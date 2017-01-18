@@ -175,4 +175,7 @@
   # Rope project settings
   .ropeproject
 
+  # OSX DS_Store files 
+  .DS_Store 
+
   # End of https://www.gitignore.io/api/sbt,scala,intellij,python
