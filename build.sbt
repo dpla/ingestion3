@@ -20,5 +20,7 @@ libraryDependencies ++= Seq(
   "com.lambdaworks" %% "jacks" % "2.3.3",
 //  Needed for SequenceFile writing
   "org.apache.hadoop" % "hadoop-mapreduce-client-jobclient" % "2.7.3",
-  "org.apache.hadoop" % "hadoop-common" % "2.7.3"
+  "org.apache.hadoop" % "hadoop-common" % "2.7.3",
+//  CdlMapping dependency
+  "org.apache.jena" % "jena-tdb" % "3.1.0"
 )
