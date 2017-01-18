@@ -1,5 +1,5 @@
 
-package la.dp.ingestion3
+package la.dp.ingestion3.harvesters
 
 import org.apache.http.HttpEntity
 import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
