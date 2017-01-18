@@ -3,3 +3,4 @@ scala:
   - 2.11.2
 jdk:
   - oraclejdk8
+sbt: 0.13.12
