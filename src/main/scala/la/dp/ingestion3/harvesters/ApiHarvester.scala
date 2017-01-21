@@ -49,7 +49,7 @@ trait ApiHarvester {
 
       if (entity != null) {
         // Parse the JSON
-        val json = parse( EntityUtils.toString(entity) )
+        val json = parse(EntityUtils.toString(entity))
         // Select the docs array
         val docs = (json \\ "docs")
         // If the number of docs returned is less than the number
@@ -58,7 +58,7 @@ trait ApiHarvester {
 
         for (doc <- (json \\ "docs").children) {
           // Generate the DPLA id
-          val identifier: String = generateMd5((doc \ "id").toString)
+          val identifier: String = Harvester.generateMd5((doc \ "id").toString)
           // Write to Hadoop Seq File
           writer.append(new Text(identifier), new Text(compact(doc)))
         }
@@ -71,14 +71,5 @@ trait ApiHarvester {
       return offset.toInt + fetchSize.toInt
     }
     return -1
-  }
-
-  /**
-    * This one liner taken from:
-    * http://stackoverflow.com/questions/38855843/scala-one-liner-to-generate-md5-hash-from-string
-    * MessageDigest.getInstance("MD5").digest(id.getBytes()).map(0xFF & _).map { "%02x".format(_) }.foldLeft("") {_ + _}
-    */
-  def generateMd5(id: String): String = {
-    DigestUtils.md5Hex(id)
   }
 }
