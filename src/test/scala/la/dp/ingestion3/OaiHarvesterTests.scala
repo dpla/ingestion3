@@ -9,5 +9,4 @@ class OaiHarvesterTests extends FlatSpec with Matchers {
 
 //  "A Oai harvest " should "print 'hello, world'" in {
 //    .main(Array[String]())
-
 }

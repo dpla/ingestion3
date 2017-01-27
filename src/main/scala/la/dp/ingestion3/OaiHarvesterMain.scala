@@ -1,18 +1,12 @@
 package la.dp.ingestion3
 
 import java.io.File
-import java.lang.String
 import java.util.concurrent.TimeUnit
 
-import la.dp.ingestion3.data.TestOaiData
 import la.dp.ingestion3.harvesters.OaiHarvester
 import la.dp.ingestion3.utils.{FileIO, Utils}
-import org.apache.hadoop.record.compiler.JString
-import org.apache.jena.sparql.function.library.print
-import org.apache.jena.vocabulary.RDF
-import org.json4s.JsonAST.JString
+import org.slf4j._
 
-import scala.xml.{NodeSeq, XML}
 
 /**
   * Created by scott on 1/21/17.
@@ -20,6 +14,8 @@ import scala.xml.{NodeSeq, XML}
 object OaiHarvesterMain extends App {
 
   override def main(args: Array[String]): Unit = {
+
+    val logger = org.apache.log4j.LogManager.getLogger("harvester")
 
     if (args.length != 1) {
       println("Args: <OUT>")
@@ -30,6 +26,7 @@ object OaiHarvesterMain extends App {
     val metadataPrefix = "oai_dc"
     val verb = "ListRecords"
 
+    logger.info(s"Saving records to ${outDir}")
     // Harvest all records
     // runHarvest(outDir, endpoint, metadataPrefix, verb)
   }

@@ -15,12 +15,14 @@ libraryDependencies ++= Seq(
   "org.elasticsearch" % "elasticsearch-hadoop" % "2.0.3"
     excludeAll(ExclusionRule("cascading", "cascading-hadoop"), ExclusionRule("cascading", "cascading-local")),
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",
-  //  ApiHarvester depends
+  // ApiHarvester depends
   "org.apache.httpcomponents" % "httpclient" % "4.5.2",
   "com.lambdaworks" %% "jacks" % "2.3.3",
-//  Needed for SequenceFile writing
+  //  Needed for SequenceFile writing
   "org.apache.hadoop" % "hadoop-mapreduce-client-jobclient" % "2.7.3",
   "org.apache.hadoop" % "hadoop-common" % "2.7.3",
-//  CdlMapping dependency
-  "org.apache.jena" % "jena-tdb" % "3.1.0"
+  //  CdlMapping dependency
+  "org.apache.jena" % "jena-tdb" % "3.1.0",
+  // Logging
+  "org.slf4j" % "slf4j-simple" % "1.7.21"
 )
