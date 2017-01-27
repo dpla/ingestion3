@@ -2,69 +2,79 @@ package la.dp.ingestion3.harvesters
 
 import java.io.File
 
-import la.dp.ingestion3.utils.{FileIO, Utils}
+import la.dp.ingestion3.utils.FileIO
 import org.apache.http.client.utils.URIBuilder
+import org.apache.jena.sparql.function.library.leviathan.root
 
-import scala.xml._
+import scala.xml.{NodeSeq, XML}
 
-trait OaiHarvester {
+/**
+  *
+  * @param endpoint
+  * @param metadataPrefix
+  * @param outDir
+  * @param scheme
+  */
+class OaiHarvester (endpoint: String,
+                   metadataPrefix: String,
+                   outDir: File,
+                   scheme: String = "http") {
 
   /**
-    * Harvest all records from the OAI-PMH endpoint
+    * Harvest all records from the OAI-PMH endpoint and saves
+    * the records as individual XML files
     *
-    * @param outDir @param resumptionTokenStr
-    * @param endpoint
-    * @param metadataPrefix
-    * @param verb
+    * @param resumptionToken Optional token to resume a previous harvest
+    * @param verb OAI verb, ListSets, ListRecords
     * @return Resumption token from the last request
     */
-  def harvest(outDir: File,
-              resumptionTokenStr: String = "",
-              endpoint: String,
-              metadataPrefix: String,
+  def harvest(resumptionToken: String = "",
               verb: String): String = {
+
     // Build the URL
     val urlParams = new URIBuilder()
-      .setScheme("http")
+      .setScheme(scheme)
       .setHost(endpoint)
       .setParameter("verb", verb)
 
-    // This could be a bit more elegant but basically if your query uses
-    // a resumption token than passing the metadataPrefix is unneeded
-    if (resumptionTokenStr.nonEmpty)
-      urlParams.setParameter("resumptionToken", resumptionTokenStr)
-    else
+    // This could be a bit more elegant but if resumptionToken is provided
+    // then metadataPrefix is an invalid parameter
+    if (resumptionToken.isEmpty)
       urlParams.setParameter("metadataPrefix", metadataPrefix)
+    else
+      urlParams.setParameter("resumptionToken", resumptionToken)
 
+    // Build the URL
     val url = urlParams.build.toURL
 
     // Load XML from constructed URL
+    // TODO Network error handling(?)
     val xml = XML.load(url)
 
-    // Get the resumption token
-    val resumptionTokenNode = xml \\ "OAI-PMH" \\ verb \\ "resumptionToken"
-
-    // Get all docs in response
-    val docs = xml \\ "OAI-PMH" \\ verb \\ "record"
-
-    // Needs an FP rewrite...
-    for (xmlDoc <- docs) {
-      val provIdentifier = xmlDoc \\ "header" \\ "identifier"
-      val dplaIdentifier = Harvester.generateMd5(provIdentifier.text)
-      val originalRecordFilename = List(dplaIdentifier, ".xml").mkString("")
-      val outFile = new File(outDir, originalRecordFilename)
-      val prettyXml = Utils.formatXml(xmlDoc)
-
-      // Serialize to disk
-      FileIO.writeFile(prettyXml, outFile)
+    // Check for and handle errors in response
+    // TODO Response for each error code
+    (xml \\ "error" \ "@code").text match {
+      case "cannotDisseminateFormat" => "Format troubles"
+      case "badResumptionToken" => "Resumption token expired or is invalaid" // throw error and abort
+      case "noRecordsMatch" => "No records found" // No exception?
+      case "noSetHierarchy" => "Hierarchy is a pain"
+      case _ => "Alls well "
     }
-    return resumptionTokenNode.text
+
+    val docs:NodeSeq = xml \\ "OAI-PMH" \\ "ListRecords" \\ "record"
+
+    // Attempt at FP
+    docs.par
+      .map(doc => {
+        val provIdentifier = (doc \\ "header" \\ "identifier").text
+        val dplaIdentifier = Harvester.generateMd5(provIdentifier)
+        val filename = dplaIdentifier+".xml"
+        val outFile = new File(outDir, filename)
+
+        // TODO this might go someplace else...
+        FileIO.writeFile(doc.text, outFile)
+      })
+
+    return (xml \\ "OAI-PMH" \\ verb \\ "resumptionToken").text
   }
 }
-
-
-
-
-
-
-

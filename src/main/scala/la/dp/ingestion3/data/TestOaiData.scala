@@ -8,10 +8,20 @@ import scala.xml.Elem
 object TestOaiData {
 
   def getPaOai(): Elem = { pa_oai }
-
+  def getPaOaiError: Elem = { pa_error }
   /**
     * Local data for testing...
     */
+
+    val pa_error: Elem =
+    <OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+      <responseDate>2017-01-27T05:10:17Z</responseDate>
+      <request verb="ListRecords">http://localhost:8080/fedora/oai</request>
+      <error code="cannotDisseminateFormat">
+        Repository does not provide that format in OAI-PMH responses.
+      </error>
+    </OAI-PMH>
+
   val pa_oai: Elem =
     <OAI-PMH
     xmlns="http://www.openarchives.org/OAI/2.0/"

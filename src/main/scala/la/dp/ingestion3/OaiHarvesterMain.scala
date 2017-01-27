@@ -1,16 +1,23 @@
 package la.dp.ingestion3
 
 import java.io.File
+import java.lang.String
 import java.util.concurrent.TimeUnit
 
-import com.twitter.finagle.http.path./
+import la.dp.ingestion3.data.TestOaiData
 import la.dp.ingestion3.harvesters.OaiHarvester
-import la.dp.ingestion3.utils.Utils
+import la.dp.ingestion3.utils.{FileIO, Utils}
+import org.apache.hadoop.record.compiler.JString
+import org.apache.jena.sparql.function.library.print
+import org.apache.jena.vocabulary.RDF
+import org.json4s.JsonAST.JString
+
+import scala.xml.{NodeSeq, XML}
 
 /**
   * Created by scott on 1/21/17.
   */
-object OaiHarvesterMain extends App with OaiHarvester {
+object OaiHarvesterMain extends App {
 
   override def main(args: Array[String]): Unit = {
 
@@ -24,8 +31,9 @@ object OaiHarvesterMain extends App with OaiHarvester {
     val verb = "ListRecords"
 
     // Harvest all records
-    runHarvest(outDir, endpoint, metadataPrefix, verb)
+    // runHarvest(outDir, endpoint, metadataPrefix, verb)
   }
+
 
   /**
     * Execute the harvest
@@ -39,12 +47,14 @@ object OaiHarvesterMain extends App with OaiHarvester {
                 endpoint: String,
                 metadataPrefix: String,
                 verb: String) = {
+
     var resumptionToken: String = ""
     val start = System.currentTimeMillis()
+    val harvester: OaiHarvester = new OaiHarvester(endpoint, metadataPrefix, outDir)
 
     try {
       do {
-        resumptionToken = harvest(outDir, resumptionToken, endpoint, metadataPrefix, verb)
+        resumptionToken = harvester.harvest(resumptionToken, verb)
       } while (resumptionToken.nonEmpty)
 
       val end = System.currentTimeMillis()
@@ -63,7 +73,7 @@ object OaiHarvesterMain extends App with OaiHarvester {
   }
 
   /**
-    * Prints the runtime of a harvest
+    * Prints the results of a harvest
     *
     * @param runtime Runtime in milliseconds
     * @param recordsHarvested Number of records in the output directory

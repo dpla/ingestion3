@@ -52,7 +52,7 @@ trait ApiHarvester {
     httpget.addHeader("X-Authentication-Token", key)
     // Execute the GET request
     val response: CloseableHttpResponse = httpclient.execute(httpget)
-  
+
     try {
       val entity: HttpEntity = response.getEntity()
 
