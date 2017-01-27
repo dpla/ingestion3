@@ -16,6 +16,15 @@ trait ApiHarvester {
   /**
     * Prototype for API harvester
     *
+    * @param endpoint
+    *                 The API endpoint to harvest from
+    * @param query
+    * @param key
+    * @param offset
+    * @param fetchSize
+    * @param outDir
+    * @param writer
+    * @return Int
    */
   def harvest(endpoint: String,
               query: String="*:*",
@@ -43,7 +52,7 @@ trait ApiHarvester {
     httpget.addHeader("X-Authentication-Token", key)
     // Execute the GET request
     val response: CloseableHttpResponse = httpclient.execute(httpget)
-
+  
     try {
       val entity: HttpEntity = response.getEntity()
 
