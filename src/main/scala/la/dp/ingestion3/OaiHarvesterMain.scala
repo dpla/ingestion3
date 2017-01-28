@@ -4,6 +4,7 @@ import java.io.File
 import java.net.URL
 import java.util.concurrent.TimeUnit
 
+import com.twitter.finagle.http.path./
 import la.dp.ingestion3.harvesters.OaiHarvester
 import la.dp.ingestion3.utils.{FileIO, Utils}
 
@@ -34,49 +35,10 @@ object OaiHarvesterMain extends App {
     val verb = args(3)
 
     logger.info(s"Saving records to ${outDir}")
-    // Harvest all records
-    // runHarvest(outDir, endpoint, metadataPrefix, verb)
-  }
 
-
-  /**
-    * Execute the harvest
-    *
-    * @param outDir File
-    *               Location to save files
-    *               TODO: this should be 100% agnostic S3, local, network
-    * @param endpoint URL
-    *                 The OAI endpoint to harvest against
-    * @param metadataPrefix String
-    *                       Metadata format of the response
-    *                       https://www.openarchives.org/OAI/openarchivesprotocol.html#MetadataNamespaces
-    * @param verb String
-    *             The OAI verb: ListRecords, ListSets, GetRecord, Identify etc.
-    *             https://www.openarchives.org/OAI/openarchivesprotocol.html#ProtocolMessages
-    */
-  def runHarvest(outDir: File,
-                endpoint: URL,
-                metadataPrefix: String,
-                verb: String): Unit = {
-
-    var resumptionToken: String = ""
-    val start = System.currentTimeMillis()
+    // Create the harvester and run
     val harvester: OaiHarvester = new OaiHarvester(endpoint, metadataPrefix, outDir)
-
-    try {
-      do {
-        resumptionToken = harvester.harvest(resumptionToken, verb)
-      } while (resumptionToken.nonEmpty)
-
-      val end = System.currentTimeMillis()
-      val recordsHarvested = Utils.countFiles(outDir, ".xml")
-      val runtimeMs = end - start
-
-      printResults(runtimeMs, recordsHarvested)
-
-    } catch {
-      case e: Exception => println(e.toString)
-    }
+    harvester.runHarvest(verb)
   }
 
   /**

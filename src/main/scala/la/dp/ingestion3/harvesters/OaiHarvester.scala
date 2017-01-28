@@ -3,7 +3,8 @@ package la.dp.ingestion3.harvesters
 import java.io.File
 import java.net.URL
 
-import la.dp.ingestion3.utils.FileIO
+import la.dp.ingestion3.OaiHarvesterMain.printResults
+import la.dp.ingestion3.utils.{FileIO, Utils}
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.LogManager
 
@@ -12,18 +13,45 @@ import scala.xml.{NodeSeq, XML}
 /**
   * OAI-PMHester for aggregating metadata into the DPLA
   *
-  * @param endpoint URL
-  *                 Address of the OAI endpoint
-  * @param metadataPrefix String
-  *                       Metadata prefix to harvest
   * @param outDir File
-  *               Location to save the harvested records
+  *               Location to save files
+  *               TODO: this should be 100% agnostic S3, local, network
+  * @param endpoint URL
+  *                 The OAI endpoint to harvest against
+  * @param metadataPrefix String
+  *                       Metadata format of the response
+  *                       https://www.openarchives.org/OAI/openarchivesprotocol.html#MetadataNamespaces
   */
 class OaiHarvester (endpoint: URL,
                     metadataPrefix: String,
                     outDir: File) {
 
   private[this] val logger = LogManager.getLogger("harvester")
+
+  /**
+    * Control method for harvesting
+    *
+    * @param verb String
+    *             The OAI verb to use in the request
+    */
+  def runHarvest(verb: String): Unit = {
+    var resumptionToken: String = ""
+    val start = System.currentTimeMillis()
+
+    try {
+      do {
+        resumptionToken = harvest(resumptionToken, verb)
+      } while (resumptionToken.nonEmpty)
+      val end = System.currentTimeMillis()
+      val recordsHarvested = Utils.countFiles(outDir, ".xml")
+      val runtimeMs = end - start
+
+      printResults(runtimeMs, recordsHarvested)
+
+    } catch {
+      case e: Exception => println(e.toString)
+    }
+  }
 
   /**
     * Harvest all records from the OAI-PMH endpoint and saves
@@ -44,10 +72,10 @@ class OaiHarvester (endpoint: URL,
     *          TODO: of further discussion in terms of error handing across
     *          TODO: the project (styles and practices)
     */
-  def harvest(resumptionToken: String = "",
+   private def harvest(resumptionToken: String = "",
               verb: String): String = {
 
-    // Build the URL
+    // Build the URL parameters
     val urlParams = new URIBuilder()
       .setScheme(endpoint.getProtocol)
       .setHost(endpoint.getHost)
@@ -81,6 +109,7 @@ class OaiHarvester (endpoint: URL,
           val dplaIdentifier = Harvester.generateMd5(provIdentifier)
           val outFile = new File(outDir, dplaIdentifier + ".xml")
           // TODO this might go someplace else...single responsibility principle...
+          // TODO #harvest probably shouldn't be writing these files to disk
           FileIO.writeFile(doc.text, outFile)
         }
       }
@@ -97,7 +126,7 @@ class OaiHarvester (endpoint: URL,
     *         The value in resumptionToken property, if the property
     *         does not exist than an empty string is returned
     */
-  def getResumptionToken(xml: NodeSeq): String = {
+   def getResumptionToken(xml: NodeSeq): String = {
     (xml \\ "OAI-PMH" \\ "resumptionToken").text
   }
 
@@ -125,15 +154,15 @@ class OaiHarvester (endpoint: URL,
     */
   @throws(classOf[HarvesterException])
   def checkOaiErrorCode(errorCode: String): Unit = {
-    // This is not my preferred style but it is much more readable
+    // This is not my preferred formatting style but it is much more readable
     errorCode match {
-      case "badArguement"             => throw HarvesterException("BadArguement in OAI request.")
+      case "badArguement"             => throw HarvesterException("Bad arguement in OAI request.")
       case "badResumptionToken"       => throw HarvesterException("Bad resumption token in OAI request")
-      case "badVerb"                  => throw HarvesterException("BadVerb in harvest request")
+      case "badVerb"                  => throw HarvesterException("Bad verb in harvest request")
       case "idDoesNotExist"           => throw HarvesterException("Item does not exist in feed.")
       case "noMetadataFormats"        => throw HarvesterException("No metadata formats available")
       case "noSetHierarchy"           => throw HarvesterException("Sets not supported")
-      case "cannotDisseminateFormat"  => throw HarvesterException("Correct the metadataPrefix and restart")
+      case "cannotDisseminateFormat"  => throw HarvesterException("Incorrect metadata format")
       case "noRecordsMatch"           => logger.warn("No records returned from request")
       case ""                         => logger.info("No error")
       case _                          => throw HarvesterException(s"Unknown error code: ${errorCode}")
