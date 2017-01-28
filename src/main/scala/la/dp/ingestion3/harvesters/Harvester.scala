@@ -11,7 +11,6 @@ object Harvester {
     * an md5 hash of the id value
     *
     * @param id String
-    *           Provider's record id to hash
     * @param prov String
     *             Optional, Provider abbreviation if provided is prepended to
     *             id and then hashed
@@ -24,4 +23,9 @@ object Harvester {
   }
 }
 
+/**
+  * Basic exception class, minimal implementation
+  *
+  * @param message String
+  */
 case class HarvesterException(message: String) extends Exception(message)
