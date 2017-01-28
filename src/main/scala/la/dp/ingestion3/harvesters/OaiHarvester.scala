@@ -41,7 +41,7 @@ class OaiHarvester (endpoint: URL,
     *
     *          TODO: I think that the error should bubble up from here but
     *          TODO: trapping it is easier for now. This should be a point
-    *          TODO: of futher discussion in terms of error handing across
+    *          TODO: of further discussion in terms of error handing across
     *          TODO: the project (styles and practices)
     */
   def harvest(resumptionToken: String = "",
@@ -60,10 +60,8 @@ class OaiHarvester (endpoint: URL,
     // Build the URL
     val url = urlParams.build.toURL
 
-
     // Load XML from constructed URL
-    // TODO Network error handling(?)
-    val xml = getResponse(url)
+    val xml = getXmlResponse(url)
 
     // Check for and handle errors in response
     try {
@@ -94,35 +92,27 @@ class OaiHarvester (endpoint: URL,
     * Get the resumptionToken in the response
     *
     * @param xml NodeSeq
-    *            The XML response
+    *            The complete XML response
     * @return String
     *         The value in resumptionToken property, if the property
     *         does not exist than an empty string is returned
     */
   def getResumptionToken(xml: NodeSeq): String = {
-    (xml \\ "OAI-PMH" \\ "ListRecords" \\ "resumptionToken").text
+    (xml \\ "OAI-PMH" \\ "resumptionToken").text
   }
 
   /**
     * Executes the request and returns the response
-    * TODO improve error handling
+    * TODO clarify error handling. Was the try/catch
+    * TODO block even necessary here?
     *
     * @param url URL
     *            OAI request URL
     * @return NodeSeq
     *         XML response
-    * @throws HarvesterException If unable to get a response
     */
-  @throws(classOf[HarvesterException])
-  def getResponse(url: URL): NodeSeq = {
-    try {
+  def getXmlResponse(url: URL): NodeSeq = {
       XML.load(url)
-    } catch {
-      case e: Exception => {
-        logger.error(e.getMessage)
-        throw HarvesterException(s"Unable to get response from ${url.toString}\n\t${e.getMessage}")
-      }
-    }
   }
 
   /**
@@ -131,13 +121,11 @@ class OaiHarvester (endpoint: URL,
     * @param errorCode String
     *                  The error code from the OAI response
     *                  See https://www.openarchives.org/OAI/openarchivesprotocol.html#ErrorConditions
-    * @throws HarvesterException If the error code being checked matches an error code in the
-    *                            OAI-PMH 2.0 specification
-    * @throws Exception If there was an unknown error code
+    * @throws HarvesterException
     */
   @throws(classOf[HarvesterException])
   def checkOaiErrorCode(errorCode: String): Unit = {
-    // This is not my perferred style but it is much more readable
+    // This is not my preferred style but it is much more readable
     errorCode match {
       case "badArguement"             => throw HarvesterException("BadArguement in OAI request.")
       case "badResumptionToken"       => throw HarvesterException("Bad resumption token in OAI request")
