@@ -17,20 +17,22 @@ class OaiHarvesterTest extends FlatSpec with Matchers {
   val oai_url = new java.net.URL("http://dev.com")
   val harvester = new OaiHarvester(oai_url, "ListRecords", file)
 
-  it should " throw an HarvesterException if a badArgument error code is returned" in {
+
+  "checkOaiErrorCode() " should " throw an HarvesterException if a badArgument error code is returned" in {
     val errorCode = "badArguement"
     assertThrows[Exception] {
       harvester.checkOaiErrorCode(errorCode)
     }
   }
 
-  it should " return an empty String when getting resumptionToken if there is an error in the response " in {
+  "getResumptionToken() " should " return an empty String if there is an error in the response " in {
     val xml = la.dp.ingestion3.data.TestOaiData.pa_error
-    assert( harvester.getResumptionToken(xml) == "" )
+    assert(harvester.getResumptionToken(xml) == "")
   }
 
-  it should " return the String value of the resumptionToken if the response is valid" in {
+  it should " return a non-empty String value if the response is valid and incomplete" in {
     val xml = la.dp.ingestion3.data.TestOaiData.pa_oai
-    assert( harvester.getResumptionToken(xml) == "90d421891feba6922f57a59868d7bcd1" )
+    assert(harvester.getResumptionToken(xml).nonEmpty)
+    assert(harvester.getResumptionToken(xml) == "90d421891feba6922f57a59868d7bcd1")
   }
 }
