@@ -333,7 +333,7 @@ object TestOaiData {
             </oai_dc:dc>
           </metadata>
         </record>
-        <resumptionToken expirationDate="2017-01-21T17:33:16Z" cursor="0"></resumptionToken>
+        <resumptionToken expirationDate="2017-01-21T17:33:16Z" cursor="0">90d421891feba6922f57a59868d7bcd1</resumptionToken>
       </ListRecords>
     </OAI-PMH>
 }

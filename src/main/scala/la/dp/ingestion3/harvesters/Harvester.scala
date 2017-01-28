@@ -17,3 +17,5 @@ object Harvester {
     DigestUtils.md5Hex(id)
   }
 }
+
+case class HarvesterException(message: String) extends Exception(message)

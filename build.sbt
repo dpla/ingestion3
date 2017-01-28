@@ -14,7 +14,7 @@ libraryDependencies ++= Seq(
   "org.eclipse.rdf4j" % "rdf4j" % "2.1.4",
   "org.elasticsearch" % "elasticsearch-hadoop" % "2.0.3"
     excludeAll(ExclusionRule("cascading", "cascading-hadoop"), ExclusionRule("cascading", "cascading-local")),
-  "org.scalatest" %% "scalatest" % "3.0.0" % "test",
+  "org.scalatest" %% "scalatest" % "3.0.1" % "test",
   // ApiHarvester depends
   "org.apache.httpcomponents" % "httpclient" % "4.5.2",
   "com.lambdaworks" %% "jacks" % "2.3.3",

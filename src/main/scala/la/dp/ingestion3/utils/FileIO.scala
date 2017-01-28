@@ -5,14 +5,12 @@ import java.nio.file.Files
 import java.nio.file.StandardOpenOption.{CREATE, TRUNCATE_EXISTING}
 
 /**
-  * Created by scott on 1/26/17.
-  *
-  * A basic object for doing File IO
+  * Basic FileIO ops
   *
   */
 object FileIO {
   /**
-    * Format the XML to storage
+    * Save the save to disk
     */
   def writeFile(record: String, outFile: File): Unit = {
     Files.write(outFile.toPath, record.getBytes("utf8"), CREATE, TRUNCATE_EXISTING)

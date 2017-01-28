@@ -1,30 +1,37 @@
 package la.dp.ingestion3
 
 import java.io.File
+import java.net.URL
 import java.util.concurrent.TimeUnit
 
 import la.dp.ingestion3.harvesters.OaiHarvester
 import la.dp.ingestion3.utils.{FileIO, Utils}
-import org.slf4j._
-
 
 /**
-  * Created by scott on 1/21/17.
+  * Driver program for OAI harvest
   */
 object OaiHarvesterMain extends App {
 
+  /**
+    * Entry point for running an OAI harvest
+    *
+    * @param args Output directory: String
+    *             OAI URL: String
+    *             Metadata Prefix: String oai_dc oai_qdc, mods, MODS21 etc.
+    *             OAI Verb: String ListRecords, ListSets etc.
+    */
   override def main(args: Array[String]): Unit = {
 
     val logger = org.apache.log4j.LogManager.getLogger("harvester")
 
-    if (args.length != 1) {
-      println("Args: <OUT>")
+    if (args.length != 4) {
+      println("Bad Args: <OUT>, <OAI URL>, <METADATA PREFIX>, <OAI VERB>")
       sys.exit(-1)
     }
     val outDir: File = new File(args(0))
-    val endpoint = "aggregator.padigital.org/oai"
-    val metadataPrefix = "oai_dc"
-    val verb = "ListRecords"
+    val endpoint = new URL(args(1))
+    val metadataPrefix = args(2)
+    val verb = args(3)
 
     logger.info(s"Saving records to ${outDir}")
     // Harvest all records
@@ -41,7 +48,7 @@ object OaiHarvesterMain extends App {
     * @param verb OAI verb
     */
   def runHarvest(outDir: File,
-                endpoint: String,
+                endpoint: URL,
                 metadataPrefix: String,
                 verb: String) = {
 
@@ -70,22 +77,28 @@ object OaiHarvesterMain extends App {
   }
 
   /**
-    * Prints the results of a harvest
+    * Print the results of a harvest
+    *
+    * Example:
+    *   Harvest count: 242924 records harvested
+    *   Runtime: 4 minutes 24 seconds
+    *   Throughput: 920 records/second
     *
     * @param runtime Runtime in milliseconds
     * @param recordsHarvested Number of records in the output directory
     */
 
   def printResults(runtime: Long, recordsHarvested: Long): Unit = {
+    // Make things pretty
+    val formatter = java.text.NumberFormat.getIntegerInstance
     val minutes = (TimeUnit.MILLISECONDS.toMinutes(runtime))
     val seconds = (TimeUnit.MILLISECONDS.toSeconds(runtime) -
       TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(runtime)))
-
     val runtimeInSeconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime)
     val recordsPerSecond: Long = recordsHarvested/runtimeInSeconds
 
-    println(s"Harvest count: ${recordsHarvested} records harvested")
-    println(s"Runtime: ${minutes} minutes $seconds seconds")
-    println(s"Throughput: ${recordsPerSecond} records/second")
+    println(s"File count: ${formatter.format(recordsHarvested)}")
+    println(s"Runtime: ${minutes}:${seconds}")
+    println(s"Throughput: ${formatter.format(recordsPerSecond)} records/second")
   }
 }

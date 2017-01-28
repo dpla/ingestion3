@@ -1,6 +1,7 @@
 package la.dp.ingestion3.harvesters
 
 import java.io.File
+import java.net.URL
 
 import la.dp.ingestion3.utils.FileIO
 import org.apache.http.client.utils.URIBuilder
@@ -9,16 +10,18 @@ import org.apache.log4j.LogManager
 import scala.xml.{NodeSeq, XML}
 
 /**
+  * OAI-PMHester for aggregating metadata into the DPLA
   *
-  * @param endpoint The address of the OAI endpoint
-  * @param metadataPrefix Metadata prefix to harvest
-  * @param outDir Location to save the harvested records
-  * @param scheme http or https, defaults to http
+  * @param endpoint URL
+  *                 Address of the OAI endpoint
+  * @param metadataPrefix String
+  *                       Metadata prefix to harvest
+  * @param outDir File
+  *               Location to save the harvested records
   */
-class OaiHarvester (endpoint: String,
-                   metadataPrefix: String,
-                   outDir: File,
-                   scheme: String = "http") {
+class OaiHarvester (endpoint: URL,
+                    metadataPrefix: String,
+                    outDir: File) {
 
   private[this] val logger = LogManager.getLogger("harvester")
 
@@ -26,23 +29,20 @@ class OaiHarvester (endpoint: String,
     * Harvest all records from the OAI-PMH endpoint and saves
     * the records as individual XML files
     *
-    * @param resumptionToken Optional token to resume a previous harvest
-    * @param verb OAI verb, ListSets, ListRecords
+    * @param resumptionToken String
+    *                        Optional token to resume a previous harvest
+    * @param verb String
+    *             OAI verb, ListSets, ListRecords
     * @return Resumption token from the last request
     */
   def harvest(resumptionToken: String = "",
               verb: String): String = {
 
-
-
     // Build the URL
     val urlParams = new URIBuilder()
-      .setScheme(scheme)
-      .setHost(endpoint)
+      .setScheme(endpoint.getProtocol)
+      .setHost(endpoint.getHost)
       .setParameter("verb", verb)
-
-    // This could be a bit more elegant but if resumptionToken is provided
-    // then metadataPrefix is an invalid parameter
     if (resumptionToken.isEmpty)
       urlParams.setParameter("metadataPrefix", metadataPrefix)
     else
@@ -53,88 +53,91 @@ class OaiHarvester (endpoint: String,
 
     // Load XML from constructed URL
     // TODO Network error handling(?)
-    val xml = XML.load(url)
+    val xml = getResponse(url)
 
     // Check for and handle errors in response
-    // TODO Response for each error code
-    // TODO define Error classes
-    val errorCode = (xml \\ "error" \ "@code").text
-    if (errorCode.nonEmpty) { checkOaiErrorCode(errorCode) }
+    try {
+      val errorCode = (xml \\ "error" \ "@code").text
+      checkOaiErrorCode(errorCode)
+    } catch {
+      case he: HarvesterException => logger.error(s"Error code in response to: ${url.toString}\n\n" + he.getMessage)
+    }
 
-    val docs:NodeSeq = xml \\ "OAI-PMH" \\ "ListRecords" \\ "record"
+    val docs: NodeSeq = xml \\ "OAI-PMH" \\ "ListRecords" \\ "record"
 
     // Attempt at FP serialization
     docs.par
-      .map(doc => {
-        val provIdentifier = (doc \\ "header" \\ "identifier").text
-        val dplaIdentifier = Harvester.generateMd5(provIdentifier)
-        val filename = dplaIdentifier+".xml"
-        val outFile = new File(outDir, filename)
-
-        // TODO this might go someplace else...single responsibility principle...
-        FileIO.writeFile(doc.text, outFile)
-      })
-
-    return (xml \\ "OAI-PMH" \\ verb \\ "resumptionToken").text
+      .foreach {
+        doc => {
+          val provIdentifier = (doc \\ "header" \\ "identifier").text
+          val dplaIdentifier = Harvester.generateMd5(provIdentifier)
+          val outFile = new File(outDir, dplaIdentifier + ".xml")
+          // TODO this might go someplace else...single responsibility principle...
+          FileIO.writeFile(doc.text, outFile)
+        }
+      }
+    // Return the resumptionToken or empty string if it doesn't exist
+    getResumptionToken(xml)
   }
 
   /**
-    * Checks the error response codes and logs an appropriate message and
-    * throws Exceptions
-    * TODO define error classes and messages
+    * Get the resumptionToken in the response
     *
-    * @param errorCode The error code from the OAI response
-    *                  See https://www.openarchives.org/OAI/openarchivesprotocol.html#ErrorConditions
+    * @param xml NodeSeq
+    *            The XML response
+    * @return String
+    *         The value in resumptionToken property, if the property does not exist than
+    *         and empty string is returned
     */
+  def getResumptionToken(xml: NodeSeq): String = {
+    (xml \\ "OAI-PMH" \\ "ListRecords" \\ "resumptionToken").text
+  }
+
+  /**
+    * Executes the request and returns the response
+    * TODO improve error handling
+    *
+    * @param url URL
+    *            OAI request URL
+    * @return NodeSeq
+    *         XML response
+    * @throws HarvesterException If unable to get a response
+    */
+  @throws(classOf[HarvesterException])
+  def getResponse(url: URL): NodeSeq = {
+    try {
+      XML.load(url)
+    } catch {
+      case e: Exception => {
+        logger.error(e.getMessage)
+        throw HarvesterException(s"Unable to get response from ${url.toString}\n\t${e.getMessage}")
+      }
+    }
+  }
+
+  /**
+    * Checks the error response codes
+    *
+    * @param errorCode String
+    *                  The error code from the OAI response
+    *                  See https://www.openarchives.org/OAI/openarchivesprotocol.html#ErrorConditions
+    * @throws HarvesterException If there was a valid error code
+    * @throws Exception If there was an unknown error code
+    */
+  @throws(classOf[HarvesterException, Exception])
   def checkOaiErrorCode(errorCode: String): Unit = {
+    // This is not my perferred style but it is much more readable
     errorCode match {
-      case "" => logger.info("No error")
-
-      case "badArguement" => {
-        logger.error("The request includes illegal arguments or is missing required arguments.")
-        throw new Exception("Error harvest. Correct the metadataPrefix and restart.")
-      }
-
-      case "badResumptionToken" => {
-        logger.error(s"The value of the resumptionToken argument is invalid or expired.")
-        throw new Exception("BadResumptionToken in harvest request")
-      }
-
-      case "badVerb" => {
-        logger.error(s"Value of the verb argument is not a legal OAI-PMH verb, the verb argument " +
-          s"is missing, or the verb argument is repeated.")
-        throw new Exception("BadVerb in harvest request")
-      }
-
-      case "cannotDisseminateFormat" => {
-        logger.error("The value of the metadataPrefix argument is not supported by the repository.")
-        throw new Exception("Error in harvest. Correct the metadataPrefix and restart.")
-      }
-
-      case "idDoesNotExist" => {
-        logger.error("The value of the identifier argument is unknown or illegal in this repository.")
-        throw new Exception("Error in harvest")
-      }
-
-      case "noRecordsMatch" => {
-        // Does not throw an exception, this case will not break the harvest but result in a no-op
-        logger.warn(s"No records returned from request")
-      }
-
-      case "noMetadataFormats" => {
-        logger.error(s"Repository does not support sets. Please correct the ingestion profile and retry.")
-      }
-
-      case "noSetHierarchy" => {
-        logger.error(s"Repository does not support sets. Please correct the ingestion profile and retry.")
-
-        throw new Exception("Error in harvest")
-      }
-      // Base case, the error code doesn't match any of the expected values
-      case _ => {
-        logger.error(s"Unknown error code: ${errorCode}")
-        throw new Exception(s"Unknown error code in harvest")
-      }
+      case "badArguement"             => throw HarvesterException("BadArguement in OAI request.")
+      case "badResumptionToken"       => throw HarvesterException("Bad resumption token in OAI request")
+      case "badVerb"                  => throw HarvesterException("BadVerb in harvest request")
+      case "idDoesNotExist"           => throw HarvesterException("Item does not exist in feed.")
+      case "noMetadataFormats"        => throw HarvesterException("No metadata formats available")
+      case "noSetHierarchy"           => throw HarvesterException("Sets not supported")
+      case "cannotDisseminateFormat"  => throw HarvesterException("Correct the metadataPrefix and restart")
+      case "noRecordsMatch"           => logger.warn("No records returned from request")
+      case ""                         => logger.info("No error")
+      case _                          => throw Exception(s"Unknown error code: ${errorCode}")
     }
   }
 }
