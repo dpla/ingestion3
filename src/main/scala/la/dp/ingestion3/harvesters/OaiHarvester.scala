@@ -33,7 +33,16 @@ class OaiHarvester (endpoint: URL,
     *                        Optional token to resume a previous harvest
     * @param verb String
     *             OAI verb, ListSets, ListRecords
-    * @return Resumption token from the last request
+    * @return  The resumptionToken to use to fetch the next set of records
+    *          or an empty string if no more records can be fetched. An
+    *          empty string does not mean all records were successfully
+    *          harvested (an error could have occured when fetching), only
+    *          that there are no more records that can be fetched.
+    *
+    *          TODO: I think that the error should bubble up from here but
+    *          TODO: trapping it is easier for now. This should be a point
+    *          TODO: of futher discussion in terms of error handing across
+    *          TODO: the project (styles and practices)
     */
   def harvest(resumptionToken: String = "",
               verb: String): String = {
@@ -50,6 +59,7 @@ class OaiHarvester (endpoint: URL,
 
     // Build the URL
     val url = urlParams.build.toURL
+
 
     // Load XML from constructed URL
     // TODO Network error handling(?)
@@ -76,7 +86,7 @@ class OaiHarvester (endpoint: URL,
           FileIO.writeFile(doc.text, outFile)
         }
       }
-    // Return the resumptionToken or empty string if it doesn't exist
+    // Return
     getResumptionToken(xml)
   }
 
@@ -86,8 +96,8 @@ class OaiHarvester (endpoint: URL,
     * @param xml NodeSeq
     *            The XML response
     * @return String
-    *         The value in resumptionToken property, if the property does not exist than
-    *         and empty string is returned
+    *         The value in resumptionToken property, if the property
+    *         does not exist than an empty string is returned
     */
   def getResumptionToken(xml: NodeSeq): String = {
     (xml \\ "OAI-PMH" \\ "ListRecords" \\ "resumptionToken").text
@@ -116,15 +126,16 @@ class OaiHarvester (endpoint: URL,
   }
 
   /**
-    * Checks the error response codes
+    * Checks the error response codes in the OAI response
     *
     * @param errorCode String
     *                  The error code from the OAI response
     *                  See https://www.openarchives.org/OAI/openarchivesprotocol.html#ErrorConditions
-    * @throws HarvesterException If there was a valid error code
+    * @throws HarvesterException If the error code being checked matches an error code in the
+    *                            OAI-PMH 2.0 specification
     * @throws Exception If there was an unknown error code
     */
-  @throws(classOf[HarvesterException, Exception])
+  @throws(classOf[HarvesterException])
   def checkOaiErrorCode(errorCode: String): Unit = {
     // This is not my perferred style but it is much more readable
     errorCode match {
@@ -137,7 +148,7 @@ class OaiHarvester (endpoint: URL,
       case "cannotDisseminateFormat"  => throw HarvesterException("Correct the metadataPrefix and restart")
       case "noRecordsMatch"           => logger.warn("No records returned from request")
       case ""                         => logger.info("No error")
-      case _                          => throw Exception(s"Unknown error code: ${errorCode}")
+      case _                          => throw HarvesterException(s"Unknown error code: ${errorCode}")
     }
   }
 }

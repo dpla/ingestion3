@@ -13,7 +13,10 @@ object Harvester {
     * @param id String to hash
     * @return String md5 hash of the id value
     */
-  def generateMd5(id: String): String = {
+  def generateMd5(id: String, prov: String=""): String = {
+    if(prov.nonEmpty)
+      println( List(prov,id).mkString("--").trim )
+      DigestUtils.md5Hex(List(prov,id).mkString("--").trim)
     DigestUtils.md5Hex(id)
   }
 }

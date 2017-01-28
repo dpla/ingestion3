@@ -7,9 +7,12 @@ import org.scalatest.{FlatSpec, Matchers}
 import org.scalatest._
 
 /**
-  * Created by scott on 1/21/17.
+  * Tests for OaiHarvester
+  *
+  *   TODO: Figure out how to simulate http requests/responses.
+  *
   */
-class OaiHarvesterTests extends FlatSpec with Matchers {
+class OaiHarvesterTest extends FlatSpec with Matchers {
   val file = new File("/dev/null")
   val oai_url = new java.net.URL("http://dev.com")
   val harvester = new OaiHarvester(oai_url, "ListRecords", file)

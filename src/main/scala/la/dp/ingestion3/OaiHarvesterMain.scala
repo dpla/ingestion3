@@ -42,15 +42,22 @@ object OaiHarvesterMain extends App {
   /**
     * Execute the harvest
     *
-    * @param outDir Location to save files
-    * @param endpoint OAI endpoint
-    * @param metadataPrefix
-    * @param verb OAI verb
+    * @param outDir File
+    *               Location to save files
+    *               TODO: this should be 100% agnostic S3, local, network
+    * @param endpoint URL
+    *                 The OAI endpoint to harvest against
+    * @param metadataPrefix String
+    *                       Metadata format of the response
+    *                       https://www.openarchives.org/OAI/openarchivesprotocol.html#MetadataNamespaces
+    * @param verb String
+    *             The OAI verb: ListRecords, ListSets, GetRecord, Identify etc.
+    *             https://www.openarchives.org/OAI/openarchivesprotocol.html#ProtocolMessages
     */
   def runHarvest(outDir: File,
                 endpoint: URL,
                 metadataPrefix: String,
-                verb: String) = {
+                verb: String): Unit = {
 
     var resumptionToken: String = ""
     val start = System.currentTimeMillis()
@@ -68,11 +75,7 @@ object OaiHarvesterMain extends App {
       printResults(runtimeMs, recordsHarvested)
 
     } catch {
-      case e: Exception => {
-        println(e.toString)
-      }
-    } finally {
-      // do nothing...for now
+      case e: Exception => println(e.toString)
     }
   }
 
@@ -91,14 +94,14 @@ object OaiHarvesterMain extends App {
   def printResults(runtime: Long, recordsHarvested: Long): Unit = {
     // Make things pretty
     val formatter = java.text.NumberFormat.getIntegerInstance
-    val minutes = (TimeUnit.MILLISECONDS.toMinutes(runtime))
-    val seconds = (TimeUnit.MILLISECONDS.toSeconds(runtime) -
-      TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(runtime)))
+    val minutes: Long = TimeUnit.MILLISECONDS.toMinutes(runtime)
+    val seconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) -
+      TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(runtime))
     val runtimeInSeconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime)
     val recordsPerSecond: Long = recordsHarvested/runtimeInSeconds
 
     println(s"File count: ${formatter.format(recordsHarvested)}")
-    println(s"Runtime: ${minutes}:${seconds}")
+    println(s"Runtime: $minutes:$seconds")
     println(s"Throughput: ${formatter.format(recordsPerSecond)} records/second")
   }
 }
