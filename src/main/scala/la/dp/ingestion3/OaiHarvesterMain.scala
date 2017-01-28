@@ -38,7 +38,16 @@ object OaiHarvesterMain extends App {
 
     // Create the harvester and run
     val harvester: OaiHarvester = new OaiHarvester(endpoint, metadataPrefix, outDir)
+
+    val start = System.currentTimeMillis()
     harvester.runHarvest(verb)
+    val end = System.currentTimeMillis()
+
+    val recordsHarvested = Utils.countFiles(outDir, ".xml")
+    val runtimeMs = end - start
+
+    printResults(runtimeMs, recordsHarvested)
+
   }
 
   /**

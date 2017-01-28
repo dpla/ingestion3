@@ -13,12 +13,12 @@ import org.scalatest.{FlatSpec, Matchers}
 class OaiHarvesterTest extends FlatSpec with Matchers {
   val file = new File("/dev/null")
   val oai_url = new java.net.URL("http://dev.com")
-  val harvester = new OaiHarvester(oai_url, "ListRecords", file)
-
+  val verb = "ListRecords"
+  val harvester = new OaiHarvester(oai_url, verb, file)
 
   "checkOaiErrorCode() " should " throw an HarvesterException if a badArgument error code is returned" in {
-    val errorCode = "badArguement"
-    assertThrows[Exception] {
+    val errorCode = "badArgument"
+    assertThrows[HarvesterException] {
       harvester.checkOaiErrorCode(errorCode)
     }
   }
@@ -30,7 +30,8 @@ class OaiHarvesterTest extends FlatSpec with Matchers {
 
   it should " return a non-empty String value if the response is valid and incomplete" in {
     val xml = la.dp.ingestion3.data.TestOaiData.pa_oai
-    assert(harvester.getResumptionToken(xml).nonEmpty)
+    assert(Predef.augmentString(harvester.getResumptionToken(xml)).nonEmpty)
     assert(harvester.getResumptionToken(xml) == "90d421891feba6922f57a59868d7bcd1")
   }
+
 }

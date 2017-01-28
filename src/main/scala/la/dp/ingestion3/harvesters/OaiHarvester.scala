@@ -3,10 +3,10 @@ package la.dp.ingestion3.harvesters
 import java.io.File
 import java.net.URL
 
-import la.dp.ingestion3.OaiHarvesterMain.printResults
-import la.dp.ingestion3.utils.{FileIO, Utils}
+import la.dp.ingestion3.utils.FileIO
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.LogManager
+import scala.collection.mutable
 
 import scala.xml.{NodeSeq, XML}
 
@@ -24,9 +24,14 @@ import scala.xml.{NodeSeq, XML}
   */
 class OaiHarvester (endpoint: URL,
                     metadataPrefix: String,
-                    outDir: File) {
+                    outDir: File,
+                    idPath: String = "" ) {
 
+  // Logging object
   private[this] val logger = LogManager.getLogger("harvester")
+  // Trying to store harvested data into a mutableMap and then seralize
+  // to disk after harvest is done.
+  private val harvestedRecords: mutable.Map[File, String] = mutable.Map[File, String]()
 
   /**
     * Control method for harvesting
@@ -36,86 +41,71 @@ class OaiHarvester (endpoint: URL,
     */
   def runHarvest(verb: String): Unit = {
     var resumptionToken: String = ""
-    val start = System.currentTimeMillis()
 
     try {
       do {
-        resumptionToken = harvest(resumptionToken, verb)
-      } while (resumptionToken.nonEmpty)
-      val end = System.currentTimeMillis()
-      val recordsHarvested = Utils.countFiles(outDir, ".xml")
-      val runtimeMs = end - start
+        val url = buildQueryUrl(resumptionToken, verb)
+        val xml = getXmlResponse(url)
+        // Get and check the
+        val errorCode = getErrorCode(xml)
+        if (errorCode.nonEmpty) {
+          checkOaiErrorCode(errorCode)
+        }
 
-      printResults(runtimeMs, recordsHarvested)
+        getHarvestedRecords(xml)
+        resumptionToken = getResumptionToken(xml)
 
+      } while (Predef.augmentString(resumptionToken).nonEmpty)
     } catch {
-      case e: Exception => println(e.toString)
+      // TODO improve this error messaging
+      case he: HarvesterException => {
+        val errMsg = s"Error during harvest.\nException message: ${he.getMessage}"
+        logger.error(errMsg)
+      }
     }
+
+    // Serialize the map of records and file paths to disk (or wherever)
+    FileIO.writeFiles(harvestedRecords.toMap)
   }
 
   /**
-    * Harvest all records from the OAI-PMH endpoint and saves
-    * the records as individual XML files
+    * Makes a single request to the OAI endpoint and adds the records
+    * in the result to a Map[File, String] object
     *
-    * @param resumptionToken String
-    *                        Optional token to resume a previous harvest
-    * @param verb String
-    *             OAI verb, ListSets, ListRecords
-    * @return  The resumptionToken to use to fetch the next set of records
-    *          or an empty string if no more records can be fetched. An
-    *          empty string does not mean all records were successfully
-    *          harvested (an error could have occured when fetching), only
-    *          that there are no more records that can be fetched.
+    * @param xml NodeSeq
+    *            Complete OAI-PMH XML response
     *
-    *          TODO: I think that the error should bubble up from here but
+    *          TODO: I think that the errorCode checking should bubble up from here but
     *          TODO: trapping it is easier for now. This should be a point
     *          TODO: of further discussion in terms of error handing across
     *          TODO: the project (styles and practices)
+    *
+    *          TODO: This method has a side-effect of mutating the class Map
+    *          TODO: harvestRecords. It should return a Map of records from
+    *          TODO: the request and then merge that map with an immutable map
+    *          TODO: but I haven't figure that out yet
     */
-   private def harvest(resumptionToken: String = "",
-              verb: String): String = {
+   private def getHarvestedRecords(xml: NodeSeq): Unit = {
+      val docs: NodeSeq = xml \\ "OAI-PMH" \\ "record"
 
-    // Build the URL parameters
-    val urlParams = new URIBuilder()
-      .setScheme(endpoint.getProtocol)
-      .setHost(endpoint.getHost)
-      .setParameter("verb", verb)
-    if (resumptionToken.isEmpty)
-      urlParams.setParameter("metadataPrefix", metadataPrefix)
-    else
-      urlParams.setParameter("resumptionToken", resumptionToken)
+      // Attempt at FP
+      docs.par
+          .foreach { doc => {
+            // TODO this path should not be fixed
+            val provIdentifier = (doc \\ "header" \\ "identifier").text
+            val dplaIdentifier = Harvester.generateMd5(provIdentifier)
+            val outFile = new File(outDir, dplaIdentifier + ".xml")
 
-    // Build the URL
-    val url = urlParams.build.toURL
+            // #harvest() probably shouldn't be writing these files to disk
+            // So I moved serialization to its own method and store the harvested
+            // records in a Map here. This approach may have scaling issues and
+            // requires testing
 
-    // Load XML from constructed URL
-    val xml = getXmlResponse(url)
-
-    // Check for and handle errors in response
-    try {
-      val errorCode = (xml \\ "error" \ "@code").text
-      checkOaiErrorCode(errorCode)
-    } catch {
-      case he: HarvesterException => logger.error(s"Error code in response to: ${url.toString}\n\n" + he.getMessage)
-    }
-
-    val docs: NodeSeq = xml \\ "OAI-PMH" \\ "ListRecords" \\ "record"
-
-    // Attempt at FP serialization
-    docs.par
-      .foreach {
-        doc => {
-          val provIdentifier = (doc \\ "header" \\ "identifier").text
-          val dplaIdentifier = Harvester.generateMd5(provIdentifier)
-          val outFile = new File(outDir, dplaIdentifier + ".xml")
-          // TODO this might go someplace else...single responsibility principle...
-          // TODO #harvest probably shouldn't be writing these files to disk
-          FileIO.writeFile(doc.text, outFile)
+            // FileIO.writeFile(doc.text, outFile)
+            harvestedRecords.put(outFile, doc.text)
+          }
         }
-      }
-    // Return
-    getResumptionToken(xml)
-  }
+   }
 
   /**
     * Get the resumptionToken in the response
@@ -123,15 +113,25 @@ class OaiHarvester (endpoint: URL,
     * @param xml NodeSeq
     *            The complete XML response
     * @return String
-    *         The value in resumptionToken property, if the property
-    *         does not exist than an empty string is returned
+    *         The resumptionToken to fetch the next set of records
+    *         or an empty string if no more records can be fetched. An
+    *         empty string does not mean all records were successfully
+    *         harvested (an error could have occured when fetching), only
+    *         that there are no more records that can be fetched.
     */
-   def getResumptionToken(xml: NodeSeq): String = {
-    (xml \\ "OAI-PMH" \\ "resumptionToken").text
-  }
+   def getResumptionToken(xml: NodeSeq): String = (xml \\ "OAI-PMH" \\ "resumptionToken").text
 
   /**
-    * Executes the request and returns the response
+    * Get the error property if it exists
+    *
+    * @return String
+    *         The error code if it exists otherwise empty string
+    */
+  def getErrorCode(xml: NodeSeq): String = (xml \\ "OAI-PMH" \\ "error").text
+
+  /**
+    * Executes the request and returns the XML response
+    * as a NodeSeq object
     * TODO clarify error handling. Was the try/catch
     * TODO block even necessary here?
     *
@@ -140,8 +140,35 @@ class OaiHarvester (endpoint: URL,
     * @return NodeSeq
     *         XML response
     */
-  def getXmlResponse(url: URL): NodeSeq = {
-      XML.load(url)
+  def getXmlResponse(url: URL): NodeSeq = XML.load(url)
+
+  /**
+    * Builds a OAI request URL
+    *
+    * @param resumptionToken String
+    *                        Optional, token used to resume a previous harvest request
+    * @param verb String
+    *             OAI request verb
+    *             See https://www.openarchives.org/OAI/openarchivesprotocol.html#ProtocolMessages
+    * @return URL
+    */
+  def buildQueryUrl(resumptionToken: String = "",
+                    verb: String): URL = {
+
+    // Build the URL parameters
+    val urlParams = new URIBuilder()
+      .setScheme(endpoint.getProtocol)
+      .setHost(endpoint.getHost)
+      .setParameter("verb", verb)
+
+    // TODO there is probably a much more elegant way to write this if
+    if (resumptionToken.isEmpty)
+      urlParams.setParameter("metadataPrefix", metadataPrefix)
+    else
+      urlParams.setParameter("resumptionToken", resumptionToken)
+
+    // Build and return the URL
+    urlParams.build.toURL
   }
 
   /**
@@ -150,13 +177,14 @@ class OaiHarvester (endpoint: URL,
     * @param errorCode String
     *                  The error code from the OAI response
     *                  See https://www.openarchives.org/OAI/openarchivesprotocol.html#ErrorConditions
-    * @throws HarvesterException
+    * @throws HarvesterException if an error code that should terminate the harvest prematurely is
+    *                            received
     */
   @throws(classOf[HarvesterException])
   def checkOaiErrorCode(errorCode: String): Unit = {
     // This is not my preferred formatting style but it is much more readable
     errorCode match {
-      case "badArguement"             => throw HarvesterException("Bad arguement in OAI request.")
+      case "badArgument"             => throw HarvesterException("Bad argument in OAI request.")
       case "badResumptionToken"       => throw HarvesterException("Bad resumption token in OAI request")
       case "badVerb"                  => throw HarvesterException("Bad verb in harvest request")
       case "idDoesNotExist"           => throw HarvesterException("Item does not exist in feed.")
