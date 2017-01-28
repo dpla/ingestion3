@@ -1,8 +1,6 @@
-package la.dp.ingestion3
+package la.dp.ingestion3.harvesters
 
-import la.dp.ingestion3.harvesters.{Harvester, OaiHarvester}
 import org.scalatest.{FlatSpec, Matchers}
-import org.scalatest._
 
 /**
   * Test class for Harvester

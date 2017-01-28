@@ -1,10 +1,8 @@
-package la.dp.ingestion3
+package la.dp.ingestion3.harvesters
 
 import java.io.File
 
-import la.dp.ingestion3.harvesters.OaiHarvester
 import org.scalatest.{FlatSpec, Matchers}
-import org.scalatest._
 
 /**
   * Tests for OaiHarvester
