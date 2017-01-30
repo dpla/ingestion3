@@ -57,18 +57,11 @@ trait ApiHarvester {
       val entity: HttpEntity = response.getEntity()
 
       if (entity != null) {
-        // Parse the JSON
         val json = parse(EntityUtils.toString(entity))
-        // Select the docs array
         val docs = (json \\ "docs")
-        // If the number of docs returned is less than the number
-        // requested then there is no more to fetch
         fetchAgain = docs.children.length == fetchSize.toInt
-
         for (doc <- (json \\ "docs").children) {
-          // Generate the DPLA id
           val identifier: String = Harvester.generateMd5((doc \ "id").toString)
-          // Write to Hadoop Seq File
           writer.append(new Text(identifier), new Text(compact(doc)))
         }
       }
@@ -77,7 +70,7 @@ trait ApiHarvester {
     }
 
     if (fetchAgain) {
-      return offset.toInt + fetchSize.toInt
+      offset.toInt + fetchSize.toInt
     }
     return -1
   }
