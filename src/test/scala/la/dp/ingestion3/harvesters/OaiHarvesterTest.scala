@@ -1,11 +1,10 @@
 package la.dp.ingestion3.harvesters
 
 import java.io.File
-import java.net.{URL, UnknownHostException}
+import java.net.URL
 
 import org.scalatest._
 
-import scala.xml.NodeSeq
 
 /**
   * Tests for OaiHarvester
@@ -15,24 +14,24 @@ import scala.xml.NodeSeq
   */
 class OaiHarvesterTest extends FlatSpec with Matchers {
   val file = new File("/dev/null")
-  val oai_url = new java.net.URL("http://aggregator.padigital.org/oai")
-  val oai_verb = "ListRecords"
+  val oaiUrl = new java.net.URL("http://aggregator.padigital.org/oai")
+  val oaiVerb = "ListRecords"
   val prefix = "oai_dc"
-  val harvester = new OaiHarvester(endpoint = oai_url,
+  val harvester = new OaiHarvester(endpoint = oaiUrl,
                                    metadataPrefix = prefix,
                                    outDir = file)
 
-  val xml_valid = la.dp.ingestion3.data.TestOaiData.pa_oai
-  val xml_error = la.dp.ingestion3.data.TestOaiData.pa_error
+  val validOaiXml = la.dp.ingestion3.data.TestOaiData.pa_oai
+  val invalidOaiXml = la.dp.ingestion3.data.TestOaiData.pa_error
 
   "buildQueryUrl (when not given a resumptionToken) " should " return a URL" in {
-    val q_url = harvester.buildQueryUrl(verb="ListRecords")
-    assert(q_url.isInstanceOf[URL])
+    val queryUrl = harvester.buildQueryUrl(verb="ListRecords")
+    assert(queryUrl.isInstanceOf[URL])
   }
 
   "buildQueryUrl (when given a resumptionToken) " should " return a URL" in {
-    val q_url = harvester.buildQueryUrl(resumptionToken = "pickup1", verb="ListRecords")
-    assert(q_url.isInstanceOf[URL])
+    val queryUrl = harvester.buildQueryUrl(resumptionToken = "pickup1", verb="ListRecords")
+    assert(queryUrl.isInstanceOf[URL])
   }
 
   "checkOaiErrorCode " should " throw a HarvesterException checking 'badArgument'" in {
@@ -67,37 +66,41 @@ class OaiHarvesterTest extends FlatSpec with Matchers {
     assertThrows[HarvesterException] { harvester.checkOaiErrorCode("non-Spec complient error message") }
   }
 
+  it should " return nothing if there is no error code" in {
+    harvester.checkOaiErrorCode("")
+  }
+
   "getErrorCode " should " return an empty string if there is no error code" in {
-      assert(harvester.getErrorCode(xml_valid).isEmpty)
+      assert(harvester.getErrorCode(validOaiXml).isEmpty)
   }
 
   it should " return a non-Empty string if there is an error code " in {
-    val errorCode = harvester.getErrorCode(xml_error)
+    val errorCode = harvester.getErrorCode(invalidOaiXml)
     assert(errorCode.nonEmpty)
   }
 
   "getHarvestedRecords " should " return a map of size 10 from data.pa_oai" in {
-    assert(harvester.getHarvestedRecords(xml_valid).size == 10)
+    assert(harvester.getHarvestedRecords(validOaiXml).size == 10)
   }
 
   "getResumptionToken() " should " return an empty String if there is an error in the response " in {
-    assert(harvester.getResumptionToken(xml_error).isEmpty)
+    assert(harvester.getResumptionToken(invalidOaiXml).isEmpty)
   }
 
   it should " return a non-empty String value if the response is valid and incomplete" in {
-    assert(harvester.getResumptionToken(xml_valid).nonEmpty)
+    assert(harvester.getResumptionToken(validOaiXml).nonEmpty)
   }
   it should " equal '90d421891feba6922f57a59868d7bcd1'" in {
-    assert(harvester.getResumptionToken(xml_valid) == "90d421891feba6922f57a59868d7bcd1")
+    assert(harvester.getResumptionToken(validOaiXml) == "90d421891feba6922f57a59868d7bcd1")
   }
 
   "getXmlResponse (when given an invalid URL) " should " throw a HarvesterException exception" in {
-    val bad_url = new java.net.URL("http://aggregator.dev.fake/oai")
-    val bad_harvester = new OaiHarvester( endpoint = bad_url,
+    val badUrl = new java.net.URL("http://aggregator.dev.fake/oai")
+    val badHarvester = new OaiHarvester( endpoint = badUrl,
                                           metadataPrefix = prefix,
                                           outDir = file)
 
-    val q_url = bad_harvester.buildQueryUrl(resumptionToken = "", verb = oai_verb)
-    assertThrows[HarvesterException] { bad_harvester.getXmlResponse(q_url) }
+    val q_url = badHarvester.buildQueryUrl(resumptionToken = "", verb = oaiVerb)
+    assertThrows[HarvesterException] { badHarvester.getXmlResponse(q_url) }
   }
 }
