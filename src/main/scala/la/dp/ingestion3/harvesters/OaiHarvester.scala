@@ -1,14 +1,13 @@
 package la.dp.ingestion3.harvesters
 
-import java.io.File
+import java.io.{File, IOException}
 import java.net.URL
 
 import la.dp.ingestion3.utils.FileIO
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.LogManager
-import scala.collection.mutable
 
-import scala.xml.{NodeSeq, XML}
+import scala.xml.{NodeSeq, SAXParseException, XML}
 
 /**
   * OAI-PMHester for aggregating metadata into the DPLA
@@ -24,14 +23,12 @@ import scala.xml.{NodeSeq, XML}
   */
 class OaiHarvester (endpoint: URL,
                     metadataPrefix: String,
-                    outDir: File,
-                    idPath: String = "" ) {
+                    outDir: File) {
 
   // Logging object
   private[this] val logger = LogManager.getLogger("harvester")
   // Trying to store harvested data into a mutableMap and then seralize
   // to disk after harvest is done.
-  private val harvestedRecords: mutable.Map[File, String] = mutable.Map[File, String]()
 
   /**
     * Control method for harvesting
@@ -39,73 +36,67 @@ class OaiHarvester (endpoint: URL,
     * @param verb String
     *             The OAI verb to use in the request
     */
+  @throws(classOf[Exception])
   def runHarvest(verb: String): Unit = {
+
     var resumptionToken: String = ""
 
     try {
       do {
         val url = buildQueryUrl(resumptionToken, verb)
         val xml = getXmlResponse(url)
-        // Get and check the
+        // Get and check the error code if it exists
         val errorCode = getErrorCode(xml)
-        if (errorCode.nonEmpty) {
+        if (Predef.augmentString(errorCode).nonEmpty) {
           checkOaiErrorCode(errorCode)
         }
+        // Transform the XML response into a Map and write Map that to disk
+        val docMap = getHarvestedRecords(xml)
+        FileIO.writeFiles(docMap)
 
-        getHarvestedRecords(xml)
         resumptionToken = getResumptionToken(xml)
 
       } while (Predef.augmentString(resumptionToken).nonEmpty)
     } catch {
       // TODO improve this error messaging
-      case he: HarvesterException => {
-        val errMsg = s"Error during harvest.\nException message: ${he.getMessage}"
-        logger.error(errMsg)
+      case harvestError: HarvesterException => {
+        logger.error(harvestError.getMessage)
+        throw new Exception("Harvest failed")
       }
     }
-
-    // Serialize the map of records and file paths to disk (or wherever)
-    FileIO.writeFiles(harvestedRecords.toMap)
   }
 
   /**
     * Makes a single request to the OAI endpoint and adds the records
     * in the result to a Map[File, String] object
+    * TODO: I think that the errorCode checking should bubble up from here but
+    * TODO: trapping it is easier for now. This should be a point
+    * TODO: of further discussion in terms of error handing across
+    * TODO: the project (styles and practices)
     *
     * @param xml NodeSeq
     *            Complete OAI-PMH XML response
     *
-    *          TODO: I think that the errorCode checking should bubble up from here but
-    *          TODO: trapping it is easier for now. This should be a point
-    *          TODO: of further discussion in terms of error handing across
-    *          TODO: the project (styles and practices)
-    *
-    *          TODO: This method has a side-effect of mutating the class Map
-    *          TODO: harvestRecords. It should return a Map of records from
-    *          TODO: the request and then merge that map with an immutable map
-    *          TODO: but I haven't figure that out yet
+    * @return Map[File, String
+    *         Map of the records in the response keyed to the fully qualified
+    *         serialization path
     */
-   private def getHarvestedRecords(xml: NodeSeq): Unit = {
-      val docs: NodeSeq = xml \\ "OAI-PMH" \\ "record"
-
-      // Attempt at FP
-      docs.par
-          .foreach { doc => {
-            // TODO this path should not be fixed
-            val provIdentifier = (doc \\ "header" \\ "identifier").text
-            val dplaIdentifier = Harvester.generateMd5(provIdentifier)
-            val outFile = new File(outDir, dplaIdentifier + ".xml")
-
-            // #harvest() probably shouldn't be writing these files to disk
-            // So I moved serialization to its own method and store the harvested
-            // records in a Map here. This approach may have scaling issues and
-            // requires testing
-
-            // FileIO.writeFile(doc.text, outFile)
-            harvestedRecords.put(outFile, doc.text)
-          }
-        }
-   }
+  def getHarvestedRecords(xml: NodeSeq): Map[File, String] = {
+    val docs: NodeSeq = xml \\ "OAI-PMH" \\ "record"
+    //
+    var harvestedRecords = scala.collection.mutable.Map[File, String]()
+    // Attempt at FP, there is probably a cleaner way to write this with more tests
+    docs.par
+      .foreach { doc => {
+        // TODO this path should not be fixed but should be a parameter
+        val provIdentifier = (doc \\ "header" \\ "identifier").text
+        val dplaIdentifier = Harvester.generateMd5(provIdentifier)
+        val outFile = new File(outDir, dplaIdentifier + ".xml")
+        harvestedRecords.put(outFile, doc.text)
+      }
+    }
+    harvestedRecords.toMap
+  }
 
   /**
     * Get the resumptionToken in the response
@@ -132,15 +123,31 @@ class OaiHarvester (endpoint: URL,
   /**
     * Executes the request and returns the XML response
     * as a NodeSeq object
-    * TODO clarify error handling. Was the try/catch
-    * TODO block even necessary here?
     *
     * @param url URL
     *            OAI request URL
     * @return NodeSeq
     *         XML response
     */
-  def getXmlResponse(url: URL): NodeSeq = XML.load(url)
+  @throws(classOf[HarvesterException])
+  def getXmlResponse(url: URL): NodeSeq = {
+    try {
+      XML.load(url)
+    } catch {
+      // TODO more nuanced error handling and logging
+      case e:SAXParseException => {
+        val msg = s"Unable to parse XML from response\n\t ${url.toString}\n\t"
+        throw HarvesterException(msg + e.getMessage)
+      }
+      case e:IOException => {
+        val msg = "Unable to load response from OAI request\n\t"
+        throw HarvesterException(msg + e.getMessage)
+      }
+      case e => {
+        throw HarvesterException(e.getMessage)
+      }
+    }
+  }
 
   /**
     * Builds a OAI request URL
@@ -159,6 +166,7 @@ class OaiHarvester (endpoint: URL,
     val urlParams = new URIBuilder()
       .setScheme(endpoint.getProtocol)
       .setHost(endpoint.getHost)
+      .setPath(endpoint.getPath)
       .setParameter("verb", verb)
 
     // TODO there is probably a much more elegant way to write this if
@@ -167,7 +175,6 @@ class OaiHarvester (endpoint: URL,
     else
       urlParams.setParameter("resumptionToken", resumptionToken)
 
-    // Build and return the URL
     urlParams.build.toURL
   }
 
@@ -176,24 +183,19 @@ class OaiHarvester (endpoint: URL,
     *
     * @param errorCode String
     *                  The error code from the OAI response
-    *                  See https://www.openarchives.org/OAI/openarchivesprotocol.html#ErrorConditions
-    * @throws HarvesterException if an error code that should terminate the harvest prematurely is
+    *                  For expected values see:
+    *                   https://www.openarchives.org/OAI/openarchivesprotocol.html#ErrorConditions
+    * @throws HarvesterException If an error code that should terminate the harvest prematurely is
     *                            received
     */
   @throws(classOf[HarvesterException])
   def checkOaiErrorCode(errorCode: String): Unit = {
-    // This is not my preferred formatting style but it is much more readable
     errorCode match {
-      case "badArgument"             => throw HarvesterException("Bad argument in OAI request.")
-      case "badResumptionToken"       => throw HarvesterException("Bad resumption token in OAI request")
-      case "badVerb"                  => throw HarvesterException("Bad verb in harvest request")
-      case "idDoesNotExist"           => throw HarvesterException("Item does not exist in feed.")
-      case "noMetadataFormats"        => throw HarvesterException("No metadata formats available")
-      case "noSetHierarchy"           => throw HarvesterException("Sets not supported")
-      case "cannotDisseminateFormat"  => throw HarvesterException("Incorrect metadata format")
-      case "noRecordsMatch"           => logger.warn("No records returned from request")
-      case ""                         => logger.info("No error")
-      case _                          => throw HarvesterException(s"Unknown error code: ${errorCode}")
+      case "" => logger.info("No error in OAI request")
+      case _ => {
+        // Need to figure out how to do a better check on error codes that isn't listing them
+        throw HarvesterException(s"Error returned from OAI request.\nError code:${errorCode}")
+      }
     }
   }
 }

@@ -46,11 +46,9 @@ object Utils {
     * @return The number of files that match the extension
     */
  def countFiles(outDir: File, ext: String): Long = {
-   val recordsHarvested = outDir.list()
+   outDir.list()
      .par
-     .filter(fileName => fileName.endsWith(ext)).length
-
-   return recordsHarvested
+     .count(fileName => fileName.endsWith(ext))
  }
 
   /**

@@ -6,7 +6,8 @@ import java.util.concurrent.TimeUnit
 
 import com.twitter.finagle.http.path./
 import la.dp.ingestion3.harvesters.OaiHarvester
-import la.dp.ingestion3.utils.{FileIO, Utils}
+import la.dp.ingestion3.utils.Utils
+import org.apache.pig.builtin.ROUND_TO
 
 /**
   * Driver program for OAI harvest
@@ -35,18 +36,26 @@ object OaiHarvesterMain extends App {
     val verb = args(3)
 
     logger.info(s"Saving records to ${outDir}")
-
+    logger.info(s"Harvesting from ${endpoint}")
     // Create the harvester and run
     val harvester: OaiHarvester = new OaiHarvester(endpoint, metadataPrefix, outDir)
 
     val start = System.currentTimeMillis()
-    harvester.runHarvest(verb)
+    try {
+      harvester.runHarvest(verb)
+    } catch {
+      case e:Exception => {
+        logger.error(e.getMessage)
+        logger.warn("Exiting...")
+        System.exit(-1)
+      }
+    }
     val end = System.currentTimeMillis()
 
-    val recordsHarvested = Utils.countFiles(outDir, ".xml")
-    val runtimeMs = end - start
+    val recordsHarvestedCount = Utils.countFiles(outDir, ".xml")
+    val runtimeMs = (end - start) + 1
 
-    printResults(runtimeMs, recordsHarvested)
+    printResults(runtimeMs, recordsHarvestedCount)
 
   }
 
@@ -59,19 +68,19 @@ object OaiHarvesterMain extends App {
     *   Throughput: 920 records/second
     *
     * @param runtime Runtime in milliseconds
-    * @param recordsHarvested Number of records in the output directory
+    * @param recordsHarvestedCount Number of records in the output directory
     */
 
-  def printResults(runtime: Long, recordsHarvested: Long): Unit = {
+  def printResults(runtime: Long, recordsHarvestedCount: Long): Unit = {
     // Make things pretty
     val formatter = java.text.NumberFormat.getIntegerInstance
     val minutes: Long = TimeUnit.MILLISECONDS.toMinutes(runtime)
     val seconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) -
       TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(runtime))
-    val runtimeInSeconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime)
-    val recordsPerSecond: Long = recordsHarvested/runtimeInSeconds
+    val runtimeInSeconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime)+1
+    val recordsPerSecond: Long = recordsHarvestedCount/runtimeInSeconds
 
-    println(s"File count: ${formatter.format(recordsHarvested)}")
+    println(s"File count: ${formatter.format(recordsHarvestedCount)}")
     println(s"Runtime: $minutes:$seconds")
     println(s"Throughput: ${formatter.format(recordsPerSecond)} records/second")
   }
