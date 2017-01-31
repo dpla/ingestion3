@@ -25,10 +25,12 @@ import scala.xml.{NodeSeq, XML}
   */
 class OaiHarvester (endpoint: URL,
                     metadataPrefix: String,
-                    outDir: File) {
+                    outDir: File,
+                    fileIO: FileIO) {
 
   // Logging object
   private[this] val logger = LogManager.getLogger("OAI harvester")
+
 
   /**
     * Control method for harvesting
@@ -51,7 +53,7 @@ class OaiHarvester (endpoint: URL,
         checkOaiErrorCode(errorCode)
         // Transform the XML response into a Map[File,String] and write to disk
         val docMap: Map[File, String] = getHarvestedRecords(xml)
-        FileIO.writeFiles(docMap)
+        fileIO.writeFiles(docMap)
         // Get the new resumptionToken, empty String if at end
         resumptionToken = getResumptionToken(xml)
       } while (Predef.augmentString(resumptionToken).nonEmpty)
@@ -130,7 +132,7 @@ class OaiHarvester (endpoint: URL,
       case NonFatal(e) => {
         val msg: String = s"Unable to load response from " +
           s"OAI request:\n\t${url.toString}\n\t"
-        throw HarvesterException(msg + e.getMessage )
+        throw new HarvesterException(msg + e.getMessage )
       }
     }
   }

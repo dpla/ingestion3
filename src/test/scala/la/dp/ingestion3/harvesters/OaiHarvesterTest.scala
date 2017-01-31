@@ -3,6 +3,7 @@ package la.dp.ingestion3.harvesters
 import java.io.File
 import java.net.URL
 
+import la.dp.ingestion3.utils.FlatFileIO
 import org.scalatest._
 
 
@@ -17,12 +18,14 @@ class OaiHarvesterTest extends FlatSpec with Matchers {
   val oaiUrl = new java.net.URL("http://aggregator.padigital.org/oai")
   val oaiVerb = "ListRecords"
   val prefix = "oai_dc"
+  val fileIO = new FlatFileIO
   val harvester = new OaiHarvester(endpoint = oaiUrl,
                                    metadataPrefix = prefix,
-                                   outDir = file)
+                                   outDir = file,
+                                   fileIO)
 
-  val validOaiXml = la.dp.ingestion3.data.TestOaiData.pa_oai
-  val invalidOaiXml = la.dp.ingestion3.data.TestOaiData.pa_error
+  val validOaiXml = la.dp.ingestion3.data.TestOaiData.paOaiListRecordsRsp
+  val invalidOaiXml = la.dp.ingestion3.data.TestOaiData.paOaiErrorRsp
 
   "buildQueryUrl (when not given a resumptionToken) " should " return a URL" in {
     val queryUrl = harvester.buildQueryUrl(verb="ListRecords")
@@ -79,7 +82,7 @@ class OaiHarvesterTest extends FlatSpec with Matchers {
     assert(errorCode.nonEmpty)
   }
 
-  "getHarvestedRecords " should " return a map of size 10 from data.pa_oai" in {
+  "getHarvestedRecords " should " return a map of size 10 from data.paOaiListRecordsRsp" in {
     assert(harvester.getHarvestedRecords(validOaiXml).size == 10)
   }
 
@@ -98,7 +101,8 @@ class OaiHarvesterTest extends FlatSpec with Matchers {
     val badUrl = new java.net.URL("http://aggregator.dev.fake/oai")
     val badHarvester = new OaiHarvester( endpoint = badUrl,
                                           metadataPrefix = prefix,
-                                          outDir = file)
+                                          outDir = file,
+    fileIO)
 
     val q_url = badHarvester.buildQueryUrl(resumptionToken = "", verb = oaiVerb)
     assertThrows[HarvesterException] { badHarvester.getXmlResponse(q_url) }

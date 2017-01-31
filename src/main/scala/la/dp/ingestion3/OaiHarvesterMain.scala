@@ -5,7 +5,7 @@ import java.net.URL
 import java.util.concurrent.TimeUnit
 
 import la.dp.ingestion3.harvesters.OaiHarvester
-import la.dp.ingestion3.utils.Utils
+import la.dp.ingestion3.utils.{FlatFileIO, Utils}
 
 import scala.util.control.NonFatal
 
@@ -34,11 +34,12 @@ object OaiHarvesterMain extends App {
     val endpoint = new URL(args(1))
     val metadataPrefix = args(2)
     val verb = args(3)
+    val fileIO = new FlatFileIO
 
     logger.debug(s"Saving records to ${outDir}")
     logger.debug(s"Harvesting from ${endpoint}")
     // Create the harvester and run
-    val harvester: OaiHarvester = new OaiHarvester(endpoint, metadataPrefix, outDir)
+    val harvester: OaiHarvester = new OaiHarvester(endpoint, metadataPrefix, outDir, fileIO)
 
     val start = System.currentTimeMillis()
     try {

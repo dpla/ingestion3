@@ -8,9 +8,9 @@ import java.nio.file.StandardOpenOption.{CREATE, TRUNCATE_EXISTING}
   * Basic FileIO ops
   *
   */
-object FileIO {
+class FlatFileIO extends FileIO {
   /**
-    * Save the save to disk
+    * Save the file to disk
     */
   def writeFile(record: String, outFile: File): Unit = {
     Files.write(outFile.toPath, record.getBytes("utf8"), CREATE, TRUNCATE_EXISTING)
@@ -25,4 +25,9 @@ object FileIO {
   def writeFiles(records: Map[File, String]): Unit = {
     records.foreach{ case(file: File, data: String) => writeFile(data, file) }
   }
+}
+
+trait FileIO {
+  def writeFile(record: String, outFile: File): Unit
+  def writeFiles(records: Map[File, String]): Unit
 }

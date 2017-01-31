@@ -6,13 +6,11 @@ import scala.xml.Elem
   * Created by scott on 1/22/17.
   */
 object TestOaiData {
-
-  def getPaOai(): Elem = { pa_oai }
-  def getPaOaiError: Elem = { pa_error }
-
   /**
     * Local data for testing...
     */
+
+    // This needs to be a String because Scala won't allow for malformed XML
     val badXmlStr: String=
       """<OAI-PMH>
         <header>
@@ -20,7 +18,7 @@ object TestOaiData {
         </header>
       </OAI-PMH>"""
 
-    val pa_error: Elem =
+    val paOaiErrorRsp: Elem =
     <OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
       <responseDate>2017-01-27T05:10:17Z</responseDate>
       <request verb="ListRecords">http://localhost:8080/fedora/oai</request>
@@ -29,7 +27,7 @@ object TestOaiData {
       </error>
     </OAI-PMH>
 
-  val pa_oai: Elem =
+  val paOaiListRecordsRsp: Elem =
     <OAI-PMH
     xmlns="http://www.openarchives.org/OAI/2.0/"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
