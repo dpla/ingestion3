@@ -3,8 +3,7 @@ package la.dp.ingestion3.utils
 import java.io.File
 
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.Path
-import org.apache.hadoop.fs.FileSystem
+import org.apache.hadoop.fs.{Path, FileSystem}
 import org.apache.hadoop.io.SequenceFile.Reader
 import org.apache.hadoop.io.Text
 

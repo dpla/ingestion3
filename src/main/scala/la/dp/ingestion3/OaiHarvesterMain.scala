@@ -4,10 +4,8 @@ import java.io.File
 import java.net.URL
 import java.util.concurrent.TimeUnit
 
-import com.twitter.finagle.http.path./
 import la.dp.ingestion3.harvesters.OaiHarvester
 import la.dp.ingestion3.utils.Utils
-import org.apache.pig.builtin.ROUND_TO
 
 /**
   * Driver program for OAI harvest
@@ -35,8 +33,8 @@ object OaiHarvesterMain extends App {
     val metadataPrefix = args(2)
     val verb = args(3)
 
-    logger.info(s"Saving records to ${outDir}")
-    logger.info(s"Harvesting from ${endpoint}")
+    logger.debug(s"Saving records to ${outDir}")
+    logger.debug(s"Harvesting from ${endpoint}")
     // Create the harvester and run
     val harvester: OaiHarvester = new OaiHarvester(endpoint, metadataPrefix, outDir)
 
@@ -44,9 +42,9 @@ object OaiHarvesterMain extends App {
     try {
       harvester.runHarvest(verb)
     } catch {
-      case e:Exception => {
+      case e => {
         logger.error(e.getMessage)
-        logger.warn("Exiting...")
+        logger.debug("Exiting...")
         System.exit(-1)
       }
     }

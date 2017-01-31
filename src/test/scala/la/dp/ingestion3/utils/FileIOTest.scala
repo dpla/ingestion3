@@ -6,7 +6,7 @@ import org.scalatest.{FlatSpec, Matchers}
 
 
 /**
-  * Created by @Scott on 1/30/17.
+  * Tests for the ingestion3 FileIO utility
   */
 class FileIOTest extends FlatSpec with Matchers {
   "writeFile " should " create a file" in {

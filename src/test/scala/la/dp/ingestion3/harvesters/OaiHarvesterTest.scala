@@ -70,12 +70,12 @@ class OaiHarvesterTest extends FlatSpec with Matchers {
     harvester.checkOaiErrorCode("")
   }
 
-  "getErrorCode " should " return an empty string if there is no error code" in {
-      assert(harvester.getErrorCode(validOaiXml).isEmpty)
+  "getOaiErrorCode " should " return an empty string if there is no error code" in {
+      assert(harvester.getOaiErrorCode(validOaiXml).isEmpty)
   }
 
   it should " return a non-Empty string if there is an error code " in {
-    val errorCode = harvester.getErrorCode(invalidOaiXml)
+    val errorCode = harvester.getOaiErrorCode(invalidOaiXml)
     assert(errorCode.nonEmpty)
   }
 
@@ -102,5 +102,12 @@ class OaiHarvesterTest extends FlatSpec with Matchers {
 
     val q_url = badHarvester.buildQueryUrl(resumptionToken = "", verb = oaiVerb)
     assertThrows[HarvesterException] { badHarvester.getXmlResponse(q_url) }
+  }
+
+  /**
+    * TODO Figure out mocks...
+    */
+  it should " throw a SaxParserException when given bad XML" in {
+    // harvester.getXmlResponse()
   }
 }
