@@ -39,6 +39,7 @@ class OaiQueryUrlBuilder extends QueryUrlBuilder {
   }
 }
 
+// TODO learn how to properly override this w/o listing all params
 trait QueryUrlBuilder {
   def buildQueryUrl(endpoint: URL,
                     metadataPrefix: String,

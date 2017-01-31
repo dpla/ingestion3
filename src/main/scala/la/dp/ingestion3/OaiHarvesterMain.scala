@@ -26,7 +26,7 @@ object OaiHarvesterMain extends App {
 
     val logger = org.apache.log4j.LogManager.getLogger("harvester")
 
-    if(args.length =!= 4) {
+    if(!args.length.equals(4)) {
       println("Bad Args: <OUT>, <OAI URL>, <METADATA PREFIX>, <OAI VERB>")
       sys.exit(-1)
     }
