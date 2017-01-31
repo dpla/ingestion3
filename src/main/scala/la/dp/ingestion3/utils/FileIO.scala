@@ -23,6 +23,6 @@ object FileIO {
     * @param records Map[File, String]
     */
   def writeFiles(records: Map[File, String]): Unit = {
-    records.foreach( kv => writeFile(kv._2, kv._1))
+    records.foreach{ case(file: File, data: String) => writeFile(data, file) }
   }
 }
