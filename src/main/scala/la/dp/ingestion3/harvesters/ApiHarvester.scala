@@ -1,9 +1,11 @@
 
 package la.dp.ingestion3.harvesters
 
-import org.apache.hadoop.io.Text
 import org.apache.hadoop.io.SequenceFile.Writer
+import org.apache.hadoop.io.Text
+
 import org.apache.http.HttpEntity
+
 import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
 import org.apache.http.client.utils.URIBuilder
 import org.apache.http.impl.client.HttpClients
