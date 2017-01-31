@@ -26,18 +26,21 @@ object OaiHarvesterMain extends App {
 
     val logger = org.apache.log4j.LogManager.getLogger("harvester")
 
-    if(!args.length.equals(4)) {
-      println("Bad Args: <OUT>, <OAI URL>, <METADATA PREFIX>, <OAI VERB>")
+    if(!args.length === 4 ) {
+      logger.error("Bad number of args: <OUT>, <OAI URL>, <METADATA PREFIX>, <OAI VERB>")
       sys.exit(-1)
     }
+
     val outDir: File = new File(args(0))
     val endpoint = new URL(args(1))
     val metadataPrefix = args(2)
     val verb = args(3)
+    // How to serialize the output
     val fileIO = new FlatFileIO
 
     logger.debug(s"Saving records to ${outDir}")
     logger.debug(s"Harvesting from ${endpoint}")
+
     // Create the harvester and run
     val harvester: OaiHarvester = new OaiHarvester(endpoint, metadataPrefix, outDir, fileIO)
 
