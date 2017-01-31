@@ -77,7 +77,7 @@ class OaiHarvesterTest extends FlatSpec with Matchers with BeforeAndAfter {
   }
 
   "getHarvestedRecords " should " return a map of size 10 from data.paOaiListRecordsRsp" in {
-    assert(harvester.getHarvestedRecords(validOaiXml).size == 10)
+    assert(harvester.getHarvestedRecords(validOaiXml).size === 10)
   }
 
   "getResumptionToken() " should " return an empty String if there is an error in the response " in {
@@ -88,7 +88,7 @@ class OaiHarvesterTest extends FlatSpec with Matchers with BeforeAndAfter {
     assert(harvester.getResumptionToken(validOaiXml).nonEmpty)
   }
   it should " equal '90d421891feba6922f57a59868d7bcd1'" in {
-    assert(harvester.getResumptionToken(validOaiXml) == "90d421891feba6922f57a59868d7bcd1")
+    assert(harvester.getResumptionToken(validOaiXml) === "90d421891feba6922f57a59868d7bcd1")
   }
 
   // TODO Figure out mocks
