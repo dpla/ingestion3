@@ -4,11 +4,13 @@ import java.io.File
 import java.net.URL
 
 import la.dp.ingestion3.utils.FileIO
+
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.LogManager
 
-import scala.xml.{NodeSeq, XML}
 import scala.util.control.NonFatal
+import scala.xml.{NodeSeq, XML}
+
 /**
   * OAI-PMH harvester for aggregating metadata into the DPLA
   *

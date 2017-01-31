@@ -7,6 +7,8 @@ import java.util.concurrent.TimeUnit
 import la.dp.ingestion3.harvesters.OaiHarvester
 import la.dp.ingestion3.utils.Utils
 
+import scala.util.control.NonFatal
+
 /**
   * Driver program for OAI harvest
   */
@@ -42,7 +44,7 @@ object OaiHarvesterMain extends App {
     try {
       harvester.runHarvest(verb)
     } catch {
-      case e => {
+      case NonFatal(e) => {
         logger.error(e.getMessage)
         logger.debug("Exiting...")
         System.exit(-1)
