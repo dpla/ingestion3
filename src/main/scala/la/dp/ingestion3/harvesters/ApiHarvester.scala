@@ -1,15 +1,15 @@
 
 package la.dp.ingestion3.harvesters
 
+import org.apache.hadoop.io.Text
+import org.apache.hadoop.io.SequenceFile.Writer
 import org.apache.http.HttpEntity
 import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
 import org.apache.http.client.utils.URIBuilder
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.util.EntityUtils
 import org.json4s.jackson.JsonMethods._
-import org.apache.commons.codec.digest.DigestUtils
-import org.apache.hadoop.io.Text
-import org.apache.hadoop.io.SequenceFile.Writer
+
 
 trait ApiHarvester {
   
@@ -68,10 +68,10 @@ trait ApiHarvester {
     } finally {
       response.close()
     }
-
+    // Calculate the new offset value
     if (fetchAgain) {
       offset.toInt + fetchSize.toInt
     }
-    return -1
+    -1
   }
 }

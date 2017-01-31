@@ -3,12 +3,11 @@ package la.dp.ingestion3.harvesters
 import java.io.File
 import java.net.URL
 
+import la.dp.ingestion3.OaiQueryUrlBuilder
 import la.dp.ingestion3.utils.FileIO
-
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.LogManager
 
-import scala.util.control.NonFatal
 import scala.xml.{NodeSeq, XML}
 
 /**
@@ -43,27 +42,20 @@ class OaiHarvester (endpoint: URL,
     // mutable resumption token for pagination
     var resumptionToken: String = ""
 
-    // TODO FP-this, but I'm not sure if it can be
-    try {
-      do {
-        val url = buildQueryUrl(resumptionToken, verb)
-        val xml = getXmlResponse(url)
-        // Get and check the error code if it exists
-        val errorCode = getOaiErrorCode(xml)
-        checkOaiErrorCode(errorCode)
-        // Transform the XML response into a Map[File,String] and write to disk
-        val docMap: Map[File, String] = getHarvestedRecords(xml)
-        fileIO.writeFiles(docMap)
-        // Get the new resumptionToken, empty String if at end
-        resumptionToken = getResumptionToken(xml)
-      } while (Predef.augmentString(resumptionToken).nonEmpty)
-    } catch {
-      // TODO improve this error messaging
-      case harvestError: HarvesterException => {
-        logger.error(harvestError.getMessage)
-        throw new Exception("Harvest failed")
-      }
-    }
+    do {
+      val urlBuilder = new OaiQueryUrlBuilder()
+      val url = urlBuilder.buildQueryUrl(endpoint, metadataPrefix, resumptionToken, verb)
+
+      val xml = getXmlResponse(url)
+      // Get and check the error code if it exists
+      val errorCode = getOaiErrorCode(xml)
+      checkOaiErrorCode(errorCode)
+      // Transform the XML response into a Map[File,String] and write to disk
+      val docMap: Map[File, String] = getHarvestedRecords(xml)
+      fileIO.writeFiles(docMap)
+      // Get the new resumptionToken, empty String if at end
+      resumptionToken = getResumptionToken(xml)
+    } while (Predef.augmentString(resumptionToken).nonEmpty)
   }
 
   /**
@@ -126,43 +118,7 @@ class OaiHarvester (endpoint: URL,
     */
   @throws(classOf[HarvesterException])
   def getXmlResponse(url: URL): NodeSeq = {
-    try {
-      XML.load(url)
-    } catch {
-      case NonFatal(e) => {
-        val msg: String = s"Unable to load response from " +
-          s"OAI request:\n\t${url.toString}\n\t"
-        throw new HarvesterException(msg + e.getMessage )
-      }
-    }
-  }
-
-  /**
-    * Builds an OAI request
-    *
-    * @param resumptionToken String
-    *                        Optional, token used to resume a previous harvest request
-    * @param verb String
-    *             OAI request verb
-    *             See https://www.openarchives.org/OAI/openarchivesprotocol.html#ProtocolMessages
-    * @return URL
-    */
-  def buildQueryUrl(resumptionToken: String = "",
-                    verb: String): URL = {
-
-    // Build the URL parameters
-    val urlParams = new URIBuilder()
-      .setScheme(endpoint.getProtocol)
-      .setHost(endpoint.getHost)
-      .setPath(endpoint.getPath)
-      .setParameter("verb", verb)
-
-    // If resumptionToken is empty then use the metadataPrefix parameter
-    resumptionToken match {
-      case "" => urlParams.setParameter("metadataPrefix", metadataPrefix)
-      case _  => urlParams.setParameter("resumptionToken", resumptionToken)
-    }
-    urlParams.build.toURL
+    XML.load(url)
   }
 
   /**

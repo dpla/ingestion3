@@ -27,6 +27,26 @@ class FlatFileIO extends FileIO {
   }
 }
 
+/**
+  * FileIO implementation using SequenceFiles
+  *
+  */
+class SeqFileIO extends  FileIO {
+  /**
+    * Saves data to SequenceFile
+    *
+    * @param record data to save
+    * @param outFile
+    */
+  def writeFile(record: String, outFile: File): Unit = {
+
+  }
+
+  def writeFiles(records: Map[File, String]): Unit = {
+
+  }
+}
+
 trait FileIO {
   def writeFile(record: String, outFile: File): Unit
   def writeFiles(records: Map[File, String]): Unit
