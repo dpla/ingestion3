@@ -16,50 +16,25 @@ import scala.xml.{NodeSeq, XML}
   * @param outDir File
   *               Location to save files
   *               TODO: this should be 100% agnostic S3, local, network
-  * @param endpoint URL
-  *                 The OAI endpoint to harvest against
-  * @param metadataPrefix String
-  *                       Metadata format of the response
-  *                       https://www.openarchives.org/OAI/openarchivesprotocol.html#MetadataNamespaces
+  * @param fileIO FileIO
+  *               The protocol to use to save the records (FlatFileIO, SeqFileIO)
   */
-class OaiHarvester (endpoint: URL,
-                    metadataPrefix: String,
-                    outDir: File,
+class OaiHarvester (outDir: File,
                     fileIO: FileIO) {
 
   // Logging object
   private[this] val logger = LogManager.getLogger("OAI harvester")
 
-
   /**
-    * Control method for harvesting
+    * Testing the apply method
     *
-    * @param verb String
-    *             The OAI verb to use in the request
+    * @param url
+    * @return
     */
-  @throws(classOf[Exception])
-  def runHarvest(verb: String): Unit = {
-    // mutable resumption token for pagination
-    var resumptionToken: String = ""
-
-    do {
-      val urlBuilder = new OaiQueryUrlBuilder()
-      val url = urlBuilder.buildQueryUrl(endpoint, metadataPrefix, resumptionToken, verb)
-
-      val xml = getXmlResponse(url)
-      // Get and check the error code if it exists
-      val errorCode = getOaiErrorCode(xml)
-      checkOaiErrorCode(errorCode)
-      // Transform the XML response into a Map[File,String] and write to disk
-      val docMap: Map[File, String] = getHarvestedRecords(xml)
-      fileIO.writeFiles(docMap)
-      // Get the new resumptionToken, empty String if at end
-      resumptionToken = getResumptionToken(xml)
-    } while (Predef.augmentString(resumptionToken).nonEmpty)
-  }
+  def apply(url: URL) = runHarvest(url)
 
   /**
-    * Takes the XML response from a ListRecords request and processes it
+    * Takes the XML response from a List[Sets,Records] request and processes it
     * to create a Map[File, String] of target file locations and XML to save.
     *
     * @param xml NodeSeq
@@ -83,6 +58,23 @@ class OaiHarvester (endpoint: URL,
   }
 
   /**
+    * Get the error property if it exists
+    *
+    * @return Option[String]
+    *         The error code if it exists otherwise empty string
+    */
+  def getOaiErrorCode(xml: NodeSeq): Option[String] = {
+    // TODO this is redundant but I don't know how to annonymously
+    // TODO the xml select
+    val errorCode = (xml \\ "OAI-PMH" \\ "error").text
+
+    errorCode match {
+      case "" => None
+      case _ => Some(errorCode)
+    }
+  }
+
+  /**
     * Get the resumptionToken from the response
     *
     * @param xml NodeSeq
@@ -99,16 +91,6 @@ class OaiHarvester (endpoint: URL,
    }
 
   /**
-    * Get the error property if it exists
-    *
-    * @return String
-    *         The error code if it exists otherwise empty string
-    */
-  def getOaiErrorCode(xml: NodeSeq): String = {
-    (xml \\ "OAI-PMH" \\ "error").text
-  }
-
-  /**
     * Executes the request and returns the response
     *
     * @param url URL
@@ -122,23 +104,29 @@ class OaiHarvester (endpoint: URL,
   }
 
   /**
-    * Checks the error response codes in the OAI response
+    * Makes a single request and saves records in resposne to disk
     *
-    * @param errorCode String
-    *                  The error code from the OAI response
-    *                  For expected values see:
-    *                   https://www.openarchives.org/OAI/openarchivesprotocol.html#ErrorConditions
-    * @throws HarvesterException If an error code that should terminate the harvest prematurely is
-    *                            received
+    * @param url URL
+    *            Complete request URL to make of the OAI endpoint
+    *
+    * @return String
+    *         resumptionToken
     */
-  @throws(classOf[HarvesterException])
-  def checkOaiErrorCode(errorCode: String): Unit = {
-    errorCode match {
-      case "" => logger.info("No error in OAI response.")
-      case _ => {
-        // TODO Need to figure out how to do a better check on error codes that isn't listing them
-        throw HarvesterException(s"Error returned from OAI request.\nError code:${errorCode}")
-      }
+  @throws(classOf[Exception])
+  def runHarvest(url: URL): String = {
+    val xml = getXmlResponse(url)
+
+    // Get and check the error code if it exists
+    getOaiErrorCode(xml) match {
+      case Some(e) => throw HarvesterException(s"Request failed: ${url.toString} \n"+e)
+      case None => logger.info(s"Request successful: ${url.toString}")
     }
+    // Transform the XML response into a Map[File,String] and write to disk
+    val docMap: Map[File, String] = getHarvestedRecords(xml)
+    // TODO ...move this out...I could return an OaiResult object that would
+    // TODO hold resTok, output map or error.. need to think about that
+    fileIO.writeFiles(docMap)
+    // Return the resumptionToken
+    getResumptionToken(xml)
   }
 }

@@ -1,11 +1,13 @@
 package la.dp.ingestion3.harvesters
 
+import la.dp.ingestion3.OaiQueryUrlBuilder
 import java.io.File
 import java.net.URL
 
 import la.dp.ingestion3.utils.FlatFileIO
 import org.scalatest._
 
+import scala.None
 import scala.xml.NodeSeq
 
 
@@ -25,55 +27,17 @@ class OaiHarvesterTest extends FlatSpec with Matchers with BeforeAndAfter {
   val oaiVerb = "ListRecords"
   val prefix = "oai_dc"
   val fileIO = new FlatFileIO
+  val queryUrlBuilder = new OaiQueryUrlBuilder
+  val queryUrl = queryUrlBuilder.buildQueryUrl(oaiUrl, prefix, "", oaiVerb)
+  val harvester = new OaiHarvester(outDir, fileIO)
 
-  val harvester = new OaiHarvester(endpoint = oaiUrl,
-    metadataPrefix = prefix,
-    outDir = outDir,
-    fileIO = fileIO)
-
-  "checkOaiErrorCode " should " throw a HarvesterException checking 'badArgument'" in {
-    assertThrows[HarvesterException] { harvester.checkOaiErrorCode("badArgument") }
+  "getOaiErrorCode " should " return Option.None if there is no error code" in {
+    harvester.getOaiErrorCode(validOaiXml) shouldBe None
   }
 
-  it should "throw a HarvesterException checking 'badResumptionToken" in {
-    assertThrows[HarvesterException] { harvester.checkOaiErrorCode("badResumptionToken") }
-  }
-
-  it should "throw a HarvesterException checking 'badVerb" in {
-    assertThrows[HarvesterException] { harvester.checkOaiErrorCode("badVerb") }
-  }
-
-  it should "throw a HarvesterException checking 'idDoesNotExist" in {
-    assertThrows[HarvesterException] { harvester.checkOaiErrorCode("idDoesNotExist") }
-  }
-
-  it should "throw a HarvesterException checking 'noMetadataFormats" in {
-    assertThrows[HarvesterException] { harvester.checkOaiErrorCode("noMetadataFormats") }
-  }
-
-  it should "throw a HarvesterException checking 'noSetHierarchy" in {
-    assertThrows[HarvesterException] { harvester.checkOaiErrorCode("noSetHierarchy") }
-  }
-
-  it should "throw a HarvesterException checking 'cannotDisseminateFormat" in {
-    assertThrows[HarvesterException] { harvester.checkOaiErrorCode("cannotDisseminateFormat") }
-  }
-
-  it should "throw a HarvesterException checking 'non-Spec complient error code" in {
-    assertThrows[HarvesterException] { harvester.checkOaiErrorCode("non-Spec complient error message") }
-  }
-
-  it should " return nothing if there is no error code" in {
-    harvester.checkOaiErrorCode("")
-  }
-
-  "getOaiErrorCode " should " return an empty string if there is no error code" in {
-      assert(harvester.getOaiErrorCode(validOaiXml).isEmpty)
-  }
-
-  it should " return a non-Empty string if there is an error code " in {
-    val errorCode = harvester.getOaiErrorCode(invalidOaiXml)
-    assert(errorCode.nonEmpty)
+  it should " return a Option.Some(msg) if there is an error code " in {
+    harvester.getOaiErrorCode(invalidOaiXml) shouldBe
+      Some("Repository does not provide that format in OAI-PMH responses.")
   }
 
   "getHarvestedRecords " should " return a map of size 10 from data.paOaiListRecordsRsp" in {

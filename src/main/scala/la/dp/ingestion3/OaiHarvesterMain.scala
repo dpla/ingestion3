@@ -26,7 +26,8 @@ object OaiHarvesterMain extends App {
 
     val logger = org.apache.log4j.LogManager.getLogger("harvester")
 
-    if(!args.length === 4 ) {
+    // Complains about not being typesafe...
+    if(args.length != 4 ) {
       logger.error("Bad number of args: <OUT>, <OAI URL>, <METADATA PREFIX>, <OAI VERB>")
       sys.exit(-1)
     }
@@ -42,22 +43,28 @@ object OaiHarvesterMain extends App {
     logger.debug(s"Harvesting from ${endpoint}")
 
     // Create the harvester and run
-    val harvester: OaiHarvester = new OaiHarvester(endpoint, metadataPrefix, outDir, fileIO)
+    val oaiHarvester: OaiHarvester = new OaiHarvester(outDir, fileIO)
+    val queryUrlBuilder = new OaiQueryUrlBuilder
+    var resumptionToken = ""
 
+    // performance tracking
     val start = System.currentTimeMillis()
+
     try {
-      harvester.runHarvest(verb)
+      do {
+        val queryUrl = queryUrlBuilder.buildQueryUrl(endpoint, metadataPrefix, resumptionToken, verb)
+        resumptionToken = oaiHarvester(queryUrl)
+      } while (resumptionToken.nonEmpty)
     } catch {
       case NonFatal(e) => {
         logger.error(e.getMessage)
-        logger.debug("Exiting...")
         System.exit(-1)
       }
     }
     val end = System.currentTimeMillis()
 
     val recordsHarvestedCount = Utils.countFiles(outDir, ".xml")
-    val runtimeMs = (end - start) + 1
+    val runtimeMs = (end - start)
 
     printResults(runtimeMs, recordsHarvestedCount)
 
@@ -81,7 +88,8 @@ object OaiHarvesterMain extends App {
     val minutes: Long = TimeUnit.MILLISECONDS.toMinutes(runtime)
     val seconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) -
       TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(runtime))
-    val runtimeInSeconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime)+1
+    val runtimeInSeconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) + 1
+    // add 1 to avoid divide by zero error
     val recordsPerSecond: Long = recordsHarvestedCount/runtimeInSeconds
 
     println(s"File count: ${formatter.format(recordsHarvestedCount)}")
