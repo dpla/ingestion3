@@ -8,20 +8,38 @@ import org.apache.http.client.utils.URIBuilder
   * Created by scott on 1/31/17.
   */
 class OaiQueryUrlBuilder extends QueryUrlBuilder {
+
   /**
     * Builds an OAI request
-    *
-    * @param resumptionToken String
-    *                        Optional, token used to resume a previous harvest request
+    * @param endpoint
+    * @param metadataPrefix
     * @param verb String
     *             OAI request verb
     *             See https://www.openarchives.org/OAI/openarchivesprotocol.html#ProtocolMessages
     * @return URL
     */
-  def buildQueryUrl( endpoint: URL,
+  def buildQueryUrl(endpoint: URL,
+                    metadataPrefix: String,
+                    verb: String): URL = {
+    this.buildQueryUrl(endpoint, metadataPrefix, "", verb)
+  }
+
+  /**
+    * Builds an OAI request
+    *
+    * @param endpoint URL
+    * @param resumptionToken String
+    * @param metadataPrefix String
+    * @param verb String
+    *             OAI request verb
+    *             See https://www.openarchives.org/OAI/openarchivesprotocol.html#ProtocolMessages
+    * @return URL
+    */
+  def buildQueryUrl (endpoint: URL,
     metadataPrefix: String,
-    resumptionToken: String = "",
+    resumptionToken: String,
     verb: String): URL = {
+
 
     // Build the URL parameters
     val urlParams = new URIBuilder()
@@ -41,8 +59,9 @@ class OaiQueryUrlBuilder extends QueryUrlBuilder {
 
 // TODO learn how to properly override this w/o listing all params
 trait QueryUrlBuilder {
-  def buildQueryUrl(endpoint: URL,
-                    metadataPrefix: String,
-                    resumptionToken: String = "",
-                    verb: String): URL
+  def buildQueryUrl (endpoint: URL,
+    metadataPrefix: String,
+    resumptionToken: String = "",
+    verb: String): URL
+
 }
