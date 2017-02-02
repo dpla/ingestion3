@@ -4,13 +4,9 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 
 import la.dp.ingestion3.harvesters.OaiHarvester
+import org.apache.log4j.LogManager
 
-import org.apache.avro.Schema
-import org.apache.avro.file.{CodecFactory, DataFileWriter}
-import org.apache.avro.generic.{GenericDatumWriter, GenericRecord, GenericRecordBuilder}
-
-import scala.collection.mutable
-
+import scala.collection.mutable.Map
 import scala.util.control.Breaks._
 
 /**
@@ -28,76 +24,43 @@ object OaiHarvesterMain extends App {
     */
   override def main(args: Array[String]): Unit = {
 
-    val logger = org.apache.log4j.LogManager.getLogger("harvester")
+    val logger = LogManager.getLogger("OaiHarvester")
 
     // Complains about not being typesafe...
     if(args.length != 4 ) {
-      logger.error("Bad number of args: <OUT>, <OAI URL>, <METADATA PREFIX>, <OAI VERB>")
+      logger.error("Bad number of args: <OUTPUT FILE>, <OAI URL>, <METADATA PREFIX>, <OAI VERB>")
       sys.exit(-1)
     }
 
-    val outDir: File = new File(args(0))
-
-    val endpoint = args(1)
-    val metadataPrefix = args(2)
-    val verb = args(3)
-    // How to serialize the output
-
+    val outputFile: File = new File(args(0))
     val queryUrlBuilder = new OaiQueryUrlBuilder
-    // Create filesystem IO
-    val avsc =
-      """
-        |{
-        | "type" : "record",
-        | "name" : "oaiHarvester",
-        | "fields": [
-        |   {
-        |     "name": "data",
-        |     "type" : "string"
-        |   }
-        | ]
-        |}
-      """.stripMargin
 
-    val schema = new Schema.Parser().parse(avsc)
-    val writer = new DataFileWriter[Object](new GenericDatumWriter[Object]())
-    val builder = new GenericRecordBuilder(schema)
-    writer.setCodec(CodecFactory.snappyCodec())
-    writer.create(schema, new File("/Users/scott/test.avro"))
-
-    logger.debug(s"Harvesting from ${endpoint}")
-
-    // TODO I still have one mutable var here, how the F. is this supposed to work
-    // TODO in terms of 'streaming' these records if the resumptionToken changes every time
-    var params: mutable.Map[String, String] = mutable.Map("endpoint" -> endpoint,
-                                                          "metadataPrefix" -> metadataPrefix,
-                                                          "verb" -> verb)
+    // Had to use a mutable...can't quite shake this
+    val params = Map[String,String]("endpoint" -> args(1),
+      "metadataPrefix" -> args(2),
+      "verb" -> args(3))
 
 
-    breakable { while(true) {
-      val url = queryUrlBuilder.buildQueryUrl(params.toMap)
+    val oaiHarvester = new OaiHarvester()
+    // Had to put it in a loop...can't quite shake this
+    breakable {
+      while(true) {
+        // Construct the URL and get the XML
+        val url: java.net.URL= queryUrlBuilder.buildQueryUrl(params.toMap)
+        val xml = oaiHarvester.getXmlResponse(url)
 
-      logger.debug( url.toString )
+        logger.debug(url.toString)
+        // Get resumptionToken for next request (if available)
+        oaiHarvester.getResumptionToken(xml) match {
+          case Some(v) => params.put("resumptionToken", v)
+          case None => break
+        }
 
-      val oaiHarvester = new OaiHarvester()
-      val xml = oaiHarvester.getXmlResponse(url)
-      // Evaluates whether the harvest is done
-      oaiHarvester.getResumptionToken(xml) match {
-        case Some(v) => params.put("resumptionToken", v)
-        case None => {
-          logger.debug("End of the line pal, harvest is done.")
-          break
+        for (doc <- new OaiHarvester(xml)) {
+          // TODO write to something
         }
       }
-
-      for (doc <- new OaiHarvester(xml)) {
-        builder.set("data", doc)
-        writer.append(builder.build())
-      }
-    } }
-
-
-    writer.close()
+    } // end while and breakable blocks
   }
 
   /**

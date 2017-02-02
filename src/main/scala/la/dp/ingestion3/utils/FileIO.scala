@@ -4,7 +4,9 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption.{CREATE, TRUNCATE_EXISTING}
 
-import org.apache.spark.rdd.RDD
+import org.apache.avro.Schema
+import org.apache.avro.file.{CodecFactory, DataFileWriter}
+import org.apache.avro.generic.{GenericDatumWriter, GenericRecordBuilder}
 
 /**
   * Basic FileIO ops
@@ -13,9 +15,12 @@ import org.apache.spark.rdd.RDD
 class FlatFileIO extends FileIO {
   /**
     * Save the file to disk
+    *
+    * @param record String
+    * @param outputFile String
     */
-  def writeFile(record: String, file: String): Unit = {
-    val outFile = new File(file).toPath
+  def writeFile(record: String, outputFile: String): Unit = {
+    val outFile = new File(outputFile).toPath
     Files.write(outFile, record.getBytes("utf8"), CREATE, TRUNCATE_EXISTING)
   }
 }
@@ -24,29 +29,49 @@ class FlatFileIO extends FileIO {
   * FileIO implementation using SequenceFiles
   *
   */
-class SeqFileIO extends  FileIO {
+class AvroFileIO extends FileIO {
+
+  val avsc =
+  """
+    |{
+    | "type" : "record",
+    | "name" : "oaiHarvester",
+    | "fields": [
+    |   {
+    |     "name": "data",
+    |     "type" : "string"
+    |   }
+    | ]
+    |}
+  """.stripMargin
+
+  val schema = new Schema.Parser().parse(avsc)
+  val builder = new GenericRecordBuilder(schema)
+
   /**
-    * Saves data to SequenceFile
+    * Saves data to AvroFile
     *
-    * TODO: this is not how seq files should be written, I need the entirety
-    * of what needs to be written to disk, not individual files
-    *
-    * Either I aggregate them outside of OaiHarvester or after harvesting all
-    * records into single files I use those files to create the SeqFile
-    *
+    * TODO figure this sheet out
+    *   Commented out for testing
     * @param record data to save
-    * @param outFile
     */
-  def writeFile(record: String, outFile: String): Unit = {
-//    val inputData: RDD[(String, Array[Byte])] = sc.sequenceFile[String, Array[Byte]](args(0))
-//    val outputData = inputData.map(record => (record._1, process(record._2)))
-//    val key = new File(outFile).getName
-//    val mapRdd: RDD[(String, String)] = new RDD (key,record)
-//    mapRdd.saveAsSequenceFile(outFile,
-//    Some(classOf[org.apache.hadoop.io.compress.DefaultCodec]))
+  def writeFile(record: String): Unit = {
+//    val writer = new DataFileWriter[Object](new GenericDatumWriter[Object]())
+//    writer.setCodec(CodecFactory.snappyCodec())
+//    builder.set("data", record)
+//    writer.appendTo(builder.build())
+//    writer.close()
+  }
+
+  /**
+    *
+    * @param record
+    * @param outputFile
+    */
+  override def writeFile(record: String, outputFile: String): Unit = {
   }
 }
 
 trait FileIO {
-  def writeFile(record: String, outFile: String): Unit
+  def writeFile(record: String, outputFile: String): Unit
 }

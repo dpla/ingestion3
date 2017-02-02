@@ -12,17 +12,19 @@ import scala.xml.{Elem, Node, NodeSeq, XML}
   */
 class OaiHarvester (xml: NodeSeq) extends Traversable[String] {
 
-  // Logging object
-  private[this] val logger = LogManager.getLogger("OAI harvester")
+  private[this] val logger = LogManager.getLogger("OaiHarvester")
 
+  // Overloaded constructor, needed because I don't instantiate with XML
+  // But it needs to be in the class sig for me to pass XML to foreach {}
+  // TODO this feels wrong
   def this() = this(Nil)
 
   /**
-    * Traverses the documents in an OAI result and
-    * streams them back
+    * Traverses the documents in XML result and
+    * streams them back as Strings
     *
-    * @param f The
-    * @tparam U
+    * @param f The record harvested
+    * @tparam U Xml response from OAI request
     */
   override def foreach[U](f: (String) => U): Unit = {
     // throws exception if error in OAI response
@@ -79,7 +81,7 @@ class OaiHarvester (xml: NodeSeq) extends Traversable[String] {
     */
    def getResumptionToken(xml: NodeSeq): Option[String] = {
      (xml \\ "OAI-PMH" \\ "resumptionToken").text match {
-       case "" => None
+       case e if e.isEmpty => None
        case _ => Some( (xml \\ "OAI-PMH" \\ "resumptionToken").text.trim )
      }
    }
@@ -92,7 +94,6 @@ class OaiHarvester (xml: NodeSeq) extends Traversable[String] {
     * @return NodeSeq
     *         XML response
     */
-  @throws(classOf[HarvesterException])
   def getXmlResponse(url: URL): NodeSeq = {
     XML.load(url)
   }
