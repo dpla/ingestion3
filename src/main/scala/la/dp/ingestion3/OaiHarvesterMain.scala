@@ -1,13 +1,17 @@
 package la.dp.ingestion3
 
 import java.io.File
-import java.net.URL
 import java.util.concurrent.TimeUnit
 
 import la.dp.ingestion3.harvesters.OaiHarvester
-import la.dp.ingestion3.utils.{FlatFileIO, Utils}
 
-import scala.util.control.NonFatal
+import org.apache.avro.Schema
+import org.apache.avro.file.{CodecFactory, DataFileWriter}
+import org.apache.avro.generic.{GenericDatumWriter, GenericRecord, GenericRecordBuilder}
+
+import scala.collection.mutable
+
+import scala.util.control.Breaks._
 
 /**
   * Driver program for OAI harvest
@@ -33,41 +37,67 @@ object OaiHarvesterMain extends App {
     }
 
     val outDir: File = new File(args(0))
-    val endpoint = new URL(args(1))
+
+    val endpoint = args(1)
     val metadataPrefix = args(2)
     val verb = args(3)
     // How to serialize the output
-    val fileIO = new FlatFileIO
 
-    logger.debug(s"Saving records to ${outDir}")
+    val queryUrlBuilder = new OaiQueryUrlBuilder
+    // Create filesystem IO
+    val avsc =
+      """
+        |{
+        | "type" : "record",
+        | "name" : "oaiHarvester",
+        | "fields": [
+        |   {
+        |     "name": "data",
+        |     "type" : "string"
+        |   }
+        | ]
+        |}
+      """.stripMargin
+
+    val schema = new Schema.Parser().parse(avsc)
+    val writer = new DataFileWriter[Object](new GenericDatumWriter[Object]())
+    val builder = new GenericRecordBuilder(schema)
+    writer.setCodec(CodecFactory.snappyCodec())
+    writer.create(schema, new File("/Users/scott/test.avro"))
+
     logger.debug(s"Harvesting from ${endpoint}")
 
-    // Create the harvester and run
-    val oaiHarvester: OaiHarvester = new OaiHarvester(outDir, fileIO)
-    val queryUrlBuilder = new OaiQueryUrlBuilder
-    var resumptionToken = ""
+    // TODO I still have one mutable var here, how the F. is this supposed to work
+    // TODO in terms of 'streaming' these records if the resumptionToken changes every time
+    var params: mutable.Map[String, String] = mutable.Map("endpoint" -> endpoint,
+                                                          "metadataPrefix" -> metadataPrefix,
+                                                          "verb" -> verb)
 
-    // performance tracking
-    val start = System.currentTimeMillis()
 
-    try {
-      do {
-        val queryUrl = queryUrlBuilder.buildQueryUrl(endpoint, metadataPrefix, resumptionToken, verb)
-        resumptionToken = oaiHarvester(queryUrl)
-      } while (resumptionToken.nonEmpty)
-    } catch {
-      case NonFatal(e) => {
-        logger.error(e.getMessage)
-        System.exit(-1)
+    breakable { while(true) {
+      val url = queryUrlBuilder.buildQueryUrl(params.toMap)
+
+      logger.debug( url.toString )
+
+      val oaiHarvester = new OaiHarvester()
+      val xml = oaiHarvester.getXmlResponse(url)
+      // Evaluates whether the harvest is done
+      oaiHarvester.getResumptionToken(xml) match {
+        case Some(v) => params.put("resumptionToken", v)
+        case None => {
+          logger.debug("End of the line pal, harvest is done.")
+          break
+        }
       }
-    }
-    val end = System.currentTimeMillis()
 
-    val recordsHarvestedCount = Utils.countFiles(outDir, ".xml")
-    val runtimeMs = (end - start)
+      for (doc <- new OaiHarvester(xml)) {
+        builder.set("data", doc)
+        writer.append(builder.build())
+      }
+    } }
 
-    printResults(runtimeMs, recordsHarvestedCount)
 
+    writer.close()
   }
 
   /**
