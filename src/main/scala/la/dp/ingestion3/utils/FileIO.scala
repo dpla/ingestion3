@@ -26,27 +26,21 @@ class FlatFileIO extends FileIO {
 }
 
 /**
-  * FileIO implementation using SequenceFiles
+  * FileIO implementation using Avro files
   *
+  * @param avschema String
+  *                 The schema to serialize to
+  * @param outputFile File
+  *                   The Avro file destination
   */
-class AvroFileIO extends FileIO {
+class AvroFileIO (avschema: String, outputFile: File) extends FileIO {
 
-  val avsc =
-  """
-    |{
-    | "type" : "record",
-    | "name" : "oaiHarvester",
-    | "fields": [
-    |   {
-    |     "name": "data",
-    |     "type" : "string"
-    |   }
-    | ]
-    |}
-  """.stripMargin
-
-  val schema = new Schema.Parser().parse(avsc)
+  // Create and configure the writer
+  val schema = new Schema.Parser().parse(avschema)
+  val writer = new DataFileWriter[Object](new GenericDatumWriter[Object]())
   val builder = new GenericRecordBuilder(schema)
+  writer.setCodec(CodecFactory.snappyCodec())
+  writer.create(schema, outputFile)
 
   /**
     * Saves data to AvroFile
@@ -56,11 +50,8 @@ class AvroFileIO extends FileIO {
     * @param record data to save
     */
   def writeFile(record: String): Unit = {
-//    val writer = new DataFileWriter[Object](new GenericDatumWriter[Object]())
-//    writer.setCodec(CodecFactory.snappyCodec())
-//    builder.set("data", record)
-//    writer.appendTo(builder.build())
-//    writer.close()
+    builder.set("body", record)
+    writer.append(builder.build()  )
   }
 
   /**
@@ -70,8 +61,19 @@ class AvroFileIO extends FileIO {
     */
   override def writeFile(record: String, outputFile: String): Unit = {
   }
+
+  /**
+    * Close the writer
+    *
+    */
+  def close: Unit = {
+    writer.close()
+  }
 }
 
+/**
+  *
+  */
 trait FileIO {
   def writeFile(record: String, outputFile: String): Unit
 }
