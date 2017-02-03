@@ -34,8 +34,8 @@ class OaiQueryUrlBuilder extends QueryUrlBuilder {
       .setParameter("verb", verb)
 
     params.get("resumptionToken") match {
-      case Some(value) => urlParams.setParameter("resumptionToken", value)
-      case None  => urlParams.setParameter("metadataPrefix", metadataPrefix)
+      case Some(v) if v.nonEmpty => urlParams.setParameter("resumptionToken", v)
+      case None => urlParams.setParameter("metadataPrefix", metadataPrefix)
     }
 
     urlParams.build.toURL
