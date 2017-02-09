@@ -3,7 +3,7 @@ package la.dp.ingestion3
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-import la.dp.ingestion3.harvesters.{OAIFeedTraversable, OAIResponseTraversable}
+import la.dp.ingestion3.harvesters.OaiFeedTraversable
 import la.dp.ingestion3.utils.AvroFileIO
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileReader
@@ -20,7 +20,7 @@ import org.apache.log4j.LogManager
   */
 object OaiHarvesterMain extends App {
 
-  val logger = LogManager.getLogger("OAIResponseTraversable")
+  val logger = LogManager.getLogger("OaiResponseProcessor")
 
   // Complains about not being typesafe...
   if(args.length != 4 ) {
@@ -42,16 +42,14 @@ object OaiHarvesterMain extends App {
   val outputFile: File = new File(args(0))
   val urlBuilder = new OaiQueryUrlBuilder
   val fileIO = new AvroFileIO(avrscheme, outputFile)
-  val oaiRunner = new OAIFeedTraversable()
+
   val params = Map[String,String](
     "endpoint" -> args(1),
     "metadataPrefix" -> args(2),
     "verb" -> args(3))
 
-  for (response <- oaiRunner.go(params, urlBuilder)) {
-    for (record <- new OAIResponseTraversable(response)) {
-      fileIO.writeFile(record)
-    }
+  for (record <- new OaiFeedTraversable(params, urlBuilder)) {
+    fileIO.writeFile(record)
   }
 
   print(getAvroCount(outputFile, avrscheme))

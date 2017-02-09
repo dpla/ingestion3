@@ -4,12 +4,12 @@ import org.scalatest._
 
 
 /**
-  * Tests for OAIResponseTraversable
+  * Tests for OaiResponseProcessor
   *
   * TODO: Figure out how to simulate http requests/responses.
   *
   */
-class OAIResponseTraversableTest extends FlatSpec with Matchers with BeforeAndAfter {
+class OaiResponseProcessorTest extends FlatSpec with Matchers with BeforeAndAfter {
 
 //  val validOaiXml = la.dp.ingestion3.data.TestOaiData.paOaiListRecordsRsp
 //  val invalidOaiXml = la.dp.ingestion3.data.TestOaiData.paOaiErrorRsp
@@ -20,7 +20,7 @@ class OAIResponseTraversableTest extends FlatSpec with Matchers with BeforeAndAf
 //  val prefix = "oai_dc"
 //  val fileIO = new FlatFileIO
 //  val urlBuilder = new OaiQueryUrlBuilder
-//  val harvester = new OAIResponseTraversable()
+//  val harvester = new OaiResponseProcessor()
 //
 //  "getOaiErrorCode " should " return Option.None if there is no error code" in {
 //    harvester.getOaiErrorCode(validOaiXml) shouldBe None
