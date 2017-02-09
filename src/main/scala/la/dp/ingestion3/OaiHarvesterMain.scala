@@ -27,21 +27,27 @@ object OaiHarvesterMain extends App {
     logger.error("Bad number of args: <OUTPUT FILE>, <OAI URL>, <METADATA PREFIX>, <OAI VERB>")
     sys.exit(-1)
   }
-  val avrscheme =
+  val schemaStr =
     """
-      | {
-      |   "namespace": "dpla",
-      |   "type": "record",
-      |   "name": "OriginalRecord",
-      |   "fields": [
-      |     {"name": "body", "type": "string"}
-      |   ]
-      |   }
+      |{
+      |  "namespace": "la.dp.avro.MAP_3.1",
+      |  "type": "record",
+      |  "name": "OriginalRecord",
+      |  "doc": "",
+      |  "fields": [
+      |    {"name": "or_document", "type": "string", "default": ""},
+      |    {"name": "or_mimetype", "type": "string", "default": ""},
+      |    {"name": "id",          "type": "string"},
+      |    {"name": "rdf_document","type": "string", "default": ""}
+      |  ]
+      |}
     """.stripMargin
 
   val outputFile: File = new File(args(0))
   val urlBuilder = new OaiQueryUrlBuilder
-  val fileIO = new AvroFileIO(avrscheme, outputFile)
+  val schema = new Schema.Parser().parse(schemaStr)
+
+  val fileIO = new AvroFileIO(schema, outputFile)
 
   val params = Map[String,String](
     "endpoint" -> args(1),
@@ -52,7 +58,7 @@ object OaiHarvesterMain extends App {
     fileIO.writeFile(record)
   }
 
-  print(getAvroCount(outputFile, avrscheme))
+  print(getAvroCount(outputFile, schema))
 
   /**
     * Print the results of a harvest
@@ -91,13 +97,11 @@ object OaiHarvesterMain extends App {
     * @return Integer
     *         The count of items
     */
-  def getAvroCount(path: File, schema: String): Integer = {
+  def getAvroCount(path: File, schema: Schema): Integer = {
     var cnt = 0
-    val schema_obj =  new Schema.Parser
-    val schema2 = schema_obj.parse(schema)
-    val READER2 = new GenericDatumReader[GenericRecord](schema2)
+    val reader = new GenericDatumReader[GenericRecord](schema)
 
-    val dataFileReader = new DataFileReader[GenericRecord](path, READER2)
+    val dataFileReader = new DataFileReader[GenericRecord](path, reader)
 
     while(dataFileReader.hasNext) {
       cnt = cnt+1

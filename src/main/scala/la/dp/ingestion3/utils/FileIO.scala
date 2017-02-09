@@ -4,9 +4,12 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption.{CREATE, TRUNCATE_EXISTING}
 
+import la.dp.ingestion3.harvesters.Harvester
 import org.apache.avro.Schema
 import org.apache.avro.file.{CodecFactory, DataFileWriter}
 import org.apache.avro.generic.{GenericDatumWriter, GenericRecordBuilder}
+
+import scala.xml.XML
 
 /**
   * Basic FileIO ops
@@ -33,10 +36,9 @@ class FlatFileIO extends FileIO {
   * @param outputFile File
   *                   The Avro file destination
   */
-class AvroFileIO (avschema: String, outputFile: File) extends FileIO {
+class AvroFileIO (schema: Schema, outputFile: File) extends FileIO {
 
   // Create and configure the writer
-  val schema = new Schema.Parser().parse(avschema)
   val writer = new DataFileWriter[Object](new GenericDatumWriter[Object]())
   val builder = new GenericRecordBuilder(schema)
   writer.setCodec(CodecFactory.snappyCodec())
@@ -50,7 +52,11 @@ class AvroFileIO (avschema: String, outputFile: File) extends FileIO {
     * @param record data to save
     */
   def writeFile(record: String): Unit = {
-    builder.set("body", record)
+    val id = XML.loadString(record) \\ "identifier"
+    builder.set("or_document", record)
+    builder.set("or_mimetype", "application/xml")
+    builder.set("id", Harvester.generateMd5(id.text))
+
     writer.append(builder.build())
   }
 
