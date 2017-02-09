@@ -18,9 +18,9 @@ class OaiQueryUrlBuilder extends QueryUrlBuilder {
     */
   def buildQueryUrl(params: Map[String, String]): URL = {
     // Required properties, not sure if this is the right style
-    assume(params.get("endpoint").get.nonEmpty)
-    assume(params.get("verb").get.nonEmpty)
-    assume(params.get("metadataPrefix").get.nonEmpty)
+    assume(params.get("endpoint").isDefined)
+    assume(params.get("verb").isDefined)
+    assume(params.get("metadataPrefix").isDefined)
 
     val verb = params.get("verb").get
     val metadataPrefix = params.get("metadataPrefix").get
@@ -35,7 +35,7 @@ class OaiQueryUrlBuilder extends QueryUrlBuilder {
 
     params.get("resumptionToken") match {
       case Some(v) if v.nonEmpty => urlParams.setParameter("resumptionToken", v)
-      case None => urlParams.setParameter("metadataPrefix", metadataPrefix)
+      case _ => urlParams.setParameter("metadataPrefix", metadataPrefix)
     }
 
     urlParams.build.toURL

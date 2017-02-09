@@ -51,7 +51,7 @@ class AvroFileIO (avschema: String, outputFile: File) extends FileIO {
     */
   def writeFile(record: String): Unit = {
     builder.set("body", record)
-    writer.append(builder.build()  )
+    writer.append(builder.build())
   }
 
   /**
