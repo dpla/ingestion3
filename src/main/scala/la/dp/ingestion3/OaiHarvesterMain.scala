@@ -27,17 +27,6 @@ object OaiHarvesterMain extends App {
     logger.error("Bad number of args: <OUTPUT FILE>, <OAI URL>, <METADATA PREFIX>, <OAI VERB>")
     sys.exit(-1)
   }
-
-  val outputFile: File = new File(args(0))
-  val queryUrlBuilder = new OaiQueryUrlBuilder
-  val fileIO = new AvroFileIO(avrscheme, outputFile)
-  val oaiRunner = new OAIFeedTraversable()
-
-  val params = Map[String,String](
-    "endpoint" -> args(1),
-    "metadataPrefix" -> args(2),
-    "verb" -> args(3))
-
   val avrscheme =
     """
       | {
@@ -47,10 +36,19 @@ object OaiHarvesterMain extends App {
       |   "fields": [
       |     {"name": "body", "type": "string"}
       |   ]
-    |   }
+      |   }
     """.stripMargin
 
-  for (response <- oaiRunner.go(params, queryUrlBuilder)) {
+  val outputFile: File = new File(args(0))
+  val urlBuilder = new OaiQueryUrlBuilder
+  val fileIO = new AvroFileIO(avrscheme, outputFile)
+  val oaiRunner = new OAIFeedTraversable()
+  val params = Map[String,String](
+    "endpoint" -> args(1),
+    "metadataPrefix" -> args(2),
+    "verb" -> args(3))
+
+  for (response <- oaiRunner.go(params, urlBuilder)) {
     for (record <- new OAIResponseTraversable(response)) {
       fileIO.writeFile(record)
     }

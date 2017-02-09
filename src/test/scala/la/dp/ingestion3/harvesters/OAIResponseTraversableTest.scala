@@ -19,7 +19,7 @@ class OAIResponseTraversableTest extends FlatSpec with Matchers with BeforeAndAf
 //  val oaiVerb = "ListRecords"
 //  val prefix = "oai_dc"
 //  val fileIO = new FlatFileIO
-//  val queryUrlBuilder = new OaiQueryUrlBuilder
+//  val urlBuilder = new OaiQueryUrlBuilder
 //  val harvester = new OAIResponseTraversable()
 //
 //  "getOaiErrorCode " should " return Option.None if there is no error code" in {

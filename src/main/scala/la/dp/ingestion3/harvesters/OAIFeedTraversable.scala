@@ -46,7 +46,7 @@ class OAIFeedTraversable extends {
       }
     }
     val allXml = List[NodeSeq]()
-    goAcc(params, urlBuilder, "", allXml)
+    goAcc( "", allXml)
   }
 
   /**
