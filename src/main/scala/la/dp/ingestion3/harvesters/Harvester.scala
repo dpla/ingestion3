@@ -2,6 +2,8 @@ package la.dp.ingestion3.harvesters
 
 import org.apache.commons.codec.digest.DigestUtils
 
+import scala.xml.Node
+
 /**
   * Base harvester
   */
@@ -20,6 +22,18 @@ object Harvester {
     if(prov.nonEmpty)
       DigestUtils.md5Hex(List(prov,id).mkString("--").trim)
     DigestUtils.md5Hex(id)
+  }
+
+  /**
+    * Accepts a record from an OAI feed an returns the local identifier
+    * TODO: parameterize the path to the ID
+    *
+    * @param record String
+    *               The original record from the OAI feed
+    * @return The local identifier
+    */
+  def getLocalId(record: Node): String = {
+    (record \\ "header" \\ "identifier").text
   }
 }
 

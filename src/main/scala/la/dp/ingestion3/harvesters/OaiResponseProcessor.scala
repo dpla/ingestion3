@@ -21,12 +21,29 @@ class OaiResponseProcessor() {
     * @return List[String]
     *         NodeSeq of records in the response
     */
-  def getHarvestedRecords(xml: NodeSeq): List[String] = {
+  def getRecordsAsList(xml: NodeSeq): List[String] = {
     val records = xml \\ "OAI-PMH" \\ "record"
     records.map(x => x.headOption match {
       case Some(node) => node.toString
-      case _ => ""
     }).toList
+  }
+
+  /**
+    * Iterates through the records in an OAI response and generates a DPLA ID for
+    * each and maps the original record to th DPLA ID
+    *
+    * @param xml NodeSeq
+    *            The XML response from the OAI request
+    * @return
+    */
+  def getRecordsAsMap(xml: NodeSeq): Map[String,String] = {
+    val records = xml \\ "OAI-PMH" \\ "record"
+    records.map(r => r.headOption match {
+      case Some(node) => {
+        val localId = Harvester.getLocalId(node)
+        Harvester.generateMd5(localId) -> node.toString
+      }
+    }).toMap
   }
 
   /**
@@ -37,10 +54,10 @@ class OaiResponseProcessor() {
     *
     */
   @throws(classOf[HarvesterException])
-  def getOaiErrorCode(xml: NodeSeq): Option[String] = {
+  def getOaiErrorCode(xml: NodeSeq): Unit = {
     (xml \\ "OAI-PMH" \\ "error").nonEmpty match {
       case true => throw new HarvesterException((xml \\ "OAI-PMH" \\ "error").text.trim)
-      case false => None
+      case false => Unit
     }
   }
 

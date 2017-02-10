@@ -1,0 +1,12 @@
+{
+  "namespace": "la.dp.avro.MAP_3.1",
+  "type": "record",
+  "name": "OriginalRecord",
+  "doc": "",
+  "fields": [
+    {"name": "or_document", "type": "string", "default": ""},
+    {"name": "or_mimetype", "type": "string", "default": ""},
+    {"name": "id",          "type": "string"},
+    {"name": "rdf_document","type": "string", "default": ""}
+  ]
+}

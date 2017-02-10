@@ -27,6 +27,7 @@ object OaiHarvesterMain extends App {
     logger.error("Bad number of args: <OUTPUT FILE>, <OAI URL>, <METADATA PREFIX>, <OAI VERB>")
     sys.exit(-1)
   }
+  // Schema taken from http://bit.ly/2k8II6Q
   val schemaStr =
     """
       |{
@@ -43,19 +44,20 @@ object OaiHarvesterMain extends App {
       |}
     """.stripMargin
 
-  val outputFile: File = new File(args(0))
+  val outputFile = new File(args(0))
   val urlBuilder = new OaiQueryUrlBuilder
-  val schema = new Schema.Parser().parse(schemaStr)
-
-  val fileIO = new AvroFileIO(schema, outputFile)
-
-  val params = Map[String,String](
+  val schema     = new Schema.Parser().parse(schemaStr)
+  val fileIO     = new AvroFileIO(schema, outputFile)
+  val params     = Map[String,String](
     "endpoint" -> args(1),
     "metadataPrefix" -> args(2),
     "verb" -> args(3))
 
-  for (record <- new OaiFeedTraversable(params, urlBuilder)) {
-    fileIO.writeFile(record)
+  try {
+    for (record <- new OaiFeedTraversable(params, urlBuilder))
+      record.map( r => fileIO.writeFile(r._1, r._2))
+  } finally {
+    fileIO.close
   }
 
   print(getAvroCount(outputFile, schema))
@@ -100,12 +102,11 @@ object OaiHarvesterMain extends App {
   def getAvroCount(path: File, schema: Schema): Integer = {
     var cnt = 0
     val reader = new GenericDatumReader[GenericRecord](schema)
-
     val dataFileReader = new DataFileReader[GenericRecord](path, reader)
 
     while(dataFileReader.hasNext) {
-      cnt = cnt+1
       dataFileReader.next()
+      cnt = cnt+1
     }
     cnt
   }

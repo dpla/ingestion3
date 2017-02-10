@@ -4,12 +4,9 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption.{CREATE, TRUNCATE_EXISTING}
 
-import la.dp.ingestion3.harvesters.Harvester
 import org.apache.avro.Schema
 import org.apache.avro.file.{CodecFactory, DataFileWriter}
 import org.apache.avro.generic.{GenericDatumWriter, GenericRecordBuilder}
-
-import scala.xml.XML
 
 /**
   * Basic FileIO ops
@@ -29,9 +26,9 @@ class FlatFileIO extends FileIO {
 }
 
 /**
-  * FileIO implementation using Avro files
+  * Write RDD to Avro file
   *
-  * @param avschema String
+  * @param schema Schema
   *                 The schema to serialize to
   * @param outputFile File
   *                   The Avro file destination
@@ -40,32 +37,25 @@ class AvroFileIO (schema: Schema, outputFile: File) extends FileIO {
 
   // Create and configure the writer
   val writer = new DataFileWriter[Object](new GenericDatumWriter[Object]())
-  val builder = new GenericRecordBuilder(schema)
   writer.setCodec(CodecFactory.snappyCodec())
   writer.create(schema, outputFile)
+  val builder = new GenericRecordBuilder(schema)
 
   /**
     * Saves data to AvroFile
     *
-    * TODO figure this sheet out
-    *   Commented out for testing
-    * @param record data to save
+    * @param id String
+    *           DPLA identifier
+    * @param data String
+    *             Record content
     */
-  def writeFile(record: String): Unit = {
-    val id = XML.loadString(record) \\ "identifier"
-    builder.set("or_document", record)
+  override def writeFile(id: String, data: String): Unit = {
+    // TODO: QUESTION >  is this the right place to do this?
+    builder.set("or_document", data)
     builder.set("or_mimetype", "application/xml")
-    builder.set("id", Harvester.generateMd5(id.text))
+    builder.set("id", id)
 
     writer.append(builder.build())
-  }
-
-  /**
-    *
-    * @param record
-    * @param outputFile
-    */
-  override def writeFile(record: String, outputFile: String): Unit = {
   }
 
   /**

@@ -19,7 +19,7 @@ import scala.xml.{NodeSeq, XML}
   */
 class OaiFeedTraversable(params: Map[String,String],
                          urlBuilder: OaiQueryUrlBuilder)
-  extends Traversable[String] {
+  extends Traversable[Map[String,String]] {
 
   //noinspection ScalaUnusedSymbol
   private[this] val logger = LogManager.getLogger("OaiHarvester")
@@ -30,21 +30,21 @@ class OaiFeedTraversable(params: Map[String,String],
     * @return Streams strings back to caller
     *
     */
-  override def foreach[U](f: (String) => U): Unit = {
+  override def foreach[U](f: (Map[String,String]) => U): Unit = {
 
     @scala.annotation.tailrec
     def foreachAccumulator(resumptionToken: String,
-              f: (String) => U): Unit = {
+              f: (Map[String,String]) => U): Unit = {
 
       val oaiProcessor = new OaiResponseProcessor()
       val queryParams = updateParams(List(params, Map("resumptionToken" -> resumptionToken)))
       val url = urlBuilder.buildQueryUrl(queryParams)
       val xml = getXmlResponse(url)
-      val records = oaiProcessor.getHarvestedRecords(xml)
+      val recordsMap = oaiProcessor.getRecordsAsMap(xml)
       val rToken  = oaiProcessor.getResumptionToken(xml)
 
-      // stream records back
-      records.foreach(f(_))
+      // stream Map[String,String] back
+      f(recordsMap)
 
       rToken match {
         case Some(r) => foreachAccumulator(r, f)
@@ -53,6 +53,7 @@ class OaiFeedTraversable(params: Map[String,String],
     }
     foreachAccumulator( "", f)
   }
+
 
   /**
     * Executes the request and returns the response
