@@ -7,7 +7,7 @@ import org.apache.http.client.utils.URIBuilder
 /**
   * Creates a fully formed and valid URL for OAI request
   */
-class OaiQueryUrlBuilder extends QueryUrlBuilder {
+class OaiQueryUrlBuilder extends QueryUrlBuilder with Serializable {
   /**
     * Builds an OAI request
     *

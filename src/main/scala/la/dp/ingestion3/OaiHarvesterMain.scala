@@ -3,12 +3,12 @@ package la.dp.ingestion3
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-import la.dp.ingestion3.harvesters.OaiFeedTraversable
-import la.dp.ingestion3.utils.AvroFileIO
+import la.dp.ingestion3.utils.OaiRdd
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileReader
 import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
 import org.apache.log4j.LogManager
+import org.apache.spark.{SparkConf, SparkContext}
 
 /**
   * Entry point for running an OAI harvest
@@ -44,23 +44,41 @@ object OaiHarvesterMain extends App {
       |}
     """.stripMargin
 
-  val outputFile = new File(args(0))
+  // val outputFile = new File(args(0))
+  // val schema     = new Schema.Parser().parse(schemaStr)
+  // val fileIO     = new AvroFileIO(schema, outputFile)
   val urlBuilder = new OaiQueryUrlBuilder
-  val schema     = new Schema.Parser().parse(schemaStr)
-  val fileIO     = new AvroFileIO(schema, outputFile)
   val params     = Map[String,String](
     "endpoint" -> args(1),
     "metadataPrefix" -> args(2),
     "verb" -> args(3))
 
+
+
+
+
+  /*
   try {
     for (record <- new OaiFeedTraversable(params, urlBuilder))
-      record.map( r => fileIO.writeFile(r._1, r._2))
+      record.map { case(id, data) => fileIO.writeFile(id, data) }
   } finally {
     fileIO.close
   }
 
   print(getAvroCount(outputFile, schema))
+  */
+
+  // delete the file on run
+  new File(args(0)).delete()
+
+  val sparkConf = new SparkConf()
+    .setAppName("Harvester")
+    .setMaster("local")
+
+  val sc = new SparkContext(sparkConf)
+  val oaiRdd: OaiRdd = new OaiRdd(sc, params, urlBuilder)
+  oaiRdd.saveAsTextFile(args(0), classOf[org.apache.hadoop.io.compress.CompressionCodec])
+  sc.stop()
 
   /**
     * Print the results of a harvest

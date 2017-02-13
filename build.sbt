@@ -7,7 +7,7 @@ version := "0.0.1"
 scalaVersion := "2.11.8"
 
 libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % "2.0.1" % "provided",
+  "org.apache.spark" %% "spark-core" % "2.0.1",
   "org.json4s" %% "json4s-core" % "3.2.11" % "provided",
   "org.json4s" %% "json4s-jackson" % "3.2.11" % "provided",
   "com.twitter" %% "finagle-http" % "6.41.0",

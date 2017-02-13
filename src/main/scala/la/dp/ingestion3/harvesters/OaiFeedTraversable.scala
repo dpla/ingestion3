@@ -44,6 +44,7 @@ class OaiFeedTraversable(params: Map[String,String],
       val rToken  = oaiProcessor.getResumptionToken(xml)
 
       // stream Map[String,String] back
+      // records.foreach(f())
       f(recordsMap)
 
       rToken match {
