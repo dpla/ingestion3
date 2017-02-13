@@ -77,7 +77,7 @@ object OaiHarvesterMain extends App {
 
   val sc = new SparkContext(sparkConf)
   val oaiRdd: OaiRdd = new OaiRdd(sc, params, urlBuilder)
-  oaiRdd.saveAsTextFile(args(0), classOf[org.apache.hadoop.io.compress.CompressionCodec])
+  oaiRdd.saveAsTextFile(args(0), classOf[org.apache.hadoop.io.compress.DefaultCodec])
   sc.stop()
 
   /**
