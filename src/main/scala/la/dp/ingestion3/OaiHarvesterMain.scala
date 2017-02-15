@@ -57,6 +57,8 @@ object OaiHarvesterMain extends App {
 
   val provider = args(4)
 
+  deleteRecursively(new File(outputFile))
+
   val sparkConf = new SparkConf()
     .setAppName("Oai Harvest")
     .setMaster("local") //todo parameterize
@@ -113,5 +115,17 @@ object OaiHarvesterMain extends App {
     */
   def getAvroCount(path: File): Integer = {
     -1
+  }
+
+  /**
+    * Delete a directory
+    * Taken from http://stackoverflow.com/questions/25999255/delete-directory-recursively-in-scala#25999465
+    * @param file
+    */
+  def deleteRecursively(file: File): Unit = {
+    if (file.isDirectory)
+      file.listFiles.foreach(deleteRecursively)
+    if (file.exists && !file.delete)
+      throw new Exception(s"Unable to delete ${file.getAbsolutePath}")
   }
 }
