@@ -87,7 +87,7 @@ object OaiHarvesterMain extends App {
 
   val scheme = new Schema.Parser().parse(schemaStr)
   val structSchema = SchemaConverters.toSqlType(scheme)
-  
+
   oaiRdd.saveAsTextFile(outputFile, classOf[org.apache.hadoop.io.compress.GzipCodec])
 
   sc.stop()

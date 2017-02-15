@@ -24,7 +24,5 @@ libraryDependencies ++= Seq(
   //  Needed for SequenceFile writing
   "org.apache.hadoop" % "hadoop-mapreduce-client-jobclient" % "2.7.3",
   "org.apache.hadoop" % "hadoop-common" % "2.7.3",
-  "org.apache.jena" % "jena-tdb" % "3.1.0",
-  "org.apache.spark" %% "spark-sql" % "2.0.1",
-  "com.databricks" %% "spark-avro" % "3.2.0"
+  "org.apache.jena" % "jena-tdb" % "3.1.0"
 )
