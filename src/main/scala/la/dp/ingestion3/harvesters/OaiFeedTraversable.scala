@@ -19,7 +19,7 @@ import scala.xml.{NodeSeq, XML}
   */
 class OaiFeedTraversable(params: Map[String,String],
                          urlBuilder: OaiQueryUrlBuilder)
-  extends Traversable[Map[String,String]] {
+  extends Traversable[(String,String)] {
 
   //noinspection ScalaUnusedSymbol
   private[this] val logger = LogManager.getLogger("OaiHarvester")
@@ -27,14 +27,14 @@ class OaiFeedTraversable(params: Map[String,String],
   /**
     * Tail-recursive implementation of OAI harvest
     *
-    * @return Streams strings back to caller
+    * @return Streams Strings back to caller
     *
     */
-  override def foreach[U](f: (Map[String,String]) => U): Unit = {
+  override def foreach[U](f: ((String,String)) => U): Unit = {
 
     @scala.annotation.tailrec
     def foreachAccumulator(resumptionToken: String,
-              f: (Map[String,String]) => U): Unit = {
+              f: ( (String,String) ) => U): Unit = {
 
       val oaiProcessor = new OaiResponseProcessor()
       val queryParams = updateParams(List(params, Map("resumptionToken" -> resumptionToken)))
@@ -43,10 +43,9 @@ class OaiFeedTraversable(params: Map[String,String],
       val xml = getXmlResponse(url)
       val recordsMap = oaiProcessor.getRecordsAsMap(xml)
       val rToken  = oaiProcessor.getResumptionToken(xml)
-
-      // stream Map[String,String] back
-      // records.foreach(f())
-      f(recordsMap)
+      // Stream records back
+      recordsMap.foreach( f(_))
+      // f(recordsMap)
 
       rToken match {
         case Some(r) => foreachAccumulator(r, f)

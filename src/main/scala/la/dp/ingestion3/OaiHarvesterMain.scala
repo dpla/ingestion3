@@ -3,12 +3,15 @@ package la.dp.ingestion3
 import java.io.File
 import java.util.concurrent.TimeUnit
 
+import com.databricks.spark.avro.SchemaConverters
 import la.dp.ingestion3.utils.OaiRdd
 import org.apache.avro.Schema
-import org.apache.avro.file.DataFileReader
-import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
+import org.apache.avro.Schema.Field
 import org.apache.log4j.LogManager
+import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark._
 
 /**
   * Entry point for running an OAI harvest
@@ -20,14 +23,24 @@ import org.apache.spark.{SparkConf, SparkContext}
   */
 object OaiHarvesterMain extends App {
 
-  val logger = LogManager.getLogger("OaiResponseProcessor")
+  def getSchema(): StructType = {
+    val fields = StructType(
+      StructField("id", StringType, true) ::
+      StructField("document", StringType, true) ::
+      StructField("mimetype", StringType, true) :: Nil
+    )
 
-  // Complains about not being typesafe...
-  if(args.length != 4 ) {
-    logger.error("Bad number of args: <OUTPUT FILE>, <OAI URL>, <METADATA PREFIX>, <OAI VERB>")
-    sys.exit(-1)
+    val s = StructType(
+      StructField("namespace", StringType, true) ::
+      StructField("type", StringType, true) ::
+      StructField("name", StringType, true) ::
+      StructField("doc", StringType, true) ::
+      StructField("fields",fields, true) :: Nil
+    )
+
+    s
   }
-  // Schema taken from http://bit.ly/2k8II6Q
+
   val schemaStr =
     """
       |{
@@ -36,49 +49,50 @@ object OaiHarvesterMain extends App {
       |  "name": "OriginalRecord",
       |  "doc": "",
       |  "fields": [
-      |    {"name": "or_document", "type": "string", "default": ""},
-      |    {"name": "or_mimetype", "type": "string", "default": ""},
-      |    {"name": "id",          "type": "string"},
-      |    {"name": "rdf_document","type": "string", "default": ""}
+      |    {"name": "document", "type": "string", "default": ""},
+      |    {"name": "id", "type": "string", "default": ""},
+      |    {"name": "mimetype", "type": "string"}
       |  ]
       |}
     """.stripMargin
 
-  // val outputFile = new File(args(0))
-  // val schema     = new Schema.Parser().parse(schemaStr)
-  // val fileIO     = new AvroFileIO(schema, outputFile)
+  val logger = LogManager.getLogger("OaiResponseProcessor")
+
+  // Complains about not being typesafe...
+  if(args.length != 4 ) {
+    logger.error("Bad number of args: <OUTPUT FILE>, <OAI URL>, <METADATA PREFIX>, <OAI VERB>")
+    sys.exit(-1)
+  }
+
   val urlBuilder = new OaiQueryUrlBuilder
-  val params     = Map[String,String](
+  val outputFile = args(0)
+  val oaiParams = Map[String,String](
     "endpoint" -> args(1),
     "metadataPrefix" -> args(2),
     "verb" -> args(3))
 
 
 
-
-
-  /*
-  try {
-    for (record <- new OaiFeedTraversable(params, urlBuilder))
-      record.map { case(id, data) => fileIO.writeFile(id, data) }
-  } finally {
-    fileIO.close
-  }
-
-  print(getAvroCount(outputFile, schema))
-  */
-
-  // delete the file on run
-  new File(args(0)).delete()
-
   val sparkConf = new SparkConf()
-    .setAppName("Harvester")
+    .setAppName("Oai Harvest")
     .setMaster("local")
 
   val sc = new SparkContext(sparkConf)
-  val oaiRdd: OaiRdd = new OaiRdd(sc, params, urlBuilder)
-  oaiRdd.saveAsTextFile(args(0), classOf[org.apache.hadoop.io.compress.DefaultCodec])
+
+
+  val spark = SparkSession.builder().master("local").getOrCreate()
+
+
+  val oaiRdd: OaiRdd = new OaiRdd(sc, oaiParams, urlBuilder)
+
+  val scheme = new Schema.Parser().parse(schemaStr)
+  val structSchema = SchemaConverters.toSqlType(scheme)
+  
+  oaiRdd.saveAsTextFile(outputFile, classOf[org.apache.hadoop.io.compress.GzipCodec])
+
   sc.stop()
+
+  getAvroCount(new File(outputFile + "/part-00000.deflate"))
 
   /**
     * Print the results of a harvest
@@ -112,20 +126,10 @@ object OaiHarvesterMain extends App {
     *
     * @param path File
     *             Path to the Avro file
-    * @param schema String
-    *               Avro file schema
     * @return Integer
     *         The count of items
     */
-  def getAvroCount(path: File, schema: Schema): Integer = {
-    var cnt = 0
-    val reader = new GenericDatumReader[GenericRecord](schema)
-    val dataFileReader = new DataFileReader[GenericRecord](path, reader)
-
-    while(dataFileReader.hasNext) {
-      dataFileReader.next()
-      cnt = cnt+1
-    }
-    cnt
+  def getAvroCount(path: File): Integer = {
+    -1
   }
 }

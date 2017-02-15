@@ -36,14 +36,14 @@ class OaiResponseProcessor() {
     *            The XML response from the OAI request
     * @return
     */
-  def getRecordsAsMap(xml: NodeSeq): Map[String,String] = {
+  def getRecordsAsMap(xml: NodeSeq): Seq[(String,String)] = {
     val records = xml \\ "OAI-PMH" \\ "record"
     records.map(r => r.headOption match {
       case Some(node) => {
         val localId = Harvester.getLocalId(node)
-        Harvester.generateMd5(localId) -> node.toString
+        (Harvester.generateMd5(localId), node.toString)
       }
-    }).toMap
+    }) //.toMap
   }
 
   /**
