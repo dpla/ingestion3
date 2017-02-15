@@ -3,15 +3,13 @@ package la.dp.ingestion3
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-import com.databricks.spark.avro.SchemaConverters
+import com.databricks.spark.avro.{SchemaConverters, _}
 import la.dp.ingestion3.utils.OaiRdd
 import org.apache.avro.Schema
-import org.apache.avro.Schema.Field
 import org.apache.log4j.LogManager
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.spark.sql.types.{StringType, StructField, StructType}
-import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark._
 
 /**
   * Entry point for running an OAI harvest
@@ -20,49 +18,35 @@ import org.apache.spark._
   *             OAI URL: String
   *             Metadata Prefix: String oai_dc oai_qdc, mods, MODS21 etc.
   *             OAI Verb: String ListRecords, ListSets etc.
+  *             Provider: Provider name (we need to standardize this)
   */
 object OaiHarvesterMain extends App {
-
-  def getSchema(): StructType = {
-    val fields = StructType(
-      StructField("id", StringType, true) ::
-      StructField("document", StringType, true) ::
-      StructField("mimetype", StringType, true) :: Nil
-    )
-
-    val s = StructType(
-      StructField("namespace", StringType, true) ::
-      StructField("type", StringType, true) ::
-      StructField("name", StringType, true) ::
-      StructField("doc", StringType, true) ::
-      StructField("fields",fields, true) :: Nil
-    )
-
-    s
-  }
-
   val schemaStr =
-    """
-      |{
-      |  "namespace": "la.dp.avro.MAP_3.1",
-      |  "type": "record",
-      |  "name": "OriginalRecord",
-      |  "doc": "",
-      |  "fields": [
-      |    {"name": "document", "type": "string", "default": ""},
-      |    {"name": "id", "type": "string", "default": ""},
-      |    {"name": "mimetype", "type": "string"}
-      |  ]
-      |}
-    """.stripMargin
+    """{
+        "namespace": "la.dp.avro",
+        "type": "record",
+        "name": "OriginalRecord.v1",
+        "doc": "",
+        "fields": [
+          {"name": "id", "type": "string"},
+          {"name": "provider", "type": "string"},
+          {"name": "document", "type": "string"},
+          {"name": "mimetype", "type": { "name": "MimeType",
+           "type": "enum", "symbols": ["application_json", "application_xml", "text_turtle"]}
+           }
+        ]
+      }
+    """//.stripMargin //todo we need to template the document field so we can record info there
 
-  val logger = LogManager.getLogger("OaiResponseProcessor")
+  val logger = LogManager.getLogger(OaiHarvesterMain.getClass)
 
   // Complains about not being typesafe...
-  if(args.length != 4 ) {
-    logger.error("Bad number of args: <OUTPUT FILE>, <OAI URL>, <METADATA PREFIX>, <OAI VERB>")
+  if(args.length != 5 ) {
+    logger.error("Bad number of args: <OUTPUT FILE>, <OAI URL>, <METADATA PREFIX>, <OAI VERB>, <PROVIDER>")
     sys.exit(-1)
   }
+
+  println(schemaStr)
 
   val urlBuilder = new OaiQueryUrlBuilder
   val outputFile = args(0)
@@ -71,27 +55,25 @@ object OaiHarvesterMain extends App {
     "metadataPrefix" -> args(2),
     "verb" -> args(3))
 
-
+  val provider = args(4)
 
   val sparkConf = new SparkConf()
     .setAppName("Oai Harvest")
-    .setMaster("local")
+    .setMaster("local") //todo parameterize
 
-  val sc = new SparkContext(sparkConf)
+  val spark = SparkSession.builder().config(sparkConf).getOrCreate()
+  val sc = spark.sparkContext
 
-
-  val spark = SparkSession.builder().master("local").getOrCreate()
-
-
+  val avroSchema = new Schema.Parser().parse(schemaStr)
+  val schemaType = SchemaConverters.toSqlType(avroSchema)
+  val structSchema = schemaType.dataType.asInstanceOf[StructType]
   val oaiRdd: OaiRdd = new OaiRdd(sc, oaiParams, urlBuilder)
-
-  val scheme = new Schema.Parser().parse(schemaStr)
-  val structSchema = SchemaConverters.toSqlType(scheme)
-
-  oaiRdd.saveAsTextFile(outputFile, classOf[org.apache.hadoop.io.compress.GzipCodec])
-
+  val rows = oaiRdd.map(data => Row(data._1, provider, data._2, "application_xml"))
+  val dataframe = spark.createDataFrame(rows, structSchema).limit(100)
+  dataframe.write.format("com.databricks.spark.avro").option("avroSchema", schemaStr).avro(outputFile)
   sc.stop()
 
+  //TODO: should probably do this by loading the avro into a new dataframe and calling count()
   getAvroCount(new File(outputFile + "/part-00000.deflate"))
 
   /**
