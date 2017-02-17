@@ -15,6 +15,11 @@ import org.elasticsearch.hadoop.mr.EsOutputFormat.EsOldAPIOutputCommitter
   * the legacy ElasticSearch Hadoop code to work with our data. However, some generalization is possible. In the future,
   * when DPLA migrates to more modern search infrastructure, this code should be rewritten to use the Spark native
   * Elasticsearch implementation, which will be cleaner and eliminate the code that calls Hadoop APIs.
+  *
+  * Expected input: a directory containing Avro files full of JSON documents that match the intended Elasticsearch index
+  * schema.
+  *
+  * Expected output: Elasticsearch REST API calls to populate the specified index, but nothing filesystem-related.
   */
 
 object IndexerMain {
