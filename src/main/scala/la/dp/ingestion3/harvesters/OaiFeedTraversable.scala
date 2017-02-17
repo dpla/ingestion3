@@ -52,7 +52,7 @@ class OaiFeedTraversable(params: Map[String,String],
         case None => Unit
       }
     }
-    foreachAccumulator( "", f)
+    foreachAccumulator("", f)
   }
 
 

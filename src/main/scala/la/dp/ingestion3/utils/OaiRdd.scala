@@ -1,7 +1,7 @@
 package la.dp.ingestion3.utils
 
 import la.dp.ingestion3.OaiQueryUrlBuilder
-import la.dp.ingestion3.harvesters.OaiFeedTraversable
+import la.dp.ingestion3.harvesters.{OaiFeedIterator, OaiFeedTraversable}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Partition, SparkContext, TaskContext}
 
@@ -28,7 +28,9 @@ class OaiRdd(sc: SparkContext,
     * @param context
     */
   override def compute(split: Partition, context: TaskContext): Iterator[(String,String)] = {
-    new OaiFeedTraversable(params, urlBuilder).toIterator
-  }
+    // new OaiFeedTraversable(params, urlBuilder).toIterator
 
+    // Replace Traversable with Iterator
+    new OaiFeedIterator(params, urlBuilder)
+  }
 }

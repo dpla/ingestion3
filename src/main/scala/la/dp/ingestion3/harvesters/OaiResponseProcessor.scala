@@ -70,7 +70,7 @@ class OaiResponseProcessor() {
     *         The resumptionToken to fetch the next set of records
     *         or None if no more records can be fetched. An
     *         empty string does not mean all records were successfully
-    *         harvested (an error could have occured when fetching), only
+    *         harvested (an error could have occurred when fetching), only
     *         that there are no more records that can be fetched.
     */
   def getResumptionToken(xml: NodeSeq): Option[String] = {
