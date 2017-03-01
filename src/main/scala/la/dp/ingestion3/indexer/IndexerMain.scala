@@ -8,6 +8,20 @@ import org.apache.spark.sql.{Row, SparkSession}
 import org.elasticsearch.hadoop.cfg.ConfigurationOptions
 import org.elasticsearch.hadoop.mr.EsOutputFormat.EsOldAPIOutputCommitter
 
+/**
+  * This class implements a Spark pipeline for indexing Avro files of JSON documents that are formatted in DPLA MAP v3.1
+  * The indexer is capable of handling documents of multiple types existing in the same Avro collection.
+  * There are a number of hardcoded configuration options set on the JobConf object that are essentially there to get
+  * the legacy ElasticSearch Hadoop code to work with our data. However, some generalization is possible. In the future,
+  * when DPLA migrates to more modern search infrastructure, this code should be rewritten to use the Spark native
+  * Elasticsearch implementation, which will be cleaner and eliminate the code that calls Hadoop APIs.
+  *
+  * Expected input: a directory containing Avro files full of JSON documents that match the intended Elasticsearch index
+  * schema.
+  *
+  * Expected output: Elasticsearch REST API calls to populate the specified index, but nothing filesystem-related.
+  */
+
 object IndexerMain {
 
   val schema: String = """
