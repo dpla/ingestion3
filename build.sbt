@@ -20,9 +20,7 @@ libraryDependencies ++= Seq(
   ),
   // ApiHarvester depends
   "org.apache.httpcomponents" % "httpclient" % "4.5.2",
-  "com.lambdaworks" %% "jacks" % "2.3.3",
-  //  Needed for SequenceFile writing
-  "org.apache.hadoop" % "hadoop-mapreduce-client-jobclient" % "2.7.3",
-  "org.apache.hadoop" % "hadoop-common" % "2.7.3",
-  "org.apache.jena" % "jena-tdb" % "3.1.0"
+  "org.eclipse.rdf4j" % "rdf4j-model" % "2.2",
+  "org.eclipse.rdf4j" % "rdf4j-rio-api" % "2.2",
+  "org.eclipse.rdf4j" % "rdf4j-rio-turtle" % "2.2"
 )
