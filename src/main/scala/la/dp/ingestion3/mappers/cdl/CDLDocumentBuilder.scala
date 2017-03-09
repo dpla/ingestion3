@@ -1,6 +1,6 @@
 package la.dp.ingestion3.mappers.cdl
 
-import la.dp.ingestion3.mappers.json.la.dp.ingestion3.mappers.utils.JsonExtractionUtils
+import la.dp.ingestion3.mappers.json.JsonExtractionUtils
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
