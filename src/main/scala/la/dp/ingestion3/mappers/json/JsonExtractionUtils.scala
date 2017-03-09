@@ -1,6 +1,5 @@
 package la.dp.ingestion3.mappers.json
 
-package la.dp.ingestion3.mappers.utils
 
 import org.json4s.JValue
 import org.json4s.JsonAST._
