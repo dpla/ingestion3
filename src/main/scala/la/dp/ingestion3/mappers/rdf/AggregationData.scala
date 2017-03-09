@@ -4,7 +4,7 @@ import org.eclipse.rdf4j.model.{IRI, Resource}
 
 case class AggregationData(aggregatedCHO: Resource,
                            isShownAt: IRI,
-                           preview: Resource,
+                           preview: Option[Resource],
                            provider: IRI,
                            originalRecord: Resource,
                            dataProvider: Resource)
