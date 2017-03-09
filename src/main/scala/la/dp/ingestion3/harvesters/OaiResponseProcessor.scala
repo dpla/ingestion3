@@ -43,7 +43,8 @@ class OaiResponseProcessor() {
         val localId = Harvester.getLocalId(node)
         (Harvester.generateMd5(localId), node.toString)
       }
-    }) //.toMap
+      case _ => ("", "")
+    })
   }
 
   /**
