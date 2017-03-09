@@ -3,14 +3,17 @@ package la.dp.ingestion3.mappers.rdf
 import org.eclipse.rdf4j.model.impl.{SimpleIRI, SimpleNamespace}
 import org.eclipse.rdf4j.model.{IRI, Namespace}
 
+/**
+  * An abstract class that represents a suite of IRIs for an ontology. Similar to the classes in
+  * org.eclipse.rdf4j.model.vocabulary, but tidier given the scala syntax.
 
+ */
 abstract class Vocabulary(nsPrefix: String, nsUri: String) extends RdfValueUtils {
 
   def ns: Namespace = new SimpleNamespace(nsPrefix, nsUri)
 
-  def apply(name: String) = iri(nsPrefix, name)
+  def apply(name: String): IRI = iri(nsPrefix, name)
 }
-
 
 case class RDF() extends Vocabulary("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#") {
 

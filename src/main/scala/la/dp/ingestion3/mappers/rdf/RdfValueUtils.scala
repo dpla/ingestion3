@@ -3,6 +3,13 @@ package la.dp.ingestion3.mappers.rdf
 import org.eclipse.rdf4j.model._
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory
 
+
+/**
+  * Mixin for conveniently creating RDF4J datamodel objects. Maintains a SimpleValueFactory singleton so they're not
+  * being created all over the place.
+  *
+  */
+
 trait RdfValueUtils {
 
     import RdfValueUtils._
