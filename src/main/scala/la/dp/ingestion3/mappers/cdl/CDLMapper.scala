@@ -15,7 +15,7 @@ class CDLMapper(document: CDLDocument) extends MappingUtils {
     val cdlUri = iri("http://dp.la/api/contributor/cdl")
 
     val thumbnail = document.imageMD5 match {
-      case Some(md5) => Some(iri(itemUrlPrefix + document.imageMD5.get))
+      case Some(md5) => Some(iri(itemUrlPrefix + md5))
       case _ => None
     }
 
