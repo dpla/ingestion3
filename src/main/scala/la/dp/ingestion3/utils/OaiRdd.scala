@@ -5,12 +5,10 @@ import la.dp.ingestion3.harvesters.OaiFeedTraversable
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Partition, SparkContext, TaskContext}
 
-/**
-  * Created by scott on 2/10/17.
-  */
+
 class OaiRdd(sc: SparkContext,
              params: Map[String, String],
-             urlBuilder: OaiQueryUrlBuilder) extends RDD[(String,String)](sc, Nil) {
+             urlBuilder: OaiQueryUrlBuilder) extends RDD[(String,String)] (sc, Nil) {
 
   /**
     *
