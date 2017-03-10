@@ -20,7 +20,7 @@ trait MappingUtils extends DefaultVocabularies with RdfValueUtils {
     * @todo May need to create an accessor for this to allow manipulation
     *       outside of this trait.
     */
-  private val builder = new ModelBuilder()
+  private var builder = new ModelBuilder()
 
   /**
     * Finalizes the graph and returns it for later serialization
@@ -28,6 +28,11 @@ trait MappingUtils extends DefaultVocabularies with RdfValueUtils {
     * @return RD4J Model object
     */
   def build(): Model = builder.build()
+
+  /**
+    * Clears out the assertions in this graph. Useful for tests.
+    */
+  def reset(): Unit = builder = new ModelBuilder()
 
   /**
     * Builds and returns the "edm:aggregatedCHO bnode for the document
@@ -79,10 +84,13 @@ trait MappingUtils extends DefaultVocabularies with RdfValueUtils {
       .add(rdf.`type`, ore.Aggregation)
       .add(edm.aggregatedCHO, aggregation.aggregatedCHO)
       .add(edm.isShownAt, aggregation.isShownAt)
-      .add(edm.preview, aggregation.preview)
       .add(edm.provider, aggregation.provider)
       .add(dpla.originalRecord, aggregation.originalRecord)
       .add(edm.dataProvider, aggregation.dataProvider)
+
+    if (aggregation.preview.isDefined)
+      builder.add(edm.preview, aggregation.preview.get)
+
     aggregationBNode
   }
 
