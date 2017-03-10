@@ -1,4 +1,4 @@
-package la.dp.ingestion3.mappers.json
+package dpla.ingestion3.mappers.json
 
 import org.scalatest._
 import org.json4s.JsonAST._
@@ -55,7 +55,8 @@ class JsonExtractionUtilsTest extends FlatSpec with Matchers with BeforeAndAfter
     strings should contain("baz")
   }
 
-  "it" should "extract a single from anything that's not a JObject or a JList but can be stringified" in {
+  "it" should
+    "extract a single valued Seq from anything that's not a JObject or a JList but can be stringified" in {
     val testData = Seq(
       (JString("foo"), "foo"),
       (JInt(1), "1"),
@@ -72,7 +73,6 @@ class JsonExtractionUtilsTest extends FlatSpec with Matchers with BeforeAndAfter
   }
 
   "it" should "not extract anything for single valued nodes that can't be stringified" in {
-
     val testData = Seq(
       JNothing,
       JNull
@@ -80,7 +80,7 @@ class JsonExtractionUtilsTest extends FlatSpec with Matchers with BeforeAndAfter
 
     for (value <- testData) {
       val result = extractStrings(value)
-      result should be (List())
+      result should be (Seq())
     }
   }
 }
