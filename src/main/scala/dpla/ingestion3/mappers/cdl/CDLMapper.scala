@@ -19,12 +19,12 @@ class CDLMapper(document: CDLDocument) extends MappingUtils {
       case _ => None
     }
 
-
     registerNamespaces(defaultVocabularies)
     mapItemWebResource(iri(document.urlItem.get))
     mapContributingAgent(cdlUri, providerLabel)
-    for(t <- thumbnail)
-      mapThumbWebResource(t)
+
+    if (thumbnail.isDefined)
+      mapThumbWebResource(thumbnail.get)
 
     val aggregatedCHO = mapAggregatedCHO(ChoData(
       dates = mapDates(document.dates.distinct),
