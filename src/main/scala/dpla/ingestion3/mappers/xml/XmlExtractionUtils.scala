@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.xml
 
 import scala.xml._
 
-class XmlExtractionUtils {
+trait XmlExtractionUtils {
 
   /**
     *
