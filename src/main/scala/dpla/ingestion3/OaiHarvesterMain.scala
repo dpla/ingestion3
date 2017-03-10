@@ -1,16 +1,17 @@
 package dpla.ingestion3
 
+import dpla.ingestion3.harvesters.OaiQueryUrlBuilder
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-import com.databricks.spark.avro.{SchemaConverters, _}
-import dpla.ingestion3.harvesters.OaiQueryUrlBuilder
+import com.databricks.spark.avro._
 import dpla.ingestion3.utils.OaiRdd
 import org.apache.avro.Schema
 import org.apache.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.storage.StorageLevel
 
 /**
   * Entry point for running an OAI harvest
@@ -24,7 +25,7 @@ import org.apache.spark.sql.{Row, SparkSession}
 object OaiHarvesterMain extends App {
   val schemaStr =
     """{
-        "namespace": "dpla.dp.avro",
+        "namespace": "la.dp.avro",
         "type": "record",
         "name": "OriginalRecord.v1",
         "doc": "",
@@ -67,17 +68,25 @@ object OaiHarvesterMain extends App {
   val spark = SparkSession.builder().config(sparkConf).getOrCreate()
   val sc = spark.sparkContext
 
+  val start = System.currentTimeMillis()
+
   val avroSchema = new Schema.Parser().parse(schemaStr)
   val schemaType = SchemaConverters.toSqlType(avroSchema)
   val structSchema = schemaType.dataType.asInstanceOf[StructType]
-  val oaiRdd: OaiRdd = new OaiRdd(sc, oaiParams, urlBuilder)
-  val rows = oaiRdd.map(data => Row(data._1, provider, data._2, "application_xml"))
-  val dataframe = spark.createDataFrame(rows, structSchema).limit(100)
+  val oaiRdd: OaiRdd = new OaiRdd(sc, oaiParams, urlBuilder).persist(StorageLevel.DISK_ONLY)
+  val rows = oaiRdd.map(data => { Row(data._1, provider, data._2, "application_xml") })
+  val dataframe = spark.createDataFrame(rows, structSchema)
+
+  //TODO: should probably do this by loading the avro into a new dataframe and calling count()
+  val recordsHarvestedCount = dataframe.count()
+
   dataframe.write.format("com.databricks.spark.avro").option("avroSchema", schemaStr).avro(outputFile)
   sc.stop()
 
-  //TODO: should probably do this by loading the avro into a new dataframe and calling count()
-  getAvroCount(new File(outputFile + "/part-00000.deflate"))
+  val end = System.currentTimeMillis()
+
+
+  printResults((end-start),recordsHarvestedCount)
 
   /**
     * Print the results of a harvest
@@ -104,18 +113,6 @@ object OaiHarvesterMain extends App {
     println(s"File count: ${formatter.format(recordsHarvestedCount)}")
     println(s"Runtime: $minutes:$seconds")
     println(s"Throughput: ${formatter.format(recordsPerSecond)} records/second")
-  }
-
-  /**
-    * Counts the number of items in a Avro file
-    *
-    * @param path File
-    *             Path to the Avro file
-    * @return Integer
-    *         The count of items
-    */
-  def getAvroCount(path: File): Integer = {
-    -1
   }
 
   /**
