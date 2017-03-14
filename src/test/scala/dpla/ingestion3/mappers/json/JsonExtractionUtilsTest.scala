@@ -3,42 +3,42 @@ package dpla.ingestion3.mappers.json
 import org.scalatest._
 import org.json4s.JsonAST._
 
-class JsonExtractionUtilsTest extends FlatSpec with Matchers with BeforeAndAfter with JsonExtractionUtils {
+class JsonExtractionUtilsTest extends FlatSpec with JsonExtractionUtils {
 
   "A JsonExtractionUtils" should "extract strings from a field named by a string" in {
     val jvalue = JObject(JField("foo", JString("bar")))
-    extractString("foo")(jvalue) should be(Some("bar"))
+    assert(extractString("foo")(jvalue) === Some("bar"))
   }
 
   it should "return a None when there is no field named by a string" in {
     val jvalue = JObject(JField("foo", JString("bar")))
-    extractString("bar")(jvalue) should be(None)
+    assert(extractString("bar")(jvalue) === None)
   }
 
   it should "extract multiple strings from a field named by a string" in {
     val jvalue = JObject(JField("foo", JArray(List(JString("foo"), JString("bar")))))
     val strings = extractStrings("foo")(jvalue)
 
-    strings should contain("foo")
-    strings should contain("bar")
+    assert(strings.contains("foo"))
+    assert(strings.contains("bar"))
   }
 
   it should "extract an empty Seq if there are no values available in a field named by a string" in {
     val jvalue = JObject(JField("foo", JString("bar")))
     val strings = extractStrings("blah")(jvalue)
 
-    strings should have length 0
+    assert(strings.length === 0)
   }
 
   it should "extract strings from a JList" in {
     val jvalue = JArray(List(JString("foo"), JString("bar"), JString("baz"), JString("buzz")))
     val strings = extractStrings(jvalue)
 
-    strings should have length 4
-    strings should contain("foo")
-    strings should contain("bar")
-    strings should contain("baz")
-    strings should contain("buzz")
+    assert(strings.length === 4)
+    assert(strings.contains("foo"))
+    assert(strings.contains("bar"))
+    assert(strings.contains("baz"))
+    assert(strings.contains("buzz"))
   }
 
   it should "extract key values from a JObject" in {
@@ -49,10 +49,10 @@ class JsonExtractionUtilsTest extends FlatSpec with Matchers with BeforeAndAfter
     )
 
     val strings = extractStrings(jobject)
-    strings should have length 3
-    strings should contain("foo")
-    strings should contain("bar")
-    strings should contain("baz")
+    assert(strings.length === 3)
+    assert(strings.contains("foo"))
+    assert(strings.contains("bar"))
+    assert(strings.contains("baz"))
   }
 
   it should
@@ -67,8 +67,8 @@ class JsonExtractionUtilsTest extends FlatSpec with Matchers with BeforeAndAfter
 
     for (pair <- testData) {
       val result = extractStrings(pair._1)
-      result should have length 1
-      result should contain (pair._2)
+      assert(result.length === 1)
+      assert(result.contains(pair._2))
     }
   }
 
@@ -80,7 +80,7 @@ class JsonExtractionUtilsTest extends FlatSpec with Matchers with BeforeAndAfter
 
     for (value <- testData) {
       val result = extractStrings(value)
-      result should be (Seq())
+      assert(result === Seq())
     }
   }
 }
