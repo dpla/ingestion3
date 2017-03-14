@@ -10,12 +10,12 @@ class JsonExtractionUtilsTest extends FlatSpec with Matchers with BeforeAndAfter
     extractString("foo")(jvalue) should be(Some("bar"))
   }
 
-  "it" should "return a None when there is no field named by a string" in {
+  it should "return a None when there is no field named by a string" in {
     val jvalue = JObject(JField("foo", JString("bar")))
     extractString("bar")(jvalue) should be(None)
   }
 
-  "it" should "extract multiple strings from a field named by a string" in {
+  it should "extract multiple strings from a field named by a string" in {
     val jvalue = JObject(JField("foo", JArray(List(JString("foo"), JString("bar")))))
     val strings = extractStrings("foo")(jvalue)
 
@@ -23,14 +23,14 @@ class JsonExtractionUtilsTest extends FlatSpec with Matchers with BeforeAndAfter
     strings should contain("bar")
   }
 
-  "it" should "extract an empty Seq if there are no values available in a field named by a string" in {
+  it should "extract an empty Seq if there are no values available in a field named by a string" in {
     val jvalue = JObject(JField("foo", JString("bar")))
     val strings = extractStrings("blah")(jvalue)
 
     strings should have length 0
   }
 
-  "it" should "extract strings from a JList" in {
+  it should "extract strings from a JList" in {
     val jvalue = JArray(List(JString("foo"), JString("bar"), JString("baz"), JString("buzz")))
     val strings = extractStrings(jvalue)
 
@@ -41,7 +41,7 @@ class JsonExtractionUtilsTest extends FlatSpec with Matchers with BeforeAndAfter
     strings should contain("buzz")
   }
 
-  "it" should "extract key values from a JObject" in {
+  it should "extract key values from a JObject" in {
     val jobject = JObject(
       JField("1", JString("foo")),
       JField("2", JString("bar")),
@@ -55,7 +55,7 @@ class JsonExtractionUtilsTest extends FlatSpec with Matchers with BeforeAndAfter
     strings should contain("baz")
   }
 
-  "it" should
+  it should
     "extract a single valued Seq from anything that's not a JObject or a JList but can be stringified" in {
     val testData = Seq(
       (JString("foo"), "foo"),
@@ -72,7 +72,7 @@ class JsonExtractionUtilsTest extends FlatSpec with Matchers with BeforeAndAfter
     }
   }
 
-  "it" should "not extract anything for single valued nodes that can't be stringified" in {
+  it should "not extract anything for single valued nodes that can't be stringified" in {
     val testData = Seq(
       JNothing,
       JNull
