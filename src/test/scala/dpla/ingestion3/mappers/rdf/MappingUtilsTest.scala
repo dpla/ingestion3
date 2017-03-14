@@ -147,7 +147,10 @@ class MappingUtilsTest extends FlatSpec with BeforeAndAfter with MappingUtils {
     for (creator <- creators) {
       assert(creator.isInstanceOf[BNode])
       assert(model.contains(creator, rdf.`type`, edm.Agent))
-      val creatorName = getProperty(model, creator, dpla.providedLabel).get.stringValue()
+      val creatorName =
+        getProperty(model, creator, dpla.providedLabel)
+          .orElse(literal("nope"))
+          .stringValue()
       assert(creatorNames.contains(creatorName))
     }
   }
@@ -162,7 +165,10 @@ class MappingUtilsTest extends FlatSpec with BeforeAndAfter with MappingUtils {
     for (collection <- collections) {
       assert(collection.isInstanceOf[BNode])
       assert(model.contains(collection, rdf.`type`, dcmiType.Collection))
-      val collectionName = getProperty(model, collection, dcTerms.title).get.stringValue()
+      val collectionName =
+        getProperty(model, collection, dcTerms.title)
+          .orElse(literal("nope"))
+          .stringValue()
       assert(collectionNames.contains(collectionName))
     }
   }
@@ -177,7 +183,10 @@ class MappingUtilsTest extends FlatSpec with BeforeAndAfter with MappingUtils {
     for (date <- dates) {
       assert(date.isInstanceOf[BNode])
       assert(model.contains(date, rdf.`type`, edm.TimeSpan))
-      val dateText = getProperty(model, date, dpla.providedLabel).get.stringValue()
+      val dateText =
+        getProperty(model, date, dpla.providedLabel)
+          .orElse(literal("nope"))
+          .stringValue()
       assert(dateStrings.contains(dateText))
     }
   }

@@ -65,10 +65,12 @@ class JsonExtractionUtilsTest extends FlatSpec with JsonExtractionUtils {
       (JBool(true), "true")
     )
 
-    for (pair <- testData) {
-      val result = extractStrings(pair._1)
-      assert(result.length === 1)
-      assert(result.contains(pair._2))
+    for (pair <- testData) pair match {
+      case (input, expected) => {
+        val result = extractStrings(input)
+        assert(result.length === 1)
+        assert(result.contains(expected))
+      }
     }
   }
 
