@@ -9,7 +9,7 @@ import org.scalatest._
   * TODO: Figure out how to simulate http requests/responses.
   *
   */
-class OaiResponseProcessorTest extends FlatSpec with Matchers with BeforeAndAfter {
+class   OaiResponseProcessorTest extends FlatSpec with Matchers with BeforeAndAfter {
 
 //  val validOaiXml = dpla.ingestion3.data.TestOaiData.paOaiListRecordsRsp
 //  val invalidOaiXml = dpla.ingestion3.data.TestOaiData.paOaiErrorRsp
