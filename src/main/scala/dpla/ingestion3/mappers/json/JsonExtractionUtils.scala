@@ -65,6 +65,7 @@ trait JsonExtractionUtils {
   def extractString(jValue: JValue): Option[String] = jValue match {
     case JBool(bool) => Some(bool.toString)
     case JDecimal(decimal) => Some(decimal.toString())
+    case JDouble(double) => Some(double.toString())
     case JInt(int) => Some(int.toString())
     case JString(string) => Some(string)
     case _ => None

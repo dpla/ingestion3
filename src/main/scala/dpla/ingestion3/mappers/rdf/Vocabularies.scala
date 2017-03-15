@@ -12,7 +12,7 @@ abstract class Vocabulary(nsPrefix: String, nsUri: String) extends RdfValueUtils
 
   def ns: Namespace = new SimpleNamespace(nsPrefix, nsUri)
 
-  def apply(name: String): IRI = iri(nsPrefix, name)
+  def apply(name: String): IRI = iri(nsUri, name)
 }
 
 case class RDF() extends Vocabulary("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#") {
