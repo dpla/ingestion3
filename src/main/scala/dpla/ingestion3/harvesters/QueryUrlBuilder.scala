@@ -42,6 +42,33 @@ class OaiQueryUrlBuilder extends QueryUrlBuilder with Serializable {
   }
 }
 
+class ResourceSyncUrlBuilder extends QueryUrlBuilder with Serializable {
+
+  /**
+    *
+    * @param params
+    * @return
+    */
+  def buildQueryUrl(params: Map[String, String]): URL = {
+    assume(params.get("endpoint").isDefined)
+    assume(params.get("path").isDefined)
+
+    val path = params.get("path").get
+    val url = new URL(params.get("endpoint").get)
+
+    // Build the URL
+    val urlParams = new URIBuilder()
+      .setScheme(url.getProtocol)
+      .setHost(url.getHost)
+      .setPath(path)
+
+    urlParams.build().toURL
+  }
+}
+
+/**
+  *
+  */
 trait QueryUrlBuilder {
   def buildQueryUrl (params: Map[String, String]): URL
 
