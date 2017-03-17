@@ -30,7 +30,7 @@ object Utils {
 
     try {
       while (reader.next(k, v)) {
-        println(k);
+        println(k)
       }
     } finally {
       reader.close()
@@ -59,5 +59,17 @@ object Utils {
   def formatXml(xml: Node): String ={
     val prettyPrinter = new scala.xml.PrettyPrinter(80, 2)
     prettyPrinter.format(xml).toString
+  }
+
+  /**
+    * Delete a directory
+    * Taken from http://stackoverflow.com/questions/25999255/delete-directory-recursively-in-scala#25999465
+    * @param file
+    */
+  def deleteRecursively(file: File): Unit = {
+    if (file.isDirectory)
+      file.listFiles.foreach(deleteRecursively)
+    if (file.exists && !file.delete)
+      throw new Exception(s"Unable to delete ${file.getAbsolutePath}")
   }
 }

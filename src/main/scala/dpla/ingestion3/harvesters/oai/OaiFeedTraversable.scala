@@ -39,20 +39,18 @@ class OaiFeedTraversable(params: Map[String,String],
       val oaiProcessor = new OaiResponseProcessor()
       val queryParams = updateParams(List(params, Map("resumptionToken" -> resumptionToken)))
       val url = urlBuilder.buildQueryUrl(queryParams)
-      logger.info("URL: " + url)
       val xml = getXmlResponse(url)
       val recordsMap = oaiProcessor.getRecordsAsMap(xml)
       val rToken  = oaiProcessor.getResumptionToken(xml)
       // Stream records back
       recordsMap.foreach( f(_))
-      // f(recordsMap)
 
       rToken match {
         case Some(r) => foreachAccumulator(r, f)
         case None => Unit
       }
     }
-    foreachAccumulator( "", f)
+    foreachAccumulator("", f)
   }
 
 
