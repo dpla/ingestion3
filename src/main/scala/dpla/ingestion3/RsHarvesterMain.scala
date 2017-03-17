@@ -2,6 +2,8 @@ package dpla.ingestion3
 
 import dpla.ingestion3.harvesters.ResourceSyncUrlBuilder
 import dpla.ingestion3.harvesters.resourceSync.ResourceSyncIterator
+import dpla.ingestion3.utils.ResourceSyncRdd
+import org.apache.spark.{SparkConf, SparkContext}
 
 /**
   * Created by scott on 3/16/17.
@@ -37,9 +39,28 @@ object RsHarvesterMain extends App {
     * should be invoked
     */
   (baselineSync, isDumpSupported(baselineSync)) match {
-    case (true, false) => {
+    case (true, false)=> {
       // Full sync using ResourceList
+      // Requires the URL paried with capability="resourcelist"
+
+      /*
+        * TODO this is what needs to work for hybox initial test
+        * Notes on hydra testing --
+        *   + Not currently implemented at source, Resource List Index
+        *     Resource Dump, Change Dump.
+       */
+
       println("Do it using ResourceList")
+      val resourcelist_url = capabilities.get("resourcelist") match {
+        case Some(u) => u.toString
+        case _ => throw new Exception("No resources to get.") // log error
+      }
+
+      val sparkConf = new SparkConf().setAppName("Hydra Resource Sync")
+      val sc = new SparkContext(sparkConf)
+      val crdd = new ResourceSyncRdd(resourcelist_url, sc)
+      crdd.saveAsTextFile("/home/scott/hydra-harvest.txt")
+      sc.stop()
     }
     case (true, true) => {
       // Fully sync using ResourceDump
@@ -50,7 +71,7 @@ object RsHarvesterMain extends App {
     case (false, false) => {
       // Sync changes using ChangeList
     }
-    case _ => throw new Exception("This is strange")
+    case _ => throw new Exception("This is strange...")
   }
 
 
