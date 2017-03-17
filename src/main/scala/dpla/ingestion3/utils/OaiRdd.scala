@@ -28,9 +28,6 @@ class OaiRdd(sc: SparkContext,
     * @param context
     */
   override def compute(split: Partition, context: TaskContext): Iterator[(String,String)] = {
-    // new OaiFeedTraversable(params, urlBuilder).toIterator
-
-    // Replace Traversable with Iterator
     new OaiFeedIterator(params, urlBuilder)
   }
 }

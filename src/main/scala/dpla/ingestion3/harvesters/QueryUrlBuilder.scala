@@ -51,16 +51,23 @@ class ResourceSyncUrlBuilder extends QueryUrlBuilder with Serializable {
     */
   def buildQueryUrl(params: Map[String, String]): URL = {
     assume(params.get("endpoint").isDefined)
-    assume(params.get("path").isDefined)
 
-    val path = params.get("path").get
     val url = new URL(params.get("endpoint").get)
 
     // Build the URL
     val urlParams = new URIBuilder()
       .setScheme(url.getProtocol)
       .setHost(url.getHost)
-      .setPath(path)
+
+    params.get("path") match {
+      case Some(p) => urlParams.setPath(p)
+      case _ => None // do nothing
+    }
+
+    params.get("accept") match {
+      case Some(p) => urlParams.setParameter("Accept", p)
+      case _ => // Do nothing
+    }
 
     urlParams.build().toURL
   }

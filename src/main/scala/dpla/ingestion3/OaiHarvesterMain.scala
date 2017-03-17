@@ -39,7 +39,7 @@ object OaiHarvesterMain extends App {
            }
         ]
       }
-    """//.stripMargin //todo we need to template the document field so we can record info there
+    """//.stripMargin // TODO we need to template the document field so we can record info there
 
   val logger = LogManager.getLogger(OaiHarvesterMain.getClass)
 

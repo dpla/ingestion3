@@ -29,7 +29,7 @@ object Utils {
 
     try {
       while (reader.next(k, v)) {
-        println(k);
+        println(k)
       }
     } finally {
       reader.close()
@@ -61,6 +61,7 @@ object Utils {
   }
 
   /**
+<<<<<<< HEAD
     * Print the results of an activity
     *
     * Example:
@@ -97,5 +98,4 @@ object Utils {
     if (file.exists && !file.delete)
       throw new Exception(s"Unable to delete ${file.getAbsolutePath}")
   }
-
 }
