@@ -55,7 +55,7 @@ trait MappingUtils extends DefaultVocabularies with RdfValueUtils {
 
     builder
       .subject(aggregatedCHO)
-      .add(rdf.`type`, dpla.sourceResource)
+      .add(rdf.`type`, dpla.SourceResource)
 
     addAll(dc.date, choData.dates)
     addAll(dcTerms.title, choData.titles)
