@@ -12,6 +12,15 @@ import scala.xml._
   */
 class ResourceSyncIterator (queryUrlBuilder: ResourceSyncUrlBuilder) {
 
+
+  /**
+    *
+    * @param resourcelist_url
+    * @return
+    */
+  def getResources(resourcelist_url: Option[String]) = ???
+
+
   def makeRequest(params: Map[String,String]): Elem = {
     // .well-known/resourcesync
     val qUrl = queryUrlBuilder.buildQueryUrl(params)
