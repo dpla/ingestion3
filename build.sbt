@@ -22,5 +22,6 @@ libraryDependencies ++= Seq(
   "org.apache.httpcomponents" % "httpclient" % "4.5.2",
   "org.eclipse.rdf4j" % "rdf4j-model" % "2.2",
   "org.eclipse.rdf4j" % "rdf4j-rio-api" % "2.2",
-  "org.eclipse.rdf4j" % "rdf4j-rio-turtle" % "2.2"
+  "org.eclipse.rdf4j" % "rdf4j-rio-turtle" % "2.2",
+  "org.scalaj" % "scalaj-http_2.11" % "2.3.0"
 )
