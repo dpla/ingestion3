@@ -1,23 +1,34 @@
 package dpla.ingestion3.harvesters.resourceSync
 
 import java.net.URL
-
 import dpla.ingestion3.harvesters.ResourceSyncUrlBuilder
-
 import scala.xml.{Elem, XML}
 
 /**
-  * Created by scott on 3/17/17.
+  *
   */
-class ResourceSyncProcessor {
+object ResourceSyncProcessor {
   /**
     *
     * @param resourcelist_url
     * @return
     */
-  def getResources(resourcelist_url: Option[String]) = ???
+  def getResources(resourcelist_url: Option[String]): Seq[String] = {
+    val url = resourcelist_url match {
+      case Some(r) => r
+      case _ => throw new Exception("No resource URL given")
+    }
+
+    val rsp = XML.load(url)
+    (rsp \\ "loc").map(r => r.text)
+  }
 
 
+  /**
+    *
+    * @param params
+    * @return
+    */
   def makeRequest(params: Map[String,String]): Elem = {
     // .well-known/resourcesync
     val queryUrlBuilder = new ResourceSyncUrlBuilder()

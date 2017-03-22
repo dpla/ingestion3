@@ -2,110 +2,92 @@ package dpla.ingestion3
 
 import java.io.File
 
-import dpla.ingestion3.harvesters.ResourceSyncUrlBuilder
-import dpla.ingestion3.harvesters.resourceSync.ResourceSyncRdd
+import dpla.ingestion3.harvesters.resourceSync.{ResourceSyncProcessor, ResourceSyncRdd}
 import dpla.ingestion3.utils.Utils
 import org.apache.log4j.LogManager
 import org.apache.spark.{SparkConf, SparkContext}
 
-/**
-  * Created by scott on 3/16/17.
-  */
+
+
+// Example usage:
+// PATH_TO_SPARK/bin/spark-submit --class "la.dp.ingestion3.RsHarvesterMain" \
+//   --master local[3] \
+//   PATH_TO_INGESTION3_APP/target/scala-2.11/________.jar \
+//   OUTPUT_PATH
+
+
 object RsHarvesterMain extends App {
 
-
-  // Vars
   val logger = LogManager.getLogger(RsHarvesterMain.getClass)
-  val urlBuilder = new ResourceSyncUrlBuilder()
-//  val rsIter = new ResourceSyncIterator("")
-  // TODO this should be an option or programatically determined
+
+  // Complains about not being typesafe...
+  if(args.length != 1 ) {
+    logger.error("Bad number of args: <OUTPUT FILE>")
+    sys.exit(-1)
+  }
+
   val baselineSync = true
-  val outputFile = "/Users/scott/hydra-harvest/out"
-  val endpoint = "https://hyphy.demo.hydrainabox.org"
+  val isDumpFuncSupported = false // TODO placeholder for function to make determination
+  val outputFile = args(0)
+  val hyboxResourceList = Some("https://hyphy.demo.hydrainabox.org/resourcelist")
 
   Utils.deleteRecursively(new File(outputFile))
 
-  // ResourceSync paths
-  val WELL_KNOWN_PATH = "/.well-known/resourcesync"
-
-  val WELL_KNOWN_URL = urlBuilder.buildQueryUrl( Map("endpoint"->endpoint,"path"->WELL_KNOWN_PATH))
-//  val CAPABILITIES_URL = rsIter.getCapabilityListUrl(WELL_KNOWN_URL)
-
-  /*
-  Get the capabilities of the ResourceSync endpoint. This needs to happen so we know whether to use Dump or List
-   when picking up changes or getting baseline
-   */
-//  val capabilities = CAPABILITIES_URL match {
-//    case Some(c) => rsIter.getCapibilityUrls(c)
-//    case _ => throw new Exception("W/o capabilities there isn't much to do.")
-//  }
+  val sparkConf = new SparkConf()
+    .setAppName("Hydra Resource Sync")
+     .setMaster("local[32]") // TODO -- parameterize
+  val sc = new SparkContext(sparkConf)
 
 
+  // Timing start
+  val start = System.currentTimeMillis()
   /**
-    * There are four possible ways to harvest from a ResourceSync endpoint and this match determines which one
-    * should be invoked
+    * There are four possible ways to harvest from a ResourceSync endpoint depending on wether a full or partial sync
+    * is being performed and whether *Dump functionality is supported.
+    *
     */
-  (baselineSync, isDumpSupported(baselineSync)) match {
+  val rsRdd: ResourceSyncRdd = (baselineSync, isDumpFuncSupported) match {
     case (true, false)=> {
-      // Full sync using ResourceList
-      // Requires the URL paried with capability="resourcelist"
-
-      /*
-        * TODO this is what needs to work for hybox initial test
-        * Notes on hydra testing --
-        *   + Not currently implemented at source, Resource List Index
-        *     Resource Dump, Change Dump.
+      // Perform full sync using ResourceList
+      /**
+        * This is what needs to work for Hybox initial test
+        *
+        *
+        * Additional notes on Hydra endpoint testing
+        * ----------------------------------
+        *   Not currently implemented by this endpoint
+        *     1. Resource List Index
+        *     2. ResourceDump
+        *     3. ChangeList
        */
-
-      println("Do it using ResourceList")
-//      val resourcelist_url = capabilities.get("resourcelist") match {
-//        case Some(u) => u.toString
-//        case _ => throw new Exception("No resources to get.") // log error
-//      }
-      val sparkConf = new SparkConf()
-        .setAppName("Hydra Resource Sync")
-        .setMaster("local") //todo parameterize
-      val sc = new SparkContext(sparkConf)
-
-      try {
-        val rsRdd = new ResourceSyncRdd("https://hyphy.demo.hydrainabox.org/resourcelist", sc)
-        rsRdd.saveAsTextFile(outputFile)
-      } finally {
-        sc.stop()
-      }
-
-
+      // Returns a Sequence of the items resources that need to be fetched
+      val resourceItems = ResourceSyncProcessor.getResources(hyboxResourceList)
+      new ResourceSyncRdd(resourceItems, sc)
     }
+
+    /*
+    TODO These cases need to be implemented but not in scope for initial hybox tests
+
     case (true, true) => {
-      // Fully sync using ResourceDump
+      // Perform full sync using ResourceDump
     }
     case (false, true) => {
-      // Sync changes using ChangeDump
+      // Perform partial sync of changes using ChangeDump
     }
     case (false, false) => {
-      // Sync changes using ChangeList
+      // Perform partial sync of changes using ChangeList
     }
+    */
+
     case _ => throw new Exception("This is strange...")
   }
 
-
-  /**
-    * Checks whether the "Dump" functionality is supported by the endpoint for the type of sync being
-    * performed (compete vs partial)
-    *
-    * @param baselineSync
-    * @return
-    */
-  def isDumpSupported(baselineSync: Boolean): Boolean = {
-    false
+  // Save to text file
+  rsRdd.saveAsTextFile(outputFile)
 
 
-//    baselineSync match {
-//      case true => capabilities.contains("resourcedump")
-//      case false => capabilities.contains("changedump")
-//      case _ => false
-//    }
-
-  }
-
+  // Timing end and print results
+  val end = System.currentTimeMillis()
+  val recordCount = rsRdd.count()
+  Utils.printRuntimeResults(end-start, recordCount)
 }

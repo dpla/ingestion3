@@ -58,6 +58,7 @@ class ResourceSyncUrlBuilder extends QueryUrlBuilder with Serializable {
     val urlParams = new URIBuilder()
       .setScheme(url.getProtocol)
       .setHost(url.getHost)
+      .setPath(url.getPath)
 
     params.get("path") match {
       case Some(p) => urlParams.setPath(p)
@@ -66,7 +67,7 @@ class ResourceSyncUrlBuilder extends QueryUrlBuilder with Serializable {
 
     params.get("accept") match {
       case Some(p) => urlParams.setParameter("Accept", p)
-      case _ => // Do nothing
+      case _ =>
     }
 
     urlParams.build().toURL
