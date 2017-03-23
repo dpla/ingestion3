@@ -17,7 +17,7 @@ class ResourceSyncPartition(val idx: Int, val resourceUrls: Seq[String]) extends
   * @param resourceList
   * @param sc
   */
-class ResourceSyncRdd(resourceList: Seq[String], sc: SparkContext) extends RDD[String](sc, Nil) {
+class ResourceSyncRdd(resourceList: Seq[String], sc: SparkContext) extends RDD[(String,String)](sc, Nil) {
   /**
     *
     * @return
@@ -40,7 +40,7 @@ class ResourceSyncRdd(resourceList: Seq[String], sc: SparkContext) extends RDD[S
     * @param context
     * @return
     */
-  override def compute(part: Partition, context: TaskContext): Iterator[String] = {
+  override def compute(part: Partition, context: TaskContext): Iterator[(String,String)] = {
     val p = part.asInstanceOf[ResourceSyncPartition]
     val rsi = new ResourceSyncIterator()
     rsi.fillBuffer(p.resourceUrls)

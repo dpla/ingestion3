@@ -2,10 +2,15 @@ package dpla.ingestion3
 
 import java.io.File
 
+import com.databricks.spark.avro._
 import dpla.ingestion3.harvesters.resourceSync.{ResourceSyncProcessor, ResourceSyncRdd}
 import dpla.ingestion3.utils.Utils
+import org.apache.avro.Schema
 import org.apache.log4j.LogManager
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.types.StructType
+import org.apache.spark.storage.StorageLevel
+import org.apache.spark.SparkConf
 
 
 
@@ -19,6 +24,24 @@ import org.apache.spark.{SparkConf, SparkContext}
 object RsHarvesterMain extends App {
 
   val logger = LogManager.getLogger(RsHarvesterMain.getClass)
+
+  val schemaStr =
+    """{
+        "namespace": "la.dp.avro",
+        "type": "record",
+        "name": "OriginalRecord.v1",
+        "doc": "",
+        "fields": [
+          {"name": "id", "type": "string"},
+          {"name": "provider", "type": "string"},
+          {"name": "document", "type": "string"},
+          {"name": "mimetype", "type": { "name": "MimeType",
+           "type": "enum", "symbols": ["application_json", "application_xml", "text_turtle"]}
+           }
+        ]
+      }
+    """//.stripMargin // TODO we need to template the document field so we can record info there
+
 
   // Complains about not being typesafe...
   if(args.length != 1 ) {
@@ -36,7 +59,9 @@ object RsHarvesterMain extends App {
   val sparkConf = new SparkConf()
     .setAppName("Hydra Resource Sync")
      .setMaster("local[32]") // TODO -- parameterize
-  val sc = new SparkContext(sparkConf)
+
+  val spark = SparkSession.builder().config(sparkConf).getOrCreate()
+  val sc = spark.sparkContext
 
 
   // Timing start
@@ -62,7 +87,7 @@ object RsHarvesterMain extends App {
        */
       // Returns a Sequence of the items resources that need to be fetched
       val resourceItems = ResourceSyncProcessor.getResources(hyboxResourceList)
-      new ResourceSyncRdd(resourceItems, sc)
+      new ResourceSyncRdd(resourceItems, sc).persist(StorageLevel.DISK_ONLY)
     }
 
     /*
@@ -82,12 +107,25 @@ object RsHarvesterMain extends App {
     case _ => throw new Exception("This is strange...")
   }
 
+  // From OAI harvester
+  val avroSchema = new Schema.Parser().parse(schemaStr)
+  val schemaType = SchemaConverters.toSqlType(avroSchema)
+  val structSchema = schemaType.dataType.asInstanceOf[StructType]
+  val provider = "hybox"
+
+
+ // Rs version
+  val rows = rsRdd.map(data => { Row(data._1, provider, data._2, "text_turtle") })
+  val dataframe = spark.createDataFrame(rows, structSchema)
+
   // Save to text file
-  rsRdd.saveAsTextFile(outputFile)
+  // rsRdd.saveAsTextFile(outputFile)
+  dataframe.write.format("com.databricks.spark.avro").option("avroSchema", schemaStr).avro(outputFile)
 
 
   // Timing end and print results
   val end = System.currentTimeMillis()
-  val recordCount = rsRdd.count()
+  val recordCount = dataframe.count()
   Utils.printRuntimeResults(end-start, recordCount)
+
 }
