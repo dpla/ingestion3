@@ -23,8 +23,8 @@ class ResourceSyncRdd(resourceList: Seq[String], sc: SparkContext) extends RDD[(
     * @return
     */
   override protected def getPartitions: Array[Partition] = {
-    val groupSize = 10 // Arbitrary size
-    // Split resourceList into X groups of 10
+    val groupSize = 50 // Arbitrary size
+    // Split resourceList into X groups of groupSize
     val partitionedResourceLists = resourceList.grouped(groupSize).toList
     val partitions = new Array[Partition](partitionedResourceLists.size)
 

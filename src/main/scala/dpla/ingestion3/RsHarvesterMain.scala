@@ -13,14 +13,6 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.spark.SparkConf
 
 
-
-// Example usage:
-// PATH_TO_SPARK/bin/spark-submit --class "la.dp.ingestion3.RsHarvesterMain" \
-//   --master local[3] \
-//   PATH_TO_INGESTION3_APP/target/scala-2.11/________.jar \
-//   OUTPUT_PATH
-
-
 object RsHarvesterMain extends App {
 
   val logger = LogManager.getLogger(RsHarvesterMain.getClass)
@@ -58,7 +50,7 @@ object RsHarvesterMain extends App {
 
   val sparkConf = new SparkConf()
     .setAppName("Hydra Resource Sync")
-     .setMaster("local[32]") // TODO -- parameterize
+    // .setMaster("local[32]") // TODO -- parameterize
 
   val spark = SparkSession.builder().config(sparkConf).getOrCreate()
   val sc = spark.sparkContext
@@ -111,21 +103,18 @@ object RsHarvesterMain extends App {
   val avroSchema = new Schema.Parser().parse(schemaStr)
   val schemaType = SchemaConverters.toSqlType(avroSchema)
   val structSchema = schemaType.dataType.asInstanceOf[StructType]
-  val provider = "hybox"
 
-
- // Rs version
-  val rows = rsRdd.map(data => { Row(data._1, provider, data._2, "text_turtle") })
+  // Map harvested data and creates a DataFrame
+  // TODO Remove hard coded provider value
+  val rows = rsRdd.map(data => { Row(data._1, "hybox", data._2, "text_turtle") })
   val dataframe = spark.createDataFrame(rows, structSchema)
 
-  // Save to text file
-  // rsRdd.saveAsTextFile(outputFile)
-  dataframe.write.format("com.databricks.spark.avro").option("avroSchema", schemaStr).avro(outputFile)
+  // Save dataframe to avro file
+  dataframe.write.format("com.databricks.spark.avro").option("avroSchema", schemaStr).save(outputFile)
 
 
   // Timing end and print results
   val end = System.currentTimeMillis()
   val recordCount = dataframe.count()
   Utils.printRuntimeResults(end-start, recordCount)
-
 }
