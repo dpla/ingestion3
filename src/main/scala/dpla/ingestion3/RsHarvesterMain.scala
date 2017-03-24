@@ -13,6 +13,18 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.spark.SparkConf
 
 
+/**
+  * Invocation to run on EMR:
+  *
+  * spark-submit
+  *   --packages com.databricks:spark-avro_2.11:3.2.0
+  *   --class "dpla.ingestion3.RsHarvesterMain"
+  *   --master yarn
+  *   <BUILD_JAR_NAME>.jar
+  *   s3n://<PATH>
+  */
+
+
 object RsHarvesterMain extends App {
 
   val logger = LogManager.getLogger(RsHarvesterMain.getClass)
