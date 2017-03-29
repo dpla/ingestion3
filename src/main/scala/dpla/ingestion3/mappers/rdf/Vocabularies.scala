@@ -366,7 +366,7 @@ case class ORE()
 }
 
 case class SKOS()
-  extends Vocabulary("skos", "http://www.w3.org/2004/02/skos/core") {
+  extends Vocabulary("skos", "http://www.w3.org/2004/02/skos/core/") {
   val Concept: IRI = apply("Concept")
   val ConceptScheme: IRI = apply("ConceptScheme")
   val Collection: IRI = apply("Collection")
