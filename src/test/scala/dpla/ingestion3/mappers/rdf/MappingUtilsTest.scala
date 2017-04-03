@@ -29,7 +29,7 @@ class MappingUtilsTest extends FlatSpec with BeforeAndAfter with MappingUtils {
   }
 
   it should "create an aggregatedCHO that's a dpla:sourceResource" in {
-    testCHOMapping(ChoData(), rdf.`type`, Seq(dpla.sourceResource))
+    testCHOMapping(ChoData(), rdf.`type`, Seq(dpla.SourceResource))
   }
 
   it should "map dates" in {

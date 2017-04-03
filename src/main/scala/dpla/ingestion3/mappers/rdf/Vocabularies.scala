@@ -39,11 +39,11 @@ case class RDF() extends Vocabulary("rdf", "http://www.w3.org/1999/02/22-rdf-syn
   val HTML = org.eclipse.rdf4j.model.vocabulary.RDF.HTML
 }
 
-case class DPLA() extends Vocabulary("dpla", "http://dp.dpla/about/map/") {
+case class DPLA() extends Vocabulary("dpla", "http://dp.la/about/map/") {
   val Place: IRI = apply("Place")
+  val SourceResource: IRI = apply("SourceResource")
   val intermediateProvider: IRI = apply("intermediateProvider")
   val originalRecord: IRI = apply("originalRecord")
-  val sourceResource: IRI = apply("sourceResource")
   val isReplacedBy: IRI = apply("isReplacedBy")
   val providedLabel: IRI = apply("providedLabel")
   val replaces: IRI = apply("replaces")
@@ -366,7 +366,7 @@ case class ORE()
 }
 
 case class SKOS()
-  extends Vocabulary("skos", "http://www.w3.org/2004/02/skos/core") {
+  extends Vocabulary("skos", "http://www.w3.org/2004/02/skos/core/") {
   val Concept: IRI = apply("Concept")
   val ConceptScheme: IRI = apply("ConceptScheme")
   val Collection: IRI = apply("Collection")

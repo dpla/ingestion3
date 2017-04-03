@@ -2,16 +2,17 @@ package dpla.ingestion3
 
 import dpla.ingestion3.harvesters.OaiQueryUrlBuilder
 import java.io.File
-import java.util.concurrent.TimeUnit
 
 import com.databricks.spark.avro._
 import dpla.ingestion3.utils.OaiRdd
+import dpla.ingestion3.utils.Utils
 import org.apache.avro.Schema
 import org.apache.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.storage.StorageLevel
+
 
 /**
   * Entry point for running an OAI harvest
@@ -59,7 +60,7 @@ object OaiHarvesterMain extends App {
 
   val provider = args(4)
 
-  deleteRecursively(new File(outputFile))
+  Utils.deleteRecursively(new File(outputFile))
 
   val sparkConf = new SparkConf()
     .setAppName("Oai Harvest")
@@ -85,45 +86,6 @@ object OaiHarvesterMain extends App {
 
   val end = System.currentTimeMillis()
 
+  Utils.printResults((end-start),recordsHarvestedCount)
 
-  printResults((end-start),recordsHarvestedCount)
-
-  /**
-    * Print the results of a harvest
-    *
-    * Example:
-    *   Harvest count: 242924 records harvested
-    *   Runtime: 4 minutes 24 seconds
-    *   Throughput: 920 records/second
-    *
-    * @param runtime Runtime in milliseconds
-    * @param recordsHarvestedCount Number of records in the output directory
-    */
-
-  def printResults(runtime: Long, recordsHarvestedCount: Long): Unit = {
-    // Make things pretty
-    val formatter = java.text.NumberFormat.getIntegerInstance
-    val minutes: Long = TimeUnit.MILLISECONDS.toMinutes(runtime)
-    val seconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) -
-      TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(runtime))
-    val runtimeInSeconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) + 1
-    // add 1 to avoid divide by zero error
-    val recordsPerSecond: Long = recordsHarvestedCount/runtimeInSeconds
-
-    println(s"File count: ${formatter.format(recordsHarvestedCount)}")
-    println(s"Runtime: $minutes:$seconds")
-    println(s"Throughput: ${formatter.format(recordsPerSecond)} records/second")
-  }
-
-  /**
-    * Delete a directory
-    * Taken from http://stackoverflow.com/questions/25999255/delete-directory-recursively-in-scala#25999465
-    * @param file
-    */
-  def deleteRecursively(file: File): Unit = {
-    if (file.isDirectory)
-      file.listFiles.foreach(deleteRecursively)
-    if (file.exists && !file.delete)
-      throw new Exception(s"Unable to delete ${file.getAbsolutePath}")
-  }
 }

@@ -1,13 +1,12 @@
 package dpla.ingestion3.utils
 
 import java.io.File
-
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{Path, FileSystem}
 import org.apache.hadoop.io.SequenceFile.Reader
 import org.apache.hadoop.io.Text
-
 import scala.xml.Node
+import java.util.concurrent.TimeUnit
 
 /**
   * Created by scott on 1/18/17.
@@ -60,4 +59,43 @@ object Utils {
     val prettyPrinter = new scala.xml.PrettyPrinter(80, 2)
     prettyPrinter.format(xml).toString
   }
+
+  /**
+    * Print the results of an activity
+    *
+    * Example:
+    *   Harvest count: 242924 records harvested
+    *   Runtime: 4 minutes 24 seconds
+    *   Throughput: 920 records/second
+    *
+    * @param runtime Runtime in milliseconds
+    * @param recordCount Number of records output
+    */
+  def printResults(runtime: Long, recordCount: Long): Unit = {
+    val formatter = java.text.NumberFormat.getIntegerInstance
+    val minutes: Long = TimeUnit.MILLISECONDS.toMinutes(runtime)
+    val seconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) -
+      TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(runtime))
+    val runtimeInSeconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) + 1
+    // add 1 to avoid divide by zero error
+    val recordsPerSecond: Long = recordCount/runtimeInSeconds
+
+    println(s"File count: ${formatter.format(recordCount)}")
+    println(s"Runtime: $minutes:$seconds")
+    println(s"Throughput: ${formatter.format(recordsPerSecond)} records/second")
+  }
+
+
+  /**
+    * Delete a directory
+    * Taken from http://stackoverflow.com/questions/25999255/delete-directory-recursively-in-scala#25999465
+    * @param file
+    */
+  def deleteRecursively(file: File): Unit = {
+    if (file.isDirectory)
+      file.listFiles.foreach(deleteRecursively)
+    if (file.exists && !file.delete)
+      throw new Exception(s"Unable to delete ${file.getAbsolutePath}")
+  }
+
 }
