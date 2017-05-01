@@ -1,16 +1,14 @@
 package dpla.ingestion3
 
-import dpla.ingestion3.harvesters.OaiQueryUrlBuilder
 import java.io.File
-
-import com.databricks.spark.avro._
-import dpla.ingestion3.utils.OaiRdd
 import dpla.ingestion3.utils.Utils
+import com.databricks.spark.avro._
 import org.apache.avro.Schema
 import org.apache.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions._
 import org.apache.spark.storage.StorageLevel
 
 
@@ -32,8 +30,8 @@ object OaiHarvesterMain extends App {
         "doc": "",
         "fields": [
           {"name": "id", "type": "string"},
-          {"name": "provider", "type": "string"},
           {"name": "document", "type": "string"},
+          {"name": "provider", "type": "string"},
           {"name": "mimetype", "type": { "name": "MimeType",
            "type": "enum", "symbols": ["application_json", "application_xml", "text_turtle"]}
            }
@@ -51,13 +49,10 @@ object OaiHarvesterMain extends App {
 
   println(schemaStr)
 
-  val urlBuilder = new OaiQueryUrlBuilder
   val outputFile = args(0)
-  val oaiParams = Map[String,String](
-    "endpoint" -> args(1),
-    "metadataPrefix" -> args(2),
-    "verb" -> args(3))
-
+  val endpoint = args(1)
+  val metadataPrefix = args(2)
+  val verb = args(3)
   val provider = args(4)
 
   Utils.deleteRecursively(new File(outputFile))
@@ -74,18 +69,28 @@ object OaiHarvesterMain extends App {
   val avroSchema = new Schema.Parser().parse(schemaStr)
   val schemaType = SchemaConverters.toSqlType(avroSchema)
   val structSchema = schemaType.dataType.asInstanceOf[StructType]
-  val oaiRdd: OaiRdd = new OaiRdd(sc, oaiParams, urlBuilder).persist(StorageLevel.DISK_ONLY)
-  val rows = oaiRdd.map(data => { Row(data._1, provider, data._2, "application_xml") })
-  val dataframe = spark.createDataFrame(rows, structSchema)
 
-  //TODO: should probably do this by loading the avro into a new dataframe and calling count()
+  val oaiResults = spark.read
+                        .format("dpla.ingestion3.harvesters.oai")
+                        .option("metadataPrefix", metadataPrefix)
+                        .option("verb", verb)
+                        .load(endpoint)
+
+  oaiResults.persist(StorageLevel.DISK_ONLY)
+
+  val dataframe = oaiResults.withColumn("provider", lit(provider))
+                            .withColumn("mimetype", lit("application_xml"))
+
   val recordsHarvestedCount = dataframe.count()
 
-  dataframe.write.format("com.databricks.spark.avro").option("avroSchema", schemaStr).avro(outputFile)
+  dataframe.write
+           .format("com.databricks.spark.avro")
+           .option("avroSchema", schemaStr)
+           .avro(outputFile)
+
   sc.stop()
 
   val end = System.currentTimeMillis()
 
   Utils.printResults((end-start),recordsHarvestedCount)
-
 }
