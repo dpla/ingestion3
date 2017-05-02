@@ -26,8 +26,9 @@ object IndexerMain {
   def main(args:Array[String]): Unit = {
 
     val input = args(0)
-    val cluster = args(1)
-    val index = args(2)
+    val esCluster = args(1)
+    val esPort = args(2)
+    val index = args(3)
 
     val conf = new SparkConf()
       .setAppName("Ingest 3 Indexer")
@@ -61,8 +62,10 @@ object IndexerMain {
     jobConf.set("mapred.output.format.class",  "org.elasticsearch.hadoop.mr.EsOutputFormat")
     //This means we're giving it json instead of ES API record objects:
     jobConf.set(ConfigurationOptions.ES_INPUT_JSON, "yes")
-    //This passes info about the cluster we're writing to
-    jobConf.set(ConfigurationOptions.ES_NODES, cluster)
+    //This is the host name of the Elasticsearch cluster we're writing to
+    jobConf.set(ConfigurationOptions.ES_NODES, esCluster)
+    //This is the port number that Elasticsearch listens on
+    jobConf.set(ConfigurationOptions.ES_PORT, esPort)
     //This tells it to create the index if it doesn't exist.
     jobConf.set(ConfigurationOptions.ES_INDEX_AUTO_CREATE, "true")
     //Tells elastisearch-hadoop what field to use as the ID to formulate the correct ES API calls
