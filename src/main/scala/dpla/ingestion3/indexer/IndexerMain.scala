@@ -10,15 +10,16 @@ import org.elasticsearch.hadoop.mr.EsOutputFormat.EsOldAPIOutputCommitter
 
 object IndexerMain {
 
+  // See https://digitalpubliclibraryofamerica.atlassian.net/wiki/display/TECH/Ingestion+3+Storage+Specification
   val schema: String = """
   | {
-  |   "namespace": "dpla.dp.avro.MAP_3.1",
+  |   "namespace": "la.dp.avro.MAP_3.1",
   |   "type": "record",
-  |   "name": "EnrichedRecord",
-  |   "doc": "Dumped from PA cqa box in Ingestion 1",
+  |   "name": "IndexRecord.v1",
+  |   "doc": "",
   |   "fields": [
   |     { "name": "id", "type": "string" },
-  |     { "name": "json_document", "type": "string" }
+  |     { "name": "document", "type": "string" }
   |   ]
   | }
   """.stripMargin //todo retrieve this from S3
@@ -81,7 +82,7 @@ object IndexerMain {
     val es: RDD[(String, String)] = rawData.map(
       row => (
         row.getAs[String]("id"),
-        row.getAs[String]("json_document")
+        row.getAs[String]("document")
       )
     )
 
