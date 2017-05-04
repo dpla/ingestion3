@@ -83,6 +83,7 @@ object OaiHarvesterMain extends App {
 
   val recordsHarvestedCount = dataframe.count()
 
+  // This task may require a large amount of driver memory.
   dataframe.write
            .format("com.databricks.spark.avro")
            .option("avroSchema", schemaStr)
