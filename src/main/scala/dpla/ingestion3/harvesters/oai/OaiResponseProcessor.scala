@@ -9,7 +9,7 @@ import scala.xml.NodeSeq
   * OAI-PMH harvester for DPLA's Ingestion3 system
   *
   */
-class OaiResponseProcessor() {
+object OaiResponseProcessor {
   private[this] val logger = LogManager.getLogger("OaiHarvester")
 
   /**
@@ -30,14 +30,14 @@ class OaiResponseProcessor() {
   }
 
   /**
-    * Iterates through the records in an OAI response and generates a DPLA ID for
-    * each and maps the original record to th DPLA ID
+    * Iterates through the records in an OAI response and generates a DPLA ID
+    * for each and maps the original record to the DPLA ID
     *
     * @param xml NodeSeq
     *            The XML response from the OAI request
     * @return
     */
-  def getRecordsAsMap(xml: NodeSeq): Seq[(String,String)] = {
+  def getRecordsAsTuples(xml: NodeSeq): Seq[(String,String)] = {
     val records = xml \\ "OAI-PMH" \\ "record"
     records.map(r => r.headOption match {
       case Some(node) => {
@@ -65,7 +65,7 @@ class OaiResponseProcessor() {
   /**
     * Get the resumptionToken from the response
     *
-    * @param xml NodeSeq
+    * @param string String
     *            The complete XML response
     * @return Option[String]
     *         The resumptionToken to fetch the next set of records
@@ -74,10 +74,11 @@ class OaiResponseProcessor() {
     *         harvested (an error could have occurred when fetching), only
     *         that there are no more records that can be fetched.
     */
-  def getResumptionToken(xml: NodeSeq): Option[String] = {
-    (xml \\ "OAI-PMH" \\ "resumptionToken").text match {
-      case e if e.isEmpty => None
-      case _ => Some( (xml \\ "OAI-PMH" \\ "resumptionToken").text.trim )
+  def getResumptionToken(string: String): Option[String] = {
+    val pattern = """<resumptionToken>(.*)</resumptionToken>""".r
+    pattern.findFirstMatchIn(string) match {
+      case Some(m) => Some(m.group(1))
+      case None => None
     }
   }
 }
