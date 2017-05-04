@@ -4,7 +4,6 @@ import java.net.URI
 
 import dpla.ingestion3.model.{DplaMap, DplaMapData, DplaMapError, EdmAgent}
 import dpla.ingestion3.utils.Utils
-import org.apache.pig.data.utils.MethodHelper.NotImplemented
 
 import scala.util.{Failure, Success, Try}
 

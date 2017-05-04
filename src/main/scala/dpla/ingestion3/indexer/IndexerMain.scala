@@ -6,8 +6,8 @@ import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.serializer.KryoSerializer
 import org.apache.spark.sql.{Row, SparkSession}
-import org.elasticsearch.hadoop.cfg.ConfigurationOptions
-import org.elasticsearch.hadoop.mr.EsOutputFormat.EsOldAPIOutputCommitter
+import org.elasticsearch.spark.rdd.EsSpark
+
 
 object IndexerMain {
 
@@ -53,42 +53,35 @@ object IndexerMain {
       }
     }
 
-    //The following configuration stuff is basically necessary because we're using an old version of elasticsearch.
-    //This means that we need to use the older elasticsearch-hadoop tooling, which was built for Hadoop.
-    //Spark is able to take advantage of it with the saveAsHadoopDataset call below, but later versions of ES support
-    //a Spark-native approach that is a lot easier to use and would eliminate Hadoop APIs and dependencies.
-    val jobConf = new JobConf(sc.hadoopConfiguration)
-    //This class tells Hadoop how to finish off saving the output data. This is a no-op implementation.
-    jobConf.setOutputCommitter(classOf[EsOldAPIOutputCommitter])
-    //This tells the Hadoop API how to save the resulting documents, i.e., to ElasticSearch
-    jobConf.set("mapred.output.format.class",  "org.elasticsearch.hadoop.mr.EsOutputFormat")
     //This means we're giving it json instead of ES API record objects:
-    jobConf.set(ConfigurationOptions.ES_INPUT_JSON, "yes")
+    conf.set("es.output.json", "yes")
     //This is the host name of the Elasticsearch cluster we're writing to
-    jobConf.set(ConfigurationOptions.ES_NODES, esCluster)
+    conf.set("es.nodes", esCluster)
     //This is the port number that Elasticsearch listens on
-    jobConf.set(ConfigurationOptions.ES_PORT, esPort)
+    conf.set("es.port", esPort)
     //This tells it to create the index if it doesn't exist.
-    jobConf.set(ConfigurationOptions.ES_INDEX_AUTO_CREATE, "true")
+    conf.set("es.index.auto.create", "yes")
     //Tells elastisearch-hadoop what field to use as the ID to formulate the correct ES API calls
-    jobConf.set(ConfigurationOptions.ES_MAPPING_ID, "_id")
-    //This tells elasticsearch-hadoop what field represents the elasticsearch type of the record
-    jobConf.set(ConfigurationOptions.ES_RESOURCE_WRITE, index + "/{ingestType}")
-    //Since we're not running an actual Hadoop job, these only serve to turn off some warning log statements
-    jobConf.set("mapreduce.map.speculative","false")
-    jobConf.set("mapreduce.reduce.speculative","false")
+    conf.set("es.mapping.id", "id")
 
-    //The saveAsHadoopDataset call wants a PairRDD, so we build one here
-    //I'm pretty sure the elasticsearch-hadoop api ignores the ID field and only looks at the document, though
-    val es: RDD[(String, String)] = filteredData.map(
-      row => (
-        row.getAs[String]("id"),
-        row.getAs[String]("document")
-      )
+    val rdd: RDD[String] = filteredData.map(
+      row => {
+        val doc: String = row.getAs[String]("document")
+        // We remove the _id property of the document because Elasticsearch 5
+        // rejects it.  This should be fine, because we make no promises to
+        // users about its existence or utility. In fact,
+        // https://dp.la/info/developers/codex/responses/field-reference/ says
+        // for all "_" fields, "Internal field -- look away."
+        val fixedDoc: String = doc.replaceFirst(""""_id":\s*".+?",""", "")
+        fixedDoc
+      }
     )
 
-    //This actually kicks off the save process
-    es.saveAsHadoopDataset(jobConf)
+    /*
+     * FIXME: All records are updated as items, but some will be collections and
+     * we need to add a schema for collections as we have done in Ingestion 1.
+     */
+    EsSpark.saveJsonToEs(rdd, index + "/item")
 
     //This cleans up the Spark connection
     spark.stop()
