@@ -8,6 +8,7 @@ import org.apache.spark.rdd.RDD
 import java.net.URL
 import org.apache.commons.io.IOUtils
 import scala.xml.{NodeSeq, XML}
+import scala.annotation.tailrec
 
 class OaiRelation (endpoint: String, metadataPrefix: String, verb: String)
                   (@transient val sqlContext: SQLContext)
@@ -52,6 +53,7 @@ class OaiRelation (endpoint: String, metadataPrefix: String, verb: String)
   */
   def results: List[String] = {
 
+    @tailrec
     def loop(data: List[String], 
              resumptionToken: Option[String]): List[String] = {
       if(!(resumptionToken.isDefined)) return data
