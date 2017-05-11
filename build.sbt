@@ -8,8 +8,8 @@ scalaVersion := "2.11.8"
 
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-  "org.apache.spark" %% "spark-core" % "2.0.1",
-  "org.apache.spark" %% "spark-sql" % "2.0.1",
+  "org.apache.spark" %% "spark-core" % "2.0.1" exclude("org.scalatest", "scalatest_2.11"),
+  "org.apache.spark" %% "spark-sql" % "2.0.1" exclude("org.scalatest", "scalatest_2.11"),
   "com.databricks" %% "spark-avro" % "3.2.0",
   "org.json4s" %% "json4s-core" % "3.2.11" % "provided",
   "org.json4s" %% "json4s-jackson" % "3.2.11" % "provided",
