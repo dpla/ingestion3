@@ -1,11 +1,6 @@
 package dpla.ingestion3.utils
 
 import java.io.File
-<<<<<<< HEAD
-=======
-import java.util.concurrent.TimeUnit
-
->>>>>>> Working resourcesync harvester for testing hybox endpoint
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.SequenceFile.Reader
@@ -67,6 +62,7 @@ object Utils {
 
   /**
 <<<<<<< HEAD
+<<<<<<< HEAD
     * Print the results of an activity
     *
     * Example:
@@ -93,6 +89,8 @@ object Utils {
 
 
   /**
+=======
+>>>>>>> 064c6b49aa5811329ac896275c2d890fefdd21b4
     * Delete a directory
     * Taken from http://stackoverflow.com/questions/25999255/delete-directory-recursively-in-scala#25999465
     * @param file

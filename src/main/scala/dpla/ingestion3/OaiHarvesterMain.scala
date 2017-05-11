@@ -94,4 +94,5 @@ object OaiHarvesterMain extends App {
   val end = System.currentTimeMillis()
 
   Utils.printResults((end-start),recordsHarvestedCount)
+
 }
