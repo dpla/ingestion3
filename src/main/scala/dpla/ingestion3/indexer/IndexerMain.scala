@@ -30,6 +30,8 @@ object IndexerMain {
     val esCluster = args(1)
     val esPort = args(2)
     val index = args(3)
+    
+    val filter: Option[String] = if (args.isDefinedAt(4)) Some(args(4)) else None
 
     val conf = new SparkConf()
       .setAppName("Ingest 3 Indexer")
@@ -51,6 +53,17 @@ object IndexerMain {
       .format("com.databricks.spark.avro")
       .option("avroSchema", schema)
       .load(input).rdd
+
+    /**
+      * Select only those rows that contain the `filter` substring anywhere
+      * within the `document` String.
+      */
+    val filteredData: RDD[Row] = {
+      filter match {
+        case Some(filter) => rawData.filter(_.getAs[String]("document").contains(filter))
+        case None => rawData
+      }
+    }
 
     //The following configuration stuff is basically necessary because we're using an old version of elasticsearch.
     //This means that we need to use the older elasticsearch-hadoop tooling, which was built for Hadoop.
@@ -79,7 +92,7 @@ object IndexerMain {
 
     //The saveAsHadoopDataset call wants a PairRDD, so we build one here
     //I'm pretty sure the elasticsearch-hadoop api ignores the ID field and only looks at the document, though
-    val es: RDD[(String, String)] = rawData.map(
+    val es: RDD[(String, String)] = filteredData.map(
       row => (
         row.getAs[String]("id"),
         row.getAs[String]("document")
