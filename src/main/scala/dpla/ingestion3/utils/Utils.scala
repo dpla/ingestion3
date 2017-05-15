@@ -2,7 +2,7 @@ package dpla.ingestion3.utils
 
 import java.io.File
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{Path, FileSystem}
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.SequenceFile.Reader
 import org.apache.hadoop.io.Text
 import scala.xml.Node
@@ -29,7 +29,7 @@ object Utils {
 
     try {
       while (reader.next(k, v)) {
-        println(k);
+        println(k)
       }
     } finally {
       reader.close()
@@ -98,4 +98,42 @@ object Utils {
       throw new Exception(s"Unable to delete ${file.getAbsolutePath}")
   }
 
+  /**
+    * Update the query parameters
+    *
+    * @param listOfParams
+    *                     List[ Map[String,String] ]
+    *                     A list of Maps to combine
+    * @return A single Map
+    */
+  def updateParams(listOfParams: List[Map[String,String]]): Map[String, String] = {
+    listOfParams.flatten.toMap
+  }
+
+  /**
+    * Print the results of a harvest
+    *
+    * Example:
+    *   Harvest count: 242924 records harvested
+    *   Runtime: 4 minutes 24 seconds
+    *   Throughput: 920 records/second
+    *
+    * @param runtime Runtime in milliseconds
+    * @param recordsHarvestedCount Number of records in the output directory
+    */
+
+  def printRuntimeResults(runtime: Long, recordsHarvestedCount: Long): Unit = {
+    // Make things pretty
+    val formatter = java.text.NumberFormat.getIntegerInstance
+    val minutes: Long = TimeUnit.MILLISECONDS.toMinutes(runtime)
+    val seconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) -
+      TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(runtime))
+    val runtimeInSeconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) + 1
+    // add 1 to avoid divide by zero error
+    val recordsPerSecond: Long = recordsHarvestedCount/runtimeInSeconds
+
+    println(s"\n\nFile count: ${formatter.format(recordsHarvestedCount)}")
+    println(s"Runtime: $minutes:$seconds")
+    println(s"Throughput: ${formatter.format(recordsPerSecond)} records/second")
+  }
 }
