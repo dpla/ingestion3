@@ -10,11 +10,11 @@ import scala.xml.{Elem, XML}
 object ResourceSyncProcessor {
   /**
     *
-    * @param resourcelist_url
+    * @param resourcelistUrl
     * @return
     */
-  def getResources(resourcelist_url: Option[String]): Seq[String] = {
-    val url = resourcelist_url match {
+  def getResources(resourcelistUrl: Option[String]): Seq[String] = {
+    val url = resourcelistUrl match {
       case Some(r) => r
       case _ => throw new Exception("No resource URL given")
     }
