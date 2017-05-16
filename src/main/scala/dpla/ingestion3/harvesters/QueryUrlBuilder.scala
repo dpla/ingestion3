@@ -22,9 +22,9 @@ class OaiQueryUrlBuilder extends QueryUrlBuilder with Serializable {
     assume(params.get("verb").isDefined)
     assume(params.get("metadataPrefix").isDefined)
 
-    val verb = params.get("verb").get
-    val metadataPrefix = params.get("metadataPrefix").get
-    val url = new URL(params.get("endpoint").get)
+    val verb = params("verb")
+    val metadataPrefix = params("metadataPrefix")
+    val url = new URL(params("endpoint"))
 
     // Build the URL
     val urlParams = new URIBuilder()
@@ -34,8 +34,28 @@ class OaiQueryUrlBuilder extends QueryUrlBuilder with Serializable {
       .setParameter("verb", verb)
 
     params.get("resumptionToken") match {
-      case Some(v) if v.nonEmpty => urlParams.setParameter("resumptionToken", v)
-      case _ => urlParams.setParameter("metadataPrefix", metadataPrefix)
+      case Some(v) if v.nonEmpty => setResumptionParams(v)
+      case _ => setInitialRequestParams
+    }
+
+    /**
+      * Set the params that should ONLY be included in an initial OAI request.
+      * These params should NOT be included in a resumption request.
+      */
+    def setInitialRequestParams = {
+      urlParams.setParameter("metadataPrefix", metadataPrefix)
+
+      params.get("set") match {
+        case Some(v) if v.nonEmpty => urlParams.setParameter("set", v)
+        case _ => urlParams
+      }
+    }
+
+    /**
+      * Set the resumption token param.
+      */
+    def setResumptionParams(resumptionToken: String) = {
+      urlParams.setParameter("resumptionToken", resumptionToken)
     }
 
     urlParams.build.toURL

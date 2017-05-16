@@ -8,10 +8,6 @@ class DefaultSource extends RelationProvider {
   override def createRelation(sqlContext: SQLContext,
                               parameters: Map[String, String]) : OaiRelation = {
 
-    val endpoint = parameters("path")
-    val metadataPrefix = parameters("metadataPrefix")
-    val verb = parameters("verb")
-    
-    new OaiRelation(endpoint, metadataPrefix, verb)(sqlContext)
+    new OaiRelation(parameters)(sqlContext)
   }
 }
