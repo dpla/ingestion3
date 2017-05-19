@@ -75,7 +75,7 @@ object OaiResponseProcessor {
     *         that there are no more records that can be fetched.
     */
   def getResumptionToken(string: String): Option[String] = {
-    val pattern = """<resumptionToken>(.*)</resumptionToken>""".r
+    val pattern = """<resumptionToken.*>(.*)</resumptionToken>""".r
     pattern.findFirstMatchIn(string) match {
       case Some(m) => Some(m.group(1))
       case None => None
