@@ -30,11 +30,21 @@ class StringEnrichments {
 
   def limitCharacters(value: String): String = ???
 
-  def splitAtDelimiter(value: String): String = ???
+  /**
+    * Splits a String value around a given delimiter. The default delimiter
+    * is a semi-colon.
+    *
+    * @param value
+    * @param delimiter
+    * @return
+    */
+  def splitAtDelimiter(value: String, delimiter: String = ";"): Array[String] = {
+    value.split(delimiter).map(_.trim)
+  }
 
-  def splitOnProvidedLabel(value: String): String = ???
+  def splitOnProvidedLabel(value: String): Array[String]= ???
 
-  def splitProvidedLabelAtDelimiter(value: String): String = ???
+  def splitProvidedLabelAtDelimiter(value: String): Array[String] = ???
 
   def stripEndingPunctuation(value: String): String = ???
 
