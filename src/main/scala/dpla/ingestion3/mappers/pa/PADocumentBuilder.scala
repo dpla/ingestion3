@@ -6,7 +6,7 @@ import scala.xml._
 class PADocumentBuilder extends XmlExtractionUtils {
   def buildFromXml(rawData: String): PADocument = {
 
-    implicit val xml: NodeSeq = XML.load(rawData)
+    implicit val xml = XML.load(rawData)
 
     PADocument(
         contributors = extractStrings("dc:contributor"),

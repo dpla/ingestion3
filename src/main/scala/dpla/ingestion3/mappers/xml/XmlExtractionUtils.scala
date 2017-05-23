@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.xml
 
 import scala.xml._
 
-class XmlExtractionUtils {
+trait XmlExtractionUtils {
 
   /**
     *
@@ -10,14 +10,14 @@ class XmlExtractionUtils {
     * @param xml
     * @return
     */
-  def extractString(fieldName: String)(implicit xml: NodeSeq): Option[String]
-  = extractString(xml \ fieldName)
+  def extractString(fieldName: String)(implicit xml: Elem): Option[String]
+  = extractString(xml \\ fieldName)
 
   /**
     *
     */
-  def extractStrings(fieldName: String)(implicit xml: NodeSeq): Seq[String]
-  = extractStrings(xml \ fieldName)
+  def extractStrings(fieldName: String)(implicit xml: Elem): Seq[String]
+  = extractStrings(xml \\ fieldName)
 
   /**
     *
@@ -26,7 +26,7 @@ class XmlExtractionUtils {
     */
   def extractString(xValue: NodeSeq): Option[String] = {
     xValue match {
-      case v if (v.text.nonEmpty) => Some(v.text)
+      case v if (v.text.nonEmpty) => Some(v.text.trim)
       case _ => None
     }
   }
