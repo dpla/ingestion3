@@ -28,29 +28,43 @@ class StringEnrichments {
     sentences.mkString(" ")
   }
 
-  def limitCharacters(value: String): String = ???
+  def limitCharacters(value: String): String = {
+    ""
+  }
 
   /**
     * Splits a String value around a given delimiter. The default delimiter
     * is a semi-colon.
     *
-    * @param value
-    * @param delimiter
+    * @param value      The string value to split
+    * @param delimiter  The delimiter to split on
     * @return
     */
   def splitAtDelimiter(value: String, delimiter: String = ";"): Array[String] = {
     value.split(delimiter).map(_.trim)
   }
 
-  def splitOnProvidedLabel(value: String): Array[String]= ???
+  def splitOnProvidedLabel(value: String): Array[String]= {
+    Array("")
+  }
 
-  def splitProvidedLabelAtDelimiter(value: String): Array[String] = ???
+  def splitProvidedLabelAtDelimiter(value: String): Array[String] = {
+    Array("")
+  }
 
-  def stripEndingPunctuation(value: String): String = ???
+  def stripEndingPunctuation(value: String): String = {
+    ""
+  }
 
-  def stripHTML(value: String): String = ???
+  def stripHTML(value: String): String = {
+    ""
+  }
 
-  def stripLeadingPunctuation(value: String): String = ???
+  def stripLeadingPunctuation(value: String): String = {
+    ""
+  }
 
-  def stripPunctuation(value: String): String = ???
+  def stripPunctuation(value: String): String = {
+    ""
+  }
 }
