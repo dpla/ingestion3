@@ -60,7 +60,7 @@ class StringEnrichments {
   }
 
   def stripEndingPunctuation(value: String): String = {
-    ""
+    value.replace("""[^\w\'\"\s]+$""", "")
   }
 
   def stripHTML(value: String): String = {
@@ -70,10 +70,10 @@ class StringEnrichments {
   }
 
   def stripLeadingPunctuation(value: String): String = {
-    ""
+    value.replace("""^[^\w\'\"\s]+""", "")
   }
 
   def stripPunctuation(value: String): String = {
-    ""
+    value.replaceAll("""[^\w\'\"\s]""", "")
   }
 }

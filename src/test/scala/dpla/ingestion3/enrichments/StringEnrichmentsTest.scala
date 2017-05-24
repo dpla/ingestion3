@@ -64,4 +64,28 @@ class StringEnrichmentsTest extends FlatSpec with BeforeAndAfter {
     val enrichedValue = enrichments.stripHTML(originalValue)
     assert(enrichedValue === expectedValue)
   }
+
+  "stripPunctuation" should " strip all punctuation from the given string" in {
+    val originalValue = "\t\"It's @#$,.! OK\"\n"
+    val enrichedValue = enrichments.stripPunctuation(originalValue)
+    val expectedValue = "\t\"It's  OK\"\n"
+    assert(enrichedValue === expectedValue)
+  }
+
+  "stripLeadingPunctuation" should " strip leading punctuation from the " +
+      "given string" in {
+    val originalValue = "@#$,.!\t \"It's OK\""
+    val enrichedValue = enrichments.stripPunctuation(originalValue)
+    val expectedValue = "\t \"It's OK\""
+    assert(enrichedValue === expectedValue)
+  }
+
+  "stripEndingPunctuation" should " strip ending punctuation from the " +
+    "given string" in {
+    val originalValue = "\"It's OK\" @#$,.!"
+    val enrichedValue = enrichments.stripPunctuation(originalValue)
+    val expectedValue = "\"It's OK\" "
+    assert(enrichedValue === expectedValue)
+  }
+
 }
