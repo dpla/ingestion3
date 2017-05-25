@@ -4,7 +4,6 @@ import org.apache.commons.lang.StringEscapeUtils
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document.OutputSettings
 import org.jsoup.nodes.Entities.EscapeMode
-import org.jsoup.safety.Cleaner
 import org.jsoup.safety.Whitelist
 
 import scala.util.matching.Regex
