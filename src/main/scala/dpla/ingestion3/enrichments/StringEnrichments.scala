@@ -1,5 +1,12 @@
 package dpla.ingestion3.enrichments
 
+import org.apache.commons.lang.StringEscapeUtils
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document.OutputSettings
+import org.jsoup.nodes.Entities.EscapeMode
+import org.jsoup.safety.Cleaner
+import org.jsoup.safety.Whitelist
+
 import scala.util.matching.Regex
 
 /**
@@ -57,7 +64,9 @@ class StringEnrichments {
   }
 
   def stripHTML(value: String): String = {
-    ""
+    val unescaped = StringEscapeUtils.unescapeHtml(value)
+    val cleaned = Jsoup.clean(unescaped, "", Whitelist.none(), new OutputSettings().escapeMode(EscapeMode.xhtml))
+    StringEscapeUtils.unescapeHtml(cleaned)
   }
 
   def stripLeadingPunctuation(value: String): String = {
