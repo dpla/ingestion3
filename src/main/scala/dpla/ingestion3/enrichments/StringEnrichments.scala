@@ -26,6 +26,9 @@ class StringEnrichments {
     * capitalizes the first character of each sentence leaving all
     * other characters alone.
     *
+    * @example
+    *          "hello Ted.   nice to see you today." =>
+    *           "Hello Ted. Nice to see you today."
     */
   val convertToSentenceCase: SingleStringEnrichment = (value) => {
     val pattern: Regex = """.*?(\.)""".r
@@ -40,6 +43,9 @@ class StringEnrichments {
 
   /**
     * Splits a String value around a given delimiter.
+    *
+    * @example
+    *          ("ernie, bert, maria", ",") => ("ernie", "bert", "maria")
     */
   val splitAtDelimiter: (String, String) => Array[String] = (value, delimiter) => {
     value.split(delimiter).map(_.trim)
@@ -47,9 +53,18 @@ class StringEnrichments {
 
   /**
     * Splits a String around semicolon
+    *
+    * @example
+    *          ("one; two, three", ";") => ("one", "two, three")
     */
   val splitAtSemicolons: MultiStringEnrichment = splitAtDelimiter(_, ";")
 
+  /**
+    * Removes punctuation from the end of a given String
+    *
+    * @example
+    *          "Hello Frank!##$*." => "Hello Frank"
+    */
   val stripEndingPunctuation: SingleStringEnrichment = (value) => {
     value.replace("""[^\w\'\"\s]+$""", "")
   }
@@ -62,7 +77,9 @@ class StringEnrichments {
 
   /**
     * Removes leading colons and semicolons from a given String.
-    * Only run against the Title field.
+    *
+    * @note
+    *       Only run against the Title field.
     *
     * @example
     *          ":;; Happy birthday! ;;:" => "Happy birthday! ;;:"
