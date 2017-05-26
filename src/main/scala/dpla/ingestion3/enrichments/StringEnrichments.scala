@@ -69,6 +69,13 @@ class StringEnrichments {
     value.replace("""[^\w\'\"\s]+$""", "")
   }
 
+  /**
+    * Strips HTML from a string. Does a best effort around not emitting HTML entities or turning HTML entities into
+    * actual HTML
+    *
+    * @example
+    *          "It's <marquee>PEANUT BUTTER JELLY TIME</marquee>" => "It's PEANUT BUTTER JELLY TIME"
+    */
   val stripHTML: SingleStringEnrichment = (value) => {
     val unescaped = StringEscapeUtils.unescapeHtml(value)
     val cleaned = Jsoup.clean(unescaped, "", Whitelist.none(), new OutputSettings().escapeMode(EscapeMode.xhtml))
