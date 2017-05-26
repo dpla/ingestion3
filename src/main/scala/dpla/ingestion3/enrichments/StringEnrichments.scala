@@ -39,7 +39,7 @@ class StringEnrichments {
 
   // preSpacePat is precompiled once for limitCharacters, below. A string with
   // spaces, capturing the part up to the last space.
-  val preSpacePat = """^(.+)\s\S+$""".r
+  val preSpacePat: Regex = """^(.+)\s\S+$""".r
 
   /**
     * Limit a string to the given number of characters.
@@ -53,7 +53,7 @@ class StringEnrichments {
   val limitCharacters: (String, Int) => String = (value, limit) => {
     value match {
       case s if s.length > limit && limit > 3 => {
-        val sliced = s.slice(0, limit - 3) // -3 is OK if string is < 3 chars
+        val sliced = s.slice(0, limit - 3)
         sliced match {
           case preSpacePat(x) => s"$x..."  // add ellipses
           case _ => sliced                 // not space-delimited?
