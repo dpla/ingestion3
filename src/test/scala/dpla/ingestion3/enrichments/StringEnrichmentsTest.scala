@@ -14,9 +14,9 @@ class StringEnrichmentsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === expectedValue)
   }
 
-  "splitAtDelimiter" should " split a string around semi-colon by default" in {
+  "splitAtSemiColons" should " split a string around semi-colon" in {
     val originalValue = "subject-one; subject-two; subject-three"
-    val enrichedValue = enrichments.splitAtDelimiter(originalValue)
+    val enrichedValue = enrichments.splitAtSemicolons(originalValue)
     val expectedValue = Array("subject-one", "subject-two", "subject-three")
 
     assert(enrichedValue === expectedValue)
