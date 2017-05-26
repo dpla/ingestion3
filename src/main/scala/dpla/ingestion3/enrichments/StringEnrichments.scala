@@ -37,8 +37,31 @@ class StringEnrichments {
     sentences.mkString(" ")
   }
 
-  val limitCharacters: SingleStringEnrichment = (value) => {
-    ""
+  // preSpacePat is precompiled once for limitCharacters, below. A string with
+  // spaces, capturing the part up to the last space.
+  val preSpacePat = """^(.+)\s\S+$""".r
+
+  /**
+    * Limit a string to the given number of characters.
+    *
+    * Truncates the string on whitespace and adds ellipses on the end, where
+    * it can.
+    *
+    * @example
+    *          ("Lorem ipsum", 10) => "Lorem..."
+    */
+  val limitCharacters: (String, Int) => String = (value, limit) => {
+    value match {
+      case s if s.length > limit && limit > 3 => {
+        val sliced = s.slice(0, limit - 3) // -3 is OK if string is < 3 chars
+        sliced match {
+          case preSpacePat(x) => s"$x..."  // add ellipses
+          case _ => sliced                 // not space-delimited?
+        }
+      }
+      case s if limit <= 3 => value.slice(0, limit)
+      case _ => value  // Length is OK as-is.
+    }
   }
 
   /**

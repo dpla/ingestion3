@@ -112,4 +112,32 @@ class StringEnrichmentsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === expectedValue)
   }
 
+  "limitCharacters" should " truncate a given string to under the given " +
+      "length, terminated with ellipses" in {
+    val originalValue = "Lorem ipsum"
+    val enrichedValue = enrichments.limitCharacters(originalValue, 10)
+    val expectedValue = "Lorem..."
+    assert(enrichedValue === expectedValue)
+  }
+
+  it should "not alter strings that fit within the limit" in {
+    val originalValue = "Lorem"
+    val enrichedValue = enrichments.limitCharacters(originalValue, 10)
+    val expectedValue = "Lorem"
+    assert(enrichedValue === expectedValue)
+  }
+
+  it should "truncate at whitespace" in {
+    val originalValue = "Lorem ipsum dolor"  // 17 characters
+    val enrichedValue = enrichments.limitCharacters(originalValue, 16)
+    val expectedValue = "Lorem ipsum..."  // 14 characters
+    assert(enrichedValue === expectedValue)
+  }
+
+  it should "return same string given sillly short length of 3" in {
+    val originalValue = "Lorem"
+    val enrichedValue = enrichments.limitCharacters(originalValue, 3)
+    val expectedValue = "Lor"
+    assert(enrichedValue === expectedValue)
+  }
 }
