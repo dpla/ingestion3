@@ -68,5 +68,12 @@ class StringEnrichments {
     value.replaceAll("""[^\w\'\"\s]""", "")
   }
 
-  
+  /**
+    * Removes all extra whitespace in a String value
+    *
+    * @example  "one    two  three " => "one two three"
+    */
+  val stripWhitespace: SingleStringEnrichment = (value) => {
+    value.trim.replaceAll(" +", " ");
+  }
 }

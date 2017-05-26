@@ -88,4 +88,12 @@ class StringEnrichmentsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === expectedValue)
   }
 
+  "stringWhitespace" should " strip leading, ending and duplicate whitespace" +
+    "within a given string" in {
+    val originalValue = "  one      two  three  "
+    val enrichedValue = enrichments.stripWhitespace(originalValue)
+    val expectedValue = "one two three"
+    assert(enrichedValue === expectedValue)
+  }
+
 }
