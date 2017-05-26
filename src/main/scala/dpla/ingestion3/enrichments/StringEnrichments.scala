@@ -69,9 +69,11 @@ class StringEnrichments {
   }
 
   /**
-    * Removes all extra whitespace in a String value
+    * Removes all leading, trailing whitespace and replaces
+    * duplicate whitespace with a single value for a given
+    * String value
     *
-    * @example  "one    two  three " => "one two three"
+    * @example  " one    two  three  " => "one two three"
     */
   val stripWhitespace: SingleStringEnrichment = (value) => {
     value.trim.replaceAll(" +", " ");
