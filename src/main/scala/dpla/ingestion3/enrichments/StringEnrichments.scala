@@ -60,6 +60,18 @@ class StringEnrichments {
     StringEscapeUtils.unescapeHtml(cleaned)
   }
 
+  /**
+    * Removes leading colons and semicolons from a given String.
+    * Only run against the Title field.
+    *
+    * @example
+    *          ":;; Happy birthday! ;;:" => "Happy birthday! ;;:"
+    */
+  val stripLeadingColons: SingleStringEnrichment = (value) => {
+    val pattern: Regex = """^[\;\:]*""".r
+    pattern.replaceAllIn(value, "")
+  }
+
   val stripLeadingPunctuation: SingleStringEnrichment = (value) => {
     value.replace("""^[^\w\'\"\s]+""", "")
   }

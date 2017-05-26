@@ -96,4 +96,20 @@ class StringEnrichmentsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === expectedValue)
   }
 
+  "stripLeadingColons" should " remove ; and : from the start of a given " +
+  "String" in {
+    val originalValue = ";;:Hello ;world:! ;; "
+    val enrichedValue = enrichments.stripLeadingColons(originalValue)
+    val expectedValue = "Hello ;world:! ;; "
+    assert(enrichedValue === expectedValue)
+  }
+
+  it should " not change a String that does not being with ; or :" in {
+    val originalValue = "\n.Question: What is best in life?\n" +
+      "Answer: Bears, Beets, Battlestar Galactica "
+    val enrichedValue = enrichments.stripLeadingColons(originalValue)
+    val expectedValue = originalValue
+    assert(enrichedValue === expectedValue)
+  }
+
 }
