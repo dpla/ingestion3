@@ -18,13 +18,13 @@ class StringEnrichments {
   type MultiStringEnrichment = (String) => Array[String]
 
   /**
-    * Accepts a String value and splits it around periods. Strips
+    * Tokenize the provided string around period (.) and
+    * capitalizes the first character of each token.
+    *
+    * Takes a string value and splits it around periods. Strips
     * trailing and leading whitespace from those "sentences" and
     * capitalizes the first character of each sentence leaving all
     * other characters alone.
-    *
-    * We do not assume that all upper case characters should be
-    * downcased.
     *
     */
   val convertToSentenceCase: SingleStringEnrichment = (value) => {
@@ -45,6 +45,9 @@ class StringEnrichments {
     value.split(delimiter).map(_.trim)
   }
 
+  /**
+    * Splits a String around semicolon
+    */
   val splitAtSemicolons: MultiStringEnrichment = splitAtDelimiter(_, ";")
 
   val stripEndingPunctuation: SingleStringEnrichment = (value) => {
@@ -64,4 +67,6 @@ class StringEnrichments {
   val stripPunctuation: SingleStringEnrichment = (value) => {
     value.replaceAll("""[^\w\'\"\s]""", "")
   }
+
+  
 }
