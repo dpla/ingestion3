@@ -72,13 +72,9 @@ class OaiRelation (parameters: Map[String, String])
       // page [String] one page of records
       page => {
         val xml = XML.loadString(page)
-        OaiResponseProcessor.getRecordsAsTuples(xml).map(
-          tuple => {
-            // tuple._1 [String] the record ID
-            // tuple._2 [String] the full contents of the record
-            Row(tuple._1, tuple._2)
-          }
-        )
+        OaiResponseProcessor.getRecordsAsTuples(xml).map {
+          case (id, record) => Row(id, record)
+        }
       }
     )
   }
