@@ -6,7 +6,7 @@ import dpla.ingestion3.utils.Utils
 import com.databricks.spark.avro._
 import org.apache.log4j.LogManager
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 import org.apache.spark.storage.StorageLevel
 
