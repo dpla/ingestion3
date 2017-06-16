@@ -12,21 +12,16 @@ import scala.xml.NodeSeq
 object OaiResponseProcessor {
   private[this] val logger = LogManager.getLogger("OaiHarvester")
 
-  /**
-    * Takes the XML response from a ListRecords and returns
-    * the <record≥ elements
-    *
-    * @param xml NodeSeq
-    *            Complete OAI-PMH XML response
-    *
-    * @return List[String]
-    *         NodeSeq of records in the response
-    */
-  def getRecordsAsList(xml: NodeSeq): List[String] = {
-    val records = xml \\ "OAI-PMH" \\ "record"
-    records.map(x => x.headOption match {
-      case Some(node) => node.toString
-    }).toList
+  /*
+   * Get records or sets, depending on verb.
+   * Verbs in OAI-PMH are case sensitive.
+   */
+  def getItems(xml: NodeSeq, verb: String): Seq[(String, String)] = {
+    verb match {
+      case "ListRecords" => getRecords(xml)
+      case "ListSets" => getSets(xml)
+      case _ => throw new RuntimeException("Verb '" + verb + "' not recognized")
+    }
   }
 
   /**
@@ -37,13 +32,32 @@ object OaiResponseProcessor {
     *            The XML response from the OAI request
     * @return
     */
-  def getRecordsAsTuples(xml: NodeSeq): Seq[(String,String)] = {
+  def getRecords(xml: NodeSeq): Seq[(String,String)] = {
     val records = xml \\ "OAI-PMH" \\ "record"
     records.map(r => r.headOption match {
       case Some(node) => {
         val localId = Harvester.getLocalId(node)
         (Harvester.generateMd5(localId), node.toString)
       }
+      case None => throw new RuntimeException("XML parsing error")
+    })
+  }
+
+  /**
+    * Iterates through the sets in an OAI response.
+    * Returns the setSpec ID and the full text of the record as Strings.
+    *
+    * @param xml NodeSeq
+    *            The XML response from the OAI request
+    */
+  def getSets(xml: NodeSeq): Seq[(String, String)] = {
+    val sets = xml \\ "OAI-PMH" \\ "set"
+    sets.map(s => s.headOption match {
+      case Some(node) => {
+        val id = node \\ "setSpec"
+        (id.text, node.toString)
+      }
+      case None => throw new RuntimeException("XML parsing error")
     })
   }
 

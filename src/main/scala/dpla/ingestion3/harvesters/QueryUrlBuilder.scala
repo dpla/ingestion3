@@ -1,7 +1,6 @@
 package dpla.ingestion3.harvesters
 
 import java.net.URL
-
 import org.apache.http.client.utils.URIBuilder
 
 /**
@@ -22,9 +21,20 @@ class OaiQueryUrlBuilder extends QueryUrlBuilder with Serializable {
     assume(params.get("verb").isDefined)
     assume(params.get("metadataPrefix").isDefined)
 
+    /*
+     * The following OAI verbs require a metadataPrefix argument.
+     * If an OAI call contains a verb NOT in this list AND a metadataPrefix,
+     * a badArgument errors is returned.
+     *
+     * @see https://www.openarchives.org/OAI/openarchivesprotocol.html#ProtocolMessages
+     */
+    val verbsWithMetadataPrefix = List("GetRecord", "ListIdentifiers", "ListRecords")
+
     val verb = params("verb")
     val metadataPrefix = params("metadataPrefix")
     val url = new URL(params("endpoint"))
+    val resumptionToken: Option[String] = params.get("resumptionToken")
+    val set: Option[String] = params.get("set")
 
     // Build the URL
     val urlParams = new URIBuilder()
@@ -33,29 +43,20 @@ class OaiQueryUrlBuilder extends QueryUrlBuilder with Serializable {
       .setPath(url.getPath)
       .setParameter("verb", verb)
 
-    params.get("resumptionToken") match {
-      case Some(v) if v.nonEmpty => setResumptionParams(v)
-      case _ => setInitialRequestParams
+    if(set.isDefined) urlParams.setParameter("set", set.get)
+
+    if(resumptionToken.isDefined) {
+      urlParams.setParameter("resumptionToken", resumptionToken.get)
     }
 
-    /**
-      * Set the params that should ONLY be included in an initial OAI request.
-      * These params should NOT be included in a resumption request.
-      */
-    def setInitialRequestParams = {
+    /*
+     * Set metadataPrefix param if:
+     *   - the verb allows a metadataPrefix argument AND
+     *   - there is no resumption token (if an OAI call with a resumption token
+     *     also contains a metadataPrefix, an OAI badArgument error is returned).
+     */
+    if(verbsWithMetadataPrefix.contains(verb) && !resumptionToken.isDefined) {
       urlParams.setParameter("metadataPrefix", metadataPrefix)
-
-      params.get("set") match {
-        case Some(v) if v.nonEmpty => urlParams.setParameter("set", v)
-        case _ => urlParams
-      }
-    }
-
-    /**
-      * Set the resumption token param.
-      */
-    def setResumptionParams(resumptionToken: String) = {
-      urlParams.setParameter("resumptionToken", resumptionToken)
     }
 
     urlParams.build.toURL
