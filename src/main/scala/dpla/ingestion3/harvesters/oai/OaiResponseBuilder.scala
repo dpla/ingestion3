@@ -17,13 +17,13 @@ class OaiResponseBuilder (@transient val sqlContext: SQLContext)
   val urlBuilder = new OaiQueryUrlBuilder
 
   // Get one to many pages of records.
-  def getRecords(oaiParams: Map[String, String]): RDD[String] = {
+  def getResponse(oaiParams: Map[String, String]): RDD[String] = {
     val response = getMultiPageResponse(oaiParams)
     sqlContext.sparkContext.parallelize(response)
   }
 
   // Get one to many pages of records from given sets.
-  def getRecordsBySets(baseParams: Map[String, String],
+  def getResponseBySets(baseParams: Map[String, String],
                     sets: Array[String]): RDD[String] = {
 
     val rdd = sqlContext.sparkContext.parallelize(sets)

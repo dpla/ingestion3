@@ -4,7 +4,7 @@ import org.apache.spark.sql._
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types._
 import org.apache.spark.rdd.RDD
-import scala.xml.{XML}
+import scala.xml.XML
 
 /*
  * This class interprets the user-submitted params to determine which type of
@@ -14,7 +14,7 @@ import scala.xml.{XML}
   */
 class OaiRelation (parameters: Map[String, String])
                   (@transient val sqlContext: SQLContext)
-                  extends BaseRelation with TableScan {
+                  extends BaseRelation with TableScan with Serializable {
 
   // Required properties.
   assume(parameters.get("path").isDefined)
@@ -36,17 +36,17 @@ class OaiRelation (parameters: Map[String, String])
   def response: RDD[String] = {
     sets match {
       case None => {
-        oaiResponseBuilder.getRecords(recordsParams)
+        oaiResponseBuilder.getResponse(oaiParams)
       }
       case Some(sets) => {
-        val setArray = parseSets(sets)
-        oaiResponseBuilder.getRecordsBySets(recordsParams, setArray)
+        val setArray: Array[String] = parseSets(sets)
+        oaiResponseBuilder.getResponseBySets(oaiParams, setArray)
       }
     }
   }
 
-  // Base params for `records` request or `recordsBySets` request.
-  def recordsParams: Map[String, String] = Map(
+  // Params for an OAI request.
+  def oaiParams: Map[String, String] = Map(
     "endpoint" -> endpoint,
     "verb" -> verb,
     "metadataPrefix" -> metadataPrefix
@@ -72,13 +72,9 @@ class OaiRelation (parameters: Map[String, String])
       // page [String] one page of records
       page => {
         val xml = XML.loadString(page)
-        OaiResponseProcessor.getRecordsAsTuples(xml).map(
-          tuple => {
-            // tuple._1 [String] the record ID
-            // tuple._2 [String] the full contents of the record
-            Row(tuple._1, tuple._2)
-          }
-        )
+        OaiResponseProcessor.getItems(xml, verb).map {
+          case (id, item) => Row(id, item)
+        }
       }
     )
   }
