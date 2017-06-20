@@ -43,10 +43,18 @@ class OaiQueryUrlBuilder extends QueryUrlBuilder with Serializable {
       .setPath(url.getPath)
       .setParameter("verb", verb)
 
-    if(set.isDefined) urlParams.setParameter("set", set.get)
-
     if(resumptionToken.isDefined) {
       urlParams.setParameter("resumptionToken", resumptionToken.get)
+    }
+
+    /*
+     * Set `set' param if:
+     *   - set is defined
+     *   - there is no resumption token (if an OAI call with a resumption token
+     *     also contains a set, an OAI badArgument error is returned).
+     */
+    if (set.isDefined && !resumptionToken.isDefined) {
+      urlParams.setParameter("set", set.get)
     }
 
     /*
