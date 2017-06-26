@@ -40,6 +40,7 @@ class OaiQueryUrlBuilder extends QueryUrlBuilder with Serializable {
     val urlParams = new URIBuilder()
       .setScheme(url.getProtocol)
       .setHost(url.getHost)
+      .setPort(url.getPort)
       .setPath(url.getPath)
       .setParameter("verb", verb)
 
