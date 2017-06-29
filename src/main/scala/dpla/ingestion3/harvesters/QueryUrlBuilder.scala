@@ -19,20 +19,11 @@ class OaiQueryUrlBuilder extends QueryUrlBuilder with Serializable {
     // Required properties, not sure if this is the right style
     assume(params.get("endpoint").isDefined)
     assume(params.get("verb").isDefined)
-    assume(params.get("metadataPrefix").isDefined)
-
-    /*
-     * The following OAI verbs require a metadataPrefix argument.
-     * If an OAI call contains a verb NOT in this list AND a metadataPrefix,
-     * a badArgument errors is returned.
-     *
-     * @see https://www.openarchives.org/OAI/openarchivesprotocol.html#ProtocolMessages
-     */
-    val verbsWithMetadataPrefix = List("GetRecord", "ListIdentifiers", "ListRecords")
-
-    val verb = params("verb")
-    val metadataPrefix = params("metadataPrefix")
     val url = new URL(params("endpoint"))
+    val verb = params("verb")
+
+    // Optional properties.
+    val metadataPrefix: Option[String] = params.get("metadataPrefix")
     val resumptionToken: Option[String] = params.get("resumptionToken")
     val set: Option[String] = params.get("set")
 
@@ -54,18 +45,18 @@ class OaiQueryUrlBuilder extends QueryUrlBuilder with Serializable {
      *   - there is no resumption token (if an OAI call with a resumption token
      *     also contains a set, an OAI badArgument error is returned).
      */
-    if (set.isDefined && !resumptionToken.isDefined) {
-      urlParams.setParameter("set", set.get)
+    if (!resumptionToken.isDefined) {
+      set.foreach(s => urlParams.setParameter("set", s))
     }
 
     /*
      * Set metadataPrefix param if:
-     *   - the verb allows a metadataPrefix argument AND
+     *   - metadataPrefix is defined
      *   - there is no resumption token (if an OAI call with a resumption token
      *     also contains a metadataPrefix, an OAI badArgument error is returned).
      */
-    if(verbsWithMetadataPrefix.contains(verb) && !resumptionToken.isDefined) {
-      urlParams.setParameter("metadataPrefix", metadataPrefix)
+    if (!resumptionToken.isDefined) {
+      metadataPrefix.foreach(prefix => urlParams.setParameter("metadataPrefix", prefix))
     }
 
     urlParams.build.toURL

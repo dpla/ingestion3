@@ -69,6 +69,7 @@ class OaiResponseBuilder (@transient val sqlContext: SQLContext)
   // Returns a single page response as a single String
   def getSinglePageResponse(queryParams: Map[String, String]): String = {
     val url = urlBuilder.buildQueryUrl(queryParams)
+    println(url) // for testing purposes, can delete later
     getStringResponse(url)
   }
 
