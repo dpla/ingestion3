@@ -2,43 +2,46 @@ package dpla.ingestion3.harvesters.oai
 
 import java.net.URL
 import java.nio.charset.Charset
-
 import dpla.ingestion3.harvesters.OaiQueryUrlBuilder
 import org.apache.http.client.fluent.Request
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
-
 import scala.annotation.tailrec
+import scala.xml.XML
 
 /**
  * This class handles requests to the OAI feed.
  * It partitions data at strategic points.
  */
-class OaiResponseBuilder (@transient val sqlContext: SQLContext)
+class OaiResponseBuilder (baseParams: Map[String, String])
+                         (@transient val sqlContext: SQLContext)
   extends Serializable {
 
   val urlBuilder = new OaiQueryUrlBuilder
 
-  // Get one to many pages of records.
-  def getResponse(oaiParams: Map[String, String]): RDD[String] = {
-    val response = getMultiPageResponse(oaiParams)
-    sqlContext.sparkContext.parallelize(response)
+  def getSets: RDD[OaiSet] = {
+    val response = getMultiPageResponse(baseParams)
+    val responseRdd = sqlContext.sparkContext.parallelize(response)
+    responseRdd.flatMap(page => parseSets(page))
+  }
+
+  def getRecords: RDD[OaiRecord] = {
+    val response = getMultiPageResponse(baseParams)
+    val responseRdd = sqlContext.sparkContext.parallelize(response)
+    responseRdd.flatMap(page => parseRecords(page))
   }
 
   // Get one to many pages of records from given sets.
-  def getResponseBySets(baseParams: Map[String, String],
-                    sets: Array[String]): RDD[String] = {
+  def getRecordsBySets(sets: Array[OaiSet]): RDD[OaiRecord] = {
+    val setRdd = sqlContext.sparkContext.parallelize(sets)
 
-    val rdd = sqlContext.sparkContext.parallelize(sets)
-
-    val response: RDD[List[String]] = rdd.map(
+    setRdd.flatMap(
       set => {
-        val oaiParams = baseParams + ("set" -> set)
-        getMultiPageResponse(oaiParams)
+        val params = baseParams + ("set" -> set.id)
+        val response = getMultiPageResponse(params)
+        response.flatMap(page => parseRecords(page, Some(set)))
       }
     )
-
-    response.flatMap(x => x)
   }
 
   /**
@@ -89,10 +92,21 @@ class OaiResponseBuilder (@transient val sqlContext: SQLContext)
     *
     *      TODO: Handle failed HTTP request.
     */
+
   def getStringResponse(url: URL) : String = {
     Request.Get(url.toURI)
       .execute()
       .returnContent()
         .asString(Charset.forName("UTF8"))
+  }
+
+  def parseSets(page: String): Seq[OaiSet] = {
+    val xml = XML.loadString(page)
+    OaiResponseProcessor.getSets(xml)
+  }
+
+  def parseRecords(page: String, set: Option[OaiSet] = None): Seq[OaiRecord] = {
+    val xml = XML.loadString(page)
+    OaiResponseProcessor.getRecords(xml, set)
   }
 }
