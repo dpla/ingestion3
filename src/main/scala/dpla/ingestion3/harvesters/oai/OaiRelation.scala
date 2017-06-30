@@ -50,7 +50,10 @@ class OaiRelation (parameters: Map[String, String])
     // A ListRecords OAI request must have a metadataPrefix.
     assume(metadataPrefix.isDefined)
 
-    val prefix = if (metadataPrefix.isDefined) metadataPrefix.get else ""
+    val prefix = metadataPrefix match {
+      case Some(prefix) => prefix
+      case None => ""
+    }
 
     val oaiParams = Map("endpoint" -> endpoint,
                         "verb" -> verb,
