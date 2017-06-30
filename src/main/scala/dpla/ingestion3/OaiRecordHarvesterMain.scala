@@ -54,6 +54,9 @@ object OaiRecordHarvesterMain {
     // This is an Option (as opposed to a String) b/c the param args(4) is optional.
     val sets: Option[String] = if (args.isDefinedAt(4)) Some(args(4)) else None
 
+    // TODO rewrite this will better named parameters
+    val blacklistSets: Option[String] = if (args.isDefinedAt(5)) Some(args(5)) else None
+
     val verb = "ListRecords"
 
     Utils.deleteRecursively(new File(outputFile))
@@ -66,7 +69,7 @@ object OaiRecordHarvesterMain {
     val start = System.currentTimeMillis()
 
     val baseOptions = Map("metadataPrefix" -> metadataPrefix, "verb" -> verb)
-    val readerOptions = getReaderOptions(baseOptions, sets)
+    val readerOptions = getReaderOptions(baseOptions, sets, blacklistSets)
 
     val results = spark.read
       .format("dpla.ingestion3.harvesters.oai")
@@ -107,10 +110,17 @@ object OaiRecordHarvesterMain {
   }
 
   def getReaderOptions(baseOptions: Map[String, String],
-                       sets: Option[String]): Map[String, String] = {
-    sets match {
-      case Some(sets) => baseOptions + ("sets" -> sets)
-      case None => baseOptions
+                       sets: Option[String],
+                       blacklist: Option[String]): Map[String, String] = {
+    (sets, blacklist) match {
+      // No blacklist
+      case (Some(sets), None) => baseOptions + ("sets" -> sets)
+      // No set list or blacklist
+      case (None, None) => baseOptions
+      // Remove blacklisted sets from set list
+      case (Some(sets), Some(blacklist)) => {
+        baseOptions + ("sets" -> (sets.split(",") filter (!blacklist.split(",").contains(_))).mkString(","))
+      }
     }
   }
 }
