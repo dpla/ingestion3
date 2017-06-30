@@ -1,10 +1,13 @@
 package dpla.ingestion3.harvesters.oai
 
 import java.net.URL
+import java.nio.charset.Charset
+
 import dpla.ingestion3.harvesters.OaiQueryUrlBuilder
-import org.apache.commons.io.IOUtils
+import org.apache.http.client.fluent.Request
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
+
 import scala.annotation.tailrec
 
 /*
@@ -87,6 +90,9 @@ class OaiResponseBuilder (@transient val sqlContext: SQLContext)
     *      TODO: Handle failed HTTP request.
     */
   def getStringResponse(url: URL) : String = {
-    IOUtils.toString(url, "UTF-8")
+    Request.Get(url.toURI)
+      .execute()
+      .returnContent()
+        .asString(Charset.forName("UTF8"))
   }
 }

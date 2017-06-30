@@ -6,6 +6,7 @@ version := "0.0.1"
 
 scalaVersion := "2.11.8"
 
+
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
   "org.apache.spark" %% "spark-core" % "2.0.1" exclude("org.scalatest", "scalatest_2.11"),
@@ -23,6 +24,7 @@ libraryDependencies ++= Seq(
   ),
   // ApiHarvester depends
   "org.apache.httpcomponents" % "httpclient" % "4.5.2",
+  "org.apache.httpcomponents" % "fluent-hc" % "4.5.2",
   // Enricher dependencies
   // TODO: reconcile with httpclient above.
   "org.scalaj" %% "scalaj-http" % "2.3.0",
