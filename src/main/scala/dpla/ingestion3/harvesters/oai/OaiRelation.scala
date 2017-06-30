@@ -16,41 +16,57 @@ class OaiRelation (parameters: Map[String, String])
                   (@transient val sqlContext: SQLContext)
                   extends BaseRelation with TableScan with Serializable {
 
-  // Required properties.
+  // Required properties for all OAI requests.
   assume(parameters.get("path").isDefined)
   assume(parameters.get("verb").isDefined)
-  assume(parameters.get("metadataPrefix").isDefined)
 
   val endpoint = parameters("path")
   val verb = parameters("verb")
-  val metadataPrefix = parameters("metadataPrefix")
 
+  // Optional properties.
+  val metadataPrefix: Option[String] = parameters.get("metadataPrefix")
   val sets: Option[String] = parameters.get("sets")
 
   val oaiResponseBuilder = new OaiResponseBuilder(sqlContext)
+
+  // Get the appropriate response based on the value of the OAI verb.
+  def response: RDD[String] = {
+    verb match {
+      case "ListSets" => setsResponse
+      case "ListRecords" => recordsResponse
+    }
+  }
+
+  def setsResponse: RDD[String] = {
+    val oaiParams =  Map("endpoint" -> endpoint, "verb" -> verb)
+    oaiResponseBuilder.getResponse(oaiParams)
+  }
 
   /*
    * Make appropriate call to OaiResponseBuilder based on presence or absence of
    * sets.
    */
-  def response: RDD[String] = {
+  def recordsResponse: RDD[String] = {
+    // A ListRecords OAI request must have a metadataPrefix.
+    assume(metadataPrefix.isDefined)
+
+    val prefix = metadataPrefix match {
+      case Some(prefix) => prefix
+      case None => ""
+    }
+
+    val oaiParams = Map("endpoint" -> endpoint,
+                        "verb" -> verb,
+                        "metadataPrefix" -> prefix)
+
     sets match {
-      case None => {
-        oaiResponseBuilder.getResponse(oaiParams)
-      }
+      case None => oaiResponseBuilder.getResponse(oaiParams)
       case Some(sets) => {
         val setArray: Array[String] = parseSets(sets)
         oaiResponseBuilder.getResponseBySets(oaiParams, setArray)
       }
     }
   }
-
-  // Params for an OAI request.
-  def oaiParams: Map[String, String] = Map(
-    "endpoint" -> endpoint,
-    "verb" -> verb,
-    "metadataPrefix" -> metadataPrefix
-  )
 
   /*
    * Sets are passed to this class as a comma-separated String.
