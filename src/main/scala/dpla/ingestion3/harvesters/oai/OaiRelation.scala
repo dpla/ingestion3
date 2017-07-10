@@ -6,7 +6,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.rdd.RDD
 import scala.xml.XML
 
-/*
+/**
  * This class interprets the user-submitted params to determine which type of
  * request to send to the OAI feed (ie. get records or sets of records).
  * It requests an OAI response via the `OaiResponseBuilder`.
@@ -42,7 +42,7 @@ class OaiRelation (parameters: Map[String, String])
     oaiResponseBuilder.getResponse(oaiParams)
   }
 
-  /*
+  /**
    * Make appropriate call to OaiResponseBuilder based on presence or absence of
    * sets.
    */
@@ -68,7 +68,7 @@ class OaiRelation (parameters: Map[String, String])
     }
   }
 
-  /*
+  /**
    * Sets are passed to this class as a comma-separated String.
    * This parses the String to an Array.
    */

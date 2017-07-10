@@ -1,13 +1,18 @@
 package dpla.ingestion3.harvesters.oai
 
-import dpla.ingestion3.harvesters.{Harvester, HarvesterException}
 import org.apache.log4j.LogManager
 
-import scala.xml.NodeSeq
+import scala.xml.{Node, NodeSeq}
+
+/**
+  * Basic exception class, minimal implementation
+  *
+  * @param message String
+  */
+case class OaiHarvesterException(message: String) extends Exception(message)
 
 /**
   * OAI-PMH harvester for DPLA's Ingestion3 system
-  *
   */
 object OaiResponseProcessor {
   private[this] val logger = LogManager.getLogger("OaiHarvester")
@@ -32,13 +37,10 @@ object OaiResponseProcessor {
     *            The XML response from the OAI request
     * @return
     */
-  def getRecords(xml: NodeSeq): Seq[(String,String)] = {
+  def getRecords(xml: NodeSeq): Seq[(String, String)] = {
     val records = xml \\ "OAI-PMH" \\ "record"
     records.map(r => r.headOption match {
-      case Some(node) => {
-        val localId = Harvester.getLocalId(node)
-        (Harvester.generateMd5(localId), node.toString)
-      }
+      case Some(node) => (getOaiIdentifier(node), node.toString)
       case None => throw new RuntimeException("XML parsing error")
     })
   }
@@ -68,10 +70,10 @@ object OaiResponseProcessor {
     *         The error code if it exists otherwise empty string
     *
     */
-  @throws(classOf[HarvesterException])
+  @throws(classOf[OaiHarvesterException])
   def getOaiErrorCode(xml: NodeSeq): Unit = {
     (xml \\ "OAI-PMH" \\ "error").nonEmpty match {
-      case true => throw new HarvesterException((xml \\ "OAI-PMH" \\ "error").text.trim)
+      case true => throw new OaiHarvesterException((xml \\ "OAI-PMH" \\ "error").text.trim)
       case false => Unit
     }
   }
@@ -94,5 +96,20 @@ object OaiResponseProcessor {
       case Some(m) => Some(m.group(1))
       case None => None
     }
+  }
+
+  // TODO: To ensure continuity of IDs between ingestion systems and generalize the ID
+  // TODO: selection between records and sets we need to parameterize the path to the ID.
+  /**
+    * Accepts a record from an OAI feed an returns the OAI identifier
+    *
+    * @param record String
+    *               The original record from the OAI feed
+    * @param path String
+    *             XML path to the ID, defaults to header/identifier
+    * @return The local identifier
+    */
+  def getOaiIdentifier(record: Node, path: String = "header/identifier"): String = {
+    (record \\ "header" \\ "identifier").text
   }
 }

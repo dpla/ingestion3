@@ -1,17 +1,37 @@
 package dpla.ingestion3.utils
 
 import java.io.File
+
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.SequenceFile.Reader
 import org.apache.hadoop.io.Text
+
 import scala.xml.Node
 import java.util.concurrent.TimeUnit
+
+import org.apache.commons.codec.digest.DigestUtils
 
 /**
   * Created by scott on 1/18/17.
   */
 object Utils {
+
+  /**
+    * The only shared method between harvester implementations. Generates
+    * an md5 hash of the id value
+    *
+    * @param id String
+    * @param prov String
+    *             Optional, Provider abbreviation if provided is prepended to
+    *             id and then hashed
+    * @return String md5 hash of the id value
+    */
+  def generateMd5(id: String, prov: String=""): String = {
+    if(prov.nonEmpty)
+      DigestUtils.md5Hex(List(prov,id).mkString("--").trim)
+    DigestUtils.md5Hex(id)
+  }
 
   /**
     *
