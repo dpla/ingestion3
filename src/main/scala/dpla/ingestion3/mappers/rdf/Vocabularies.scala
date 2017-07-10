@@ -39,6 +39,10 @@ case class RDF() extends Vocabulary("rdf", "http://www.w3.org/1999/02/22-rdf-syn
   val HTML = org.eclipse.rdf4j.model.vocabulary.RDF.HTML
 }
 
+case class ISO_639_3() extends Vocabulary("iso-639-3", "http://lexvo.org/id/iso639-3/") {
+  val providedLabel: IRI = apply("providedLabel")
+}
+
 case class DPLA() extends Vocabulary("dpla", "http://dp.la/about/map/") {
   val Place: IRI = apply("Place")
   val SourceResource: IRI = apply("SourceResource")
