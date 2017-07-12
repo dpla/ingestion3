@@ -10,7 +10,7 @@ import org.apache.spark.sql.SQLContext
 
 import scala.annotation.tailrec
 
-/*
+/**
  * This class handles requests to the OAI feed.
  * It partitions data at strategic points.
  */
@@ -41,7 +41,7 @@ class OaiResponseBuilder (@transient val sqlContext: SQLContext)
     response.flatMap(x => x)
   }
 
-  /*
+  /**
     * Get all pages of results from an OAI feed.
     * Makes an initial call to the feed to get the first page of results.
     * For this and all subsequent pages, calls the next page if a resumption

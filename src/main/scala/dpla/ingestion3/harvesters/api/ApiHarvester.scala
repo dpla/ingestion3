@@ -1,7 +1,6 @@
 
 package dpla.ingestion3.harvesters.api
 
-import dpla.ingestion3.harvesters.Harvester
 import org.apache.hadoop.io.SequenceFile.Writer
 import org.apache.hadoop.io.Text
 import org.apache.http.HttpEntity
@@ -62,8 +61,7 @@ trait ApiHarvester {
         val docs = (json \\ "docs")
         fetchAgain = docs.children.length == fetchSize.toInt
         for (doc <- (json \\ "docs").children) {
-          val identifier: String = Harvester.generateMd5((doc \ "id").toString)
-          writer.append(new Text(identifier), new Text(compact(doc)))
+          writer.append((doc \ "id").toString, new Text(compact(doc)))
         }
       }
     } finally {
