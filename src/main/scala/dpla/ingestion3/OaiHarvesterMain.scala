@@ -41,7 +41,7 @@ object OaiHarvesterMain {
   val setSchemaStr =
     """{
         "namespace": "dpla.avro",
-        "type": "record",
+        "type": "set",
         "name": "OriginalRecord.v1",
         "doc": "",
         "fields": [

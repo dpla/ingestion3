@@ -20,7 +20,7 @@ object PssHarvesterMain {
 
   val schemaStr =
     """{
-        "namespace": "la.dp.avro",
+        "namespace": "dpla.avro",
         "type": "primary source set",
         "doc": "",
         "fields": [

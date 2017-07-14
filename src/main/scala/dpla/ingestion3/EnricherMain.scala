@@ -37,7 +37,7 @@ object EnricherMain {
   val schemaStr: String =
     """
     {
-      "namespace": "la.dp.avro",
+      "namespace": "dpla.avro",
       "type": "record",
       "name": "MAPRecord.v1",
       "doc": "Prototype enriched record",
