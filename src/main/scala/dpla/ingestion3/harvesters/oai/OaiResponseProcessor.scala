@@ -17,51 +17,41 @@ case class OaiHarvesterException(message: String) extends Exception(message)
 object OaiResponseProcessor {
   private[this] val logger = LogManager.getLogger("OaiHarvester")
 
-  /*
-   * Get records or sets, depending on verb.
-   * Verbs in OAI-PMH are case sensitive.
-   */
-  def getItems(xml: NodeSeq, verb: String): Seq[(String, String)] = {
-    verb match {
-      case "ListRecords" => getRecords(xml)
-      case "ListSets" => getSets(xml)
-      case _ => throw new RuntimeException("Verb '" + verb + "' not recognized")
-    }
-  }
-
   /**
-    * Iterates through the records in an OAI response and generates a DPLA ID
-    * for each and maps the original record to the DPLA ID
+    * Iterates through the records in an OAI response.
+    * Returns a Sequence of OaiRecord
     *
     * @param xml NodeSeq
     *            The XML response from the OAI request
-    * @return
     */
-  def getRecords(xml: NodeSeq): Seq[(String, String)] = {
-    val records = xml \\ "OAI-PMH" \\ "record"
-    records.map(r => r.headOption match {
-      case Some(node) => (getOaiIdentifier(node), node.toString)
-      case None => throw new RuntimeException("XML parsing error")
-    })
-  }
+
+    def getRecords(xml: NodeSeq, set: Option[OaiSet] = None): Seq[OaiRecord] = {
+      val records = xml \\ "OAI-PMH" \\ "record"
+      records.map(r => r.headOption match {
+        case Some(node) => {
+          new OaiRecord(getOaiIdentifier(node), node.toString, set)
+        }
+        case None => throw new RuntimeException("XML parsing error")
+      })
+    }
 
   /**
     * Iterates through the sets in an OAI response.
-    * Returns the setSpec ID and the full text of the record as Strings.
+    * Returns a Sequence of OaiSet
     *
     * @param xml NodeSeq
     *            The XML response from the OAI request
     */
-  def getSets(xml: NodeSeq): Seq[(String, String)] = {
-    val sets = xml \\ "OAI-PMH" \\ "set"
-    sets.map(s => s.headOption match {
-      case Some(node) => {
-        val id = node \\ "setSpec"
-        (id.text, node.toString)
-      }
-      case None => throw new RuntimeException("XML parsing error")
-    })
-  }
+    def getSets(xml: NodeSeq): Seq[OaiSet] = {
+      val sets = xml \\ "OAI-PMH" \\ "set"
+      sets.map(s => s.headOption match {
+        case Some(node) => {
+          val id = node \\ "setSpec"
+          new OaiSet(id.text, node.toString)
+        }
+        case None => throw new RuntimeException("XML parsing error")
+      })
+    }
 
   /**
     * Get the error property if it exists
