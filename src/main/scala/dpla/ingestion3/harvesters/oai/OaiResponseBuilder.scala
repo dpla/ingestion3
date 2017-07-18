@@ -13,32 +13,52 @@ import scala.xml.XML
  * This class handles requests to the OAI feed.
  * It partitions data at strategic points.
  */
-class OaiResponseBuilder (baseParams: Map[String, String])
+
+class OaiResponseBuilder (endpoint: String)
                          (@transient val sqlContext: SQLContext)
   extends Serializable {
 
   val urlBuilder = new OaiQueryUrlBuilder
 
+  /**
+    * Get one to many pages of sets.
+    * Results will include all sets.
+    */
   def getSets: RDD[OaiSet] = {
+    val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListSets")
     val response = getMultiPageResponse(baseParams)
     val responseRdd = sqlContext.sparkContext.parallelize(response)
     responseRdd.flatMap(page => parseSets(page))
   }
 
-  def getRecords: RDD[OaiRecord] = {
-    val response = getMultiPageResponse(baseParams)
+  /**
+    * Get one to many pages of records.
+    * Results will include all records, regardless of whether or not they belong
+    * to a set.
+    * @param opts Optional OAI args, eg. metadataPrefix
+    */
+  def getRecords(opts: Map[String, String]): RDD[OaiRecord] = {
+    val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListRecords")
+    val response = getMultiPageResponse(baseParams, opts)
     val responseRdd = sqlContext.sparkContext.parallelize(response)
     responseRdd.flatMap(page => parseRecords(page))
   }
 
-  // Get one to many pages of records from given sets.
-  def getRecordsBySets(sets: Array[OaiSet]): RDD[OaiRecord] = {
+  /**
+    * Get one to many pages of records from given sets.
+    * @param sets Sets from which to harvest records
+    * @param opts Optional OAI args, eg. metadataPrefix
+    */
+  def getRecordsBySets(sets: Array[OaiSet],
+                       opts: Map[String, String] = Map()): RDD[OaiRecord] = {
+
+    val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListRecords")
     val setRdd = sqlContext.sparkContext.parallelize(sets)
 
     setRdd.flatMap(
       set => {
-        val params = baseParams + ("set" -> set.id)
-        val response = getMultiPageResponse(params)
+        val options = opts + ("set" -> set.id)
+        val response = getMultiPageResponse(baseParams, options)
         response.flatMap(page => parseRecords(page, Some(set)))
       }
     )
@@ -51,7 +71,8 @@ class OaiResponseBuilder (baseParams: Map[String, String])
     * token is present.
     * Returns a single List of single-page responses as Strings.
     */
-  def getMultiPageResponse(parameters: Map[String, String]): List[String] = {
+  def getMultiPageResponse(baseParams: Map[String, String],
+                           opts: Map[String, String] = Map()): List[String] = {
 
     @tailrec
     def loop(data: List[String]): List[String] = {
@@ -61,14 +82,18 @@ class OaiResponseBuilder (baseParams: Map[String, String])
       token match {
         case None => data
         case Some(token) => {
-          val queryParams = parameters + ("resumptionToken" -> token)
-          val nextResponse = getSinglePageResponse(queryParams)
+          // Resumption tokens are exclusive, meaning a request with a token
+          // cannot have any additional optional args.
+          val nextParams = baseParams + ("resumptionToken" -> token)
+          val nextResponse = getSinglePageResponse(nextParams)
           loop(nextResponse :: data)
         }
       }
     }
 
-    val firstResponse = getSinglePageResponse(parameters)
+    // The initial request must include all optional args.
+    val firstParams = baseParams ++ opts
+    val firstResponse = getSinglePageResponse(firstParams)
     loop(List(firstResponse))
   }
 

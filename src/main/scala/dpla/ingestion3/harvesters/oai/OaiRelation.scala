@@ -30,11 +30,9 @@ class OaiRelation (endpoint: String,
   require((setHandler.size == 0 || verb == "ListRecords"), "The following can " +
     "only be used with the 'ListRecords' verb: harvestAllSets, setlist, blacklist")
 
-  def allSets: RDD[OaiSet] = {
-    val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListSets")
-    val oaiResponseBuilder = new OaiResponseBuilder(baseParams)(sqlContext)
-    oaiResponseBuilder.getSets
-  }
+  val oaiResponseBuilder = new OaiResponseBuilder(endpoint)(sqlContext)
+
+  def allSets: RDD[OaiSet] = oaiResponseBuilder.getSets
 
   /**
     * Make appropriate call to OaiResponseBuilder based on presence or absence of
@@ -42,18 +40,20 @@ class OaiRelation (endpoint: String,
     */
   def records: RDD[OaiRecord] = {
 
-    val baseParams: Map[String, String] = {
-      val required = Map("endpoint" -> endpoint, "verb" -> "ListRecords")
-
-      val prefix = metadataPrefix match {
-        case Some(p) => Map("metadataPrefix" -> p)
-        case None => throw new IllegalArgumentException("Missing metadata prefix")
+    /**
+      * Get any optional OAI arguments that may be used in a records request.
+      * Remove any null values.
+      * Currently, the only supported option for a records request is metadataPrefix.
+      * Per the OAI spec, the only required OAI args are "verb" and "endpoint";
+      * every OAI request must include these two args.
+      * All other args are permissible only in certain contexts.
+      * The OaiResponseBuilder is responsible for managing these contexts.
+      */
+    def options: Map[String, String] = {
+      Map("metadataPrefix" -> metadataPrefix).collect {
+        case(key, Some(value)) => key -> value
       }
-
-      required ++ prefix
     }
-
-    val oaiResponseBuilder = new OaiResponseBuilder(baseParams)(sqlContext)
 
     val sets: Option[Array[OaiSet]] = {
       (setlist, blacklist, harvestAllSets) match {
@@ -79,8 +79,8 @@ class OaiRelation (endpoint: String,
     }
 
     sets match {
-      case Some(s) => oaiResponseBuilder.getRecordsBySets(s)
-      case _ => oaiResponseBuilder.getRecords
+      case Some(s) => oaiResponseBuilder.getRecordsBySets(s, options)
+      case _ => oaiResponseBuilder.getRecords(options)
     }
   }
 
