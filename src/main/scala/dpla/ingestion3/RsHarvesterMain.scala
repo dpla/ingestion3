@@ -31,7 +31,7 @@ object RsHarvesterMain extends App {
 
   val schemaStr =
     """{
-        "namespace": "la.dp.avro",
+        "namespace": "dpla.avro",
         "type": "record",
         "name": "OriginalRecord.v1",
         "doc": "",

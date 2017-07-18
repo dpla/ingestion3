@@ -1,5 +1,5 @@
 {
-  "namespace": "la.dp.avro.MAP_3.1",
+  "namespace": "dpla.avro.MAP_3.1",
   "type": "record",
   "name": "OriginalRecord",
   "doc": "",
