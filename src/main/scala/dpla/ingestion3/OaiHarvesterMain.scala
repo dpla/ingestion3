@@ -38,6 +38,8 @@ object OaiHarvesterMain {
       }
     """//.stripMargin // TODO we need to template the document field so we can record info there
 
+  // This schema String is printed to help with debugging.
+  // It is NOT implemented during the write operation b/c sets are written to CSV.
   val setSchemaStr =
     """{
         "namespace": "dpla.avro",
@@ -81,12 +83,6 @@ object OaiHarvesterMain {
       "blacklist" -> oaiConf.blacklist.toOption
     ).collect{ case (key, Some(value)) => key -> value } // remove None values
 
-    val schemaStr = readerOptions("verb") match {
-      case "ListRecords" => recordSchemaStr
-      case "ListSets" => setSchemaStr
-      case _ => throw new IllegalArgumentException("Verb not recognized.")
-    }
-
     val results = spark.read
       .format("dpla.ingestion3.harvesters.oai")
       .options(readerOptions)
@@ -99,11 +95,28 @@ object OaiHarvesterMain {
 
     val recordsHarvestedCount = dataframe.count()
 
-    // This task may require a large amount of driver memory.
-    dataframe.write
-      .format("com.databricks.spark.avro")
-      .option("avroSchema", schemaStr)
-      .avro(oaiConf.outputDir())
+    readerOptions("verb") match {
+      // Write records to avro.
+      // This task may require a large amount of driver memory.
+      case "ListRecords" => {
+        println(recordSchemaStr)
+
+        dataframe.write
+          .format("com.databricks.spark.avro")
+          .option("avroSchema", recordSchemaStr)
+          .avro(oaiConf.outputDir())
+      }
+      // Write sets to csv.
+      case "ListSets" => {
+        println(setSchemaStr)
+
+        dataframe.coalesce(1).write
+          .format("com.databricks.spark.csv")
+          .option("header", true)
+          .csv(oaiConf.outputDir())
+      }
+      case _ => throw new IllegalArgumentException("Verb not recognized.")
+    }
 
     // Stop spark session.
     sc.stop()
