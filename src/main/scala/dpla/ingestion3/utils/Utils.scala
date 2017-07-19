@@ -1,6 +1,7 @@
 package dpla.ingestion3.utils
 
 import java.io.File
+import java.net.URL
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -11,11 +12,42 @@ import scala.xml.Node
 import java.util.concurrent.TimeUnit
 
 import org.apache.commons.codec.digest.DigestUtils
+import org.apache.http.client.fluent.Request
+
+import scala.util.{Failure, Success, Try}
 
 /**
   * Created by scott on 1/18/17.
   */
 object Utils {
+  /**
+    * Accepts a String URL and validates it by making a request and returning true only if
+    * the response code is a 200.
+    *
+    * @param str
+    * @return
+    */
+  def validateUrl(str: String): Boolean = {
+    def url() : Try[URL] = Try {
+      new URL(str) // with throw exception if string is not valid URL
+    }
+
+    url() match {
+      case Success(endpoint) => {
+        val code = Request.Get(endpoint.toURI)
+          .execute()
+          .returnResponse()
+          .getStatusLine
+          .getStatusCode
+        // TODO Other appropriate codes or something like (code / 100) match case 2 => ?
+        code match {
+          case 200 => true
+          case _ => false
+        }
+      }
+      case Failure(_) => false
+    }
+  }
 
   /**
     * The only shared method between harvester implementations. Generates
