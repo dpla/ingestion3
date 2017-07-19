@@ -1,0 +1,386 @@
+// See http://dp.la/info/wp-content/uploads/2015/03/MAPv4.pdf
+// and https://dp.la/info/wp-content/uploads/2013/04/DPLA-MAP-V3.1-2.pdf
+//
+// Figures below like "1" or "0-1" indicate field obligations specified in those
+// documents.
+//
+// Fields are mostly taken from the MAPv4 document, except for Place, which is
+// pulled from the MAPv3.1 document.
+{
+  "namespace": "la.dp.avro.MAP.4_x",
+  "type": "record",
+  "name": "MAPRecord.v1alpha",
+  "doc": "",
+
+  "types": [
+    {"name": "StringArray", "type": "array", "items": "string"},
+    {
+      "name": "Collection",  // dcmitype:Collection
+      "type": "record",
+      "fields": [
+        {   // 0-1
+          "name": "title",
+          "type": ["null", "string"],
+          "default": null
+        },
+        {   // 0-1
+          "name": "description",
+          "type": ["null", "string"],
+          "default": null
+        }
+      ]
+    },
+    {
+      "name": "Agent",  // edm:Agent
+      "type": "record",
+      "fields": [
+        {   // 0-1
+          "name": "name",
+          "type": ["null", "string"],
+          "default": null
+        },
+        {
+          // 0-1
+          "name": "providedLabel",
+          "type": ["null", "string"],
+          "default": null
+        },
+        {
+          // 0-1
+          "name": "note",
+          "type": ["null", "string"],
+          "default": null
+        },
+        {
+          // 0-1
+          "name": "inScheme",
+          "type": ["null", "string"],
+          "default": null
+        },
+        {
+          // 0-n
+          "name": "exactMatch",
+          "type": ["null", "StringArray"],
+          "default": null
+        },
+        {
+          // 0-n
+          "name": "closeMatch",
+          "type": ["null", "StringArray"],
+          "default": null
+        }
+      ]
+    },
+    {
+      "name": "Concept",  // skos:Concept
+      "type": "record",
+      "fields": [
+        {
+          // 0-1
+          "name": "name",  // skos:prefLabel
+          "type": ["null", "string"],
+          "default": null
+        },
+        {
+          // 0-1
+          "name": "providedLabel",
+          "type": ["null", "string"],
+          "default": null
+        },
+        {
+          // 0-1
+          "name": "note",
+          "type": ["null", "string"],
+          "default": null
+        },
+        {
+          // 0-1
+          "name": "inScheme",
+          "type": ["null", "string"],
+          "default": null
+        },
+        {
+          // 0-n
+          "name": "exactMatch",
+          "type": ["null", "StringArray"],
+          "default": null
+        },
+        {
+          // 0-n
+          "name": "closeMatch",
+          "type": ["null", "StringArray"],
+          "default": null
+        }
+      ]
+    },
+    {
+      "name": "Place",  // dpla:Place from MAP 3.1 spec
+      "type": "record",
+      "fields": [
+        {"name": "name", "type": "string"}, // 1
+        {   // 0-1
+          "name": "city",
+          "type": ["null", "string"],
+          "default": null
+        },
+        {   // 0-1
+          "name": "county",
+          "type": ["null", "string"],
+          "default": null
+        },
+        {   // 0-1
+          "name": "state",
+          "type": ["null", "string"],
+          "default": null
+        },
+        {   // 0-1
+          "name": "country",
+          "type": ["null", "string"],
+          "default": null
+        },
+        {   // 0-1
+          "name": "region",
+          "type": ["null", "string"],
+          "default": null
+        },
+        {   // 0-1
+          "name": "coordinates",
+          "type": ["null", "string"],
+          "default": null
+        }
+      ]
+    },
+    {
+      "name": "TimeSpan",  // edm:TimeSpan
+      "type": "record",
+      "fields": [
+        {   // 0-n
+          "name": "providedLabel",
+          "type": ["null", "StringArray"],
+          "default": null
+        },
+        {
+          // 0-1
+          "name": "begin",
+          "type": ["null", "string"],
+          "default": null
+        },
+        {
+          // 0-1
+          "name": "end",
+          "type": ["null", "string"],
+          "default": null
+        }
+      ]
+    }
+  ],  // types
+
+  "fields": [
+
+    // 1
+    {"name": "id", "type": "string", "doc": "DPLA record ID"},
+
+    // 1
+    {
+      "name": "ingestType",
+      "type": {
+        "name": "IngestType",
+        "type": "enum",
+        "symbols": ["item", "collection"]
+      }
+    },
+
+    // 1
+    {
+      "name": "ingestDate",
+      "type": "long",
+      "doc": "UNIX timestamp"
+    },
+
+    // 1
+    {"name": "dataProvider", "type": "string"},
+
+    // 0-n
+    {
+      "name": "hasView",
+      "type": ["null", "StringArray"],
+      "default": null
+    },
+
+    // 0-n
+    {
+      "name": "intermediateProvider",
+      "type": ["null", "StringArray"],
+      "default": null
+    },
+
+    // 1
+    {"name": "isShownAt", "type": "string"},
+
+    // 0-1
+    {
+      "name": "object",
+      "type": ["null", "string"],
+      "default": null
+    },
+
+    // 1
+    {"name": "originalRecord", "type": "string"},
+
+    // 1
+    {"name": "preview", "type": "string"},
+
+    // 1
+    {"name": "provider", "type": "string"},
+
+    // 0-1
+    {
+      "name": "rightsStatement",
+      "type": ["null", "string"],
+      "default": null
+    },
+
+    // 1
+    {
+      "name": "sourceResource",
+      "type": {
+        "type": "record",
+        "name": "SourceResource",
+        "fields": [
+
+          {   // 0-n
+            "name": "alternative",
+            "type": ["null", "StringArray"],
+            "default": null
+          },
+          {   // 0-n
+            "name": "collection",
+            "type": ["null", {"type": "array", "items": "Collection"}],
+            "default": null
+          },
+          {   // 0-n
+            "name": "contributor",
+            "type": ["null", {"type": "array", "items": "Agent"}],
+            "default": null
+          },
+          {   // 0-n
+            "name": "creator",
+            "type": ["null", {"type": "array", "items": "Agent"}],
+            "default": null
+          },
+          {   // 0-n
+            "name": "date",
+            "type": ["null", {"type": "array", "items": "TimeSpan"}],
+            "default": null
+          },
+          {
+            // 0-n
+            "name": "description",
+            "type": ["null", "StringArray"],
+            "default": null
+          },
+          {
+            // 0-n
+            "name": "extent",
+            "type": ["null", "StringArray"],
+            "default": null
+          },
+          {
+            // 0-n
+            "name": "format",
+            "type": ["null", "StringArray"],
+            "default": null
+          },
+          {
+            // 0-n
+            "name": "genre",
+            "type": ["null", {"type": "array", "items": "Concept"}],
+            "default": null
+          },
+          {
+            // 0-n
+            "name": "identifier",
+            "type": ["null", "StringArray"],
+            "default": null
+          },
+          {
+            // 0-n
+            "name": "language",
+            "type": ["null", "StringArray"],
+            "default": null
+          },
+          {
+            // 0-n
+            "name": "spatial",
+            "type": ["null", {"type": "array", "items": "Place"}],
+            "default": null
+          },
+          {   // 0-n
+            "name": "publisher",
+            "type": ["null", {"type": "array", "items": "Agent"}],
+            "default": null
+          },
+          {
+            // 0-n
+            "name": "relation",
+            "type": ["null", "StringArray"],
+            "default": null
+          },
+          {
+            // 0-n
+            "name": "isReplacedBy",
+            "type": ["null", "StringArray"],
+            "default": null
+          },
+          {
+            // 0-n
+            "name": "replaces",
+            "type": ["null", "StringArray"],
+            "default": null
+          },
+          {
+            // 1-n
+            "name": "rights",
+            "type": {"type": "array", "items": "string"}
+          },
+          {   // 0-n
+            "name": "rightsHolder",
+            "type": ["null", {"type": "array", "items": "Agent"}],
+            "default": null
+          },
+          {
+            // 0-n
+            "name": "subject",
+            "type": ["null", {"type": "array", "items": "Concept"}],
+            "default": null
+          },
+          {   // 0-n
+            "name": "temporal",
+            "type": ["null", {"type": "array", "items": "TimeSpan"}],
+            "default": null
+          },
+          {
+            // 1-n
+            "name": "title",
+            "type": {"type": "array", "items": "string"}
+          },
+          {
+            // 0-n
+            "name": "type",
+            "type": ["null", "StringArray"],
+            "default": null
+          }
+        ] // fields
+      }  // type
+
+    }, // sourceResource
+
+    {
+      "name": "title",
+      "type": ["null", "string"],
+      "doc": "Only for collection records"
+    }
+
+  ]  // fields
+
+}
