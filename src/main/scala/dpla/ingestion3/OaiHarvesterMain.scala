@@ -15,8 +15,48 @@ import scala.util.{Failure, Success, Try}
 
 /**
   * Entry point for running an OAI harvest.
+  *
+  * For argument options, @see OaiHarvesterConf.
   */
 object OaiHarvesterMain {
+
+  val recordSchemaStr =
+    """{
+        "namespace": "dpla.avro",
+        "type": "record",
+        "name": "OriginalRecord.v1",
+        "doc": "",
+        "fields": [
+          {"name": "id", "type": "string"},
+          {"name": "document", "type": "string"},
+          {"name": "set_id", "type": "string"},
+          ("name": "set_document", "type": "string"},
+          {"name": "provider", "type": "string"},
+          {"name": "mimetype", "type": { "name": "MimeType",
+           "type": "enum", "symbols": ["application_json", "application_xml", "text_turtle"]}
+           }
+        ]
+      }
+    """//.stripMargin // TODO we need to template the document field so we can record info there
+
+  // This schema String is printed to help with debugging.
+  // It is NOT implemented during the write operation b/c sets are written to CSV.
+  val setSchemaStr =
+  """{
+        "namespace": "dpla.avro",
+        "type": "set",
+        "name": "OriginalRecord.v1",
+        "doc": "",
+        "fields": [
+          {"name": "id", "type": "string"},
+          {"name": "document", "type": "string"},
+          {"name": "provider", "type": "string"},
+          {"name": "mimetype", "type": { "name": "MimeType",
+           "type": "enum", "symbols": ["application_json", "application_xml", "text_turtle"]}
+           }
+        ]
+      }
+    """
 
   val logger = LogManager.getLogger(OaiHarvesterMain.getClass)
 
@@ -66,7 +106,7 @@ object OaiHarvesterMain {
     }
 
     runHarvest() match {
-      case Success(results) =>
+      case Success(results) => {
         results.persist(StorageLevel.DISK_ONLY)
 
         val dataframe = results.withColumn("provider", lit(provider))
@@ -75,13 +115,28 @@ object OaiHarvesterMain {
         // Log the results of the harvest
         logger.info(s"Harvested ${dataframe.count()} records")
 
-        val schema = dataframe.schema
+        readerOptions("verb") match {
+          // Write records to avro.
+          // This task may require a large amount of driver memory.
+          case "ListRecords" => {
+            println(recordSchemaStr)
 
-        dataframe.write
-          .format("com.databricks.spark.avro")
-          .option("avroSchema", schema.toString)
-          .avro(outputDir)
+            dataframe.write
+              .format("com.databricks.spark.avro")
+              .option("avroSchema", recordSchemaStr)
+              .avro(outputDir)
+          }
+          // Write sets to csv.
+          case "ListSets" => {
+            println(setSchemaStr)
 
+            dataframe.coalesce(1).write
+              .format("com.databricks.spark.csv")
+              .option("header", true)
+              .csv(outputDir)
+          }
+        }
+      }
       case Failure(f) => logger.fatal(s"Unable to harvest records. ${f.getMessage}")
     }
     // Stop spark session.
