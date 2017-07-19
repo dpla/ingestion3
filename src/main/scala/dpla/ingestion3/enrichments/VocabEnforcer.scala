@@ -1,7 +1,8 @@
 package dpla.ingestion3.enrichments
 
-import dpla.ingestion3.mappers.rdf.DCMIType
 import org.eclipse.rdf4j.model.IRI
+import dpla.ingestion3.mappers.rdf.{DCMIType, ISO_639_3}
+import scala.io.Source
 
 
 trait VocabEnforcer[T] {
@@ -13,6 +14,10 @@ trait VocabEnforcer[T] {
   val mapVocab: (T, Map[T, IRI]) => Option[IRI] = (value, vocab) => {
     // TODO string similarity comparision, this just does a strict lookup...
     vocab.get(value)
+  }
+
+  val matchAbbvToTerm: (String, Map[String,String]) => String = (value, vocab) => {
+    vocab.getOrElse(value, value)
   }
 }
 
@@ -34,11 +39,8 @@ object DcmiTypeEnforcer extends VocabEnforcer[String] {
     dcmiType.Text
   ).map(_.getLocalName)
 
-  println(DcmiTypeStrings)
-
   val enforceDcmiType: (String) => Boolean = enforceVocab(_, DcmiTypeStrings)
 }
-
 
 object DcmiTypeMapper extends VocabEnforcer[String] {
   val dcmiType = DCMIType()
@@ -97,4 +99,27 @@ object DcmiTypeMapper extends VocabEnforcer[String] {
   )
 
   val mapDcmiType: (String) => Any = mapVocab(_, DcmiTypeMap)
+}
+
+/**
+  * Reads in ISO-693-3 data from text file and generates a
+  * map of abbreviations >> normalized names.
+  *
+  */
+object LexvoEnforcer extends VocabEnforcer[String] {
+  val iso_639_3 = ISO_639_3()
+
+  val lexvoStrings = {
+    // TODO make this a config property
+    val bufferedSource = Source.fromFile("./data/iso-639-3/iso-639-3.tab")
+    val lines = bufferedSource.getLines
+    bufferedSource.close
+
+    lines
+      .map(_.split("\t"))
+      .map(f => (f(0), f(1)))
+      .toMap
+  }
+
+  val enforceLexvoType: (String) => String = matchAbbvToTerm(_, lexvoStrings)
 }
