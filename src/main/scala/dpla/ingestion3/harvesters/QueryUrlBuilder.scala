@@ -35,29 +35,10 @@ class OaiQueryUrlBuilder extends QueryUrlBuilder with Serializable {
       .setPath(url.getPath)
       .setParameter("verb", verb)
 
-    if(resumptionToken.isDefined) {
-      urlParams.setParameter("resumptionToken", resumptionToken.get)
-    }
-
-    /*
-     * Set `set' param if:
-     *   - set is defined
-     *   - there is no resumption token (if an OAI call with a resumption token
-     *     also contains a set, an OAI badArgument error is returned).
-     */
-    if (!resumptionToken.isDefined) {
-      set.foreach(s => urlParams.setParameter("set", s))
-    }
-
-    /*
-     * Set metadataPrefix param if:
-     *   - metadataPrefix is defined
-     *   - there is no resumption token (if an OAI call with a resumption token
-     *     also contains a metadataPrefix, an OAI badArgument error is returned).
-     */
-    if (!resumptionToken.isDefined) {
-      metadataPrefix.foreach(prefix => urlParams.setParameter("metadataPrefix", prefix))
-    }
+    // Set optional properties.
+    resumptionToken.foreach(t => urlParams.setParameter("resumptionToken", t))
+    set.foreach(s => urlParams.setParameter("set", s))
+    metadataPrefix.foreach(prefix => urlParams.setParameter("metadataPrefix", prefix))
 
     urlParams.build.toURL
   }

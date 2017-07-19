@@ -13,7 +13,7 @@ object IndexerMain {
   // See https://digitalpubliclibraryofamerica.atlassian.net/wiki/display/TECH/Ingestion+3+Storage+Specification
   val schema: String = """
   | {
-  |   "namespace": "la.dp.avro.MAP_3.1",
+  |   "namespace": "dpla.avro.MAP_3.1",
   |   "type": "record",
   |   "name": "IndexRecord.v1",
   |   "doc": "",

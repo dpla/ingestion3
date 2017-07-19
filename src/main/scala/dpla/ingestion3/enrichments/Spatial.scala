@@ -2,15 +2,15 @@ package dpla.ingestion3.enrichments
 
 // JavaConversions is for iterating over Sets of
 // org.eclipse.rdf4j.model.Resource and org.eclipse.rdf4j.model.Model
-import collection.JavaConversions._
-import org.eclipse.rdf4j.model._
-import org.eclipse.rdf4j.model.util.Models
-import dpla.ingestion3.mappers.rdf.MappingUtils
 import dpla.ingestion3.mappers.rdf.DefaultVocabularies
-import scalaj.http._ // Used here because it's easy, but see ApiHarvester
+import dpla.ingestion3.mappers.rdf.RdfValueUtils
+import org.apache.log4j.Logger
+import org.eclipse.rdf4j.model._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
-import org.apache.log4j.Logger
+
+import scala.collection.JavaConversions._
+import scalaj.http._
 
 
 /*
@@ -96,7 +96,7 @@ case class Interpretation(feature: Feature)
 
 case class Result(interpretations: List[Interpretation])
 
-object Spatial extends MappingUtils with DefaultVocabularies {
+object Spatial extends RdfValueUtils with DefaultVocabularies {
 
   implicit val formats = DefaultFormats // Formats for json4s
   val log = Logger.getLogger(getClass.getName)

@@ -1,6 +1,5 @@
 package dpla.ingestion3.harvesters.resourceSync
 
-import dpla.ingestion3.harvesters.Harvester
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.util.EntityUtils
@@ -35,7 +34,7 @@ class ResourceSyncIterator() extends Iterator[(String,String)] {
 
     try {
       val entity = rsp.getEntity
-      (Harvester.generateMd5(url,"hybox"), EntityUtils.toString(entity))
+      (url, EntityUtils.toString(entity))
     } finally {
       rsp.close()
     }
