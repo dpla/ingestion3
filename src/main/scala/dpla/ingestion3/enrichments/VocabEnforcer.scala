@@ -1,9 +1,12 @@
 package dpla.ingestion3.enrichments
 
-import org.eclipse.rdf4j.model.IRI
-import dpla.ingestion3.mappers.rdf.{DCMIType, ISO_639_3}
-import scala.io.Source
+import java.net.URI
 
+import org.eclipse.rdf4j.model.IRI
+import dpla.ingestion3.mappers.rdf.DCMIType
+import dpla.ingestion3.model.SkosConcept
+
+import scala.io.Source
 
 trait VocabEnforcer[T] {
   val enforceVocab: (T, Set[T]) => Boolean = (value, vocab) => {
@@ -16,8 +19,20 @@ trait VocabEnforcer[T] {
     vocab.get(value)
   }
 
-  val matchAbbvToTerm: (String, Map[String,String]) => String = (value, vocab) => {
-    vocab.getOrElse(value, value)
+  /**
+    * Accepts a SkosConcept object from the mapped original record and looks up the providedLabel value
+    * against the providedLabel value (abbreviations) of ISO-639-3 language values
+    */
+  val matchToSkosVocab: (SkosConcept, Map[SkosConcept,SkosConcept]) => SkosConcept = (originalValue, skosVocab) => {
+    val enrichedLexvo = skosVocab.getOrElse(originalValue, originalValue)
+
+    // TODO: Are these the correct mappings?
+    // TODO: should properties like exactMatch, closeMatch and note be set? If so with what?
+    SkosConcept(
+      concept = enrichedLexvo.concept,
+      scheme = enrichedLexvo.scheme,
+      providedLabel = originalValue.providedLabel
+    )
   }
 }
 
@@ -98,28 +113,37 @@ object DcmiTypeMapper extends VocabEnforcer[String] {
     "object" -> dcmiType.PhysicalObject
   )
 
-  val mapDcmiType: (String) => Any = mapVocab(_, DcmiTypeMap)
+  val mapDcmiType: (String) => Option[IRI] = mapVocab(_, DcmiTypeMap)
 }
 
 /**
-  * Reads in ISO-693-3 data from text file and generates a
-  * map of abbreviations >> normalized names.
+  * Reads in ISO-693-3 data from tab-delimited file and generates a
+  * map to reconcile language abbreviations to the full term
   *
   */
-object LexvoEnforcer extends VocabEnforcer[String] {
-  val iso_639_3 = ISO_639_3()
-
-  val lexvoStrings = {
-    // TODO make this a config property
-    val bufferedSource = Source.fromFile("./data/iso-639-3/iso-639-3.tab")
-    val lines = bufferedSource.getLines
-    bufferedSource.close
-
-    lines
-      .map(_.split("\t"))
-      .map(f => (f(0), f(1)))
-      .toMap
+object LanguageMapper extends VocabEnforcer[String] {
+  // Reads a file
+  val readFile:(String) => Iterator[String] = (path) => {
+    val stream = getClass.getResourceAsStream(path)
+    Source.fromInputStream(stream).getLines
   }
 
-  val enforceLexvoType: (String) => String = matchAbbvToTerm(_, lexvoStrings)
+  // Create the language lookup map
+  val iso639Map = {
+    // TODO: Make the path to the ISO data file configurable
+    readFile("/iso-639-3.tab")
+      // TODO: Find a clearer way to write the parsing of that file
+      .map(_.split("\t"))
+      .map(f = f => {
+        // TODO: Does additional data need to be read in to more completely instantiate these objects?
+        val languageAbbv = Option(f(0))
+        val languageTerm = Option(f(1))
+        val schemeUri = Option(new URI("http://lexvo.org/id/iso639-3/"))
+        // Create a tuple >> (SkosConcept(abbv), SkosConcept(term, scheme))
+        (SkosConcept(providedLabel = languageAbbv), SkosConcept(concept = languageTerm, scheme = schemeUri))
+      })
+      .toMap
+  }
+  // Attempt to enrich the original record value
+  val mapLanguage: (SkosConcept) => SkosConcept = matchToSkosVocab(_, iso639Map)
 }
