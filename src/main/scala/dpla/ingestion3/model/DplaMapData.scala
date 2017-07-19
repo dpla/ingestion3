@@ -1,7 +1,9 @@
 package dpla.ingestion3.model
 
 import java.net.URI
+
 import dpla.ingestion3.model.DplaMapData._
+import org.eclipse.rdf4j.model.IRI
 
 /**
   * Contains type definitions that express cardinality of fields
@@ -14,6 +16,7 @@ object DplaMapData {
   type ZeroToOne[T] = Option[T]
   type ExactlyOne[T] = T
   type LiteralOrUri = Either[String,URI]
+  type LiteralOrSkos = Either[String,SkosConcept]
 }
 
 /**
@@ -137,7 +140,19 @@ case class EdmPlace(
                    )
 
 case class EdmTimeSpan(
-                        originalSourceDate: ZeroToMany[String] = Seq(),
+                        /* Why is this 0.n? I would have assumed ExactlyOne or ZeroToOne
+                            since it wouldn't make sense to have multiple original ranges
+                            per EdmTimeSpan but rather one edmTimeSpan per originalSourceDate?
+
+                            Esp. since in date in sourceResource is also ZeroToMany...
+
+                            I'm changing the type for the enrichment driver and need to follow-up
+                            w/team
+
+                            Also added a prefLabel property to store the enriched label
+                         */
+                        originalSourceDate: ZeroToOne[String] = None,
+                        prefLabel: ZeroToOne[String] = None,
                         begin: ZeroToOne[String] = None,
                         end: ZeroToOne[String] = None
                       )
