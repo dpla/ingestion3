@@ -54,6 +54,18 @@ object OaiResponseProcessor {
     }
 
   /**
+    * Get all set ids from a single record.
+    * Return empty Seq if none exist.
+    *
+    * @return Seq[String]
+    *         The set ids.
+    */
+  def getSetIdsFromRecord(xml: NodeSeq): Seq[String] = {
+    val sets = xml \\ "setSpec"
+    sets.map(s => s.text)
+  }
+
+  /**
     * Get the error property if it exists
     *
     * @return Option[String]

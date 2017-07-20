@@ -38,10 +38,32 @@ class OaiResponseBuilder (endpoint: String)
     * @param opts Optional OAI args, eg. metadataPrefix
     */
   def getRecords(opts: Map[String, String]): RDD[OaiRecord] = {
+    val sets = getSets.collect
     val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListRecords")
     val response = getMultiPageResponse(baseParams, opts)
     val responseRdd = sqlContext.sparkContext.parallelize(response)
-    responseRdd.flatMap(page => parseRecords(page))
+    val recordsRdd = responseRdd.flatMap(page => parseRecords(page))
+
+    recordsRdd.flatMap(record => {
+      // Get set ids from the record document.
+      // Records may have 0 to many sets ids.
+      val node = XML.loadString(record.document)
+      val setIds = OaiResponseProcessor.getSetIdsFromRecord(node)
+
+      // Map each set id to an OaiSet.
+      // Create a new OaiRecord that contains the OaiSet.
+      val newRecords = setIds.map(id => {
+        val set = sets.filter(s => s.id == id).headOption
+        new OaiRecord(record.id, record.document, set)
+      })
+
+      // If there are any new OaiRecords with sets, return them.
+      // Otherwise, return the original OaiRecord.
+      newRecords.size match {
+        case 0 => Seq(record)
+        case _ => newRecords
+      }
+    })
   }
 
   /**
