@@ -7,9 +7,9 @@
 // Fields are mostly taken from the MAPv4 document, except for Place, which is
 // pulled from the MAPv3.1 document.
 {
-  "namespace": "la.dp.avro.MAP.4_x",
+  "namespace": "dpla.avro.v1.MAP4_x",
   "type": "record",
-  "name": "MAPRecord.v1alpha",
+  "name": "MAPRecord",
   "doc": "",
 
   "types": [
@@ -34,31 +34,27 @@
       "name": "Agent",  // edm:Agent
       "type": "record",
       "fields": [
-        {   // 0-1
+        { // 0-1
           "name": "name",
           "type": ["null", "string"],
           "default": null
         },
-        {
-          // 0-1
+        { // 0-1
           "name": "providedLabel",
           "type": ["null", "string"],
           "default": null
         },
-        {
-          // 0-1
+        { // 0-1
           "name": "note",
           "type": ["null", "string"],
           "default": null
         },
-        {
-          // 0-1
+        { // 0-1
           "name": "inScheme",
           "type": ["null", "string"],
           "default": null
         },
-        {
-          // 0-n
+        { // 0-1
           "name": "exactMatch",
           "type": ["null", "StringArray"],
           "default": null
@@ -71,6 +67,7 @@
         }
       ]
     },
+    {"name": "AgentArray", "type": "array", "items": "Agent"},
     {
       "name": "Concept",  // skos:Concept
       "type": "record",
@@ -113,6 +110,7 @@
         }
       ]
     },
+    {"name": "ConceptArray", "type": "array", "items": "Concept"},
     {
       "name": "Place",  // dpla:Place from MAP 3.1 spec
       "type": "record",
@@ -150,6 +148,7 @@
         }
       ]
     },
+    {"name": "PlaceArray", "type": "array", "items": "Place"},
     {
       "name": "TimeSpan",  // edm:TimeSpan
       "type": "record",
@@ -172,7 +171,8 @@
           "default": null
         }
       ]
-    }
+    },
+    {"name": "TimeSpanArray", "type": "array", "items": "TimeSpan"}
   ],  // types
 
   "fields": [
@@ -255,22 +255,22 @@
           },
           {   // 0-n
             "name": "collection",
-            "type": ["null", {"type": "array", "items": "Collection"}],
+            "type": ["null", "CollectionArray"],
             "default": null
           },
           {   // 0-n
             "name": "contributor",
-            "type": ["null", {"type": "array", "items": "Agent"}],
+            "type": ["null", "AgentArray"],
             "default": null
           },
           {   // 0-n
             "name": "creator",
-            "type": ["null", {"type": "array", "items": "Agent"}],
+            "type": ["null", "AgentArray"],
             "default": null
           },
           {   // 0-n
             "name": "date",
-            "type": ["null", {"type": "array", "items": "TimeSpan"}],
+            "type": ["null", "TimeSpanArray"],
             "default": null
           },
           {
@@ -294,7 +294,7 @@
           {
             // 0-n
             "name": "genre",
-            "type": ["null", {"type": "array", "items": "Concept"}],
+            "type": ["null", "ConceptArray"],
             "default": null
           },
           {
@@ -312,12 +312,12 @@
           {
             // 0-n
             "name": "spatial",
-            "type": ["null", {"type": "array", "items": "Place"}],
+            "type": ["null", "PlaceArray"],
             "default": null
           },
           {   // 0-n
             "name": "publisher",
-            "type": ["null", {"type": "array", "items": "Agent"}],
+            "type": ["null", "AgentArray"],
             "default": null
           },
           {
@@ -341,28 +341,28 @@
           {
             // 1-n
             "name": "rights",
-            "type": {"type": "array", "items": "string"}
+            "type": "StringArray"
           },
           {   // 0-n
             "name": "rightsHolder",
-            "type": ["null", {"type": "array", "items": "Agent"}],
+            "type": ["null", "AgentArray"],
             "default": null
           },
           {
             // 0-n
             "name": "subject",
-            "type": ["null", {"type": "array", "items": "Concept"}],
+            "type": ["null", "ConceptArray"],
             "default": null
           },
           {   // 0-n
             "name": "temporal",
-            "type": ["null", {"type": "array", "items": "TimeSpan"}],
+            "type": ["null", "TimeSpanArray"],
             "default": null
           },
           {
             // 1-n
             "name": "title",
-            "type": {"type": "array", "items": "string"}
+            "type": "StringArray"
           },
           {
             // 0-n

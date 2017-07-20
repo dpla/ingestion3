@@ -1,7 +1,7 @@
 {
-  "namespace": "la.dp.avro",
+  "namespace": "dpla.avro.v1",
   "type": "record",
-  "name": "OriginalRecord.v1",
+  "name": "OriginalRecord",
   "doc": "",
   "fields": [
     {"name": "id", "type": "string"},

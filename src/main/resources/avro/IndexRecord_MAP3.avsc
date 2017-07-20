@@ -1,5 +1,5 @@
 {
-  "namespace": "la.dp.avro.MAP.3_1",
+  "namespace": "dpla.avro.v1.MAP3_1",
   "type": "record",
   "name": "IndexRecord.v1",
   "doc": "",
