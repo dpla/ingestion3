@@ -341,4 +341,32 @@ object TestOaiData {
         <resumptionToken expirationDate="2017-01-21T17:33:16Z" cursor="0">90d421891feba6922f57a59868d7bcd1</resumptionToken>
       </ListRecords>
     </OAI-PMH>
+
+  val inOaiListSetsRsp: Elem =
+    <OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+      <responseDate>2017-07-20T19:58:26Z</responseDate>
+      <request verb="ListSets">http://dpla.library.in.gov/OAIHandler</request>
+      <ListSets>
+        <set>
+          <setSpec>PALNI_winona</setSpec>
+          <setName>Grace College - Winona Railroad Collection</setName>
+        </set>
+        <set>
+          <setSpec>BSU_INArtsDesk</setSpec>
+          <setName>Indiana ArtsDesk Broadcasts</setName>
+        </set>
+        <set>
+          <setSpec>IPFW_cc_fw_elect</setSpec>
+          <setName>Fort Wayne Area Election Returns</setName>
+        </set>
+        <set>
+          <setSpec>PPO_IndianaAlbum</setSpec>
+          <setName>Indiana Album</setName>
+        </set>
+        <set>
+          <setSpec>IMCPL_shs</setSpec>
+          <setName>Shortridge High School Yearbook Collection</setName>
+        </set>
+    </ListSets>
+  </OAI-PMH>
 }
