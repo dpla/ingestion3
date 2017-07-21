@@ -1,5 +1,6 @@
 package dpla.ingestion3.indexer
 
+import dpla.ingestion3.utils.FlatFileIO
 import org.apache.hadoop.mapred.JobConf
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
@@ -9,21 +10,6 @@ import org.elasticsearch.hadoop.cfg.ConfigurationOptions
 import org.elasticsearch.hadoop.mr.EsOutputFormat.EsOldAPIOutputCommitter
 
 object IndexerMain {
-
-  // See https://digitalpubliclibraryofamerica.atlassian.net/wiki/display/TECH/Ingestion+3+Storage+Specification
-  val schema: String = """
-  | {
-  |   "namespace": "dpla.avro.MAP_3.1",
-  |   "type": "record",
-  |   "name": "IndexRecord.v1",
-  |   "doc": "",
-  |   "fields": [
-  |     { "name": "id", "type": "string" },
-  |     { "name": "document", "type": "string" }
-  |   ]
-  | }
-  """.stripMargin //todo retrieve this from S3
-
   def main(args:Array[String]): Unit = {
 
     val input = args(0)
@@ -47,7 +33,8 @@ object IndexerMain {
       .config(conf)
       .getOrCreate()
     val sc = spark.sparkContext
-
+    // See https://digitalpubliclibraryofamerica.atlassian.net/wiki/display/TECH/Ingestion+3+Storage+Specification
+    val schema = new FlatFileIO().readFileAsString("/avro/IndexRecord_MAP3.avsc")
     //Using this API for reading Avro means that we get the
     val rawData: RDD[Row] = spark.read
       .format("com.databricks.spark.avro")
