@@ -18,17 +18,17 @@ object TestOaiData {
         </header>
       </OAI-PMH>"""
 
-    val paOaiErrorRsp: Elem =
-    <OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+    val paOaiErrorRsp: String =
+    """<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
       <responseDate>2017-01-27T05:10:17Z</responseDate>
       <request verb="ListRecords">http://localhost:8080/fedora/oai</request>
       <error code="cannotDisseminateFormat">
         Repository does not provide that format in OAI-PMH responses.
       </error>
-    </OAI-PMH>
+    </OAI-PMH>"""
 
-  val paOaiListRecordsRsp: Elem =
-    <OAI-PMH
+  val paOaiListRecordsRsp: String =
+    """<OAI-PMH
     xmlns="http://www.openarchives.org/OAI/2.0/"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
       <responseDate>2017-01-21T17:24:56Z</responseDate>
@@ -40,6 +40,7 @@ object TestOaiData {
               oai:libcollab.temple.edu:fedora-system:ContentModel-3.0
             </identifier>
             <datestamp>2008-07-02T05:09:44Z</datestamp>
+            <setSpec>foobar</setSpec>
           </header>
           <metadata>
             <oai_dc:dc
@@ -340,10 +341,10 @@ object TestOaiData {
         </record>
         <resumptionToken expirationDate="2017-01-21T17:33:16Z" cursor="0">90d421891feba6922f57a59868d7bcd1</resumptionToken>
       </ListRecords>
-    </OAI-PMH>
+    </OAI-PMH>"""
 
-  val inOaiListSetsRsp: Elem =
-    <OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+  val inOaiListSetsRsp: String =
+    """<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
       <responseDate>2017-07-20T19:58:26Z</responseDate>
       <request verb="ListSets">http://dpla.library.in.gov/OAIHandler</request>
       <ListSets>
@@ -368,5 +369,5 @@ object TestOaiData {
           <setName>Shortridge High School Yearbook Collection</setName>
         </set>
     </ListSets>
-  </OAI-PMH>
+  </OAI-PMH>"""
 }
