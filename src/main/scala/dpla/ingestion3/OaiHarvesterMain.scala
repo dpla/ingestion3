@@ -2,7 +2,7 @@ package dpla.ingestion3
 
 import java.io.File
 
-import dpla.ingestion3.utils.Utils
+import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.OaiHarvesterConf
 import org.apache.log4j.LogManager
@@ -18,45 +18,6 @@ import org.apache.spark.storage.StorageLevel
   * For argument options, @see OaiHarvesterConf.
   */
 object OaiHarvesterMain {
-
-  val recordSchemaStr =
-    """{
-        "namespace": "dpla.avro",
-        "type": "record",
-        "name": "OriginalRecord.v1",
-        "doc": "",
-        "fields": [
-          {"name": "id", "type": "string"},
-          {"name": "document", "type": "string"},
-          {"name": "set_id", "type": "string"},
-          ("name": "set_document", "type": "string"},
-          {"name": "provider", "type": "string"},
-          {"name": "mimetype", "type": { "name": "MimeType",
-           "type": "enum", "symbols": ["application_json", "application_xml", "text_turtle"]}
-           }
-        ]
-      }
-    """//.stripMargin // TODO we need to template the document field so we can record info there
-
-  // This schema String is printed to help with debugging.
-  // It is NOT implemented during the write operation b/c sets are written to CSV.
-  val setSchemaStr =
-    """{
-        "namespace": "dpla.avro",
-        "type": "set",
-        "name": "OriginalRecord.v1",
-        "doc": "",
-        "fields": [
-          {"name": "id", "type": "string"},
-          {"name": "document", "type": "string"},
-          {"name": "provider", "type": "string"},
-          {"name": "mimetype", "type": { "name": "MimeType",
-           "type": "enum", "symbols": ["application_json", "application_xml", "text_turtle"]}
-           }
-        ]
-      }
-    """
-
   val logger = LogManager.getLogger(OaiHarvesterMain.getClass)
 
   def main(args: Array[String]): Unit = {
@@ -72,6 +33,7 @@ object OaiHarvesterMain {
 
     val spark = SparkSession.builder().config(sparkConf).getOrCreate()
     val sc = spark.sparkContext
+    val schema = new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc")
 
     val start = System.currentTimeMillis()
 
@@ -99,16 +61,16 @@ object OaiHarvesterMain {
       // Write records to avro.
       // This task may require a large amount of driver memory.
       case "ListRecords" => {
-        println(recordSchemaStr)
+        println(schema)
 
         dataframe.write
           .format("com.databricks.spark.avro")
-          .option("avroSchema", recordSchemaStr)
+          .option("avroSchema", schema)
           .avro(oaiConf.outputDir())
       }
       // Write sets to csv.
       case "ListSets" => {
-        println(setSchemaStr)
+        println(schema)
 
         dataframe.coalesce(1).write
           .format("com.databricks.spark.csv")
