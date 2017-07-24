@@ -168,3 +168,5 @@ ENV/
 log/*
 
 *.sublime-project
+
+metastore_db/
