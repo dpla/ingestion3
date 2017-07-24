@@ -13,7 +13,7 @@ package object model {
 
   def nameOnlyPlace(string: String): EdmPlace = EdmPlace(name = Some(string))
 
-  def stringOnlyTimeSpan(string: String): EdmTimeSpan = EdmTimeSpan(originalSourceDate = Seq(string))
+  def stringOnlyTimeSpan(string: String): EdmTimeSpan = EdmTimeSpan(originalSourceDate = Option(string))
 
   def nameOnlyConcept(string: String): SkosConcept = SkosConcept(concept = Some(string))
 

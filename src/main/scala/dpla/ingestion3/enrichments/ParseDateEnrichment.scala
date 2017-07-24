@@ -5,12 +5,15 @@ import java.text.SimpleDateFormat
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 import ParseDateEnrichment._
+import dpla.ingestion3.model.EdmTimeSpan
 
 class ParseDateEnrichment {
 
   //TODO ranges
-  def parse(dateString: String, allowInterval: Boolean = false): Option[String] = {
+  def parse(edtfOriginalDate: EdmTimeSpan, allowInterval: Boolean = false): EdmTimeSpan = {
+    val dateString = edtfOriginalDate.originalSourceDate.getOrElse("")
     val str = preprocess(dateString)
+
     //TODO these lazy vals get dereferenced when put in the Seq below.
     val interval = () => if (allowInterval) parseInterval(str) else None
     val parseDateVal = () => parseDate(str)
@@ -35,11 +38,20 @@ class ParseDateEnrichment {
     //this iterates over the list, executes the next function, and returns it if there's a result.
     //otherwise, it continues until the end and returns None.
     //I wasn't able to find a better way to emulate ||= from Ruby. There's probably a better way.
-    @tailrec def findFirst(options: List[() => Option[String]]): Option[String] = options match {
+    @tailrec def findFirst(options: List[() => Option[String]]): EdmTimeSpan = options match {
       case x::xs =>
         val result = x()
-        if (result.isDefined) result else findFirst(xs)
-      case Nil => None
+        if (result.isDefined) {
+          EdmTimeSpan(
+              prefLabel = result,
+              originalSourceDate = edtfOriginalDate.originalSourceDate,
+              // TODO: Get these values out of enrichment
+              begin = None,
+              end = None
+            )
+        } else findFirst(xs)
+      // If no enrichment worked then return the original data
+      case Nil => edtfOriginalDate
     }
 
     findFirst(options)
