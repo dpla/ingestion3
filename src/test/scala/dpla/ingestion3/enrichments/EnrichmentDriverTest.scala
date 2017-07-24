@@ -27,7 +27,6 @@ class EnrichmentDriverTest extends FlatSpec with BeforeAndAfter {
 
     assert(enrichedRecord === expectedValue)
   }
-
 }
 
 
