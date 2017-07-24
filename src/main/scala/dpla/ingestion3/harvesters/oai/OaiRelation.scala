@@ -4,6 +4,7 @@ import org.apache.spark.sql._
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types._
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.catalyst.ScalaReflection
 
 /**
   * This class interprets the user-submitted params to determine which type of
@@ -32,13 +33,13 @@ class OaiRelation (endpoint: String,
 
   val oaiResponseBuilder = new OaiResponseBuilder(endpoint)(sqlContext)
 
-  def allSets: RDD[OaiSet] = oaiResponseBuilder.getSets
+  def allSets: RDD[OaiResponse] = oaiResponseBuilder.getAllSets
 
   /**
     * Make appropriate call to OaiResponseBuilder based on presence or absence of
     * set, blacklist, or harvetAllSets.
     */
-  def records: RDD[OaiRecord] = {
+  def records: RDD[OaiResponse] = {
 
     /**
       * Get any optional OAI arguments that may be used in a records request.
@@ -55,73 +56,90 @@ class OaiRelation (endpoint: String,
       }
     }
 
-    val sets: Option[Array[OaiSet]] = {
-      (setlist, blacklist, harvestAllSets) match {
-        // If setlist is present, get all sets and subtract any that are not
-        // included in the setlist.
-        case(Some(whiteSets), None, false) => {
-          Some(allSets.collect.filter(whiteSets contains _.id))
-        }
-        // If blacklist is present, get all sets and subtract any blacklisted sets.
-        case (None, Some(blackSets), false) => {
-          Some(allSets.collect.filterNot(blackSets contains _.id))
-        }
-        // If harvestAllSets is true, get all sets.
-        case (None, None, true) => Some(allSets.collect)
-        case (None, None, false) => None
-        // Throw exception if more than one set handler is present.
-        case _ => {
-          val msg = "Only one of the following can be present: " +
-            "harvestAllSets, setlist, blacklist"
-          throw new IllegalArgumentException(msg)
-        }
-      }
-    }
-
-    sets match {
-      case Some(s) => oaiResponseBuilder.getRecordsBySets(s, options)
-      case _ => oaiResponseBuilder.getRecords(options)
+    setResponses match {
+      case Some(sets) =>
+        // If there are sets to be harvested from:
+        oaiResponseBuilder.getRecordsBySets(sets, options)
+      case None =>
+        // If there are no sets to be harvested from:
+        oaiResponseBuilder.getAllRecords(options)
     }
   }
 
-  // Set the schema for the DataFrame that will be returned on load.
-  override def schema: StructType = {
-
-    verb match {
-      case "ListSets" => {
-        StructType(Seq(StructField("id", StringType, true),
-          StructField("document", StringType, true)))
-      }
-      case "ListRecords" => {
-        StructType(Seq(StructField("id", StringType, true),
-          StructField("document", StringType, true),
-          StructField("set_id", StringType, true),
-          StructField("set_document", StringType, true)))
-      }
+  /**
+    * Get any relevant sets for a records request, based on presence of setlit,
+    * blacklist, or harvestAllSets.
+    *
+    * @return all sets from which records should be harvested, and any errors
+    *         incurred in the process of harvesting said sets
+    */
+  def setResponses: Option[RDD[OaiResponse]] = {
+    (setlist, blacklist, harvestAllSets) match {
+      case (Some(list), None, false) =>
+        Some(oaiResponseBuilder.getSetsInclude(list))
+      case (None, Some(list), false) =>
+        Some(oaiResponseBuilder.getSetsExclude(list))
+      case (None, None, true) => Some(allSets)
+      case (None, None, false) => None
+      // Throw exception if more than one set handler is present.
+      case _ =>
+        val msg = "Only one of the following can be present: " +
+          "harvestAllSets, setlist, blacklist"
+        throw new IllegalArgumentException(msg)
     }
   }
 
-  // Build the rows for the DataFrame.
-  override def buildScan(): RDD[Row] = {
-
+  // Get responses according to the verb.
+  def getResponses: RDD[OaiResponse] = {
     verb match {
-      case "ListSets" => {
-        allSets.map(set => Row(set.id, set.document))
-      }
-      case "ListRecords" => {
-        records.map(record => {
-          // Get set id and set document if record has associated set.
-          val (setId, setDoc) = record.set match {
-            case Some(set) => (set.id, set.document)
-            case _ => (None, None)
-          }
-          Row(record.id, record.document, setId, setDoc)
-        })
-      }
-      case _ => {
+      case "ListSets" => allSets
+      case "ListRecords" => records
+      case _ =>
         val msg = s"Verb $verb not supported."
         throw new IllegalArgumentException(msg)
-      }
+    }
+  }
+
+  /**
+    * Set the schema for the DataFrame that will be returned on load.
+    * Columns:
+    *   - set: OaiSet
+    *   - record: OaiRecord
+    *   - error: String
+    * Each row will have a non-null value for ONE of sets, records, or error.
+    */
+  override def schema: StructType = {
+    val setType = ScalaReflection.schemaFor[OaiSet].dataType
+      .asInstanceOf[StructType]
+    val recordType = ScalaReflection.schemaFor[OaiRecord].dataType
+      .asInstanceOf[StructType]
+    val errorType = ScalaReflection.schemaFor[OaiError].dataType
+      .asInstanceOf[StructType]
+
+    val setField = StructField("set", setType, true)
+    val recordField = StructField("record", recordType, true)
+    val errorField = StructField("error", errorType, true)
+    StructType(Seq(setField, recordField, errorField))
+  }
+
+  /**
+    * Build the rows for the DataFrame.
+    *
+    * Duplicate records may occur if they appeared in different sources.
+    * For example, if a record belongs to more than one set, it may appear in
+    * responses for each set.
+    */
+  override def buildScan(): RDD[Row] = {
+
+    getResponses.flatMap {
+      case x: SetsPage => x.sets.map(set => Row(set, None, None))
+      case x: RecordsPage => x.records.map(record => Row(None, record, None))
+      case x: OaiError => Seq(Row(None, None, x))
+      case x: OaiSource =>
+        val msg = "Unexpected OaiSource type encountered when building DataFrame"
+        val exception = new OaiHarvesterException(msg)
+        val error = OaiError(exception.toString, x)
+        Seq(Row(None, None, error))
     }
   }
 }
