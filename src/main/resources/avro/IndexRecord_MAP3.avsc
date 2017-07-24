@@ -1,7 +1,7 @@
 {
   "namespace": "dpla.avro.v1.MAP3_1",
   "type": "record",
-  "name": "IndexRecord.v1",
+  "name": "IndexRecord",
   "doc": "",
   "fields": [
     {"name": "id", "type": "string"},
