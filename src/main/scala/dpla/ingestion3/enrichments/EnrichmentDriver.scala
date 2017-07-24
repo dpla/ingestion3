@@ -2,10 +2,25 @@ package dpla.ingestion3.enrichments
 
 import dpla.ingestion3.model._
 
+/**
+  * TODO: assign the hostname from a config file or commandline switch?
+  *
+  * @see dpla.ingestion3.enrichments.Twofisher
+  * @see SpatialEnrichmentIntegrationTest
+  */
+object Geocoder extends Twofisher {
+  override def hostname = {
+    System.getenv("GEOCODER_HOST") match {
+      case h if h.isInstanceOf[String] => h
+      case _ => "localhost"
+    }
+  }
+}
 
 class EnrichmentDriver {
-  val stringEnrich = new StringEnrichments()
-  val dateEnrich = new ParseDateEnrichment()
+  val stringEnrichment = new StringEnrichments()
+  val dateEnrichment = new ParseDateEnrichment()
+  val spatialEnrichment = new SpatialEnrichment(Geocoder)
 
   /**
     * Applies a set of common enrichments that need to be run for all providers
@@ -20,8 +35,10 @@ class EnrichmentDriver {
   def enrich(record: DplaMapData): DplaMapData = {
     record.copy(
       DplaSourceResource(
-        date = record.sourceResource.date.map(d => dateEnrich.parse(d)),
-        language = record.sourceResource.language.map(LanguageMapper.mapLanguage)
+        date = record.sourceResource.date.map(d => dateEnrichment.parse(d)),
+        language = record.sourceResource.language.map(LanguageMapper.mapLanguage),
+        place = record.sourceResource.place
+                      .map(p => spatialEnrichment.enrich(p))
     ))
   }
 }

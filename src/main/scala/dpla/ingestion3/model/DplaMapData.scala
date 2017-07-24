@@ -53,7 +53,7 @@ case class DplaSourceResource(
                                genre: ZeroToMany[SkosConcept] = Seq(),
                                identifier: ZeroToMany[String] = Seq(),
                                language: ZeroToMany[SkosConcept] = Seq(),
-                               place: ZeroToMany[EdmPlace] = Seq(), //specified as dpla:Place in the spec
+                               place: ZeroToMany[DplaPlace] = Seq(), //specified as dpla:Place in the spec
                                publisher: ZeroToMany[EdmAgent] = Seq(),
                                relation: ZeroToMany[LiteralOrUri] = Seq(),
                                replacedBy: ZeroToMany[String] = Seq(),
@@ -128,20 +128,16 @@ case class SkosConcept(
                         closeMatch: ZeroToMany[URI] = Seq()
                       )
 
-case class EdmPlace(
+case class DplaPlace(
                      name: ZeroToOne[String] = None,
-                     provideLabel: ZeroToOne[String] = None,
-                     latitude: ZeroToOne[String] = None, //these possibly should be a numeric type?
-                     longitude: ZeroToOne[String] = None, // this too
-                     altitude: ZeroToOne[String] = None, //this three
-                     geometry: ZeroToOne[String] = None, //cowardly calling this a string. not currently used.
-                     parentFeature: ZeroToMany[EdmPlace] = Seq(),
-                     countryCode: ZeroToOne[String] = None, //maybe come up with a enum thingy for this
-                     note: ZeroToOne[String] = None,
-                     scheme: ZeroToOne[URI] = None,
-                     exactMatch: ZeroToMany[SkosConcept] = Seq(),
-                     closeMatch: ZeroToMany[SkosConcept] = Seq()
-                   )
+                     city: ZeroToOne[String] = None,
+                     county: ZeroToOne[String] = None,
+                     state: ZeroToOne[String] = None,
+                     country: ZeroToOne[String] = None,
+                     // Region or equivalent is not returned by Twofishes
+                     // region: ZeroToOne[String] = None,
+                     coordinates: ZeroToOne[String] = None
+                    )
 
 case class EdmTimeSpan(
                         /* Why is this 0.n? I would have assumed ExactlyOne or ZeroToOne

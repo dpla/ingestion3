@@ -16,7 +16,7 @@ package object model {
 
   def nameOnlyAgent(string: String): EdmAgent = EdmAgent(name = Some(string))
 
-  def nameOnlyPlace(string: String): EdmPlace = EdmPlace(name = Some(string))
+  def nameOnlyPlace(string: String): DplaPlace = DplaPlace(name = Some(string))
 
   def stringOnlyTimeSpan(string: String): EdmTimeSpan = EdmTimeSpan(originalSourceDate = Option(string))
 
