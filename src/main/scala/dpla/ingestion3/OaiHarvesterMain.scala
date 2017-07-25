@@ -7,10 +7,11 @@ import com.databricks.spark.avro._
 import dpla.ingestion3.confs.OaiHarvesterConf
 import org.apache.log4j.LogManager
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.storage.StorageLevel
 
+import scala.util.{Failure, Success, Try}
 
 /**
   * Entry point for running an OAI harvest.
@@ -73,56 +74,57 @@ object OaiHarvesterMain {
     val spark = SparkSession.builder().config(sparkConf).getOrCreate()
     val sc = spark.sparkContext
 
-    val start = System.currentTimeMillis()
-
     val readerOptions: Map[String, String] = Map(
       "verb" -> oaiConf.verb.toOption,
       "metadataPrefix" -> oaiConf.prefix.toOption,
       "harvestAllSets" -> oaiConf.harvestAllSets.toOption,
       "setlist" -> oaiConf.setlist.toOption,
-      "blacklist" -> oaiConf.blacklist.toOption
+      "blacklist" -> oaiConf.blacklist.toOption,
+      "endpoint" -> oaiConf.endpoint.toOption
     ).collect{ case (key, Some(value)) => key -> value } // remove None values
 
-    val results = spark.read
-      .format("dpla.ingestion3.harvesters.oai")
-      .options(readerOptions)
-      .load(oaiConf.endpoint())
-
-    results.persist(StorageLevel.DISK_ONLY)
-
-    val dataframe = results.withColumn("provider", lit(oaiConf.provider()))
-      .withColumn("mimetype", lit("application_xml"))
-
-    val recordsHarvestedCount = dataframe.count()
-
-    readerOptions("verb") match {
-      // Write records to avro.
-      // This task may require a large amount of driver memory.
-      case "ListRecords" => {
-        println(recordSchemaStr)
-
-        dataframe.write
-          .format("com.databricks.spark.avro")
-          .option("avroSchema", recordSchemaStr)
-          .avro(oaiConf.outputDir())
-      }
-      // Write sets to csv.
-      case "ListSets" => {
-        println(setSchemaStr)
-
-        dataframe.coalesce(1).write
-          .format("com.databricks.spark.csv")
-          .option("header", true)
-          .csv(oaiConf.outputDir())
-      }
-      case _ => throw new IllegalArgumentException("Verb not recognized.")
+    def runHarvest(): Try[DataFrame] = {
+      Try(spark.read
+        .format("dpla.ingestion3.harvesters.oai")
+        .options(readerOptions)
+        .load())
     }
 
+    runHarvest() match {
+      case Success(results) => {
+        results.persist(StorageLevel.DISK_ONLY)
+
+        val dataframe = results.withColumn("provider", lit(oaiConf.provider()))
+          .withColumn("mimetype", lit("application_xml"))
+
+        // Log the results of the harvest
+        logger.info(s"Harvested ${dataframe.count()} records")
+
+        readerOptions("verb") match {
+          // Write records to avro.
+          // This task may require a large amount of driver memory.
+          case "ListRecords" => {
+            println(recordSchemaStr)
+
+            dataframe.write
+              .format("com.databricks.spark.avro")
+              .option("avroSchema", recordSchemaStr)
+              .avro(oaiConf.outputDir())
+          }
+          // Write sets to csv.
+          case "ListSets" => {
+            println(setSchemaStr)
+
+            dataframe.coalesce(1).write
+              .format("com.databricks.spark.csv")
+              .option("header", true)
+              .csv(oaiConf.outputDir())
+          }
+        }
+      }
+      case Failure(f) => logger.fatal(s"Unable to harvest records. ${f.getMessage}")
+    }
     // Stop spark session.
     sc.stop()
-
-    val end = System.currentTimeMillis()
-
-    Utils.printResults((end-start),recordsHarvestedCount)
   }
 }

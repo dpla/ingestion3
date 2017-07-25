@@ -7,7 +7,7 @@ import org.scalatest._
   */
 class DefaultSourceTest extends FlatSpec {
   val source = new DefaultSource
-  val endpoint = "http://repox.example.edu:8080/repox/OAIHandler"
+  val endpoint = "http://google.com" // TODO replace with HTTP simulation
   val verb = "ListRecords"
   val list = "manuscripts, newspapers, maps"
   val prefix = "mods"
@@ -17,8 +17,9 @@ class DefaultSourceTest extends FlatSpec {
     val params = Map("foo" -> "bar")
     assertThrows[Exception](source.getEndpoint(params))
   }
-  it should "return endpoint as String" in {
-    val params = Map("path" -> endpoint)
+  // TODO rewrite with HTTP simulation
+  it should "return endpoint as String if the endpoint is provided and reachable" in {
+    val params = Map("endpoint" -> endpoint)
     assert(source.getEndpoint(params) === endpoint)
   }
 
@@ -26,7 +27,7 @@ class DefaultSourceTest extends FlatSpec {
     val params = Map("foo" -> "bar")
     assertThrows[Exception](source.getVerb(params))
   }
-  it should "return endpoint as String" in {
+  it should "return verb as String" in {
     val params = Map("verb" -> verb)
     assert(source.getVerb(params) === verb)
   }
