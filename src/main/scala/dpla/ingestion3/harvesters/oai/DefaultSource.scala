@@ -1,9 +1,14 @@
 package dpla.ingestion3.harvesters.oai
 
+import dpla.ingestion3.utils.Utils.validateUrl
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.sources._
 
 class DefaultSource extends RelationProvider {
+
+  // TODO: Are all of these verbs going to be supported out of the gate?
+  // "GetRecord", "ListIdentifiers", "ListMetadataFormats", "Identify"
+  val oaiVerbs = List("ListRecords", "ListSets")
 
   /**
     * The "parameters" argument for createRelation must be of type Map[String, String]
@@ -31,17 +36,44 @@ class DefaultSource extends RelationProvider {
     new OaiRelation(endpoint, verb, metadataPrefix, harvestAllSets, setlist, blacklist)(sqlContext)
   }
 
-  def getEndpoint(parameters: Map[String, String]): String = {
-    parameters.get("path") match {
-      case Some(x) => x
-      case None => throwMissingArgException("endpoint")
+  def getMetadataPrefix(parameters: Map[String, String]): String = {
+    (parameters.get("metadataPrefix"), parameters.get("verb")) match {
+      case (Some(prefix), Some(verb)) => prefix
     }
   }
 
+  def getEndpoint(parameters: Map[String, String]): String = {
+    val endpoint = parameters.get("endpoint")
+    (endpoint, validateUrl(endpoint.getOrElse(""))) match {
+      // An endpoint url was provided and is reachable
+      case (Some(url), true) => url
+      // An endpoint url was provided but is unreachable
+      case (Some(url), false) => throwValidationException(s"OAI endpoint ${url} is not reachable.")
+      // No endpoint parameter was provided, it is a redundant validation of those in OaiHarvesterConf
+      case (None, false) => throwMissingArgException("endpoint")
+      // Something very unexpected
+      case _ => throwValidationException(s"Unable to validate the OAI endpoint.")
+    }
+  }
+
+  /**
+    * Validates that a verb parameter was passed in and it is a valid OAI verb
+    *
+    * @param parameters
+    * @return The verb if valid
+    * @throws IllegalArgumentException
+    */
   def getVerb(parameters: Map[String, String]): String = {
-    parameters.get("verb") match {
-      case Some(x) => x
-      case None => throwMissingArgException("verb")
+    val verb = parameters.get("verb")
+    (verb, oaiVerbs.contains(verb.getOrElse(""))) match {
+      // A verb parameter was given and it matches the list of valid OAI verbs
+      case (Some(v), true) => v
+      // A verb parameter was given but it is not a supported OAI verb
+      case (Some(v), false) => throwValidationException(s"${v} is not a valid or currently supported OAI verb")
+      // A verb was not provided, it is a redundant validation of those in OaiHarvesterConf
+      case (None, false) => throwMissingArgException("verb")
+      // Something very unexpected
+      case _ => throwValidationException("Unable to validate OAI verb.")
     }
   }
 
@@ -84,6 +116,11 @@ class DefaultSource extends RelationProvider {
 
   def throwUnrecognizedArgException(arg: String) = {
     val msg = s"Unrecognized argument: $arg"
+    throw new IllegalArgumentException(msg)
+  }
+
+  def throwValidationException(arg: String) = {
+    val msg = s"Validation error: ${arg}"
     throw new IllegalArgumentException(msg)
   }
 }

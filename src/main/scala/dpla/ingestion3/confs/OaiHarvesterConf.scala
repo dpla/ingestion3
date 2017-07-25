@@ -1,7 +1,7 @@
 package dpla.ingestion3.confs
 
 import org.rogach.scallop.{ScallopConf, ScallopOption}
-
+import dpla.ingestion3.utils.Utils.validateUrl
 
 /**
   * https://github.com/scallop/scallop/wiki
@@ -27,16 +27,13 @@ class OaiHarvesterConf(arguments: Seq[String]) extends ScallopConf(arguments) {
   val outputDir: ScallopOption[String] = opt[String]("outputDir",
     required = true,
     noshort = true,
-    validate = (_.nonEmpty))
+    validate = _.nonEmpty)
   val endpoint: ScallopOption[String] = opt[String]("endpoint",
     required = true,
-    noshort = true,
-    // TODO is there a better validation of the URL rather than nonEmpty?
-    validate = (_.nonEmpty))
+    noshort = true)
   val verb: ScallopOption[String] = opt[String]("verb",
     required = true,
-    noshort = true,
-    validate = (_.nonEmpty))
+    noshort = true)
   val provider: ScallopOption[String] = opt[String]("provider",
     required = true,
     noshort = true)
@@ -44,7 +41,7 @@ class OaiHarvesterConf(arguments: Seq[String]) extends ScallopConf(arguments) {
   val prefix: ScallopOption[String] = opt[String]("prefix",
     required = false,
     noshort = true,
-    validate = (_.nonEmpty))
+    validate = _.nonEmpty)
   val harvestAllSets: ScallopOption[String] = opt[String]("harvestAllSets",
     required = false,
     noshort = true,
@@ -52,11 +49,11 @@ class OaiHarvesterConf(arguments: Seq[String]) extends ScallopConf(arguments) {
   val setlist: ScallopOption[String] = opt[String]("setlist",
     required = false,
     noshort = true,
-    validate = (_.nonEmpty))
+    validate = _.nonEmpty)
   val blacklist: ScallopOption[String] = opt[String]("blacklist",
     required = false,
     noshort = true,
-    validate = (_.nonEmpty))
+    validate = _.nonEmpty)
   // If a master URL is not provider then default to local[*]
   val sparkMaster: ScallopOption[String] = opt[String]("sparkMaster",
     required = false,
