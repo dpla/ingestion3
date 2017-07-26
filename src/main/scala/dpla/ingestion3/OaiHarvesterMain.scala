@@ -62,26 +62,41 @@ object OaiHarvesterMain {
 
   def main(args: Array[String]): Unit = {
     val oaiConf = new OaiHarvesterConf(args.toSeq)
+    val oaiParams = oaiConf.load()
 
-    Utils.deleteRecursively(new File(oaiConf.outputDir()))
+    // TODO print something pleasant.
+    Utils.deleteRecursively(new File(oaiParams.outputDir.get))
 
     // Initiate spark session.
     val sparkConf = new SparkConf().setAppName("Oai Harvest")
     // sparkMaster has a default value of local[*] if not provided.
     // TODO: will this default value work with EMR?
-    sparkConf.setMaster(oaiConf.sparkMaster())
+    sparkConf.setMaster(oaiParams.sparkMaster.get)
 
     val spark = SparkSession.builder().config(sparkConf).getOrCreate()
     val sc = spark.sparkContext
 
+    // Set options
     val readerOptions: Map[String, String] = Map(
-      "verb" -> oaiConf.verb.toOption,
-      "metadataPrefix" -> oaiConf.prefix.toOption,
-      "harvestAllSets" -> oaiConf.harvestAllSets.toOption,
-      "setlist" -> oaiConf.setlist.toOption,
-      "blacklist" -> oaiConf.blacklist.toOption,
-      "endpoint" -> oaiConf.endpoint.toOption
+      "verb" -> oaiParams.verb,
+      "metadataPrefix" -> oaiParams.metadataPrefix,
+      "harvestAllSets" -> oaiParams.harvestAllSets,
+      "setlist" -> oaiParams.setList,
+      "blacklist" -> oaiParams.blacklist,
+      "endpoint" -> oaiParams.endpoint
     ).collect{ case (key, Some(value)) => key -> value } // remove None values
+
+    // These were already validated in OaiHarvesterConf so this is redundant but did not want
+    // to call .get() on an option to access the properties when saving the avro
+    val outputDir = oaiParams.outputDir match {
+      case Some(d) => d
+      case _ => throw new IllegalArgumentException("Output directory is not specified. Terminating run.")
+    }
+
+    val provider = oaiParams.provider match {
+      case Some(p) => p
+      case _ => throw new IllegalArgumentException("Provider is not specified. Terminating run.")
+    }
 
     def runHarvest(): Try[DataFrame] = {
       Try(spark.read
@@ -94,7 +109,7 @@ object OaiHarvesterMain {
       case Success(results) => {
         results.persist(StorageLevel.DISK_ONLY)
 
-        val dataframe = results.withColumn("provider", lit(oaiConf.provider()))
+        val dataframe = results.withColumn("provider", lit(provider))
           .withColumn("mimetype", lit("application_xml"))
 
         // Log the results of the harvest
@@ -109,7 +124,7 @@ object OaiHarvesterMain {
             dataframe.write
               .format("com.databricks.spark.avro")
               .option("avroSchema", recordSchemaStr)
-              .avro(oaiConf.outputDir())
+              .avro(outputDir)
           }
           // Write sets to csv.
           case "ListSets" => {
@@ -118,7 +133,7 @@ object OaiHarvesterMain {
             dataframe.coalesce(1).write
               .format("com.databricks.spark.csv")
               .option("header", true)
-              .csv(oaiConf.outputDir())
+              .csv(outputDir)
           }
         }
       }
