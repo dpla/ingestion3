@@ -2,10 +2,11 @@ package dpla.ingestion3.enrichments
 
 import java.text.SimpleDateFormat
 
-import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 import ParseDateEnrichment._
 import dpla.ingestion3.model.EdmTimeSpan
+
+import scala.annotation.tailrec
 
 class ParseDateEnrichment {
 
@@ -14,48 +15,48 @@ class ParseDateEnrichment {
     val dateString = edtfOriginalDate.originalSourceDate.getOrElse("")
     val str = preprocess(dateString)
 
-    //TODO these lazy vals get dereferenced when put in the Seq below.
-    val interval = () => if (allowInterval) parseInterval(str) else None
-    val parseDateVal = () => parseDate(str)
-    //    date ||= Date.edtf(str.gsub('.', '-')) //todo
-    val partialEdtfVal = () => partialEdtf(str)
-    val decadeHyphenVal = () => decadeHyphen(str)
-    val monthYearVal = () => monthYear(str)
-    val decadeStrVal = () => decadeString(str)
-    val hyphenatedPartialRangeVal = () => hyphenatedPartialRange(str)
-    val circaVal = () => circa(str)
+    //if we can get an interval out of this, return that
+    parseInterval(str)
+      .map(
+        { case (begin, end) =>
+          return EdmTimeSpan(
+            originalSourceDate = Some(dateString),
+            prefLabel = Some(dateString),
+            begin = Some(begin),
+            end = Some(end)
+          )
+        }
+      )
 
-    val options = List(
-      parseDateVal,
-      partialEdtfVal,
-      decadeHyphenVal,
-      monthYearVal,
-      decadeStrVal,
-      hyphenatedPartialRangeVal,
-      circaVal
-    )
 
-    //this iterates over the list, executes the next function, and returns it if there's a result.
-    //otherwise, it continues until the end and returns None.
-    //I wasn't able to find a better way to emulate ||= from Ruby. There's probably a better way.
-    @tailrec def findFirst(options: List[() => Option[String]]): EdmTimeSpan = options match {
-      case x::xs =>
-        val result = x()
-        if (result.isDefined) {
-          EdmTimeSpan(
-              prefLabel = result,
-              originalSourceDate = edtfOriginalDate.originalSourceDate,
-              // TODO: Get these values out of enrichment
-              begin = None,
-              end = None
-            )
-        } else findFirst(xs)
-      // If no enrichment worked then return the original data
-      case Nil => edtfOriginalDate
-    }
+    //helper function to return a string
+    def timespanify(result: String): Option[EdmTimeSpan] =
+      Some(
+        EdmTimeSpan(
+          prefLabel = Some(result),
+          originalSourceDate = edtfOriginalDate.originalSourceDate,
+          // TODO: Get these values out of enrichment
+          begin = None,
+          end = None
+        ))
 
-    findFirst(options)
+    //calling flatMap on an option doesn't iterate, so each of these chains
+    //short circuits the rest of the execution if the result is Some(string)
+
+    parseDate(str).flatMap(timespanify).foreach(return _)
+    //todo full EDTF parsing
+    partialEdtf(str).flatMap(timespanify).foreach(return _)
+    decadeHyphen(str).flatMap(timespanify).foreach(return _)
+    monthYear(str).flatMap(timespanify).foreach(return _)
+    decadeString(str).flatMap(timespanify).foreach(return _)
+    hyphenatedPartialRange(str).flatMap(timespanify).foreach(return _)
+    circa(str).flatMap(timespanify).foreach(return _)
+
+    //by default, return the input if we get here
+    edtfOriginalDate
+
   }
+
 
   private def preprocess(str: String): String = {
 
@@ -77,14 +78,6 @@ class ParseDateEnrichment {
     removedRanges
   }
 
-  private def rangeMatch(str: String): Option[(String, String)] = {
-    val cleanedString = str.replace("to", "-").replace("until", "-")
-    rangeMatchRexp.findFirstMatchIn(cleanedString) match {
-      case Some(matched) => Some((matched.group(1), matched.group(2)))
-      case None => None
-    }
-  }
-
   private def circa(str: String): Option[String] = {
     val cleaned = str.replaceAll(""".*[cC]{1}[irca\.]*""", "").replaceAll(""".*about""", "")
     parseDate(cleaned) match { //todo i removed recusrion by changing parse() to parseDate().
@@ -93,7 +86,6 @@ class ParseDateEnrichment {
     }
     //todo EDTF stuff
   }
-
 
   private def parseInterval(str: String): Option[(String, String)] = {
     //todo parse the dates from the range?
@@ -107,17 +99,42 @@ class ParseDateEnrichment {
     }
   }
 
+  private def rangeMatch(str: String): Option[(String, String)] = {
+    val cleanedString = str.replace("to", "-").replace("until", "-")
+    rangeMatchRexp.findFirstMatchIn(cleanedString) match {
+      case Some(matched) => Some((matched.group(1), matched.group(2)))
+      case None => None
+    }
+  }
+
   private def parseDate(str: String): Option[String] = {
+
+    //TODO ideally these are ThreadLocal and stick around rather than being rebuilt all the time
+    val trialFormats = List(
+      "yyyy-MM-dd",
+      "MMM dd, yyyy",
+      "MM/dd/yyyy",
+      "MM.dd.yyyy",
+      "MM-dd-yyyy",
+      "MMM, yyyy"
+    )
+
     @tailrec
-    def innerParseDate(str: String, formats: List[SimpleDateFormat]): Option[String] =
+    def innerParseDate(str: String, formats: List[String]): Option[String] =
       formats match {
         case head :: rest =>
-          Try(head.parse(str)) match {
-            case Success(date) => Some(responseFormat.format(date))
-            case Failure(exception) => innerParseDate(str, rest)
+          val df = new SimpleDateFormat(head)
+          df.setLenient(false)
+          val responseFormat = new SimpleDateFormat("yyyy-MM-dd")
+          df.setLenient(false)
+          Try(df.parse(str)) match {
+            case Success(date) =>
+              Some(responseFormat.format(date))
+            case Failure(exception) =>
+              innerParseDate(str, rest)
           }
         case Nil => None
-    }
+      }
 
     innerParseDate(str, trialFormats)
   }
@@ -162,17 +179,6 @@ class ParseDateEnrichment {
 }
 
 object ParseDateEnrichment {
-  val responseFormat = new SimpleDateFormat("yyyy-MM-dd")
-
-  val trialFormats = List(
-    new SimpleDateFormat("yyyy-MM-dd"),
-    new SimpleDateFormat("MMM dd, yyyy"),
-    new SimpleDateFormat("MM/dd/yyyy"),
-    new SimpleDateFormat("MM.dd.yyyy"),
-    new SimpleDateFormat("MM-dd-yyyy"),
-    new SimpleDateFormat("MMM, yyyy")
-  )
-  trialFormats.foreach(_.setLenient(false))
 
   val rangeMatchRexp = """([a-zA-Z]{0,3}\s?[\d\-\/\.xu\?\~a-zA-Z]*,?\s?\d{3}[\d\-xs][s\d\-\.xu\?\~]*)\s*[-\.]+\s*([a-zA-Z]{0,3}\s?[\d\-\/\.xu\?\~a-zA-Z]*,?\s?\d{3}[\d\-xs][s\d\-\.xu\?\~]*)""".r
 

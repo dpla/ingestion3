@@ -7,11 +7,11 @@ class ParseDateEnrichmentTest extends FlatSpec with BeforeAndAfter {
   val enrichment = new ParseDateEnrichment
 
   "ParseDateEnrichment" should "parse calendar to iso Date'" in {
-    val date = "May 15, 2014"
+    val date = "Jan 10, 2011"
     val originalDate = EdmTimeSpan(originalSourceDate = Some(date))
     val enrichedDate = EdmTimeSpan(
       originalSourceDate = Some(date),
-      prefLabel = Some("2014-05-15"),
+      prefLabel = Some("2011-01-10"),
       begin = None,
       end = None
     )
@@ -48,11 +48,11 @@ class ParseDateEnrichmentTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "parse dot date to iso date" in {
-    val date = "5.7.2012"
+    val date = "9.8.2013"
     val originalDate = EdmTimeSpan(originalSourceDate = Some(date))
     val enrichedDate = EdmTimeSpan(
       originalSourceDate = Some(date),
-      prefLabel = Some("2012-05-07"),
+      prefLabel = Some("2013-09-08"),
       begin = None,
       end = None
     )
