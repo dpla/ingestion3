@@ -50,19 +50,18 @@ object Utils {
   }
 
   /**
-    * The only shared method between harvester implementations. Generates
-    * an md5 hash of the id value
+    * Create an md5 hash from the given id value
     *
-    * @param id String
-    * @param prov String
-    *             Optional, Provider abbreviation if provided is prepended to
-    *             id and then hashed
-    * @return String md5 hash of the id value
+    * @param id Value to hash
+    * @return MD5 hash
+    * @throws IllegalArgumentException If no source value given
     */
-  def generateMd5(id: String, prov: String=""): String = {
-    if(prov.nonEmpty)
-      DigestUtils.md5Hex(List(prov,id).mkString("--").trim)
-    DigestUtils.md5Hex(id)
+  def generateMd5(id: Option[String]): String = {
+    id match {
+      case Some(i) => DigestUtils.md5Hex(i)
+      // TODO: Is more information required in this error message?
+      case _ => throw new IllegalArgumentException("Unable to mint an MD5 ID for record.")
+    }
   }
 
   /**

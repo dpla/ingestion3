@@ -3,7 +3,6 @@ package dpla.ingestion3.model
 import java.net.URI
 
 import dpla.ingestion3.model.DplaMapData._
-import org.eclipse.rdf4j.model.IRI
 
 /**
   * Contains type definitions that express cardinality of fields

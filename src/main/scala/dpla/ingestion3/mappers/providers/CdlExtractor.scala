@@ -7,12 +7,10 @@ import dpla.ingestion3.model.{DplaMapData, DplaSourceResource, EdmWebResource, O
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
-class CdlExtractor extends Extractor with JsonExtractionUtils {
+class CdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
+  implicit val json: JValue = parse(rawData)
 
-  def build(rawData: String): DplaMapData = {
-
-    implicit val json: JValue = parse(rawData)
-
+  def build: DplaMapData = {
     DplaMapData(
       DplaSourceResource(
         alternateTitle = extractStrings("alternative_title_ss"),
@@ -42,7 +40,7 @@ class CdlExtractor extends Extractor with JsonExtractionUtils {
         uri = providerUri(json)
       ),
       OreAggregation(
-        uri = new URI("http://example.com"), //TODO: our url
+        uri = mintDplaItemUri(),
         dataProvider = nameOnlyAgent(provider(json)),
         originalRecord = rawData,
         preview = thumbnail(json),
@@ -81,4 +79,6 @@ class CdlExtractor extends Extractor with JsonExtractionUtils {
     name = Some("California Digital Library"),
     uri = Some(new URI("http://dp.la/api/contributor/cdl"))
   )
+  // Base CDL ID should use provider prefix (e.g. cdl--104014afdkfg2a)
+  override def getProviderBaseId(): Option[String] = Option(List("cdl", extractString("id")(json)).mkString("--"))
 }

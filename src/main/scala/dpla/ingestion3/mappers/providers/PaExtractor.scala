@@ -3,27 +3,23 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.mappers.xml.XmlExtractionUtils
-import dpla.ingestion3.model.{DplaMapData, DplaSourceResource, EdmAgent, EdmWebResource, OreAggregation, _}
+import dpla.ingestion3.model._
 
 import scala.xml._
 
-class PaExtractor extends Extractor with XmlExtractionUtils {
+class PaExtractor(rawData: String) extends Extractor with XmlExtractionUtils {
+
+  implicit val xml: NodeSeq = XML.load(rawData)
 
   def agent = EdmAgent(
     name = Some("Pennsylvania Digital Collections Project"),
     uri = Some(new URI("http://dp.la/api/contributor/pa"))
   )
 
-  //TODO we haven't figured out how to derive our URIs for items yet
-
-  def build(rawData: String): DplaMapData = {
-
-    implicit val xml: NodeSeq = XML.load(rawData)
-
+  def build: DplaMapData = {
     lazy val itemUrl = new URI(extractStrings("dc:identifier").apply(1))
 
     DplaMapData(
-
       DplaSourceResource(
         collection = extractStrings("dc:relation").headOption.map(nameOnlyCollection).toSeq,
         contributor = extractStrings("dc:contributor").map(nameOnlyAgent),
@@ -49,7 +45,7 @@ class PaExtractor extends Extractor with XmlExtractionUtils {
       ),
 
       OreAggregation(
-        uri = new URI("http://example.com"), //todo our url
+        uri = mintDplaItemUri(),
         //below will throw if not enough contributors
         dataProvider = nameOnlyAgent(extractStrings("dc:contributor").last),
         originalRecord = rawData,
@@ -58,4 +54,6 @@ class PaExtractor extends Extractor with XmlExtractionUtils {
       )
     )
   }
+
+  override def getProviderBaseId(): Option[String] = extractString("id")(xml)
 }
