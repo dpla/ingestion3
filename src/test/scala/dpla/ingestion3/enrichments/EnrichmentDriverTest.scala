@@ -4,6 +4,8 @@ import java.net.URI
 
 
 import dpla.ingestion3.model._
+import dpla.ingestion3.data.MappedRecordsFixture
+import dpla.ingestion3.model.{DplaSourceResource, EdmTimeSpan, SkosConcept}
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 class EnrichmentDriverTest extends FlatSpec with BeforeAndAfter {
@@ -38,10 +40,10 @@ class EnrichmentDriverTest extends FlatSpec with BeforeAndAfter {
   )
 
   "EnrichmentDriver" should " enrich both language and date" in {
-    val expectedValue = mappedRecord.copy(DplaSourceResource(
-      date = Seq(EdmTimeSpan(
-          prefLabel = Some("2015-04-03"),
-          originalSourceDate = Some("4.3.2015")
+    val expectedValue = MappedRecordsFixture.mappedRecord.copy(new DplaSourceResource(
+      date = Seq(new EdmTimeSpan(
+          prefLabel = Some("2012-05-07"),
+          originalSourceDate = Some("5.7.2012")
         )),
       language = Seq(SkosConcept(
         providedLabel = Some("eng"),
@@ -50,7 +52,7 @@ class EnrichmentDriverTest extends FlatSpec with BeforeAndAfter {
       )
     ))
 
-    val enrichedRecord = driver.enrich(mappedRecord)
+    val enrichedRecord = driver.enrich(MappedRecordsFixture.mappedRecord)
 
     assert(enrichedRecord === expectedValue)
   }
