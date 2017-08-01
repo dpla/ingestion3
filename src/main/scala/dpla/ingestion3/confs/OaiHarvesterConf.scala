@@ -1,13 +1,11 @@
 package dpla.ingestion3.confs
 
-import org.rogach.scallop.{ScallopConf, ScallopOption}
-
+import com.typesafe.config.ConfigFactory
 
 /**
-  * https://github.com/scallop/scallop/wiki
   *
   * Arguments to be passed into the OAI-PMH harvester
-  *
+  * 
   * Output directory: String
   * Endpoint: String the OAI URL
   * Verb: String ListRecords || ListSets
@@ -22,46 +20,53 @@ import org.rogach.scallop.{ScallopConf, ScallopOption}
   * sparkMaster (Optional): If omitted the defaults to local[*]
   */
 
-class OaiHarvesterConf(arguments: Seq[String]) extends ScallopConf(arguments) {
-  // Required parameters
-  val outputDir: ScallopOption[String] = opt[String]("outputDir",
-    required = true,
-    noshort = true,
-    validate = (_.nonEmpty))
-  val endpoint: ScallopOption[String] = opt[String]("endpoint",
-    required = true,
-    noshort = true,
-    // TODO is there a better validation of the URL rather than nonEmpty?
-    validate = (_.nonEmpty))
-  val verb: ScallopOption[String] = opt[String]("verb",
-    required = true,
-    noshort = true,
-    validate = (_.nonEmpty))
-  val provider: ScallopOption[String] = opt[String]("provider",
-    required = true,
-    noshort = true)
-  // Optional parameters
-  val prefix: ScallopOption[String] = opt[String]("prefix",
-    required = false,
-    noshort = true,
-    validate = (_.nonEmpty))
-  val harvestAllSets: ScallopOption[String] = opt[String]("harvestAllSets",
-    required = false,
-    noshort = true,
-    default = Some("false"))
-  val setlist: ScallopOption[String] = opt[String]("setlist",
-    required = false,
-    noshort = true,
-    validate = (_.nonEmpty))
-  val blacklist: ScallopOption[String] = opt[String]("blacklist",
-    required = false,
-    noshort = true,
-    validate = (_.nonEmpty))
-  // If a master URL is not provider then default to local[*]
-  val sparkMaster: ScallopOption[String] = opt[String]("sparkMaster",
-    required = false,
-    noshort = true,
-    default = Some("local[*]"))
+class OaiHarvesterConf(arguments: Seq[String]) {
+  def load(): OaiConfig = {
+    // Loads config file for more information about loading hierarchy please read
+    // https://github.com/typesafehub/config#standard-behavior
+    ConfigFactory.invalidateCaches()
+    val oaiConf = ConfigFactory.load()
 
-  verify()
+    def getProp(prop: String, default: Option[String] = None): Option[String] = {
+      oaiConf.hasPath(prop) match {
+        case true => Some(oaiConf.getString(prop))
+        case false => default
+      }
+    }
+
+    OaiConfig(
+      // Validate outputDir parameter here since it is not validated in DefaultSource
+      outputDir = getProp("outputDir") match {
+        case Some(d) => Some(d)
+        case None => throw new IllegalArgumentException("Output directory is not " +
+          "specified in config. Cannot harvest.")
+      },
+      endpoint = getProp("endpoint"),
+      verb = getProp("verb"),
+      // Validate provider parameter here since it is not validated in DefaultSource
+      provider = getProp("provider") match {
+        case Some(d) => Some(d)
+        case None => throw new IllegalArgumentException("Provider is not " +
+          "specified in config. Cannot harvest.")
+      },
+      metadataPrefix = getProp("metadataPrefix"),
+      harvestAllSets = getProp("harvestAllSets"),
+      setList = getProp("setList"),
+      blacklist = getProp("blacklist"),
+      // Default spark master is to run on local
+      sparkMaster = getProp("sparkMaster", Some("local[*]"))
+    )
+  }
 }
+
+case class OaiConfig (
+                       outputDir: Option[String],
+                       endpoint: Option[String],
+                       verb: Option[String],
+                       provider: Option[String],
+                       metadataPrefix: Option[String],
+                       harvestAllSets: Option[String],
+                       setList: Option[String],
+                       blacklist: Option[String],
+                       sparkMaster: Option[String]
+                     )
