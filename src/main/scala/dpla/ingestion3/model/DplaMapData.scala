@@ -85,6 +85,11 @@ case class EdmWebResource(
   */
 
 case class OreAggregation(
+                           /*
+                            * FIXME: it's not clear what `uri' corresponds to
+                            * in Section 4.1.C of
+                            * http://dp.la/info/wp-content/uploads/2015/03/MAPv4.pdf
+                            */
                            uri: ExactlyOne[URI], //uri of the record on our site
                            dataProvider: ExactlyOne[EdmAgent],
                            originalRecord: ExactlyOne[String], //map v4 specifies this as a ref, but that's LDP maybe?
