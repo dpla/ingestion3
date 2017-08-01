@@ -7,6 +7,9 @@ import java.nio.file.StandardOpenOption.{CREATE, TRUNCATE_EXISTING}
 import org.apache.avro.Schema
 import org.apache.avro.file.{CodecFactory, DataFileWriter}
 import org.apache.avro.generic.{GenericDatumWriter, GenericRecordBuilder}
+import org.apache.commons.io.IOUtils
+
+import scala.io.Source
 
 /**
   * Basic FileIO ops
@@ -22,6 +25,16 @@ class FlatFileIO extends FileIO {
   def writeFile(record: String, outputFile: String): Unit = {
     val outFile = new File(outputFile).toPath
     Files.write(outFile, record.getBytes("utf8"), CREATE, TRUNCATE_EXISTING)
+  }
+
+  /**
+    * Reads a file and returns it as a single string
+    * @param name
+    * @return
+    */
+  def readFileAsString(name: String): String = {
+    val stream = getClass.getResourceAsStream(name)
+    try Source.fromInputStream(stream).mkString finally IOUtils.closeQuietly(stream)
   }
 }
 
