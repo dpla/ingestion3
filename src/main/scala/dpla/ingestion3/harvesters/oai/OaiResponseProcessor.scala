@@ -2,7 +2,8 @@ package dpla.ingestion3.harvesters.oai
 
 import org.apache.log4j.LogManager
 
-import scala.xml.{Node, NodeSeq}
+import scala.util.{Try, Success, Failure}
+import scala.xml.{Node, NodeSeq, XML}
 
 /**
   * Basic exception class, minimal implementation
@@ -18,40 +19,53 @@ object OaiResponseProcessor {
   private[this] val logger = LogManager.getLogger("OaiHarvester")
 
   /**
-    * Iterates through the records in an OAI response.
-    * Returns a Sequence of OaiRecord
+    * Parses records from an OaiSource.
     *
-    * @param xml NodeSeq
-    *            The XML response from the OAI request
+    * @param source OaiSource
+    *               The single-page response to a single OAI query.
+    *
+    * @return OaiResponse
+    *         OaiRecordsPage - all the records appearing on the page OR
+    *         OaiError - an error incurred during the process of parsing the records.
     */
 
-    def getRecords(xml: NodeSeq, set: Option[OaiSet] = None): Seq[OaiRecord] = {
-      val records = xml \\ "OAI-PMH" \\ "record"
-      records.map(r => r.headOption match {
-        case Some(node) => {
-          new OaiRecord(getOaiIdentifier(node), node.toString, set)
-        }
-        case None => throw new RuntimeException("XML parsing error")
+  def getRecords(source: OaiSource): OaiResponse = {
+
+    // Parse all records from XML
+    def getRecordsFromXml(xml: Node): Seq[OaiRecord] = {
+      val xmlRecords: NodeSeq = (xml \ "ListRecords" \ "record")
+
+      xmlRecords.flatMap(record =>
+        record.headOption match {
+          case Some(node) =>
+            val id = getRecordIdentifier(node)
+            val setIds = getSetIdsFromRecord(node)
+            Some(OaiRecord(id, node.toString, setIds, source))
+          case _ => None
       })
     }
 
+    val text = source.text.getOrElse("")
+
+    getXml(text) match {
+      case Failure(e) => OaiError(e.toString, source)
+      case Success(xml) =>
+        val records = getRecordsFromXml(xml)
+        RecordsPage(records)
+    }
+  }
+
+
+  // TODO: To ensure continuity of IDs between ingestion systems and generalize the ID
   /**
-    * Iterates through the sets in an OAI response.
-    * Returns a Sequence of OaiSet
+    * Accepts a record from an OAI feed an returns the OAI identifier
     *
-    * @param xml NodeSeq
-    *            The XML response from the OAI request
+    * @param record Node
+    *               The original record from the OAI feed
+    * @return The local identifier
     */
-    def getSets(xml: NodeSeq): Seq[OaiSet] = {
-      val sets = xml \\ "OAI-PMH" \\ "set"
-      sets.map(s => s.headOption match {
-        case Some(node) => {
-          val id = node \\ "setSpec"
-          new OaiSet(id.text, node.toString)
-        }
-        case None => throw new RuntimeException("XML parsing error")
-      })
-    }
+  def getRecordIdentifier(record: Node): String =
+    (record \ "header" \ "identifier").text
 
   /**
     * Get all set ids from a single record.
@@ -60,31 +74,97 @@ object OaiResponseProcessor {
     * @return Seq[String]
     *         The set ids.
     */
-  def getSetIdsFromRecord(xml: NodeSeq): Seq[String] = {
-    val sets = xml \\ "setSpec"
-    sets.map(s => s.text)
+  def getSetIdsFromRecord(record: Node): Seq[String] =
+    for (set <- record \ "header" \ "setSpec") yield set.text
+
+  /**
+    * Parses sets from an OaiSource, and filter if necessary according to a
+    * whitelist or blacklist.
+    *
+    * @param source OaiSource
+    *               The single-page response to a single OAI query
+    *
+    * @param setFilter: PartialFunction[(Seq[OaiSet]), Seq[OaiSet]])
+    *                   A partial function indicating how sets should be filtered,
+    *                   ie. according to a whitelist or blacklist.
+    */
+  def getSets(source: OaiSource,
+              setFilter: PartialFunction[(Seq[OaiSet]), Seq[OaiSet]]): OaiResponse = {
+
+    // Parse all sets from XML.
+    def getSetsFromXml(xml: Node): Seq[OaiSet] =
+      for (set <- xml \ "ListSets" \ "set")
+        yield OaiSet(getSetIdentifier(set), set.toString, source)
+
+    val text = source.text.getOrElse("")
+
+    getXml(text) match {
+      case Failure(e) => OaiError(e.toString, source)
+      case Success(xml) =>
+        val sets = getSetsFromXml(xml)
+        // Apply partial function to filter out any sets that do not match some criteria.
+        val filtered = setFilter(sets)
+        SetsPage(filtered)
+    }
   }
 
   /**
-    * Get the error property if it exists
+    * Accepts a set from an OAI feed an returns the OAI identifier
     *
-    * @return Option[String]
-    *         The error code if it exists otherwise empty string
+    * @param set Node
+    *            The original set from the OAI feed
+    * @return The local identifier
+    */
+  def getSetIdentifier(set: Node): String = (set \ "setSpec").text
+
+  def getAllSets(page: OaiSource): OaiResponse = {
+    val setFilter: PartialFunction[(Seq[OaiSet]), Seq[OaiSet]] = {
+      // No filtering required; return all sets.
+      case sets => sets
+    }
+    getSets(page, setFilter)
+  }
+
+  // Get all sets that belong to a given whitelist.
+  def getSetsByWhitelist(page: OaiSource, whitelist: Array[String]) = {
+    val setFilter: PartialFunction[(Seq[OaiSet]), Seq[OaiSet]] = {
+      // Return only those sets with ids NOT in the blacklist.
+      case sets => sets.filter { set => whitelist.contains(set.id) }
+    }
+    getSets(page, setFilter)
+  }
+
+  // Get all sets except those belonging to a given blacklist.
+  def getSetsByBlacklist(page: OaiSource, blacklist: Array[String]) = {
+    val setFilter: PartialFunction[(Seq[OaiSet]), Seq[OaiSet]] = {
+      // Return only those sets with ids in the whitelist.
+      case sets => sets.filterNot{ set => blacklist.contains(set.id) }
+    }
+    getSets(page, setFilter)
+  }
+
+  /**
+    * Parse an error message from an XML node.  Throw an excpetion if an error
+    * is found.
+    *
+    * @param xml: NodeSeq
+    *             The XML that may include an error message.
+    *
+    * @return Try[Unit]
+    *
+    * @throws OaiHarvesterException
     *
     */
-  @throws(classOf[OaiHarvesterException])
-  def getOaiErrorCode(xml: NodeSeq): Unit = {
-    (xml \\ "OAI-PMH" \\ "error").nonEmpty match {
-      case true => throw new OaiHarvesterException((xml \\ "OAI-PMH" \\ "error").text.trim)
-      case false => Unit
-    }
+  def getOaiErrorCode(xml: NodeSeq): Try[Unit] = Try {
+    if ((xml \ "error").nonEmpty)
+      throw new OaiHarvesterException((xml \ "OAI-PMH" \ "error").text.trim)
   }
 
   /**
     * Get the resumptionToken from the response
     *
-    * @param string String
-    *            The complete XML response
+    * @param page String
+    *             The String response from an OAI request
     * @return Option[String]
     *         The resumptionToken to fetch the next set of records
     *         or None if no more records can be fetched. An
@@ -92,26 +172,38 @@ object OaiResponseProcessor {
     *         harvested (an error could have occurred when fetching), only
     *         that there are no more records that can be fetched.
     */
-  def getResumptionToken(string: String): Option[String] = {
+  def getResumptionToken(page: String): Option[String] = {
     val pattern = """<resumptionToken.*>(.*)</resumptionToken>""".r
-    pattern.findFirstMatchIn(string) match {
+    pattern.findFirstMatchIn(page) match {
       case Some(m) => Some(m.group(1))
-      case None => None
+      case _ => None
     }
   }
 
-  // TODO: To ensure continuity of IDs between ingestion systems and generalize the ID
-  // TODO: selection between records and sets we need to parameterize the path to the ID.
   /**
-    * Accepts a record from an OAI feed an returns the OAI identifier
+    * Try to parse XML from a given String, representing a valid OAI response.
     *
-    * @param record String
-    *               The original record from the OAI feed
-    * @param path String
-    *             XML path to the ID, defaults to header/identifier
-    * @return The local identifier
+    * @param string String
+    *               A string response from an OAI feed.
+    *
+    * @return Try[Node]
+    *         An valid XML node, OR
+    *         A failure if the XML is invalid or contains an OAI error message.
     */
-  def getOaiIdentifier(record: Node, path: String = "header/identifier"): String = {
-    (record \\ "header" \\ "identifier").text
+  def getXml(string: String): Try[Node] = Try {
+    loadXml(string) match {
+      // XML parsing error.
+      case Failure(e) => throw e
+      case Success(xml) =>
+        getOaiErrorCode(xml) match {
+          // XML contains OAI error.
+          case Failure(e) => throw e
+          // Return XML node if no errors.
+          case Success(_) => xml
+        }
+    }
   }
+
+  // Try to parse a string into valid XML.
+  def loadXml(string: String): Try[Node] = Try { XML.loadString(string) }
 }
