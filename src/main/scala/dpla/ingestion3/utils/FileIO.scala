@@ -1,6 +1,6 @@
 package dpla.ingestion3.utils
 
-import java.io.File
+import java.io.{File, IOException}
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption.{CREATE, TRUNCATE_EXISTING}
 
