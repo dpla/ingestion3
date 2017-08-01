@@ -34,5 +34,6 @@ libraryDependencies ++= Seq(
   "org.eclipse.rdf4j" % "rdf4j-rio-turtle" % "2.2",
   "org.scalaj" % "scalaj-http_2.11" % "2.3.0",
   "org.rogach" % "scallop_2.11" % "3.0.3",
-  "org.scalamock" %% "scalamock-scalatest-support" % "3.6.0" % "test"
+  "org.scalamock" %% "scalamock-scalatest-support" % "3.6.0" % "test",
+  "com.typesafe" % "config" % "1.3.1"
 )
