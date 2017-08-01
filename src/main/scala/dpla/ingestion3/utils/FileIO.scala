@@ -1,12 +1,13 @@
 package dpla.ingestion3.utils
 
-import java.io.File
+import java.io.{File, IOException}
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption.{CREATE, TRUNCATE_EXISTING}
 
 import org.apache.avro.Schema
 import org.apache.avro.file.{CodecFactory, DataFileWriter}
 import org.apache.avro.generic.{GenericDatumWriter, GenericRecordBuilder}
+import org.apache.commons.io.IOUtils
 
 import scala.io.Source
 
@@ -33,7 +34,7 @@ class FlatFileIO extends FileIO {
     */
   def readFileAsString(name: String): String = {
     val stream = getClass.getResourceAsStream(name)
-    try Source.fromInputStream(stream).mkString finally stream.close()
+    try Source.fromInputStream(stream).mkString finally IOUtils.closeQuietly(stream)
   }
 }
 
