@@ -36,12 +36,6 @@ class DefaultSource extends RelationProvider {
     new OaiRelation(endpoint, verb, metadataPrefix, harvestAllSets, setlist, blacklist)(sqlContext)
   }
 
-  def getMetadataPrefix(parameters: Map[String, String]): String = {
-    (parameters.get("metadataPrefix"), parameters.get("verb")) match {
-      case (Some(prefix), Some(verb)) => prefix
-    }
-  }
-
   def getEndpoint(parameters: Map[String, String]): String = {
     val endpoint = parameters.get("endpoint")
     (endpoint, validateUrl(endpoint.getOrElse(""))) match {
@@ -79,13 +73,12 @@ class DefaultSource extends RelationProvider {
 
   def getHarvestAllSets(parameters: Map[String, String]): Boolean = {
     parameters.get("harvestAllSets") match {
-      case Some(x) => {
+      case Some(x) =>
         x.toLowerCase match {
-          case("true") => true
-          case("false") => false
-          case (_) => throwUnrecognizedArgException(x)
+          case "true" => true
+          case "false" => false
+          case _ => throwUnrecognizedArgException(x)
         }
-      }
       case _ => false
     }
   }
@@ -105,9 +98,7 @@ class DefaultSource extends RelationProvider {
   }
 
   // Converts a comma-separated String of sets to an Array of sets.
-  def parseSets(sets: String): Array[String] = {
-    sets.split(",").map(_.trim)
-  }
+  def parseSets(sets: String): Array[String] = sets.split(",").map(_.trim)
 
   def throwMissingArgException(arg: String) = {
     val msg = s"Missing argument: $arg"
