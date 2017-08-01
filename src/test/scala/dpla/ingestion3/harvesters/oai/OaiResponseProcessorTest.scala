@@ -6,61 +6,120 @@ import org.scalamock.scalatest.MockFactory
 /**
   * Tests for OaiResponseProcessor
   */
-class OaiResponseProcessorTest extends FlatSpec with MockFactory {
+class OaiResponseProcessorTest extends FlatSpec with Matchers with MockFactory {
 
-  val validRecordOaiXml = dpla.ingestion3.data.TestOaiData.paOaiListRecordsRsp
-  val validSetOaiXml = dpla.ingestion3.data.TestOaiData.inOaiListSetsRsp
-  val errorOaiXml = dpla.ingestion3.data.TestOaiData.paOaiErrorRsp
+  val fakeParams = Map("foo"-> "bar")
+  val fakeUrl = "http://example.org"
 
-  "getRecords" should "return the correct number of records" in {
-    val records = OaiResponseProcessor.getRecords(validRecordOaiXml)
-    assert(records.size === 10)
+  val validRecordSource: OaiSource = {
+    val text = dpla.ingestion3.data.TestOaiData.paOaiListRecordsRsp
+    OaiSource(fakeParams, Some(fakeUrl), Some(text))
   }
-  it should "add OaiSet to OaiRecord if OaiSet is given" in {
-    val mockOaiSet = mock[OaiSet]
-    val records = OaiResponseProcessor.getRecords(validRecordOaiXml, Some(mockOaiSet))
-    assert(records(0).set.nonEmpty)
+
+  val validSetSource: OaiSource = {
+    val text = dpla.ingestion3.data.TestOaiData.inOaiListSetsRsp
+    OaiSource(fakeParams, Some(fakeUrl), Some(text))
+  }
+
+  val errorSource: OaiSource = {
+    val text = dpla.ingestion3.data.TestOaiData.paOaiErrorRsp
+    OaiSource(fakeParams, Some(fakeUrl), Some(text))
+  }
+
+  val invalidXmlSource: OaiSource = {
+    val text = dpla.ingestion3.data.TestOaiData.badXmlStr
+    OaiSource(fakeParams, Some(fakeUrl), Some(text))
+  }
+
+  "getRecords" should "return a RecordsPage if source contains records" in {
+    val response = OaiResponseProcessor.getRecords(validRecordSource)
+    assert(response.getClass.getName === "dpla.ingestion3.harvesters.oai.RecordsPage")
+  }
+  it should "return an OaiError if source contains OAI error message" in {
+    val response = OaiResponseProcessor.getRecords(errorSource)
+    assert(response.getClass.getName === "dpla.ingestion3.harvesters.oai.OaiError")
+  }
+  it should "return an OaiError if source contains invalid XML" in {
+    val response = OaiResponseProcessor.getRecords(invalidXmlSource)
+    assert(response.getClass.getName === "dpla.ingestion3.harvesters.oai.OaiError")
+  }
+  it should "return the correct number of records" in {
+    val response = OaiResponseProcessor.getRecords(validRecordSource)
+    response match {
+      case r: RecordsPage => assert(r.records.size === 10)
+      case _ => fail
+    }
   }
   it should "return empty sequence if XML page contains no records" in {
-    val records = OaiResponseProcessor.getRecords(validSetOaiXml)
-    assert(records.size === 0)
+    val response = OaiResponseProcessor.getRecords(validSetSource)
+    response match {
+      case r: RecordsPage => assert(r.records.size === 0)
+      case _ => fail
+    }
   }
-  it should "parse record id" in {
+  it should "parse record ids" in {
     val expectedId = "oai:libcollab.temple.edu:fedora-system:ContentModel-3.0"
-    val records = OaiResponseProcessor.getRecords(validRecordOaiXml)
-    // Use contains instead of === to handle whitespace in test data.
-    assert(records(0).id.contains(expectedId))
+    val response = OaiResponseProcessor.getRecords(validRecordSource)
+    response match {
+      // Use contains instead of === to handle whitespace in test data.
+      case r: RecordsPage => assert(r.records(0).id.contains(expectedId))
+      case _ => fail
+    }
+  }
+  it should "parse set ids" in {
+    val expectedId = "foobar"
+    val response = OaiResponseProcessor.getRecords(validRecordSource)
+    response match {
+      // Use contains instead of === to handle whitespace in test data.
+      case r: RecordsPage => assert(r.records(0).setIds(0).contains(expectedId))
+      case _ => fail
+    }
   }
 
-  "getSets" should "return the correct number of sets" in {
-    val sets = OaiResponseProcessor.getSets(validSetOaiXml)
-    assert(sets.size === 5)
+  "getAllSets" should "return a SetsResponse if source contains sets" in {
+    val response = OaiResponseProcessor.getAllSets(validSetSource)
+    assert(response.getClass.getName === "dpla.ingestion3.harvesters.oai.SetsPage")
+  }
+  it should "return an OaiError if source contains OAI error message" in {
+    val response = OaiResponseProcessor.getAllSets(errorSource)
+    assert(response.getClass.getName === "dpla.ingestion3.harvesters.oai.OaiError")
+  }
+  it should "return an OaiError if source contains invalid XML" in {
+    val response = OaiResponseProcessor.getAllSets(invalidXmlSource)
+    assert(response.getClass.getName === "dpla.ingestion3.harvesters.oai.OaiError")
+  }
+  it should "return the correct number of sets" in {
+    val response = OaiResponseProcessor.getAllSets(validSetSource)
+    response match {
+      case s: SetsPage => assert(s.sets.size === 5)
+      case _ => fail
+    }
   }
   it should "return empty sequence if XML page contains no sets" in {
-    val sets = OaiResponseProcessor.getSets(validRecordOaiXml)
-    assert(sets.size === 0)
+    val response = OaiResponseProcessor.getAllSets(validRecordSource)
+    response match {
+      case s: SetsPage => assert(s.sets.size === 0)
+      case _ => fail
+    }
   }
   it should "parse set id" in {
     val expectedId = "PALNI_winona"
-    val sets = OaiResponseProcessor.getSets(validSetOaiXml)
-    assert(sets(0).id === expectedId)
+    val response = OaiResponseProcessor.getAllSets(validSetSource)
+    response match {
+      case s: SetsPage => assert(s.sets(0).id === expectedId)
+      case _ => fail
+    }
   }
 
   "getResumptionToken" should "return the resumption token" in {
     val expectedToken = "90d421891feba6922f57a59868d7bcd1"
-    val token = OaiResponseProcessor.getResumptionToken(validRecordOaiXml.toString)
+    val text = validRecordSource.text.getOrElse("")
+    val token = OaiResponseProcessor.getResumptionToken(text)
     assert(token === Some(expectedToken))
   }
   it should "return None in absence of resumption token" in {
-    val token = OaiResponseProcessor.getResumptionToken(validSetOaiXml.toString)
+    val text = validSetSource.text.getOrElse(fail)
+    val token = OaiResponseProcessor.getResumptionToken(text)
     assert(token === None)
-  }
-
-  "getOaiErrorCode" should "return Unit if there is no error code" in {
-    val error = OaiResponseProcessor.getOaiErrorCode(validRecordOaiXml)
-    assert(error.isInstanceOf[Unit])
-  }
-  it should "throw an Exception if there is an error code" in {
-    assertThrows[Exception](OaiResponseProcessor.getOaiErrorCode(errorOaiXml))
   }
 }

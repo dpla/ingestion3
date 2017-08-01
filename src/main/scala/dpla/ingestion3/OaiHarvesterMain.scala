@@ -14,10 +14,9 @@ import org.apache.spark.storage.StorageLevel
 
 /**
   * Entry point for running an OAI harvest.
-  *
-  * For argument options, @see OaiHarvesterConf.
   */
 object OaiHarvesterMain {
+  
   val logger = LogManager.getLogger(OaiHarvesterMain.getClass)
 
   def main(args: Array[String]): Unit = {
@@ -57,27 +56,24 @@ object OaiHarvesterMain {
 
     val recordsHarvestedCount = dataframe.count()
 
-    readerOptions("verb") match {
-      // Write records to avro.
-      // This task may require a large amount of driver memory.
-      case "ListRecords" => {
-        println(schema)
+    runHarvest() match {
+      case Success(results) =>
+        results.persist(StorageLevel.DISK_ONLY)
+
+        val dataframe = results.withColumn("provider", lit(provider))
+          .withColumn("mimetype", lit("application_xml"))
+
+        // Log the results of the harvest
+        logger.info(s"Harvested ${dataframe.count()} records")
+
+        val schema = dataframe.schema
 
         dataframe.write
           .format("com.databricks.spark.avro")
-          .option("avroSchema", schema)
-          .avro(oaiConf.outputDir())
-      }
-      // Write sets to csv.
-      case "ListSets" => {
-        println(schema)
+          .option("avroSchema", schema.toString)
+          .avro(outputDir)
 
-        dataframe.coalesce(1).write
-          .format("com.databricks.spark.csv")
-          .option("header", true)
-          .csv(oaiConf.outputDir())
-      }
-      case _ => throw new IllegalArgumentException("Verb not recognized.")
+      case Failure(f) => logger.fatal(s"Unable to harvest records. ${f.getMessage}")
     }
 
     // Stop spark session.
