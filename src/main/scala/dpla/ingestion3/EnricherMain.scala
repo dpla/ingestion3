@@ -14,7 +14,7 @@ import org.eclipse.rdf4j.model.Model
 import org.eclipse.rdf4j.model.util.ModelBuilder
 import org.eclipse.rdf4j.rio._
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
-import dpla.ingestion3.enrichments.Spatial
+
 
 /**
  * Driver for running an enrichment
@@ -95,13 +95,21 @@ object EnricherMain {
 
   def process(rdfString: String): String = {
     try {
-      val rdfByteStream = new StringReader(rdfString)
-      val in_model = Rio.parse(rdfByteStream, "", RDFFormat.TURTLE)
-      val out_model: Model = Spatial.enrich(in_model)
-      // out_model could be passed to other enrichments in turn
-      val out = new StringWriter()
-      Rio.write(out_model, out, RDFFormat.TURTLE)
-      out.toString
+
+      // FIXME: temporarily commenting this out until it can be changed to pass
+      // an EdmPlace object to the enricher, probably by making a small change
+      // to the rdd.map call above and loading our updated Avro schema.
+      // Compilation will fail with this code because Spatial no longer works
+      // with a Model -- it needs a DplaPlace.
+
+//      val rdfByteStream = new StringReader(rdfString)
+//      val in_model = Rio.parse(rdfByteStream, "", RDFFormat.TURTLE)
+//      val out_model: Model = Spatial.enrich(in_model)
+//      // out_model could be passed to other enrichments in turn
+//      val out = new StringWriter()
+//      Rio.write(out_model, out, RDFFormat.TURTLE)
+//      out.toString
+      ""
     } catch {
       case e: Exception => {
         val sw = new StringWriter
