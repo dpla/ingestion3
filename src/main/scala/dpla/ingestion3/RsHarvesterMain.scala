@@ -4,7 +4,7 @@ import java.io.File
 
 import com.databricks.spark.avro._
 import dpla.ingestion3.harvesters.resourceSync.{ResourceSyncProcessor, ResourceSyncRdd}
-import dpla.ingestion3.utils.Utils
+import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
 import org.apache.log4j.LogManager
 import org.apache.spark.sql.{Row, SparkSession}
@@ -29,24 +29,6 @@ object RsHarvesterMain extends App {
 
   val logger = LogManager.getLogger(RsHarvesterMain.getClass)
 
-  val schemaStr =
-    """{
-        "namespace": "dpla.avro",
-        "type": "record",
-        "name": "OriginalRecord.v1",
-        "doc": "",
-        "fields": [
-          {"name": "id", "type": "string"},
-          {"name": "provider", "type": "string"},
-          {"name": "document", "type": "string"},
-          {"name": "mimetype", "type": { "name": "MimeType",
-           "type": "enum", "symbols": ["application_json", "application_xml", "text_turtle"]}
-           }
-        ]
-      }
-    """//.stripMargin // TODO we need to template the document field so we can record info there
-
-
   // Complains about not being typesafe...
   if(args.length != 1 ) {
     logger.error("Bad number of args: <OUTPUT FILE>")
@@ -57,6 +39,7 @@ object RsHarvesterMain extends App {
   val isDumpFuncSupported = false // TODO placeholder for function to make determination
   val outputFile = args(0)
   val hyboxResourceList = Some("https://hyphy.demo.hydrainabox.org/resourcelist")
+  val schema = new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc")
 
   Utils.deleteRecursively(new File(outputFile))
 
@@ -112,7 +95,7 @@ object RsHarvesterMain extends App {
   }
 
   // From OAI harvester
-  val avroSchema = new Schema.Parser().parse(schemaStr)
+  val avroSchema = new Schema.Parser().parse(schema)
   val schemaType = SchemaConverters.toSqlType(avroSchema)
   val structSchema = schemaType.dataType.asInstanceOf[StructType]
 
@@ -122,7 +105,7 @@ object RsHarvesterMain extends App {
   val dataframe = spark.createDataFrame(rows, structSchema)
 
   // Save dataframe to avro file
-  dataframe.write.format("com.databricks.spark.avro").option("avroSchema", schemaStr).save(outputFile)
+  dataframe.write.format("com.databricks.spark.avro").option("avroSchema", schema).save(outputFile)
 
 
   // Timing end and print results

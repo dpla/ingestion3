@@ -13,7 +13,7 @@ import org.apache.spark.storage.StorageLevel
 import org.eclipse.rdf4j.model.Model
 import org.eclipse.rdf4j.model.util.ModelBuilder
 import org.eclipse.rdf4j.rio._
-import dpla.ingestion3.utils.Utils
+import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import dpla.ingestion3.enrichments.Spatial
 
 /**
@@ -33,20 +33,6 @@ import dpla.ingestion3.enrichments.Spatial
  */
 object EnricherMain {
 
-  // Avro schema for our output
-  val schemaStr: String =
-    """
-    {
-      "namespace": "dpla.avro",
-      "type": "record",
-      "name": "MAPRecord.v1",
-      "doc": "Prototype enriched record",
-      "fields": [
-        {"name": "id", "type": "string"},
-        {"name": "document", "type": "string"}
-      ]
-    }
-    """
   val logger = LogManager.getLogger(EnricherMain.getClass)
 
   /*
@@ -64,6 +50,7 @@ object EnricherMain {
     val sparkMaster = args(0)
     val inputURI = args(1)
     val outputURI = args(2)
+    val schema = new FlatFileIO().readFileAsString("/avro/MapRecord.avsc")
 
     val start_time = System.currentTimeMillis()
 
@@ -75,7 +62,7 @@ object EnricherMain {
 
     val rdd: RDD[Row] = spark.read
       .format("com.databricks.spark.avro")
-      .option("avroSchema", schemaStr)
+      .option("avroSchema", schema)
       .load(inputURI)
       .rdd
 
