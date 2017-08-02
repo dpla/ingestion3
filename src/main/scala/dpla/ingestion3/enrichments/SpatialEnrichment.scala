@@ -57,13 +57,32 @@ trait Twofisher {
     */
   def geocoderResponse(queryType: String, term: String): JValue = {
     val baseURI = s"http://$hostname:$port/query"
-    val response: HttpResponse[String] =
-      Http(baseURI)
-        .param("lang", "en")
-        .param("responseIncludes", "PARENTS,DISPLAY_NAME")
-        .param(queryType, term)
-        .asString
-    parse(response.body)
+    retry(3) {
+      val response: HttpResponse[String] =
+        Http(baseURI)
+          .timeout(connTimeoutMs = 1000, readTimeoutMs = 5000)
+          .param("lang", "en")
+          .param("responseIncludes", "PARENTS,DISPLAY_NAME")
+          .param(queryType, term)
+          .asString
+      parse(response.body)
+    } match {
+      case Success(body) => body
+      case Failure(_) => JNothing
+    }
+  }
+
+  /**
+    * Retry method taken from http://bit.ly/2fdHVQb
+    * credit to @leedm777
+    */
+  @annotation.tailrec
+  final def retry[T](n: Int)(fn: => T): util.Try[T] = {
+    util.Try { fn } match {
+      case x: util.Success[T] => x
+      case _ if n > 1 => retry(n - 1)(fn)
+      case fn => fn
+    }
   }
 
   def hostname: String = "localhost"
@@ -71,13 +90,12 @@ trait Twofisher {
   def port: String = "8081"
 }
 
-
 /**
   * The DplaPlace spatial object enrichment
   *
   * @param geocoder A singleton object representing your geocoder
   */
-class SpatialEnrichment(geocoder: Twofisher) {
+class SpatialEnrichment(geocoder: Twofisher) extends Serializable {
 
   implicit val formats = DefaultFormats // Formats for json4s
   val logger: Logger = Logger.getLogger(getClass.getName)
