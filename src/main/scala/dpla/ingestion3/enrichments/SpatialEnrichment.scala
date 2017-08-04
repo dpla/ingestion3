@@ -135,17 +135,17 @@ class SpatialEnrichment(geocoder: Twofisher) {
     * @param place The edm:Place object to consider
     * @return The query term: either the name or coordinates, or None
     */
-  private def queryTerm(place: DplaPlace): Option[String] = {
-    if (place.coordinates.isDefined) place.coordinates
-    else if (place.name.isDefined) {
-      val name = place.name.mkString
+  private def queryTerm(place: DplaPlace): Option[String] = place match {
+    case DplaPlace(_, _, _, _, _, Some(coordinates)) =>
+      Some(coordinates)
+    case DplaPlace(Some(name), _, _, _, _, _) =>
       name match {
         case s if s matches """^United States(?!\-\-)""" => None
         case s if s matches "^USA" => None
-        case _ => place.name
+        case _ => Some(name)
       }
-    }
-    else None
+    case _ =>
+      None
   }
 
   /**
