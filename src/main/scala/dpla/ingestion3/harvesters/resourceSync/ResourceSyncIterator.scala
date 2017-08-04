@@ -1,10 +1,12 @@
 package dpla.ingestion3.harvesters.resourceSync
 
+import org.apache.commons.io.IOUtils
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.util.EntityUtils
 
 import scala.collection.mutable.Stack
+import scala.util.Try
 
 /**
   *
@@ -32,12 +34,10 @@ class ResourceSyncIterator() extends Iterator[(String,String)] {
     httpGet.addHeader("Accept", "text/turtle")  // Explicitly limited to text/turtle for hybox testing
     val rsp = httpClient.execute(httpGet)
 
-    try {
-      val entity = rsp.getEntity
-      (url, EntityUtils.toString(entity))
-    } finally {
-      rsp.close()
-    }
+    val entity = rsp.getEntity
+    val response = (url, EntityUtils.toString(entity))
+    IOUtils.closeQuietly(rsp)
+    response
   }
 
   /**

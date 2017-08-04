@@ -2,10 +2,8 @@ package dpla.ingestion3.enrichments
 
 import java.net.URI
 
-
-import dpla.ingestion3.model._
 import dpla.ingestion3.data.MappedRecordsFixture
-import dpla.ingestion3.model.{DplaSourceResource, EdmTimeSpan, SkosConcept}
+import dpla.ingestion3.model.{DplaSourceResource, EdmTimeSpan, SkosConcept, _}
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 

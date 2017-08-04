@@ -65,29 +65,6 @@ object Utils {
   }
 
   /**
-    *
-    * @param fs
-    * @param seqFilePath
-    * @param conf
-    * @return
-    */
-  def printSeqFile(fs: FileSystem, seqFilePath: Path, conf: Configuration): Unit = {
-    val reader: Reader = new Reader(fs, seqFilePath, conf)
-
-
-    val k: Text = new Text()
-    val v: Text = new Text()
-
-    try {
-      while (reader.next(k, v)) {
-        println(k)
-      }
-    } finally {
-      reader.close()
-    }
-  }
-
-  /**
     * Count the number of files in the given directory, outDir.
     *
     * @param outDir Directory to count

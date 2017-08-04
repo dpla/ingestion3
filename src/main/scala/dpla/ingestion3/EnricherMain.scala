@@ -52,7 +52,7 @@ object EnricherMain {
     val outputURI = args(2)
     val schema = new FlatFileIO().readFileAsString("/avro/MapRecord.avsc")
 
-    val start_time = System.currentTimeMillis()
+    val startTime = System.currentTimeMillis()
 
     val sparkConf = new SparkConf()
       .setAppName("Enricher")
@@ -88,13 +88,12 @@ object EnricherMain {
              .avro(outputURI)
     sc.stop()
 
-    val end_time = System.currentTimeMillis()
-    Utils.printResults((end_time - start_time), recordCount)
+    val endTime = System.currentTimeMillis()
+    Utils.printResults((endTime - startTime), recordCount)
 
   }
 
   def process(rdfString: String): String = {
-    try {
 
       // FIXME: temporarily commenting this out until it can be changed to pass
       // an EdmPlace object to the enricher, probably by making a small change
@@ -110,15 +109,7 @@ object EnricherMain {
 //      Rio.write(out_model, out, RDFFormat.TURTLE)
 //      out.toString
       ""
-    } catch {
-      case e: Exception => {
-        val sw = new StringWriter
-        val pw = new PrintWriter(sw)
-        e.printStackTrace(pw)
-        logger.warn(sw.toString)
-        sw.toString
-      }
-    }
+
   }
 
 }
