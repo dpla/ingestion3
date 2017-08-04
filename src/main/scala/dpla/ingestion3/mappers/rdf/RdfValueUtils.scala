@@ -3,7 +3,7 @@ package dpla.ingestion3.mappers.rdf
 import org.eclipse.rdf4j.model._
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory
 
-
+import RdfValueUtils._
 /**
   * Mixin for conveniently creating RDF4J datamodel objects. Maintains a SimpleValueFactory singleton so they're not
   * being created all over the place.
@@ -11,8 +11,6 @@ import org.eclipse.rdf4j.model.impl.SimpleValueFactory
   */
 
 trait RdfValueUtils {
-
-  import RdfValueUtils._
 
   def literal(string: String): Literal =
     valueFactory.createLiteral(string)

@@ -67,6 +67,6 @@ object ResourceSyncProcessor {
         }
         case _ => None
       }
-    }).head // Head is required to not return a Seq(Option[URL])
+    }).headOption.getOrElse(None)
   }
 }

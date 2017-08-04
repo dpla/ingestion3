@@ -152,7 +152,6 @@ public class Coordinates {
 			throw new IllegalArgumentException();
 			
 		}
-
 		return isNegative(c) ? retval * -1 : retval;
 	}
 
@@ -174,11 +173,11 @@ public class Coordinates {
 	private boolean isNegative(String raw) {
 
 		boolean retval = false;
-		raw = raw.toUpperCase();
+		String rawUpper = raw.toUpperCase();
 
-		if( raw.contains("N") || raw.contains("E") )
+		if( rawUpper.contains("N") || rawUpper.contains("E") )
 			retval = false;
-		else if(raw.contains("S") || raw.contains("W") )
+		else if(rawUpper.contains("S") || rawUpper.contains("W") )
 			retval = true;
 
 		return retval;

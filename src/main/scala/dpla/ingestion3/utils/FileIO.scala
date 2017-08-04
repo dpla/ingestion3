@@ -34,7 +34,9 @@ class FlatFileIO extends FileIO {
     */
   def readFileAsString(name: String): String = {
     val stream = getClass.getResourceAsStream(name)
-    try Source.fromInputStream(stream).mkString finally IOUtils.closeQuietly(stream)
+    val result = Source.fromInputStream(stream).mkString
+    IOUtils.closeQuietly(stream)
+    result
   }
 }
 

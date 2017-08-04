@@ -8,7 +8,7 @@ import dpla.ingestion3.model.EdmTimeSpan
 
 import scala.annotation.tailrec
 
-class ParseDateEnrichment {
+class   ParseDateEnrichment {
 
   //TODO ranges
   def parse(edtfOriginalDate: EdmTimeSpan, allowInterval: Boolean = false): EdmTimeSpan = {
