@@ -21,7 +21,7 @@ import com.typesafe.config.ConfigFactory
   */
 
 class OaiHarvesterConf(arguments: Seq[String]) {
-  def load(): OaiConfig = {
+  def load(): OaiConf = {
     // Loads config file for more information about loading hierarchy please read
     // https://github.com/typesafehub/config#standard-behavior
     ConfigFactory.invalidateCaches()
@@ -34,7 +34,7 @@ class OaiHarvesterConf(arguments: Seq[String]) {
       }
     }
 
-    OaiConfig(
+    OaiConf(
       // Validate outputDir parameter here since it is not validated in DefaultSource
       outputDir = getProp("outputDir") match {
         case Some(d) => Some(d)
@@ -59,7 +59,7 @@ class OaiHarvesterConf(arguments: Seq[String]) {
   }
 }
 
-case class OaiConfig (
+case class OaiConf(
                        outputDir: Option[String],
                        endpoint: Option[String],
                        verb: Option[String],

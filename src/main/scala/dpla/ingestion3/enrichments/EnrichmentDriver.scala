@@ -17,10 +17,11 @@ object Geocoder extends Twofisher {
   }
 }
 
-class EnrichmentDriver {
+class EnrichmentDriver extends Serializable {
   val stringEnrichment = new StringEnrichments()
   val dateEnrichment = new ParseDateEnrichment()
   val spatialEnrichment = new SpatialEnrichment(Geocoder)
+  val langEnrichment = LanguageMapper
 
   /**
     * Applies a set of common enrichments that need to be run for all providers
@@ -36,9 +37,8 @@ class EnrichmentDriver {
     record.copy(
       DplaSourceResource(
         date = record.sourceResource.date.map(d => dateEnrichment.parse(d)),
-        language = record.sourceResource.language.map(LanguageMapper.mapLanguage),
-        place = record.sourceResource.place
-                      .map(p => spatialEnrichment.enrich(p))
+        language = record.sourceResource.language.map(l => LanguageMapper.mapLanguage(l)),
+        place = record.sourceResource.place.map(p => spatialEnrichment.enrich(p))
     ))
   }
 }
