@@ -3,6 +3,7 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.mappers.xml.XmlExtractionUtils
+import dpla.ingestion3.model.DplaMapData.ZeroToOne
 import dpla.ingestion3.model._
 
 import scala.xml._
@@ -16,13 +17,22 @@ class PaExtractor(rawData: String) extends Extractor with XmlExtractionUtils {
     uri = Some(new URI("http://dp.la/api/contributor/pa"))
   )
 
+  // Get the last occurrence of the identifier property
+  def thumbnail(): ZeroToOne[EdmWebResource] = {
+    val ids = extractStrings("dc:identifier")
+    if (ids.size > 2)
+      Option(uriOnlyWebResource(new URI(ids.last)))
+    else
+      None
+  }
+
   def build: DplaMapData = {
     lazy val itemUrl = new URI(extractStrings("dc:identifier").apply(1))
 
     DplaMapData(
       DplaSourceResource(
         collection = extractStrings("dc:relation").headOption.map(nameOnlyCollection).toSeq,
-        contributor = extractStrings("dc:contributor").map(nameOnlyAgent),
+        contributor = extractStrings("dc:contributor").dropRight(1).map(nameOnlyAgent),
         creator = extractStrings("dc:creator").map(nameOnlyAgent),
         date = extractStrings("dc:date").map(stringOnlyTimeSpan),
         description = extractStrings("dc:description"),
@@ -36,10 +46,11 @@ class PaExtractor(rawData: String) extends Extractor with XmlExtractionUtils {
         rights = extractStrings("dc:rights"),
         subject = extractStrings("dc:subject").map(nameOnlyConcept),
         title = extractStrings("dc:title"),
-        `type` = extractStrings("dc:type")
+        `type` = extractStrings("dc:type").filter(isDcmiType)
       ),
 
       EdmWebResource(
+        // TODO is this the correct mapping for uri? What about OreAgg.`object`?
         uri = itemUrl,
         fileFormat = extractStrings("dc:format")
       ),
@@ -49,8 +60,9 @@ class PaExtractor(rawData: String) extends Extractor with XmlExtractionUtils {
         //below will throw if not enough contributors
         dataProvider = nameOnlyAgent(extractStrings("dc:contributor").last),
         originalRecord = rawData,
-        provider = agent
-        //todo thumbnail
+        provider = agent,
+        preview = thumbnail
+        // TODO what about `object` in this context? Assume no implementation
       )
     )
   }
