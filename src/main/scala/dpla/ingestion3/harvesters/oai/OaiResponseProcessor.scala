@@ -40,7 +40,9 @@ object OaiResponseProcessor {
           case Some(node) =>
             val id = getRecordIdentifier(node)
             val setIds = getSetIdsFromRecord(node)
-            Some(OaiRecord(id, node.toString, setIds, source))
+            // Drop the entire page text from source when returning OaiRecord. Embedding the entire
+            // page text was triggering Out of Memory exceptions even on small harvests (200,000 records)
+            Some(OaiRecord(id, node.toString, setIds, source.copy(text = None) ))
           case _ => None
       })
     }

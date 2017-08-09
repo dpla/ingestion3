@@ -147,7 +147,10 @@ class OaiResponseBuilder (endpoint: String)
     def loop(data: List[OaiResponse]): List[OaiResponse] = {
 
       data.headOption match {
-
+        // Stops the harvest if an OaiError or Http error was trapped and returns everything
+        // harvested up that this point plus the error
+        case Some(error: OaiError) => data
+        // If it was a valid and parsable response then extract data and call the next page
         case Some(previous: OaiSource) =>
           val text = previous.text.getOrElse("")
           val token = OaiResponseProcessor.getResumptionToken(text)
@@ -161,6 +164,7 @@ class OaiResponseBuilder (endpoint: String)
               val nextResponse = getSinglePageResponse(nextParams)
               loop(nextResponse :: data)
           }
+        // This is only reached if something really strange happened
         // If there is an error or unexpected response type, return all data
         // collected up to this point (including the error or unexpected response).
         case _ => data
@@ -187,15 +191,22 @@ class OaiResponseBuilder (endpoint: String)
       case Failure(e) =>
         val source = OaiSource(queryParams)
         OaiError(e.toString, source)
-      case Success(url) =>
+      case Success(url) => {
         getStringResponse(url) match {
           // HTTP error
           case Failure(e) =>
             val source = OaiSource(queryParams, Some(url.toString))
             OaiError(e.toString, source)
-          case Success(response) =>
-            OaiSource(queryParams, Some(url.toString), Some(response))
+            // If a successful HTTP request was made we still need to parse the response to determine if there was
+            // and OAI error (HTTP code 200) or invalid XML that will prevent additional requests.
+            // If the XML can be parsed and if there was no OAI error then it will return Success otherwise Failure
+          case Success(response) => OaiResponseProcessor.getXml(response) match {
+            case Success(_) =>
+              OaiSource(queryParams, Some(url.toString), Some(response))
+            case Failure(e) => OaiError(e.toString, OaiSource(queryParams, Some(url.toString), Some(response)))
+          }
         }
+      }
     }
   }
 
