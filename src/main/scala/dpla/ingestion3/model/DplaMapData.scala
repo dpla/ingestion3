@@ -95,10 +95,15 @@ case class OreAggregation(
                            originalRecord: ExactlyOne[String], //map v4 specifies this as a ref, but that's LDP maybe?
                            hasView: ZeroToMany[EdmWebResource] = Seq(),
                            intermediateProvider: ZeroToOne[EdmAgent] = None,
-                           `object`: ZeroToOne[EdmWebResource] = None, //full item page
-                           preview: ZeroToOne[EdmWebResource] = None, ///thumbnail
+                           `object`: ZeroToOne[EdmWebResource] = None, // full size image (should *not* be used)
+                           preview: ZeroToOne[EdmWebResource] = None, // thumbnail
                            provider: ExactlyOne[EdmAgent],
                            edmRights: ZeroToOne[URI] = None
+                         /*
+                          * TODO: Discuss missing isShownAt property
+                          * How and where should isShownAt be added?
+                          * What is the relationship to uri?
+                          */
                          )
 
 
