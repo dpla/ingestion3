@@ -3,62 +3,82 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.mappers.xml.XmlExtractionUtils
-import dpla.ingestion3.model.DplaMapData.ZeroToOne
+import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToOne}
 import dpla.ingestion3.model._
 
+import scala.util.{Failure, Success, Try}
 import scala.xml._
 
 class PaExtractor(rawData: String) extends Extractor with XmlExtractionUtils {
 
-  implicit val xml: NodeSeq = XML.load(rawData)
+  implicit val xml: NodeSeq = XML.loadString(rawData)
 
   def agent = EdmAgent(
     name = Some("Pennsylvania Digital Collections Project"),
     uri = Some(new URI("http://dp.la/api/contributor/pa"))
   )
 
-  // Get the last occurrence of the identifier property
+  // Get the last occurrence of the identifier property, there
+  // must be at least three dc:identifier properties for there
+  // to be a thumbnail
   def thumbnail(): ZeroToOne[EdmWebResource] = {
-    val ids = extractStrings("dc:identifier")
+    val ids = extractStrings(xml \ "metadata" \\ "identifier")
     if (ids.size > 2)
       Option(uriOnlyWebResource(new URI(ids.last)))
     else
       None
   }
 
-  def build: DplaMapData = {
-    lazy val itemUrl = new URI(extractStrings("dc:identifier").apply(1))
+  def dataProvider(): ExactlyOne[EdmAgent] = {
+    val contributors = extractStrings(xml \ "metadata" \\ "contributor")
+    if (contributors.nonEmpty)
+      nameOnlyAgent(contributors.last)
+    else
+      throw new Exception("Missing required property dataProvider because dc:contributor is empty")
+  }
+  // Get the second occurrence of the dc:identifier property
+  def itemUri(): ExactlyOne[URI] = {
+    val ids = extractStrings(xml \ "metadata" \\ "identifier")
+    if (ids.size >= 2)
+      new URI(ids(1))
+    else
+    // TODO Are these exception messages valid? Or is there a cleaner way of writing these?
+      throw new Exception("Missing required property itemUri because dc:identifier " +
+        s"does not occur at least twice in record: ${getProviderBaseId().getOrElse("No ID available!")}")
+  }
 
+  def build: DplaMap = Try {
     DplaMapData(
       DplaSourceResource(
-        collection = extractStrings("dc:relation").headOption.map(nameOnlyCollection).toSeq,
-        contributor = extractStrings("dc:contributor").dropRight(1).map(nameOnlyAgent),
-        creator = extractStrings("dc:creator").map(nameOnlyAgent),
-        date = extractStrings("dc:date").map(stringOnlyTimeSpan),
-        description = extractStrings("dc:description"),
-        format = extractStrings("dc:type").filterNot(isDcmiType),
-        genre = extractStrings("dc:type").map(nameOnlyConcept),
-        identifier = extractStrings("dc:identifier"),
-        language = extractStrings("dc:language").map(nameOnlyConcept),
-        place = extractStrings("dc:coverage").map(nameOnlyPlace),
-        publisher = extractStrings("dc:publisher").map(nameOnlyAgent),
-        relation = extractStrings("dc:relation").drop(1).map(eitherStringOrUri),
-        rights = extractStrings("dc:rights"),
-        subject = extractStrings("dc:subject").map(nameOnlyConcept),
-        title = extractStrings("dc:title"),
-        `type` = extractStrings("dc:type").filter(isDcmiType)
+        // This method of using NodeSeq is required because of namespace issues.
+        collection = extractStrings(xml \ "metadata" \\ "relation").headOption.map(nameOnlyCollection).toSeq,
+        contributor = extractStrings(xml \ "metadata" \\ "contributor").dropRight(1).map(nameOnlyAgent),
+        creator = extractStrings(xml \ "metadata" \\ "creator").map(nameOnlyAgent),
+        date = extractStrings(xml \ "metadata" \\ "date").map(stringOnlyTimeSpan),
+        description = extractStrings(xml \ "metadata" \\ "description"),
+        format = extractStrings(xml \ "metadata" \\ "type").filterNot(isDcmiType),
+        genre = extractStrings(xml \ "metadata" \\ "type").map(nameOnlyConcept),
+        identifier = extractStrings(xml \ "metadata" \\ "identifier"),
+        language = extractStrings(xml \ "metadata" \\ "language").map(nameOnlyConcept),
+        place = extractStrings(xml \ "metadata" \\ "coverage").map(nameOnlyPlace),
+        publisher = extractStrings(xml \ "metadata" \\ "publisher").map(nameOnlyAgent),
+        relation = extractStrings(xml \ "metadata" \\ "relation").drop(1).map(eitherStringOrUri),
+        rights = extractStrings(xml \ "metadata" \\ "rights"),
+        subject = extractStrings(xml \ "metadata" \\ "subject").map(nameOnlyConcept),
+        title = extractStrings(xml \ "metadata" \\ "title"),
+        `type` = extractStrings(xml \ "metadata" \\ "type").filter(isDcmiType)
       ),
 
       EdmWebResource(
         // TODO is this the correct mapping for uri? What about OreAgg.`object`?
-        uri = itemUrl,
+        uri = itemUri,
         fileFormat = extractStrings("dc:format")
       ),
 
       OreAggregation(
         uri = mintDplaItemUri(),
         //below will throw if not enough contributors
-        dataProvider = nameOnlyAgent(extractStrings("dc:contributor").last),
+        dataProvider = dataProvider(),
         originalRecord = rawData,
         provider = agent,
         preview = thumbnail
@@ -67,5 +87,5 @@ class PaExtractor(rawData: String) extends Extractor with XmlExtractionUtils {
     )
   }
 
-  override def getProviderBaseId(): Option[String] = extractString("id")(xml)
+  override def getProviderBaseId(): Option[String] = extractString(xml \ "header" \ "identifier")
 }

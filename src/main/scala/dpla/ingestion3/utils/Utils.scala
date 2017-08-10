@@ -60,7 +60,8 @@ object Utils {
     id match {
       case Some(i) => DigestUtils.md5Hex(i)
       // TODO: Is more information required in this error message?
-      case _ => throw new IllegalArgumentException("Unable to mint an MD5 ID for record.")
+      case _ => throw new IllegalArgumentException(s"Unable to mint an MD5 ID given local " +
+        s"ID of ${id.getOrElse("**No ID provided**")}")
     }
   }
 

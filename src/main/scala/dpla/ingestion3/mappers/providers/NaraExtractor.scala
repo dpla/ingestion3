@@ -8,6 +8,7 @@ import dpla.ingestion3.mappers.xml.XmlExtractionUtils
 import dpla.ingestion3.model._
 import org.eclipse.rdf4j.model.IRI
 
+import scala.util.{Failure, Success, Try}
 import scala.xml.{Node, NodeSeq, XML}
 
 class NaraExtractor(rawData:String) extends Extractor with XmlExtractionUtils with Serializable {
@@ -16,41 +17,46 @@ class NaraExtractor(rawData:String) extends Extractor with XmlExtractionUtils wi
 
   override def getProviderBaseId(): Option[String] = Some("nara--" + itemUri.toString) //TODO can't figure this out.
 
-  override def build(): DplaMapData = {
-    DplaMapData(
-      DplaSourceResource(
-        collection = collection(xml).map(nameOnlyCollection),
-        contributor = contributor(xml).map(nameOnlyAgent),
-        creator = creator(xml).map(nameOnlyAgent),
-        date = date(xml),
-        description = extractStrings("scopeAndContentNote"),
-        extent = extractStrings("extent"),
-        format = extractStrings(xml \\ "specificRecordsTypeArray" \ "specificRecordsType" \ "termName"),
-        identifier = extractStrings("naId"),
-        language = extractStrings(xml \\ "languageArray" \ "language" \ "termName").map(nameOnlyConcept),
-        place =
-          extractStrings(xml \\ "geographicReferenceArray" \ "geographicPlaceName" \ "termName").map(nameOnlyPlace),
-        publisher = publisher(xml).map(nameOnlyAgent),
-        relation = relation(xml).map(Left(_)),
-        rights = rights(xml),
-        subject = extractStrings(xml \\ "topicalSubjectArray" \ "topicalSubject" \ "termName").map(nameOnlyConcept),
-        title = extractStrings("title"),
-        `type` = types(xml)
-      ),
-      EdmWebResource(
-        //todo proper uri handling from other branch
-        uri = itemUri(xml),
-        //TODO naId doesn't seem like a meaningful file format
-        fileFormat = extractStrings(xml \\ "objectType" \ "naId") ++ extractStrings(xml \\ "objectType" \ "termName")
-      ),
-      OreAggregation(
-        uri = itemUri(xml), //this should probably be renamed to isShownAt
-        dataProvider = dataProvider(xml),
-        originalRecord = rawData,
-        provider = agent,
-        preview = extractString("thumbnailFilename").map(new URI(_)).map(uriOnlyWebResource)
+  override def build(): DplaMap = {
+    Try {
+      DplaMapData(
+        DplaSourceResource(
+          collection = collection(xml).map(nameOnlyCollection),
+          contributor = contributor(xml).map(nameOnlyAgent),
+          creator = creator(xml).map(nameOnlyAgent),
+          date = date(xml),
+          description = extractStrings("scopeAndContentNote"),
+          extent = extractStrings("extent"),
+          format = extractStrings(xml \\ "specificRecordsTypeArray" \ "specificRecordsType" \ "termName"),
+          identifier = extractStrings("naId"),
+          language = extractStrings(xml \\ "languageArray" \ "language" \ "termName").map(nameOnlyConcept),
+          place =
+            extractStrings(xml \\ "geographicReferenceArray" \ "geographicPlaceName" \ "termName").map(nameOnlyPlace),
+          publisher = publisher(xml).map(nameOnlyAgent),
+          relation = relation(xml).map(Left(_)),
+          rights = rights(xml),
+          subject = extractStrings(xml \\ "topicalSubjectArray" \ "topicalSubject" \ "termName").map(nameOnlyConcept),
+          title = extractStrings("title"),
+          `type` = types(xml)
+        ),
+        EdmWebResource(
+          //todo proper uri handling from other branch
+          uri = itemUri(xml),
+          //TODO naId doesn't seem like a meaningful file format
+          fileFormat = extractStrings(xml \\ "objectType" \ "naId") ++ extractStrings(xml \\ "objectType" \ "termName")
+        ),
+        OreAggregation(
+          uri = itemUri(xml), //this should probably be renamed to isShownAt
+          dataProvider = dataProvider(xml),
+          originalRecord = rawData,
+          provider = agent,
+          preview = extractString("thumbnailFilename").map(new URI(_)).map(uriOnlyWebResource)
+        )
       )
-    )
+    } match {
+      case Success(s) => s
+      case Failure(f) => DplaMapError(f.getMessage)
+    }
   }
 
   def agent = EdmAgent(

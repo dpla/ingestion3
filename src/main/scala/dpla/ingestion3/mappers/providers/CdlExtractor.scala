@@ -7,46 +7,53 @@ import dpla.ingestion3.model.{DplaMapData, DplaSourceResource, EdmWebResource, O
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
+import scala.util.{Failure, Success, Try}
+
 class CdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
   implicit val json: JValue = parse(rawData)
 
-  def build: DplaMapData = {
-    DplaMapData(
-      DplaSourceResource(
-        alternateTitle = extractStrings("alternative_title_ss"),
-        collection = extractStrings("collection_name").map(nameOnlyCollection),
-        contributor = extractStrings("contributor_ss").map(nameOnlyAgent),
-        creator = extractStrings("creator_ss").map(nameOnlyAgent),
-        date = extractStrings("date_ss").map(stringOnlyTimeSpan),
-        description = extractStrings("description_ss"),
-        extent = extractStrings("extent_ss"),
-        format = extractStrings("format"),
-        genre = extractStrings("genre_ss").map(nameOnlyConcept),
-        identifier = extractStrings("identifier_ss"),
-        language = extractStrings("language_ss").map(nameOnlyConcept),
-        place = extractStrings("coverage_ss").map(nameOnlyPlace),
-        publisher = extractStrings("publisher_ss").map(nameOnlyAgent),
-        relation = extractStrings("relation_ss").map(eitherStringOrUri),
-        rights = extractStrings("rights_ss")
-          ++ extractStrings("rights_note_ss")
-          ++ extractStrings("rights_date_ss"),
-        rightsHolder = extractStrings("rightsholder_ss").map(nameOnlyAgent),
-        subject = extractStrings("subject_ss").map(nameOnlyConcept),
-        temporal = extractStrings("temporal_ss").map(stringOnlyTimeSpan),
-        title = extractStrings("title_ss"),
-        `type` = extractStrings("type")
-      ),
-      EdmWebResource(
-        uri = providerUri(json)
-      ),
-      OreAggregation(
-        uri = mintDplaItemUri(),
-        dataProvider = nameOnlyAgent(provider(json)),
-        originalRecord = rawData,
-        preview = thumbnail(json),
-        provider = agent
+  def build: DplaMap = {
+    Try {
+      DplaMapData(
+        DplaSourceResource(
+          alternateTitle = extractStrings("alternative_title_ss"),
+          collection = extractStrings("collection_name").map(nameOnlyCollection),
+          contributor = extractStrings("contributor_ss").map(nameOnlyAgent),
+          creator = extractStrings("creator_ss").map(nameOnlyAgent),
+          date = extractStrings("date_ss").map(stringOnlyTimeSpan),
+          description = extractStrings("description_ss"),
+          extent = extractStrings("extent_ss"),
+          format = extractStrings("format"),
+          genre = extractStrings("genre_ss").map(nameOnlyConcept),
+          identifier = extractStrings("identifier_ss"),
+          language = extractStrings("language_ss").map(nameOnlyConcept),
+          place = extractStrings("coverage_ss").map(nameOnlyPlace),
+          publisher = extractStrings("publisher_ss").map(nameOnlyAgent),
+          relation = extractStrings("relation_ss").map(eitherStringOrUri),
+          rights = extractStrings("rights_ss")
+            ++ extractStrings("rights_note_ss")
+            ++ extractStrings("rights_date_ss"),
+          rightsHolder = extractStrings("rightsholder_ss").map(nameOnlyAgent),
+          subject = extractStrings("subject_ss").map(nameOnlyConcept),
+          temporal = extractStrings("temporal_ss").map(stringOnlyTimeSpan),
+          title = extractStrings("title_ss"),
+          `type` = extractStrings("type")
+        ),
+        EdmWebResource(
+          uri = providerUri(json)
+        ),
+        OreAggregation(
+          uri = mintDplaItemUri(),
+          dataProvider = nameOnlyAgent(provider(json)),
+          originalRecord = rawData,
+          preview = thumbnail(json),
+          provider = agent
+        )
       )
-    )
+    } match {
+      case Success(s) => s
+      case Failure(f) => DplaMapError(f.getMessage)
+    }
   }
 
   def provider(json: JValue): String = {
