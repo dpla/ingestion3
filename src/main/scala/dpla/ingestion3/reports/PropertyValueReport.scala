@@ -1,75 +1,45 @@
 package dpla.ingestion3.reports
+import dpla.ingestion3.model.DplaMapData
+import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 
-import org.apache.spark.sql.{DataFrame, Row, SparkSession, Dataset}
-import dpla.ingestion3.model._
-
-/**
-  * Property Value QA report.  Takes one field and gives a count of unique
-  * values.
-  *
-  * Fields currently supported:
-  *   - sourceResource.format
-  *   - sourceResource.rights
-  *   - sourceResource.type
-  *
-  * @example Example invocation:
-  *
-  *   $ sbt "run-main dpla.ingestion3.ReporterMain \
-  *     /path/to/enriched-data.avro /path/to/propvalreport local[2] \
-  *     propertyValue sourceResource.type"
-  *
-  *     ... This produces a directory named 'propvalreport' with a file in it
-  *     named 'part-< ... >.csv', with contents like:
-  *
-  *     value,count
-  *     physicalobject,1
-  *     dataset,13
-  *     [...]
-  *
-  * @param inputURI         Input URI or file path (Avro file / directory)
-  * @param outputURI        Output URI or file path (directory containing CSV
-  *                         file)
-  * @param sparkMasterName  Spark master name, e.g. "local[1]"
-  * @param params           Additional parameters, currently:
-  *                         params(0): The DPLA MAP field to analyze
-  */
 class PropertyValueReport (
                             val inputURI: String,
                             val outputURI: String,
                             val sparkMasterName: String,
-                            val params: Array[String]
-                          ) extends Report {
+                            val params: Array[String]) extends Report {
 
-  /*
-   * We set instance fields from constructor arguments, and override accessor
-   * methods in order to make the class more amenable to unit testing.
-   * However ...
-   * FIXME: It's not clear how to write unit tests that involve Dataframes
-   * and Datasets, so there are no such tests for this class.
-   *
-   */
   override val sparkAppName: String = "PropertyValueReport"
   override def getInputURI: String = inputURI
   override def getOutputURI: String = outputURI
   override def getSparkMasterName: String = sparkMasterName
   override def getParams: Option[Array[String]] = {
-    if (params.nonEmpty) Some(params) else None
+    params.nonEmpty match {
+      case true => Some(params)
+      case _ => None
+    }
   }
 
+  def splitOnPipe(str: String) = str.split("|")
 
   /**
-    * Process the incoming dataset.
+    * Process the incoming dataset (mapped or enriched records) and return a
+    * DataFrame of computed results.
     *
-    * @see          Report.process()
+    * This report returns:
+    *   local uri, dpla uri, value
     *
-    * @param ds     Dataset of DplaMapData (mapped or enriched records)
-    * @param spark  The Spark session, which contains encoding / parsing info.
-    * @return       DataFrame, typically of Row[value: String, count: Int]
+    * If value is an array then multiple values are sent to separate rows.
+    * E.x.
+    *   id1, format1, dplaId1
+    *   id1, format2, dplaId1
+    *
+    * Overridden by classes in dpla.ingestion3.reports
+    *
+    * @param ds    Dataset of DplaMapData (mapped or enriched records)
+    * @param spark The Spark session, which contains encoding / parsing info.
+    * @return DataFrame, typically of Row[value: String, count: Int]
     */
-  override def process(ds: Dataset[DplaMapData],
-                       spark: SparkSession
-                      ): DataFrame = {
-
+  override def process(ds: Dataset[DplaMapData], spark: SparkSession): DataFrame = {
     import spark.implicits._
 
     val token: String = getParams match {
@@ -77,32 +47,43 @@ class PropertyValueReport (
       case _ => throw new RuntimeException(s"No field specified")
     }
 
-    token match {
-        /*
-         * FIXME: "java.lang.UnsupportedOperationException: No Encoder found
-         * for java.net.URI" for sourceResource.language, subject, and other
-         * fields of classes that have URIs, even if you're not evaluating
-         * one of the URI fields in that dpla.ingestion3.model case class.
-         */
-      case "sourceResource.format" =>
-        ds.map(dplaMapData => dplaMapData.sourceResource.format)
-          .flatMap(x => x)
-          .groupBy("value")
-          .count
-      case "sourceResource.rights" =>
-        ds.map(dplaMapData => dplaMapData.sourceResource.rights)
-          .flatMap(x => x)
-          .groupBy("value")
-          .count
-      case "sourceResource.type" =>
-        ds.map(dplaMapData => dplaMapData.sourceResource.`type`)
-          .flatMap(x => x)
-          .groupBy("value")
-          .count
-      case x =>
-        throw new RuntimeException(s"Unrecognized field name '$x'")
-    }
+    implicit val dplaMapDataEncoder =
+      org.apache.spark.sql.Encoders.kryo[DplaMapData]
 
+    token match {
+        // TODO Is there a cleaner way of including the local and dpla uris
+        // so they aren't repeated for every single case block?
+      case "sourceResource.format" =>
+          ds.map(dplaMapData => ( dplaMapData.edmWebResource.uri.toString,
+                                dplaMapData.sourceResource.format,
+                                dplaMapData.oreAggregation.uri.toString))
+            .withColumnRenamed("_1", "local uri")
+            .withColumnRenamed("_3", "dpla uri")
+            .withColumn("format", org.apache.spark.sql.functions.explode($"_2"))
+            .drop("_2")
+
+      case "sourceResource.rights" =>
+        ds.map(dplaMapData => ( dplaMapData.edmWebResource.uri.toString,
+                                dplaMapData.sourceResource.rights,
+                                dplaMapData.oreAggregation.uri.toString))
+          .withColumnRenamed("_1", "local uri")
+          .withColumnRenamed("_3", "dpla uri")
+          .withColumn("rights", org.apache.spark.sql.functions.explode($"_2"))
+          .drop("_2")
+
+      case "sourceResource.type" =>
+        ds.map(dplaMapData => ( dplaMapData.edmWebResource.uri.toString,
+                                dplaMapData.sourceResource.`type`,
+                                dplaMapData.oreAggregation.uri.toString))
+          .withColumnRenamed("_1", "local uri")
+          .withColumnRenamed("_3", "dpla uri")
+          .withColumn("type", org.apache.spark.sql.functions.explode($"_2"))
+          .drop("_2")
+
+      case x =>
+        throw new RuntimeException(s"Unrecognized field name '${x}'")
+    }
   }
+
 
 }
