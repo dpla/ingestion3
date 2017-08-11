@@ -26,10 +26,11 @@ import util.{Try, Failure}
   *
   * @see ReporterTest
   *
-  * @param token            The report name token
+  *
   * @param inputURI         Input URI or file path
   * @param outputURI        Output URI or file path
   * @param sparkMasterName  Spark master name, e.g. "local[1]"
+  * @param token            The report name token
   * @param reportParams     Additional parameters particular to the report
   */
 class Reporter (
@@ -44,6 +45,10 @@ class Reporter (
 
   private def getReport(token: String): Option[Report] = {
     token match {
+      case "propertyDistinctValue" =>
+        Some(new PropertyDistinctValueReport(
+          inputURI, outputURI, sparkMasterName, reportParams
+        ))
       case "propertyValue" =>
         Some(new PropertyValueReport(
           inputURI, outputURI, sparkMasterName, reportParams

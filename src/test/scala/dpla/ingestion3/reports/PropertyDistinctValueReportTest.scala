@@ -7,9 +7,9 @@ import dpla.ingestion3.model._
 import dpla.ingestion3.reports._
 
 
-class PropertyValueReportTest extends FlatSpec with MockFactory{
+class PropertyDistinctValueReportTest extends FlatSpec with MockFactory{
 
-  "PropertyValueReport.process" should "x" in {
+  "PropertyDistinctValueReport.process" should "x" in {
     // FIXME: How do you mock Dataframes and DataSets??
     true
   }
