@@ -16,7 +16,6 @@ object DplaMapData {
   type ZeroToOne[T] = Option[T]
   type ExactlyOne[T] = T
   type LiteralOrUri = Either[String,URI]
-  type LiteralOrSkos = Either[String,SkosConcept]
 }
 
 sealed trait DplaMap
@@ -150,8 +149,7 @@ case class DplaPlace(
                      county: ZeroToOne[String] = None,
                      state: ZeroToOne[String] = None,
                      country: ZeroToOne[String] = None,
-                     // Region or equivalent is not returned by Twofishes
-                     // region: ZeroToOne[String] = None,
+                     region: ZeroToOne[String] = None,
                      coordinates: ZeroToOne[String] = None
                     )
 
