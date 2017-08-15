@@ -2,8 +2,8 @@ package dpla.ingestion3
 
 import java.io.File
 
-import dpla.ingestion3.mappers.providers.{CdlExtractor, NaraExtractor}
-import dpla.ingestion3.model.DplaMapData
+import dpla.ingestion3.mappers.providers.{CdlExtractor, NaraExtractor, PaExtractor}
+import dpla.ingestion3.model.{DplaMap, DplaMapData, DplaMapError}
 import dpla.ingestion3.utils.Utils
 import org.apache.log4j.LogManager
 import org.apache.spark.SparkConf
@@ -39,7 +39,10 @@ object MappingEntry {
       // TODO: This spark.serializer is a kludge to get around serialization issues. Will be fixed in future ticket
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
 
+    // Needed to serialize the successful mapped records
     implicit val dplaMapDataEncoder = org.apache.spark.sql.Encoders.kryo[DplaMapData]
+    // Need to map the mapping results
+    implicit val dplaMapEncoder = org.apache.spark.sql.Encoders.kryo[DplaMap]
 
     val spark = SparkSession.builder()
       .config(sparkConf)
@@ -60,10 +63,14 @@ object MappingEntry {
     val extractorClass = shortName match {
       case "cdl" => classOf[CdlExtractor]
       case "nara" => classOf[NaraExtractor]
+      case "pa digital" => classOf[PaExtractor]
+      case _ =>
+        logger.fatal(s"No match found for provider short name ${shortName}")
+        throw new Exception("Cannot find a mapper")
     }
 
     // Run the mapping over the Dataframe
-    val mappedRecords = harvestedRecords.map(
+    val mappingResults = harvestedRecords.select("record.document").map(
       record => {
         extractorClass.getConstructor(classOf[String])
           .newInstance(record.getAs[String]("document"))
@@ -71,19 +78,30 @@ object MappingEntry {
       }
     )
 
+    // TODO there is probably a much cleaner/better way of writing this
+    val mappingSuccess = mappingResults
+      .filter(r => r.isInstanceOf[DplaMapData])
+      .map(r2 => r2.asInstanceOf[DplaMapData])
+
+    // TODO ditto ^^ This converts the Dataset to an Array[String], This is an easy way out for now.
+    val failures = mappingResults
+      .filter(r => r.isInstanceOf[DplaMapError])
+      .map(r2 => r2.asInstanceOf[DplaMapError]).map(f => f.errorMessage).collect()
+
     // Delete the output location if it exists
     Utils.deleteRecursively(new File(dataOut))
 
-    // Save mapped records out to Avro file
-    mappedRecords.toDF("document").write
+    // Save successfully mapped records out to Avro file
+    mappingSuccess.toDF("document").write
       .format("com.databricks.spark.avro")
       .save(dataOut)
 
-    // Gather some stats
-    val harvestedRecordCount = harvestedRecords.count()
-    val mappedRecordCount = mappedRecords.count()
+    val harvestCount = harvestedRecords.count()
+    val failCount = failures.size
 
-    logger.debug(s"Harvested ${harvestedRecordCount} records and mapped ${mappedRecordCount} records")
-    logger.debug(s"${harvestedRecordCount-mappedRecordCount} mapping errors")
+    println(s"Harvested ${harvestCount} records")
+    println(s"Mapped ${harvestCount - failCount} records")
+    println(s"Failed to map ${failCount} records.\n\nError messages:\n")
+    failures.foreach(f => println(f))
   }
 }

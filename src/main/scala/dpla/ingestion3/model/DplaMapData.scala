@@ -9,6 +9,7 @@ import dpla.ingestion3.model.DplaMapData._
   * and a union type for fields that can be literals or uris.
   */
 
+
 object DplaMapData {
   type ZeroToMany[T] = Seq[T]
   type AtLeastOne[T] = Seq[T]
@@ -18,6 +19,16 @@ object DplaMapData {
   type LiteralOrSkos = Either[String,SkosConcept]
 }
 
+sealed trait DplaMap
+
+/**
+  * Class for describing mapping errors
+  * @param errorMessage
+  */
+// TODO Work out additional useful properties and useful error reporting
+case class DplaMapError (
+                          errorMessage: String
+                         ) extends DplaMap
 /**
   * Container for the classes that represent an item in DPLA MAP.
   *
@@ -27,11 +38,11 @@ object DplaMapData {
   * @param edmWebResource Metadata about the item's representation on the provider's site.
   * @param oreAggregation Metadata about the aggretation of the item across it's source and representations.
   */
-case class DplaMapData(
+case class DplaMapData (
                          sourceResource: DplaSourceResource,
                          edmWebResource: EdmWebResource,
                          oreAggregation: OreAggregation
-                       )
+                       ) extends DplaMap
 
 //Core Classes
 
@@ -161,5 +172,4 @@ case class EdmTimeSpan(
                         begin: ZeroToOne[String] = None,
                         end: ZeroToOne[String] = None
                       )
-
 
