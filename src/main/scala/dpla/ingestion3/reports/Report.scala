@@ -2,13 +2,14 @@ package dpla.ingestion3.reports
 
 
 import java.io.File
-import com.databricks.spark.avro._
-import dpla.ingestion3.model.DplaMapData
-import org.apache.spark.SparkConf
-import org.apache.spark.sql.{SparkSession, Dataset, DataFrame}
-import dpla.ingestion3.utils.Utils
-import util.Try
 
+import com.databricks.spark.avro._
+import dpla.ingestion3.model._
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+import dpla.ingestion3.utils.Utils
+
+import util.Try
 
 /**
   * Report:  trait with common fields and methods for QA reports.
@@ -88,4 +89,38 @@ trait Report {
     */
   def process(ds: Dataset[DplaMapData], spark: SparkSession): DataFrame
 
+  /**
+    * Accepts Seq[Any] and tries to extract the String values which
+    * should be included in the report.
+    *
+    * For fields like Title and Rights this is fairly straight forward but for
+    * context case classes like EdmAgent and SkosConcept it will be slightly trickier
+    * to report on multiple fields.
+    *
+    *  If the sequence is empty then a String indicating that the value is missing is
+    * returned.
+    *
+    * @param t
+    * @return
+    */
+  def extractValue(t: Seq[Any]): Seq[String] = {
+    t.isEmpty match {
+      case true => Seq("__MISSING__")
+      // If non-empty, then take the first element to determine the type of context class
+      case false => t.headOption match {
+        case _: DplaPlace =>
+          t.map(_.asInstanceOf[DplaPlace].name.getOrElse("__MISSING DplaPlace.name__"))
+        case _: DcmiTypeCollection =>
+          t.map(_.asInstanceOf[DcmiTypeCollection].title.getOrElse("__MISSING DcmiTypeCollection.title__"))
+        case _: EdmAgent =>
+          t.map(_.asInstanceOf[EdmAgent].name.getOrElse("__MISSING EdmAgent.name__"))
+        case _: EdmTimeSpan =>
+          t.map(_.asInstanceOf[EdmTimeSpan].originalSourceDate.getOrElse("__MISSING EdmTimeSpan.originalSourceDate__"))
+        case _: SkosConcept =>
+          t.map(_.asInstanceOf[SkosConcept].providedLabel.getOrElse("__MISSING SkosConcept.providedLabel__"))
+        case None => Seq("__MISSING__")
+        case _ => t.map(_.toString)
+      }
+    }
+  }
 }
