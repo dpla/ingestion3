@@ -53,6 +53,10 @@ class Reporter (
         Some(new PropertyValueReport(
           inputURI, outputURI, sparkMasterName, reportParams
         ))
+      case "metadataCompleteness" =>
+        Some(new MetadataCompletenessReport(
+          inputURI, outputURI, sparkMasterName, reportParams
+        ))
       case _ => None
     }
   }
