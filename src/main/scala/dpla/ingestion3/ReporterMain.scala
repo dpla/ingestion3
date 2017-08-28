@@ -57,6 +57,10 @@ class Reporter (
         Some(new MetadataCompletenessReport(
           inputURI, outputURI, sparkMasterName, reportParams
         ))
+      case "thumbnail" =>
+        Some(new ThumbnailReport(
+          inputURI, outputURI, sparkMasterName, reportParams
+        ))
       case _ => None
     }
   }
