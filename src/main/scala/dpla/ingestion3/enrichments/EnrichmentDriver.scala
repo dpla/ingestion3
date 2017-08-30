@@ -35,7 +35,7 @@ class EnrichmentDriver extends Serializable {
     */
   def enrich(record: DplaMapData): DplaMapData = {
     record.copy(
-      DplaSourceResource(
+      record.sourceResource.copy(
         date = record.sourceResource.date.map(d => dateEnrichment.parse(d)),
         language = record.sourceResource.language.map(l => LanguageMapper.mapLanguage(l)),
         place = record.sourceResource.place.map(p => spatialEnrichment.enrich(p))
