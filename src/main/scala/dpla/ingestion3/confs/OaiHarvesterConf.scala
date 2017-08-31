@@ -1,6 +1,8 @@
 package dpla.ingestion3.confs
 
+import java.net.URL
 import com.typesafe.config.ConfigFactory
+import scala.util.Try
 
 /**
   *
@@ -25,7 +27,22 @@ class OaiHarvesterConf(arguments: Seq[String]) {
     // Loads config file for more information about loading hierarchy please read
     // https://github.com/typesafehub/config#standard-behavior
     ConfigFactory.invalidateCaches()
-    val oaiConf = ConfigFactory.load()
+
+    val filePath = arguments.headOption.getOrElse("")
+
+    if (filePath.isEmpty) throw new IllegalArgumentException("Missing path to conf file")
+
+    // Check if filePath is a URL.
+    def validateUrl(string: String): Boolean = Try{ new URL(string) }.isSuccess
+
+    val property = validateUrl(filePath) match {
+      case true => "config.url"
+      case false => "config.file"
+    }
+
+    System.setProperty(property, filePath)
+    val oaiConf = ConfigFactory.load
+
 
     def getProp(prop: String, default: Option[String] = None): Option[String] = {
       oaiConf.hasPath(prop) match {

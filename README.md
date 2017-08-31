@@ -61,24 +61,21 @@ To use SBT you need to specify the path to the config file you just created when
 
 ```
 # Example when the path is stored locally. This should address 95% of all use cases
--Dconfig.file=/loca/path/to/config.conf
+/local/path/to/config.conf
 
-# Exmple when the profile is stored remotely
--Dconfig.url=https://s3.amazonaws.com/dpla-i3-oai-profiles/sample_provider.conf
-
-# Example when the config file is on the project classpath
--Dconfig.resource=profiles/sample_provider.conf
+# Example when the profile is stored remotely
+https://s3.amazonaws.com/dpla-i3-oai-profiles/sample_provider.conf
 ``` 
 
 *Example invocation with local config file*
 
-`sbt "run -Dconfig.file=/loca/path/to/oai.conf /path/to/ingestion3.jar"`
+`sbt "run /local/path/to/oai.conf /path/to/ingestion3.jar"`
 
 ### Running using IntelliJ
 Specify the config file parameter as a VM Option argument.
 
 ```text
--Dconfig.url=https://s3.amazonaws.com/dpla-i3-oai-profiles/sample_provider.conf
+https://s3.amazonaws.com/dpla-i3-oai-profiles/sample_provider.conf
 ``` 
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/6a9dfda51ad04ce3acfb7fcb441af846)](https://www.codacy.com/app/mdellabitta/ingestion3?utm_source=github.com&utm_medium=referral&utm_content=dpla/ingestion3&utm_campaign=badger)
