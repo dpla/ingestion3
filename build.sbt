@@ -21,7 +21,7 @@ lazy val root = (project in file("."))
         ExclusionRule("cascading", "cascading-hadoop"),
         ExclusionRule("cascading", "cascading-local")
       ),
-      // ApiHarvester depends
+      // CdlHarvester depends
       "org.apache.httpcomponents" % "httpclient" % "4.5.2",
       "org.apache.httpcomponents" % "fluent-hc" % "4.5.2",
       // Enricher dependencies

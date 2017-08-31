@@ -52,7 +52,7 @@ class CdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
       )
     } match {
       case Success(s) => s
-      case Failure(f) => DplaMapError(f.getMessage)
+      case Failure(f) => DplaMapError(s"ERROR -- providerBaseId=${getProviderBaseId} -- ${f.getMessage}")
     }
   }
 
@@ -70,7 +70,7 @@ class CdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
     extractString("reference_image_md5")(json) match {
       case Some(md5) => Some(
         uriOnlyWebResource(
-          new URI("https://thumbnails.calisphere.org/{mode}/150x150/" + md5)
+          new URI("https://thumbnails.calisphere.org/clip/150x150/" + md5)
         )
       )
       case None => None
@@ -86,6 +86,19 @@ class CdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
     name = Some("California Digital Library"),
     uri = Some(new URI("http://dp.la/api/contributor/cdl"))
   )
-  // Base CDL ID should use provider prefix (e.g. cdl--104014afdkfg2a)
-  override def getProviderBaseId(): Option[String] = Option(List("cdl", extractString("id")(json)).mkString("--"))
+
+  /**
+    * Base CDL ID should use provider prefix (e.g. cdl--104014afdkfg2a)
+    *
+    * #get is called on extractString(id) because we want it to blow up here if ID is not present in the record.
+    * Also, the value needs to be extracted before being concatenated with the provider shortname otherwise we'll
+    * end up with something like: cdl--Some(2a6e6cd353498637048c17d5b9769a9b) and not cdl-2askbe53
+    *
+    * FIXME: Issue with be added to code cleanup ticket in the 9/11 sprint
+    */
+  override def getProviderBaseId(): Option[String] =
+    Option(List("cdl",
+      extractString("id")(json).getOrElse(throw new RuntimeException(s"Could not extract `id` from record\n" +
+        s"${compact(json)}"))
+    ).mkString("--"))
 }
