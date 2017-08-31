@@ -41,7 +41,7 @@ object OaiHarvesterMain {
       "verb" -> oaiParams.verb,
       "metadataPrefix" -> oaiParams.metadataPrefix,
       "harvestAllSets" -> oaiParams.harvestAllSets,
-      "setlist" -> oaiParams.setList,
+      "setlist" -> oaiParams.setlist,
       "blacklist" -> oaiParams.blacklist,
       "endpoint" -> oaiParams.endpoint
     ).collect{ case (key, Some(value)) => key -> value } // remove None values

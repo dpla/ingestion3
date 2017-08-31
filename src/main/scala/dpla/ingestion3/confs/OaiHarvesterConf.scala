@@ -51,7 +51,7 @@ class OaiHarvesterConf(arguments: Seq[String]) {
       },
       metadataPrefix = getProp("metadataPrefix"),
       harvestAllSets = getProp("harvestAllSets"),
-      setList = getProp("setList"),
+      setlist = getProp("setlist"),
       blacklist = getProp("blacklist"),
       // Default spark master is to run on local
       sparkMaster = getProp("sparkMaster", Some("local[*]"))
@@ -66,7 +66,7 @@ case class OaiConf(
                        provider: Option[String],
                        metadataPrefix: Option[String],
                        harvestAllSets: Option[String],
-                       setList: Option[String],
+                       setlist: Option[String],
                        blacklist: Option[String],
                        sparkMaster: Option[String]
                      )
