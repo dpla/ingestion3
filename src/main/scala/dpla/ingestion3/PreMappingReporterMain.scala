@@ -36,6 +36,8 @@ class PreMappingReporter (token: String,
     token match {
       case "xmlShredder" =>
         Some(new XmlShredderReport(inputURI, outputURI, sparkMasterName))
+      case "jsonShredder" =>
+        Some(new JsonShredderReport(inputURI, outputURI, sparkMasterName))
       case _ => None
     }
   }

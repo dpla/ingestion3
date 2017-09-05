@@ -6,12 +6,12 @@ import org.apache.spark.sql.functions._
 
 import scala.util.parsing.json._
 
-class XmlShredderReport(val inputURI: String,
+class JsonShredderReport(val inputURI: String,
                         val outputURI: String,
                         val sparkMasterName: String
                        ) extends PreMappingReport with Serializable {
 
-  override val sparkAppName: String = "XmlShredder"
+  override val sparkAppName: String = "JsonShredder"
 
   override def getInputURI: String = inputURI
 
@@ -74,7 +74,7 @@ class XmlShredderReport(val inputURI: String,
     * Create a UDF to convert a document String into a List of parsed Triples.
     */
   private val docToTriples: ((String, String) => List[Triple]) =
-    (id: String, record: String) => XmlShredder.getXmlTriples(id, record)
+  (id: String, record: String) => JsonShredder.getJsonTriples(id, record)
 
   private val docToTriplesFunc = udf(docToTriples)
 }
