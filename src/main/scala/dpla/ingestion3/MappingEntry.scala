@@ -1,6 +1,6 @@
 package dpla.ingestion3
 
-import java.io.File
+import java.io.{File, PrintWriter}
 
 import dpla.ingestion3.mappers.providers._
 import dpla.ingestion3.model.{DplaMapData, RowConverter}
@@ -8,12 +8,11 @@ import dpla.ingestion3.utils.Utils
 import org.apache.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
-import java.io._
-
-import com.databricks.spark.avro._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
+import com.databricks.spark.avro._
 
 import scala.util.{Failure, Success}
+
 
 /**
   * Expects two parameters:
@@ -73,6 +72,7 @@ object MappingEntry {
       case "mdl" => classOf[MdlExtractor]
       case "nara" => classOf[NaraExtractor]
       case "pa digital" => classOf[PaExtractor]
+      case "wi" => classOf[WiExtractor]
       case _ =>
         logger.fatal(s"No match found for provider short name ${shortName}")
         throw new Exception("Cannot find a mapper")
