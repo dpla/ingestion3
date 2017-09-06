@@ -8,6 +8,7 @@ import dpla.ingestion3.utils.Utils
 import org.apache.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
+import java.io._
 
 /**
   * Expects two parameters:
@@ -17,7 +18,7 @@ import org.apache.spark.sql.SparkSession
   *   Usage
   *   -----
   *   To invoke via sbt:
-  *     sbt "run-main dpla.ingestion3.MappingEntry /input/path/to/harvested.avro /output/path/to/mapped.avro"
+  *     sbt "run-main dpla.ingestion3.MappingEntry /input/path/to/harvested/ /output/path/to/mapped/"
   */
 
 object MappingEntry {
@@ -28,7 +29,7 @@ object MappingEntry {
     if (args.length != 2)
       logger.error("Incorrect number of parameters provided. Expected <input> <output>")
 
-    // Get files
+    // Get the input and output paths
     val dataIn = args(0)
     val dataOut = args(1)
 
@@ -70,7 +71,7 @@ object MappingEntry {
     }
 
     // Run the mapping over the Dataframe
-    val mappingResults = harvestedRecords.select("record.document").map(
+    val mappingResults = harvestedRecords.select("document").map(
       record => {
         extractorClass.getConstructor(classOf[String])
           .newInstance(record.getAs[String]("document"))
@@ -78,7 +79,7 @@ object MappingEntry {
       }
     )
 
-    // TODO there is probably a much cleaner/better way of writing this
+    // TODO there is probably a much cleaner/better way of writing this.
     val mappingSuccess = mappingResults
       .filter(r => r.isInstanceOf[DplaMapData])
       .map(r2 => r2.asInstanceOf[DplaMapData])
@@ -96,12 +97,35 @@ object MappingEntry {
       .format("com.databricks.spark.avro")
       .save(dataOut)
 
-    val harvestCount = harvestedRecords.count()
-    val failCount = failures.size
+    // Summarize results
+    mappingSummary(harvestedRecords.count(), mappingSuccess.count(),failures, dataOut, shortName)
+  }
 
-    println(s"Harvested ${harvestCount} records")
-    println(s"Mapped ${harvestCount - failCount} records")
-    println(s"Failed to map ${failCount} records.\n\nError messages:\n")
-    failures.foreach(f => println(f))
+  /**
+    * Print mapping summary information
+    *
+    * @param harvestCount
+    * @param mapCount
+    * @param errors
+    * @param outDir
+    * @param shortName
+    */
+  def mappingSummary(harvestCount: Long,
+                     mapCount: Long,
+                     errors: Array[String],
+                     outDir: String,
+                     shortName: String): Unit = {
+    val logDir = new File(s"$outDir/logs/")
+    logDir.mkdirs()
+
+    println(s"Harvested $harvestCount records")
+    println(s"Mapped ${mapCount} records")
+    println(s"Failed to map ${harvestCount-mapCount} records.")
+    if (mapCount != harvestCount)
+      println(s"Saving error log to ${logDir.getAbsolutePath}")
+      val pw = new PrintWriter(
+        new File(s"${logDir.getAbsolutePath}/$shortName-mapping-errors-${System.currentTimeMillis()}.log"))
+      errors.foreach(f => pw.write(s"$f\n"))
+      pw.close()
   }
 }
