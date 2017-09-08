@@ -6,7 +6,9 @@ import com.databricks.spark.avro._
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import dpla.ingestion3.utils.Utils
+import org.apache.spark.rdd.RDD
 
+import scala.util.parsing.json.JSONType
 import util.Try
 
 /**
@@ -43,27 +45,23 @@ trait PreMappingReport {
 
     val input: DataFrame = spark.read.avro(getInputURI)
 
-    val output: DataFrame = process(input)
+    val output: RDD[JSONType] = process(input)
 
     Utils.deleteRecursively(new File(getOutputURI))
-    output
-      .repartition(1)  // Otherwise multiple CSV files
-      .write
-      .format("com.databricks.spark.csv")
-      .option("header", "true")
-      .save(getOutputURI)
+
+    output.saveAsTextFile(getOutputURI)
 
     sc.stop()
   }
 
   /**
-    * Process the incoming DataFrame (harvested records) and return a
-    * DataFrame of computed results.
+    * Process the incoming DataFrame (harvested records) and return an RDD
+    * of computed results.
     *
     * Overridden by classes in dpla.ingestion3.premappingreports
     *
     * @param df     DataFrame of harvested records
-    * @return       DataFrame
+    * @return       RDD[JSONType]
     */
-  def process(df: DataFrame): DataFrame
+  def process(df: DataFrame): RDD[JSONType]
 }
