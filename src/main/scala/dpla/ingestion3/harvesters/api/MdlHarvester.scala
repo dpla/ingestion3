@@ -12,25 +12,20 @@ import org.apache.http.util.EntityUtils
 import scala.util.{Failure, Success, Try}
 
 /**
-  * Class for harvesting records from the California Digital Library's Solr API
-  *
-  * Calisphere API documentation
-  * https://help.oac.cdlib.org/support/solutions/articles/9000101639-calisphere-api
+  * Class for harvesting records from the Minnesota Digital Library's API
   *
   * @param queryParams - Query parameters (q, rows, cursorMark etc.)
   */
-class CdlHarvester(val queryParams: Map[String, String] = Map()) {
-
+class MdlHarvester(val queryParams: Map[String, String] = Map()) {
   /**
-    * Get a single-page, un-parsed response from the OAI feed, or an error if
+    * Get a single-page, un-parsed response from the API feed, or an error if
     * one occurs.
     *
-    * @param cursorMark Uses cursor and not start/offset to paginate. Used to work around Solr
-    *                   deep-paging performance issues.
+    * @param start Uses start as an offset to paginate.
     * @return ApiSource or ApiError
     */
-  def harvest(cursorMark: String): ApiResponse = {
-    getUri(queryParams.updated("cursorMark", cursorMark)) match {
+  def harvest(start: String): ApiResponse = {
+    getUri(queryParams.updated("start", start)) match {
       // Error building URL
       case Failure(e) =>
         val source = ApiSource(queryParams)
@@ -56,15 +51,14 @@ class CdlHarvester(val queryParams: Map[String, String] = Map()) {
     */
   def getUri(queryParams: Map[String, String]): Try[URI] = Try {
     new URIBuilder()
-      .setScheme("https")
-      .setHost("solr.calisphere.org")
-      .setPath("/solr/query")
+      .setScheme("http")
+      .setHost("hub-client.lib.umn.edu")
+      .setPath("/api/v1/records")
       .setParameter("q", queryParams.getOrElse("query", "*:*"))
-      .setParameter("cursorMark", queryParams.getOrElse("cursorMark", "*"))
+      .setParameter("start", queryParams.getOrElse("start", "0"))
       .setParameter("rows", queryParams.getOrElse("rows", "10"))
-      .setParameter("sort", "id desc")
       .build()
-    }
+  }
 
   /**
     * Makes request and returns stringified JSON response
@@ -75,7 +69,6 @@ class CdlHarvester(val queryParams: Map[String, String] = Map()) {
   def getResponse(uri: URI): Try[String] = Try {
     val httpclient = HttpClients.createDefault()
     val get = new HttpGet(uri)
-    get.addHeader("X-Authentication-Token", queryParams.getOrElse("api_key", ""))
     var response: CloseableHttpResponse = null
     try {
       response = httpclient.execute(get)
