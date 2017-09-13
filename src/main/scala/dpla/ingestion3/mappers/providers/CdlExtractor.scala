@@ -12,7 +12,7 @@ import scala.util.{Failure, Success, Try}
 class CdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
   implicit val json: JValue = parse(rawData)
 
-  def build: DplaMap = {
+  def build: Try[DplaMapData] = {
     Try {
       DplaMapData(
         DplaSourceResource(
@@ -50,9 +50,6 @@ class CdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
           provider = agent
         )
       )
-    } match {
-      case Success(s) => s
-      case Failure(f) => DplaMapError(s"ERROR -- providerBaseId=${getProviderBaseId} -- ${f.getMessage}")
     }
   }
 

@@ -88,9 +88,9 @@ object RowConverter {
     dplaPlace.name.orNull,
     dplaPlace.city.orNull,
     dplaPlace.county.orNull,
+    dplaPlace.region.orNull,
     dplaPlace.state.orNull,
     dplaPlace.country.orNull,
-    dplaPlace.region.orNull,
     dplaPlace.coordinates.orNull
   )
 
