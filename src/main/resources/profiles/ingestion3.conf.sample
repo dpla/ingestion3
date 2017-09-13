@@ -1,0 +1,19 @@
+spark.master="local[*]"
+spark.driverMemory="2g"
+
+# Harvard
+harvard.provider = "Harvard"
+harvard.harvest.type="oai"
+harvard.harvest.endpoint = "http://vcoai.lib.harvard.edu/vcoai/vc"
+harvard.harvest.metadataPrefix = "mods"
+harvard.harvest.setlist="dag,lap,crimes,scarlet,manuscripts,eda,cna,ihp,ward,rubbings"
+harvard.harvest.verb = "ListRecords"
+harvard.spark.master = "local[1]"
+
+# CDL
+cdl.provider = "California Digital Library"
+cdl.harvest.type="api"
+cdl.harvest.rows = "500"
+cdl.harvest.query = "-type_ss:dataset"
+cdl.harvest.apiKey = ""
+cdl.spark.master = "local[3]"
