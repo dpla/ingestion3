@@ -1,0 +1,539 @@
+{
+  "settings": {
+    "index": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1
+    } /*, */
+    /*
+     * See FIXME below
+     *
+    "analysis": {
+      "analyzer": {
+        "canonical_sort": {
+          "type": "custom",
+          "tokenizer": "keyword",
+          "filter": ["lowercase", "pattern_replace"]
+        }
+      },
+      "filter": {
+        "pattern_replace": {
+          "type": "pattern_replace",
+          "pattern": "^([^a-z0-9]+|a\b|an\b|the\b)*",
+          "replacement": ""
+        }
+      }
+    }*/
+  },
+  "mappings": {
+    "item": {
+      "dynamic": false,
+      "properties": {
+        "@context": {
+          "enabled": false
+        },
+        "@id": {
+          "enabled": false
+        },
+        "admin": {
+          "properties": {
+            "contributingInstitution": {
+              "type": "keyword",
+              "norms": false,
+              "include_in_all": false
+            },
+            "ingestDate": {
+              "enabled": false
+            },
+            "ingestType": {
+              "enabled": false
+            },
+            "object_status": {
+              "enabled": false
+            },
+            "sourceResource": {
+              "properties": {
+                "title": {
+                  /* FIXME:
+                   * There's an incompatibility here between 0.90 and 5.x.
+                   * This used to be a "string" field.  The API relies somewhere
+                   * on admin.sourceresource.title as a "shadow sort field",
+                   * according to schema.rb in the `platform' app. With ES 5,
+                   * you can't have an analyzer on a "keyword" field (it's
+                   * contrary to the purpose of "keyword", which is unanalyzed).
+                   * But you can't specify a "null_value" property for a
+                   * "text" field using a string, because a JSON string equates
+                   * to a "keyword". I assume it's important to have the
+                   * canonical sort in some fashion, so here it is without a
+                   * value to swap in if it's null. I'm not sure what the
+                   * implications are.  -MB
+                   */
+                  "type": "text",
+                  "analyzer": "canonical_sort" /* ,
+                  "null_value": "zzzzzzzz" */
+                }
+              }
+            },
+            "valid_after_enrich": {
+              "enabled": false
+            },
+            "validation_message": {
+              "enabled": false
+            }
+          }
+        },
+        "aggregatedCHO": {
+          "enabled": false
+        },
+        "dataProvider": {
+          "type": "text",
+          "fields": {
+            "not_analyzed": {
+              "type": "keyword"
+            }
+          }
+        },
+        "hasView": {
+          "properties": {
+            "@id": {
+              "type": "keyword",
+              "norms": false,
+              "index_options": "docs"
+            },
+            "edmRights": {
+              "type": "text",
+              "fields": {
+                "not_analyzed": {
+                  "type": "keyword",
+                  "norms": false,
+                  "index_options": "docs"
+                }
+              }
+            },
+            "format": {
+              "type": "keyword",
+              "norms": false,
+              "index_options": "docs"
+            },
+            "rights": {
+              "type": "keyword",
+              "norms": false,
+              "index_options": "docs"
+            }
+          }
+        },
+        "id": {
+          "type": "keyword",
+          "norms": false,
+          "index_options": "docs"
+        },
+        "ingestDate": {
+          "enabled": false
+        },
+        "ingestType": {
+          "enabled": false
+        },
+        "ingestionSequence": {
+          "enabled": false
+        },
+        "intermediateProvider": {
+          "type": "text",
+          "fields": {
+            "not_analyzed": {
+              "type": "keyword",
+              "norms": false,
+              "index_options": "docs"
+            }
+          }
+        },
+        "isPartOf": {
+          "properties": {
+            "@id": {
+              "type": "keyword",
+              "norms": false,
+              "index_options": "docs"
+            },
+            "name": {
+              "type": "text",
+              "fields": {
+                "not_analyzed": {
+                  "type": "keyword",
+                  "norms": false,
+                  "index_options": "docs"
+                }
+              }
+            }
+          }
+        },
+        "isShownAt": {
+          "type": "keyword",
+          "norms": false,
+          "index_options": "docs"
+        },
+        "object": {
+          "type": "keyword",
+          "norms": false,
+          "index_options": "docs"
+        },
+        "originalRecord": {
+          "enabled": false
+        },
+        "provider": {
+          "properties": {
+            "@id": {
+              "type": "keyword",
+              "norms": false,
+              "index_options": "docs"
+            },
+            "name": {
+              "type": "text",
+              "fields": {
+                "not_analyzed": {
+                  "type": "keyword",
+                  "norms": false,
+                  "index_options": "docs"
+                }
+              }
+            }
+          }
+        },
+        "rights": {
+          "type": "keyword"
+        },
+        "sourceResource": {
+          "properties": {
+            "@id": {
+              "enabled": false
+            },
+            "collection": {
+              "properties": {
+                "@id": {
+                  "type": "keyword",
+                  "norms": false,
+                  "index_options": "docs"
+                },
+                "description": {
+                  "type": "text"
+                },
+                "id": {
+                  "type": "keyword",
+                  "norms": false,
+                  "index_options": "docs"
+                },
+                "title": {
+                  "type": "text",
+                  "fields": {
+                    "not_analyzed": {
+                      "type": "keyword",
+                      "norms": false,
+                      "index_options": "docs"
+                    }
+                  }
+                }
+              }
+            },
+            "contributor": {
+              "type": "text"
+            },
+            "creator": {
+              "type": "text"
+            },
+            "date": {
+              "properties": {
+                "begin": {
+                  "type": "date",
+                  "ignore_malformed": true,
+                  "format": "date_optional_time",
+                  "null_value": "-9999",
+                  "fields": {
+                    "not_analyzed": {
+                      "type": "keyword",
+                      "norms": false,
+                      "index_options": "docs"
+                    }
+                  }
+                },
+                "end": {
+                  "type": "date",
+                  "ignore_malformed": true,
+                  "format": "date_optional_time",
+                  "null_value": "-9999",
+                  "fields": {
+                    "not_analyzed": {
+                      "type": "keyword",
+                      "norms": false,
+                      "index_options": "docs"
+                    }
+                  }
+                },
+                "displayDate": {
+                  "enabled": false
+                }
+              }
+            },
+            "description": {
+              "type": "text"
+            },
+            "extent": {
+              "type": "keyword",
+              "norms": false,
+              "index_options": "docs"
+            },
+            "format": {
+              "type": "text"
+            },
+            "genre": {
+              "type": "text"
+            },
+            "identifier": {
+              "type": "text",
+              "index_options": "docs"
+            },
+            "isPartOf": {
+              "enabled": false
+            },
+            "language": {
+              "properties": {
+                "iso639_3": {
+                  "type": "keyword",
+                  "norms": false,
+                  "index_options": "docs"
+                },
+                "name": {
+                  "type": "keyword",
+                  "norms": false,
+                  "index_options": "docs",
+                  "fields": {
+                    "not_analyzed": {
+                      "type": "keyword",
+                      "norms": false,
+                      "index_options": "docs"
+                    }
+                  }
+                }
+              }
+            },
+            "publisher": {
+              "type": "text",
+              "fields": {
+                "not_analyzed": {
+                  "type": "keyword",
+                  "norms": false,
+                  "index_options": "docs"
+                }
+              }
+            },
+            "relation": {
+              "type": "text"
+            },
+            "rights": {
+              "type": "text"
+            },
+            "spatial": {
+              "properties": {
+                "city": {
+                  "type": "text",
+                  "fields": {
+                    "not_analyzed": {
+                      "type": "keyword",
+                      "norms": false,
+                      "index_options": "docs"
+                    }
+                  }
+                },
+                "coordinates": {
+                  "type": "geo_point"
+                },
+                "country": {
+                  "type": "text",
+                  "fields": {
+                    "not_analyzed": {
+                      "type": "keyword",
+                      "norms": false,
+                      "index_options": "docs"
+                    }
+                  }
+                },
+                "county": {
+                  "type": "text",
+                  "fields": {
+                    "not_analyzed": {
+                      "type": "keyword",
+                      "norms": false,
+                      "index_options": "docs"
+                    }
+                  }
+                },
+                "iso3166-2": {
+                  "type": "keyword",
+                  "norms": false,
+                  "index_options": "docs"
+                },
+                "name": {
+                  "type": "text",
+                  "fields": {
+                    "not_analyzed": {
+                      "type": "keyword",
+                      "norms": false,
+                      "index_options": "docs"
+                    }
+                  }
+                },
+                "region": {
+                  "type": "text",
+                  "fields": {
+                    "not_analyzed": {
+                      "type": "keyword",
+                      "norms": false,
+                      "index_options": "docs"
+                    }
+                  }
+                },
+                "state": {
+                  "type": "text",
+                  "fields": {
+                    "not_analyzed": {
+                      "type": "keyword",
+                      "norms": false,
+                      "index_options": "docs"
+                    }
+                  }
+                }
+              }
+            },
+            "specType": {
+              "type": "keyword",
+              "norms": false,
+              "index_options": "docs"
+            },
+            "stateLocatedIn": {
+              "properties": {
+                "iso3166-2": {
+                  "type": "keyword",
+                  "norms": false,
+                  "index_options": "docs"
+                },
+                "name": {
+                  "type": "keyword",
+                  "norms": false,
+                  "index_options": "docs"
+                }
+              }
+            },
+            "subject": {
+              "properties": {
+                "@id": {
+                  "type": "keyword",
+                  "norms": false,
+                  "index_options": "docs"
+                },
+                "@type": {
+                  "type": "keyword",
+                  "norms": false,
+                  "index_options": "docs"
+                },
+                "name": {
+                  "type": "text",
+                  "fields": {
+                    "not_analyzed": {
+                      "type": "keyword",
+                      "norms": false,
+                      "index_options": "docs"
+                    }
+                  }
+                }
+              }
+            },
+            "temporal": {
+              "properties": {
+                "begin": {
+                  "type": "date",
+                  "ignore_malformed": true,
+                  "format": "date_optional_time",
+                  "null_value": "-9999",
+                  "fields": {
+                    "not_analyzed": {
+                      "type": "keyword",
+                      "norms": false,
+                      "index_options": "docs"
+                    }
+                  }
+                },
+                "end": {
+                  "type": "date",
+                  "ignore_malformed": true,
+                  "format": "date_optional_time",
+                  "null_value": "-9999",
+                  "fields": {
+                    "not_analyzed": {
+                      "type": "keyword",
+                      "norms": false,
+                      "index_options": "docs"
+                    }
+                  }
+                },
+                "displayDate": {
+                  "enabled": false
+                },
+                "encoding": {
+                  "enabled": false
+                },
+                "point": {
+                  "enabled": false
+                }
+              }
+            },
+            "title": {
+              "type": "text"
+            },
+            "type": {
+              "type": "keyword",
+              "norms": false,
+              "index_options": "docs"
+            }
+          }
+        }
+      }
+    },
+    "collection": {
+      "dynamic": false,
+      "properties": {
+        "@context": {
+          "enabled": false
+        },
+        "@id": {
+          "enabled": false
+        },
+        "admin": {
+          "enabled": false
+        },
+        "description": {
+          "type": "text"
+        },
+        "id": {
+          "type": "keyword",
+          "norms": false,
+          "index_options": "docs"
+        },
+        "ingestDate": {
+          "enabled": false
+        },
+        "ingestType": {
+          "enabled": false
+        },
+        "ingestionSequence": {
+          "enabled": false
+        },
+        "title": {
+          "type": "text",
+          "fields": {
+            "not_analyzed": {
+              "type": "keyword",
+              "norms": false,
+              "index_options": "docs"
+            }
+          }
+        }
+      }
+    }
+  }
+}
