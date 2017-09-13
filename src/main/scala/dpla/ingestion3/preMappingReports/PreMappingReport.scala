@@ -49,7 +49,7 @@ trait PreMappingReport {
 
     Utils.deleteRecursively(new File(getOutputURI))
 
-    output.saveAsTextFile(getOutputURI)
+    output.coalesce(1).saveAsTextFile(getOutputURI)
 
     sc.stop()
   }

@@ -148,7 +148,7 @@ object XmlShredder {
 
     // Map text nodes Triples.
     val text: List[Triple] = textNodes.map(t => {
-      val attribute = s"${label}.text()"
+      val attribute = s"${label}.text"
       Triple(id, attribute, t.text.toString)
     })
 
@@ -168,7 +168,7 @@ object XmlShredder {
   def labelWithPrefix(node: Node): String =
     // We have to use null here b/c it can be returned by scala.xml.Node
     if(node.prefix == null) node.label
-    else s"${node.prefix}:${node.label}"
+    else s"${node.prefix}_${node.label}"
 }
 
 // An XML node plus its label
