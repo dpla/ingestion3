@@ -111,5 +111,5 @@ object RsHarvesterMain extends App {
   // Timing end and print results
   val end = System.currentTimeMillis()
   val recordCount = dataframe.count()
-  Utils.printRuntimeResults(end-start, recordCount)
+  Utils.printResults(end-start, recordCount)
 }

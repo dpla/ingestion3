@@ -2,6 +2,7 @@ package dpla.ingestion3
 
 import java.io.File
 
+import dpla.ingestion3.confs.{HarvestCmdArgs, Ingestion3Conf}
 import dpla.ingestion3.harvesters.api._
 import dpla.ingestion3.harvesters.file.NaraFileHarvestMain.getAvroWriter
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
@@ -11,7 +12,6 @@ import org.apache.avro.generic.GenericRecord
 import org.apache.log4j.LogManager
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
-import org.rogach.scallop.{ScallopConf, ScallopOption}
 
 
 object CdlHarvesterMain extends ApiHarvester {
@@ -32,23 +32,37 @@ object CdlHarvesterMain extends ApiHarvester {
     */
   def main(args: Array[String]): Unit = {
     // Parse and set the command line options
-    val conf = new CdlHarvestConf(args)
-    val outFile = new File(conf.outputFile.getOrElse("out"))
-    val queryParams = Map(
-      "query" -> conf.query.getOrElse("*:*"),
-      "rows" -> conf.rows.getOrElse("100"),
-      "api_key" -> conf.apiKey.getOrElse("MISSING API KEY")
-    )
+    val cmdArgs = new HarvestCmdArgs(args)
 
+    val outputDir = cmdArgs.output.toOption
+      .map(new File(_))
+      .getOrElse(throw new RuntimeException("No output specified"))
+    val confFile = cmdArgs.configFile.toOption
+      .map(_.toString)
+      .getOrElse(throw new RuntimeException("No conf file specified"))
+    val providerName = cmdArgs.providerName.toOption
+      .map(_.toString)
+      .getOrElse(throw new RuntimeException("No provider name specified"))
+
+    val i3Conf = new Ingestion3Conf(confFile, providerName)
+    val providerConf = i3Conf.load()
+
+    val queryParams: Map[String, String] = Map(
+      "query" -> providerConf.harvest.query,
+      "rows" -> providerConf.harvest.rows,
+      "api_key" -> providerConf.harvest.apiKey
+    ).collect{ case (key, Some(value)) => key -> value } // remove None values
+
+    println(queryParams)
     // Must do this before setting the avroWriter
-    outFile.getParentFile.mkdir()
-    Utils.deleteRecursively(outFile)
+    outputDir.getParentFile.mkdir()
+    Utils.deleteRecursively(outputDir)
 
     val schemaStr = new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc")
     val schema = new Schema.Parser().parse(schemaStr)
-    val avroWriter = getAvroWriter(outFile, schema)
+    val avroWriter = getAvroWriter(outputDir, schema)
 
-    startHarvest(outFile, queryParams, avroWriter, schema)
+    startHarvest(outputDir, queryParams, avroWriter, schema)
   }
 
   /**
@@ -106,42 +120,4 @@ object CdlHarvesterMain extends ApiHarvester {
         continueHarvest = false
     }
   }
-}
-
-/**
-  * CDL harvester command line parameters
-  *
-  * @param arguments
-  */
-class CdlHarvestConf(arguments: Seq[String]) extends ScallopConf(arguments) {
-  val outputFile: ScallopOption[String] = opt[String](
-    "outputFile",
-    required = true,
-    noshort = true,
-    validate = _.endsWith(".avro"),
-    descr = "Output file must end with .avro"
-  )
-
-  val apiKey: ScallopOption[String] = opt[String](
-    "apiKey",
-    required = true,
-    noshort = true,
-    validate = _.nonEmpty
-  )
-
-  val query: ScallopOption[String] = opt[String](
-    "query",
-    required = false,
-    noshort = true,
-    validate = _.nonEmpty
-  )
-
-  val rows: ScallopOption[String] = opt[String](
-    "rows",
-    required = false,
-    noshort = true,
-    validate = _.nonEmpty
-  )
-
-  verify()
 }
