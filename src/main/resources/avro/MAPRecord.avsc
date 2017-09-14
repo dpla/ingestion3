@@ -398,6 +398,13 @@
                     ]
                   },
                   {
+                    "name": "region",
+                    "type": [
+                        "null",
+                        "string"
+                    ]
+                  },
+                  {
                     "name": "state",
                     "type": [
                       "null",
@@ -924,7 +931,7 @@
           },
           {
             "name": "object",
-            "type": {
+            "type": [ "null", {
               "name": "ObjectEdmWebResource",
               "type": "record",
               "fields": [
@@ -956,7 +963,7 @@
                   ]
                 }
               ]
-            }
+            } ]
           },
           {
             "name": "preview",

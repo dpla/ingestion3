@@ -130,9 +130,9 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
     assert(row(0) === dplaPlace.name.orNull)
     assert(row(1) === dplaPlace.city.orNull)
     assert(row(2) === dplaPlace.county.orNull)
-    assert(row(3) === dplaPlace.state.orNull)
-    assert(row(4) === dplaPlace.country.orNull)
-    assert(row(5) === dplaPlace.region.orNull)
+    assert(row(3) === dplaPlace.region.orNull)
+    assert(row(4) === dplaPlace.state.orNull)
+    assert(row(5) === dplaPlace.country.orNull)
     assert(row(6) === dplaPlace.coordinates.orNull)
   }
 

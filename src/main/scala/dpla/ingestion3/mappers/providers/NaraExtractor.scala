@@ -17,7 +17,7 @@ class NaraExtractor(rawData:String) extends Extractor with XmlExtractionUtils wi
 
   override def getProviderBaseId(): Option[String] = Some("nara--" + itemUri.toString) //TODO can't figure this out.
 
-  override def build(): DplaMap = {
+  override def build(): Try[DplaMapData] = {
     Try {
       DplaMapData(
         DplaSourceResource(
@@ -53,9 +53,6 @@ class NaraExtractor(rawData:String) extends Extractor with XmlExtractionUtils wi
           preview = extractString("thumbnailFilename").map(new URI(_)).map(uriOnlyWebResource)
         )
       )
-    } match {
-      case Success(s) => s
-      case Failure(f) => DplaMapError(f.getMessage)
     }
   }
 

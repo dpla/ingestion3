@@ -47,7 +47,7 @@ class PaExtractor(rawData: String) extends Extractor with XmlExtractionUtils {
         s"does not occur at least twice in record: ${getProviderBaseId().getOrElse("No ID available!")}")
   }
 
-  def build: DplaMap = Try {
+  def build: Try[DplaMapData] = Try {
     DplaMapData(
       DplaSourceResource(
         // This method of using NodeSeq is required because of namespace issues.

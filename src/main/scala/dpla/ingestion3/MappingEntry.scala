@@ -2,23 +2,28 @@ package dpla.ingestion3
 
 import java.io.File
 
-import dpla.ingestion3.mappers.providers.{CdlExtractor, NaraExtractor, PaExtractor}
-import dpla.ingestion3.model.{DplaMap, DplaMapData, DplaMapError}
+import dpla.ingestion3.mappers.providers.{CdlExtractor, Extractor, NaraExtractor, PaExtractor}
+import dpla.ingestion3.model.{DplaMapData, RowConverter}
 import dpla.ingestion3.utils.Utils
 import org.apache.log4j.LogManager
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import java.io._
+
+import com.databricks.spark.avro._
+import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
+
+import scala.util.{Failure, Success}
 
 /**
   * Expects two parameters:
-  *   1) a path to the harvested data
-  *   2) a path to output the mapped data
+  * 1) a path to the harvested data
+  * 2) a path to output the mapped data
   *
-  *   Usage
-  *   -----
-  *   To invoke via sbt:
-  *     sbt "run-main dpla.ingestion3.MappingEntry /input/path/to/harvested/ /output/path/to/mapped/"
+  * Usage
+  * -----
+  * To invoke via sbt:
+  * sbt "run-main dpla.ingestion3.MappingEntry /input/path/to/harvested/ /output/path/to/mapped/"
   */
 
 object MappingEntry {
@@ -42,8 +47,6 @@ object MappingEntry {
 
     // Needed to serialize the successful mapped records
     implicit val dplaMapDataEncoder = org.apache.spark.sql.Encoders.kryo[DplaMapData]
-    // Need to map the mapping results
-    implicit val dplaMapEncoder = org.apache.spark.sql.Encoders.kryo[DplaMap]
 
     val spark = SparkSession.builder()
       .config(sparkConf)
@@ -52,10 +55,14 @@ object MappingEntry {
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
 
+    //these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
+    val dplaMapDataRowEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
+    val stringEncoder: ExpressionEncoder[String] = ExpressionEncoder()
+    val tupleRowStringEncoder: ExpressionEncoder[Tuple2[Row, String]] =
+      ExpressionEncoder.tuple(RowEncoder(model.sparkSchema), ExpressionEncoder())
+
     // Load the harvested record dataframe
-    val harvestedRecords = spark.read
-      .format("com.databricks.spark.avro")
-      .load(dataIn)
+    val harvestedRecords: DataFrame = spark.read.avro(dataIn)
 
     // Take the first harvested record in the dataFrame and get the provider value
     val shortName = harvestedRecords.take(1)(0).getAs[String]("provider").toLowerCase
@@ -71,35 +78,35 @@ object MappingEntry {
     }
 
     // Run the mapping over the Dataframe
-    val mappingResults = harvestedRecords.select("document").map(
-      record => {
-        extractorClass.getConstructor(classOf[String])
-          .newInstance(record.getAs[String]("document"))
-          .build
-      }
-    )
-
-    // TODO there is probably a much cleaner/better way of writing this.
-    val mappingSuccess = mappingResults
-      .filter(r => r.isInstanceOf[DplaMapData])
-      .map(r2 => r2.asInstanceOf[DplaMapData])
-
-    // TODO ditto ^^ This converts the Dataset to an Array[String], This is an easy way out for now.
-    val failures = mappingResults
-      .filter(r => r.isInstanceOf[DplaMapError])
-      .map(r2 => r2.asInstanceOf[DplaMapError]).map(f => f.errorMessage).collect()
+    val documents: Dataset[String] = harvestedRecords.select("document").as[String]
+    val mappingResults: Dataset[(Row, String)] = documents.map(document => map(extractorClass, document))(tupleRowStringEncoder)
 
     // Delete the output location if it exists
     Utils.deleteRecursively(new File(dataOut))
 
-    // Save successfully mapped records out to Avro file
-    mappingSuccess.toDF("document").write
-      .format("com.databricks.spark.avro")
-      .save(dataOut)
+
+    val successResults: Dataset[Row] = mappingResults
+          .filter(tuple => Option(tuple._1).isDefined)
+          .map(tuple => tuple._1)(dplaMapDataRowEncoder)
+
+    val failures:  Array[String] = mappingResults
+      .filter(tuple => Option(tuple._2).isDefined)
+      .map(tuple => tuple._2).collect()
+
+    successResults.toDF().write.avro(dataOut)
+
 
     // Summarize results
-    mappingSummary(harvestedRecords.count(), mappingSuccess.count(),failures, dataOut, shortName)
+    mappingSummary(harvestedRecords.count(), successResults.count(), failures, dataOut, shortName)
+
+    spark.stop()
   }
+
+  private def map(extractorClass: Class[_ <: Extractor], document: String): (Row, String) =
+    extractorClass.getConstructor(classOf[String]).newInstance(document).build() match {
+      case Success(dplaMapData) => (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
+      case Failure(exception) => (null, exception.getMessage)
+    }
 
   /**
     * Print mapping summary information
@@ -120,12 +127,12 @@ object MappingEntry {
 
     println(s"Harvested $harvestCount records")
     println(s"Mapped ${mapCount} records")
-    println(s"Failed to map ${harvestCount-mapCount} records.")
+    println(s"Failed to map ${harvestCount - mapCount} records.")
     if (mapCount != harvestCount)
       println(s"Saving error log to ${logDir.getAbsolutePath}")
-      val pw = new PrintWriter(
-        new File(s"${logDir.getAbsolutePath}/$shortName-mapping-errors-${System.currentTimeMillis()}.log"))
-      errors.foreach(f => pw.write(s"$f\n"))
-      pw.close()
+    val pw = new PrintWriter(
+      new File(s"${logDir.getAbsolutePath}/$shortName-mapping-errors-${System.currentTimeMillis()}.log"))
+    errors.foreach(f => pw.write(s"$f\n"))
+    pw.close()
   }
 }
