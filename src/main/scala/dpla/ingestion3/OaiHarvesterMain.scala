@@ -3,9 +3,11 @@ package dpla.ingestion3
 import java.io.File
 
 import dpla.ingestion3.utils.Utils
+import dpla.ingestion3.confs.{HarvestCmdArgs, Ingestion3Conf}
+
 import com.databricks.spark.avro._
-import dpla.ingestion3.confs.OaiHarvesterConf
-import org.apache.log4j.LogManager
+
+import org.apache.log4j.{LogManager, Logger}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
@@ -18,42 +20,58 @@ import scala.util.{Failure, Success, Try}
   */
 object OaiHarvesterMain {
 
-  val logger = LogManager.getLogger(OaiHarvesterMain.getClass)
-
   def main(args: Array[String]): Unit = {
-    val oaiConf = new OaiHarvesterConf(args.toSeq)
-    val oaiParams = oaiConf.load()
+    // Read in command line args
+    val cmdArgs = new HarvestCmdArgs(args)
 
-    // TODO print something pleasant.
-    Utils.deleteRecursively(new File(oaiParams.outputDir.get))
+    val outputDir = cmdArgs.output.toOption match {
+      case Some(o) => o
+    }
+    val confFile = cmdArgs.configFile.toOption match {
+      case Some(f) => f
+    }
+    val providerName = cmdArgs.providerName.toOption match {
+      case Some(p) => p
+    }
+    // Setup logger with dynamically named output file
+    val harvestLogger: Logger = LogManager.getLogger("ingestion3")
+    val appender = Utils.getFileAppender(providerName, "harvest")
+    harvestLogger.addAppender(appender)
+
+    // Load configuration from file
+    val i3Conf = new Ingestion3Conf(confFile, providerName)
+    val providerConf = i3Conf.load()
+
+    // TODO log the settings that are being used here...
+
+    // If the output directory already exists then delete it and its contents
+    if (new File(outputDir).exists())
+      harvestLogger.info(s"Output directory already exists. Deleting ${outputDir}...")
+      Utils.deleteRecursively(new File(outputDir))
 
     // Initiate spark session.
     val sparkConf = new SparkConf().setAppName("Oai Harvest")
-    // sparkMaster has a default value of local[*] if not provided.
     // TODO: will this default value work with EMR?
-    sparkConf.setMaster(oaiParams.sparkMaster.get)
+    sparkConf.setMaster(providerConf.spark.sparkMaster.get)
 
-    val spark = SparkSession.builder().config(sparkConf).getOrCreate()
+    val spark = SparkSession
+      .builder()
+      .config(sparkConf)
+      .getOrCreate()
+
     val sc = spark.sparkContext
 
     // Set options
     val readerOptions: Map[String, String] = Map(
-      "verb" -> oaiParams.verb,
-      "metadataPrefix" -> oaiParams.metadataPrefix,
-      "harvestAllSets" -> oaiParams.harvestAllSets,
-      "setlist" -> oaiParams.setlist,
-      "blacklist" -> oaiParams.blacklist,
-      "endpoint" -> oaiParams.endpoint
+      "verb" -> providerConf.harvest.verb,
+      "metadataPrefix" -> providerConf.harvest.metadataPrefix,
+      "harvestAllSets" -> providerConf.harvest.harvestAllSets,
+      "setlist" -> providerConf.harvest.setlist,
+      "blacklist" -> providerConf.harvest.blacklist,
+      "endpoint" -> providerConf.harvest.endpoint
     ).collect{ case (key, Some(value)) => key -> value } // remove None values
 
-    // These were already validated in OaiHarvesterConf so this is redundant but did not want
-    // to call .get() on an option to access the properties when saving the avro
-    val outputDir = oaiParams.outputDir match {
-      case Some(d) => d
-      case _ => throw new IllegalArgumentException("Output directory is not specified. Terminating run.")
-    }
-
-    val provider = oaiParams.provider match {
+    val provider = providerConf.provider match {
       case Some(p) => p
       case _ => throw new IllegalArgumentException("Provider is not specified. Terminating run.")
     }
@@ -65,6 +83,9 @@ object OaiHarvesterMain {
         .load())
     }
 
+    harvestLogger.info(s"Beginning ${provider} harvest")
+    val startTime = System.currentTimeMillis()
+
     runHarvest() match {
       case Success(results) =>
         results.persist(StorageLevel.DISK_ONLY)
@@ -73,7 +94,8 @@ object OaiHarvesterMain {
           .withColumn("mimetype", lit("application_xml"))
 
         // Log the results of the harvest
-        logger.info(s"Harvested ${dataframe.count()} records")
+        val formatter = java.text.NumberFormat.getIntegerInstance
+        harvestLogger.info(s"Successfully harvested ${formatter.format(dataframe.count())} records")
 
         val schema = dataframe.schema
 
@@ -82,7 +104,12 @@ object OaiHarvesterMain {
           .option("avroSchema", schema.toString)
           .avro(outputDir)
 
-      case Failure(f) => logger.fatal(s"Unable to harvest records. ${f.getMessage}")
+        harvestLogger.info(s"Records saved to ${outputDir}")
+        val endTime = System.currentTimeMillis()
+        // TODO passing *this* logger to other classes so all relevant output is in single file
+        Utils.logResults(endTime-startTime, dataframe.count(), harvestLogger)
+
+      case Failure(f) => harvestLogger.fatal(s"Unable to harvest records. ${f.getMessage}")
     }
     // Stop spark session.
     sc.stop()

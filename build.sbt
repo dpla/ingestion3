@@ -8,8 +8,16 @@ lazy val root = (project in file("."))
     Defaults.itSettings,
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.0.1" % "it,test",
-      "org.apache.spark" %% "spark-core" % "2.0.1" exclude("org.scalatest", "scalatest_2.11"),
-      "org.apache.spark" %% "spark-sql" % "2.0.1" exclude("org.scalatest", "scalatest_2.11"),
+
+      /**
+        * @sw I updated spark core and spark sql from 2.0.1 to 2.1.0 to
+        *    resovle the bulid issues I was having (couldn't resolve
+        *    org.arpache.spark.Schema)
+        *
+        *    TODO test with 2.0.1 on someone else's machine during PR review?
+        */
+      "org.apache.spark" %% "spark-core" % "2.1.0" exclude("org.scalatest", "scalatest_2.11"),
+      "org.apache.spark" %% "spark-sql" % "2.1.0" exclude("org.scalatest", "scalatest_2.11"),
       "org.apache.ant" % "ant" % "1.10.1",
       "com.databricks" %% "spark-avro" % "3.2.0",
       "org.json4s" %% "json4s-core" % "3.2.11" % "provided",
