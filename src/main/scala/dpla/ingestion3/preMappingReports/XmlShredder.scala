@@ -20,17 +20,17 @@ object XmlShredder {
     * Examples:
     *   <a id='foo'/>
     *   id: [ID of record being shredded]
-    *   attribute: a.@id
+    *   attribute: a_@id
     *   value:     foo
     *
     *   <a>foo</a>
     *   id: [ID of record being shredded]
-    *   attribute: a.text()
+    *   attribute: a_text
     *   value:     foo
     *
     *   <a><b><c>foo</c></b></a>
     *   id: [ID of record being shredded]
-    *   attribute: a.b.c.text()
+    *   attribute: a_b_c_text
     *   value:     foo
     *
     * Any XML parsing errors fail silently. This is based on these assumptions:
@@ -59,7 +59,7 @@ object XmlShredder {
     * The label is actually the concatenated labels of a node and all its ancestors.
     * For example, given this xml:
     *   <a><b><c>foo</c></b></a>
-    *   The label for the c node is "a.b.c"
+    *   The label for the c node is "a_b_c"
     * The case class stores the label so that it doesn't have to be constructed
     * for each triple via another traversal of the XML record.
     *
@@ -130,7 +130,7 @@ object XmlShredder {
 
     // Map attributes to Triples.
     val attributes: List[Triple] = node.attributes.flatMap(attr => {
-      val attrLabel = s"${label}.@${attr.key}"
+      val attrLabel = s"${label}_@${attr.key}"
       attr.value.map(v => Triple(id, attrLabel, v.text.toString))
     }).toList
 
@@ -138,7 +138,7 @@ object XmlShredder {
     val namespaces: List[Triple] =
       if(node.namespace.isEmpty) List()
       else {
-        val attribute = s"${label}.@xmlns"
+        val attribute = s"${label}_@xmlns"
         List(Triple(id, attribute, node.namespace))
       }
 
@@ -148,13 +148,13 @@ object XmlShredder {
 
     // Map text nodes Triples.
     val text: List[Triple] = textNodes.map(t => {
-      val attribute = s"${label}.text"
+      val attribute = s"${label}_text"
       Triple(id, attribute, t.text.toString)
     })
 
     // Map xml nodes to NodeWithLabels.
     val newNodes: List[NodeWithLabel] = xmlNodes.map(child => {
-      val childLabel = s"${label}.${labelWithPrefix(child)}"
+      val childLabel = s"${label}_${labelWithPrefix(child)}"
       NodeWithLabel(childLabel, child)
     })
 
@@ -168,13 +168,5 @@ object XmlShredder {
   def labelWithPrefix(node: Node): String =
     // We have to use null here b/c it can be returned by scala.xml.Node
     if(node.prefix == null) node.label
-    else s"${node.prefix}_${node.label}"
+    else s"${node.prefix}.${node.label}"
 }
-
-// An XML node plus its label
-case class NodeWithLabel(label: String,
-                         node: Node)
-
-case class Triple(id: String,
-                  attribute: String,
-                  value: String)
