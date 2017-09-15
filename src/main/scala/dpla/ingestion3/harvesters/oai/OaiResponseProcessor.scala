@@ -159,7 +159,7 @@ object OaiResponseProcessor {
     */
   def getOaiErrorCode(xml: NodeSeq): Try[Unit] = Try {
     if ((xml \ "error").nonEmpty)
-      throw new OaiHarvesterException((xml \ "OAI-PMH" \ "error").text.trim)
+      throw new OaiHarvesterException((xml \ "error").text.trim)
   }
 
   /**

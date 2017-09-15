@@ -1,44 +1,51 @@
 package dpla.ingestion3.harvesters.api
 
-import java.io.File
-
-import dpla.ingestion3.utils.Utils
 import org.apache.avro.Schema
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.DataFrame
 import com.databricks.spark.avro._
+import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.harvesters.Harvester
+import dpla.ingestion3.harvesters.file.NaraFileHarvestMain._
+import dpla.ingestion3.utils.FlatFileIO
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.{GenericData, GenericRecord}
+import org.apache.log4j.Logger
+
+import scala.util.Try
 
 
-trait ApiHarvester {
+abstract class ApiHarvester(shortName: String,
+                            conf: i3Conf,
+                            outputDir: String,
+                            harvestLogger: Logger)
+  extends Harvester(shortName, conf, outputDir, harvestLogger) {
+
+  // Abstract method queryParams should set base query parameters for API call.
+  protected val queryParams: Map[String, String]
+
+  // Abstract method doHarvest should execute the harvest and save (@see saveOut)
+  protected def localApiHarvest: Unit
+
+  // Schema for harvested data.
+  protected val schema: Schema = {
+    val schemaStr = new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc")
+    new Schema.Parser().parse(schemaStr)
+  }
 
   /**
-    * Method for the provider specific harvester to implement. This is the bulk
-    * of the harvester and should contain the query, ID selection, ApiRecord construction
-    * and loop control.
-    *
-    * @param queryParams Map of query parameters
-    * @param avroWriter Writer
-    * @param schema Schema to apply to data
+    * This is lazy b/c queryParams should be printed before avroWriter is set.
+    * @see doHarvest
     */
-  def doHarvest(queryParams: Map[String, String],
-                avroWriter: DataFileWriter[GenericRecord],
-                schema: Schema)
+  protected lazy val avroWriter: DataFileWriter[GenericRecord] =
+  getAvroWriter(outputFile, schema)
 
   /**
     * Saves the records
     *
-    * @param avroWriter -
     * @param docs - List of ApiRecords to save out
-    * @param schema - Avro Schema to apply
-    * @param shortName - Provider's abbreviated name [e.g. cdl, mdl, nara]
-    * @param mimeType - application_json, application_xml
     */
-  def saveOut(avroWriter: DataFileWriter[GenericRecord],
-              docs: List[ApiRecord],
-              schema: Schema,
-              shortName: String,
-              mimeType: String): Unit = {
+  protected def saveOut(docs: List[ApiRecord]): Unit = {
+
     docs.foreach(doc => {
       val startTime = System.currentTimeMillis()
       val unixEpoch = startTime / 1000L
@@ -55,36 +62,18 @@ trait ApiHarvester {
   }
 
   /**
-    * Generalized driver for ApiHarvesters invokes the local doHarvest() method and reports
-    * summary information
-    *
-    * @param queryParams
-    * @param avroWriter
-    * @param schema
+    * Generalized driver for ApiHarvesters invokes localApiHarvest() method and reports
+    * summary information.
     */
-  def startHarvest(outFile: File,
-                   queryParams: Map[String,String],
-                   avroWriter: DataFileWriter[GenericRecord],
-                   schema: Schema): Unit = {
+  protected def runHarvest: Try[DataFrame] = Try{
 
     avroWriter.setFlushOnEveryBlock(true)
 
-    // Runtime tracking
-    val startTime = System.currentTimeMillis()
-
     // Calls the local implementation
-    doHarvest(queryParams, avroWriter, schema)
+    localApiHarvest
 
     avroWriter.close()
 
-    val endTime = System.currentTimeMillis()
-
-    val spark = SparkSession.builder().master("local").getOrCreate()
-    val recordCount = spark.read.avro(outFile.toString).count()
-    spark.stop()
-
-    // Summarize results
-    Utils.printResults(endTime-startTime, recordCount)
+    spark.read.avro(outputDir)
   }
-
 }

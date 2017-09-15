@@ -91,7 +91,7 @@ object Utils {
     * Print the results of an activity
     *
     * Example:
-    *   Harvest count: 242924 records harvested
+    *   Record count: 242924 records harvested
     *   Runtime: 4 minutes 24 seconds
     *   Throughput: 920 records/second
     *
