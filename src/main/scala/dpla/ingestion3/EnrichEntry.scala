@@ -3,11 +3,13 @@ package dpla.ingestion3
 import java.io.File
 
 import dpla.ingestion3.enrichments.EnrichmentDriver
-import dpla.ingestion3.model.DplaMapData
+import dpla.ingestion3.model.{DplaMapData, ModelConverter, RowConverter}
 import dpla.ingestion3.utils.Utils
 import org.apache.log4j.LogManager
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Row, SparkSession}
+import com.databricks.spark.avro._
+import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 
 /**
   * Expects two parameters:
@@ -38,8 +40,6 @@ object EnrichEntry {
       .setAppName("Enrichment")
       // TODO there should be a central place to store the sparkMaster
       .setMaster("local[*]")
-      // TODO: This spark.serializer is a kludge to get around serialization issues. Will be fixed in future ticket
-      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
 
     implicit val dplaMapDataEncoder = org.apache.spark.sql.Encoders.kryo[DplaMapData]
 
@@ -51,35 +51,32 @@ object EnrichEntry {
 
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
+    val dplaMapDataRowEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
 
     // Load the mapped records
-    val mappedRecords = spark.read
-      .format("com.databricks.spark.avro")
-      .load(dataIn)
-      .as[DplaMapData]
-
-    // Create a broadcast enrichment driver
-    val enrichment = sc.broadcast(new EnrichmentDriver)
+    val mappedRows = spark.read.avro(dataIn)
 
     // Run the enrichments over the Dataframe
-    val enrichedRecords = mappedRecords.map(
-      record => {
-        enrichment.value.enrich(record)
+    val enrichedRows = mappedRows.map(
+      row => {
+        val dplaMapData = ModelConverter.toModel(row)
+        val enrichedDplaMapData = new EnrichmentDriver().enrich(dplaMapData)
+        RowConverter.toRow(enrichedDplaMapData, model.sparkSchema)
       }
-    )
+    )(dplaMapDataRowEncoder)
 
     // Delete the output location if it exists
     Utils.deleteRecursively(new File(dataOut))
 
     // Save mapped records out to Avro file
-    enrichedRecords.toDF("document").write
+    enrichedRows.toDF().write
       .format("com.databricks.spark.avro")
       .save(dataOut)
 
 
     // Gather some stats
-    val mappedRecordCount = mappedRecords.count()
-    val enrichedRecordCount = enrichedRecords.count()
+    val mappedRecordCount = mappedRows.count()
+    val enrichedRecordCount = enrichedRows.count()
 
     sc.stop()
 

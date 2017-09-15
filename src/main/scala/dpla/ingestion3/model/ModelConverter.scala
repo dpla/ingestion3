@@ -71,9 +71,9 @@ object ModelConverter {
     name = optionalString(row, 0),
     city = optionalString(row, 1),
     county = optionalString(row, 2),
-    state = optionalString(row, 3),
-    country = optionalString(row, 4),
-    region = optionalString(row, 5),
+    region = optionalString(row, 3),
+    state = optionalString(row, 4),
+    country = optionalString(row, 5),
     coordinates = optionalString(row, 6)
   )
 

@@ -210,10 +210,18 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
     assert(testResult1.name === Some("foo"))
     assert(testResult1.city === Some("bar"))
     assert(testResult1.county === Some("baz"))
-    assert(testResult1.state === Some("buzz"))
-    assert(testResult1.country === Some("Booga"))
-    assert(testResult1.region === Some("Wooga"))
+    assert(testResult1.region === Some("buzz"))
+    assert(testResult1.state === Some("Booga"))
+    assert(testResult1.country === Some("Wooga"))
     assert(testResult1.coordinates === Some("Oooga"))
+
+    assert(testResult2.name === None)
+    assert(testResult2.city === None)
+    assert(testResult2.county === None)
+    assert(testResult2.region === None)
+    assert(testResult2.state === None)
+    assert(testResult2.country === None)
+    assert(testResult2.coordinates === None)
   }
 
   it should "convert an OreAggregation" in {

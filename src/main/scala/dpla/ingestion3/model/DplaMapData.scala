@@ -18,16 +18,6 @@ object DplaMapData {
   type LiteralOrUri = Either[String,URI]
 }
 
-sealed trait DplaMap
-
-/**
-  * Class for describing mapping errors
-  * @param errorMessage
-  */
-// TODO Work out additional useful properties and useful error reporting
-case class DplaMapError (
-                          errorMessage: String
-                         ) extends DplaMap
 /**
   * Container for the classes that represent an item in DPLA MAP.
   *
@@ -41,7 +31,7 @@ case class DplaMapData (
                          sourceResource: DplaSourceResource,
                          edmWebResource: EdmWebResource,
                          oreAggregation: OreAggregation
-                       ) extends DplaMap
+                       )
 
 //Core Classes
 

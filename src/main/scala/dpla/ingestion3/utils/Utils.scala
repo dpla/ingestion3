@@ -2,17 +2,15 @@ package dpla.ingestion3.utils
 
 import java.io.File
 import java.net.URL
-
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.io.SequenceFile.Reader
-import org.apache.hadoop.io.Text
+import java.text.SimpleDateFormat
+import java.util.Calendar
 
 import scala.xml.Node
 import java.util.concurrent.TimeUnit
 
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.http.client.fluent.Request
+import org.apache.log4j.{FileAppender, Logger, PatternLayout}
 
 import scala.util.{Failure, Success, Try}
 
@@ -100,7 +98,8 @@ object Utils {
     * @param runtime Runtime in milliseconds
     * @param recordCount Number of records output
     */
-  def printResults(runtime: Long, recordCount: Long): Unit = {
+  def logResults(runtime: Long, recordCount: Long, logger: Logger): Unit = {
+    // TODO figure out a better way to share a logger...
     val formatter = java.text.NumberFormat.getIntegerInstance
     val minutes: Long = TimeUnit.MILLISECONDS.toMinutes(runtime)
     val seconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) -
@@ -109,9 +108,9 @@ object Utils {
     // add 1 to avoid divide by zero error
     val recordsPerSecond: Long = recordCount/runtimeInSeconds
 
-    println(s"File count: ${formatter.format(recordCount)}")
-    println(s"Runtime: $minutes:$seconds")
-    println(s"Throughput: ${formatter.format(recordsPerSecond)} records/second")
+    logger.info(s"Record count: ${formatter.format(recordCount)}")
+    logger.info(s"Runtime: $minutes:$seconds")
+    logger.info(s"Throughput: ${formatter.format(recordsPerSecond)} records/second")
   }
 
 
@@ -151,7 +150,7 @@ object Utils {
     * @param recordsHarvestedCount Number of records in the output directory
     */
 
-  def printRuntimeResults(runtime: Long, recordsHarvestedCount: Long): Unit = {
+  def printResults(runtime: Long, recordsHarvestedCount: Long): Unit = {
     // Make things pretty
     val formatter = java.text.NumberFormat.getIntegerInstance
     val minutes: Long = TimeUnit.MILLISECONDS.toMinutes(runtime)
@@ -164,5 +163,26 @@ object Utils {
     println(s"\n\nFile count: ${formatter.format(recordsHarvestedCount)}")
     println(s"Runtime: $minutes:$seconds")
     println(s"Throughput: ${formatter.format(recordsPerSecond)} records/second")
+  }
+
+  /**
+    * Uses runtime information to create a log4j file appender.
+    *
+    * @param provider - Name partner
+    * @param process - Process name [harvest, mapping, enrichment]
+    * @return FileAppender
+    */
+  def getFileAppender(provider: String, process: String): FileAppender = {
+    val layout = new PatternLayout()
+    layout.setConversionPattern("[%p] %d %c %M - %m%n")
+
+    // Date formatting for the file name
+    val format = new SimpleDateFormat("y-M-d")
+    val date = format.format(Calendar.getInstance().getTime())
+
+    new FileAppender(
+      layout,
+      s"log/${provider}-${process}-${date}.log",
+      true)
   }
 }

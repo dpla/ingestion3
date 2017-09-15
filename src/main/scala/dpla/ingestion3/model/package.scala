@@ -2,11 +2,15 @@ package dpla.ingestion3
 
 import java.net.URI
 
+import com.databricks.spark.avro.SchemaConverters
 import dpla.ingestion3.model.DplaMapData.LiteralOrUri
+import dpla.ingestion3.utils.FlatFileIO
 import org.json4s.JsonAST.JObject
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import dpla.ingestion3.utils.Utils.generateMd5
+import org.apache.avro.Schema
+import org.apache.spark.sql.types.StructType
 
 
 package object model {
@@ -99,5 +103,8 @@ package object model {
 
     compact(render(jobj))
   }
+
+  val avroSchema: Schema = new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
+  val sparkSchema: StructType = SchemaConverters.toSqlType(avroSchema).dataType.asInstanceOf[StructType]
 
 }
