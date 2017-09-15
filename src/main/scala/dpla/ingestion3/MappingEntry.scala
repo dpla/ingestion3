@@ -2,7 +2,7 @@ package dpla.ingestion3
 
 import java.io.File
 
-import dpla.ingestion3.mappers.providers.{CdlExtractor, Extractor, NaraExtractor, PaExtractor}
+import dpla.ingestion3.mappers.providers._
 import dpla.ingestion3.model.{DplaMapData, RowConverter}
 import dpla.ingestion3.utils.Utils
 import org.apache.log4j.LogManager
@@ -70,6 +70,7 @@ object MappingEntry {
     // Match on the shortName to select the correct Extractor
     val extractorClass = shortName match {
       case "cdl" => classOf[CdlExtractor]
+      case "mdl" => classOf[MdlExtractor]
       case "nara" => classOf[NaraExtractor]
       case "pa digital" => classOf[PaExtractor]
       case _ =>
