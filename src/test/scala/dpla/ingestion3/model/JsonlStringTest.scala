@@ -19,14 +19,15 @@ class JsonlStringTest extends FlatSpec {
     val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord)
     val jvalue = parse(s)
     assert(
-      compact(render(jvalue \ "id")) == "\"7738a840caff15224f50cf17eade27e6\""
+      compact(render(jvalue \ "_source" \ "id")) ==
+        "\"7738a840caff15224f50cf17eade27e6\""
     )
   }
 
   it should "render a field that's a sequence" in {
     val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord)
     val jvalue = parse(s)
-    val title = jvalue \ "sourceResource" \ "title"
+    val title = jvalue \ "_source" \ "sourceResource" \ "title"
     assert(title.isInstanceOf[JArray])
     assert(compact(render(title(0))) == "\"The Title\"")
   }
@@ -34,7 +35,7 @@ class JsonlStringTest extends FlatSpec {
   it should "render a field that requires a map() on a sequence" in {
     val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord)
     val jvalue = parse(s)
-    val collection = jvalue \ "sourceResource" \ "collection"
+    val collection = jvalue \ "_source" \ "sourceResource" \ "collection"
     assert(collection.isInstanceOf[JArray])
     assert(
       compact(render(collection(0))) == "{\"title\":\"The Collection\"}"
@@ -46,8 +47,21 @@ class JsonlStringTest extends FlatSpec {
     val s: String = jsonlRecord(EnrichedRecordFixture.minimalEnrichedRecord)
     val jvalue = parse(s)
     assert(
-      compact(render(jvalue \ "sourceResource" \ "collection")) == "[]"
+      compact(render(jvalue \ "_source" \ "sourceResource" \ "collection")) ==
+        "[]"
     )
+  }
+
+  it should "use the same ingestDate across multiple calls" in {
+    val s1: String = ingestDate
+    Thread.sleep(100)
+    val s2: String = ingestDate
+    assert(s1 == s2)
+  }
+
+  "ingestDate" should "return a string in the correct format" in {
+    assert(ingestDate matches
+           """^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z$""")
   }
 
 }

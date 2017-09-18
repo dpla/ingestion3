@@ -11,6 +11,8 @@ import org.json4s.jackson.JsonMethods._
 import dpla.ingestion3.utils.Utils.generateMd5
 import org.apache.avro.Schema
 import org.apache.spark.sql.types.StructType
+import java.util.{Calendar, TimeZone}
+import java.text.SimpleDateFormat
 
 
 package object model {
@@ -36,70 +38,113 @@ package object model {
 
   def eitherStringOrUri(uri: URI): LiteralOrUri = new Right(uri)
 
+  lazy val ingestDate: String = {
+    val now = Calendar.getInstance().getTime
+    val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+    val tz = TimeZone.getTimeZone("UTC")
+    sdf.setTimeZone(tz)
+    sdf.format(now)
+  }
+
+  lazy val providerToken: (Option[URI]) => String = {
+    (uri: Option[URI]) => {
+      uri match {
+        case Some(x) =>
+          val pat = """.*/([a-z]+)$""".r
+          val pat(token) = x.toString
+          token
+        case _ =>
+          throw new RuntimeException("Invalid provider URI")
+      }
+    }
+  }
+
   def jsonlRecord(record: DplaMapData): String = {
     val recordID: String = generateMd5(Some(record.oreAggregation.uri.toString))
     val jobj: JObject =
-      ("id" -> recordID) ~
-      ("@context" -> "http://dp.la/api/items/context") ~
-      ("@id" -> ("http://dp.la/api/items/" + recordID)) ~
-      ("admin" ->
-        ("sourceResource" -> ("title" -> record.sourceResource.title))) ~
-      ("aggregatedCHO" -> "#sourceResource") ~
-      ("dataProvider" -> record.oreAggregation.dataProvider.name) ~
-      ("ingestDate" -> "FIXME") ~  // FIXME: no place in MAPv4 schema for this
-      ("ingestType" -> "item") ~
-      ("isShownAt" -> record.edmWebResource.uri.toString) ~
-      ("object" -> record.oreAggregation.`object`
-                         .map{o => o.uri.toString}) ~
-      ("originalRecord" -> record.oreAggregation.originalRecord) ~
-      ("provider" -> record.oreAggregation.provider.name) ~
-      ("sourceResource" ->
-        ("@id" ->
-          ("http://dp.la/api/items/" + recordID + "#SourceResource")) ~
-        ("collection" ->
-          record.sourceResource.collection.map {c => "title" -> c.title}) ~
-        ("contributor" -> record.sourceResource.contributor.map{c => c.name}) ~
-        ("creator" -> record.sourceResource.creator.map{c => c.name}) ~
-        ("date" ->
-          record.sourceResource.date.map { d =>
-            ("displayDate" -> d.originalSourceDate) ~
+      ("_type" -> "item") ~
+      // For _id, we should have a provider token like "nara" or "ia"
+      ("_id" ->
+        (s"${providerToken(record.oreAggregation.provider.uri)}--" +
+         s"${record.oreAggregation.uri.toString}")) ~
+      ("_source" ->
+        ("id" -> recordID) ~
+        ("_id" ->
+          (s"${providerToken(record.oreAggregation.provider.uri)}--" +
+           s"${record.oreAggregation.uri.toString}")) ~
+        ("@context" -> "http://dp.la/api/items/context") ~
+        ("@id" -> ("http://dp.la/api/items/" + recordID)) ~
+        ("admin" ->
+          ("sourceResource" -> ("title" -> record.sourceResource.title))) ~
+        ("aggregatedCHO" -> "#sourceResource") ~
+        ("dataProvider" -> record.oreAggregation.dataProvider.name) ~
+        ("ingestDate" -> ingestDate) ~
+        ("ingestType" -> "item") ~
+        ("isShownAt" -> record.edmWebResource.uri.toString) ~
+        ("object" -> record.oreAggregation.`object`.map{o => o.uri.toString}) ~
+        ("originalRecord" ->
+          ("stringValue" -> record.oreAggregation.originalRecord )) ~
+        ("provider" ->
+          ("@id" -> record.oreAggregation.provider.uri
+                      .getOrElse(
+                        throw new RuntimeException("Invalid Provider URI")
+                      ).toString) ~
+          ("name" -> record.oreAggregation.provider.name)) ~
+        ("sourceResource" ->
+          ("@id" ->
+            ("http://dp.la/api/items/" + recordID + "#SourceResource")) ~
+          ("collection" ->
+            record.sourceResource.collection.map {c => "title" -> c.title}) ~
+          ("contributor" -> record.sourceResource.contributor.map{c => c.name}) ~
+          ("creator" -> record.sourceResource.creator.map{c => c.name}) ~
+          ("date" ->
+            record.sourceResource.date.map { d =>
+              ("displayDate" -> d.originalSourceDate) ~
               ("begin" -> d.begin) ~
               ("end" -> d.end)
-          }) ~
-        ("description" -> record.sourceResource.description) ~
-        ("extent" -> record.sourceResource.extent) ~
-        ("format" -> record.sourceResource.format) ~
-        ("identifier" -> record.sourceResource.identifier) ~
-        ("language" ->
-          record.sourceResource.language.map { lang =>
-            ("name" -> lang.providedLabel) ~ ("iso639_3" -> lang.concept)
-          }) ~
-        ("publisher" -> record.sourceResource.publisher.map{p => p.name}) ~
-        ("relation" ->
-          record.sourceResource.relation.map { r =>
-            r.merge.toString
-          })  ~
-        ("rights" -> record.sourceResource.rights) ~
-        // FIXME: Wait til open PR for geo enrichments gets merged before
-        // implementing Spatial.
-        ("spatial" -> "FIXME") ~
-        /*
-         * FIXME: specType is unaccounted for in MAPv4 and DplaMapData.
-         * It was edm:hasType in MAPv3.1.  It was optional. Shall we omit it?
-         */
-        ("specType" -> "FIXME") ~
-        // stateLocatedIn is being omitted here ...
-        ("subject" -> record.sourceResource.subject.map{s => s.providedLabel}) ~
-        ("temporal" ->
-          record.sourceResource.temporal.map{ t =>
-            ("displayDate" -> t.originalSourceDate) ~
+            }) ~
+          ("description" -> record.sourceResource.description) ~
+          ("extent" -> record.sourceResource.extent) ~
+          ("format" -> record.sourceResource.format) ~
+          ("identifier" -> record.sourceResource.identifier) ~
+          ("language" ->
+            record.sourceResource.language.map { lang =>
+              ("name" -> lang.providedLabel) ~ ("iso639_3" -> lang.concept)
+            }) ~
+          ("publisher" -> record.sourceResource.publisher.map{p => p.name}) ~
+          ("relation" ->
+            record.sourceResource.relation.map { r =>
+              r.merge.toString
+            })  ~
+          ("rights" -> record.sourceResource.rights) ~
+          ("spatial" ->
+            record.sourceResource.place.map { place =>
+              ("name" -> place.name) ~
+              ("city" -> place.city) ~
+              ("county" -> place.county) ~
+              ("state" -> place.state) ~
+              ("country" -> place.country) ~
+              ("coordinates" -> place.coordinates)
+            }) ~
+          /*
+           * FIXME: specType is unaccounted for in DplaMapData.
+           * It was edm:hasType in MAPv3.1, and was optional.
+           */
+          // ("specType" -> "FIXME") ~
+          // stateLocatedIn is omitted.
+          ("subject" -> record.sourceResource.subject.map{s => s.providedLabel}) ~
+          ("temporal" ->
+            record.sourceResource.temporal.map{ t =>
+              ("displayDate" -> t.originalSourceDate) ~
               ("begin" -> t.begin) ~
               ("end" -> t.end)
-          }) ~
-        ("title" -> record.sourceResource.title) ~
-        ("type" -> record.sourceResource.`type`)
-      ) ~
-      ("type" -> "ore:Aggregation")
+            }) ~
+          ("title" -> record.sourceResource.title) ~
+          ("type" -> record.sourceResource.`type`)
+        ) ~
+        ("@type" -> "ore:Aggregation")
+      )
+
 
     compact(render(jobj))
   }

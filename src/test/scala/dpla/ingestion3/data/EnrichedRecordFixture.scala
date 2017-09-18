@@ -56,6 +56,21 @@ object EnrichedRecordFixture {
           end = Some("1939-12-31")
         )
       ),
+      place = Seq(
+        DplaPlace(
+          name = Some("Somerville, MA, United States"),
+          city = Some("Somerville"),
+          county = Some("Middlesex County"),
+          country = Some("United States"),
+          coordinates = Some("42.3876,-71.0995")
+        ),
+        DplaPlace(
+          name = Some("California"),
+          country = Some("United States")
+          // Unspecified fields verify serialization of places without optional
+          // fields.
+        )
+      ),
       title = Seq("The Title"),
       `type` = Seq("image", "text")
     ),
@@ -69,6 +84,7 @@ object EnrichedRecordFixture {
       uri = new URI("https://example.org/record/123"),
       originalRecord = "The Original Record",
       provider = EdmAgent(
+        uri = Some(new URI("http://dp.la/api/contributor/thedataprovider")),
         name = Some("The Provider")
       ),
       hasView = Seq(EdmWebResource(uri = new URI("https://example.org/"))),
@@ -101,7 +117,8 @@ object EnrichedRecordFixture {
       uri = new URI(""),
       originalRecord = "The Original Record",
       provider = EdmAgent(
-        name = Some("The Provider")
+        name = Some("The Provider"),
+        uri = Some(new URI("http://dp.la/api/contributor/thedataprovider"))
       ),
       hasView = Seq(EdmWebResource(uri = new URI("https://example.org/"))),
       intermediateProvider = Some(
