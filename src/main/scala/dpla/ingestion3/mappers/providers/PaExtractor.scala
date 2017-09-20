@@ -13,29 +13,6 @@ class PaExtractor(rawData: String) extends Extractor with XmlExtractionUtils {
 
   implicit val xml: NodeSeq = XML.loadString(rawData)
 
-  def agent = EdmAgent(
-    name = Some("Pennsylvania Digital Collections Project"),
-    uri = Some(new URI("http://dp.la/api/contributor/pa"))
-  )
-
-  // Get the last occurrence of the identifier property, there
-  // must be at least three dc:identifier properties for there
-  // to be a thumbnail
-  def thumbnail(): ZeroToOne[EdmWebResource] = {
-    val ids = extractStrings(xml \ "metadata" \\ "identifier")
-    if (ids.size > 2)
-      Option(uriOnlyWebResource(new URI(ids.last)))
-    else
-      None
-  }
-
-  def dataProvider(): ExactlyOne[EdmAgent] = {
-    val contributors = extractStrings(xml \ "metadata" \\ "contributor")
-    if (contributors.nonEmpty)
-      nameOnlyAgent(contributors.last)
-    else
-      throw new Exception("Missing required property dataProvider because dc:contributor is empty")
-  }
   // Get the second occurrence of the dc:identifier property
   def itemUri(): ExactlyOne[URI] = {
     val ids = extractStrings(xml \ "metadata" \\ "identifier")
@@ -47,9 +24,12 @@ class PaExtractor(rawData: String) extends Extractor with XmlExtractionUtils {
         s"does not occur at least twice in record: ${getProviderBaseId().getOrElse("No ID available!")}")
   }
 
-  def build: Try[DplaMapData] = Try {
-    DplaMapData(
-      DplaSourceResource(
+  override def getProviderBaseId(): Option[String] = extractString(xml \ "header" \ "identifier")
+
+  def build: Try[OreAggregation] = Try {
+    OreAggregation(
+      dplaUri = mintDplaItemUri(),
+      sourceResource = DplaSourceResource(
         // This method of using NodeSeq is required because of namespace issues.
         collection = extractStrings(xml \ "metadata" \\ "relation").headOption.map(nameOnlyCollection).toSeq,
         contributor = extractStrings(xml \ "metadata" \\ "contributor").dropRight(1).map(nameOnlyAgent),
@@ -68,24 +48,36 @@ class PaExtractor(rawData: String) extends Extractor with XmlExtractionUtils {
         title = extractStrings(xml \ "metadata" \\ "title"),
         `type` = extractStrings(xml \ "metadata" \\ "type").filter(isDcmiType)
       ),
-
-      EdmWebResource(
-        // TODO is this the correct mapping for uri? What about OreAgg.`object`?
-        uri = itemUri,
-        fileFormat = extractStrings("dc:format")
-      ),
-
-      OreAggregation(
-        uri = mintDplaItemUri(),
-        //below will throw if not enough contributors
-        dataProvider = dataProvider(),
-        originalRecord = rawData,
-        provider = agent,
-        preview = thumbnail
-        // TODO what about `object` in this context? Assume no implementation
-      )
+      //below will throw if not enough contributors
+      dataProvider = extractDataProvider(),
+      originalRecord = rawData,
+      provider = agent,
+      isShownAt = EdmWebResource(uri = itemUri(), fileFormat = extractStrings("dc:format")),
+      preview = thumbnail()
     )
   }
 
-  override def getProviderBaseId(): Option[String] = extractString(xml \ "header" \ "identifier")
+  def agent = EdmAgent(
+    name = Some("Pennsylvania Digital Collections Project"),
+    uri = Some(new URI("http://dp.la/api/contributor/pa"))
+  )
+
+  // Get the last occurrence of the identifier property, there
+  // must be at least three dc:identifier properties for there
+  // to be a thumbnail
+  def thumbnail(): ZeroToOne[EdmWebResource] = {
+    val ids = extractStrings(xml \ "metadata" \\ "identifier")
+    if (ids.size > 2)
+      Option(uriOnlyWebResource(new URI(ids.last)))
+    else
+      None
+  }
+
+  def extractDataProvider(): ExactlyOne[EdmAgent] = {
+    val contributors = extractStrings(xml \ "metadata" \\ "contributor")
+    if (contributors.nonEmpty)
+      nameOnlyAgent(contributors.last)
+    else
+      throw new Exception("Missing required property dataProvider because dc:contributor is empty")
+  }
 }

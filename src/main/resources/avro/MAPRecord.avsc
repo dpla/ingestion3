@@ -8,10 +8,14 @@
 // pulled from the MAPv3.1 document.
 {
   "namespace": "dpla.avro.v1.MAP4_x",
-  "type": "record",
-  "name": "MAPRecord",
   "doc": "",
+  "name": "OreAggregation",
+  "type": "record",
   "fields": [
+    {
+      "name": "dplaUri",
+      "type": "string"
+    },
     {
       "name": "SourceResource",
       "type": {
@@ -400,8 +404,8 @@
                   {
                     "name": "region",
                     "type": [
-                        "null",
-                        "string"
+                      "null",
+                      "string"
                     ]
                   },
                   {
@@ -543,7 +547,7 @@
             "type": {
               "name": "RightsHolderEdmAgentArray",
               "type": "array",
-              "items" : {
+              "items": {
                 "name": "RightsHolderEdmAgent",
                 "type": "record",
                 "fields": [
@@ -664,7 +668,7 @@
             "type": {
               "name": "TemporalEdmTimeSpanArray",
               "type": "array",
-              "items" : {
+              "items": {
                 "name": "TemporalEdmTimeSpan",
                 "type": "record",
                 "fields": [
@@ -720,9 +724,176 @@
       }
     },
     {
-      "name": "EdmWebResource",
+      "name": "dataProvider",
       "type": {
-        "name": "EdmWebResource",
+        "name": "DataProviderEdmAgent",
+        "type": "record",
+        "fields": [
+          {
+            "name": "uri",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          {
+            "name": "name",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          {
+            "name": "providedLabel",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          {
+            "name": "note",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          {
+            "name": "scheme",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          {
+            "name": "exactMatch",
+            "type": {
+              "name": "exactMatchArray",
+              "type": "array",
+              "items": "string"
+            }
+          },
+          {
+            "name": "closeMatch",
+            "type": {
+              "name": "closeMatchArray",
+              "type": "array",
+              "items": "string"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "originalRecord",
+      "type": "string"
+    },
+    {
+      "name": "hasView",
+      "type": {
+        "name": "HasViewEdmWebResourceArray",
+        "type": "array",
+        "items": {
+          "name": "HasViewEdmWebResource",
+          "type": "record",
+          "fields": [
+            {
+              "name": "uri",
+              "type": "string"
+            },
+            {
+              "name": "fileFormat",
+              "type": {
+                "name": "fileFormatsArray",
+                "type": "array",
+                "items": "string"
+              }
+            },
+            {
+              "name": "dcRights",
+              "type": {
+                "name": "dcRightsArray",
+                "type": "array",
+                "items": "string"
+              }
+            },
+            {
+              "name": "edmRights",
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "intermediateProvider",
+      "type": [
+        "null",
+        {
+          "name": "IntermediateProviderEdmAgent",
+          "type": "record",
+          "fields": [
+            {
+              "name": "uri",
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            {
+              "name": "name",
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            {
+              "name": "providedLabel",
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            {
+              "name": "note",
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            {
+              "name": "scheme",
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            {
+              "name": "exactMatch",
+              "type": {
+                "name": "exactMatchArray",
+                "type": "array",
+                "items": "string"
+              }
+            },
+            {
+              "name": "closeMatch",
+              "type": {
+                "name": "closeMatchArray",
+                "type": "array",
+                "items": "string"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "isShownAt",
+      "type": {
+        "name": "IsShownAtEdmWebResource",
         "type": "record",
         "fields": [
           {
@@ -755,324 +926,152 @@
         ]
       }
     },
+
+
     {
-      "name": "OreAggregation",
+      "name": "object",
+      "type": [
+        "null",
+        {
+          "name": "ObjectEdmWebResource",
+          "type": "record",
+          "fields": [
+            {
+              "name": "uri",
+              "type": "string"
+            },
+            {
+              "name": "fileFormat",
+              "type": {
+                "name": "fileFormatsArray",
+                "type": "array",
+                "items": "string"
+              }
+            },
+            {
+              "name": "dcRights",
+              "type": {
+                "name": "dcRightsArray",
+                "type": "array",
+                "items": "string"
+              }
+            },
+            {
+              "name": "edmRights",
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "preview",
+      "type": [
+        "null",
+        {
+          "name": "PreviewEdmWebResource",
+          "type": "record",
+          "fields": [
+            {
+              "name": "uri",
+              "type": "string"
+            },
+            {
+              "name": "fileFormat",
+              "type": {
+                "name": "fileFormatsArray",
+                "type": "array",
+                "items": "string"
+              }
+            },
+            {
+              "name": "dcRights",
+              "type": {
+                "name": "dcRightsArray",
+                "type": "array",
+                "items": "string"
+              }
+            },
+            {
+              "name": "edmRights",
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "provider",
       "type": {
-        "name": "OreAggregation",
+        "name": "ProviderEdmAgent",
         "type": "record",
         "fields": [
           {
             "name": "uri",
-            "type": "string"
-          },
-          {
-            "name": "dataProvider",
-            "type": {
-              "name": "DataProviderEdmAgent",
-              "type": "record",
-              "fields": [
-                {
-                  "name": "uri",
-                  "type": [
-                    "null",
-                    "string"
-                  ]
-                },
-                {
-                  "name": "name",
-                  "type": [
-                    "null",
-                    "string"
-                  ]
-                },
-                {
-                  "name": "providedLabel",
-                  "type": [
-                    "null",
-                    "string"
-                  ]
-                },
-                {
-                  "name": "note",
-                  "type": [
-                    "null",
-                    "string"
-                  ]
-                },
-                {
-                  "name": "scheme",
-                  "type": [
-                    "null",
-                    "string"
-                  ]
-                },
-                {
-                  "name": "exactMatch",
-                  "type": {
-                    "name": "exactMatchArray",
-                    "type": "array",
-                    "items": "string"
-                  }
-                },
-                {
-                  "name": "closeMatch",
-                  "type": {
-                    "name": "closeMatchArray",
-                    "type": "array",
-                    "items": "string"
-                  }
-                }
-              ]
-            }
-          },
-          {
-            "name": "originalRecord",
-            "type": "string"
-          },
-          {
-            "name": "hasView",
-            "type": {
-              "name": "HasViewEdmWebResourceArray",
-              "type": "array",
-              "items": {
-                "name": "HasViewEdmWebResource",
-                "type": "record",
-                "fields": [
-                  {
-                    "name": "uri",
-                    "type": "string"
-                  },
-                  {
-                    "name": "fileFormat",
-                    "type": {
-                      "name": "fileFormatsArray",
-                      "type": "array",
-                      "items": "string"
-                    }
-                  },
-                  {
-                    "name": "dcRights",
-                    "type": {
-                      "name": "dcRightsArray",
-                      "type": "array",
-                      "items": "string"
-                    }
-                  },
-                  {
-                    "name": "edmRights",
-                    "type": [
-                      "null",
-                      "string"
-                    ]
-                  }
-                ]
-              }
-            }
-          },
-          {
-            "name": "intermediateProvider",
-            "type": [
-              "null",
-              {
-                "name": "IntermediateProviderEdmAgent",
-                "type": "record",
-                "fields": [
-                  {
-                    "name": "uri",
-                    "type": ["null", "string"]
-                  },
-                  {
-                    "name": "name",
-                    "type": [
-                      "null",
-                      "string"
-                    ]
-                  },
-                  {
-                    "name": "providedLabel",
-                    "type": [
-                      "null",
-                      "string"
-                    ]
-                  },
-                  {
-                    "name": "note",
-                    "type": [
-                      "null",
-                      "string"
-                    ]
-                  },
-                  {
-                    "name": "scheme",
-                    "type": [
-                      "null",
-                      "string"
-                    ]
-                  },
-                  {
-                    "name": "exactMatch",
-                    "type": {
-                      "name": "exactMatchArray",
-                      "type": "array",
-                      "items": "string"
-                    }
-                  },
-                  {
-                    "name": "closeMatch",
-                    "type": {
-                      "name": "closeMatchArray",
-                      "type": "array",
-                      "items": "string"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "name": "object",
-            "type": [ "null", {
-              "name": "ObjectEdmWebResource",
-              "type": "record",
-              "fields": [
-                {
-                  "name": "uri",
-                  "type": "string"
-                },
-                {
-                  "name": "fileFormat",
-                  "type": {
-                    "name": "fileFormatsArray",
-                    "type": "array",
-                    "items": "string"
-                  }
-                },
-                {
-                  "name": "dcRights",
-                  "type": {
-                    "name": "dcRightsArray",
-                    "type": "array",
-                    "items": "string"
-                  }
-                },
-                {
-                  "name": "edmRights",
-                  "type": [
-                    "null",
-                    "string"
-                  ]
-                }
-              ]
-            } ]
-          },
-          {
-            "name": "preview",
-            "type": [
-              "null",
-              {
-                "name": "PreviewEdmWebResource",
-                "type": "record",
-                "fields": [
-                  {
-                    "name": "uri",
-                    "type": "string"
-                  },
-                  {
-                    "name": "fileFormat",
-                    "type": {
-                      "name": "fileFormatsArray",
-                      "type": "array",
-                      "items": "string"
-                    }
-                  },
-                  {
-                    "name": "dcRights",
-                    "type": {
-                      "name": "dcRightsArray",
-                      "type": "array",
-                      "items": "string"
-                    }
-                  },
-                  {
-                    "name": "edmRights",
-                    "type": [
-                      "null",
-                      "string"
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "name": "provider",
-            "type": {
-              "name": "ProviderEdmAgent",
-              "type": "record",
-              "fields": [
-                {
-                  "name": "uri",
-                  "type": [
-                    "null",
-                    "string"
-                  ]
-                },
-                {
-                  "name": "name",
-                  "type": [
-                    "null",
-                    "string"
-                  ]
-                },
-                {
-                  "name": "providedLabel",
-                  "type": [
-                    "null",
-                    "string"
-                  ]
-                },
-                {
-                  "name": "note",
-                  "type": [
-                    "null",
-                    "string"
-                  ]
-                },
-                {
-                  "name": "scheme",
-                  "type": [
-                    "null",
-                    "string"
-                  ]
-                },
-                {
-                  "name": "exactMatch",
-                  "type": {
-                    "name": "exactMatchArray",
-                    "type": "array",
-                    "items": "string"
-                  }
-                },
-                {
-                  "name": "closeMatch",
-                  "type": {
-                    "name": "closeMatchArray",
-                    "type": "array",
-                    "items": "string"
-                  }
-                }
-              ]
-            }
-          },
-          {
-            "name": "edmRights",
             "type": [
               "null",
               "string"
             ]
+          },
+          {
+            "name": "name",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          {
+            "name": "providedLabel",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          {
+            "name": "note",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          {
+            "name": "scheme",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          {
+            "name": "exactMatch",
+            "type": {
+              "name": "exactMatchArray",
+              "type": "array",
+              "items": "string"
+            }
+          },
+          {
+            "name": "closeMatch",
+            "type": {
+              "name": "closeMatchArray",
+              "type": "array",
+              "items": "string"
+            }
           }
         ]
       }
+    },
+    {
+      "name": "edmRights",
+      "type": [
+        "null",
+        "string"
+      ]
     }
   ]
 }

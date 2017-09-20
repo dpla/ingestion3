@@ -55,13 +55,13 @@ trait Report {
       "spark.serializer", "org.apache.spark.serializer.KryoSerializer"
     )
     implicit val dplaMapDataEncoder =
-      org.apache.spark.sql.Encoders.kryo[DplaMapData]
+      org.apache.spark.sql.Encoders.kryo[OreAggregation]
     val spark: SparkSession =
       SparkSession.builder().config(sparkConf).getOrCreate()
     val sc = spark.sparkContext
 
-    val input: Dataset[DplaMapData] =
-      spark.read.avro(getInputURI).as[DplaMapData]
+    val input: Dataset[OreAggregation] =
+      spark.read.avro(getInputURI).as[OreAggregation]
     val output: DataFrame = process(input, spark)
 
     Utils.deleteRecursively(new File(getOutputURI))
@@ -87,7 +87,7 @@ trait Report {
     * @param spark  The Spark session, which contains encoding / parsing info.
     * @return       DataFrame, typically of Row[value: String, count: Int]
     */
-  def process(ds: Dataset[DplaMapData], spark: SparkSession): DataFrame
+  def process(ds: Dataset[OreAggregation], spark: SparkSession): DataFrame
 
   /**
     * Accepts Seq[Any] and tries to extract the String values which

@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
-import dpla.ingestion3.model.{DplaMapData, EdmAgent}
+import dpla.ingestion3.model.{DplaMapData, EdmAgent, OreAggregation}
 import dpla.ingestion3.utils.Utils
 
 import scala.util.{Failure, Success, Try}
@@ -15,7 +15,7 @@ trait Extractor {
   // Base item uri
   private val baseItemUri = "http://dp.la/api/items/"
 
-  def build(): Try[DplaMapData]
+  def build(): Try[OreAggregation]
   def agent: EdmAgent
   /**
     * Build the base ID to be hashed. Implemented per provider

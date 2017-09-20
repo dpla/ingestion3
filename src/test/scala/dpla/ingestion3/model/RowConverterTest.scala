@@ -78,19 +78,19 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "convert a DcmiTypeCollection" in {
-    val row = RowConverter.dcmiTypeCollection(dcmiTypeCollection)
+    val row = RowConverter.fromDcmiTypeCollection(dcmiTypeCollection)
     assert(row(0) === dcmiTypeCollection.title.orNull)
     assert(row(1) === dcmiTypeCollection.description.orNull)
   }
 
   it should "convert an empty DcmiTypeCollection" in {
-    val row = RowConverter.dcmiTypeCollection(emptyDcmiTypeCollection)
+    val row = RowConverter.fromDcmiTypeCollection(emptyDcmiTypeCollection)
     assert(row(0) === null)
     assert(row(1) === null)
   }
 
   it should "convert an EdmTimeSpan" in {
-    val row = RowConverter.edmTimeSpan(edmTimeSpan)
+    val row = RowConverter.fromEdmTimeSpan(edmTimeSpan)
     assert(row(0) === edmTimeSpan.originalSourceDate.orNull)
     assert(row(1) === edmTimeSpan.prefLabel.orNull)
     assert(row(2) === edmTimeSpan.begin.orNull)
@@ -98,7 +98,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "convert an empty EdmTimeSpan" in {
-    val row = RowConverter.edmTimeSpan(emptyEdmTimeSpan)
+    val row = RowConverter.fromEdmTimeSpan(emptyEdmTimeSpan)
     assert(row(0) === null)
     assert(row(1) === null)
     assert(row(2) === null)
@@ -106,7 +106,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "convert a SkosConcept" in {
-    val row = RowConverter.skosConcept(skosConcept)
+    val row = RowConverter.fromSkosConcept(skosConcept)
     assert(row(0) === skosConcept.concept.orNull)
     assert(row(1) === skosConcept.providedLabel.orNull)
     assert(row(2) === skosConcept.note.orNull)
@@ -116,7 +116,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "convert an empty SkosConcpet" in {
-    val row = RowConverter.skosConcept(emtpySkosConcept)
+    val row = RowConverter.fromSkosConcept(emtpySkosConcept)
     assert(row(0) === null)
     assert(row(1) === null)
     assert(row(2) === null)
@@ -126,7 +126,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "convert a DplaPlace" in {
-    val row = RowConverter.dplaPlace(dplaPlace)
+    val row = RowConverter.fromDplaPlace(dplaPlace)
     assert(row(0) === dplaPlace.name.orNull)
     assert(row(1) === dplaPlace.city.orNull)
     assert(row(2) === dplaPlace.county.orNull)
@@ -137,7 +137,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "convert an empty DplaPlace" in {
-    val row = RowConverter.dplaPlace(emptyDplaPlace)
+    val row = RowConverter.fromDplaPlace(emptyDplaPlace)
     assert(row(0) === null)
     assert(row(1) === null)
     assert(row(2) === null)
@@ -148,17 +148,17 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "convert a LiteralOrUri" in {
-    val stringRow = RowConverter.literalOrUri(stringLiteralOrUri)
+    val stringRow = RowConverter.fromLiteralOrUri(stringLiteralOrUri)
     assert(stringRow(0) === "String")
     assert(stringRow(1) === false)
 
-    val uriRow = RowConverter.literalOrUri(uriLiteralOrUri)
+    val uriRow = RowConverter.fromLiteralOrUri(uriLiteralOrUri)
     assert(uriRow(0) === uri1.toString)
     assert(uriRow(1) === true)
   }
 
   it should "convert an EdmAgent" in {
-    val row = RowConverter.edmAgent(edmAgent)
+    val row = RowConverter.fromEdmAgent(edmAgent)
     assert(row(0) === edmAgent.uri.map(_.toString).orNull)
     assert(row(1) === edmAgent.name.orNull)
     assert(row(2) === edmAgent.providedLabel.orNull)
@@ -169,7 +169,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "convert an empty EdmAgent" in {
-    val row = RowConverter.edmAgent(emptyEdmAgent)
+    val row = RowConverter.fromEdmAgent(emptyEdmAgent)
     assert(row(0) === null)
     assert(row(1) === null)
     assert(row(2) === null)
@@ -180,7 +180,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "convert an EdmWebResource" in {
-    val row = RowConverter.edmWebResource(edmWebResource)
+    val row = RowConverter.fromEdmWebResource(edmWebResource)
     assert(row(0) === edmWebResource.uri.toString)
     assert(row(1) === edmWebResource.fileFormat)
     assert(row(2) === edmWebResource.dcRights)
@@ -188,35 +188,53 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "convert an empty EdmWebResource" in {
-    val row = RowConverter.edmWebResource(emptyEdmWebResource)
+    val row = RowConverter.fromEdmWebResource(emptyEdmWebResource)
     assert(row(0) === emptyEdmWebResource.uri.toString)
     assert(row(1) === Seq())
     assert(row(2) === Seq())
     assert(row(3) === null)
   }
 
+  /*
+  dplaUri: ExactlyOne[URI],
+                           sourceResource: ExactlyOne[DplaSourceResource],
+                           dataProvider: ExactlyOne[EdmAgent],
+                           originalRecord: ExactlyOne[String],
+                           hasView: ZeroToMany[EdmWebResource] = Seq(),
+                           intermediateProvider: ZeroToOne[EdmAgent] = None,
+                           isShownAt: ExactlyOne[EdmWebResource],
+                           `object`: ZeroToOne[EdmWebResource] = None, // full size image
+                           preview: ZeroToOne[EdmWebResource] = None, // thumbnail
+                           provider: ExactlyOne[EdmAgent],
+                           edmRights: ZeroToOne[URI] = None
+   */
+
   it should "convert an OreAggregation" in {
     val oreAggregation = OreAggregation(
-      uri = uri3,
+      dplaUri = uri3,
+      sourceResource = DplaSourceResource(),
       dataProvider = edmAgent,
       originalRecord = "I'm very original",
       hasView = Seq(edmWebResource, edmWebResource),
       intermediateProvider = Some(edmAgent),
+      isShownAt = edmWebResource,
       `object` = Some(edmWebResource),
       preview = Some(edmWebResource),
       provider = edmAgent,
       edmRights = Some(uri1)
     )
-    val row = RowConverter.oreAggregation(oreAggregation)
-    assert(row(0) === oreAggregation.uri.toString)
-    assert(row(1) === RowConverter.edmAgent(oreAggregation.dataProvider))
-    assert(row(2) === oreAggregation.originalRecord)
-    assert(row(3) === oreAggregation.hasView.map(RowConverter.edmWebResource))
-    assert(row(4) === oreAggregation.intermediateProvider.map(RowConverter.edmAgent).orNull)
-    assert(row(5) === oreAggregation.`object`.map(RowConverter.edmWebResource).orNull)
-    assert(row(6) === oreAggregation.preview.map(RowConverter.edmWebResource).orNull)
-    assert(row(7) === RowConverter.edmAgent(oreAggregation.provider))
-    assert(row(8) === oreAggregation.edmRights.map(_.toString).orNull)
+    val row = RowConverter.toRow(oreAggregation, sparkSchema)
+    assert(row(0) === oreAggregation.dplaUri.toString)
+    assert(row(1) === RowConverter.fromSourceResource(oreAggregation.sourceResource))
+    assert(row(2) === RowConverter.fromEdmAgent(oreAggregation.dataProvider))
+    assert(row(3) === oreAggregation.originalRecord)
+    assert(row(4) === oreAggregation.hasView.map(RowConverter.fromEdmWebResource))
+    assert(row(5) === oreAggregation.intermediateProvider.map(RowConverter.fromEdmAgent).orNull)
+    assert(row(6) === RowConverter.fromEdmWebResource(oreAggregation.isShownAt))
+    assert(row(7) === oreAggregation.`object`.map(RowConverter.fromEdmWebResource).orNull)
+    assert(row(8) === oreAggregation.preview.map(RowConverter.fromEdmWebResource).orNull)
+    assert(row(9) === RowConverter.fromEdmAgent(oreAggregation.provider))
+    assert(row(10) === oreAggregation.edmRights.map(_.toString).orNull)
   }
 
   it should "convert a SourceResource" in {
@@ -244,27 +262,27 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
       title = Seq("some", "title"),
       `type` = Seq("rock", "magic", "grass")
     )
-    val row = RowConverter.dplaSourceResource(sourceResource)
+    val row = RowConverter.fromSourceResource(sourceResource)
     assert(row(0) === sourceResource.alternateTitle)
-    assert(row(1) === sourceResource.collection.map(RowConverter.dcmiTypeCollection))
-    assert(row(2) === sourceResource.contributor.map(RowConverter.edmAgent))
-    assert(row(3) === sourceResource.creator.map(RowConverter.edmAgent))
-    assert(row(4) === sourceResource.date.map(RowConverter.edmTimeSpan))
+    assert(row(1) === sourceResource.collection.map(RowConverter.fromDcmiTypeCollection))
+    assert(row(2) === sourceResource.contributor.map(RowConverter.fromEdmAgent))
+    assert(row(3) === sourceResource.creator.map(RowConverter.fromEdmAgent))
+    assert(row(4) === sourceResource.date.map(RowConverter.fromEdmTimeSpan))
     assert(row(5) === sourceResource.description)
     assert(row(6) === sourceResource.extent)
     assert(row(7) === sourceResource.format)
-    assert(row(8) === sourceResource.genre.map(RowConverter.skosConcept))
+    assert(row(8) === sourceResource.genre.map(RowConverter.fromSkosConcept))
     assert(row(9) === sourceResource.identifier)
-    assert(row(10) === sourceResource.language.map(RowConverter.skosConcept))
-    assert(row(11) === sourceResource.place.map(RowConverter.dplaPlace))
-    assert(row(12) === sourceResource.publisher.map(RowConverter.edmAgent))
-    assert(row(13) === sourceResource.relation.map(RowConverter.literalOrUri))
+    assert(row(10) === sourceResource.language.map(RowConverter.fromSkosConcept))
+    assert(row(11) === sourceResource.place.map(RowConverter.fromDplaPlace))
+    assert(row(12) === sourceResource.publisher.map(RowConverter.fromEdmAgent))
+    assert(row(13) === sourceResource.relation.map(RowConverter.fromLiteralOrUri))
     assert(row(14) === sourceResource.replacedBy)
     assert(row(15) === sourceResource.replaces)
     assert(row(16) === sourceResource.rights)
-    assert(row(17) === sourceResource.rightsHolder.map(RowConverter.edmAgent))
-    assert(row(18) === sourceResource.subject.map(RowConverter.skosConcept))
-    assert(row(19) === sourceResource.temporal.map(RowConverter.edmTimeSpan))
+    assert(row(17) === sourceResource.rightsHolder.map(RowConverter.fromEdmAgent))
+    assert(row(18) === sourceResource.subject.map(RowConverter.fromSkosConcept))
+    assert(row(19) === sourceResource.temporal.map(RowConverter.fromEdmTimeSpan))
     assert(row(20) === sourceResource.title)
     assert(row(21) === sourceResource.`type`)
 

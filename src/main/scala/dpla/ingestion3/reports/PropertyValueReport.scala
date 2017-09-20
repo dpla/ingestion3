@@ -46,7 +46,7 @@ class PropertyValueReport (
     * @param spark The Spark session, which contains encoding / parsing info.
     * @return DataFrame, typically of Row[value: String, count: Int]
     */
-  override def process(ds: Dataset[DplaMapData], spark: SparkSession): DataFrame = {
+  override def process(ds: Dataset[OreAggregation], spark: SparkSession): DataFrame = {
     import spark.implicits._
 
     val token: String = getParams match {
@@ -55,199 +55,199 @@ class PropertyValueReport (
     }
 
     implicit val dplaMapDataEncoder =
-      org.apache.spark.sql.Encoders.kryo[DplaMapData]
+      org.apache.spark.sql.Encoders.kryo[OreAggregation]
 
     val rptDataset: Dataset[PropertyValueRpt] = token match {
       case "sourceResource.alternateTitle" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.alternateTitle)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.alternateTitle)
           )
         })
       case "sourceResource.contributor.name" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.contributor)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.contributor)
           )
         })
       case "sourceResource.collection.title" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.collection)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.collection)
           )
         })
       case "sourceResource.creator.name" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.creator)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.creator)
           )
         })
       case "sourceResource.date.originalSourceDate" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.date)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.date)
           )
         })
       case "sourceResource.description" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.description)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.description)
           )
         })
       case "sourceResource.extent" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.extent)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.extent)
           )
         })
       case "sourceResource.format" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.format)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.format)
           )
         })
       case "sourceResource.genre" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.genre)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.genre)
           )
         })
       case "sourceResource.identifier" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.identifier)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.identifier)
           )
         })
       case "sourceResource.language.providedLabel" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.language)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.language)
           )
         })
       case "sourceResource.place.name" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.place)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.place)
           )
         })
       case "sourceResource.place.name" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.place)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.place)
           )
         })
       case "sourceResource.publisher.name" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.publisher)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.publisher)
           )
         })
       case "sourceResource.relation" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.relation)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.relation)
           )
         })
       case "sourceResource.replacedBy" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.replacedBy)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.replacedBy)
           )
         })
       case "sourceResource.replacedBy" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.replacedBy)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.replacedBy)
           )
         })
       case "sourceResource.replaces" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.replaces)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.replaces)
           )
         })
       case "sourceResource.rights" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.rights)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.rights)
           )
         })
       case "sourceResource.rightsHolder.name" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.rightsHolder)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.rightsHolder)
           )
         })
       case "sourceResource.subject.providedLabel" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.subject)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.subject)
           )
         })
       case "sourceResource.temporal.originalSourceDate" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.temporal)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.temporal)
           )
         })
       case "sourceResource.title" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.title)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.title)
           )
         })
       case "sourceResource.type" =>
-        ds.map(dplaMapData => {
+        ds.map(oreAggregation => {
           PropertyValueRpt(
-            dplaUri = dplaMapData.edmWebResource.uri.toString,
-            localUri = dplaMapData.oreAggregation.uri.toString,
-            value = extractValue(dplaMapData.sourceResource.`type`)
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.toString,
+            value = extractValue(oreAggregation.sourceResource.`type`)
           )
         })
       case x =>

@@ -13,10 +13,11 @@ import scala.util.Try
 class MdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
   implicit val json: JValue = parse(rawData)
 
-  def build: Try[DplaMapData] = {
+  def build: Try[OreAggregation] = {
     Try {
-      DplaMapData(
-        DplaSourceResource(
+      OreAggregation(
+        dplaUri = new URI(mintDplaId()),
+        sourceResource = DplaSourceResource(
           collection = collection(json \\ "record" \ "sourceResource" \ "collection"),
           contributor = extractStrings(json \\ "record" \ "sourceResource" \ "contributor").map(nameOnlyAgent),
           creator = extractStrings(json \\ "record" \ "sourceResource" \ "creator").map(nameOnlyAgent),
@@ -33,16 +34,11 @@ class MdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
           title = extractStrings(json \\ "record" \ "sourceResource" \ "title"),
           `type` = extractStrings(json \\ "record" \ "sourceResource" \ "type")
         ),
-        EdmWebResource(
-          uri = uri(json \\ "record" \ "isShownAt")
-        ),
-        OreAggregation(
-          uri = mintDplaItemUri(),
-          dataProvider = dataProvider(json \\ "record" \ "dataProvider"),
-          originalRecord = rawData,
-          preview = thumbnail(json \\ "record" \ "object"),
-          provider = agent
-        )
+        dataProvider = dataProvider(json \\ "record" \ "dataProvider"),
+        originalRecord = rawData,
+        isShownAt = uriOnlyWebResource(uri(json)),
+        preview = thumbnail(json \\ "record" \ "object"),
+        provider = agent
       )
     }
   }
@@ -52,7 +48,7 @@ class MdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
       DcmiTypeCollection(
         title = extractString(c \\ "name"),
         description = extractString(c \\ "description" \ "dc" \ "description")
-    ))
+      ))
   }
 
   def dataProvider(dataProvider: JValue): ExactlyOne[EdmAgent] = {
@@ -62,9 +58,12 @@ class MdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
       .headOption
       .map(nameOnlyAgent)
       .getOrElse(throw new RuntimeException(s"dataProvider is missing for\t" +
-        s"${extractString(json \\ "isShownAt")
-          .getOrElse(pretty(render(json)))}"))
+        s"${
+          extractString(json \\ "isShownAt")
+            .getOrElse(pretty(render(json)))
+        }"))
   }
+
   def date(date: JValue): ZeroToMany[EdmTimeSpan] = {
     date.children.map(d =>
       EdmTimeSpan(
@@ -90,17 +89,17 @@ class MdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
       case None => None
     }
 
+  def agent = EdmAgent(
+    name = Some("Minnesota Digital Library"),
+    uri = Some(new URI("http://dp.la/api/contributor/mdl"))
+  )
+
   def uri(uri: JValue): URI = {
     extractString(uri) match {
       case Some(t) => new URI(t)
       case _ => throw new RuntimeException(s"isShownAt is missing. Cannot map record.")
     }
   }
-
-  def agent = EdmAgent(
-    name = Some("Minnesota Digital Library"),
-    uri = Some(new URI("http://dp.la/api/contributor/mdl"))
-  )
 
   override def getProviderBaseId(): Option[String] =
     Option(List("mdl",

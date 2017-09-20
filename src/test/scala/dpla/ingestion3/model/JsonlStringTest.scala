@@ -20,7 +20,7 @@ class JsonlStringTest extends FlatSpec {
     val jvalue = parse(s)
     assert(
       compact(render(jvalue \ "_source" \ "id")) ==
-        "\"7738a840caff15224f50cf17eade27e6\""
+        "\"4b1bd605bd1d75ee23baadb0e1f24457\""
     )
   }
 

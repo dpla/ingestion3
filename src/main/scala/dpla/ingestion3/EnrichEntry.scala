@@ -48,8 +48,6 @@ object EnrichEntry {
       .setAppName("Enrichment")
       .setMaster(i3Conf.spark.sparkMaster.getOrElse("local[*]"))
 
-    implicit val dplaMapDataEncoder = org.apache.spark.sql.Encoders.kryo[DplaMapData]
-
     val spark = SparkSession.builder()
       .config(sparkConf)
       .getOrCreate()
@@ -79,7 +77,6 @@ object EnrichEntry {
     enrichedRows.toDF().write
       .format("com.databricks.spark.avro")
       .save(outputDir)
-
 
     // Gather some stats
     val mappedRecordCount = mappedRows.count()
