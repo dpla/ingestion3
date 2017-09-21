@@ -2,6 +2,7 @@ package dpla.ingestion3.enrichments
 
 import java.net.URI
 
+import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.data.MappedRecordsFixture
 import dpla.ingestion3.model.{DplaSourceResource, EdmTimeSpan, SkosConcept, _}
 import org.scalatest.{BeforeAndAfter, FlatSpec}
@@ -9,7 +10,7 @@ import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 class EnrichmentDriverTest extends FlatSpec with BeforeAndAfter {
 
-  val driver = new EnrichmentDriver
+  val driver = new EnrichmentDriver(i3Conf())
 
   val mappedRecord = DplaMapData(
     DplaSourceResource(

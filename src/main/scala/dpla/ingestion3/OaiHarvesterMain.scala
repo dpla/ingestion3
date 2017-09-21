@@ -3,7 +3,7 @@ package dpla.ingestion3
 import java.io.File
 
 import dpla.ingestion3.utils.Utils
-import dpla.ingestion3.confs.{HarvestCmdArgs, Ingestion3Conf}
+import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
 
 import com.databricks.spark.avro._
 
@@ -22,24 +22,19 @@ object OaiHarvesterMain {
 
   def main(args: Array[String]): Unit = {
     // Read in command line args
-    val cmdArgs = new HarvestCmdArgs(args)
+    val cmdArgs = new CmdArgs(args)
 
-    val outputDir = cmdArgs.output.toOption match {
-      case Some(o) => o
-    }
-    val confFile = cmdArgs.configFile.toOption match {
-      case Some(f) => f
-    }
-    val providerName = cmdArgs.providerName.toOption match {
-      case Some(p) => p
-    }
+    val outputDir = cmdArgs.output.getOrElse(throw new IllegalArgumentException("Missing output dir"))
+    val confFile = cmdArgs.configFile.getOrElse(throw new IllegalArgumentException("Missing conf file"))
+    val providerName = cmdArgs.providerName.getOrElse(throw new IllegalArgumentException("Missing provider name"))
+
     // Setup logger with dynamically named output file
     val harvestLogger: Logger = LogManager.getLogger("ingestion3")
     val appender = Utils.getFileAppender(providerName, "harvest")
     harvestLogger.addAppender(appender)
 
     // Load configuration from file
-    val i3Conf = new Ingestion3Conf(confFile, providerName)
+    val i3Conf = new Ingestion3Conf(confFile, Some(providerName))
     val providerConf = i3Conf.load()
 
     // TODO log the settings that are being used here...
@@ -51,7 +46,6 @@ object OaiHarvesterMain {
 
     // Initiate spark session.
     val sparkConf = new SparkConf().setAppName("Oai Harvest")
-    // TODO: will this default value work with EMR?
     sparkConf.setMaster(providerConf.spark.sparkMaster.get)
 
     val spark = SparkSession

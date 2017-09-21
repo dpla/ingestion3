@@ -3,7 +3,17 @@ package dpla.ingestion3.confs
 import com.typesafe.config.ConfigFactory
 import org.rogach.scallop.{ScallopConf, ScallopOption}
 
-class Ingestion3Conf(confFilePath: String, providerName: String) extends ConfUtils {
+/**
+  *
+  * @param confFilePath Required for all operations (harvest, mapping,
+  *                     or enrichment)
+  * @param providerName Optional - Provider shortName used to lookup provider
+  *                     specific settings in application configuration file.
+  *
+  *                     Harvest operations require a set of provider settings
+  *
+  */
+class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None) extends ConfUtils {
   def load(): i3Conf = {
     // Loads config file for more information about loading hierarchy please read
     // https://github.com/typesafehub/config#standard-behavior
@@ -15,18 +25,16 @@ class Ingestion3Conf(confFilePath: String, providerName: String) extends ConfUti
 
     val baseConfig = ConfigFactory.load
 
-    val providerConf = ConfigFactory
-      .load
-      .getConfig(providerName)
-      .withFallback(baseConfig)
-      .resolve()
+    val providerConf = providerName match {
+      case Some(name) => ConfigFactory.load
+        .getConfig(name)
+        .withFallback(baseConfig)
+        .resolve()
+      case _ => baseConfig.resolve()
+    }
 
     i3Conf(
-      provider = getProp(providerConf, "provider") match {
-        case Some(d) => Some(d)
-        case None => throw new IllegalArgumentException("Provider is not " +
-          "specified in config. Cannot harvest.")
-      },
+      provider = getProp(providerConf, "provider"),
       Harvest(
         // Generally applicable
         endpoint = getProp(providerConf, "harvest.endpoint"),
@@ -46,21 +54,23 @@ class Ingestion3Conf(confFilePath: String, providerName: String) extends ConfUti
         sparkMaster = getProp(providerConf, "spark.master"),
         sparkDriverMemory = getProp(providerConf, "spark.driverMemory"),
         sparkExecutorMemory= getProp(providerConf, "spark.executorMemory")
+      ),
+      i3Twofishes(
+        hostname = getProp(providerConf, "twofishes.hostname")
       )
     )
   }
 }
 
-
 /**
-  * Command line arguments for invoking a harvester
+  * Command line arguments
   *
   * @param arguments
   */
-class HarvestCmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
-  val providerName: ScallopOption[String] = opt[String](
-    "name",
-    required = true,
+class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
+  val input: ScallopOption[String] = opt[String](
+    "input",
+    required = false,
     noshort = true,
     validate = _.nonEmpty
   )
@@ -80,37 +90,48 @@ class HarvestCmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     descr = "Configuration file must end with .conf"
   )
 
+  val providerName: ScallopOption[String] = opt[String](
+    "name",
+    required = true,
+    noshort = true,
+    validate = _.nonEmpty
+  )
+
   verify()
 }
-
 
 /**
   * Classes for defining the application.conf file
   */
 case class Harvest (
                       // General
-                      endpoint: Option[String],
-                      setlist: Option[String],
-                      blacklist: Option[String],
-                      harvestType: Option[String],
+                      endpoint: Option[String] = None,
+                      setlist: Option[String] = None,
+                      blacklist: Option[String] = None,
+                      harvestType: Option[String] = None,
                       // OAI
-                      verb: Option[String],
-                      metadataPrefix: Option[String],
-                      harvestAllSets: Option[String],
+                      verb: Option[String] = None,
+                      metadataPrefix: Option[String] = None,
+                      harvestAllSets: Option[String] = None,
                       // API
-                      rows: Option[String],
-                      query: Option[String],
-                      apiKey: Option[String]
+                      rows: Option[String] = None,
+                      query: Option[String] = None,
+                      apiKey: Option[String] = None
                     )
 
 case class i3Conf(
-                   provider: Option[String],
-                   harvest: Harvest,
-                   spark: i3Spark
+                   provider: Option[String] = None,
+                   harvest: Harvest = Harvest(),
+                   spark: i3Spark = i3Spark(),
+                   twofishes: i3Twofishes = i3Twofishes()
                  )
 
+case class i3Twofishes(
+                  hostname: Option[String] = None
+                )
+
 case class i3Spark (
-                     sparkMaster: Option[String],
-                     sparkDriverMemory: Option[String],
-                     sparkExecutorMemory: Option[String]
+                     sparkMaster: Option[String] = None,
+                     sparkDriverMemory: Option[String] = None,
+                     sparkExecutorMemory: Option[String] = None
                    )
