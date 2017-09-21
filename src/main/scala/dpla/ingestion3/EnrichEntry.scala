@@ -2,24 +2,29 @@ package dpla.ingestion3
 
 import java.io.File
 
-import dpla.ingestion3.enrichments.EnrichmentDriver
+import dpla.ingestion3.enrichments.{EnrichmentDriver, Twofisher}
 import dpla.ingestion3.model.{DplaMapData, ModelConverter, RowConverter}
 import dpla.ingestion3.utils.Utils
 import org.apache.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{Row, SparkSession}
 import com.databricks.spark.avro._
+import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 
 /**
-  * Expects two parameters:
+  * Expects three parameters:
   *   1) a path to the harvested data
   *   2) a path to output the mapped data
+  *   3) a path to the application configuration file
   *
   *   Usage
   *   -----
   *   To invoke via sbt:
-  *     sbt "run-main dpla.ingestion3.EnrichEntry /input/path/to/mapped.avro /output/path/to/enriched.avro"
+  *     sbt "run-main dpla.ingestion3.EnrichEntry
+  *     --input=/input/path/to/mapped.avro
+  *     --output=/output/path/to/enriched.avro
+  *     --conf=/path/to/application.conf
   *
   */
 
@@ -27,19 +32,21 @@ object EnrichEntry {
 
   def main(args: Array[String]): Unit = {
 
+    // Read in command line args
+    val cmdArgs = new CmdArgs(args)
+
+    val inputDir = cmdArgs.input.getOrElse(throw new IllegalArgumentException("Missing input dir"))
+    val outputDir = cmdArgs.output.getOrElse(throw new IllegalArgumentException("Missing output dir"))
+    val confFile = cmdArgs.configFile.getOrElse(throw new IllegalArgumentException("Missing conf file"))
+
     val logger = LogManager.getLogger(EnrichEntry.getClass)
 
-    if (args.length != 2)
-      logger.error("Incorrect number of parameters provided. Expected <input> <output>")
-
-    // Get files
-    val dataIn = args(0)
-    val dataOut = args(1)
+    // Load configuration from file
+    val i3Conf = new Ingestion3Conf(confFile).load()
 
     val sparkConf = new SparkConf()
       .setAppName("Enrichment")
-      // TODO there should be a central place to store the sparkMaster
-      .setMaster("local[*]")
+      .setMaster(i3Conf.spark.sparkMaster.getOrElse("local[*]"))
 
     implicit val dplaMapDataEncoder = org.apache.spark.sql.Encoders.kryo[DplaMapData]
 
@@ -54,24 +61,24 @@ object EnrichEntry {
     val dplaMapDataRowEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
 
     // Load the mapped records
-    val mappedRows = spark.read.avro(dataIn)
+    val mappedRows = spark.read.avro(inputDir)
 
     // Run the enrichments over the Dataframe
     val enrichedRows = mappedRows.map(
       row => {
         val dplaMapData = ModelConverter.toModel(row)
-        val enrichedDplaMapData = new EnrichmentDriver().enrich(dplaMapData)
+        val enrichedDplaMapData = new EnrichmentDriver(i3Conf).enrich(dplaMapData)
         RowConverter.toRow(enrichedDplaMapData, model.sparkSchema)
       }
     )(dplaMapDataRowEncoder)
 
     // Delete the output location if it exists
-    Utils.deleteRecursively(new File(dataOut))
+    Utils.deleteRecursively(new File(outputDir))
 
     // Save mapped records out to Avro file
     enrichedRows.toDF().write
       .format("com.databricks.spark.avro")
-      .save(dataOut)
+      .save(outputDir)
 
 
     // Gather some stats

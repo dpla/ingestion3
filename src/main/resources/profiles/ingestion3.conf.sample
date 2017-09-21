@@ -1,5 +1,9 @@
+# Spark
 spark.master="local[*]"
 spark.driverMemory="2g"
+
+# Twofishes / geocoding
+twofishes.hostname = "localhost"
 
 # Harvard
 harvard.provider = "Harvard"

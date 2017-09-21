@@ -1,23 +1,20 @@
 package dpla.ingestion3.enrichments
 
+import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.model._
 
-/**
-  * TODO: assign the hostname from a config file or commandline switch?
-  *
-  * @see dpla.ingestion3.enrichments.Twofisher
-  * @see SpatialEnrichmentIntegrationTest
-  */
-object Geocoder extends Twofisher {
-  override def hostname = {
-    System.getenv("GEOCODER_HOST") match {
-      case h if h.isInstanceOf[String] => h
-      case _ => "localhost"
-    }
-  }
-}
 
-class EnrichmentDriver extends Serializable {
+class EnrichmentDriver(conf: i3Conf) extends Serializable {
+  /**
+    * Reads twofishes hostname from application config file
+    *
+    * @see dpla.ingestion3.enrichments.Twofisher
+    * @see SpatialEnrichmentIntegrationTest
+    */
+  object Geocoder extends Twofisher {
+    override def hostname = conf.twofishes.hostname.getOrElse("localhost")
+  }
+
   val stringEnrichment = new StringEnrichments()
   val dateEnrichment = new ParseDateEnrichment()
   val spatialEnrichment = new SpatialEnrichment(Geocoder)

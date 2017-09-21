@@ -2,7 +2,7 @@ package dpla.ingestion3
 
 import java.io.File
 
-import dpla.ingestion3.confs.{HarvestCmdArgs, Ingestion3Conf}
+import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
 import dpla.ingestion3.harvesters.api._
 import dpla.ingestion3.harvesters.file.NaraFileHarvestMain.getAvroWriter
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
@@ -32,7 +32,7 @@ object CdlHarvesterMain extends ApiHarvester {
     */
   def main(args: Array[String]): Unit = {
     // Parse and set the command line options
-    val cmdArgs = new HarvestCmdArgs(args)
+    val cmdArgs = new CmdArgs(args)
 
     val outputDir = cmdArgs.output.toOption
       .map(new File(_))
@@ -44,7 +44,7 @@ object CdlHarvesterMain extends ApiHarvester {
       .map(_.toString)
       .getOrElse(throw new RuntimeException("No provider name specified"))
 
-    val i3Conf = new Ingestion3Conf(confFile, providerName)
+    val i3Conf = new Ingestion3Conf(confFile, Some(providerName))
     val providerConf = i3Conf.load()
 
     val queryParams: Map[String, String] = Map(
