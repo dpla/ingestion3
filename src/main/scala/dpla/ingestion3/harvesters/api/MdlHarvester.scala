@@ -2,46 +2,101 @@
 package dpla.ingestion3.harvesters.api
 
 import java.net.URI
-
+import dpla.ingestion3.confs.i3Conf
 import org.apache.commons.io.IOUtils
 import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
 import org.apache.http.client.utils.URIBuilder
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.util.EntityUtils
+import org.apache.log4j.Logger
+import org.json4s.DefaultFormats
+import org.json4s.jackson.JsonMethods._
 
 import scala.util.{Failure, Success, Try}
 
-/**
-  * Class for harvesting records from the Minnesota Digital Library's API
-  *
-  * @param queryParams - Query parameters (q, rows, cursorMark etc.)
-  */
-class MdlHarvester(val queryParams: Map[String, String] = Map()) {
-  /**
+class MdlHarvester(shortName: String,
+                   conf: i3Conf,
+                   outputDir: String,
+                   harvestLogger: Logger)
+  extends ApiHarvester(shortName, conf, outputDir, harvestLogger) {
+
+  override protected val mimeType: String = "application_json"
+
+  override protected val queryParams: Map[String, String] = Map(
+    "query" -> conf.harvest.query.getOrElse("*:*"),
+    "rows" -> conf.harvest.rows.getOrElse("10")
+  )
+
+  override protected def localApiHarvest: Unit = {
+    implicit val formats = DefaultFormats
+
+    // Mutable vars for controlling harvest loop
+    var continueHarvest = true
+    var start = 0
+
+    while (continueHarvest) getSinglePage(start.toString) match {
+      case error: ApiError with ApiResponse =>
+        harvestLogger.error("Error returned by request %s\n%s\n%s".format(
+          error.errorSource.url.getOrElse("Undefined url"),
+          error.errorSource.queryParams,
+          error.message
+        ))
+        continueHarvest = false
+      case src: ApiSource with ApiResponse =>
+        src.text match {
+          case Some(docs) =>
+            val json = parse(docs)
+
+            harvestLogger.info(s"Requesting $start of ${(json \\ "numFound").extract[String]}")
+
+            val mdlRecords = (json \\ "docs").children.map(doc => {
+              ApiRecord((doc \\ "record_id").toString, compact(render(doc)))
+            })
+
+            saveOut(mdlRecords)
+
+            // Number of records returned < number of records requested
+            val rows = queryParams.getOrElse("rows", "10").toInt
+            mdlRecords.size < rows match {
+              case true => continueHarvest = false
+              case false => start += rows
+            }
+          case None =>
+            harvestLogger.error(s"The body of the response is empty. Stopping run.\nApiSource >> ${src.toString}")
+            continueHarvest = false
+        }
+      case _ =>
+        harvestLogger.error("Harvest returned None")
+        continueHarvest = false
+    }
+  }
+
+
+    /**
     * Get a single-page, un-parsed response from the API feed, or an error if
     * one occurs.
     *
     * @param start Uses start as an offset to paginate.
     * @return ApiSource or ApiError
     */
-  def harvest(start: String): ApiResponse = {
+  private def getSinglePage(start: String): ApiResponse =
     getUri(queryParams.updated("start", start)) match {
       // Error building URL
       case Failure(e) =>
         val source = ApiSource(queryParams)
         ApiError(e.toString, source)
-      case Success(url) => {
+      case Success(url) =>
         getResponse(url) match {
           case Failure(e) =>
             ApiError(e.toString, ApiSource(queryParams, Some(url.toString)))
           case Success(response) => response.isEmpty match {
-            case true => ApiError("Response body is empty", ApiSource(queryParams, Some(url.toString)))
-            case false => ApiSource(queryParams, Some(url.toString), Some(response))
+            case true =>
+              ApiError("Response body is empty", ApiSource(queryParams, Some(url.toString)))
+            case false =>
+              ApiSource(queryParams, Some(url.toString), Some(response))
           }
         }
-      }
     }
-  }
 
   /**
     * Builds query URI from parameters
@@ -49,7 +104,7 @@ class MdlHarvester(val queryParams: Map[String, String] = Map()) {
     * @param queryParams
     * @return URI
     */
-  def getUri(queryParams: Map[String, String]): Try[URI] = Try {
+  private def getUri(queryParams: Map[String, String]): Try[URI] = Try {
     new URIBuilder()
       .setScheme("http")
       .setHost("hub-client.lib.umn.edu")
@@ -66,7 +121,7 @@ class MdlHarvester(val queryParams: Map[String, String] = Map()) {
     * @param uri
     * @return
     */
-  def getResponse(uri: URI): Try[String] = Try {
+  private def getResponse(uri: URI): Try[String] = Try {
     val httpclient = HttpClients.createDefault()
     val get = new HttpGet(uri)
     var response: CloseableHttpResponse = null
