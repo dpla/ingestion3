@@ -50,7 +50,7 @@ class NaraExtractor(rawData:String) extends Extractor with XmlExtractionUtils wi
           dataProvider = dataProvider(xml),
           originalRecord = rawData,
           provider = agent,
-          preview = extractString("thumbnailFilename").map(new URI(_)).map(uriOnlyWebResource)
+          preview = extractString(xml \ "digitalObjectArray" \ "digitalObject" \ "thumbnailFilename").map(new URI(_)).map(uriOnlyWebResource)
         )
       )
     }
