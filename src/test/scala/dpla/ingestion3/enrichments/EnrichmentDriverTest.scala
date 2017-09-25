@@ -12,10 +12,15 @@ class EnrichmentDriverTest extends FlatSpec with BeforeAndAfter {
 
   val driver = new EnrichmentDriver(i3Conf())
 
-  val mappedRecord = DplaMapData(
-    DplaSourceResource(
+  val mappedRecord = OreAggregation(
+    dataProvider = EdmAgent(),
+    dplaUri = new URI("https://example.org/item/123"), //uri of the record on our site
+    originalRecord = "", //map v4 specifies this as a ref, but that's LDP maybe?
+    provider = EdmAgent(),
+    isShownAt = EdmWebResource(new URI("http://foo.com")),
+    sourceResource = DplaSourceResource(
       date = Seq(EdmTimeSpan(
-        originalSourceDate=Some("4.3.2015"),
+        originalSourceDate = Some("4.3.2015"),
         prefLabel = None,
         begin = None,
         end = None
@@ -24,27 +29,18 @@ class EnrichmentDriverTest extends FlatSpec with BeforeAndAfter {
         providedLabel = Some("eng"),
         note = None,
         scheme = None,
-        exactMatch= Seq(),
+        exactMatch = Seq(),
         closeMatch = Seq())
       )
-    ),
-    EdmWebResource(
-      uri = new URI("")
-    ),
-    OreAggregation(
-      dataProvider = EdmAgent(),
-      uri = new URI("https://example.org/item/123"), //uri of the record on our site
-      originalRecord = "", //map v4 specifies this as a ref, but that's LDP maybe?
-      provider = EdmAgent()
     )
   )
 
   "EnrichmentDriver" should " enrich both language and date" in {
-    val expectedValue = MappedRecordsFixture.mappedRecord.copy(new DplaSourceResource(
+    val expectedValue = MappedRecordsFixture.mappedRecord.copy(sourceResource = DplaSourceResource(
       date = Seq(new EdmTimeSpan(
-          prefLabel = Some("2012-05-07"),
-          originalSourceDate = Some("5.7.2012")
-        )),
+        prefLabel = Some("2012-05-07"),
+        originalSourceDate = Some("5.7.2012")
+      )),
       language = Seq(SkosConcept(
 
         /*

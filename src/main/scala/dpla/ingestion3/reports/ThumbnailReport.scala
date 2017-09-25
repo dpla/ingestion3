@@ -1,8 +1,9 @@
 package dpla.ingestion3.reports
 
-import dpla.ingestion3.model.DplaMapData
+import dpla.ingestion3.model.{DplaMapData, OreAggregation}
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
-import scala.util.{Try, Failure, Success}
+
+import scala.util.{Failure, Success, Try}
 import javax.imageio.ImageIO
 import java.net.URI
 
@@ -62,11 +63,11 @@ class ThumbnailReport (
     * @param spark The Spark session, which contains encoding / parsing info.
     * @return DataFrame, typically of Row[value: String, count: Int]
     */
-  override def process(ds: Dataset[DplaMapData], spark: SparkSession): DataFrame = {
+  override def process(ds: Dataset[OreAggregation], spark: SparkSession): DataFrame = {
 
 
     implicit val dplaMapDataEncoder =
-      org.apache.spark.sql.Encoders.kryo[DplaMapData]
+      org.apache.spark.sql.Encoders.kryo[OreAggregation]
 
     val token: String = getParams match {
       case Some(p) => p.headOption.getOrElse("")
@@ -85,7 +86,7 @@ class ThumbnailReport (
     * Get images with missing thumbnails.
     * Images are items where sourceResource.`type` = image
     */
-  def missingReport(ds: Dataset[DplaMapData], spark: SparkSession): DataFrame = {
+  def missingReport(ds: Dataset[OreAggregation], spark: SparkSession): DataFrame = {
     import spark.implicits._
 
     val thumbnailData: Dataset[MissingThumbnail] = ds.map(dplaMapData => {
@@ -113,7 +114,7 @@ class ThumbnailReport (
     * request the thumbnail endpoint.
     * Warning: This process takes a long time to run.
     */
-  def dimensionsReport(ds: Dataset[DplaMapData], spark: SparkSession): DataFrame = {
+  def dimensionsReport(ds: Dataset[OreAggregation], spark: SparkSession): DataFrame = {
     import spark.implicits._
 
     val thumbnailData: Dataset[ThumbnailDimensions] = ds.map(dplaMapData => {
@@ -137,25 +138,25 @@ class ThumbnailReport (
   }
 
   /**
-    * @param dplaMapData
+    * @param oreAggregation
     * @return String, the DPLA URI for an item
     */
-  def localUri(dplaMapData: DplaMapData): String =
-    dplaMapData.edmWebResource.uri.toString
+  def localUri(oreAggregation: OreAggregation): String =
+    oreAggregation.dplaUri.toString
 
   /**
-    * @param dplaMapData
+    * @param oreAggregation
     * @return String, the provider URI for an item
     */
-  def dplaUri(dplaMapData: DplaMapData): String =
-    dplaMapData.oreAggregation.uri.toString
+  def dplaUri(oreAggregation: OreAggregation): String =
+    oreAggregation.isShownAt.toString
 
   /**
     * @param dplaMapData
     * @return Option[URI], the thumbnail URI
     */
-  def previewUri(dplaMapData: DplaMapData): Option[URI] =
-    dplaMapData.oreAggregation.preview.map(_.uri)
+  def previewUri(oreAggregation: OreAggregation): Option[URI] =
+    oreAggregation.preview.map(_.uri)
 
   /**
     * Parse the height and width from the thumbnail image.

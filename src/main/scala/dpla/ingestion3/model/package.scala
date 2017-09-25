@@ -59,37 +59,37 @@ package object model {
     }
   }
 
-  def jsonlRecord(record: DplaMapData): String = {
-    val recordID: String = generateMd5(Some(record.oreAggregation.uri.toString))
+  def jsonlRecord(record: OreAggregation): String = {
+    val recordID: String = generateMd5(Some(record.dplaUri.toString)) //todo this is almost definitely wrong
     val jobj: JObject =
       ("_type" -> "item") ~
       // For _id, we should have a provider token like "nara" or "ia"
       ("_id" ->
-        (s"${providerToken(record.oreAggregation.provider.uri)}--" +
-         s"${record.oreAggregation.uri.toString}")) ~
+        (s"${providerToken(record.provider.uri)}--" +
+         s"${record.isShownAt.toString}")) ~
       ("_source" ->
         ("id" -> recordID) ~
         ("_id" ->
-          (s"${providerToken(record.oreAggregation.provider.uri)}--" +
-           s"${record.oreAggregation.uri.toString}")) ~
+          (s"${providerToken(record.provider.uri)}--" +
+           s"${record.dplaUri.toString}")) ~ //todo this is almost definitely wrong
         ("@context" -> "http://dp.la/api/items/context") ~
         ("@id" -> ("http://dp.la/api/items/" + recordID)) ~
         ("admin" ->
           ("sourceResource" -> ("title" -> record.sourceResource.title))) ~
         ("aggregatedCHO" -> "#sourceResource") ~
-        ("dataProvider" -> record.oreAggregation.dataProvider.name) ~
+        ("dataProvider" -> record.dataProvider.name) ~
         ("ingestDate" -> ingestDate) ~
         ("ingestType" -> "item") ~
-        ("isShownAt" -> record.edmWebResource.uri.toString) ~
-        ("object" -> record.oreAggregation.`object`.map{o => o.uri.toString}) ~
+        ("isShownAt" -> record.isShownAt.toString) ~
+        ("object" -> record.`object`.map{o => o.uri.toString}) ~
         ("originalRecord" ->
-          ("stringValue" -> record.oreAggregation.originalRecord )) ~
+          ("stringValue" -> record.originalRecord )) ~
         ("provider" ->
-          ("@id" -> record.oreAggregation.provider.uri
+          ("@id" -> record.provider.uri
                       .getOrElse(
                         throw new RuntimeException("Invalid Provider URI")
                       ).toString) ~
-          ("name" -> record.oreAggregation.provider.name)) ~
+          ("name" -> record.provider.name)) ~
         ("sourceResource" ->
           ("@id" ->
             ("http://dp.la/api/items/" + recordID + "#SourceResource")) ~

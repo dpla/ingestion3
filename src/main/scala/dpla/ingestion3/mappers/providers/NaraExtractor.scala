@@ -11,16 +11,21 @@ import org.eclipse.rdf4j.model.IRI
 import scala.util.{Failure, Success, Try}
 import scala.xml.{Node, NodeSeq, XML}
 
-class NaraExtractor(rawData:String) extends Extractor with XmlExtractionUtils with Serializable {
+class NaraExtractor(rawData: String) extends Extractor with XmlExtractionUtils with Serializable {
 
   implicit val xml: NodeSeq = XML.loadString(rawData)
 
   override def getProviderBaseId(): Option[String] = Some("nara--" + itemUri.toString) //TODO can't figure this out.
 
-  override def build(): Try[DplaMapData] = {
+  def itemUri(implicit xml: NodeSeq): URI =
+    extractString("naId").map(naId => new URI("http://catalog.archives.gov/id/" + naId))
+      .getOrElse(throw new IllegalArgumentException("Couldn't load item url."))
+
+  override def build(): Try[OreAggregation] = {
     Try {
-      DplaMapData(
-        DplaSourceResource(
+      OreAggregation(
+        dplaUri = mintDplaItemUri(),
+        sourceResource = DplaSourceResource(
           collection = collection(xml).map(nameOnlyCollection),
           contributor = contributor(xml).map(nameOnlyAgent),
           creator = creator(xml).map(nameOnlyAgent),
@@ -39,19 +44,11 @@ class NaraExtractor(rawData:String) extends Extractor with XmlExtractionUtils wi
           title = extractStrings("title"),
           `type` = types(xml)
         ),
-        EdmWebResource(
-          //todo proper uri handling from other branch
-          uri = itemUri(xml),
-          //TODO naId doesn't seem like a meaningful file format
-          fileFormat = extractStrings(xml \\ "objectType" \ "naId") ++ extractStrings(xml \\ "objectType" \ "termName")
-        ),
-        OreAggregation(
-          uri = itemUri(xml), //this should probably be renamed to isShownAt
-          dataProvider = dataProvider(xml),
-          originalRecord = rawData,
-          provider = agent,
-          preview = extractString(xml \ "digitalObjectArray" \ "digitalObject" \ "thumbnailFilename").map(new URI(_)).map(uriOnlyWebResource)
-        )
+        dataProvider = dataProvider(xml),
+        originalRecord = rawData,
+        provider = agent,
+        isShownAt = uriOnlyWebResource(itemUri(xml)),
+        preview = extractString(xml \ "digitalObjectArray" \ "digitalObject" \ "thumbnailFilename").map(new URI(_)).map(uriOnlyWebResource)
       )
     }
   }
@@ -89,7 +86,7 @@ class NaraExtractor(rawData:String) extends Extractor with XmlExtractionUtils wi
     val personalContributors = for {
       person <- xml \\ "personalContributorArray" \ "personalContributor"
       name = (person \ "contributor" \ "termName").text
-      //_type = (person \ "contributorType" \ "TermName").text
+    //_type = (person \ "contributorType" \ "TermName").text
     } yield name
 
     organizationalContributors ++ personalContributors
@@ -108,35 +105,6 @@ class NaraExtractor(rawData:String) extends Extractor with XmlExtractionUtils wi
 
     if (organizationalCreators.nonEmpty) organizationalCreators else individualCreators
   }
-
-
-  def nodeToDateString(nodeOption: Option[Node]): Option[String] = nodeOption match {
-    case None => None
-    case Some(node) =>
-      val year = (node \ "year").text
-      val month = (node \ "month").text
-      val day = (node \ "day").text
-
-      (year, month, day) match {
-        case (y, m, d) if y.isEmpty => None
-        case (y, m, d) if m.isEmpty => Some(year)
-        case (y, m, d) if d.isEmpty => Some(s"$year-$month")
-        case (y, m, d) => Some(s"$year-$month-$day")
-      }
-  }
-
-  def getDisplayDate(start: Option[Node], end: Option[Node]): Option[String] = {
-    if (start.isEmpty && end.isEmpty) {
-      None
-    } else {
-      val startString = start.map(_.text).getOrElse("unknown")
-      val endString = end.map(_.text).getOrElse("unknown")
-      Some(s"$startString/$endString")
-    }
-  }
-
-  def simpleDate(nodeSeq: NodeSeq): Seq[EdmTimeSpan] =
-    nodeSeq.map(node => EdmTimeSpan(originalSourceDate = nodeToDateString(Some(node))))
 
   def date(xml: NodeSeq): Seq[EdmTimeSpan] = {
 
@@ -174,6 +142,34 @@ class NaraExtractor(rawData:String) extends Extractor with XmlExtractionUtils wi
     ).find(_.nonEmpty).getOrElse(Seq())
   }
 
+  def getDisplayDate(start: Option[Node], end: Option[Node]): Option[String] = {
+    if (start.isEmpty && end.isEmpty) {
+      None
+    } else {
+      val startString = start.map(_.text).getOrElse("unknown")
+      val endString = end.map(_.text).getOrElse("unknown")
+      Some(s"$startString/$endString")
+    }
+  }
+
+  def simpleDate(nodeSeq: NodeSeq): Seq[EdmTimeSpan] =
+    nodeSeq.map(node => EdmTimeSpan(originalSourceDate = nodeToDateString(Some(node))))
+
+  def nodeToDateString(nodeOption: Option[Node]): Option[String] = nodeOption match {
+    case None => None
+    case Some(node) =>
+      val year = (node \ "year").text
+      val month = (node \ "month").text
+      val day = (node \ "day").text
+
+      (year, month, day) match {
+        case (y, m, d) if y.isEmpty => None
+        case (y, m, d) if m.isEmpty => Some(year)
+        case (y, m, d) if d.isEmpty => Some(s"$year-$month")
+        case (y, m, d) => Some(s"$year-$month-$day")
+      }
+  }
+
   def publisher(xml: NodeSeq): Seq[String] = {
 
     val orgs = for {
@@ -209,7 +205,8 @@ class NaraExtractor(rawData:String) extends Extractor with XmlExtractionUtils wi
     value2 = (useRestriction \ "specificUseRestrictionArray" \ "specificUseRestriction" \ "termName").text
     value3 = (useRestriction \ "status" \ "termName").text
   //VALUE2": "VALUE1" "VALUE3
-  } yield f"""$value2": "$value1" "$value3"""
+  } yield
+    f"""$value2": "$value1" "$value3"""
 
   def types(xml: NodeSeq): Seq[String] = for {
     stringType <- extractStrings(xml \\ "generalRecordsTypeArray" \ "generalRecordsType" \ "termName")
@@ -217,10 +214,6 @@ class NaraExtractor(rawData:String) extends Extractor with XmlExtractionUtils wi
   } yield {
     mappedType.getLocalName.toLowerCase
   }
-
-  def itemUri(implicit xml: NodeSeq): URI =
-    extractString("naId").map(naId => new URI("http://catalog.archives.gov/id/" + naId))
-      .getOrElse(throw new IllegalArgumentException("Couldn't load item url."))
 
   def dataProvider(xml: NodeSeq): EdmAgent = {
     val referenceUnit = (for {
@@ -237,7 +230,7 @@ class NaraExtractor(rawData:String) extends Extractor with XmlExtractionUtils wi
 
 object NaraTypeVocabEnforcer extends VocabEnforcer[String] {
   val dcmiTypes = DCMIType()
-  val naraVocab: Map[String,IRI] = Map(
+  val naraVocab: Map[String, IRI] = Map(
     "Architectural and Engineering Drawings" -> dcmiTypes.Image,
     "Artifacts" -> dcmiTypes.PhysicalObject,
     "Data Files" -> dcmiTypes.Dataset,

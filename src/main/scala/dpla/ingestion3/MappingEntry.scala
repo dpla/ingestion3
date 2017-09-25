@@ -3,7 +3,7 @@ package dpla.ingestion3
 import java.io.{File, PrintWriter}
 
 import dpla.ingestion3.mappers.providers._
-import dpla.ingestion3.model.{DplaMapData, RowConverter}
+import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.utils.Utils
 import org.apache.log4j.LogManager
 import org.apache.spark.SparkConf
@@ -41,11 +41,6 @@ object MappingEntry {
       .setAppName("Mapper")
       // TODO there should be a central place to store the sparkMaster
       .setMaster("local[*]")
-      // TODO: This spark.serializer is a kludge to get around serialization issues. Will be fixed in future ticket
-      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-
-    // Needed to serialize the successful mapped records
-    implicit val dplaMapDataEncoder = org.apache.spark.sql.Encoders.kryo[DplaMapData]
 
     val spark = SparkSession.builder()
       .config(sparkConf)
@@ -55,7 +50,7 @@ object MappingEntry {
     import spark.implicits._
 
     //these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
-    val dplaMapDataRowEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
+    val oreAggregationEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
     val stringEncoder: ExpressionEncoder[String] = ExpressionEncoder()
     val tupleRowStringEncoder: ExpressionEncoder[Tuple2[Row, String]] =
       ExpressionEncoder.tuple(RowEncoder(model.sparkSchema), ExpressionEncoder())
@@ -88,7 +83,7 @@ object MappingEntry {
 
     val successResults: Dataset[Row] = mappingResults
           .filter(tuple => Option(tuple._1).isDefined)
-          .map(tuple => tuple._1)(dplaMapDataRowEncoder)
+          .map(tuple => tuple._1)(oreAggregationEncoder)
 
     val failures:  Array[String] = mappingResults
       .filter(tuple => Option(tuple._2).isDefined)

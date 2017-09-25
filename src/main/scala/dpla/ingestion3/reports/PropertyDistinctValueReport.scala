@@ -68,7 +68,7 @@ class PropertyDistinctValueReport(
     * @param spark  The Spark session, which contains encoding / parsing info.
     * @return       DataFrame, typically of Row[value: String, count: Int]
     */
-  override def process(ds: Dataset[DplaMapData],
+  override def process(ds: Dataset[OreAggregation],
                        spark: SparkSession
                       ): DataFrame = {
 

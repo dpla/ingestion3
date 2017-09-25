@@ -43,6 +43,32 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
   val literal = Row("I'm very literal", false)
   val uri = Row(urlString1, true)
 
+  val stringSeq = Seq("booga", "wooga", "oooga")
+  val testSourceResource = Row(
+    stringSeq,                                          //alternateTitle
+    Seq(testDcmiTypeCollection, testDcmiTypeCollection),//collection
+    Seq(testEdmAgent, testEdmAgent),                    //contributor
+    Seq(testEdmAgent, testEdmAgent),                    //creator
+    Seq(testEdmTimeSpan, testEdmTimeSpan),              //date
+    stringSeq,                                          //description
+    stringSeq,                                          //extent
+    stringSeq,                                          //format
+    Seq(testSkosConcept, testSkosConcept),              //genre
+    stringSeq,                                          //identifier
+    Seq(testSkosConcept, testSkosConcept),              //language
+    Seq(testDplaPlace, testDplaPlace),                  //place,
+    Seq(testEdmAgent, testEdmAgent),                    //publisher
+    Seq(literal, literal, uri),                         //relation
+    stringSeq,                                          //replacedBy
+    stringSeq,                                          //replaces
+    stringSeq,                                          //rights
+    Seq(testEdmAgent, testEdmAgent),                    //rightsHolder
+    Seq(testSkosConcept, testSkosConcept),              //subject
+    Seq(testEdmTimeSpan, testEdmTimeSpan),              //temporal
+    stringSeq,                                          //title
+    stringSeq                                           //type
+  )
+
 
   "A ModelConverter" should "work with RowConverter and round trip a DplaMapModel" in {
     val row = RowConverter.toRow(enrichedRecord, sqlSchema)
@@ -152,7 +178,7 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
 
   it should "handle optional EdmWebResources" in {
     ModelConverter.toOptionEdmWebResource(testEdmWebResource) match {
-      case Some(edmWebResource: EdmWebResource) => assert(true)
+      case Some(edmWebResource: EdmWebResource) => Unit
       case None => fail("Got a none back for something that should be a Some")
     }
 
@@ -225,13 +251,15 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "convert an OreAggregation" in {
-    val testResult1 = ModelConverter.toOreAggregation(
+    val testResult1 = ModelConverter.toModel(
       Row(
         urlString1,
+        testSourceResource,
         testEdmAgent,
         "an original record",
         Seq(testEdmWebResource, testEdmWebResource),
         testEdmAgent,
+        testEdmWebResource,
         testEdmWebResource,
         testEdmWebResource,
         testEdmAgent,
@@ -242,7 +270,7 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
     val edmAgent = ModelConverter.toEdmAgent(testEdmAgent)
     val edmWebResource = ModelConverter.toEdmWebResource(testEdmWebResource)
 
-    assert(testResult1.uri === new URI(urlString1))
+    assert(testResult1.dplaUri === new URI(urlString1))
     assert(testResult1.dataProvider === edmAgent)
     assert(testResult1.originalRecord === "an original record" )
     assert(testResult1.hasView === Seq(edmWebResource, edmWebResource))
@@ -262,53 +290,29 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "convert a SourceResource" in {
-    val stringSeq = Seq("booga", "wooga", "oooga")
-    val testRow = Row(
-      stringSeq,                                          //alternateTitle
-      Seq(testDcmiTypeCollection, testDcmiTypeCollection),//collection
-      Seq(testEdmAgent, testEdmAgent),                    //contributor
-      Seq(testEdmAgent, testEdmAgent),                    //creator
-      Seq(testEdmTimeSpan, testEdmTimeSpan),              //date
-      stringSeq,                                          //description
-      stringSeq,                                          //extent
-      stringSeq,                                          //format
-      Seq(testSkosConcept, testSkosConcept),              //genre
-      stringSeq,                                          //identifier
-      Seq(testSkosConcept, testSkosConcept),              //language
-      Seq(testDplaPlace, testDplaPlace),                  //place,
-      Seq(testEdmAgent, testEdmAgent),                    //publisher
-      Seq(literal, literal, uri),                         //relation
-      stringSeq,                                          //replacedBy
-      stringSeq,                                          //replaces
-      stringSeq,                                          //rights
-      Seq(testEdmAgent, testEdmAgent),                    //rightsHolder
-      Seq(testSkosConcept, testSkosConcept),              //subject
-      Seq(testEdmTimeSpan, testEdmTimeSpan),              //temporal
-      stringSeq,                                          //title
-      stringSeq                                           //type
-    )
-    val output = ModelConverter.toSourceResource(testRow)
-    assert(ModelConverter.stringSeq(testRow, 0) === output.alternateTitle)
-    assert(testRow.getSeq[Row](1).map(ModelConverter.toDcmiTypeCollection) === output.collection)
-    assert(testRow.getSeq[Row](2).map(ModelConverter.toEdmAgent) === output.contributor)
-    assert(testRow.getSeq[Row](3).map(ModelConverter.toEdmAgent) === output.creator)
-    assert(testRow.getSeq[Row](4).map(ModelConverter.toEdmTimeSpan) === output.date)
-    assert(ModelConverter.stringSeq(testRow, 5) === output.description)
-    assert(ModelConverter.stringSeq(testRow, 6) === output.extent)
-    assert(ModelConverter.stringSeq(testRow, 7) === output.format)
-    assert(testRow.getSeq[Row](8).map(ModelConverter.toSkosConcept) === output.genre)
-    assert(ModelConverter.stringSeq(testRow, 9) === output.identifier)
-    assert(testRow.getSeq[Row](10).map(ModelConverter.toSkosConcept) === output.language)
-    assert(testRow.getSeq[Row](11).map(ModelConverter.toDplaPlace) === output.place)
-    assert(testRow.getSeq[Row](12).map(ModelConverter.toEdmAgent) === output.publisher)
-    assert(testRow.getSeq[Row](13).map(ModelConverter.toLiteralOrUri) === output.relation)
-    assert(ModelConverter.stringSeq(testRow, 14) === output.replacedBy)
-    assert(ModelConverter.stringSeq(testRow, 15) === output.replaces)
-    assert(ModelConverter.stringSeq(testRow, 16) === output.rights)
-    assert(testRow.getSeq[Row](17).map(ModelConverter.toEdmAgent) === output.rightsHolder)
-    assert(testRow.getSeq[Row](18).map(ModelConverter.toSkosConcept) === output.subject)
-    assert(testRow.getSeq[Row](19).map(ModelConverter.toEdmTimeSpan) === output.temporal)
-    assert(ModelConverter.stringSeq(testRow, 20) === output.title)
-    assert(ModelConverter.stringSeq(testRow, 21) === output.`type`)
+
+    val output = ModelConverter.toSourceResource(testSourceResource)
+    assert(ModelConverter.stringSeq(testSourceResource, 0) === output.alternateTitle)
+    assert(testSourceResource.getSeq[Row](1).map(ModelConverter.toDcmiTypeCollection) === output.collection)
+    assert(testSourceResource.getSeq[Row](2).map(ModelConverter.toEdmAgent) === output.contributor)
+    assert(testSourceResource.getSeq[Row](3).map(ModelConverter.toEdmAgent) === output.creator)
+    assert(testSourceResource.getSeq[Row](4).map(ModelConverter.toEdmTimeSpan) === output.date)
+    assert(ModelConverter.stringSeq(testSourceResource, 5) === output.description)
+    assert(ModelConverter.stringSeq(testSourceResource, 6) === output.extent)
+    assert(ModelConverter.stringSeq(testSourceResource, 7) === output.format)
+    assert(testSourceResource.getSeq[Row](8).map(ModelConverter.toSkosConcept) === output.genre)
+    assert(ModelConverter.stringSeq(testSourceResource, 9) === output.identifier)
+    assert(testSourceResource.getSeq[Row](10).map(ModelConverter.toSkosConcept) === output.language)
+    assert(testSourceResource.getSeq[Row](11).map(ModelConverter.toDplaPlace) === output.place)
+    assert(testSourceResource.getSeq[Row](12).map(ModelConverter.toEdmAgent) === output.publisher)
+    assert(testSourceResource.getSeq[Row](13).map(ModelConverter.toLiteralOrUri) === output.relation)
+    assert(ModelConverter.stringSeq(testSourceResource, 14) === output.replacedBy)
+    assert(ModelConverter.stringSeq(testSourceResource, 15) === output.replaces)
+    assert(ModelConverter.stringSeq(testSourceResource, 16) === output.rights)
+    assert(testSourceResource.getSeq[Row](17).map(ModelConverter.toEdmAgent) === output.rightsHolder)
+    assert(testSourceResource.getSeq[Row](18).map(ModelConverter.toSkosConcept) === output.subject)
+    assert(testSourceResource.getSeq[Row](19).map(ModelConverter.toEdmTimeSpan) === output.temporal)
+    assert(ModelConverter.stringSeq(testSourceResource, 20) === output.title)
+    assert(ModelConverter.stringSeq(testSourceResource, 21) === output.`type`)
   }
 }

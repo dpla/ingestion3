@@ -32,7 +32,7 @@ class MetadataCompletenessReport(
     * @param spark  The Spark session, which contains encoding / parsing info.
     * @return       DataFrame, typically of Row[value: String, count: Int]
     */
-  override def process(ds: Dataset[DplaMapData], spark: SparkSession): DataFrame = {
+  override def process(ds: Dataset[OreAggregation], spark: SparkSession): DataFrame = {
 
     val sqlContext = spark.sqlContext
 
@@ -85,7 +85,7 @@ class MetadataCompletenessReport(
   /**
     * Map a Dataset of DplaMapData to a Dataset of CompletenessTally.
     */
-  private def getItemTallies(ds: Dataset[DplaMapData], spark: SparkSession):
+  private def getItemTallies(ds: Dataset[OreAggregation], spark: SparkSession):
     Dataset[CompletenessTally] = {
 
     import spark.implicits._
@@ -109,13 +109,13 @@ class MetadataCompletenessReport(
         extent = tally(dplaMapData.sourceResource.extent),
         format = tally(dplaMapData.sourceResource.format),
         relation = tally(dplaMapData.sourceResource.relation),
-        id = tally(Seq(dplaMapData.oreAggregation.uri)),
-        dataProvider = tally(Seq(dplaMapData.oreAggregation.dataProvider)),
-        provider = tally(Seq(dplaMapData.oreAggregation.provider)),
-        preview = tally(Seq(dplaMapData.oreAggregation.preview)),
+        id = tally(Seq(dplaMapData.dplaUri)),
+        dataProvider = tally(Seq(dplaMapData.dataProvider)),
+        provider = tally(Seq(dplaMapData.provider)),
+        preview = tally(Seq(dplaMapData.preview)),
         rights = {
           val sourceResourceRights = dplaMapData.sourceResource.rights
-          val edmRights = dplaMapData.oreAggregation.edmRights
+          val edmRights = dplaMapData.edmRights
           if (sourceResourceRights.nonEmpty || edmRights.nonEmpty) 1 else 0
         },
         // add isShownAt value once it has been added to DplaMapData

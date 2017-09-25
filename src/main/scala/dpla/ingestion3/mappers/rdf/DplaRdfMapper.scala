@@ -9,14 +9,13 @@ import org.eclipse.rdf4j.model.{Model, Resource}
   * @param doc DPLA MAP Record to express as RDF
   */
 
-class DplaRdfMapper(doc: DplaMapData) extends RdfBuilderUtils {
+class DplaRdfMapper(doc: OreAggregation) extends RdfBuilderUtils {
 
   def map(): Model = {
     assert(true) //todo assertions
     registerNamespaces(defaultVocabularies)
     mapSourceResource()
     mapOreAggregation()
-    mapItemEdmWebResource()
     build()
   }
 
@@ -24,7 +23,7 @@ class DplaRdfMapper(doc: DplaMapData) extends RdfBuilderUtils {
 
   def mapSourceResource(): Unit = {
     val sourceResource = doc.sourceResource
-    createResource(doc.oreAggregation.uri.resolve("#sourceResource"))
+    createResource(doc.dplaUri.resolve("#sourceResource"))
     setType(dpla.SourceResource)
     map(dc.date, sourceResource.date.map(edmTimespan))
     map(dcTerms.title, sourceResource.title)
@@ -37,18 +36,14 @@ class DplaRdfMapper(doc: DplaMapData) extends RdfBuilderUtils {
     map(dcTerms.`type`, sourceResource.`type`)
   }
 
-  def mapItemEdmWebResource(): Unit =
-    edmWebResource(doc.edmWebResource)
-
-
   def mapOreAggregation(): Unit = {
-    val oreAggregation = doc.oreAggregation
-    createResource(oreAggregation.uri)
+    val oreAggregation = doc
+    createResource(oreAggregation.dplaUri)
     setType(ore.Aggregation)
     //links the SourceResource in the record to the Aggregation
-    map(edm.aggregatedCHO, iri(oreAggregation.uri.toString + "#sourceResource"))
+    map(edm.aggregatedCHO, iri(oreAggregation.dplaUri.toString + "#sourceResource"))
     //links the top level edm:WebResource to the Aggregation
-    map(edm.isShownAt, iri(doc.edmWebResource.uri))
+    map(edm.isShownAt, iri(doc.isShownAt.uri))
     map(edm.provider, edmAgent(oreAggregation.provider))
     map(dpla.originalRecord, oreAggregation.originalRecord) //TODO what to do with ORs
     map(edm.dataProvider, edmAgent(oreAggregation.dataProvider))

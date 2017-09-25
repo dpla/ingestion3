@@ -14,13 +14,20 @@ import org.apache.spark.sql.Row
   * is responsible for converting a DplaMapData to a Row and represents the opposite of this transformation.
   */
 
-
 object ModelConverter {
 
-  def toModel(row: Row): DplaMapData = DplaMapData(
-    sourceResource = toSourceResource(row.getStruct(0)),
-    edmWebResource = toEdmWebResource(row.getStruct(1)),
-    oreAggregation = toOreAggregation(row.getStruct(2))
+  def toModel(row: Row): OreAggregation = OreAggregation(
+    dplaUri = requiredUri(row, 0),
+    sourceResource = toSourceResource(row.getStruct(1)),
+    dataProvider = toEdmAgent(row.getStruct(2)),
+    originalRecord = requiredString(row, 3),
+    hasView = toRows(row, 4).map(toEdmWebResource),
+    intermediateProvider = Option(row.getStruct(5)).map(toEdmAgent),
+    isShownAt = toEdmWebResource(row.getStruct(6)),
+    `object` = toOptionEdmWebResource(row.getStruct(7)),
+    preview = toOptionEdmWebResource(row.getStruct(8)),
+    provider = toEdmAgent(row.getStruct(9)),
+    edmRights = optionalUri(row, 10)
   )
 
   private[model] def toSourceResource(row: Row): DplaSourceResource = DplaSourceResource(
@@ -46,25 +53,6 @@ object ModelConverter {
     temporal = toMulti(row, 19, toEdmTimeSpan),
     title = stringSeq(row, 20),
     `type` = stringSeq(row, 21)
-  )
-
-  private[model] def toEdmWebResource(row: Row): EdmWebResource = EdmWebResource(
-    uri = requiredUri(row, 0),
-    fileFormat = stringSeq(row, 1),
-    dcRights = stringSeq(row, 2),
-    edmRights = optionalString(row, 3)
-  )
-
-  private[model] def toOreAggregation(row: Row): OreAggregation = OreAggregation(
-    uri = requiredUri(row, 0),
-    dataProvider = toEdmAgent(row.getStruct(1)),
-    originalRecord = requiredString(row, 2),
-    hasView = toRows(row, 3).map(toEdmWebResource),
-    intermediateProvider = Option(row.getStruct(4)).map(toEdmAgent),
-    `object` = toOptionEdmWebResource(row.getStruct(5)),
-    preview = toOptionEdmWebResource(row.getStruct(6)),
-    provider = toEdmAgent(row.getStruct(7)),
-    edmRights = optionalUri(row, 8)
   )
 
   private[model] def toDplaPlace(row: Row): DplaPlace = DplaPlace(
@@ -103,6 +91,13 @@ object ModelConverter {
       case None => None
       case Some(row) => Some(toEdmWebResource(row))
     }
+
+  private[model] def toEdmWebResource(row: Row): EdmWebResource = EdmWebResource(
+    uri = requiredUri(row, 0),
+    fileFormat = stringSeq(row, 1),
+    dcRights = stringSeq(row, 2),
+    edmRights = optionalString(row, 3)
+  )
 
   private[model] def toLiteralOrUri(row: Row): LiteralOrUri =
     if (row.getBoolean(1)) Right(new URI(row.getString(0)))

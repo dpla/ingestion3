@@ -12,10 +12,11 @@ import scala.util.{Failure, Success, Try}
 class CdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
   implicit val json: JValue = parse(rawData)
 
-  def build: Try[DplaMapData] = {
+  def build: Try[OreAggregation] = {
     Try {
-      DplaMapData(
-        DplaSourceResource(
+      OreAggregation(
+        dplaUri = mintDplaItemUri(),
+        sourceResource = DplaSourceResource(
           alternateTitle = extractStrings("alternative_title_ss"),
           collection = extractStrings("collection_name").map(nameOnlyCollection),
           contributor = extractStrings("contributor_ss").map(nameOnlyAgent),
@@ -39,16 +40,11 @@ class CdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
           title = extractStrings("title_ss"),
           `type` = extractStrings("type")
         ),
-        EdmWebResource(
-          uri = providerUri(json)
-        ),
-        OreAggregation(
-          uri = mintDplaItemUri(),
-          dataProvider = nameOnlyAgent(provider(json)),
-          originalRecord = rawData,
-          preview = thumbnail(json),
-          provider = agent
-        )
+        dataProvider = nameOnlyAgent(provider(json)),
+        originalRecord = rawData,
+        preview = thumbnail(json),
+        provider = agent,
+        isShownAt = uriOnlyWebResource(providerUri(json))
       )
     }
   }
@@ -73,16 +69,16 @@ class CdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
       case None => None
     }
 
+  def agent = EdmAgent(
+    name = Some("California Digital Library"),
+    uri = Some(new URI("http://dp.la/api/contributor/cdl"))
+  )
+
   def providerUri(json: JValue): URI =
     extractString("url_item")(json) match {
       case Some(url) => new URI(url)
       case None => throw new Exception("Unable to determine URL of item on provider's site")
     }
-
-  def agent = EdmAgent(
-    name = Some("California Digital Library"),
-    uri = Some(new URI("http://dp.la/api/contributor/cdl"))
-  )
 
   /**
     * Base CDL ID should use provider prefix (e.g. cdl--104014afdkfg2a)

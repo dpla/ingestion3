@@ -8,32 +8,34 @@ import dpla.ingestion3.model.DplaMapData._
   * Contains type definitions that express cardinality of fields
   * and a union type for fields that can be literals or uris.
   */
-
-
 object DplaMapData {
   type ZeroToMany[T] = Seq[T]
   type AtLeastOne[T] = Seq[T]
   type ZeroToOne[T] = Option[T]
   type ExactlyOne[T] = T
-  type LiteralOrUri = Either[String,URI]
+  type LiteralOrUri = Either[String, URI]
 }
 
-/**
-  * Container for the classes that represent an item in DPLA MAP.
-  *
-  * @see https://dp.la/info/developers/map/
-  *
-  * @param sourceResource Metadata about the source item rather than it's representations.
-  * @param edmWebResource Metadata about the item's representation on the provider's site.
-  * @param oreAggregation Metadata about the aggretation of the item across it's source and representations.
-  */
-case class DplaMapData (
-                         sourceResource: DplaSourceResource,
-                         edmWebResource: EdmWebResource,
-                         oreAggregation: OreAggregation
-                       )
-
 //Core Classes
+
+/**
+  * The aggregation of attributes that apply to the described resource as a whole,
+  * grouped from edm:WebResource and dpla:SourceResource.
+  *
+  */
+case class OreAggregation(
+                           dplaUri: ExactlyOne[URI],
+                           sourceResource: ExactlyOne[DplaSourceResource],
+                           dataProvider: ExactlyOne[EdmAgent],
+                           originalRecord: ExactlyOne[String],
+                           hasView: ZeroToMany[EdmWebResource] = Seq(),
+                           intermediateProvider: ZeroToOne[EdmAgent] = None,
+                           isShownAt: ExactlyOne[EdmWebResource],
+                           `object`: ZeroToOne[EdmWebResource] = None, // full size image
+                           preview: ZeroToOne[EdmWebResource] = None, // thumbnail
+                           provider: ExactlyOne[EdmAgent],
+                           edmRights: ZeroToOne[URI] = None
+                         )
 
 /**
   * dpla:SourceResource is a subclass of "edm:ProvidedCHO," which comprises the described resources
@@ -53,7 +55,7 @@ case class DplaSourceResource(
                                genre: ZeroToMany[SkosConcept] = Seq(),
                                identifier: ZeroToMany[String] = Seq(),
                                language: ZeroToMany[SkosConcept] = Seq(),
-                               place: ZeroToMany[DplaPlace] = Seq(), //specified as dpla:Place in the spec
+                               place: ZeroToMany[DplaPlace] = Seq(),
                                publisher: ZeroToMany[EdmAgent] = Seq(),
                                relation: ZeroToMany[LiteralOrUri] = Seq(),
                                replacedBy: ZeroToMany[String] = Seq(),
@@ -63,14 +65,12 @@ case class DplaSourceResource(
                                subject: ZeroToMany[SkosConcept] = Seq(),
                                temporal: ZeroToMany[EdmTimeSpan] = Seq(),
                                title: AtLeastOne[String] = Seq(),
-                               `type`: ZeroToMany[String] = Seq() //should be URIs?
+                               `type`: ZeroToMany[String] = Seq() //todo should be URIs?
                              )
 
-/**
-  * Contains the attributes of the digital representation of the web resource, not the source resource.
-  *
-  * Used both to talk about the item in situ on the provider's site, along with other entities on the Web.
-  */
+
+// Context Classes
+
 case class EdmWebResource(
                            uri: ExactlyOne[URI],
                            fileFormat: ZeroToMany[String] = Seq(),
@@ -78,36 +78,6 @@ case class EdmWebResource(
                            edmRights: ZeroToOne[String] = None //todo should be a URI?
                          )
 
-/**
-  * The aggregation of attributes that apply to the described resource as a whole,
-  * grouped from edm:WebResource and dpla:SourceResource.
-  *
-  */
-
-case class OreAggregation(
-                           /*
-                            * FIXME: it's not clear what `uri' corresponds to
-                            * in Section 4.1.C of
-                            * http://dp.la/info/wp-content/uploads/2015/03/MAPv4.pdf
-                            */
-                           uri: ExactlyOne[URI], //uri of the record on our site
-                           dataProvider: ExactlyOne[EdmAgent],
-                           originalRecord: ExactlyOne[String], //map v4 specifies this as a ref, but that's LDP maybe?
-                           hasView: ZeroToMany[EdmWebResource] = Seq(),
-                           intermediateProvider: ZeroToOne[EdmAgent] = None,
-                           `object`: ZeroToOne[EdmWebResource] = None, // full size image (should *not* be used)
-                           preview: ZeroToOne[EdmWebResource] = None, // thumbnail
-                           provider: ExactlyOne[EdmAgent],
-                           edmRights: ZeroToOne[URI] = None
-                         /*
-                          * TODO: Discuss missing isShownAt property
-                          * How and where should isShownAt be added?
-                          * What is the relationship to uri?
-                          */
-                         )
-
-
-// Context Classes
 
 case class EdmAgent(
                      uri: ZeroToOne[URI] = None,
@@ -134,30 +104,18 @@ case class SkosConcept(
                       )
 
 case class DplaPlace(
-                     name: ZeroToOne[String] = None,
-                     city: ZeroToOne[String] = None,
-                     county: ZeroToOne[String] = None,
-                     state: ZeroToOne[String] = None,
-                     country: ZeroToOne[String] = None,
-                     region: ZeroToOne[String] = None,
-                     coordinates: ZeroToOne[String] = None
+                      name: ZeroToOne[String] = None,
+                      city: ZeroToOne[String] = None,
+                      county: ZeroToOne[String] = None,
+                      state: ZeroToOne[String] = None,
+                      country: ZeroToOne[String] = None,
+                      region: ZeroToOne[String] = None,
+                      coordinates: ZeroToOne[String] = None
                     )
 
 case class EdmTimeSpan(
-                        /* Why is this 0.n? I would have assumed ExactlyOne or ZeroToOne
-                            since it wouldn't make sense to have multiple original ranges
-                            per EdmTimeSpan but rather one edmTimeSpan per originalSourceDate?
-
-                            Esp. since in date in sourceResource is also ZeroToMany...
-
-                            I'm changing the type for the enrichment driver and need to follow-up
-                            w/team
-
-                            Also added a prefLabel property to store the enriched label
-                         */
                         originalSourceDate: ZeroToOne[String] = None,
                         prefLabel: ZeroToOne[String] = None,
                         begin: ZeroToOne[String] = None,
                         end: ZeroToOne[String] = None
                       )
-

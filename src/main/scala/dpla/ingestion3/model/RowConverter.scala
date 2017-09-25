@@ -1,9 +1,10 @@
 package dpla.ingestion3.model
 
 import dpla.ingestion3.model.DplaMapData.LiteralOrUri
+import dpla.ingestion3.model.RowConverter.fromEdmAgent
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
-import org.apache.spark.sql.types.{ArrayType, StringType, StructField, StructType}
+import org.apache.spark.sql.types.StructType
 
 /**
   * Responsible for desugaring a DplaMapModel and converting it to a Spark-native Row-based structure.
@@ -16,103 +17,102 @@ import org.apache.spark.sql.types.{ArrayType, StringType, StructField, StructTyp
 
 object RowConverter {
 
-  def toRow(dplaMapData: DplaMapData, sqlSchema: StructType): Row =
+  def toRow(oreAggregation: OreAggregation, sqlSchema: StructType): Row = {
+
     new GenericRowWithSchema(
-      Array(dplaSourceResource(dplaMapData.sourceResource),
-        edmWebResource(dplaMapData.edmWebResource),
-        oreAggregation(dplaMapData.oreAggregation)),
+      Array(
+        oreAggregation.dplaUri.toString, //0
+        fromSourceResource(oreAggregation.sourceResource), //1
+        fromEdmAgent(oreAggregation.dataProvider), //2
+        oreAggregation.originalRecord, //3
+        oreAggregation.hasView.map(fromEdmWebResource), //4
+        oreAggregation.intermediateProvider.map(fromEdmAgent).orNull, //5
+        fromEdmWebResource(oreAggregation.isShownAt), //6
+        oreAggregation.`object`.map(fromEdmWebResource).orNull, //7
+        oreAggregation.preview.map(fromEdmWebResource).orNull, //8
+        fromEdmAgent(oreAggregation.provider), //9
+        oreAggregation.edmRights.map(_.toString).orNull //10
+      ),
       sqlSchema
     )
+  }
 
-  private[model] def oreAggregation(oa: OreAggregation): Row = Row(
-    oa.uri.toString,
-    edmAgent(oa.dataProvider),
-    oa.originalRecord,
-    oa.hasView.map(edmWebResource),
-    oa.intermediateProvider.map(edmAgent).orNull,
-    oa.`object`.map(edmWebResource).orNull,
-    oa.preview.map(edmWebResource).orNull,
-    edmAgent(oa.provider),
-    oa.edmRights.map(_.toString).orNull
+  private[model] def fromEdmWebResource(wr: EdmWebResource): Row = Row(
+    wr.uri.toString, //0
+    wr.fileFormat, //1
+    wr.dcRights, //2
+    wr.edmRights.orNull //3
   )
 
-  private[model] def dplaSourceResource(sr: DplaSourceResource): Row = Row(
-    sr.alternateTitle,
-    sr.collection.map(dcmiTypeCollection),
-    sr.contributor.map(edmAgent),
-    sr.creator.map(edmAgent),
-    sr.date.map(edmTimeSpan),
-    sr.description,
-    sr.extent,
-    sr.format,
-    sr.genre.map(skosConcept),
-    sr.identifier,
-    sr.language.map(skosConcept),
-    sr.place.map(dplaPlace),
-    sr.publisher.map(edmAgent),
-    sr.relation.map(literalOrUri),
-    sr.replacedBy,
-    sr.replaces,
-    sr.rights,
-    sr.rightsHolder.map(edmAgent),
-    sr.subject.map(skosConcept),
-    sr.temporal.map(edmTimeSpan),
-    sr.title,
-    sr.`type`
+  private[model] def fromSourceResource(sr: DplaSourceResource): Row = Row(
+    sr.alternateTitle, //0
+    sr.collection.map(fromDcmiTypeCollection), //1
+    sr.contributor.map(fromEdmAgent), //2
+    sr.creator.map(fromEdmAgent), //3
+    sr.date.map(fromEdmTimeSpan), //4
+    sr.description, //5
+    sr.extent, //6
+    sr.format, //7
+    sr.genre.map(fromSkosConcept), //8
+    sr.identifier, //9
+    sr.language.map(fromSkosConcept), //10
+    sr.place.map(fromDplaPlace), //11
+    sr.publisher.map(fromEdmAgent), //12
+    sr.relation.map(fromLiteralOrUri), //13
+    sr.replacedBy, //14
+    sr.replaces, //15
+    sr.rights, //16
+    sr.rightsHolder.map(fromEdmAgent), //17
+    sr.subject.map(fromSkosConcept), //18
+    sr.temporal.map(fromEdmTimeSpan), //19
+    sr.title, //20
+    sr.`type` //21
   )
 
-  private[model]def edmWebResource(wr: EdmWebResource): Row = Row(
-    wr.uri.toString,
-    wr.fileFormat,
-    wr.dcRights,
-    wr.edmRights.orNull
+  private[model] def fromEdmAgent(ea: EdmAgent): Row = Row(
+    ea.uri.map(_.toString).orNull, //0
+    ea.name.orNull, //1
+    ea.providedLabel.orNull, //2
+    ea.note.orNull, //3
+    ea.scheme.map(_.toString).orNull, //4
+    ea.exactMatch.map(_.toString), //5
+    ea.closeMatch.map(_.toString) //6
   )
 
-  private[model] def edmAgent(ea: EdmAgent): Row = Row(
-    ea.uri.map(_.toString).orNull,
-    ea.name.orNull,
-    ea.providedLabel.orNull,
-    ea.note.orNull,
-    ea.scheme.map(_.toString).orNull,
-    ea.exactMatch.map(_.toString),
-    ea.closeMatch.map(_.toString)
-  )
-
-
-  private[model] def literalOrUri(literalOrUri: LiteralOrUri): Row = Row(
+  private[model] def fromLiteralOrUri(literalOrUri: LiteralOrUri): Row = Row(
     literalOrUri.merge.toString, //both types turn into strings with toString
     literalOrUri.isRight //right is URI, isRight is true when it's a uri
   )
 
-  private[model] def dplaPlace(dplaPlace: DplaPlace): Row = Row(
-    dplaPlace.name.orNull,
-    dplaPlace.city.orNull,
-    dplaPlace.county.orNull,
-    dplaPlace.region.orNull,
-    dplaPlace.state.orNull,
-    dplaPlace.country.orNull,
-    dplaPlace.coordinates.orNull
+  private[model] def fromDplaPlace(dplaPlace: DplaPlace): Row = Row(
+    dplaPlace.name.orNull, //0
+    dplaPlace.city.orNull, //1
+    dplaPlace.county.orNull, //2
+    dplaPlace.region.orNull, //3
+    dplaPlace.state.orNull, //4
+    dplaPlace.country.orNull, //5
+    dplaPlace.coordinates.orNull //6
   )
 
-  private[model] def skosConcept(skosConcept: SkosConcept): Row = Row(
-    skosConcept.concept.orNull,
-    skosConcept.providedLabel.orNull,
-    skosConcept.note.orNull,
-    skosConcept.scheme.map(_.toString).orNull,
-    skosConcept.exactMatch.map(_.toString),
-    skosConcept.closeMatch.map(_.toString)
+  private[model] def fromSkosConcept(skosConcept: SkosConcept): Row = Row(
+    skosConcept.concept.orNull, //0
+    skosConcept.providedLabel.orNull, //1
+    skosConcept.note.orNull, //2
+    skosConcept.scheme.map(_.toString).orNull, //3
+    skosConcept.exactMatch.map(_.toString), //4
+    skosConcept.closeMatch.map(_.toString) //5
   )
 
-  private[model] def edmTimeSpan(edmTimeSpan: EdmTimeSpan): Row = Row(
-    edmTimeSpan.originalSourceDate.orNull,
-    edmTimeSpan.prefLabel.orNull,
-    edmTimeSpan.begin.orNull,
-    edmTimeSpan.end.orNull
+  private[model] def fromEdmTimeSpan(edmTimeSpan: EdmTimeSpan): Row = Row(
+    edmTimeSpan.originalSourceDate.orNull, //0
+    edmTimeSpan.prefLabel.orNull, //1
+    edmTimeSpan.begin.orNull, //2
+    edmTimeSpan.end.orNull //3
   )
 
-  private[model] def dcmiTypeCollection(dcmiTypeCollection: DcmiTypeCollection): Row = Row(
-    dcmiTypeCollection.title.orNull,
-    dcmiTypeCollection.description.orNull
+  private[model] def fromDcmiTypeCollection(dcmiTypeCollection: DcmiTypeCollection): Row = Row(
+    dcmiTypeCollection.title.orNull, //0
+    dcmiTypeCollection.description.orNull //1
   )
 
 }
