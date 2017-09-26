@@ -6,25 +6,37 @@ import dpla.ingestion3.mappers.xml.XmlExtractionUtils
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToOne}
 import dpla.ingestion3.model._
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 import scala.xml._
 
-class PaExtractor(rawData: String) extends Extractor with XmlExtractionUtils {
+class PaExtractor(rawData: String, shortName: String) extends Extractor with XmlExtractionUtils {
 
   implicit val xml: NodeSeq = XML.loadString(rawData)
 
-  // Get the second occurrence of the dc:identifier property
+  // ID minting functions
+  override def useProviderName(): Boolean = false
+
+  override def getProviderName(): String = shortName
+
+  override def getProviderId(): String = extractString(xml \ "header" \ "identifier")
+    .getOrElse(throw ExtractorException(s"No ID for record ${xml}")
+  )
+
+
+  /**
+    * Extracts the external link to the object from the second occurrence
+    * of the dc:identifier property
+    *
+    * @return URI
+    * @throws Exception If dc:identifier does not occur twice
+   */
   def itemUri(): ExactlyOne[URI] = {
     val ids = extractStrings(xml \ "metadata" \\ "identifier")
     if (ids.size >= 2)
       new URI(ids(1))
     else
-    // TODO Are these exception messages valid? Or is there a cleaner way of writing these?
-      throw new Exception("Missing required property itemUri because dc:identifier " +
-        s"does not occur at least twice in record: ${getProviderBaseId().getOrElse("No ID available!")}")
+      throw new Exception(s"dc:identifier does not occur at least twice for: ${getProviderId()}")
   }
-
-  override def getProviderBaseId(): Option[String] = extractString(xml \ "header" \ "identifier")
 
   def build: Try[OreAggregation] = Try {
     OreAggregation(

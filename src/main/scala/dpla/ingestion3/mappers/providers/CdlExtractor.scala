@@ -3,14 +3,24 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.mappers.json.JsonExtractionUtils
-import dpla.ingestion3.model.{DplaMapData, DplaSourceResource, EdmWebResource, OreAggregation, _}
+import dpla.ingestion3.model.{DplaSourceResource, EdmWebResource, OreAggregation, _}
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
-class CdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
+class CdlExtractor(rawData: String, shortName: String)
+  extends Extractor with JsonExtractionUtils {
+
   implicit val json: JValue = parse(rawData)
+
+  // ID minting functions
+  override def useProviderName(): Boolean = true
+
+  override def getProviderName(): String = shortName
+
+  override def getProviderId(): String = extractString("id")(json)
+    .getOrElse(throw ExtractorException(s"No ID for record: ${compact(json)}"))
 
   def build: Try[OreAggregation] = {
     Try {
@@ -79,19 +89,4 @@ class CdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
       case Some(url) => new URI(url)
       case None => throw new Exception("Unable to determine URL of item on provider's site")
     }
-
-  /**
-    * Base CDL ID should use provider prefix (e.g. cdl--104014afdkfg2a)
-    *
-    * #get is called on extractString(id) because we want it to blow up here if ID is not present in the record.
-    * Also, the value needs to be extracted before being concatenated with the provider shortname otherwise we'll
-    * end up with something like: cdl--Some(2a6e6cd353498637048c17d5b9769a9b) and not cdl-2askbe53
-    *
-    * FIXME: Issue with be added to code cleanup ticket in the 9/11 sprint
-    */
-  override def getProviderBaseId(): Option[String] =
-    Option(List("cdl",
-      extractString("id")(json).getOrElse(throw new RuntimeException(s"Could not extract `id` from record\n" +
-        s"${compact(json)}"))
-    ).mkString("--"))
 }

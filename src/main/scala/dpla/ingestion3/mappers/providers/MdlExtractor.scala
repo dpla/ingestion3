@@ -4,14 +4,22 @@ import java.net.URI
 
 import dpla.ingestion3.mappers.json.JsonExtractionUtils
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany}
-import dpla.ingestion3.model.{DplaMapData, DplaSourceResource, EdmWebResource, OreAggregation, _}
+import dpla.ingestion3.model.{DplaSourceResource, EdmWebResource, OreAggregation, _}
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
 import scala.util.Try
 
-class MdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
+class MdlExtractor(rawData: String, shortName: String) extends Extractor with JsonExtractionUtils {
   implicit val json: JValue = parse(rawData)
+
+  // ID minting functions
+  override def useProviderName(): Boolean = true
+
+  override def getProviderName(): String = shortName
+
+  override def getProviderId(): String = extractString("id")(json)
+    .getOrElse(throw ExtractorException(s"No ID for record: ${compact(json)}"))
 
   def build: Try[OreAggregation] = {
     Try {
@@ -100,10 +108,4 @@ class MdlExtractor(rawData: String) extends Extractor with JsonExtractionUtils {
       case _ => throw new RuntimeException(s"isShownAt is missing. Cannot map record.")
     }
   }
-
-  override def getProviderBaseId(): Option[String] =
-    Option(List("mdl",
-      extractString(json \\ "record" \ "isShownAt").getOrElse(
-        throw new RuntimeException(s"Could not extract `isShownAt` from record:\ns${compact(json)}"))
-    ).mkString("--"))
 }

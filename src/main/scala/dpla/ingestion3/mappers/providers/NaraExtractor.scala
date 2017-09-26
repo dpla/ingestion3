@@ -8,18 +8,24 @@ import dpla.ingestion3.mappers.xml.XmlExtractionUtils
 import dpla.ingestion3.model._
 import org.eclipse.rdf4j.model.IRI
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 import scala.xml.{Node, NodeSeq, XML}
 
-class NaraExtractor(rawData: String) extends Extractor with XmlExtractionUtils with Serializable {
+class NaraExtractor(rawData: String, shortName: String) extends Extractor with XmlExtractionUtils with Serializable {
 
   implicit val xml: NodeSeq = XML.loadString(rawData)
 
-  override def getProviderBaseId(): Option[String] = Some("nara--" + itemUri.toString) //TODO can't figure this out.
+  // ID minting functions
+  override def useProviderName(): Boolean = true
+
+  override def getProviderName(): String = shortName
+
+  // itemUri will throw an exception if an ID is missing
+  override def getProviderId(): String = itemUri.toString
 
   def itemUri(implicit xml: NodeSeq): URI =
     extractString("naId").map(naId => new URI("http://catalog.archives.gov/id/" + naId))
-      .getOrElse(throw new IllegalArgumentException("Couldn't load item url."))
+      .getOrElse(throw ExtractorException("Couldn't load item url."))
 
   override def build(): Try[OreAggregation] = {
     Try {

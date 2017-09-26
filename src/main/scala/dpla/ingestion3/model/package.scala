@@ -1,18 +1,18 @@
 package dpla.ingestion3
 
 import java.net.URI
+import java.text.SimpleDateFormat
+import java.util.{Calendar, TimeZone}
 
 import com.databricks.spark.avro.SchemaConverters
 import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import dpla.ingestion3.utils.FlatFileIO
+import org.apache.avro.Schema
+import org.apache.commons.codec.digest.DigestUtils
+import org.apache.spark.sql.types.StructType
 import org.json4s.JsonAST.JObject
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
-import dpla.ingestion3.utils.Utils.generateMd5
-import org.apache.avro.Schema
-import org.apache.spark.sql.types.StructType
-import java.util.{Calendar, TimeZone}
-import java.text.SimpleDateFormat
 
 
 package object model {
@@ -60,7 +60,7 @@ package object model {
   }
 
   def jsonlRecord(record: OreAggregation): String = {
-    val recordID: String = generateMd5(Some(record.dplaUri.toString)) //todo this is almost definitely wrong
+    val recordID: String = DigestUtils.md5Hex(record.dplaUri.toString) //todo this is almost definitely wrong
     val jobj: JObject =
       ("_type" -> "item") ~
       // For _id, we should have a provider token like "nara" or "ia"
