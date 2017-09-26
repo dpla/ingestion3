@@ -66,7 +66,7 @@ object MappingEntry {
       case "cdl" => classOf[CdlExtractor]
       case "mdl" => classOf[MdlExtractor]
       case "nara" => classOf[NaraExtractor]
-      case "pa digital" => classOf[PaExtractor]
+      case "pa" => classOf[PaExtractor]
       case "wi" => classOf[WiExtractor]
       case _ =>
         logger.fatal(s"No match found for provider short name ${shortName}")
