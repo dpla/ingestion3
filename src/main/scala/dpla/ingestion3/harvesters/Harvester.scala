@@ -2,12 +2,13 @@ package dpla.ingestion3.harvesters
 
 import java.io.File
 
+import com.amazonaws.auth.{AWSCredentialsProviderChain, DefaultAWSCredentialsProviderChain}
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.utils.Utils
 import org.apache.log4j.Logger
-import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.util.{Failure, Success, Try}
 
@@ -51,11 +52,13 @@ abstract class Harvester(shortName: String,
     */
   def harvest = {
 
-    // If the output directory already exists then delete it and its contents.
-    val outputFile = new File(outputDir)
-    if (outputFile.exists)
+    // If the output directory already exists it is a local path
+    // then delete it and its contents.
+    // TODO Move this into a shell script
+    outputFile.getParentFile.mkdirs()
+    if (outputFile.exists & !outputDir.startsWith("s3"))
       harvestLogger.info(s"Output directory already exists. Deleting ${outputDir}...")
-    Utils.deleteRecursively(outputFile)
+      Utils.deleteRecursively(outputFile)
 
     // Log message that harvest is starting.
     harvestLogger.info(s"Beginning ${shortName} harvest")
@@ -80,6 +83,21 @@ abstract class Harvester(shortName: String,
     sc.stop()
   }
 
+  protected val outputFile = new File(outputDir)
+  protected lazy val s3AccessKey: String = awsCredentials.getCredentials.getAWSAccessKeyId
+  protected lazy val s3SecretKey: String = awsCredentials.getCredentials.getAWSSecretKey
+
+  /**
+    * DefaultAWSCredentialsProviderChain looks for AWS keys in the following order:
+    *   1. Environment Variables
+    *   2. Java System Properties
+    *   3. Credential profiles file at the default location (~/.aws/credentials)
+    *   4. Instance profile credentials delivered through the Amazon EC2 metadata service
+    *
+    * @return
+    */
+  def awsCredentials = new AWSCredentialsProviderChain(new DefaultAWSCredentialsProviderChain)
+
   /**
     * Initiate a spark session using the configs specified in the i3Conf.
     *
@@ -89,7 +107,9 @@ abstract class Harvester(shortName: String,
     * @return SparkSession
     */
   protected lazy val spark: SparkSession = {
-    val sparkConf = new SparkConf().setAppName(s"Harvest: ${shortName}")
+    val sparkConf = new SparkConf()
+      .setAppName(s"Harvest: ${shortName}")
+
     val sparkMaster = conf.spark.sparkMaster.getOrElse("local[1]")
     sparkConf.setMaster(sparkMaster)
 
@@ -98,8 +118,10 @@ abstract class Harvester(shortName: String,
       .config(sparkConf)
       .getOrCreate()
   }
-  protected lazy val sc: SparkContext = spark.sparkContext
 
+  protected lazy val sc: SparkContext = spark.sparkContext
+  sc.hadoopConfiguration.set("fs.s3a.access.key", s3AccessKey)
+  sc.hadoopConfiguration.set("fs.s3a.secret.key", s3SecretKey)
   /**
     * Check that harvested DataFrame meets the expected schema.
     * If not, log a warning.
@@ -123,7 +145,7 @@ abstract class Harvester(shortName: String,
     // Match only the names and data types of the fields.
     // Whether or not a field is nullable does not matter for our purposes.
     def mapFields(fields: Array[StructField]): Array[(String, DataType)] =
-      fields.map{ s => (s.name -> s.dataType) }
+      fields.map{ s => s.name -> s.dataType }
 
     val expectedFields = mapFields(expectedStructs)
     val actualFields = mapFields(actualStructs)

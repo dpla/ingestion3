@@ -41,6 +41,8 @@ lazy val root = (project in file("."))
       "org.scalaj" % "scalaj-http_2.11" % "2.3.0",
       "org.rogach" % "scallop_2.11" % "3.0.3",
       "org.scalamock" %% "scalamock-scalatest-support" % "3.6.0" % "test",
-      "com.typesafe" % "config" % "1.3.1"
+      "com.typesafe" % "config" % "1.3.1",
+      "com.amazonaws" % "aws-java-sdk-s3" % "1.10.6",
+      "org.apache.hadoop" % "hadoop-aws" % "2.8.1"
     )
   )

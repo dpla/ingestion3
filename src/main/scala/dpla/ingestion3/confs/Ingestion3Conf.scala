@@ -15,19 +15,17 @@ import org.rogach.scallop.{ScallopConf, ScallopOption}
   */
 class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None) extends ConfUtils {
   def load(): i3Conf = {
-    // Loads config file for more information about loading hierarchy please read
-    // https://github.com/typesafehub/config#standard-behavior
     ConfigFactory.invalidateCaches()
 
     if (confFilePath.isEmpty) throw new IllegalArgumentException("Missing path to conf file")
 
-    System.setProperty(getConfFileLocation(confFilePath), confFilePath)
+    val confString = getConfigContents(confFilePath)
 
-    val baseConfig = ConfigFactory.load
+    val baseConfig = ConfigFactory.parseString(confString.getOrElse(
+      throw new RuntimeException(s"Unable to load configuration file at ${confFilePath}")))
 
     val providerConf = providerName match {
-      case Some(name) => ConfigFactory.load
-        .getConfig(name)
+      case Some(name) => baseConfig.getConfig(name)
         .withFallback(baseConfig)
         .resolve()
       case _ => baseConfig.resolve()
