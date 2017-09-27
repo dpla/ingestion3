@@ -41,7 +41,7 @@ abstract class ApiHarvester(shortName: String,
   protected lazy val avroWriter: DataFileWriter[GenericRecord] = {
     val dirName = if (outputDir.endsWith("/")) outputDir.dropRight(1) else outputDir
     val fileName = dirName + "/api_harvest.avro"
-    val dir = new File(dirName).mkdir
+    val dir = new File(dirName).mkdirs
     val file = new File(fileName)
     getAvroWriter(file, schema)
   }
