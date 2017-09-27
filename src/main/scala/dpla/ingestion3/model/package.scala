@@ -66,7 +66,7 @@ package object model {
       // For _id, we should have a provider token like "nara" or "ia"
       ("_id" ->
         (s"${providerToken(record.provider.uri)}--" +
-         s"${record.isShownAt.toString}")) ~
+         s"${record.isShownAt.uri}")) ~
       ("_source" ->
         ("id" -> recordID) ~
         ("_id" ->
