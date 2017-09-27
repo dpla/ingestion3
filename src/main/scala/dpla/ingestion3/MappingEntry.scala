@@ -127,7 +127,7 @@ object MappingEntry {
   }
 
   private def map(extractorClass: Class[_ <: Extractor], document: String, shortName: String): (Row, String) =
-    extractorClass.getConstructor(classOf[String]).newInstance(document, shortName).build() match {
+    extractorClass.getConstructor(classOf[String], classOf[String]).newInstance(document, shortName).build() match {
       case Success(dplaMapData) => (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
       case Failure(exception) => (null, exception.getMessage)
     }
