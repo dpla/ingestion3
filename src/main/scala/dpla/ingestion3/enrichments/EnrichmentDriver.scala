@@ -3,6 +3,8 @@ package dpla.ingestion3.enrichments
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.model._
 
+import scala.util.Try
+
 
 class EnrichmentDriver(conf: i3Conf) extends Serializable {
   /**
@@ -30,7 +32,7 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
     * @param record The mapped record
     * @return An enriched record
     */
-  def enrich(record: OreAggregation): OreAggregation = {
+  def enrich(record: OreAggregation): Try[OreAggregation] = Try {
     record.copy(
       sourceResource = record.sourceResource.copy(
         date = record.sourceResource.date.map(d => dateEnrichment.parse(d)),
