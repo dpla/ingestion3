@@ -9,9 +9,19 @@ import dpla.ingestion3.model._
 import scala.util.Try
 import scala.xml._
 
-class WiExtractor(rawData: String) extends Extractor with XmlExtractionUtils {
+class WiExtractor(rawData: String, shortName: String) extends Extractor with XmlExtractionUtils {
 
   implicit val xml: NodeSeq = XML.loadString(rawData)
+
+  // ID minting functions
+  // TODO confirm WI does not use prefix.
+  override def useProviderName(): Boolean = false
+
+  override def getProviderName(): String = shortName
+
+  override def getProviderId(): String = extractString(xml \ "header" \ "identifier")
+    .getOrElse(throw ExtractorException(s"No ID for record ${xml}")
+  )
 
   def build(): Try[OreAggregation] = Try {
     OreAggregation(
@@ -65,6 +75,4 @@ class WiExtractor(rawData: String) extends Extractor with XmlExtractionUtils {
       case None => throw new Exception("Missing required property isShownAt")
     }
   }
-
-  override def getProviderBaseId(): Option[String] = extractString(xml \ "header" \ "identifier")
 }

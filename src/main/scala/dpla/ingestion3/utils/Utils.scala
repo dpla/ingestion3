@@ -8,7 +8,6 @@ import java.util.Calendar
 import scala.xml.Node
 import java.util.concurrent.TimeUnit
 
-import org.apache.commons.codec.digest.DigestUtils
 import org.apache.http.client.fluent.Request
 import org.apache.log4j.{FileAppender, Logger, PatternLayout}
 
@@ -44,22 +43,6 @@ object Utils {
         }
       }
       case Failure(_) => false
-    }
-  }
-
-  /**
-    * Create an md5 hash from the given id value
-    *
-    * @param id Value to hash
-    * @return MD5 hash
-    * @throws IllegalArgumentException If no source value given
-    */
-  def generateMd5(id: Option[String]): String = {
-    id match {
-      case Some(i) => DigestUtils.md5Hex(i)
-      // TODO: Is more information required in this error message?
-      case _ => throw new IllegalArgumentException(s"Unable to mint an MD5 ID given local " +
-        s"ID of ${id.getOrElse("**No ID provided**")}")
     }
   }
 

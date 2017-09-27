@@ -66,7 +66,7 @@ object MappingEntry {
       case "cdl" => classOf[CdlExtractor]
       case "mdl" => classOf[MdlExtractor]
       case "nara" => classOf[NaraExtractor]
-      case "pa digital" => classOf[PaExtractor]
+      case "pa" => classOf[PaExtractor]
       case "wi" => classOf[WiExtractor]
       case _ =>
         logger.fatal(s"No match found for provider short name ${shortName}")
@@ -75,7 +75,8 @@ object MappingEntry {
 
     // Run the mapping over the Dataframe
     val documents: Dataset[String] = harvestedRecords.select("document").as[String]
-    val mappingResults: Dataset[(Row, String)] = documents.map(document => map(extractorClass, document))(tupleRowStringEncoder)
+    val mappingResults: Dataset[(Row, String)] = documents.map(document =>
+      map(extractorClass, document, shortName))(tupleRowStringEncoder)
 
     // Delete the output location if it exists
     Utils.deleteRecursively(new File(dataOut))
@@ -98,8 +99,8 @@ object MappingEntry {
     spark.stop()
   }
 
-  private def map(extractorClass: Class[_ <: Extractor], document: String): (Row, String) =
-    extractorClass.getConstructor(classOf[String]).newInstance(document).build() match {
+  private def map(extractorClass: Class[_ <: Extractor], document: String, shortName: String): (Row, String) =
+    extractorClass.getConstructor(classOf[String]).newInstance(document, shortName).build() match {
       case Success(dplaMapData) => (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
       case Failure(exception) => (null, exception.getMessage)
     }
