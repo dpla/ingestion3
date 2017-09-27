@@ -1,5 +1,7 @@
 package dpla.ingestion3.harvesters.api
 
+import java.io.File
+
 import org.apache.avro.Schema
 import org.apache.spark.sql.DataFrame
 import com.databricks.spark.avro._
@@ -36,8 +38,13 @@ abstract class ApiHarvester(shortName: String,
     * This is lazy b/c queryParams should be printed before avroWriter is set.
     * @see doHarvest
     */
-  protected lazy val avroWriter: DataFileWriter[GenericRecord] =
-  getAvroWriter(outputFile, schema)
+  protected lazy val avroWriter: DataFileWriter[GenericRecord] = {
+    val dirName = if (outputDir.endsWith("/")) outputDir.dropRight(1) else outputDir
+    val fileName = dirName + "/api_harvest.avro"
+    val dir = new File(dirName).mkdir
+    val file = new File(fileName)
+    getAvroWriter(file, schema)
+  }
 
   /**
     * Saves the records
