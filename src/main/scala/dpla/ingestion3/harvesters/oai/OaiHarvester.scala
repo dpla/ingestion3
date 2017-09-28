@@ -1,11 +1,11 @@
 package dpla.ingestion3.harvesters.oai
 
+import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.Harvester
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.functions._
-import com.databricks.spark.avro._
 
 import scala.util.Try
 
@@ -18,7 +18,6 @@ class OaiHarvester(shortName: String,
   override protected val mimeType: String = "application_xml"
 
   override protected def runHarvest: Try[DataFrame] = Try{
-
     // Set options.
     val readerOptions: Map[String, String] = Map(
       "verb" -> conf.harvest.verb,
@@ -51,13 +50,15 @@ class OaiHarvester(shortName: String,
       .withColumn("provider", lit(shortName))
       .withColumn("mimetype", lit(mimeType))
 
+    harvestLogger.info(s"Saving output to ${outputDir}")
+
     // Write harvested data to file.
-    finalData.write
+    finalData
+      .write
       .format("com.databricks.spark.avro")
       .option("avroSchema", finalData.schema.toString)
       .avro(outputDir)
 
-    // Return DataFrame.
     finalData
   }
 }
