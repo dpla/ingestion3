@@ -52,7 +52,7 @@ abstract class Harvester(shortName: String,
   def harvest = {
 
     // If the output directory already exists then delete it and its contents.
-    outputFile.getParentFile.mkdir()
+    val outputFile = new File(outputDir)
     if (outputFile.exists)
       harvestLogger.info(s"Output directory already exists. Deleting ${outputDir}...")
     Utils.deleteRecursively(outputFile)
@@ -79,8 +79,6 @@ abstract class Harvester(shortName: String,
     // Shut down spark session.
     sc.stop()
   }
-
-  protected val outputFile = new File(outputDir)
 
   /**
     * Initiate a spark session using the configs specified in the i3Conf.

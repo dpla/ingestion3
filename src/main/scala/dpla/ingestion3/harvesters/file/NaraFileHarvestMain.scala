@@ -3,10 +3,10 @@ package dpla.ingestion3.harvesters.file
 import java.io.{File, FileInputStream}
 import java.util.zip.GZIPInputStream
 
-import dpla.ingestion3.utils.{FlatFileIO, Utils}
+import dpla.ingestion3.utils.{AvroUtils, FlatFileIO, Utils}
 import org.apache.avro.Schema
-import org.apache.avro.file.{CodecFactory, DataFileWriter}
-import org.apache.avro.generic.{GenericData, GenericDatumWriter, GenericRecord}
+import org.apache.avro.file.DataFileWriter
+import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.LogManager
 import org.apache.tools.bzip2.CBZip2InputStream
@@ -31,7 +31,7 @@ object NaraFileHarvestMain {
     Utils.deleteRecursively(outFile)
     val schemaStr = new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc")
     val schema = new Schema.Parser().parse(schemaStr)
-    val avroWriter = getAvroWriter(outFile, schema)
+    val avroWriter = AvroUtils.getAvroWriter(outFile, schema)
 
     val inputStream = getInputStream(inFile)
       .getOrElse(throw new IllegalArgumentException("Couldn't load tar file."))
@@ -122,21 +122,6 @@ object NaraFileHarvestMain {
     */
   def xmlToString(node: Node): String =
     Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
-
-  /**
-    * Builds a writer for saving Avros.
-    *
-    * @param outputFile Place to save Avro
-    * @param schema     Parsed schema of the output
-    * @return DataFileWriter for writing Avros in the given schema
-    */
-  def getAvroWriter(outputFile: File, schema: Schema): DataFileWriter[GenericRecord] = {
-    val datumWriter = new GenericDatumWriter[GenericRecord](schema)
-    val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
-    dataFileWriter.setCodec(CodecFactory.deflateCodec(1))
-    dataFileWriter.setSyncInterval(1024 * 1024 * 2) //2M
-    dataFileWriter.create(schema, outputFile)
-  }
 
   /**
     * Loads .gz, .tgz, .bz, and .tbz2, and plain old .tar files.
