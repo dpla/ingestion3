@@ -6,7 +6,7 @@ import java.nio.file.StandardOpenOption.{CREATE, TRUNCATE_EXISTING}
 
 import org.apache.avro.Schema
 import org.apache.avro.file.{CodecFactory, DataFileWriter}
-import org.apache.avro.generic.{GenericDatumWriter, GenericRecordBuilder}
+import org.apache.avro.generic.{GenericDatumWriter, GenericRecord}
 import org.apache.commons.io.IOUtils
 
 import scala.io.Source
@@ -41,44 +41,22 @@ class FlatFileIO extends FileIO {
 }
 
 /**
-  * Write RDD to Avro file
-  *
-  * @param schema Schema
-  *                 The schema to serialize to
-  * @param outputFile File
-  *                   The Avro file destination
+  * Helper functions for working Avros
   */
-class AvroFileIO (schema: Schema, outputFile: File) extends FileIO {
-
-  // Create and configure the writer
-  val writer = new DataFileWriter[Object](new GenericDatumWriter[Object]())
-  writer.setCodec(CodecFactory.snappyCodec())
-  writer.create(schema, outputFile)
-  val builder = new GenericRecordBuilder(schema)
-
+object AvroUtils {
   /**
-    * Saves data to AvroFile
+    * Builds a writer for saving Avros.
     *
-    * @param id String
-    *           DPLA identifier
-    * @param data String
-    *             Record content
+    * @param outputFile Place to save Avro
+    * @param schema     Parsed schema of the output
+    * @return DataFileWriter for writing Avros in the given schema
     */
-  override def writeFile(id: String, data: String): Unit = {
-    // TODO: QUESTION >  is this the right place to do this?
-    builder.set("or_document", data)
-    builder.set("or_mimetype", "application/xml")
-    builder.set("id", id)
-
-    writer.append(builder.build())
-  }
-
-  /**
-    * Close the writer
-    *
-    */
-  def close: Unit = {
-    writer.close()
+  def getAvroWriter(outputFile: File, schema: Schema): DataFileWriter[GenericRecord] = {
+    val datumWriter = new GenericDatumWriter[GenericRecord](schema)
+    val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
+    dataFileWriter.setCodec(CodecFactory.deflateCodec(1))
+    dataFileWriter.setSyncInterval(1024 * 1024 * 2) //2M
+    dataFileWriter.create(schema, outputFile)
   }
 }
 

@@ -8,7 +8,7 @@ import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.file.NaraFileHarvestMain._
-import dpla.ingestion3.utils.FlatFileIO
+import dpla.ingestion3.utils.{AvroUtils, FlatFileIO}
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.log4j.Logger
@@ -43,7 +43,7 @@ abstract class ApiHarvester(shortName: String,
     val fileName = dirName + "/api_harvest.avro"
     val dir = new File(dirName).mkdirs
     val file = new File(fileName)
-    getAvroWriter(file, schema)
+    AvroUtils.getAvroWriter(file, schema)
   }
 
   /**
