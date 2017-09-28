@@ -61,17 +61,13 @@ package object model {
 
   def jsonlRecord(record: OreAggregation): String = {
     val recordID: String = DigestUtils.md5Hex(record.dplaUri.toString) //todo this is almost definitely wrong
+    val _id = s"${providerToken(record.provider.uri)}--${record.isShownAt.uri}"
     val jobj: JObject =
       ("_type" -> "item") ~
-      // For _id, we should have a provider token like "nara" or "ia"
-      ("_id" ->
-        (s"${providerToken(record.provider.uri)}--" +
-         s"${record.isShownAt.uri}")) ~
+      ("_id" -> _id) ~
       ("_source" ->
         ("id" -> recordID) ~
-        ("_id" ->
-          (s"${providerToken(record.provider.uri)}--" +
-           s"${record.dplaUri.toString}")) ~ //todo this is almost definitely wrong
+        ("_id" -> _id) ~
         ("@context" -> "http://dp.la/api/items/context") ~
         ("@id" -> ("http://dp.la/api/items/" + recordID)) ~
         ("admin" ->
