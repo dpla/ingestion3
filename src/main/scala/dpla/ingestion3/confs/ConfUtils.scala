@@ -50,7 +50,7 @@ trait ConfUtils {
     val source: BufferedSource = Source.fromInputStream(s3Object.getObjectContent)
     // Try-block exists to ensure closure of input stream
     try
-      Option(source.mkString)
+      Option(source.getLines().mkString("\n"))
     finally
       source.close()
   }
@@ -62,7 +62,7 @@ trait ConfUtils {
     * @return Option[String] The contents of the file or None
     */
   def getLocalConf(path: String): Option[String] = Try {
-      Source.fromFile(path).getLines.mkString
+      Source.fromFile(path).getLines.mkString("\n")
     } match {
       case Success(s) => Some(s)
       case Failure(_) => None
