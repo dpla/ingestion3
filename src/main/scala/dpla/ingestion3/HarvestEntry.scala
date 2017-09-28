@@ -5,6 +5,7 @@ import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.harvesters.api.{CdlHarvester, MdlHarvester}
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.harvesters.pss.PssHarvester
+import dpla.ingestion3.harvesters.resourceSync.RsHarvester
 import org.apache.log4j.{LogManager, Logger}
 
 /**
@@ -83,6 +84,9 @@ object HarvestEntry {
       }
       case "pss" =>
         new PssHarvester(shortName, conf, outputDir, harvestLogger).harvest
+      case "rs" =>
+        new RsHarvester(shortName, conf, outputDir, harvestLogger).harvest
+
       case _ =>
         throw new RuntimeException("Harvest type not recognized.")
     }

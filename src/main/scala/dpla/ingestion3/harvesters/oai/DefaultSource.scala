@@ -3,6 +3,7 @@ package dpla.ingestion3.harvesters.oai
 import dpla.ingestion3.utils.Utils.validateUrl
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.sources._
+import dpla.ingestion3.harvesters.HarvesterExceptions._
 
 class DefaultSource extends RelationProvider {
 
@@ -99,19 +100,4 @@ class DefaultSource extends RelationProvider {
 
   // Converts a comma-separated String of sets to an Array of sets.
   def parseSets(sets: String): Array[String] = sets.split(",").map(_.trim)
-
-  def throwMissingArgException(arg: String) = {
-    val msg = s"Missing argument: $arg"
-    throw new IllegalArgumentException(msg)
-  }
-
-  def throwUnrecognizedArgException(arg: String) = {
-    val msg = s"Unrecognized argument: $arg"
-    throw new IllegalArgumentException(msg)
-  }
-
-  def throwValidationException(arg: String) = {
-    val msg = s"Validation error: ${arg}"
-    throw new IllegalArgumentException(msg)
-  }
 }
