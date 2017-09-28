@@ -77,7 +77,7 @@ package object model {
         ("ingestDate" -> ingestDate) ~
         ("ingestType" -> "item") ~
         ("isShownAt" -> record.isShownAt.toString) ~
-        ("object" -> record.`object`.map{o => o.uri.toString}) ~
+        ("object" -> record.`preview`.map{o => o.uri.toString}) ~ // in dpla map 3, object is the thumbnail
         ("originalRecord" ->
           ("stringValue" -> record.originalRecord )) ~
         ("provider" ->
