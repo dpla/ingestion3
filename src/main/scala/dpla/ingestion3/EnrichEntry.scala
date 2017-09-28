@@ -2,17 +2,15 @@ package dpla.ingestion3
 
 import java.io.File
 
+import com.databricks.spark.avro._
+import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.enrichments.EnrichmentDriver
 import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
 import dpla.ingestion3.utils.Utils
 import org.apache.log4j.{LogManager, Logger}
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
-import com.databricks.spark.avro._
-import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
-import dpla.ingestion3.mappers.providers.Extractor
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
 import scala.util.{Failure, Success, Try}
 
@@ -55,7 +53,10 @@ object EnrichEntry {
     enrichLogger.addAppender(appender)
 
     // Load configuration from file
-    val i3Conf = new Ingestion3Conf(confFile).load()
+    val i3Conf: i3Conf = new Ingestion3Conf(confFile).load()
+
+    // Verify Twofishes can be reached
+    pingTwofishes(i3Conf)
 
     val sparkConf = new SparkConf()
       .setAppName("Enrichment")
@@ -70,21 +71,20 @@ object EnrichEntry {
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
     val dplaMapDataRowEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
-    val tupleRowStringEncoder: ExpressionEncoder[Tuple2[Row, String]] =
+    val tupleRowStringEncoder: ExpressionEncoder[(Row, String)] =
       ExpressionEncoder.tuple(RowEncoder(model.sparkSchema), ExpressionEncoder())
 
     // Load the mapped records
     val mappedRows: DataFrame = spark.read.avro(inputDir)
 
+    // Create the enrichment outside map function so it is not recreated for each record.
+    // If the Twofishes host is not reachable it will die hard
     val enrichResults: Dataset[(Row, String)] = mappedRows.map(row => {
+      val driver = new EnrichmentDriver(i3Conf)
       Try{ ModelConverter.toModel(row) } match {
-        case Success(dplaMapData) => {
-          val driver = new EnrichmentDriver(i3Conf)
-          enrich(dplaMapData, driver)
-        }
+        case Success(dplaMapData) => enrich(dplaMapData, driver)
         case Failure(err) => (null, s"Error parsing mapped data: ${err.getMessage}")
       }
-
     })(tupleRowStringEncoder)
 
     val successResults: Dataset[Row] = enrichResults
@@ -120,6 +120,20 @@ object EnrichEntry {
     driver.enrich(dplaMapData) match {
       case Success(enriched) => (RowConverter.toRow(enriched, model.sparkSchema), null)
       case Failure(exception) => (null, exception.getMessage)
+    }
+  }
+
+  /**
+    * Attempts to reach the Twofishes service
+    *
+    * @param conf Configuration file
+    * @throws RuntimeException If the service cannot be reached
+    */
+  private def pingTwofishes(conf: i3Conf) = {
+    val host = conf.twofishes.hostname.getOrElse("localhost")
+    val port = conf.twofishes.port.getOrElse("8081")
+    Utils.validateUrl(s"http://${host}:${port}/query") match {
+      case false => throw new RuntimeException(s"Cannot reach Twofishes at ${host}")
     }
   }
 }

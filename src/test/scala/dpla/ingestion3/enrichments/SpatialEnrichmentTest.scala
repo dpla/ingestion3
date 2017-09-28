@@ -1,13 +1,15 @@
 package dpla.ingestion3.enrichments
 
-import org.json4s.jackson.JsonMethods
 import dpla.ingestion3.model.DplaPlace
+import org.json4s.jackson.JsonMethods
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{FlatSpec, PrivateMethodTester}
-import util.Try
+
+import scala.util.Try
 
 
-class SpatialEnrichmentTest extends FlatSpec with PrivateMethodTester
+class SpatialEnrichmentTest extends FlatSpec
+    with PrivateMethodTester
     with MockFactory {
 
   val geocoder: Twofisher = mock[Twofisher]

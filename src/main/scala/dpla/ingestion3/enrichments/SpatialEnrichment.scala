@@ -6,9 +6,12 @@ import dpla.ingestion3.model.DplaPlace
 import org.apache.log4j.Logger
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
+
 import scalaj.http._
 import com.github.dvdme.Coordinates
-import util.{Try, Success, Failure}
+import dpla.ingestion3.utils.Utils
+
+import util.{Failure, Success, Try}
 
 
 /* Case classes for JSON parser ... */
@@ -56,7 +59,7 @@ trait Twofisher {
     *         interpretations
     */
   def geocoderResponse(queryType: String, term: String): JValue = {
-    val baseURI = s"http://$hostname:$port/query"
+    val baseURI = getBaseUri
     retry(3) {
       val response: HttpResponse[String] =
         Http(baseURI)
@@ -88,6 +91,9 @@ trait Twofisher {
   def hostname: String = "localhost"
 
   def port: String = "8081"
+
+  def getBaseUri: String = s"http://$hostname:$port/query"
+
 }
 
 /**

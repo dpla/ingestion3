@@ -8,13 +8,14 @@ import scala.util.Try
 
 class EnrichmentDriver(conf: i3Conf) extends Serializable {
   /**
-    * Reads twofishes hostname from application config file
+    * Reads Twofishes hostname and port from application config file
     *
     * @see dpla.ingestion3.enrichments.Twofisher
     * @see SpatialEnrichmentIntegrationTest
     */
   object Geocoder extends Twofisher {
     override def hostname = conf.twofishes.hostname.getOrElse("localhost")
+    override def port = conf.twofishes.port.getOrElse("8081")
   }
 
   val stringEnrichment = new StringEnrichments()
@@ -38,6 +39,6 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
         date = record.sourceResource.date.map(d => dateEnrichment.parse(d)),
         language = record.sourceResource.language.map(l => LanguageMapper.mapLanguage(l)),
         place = record.sourceResource.place.map(p => spatialEnrichment.enrich(p))
-    ))
+      ))
   }
 }

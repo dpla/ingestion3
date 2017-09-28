@@ -13,35 +13,17 @@ import org.apache.log4j.{FileAppender, Logger, PatternLayout}
 
 import scala.util.{Failure, Success, Try}
 
-/**
-  * Created by scott on 1/18/17.
-  */
+
 object Utils {
   /**
-    * Accepts a String URL and validates it by making a request and returning true only if
-    * the response code is a 200.
+    * TODO This should be re-written after an HTTP library is chosen.
     *
     * @param str
     * @return
     */
   def validateUrl(str: String): Boolean = {
-    def url() : Try[URL] = Try {
-      new URL(str) // with throw exception if string is not valid URL
-    }
-
-    url() match {
-      case Success(endpoint) => {
-        val code = Request.Get(endpoint.toURI)
-          .execute()
-          .returnResponse()
-          .getStatusLine
-          .getStatusCode
-        // TODO Other appropriate codes or something like (code / 100) match case 2 => ?
-        code match {
-          case 200 => true
-          case _ => false
-        }
-      }
+    Try { Request.Get(new URL(str).toURI).execute() } match {
+      case Success(_) => true
       case Failure(_) => false
     }
   }

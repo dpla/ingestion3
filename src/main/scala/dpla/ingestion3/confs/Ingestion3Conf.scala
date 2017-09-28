@@ -54,7 +54,8 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None) 
         sparkExecutorMemory= getProp(providerConf, "spark.executorMemory")
       ),
       i3Twofishes(
-        hostname = getProp(providerConf, "twofishes.hostname")
+        hostname = getProp(providerConf, "twofishes.hostname"),
+        port = getProp(providerConf, "twofishes.port")
       )
     )
   }
@@ -125,7 +126,8 @@ case class i3Conf(
                  )
 
 case class i3Twofishes(
-                  hostname: Option[String] = None
+                  hostname: Option[String] = None,
+                  port: Option[String] = None
                 )
 
 case class i3Spark (
