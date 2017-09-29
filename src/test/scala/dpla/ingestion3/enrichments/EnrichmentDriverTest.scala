@@ -7,6 +7,8 @@ import dpla.ingestion3.data.MappedRecordsFixture
 import dpla.ingestion3.model.{DplaSourceResource, EdmTimeSpan, SkosConcept, _}
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 
+import scala.util.Success
+
 
 class EnrichmentDriverTest extends FlatSpec with BeforeAndAfter {
 
@@ -61,7 +63,7 @@ class EnrichmentDriverTest extends FlatSpec with BeforeAndAfter {
 
     val enrichedRecord = driver.enrich(MappedRecordsFixture.mappedRecord)
 
-    assert(enrichedRecord === expectedValue)
+    assert(enrichedRecord === Success(expectedValue))
   }
 }
 
