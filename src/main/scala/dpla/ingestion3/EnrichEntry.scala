@@ -129,10 +129,11 @@ object EnrichEntry {
     * @param conf Configuration file
     * @throws RuntimeException If the service cannot be reached
     */
-  private def pingTwofishes(conf: i3Conf) = {
+  private def pingTwofishes(conf: i3Conf): Unit = {
     val host = conf.twofishes.hostname.getOrElse("localhost")
     val port = conf.twofishes.port.getOrElse("8081")
     Utils.validateUrl(s"http://${host}:${port}/query") match {
+      case true => Unit // TODO log something?
       case false => throw new RuntimeException(s"Cannot reach Twofishes at ${host}")
     }
   }
