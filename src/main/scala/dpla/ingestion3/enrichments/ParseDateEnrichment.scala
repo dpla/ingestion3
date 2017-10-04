@@ -15,6 +15,12 @@ class ParseDateEnrichment extends Serializable {
     val dateString = edtfOriginalDate.originalSourceDate.getOrElse("")
     val str = preprocess(dateString)
 
+
+    timeSpanFromEDTF(str) match {
+      case Some(timespan) => return timespan
+      case None => Unit
+    }
+
     //if we can get an interval out of this, return that
     parseInterval(str)
       .map(
@@ -86,6 +92,62 @@ class ParseDateEnrichment extends Serializable {
       case None => None
     }
     //todo EDTF stuff
+  }
+
+  def timeSpanFromEDTF(str: String): Option[EdmTimeSpan] = {
+    edtfExactDate(str) match {
+      case Some(timespan) => Some(timespan)
+      case None =>
+        edtfDateAndTime(str) match {
+          case Some(timespan) => Some(timespan)
+          case None =>
+            edtfInterval(str) match {
+              case Some(timespan) => Some(timespan)
+              case _ => None
+            }
+        }
+    }
+  }
+
+  def edtfExactDate(str: String): Option[EdmTimeSpan] = {
+    edtfDateRexp.findFirstMatchIn(str) match {
+      case Some(matched) =>
+        Some(EdmTimeSpan(
+          originalSourceDate = Some(str),
+          prefLabel = Some(str),
+          begin = Some(str),
+          end = Some(str)
+        ))
+      case _ => None
+    }
+  }
+
+  def edtfDateAndTime(str: String): Option[EdmTimeSpan] = {
+    edtfDateAndTimeRexp.findFirstMatchIn(str) match {
+      case Some(matched) =>
+        Some(EdmTimeSpan(
+          originalSourceDate = Some(str),
+          prefLabel = Some(str),
+          // Assuming we just want the date and not the whole timestamp for
+          // begin and end, we take the date part of the timestamp ...
+          begin = Some(matched.group(1)),
+          end = Some(matched.group(1))
+        ))
+      case _ => None
+    }
+  }
+
+  def edtfInterval(str: String): Option[EdmTimeSpan] = {
+    edtfIntervalRexp.findFirstMatchIn(str) match {
+      case Some(matched) =>
+        Some(EdmTimeSpan(
+          originalSourceDate = Some(str),
+          prefLabel = Some(str),
+          begin = Some(matched.group(1)),
+          end = Some(matched.group(2))
+        ))
+      case _ => None
+    }
   }
 
   private def parseInterval(str: String): Option[(String, String)] = {
@@ -177,7 +239,9 @@ class ParseDateEnrichment extends Serializable {
       case None => None
     }
   }
+
 }
+
 
 object ParseDateEnrichment {
 
@@ -192,4 +256,20 @@ object ParseDateEnrichment {
   val decadeStringRegexp = """^(\d{3})0s$""".r
 
   val decadeHyphenRegexp = """^(\d{3})-$""".r
+
+
+  val edtfDateRexp: scala.util.matching.Regex =
+    """^\d{4}-?(?:\d{2})?-?(?:\d{2})?$""".r
+  // edtfDateAndTimeRexp captures the date part of the timestamp (YYYY-mm-dd)
+  // because it's assumed that EdmTimeSpan's 'begin' and 'end' are just supposed
+  // to be dates, without time. If that's wrong, change this and
+  // edtfDateAndTime().
+  val edtfDateAndTimeRexp: scala.util.matching.Regex =
+    """^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}:\d{2}(?:Z|[\+\-]\d{2}:\d{2})?$""".r
+  // Sorry for all the parentheses, but there are two match groups in
+  // edtfIntervalRexp, one for the begin and one for the end. Note the forward
+  // slash as the delimiter.
+  val edtfIntervalRexp: scala.util.matching.Regex =
+    """^(\d{4}-?(?:\d{2})?-?(?:\d{2})?)/(\d{4}-?(?:\d{2})?-?(?:\d{2})?)$""".r
+
 }
