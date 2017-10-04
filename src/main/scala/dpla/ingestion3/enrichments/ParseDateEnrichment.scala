@@ -66,12 +66,13 @@ class ParseDateEnrichment extends Serializable {
         .replaceAll("\\s+", " ")
 
     val removedDecades =
-      if (removedLateAndEarly.matches("""^[1-9]+0s$"""))
-        removedLateAndEarly.replaceAll("0s", "x")
+      if (removedLateAndEarly.matches("""^\d{2,3}0s$"""))
+        removedLateAndEarly.replaceAll("""0s\b""", "x")
       else removedLateAndEarly
 
+    // What is the goal of this replacement?  Why turn "1978--" into "1978xx"?
     val removedRanges =
-      if (removedDecades.matches("""^[1-9]+\-+$"""))
+      if (removedDecades.matches("""^\d{2,4}\-+$"""))
         removedDecades.replaceAll("-", "x")
       else removedDecades
 
