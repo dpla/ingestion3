@@ -11,6 +11,7 @@ import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
+import org.apache.spark.util.LongAccumulator
 
 import scala.util.{Failure, Success}
 
@@ -76,6 +77,10 @@ object MappingEntry {
       .config(sparkConf)
       .getOrCreate()
 
+    val sc = spark.sparkContext
+    val totalCount: LongAccumulator = sc.longAccumulator("Total Record Count")
+    val successCount: LongAccumulator = sc.longAccumulator("Successful Record Count")
+
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
 
@@ -102,8 +107,10 @@ object MappingEntry {
 
     // Run the mapping over the Dataframe
     val documents: Dataset[String] = harvestedRecords.select("document").as[String]
-    val mappingResults: Dataset[(Row, String)] = documents.map(document =>
-      map(extractorClass, document, shortName))(tupleRowStringEncoder)
+    val mappingResults: Dataset[(Row, String)] =
+      documents.map(document =>
+        map(extractorClass, document, shortName, totalCount, successCount)
+      )(tupleRowStringEncoder)
 
     // Delete the output location if it exists
     Utils.deleteRecursively(new File(dataOut))
@@ -121,16 +128,27 @@ object MappingEntry {
 
 
     // Summarize results
-    mappingSummary(harvestedRecords.count(), successResults.count(), failures, dataOut, shortName)
+    mappingSummary(
+      totalCount.value, successCount.value, failures, dataOut, shortName
+    )
 
     spark.stop()
   }
 
-  private def map(extractorClass: Class[_ <: Extractor], document: String, shortName: String): (Row, String) =
+  private def map(extractorClass: Class[_ <: Extractor],
+                  document: String,
+                  shortName: String,
+                  totalCount: LongAccumulator,
+                  successCount: LongAccumulator): (Row, String) = {
+    totalCount.add(1)
     extractorClass.getConstructor(classOf[String], classOf[String]).newInstance(document, shortName).build() match {
-      case Success(dplaMapData) => (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
-      case Failure(exception) => (null, exception.getMessage)
+      case Success(dplaMapData) =>
+        successCount.add(1)
+        (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
+      case Failure(exception) =>
+        (null, exception.getMessage)
     }
+  }
 
   /**
     * Print mapping summary information
