@@ -89,7 +89,8 @@ object EnrichEntry {
         case Success(dplaMapData) =>
           enrich(dplaMapData, driver, totalCount, successCount)
         case Failure(err) =>
-          (null, s"Error parsing mapped data: ${err.getMessage}")
+          (null, s"Error parsing mapped data: ${err.getMessage}\n" +
+                 s"${err.getStackTrace.mkString("\n")}")
       }
     })(tupleRowStringEncoder)
 

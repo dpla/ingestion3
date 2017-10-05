@@ -146,7 +146,8 @@ object MappingEntry {
         successCount.add(1)
         (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
       case Failure(exception) =>
-        (null, exception.getMessage)
+        (null, s"${exception.getMessage}\n" +
+               s"${exception.getStackTrace.mkString("\n")}")
     }
   }
 
