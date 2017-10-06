@@ -71,6 +71,7 @@ object EnrichEntry {
     val sc = spark.sparkContext
     val totalCount: LongAccumulator = sc.longAccumulator("Total Record Count")
     val successCount: LongAccumulator = sc.longAccumulator("Successful Record Count")
+    val failureCount: LongAccumulator = sc.longAccumulator("Failed Record Count")
 
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
@@ -87,7 +88,7 @@ object EnrichEntry {
       val driver = new EnrichmentDriver(i3Conf)
       Try{ ModelConverter.toModel(row) } match {
         case Success(dplaMapData) =>
-          enrich(dplaMapData, driver, totalCount, successCount)
+          enrich(dplaMapData, driver, totalCount, successCount, failureCount)
         case Failure(err) =>
           (null, s"Error parsing mapped data: ${err.getMessage}\n" +
                  s"${err.getStackTrace.mkString("\n")}")
@@ -119,22 +120,24 @@ object EnrichEntry {
       s"Mapped ${totalCount.value} records and enriched ${successCount.value}" +
         s" records"
     )
-    enrichLogger.debug(
-      s"${totalCount.value - successCount.value} enrichment errors"
-    )
+    enrichLogger.debug(s"${failureCount.value} enrichment errors")
   }
 
   private def enrich(dplaMapData: OreAggregation,
                      driver: EnrichmentDriver,
                      totalCount: LongAccumulator,
-                     successCount: LongAccumulator): (Row, String) = {
+                     successCount: LongAccumulator,
+                     failureCount: LongAccumulator): (Row, String) = {
     totalCount.add(1)
     driver.enrich(dplaMapData) match {
       case Success(enriched) =>
         successCount.add(1)
         (RowConverter.toRow(enriched, model.sparkSchema), null)
       case Failure(exception) =>
-        (null, exception.getMessage)
+        failureCount.add(1)
+        (null, s"${exception.getMessage}\n" +
+          s"${exception.getStackTrace.mkString("\n")}")
+
     }
   }
 

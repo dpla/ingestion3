@@ -80,6 +80,7 @@ object MappingEntry {
     val sc = spark.sparkContext
     val totalCount: LongAccumulator = sc.longAccumulator("Total Record Count")
     val successCount: LongAccumulator = sc.longAccumulator("Successful Record Count")
+    val failureCount: LongAccumulator = sc.longAccumulator("Failed Record Count")
 
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
@@ -109,7 +110,8 @@ object MappingEntry {
     val documents: Dataset[String] = harvestedRecords.select("document").as[String]
     val mappingResults: Dataset[(Row, String)] =
       documents.map(document =>
-        map(extractorClass, document, shortName, totalCount, successCount)
+        map(extractorClass, document, shortName,
+            totalCount, successCount, failureCount)
       )(tupleRowStringEncoder)
 
     // Delete the output location if it exists
@@ -129,7 +131,8 @@ object MappingEntry {
 
     // Summarize results
     mappingSummary(
-      totalCount.value, successCount.value, failures, dataOut, shortName
+      totalCount.value, successCount.value, failureCount.value,
+      failures, dataOut, shortName
     )
 
     spark.stop()
@@ -139,13 +142,15 @@ object MappingEntry {
                   document: String,
                   shortName: String,
                   totalCount: LongAccumulator,
-                  successCount: LongAccumulator): (Row, String) = {
+                  successCount: LongAccumulator,
+                  failureCount: LongAccumulator): (Row, String) = {
     totalCount.add(1)
     extractorClass.getConstructor(classOf[String], classOf[String]).newInstance(document, shortName).build() match {
       case Success(dplaMapData) =>
         successCount.add(1)
         (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
       case Failure(exception) =>
+        failureCount.add(1)
         (null, s"${exception.getMessage}\n" +
                s"${exception.getStackTrace.mkString("\n")}")
     }
@@ -162,6 +167,7 @@ object MappingEntry {
     */
   def mappingSummary(harvestCount: Long,
                      mapCount: Long,
+                     failureCount: Long,
                      errors: Array[String],
                      outDir: String,
                      shortName: String): Unit = {
@@ -169,9 +175,9 @@ object MappingEntry {
     logDir.mkdirs()
 
     println(s"Harvested $harvestCount records")
-    println(s"Mapped ${mapCount} records")
-    println(s"Failed to map ${harvestCount - mapCount} records.")
-    if (mapCount != harvestCount)
+    println(s"Mapped $mapCount records")
+    println(s"Failed to map $failureCount records.")
+    if (failureCount > 0)
       println(s"Saving error log to ${logDir.getAbsolutePath}")
     val pw = new PrintWriter(
       new File(s"${logDir.getAbsolutePath}/$shortName-mapping-errors-${System.currentTimeMillis()}.log"))
