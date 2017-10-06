@@ -1072,6 +1072,13 @@
         "null",
         "string"
       ]
+    },
+    {
+      "name": "sidecar",
+      "type": [
+        "null",
+        "string"
+      ]
     }
   ]
 }

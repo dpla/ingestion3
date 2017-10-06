@@ -4,6 +4,10 @@ import java.net.URI
 
 import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import org.apache.spark.sql.Row
+import org.json4s.JsonAST.{JNothing, JValue}
+import org.json4s.jackson.JsonMethods.parse
+
+import scala.util.{Failure, Success, Try}
 
 /**
   * Responsible for taking a Row representing a structure of fields that represents a DplaMapData in Avro or other
@@ -27,7 +31,8 @@ object ModelConverter {
     `object` = toOptionEdmWebResource(row.getStruct(7)),
     preview = toOptionEdmWebResource(row.getStruct(8)),
     provider = toEdmAgent(row.getStruct(9)),
-    edmRights = optionalUri(row, 10)
+    edmRights = optionalUri(row, 10),
+    sidecar = toJValue(row, 11)
   )
 
   private[model] def toSourceResource(row: Row): DplaSourceResource = DplaSourceResource(
@@ -141,4 +146,9 @@ object ModelConverter {
   private[model] def uriSeq(row: Row, fieldPosition: Integer): Seq[URI] =
     stringSeq(row, fieldPosition).map(new URI(_))
 
+  private[model] def toJValue(row: Row, fieldPosition: Integer): JValue = Try {
+    parse(row.getString(fieldPosition)) } match {
+      case Success(jv) => jv
+      case Failure(_) => throw new RuntimeException(s"Couldn't parse JSON in row $row, field position $fieldPosition")
+    }
 }
