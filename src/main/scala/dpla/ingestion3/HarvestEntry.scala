@@ -1,12 +1,13 @@
 package dpla.ingestion3
 
-import dpla.ingestion3.utils.Utils
+import dpla.ingestion3.utils.{ProviderRegistry, Utils}
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
-import dpla.ingestion3.harvesters.api.{CdlHarvester, MdlHarvester}
+import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.harvesters.pss.PssHarvester
-import dpla.ingestion3.harvesters.resourceSync.RsHarvester
 import org.apache.log4j.{LogManager, Logger}
+
+import scala.util.{Failure, Success}
 
 /**
   * Entry point for running a harvest.
@@ -73,22 +74,36 @@ object HarvestEntry {
                      harvestLogger: Logger) = {
 
     // TODO Add resource sync type
-    harvestType match {
+    val harvester: Harvester = harvestType match {
       case "oai" =>
-        new OaiHarvester(shortName, conf, outputDir, harvestLogger).harvest
-      case "api" => shortName match {
-        case "cdl" =>
-          new CdlHarvester(shortName, conf, outputDir, harvestLogger).harvest
-        case "mdl" =>
-          new MdlHarvester(shortName, conf, outputDir, harvestLogger).harvest
-      }
+        new OaiHarvester(shortName, conf, outputDir, harvestLogger)
+      case "api" =>
+        registeredHarvester(shortName, outputDir, conf, harvestLogger)
       case "pss" =>
-        new PssHarvester(shortName, conf, outputDir, harvestLogger).harvest
-      case "rs" =>
-        new RsHarvester(shortName, conf, outputDir, harvestLogger).harvest
-
+        new PssHarvester(shortName, conf, outputDir, harvestLogger)
       case _ =>
-        throw new RuntimeException("Harvest type not recognized.")
+        val msg = s"Harvest type not recognized."
+        harvestLogger.fatal(msg)
+        throw new RuntimeException(msg)
     }
+
+    harvester.harvest
+  }
+
+  // Look up a registered Harvester class with the given shortName and instantiate.
+  def registeredHarvester(shortName: String,
+                          outputDir: String,
+                          conf: i3Conf,
+                          harvestLogger: Logger): Harvester = {
+
+    val harvesterClass = ProviderRegistry.lookupHarvesterClass(shortName) match {
+      case Success(harvClass) => harvClass
+      case Failure(e) =>
+        harvestLogger.fatal(e.getMessage)
+        throw e
+    }
+
+    harvesterClass.getConstructor(classOf[String], classOf[i3Conf], classOf[String], classOf[Logger])
+      .newInstance(shortName, conf, outputDir, harvestLogger)
   }
 }

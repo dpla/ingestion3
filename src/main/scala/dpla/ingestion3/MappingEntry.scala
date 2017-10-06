@@ -4,7 +4,7 @@ import java.io.{File, PrintWriter}
 
 import dpla.ingestion3.mappers.providers._
 import dpla.ingestion3.model.RowConverter
-import dpla.ingestion3.utils.Utils
+import dpla.ingestion3.utils.{ProviderRegistry, Utils}
 import org.apache.log4j.{LogManager, Logger}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
@@ -93,17 +93,13 @@ object MappingEntry {
 
     // Load the harvested record dataframe
     val harvestedRecords: DataFrame = spark.read.avro(dataIn)
-    
-    // Match on the shortName to select the correct Extractor
-    val extractorClass = shortName match {
-      case "cdl" => classOf[CdlExtractor]
-      case "mdl" => classOf[MdlExtractor]
-      case "nara" => classOf[NaraExtractor]
-      case "pa" => classOf[PaExtractor]
-      case "wi" => classOf[WiExtractor]
-      case _ =>
-        mappingLogger.fatal(s"No match found for provider short name ${shortName}")
-        throw new Exception("Cannot find a mapper")
+
+    // Look up a registered Extractor class with the given shortName.
+    val extractorClass = ProviderRegistry.lookupExtractorClass(shortName) match {
+      case Success(extClass) => extClass
+      case Failure(e) =>
+        mappingLogger.fatal(e.getMessage)
+        throw e
     }
 
     // Run the mapping over the Dataframe
