@@ -11,6 +11,8 @@ import org.apache.log4j.{LogManager, Logger}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
+import org.apache.spark.util.LongAccumulator
+
 
 import scala.util.{Failure, Success, Try}
 
@@ -67,6 +69,9 @@ object EnrichEntry {
       .getOrCreate()
 
     val sc = spark.sparkContext
+    val totalCount: LongAccumulator = sc.longAccumulator("Total Record Count")
+    val successCount: LongAccumulator = sc.longAccumulator("Successful Record Count")
+    val failureCount: LongAccumulator = sc.longAccumulator("Failed Record Count")
 
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
@@ -82,8 +87,11 @@ object EnrichEntry {
     val enrichResults: Dataset[(Row, String)] = mappedRows.map(row => {
       val driver = new EnrichmentDriver(i3Conf)
       Try{ ModelConverter.toModel(row) } match {
-        case Success(dplaMapData) => enrich(dplaMapData, driver)
-        case Failure(err) => (null, s"Error parsing mapped data: ${err.getMessage}")
+        case Success(dplaMapData) =>
+          enrich(dplaMapData, driver, totalCount, successCount, failureCount)
+        case Failure(err) =>
+          (null, s"Error parsing mapped data: ${err.getMessage}\n" +
+                 s"${err.getStackTrace.mkString("\n")}")
       }
     })(tupleRowStringEncoder)
 
@@ -103,23 +111,33 @@ object EnrichEntry {
       .format("com.databricks.spark.avro")
       .save(outputDir)
 
-    // Gather some stats
-    val mappedRecordCount = mappedRows.count()
-    val enrichedRecordCount = successResults.count()
-
     sc.stop()
 
     // Log error messages.
     failures.foreach(msg => enrichLogger.warn(s"Error: ${msg}"))
 
-    enrichLogger.debug(s"Mapped ${mappedRecordCount} records and enriched ${enrichedRecordCount} records")
-    enrichLogger.debug(s"${mappedRecordCount-enrichedRecordCount} enrichment errors")
+    enrichLogger.debug(
+      s"Mapped ${totalCount.value} records and enriched ${successCount.value}" +
+        s" records"
+    )
+    enrichLogger.debug(s"${failureCount.value} enrichment errors")
   }
 
-  private def enrich(dplaMapData: OreAggregation, driver: EnrichmentDriver): (Row, String) = {
+  private def enrich(dplaMapData: OreAggregation,
+                     driver: EnrichmentDriver,
+                     totalCount: LongAccumulator,
+                     successCount: LongAccumulator,
+                     failureCount: LongAccumulator): (Row, String) = {
+    totalCount.add(1)
     driver.enrich(dplaMapData) match {
-      case Success(enriched) => (RowConverter.toRow(enriched, model.sparkSchema), null)
-      case Failure(exception) => (null, exception.getMessage)
+      case Success(enriched) =>
+        successCount.add(1)
+        (RowConverter.toRow(enriched, model.sparkSchema), null)
+      case Failure(exception) =>
+        failureCount.add(1)
+        (null, s"${exception.getMessage}\n" +
+          s"${exception.getStackTrace.mkString("\n")}")
+
     }
   }
 
