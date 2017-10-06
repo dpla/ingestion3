@@ -1,10 +1,10 @@
 package dpla.ingestion3.model
 
 import dpla.ingestion3.model.DplaMapData.LiteralOrUri
-import dpla.ingestion3.model.RowConverter.fromEdmAgent
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.types.StructType
+import org.json4s.jackson.JsonMethods._
 
 /**
   * Responsible for desugaring a DplaMapModel and converting it to a Spark-native Row-based structure.
@@ -31,7 +31,8 @@ object RowConverter {
         oreAggregation.`object`.map(fromEdmWebResource).orNull, //7
         oreAggregation.preview.map(fromEdmWebResource).orNull, //8
         fromEdmAgent(oreAggregation.provider), //9
-        oreAggregation.edmRights.map(_.toString).orNull //10
+        oreAggregation.edmRights.map(_.toString).orNull, //10
+        compact(oreAggregation.sidecar)
       ),
       sqlSchema
     )

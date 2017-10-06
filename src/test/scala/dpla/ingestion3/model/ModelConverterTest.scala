@@ -10,6 +10,7 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.StructType
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 
+
 class ModelConverterTest extends FlatSpec with BeforeAndAfter {
 
   val schema = new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
@@ -263,7 +264,8 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
         testEdmWebResource,
         testEdmWebResource,
         testEdmAgent,
-        urlString1
+        urlString1,
+        """"{"field": "value"}"""
       )
     )
 

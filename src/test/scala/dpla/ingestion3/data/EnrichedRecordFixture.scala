@@ -3,6 +3,7 @@ package dpla.ingestion3.data
 import java.net.URI
 
 import dpla.ingestion3.model._
+import org.json4s.jackson.JsonMethods.parse
 
 object EnrichedRecordFixture {
 
@@ -31,6 +32,7 @@ object EnrichedRecordFixture {
       isShownAt = EdmWebResource(
         uri = new URI("https://example.org/record/123")
       ),
+      sidecar = parse("""{"field": "value"}"""),
       sourceResource = DplaSourceResource(
         collection = Seq(DcmiTypeCollection(
           title = Some("The Collection"),

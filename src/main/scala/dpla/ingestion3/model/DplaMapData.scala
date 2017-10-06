@@ -3,6 +3,8 @@ package dpla.ingestion3.model
 import java.net.URI
 
 import dpla.ingestion3.model.DplaMapData._
+import org.json4s.JValue
+import org.json4s.JsonAST.JNothing
 
 /**
   * Contains type definitions that express cardinality of fields
@@ -34,7 +36,8 @@ case class OreAggregation(
                            `object`: ZeroToOne[EdmWebResource] = None, // full size image
                            preview: ZeroToOne[EdmWebResource] = None, // thumbnail
                            provider: ExactlyOne[EdmAgent],
-                           edmRights: ZeroToOne[URI] = None
+                           edmRights: ZeroToOne[URI] = None,
+                           sidecar: JValue = JNothing
                          )
 
 /**
