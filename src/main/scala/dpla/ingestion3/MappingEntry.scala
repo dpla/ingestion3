@@ -59,8 +59,8 @@ object MappingEntry {
 
     // Log config file location and provider short name.
     mappingLogger.info(s"Mapping initiated")
-    mappingLogger.info(s"Config file: ${confFile}")
-    mappingLogger.info(s"Provider short name: ${shortName}")
+    mappingLogger.info(s"Config file: $confFile")
+    mappingLogger.info(s"Provider short name: $shortName")
 
     // Load configuration from file.
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
@@ -70,7 +70,7 @@ object MappingEntry {
     val sparkMaster = conf.spark.sparkMaster.getOrElse("local[1]")
 
     val sparkConf = new SparkConf()
-      .setAppName(s"Mapping: ${shortName}")
+      .setAppName(s"Mapping: $shortName")
       .setMaster(sparkMaster)
 
     val spark = SparkSession.builder()
@@ -87,8 +87,10 @@ object MappingEntry {
 
     //these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
     val oreAggregationEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
-    val stringEncoder: ExpressionEncoder[String] = ExpressionEncoder()
-    val tupleRowStringEncoder: ExpressionEncoder[Tuple2[Row, String]] =
+    // TODO Is this line actually required?
+    // val stringEncoder: ExpressionEncoder[String] = ExpressionEncoder()
+
+    val tupleRowStringEncoder: ExpressionEncoder[(Row, String)] =
       ExpressionEncoder.tuple(RowEncoder(model.sparkSchema), ExpressionEncoder())
 
     // Load the harvested record dataframe
@@ -134,6 +136,19 @@ object MappingEntry {
     spark.stop()
   }
 
+  /**
+    * Perform the mapping for a single record
+    *
+    * @param extractorClass Provider's extractor class
+    * @param document The harvested record to map
+    * @param shortName Provider short name
+    * @param totalCount Accumulator to track the number of records processed
+    * @param successCount Accumulator to track the number of records successfully mapped
+    * @param failureCount Accumulator to track the number of records that failed to map
+    * @return A tuple (Row, String)
+    *           - (Row, null) on successful mapping
+    *           - (null, Error message) on mapping failure
+    */
   private def map(extractorClass: Class[_ <: Extractor],
                   document: String,
                   shortName: String,
@@ -155,11 +170,11 @@ object MappingEntry {
   /**
     * Print mapping summary information
     *
-    * @param harvestCount
-    * @param mapCount
-    * @param errors
-    * @param outDir
-    * @param shortName
+    * @param harvestCount Number of harvested records
+    * @param mapCount Number of mapped records
+    * @param errors Number of mapping failures
+    * @param outDir Location to save mapping output
+    * @param shortName Provider short name
     */
   def mappingSummary(harvestCount: Long,
                      mapCount: Long,

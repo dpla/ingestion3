@@ -41,8 +41,8 @@ object HarvestEntry {
 
     // Log config file location and provider short name.
     harvestLogger.info(s"Harvest initiated")
-    harvestLogger.info(s"Config file: ${confFile}")
-    harvestLogger.info(s"Provider short name: ${shortName}")
+    harvestLogger.info(s"Config file: $confFile")
+    harvestLogger.info(s"Provider short name: $shortName")
 
     // Load configuration from file.
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
@@ -52,7 +52,7 @@ object HarvestEntry {
     val harvestType = providerConf.harvest.harvestType
       .getOrElse(throw new RuntimeException("No harvest type specified."))
 
-    harvestLogger.info(s"Harvest type: ${harvestType}")
+    harvestLogger.info(s"Harvest type: $harvestType")
 
     // Execute harvest.
     executeHarvest(harvestType, shortName, outputDir, providerConf, harvestLogger)
@@ -61,11 +61,14 @@ object HarvestEntry {
   /**
     * Run the appropriate type of harvest.
     *
-    * @param harvestType
-    * @param shortName
-    * @param outputDir
-    * @param conf
-    * @param harvestLogger
+    * @param harvestType Abbreviation indicating the type of harvest to run.
+    *                    Valid values: [oai, api, pss]
+    * @param shortName Provider short name (e.g. cdl, mdl, nara, loc).
+    *                  @see ProviderRegistry.register() for the authoritative
+    *                       list of provider short names.
+    * @param outputDir Location to save output from harvest
+    * @param conf Configurations read from application configuration file
+    * @param harvestLogger Logger object
     */
   def executeHarvest(harvestType: String,
                      shortName: String,
