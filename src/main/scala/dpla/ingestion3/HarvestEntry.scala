@@ -1,12 +1,13 @@
 package dpla.ingestion3
 
-import dpla.ingestion3.utils.Utils
+import dpla.ingestion3.utils.{ProviderRegistry, Utils}
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
-import dpla.ingestion3.harvesters.api.{CdlHarvester, MdlHarvester}
+import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.harvesters.pss.PssHarvester
-import dpla.ingestion3.harvesters.resourceSync.RsHarvester
 import org.apache.log4j.{LogManager, Logger}
+
+import scala.util.{Failure, Success}
 
 /**
   * Entry point for running a harvest.
@@ -40,8 +41,8 @@ object HarvestEntry {
 
     // Log config file location and provider short name.
     harvestLogger.info(s"Harvest initiated")
-    harvestLogger.info(s"Config file: ${confFile}")
-    harvestLogger.info(s"Provider short name: ${shortName}")
+    harvestLogger.info(s"Config file: $confFile")
+    harvestLogger.info(s"Provider short name: $shortName")
 
     // Load configuration from file.
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
@@ -51,7 +52,7 @@ object HarvestEntry {
     val harvestType = providerConf.harvest.harvestType
       .getOrElse(throw new RuntimeException("No harvest type specified."))
 
-    harvestLogger.info(s"Harvest type: ${harvestType}")
+    harvestLogger.info(s"Harvest type: $harvestType")
 
     // Execute harvest.
     executeHarvest(harvestType, shortName, outputDir, providerConf, harvestLogger)
@@ -60,11 +61,14 @@ object HarvestEntry {
   /**
     * Run the appropriate type of harvest.
     *
-    * @param harvestType
-    * @param shortName
-    * @param outputDir
-    * @param conf
-    * @param harvestLogger
+    * @param harvestType Abbreviation indicating the type of harvest to run.
+    *                    Valid values: [oai, api, pss]
+    * @param shortName Provider short name (e.g. cdl, mdl, nara, loc).
+    *                  @see ProviderRegistry.register() for the authoritative
+    *                       list of provider short names.
+    * @param outputDir Location to save output from harvest
+    * @param conf Configurations read from application configuration file
+    * @param harvestLogger Logger object
     */
   def executeHarvest(harvestType: String,
                      shortName: String,
@@ -73,22 +77,36 @@ object HarvestEntry {
                      harvestLogger: Logger) = {
 
     // TODO Add resource sync type
-    harvestType match {
+    val harvester: Harvester = harvestType match {
       case "oai" =>
-        new OaiHarvester(shortName, conf, outputDir, harvestLogger).harvest
-      case "api" => shortName match {
-        case "cdl" =>
-          new CdlHarvester(shortName, conf, outputDir, harvestLogger).harvest
-        case "mdl" =>
-          new MdlHarvester(shortName, conf, outputDir, harvestLogger).harvest
-      }
+        new OaiHarvester(shortName, conf, outputDir, harvestLogger)
+      case "api" =>
+        registeredHarvester(shortName, outputDir, conf, harvestLogger)
       case "pss" =>
-        new PssHarvester(shortName, conf, outputDir, harvestLogger).harvest
-      case "rs" =>
-        new RsHarvester(shortName, conf, outputDir, harvestLogger).harvest
-
+        new PssHarvester(shortName, conf, outputDir, harvestLogger)
       case _ =>
-        throw new RuntimeException("Harvest type not recognized.")
+        val msg = s"Harvest type not recognized."
+        harvestLogger.fatal(msg)
+        throw new RuntimeException(msg)
     }
+
+    harvester.harvest
+  }
+
+  // Look up a registered Harvester class with the given shortName and instantiate.
+  def registeredHarvester(shortName: String,
+                          outputDir: String,
+                          conf: i3Conf,
+                          harvestLogger: Logger): Harvester = {
+
+    val harvesterClass = ProviderRegistry.lookupHarvesterClass(shortName) match {
+      case Success(harvClass) => harvClass
+      case Failure(e) =>
+        harvestLogger.fatal(e.getMessage)
+        throw e
+    }
+
+    harvesterClass.getConstructor(classOf[String], classOf[i3Conf], classOf[String], classOf[Logger])
+      .newInstance(shortName, conf, outputDir, harvestLogger)
   }
 }
