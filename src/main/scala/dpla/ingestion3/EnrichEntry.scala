@@ -12,6 +12,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.util.LongAccumulator
+import org.apache.spark.storage.StorageLevel
 
 
 import scala.util.{Failure, Success, Try}
@@ -62,6 +63,8 @@ object EnrichEntry {
 
     val sparkConf = new SparkConf()
       .setAppName("Enrichment")
+      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+      .set("spark.kryoserializer.buffer.max", "200")
       .setMaster(i3Conf.spark.sparkMaster.getOrElse("local[*]"))
 
     val spark = SparkSession.builder()
@@ -69,6 +72,10 @@ object EnrichEntry {
       .getOrCreate()
 
     val sc = spark.sparkContext
+    // TODO: assign checkpoint directory based on a configurable setting.
+    // Consider cluster / EMR usage.
+    // See https://github.com/dpla/ingestion3/pull/105
+    sc.setCheckpointDir("/tmp/checkpoint")
     val totalCount: LongAccumulator = sc.longAccumulator("Total Record Count")
     val successCount: LongAccumulator = sc.longAccumulator("Successful Record Count")
     val failureCount: LongAccumulator = sc.longAccumulator("Failed Record Count")
@@ -94,6 +101,8 @@ object EnrichEntry {
                  s"${err.getStackTrace.mkString("\n")}")
       }
     })(tupleRowStringEncoder)
+       .persist(StorageLevel.DISK_ONLY)
+       .checkpoint()
 
     val successResults: Dataset[Row] = enrichResults
       .filter(tuple => Option(tuple._1).isDefined)
@@ -113,14 +122,19 @@ object EnrichEntry {
 
     sc.stop()
 
+    // Clean up checkpoint directory, created above
+    Utils.deleteRecursively(new File("/tmp/checkpoint"))
+
     // Log error messages.
     failures.foreach(msg => enrichLogger.warn(s"Error: ${msg}"))
 
-    enrichLogger.debug(
-      s"Mapped ${totalCount.value} records and enriched ${successCount.value}" +
-        s" records"
-    )
-    enrichLogger.debug(s"${failureCount.value} enrichment errors")
+    val statusMsg =
+      s"Mapped ${totalCount.value} records and enriched " +
+      s"${successCount.value} records.\n" +
+      s"${failureCount.value} enrichment errors"
+    enrichLogger.debug(statusMsg)
+    println(statusMsg)
+
   }
 
   private def enrich(dplaMapData: OreAggregation,

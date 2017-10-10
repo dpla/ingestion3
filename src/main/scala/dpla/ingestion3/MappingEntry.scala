@@ -11,6 +11,7 @@ import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
+import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
 import scala.util.{Failure, Success}
@@ -71,6 +72,7 @@ object MappingEntry {
 
     val sparkConf = new SparkConf()
       .setAppName(s"Mapping: $shortName")
+      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .setMaster(sparkMaster)
 
     val spark = SparkSession.builder()
@@ -78,6 +80,10 @@ object MappingEntry {
       .getOrCreate()
 
     val sc = spark.sparkContext
+    // TODO: assign checkpoint directory based on a configurable setting.
+    // Consider cluster / EMR usage.
+    // See https://github.com/dpla/ingestion3/pull/105
+    sc.setCheckpointDir("/tmp/checkpoint")
     val totalCount: LongAccumulator = sc.longAccumulator("Total Record Count")
     val successCount: LongAccumulator = sc.longAccumulator("Successful Record Count")
     val failureCount: LongAccumulator = sc.longAccumulator("Failed Record Count")
@@ -111,10 +117,11 @@ object MappingEntry {
         map(extractorClass, document, shortName,
             totalCount, successCount, failureCount)
       )(tupleRowStringEncoder)
+        .persist(StorageLevel.DISK_ONLY)
+        .checkpoint()
 
     // Delete the output location if it exists
     Utils.deleteRecursively(new File(dataOut))
-
 
     val successResults: Dataset[Row] = mappingResults
           .filter(tuple => Option(tuple._1).isDefined)
@@ -126,7 +133,6 @@ object MappingEntry {
 
     successResults.toDF().write.avro(dataOut)
 
-
     // Summarize results
     mappingSummary(
       totalCount.value, successCount.value, failureCount.value,
@@ -134,6 +140,10 @@ object MappingEntry {
     )
 
     spark.stop()
+
+    // Clean up checkpoint directory, created above
+    Utils.deleteRecursively(new File("/tmp/checkpoint"))
+
   }
 
   /**
