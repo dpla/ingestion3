@@ -2,7 +2,8 @@ package dpla.ingestion3
 
 import dpla.ingestion3.premappingreports._
 import org.apache.log4j.{LogManager, Logger}
-import scala.util.{Failure, Try}
+
+import scala.util.Failure
 
 /**
   * PreMappingReporterMain and PreMappingReporter, for generating QA reports
@@ -11,8 +12,7 @@ import scala.util.{Failure, Try}
   * Example invocation:
   *
   *   $ sbt "run-main dpla.ingestion3.PreMappingReporterMain \
-  *     /path/to/harvested-data.avro /path/to/pre-mapping-report local[2] \
-  *     xmlShredder"
+  *     /path/to/harvested-data.avro /path/to/pre-mapping-report local[2] xml
  */
 
 /**
@@ -23,40 +23,10 @@ import scala.util.{Failure, Try}
   * @param inputURI         Input URI or file path
   * @param outputURI        Output URI or file path
   * @param sparkMasterName  Spark master name, e.g. "local[1]"
-  * @param token            The report name token
+  * @param inputDataType    The data type of the input data ("xml", "json")
   */
-class PreMappingReporter (token: String,
-                          inputURI: String,
-                          outputURI: String,
-                          sparkMasterName: String) {
 
-  val logger: Logger = LogManager.getLogger(this.getClass)
 
-  private def getPreMappingReport(token: String): Option[PreMappingReport] = {
-    token match {
-      case "xmlShredder" =>
-        Some(new XmlShredderReport(inputURI, outputURI, sparkMasterName))
-      case "jsonShredder" =>
-        Some(new JsonShredderReport(inputURI, outputURI, sparkMasterName))
-      case _ => None
-    }
-  }
-
-  def main(): Unit = {
-    val result: Try[Unit] = getPreMappingReport(token) match {
-      case Some(shreds) => shreds.run()
-      case None => Failure(
-        new RuntimeException(s"Pre-mapping report type $token is unknown")
-      )
-    }
-    result match {
-      case Failure(ex) =>
-        logger.error(ex.toString)
-        logger.error("\n" + ex.getStackTrace.mkString("\n"))
-      case _ => Unit
-    }
-  }
-}
 
 /**
   * Entry point for running a pre-mapping report.
@@ -68,9 +38,11 @@ object PreMappingReporterMain {
       """
         |Usage:
         |
-        |PreMappingReporterMain <input> <output> <spark master> <report token>
+        |PreMappingReporterMain <input> <output> <spark master> <input data type>
       """.stripMargin)
   }
+
+  val logger: Logger = LogManager.getLogger("PreMappingReporter")
 
   def main(args: Array[String]): Unit = {
     if (args.length < 4) {
@@ -78,14 +50,17 @@ object PreMappingReporterMain {
       System.err.println("Incorrect invocation arguments")
       sys.exit(1)
     }
-    val inputURI = args(0)
-    val outputURI = args(1)
+    val input = args(0)
+    val output = args(1)
     val sparkMasterName = args(2)
-    val token = args(3)
+    val inputDataType = args(3)
 
-    new PreMappingReporter(
-      token, inputURI, outputURI, sparkMasterName
-    ).main()
+    val result = new PreMappingReporter(input, output, sparkMasterName, inputDataType)
+      .writeAllReports
+
+    result match {
+      case Failure(e) => logger.error(e.toString)
+      case _ => Unit
+    }
   }
 }
-
