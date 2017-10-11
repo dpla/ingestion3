@@ -32,7 +32,7 @@ object ModelConverter {
     preview = toOptionEdmWebResource(row.getStruct(8)),
     provider = toEdmAgent(row.getStruct(9)),
     edmRights = optionalUri(row, 10),
-    sidecar = toJValue(row, 11)
+    sidecar = optionalJValue(row, 11)
   )
 
   private[model] def toSourceResource(row: Row): DplaSourceResource = DplaSourceResource(
@@ -146,9 +146,9 @@ object ModelConverter {
   private[model] def uriSeq(row: Row, fieldPosition: Integer): Seq[URI] =
     stringSeq(row, fieldPosition).map(new URI(_))
 
-  private[model] def toJValue(row: Row, fieldPosition: Integer): JValue = Try {
-    parse(row.getString(fieldPosition)) } match {
+  private[model] def optionalJValue(row: Row, fieldPosition: Integer): JValue =
+    Try { parse(row.getString(fieldPosition)) } match {
       case Success(jv) => jv
-      case Failure(_) => throw new RuntimeException(s"Couldn't parse JSON in row $row, field position $fieldPosition")
+      case Failure(_) => JNothing
     }
 }
