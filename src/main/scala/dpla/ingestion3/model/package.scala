@@ -8,9 +8,8 @@ import com.databricks.spark.avro.SchemaConverters
 import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import dpla.ingestion3.utils.FlatFileIO
 import org.apache.avro.Schema
-import org.apache.commons.codec.digest.DigestUtils
 import org.apache.spark.sql.types.StructType
-import org.json4s.JsonAST.JObject
+import org.json4s.JsonAST.{JObject, JString}
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
@@ -26,7 +25,7 @@ package object model {
 
   def stringOnlyTimeSpan(string: String): EdmTimeSpan = EdmTimeSpan(originalSourceDate = Option(string))
 
-  def nameOnlyConcept(string: String): SkosConcept = SkosConcept(concept = Some(string))
+  def nameOnlyConcept(string: String): SkosConcept = SkosConcept(providedLabel = Some(string))
 
   def nameOnlyCollection(string: String): DcmiTypeCollection = DcmiTypeCollection(title = Some(string))
 
@@ -60,18 +59,25 @@ package object model {
   }
 
   def jsonlRecord(record: OreAggregation): String = {
-    val recordID: String = DigestUtils.md5Hex(record.dplaUri.toString) //todo this is almost definitely wrong
-    val _id = s"${providerToken(record.provider.uri)}--${record.isShownAt.uri}"
+    // We require the that DPLA ID and prehash ID (the providers 'permanent' identifier) be passed forward via the
+    // metadata sidecar. Currently, there is no place to store these values in either the DPLA MAPv3.1 or MAPv4.0 models
+    val dplaId = record.sidecar \ "dplaId" match {
+      case JString(js) => js
+      case _ => throw new RuntimeException("DPLA ID is not in metadata sidecar")
+    }
+    val _id = record.sidecar \ "prehashId" match {
+      case JString(js) => js
+      case _ => throw new RuntimeException("Prehash ID is not in metadata sidecar")
+    }
+
     val jobj: JObject =
       ("_type" -> "item") ~
       ("_id" -> _id) ~
       ("_source" ->
-        ("id" -> recordID) ~
+        ("id" -> dplaId) ~
         ("_id" -> _id) ~
         ("@context" -> "http://dp.la/api/items/context") ~
-        ("@id" -> ("http://dp.la/api/items/" + recordID)) ~
-        ("admin" ->
-          ("sourceResource" -> ("title" -> record.sourceResource.title))) ~
+        ("@id" -> record.dplaUri.toString) ~
         ("aggregatedCHO" -> "#sourceResource") ~
         ("dataProvider" -> record.dataProvider.name) ~
         ("ingestDate" -> ingestDate) ~
@@ -79,7 +85,9 @@ package object model {
         ("isShownAt" -> record.isShownAt.uri.toString) ~
         ("object" -> record.`preview`.map{o => o.uri.toString}) ~ // in dpla map 3, object is the thumbnail
         ("originalRecord" ->
-          ("stringValue" -> record.originalRecord )) ~
+          ("stringValue" -> record.originalRecord )) ~  // work around b/c original record viewer in CQA
+                                                        // expects JSON and all ORs in ingest1 were converted to JSON
+                                                        // TODO We need to prettify this so the OR is readable in CQA
         ("provider" ->
           ("@id" -> record.provider.uri
                       .getOrElse(
@@ -88,7 +96,7 @@ package object model {
           ("name" -> record.provider.name)) ~
         ("sourceResource" ->
           ("@id" ->
-            ("http://dp.la/api/items/" + recordID + "#SourceResource")) ~
+            (record.dplaUri.toString + "#SourceResource")) ~
           ("collection" ->
             record.sourceResource.collection.map {c => "title" -> c.title}) ~
           ("contributor" -> record.sourceResource.contributor.map{c => c.name}) ~
@@ -105,7 +113,9 @@ package object model {
           ("identifier" -> record.sourceResource.identifier) ~
           ("language" ->
             record.sourceResource.language.map { lang =>
-              ("name" -> lang.providedLabel) ~ ("iso639_3" -> lang.concept)
+              "name" -> lang.concept.getOrElse(
+                          lang.providedLabel.getOrElse(""))
+               // FIXME what other SkosConcept fields do we need in the index for language?
             }) ~
           ("publisher" -> record.sourceResource.publisher.map{p => p.name}) ~
           ("relation" ->
@@ -128,7 +138,9 @@ package object model {
            */
           // ("specType" -> "FIXME") ~
           // stateLocatedIn is omitted.
-          ("subject" -> record.sourceResource.subject.map{s => s.providedLabel}) ~
+          ("subject" -> record.sourceResource.subject.map{s =>
+            "name" -> s.providedLabel
+          }) ~
           ("temporal" ->
             record.sourceResource.temporal.map{ t =>
               ("displayDate" -> t.originalSourceDate) ~
@@ -140,7 +152,6 @@ package object model {
         ) ~
         ("@type" -> "ore:Aggregation")
       )
-
 
     compact(render(jobj))
   }
