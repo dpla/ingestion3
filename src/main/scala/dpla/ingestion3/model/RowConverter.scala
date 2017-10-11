@@ -32,7 +32,7 @@ object RowConverter {
         oreAggregation.preview.map(fromEdmWebResource).orNull, //8
         fromEdmAgent(oreAggregation.provider), //9
         oreAggregation.edmRights.map(_.toString).orNull, //10
-        compact(oreAggregation.sidecar)
+        compact(render(oreAggregation.sidecar))
       ),
       sqlSchema
     )

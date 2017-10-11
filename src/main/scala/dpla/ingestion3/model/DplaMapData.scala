@@ -4,7 +4,7 @@ import java.net.URI
 
 import dpla.ingestion3.model.DplaMapData._
 import org.json4s.JValue
-import org.json4s.JsonAST.JNothing
+import org.json4s.JNothing
 
 /**
   * Contains type definitions that express cardinality of fields
