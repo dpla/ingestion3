@@ -7,6 +7,7 @@ import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany}
 import dpla.ingestion3.model.{DplaSourceResource, EdmWebResource, OreAggregation, _}
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
+import org.json4s.JsonDSL._
 
 import scala.util.Try
 
@@ -25,6 +26,8 @@ class MdlExtractor(rawData: String, shortName: String) extends Extractor with Js
     Try {
       OreAggregation(
         dplaUri = new URI(mintDplaId()),
+        sidecar = ("prehashId", buildProviderBaseId()) ~
+                  ("dplaId", mintDplaId()),
         sourceResource = DplaSourceResource(
           collection = collection(json \\ "record" \ "sourceResource" \ "collection"),
           contributor = extractStrings(json \\ "record" \ "sourceResource" \ "contributor").map(nameOnlyAgent),
