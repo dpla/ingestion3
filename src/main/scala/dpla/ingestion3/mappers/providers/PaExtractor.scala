@@ -5,13 +5,15 @@ import java.net.URI
 import dpla.ingestion3.mappers.xml.XmlExtractionUtils
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToOne}
 import dpla.ingestion3.model._
+import dpla.ingestion3.utils.Utils
+import org.json4s.JsonDSL._
 
 import scala.util.Try
 import scala.xml._
 
 class PaExtractor(rawData: String, shortName: String) extends Extractor with XmlExtractionUtils {
 
-  implicit val xml: NodeSeq = XML.loadString(rawData)
+  implicit val xml: Elem = XML.loadString(rawData)
 
   // ID minting functions
   override def useProviderName(): Boolean = false
@@ -41,6 +43,8 @@ class PaExtractor(rawData: String, shortName: String) extends Extractor with Xml
   def build: Try[OreAggregation] = Try {
     OreAggregation(
       dplaUri = mintDplaItemUri(),
+      sidecar = ("prehashId", buildProviderBaseId()) ~
+                ("dplaId", mintDplaId()),
       sourceResource = DplaSourceResource(
         // This method of using NodeSeq is required because of namespace issues.
         collection = extractStrings(xml \ "metadata" \\ "relation").headOption.map(nameOnlyCollection).toSeq,
@@ -62,7 +66,7 @@ class PaExtractor(rawData: String, shortName: String) extends Extractor with Xml
       ),
       //below will throw if not enough contributors
       dataProvider = extractDataProvider(),
-      originalRecord = rawData,
+      originalRecord = Utils.formatXml(xml),
       provider = agent,
       isShownAt = EdmWebResource(uri = itemUri(), fileFormat = extractStrings("dc:format")),
       preview = thumbnail()

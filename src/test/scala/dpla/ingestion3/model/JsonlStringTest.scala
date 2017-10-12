@@ -6,7 +6,6 @@ import dpla.ingestion3.data.EnrichedRecordFixture
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
-
 class JsonlStringTest extends FlatSpec {
 
   "jsonlRecord" should "print a valid JSON string" in {

@@ -20,14 +20,20 @@ trait VocabEnforcer[T] {
   }
 
   /**
-    * Accepts a SkosConcept object from the mapped original record and looks up the providedLabel value
-    * against the providedLabel value (abbreviations) of ISO-639-3 language values
+    * Accepts a SkosConcept from the mapped record and attempts to lookup the mapped value
+    * in an external vocabulary returning the preferred form.
     */
   val matchToSkosVocab: (SkosConcept, Map[SkosConcept,SkosConcept]) => SkosConcept = (originalValue, skosVocab) => {
     val enrichedLexvo = skosVocab.getOrElse(originalValue, originalValue)
 
     // TODO: Are these the correct mappings?
     // TODO: should properties like exactMatch, closeMatch and note be set? If so with what?
+    // If the lookup performed above returned a match then we need to merge the providedLabel value
+    // from originalValue with the enriched concept and scheme values. If no match was found these
+    // step are essentially no-ops (setting None values).
+
+    // For languages: The concept property should only contain ISO-639 term values. If not match is
+    // found then it should remain blank and the original value remains in providedLabel.
     SkosConcept(
       concept = enrichedLexvo.concept,
       scheme = enrichedLexvo.scheme,
@@ -139,7 +145,8 @@ object LanguageMapper extends VocabEnforcer[String] {
         val languageAbbv = Option(f(0))
         val languageTerm = Option(f(1))
         val schemeUri = Option(new URI("http://lexvo.org/id/iso639-3/"))
-        // Create a tuple >> (SkosConcept(abbv), SkosConcept(term, scheme))
+        // Create a tuple >> (SkosConcept(abbv), SkosConcept(term, scheme)) that will be used to perform
+        // lookups when enriching a value
         (SkosConcept(providedLabel = languageAbbv), SkosConcept(concept = languageTerm, scheme = schemeUri))
       })
       .toMap

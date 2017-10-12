@@ -4,6 +4,7 @@ import java.net.URI
 
 import dpla.ingestion3.model._
 import org.json4s.jackson.JsonMethods.parse
+import org.json4s.JsonDSL._
 
 object EnrichedRecordFixture {
 
@@ -32,7 +33,7 @@ object EnrichedRecordFixture {
       isShownAt = EdmWebResource(
         uri = new URI("https://example.org/record/123")
       ),
-      sidecar = parse("""{"field": "value"}"""),
+      sidecar = ("prehashId" -> "oai:somestate:id123") ~ ("dplaId" -> "4b1bd605bd1d75ee23baadb0e1f24457"),
       sourceResource = DplaSourceResource(
         collection = Seq(DcmiTypeCollection(
           title = Some("The Collection"),
@@ -89,6 +90,7 @@ object EnrichedRecordFixture {
 
   val minimalEnrichedRecord =
     OreAggregation(
+      sidecar = ("prehashId" -> "oai:somestate:id123") ~ ("dplaId" -> "123"),
       sourceResource = DplaSourceResource(
         rights = Seq("Public Domain"),
         title = Seq("The Title"),
