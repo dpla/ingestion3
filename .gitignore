@@ -9,6 +9,7 @@ lib_managed/
 src_managed/
 project/boot/
 project/target/*
+project/project/
 .history
 .cache
 
