@@ -100,7 +100,7 @@ object MappingEntry {
       ExpressionEncoder.tuple(RowEncoder(model.sparkSchema), ExpressionEncoder())
 
     // Load the harvested record dataframe
-    val harvestedRecords: DataFrame = spark.read.avro(dataIn)
+    val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
 
     // Look up a registered Extractor class with the given shortName.
     val extractorClass = ProviderRegistry.lookupExtractorClass(shortName) match {
@@ -112,6 +112,7 @@ object MappingEntry {
 
     // Run the mapping over the Dataframe
     val documents: Dataset[String] = harvestedRecords.select("document").as[String]
+
     val mappingResults: Dataset[(Row, String)] =
       documents.map(document =>
         map(extractorClass, document, shortName,
