@@ -10,6 +10,7 @@ import org.eclipse.rdf4j.model.IRI
 
 import scala.util.Try
 import scala.xml.{Node, NodeSeq, XML}
+import org.json4s.JsonDSL._
 
 class NaraExtractor(rawData: String, shortName: String) extends Extractor with XmlExtractionUtils with Serializable {
 
@@ -31,6 +32,8 @@ class NaraExtractor(rawData: String, shortName: String) extends Extractor with X
     Try {
       OreAggregation(
         dplaUri = mintDplaItemUri(),
+        sidecar = ("prehashId", buildProviderBaseId()) ~
+          ("dplaId", mintDplaId()),
         sourceResource = DplaSourceResource(
           collection = collection(xml).map(nameOnlyCollection),
           contributor = contributor(xml).map(nameOnlyAgent),
