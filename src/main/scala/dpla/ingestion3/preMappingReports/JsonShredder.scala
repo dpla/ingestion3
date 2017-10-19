@@ -8,7 +8,7 @@ import org.json4s.JsonAST._
 /**
   * JSON shredder for pre-mapping QA.
   */
-object JsonShredder {
+object JsonShredder extends Shredder {
 
   /**
     * Entry point for JsonShredder.
@@ -26,7 +26,7 @@ object JsonShredder {
     * @param record String the record being shredded
     * @return List[Triple]
     */
-  def getJsonTriples(id: String, record: String): List[Triple] = {
+  def getTriples(id: String, record: String): List[Triple] = {
     val json: JValue = parse(record)
     shredRecord(id, json)
   }

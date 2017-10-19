@@ -7,7 +7,7 @@ import scala.xml._
 /**
   * XML shredder for pre-mapping QA.
   */
-object XmlShredder {
+object XmlShredder extends Shredder {
 
   /**
     * Entry point for XmlShredder.
@@ -41,7 +41,7 @@ object XmlShredder {
     * @param record String the record being shredded
     * @return List[Triple]
     */
-  def getXmlTriples(id: String, record: String): List[Triple] = {
+  def getTriples(id: String, record: String): List[Triple] = {
     loadXml(record) match {
       case Success(xml) => shredRecord(id, xml)
       // Return empty list in case of XML parsing error.
