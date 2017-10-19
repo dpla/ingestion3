@@ -5,6 +5,7 @@ import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.harvesters.pss.PssHarvester
+import dpla.ingestion3.harvesters.resourceSync.RsHarvester
 import org.apache.log4j.{LogManager, Logger}
 
 import scala.util.{Failure, Success}
@@ -76,7 +77,6 @@ object HarvestEntry {
                      conf: i3Conf,
                      harvestLogger: Logger) = {
 
-    // TODO Add resource sync type
     val harvester: Harvester = harvestType match {
       case "oai" =>
         new OaiHarvester(shortName, conf, outputDir, harvestLogger)
@@ -84,6 +84,8 @@ object HarvestEntry {
         registeredHarvester(shortName, outputDir, conf, harvestLogger)
       case "pss" =>
         new PssHarvester(shortName, conf, outputDir, harvestLogger)
+      case "rs" =>
+        new RsHarvester(shortName, conf, outputDir, harvestLogger)
       case _ =>
         val msg = s"Harvest type not recognized."
         harvestLogger.fatal(msg)
