@@ -54,11 +54,11 @@ class PreMappingReporter(val inputDir: String,
     // TODO: Determine whether we want to write out all of reports or allow
     // user to choose which reports they want to generate.  We may also decide
     // to eliminate some of these reports if we don't need them.
-    writeShreddedData
-    writeElasticSearchData
-    writeCardinalityReport
-    writeOpenRefineData
-    writeRecordsMissingAttributesReport
+    writeShreddedData()
+    writeElasticSearchData()
+    writeCardinalityReport()
+    writeOpenRefineData()
+    writeRecordsMissingAttributesReport()
 
     // Stop spark context.
     spark.sparkContext.stop()
