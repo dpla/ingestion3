@@ -1,4 +1,4 @@
-package dpla.ingestion3
+package dpla.ingestion3.entries.reports
 
 import dpla.ingestion3.premappingreports._
 import org.apache.log4j.{LogManager, Logger}

@@ -22,7 +22,7 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None) 
     val confString = getConfigContents(confFilePath)
 
     val baseConfig = ConfigFactory.parseString(confString.getOrElse(
-      throw new RuntimeException(s"Unable to load configuration file at ${confFilePath}")))
+      throw new RuntimeException(s"Unable to load configuration file at $confFilePath")))
 
     val providerConf = providerName match {
       case Some(name) => baseConfig.getConfig(name)
@@ -34,7 +34,7 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None) 
     i3Conf(
       provider = getProp(providerConf, "provider"),
       Harvest(
-        // Generally applicable
+        // Generally applicable to all harvesters
         endpoint = getProp(providerConf, "harvest.endpoint"),
         setlist = getProp(providerConf, "harvest.setlist"),
         blacklist = getProp(providerConf, "harvest.blacklist"),
@@ -50,6 +50,7 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None) 
       ),
       i3Spark(
         sparkMaster = getProp(providerConf, "spark.master"),
+        // FIXME these should be removed
         sparkDriverMemory = getProp(providerConf, "spark.driverMemory"),
         sparkExecutorMemory= getProp(providerConf, "spark.executorMemory")
       ),
@@ -95,6 +96,42 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     noshort = true,
     validate = _.nonEmpty
   )
+
+  /**
+    * Gets the configuration file property from command line arguments
+    *
+    * @return Configuration file location
+    */
+  def getConfigFile() = configFile.toOption
+    .map(_.toString)
+    .getOrElse(throw new RuntimeException("No configuration file specified."))
+
+  /**
+    * Gets the input property from command line arguments
+    *
+    * @return Input location
+    */
+  def getInput() = input.toOption
+    .map(_.toString)
+    .getOrElse(throw new RuntimeException("No input specified."))
+
+  /**
+    * Gets the output property from command line arguments
+    *
+    * @return Output location
+    */
+  def getOutput() = output.toOption
+    .map(_.toString)
+    .getOrElse(throw new RuntimeException("No output specified."))
+
+  /**
+    * Gets the provider short name from command line arguments
+    *
+    * @return Provider short name
+    */
+  def getProviderName() = providerName.toOption
+    .map(_.toString)
+    .getOrElse(throw new RuntimeException("No provider name specified."))
 
   verify()
 }

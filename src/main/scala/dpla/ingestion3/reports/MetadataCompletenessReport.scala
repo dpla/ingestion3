@@ -1,7 +1,8 @@
 package dpla.ingestion3.reports
 
-import org.apache.spark.sql.{DataFrame, SparkSession, Dataset}
+import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import dpla.ingestion3.model._
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.functions.mean
 
 /**
@@ -10,15 +11,15 @@ import org.apache.spark.sql.functions.mean
 class MetadataCompletenessReport(
                                    val inputURI: String,
                                    val outputURI: String,
-                                   val sparkMasterName: String,
-                                   val params: Array[String]
+                                   val sparkConf: SparkConf,
+                                   val params: Array[String] = Array()
                                  ) extends Report with Serializable {
 
 
   override val sparkAppName: String = "MetadataCompletenessReport"
   override def getInputURI: String = inputURI
   override def getOutputURI: String = outputURI
-  override def getSparkMasterName: String = sparkMasterName
+  override def getSparkConf: SparkConf = sparkConf
   override def getParams: Option[Array[String]] = {
     if (params.nonEmpty) Some(params) else None
   }
@@ -129,7 +130,7 @@ class MetadataCompletenessReport(
     *
     * @param value: A Sequence containing zero to many values from a DplaDataMap
     *               object.
-    * @return: 1 if there is at least one value; otherwise 0
+    * @return 1 if there is at least one value; otherwise 0
     */
   private def tally(value: Seq[Any]): Integer = {
     if(value.nonEmpty) 1 else 0

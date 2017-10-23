@@ -2,6 +2,7 @@ package dpla.ingestion3.reports
 
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import dpla.ingestion3.model._
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.functions.{col, explode}
 
 
@@ -32,14 +33,13 @@ case class PropertyDistinctValueRpt(value: Seq[String])
   * @param inputURI         Input URI or file path (Avro file / directory)
   * @param outputURI        Output URI or file path (directory containing CSV
   *                         file)
-  * @param sparkMasterName  Spark master name, e.g. "local[1]"
   * @param params           Additional parameters, currently:
   *                         params(0): The DPLA MAP field to analyze
   */
 class PropertyDistinctValueReport(
                             val inputURI: String,
                             val outputURI: String,
-                            val sparkMasterName: String,
+                            val sparkConf: SparkConf,
                             val params: Array[String]
                           ) extends Report with Serializable {
 
@@ -54,13 +54,13 @@ class PropertyDistinctValueReport(
   override val sparkAppName: String = "PropertyDistinctValueReport"
   override def getInputURI: String = inputURI
   override def getOutputURI: String = outputURI
-  override def getSparkMasterName: String = sparkMasterName
+  override def getSparkConf: SparkConf = sparkConf
   override def getParams: Option[Array[String]] = {
     if (params.nonEmpty) Some(params) else None
   }
 
   /**
-    * Process the incoming dataset.
+    * Process the incoming data set.
     *
     * @see          Report.process()
     *
@@ -114,7 +114,7 @@ class PropertyDistinctValueReport(
         ds.map(dplaMapData => PropertyDistinctValueRpt(extractValue(dplaMapData.sourceResource.replaces)))
       case "sourceResource.rights" =>
         ds.map(dplaMapData => PropertyDistinctValueRpt(extractValue(dplaMapData.sourceResource.rights)))
-      case "sourceResource.rightsHolder" =>
+      case "sourceResource.rightsHolder.name" =>
         ds.map(dplaMapData => PropertyDistinctValueRpt(extractValue(dplaMapData.sourceResource.rightsHolder)))
       case "sourceResource.subject.providedLabel" =>
         ds.map(dplaMapData => PropertyDistinctValueRpt(extractValue(dplaMapData.sourceResource.subject)))
@@ -137,9 +137,9 @@ class PropertyDistinctValueReport(
     * occur on separate rows. Then the groupBy and count
     * operations are performed on the data
     *
-    * @param rptDataset
-    * @param spark
-    * @param token
+    * @param rptDataset Dataset to report against
+    * @param spark Spark session
+    * @param token Column name
     * @return
     */
   def makeTable(rptDataset: Dataset[PropertyDistinctValueRpt],

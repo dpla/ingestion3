@@ -1,24 +1,24 @@
-package dpla.ingestion3
+package dpla.ingestion3.entries.ingest
 
 import java.io.File
 
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.enrichments.EnrichmentDriver
+import dpla.ingestion3.model
 import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
 import dpla.ingestion3.utils.Utils
-import org.apache.log4j.{LogManager, Logger}
+import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
-import org.apache.spark.util.LongAccumulator
 import org.apache.spark.storage.StorageLevel
-
+import org.apache.spark.util.LongAccumulator
 
 import scala.util.{Failure, Success, Try}
 
 /**
-  * Expects three parameters:
+  * Expects four parameters:
   *   1) a path to the harvested data
   *   2) a path to output the mapped data
   *   3) a path to the application configuration file
@@ -42,18 +42,13 @@ object EnrichEntry {
     // Read in command line args
     val cmdArgs = new CmdArgs(args)
 
-    val inputDir = cmdArgs.input
-      .getOrElse(throw new IllegalArgumentException("Missing input dir"))
-    val outputDir = cmdArgs.output
-      .getOrElse(throw new IllegalArgumentException("Missing output dir"))
-    val confFile = cmdArgs.configFile
-      .getOrElse(throw new IllegalArgumentException("Missing conf file"))
-    val shortName = cmdArgs.providerName
-      .getOrElse(throw new IllegalArgumentException("Missing provider short name"))
+    val dataIn = cmdArgs.getInput()
+    val dataOut = cmdArgs.getOutput()
+    val confFile = cmdArgs.getConfigFile()
+    val shortName = cmdArgs.getProviderName()
 
-    val enrichLogger: Logger = LogManager.getLogger("ingestion3")
-    val appender = Utils.getFileAppender(shortName, "enrichment")
-    enrichLogger.addAppender(appender)
+    // Create enrichment logger.
+    val enrichLogger = Utils.createLogger("enrichment", shortName)
 
     // Load configuration from file
     val i3Conf: i3Conf = new Ingestion3Conf(confFile).load()
@@ -66,6 +61,26 @@ object EnrichEntry {
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryoserializer.buffer.max", "200")
       .setMaster(i3Conf.spark.sparkMaster.getOrElse("local[*]"))
+
+    executeEnrichment(sparkConf, dataIn, dataOut, shortName, enrichLogger, i3Conf)
+  }
+
+  /**
+    * Execute the enrichments
+    * @param sparkConf Spark configuration
+    * @param dataIn Mapped data
+    * @param dataOut Location to save output
+    * @param shortName Provider short name
+    * @param logger Logger
+    */
+  def executeEnrichment(sparkConf: SparkConf,
+                        dataIn: String,
+                        dataOut: String,
+                        shortName: String,
+                        logger: Logger,
+                        i3conf: i3Conf): Unit = {
+
+    logger.info("Enrichments started")
 
     val spark = SparkSession.builder()
       .config(sparkConf)
@@ -87,22 +102,22 @@ object EnrichEntry {
       ExpressionEncoder.tuple(RowEncoder(model.sparkSchema), ExpressionEncoder())
 
     // Load the mapped records
-    val mappedRows: DataFrame = spark.read.avro(inputDir)
+    val mappedRows: DataFrame = spark.read.avro(dataIn)
 
     // Create the enrichment outside map function so it is not recreated for each record.
     // If the Twofishes host is not reachable it will die hard
     val enrichResults: Dataset[(Row, String)] = mappedRows.map(row => {
-      val driver = new EnrichmentDriver(i3Conf)
+      val driver = new EnrichmentDriver(i3conf)
       Try{ ModelConverter.toModel(row) } match {
         case Success(dplaMapData) =>
           enrich(dplaMapData, driver, totalCount, successCount, failureCount)
         case Failure(err) =>
           (null, s"Error parsing mapped data: ${err.getMessage}\n" +
-                 s"${err.getStackTrace.mkString("\n")}")
+            s"${err.getStackTrace.mkString("\n")}")
       }
     })(tupleRowStringEncoder)
-       .persist(StorageLevel.DISK_ONLY)
-       .checkpoint()
+      .persist(StorageLevel.DISK_ONLY)
+      .checkpoint()
 
     val successResults: Dataset[Row] = enrichResults
       .filter(tuple => Option(tuple._1).isDefined)
@@ -113,12 +128,12 @@ object EnrichEntry {
       .map(tuple => tuple._2).collect()
 
     // Delete the output location if it exists
-    Utils.deleteRecursively(new File(outputDir))
+    Utils.deleteRecursively(new File(dataOut))
 
     // Save mapped records out to Avro file
     successResults.toDF().write
       .format("com.databricks.spark.avro")
-      .save(outputDir)
+      .save(dataOut)
 
     sc.stop()
 
@@ -126,15 +141,11 @@ object EnrichEntry {
     Utils.deleteRecursively(new File("/tmp/checkpoint"))
 
     // Log error messages.
-    failures.foreach(msg => enrichLogger.warn(s"Error: ${msg}"))
+    failures.foreach(msg => logger.warn(s"Enrichment error >> $msg"))
 
-    val statusMsg =
-      s"Mapped ${totalCount.value} records and enriched " +
-      s"${successCount.value} records.\n" +
-      s"${failureCount.value} enrichment errors"
-    enrichLogger.debug(statusMsg)
-    println(statusMsg)
-
+    logger.info("Enrichment finished")
+    logger.info(s"Enriched ${Utils.formatNumber(successCount.value)} records")
+    logger.info(s"Failed to enrich ${failureCount.value} records")
   }
 
   private def enrich(dplaMapData: OreAggregation,
@@ -164,9 +175,9 @@ object EnrichEntry {
   private def pingTwofishes(conf: i3Conf): Unit = {
     val host = conf.twofishes.hostname.getOrElse("localhost")
     val port = conf.twofishes.port.getOrElse("8081")
-    Utils.validateUrl(s"http://${host}:${port}/query") match {
+    Utils.validateUrl(s"http://$host:$port/query") match {
       case true => Unit // TODO log something?
-      case false => throw new RuntimeException(s"Cannot reach Twofishes at ${host}")
+      case false => throw new RuntimeException(s"Cannot reach Twofishes at $host")
     }
   }
 }

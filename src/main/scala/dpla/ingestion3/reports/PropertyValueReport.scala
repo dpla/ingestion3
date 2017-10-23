@@ -1,5 +1,6 @@
 package dpla.ingestion3.reports
 import dpla.ingestion3.model._
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import org.apache.spark.sql.functions.{col, explode}
 
@@ -10,13 +11,13 @@ case class PropertyValueRpt(dplaUri: String,
 class PropertyValueReport (
                             val inputURI: String,
                             val outputURI: String,
-                            val sparkMasterName: String,
+                            val sparkConf: SparkConf,
                             val params: Array[String]) extends Report with Serializable {
 
   override val sparkAppName: String = "PropertyValueReport"
   override def getInputURI: String = inputURI
   override def getOutputURI: String = outputURI
-  override def getSparkMasterName: String = sparkMasterName
+  override def getSparkConf: SparkConf = sparkConf
   override def getParams: Option[Array[String]] = {
     params.nonEmpty match {
       case true => Some(params)
@@ -62,7 +63,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.alternateTitle)
           )
         })
@@ -70,7 +71,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.contributor)
           )
         })
@@ -78,7 +79,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.collection)
           )
         })
@@ -86,7 +87,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.creator)
           )
         })
@@ -94,7 +95,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.date)
           )
         })
@@ -102,7 +103,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.description)
           )
         })
@@ -110,7 +111,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.extent)
           )
         })
@@ -118,7 +119,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.format)
           )
         })
@@ -126,7 +127,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.genre)
           )
         })
@@ -134,7 +135,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.identifier)
           )
         })
@@ -142,7 +143,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.language)
           )
         })
@@ -150,7 +151,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.place)
           )
         })
@@ -158,7 +159,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.place)
           )
         })
@@ -166,7 +167,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.publisher)
           )
         })
@@ -174,7 +175,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.relation)
           )
         })
@@ -182,7 +183,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.replacedBy)
           )
         })
@@ -190,7 +191,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.replacedBy)
           )
         })
@@ -198,7 +199,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.replaces)
           )
         })
@@ -206,7 +207,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.rights)
           )
         })
@@ -214,7 +215,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.rightsHolder)
           )
         })
@@ -222,7 +223,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.subject)
           )
         })
@@ -230,7 +231,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.temporal)
           )
         })
@@ -238,7 +239,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.title)
           )
         })
@@ -246,7 +247,7 @@ class PropertyValueReport (
         ds.map(oreAggregation => {
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
             value = extractValue(oreAggregation.sourceResource.`type`)
           )
         })

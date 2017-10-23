@@ -62,9 +62,8 @@ object OaiResponseProcessor {
   /**
     * Accepts a record from an OAI feed an returns the OAI identifier
     *
-    * @param record Node
-    *               The original record from the OAI feed
-    * @return The local identifier
+    * @param record The original record from the OAI feed
+    * @return The local OAI identifier
     */
   def getRecordIdentifier(record: Node): String =
     (record \ "header" \ "identifier").text

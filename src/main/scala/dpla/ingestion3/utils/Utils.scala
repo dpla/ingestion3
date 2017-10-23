@@ -9,7 +9,7 @@ import scala.xml.Node
 import java.util.concurrent.TimeUnit
 
 import org.apache.http.client.fluent.Request
-import org.apache.log4j.{FileAppender, Logger, PatternLayout}
+import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
 
 import scala.util.{Failure, Success, Try}
 
@@ -27,19 +27,6 @@ object Utils {
       case Failure(_) => false
     }
   }
-
-  /**
-    * Count the number of files in the given directory, outDir.
-    *
-    * @param outDir Directory to count
-    * @param ext File extension to filter by
-    * @return The number of files that match the extension
-    */
- def countFiles(outDir: File, ext: String): Long = {
-   outDir.list()
-     .par
-     .count(fileName => fileName.endsWith(ext))
- }
 
   /**
     * Formats the Node in a more human-readable form
@@ -63,7 +50,7 @@ object Utils {
     * @param runtime Runtime in milliseconds
     * @param recordCount Number of records output
     */
-  def logResults(runtime: Long, recordCount: Long, logger: Logger): Unit = {
+  def logResults(runtime: Long, recordCount: Long): String = {
     // TODO figure out a better way to share a logger...
     val formatter = java.text.NumberFormat.getIntegerInstance
     val minutes: Long = TimeUnit.MILLISECONDS.toMinutes(runtime)
@@ -73,11 +60,21 @@ object Utils {
     // add 1 to avoid divide by zero error
     val recordsPerSecond: Long = recordCount/runtimeInSeconds
 
-    logger.info(s"Record count: ${formatter.format(recordCount)}")
-    logger.info(s"Runtime: $minutes:$seconds")
-    logger.info(s"Throughput: ${formatter.format(recordsPerSecond)} records/second")
+    s"Harvest complete\n" +
+    s"\tRecord count:\t${formatter.format(recordCount)}\n" +
+    s"\tRuntime:\t$minutes:$seconds\n" +
+    s"\tThroughput:\t${formatter.format(recordsPerSecond)} records/second\n"
   }
 
+  /**
+    * Format numbers with commas
+    * @param n A number
+    * @return xxx,xxx
+    */
+  def formatNumber(n: Long): String = {
+    val formatter = java.text.NumberFormat.getIntegerInstance
+    formatter.format(n)
+  }
 
   /**
     * Delete a directory
@@ -104,33 +101,6 @@ object Utils {
   }
 
   /**
-    * Print the results of a harvest
-    *
-    * Example:
-    *   Harvest count: 242924 records harvested
-    *   Runtime: 4 minutes 24 seconds
-    *   Throughput: 920 records/second
-    *
-    * @param runtime Runtime in milliseconds
-    * @param recordsHarvestedCount Number of records in the output directory
-    */
-
-  def printResults(runtime: Long, recordsHarvestedCount: Long): Unit = {
-    // Make things pretty
-    val formatter = java.text.NumberFormat.getIntegerInstance
-    val minutes: Long = TimeUnit.MILLISECONDS.toMinutes(runtime)
-    val seconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) -
-      TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(runtime))
-    val runtimeInSeconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) + 1
-    // add 1 to avoid divide by zero error
-    val recordsPerSecond: Long = recordsHarvestedCount/runtimeInSeconds
-
-    println(s"\n\nFile count: ${formatter.format(recordsHarvestedCount)}")
-    println(s"Runtime: $minutes:$seconds")
-    println(s"Throughput: ${formatter.format(recordsPerSecond)} records/second")
-  }
-
-  /**
     * Uses runtime information to create a log4j file appender.
     *
     * @param provider - Name partner
@@ -147,7 +117,21 @@ object Utils {
 
     new FileAppender(
       layout,
-      s"log/${provider}-${process}-${date}.log",
+      s"log/$provider-$process-$date.log",
       true)
+  }
+
+  /**
+    * Creates a logger object
+    *
+    * @param operation
+    * @param shortName
+    * @return
+    */
+  def createLogger(operation: String, shortName: String = ""): Logger = {
+    val logger: Logger = LogManager.getLogger("ingestion3")
+    val appender = Utils.getFileAppender(shortName, operation)
+    logger.addAppender(appender)
+    logger
   }
 }

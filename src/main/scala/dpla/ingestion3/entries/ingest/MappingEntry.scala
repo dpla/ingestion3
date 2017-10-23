@@ -1,16 +1,17 @@
-package dpla.ingestion3
+package dpla.ingestion3.entries.ingest
 
 import java.io.{File, PrintWriter}
 
-import dpla.ingestion3.mappers.providers._
-import dpla.ingestion3.model.RowConverter
-import dpla.ingestion3.utils.{ProviderRegistry, Utils}
-import org.apache.log4j.{LogManager, Logger}
-import org.apache.spark.SparkConf
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
-import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
+import dpla.ingestion3.mappers.providers._
+import dpla.ingestion3.model
+import dpla.ingestion3.model.RowConverter
+import dpla.ingestion3.utils.{ProviderRegistry, Utils}
+import org.apache.log4j.Logger
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
@@ -40,28 +41,13 @@ object MappingEntry {
     // Read in command line args.
     val cmdArgs = new CmdArgs(args)
 
-    val dataIn = cmdArgs.input.toOption
-      .map(_.toString)
-      .getOrElse(throw new RuntimeException("No input data specified."))
-    val dataOut = cmdArgs.output.toOption
-      .map(_.toString)
-      .getOrElse(throw new RuntimeException("No output location specified."))
-    val confFile = cmdArgs.configFile.toOption
-      .map(_.toString)
-      .getOrElse(throw new RuntimeException("No conf file specified."))
-    val shortName = cmdArgs.providerName.toOption
-      .map(_.toString)
-      .getOrElse(throw new RuntimeException("No provider short name specified."))
+    val dataIn = cmdArgs.getInput()
+    val dataOut = cmdArgs.getOutput()
+    val confFile = cmdArgs.getConfigFile()
+    val shortName = cmdArgs.getProviderName()
 
-    // Get logger.
-    val mappingLogger: Logger = LogManager.getLogger("ingestion3")
-    val appender = Utils.getFileAppender(shortName, "mapping")
-    mappingLogger.addAppender(appender)
-
-    // Log config file location and provider short name.
-    mappingLogger.info(s"Mapping initiated")
-    mappingLogger.info(s"Config file: $confFile")
-    mappingLogger.info(s"Provider short name: $shortName")
+    // Get mapping logger.
+    val mappingLogger = Utils.createLogger("mapping", shortName)
 
     // Load configuration from file.
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
@@ -75,6 +61,26 @@ object MappingEntry {
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .setMaster(sparkMaster)
 
+    // Log config file location and provider short name.
+    mappingLogger.info(s"Mapping initiated")
+    mappingLogger.info(s"Config file: $confFile")
+    mappingLogger.info(s"Provider short name: $shortName")
+
+    executeMapping(sparkConf, dataIn, dataOut, shortName, mappingLogger)
+  }
+
+  /**
+    * Performs the mapping for the given provider
+    *
+    * @param sparkConf Spark configurations
+    * @param dataIn Path to harvested data
+    * @param dataOut Path to save mapped data
+    * @param shortName Provider short name
+    * @param logger Logger to use
+    */
+  def executeMapping(sparkConf: SparkConf, dataIn: String, dataOut: String, shortName: String, logger: Logger) = {
+
+    logger.info("Mapping started")
     val spark = SparkSession.builder()
       .config(sparkConf)
       .getOrCreate()
@@ -91,10 +97,8 @@ object MappingEntry {
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
 
-    //these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
+    // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
     val oreAggregationEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
-    // TODO Is this line actually required?
-    // val stringEncoder: ExpressionEncoder[String] = ExpressionEncoder()
 
     val tupleRowStringEncoder: ExpressionEncoder[(Row, String)] =
       ExpressionEncoder.tuple(RowEncoder(model.sparkSchema), ExpressionEncoder())
@@ -106,7 +110,7 @@ object MappingEntry {
     val extractorClass = ProviderRegistry.lookupExtractorClass(shortName) match {
       case Success(extClass) => extClass
       case Failure(e) =>
-        mappingLogger.fatal(e.getMessage)
+        logger.fatal(e.getMessage)
         throw e
     }
 
@@ -116,7 +120,7 @@ object MappingEntry {
     val mappingResults: Dataset[(Row, String)] =
       documents.map(document =>
         map(extractorClass, document, shortName,
-            totalCount, successCount, failureCount)
+          totalCount, successCount, failureCount)
       )(tupleRowStringEncoder)
         .persist(StorageLevel.DISK_ONLY)
         .checkpoint()
@@ -125,8 +129,8 @@ object MappingEntry {
     Utils.deleteRecursively(new File(dataOut))
 
     val successResults: Dataset[Row] = mappingResults
-          .filter(tuple => Option(tuple._1).isDefined)
-          .map(tuple => tuple._1)(oreAggregationEncoder)
+      .filter(tuple => Option(tuple._1).isDefined)
+      .map(tuple => tuple._1)(oreAggregationEncoder)
 
     val failures:  Array[String] = mappingResults
       .filter(tuple => Option(tuple._2).isDefined)
@@ -136,15 +140,19 @@ object MappingEntry {
 
     // Summarize results
     mappingSummary(
-      totalCount.value, successCount.value, failureCount.value,
-      failures, dataOut, shortName
+      totalCount.value,
+      successCount.value,
+      failureCount.value,
+      failures,
+      dataOut,
+      shortName,
+      logger
     )
 
     spark.stop()
 
     // Clean up checkpoint directory, created above
     Utils.deleteRecursively(new File("/tmp/checkpoint"))
-
   }
 
   /**
@@ -192,15 +200,16 @@ object MappingEntry {
                      failureCount: Long,
                      errors: Array[String],
                      outDir: String,
-                     shortName: String): Unit = {
+                     shortName: String,
+                     logger: Logger): Unit = {
     val logDir = new File(s"$outDir/logs/")
     logDir.mkdirs()
 
-    println(s"Harvested $harvestCount records")
-    println(s"Mapped $mapCount records")
-    println(s"Failed to map $failureCount records.")
+    logger.info(s"Mapped ${Utils.formatNumber(mapCount)} records.")
+    logger.info(s"Failed to map ${Utils.formatNumber(failureCount)} records.")
+
     if (failureCount > 0)
-      println(s"Saving error log to ${logDir.getAbsolutePath}")
+      logger.info(s"Error log >> ${logDir.getAbsolutePath}")
     val pw = new PrintWriter(
       new File(s"${logDir.getAbsolutePath}/$shortName-mapping-errors-${System.currentTimeMillis()}.log"))
     errors.foreach(f => pw.write(s"$f\n"))
