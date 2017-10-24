@@ -28,7 +28,7 @@ import scala.util.Try
   */
 trait Report {
 
-  private final val __MISSING__ = "__MISSING__"
+  private final val missing = "__MISSING__"
   val sparkAppName: String = "Report"  // Usually overridden
 
   /*
@@ -109,9 +109,9 @@ trait Report {
     */
   def extractValue(t: Seq[AnyRef]): Seq[String] = {
     if (t.isEmpty) {
-      Seq(__MISSING__)
+      Seq(missing)
     } else {
-      t.head match {
+      t.headOption.getOrElse("__MISSING No value to extract__") match {
         case _: DplaPlace =>
           t.map(_.asInstanceOf[DplaPlace].name.getOrElse("__MISSING DplaPlace.name__"))
         case _: DcmiTypeCollection =>

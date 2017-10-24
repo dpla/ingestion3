@@ -4,7 +4,6 @@ import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
 import dpla.ingestion3.entries.ingest.EnrichEntry.executeEnrichment
 import dpla.ingestion3.entries.ingest.JsonlEntry.executeJsonL
 import dpla.ingestion3.entries.ingest.MappingEntry.executeMapping
-import dpla.ingestion3.entries.ingest.HarvestEntry.executeHarvest
 import dpla.ingestion3.entries.reports.ReporterMain.executeAllReports
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
