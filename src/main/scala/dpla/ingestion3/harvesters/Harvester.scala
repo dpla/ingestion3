@@ -1,6 +1,7 @@
 package dpla.ingestion3.harvesters
 
 import java.io.File
+import java.net.URL
 
 import com.amazonaws.auth.{AWSCredentialsProviderChain, DefaultAWSCredentialsProviderChain}
 import dpla.ingestion3.confs.i3Conf
@@ -24,6 +25,7 @@ import scala.util.{Failure, Success, Try}
   *   5. Validate the schema final DataFrame (only for logging purposes).
   *   6. Manage the spark session.
   *
+  * @param shortName [String] Provider short name
   * @param conf [i3Conf] contains configs for the harvester.
   * @param outputDir [String] outputDir for the harvested data.
   * @param harvestLogger [Logger] for the harvester.
@@ -33,7 +35,7 @@ abstract class Harvester(shortName: String,
                          outputDir: String,
                          harvestLogger: Logger) {
   /**
-    * Abstract method doHarvest should:
+    * Abstract method runHarvest() should:
     *   1. Run a harvest.
     *   2. Save harvested data.
     *   3. Return a Try[DataFrame] of the harvested data.
@@ -56,9 +58,10 @@ abstract class Harvester(shortName: String,
     // then delete it and its contents.
     // TODO Move this into a shell script
     outputFile.getParentFile.mkdirs()
-    if (outputFile.exists & !outputDir.startsWith("s3"))
-      harvestLogger.info(s"Output directory already exists. Deleting ${outputDir}...")
+    if (outputFile.exists & !outputDir.startsWith("s3")) {
+      harvestLogger.info(s"Deleting $outputDir...")
       Utils.deleteRecursively(outputFile)
+    }
 
     val startTime = System.currentTimeMillis()
 
@@ -68,7 +71,8 @@ abstract class Harvester(shortName: String,
       case Success(df) =>
         // Log details about the successful harvest.
         val endTime = System.currentTimeMillis()
-        harvestLogger.info(Utils.logResults(endTime-startTime, df.count()))
+        harvestLogger.info(s"Records saving to $outputDir")
+        harvestLogger.info(Utils.summarizeResults(endTime-startTime, df.count()))
         validateSchema(df)
 
       case Failure(f) =>
@@ -80,7 +84,7 @@ abstract class Harvester(shortName: String,
     sc.stop()
   }
 
-  protected val outputFile = new File(outputDir)
+  protected lazy val outputFile = new File(outputDir)
   protected lazy val s3AccessKey: String = awsCredentials.getCredentials.getAWSAccessKeyId
   protected lazy val s3SecretKey: String = awsCredentials.getCredentials.getAWSSecretKey
 
@@ -162,7 +166,9 @@ abstract class Harvester(shortName: String,
   }
 }
 
-
+/**
+  * Harvester Exceptions
+  */
 object HarvesterExceptions {
 
   def throwMissingArgException(arg: String) = {
@@ -176,7 +182,15 @@ object HarvesterExceptions {
   }
 
   def throwValidationException(arg: String) = {
-    val msg = s"Validation error: ${arg}"
+    val msg = s"Validation error: $arg"
     throw new IllegalArgumentException(msg)
   }
+}
+
+/**
+  * Generic URL builder. Implemented in harvesters that need some help when building
+  * HTTP requests.
+  */
+trait UrlBuilder {
+  protected def buildUrl(params: Map[String, String]): URL
 }

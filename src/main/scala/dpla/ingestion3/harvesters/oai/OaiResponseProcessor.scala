@@ -192,7 +192,7 @@ object OaiResponseProcessor {
     *         A failure if the XML is invalid or contains an OAI error message.
     */
   def getXml(string: String): Try[Node] = Try {
-    loadXml(string) match {
+    Try { XML.loadString(string) } match {
       // XML parsing error.
       case Failure(e) => throw e
       case Success(xml) =>
@@ -204,7 +204,4 @@ object OaiResponseProcessor {
         }
     }
   }
-
-  // Try to parse a string into valid XML.
-  def loadXml(string: String): Try[Node] = Try { XML.loadString(string) }
 }

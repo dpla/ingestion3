@@ -43,6 +43,7 @@ lazy val root = (project in file("."))
       "org.scalamock" %% "scalamock-scalatest-support" % "3.6.0" % "test",
       "com.typesafe" % "config" % "1.3.1",
       "com.amazonaws" % "aws-java-sdk-s3" % "1.10.6",
-      "org.apache.hadoop" % "hadoop-aws" % "2.8.1"
+      "org.apache.hadoop" % "hadoop-aws" % "2.8.1",
+      "com.squareup.okhttp3" % "okhttp" % "3.8.0"
     )
   )

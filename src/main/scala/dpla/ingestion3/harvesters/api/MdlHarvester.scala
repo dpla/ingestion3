@@ -1,18 +1,16 @@
 
 package dpla.ingestion3.harvesters.api
 
-import java.net.URI
+import java.net.URL
+
 import dpla.ingestion3.confs.i3Conf
-import org.apache.commons.io.IOUtils
-import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
+import dpla.ingestion3.utils.HttpUtils
 import org.apache.http.client.utils.URIBuilder
-import org.apache.http.impl.client.HttpClients
-import org.apache.http.util.EntityUtils
 import org.apache.log4j.Logger
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 class MdlHarvester(shortName: String,
                    conf: i3Conf,
@@ -79,58 +77,31 @@ class MdlHarvester(shortName: String,
     * @param start Uses start as an offset to paginate.
     * @return ApiSource or ApiError
     */
-  private def getSinglePage(start: String): ApiResponse =
-    getUri(queryParams.updated("start", start)) match {
-      // Error building URL
+  private def getSinglePage(start: String): ApiResponse = {
+    val url = buildUrl(queryParams.updated("start", start))
+    HttpUtils.makeGetRequest(url) match {
       case Failure(e) =>
-        val source = ApiSource(queryParams)
-        ApiError(e.toString, source)
-      case Success(url) =>
-        getResponse(url) match {
-          case Failure(e) =>
-            ApiError(e.toString, ApiSource(queryParams, Some(url.toString)))
-          case Success(response) => response.isEmpty match {
-            case true =>
-              ApiError("Response body is empty", ApiSource(queryParams, Some(url.toString)))
-            case false =>
-              ApiSource(queryParams, Some(url.toString), Some(response))
-          }
-        }
+        ApiError(e.toString, ApiSource(queryParams, Some(url.toString)))
+      case Success(response) if response.isEmpty =>
+          ApiError("Response body is empty", ApiSource(queryParams, Some(url.toString)))
+      case Success(response) =>
+        ApiSource(queryParams, Some(url.toString), Some(response))
     }
+  }
 
   /**
-    * Builds query URI from parameters
+    * Builds MDL query URL from parameters
     *
-    * @param queryParams
+    * @param queryParams URL parameters
     * @return URI
     */
-  private def getUri(queryParams: Map[String, String]): Try[URI] = Try {
-    new URIBuilder()
-      .setScheme("http")
-      .setHost("hub-client.lib.umn.edu")
-      .setPath("/api/v1/records")
-      .setParameter("q", queryParams.getOrElse("query", "*:*"))
-      .setParameter("start", queryParams.getOrElse("start", "0"))
-      .setParameter("rows", queryParams.getOrElse("rows", "10"))
-      .build()
-  }
-
-  /**
-    * Makes request and returns stringified JSON response
-    *
-    * @param uri
-    * @return
-    */
-  private def getResponse(uri: URI): Try[String] = Try {
-    val httpclient = HttpClients.createDefault()
-    val get = new HttpGet(uri)
-    var response: CloseableHttpResponse = null
-    try {
-      response = httpclient.execute(get)
-      val entity = response.getEntity
-      EntityUtils.toString(entity)
-    } finally {
-      IOUtils.closeQuietly(response)
-    }
-  }
+  override protected def buildUrl(queryParams: Map[String, String]): URL = new URIBuilder()
+    .setScheme("http")
+    .setHost("hub-client.lib.umn.edu")
+    .setPath("/api/v1/records")
+    .setParameter("q", queryParams.getOrElse("query", "*:*"))
+    .setParameter("start", queryParams.getOrElse("start", "0"))
+    .setParameter("rows", queryParams.getOrElse("rows", "10"))
+    .build()
+    .toURL
 }

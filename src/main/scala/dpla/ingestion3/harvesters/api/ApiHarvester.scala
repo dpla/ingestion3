@@ -2,16 +2,15 @@ package dpla.ingestion3.harvesters.api
 
 import java.io.File
 
-import org.apache.avro.Schema
-import org.apache.spark.sql.DataFrame
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.Harvester
-import dpla.ingestion3.harvesters.file.NaraFileHarvestMain._
+import dpla.ingestion3.harvesters.{Harvester, UrlBuilder}
 import dpla.ingestion3.utils.{AvroUtils, FlatFileIO}
+import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.log4j.Logger
+import org.apache.spark.sql.DataFrame
 
 import scala.util.Try
 
@@ -20,7 +19,8 @@ abstract class ApiHarvester(shortName: String,
                             conf: i3Conf,
                             outputDir: String,
                             harvestLogger: Logger)
-  extends Harvester(shortName, conf, outputDir, harvestLogger) {
+  extends Harvester(shortName, conf, outputDir, harvestLogger)
+    with UrlBuilder {
 
   // Abstract method queryParams should set base query parameters for API call.
   protected val queryParams: Map[String, String]

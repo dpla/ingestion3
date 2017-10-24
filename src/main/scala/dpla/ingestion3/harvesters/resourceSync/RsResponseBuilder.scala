@@ -1,16 +1,13 @@
 package dpla.ingestion3.harvesters.resourceSync
 
-import java.net.{URI, URL}
+import java.net.URL
 
-import org.apache.commons.io.IOUtils
-import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
-import org.apache.http.impl.client.HttpClients
-import org.apache.http.util.EntityUtils
+import dpla.ingestion3.utils.HttpUtils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
 
 import scala.annotation.tailrec
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 import scala.xml.XML
 
 
@@ -138,37 +135,22 @@ class RsResponseBuilder (endpoint: String)
     * @return
     */
   def getResources(resourceListUrl: String): List[RsResponse] = {
-    getResponse(new URI(resourceListUrl)) match {
+    val headers = Map("Accept" -> "text/json")
+    HttpUtils.makeGetRequest(new URL(resourceListUrl), Some(headers)) match {
       case Success(indexDoc) => {
-        val itemUrls = getUrls(indexDoc)
-        itemUrls.map(itemUrl => {
-          getResponse(new URI(itemUrl)) match {
-            case Success(item) => RsRecord("id", item, RsSource(Some(itemUrl)))
-            case Failure(error) => RsError(error.getMessage, RsSource(Some(itemUrl)))
+        val items = getUrls(indexDoc)
+        items.map(i => {
+          val url = new URL(i)
+          HttpUtils.makeGetRequest(url, Some(headers)) match {
+            case Success(item) => RsRecord("id", item, RsSource(Some(i)))
+            case Failure(error) => RsError(error.getMessage, RsSource(Some(i)))
           }
         }).toList
       }
-    }
-  }
-
-  /**
-    * Makes request and returns stringified JSON response
-    *
-    * @param uri
-    * @return
-    */
-  private def getResponse(uri: URI): Try[String] = Try {
-    val httpclient = HttpClients.createDefault()
-    val get = new HttpGet(uri)
-    // TODO this should be configurable, do not expect all RS to support JSON?
-    get.addHeader("Accept", "text/json")
-    var response: CloseableHttpResponse = null
-    try {
-      response = httpclient.execute(get)
-      val entity = response.getEntity
-      EntityUtils.toString(entity)
-    } finally {
-      IOUtils.closeQuietly(response)
+      case Failure(f) => {
+        List(RsError(s"Unable to get resource list page ${f.getMessage}",
+          RsSource(Some(resourceListUrl))))
+      }
     }
   }
 }

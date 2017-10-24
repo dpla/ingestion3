@@ -1,19 +1,16 @@
 
 package dpla.ingestion3.harvesters.api
 
-import java.net.URI
+import java.net.URL
 
 import dpla.ingestion3.confs.i3Conf
-import org.apache.commons.io.IOUtils
-import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
+import dpla.ingestion3.utils.HttpUtils
 import org.apache.http.client.utils.URIBuilder
-import org.apache.http.impl.client.HttpClients
-import org.apache.http.util.EntityUtils
 import org.apache.log4j.Logger
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 /**
   * Class for harvesting records from the California Digital Library's Solr API
@@ -94,13 +91,8 @@ class CdlHarvester(shortName: String,
     * @return ApiSource or ApiError
     */
   private def getSinglePage(cursorMark: String): ApiResponse = {
-    getUri(queryParams.updated("cursorMark", cursorMark)) match {
-      // Error building URL
-      case Failure(e) =>
-        val source = ApiSource(queryParams)
-        ApiError(e.toString, source)
-      case Success(url) => {
-        getResponse(url) match {
+    val url = buildUrl(queryParams.updated("cursorMark", cursorMark))
+        HttpUtils.makeGetRequest(url) match {
           case Failure(e) =>
             ApiError(e.toString, ApiSource(queryParams, Some(url.toString)))
           case Success(response) => response.isEmpty match {
@@ -109,44 +101,22 @@ class CdlHarvester(shortName: String,
           }
         }
       }
-    }
-  }
 
   /**
-    * Builds query URI from parameters
+    * Constructs the URL for CDL API requests
     *
-    * @param queryParams
-    * @return URI
-    */
-  private def getUri(queryParams: Map[String, String]): Try[URI] = Try {
-    new URIBuilder()
-      .setScheme("https")
-      .setHost("solr.calisphere.org")
-      .setPath("/solr/query")
-      .setParameter("q", queryParams.getOrElse("query", "*:*"))
-      .setParameter("cursorMark", queryParams.getOrElse("cursorMark", "*"))
-      .setParameter("rows", queryParams.getOrElse("rows", "10"))
-      .setParameter("sort", "id desc")
-      .build()
-    }
-
-  /**
-    * Makes request and returns stringified JSON response
-    *
-    * @param uri
+    * @param params URL parameters
     * @return
     */
-  private def getResponse(uri: URI): Try[String] = Try {
-    val httpclient = HttpClients.createDefault()
-    val get = new HttpGet(uri)
-    get.addHeader("X-Authentication-Token", queryParams.getOrElse("api_key", ""))
-    var response: CloseableHttpResponse = null
-    try {
-      response = httpclient.execute(get)
-      val entity = response.getEntity
-      EntityUtils.toString(entity)
-    } finally {
-      IOUtils.closeQuietly(response)
-    }
-  }
+  override protected def buildUrl(params: Map[String, String]): URL =
+    new URIBuilder()
+    .setScheme("https")
+    .setHost("solr.calisphere.org")
+    .setPath("/solr/query")
+    .setParameter("q", queryParams.getOrElse("query", "*:*"))
+    .setParameter("cursorMark", queryParams.getOrElse("cursorMark", "*"))
+    .setParameter("rows", queryParams.getOrElse("rows", "10"))
+    .setParameter("sort", "id desc")
+    .build()
+    .toURL
 }

@@ -1,9 +1,13 @@
 package dpla.ingestion3.harvesters.pss
 
 import java.net.URL
+
+import dpla.ingestion3.utils.HttpUtils
 import org.apache.commons.io.IOUtils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
+
+import scala.util.{Failure, Success}
 
 /*
  * This class handles requests to the PSS feed.
@@ -51,10 +55,12 @@ class PssResponseBuilder (@transient val sqlContext: SQLContext)
     *            PSS request URL
     * @return String
     *         String response
-    *
-    *      TODO: Handle failed HTTP request.
     */
   def getStringResponse(url: URL) : String = {
-    IOUtils.toString(url, "UTF-8")
+    HttpUtils.makeGetRequest(url) match {
+      case Success(s) => s
+      // TODO: Handle failed HTTP request.
+      case Failure(f) => throw f
+    }
   }
 }

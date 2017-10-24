@@ -2,16 +2,15 @@ package dpla.ingestion3.enrichments
 
 // JavaConversions is for iterating over Sets of
 // org.eclipse.rdf4j.model.Resource and org.eclipse.rdf4j.model.Model
+import com.github.dvdme.Coordinates
 import dpla.ingestion3.model.DplaPlace
+import dpla.ingestion3.utils.HttpUtils
+import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
-import scalaj.http._
-import com.github.dvdme.Coordinates
-import dpla.ingestion3.utils.Utils
-
-import util.{Failure, Success, Try}
+import scala.util.{Failure, Success, Try}
 
 
 /* Case classes for JSON parser ... */
@@ -59,18 +58,19 @@ trait Twofisher {
     *         interpretations
     */
   def geocoderResponse(queryType: String, term: String): JValue = {
-    val baseURI = getBaseUri
-    retry(3) {
-      val response: HttpResponse[String] =
-        Http(baseURI)
-          .timeout(connTimeoutMs = 1000, readTimeoutMs = 5000)
-          .param("lang", "en")
-          .param("responseIncludes", "PARENTS,DISPLAY_NAME")
-          .param(queryType, term)
-          .asString
-      parse(response.body)
-    } match {
-      case Success(body) => body
+   val url = new URIBuilder()
+      .setScheme("http")
+      .setHost(hostname)
+      .setPort(new Integer(port).toInt)
+      .setPath("query")
+      .addParameter("lang", "en")
+      .addParameter("responseIncludes", "PARENTS,DISPLAY_NAME")
+      .addParameter(queryType, term)
+      .build()
+      .toURL
+
+    HttpUtils.makeGetRequest(url) match {
+      case Success(body) => parse(body)
       case Failure(_) => JNothing
     }
   }

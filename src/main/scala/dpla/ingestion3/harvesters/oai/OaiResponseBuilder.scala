@@ -3,14 +3,15 @@ package dpla.ingestion3.harvesters.oai
 import java.net.URL
 import java.nio.charset.Charset
 
-import dpla.ingestion3.harvesters.OaiQueryUrlBuilder
-
+import dpla.ingestion3.harvesters.UrlBuilder
+import dpla.ingestion3.utils.HttpUtils
 import org.apache.http.client.fluent.Request
+import org.apache.http.client.utils.URIBuilder
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
 
 import scala.annotation.tailrec
-import scala.util.{Try, Success, Failure}
+import scala.util.{Failure, Success, Try}
 
 /**
  * This class handles requests to the OAI feed.
@@ -19,9 +20,7 @@ import scala.util.{Try, Success, Failure}
 
 class OaiResponseBuilder (endpoint: String)
                          (@transient val sqlContext: SQLContext)
-  extends Serializable {
-
-  val urlBuilder = new OaiQueryUrlBuilder
+  extends Serializable with UrlBuilder {
 
   /**
     * Get one to many pages of sets, and any errors that occurred in the process
@@ -185,14 +184,13 @@ class OaiResponseBuilder (endpoint: String)
     * @return OaiSource or OaiError
     */
   def getSinglePageResponse(queryParams: Map[String, String]): OaiResponse = {
-
     getUrl(queryParams) match {
       // Error building URL
       case Failure(e) =>
         val source = OaiSource(queryParams)
         OaiError(e.toString, source)
       case Success(url) => {
-        getStringResponse(url) match {
+        HttpUtils.makeGetRequest(url) match {
           // HTTP error
           case Failure(e) =>
             val source = OaiSource(queryParams, Some(url.toString))
@@ -210,26 +208,48 @@ class OaiResponseBuilder (endpoint: String)
     }
   }
 
-  // Attempts to build a URL based on given query params.
-  def getUrl(queryParams: Map[String, String]): Try[URL] = Try {
-    urlBuilder.buildQueryUrl(queryParams)
-  }
+  /**
+    * Tries to build a URL from the parameters
+    *
+    * @param queryParams HTTP parameters
+    * @return Try[URL]
+    */
+  def getUrl(queryParams: Map[String, String]): Try[URL] = Try { buildUrl(queryParams) }
 
   /**
-    * Executes the request and returns the response
+    * Builds an OAI request
     *
-    * @param url URL
-    *            OAI request URL
-    * @return Try[String]
-    *         String response
-    *
-    *         OAI-PMH XML responses must be enncoded as UTF-8.
-    * @see https://www.openarchives.org/OAI/openarchivesprotocol.html#XMLResponse
+    * @param params Map of parameters needed to construct the URL
+    *               OAI request verbs
+    *               See https://www.openarchives.org/OAI/openarchivesprotocol.html#ProtocolMessages
+    * @return URL
     */
-  def getStringResponse(url: URL) : Try[String] = Try {
-    Request.Get(url.toURI)
-      .execute()
-      .returnContent()
-      .asString(Charset.forName("UTF8"))
+  override def buildUrl(params: Map[String, String]): URL = {
+    // Required properties, not sure if this is the right style
+    assume(params.get("endpoint").isDefined)
+    assume(params.get("verb").isDefined)
+    val url = new URL(params("endpoint"))
+    val verb = params("verb")
+
+    // Optional properties.
+    val metadataPrefix: Option[String] = params.get("metadataPrefix")
+    val resumptionToken: Option[String] = params.get("resumptionToken")
+    val set: Option[String] = params.get("set")
+
+    // Build the URL
+    val urlParams = new URIBuilder()
+      .setScheme(url.getProtocol)
+      .setHost(url.getHost)
+      .setPort(url.getPort)
+      .setPath(url.getPath)
+      .setParameter("verb", verb)
+
+    // Set optional properties.
+    resumptionToken.foreach(t => urlParams.setParameter("resumptionToken", t))
+    set.foreach(s => urlParams.setParameter("set", s))
+    metadataPrefix.foreach(prefix => urlParams.setParameter("metadataPrefix", prefix))
+
+    urlParams.build.toURL
   }
+
 }
