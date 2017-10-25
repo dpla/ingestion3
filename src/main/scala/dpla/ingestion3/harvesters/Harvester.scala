@@ -120,8 +120,13 @@ abstract class Harvester(shortName: String,
   }
 
   protected lazy val sc: SparkContext = spark.sparkContext
-  sc.hadoopConfiguration.set("fs.s3a.access.key", s3AccessKey)
-  sc.hadoopConfiguration.set("fs.s3a.secret.key", s3SecretKey)
+
+  // Only set AWS keys if output destination is s3
+  if (outputDir.startsWith("s3")) {
+    sc.hadoopConfiguration.set("fs.s3a.access.key", s3AccessKey)
+    sc.hadoopConfiguration.set("fs.s3a.secret.key", s3SecretKey)
+  }
+
   /**
     * Check that harvested DataFrame meets the expected schema.
     * If not, log a warning.
