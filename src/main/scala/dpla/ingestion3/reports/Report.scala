@@ -3,13 +3,12 @@ package dpla.ingestion3.reports
 
 import java.io.File
 
-import com.databricks.spark.avro._
 import dpla.ingestion3.model._
-import org.apache.spark.SparkConf
-import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import dpla.ingestion3.utils.Utils
+import org.apache.spark.SparkConf
+import org.apache.spark.sql._
 
-import util.Try
+import scala.util.Try
 
 /**
   * Report:  trait with common fields and methods for QA reports.
@@ -29,6 +28,7 @@ import util.Try
   */
 trait Report {
 
+  private final val missing = "__MISSING__"
   val sparkAppName: String = "Report"  // Usually overridden
 
   /*
@@ -37,8 +37,8 @@ trait Report {
    */
   def getInputURI: String
   def getOutputURI: String
-  def getSparkMasterName: String
   def getParams: Option[Array[String]]
+  def getSparkConf: SparkConf
 
   /**
     * Run the report, opening the input and output and invoking the process()
@@ -48,20 +48,24 @@ trait Report {
     * @return Try object representing success or failure, for Reporter.main()
     */
   def run(): Try[Unit] = Try {
+    val spark = SparkSession
+      .builder()
+      .config(getSparkConf)
+      .getOrCreate()
 
-    val sparkConf: SparkConf =
-      new SparkConf().setAppName(sparkAppName).setMaster(getSparkMasterName)
-    sparkConf.set(
-      "spark.serializer", "org.apache.spark.serializer.KryoSerializer"
-    )
-    implicit val dplaMapDataEncoder =
-      org.apache.spark.sql.Encoders.kryo[OreAggregation]
-    val spark: SparkSession =
-      SparkSession.builder().config(sparkConf).getOrCreate()
     val sc = spark.sparkContext
 
-    val input: Dataset[OreAggregation] =
-      spark.read.avro(getInputURI).as[OreAggregation]
+    // Need to keep this here despite what IntelliJ and Codacy say
+    import spark.implicits._
+
+    implicit val dplaMapDataEncoder: Encoder[OreAggregation] =
+      org.apache.spark.sql.Encoders.kryo[OreAggregation]
+
+    val input = spark
+        .read
+        .format("com.databricks.spark.avro")
+        .load(getInputURI).map(row => ModelConverter.toModel(row))
+
     val output: DataFrame = process(input, spark)
 
     Utils.deleteRecursively(new File(getOutputURI))
@@ -100,14 +104,14 @@ trait Report {
     *  If the sequence is empty then a String indicating that the value is missing is
     * returned.
     *
-    * @param t
+    * @param t Sequence to report on
     * @return
     */
-  def extractValue(t: Seq[Any]): Seq[String] = {
-    t.isEmpty match {
-      case true => Seq("__MISSING__")
-      // If non-empty, then take the first element to determine the type of context class
-      case false => t.headOption match {
+  def extractValue(t: Seq[AnyRef]): Seq[String] = {
+    if (t.isEmpty) {
+      Seq(missing)
+    } else {
+      t.headOption.getOrElse("__MISSING No value to extract__") match {
         case _: DplaPlace =>
           t.map(_.asInstanceOf[DplaPlace].name.getOrElse("__MISSING DplaPlace.name__"))
         case _: DcmiTypeCollection =>
@@ -118,9 +122,9 @@ trait Report {
           t.map(_.asInstanceOf[EdmTimeSpan].originalSourceDate.getOrElse("__MISSING EdmTimeSpan.originalSourceDate__"))
         case _: SkosConcept =>
           t.map(_.asInstanceOf[SkosConcept].providedLabel.getOrElse("__MISSING SkosConcept.providedLabel__"))
-        case None => Seq("__MISSING__")
         case _ => t.map(_.toString)
       }
     }
   }
+
 }

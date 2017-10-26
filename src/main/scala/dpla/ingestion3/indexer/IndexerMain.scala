@@ -22,7 +22,7 @@ object IndexerMain {
     val filter: Option[String] = if (args.isDefinedAt(4)) Some(args(4)) else None
 
     val conf = new SparkConf()
-      .setAppName("Ingest 3 Indexer")
+      .setAppName("IngestRemap 3 Indexer")
       //todo this should be a parameter
       .setMaster("local")
       //This enables object serialization using the Kryo library

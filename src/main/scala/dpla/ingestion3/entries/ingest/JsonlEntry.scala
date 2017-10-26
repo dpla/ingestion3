@@ -1,8 +1,12 @@
-package dpla.ingestion3
+package dpla.ingestion3.entries.ingest
 
-import dpla.ingestion3.model.{DplaMapData, ModelConverter, jsonlRecord}
+import java.io.File
+
+import dpla.ingestion3.model.{ModelConverter, jsonlRecord}
+import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{Dataset, SparkSession}
+import org.apache.log4j.Logger
 
 /**
   * Driver for reading DplaMapData records (mapped or enriched) and generating
@@ -20,7 +24,7 @@ import org.apache.spark.sql.{Dataset, SparkSession}
   *   Usage
   *   -----
   *   To invoke via sbt:
-  *     sbt "run-main dpla.ingestion3.JsonlEntry /input/path /output/path"
+  *     sbt "run-main dpla.ingestion3.entries.JsonlEntry /input/path /output/path"
   *
   */
 object JsonlEntry {
@@ -35,15 +39,34 @@ object JsonlEntry {
       .setAppName("jsonl")
       .setMaster("local[*]")
 
-    val spark = SparkSession.builder().config(sparkConf).getOrCreate()
+
+    executeJsonL(sparkConf, inputName, outputName, Utils.createLogger("jsonl", ""))
+  }
+
+  /**
+    * Generate JSON-L files from AVRO file
+    * @param sparkConf Spark configuration
+    * @param dataIn Data to transform into JSON-L
+    * @param dataOut Location to save JSON-L
+    */
+  def executeJsonL(sparkConf: SparkConf, dataIn: String, dataOut: String, logger: Logger) = {
+    logger.info("Starting JSON-L export")
+
+    // Delete the output location if it exists
+    Utils.deleteRecursively(new File(dataOut))
+
+    val spark = SparkSession
+      .builder()
+      .config(sparkConf)
+      .getOrCreate()
+
     import spark.implicits._
     val sc = spark.sparkContext
 
     val enrichedRows =
       spark.read
-      .format("com.databricks.spark.avro")
-      .load(inputName)
-
+        .format("com.databricks.spark.avro")
+        .load(dataIn)
 
     val indexRecords: Dataset[String] = enrichedRows.map(
       row => {
@@ -52,10 +75,9 @@ object JsonlEntry {
       }
     )
 
-    indexRecords.coalesce(1).write.text(outputName)
-
+    indexRecords.coalesce(1).write.json(dataOut)
     sc.stop()
 
+    logger.info("JSON-L export complete")
   }
-
 }

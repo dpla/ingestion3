@@ -60,8 +60,6 @@ abstract class Harvester(shortName: String,
       harvestLogger.info(s"Output directory already exists. Deleting ${outputDir}...")
       Utils.deleteRecursively(outputFile)
 
-    // Log message that harvest is starting.
-    harvestLogger.info(s"Beginning ${shortName} harvest")
     val startTime = System.currentTimeMillis()
 
     // Call local implementation.
@@ -70,8 +68,7 @@ abstract class Harvester(shortName: String,
       case Success(df) =>
         // Log details about the successful harvest.
         val endTime = System.currentTimeMillis()
-        harvestLogger.info(s"Records saving to ${outputDir}")
-        Utils.logResults(endTime-startTime, df.count(), harvestLogger)
+        harvestLogger.info(Utils.logResults(endTime-startTime, df.count()))
         validateSchema(df)
 
       case Failure(f) =>

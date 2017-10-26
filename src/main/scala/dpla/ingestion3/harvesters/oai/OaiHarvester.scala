@@ -3,8 +3,8 @@ package dpla.ingestion3.harvesters.oai
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.Harvester
-import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.apache.log4j.Logger
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 
 import scala.util.Try
@@ -38,7 +38,7 @@ class OaiHarvester(shortName: String,
     harvestedData.select("error.message", "error.errorSource.url")
       .where("error is not null")
       .collect
-      .foreach(row => harvestLogger.warn("OAI harvest error: " + row))
+      .foreach(row => harvestLogger.warn(s"OAI harvest error ${row.getString(0)} when fetching ${row.getString(1)}" ))
 
     val startTime = System.currentTimeMillis()
     val unixEpoch = startTime / 1000L
@@ -50,7 +50,7 @@ class OaiHarvester(shortName: String,
       .withColumn("provider", lit(shortName))
       .withColumn("mimetype", lit(mimeType))
 
-    harvestLogger.info(s"Saving output to ${outputDir}")
+    harvestLogger.info(s"Saving to $outputDir")
 
     // Write harvested data to file.
     finalData

@@ -1,11 +1,13 @@
 package dpla.ingestion3.reports
 
-import dpla.ingestion3.model.{DplaMapData, OreAggregation}
-import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+import java.net.URI
+import javax.imageio.ImageIO
+
+import dpla.ingestion3.model.OreAggregation
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.{DataFrame, Dataset, Encoder, SparkSession}
 
 import scala.util.{Failure, Success, Try}
-import javax.imageio.ImageIO
-import java.net.URI
 
 /**
   * Produces QA reports related to thumbnails (i.e. oreAggregation.preview).
@@ -31,23 +33,18 @@ import java.net.URI
   *
   * @param inputURI String, path to the data sample
   * @param outputURI String, path to write output
-  * @param sparkMasterName String
   * @param params Array[String], string value can be "missing" OR "dimensions"
   */
 class ThumbnailReport (
                             val inputURI: String,
                             val outputURI: String,
-                            val sparkMasterName: String,
-                            val params: Array[String]) extends Report with Serializable {
+                            val sparkConf: SparkConf,
+                            val params: Array[String] = Array()) extends Report with Serializable {
 
   override val sparkAppName: String = "ThumbnailReport"
-
   override def getInputURI: String = inputURI
-
   override def getOutputURI: String = outputURI
-
-  override def getSparkMasterName: String = sparkMasterName
-
+  override def getSparkConf: SparkConf = sparkConf
   override def getParams: Option[Array[String]] = {
     params.nonEmpty match {
       case true => Some(params)
@@ -66,7 +63,7 @@ class ThumbnailReport (
   override def process(ds: Dataset[OreAggregation], spark: SparkSession): DataFrame = {
 
 
-    implicit val dplaMapDataEncoder =
+    implicit val dplaMapDataEncoder: Encoder[OreAggregation] =
       org.apache.spark.sql.Encoders.kryo[OreAggregation]
 
     val token: String = getParams match {
@@ -91,9 +88,7 @@ class ThumbnailReport (
 
     val thumbnailData: Dataset[MissingThumbnail] = ds.map(dplaMapData => {
 
-      val hasImageType = dplaMapData.sourceResource.`type`
-        .filter {  _.toLowerCase() == "image" }
-        .nonEmpty
+      val hasImageType = dplaMapData.sourceResource.`type`.exists(_.toLowerCase() == "image")
 
       val hasPreview = previewUri(dplaMapData).nonEmpty
 
@@ -152,7 +147,7 @@ class ThumbnailReport (
     oreAggregation.isShownAt.toString
 
   /**
-    * @param dplaMapData
+    * @param oreAggregation
     * @return Option[URI], the thumbnail URI
     */
   def previewUri(oreAggregation: OreAggregation): Option[URI] =
