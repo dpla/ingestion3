@@ -129,10 +129,8 @@ object MappingEntry {
     Utils.deleteRecursively(new File(dataOut))
 
     val successResults: Dataset[Row] = mappingResults
-      .filter(r => r match {
-        case(row: Row, _) => Option(row).isDefined
-      })
-      .map( { case(row, _) => row } )(oreAggregationEncoder)
+      .filter(tuple => Option(tuple._1).isDefined)
+      .map(tuple => tuple._1)(oreAggregationEncoder)
 
     val failures:  Array[String] = mappingResults
       .filter(tuple => Option(tuple._2).isDefined)
