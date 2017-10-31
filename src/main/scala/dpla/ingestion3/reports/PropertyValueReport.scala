@@ -1,8 +1,8 @@
 package dpla.ingestion3.reports
 import dpla.ingestion3.model._
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.{DataFrame, Dataset, Encoder, SparkSession}
 import org.apache.spark.sql.functions.{col, explode}
+import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 
 case class PropertyValueRpt(dplaUri: String,
                             localUri: String,
@@ -56,7 +56,7 @@ class PropertyValueReport (
       case _ => throw new RuntimeException(s"No field specified")
     }
 
-    implicit val dplaMapDataEncoder: Encoder[OreAggregation] =
+    implicit val dplaMapDataEncoder =
       org.apache.spark.sql.Encoders.kryo[OreAggregation]
 
     val rptDataset: Dataset[PropertyValueRpt] = token match {
