@@ -6,6 +6,7 @@ import dpla.ingestion3.mappers.json.JsonExtractionUtils
 import dpla.ingestion3.model.{DplaSourceResource, EdmWebResource, OreAggregation, _}
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
+import org.json4s.JsonDSL._
 
 import scala.util.Try
 
@@ -26,6 +27,8 @@ class CdlExtractor(rawData: String, shortName: String)
     Try {
       OreAggregation(
         dplaUri = mintDplaItemUri(),
+        sidecar = ("prehashId", buildProviderBaseId()) ~
+                  ("dplaId", mintDplaId()),
         sourceResource = DplaSourceResource(
           alternateTitle = extractStrings("alternative_title_ss"),
           collection = extractStrings("collection_name").map(nameOnlyCollection),

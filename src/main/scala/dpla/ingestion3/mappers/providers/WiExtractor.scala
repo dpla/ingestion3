@@ -5,6 +5,7 @@ import java.net.URI
 import dpla.ingestion3.mappers.xml.XmlExtractionUtils
 import dpla.ingestion3.model.DplaMapData.ExactlyOne
 import dpla.ingestion3.model._
+import org.json4s.JsonDSL._
 
 import scala.util.Try
 import scala.xml._
@@ -26,6 +27,8 @@ class WiExtractor(rawData: String, shortName: String) extends Extractor with Xml
   def build(): Try[OreAggregation] = Try {
     OreAggregation(
       dplaUri = mintDplaItemUri(),
+      sidecar = ("prehashId", buildProviderBaseId()) ~
+                ("dplaId", mintDplaId()),
       dataProvider = dataProvider(),
       originalRecord = rawData,
       provider = agent,
