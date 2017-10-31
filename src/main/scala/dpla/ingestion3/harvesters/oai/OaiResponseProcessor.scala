@@ -151,14 +151,11 @@ object OaiResponseProcessor {
     * @param xml: NodeSeq
     *             The XML that may include an error message.
     *
-    * @return Try[Unit]
-    *
-    * @throws OaiHarvesterException
-    *
+    * @return Unit
     */
-  def getOaiErrorCode(xml: NodeSeq): Try[Unit] = Try {
+  def getOaiErrorCode(xml: NodeSeq): Unit = {
     if ((xml \ "error").nonEmpty)
-      throw new OaiHarvesterException((xml \ "error").text.trim)
+      throw OaiHarvesterException((xml \ "error").text.trim)
   }
 
   /**
@@ -192,16 +189,8 @@ object OaiResponseProcessor {
     *         A failure if the XML is invalid or contains an OAI error message.
     */
   def getXml(string: String): Try[Node] = Try {
-    Try { XML.loadString(string) } match {
-      // XML parsing error.
-      case Failure(e) => throw e
-      case Success(xml) =>
-        getOaiErrorCode(xml) match {
-          // XML contains OAI error.
-          case Failure(e) => throw e
-          // Return XML node if no errors.
-          case Success(_) => xml
-        }
-    }
+    val xml = XML.loadString(string)
+    getOaiErrorCode(xml)
+    xml
   }
 }
