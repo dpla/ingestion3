@@ -1,7 +1,7 @@
 package dpla.ingestion3.reports
 import dpla.ingestion3.model._
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, Encoder, SparkSession}
 import org.apache.spark.sql.functions.{col, explode}
 
 case class PropertyValueRpt(dplaUri: String,
@@ -19,9 +19,10 @@ class PropertyValueReport (
   override def getOutputURI: String = outputURI
   override def getSparkConf: SparkConf = sparkConf
   override def getParams: Option[Array[String]] = {
-    params.nonEmpty match {
-      case true => Some(params)
-      case _ => None
+    if (params.nonEmpty) {
+      Some(params)
+    } else {
+      None
     }
   }
   val dplaUriCol = "dpla uri"
@@ -55,10 +56,18 @@ class PropertyValueReport (
       case _ => throw new RuntimeException(s"No field specified")
     }
 
-    implicit val dplaMapDataEncoder =
+    implicit val dplaMapDataEncoder: Encoder[OreAggregation] =
       org.apache.spark.sql.Encoders.kryo[OreAggregation]
 
     val rptDataset: Dataset[PropertyValueRpt] = token match {
+      case "edmRights" =>
+        ds.map(oreAggregation => {
+          PropertyValueRpt(
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
+            value = extractValue(oreAggregation.edmRights.toSeq)
+          )
+        })
       case "sourceResource.alternateTitle" =>
         ds.map(oreAggregation => {
           PropertyValueRpt(
@@ -179,14 +188,6 @@ class PropertyValueReport (
             value = extractValue(oreAggregation.sourceResource.replacedBy)
           )
         })
-      case "sourceResource.replacedBy" =>
-        ds.map(oreAggregation => {
-          PropertyValueRpt(
-            dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.uri.toString,
-            value = extractValue(oreAggregation.sourceResource.replacedBy)
-          )
-        })
       case "sourceResource.replaces" =>
         ds.map(oreAggregation => {
           PropertyValueRpt(
@@ -244,7 +245,7 @@ class PropertyValueReport (
           )
         })
       case x =>
-        throw new RuntimeException(s"Unrecognized field name '${x}'")
+        throw new RuntimeException(s"Unrecognized field name '$x'")
     }
 
     makeTable(rptDataset, spark, token)
