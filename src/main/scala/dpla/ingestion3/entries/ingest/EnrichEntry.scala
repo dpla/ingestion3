@@ -53,9 +53,6 @@ object EnrichEntry {
     // Load configuration from file
     val i3Conf: i3Conf = new Ingestion3Conf(confFile).load()
 
-    // Verify Twofishes can be reached
-    pingTwofishes(i3Conf)
-
     val sparkConf = new SparkConf()
       .setAppName("Enrichment")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
@@ -79,6 +76,9 @@ object EnrichEntry {
                         shortName: String,
                         logger: Logger,
                         i3conf: i3Conf): Unit = {
+
+    // Verify that twofishes is reachable
+    pingTwofishes(i3conf)
 
     logger.info("Enrichments started")
 
@@ -175,9 +175,11 @@ object EnrichEntry {
   private def pingTwofishes(conf: i3Conf): Unit = {
     val host = conf.twofishes.hostname.getOrElse("localhost")
     val port = conf.twofishes.port.getOrElse("8081")
-    HttpUtils.validateUrl(s"http://$host:$port/query") match {
-      case true => Unit // TODO log something?
-      case false => throw new RuntimeException(s"Cannot reach Twofishes at $host")
+    val url = s"http://$host:$port/query?query=nyc"
+    if (HttpUtils.validateUrl(url)) {
+      Unit
+    } else {
+      throw new RuntimeException(s"Cannot reach Twofishes at $url")
     }
   }
 }
