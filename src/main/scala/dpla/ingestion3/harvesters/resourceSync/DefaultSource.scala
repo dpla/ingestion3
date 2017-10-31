@@ -1,6 +1,6 @@
 package dpla.ingestion3.harvesters.resourceSync
 import dpla.ingestion3.harvesters.HarvesterExceptions._
-import dpla.ingestion3.utils.Utils.validateUrl
+import dpla.ingestion3.utils.HttpUtils
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.sources.RelationProvider
 
@@ -32,7 +32,7 @@ class DefaultSource extends RelationProvider {
 
   def getEndpoint(parameters: Map[String, String]): String = {
     val endpoint = parameters.get("endpoint")
-    (endpoint, validateUrl(endpoint.getOrElse(""))) match {
+    (endpoint, HttpUtils.validateUrl(endpoint.getOrElse(""))) match {
       // An endpoint url was provided and is reachable
       case (Some(url), true) => url
       // An endpoint url was provided but is unreachable

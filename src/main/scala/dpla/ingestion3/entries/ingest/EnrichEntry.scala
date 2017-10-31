@@ -7,7 +7,7 @@ import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.enrichments.EnrichmentDriver
 import dpla.ingestion3.model
 import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
-import dpla.ingestion3.utils.Utils
+import dpla.ingestion3.utils.{HttpUtils, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
@@ -175,7 +175,7 @@ object EnrichEntry {
   private def pingTwofishes(conf: i3Conf): Unit = {
     val host = conf.twofishes.hostname.getOrElse("localhost")
     val port = conf.twofishes.port.getOrElse("8081")
-    Utils.validateUrl(s"http://$host:$port/query") match {
+    HttpUtils.validateUrl(s"http://$host:$port/query") match {
       case true => Unit // TODO log something?
       case false => throw new RuntimeException(s"Cannot reach Twofishes at $host")
     }

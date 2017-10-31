@@ -155,14 +155,6 @@ class PropertyValueReport (
             value = extractValue(oreAggregation.sourceResource.place)
           )
         })
-      case "sourceResource.place.name" =>
-        ds.map(oreAggregation => {
-          PropertyValueRpt(
-            dplaUri = oreAggregation.dplaUri.toString,
-            localUri = oreAggregation.isShownAt.uri.toString,
-            value = extractValue(oreAggregation.sourceResource.place)
-          )
-        })
       case "sourceResource.publisher.name" =>
         ds.map(oreAggregation => {
           PropertyValueRpt(
