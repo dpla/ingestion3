@@ -75,7 +75,10 @@ object JsonlEntry {
       }
     )
 
-    indexRecords.coalesce(1).write.json(dataOut)
+    // This should always write out as #text() because if we use #json() then the
+    // data will be written out inside a JSON object (e.g. {'value': <doc>}) which is
+    // invalid for our use
+    indexRecords.coalesce(1).write.text(dataOut)
     sc.stop()
 
     logger.info("JSON-L export complete")

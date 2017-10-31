@@ -62,7 +62,7 @@ trait Twofisher {
       .setScheme("http")
       .setHost(hostname)
       .setPort(new Integer(port).toInt)
-      .setPath("query")
+      .setPath("/query")
       .addParameter("lang", "en")
       .addParameter("responseIncludes", "PARENTS,DISPLAY_NAME")
       .addParameter(queryType, term)
