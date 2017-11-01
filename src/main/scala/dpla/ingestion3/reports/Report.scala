@@ -2,6 +2,7 @@ package dpla.ingestion3.reports
 
 
 import java.io.File
+import java.net.URI
 
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -112,6 +113,8 @@ trait Report {
       Seq(missing)
     } else {
       t.headOption.getOrElse("__MISSING No value to extract__") match {
+        case _: URI =>
+          t.map(_.asInstanceOf[URI].toString)
         case _: DplaPlace =>
           t.map(_.asInstanceOf[DplaPlace].name.getOrElse("__MISSING DplaPlace.name__"))
         case _: DcmiTypeCollection =>

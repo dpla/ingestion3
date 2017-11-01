@@ -12,6 +12,7 @@ object ReporterMain {
   )
 
   private val reportFields = Seq(
+    "edmRights",
     "sourceResource.collection.title",
     "sourceResource.contributor.name",
     "sourceResource.creator.name",

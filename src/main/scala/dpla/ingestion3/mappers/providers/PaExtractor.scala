@@ -1,6 +1,6 @@
 package dpla.ingestion3.mappers.providers
 
-import java.net.URI
+import java.net.{URI, URL}
 
 import dpla.ingestion3.mappers.xml.XmlExtractionUtils
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToOne}
@@ -59,13 +59,14 @@ class PaExtractor(rawData: String, shortName: String) extends Extractor with Xml
         place = extractStrings(xml \ "metadata" \\ "coverage").map(nameOnlyPlace),
         publisher = extractStrings(xml \ "metadata" \\ "publisher").map(nameOnlyAgent),
         relation = extractStrings(xml \ "metadata" \\ "relation").drop(1).map(eitherStringOrUri),
-        rights = extractStrings(xml \ "metadata" \\ "rights"),
+        rights = extractStrings(xml \ "metadata" \\ "rights").filter(r => !isUrl(r)),
         subject = extractStrings(xml \ "metadata" \\ "subject").map(nameOnlyConcept),
         title = extractStrings(xml \ "metadata" \\ "title"),
         `type` = extractStrings(xml \ "metadata" \\ "type").filter(isDcmiType)
       ),
       //below will throw if not enough contributors
       dataProvider = extractDataProvider(),
+      edmRights = extractStrings(xml \ "metadata" \\ "rights").find(r => isUrl(r)).map(new URI(_)),
       originalRecord = Utils.formatXml(xml),
       provider = agent,
       isShownAt = EdmWebResource(uri = itemUri(), fileFormat = extractStrings("dc:format")),
@@ -96,4 +97,6 @@ class PaExtractor(rawData: String, shortName: String) extends Extractor with Xml
     else
       throw new Exception("Missing required property dataProvider because dc:contributor is empty")
   }
+
+  def isUrl(url: String): Boolean = Try {new URL(url) }.isSuccess
 }
