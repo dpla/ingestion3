@@ -50,19 +50,19 @@ class PaExtractor(rawData: String, shortName: String) extends Extractor with Xml
         collection = extractStrings(xml \ "metadata" \\ "relation").headOption.map(nameOnlyCollection).toSeq,
         contributor = extractStrings(xml \ "metadata" \\ "contributor").dropRight(1).map(nameOnlyAgent),
         creator = extractStrings(xml \ "metadata" \\ "creator").map(nameOnlyAgent),
-        date = extractStrings(xml \ "metadata" \\ "date").map(stringOnlyTimeSpan),
+        date = extractStrings(xml \ "metadata" \\ "date").distinct.map(stringOnlyTimeSpan),
         description = extractStrings(xml \ "metadata" \\ "description"),
-        format = extractStrings(xml \ "metadata" \\ "type").filterNot(isDcmiType),
-        genre = extractStrings(xml \ "metadata" \\ "type").map(nameOnlyConcept),
+        format = extractStrings(xml \ "metadata" \\ "type").distinct.filterNot(isDcmiType),
+        genre = extractStrings(xml \ "metadata" \\ "type").distinct.map(nameOnlyConcept),
         identifier = extractStrings(xml \ "metadata" \\ "identifier"),
-        language = extractStrings(xml \ "metadata" \\ "language").map(nameOnlyConcept),
-        place = extractStrings(xml \ "metadata" \\ "coverage").map(nameOnlyPlace),
-        publisher = extractStrings(xml \ "metadata" \\ "publisher").map(nameOnlyAgent),
+        language = extractStrings(xml \ "metadata" \\ "language").distinct.map(nameOnlyConcept),
+        place = extractStrings(xml \ "metadata" \\ "coverage").distinct.map(nameOnlyPlace),
+        publisher = extractStrings(xml \ "metadata" \\ "publisher").distinct.map(nameOnlyAgent),
         relation = extractStrings(xml \ "metadata" \\ "relation").drop(1).map(eitherStringOrUri),
         rights = extractStrings(xml \ "metadata" \\ "rights").filter(r => !isUrl(r)),
         subject = extractStrings(xml \ "metadata" \\ "subject").map(nameOnlyConcept),
         title = extractStrings(xml \ "metadata" \\ "title"),
-        `type` = extractStrings(xml \ "metadata" \\ "type").filter(isDcmiType)
+        `type` = extractStrings(xml \ "metadata" \\ "type").filter(isDcmiType).map(_.toLowerCase)
       ),
       //below will throw if not enough contributors
       dataProvider = extractDataProvider(),
@@ -75,7 +75,7 @@ class PaExtractor(rawData: String, shortName: String) extends Extractor with Xml
   }
 
   def agent = EdmAgent(
-    name = Some("Pennsylvania Digital Collections Project"),
+    name = Some("PA Digital"),
     uri = Some(new URI("http://dp.la/api/contributor/pa"))
   )
 
