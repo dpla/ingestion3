@@ -39,8 +39,6 @@ package object model {
 
   def eitherStringOrUri(uri: URI): LiteralOrUri = new Right(uri)
 
-  def dedup(seq: Seq[String]): Seq[String] = seq.distinct
-
   lazy val ingestDate: String = {
     val now = Calendar.getInstance().getTime
     val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
