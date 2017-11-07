@@ -88,7 +88,7 @@ package object model {
         ("ingestType" -> "item") ~
         ("isShownAt" -> record.isShownAt.uri.toString) ~
         ("object" -> record.`preview`.map{o => o.uri.toString}) ~ // in dpla map 3, object is the thumbnail
-        ("rights" -> record.edmRights.toString) ~
+        ("rights" -> record.edmRights.map(r => r.toString)) ~
         ("originalRecord" ->
           ("stringValue" -> record.originalRecord )) ~  // work around b/c original record viewer in CQA
                                                         // expects JSON and all ORs in ingest1 were converted to JSON
