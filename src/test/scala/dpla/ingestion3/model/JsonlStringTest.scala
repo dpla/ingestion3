@@ -41,13 +41,12 @@ class JsonlStringTest extends FlatSpec {
     )
   }
 
-  it should "have empty arrays for fields that have no data" in {
+  it should "not have empty arrays for fields that have no data" in {
     // Those fields that are optional are 0-n, so they will be arrays.
     val s: String = jsonlRecord(EnrichedRecordFixture.minimalEnrichedRecord)
     val jvalue = parse(s)
     assert(
-      compact(render(jvalue \ "_source" \ "sourceResource" \ "collection")) ==
-        "[]"
+      compact(render(jvalue \ "_source" \ "sourceResource" \ "collection")) == ""
     )
   }
 

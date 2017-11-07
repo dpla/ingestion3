@@ -87,7 +87,6 @@ object HttpUtils {
       case x: Success[T] => x
       // If we haven't maxed out our retries
       case _ if n > 1 => {
-        println(s"Sleeping ${wait}ms")
         Thread.sleep(wait)
         // TODO some better way of incrementing wait period
         retry(n - 1, wait*2)(fn)

@@ -9,9 +9,11 @@ import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import dpla.ingestion3.utils.FlatFileIO
 import org.apache.avro.Schema
 import org.apache.spark.sql.types.StructType
-import org.json4s.JsonAST.{JObject, JString}
+import org.json4s.DefaultFormats
+import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
+import org.json4s.prefs.EmptyValueStrategy
 
 
 package object model {
@@ -84,6 +86,7 @@ package object model {
         ("ingestType" -> "item") ~
         ("isShownAt" -> record.isShownAt.uri.toString) ~
         ("object" -> record.`preview`.map{o => o.uri.toString}) ~ // in dpla map 3, object is the thumbnail
+        ("rights" -> record.edmRights.map(r => r.toString)) ~
         ("originalRecord" ->
           ("stringValue" -> record.originalRecord )) ~  // work around b/c original record viewer in CQA
                                                         // expects JSON and all ORs in ingest1 were converted to JSON
@@ -153,7 +156,25 @@ package object model {
         ("@type" -> "ore:Aggregation")
       )
 
-    compact(render(jobj))
+
+    // Taken from
+    // https://stackoverflow.com/questions/40128816/remove-json-field-when-empty-value-in-serialize-with-json4s
+    implicit val formats = DefaultFormats.withEmptyValueStrategy(new EmptyValueStrategy {
+      def noneValReplacement = None
+
+      def replaceEmpty(value: JValue): JValue = value match {
+        case JString("") => JNothing
+        case JArray(items) =>
+          if(items.isEmpty) JNothing
+          else JArray(items.map(replaceEmpty))
+        case JObject(fields) => JObject(fields map {
+          case JField(name, v) => JField(name, value = replaceEmpty(v))
+        })
+        case oth => oth
+      }
+    })
+
+    compact(render(jobj)(formats))
   }
 
   val avroSchema: Schema = new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
