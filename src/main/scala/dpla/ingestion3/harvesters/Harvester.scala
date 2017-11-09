@@ -74,7 +74,7 @@ abstract class Harvester(shortName: String,
         val recordCount = df.count()
 
         harvestLogger.info(s"Records saving to $outputDir")
-        harvestLogger.info(Utils.summarizeResults(endTime-startTime, recordCount))
+        harvestLogger.info(Utils.harvestSummary(endTime-startTime, recordCount))
         validateSchema(df)
 
         Success(recordCount)

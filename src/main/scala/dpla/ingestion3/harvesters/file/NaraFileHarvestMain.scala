@@ -51,7 +51,7 @@ object NaraFileHarvestMain {
     IOUtils.closeQuietly(inputStream)
 
     val endTime = System.currentTimeMillis()
-    logger.info(Utils.summarizeResults(endTime - startTime, recordCount))
+    logger.info(Utils.harvestSummary(endTime - startTime, recordCount))
   }
 
   /**

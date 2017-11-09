@@ -1,10 +1,11 @@
 package dpla.ingestion3.utils
 
-import java.io.File
+import java.io.{File, PrintWriter}
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
+import dpla.ingestion3.confs.i3Conf
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
 
 import scala.xml.Node
@@ -106,23 +107,72 @@ object Utils {
       true)
   }
 
+  // TODO These *Summary methods should be refactored and normalized when we fixup logging
+
+
   /**
     * Print the results of an activity
     *
     * Example:
-    *   Record count: 242924 records harvested
-    *   Runtime: 4 minutes 24 seconds
-    *   Throughput: 920 records/second
+    *
+    *   Record count: 242,924
+    *   Runtime: 4:24
+    *   Throughput: 920 records per second
     *
     * @param runtime Runtime in milliseconds
     * @param recordCount Number of records output
     */
-  def summarizeResults(runtime: Long, recordCount: Long): String = {
+  def harvestSummary(runtime: Long, recordCount: Long): String = {
     val recordsPerSecond: Long = recordCount/(runtime/1000)
-    val formatter = java.text.NumberFormat.getIntegerInstance
 
-    s"\n\nRecord count: ${formatter.format(recordCount)}\n" +
+    s"\n\nRecord count: ${Utils.formatNumber(recordCount)}\n" +
     s"Runtime: ${formatRuntime(runtime)}\n" +
-    s"Throughput: ${formatter.format(recordsPerSecond)} records per second"
+    s"Throughput: ${Utils.formatNumber(recordsPerSecond)} records per second"
+  }
+
+
+  /**
+    * Print mapping summary information
+    *
+    * @param harvestCount Number of harvested records
+    * @param mapCount Number of mapped records
+    * @param errors Number of mapping failures
+    * @param outDir Location to save mapping output
+    * @param shortName Provider short name
+    */
+  def mappingSummary(harvestCount: Long,
+                     mapCount: Long,
+                     failureCount: Long,
+                     errors: Array[String],
+                     outDir: String,
+                     shortName: String,
+                     logger: Logger): Unit = {
+    val logDir = new File(s"$outDir/logs/")
+    logDir.mkdirs()
+
+    logger.info(s"Mapped ${Utils.formatNumber(mapCount)} records.")
+    logger.info(s"Failed to map ${Utils.formatNumber(failureCount)} records.")
+
+    if (failureCount > 0)
+      logger.info(s"Error log >> ${logDir.getAbsolutePath}")
+    val pw = new PrintWriter(
+      new File(s"${logDir.getAbsolutePath}/$shortName-mapping-errors-${System.currentTimeMillis()}.log"))
+    errors.foreach(f => pw.write(s"$f\n"))
+    pw.close()
+  }
+
+  /**
+    * Attempts to reach the Twofishes service
+    *
+    * @param conf Configuration file
+    * @throws RuntimeException If the service cannot be reached
+    */
+  def pingTwofishes(conf: i3Conf): Unit = {
+    val host = conf.twofishes.hostname.getOrElse("localhost")
+    val port = conf.twofishes.port.getOrElse("8081")
+    val url = s"http://$host:$port/query?query=nyc"
+
+    if (HttpUtils.validateUrl(url)) Unit
+    else throw new RuntimeException(s"Cannot reach Twofishes at $url")
   }
 }

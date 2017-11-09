@@ -59,25 +59,25 @@ trait HarvestExecutor {
   /**
     * Look up a registered Harvester class with the given shortName and instantiate.
     *
-    * @param shortName
-    * @param outputDir
-    * @param conf
-    * @param harvestLogger
+    * @param shortName Provider short name
+    * @param outputDir Path to save harvested records
+    * @param conf Configuration properties
+    * @param logger Logger
     * @return
     */
   def registeredHarvester(shortName: String,
                           outputDir: String,
                           conf: i3Conf,
-                          harvestLogger: Logger): Harvester = {
+                          logger: Logger): Harvester = {
 
     val harvesterClass = ProviderRegistry.lookupHarvesterClass(shortName) match {
       case Success(harvClass) => harvClass
       case Failure(e) =>
-        harvestLogger.fatal(e.getMessage)
+        logger.fatal(e.getMessage)
         throw e
     }
 
     harvesterClass.getConstructor(classOf[String], classOf[i3Conf], classOf[String], classOf[Logger])
-      .newInstance(shortName, conf, outputDir, harvestLogger)
+      .newInstance(shortName, conf, outputDir, logger)
   }
 }
