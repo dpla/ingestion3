@@ -10,9 +10,11 @@ case class OaiSource(queryParams: Map[String, String],
                      text: Option[String] = None) extends OaiResponse
 
 // A single page of successfully parsed records.
+@Deprecated
 case class RecordsPage(records: Seq[OaiRecord]) extends OaiResponse
 
 // A single page of successfully parsed sets.
+@Deprecated
 case class SetsPage(sets: Seq[OaiSet]) extends OaiResponse
 
 // An error that occurs during the harvest, but that does not cause total failure.
