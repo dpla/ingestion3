@@ -1,11 +1,8 @@
 package dpla.ingestion3.harvesters.oai
 
 import java.net.URL
-import java.nio.charset.Charset
 
-import dpla.ingestion3.harvesters.UrlBuilder
 import dpla.ingestion3.utils.HttpUtils
-import org.apache.http.client.fluent.Request
 import org.apache.http.client.utils.URIBuilder
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
@@ -20,7 +17,7 @@ import scala.util.{Failure, Success, Try}
 
 class OaiResponseBuilder (endpoint: String)
                          (@transient val sqlContext: SQLContext)
-  extends Serializable with UrlBuilder {
+  extends Serializable {
 
   /**
     * Get one to many pages of sets, and any errors that occurred in the process
@@ -76,11 +73,11 @@ class OaiResponseBuilder (endpoint: String)
     * to a set.
     * @param opts Optional OAI args, eg. metadataPrefix
     */
-  def getAllRecords(opts: Map[String, String]): RDD[OaiResponse] = {
+  def getAllRecords(opts: Map[String, String], removeDeleted: Boolean): RDD[OaiResponse] = {
     val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListRecords")
     val multiPageResponse = getMultiPageResponse(baseParams, opts)
     val responseRdd = sqlContext.sparkContext.parallelize(multiPageResponse)
-    val recordsRdd = responseRdd.map(response => parseRecordsResponse(response))
+    val recordsRdd = responseRdd.map(response => parseRecordsResponse(response, removeDeleted))
     recordsRdd.union(getAllSets)
   }
 
@@ -91,7 +88,7 @@ class OaiResponseBuilder (endpoint: String)
     * @param opts Optional OAI args, eg. metadataPrefix
     */
   def getRecordsBySets(setResponses: RDD[OaiResponse],
-                       opts: Map[String, String] = Map()): RDD[OaiResponse] = {
+                       opts: Map[String, String] = Map(), removeDeleted: Boolean): RDD[OaiResponse] = {
 
     val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListRecords")
 
@@ -115,7 +112,7 @@ class OaiResponseBuilder (endpoint: String)
       setId => {
         val options = opts + ("set" -> setId)
         val multiPageResponse = getMultiPageResponse(baseParams, options)
-        multiPageResponse.map(response => parseRecordsResponse(response))
+        multiPageResponse.map(response => parseRecordsResponse(response, removeDeleted))
       }
     )
 
@@ -123,9 +120,9 @@ class OaiResponseBuilder (endpoint: String)
     records.union(setResponses)
   }
 
-  def parseRecordsResponse(response: OaiResponse): OaiResponse = {
+  def parseRecordsResponse(response: OaiResponse, removeDeleted: Boolean): OaiResponse = {
     response match {
-      case page: OaiSource => OaiResponseProcessor.getRecords(page)
+      case page: OaiSource => OaiResponseProcessor.getRecords(page, removeDeleted)
       case _ => response
     }
   }
@@ -184,7 +181,9 @@ class OaiResponseBuilder (endpoint: String)
     * @return OaiSource or OaiError
     */
   def getSinglePageResponse(queryParams: Map[String, String]): OaiResponse = {
-    getUrl(queryParams) match {
+    Try {
+      buildUrl(queryParams)
+    } match {
       // Error building URL
       case Failure(e) =>
         val source = OaiSource(queryParams)
@@ -209,14 +208,6 @@ class OaiResponseBuilder (endpoint: String)
   }
 
   /**
-    * Tries to build a URL from the parameters
-    *
-    * @param queryParams HTTP parameters
-    * @return Try[URL]
-    */
-  def getUrl(queryParams: Map[String, String]): Try[URL] = Try { buildUrl(queryParams) }
-
-  /**
     * Builds an OAI request
     *
     * @param params Map of parameters needed to construct the URL
@@ -224,7 +215,7 @@ class OaiResponseBuilder (endpoint: String)
     *               See https://www.openarchives.org/OAI/openarchivesprotocol.html#ProtocolMessages
     * @return URL
     */
-  override def buildUrl(params: Map[String, String]): URL = {
+  def buildUrl(params: Map[String, String]): URL = {
     // Required properties, not sure if this is the right style
     assume(params.get("endpoint").isDefined)
     assume(params.get("verb").isDefined)

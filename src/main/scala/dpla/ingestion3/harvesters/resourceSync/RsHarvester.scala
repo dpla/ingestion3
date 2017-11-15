@@ -3,24 +3,25 @@ package dpla.ingestion3.harvesters.resourceSync
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.Harvester
 import org.apache.log4j.Logger
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.lit
 import com.databricks.spark.avro._
 
 import scala.util.Try
 
-class RsHarvester(shortName: String,
+class RsHarvester(spark: SparkSession,
+                  shortName: String,
                   conf: i3Conf,
                   outputDir: String,
                   harvestLogger: Logger)
-  extends Harvester(shortName, conf, outputDir, harvestLogger) {
+  extends Harvester(spark, shortName, conf, outputDir, harvestLogger) {
 
   // TODO Do all RS enpoints support JSON?
   override protected val mimeType: String = "application_json"
 
   override protected def localHarvest(): Unit = ???
 
-  override protected def runHarvest: Try[DataFrame] = Try{
+  override def harvest: Try[Long] = Try{
 
     // Set options.
     val readerOptions: Map[String, String] = Map(
@@ -56,6 +57,7 @@ class RsHarvester(shortName: String,
       .avro(outputDir)
 
     // Return DataFrame.
-    finalData
+    finalData.count()
+
   }
 }

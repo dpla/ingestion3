@@ -29,28 +29,17 @@ object OaiResponseProcessor {
     *         OaiError - an error incurred during the process of parsing the records.
     */
 
-  def getRecords(source: OaiSource): OaiResponse = {
+  def getRecords(source: OaiSource, removeDeleted: Boolean): OaiResponse = {
 
     // Parse all records from XML
-    def getRecordsFromXml(xml: Node): Seq[OaiRecord] = {
-      val xmlRecords: NodeSeq = (xml \ "ListRecords" \ "record")
+    def getRecordsFromXml(xml: Node): Seq[OaiRecord] = for {
+        record <- xml \ "ListRecords" \ "record"
+        id = getRecordIdentifier(record)
+        setIds = getSetIdsFromRecord(record)
+        status = getRecordStatus(record)
+        if !removeDeleted || status != "deleted"
+      } yield OaiRecord(id, record.toString, setIds, source.copy(text = None))
 
-      xmlRecords.flatMap(record =>
-        record.headOption match {
-          case Some(node) =>
-            // Do not harvest records marked as deleted
-            if (isDeleted(node)) {
-              None
-            } else {
-              val id = getRecordIdentifier(node)
-              val setIds = getSetIdsFromRecord(node)
-              // Drop the entire page text from source when returning OaiRecord. Embedding the entire
-              // page text was triggering Out of Memory exceptions even on small harvests (200,000 records)
-              Some(OaiRecord(id, node.toString, setIds, source.copy(text = None)))
-            }
-          case _ => None
-      })
-    }
 
     val text = source.text.getOrElse("")
 
@@ -61,6 +50,9 @@ object OaiResponseProcessor {
         RecordsPage(records)
     }
   }
+
+  def getRecordStatus(record: Node): String =
+    (record \ "header" \ "@status").headOption.getOrElse(<foo>foo</foo>).text
 
 
   // TODO: To ensure continuity of IDs between ingestion systems and generalize the ID
@@ -90,7 +82,7 @@ object OaiResponseProcessor {
     * @param source OaiSource
     *               The single-page response to a single OAI query
     *
-    * @param setFilter: PartialFunction[(Seq[OaiSet]), Seq[OaiSet]])
+    * @param setFilter: PartialFunction[(Seq[OaiSet]), Seq[OaiSet])
     *                   A partial function indicating how sets should be filtered,
     *                   ie. according to a whitelist or blacklist.
     */

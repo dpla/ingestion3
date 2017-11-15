@@ -30,33 +30,22 @@ import scala.util.{Failure, Success, Try}
   *   6. Manage the spark session.
   *
   * @param shortName [String] Provider short name
-  * @param conf [i3Conf] contains configs for the harvester.
-  * @param outStr [String] outputPathStr for the harvested data.
-  * @param logger [Logger] for the harvester.
+  * @param conf      [i3Conf] contains configs for the harvester.
+  * @param outStr    [String] outputPathStr for the harvested data.
+  * @param logger    [Logger] for the harvester.
   */
-abstract class Harvester(shortName: String,
+abstract class Harvester(spark: SparkSession,
+                         shortName: String,
                          conf: i3Conf,
                          outStr: String,
-                         logger: Logger)
-  extends AwsUtils {
+                         logger: Logger) {
 
-  private val avroWriter: DataFileWriter[GenericRecord]  = {
-    val filename = s"${shortName}_${System.currentTimeMillis()}.avro"
-    val path = if (outStr.endsWith("/")) outStr else outStr + "/"
-    val outputDir = new File(path)
-    outputDir.mkdirs()
-    if (!outputDir.exists) throw new RuntimeException(s"Output directory ${path} does not exist")
-    logger.info(s"Writing output to ${path}")
 
-    val avroWriter = AvroUtils.getAvroWriter(new File(path + filename), schema)
-    avroWriter.setFlushOnEveryBlock(true)
-    avroWriter
-  }
 
-  protected def getAvroWriter(): DataFileWriter[GenericRecord] = avroWriter
+  private val avroWriter: DataFileWriter[GenericRecord] =
+    AvroHelper.avroWriter(shortName, outStr, Harvester.schema)
 
-  protected lazy val fileIo = new FlatFileIO()
-
+  def getAvroWriter: DataFileWriter[GenericRecord] = avroWriter
 
   /**
     * Abstract method mimeType should store the mimeType of the harvested data.
@@ -65,42 +54,11 @@ abstract class Harvester(shortName: String,
 
   protected lazy val outputPath = new File(outStr)
 
-  protected lazy val schemaStr: String = fileIo.readFileAsString("/avro/OriginalRecord.avsc")
-  protected lazy val schema: Schema = new Schema.Parser().parse(schemaStr)
-
   /**
-    * Initiate a spark session using the configs specified in the i3Conf.
-    *
-    * Lazy evaluation b/c some harvesters do not need a spark context until the
-    * very end of the harvest.
-    *
-    * @return SparkSession
-    */
-  protected lazy val sc: SparkContext = spark.sparkContext
-
-  protected lazy val spark: SparkSession = {
-    val sparkConf = new SparkConf()
-      .setAppName(s"Harvest: $shortName")
-
-    val sparkMaster = conf.spark.sparkMaster.getOrElse("local[1]")
-    sparkConf.setMaster(sparkMaster)
-
-    SparkSession
-      .builder()
-      .config(sparkConf)
-      .getOrCreate()
-  }
-
-  // Only set AWS key properties in SparkContext if output destination is s3
-  if (outStr.startsWith("s3")) {
-    sc.hadoopConfiguration.set("fs.s3a.access.key", s3AccessKey)
-    sc.hadoopConfiguration.set("fs.s3a.secret.key", s3SecretKey)
-  }
-
-  /**
-    * Entry point for performing harvest. Deletes existing data on path,
-    * executes harvest, validates result against schema and returns the
-    * count of successfully harvested records or failures.
+    * Entry point for performing harvest. Executes harvest, validates result
+    * against schema and returns the count of successfully harvested records
+    * or failures. Defers to localHarvest implementation to gather actual
+    * records.
     *
     * @return Try[Long] Number of harvested records or Failure
     */
@@ -108,39 +66,31 @@ abstract class Harvester(shortName: String,
     val start = System.currentTimeMillis()
 
     // Call local implementation of runHarvest()
-    val harvestResult = runHarvest match {
+    Try {
+      // Calls the local implementation
+      localHarvest()
+      logger.info(s"Saving to $outStr")
+      // Reads the saved avro file back
+      avroWriter.close()
+      spark.read.avro(outStr)
+    } match {
       case Success(df) =>
         validateSchema(df)
         val recordCount = df.count()
-        logger.info(Utils.harvestSummary(System.currentTimeMillis()-start, recordCount))
+        logger.info(Utils.harvestSummary(System.currentTimeMillis() - start, recordCount))
         Success(recordCount)
       case Failure(f) => Failure(f)
     }
-    // Shut down spark session.
-    sc.stop()
-    // Count of record or Failure
-    harvestResult
   }
 
   /**
-    * Performs specific harvest (OAI, p2p, Cdl, PSS)
+    * Template method for implementations to override. Expectation is that
+    * at the end of the execution of this method, avro files in the correct
+    * schema will be available in the folder at path outStr.
     *
     * To be defined in implementing class
     */
   protected def localHarvest(): Unit
-
-  /**
-    * Generalized driver for FileHarvesters invokes localApiHarvest() method and reports
-    * summary information.
-    */
-  protected def runHarvest: Try[DataFrame] = Try {
-    // Calls the local implementation
-    localHarvest()
-    avroWriter.close()
-    logger.info(s"Saving to $outStr")
-    // Reads the saved avro file back
-    spark.read.avro(outStr)
-  }
 
   /**
     * Check that harvested DataFrame meets the expected schema.
@@ -149,7 +99,7 @@ abstract class Harvester(shortName: String,
     *
     * @param df [DataFrame] The final DataFrame from the harvest.
     */
-  protected def validateSchema(df: DataFrame): Unit = {
+  private def validateSchema(df: DataFrame): Unit = {
     val idSt = StructField("id", StringType, true)
     val docSt = StructField("document", StringType, true)
     val dateSt = StructField("ingestDate", LongType, false)
@@ -165,7 +115,7 @@ abstract class Harvester(shortName: String,
     // Match only the names and data types of the fields.
     // Whether or not a field is nullable does not matter for our purposes.
     def mapFields(fields: Array[StructField]): Array[(String, DataType)] =
-      fields.map{ s => s.name -> s.dataType }
+      fields.map { s => s.name -> s.dataType }
 
     val expectedFields = mapFields(expectedStructs)
     val actualFields = mapFields(actualStructs)
@@ -180,10 +130,10 @@ abstract class Harvester(shortName: String,
   }
 }
 
-/**
-  * Generic URL builder. Implemented in harvesters that need some help when building
-  * HTTP requests.
-  */
-trait UrlBuilder {
-  protected def buildUrl(params: Map[String, String]): URL
+object Harvester {
+
+  // Schema for harvested records.
+  val schema: Schema =
+    new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc"))
 }
+
