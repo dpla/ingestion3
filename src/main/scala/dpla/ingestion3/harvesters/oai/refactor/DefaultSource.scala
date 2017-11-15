@@ -19,15 +19,13 @@ class DefaultSource extends RelationProvider {
   override def createRelation(sqlContext: SQLContext,
                               parameters: Map[String, String]): OaiRelation = {
 
-    val oaiProtocol: OaiProtocol = new OaiProtocol {
-
-    }
+    val oaiMethods = new OaiProtocol()
 
     OaiConfiguration(parameters).getHarvestType match {
-      case blackListHarvest: BlacklistHarvest => new BlacklistOaiRelation(blackListHarvest, oaiProtocol)(sqlContext)
-      case whitelistHarvest: WhitelistHarvest => new WhitelistOaiRelation(whitelistHarvest, oaiProtocol)(sqlContext)
-      case allRecordsHarvest: AllRecordsHarvest => new AllRecordsOaiRelation(allRecordsHarvest, oaiProtocol)(sqlContext)
-      case allSetsHarvest: AllSetsHarvest => new AllSetsOaiRelation(allSetsHarvest, oaiProtocol)(sqlContext)
+      case blackListHarvest: BlacklistHarvest => new BlacklistOaiRelation(blackListHarvest)(oaiMethods)(sqlContext)
+      case whitelistHarvest: WhitelistHarvest => new WhitelistOaiRelation(whitelistHarvest)(oaiMethods)(sqlContext)
+      case allRecordsHarvest: AllRecordsHarvest => new AllRecordsOaiRelation(allRecordsHarvest)(oaiMethods)(sqlContext)
+      case allSetsHarvest: AllSetsHarvest => new AllSetsOaiRelation(allSetsHarvest)(oaiMethods)(sqlContext)
     }
   }
 }
@@ -133,7 +131,7 @@ abstract class OaiRelation extends BaseRelation with TableScan with Serializable
 // on it until it results in a RDD[Row] of result values per the schema in OaiRelation.
 
 class AllRecordsOaiRelation(allRecordsHarvest: AllRecordsHarvest)
-                           (@transient oaiProtocol: OaiProtocol)
+                           (@transient oaiProtocol: OaiMethods)
                            (@transient override val sqlContext: SQLContext)
   extends OaiRelation {
   //list all the record pages, flat map to records
@@ -159,39 +157,50 @@ class AllRecordsOaiRelation(allRecordsHarvest: AllRecordsHarvest)
 }
 
 class AllSetsOaiRelation(allSetsHarvest: AllSetsHarvest)
-                        (@transient oaiProtocol: OaiProtocol)
+                        (@transient oaiMethods: OaiMethods)
                         (@transient override val sqlContext: SQLContext)
   extends OaiRelation {
   override def buildScan(): RDD[Row] = {
     sqlContext.sparkContext
-      .parallelize[String](oaiProtocol.listAllSets.toSeq)
-      .flatMap(set => oaiProtocol.listAllRecordPagesForSet(set))
-      .flatMap(oaiProtocol.parsePageIntoRecords(_)) //TODO
+      .parallelize[String](oaiMethods.listAllSets.toSeq)
+      .flatMap(set => oaiMethods.listAllRecordPagesForSet(set))
+      .flatMap(oaiMethods.parsePageIntoRecords(_)) //TODO
 
   }
 }
 
 class BlacklistOaiRelation(blacklistHarvest: BlacklistHarvest)
-                          (@transient oaiProtocol: OaiProtocol)
+                          (@transient oaiMethods: OaiMethods)
                           (@transient override val sqlContext: SQLContext)
   extends OaiRelation {
   override def buildScan(): RDD[Row] = ???
 }
 
 class WhitelistOaiRelation(whitelistHarvest: WhitelistHarvest)
-                          (@transient oaiProtocol: OaiProtocol)
+                          (@transient oaiMethods: OaiMethods)
                           (@transient override val sqlContext: SQLContext)
   extends OaiRelation {
   override def buildScan(): RDD[Row] = ???
 }
 
-trait OaiProtocol {
+trait OaiMethods {
 
-  def listAllRecordPagesForSet(set: String): TraversableOnce[String]
+  def listAllRecordPagesForSet(set: String): TraversableOnce[Either[OaiRecord, OaiError]]
 
-  def parsePageIntoRecords(page: String): TraversableOnce[OaiResponse]
+  def parsePageIntoRecords(page: String): TraversableOnce[Either[OaiRecord, OaiError]]
 
-  def listAllSets: TraversableOnce[String]
+  def listAllSets: TraversableOnce[Either[OaiSet, OaiError]]
 
-  def listAllRecordPages: TraversableOnce[String]
+  def listAllRecordPages: TraversableOnce[Either[OaiPage, OaiError]]
+}
+
+class OaiProtocol extends OaiMethods {
+
+  override def listAllRecordPages = ???
+
+  override def listAllRecordPagesForSet(set: String) = ???
+
+  override def parsePageIntoRecords(page: String) = ???
+
+  override def listAllSets = ???
 }
