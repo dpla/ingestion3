@@ -31,3 +31,5 @@ case class OaiRecord(id: String,
 case class OaiSet(id: String,
                   document: String,
                   setSource: OaiSource)
+
+case class OaiPage(page: String) extends OaiResponse
