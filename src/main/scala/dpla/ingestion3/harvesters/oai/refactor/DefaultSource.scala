@@ -188,7 +188,7 @@ class WhitelistOaiRelation(whitelistHarvest: WhitelistHarvest)
 trait OaiProtocol {
 
   def listAllRecordPagesForSet(set: String): TraversableOnce[String]
-3
+
   def parsePageIntoRecords(page: String): TraversableOnce[OaiResponse]
 
   def listAllSets: TraversableOnce[String]
