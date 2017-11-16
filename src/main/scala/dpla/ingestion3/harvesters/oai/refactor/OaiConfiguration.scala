@@ -3,6 +3,11 @@ package dpla.ingestion3.harvesters.oai.refactor
 import dpla.ingestion3.harvesters.HarvesterExceptions.{throwMissingArgException, throwUnrecognizedArgException, throwValidationException}
 import dpla.ingestion3.utils.HttpUtils
 
+
+/**
+  * Case class that holds the responsibility of interpreting the parameters map from the DefaultSource.
+
+ */
 case class OaiConfiguration(parameters: Map[String, String]) {
 
   def endpoint: String = {
