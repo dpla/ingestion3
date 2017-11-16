@@ -32,7 +32,7 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
   }
 
   override def listAllRecordPagesForSet(setEither: Either[OaiSet, OaiError]):
-    TraversableOnce[Either[OaiRecord, OaiError]] = ???
+    TraversableOnce[Either[OaiPage, OaiError]] = ???
 
   override def parsePageIntoRecords(pageEither: Either[OaiPage, OaiError]):
     TraversableOnce[Either[OaiRecord, OaiError]] = ???
