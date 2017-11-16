@@ -31,7 +31,7 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, @transient val o
     val pagesEitherRdd = eitherRdd.flatMap(oaiMethods.parsePageIntoRecords)
     pagesEitherRdd.map(convertToOutputRow)
   }
-`
+
   private def convertToOutputRow(oaiRecordEither: Either[OaiRecord, OaiError]): Row =
     oaiRecordEither match {
       case Left(oaiRecord: OaiRecord) =>
