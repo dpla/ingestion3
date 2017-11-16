@@ -42,4 +42,12 @@ object OaiRelation {
       case (None, true, None) => new AllSetsOaiRelation(oaiConfig, oaiMethods)(sqlContext)
     }
 
+  def convertToOutputRow(oaiRecordEither: Either[OaiRecord, OaiError]): Row =
+    oaiRecordEither match {
+      case Left(oaiRecord: OaiRecord) =>
+        Row(None, oaiRecord, None)
+      case Right(oaiError: OaiError) =>
+        Row(None, None, oaiError)
+    }
+
 }
