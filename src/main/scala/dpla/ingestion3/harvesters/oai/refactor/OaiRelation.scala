@@ -1,8 +1,7 @@
 package dpla.ingestion3.harvesters.oai.refactor
 
-import dpla.ingestion3.harvesters.oai.{OaiError, OaiRecord, OaiSet}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{Row, SQLContext}
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.sources.{BaseRelation, TableScan}
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -35,4 +34,15 @@ abstract class OaiRelation extends BaseRelation with TableScan with Serializable
     ScalaReflection.schemaFor[T].dataType.asInstanceOf[StructType]
 
   override def buildScan(): RDD[Row]
+}
+
+object OaiRelation {
+  def getRelation(oaiMethods: OaiMethods, oaiConfig: OaiConfiguration, sqlContext: SQLContext): OaiRelation =
+    (oaiConfig.setlist, oaiConfig.harvestAllSets, oaiConfig.blacklist) match {
+      case (None, false, Some(blacklist)) => new BlacklistOaiRelation(oaiConfig, oaiMethods)(sqlContext)
+      case (Some(setList), false, None) => new WhitelistOaiRelation(oaiConfig, oaiMethods)(sqlContext)
+      case (None, false, None) => new AllRecordsOaiRelation(oaiConfig, oaiMethods)(sqlContext)
+      case (None, true, None) => new AllSetsOaiRelation(oaiConfig, oaiMethods)(sqlContext)
+    }
+
 }
