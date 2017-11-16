@@ -7,6 +7,11 @@ import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.sources.{BaseRelation, TableScan}
 import org.apache.spark.sql.types.{StructField, StructType}
 
+/**
+  * Abstract parent class for classes that each handle the different types of OaiHarvests.
+  * Contains common code (i.e. the schema right now)
+  */
+
 abstract class OaiRelation extends BaseRelation with TableScan with Serializable {
   /**
     * Set the schema for the DataFrame that will be returned on load.

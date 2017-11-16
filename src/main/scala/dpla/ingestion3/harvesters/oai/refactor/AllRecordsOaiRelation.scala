@@ -6,8 +6,16 @@ import org.apache.commons.io.IOUtils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SQLContext}
 
+/**
+  * OaiRelation for harvests that don't specify sets.
+  *
+  * @param allRecordsHarvest Configuration information.
+  * @param oaiMethods Implementation of the OaiMethods trait.
+  * @param sqlContext Spark sqlContext.
+  */
+
 class AllRecordsOaiRelation(allRecordsHarvest: AllRecordsHarvest)
-                           (@transient oaiProtocol: OaiMethods)
+                           (@transient oaiMethods: OaiMethods)
                            (@transient override val sqlContext: SQLContext)
   extends OaiRelation {
   //list all the record pages, flat map to records
@@ -17,7 +25,7 @@ class AllRecordsOaiRelation(allRecordsHarvest: AllRecordsHarvest)
     val writer = new FileWriter(tempFile)
 
     try {
-      for (page <- oaiProtocol.listAllRecordPages)
+      for (page <- oaiMethods.listAllRecordPages)
         writer.write(page.replaceAll("\n", " "))
       //todo error handling
 
@@ -26,7 +34,7 @@ class AllRecordsOaiRelation(allRecordsHarvest: AllRecordsHarvest)
     }
 
     sqlContext.read.text(tempFile.getAbsolutePath)
-      .flatMap(row => oaiProtocol.parsePageIntoRecords(row.getString(0)))
+      .flatMap(row => oaiMethods.parsePageIntoRecords(row.getString(0)))
       .map(Row(None, _, None))
       .rdd
   }

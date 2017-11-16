@@ -3,6 +3,14 @@ package dpla.ingestion3.harvesters.oai.refactor
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SQLContext}
 
+/**
+  * OaiRelation for harvests that capture all available sets.
+  *
+  * @param allSetsHarvest Configuration information.
+  * @param oaiMethods Implementation of the OaiMethods trait.
+  * @param sqlContext Spark sqlContext.
+  */
+
 class AllSetsOaiRelation(allSetsHarvest: AllSetsHarvest)
                         (@transient oaiMethods: OaiMethods)
                         (@transient override val sqlContext: SQLContext)
