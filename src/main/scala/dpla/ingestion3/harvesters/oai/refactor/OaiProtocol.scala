@@ -20,7 +20,9 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
 
     val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListRecords")
     val multiPageResponse = getMultiPageResponse(baseParams)
-    ???
+    // TODO: This is a convenient but probably not very useful way to make the
+    // return type a TraversableOnce until I figure out a better way.
+    multiPageResponse.toIterator
   }
 
   override def listAllRecordPagesForSet(setEither: Either[OaiSet, OaiError]):
@@ -33,6 +35,8 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
 
   /**
     * Get all pages of results from an OAI feed.
+    * Pages may contain an OAI error (HTTP code 200) or invalid XML.
+    *
     * Makes an initial call to the feed to get the first page of results.
     * For this and all subsequent pages, calls the next page if a resumption
     * token is present.
@@ -47,16 +51,19 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
     def loop(data: List[Either[OaiPage, OaiError]]): List[Either[OaiPage, OaiError]] = {
 
       data.headOption match {
-        // Stops the harvest if an OaiError or Http error was trapped and returns everything
-        // harvested up that this point plus the error
-        case Some(error: OaiError) => data
-        // If it was a valid and parsable response then extract data and call the next page
-        case Some(previous: OaiSource) =>
-          val text = previous.text.getOrElse("")
+        // Stops the harvest if an OaiError was trapped and returns everything
+        // harvested up that this point plus the error.
+        case Some(Right(_)) => data
+        // If it was a valid page response then extract data and call the next page.
+        case Some(Left(previous)) =>
+          val text = previous.page
           val token = OaiResponseProcessor.getResumptionToken(text)
 
           token match {
+            // If the page does not contain a token, return everything harvested
+            // up to this point.
             case None => data
+            // Otherwise, get the next page.
             case Some(token) =>
               // Resumption tokens are exclusive, meaning a request with a token
               // cannot have any additional optional args.
@@ -81,6 +88,8 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
     * Get a single-page, unparsed response from the OAI feed, or an error if
     * one occurs.
     *
+    * The page may contain an OAI error (HTTP code 200) or invalid XML.
+    *
     * @param queryParams parameters for a single OAI request.
     * @return OaiPage or OaiError
     */
@@ -92,13 +101,7 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
         HttpUtils.makeGetRequest(url) match {
           // HTTP error
           case Failure(e) => Right(OaiError(e.toString, Some(url.toString)))
-          // If a successful HTTP request was made we still need to parse the response to determine if there was
-          // and OAI error (HTTP code 200) or invalid XML that will prevent additional requests.
-          // If the XML can be parsed and if there was no OAI error then it will return Success otherwise Failure
-          case Success(page) => OaiResponseProcessor.getXml(page) match {
-            case Failure(e) => Right(OaiError(e.toString, Some(url.toString)))
-            case Success(_) => Left(OaiPage(page))
-          }
+          case Success(page) => Left(OaiPage(page))
         }
       }
     }
