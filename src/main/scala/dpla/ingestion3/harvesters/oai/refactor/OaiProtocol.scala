@@ -15,11 +15,17 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
   override def listAllRecordPages:
     TraversableOnce[Either[OaiPage, OaiError]] = {
 
-    val metadataPrefix = oaiConfiguration.metadataPrefix
     val endpoint = oaiConfiguration.endpoint
 
+    val metadataPrefix = oaiConfiguration.metadataPrefix.getOrElse(
+      // Fatal exception.
+      throw new RuntimeException("metadataPrefix not found")
+    )
+
     val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListRecords")
-    val multiPageResponse = getMultiPageResponse(baseParams)
+    val opts = Map("metadataPrefix" -> metadataPrefix)
+
+    val multiPageResponse = getMultiPageResponse(baseParams, opts)
     // TODO: This is a convenient but probably not very useful way to make the
     // return type a TraversableOnce until I figure out a better way.
     multiPageResponse.toIterator
@@ -41,7 +47,19 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
     * For this and all subsequent pages, calls the next page if a resumption
     * token is present.
     *
-    * @return Un-parsed response page from OAI requests, including OaiSources
+    * @param baseParams Map[String, String]
+    *                   Params that are required for every OAI request, including
+    *                   those with resumption tokens.
+    *                   Per the OAI spec, the two required params are "verb" and
+    *                   "endpoint".
+    *
+    * @param opts Map[String, String]
+    *             Optional params that can be included in an initial OAI request,
+    *             but not in any subsequent requests.
+    *             Currently, the only supported option for a records request is
+    *             metadataPrefix.
+    *
+    * @return Un-parsed response page from OAI requests, including OaiPages
     *         and OaiErrors.
     */
   def getMultiPageResponse(baseParams: Map[String, String], opts: Map[String, String] = Map()):
@@ -132,11 +150,11 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
     * @return URL
     */
   override def buildUrl(params: Map[String, String]): URL = {
-    // Required properties, not sure if this is the right style
-    assume(params.get("endpoint").isDefined)
-    assume(params.get("verb").isDefined)
-    val url = new URL(params("endpoint"))
-    val verb = params("verb")
+    val url = new URL(params.getOrElse("endpoint",
+      throw new RuntimeException("Endpoint not found")))
+
+    val verb = params.getOrElse("verb",
+      throw new RuntimeException("Verb not found"))
 
     // Optional properties.
     val metadataPrefix: Option[String] = params.get("metadataPrefix")
