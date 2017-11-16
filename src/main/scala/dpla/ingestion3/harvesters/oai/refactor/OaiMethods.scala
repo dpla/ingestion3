@@ -9,7 +9,7 @@ import scala.collection.TraversableOnce
 
 trait OaiMethods {
 
-  def listAllRecordPagesForSet(setEither: Either[OaiSet, OaiError]): TraversableOnce[Either[OaiRecord, OaiError]]
+  def listAllRecordPagesForSet(setEither: Either[OaiSet, OaiError]): TraversableOnce[Either[OaiPage, OaiError]]
 
   def parsePageIntoRecords(pageEither: Either[OaiPage, OaiError]): TraversableOnce[Either[OaiRecord, OaiError]]
 
