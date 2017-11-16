@@ -11,13 +11,13 @@ import scala.annotation.tailrec
 import scala.collection.TraversableOnce
 import scala.util.{Failure, Success, Try}
 
-class OaiProtocol extends OaiMethods with UrlBuilder {
+class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with UrlBuilder {
 
-  override def listAllRecordPages(harvest: AllRecordsHarvest):
+  override def listAllRecordPages:
     TraversableOnce[Either[OaiPage, OaiError]] = {
 
-    val metadataPrefix = harvest.metadataPrefix
-    val endpoint = harvest.endpoint
+    val metadataPrefix = oaiConfiguration.metadataPrefix
+    val endpoint = oaiConfiguration.endpoint
 
     val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListRecords")
     val multiPageResponse: List[OaiResponse] = getMultiPageResponse(baseParams)

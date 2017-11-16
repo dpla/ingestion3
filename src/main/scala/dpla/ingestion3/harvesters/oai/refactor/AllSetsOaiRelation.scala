@@ -6,20 +6,18 @@ import org.apache.spark.sql.{Row, SQLContext}
 /**
   * OaiRelation for harvests that capture all available sets.
   *
-  * @param allSetsHarvest Configuration information.
   * @param oaiMethods Implementation of the OaiMethods trait.
   * @param sqlContext Spark sqlContext.
   */
 
-class AllSetsOaiRelation(allSetsHarvest: AllSetsHarvest)
-                        (@transient oaiMethods: OaiMethods)
+class AllSetsOaiRelation(oaiConfiguration: OaiConfiguration, @transient oaiMethods: OaiMethods)
                         (@transient override val sqlContext: SQLContext)
   extends OaiRelation {
   override def buildScan(): RDD[Row] = {
-    sqlContext.sparkContext
-      .parallelize[String](oaiMethods.listAllSets.toSeq)
-      .flatMap(set => oaiMethods.listAllRecordPagesForSet(set))
-      .flatMap(oaiMethods.parsePageIntoRecords(_)) //TODO
+//    sqlContext.sparkContext
+//      .parallelize[String](oaiMethods.listAllSets.toSeq)
+//      .flatMap(set => oaiMethods.listAllRecordPagesForSet(set))
+//      .flatMap(oaiMethods.parsePageIntoRecords(_)) //TODO
 
   }
 }
