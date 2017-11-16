@@ -14,12 +14,11 @@ import org.apache.spark.sql.{Row, SQLContext}
   * @param sqlContext        Spark sqlContext.
   */
 
-class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, @transient oaiMethods: OaiMethods)
+class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, @transient val oaiMethods: OaiMethods)
                            (@transient override val sqlContext: SQLContext)
   extends OaiRelation {
-  //list all the record pages, flat map to records
-  override def buildScan(): RDD[Row] = {
 
+  override def buildScan(): RDD[Row] = {
     val tempFile = File.createTempFile("oai", ".txt")
     tempFile.deleteOnExit()
     cacheTempFile(tempFile)
@@ -27,13 +26,21 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, @transient oaiMe
   }
 
   private def tempFileToRdd(tempFile: File): RDD[Row] = {
-    sqlContext.read.csv(tempFile.getAbsolutePath)
-      .rdd
-      .map(handleRow)
-      //.flatMap({case Left(OaiPage(string)) => oaiMethods.parsePageIntoRecords(string)})
+    val csvRdd = sqlContext.read.csv(tempFile.getAbsolutePath).rdd
+    val eitherRdd = csvRdd.map(handleCsvRow)
+    val pagesEitherRdd = eitherRdd.flatMap(oaiMethods.parsePageIntoRecords)
+    pagesEitherRdd.map(convertToOutputRow)
   }
+`
+  private def convertToOutputRow(oaiRecordEither: Either[OaiRecord, OaiError]): Row =
+    oaiRecordEither match {
+      case Left(oaiRecord: OaiRecord) =>
+        Row(None, oaiRecord, None)
+      case Right(oaiError: OaiError) =>
+        Row(None, None, oaiError)
+    }
 
-  private def handleRow(row: Row): Either[OaiPage, OaiError] =
+  private def handleCsvRow(row: Row): Either[OaiPage, OaiError] =
     row.getString(0) match {
       case "page" => Left(OaiPage(row.getString(1)))
       case "error" => Right(OaiError(row.getString(1), Option(row.getString(2))))
@@ -41,12 +48,11 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, @transient oaiMe
 
   private def cacheTempFile(tempFile: File): Unit = {
     val fileWriter = new FileWriter(tempFile)
-
     val writerSettings = new CsvWriterSettings
     val writer = new CsvWriter(fileWriter, writerSettings)
 
     try {
-      for (page <- oaiMethods.listAllRecordPages)
+      for (page <- oaiMethods.listAllRecordPages())
         writer.writeRow(eitherToArray(page))
 
     } finally {
@@ -58,7 +64,5 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, @transient oaiMe
     case Left(OaiPage(string)) => Seq("page", string, null)
     case Right(OaiError(message, url)) => Seq("error", message, url)
   }
-
-
 
 }
