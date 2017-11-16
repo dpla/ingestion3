@@ -13,11 +13,11 @@ import org.apache.spark.sql.{Row, SQLContext}
 class AllSetsOaiRelation(oaiConfiguration: OaiConfiguration, @transient oaiMethods: OaiMethods)
                         (@transient override val sqlContext: SQLContext)
   extends OaiRelation {
-  override def buildScan(): RDD[Row] = {
-//    sqlContext.sparkContext
-//      .parallelize[String](oaiMethods.listAllSets.toSeq)
-//      .flatMap(set => oaiMethods.listAllRecordPagesForSet(set))
-//      .flatMap(oaiMethods.parsePageIntoRecords(_)) //TODO
 
+  override def buildScan(): RDD[Row] = {
+    val sets = sqlContext.sparkContext.parallelize(oaiMethods.listAllSets().toSeq)
+    val pages = sets.flatMap(oaiMethods.listAllRecordPagesForSet)
+    val records = pages.flatMap(oaiMethods.parsePageIntoRecords)
+    records.map(OaiRelation.convertToOutputRow)
   }
 }
