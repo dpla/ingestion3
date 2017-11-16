@@ -1,12 +1,35 @@
 package dpla.ingestion3.harvesters.oai.refactor
 
-class OaiProtocol extends OaiMethods {
+import java.net.URL
 
-  override def listAllRecordPages = ???
+import dpla.ingestion3.harvesters.UrlBuilder
+import dpla.ingestion3.harvesters.oai._
+import dpla.ingestion3.utils.HttpUtils
+import org.apache.http.client.utils.URIBuilder
 
-  override def listAllRecordPagesForSet(set: String) = ???
+import scala.annotation.tailrec
+import scala.collection.TraversableOnce
+import scala.util.{Failure, Success, Try}
 
-  override def parsePageIntoRecords(page: String) = ???
+class OaiProtocol extends OaiMethods with UrlBuilder {
 
-  override def listAllSets = ???
+  override def listAllRecordPages(harvest: AllRecordsHarvest):
+    TraversableOnce[Either[OaiPage, OaiError]] = {
+
+    val metadataPrefix = harvest.metadataPrefix
+    val endpoint = harvest.endpoint
+
+    val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListRecords")
+    val multiPageResponse: List[OaiResponse] = getMultiPageResponse(baseParams)
+  }
+
+  override def listAllRecordPagesForSet(set: String): TraversableOnce[Either[OaiRecord, OaiError]] = ???
+
+  override def parsePageIntoRecords(page: String): TraversableOnce[Either[OaiRecord, OaiError]] = ???
+
+  override def listAllSets: TraversableOnce[Either[OaiSet, OaiError]] = ???
+
+
+  def getMultiPageResponse(baseParams: Map[String, String],
+                           opts: Map[String, String] = Map()): List[OaiResponse] = ???
 }
