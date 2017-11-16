@@ -29,16 +29,8 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, @transient val o
     val csvRdd = sqlContext.read.csv(tempFile.getAbsolutePath).rdd
     val eitherRdd = csvRdd.map(handleCsvRow)
     val pagesEitherRdd = eitherRdd.flatMap(oaiMethods.parsePageIntoRecords)
-    pagesEitherRdd.map(convertToOutputRow)
+    pagesEitherRdd.map(OaiRelation.convertToOutputRow)
   }
-
-  private def convertToOutputRow(oaiRecordEither: Either[OaiRecord, OaiError]): Row =
-    oaiRecordEither match {
-      case Left(oaiRecord: OaiRecord) =>
-        Row(None, oaiRecord, None)
-      case Right(oaiError: OaiError) =>
-        Row(None, None, oaiError)
-    }
 
   private def handleCsvRow(row: Row): Either[OaiPage, OaiError] =
     row.getString(0) match {
