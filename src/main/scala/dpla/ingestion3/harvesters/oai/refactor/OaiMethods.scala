@@ -12,5 +12,6 @@ trait OaiMethods {
 
   def listAllSets: TraversableOnce[Either[OaiSet, OaiError]]
 
-  def listAllRecordPages: TraversableOnce[Either[OaiPage, OaiError]]
+  def listAllRecordPages(harvest: AllRecordsHarvest):
+    TraversableOnce[Either[OaiPage, OaiError]]
 }
