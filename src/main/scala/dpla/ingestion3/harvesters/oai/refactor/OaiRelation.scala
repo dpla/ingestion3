@@ -21,17 +21,14 @@ abstract class OaiRelation extends BaseRelation with TableScan with Serializable
     * Each row will have a non-null value for ONE of sets, records, or error.
     */
   override def schema: StructType = {
-    val setType = getStruct[OaiSet]
-    val recordType = getStruct[OaiRecord]
-    val errorType = getStruct[OaiError]
+    val setType = ScalaReflection.schemaFor[OaiSet].dataType.asInstanceOf[StructType]
+    val recordType = ScalaReflection.schemaFor[OaiRecord].dataType.asInstanceOf[StructType]
+    val errorType = ScalaReflection.schemaFor[OaiError].dataType.asInstanceOf[StructType]
     val setField = StructField("set", setType, nullable = true)
     val recordField = StructField("record", recordType, nullable = true)
     val errorField = StructField("error", errorType, nullable = true)
     StructType(Seq(setField, recordField, errorField))
   }
-
-  private def getStruct[T] =
-    ScalaReflection.schemaFor[T].dataType.asInstanceOf[StructType]
 
   override def buildScan(): RDD[Row]
 }
