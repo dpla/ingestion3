@@ -32,10 +32,10 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, @transient val o
     pagesEitherRdd.map(OaiRelation.convertToOutputRow)
   }
 
-  private def handleCsvRow(row: Row): Either[OaiPage, OaiError] =
+  private def handleCsvRow(row: Row): Either[OaiError, OaiPage] =
     row.getString(0) match {
-      case "page" => Left(OaiPage(row.getString(1)))
-      case "error" => Right(OaiError(row.getString(1), Option(row.getString(2))))
+      case "page" => Right(OaiPage(row.getString(1)))
+      case "error" => Left(OaiError(row.getString(1), Option(row.getString(2))))
     }
 
   private def cacheTempFile(tempFile: File): Unit = {
@@ -52,9 +52,9 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, @transient val o
     }
   }
 
-  private def eitherToArray(either: Either[OaiPage, OaiError]) = either match {
-    case Left(OaiPage(string)) => Seq("page", string, null)
-    case Right(OaiError(message, url)) => Seq("error", message, url)
+  private def eitherToArray(either: Either[OaiError, OaiPage]) = either match {
+    case Right(OaiPage(string)) => Seq("page", string, null)
+    case Left(OaiError(message, url)) => Seq("error", message, url)
   }
 
 }
