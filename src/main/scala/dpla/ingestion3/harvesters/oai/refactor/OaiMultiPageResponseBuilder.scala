@@ -44,14 +44,12 @@ class OaiMultiPageResponseBuilder(endpoint: String,
               val nextResponse: Either[OaiError, OaiPage] = getSinglePage(url)
               loop(nextResponse :: data)
           }
+        // If data is empty, return it.
         // This is only reached if something really strange happened.
-        // If there is an error or unexpected response type, return all data
-        // collected up to this point (including the error or unexpected response).
         case _ => data
       }
     }
 
-    // The initial request must include all optional args.
     val url: Try[URL] = buildUrl()
     val firstResponse: Either[OaiError, OaiPage] = getSinglePage(url)
     loop(List(firstResponse))
