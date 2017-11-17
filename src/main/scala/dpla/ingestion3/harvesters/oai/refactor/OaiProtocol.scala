@@ -69,7 +69,13 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
   }
 
   override def parsePageIntoSets(pageEither: Either[OaiError, OaiPage]):
-    TraversableOnce[Either[OaiError, OaiSet]] = ???
+    TraversableOnce[Either[OaiError, OaiSet]] = {
+
+    val xmlEither = OaiXmlParser.parsePageIntoXml(pageEither)
+    val sets = OaiXmlParser.parseXmlIntoSets(xmlEither)
+    // TODO: Is there a better way to make a TraversableOnce return type?
+    sets.toIterator
+  }
 
   /**
     * Get all pages of results from an OAI feed.
