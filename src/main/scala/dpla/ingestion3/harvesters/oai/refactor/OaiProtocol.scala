@@ -32,7 +32,27 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
   }
 
   override def listAllRecordPagesForSet(setEither: Either[OaiError, OaiSet]):
-    TraversableOnce[Either[OaiError, OaiPage]] = ???
+    TraversableOnce[Either[OaiError, OaiPage]] = {
+
+    val listResponse: List[Either[OaiError, OaiPage]] = setEither match {
+      case Left(error) => List(Left(error))
+      case Right(set) => {
+        val endpoint = oaiConfiguration.endpoint
+
+        val metadataPrefix = oaiConfiguration.metadataPrefix.getOrElse(
+          // Fatal exception.
+          throw new RuntimeException("metadataPrefix not found")
+        )
+
+        val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListRecords")
+        val opts = Map("metadataPrefix" -> metadataPrefix, "set" -> set.id)
+
+        getMultiPageResponse(baseParams, opts)
+      }
+    }
+    // TODO: Is there a better way to make a TraversableOnce return type?
+    listResponse.toIterator
+  }
 
   override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage]):
     TraversableOnce[Either[OaiError, OaiRecord]] = ???
