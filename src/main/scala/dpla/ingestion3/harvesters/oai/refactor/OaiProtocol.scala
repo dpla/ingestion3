@@ -12,8 +12,7 @@ import scala.util.{Failure, Success, Try}
 
 class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with UrlBuilder {
 
-  override def listAllRecordPages:
-    TraversableOnce[Either[OaiError, OaiPage]] = {
+  override def listAllRecordPages: TraversableOnce[Either[OaiError, OaiPage]] = {
 
     val endpoint = oaiConfiguration.endpoint
 
@@ -57,7 +56,10 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
   override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage]):
     TraversableOnce[Either[OaiError, OaiRecord]] = ???
 
-  override def listAllSets: TraversableOnce[Either[OaiError, OaiSet]] = ???
+  override def listAllSetPages: TraversableOnce[Either[OaiError, OaiPage]] = ???
+
+  override def parsePageIntoSets(pageEither: Either[OaiError, OaiPage]):
+    TraversableOnce[Either[OaiError, OaiSet]] = ???
 
   /**
     * Get all pages of results from an OAI feed.
