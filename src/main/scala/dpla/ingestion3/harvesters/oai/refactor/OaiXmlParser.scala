@@ -66,23 +66,23 @@ object OaiXmlParser {
     xmlEither match {
       case Left(error) => Seq(Left(error))
       case Right(xml) =>
-        val xmlRecords: NodeSeq = (xml \ "ListRecords" \ "record")
-
-        // Remove empty nodes
-        val nodes: NodeSeq = xmlRecords.flatMap(record =>
-          record.headOption match {
-            case Some(node) => node
-            case _ => None
+        for (record <- xml \ "ListRecords" \ "record")
+          yield {
+            val id = getRecordIdentifier(record)
+            val setIds = getSetIdsFromRecord(record)
+            val oaiRecord = OaiRecord(id, record.toString, setIds)
+            Right(oaiRecord)
           }
-        )
+    }
+  }
 
-        // Map nodes to OaiRecords
-        nodes.map(node => {
-          val id = getRecordIdentifier(node)
-          val setIds = getSetIdsFromRecord(node)
-          val oaiRecord = OaiRecord(id, node.toString, setIds)
-          Right(oaiRecord)
-        })
+  def parseXmlIntoSets(xmlEither: Either[OaiError, Node]):
+    Seq[Either[OaiError, OaiSet]] = {
+
+    xmlEither match {
+      case Left(error) => Seq(Left(error))
+      case Right(xml) =>
+        ???
     }
   }
 
