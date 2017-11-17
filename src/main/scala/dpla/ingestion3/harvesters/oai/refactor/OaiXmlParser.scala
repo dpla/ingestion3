@@ -101,7 +101,7 @@ object OaiXmlParser {
     *         An valid XML node, OR
     *         A failure if the XML is invalid or contains an OAI error message.
     */
-  private def parseStringIntoXml(string: String): Try[Node] = Try {
+  def parseStringIntoXml(string: String): Try[Node] = Try {
     val xml = XML.loadString(string)
     checkForOaiError(xml)
     xml
@@ -116,7 +116,7 @@ object OaiXmlParser {
     * @return Unit
     * @throws RuntimeException
     */
-  private def checkForOaiError(xml: NodeSeq): Unit = {
+  def checkForOaiError(xml: NodeSeq): Unit = {
     if ((xml \ "error").nonEmpty)
       throw new RuntimeException((xml \ "error").text.trim)
   }
@@ -128,7 +128,7 @@ object OaiXmlParser {
     * @param record The original record from the OAI feed
     * @return The local OAI identifier
     */
-  private def getRecordIdentifier(record: Node): String =
+  def getRecordIdentifier(record: Node): String =
     (record \ "header" \ "identifier").text
 
   /**
@@ -138,7 +138,7 @@ object OaiXmlParser {
     * @return Seq[String]
     *         The set ids.
     */
-  private def getSetIdsFromRecord(record: Node): Seq[String] =
+  def getSetIdsFromRecord(record: Node): Seq[String] =
     for (set <- record \ "header" \ "setSpec") yield set.text
 
   /**
@@ -148,5 +148,5 @@ object OaiXmlParser {
     *            The original set from the OAI feed
     * @return The local identifier
     */
-  private def getSetIdentifier(set: Node): String = (set \ "setSpec").text
+  def getSetIdentifier(set: Node): String = (set \ "setSpec").text
 }

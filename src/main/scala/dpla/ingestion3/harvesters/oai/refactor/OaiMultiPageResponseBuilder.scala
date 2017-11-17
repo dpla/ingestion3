@@ -2,14 +2,13 @@ package dpla.ingestion3.harvesters.oai.refactor
 
 import java.net.URL
 
-import dpla.ingestion3.harvesters.UrlBuilder
 import dpla.ingestion3.utils.HttpUtils
 import org.apache.http.client.utils.URIBuilder
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
-object OaiMultiPageResponseBuilder extends UrlBuilder {
+object OaiMultiPageResponseBuilder {
 
   /**
     * Main entry point.
@@ -84,7 +83,7 @@ object OaiMultiPageResponseBuilder extends UrlBuilder {
     * @param queryParams parameters for a single OAI request.
     * @return OaiPage or OaiError
     */
-  private def getSinglePage(queryParams: Map[String, String]): Either[OaiError, OaiPage] = {
+  def getSinglePage(queryParams: Map[String, String]): Either[OaiError, OaiPage] = {
     getUrl(queryParams) match {
       // Error building URL
       case Left(error) => Left(error)
@@ -104,7 +103,7 @@ object OaiMultiPageResponseBuilder extends UrlBuilder {
     * @param queryParams HTTP parameters
     * @return Either[OaiError, URL]
     */
-  private def getUrl(queryParams: Map[String, String]): Either[OaiError, URL] =
+  def getUrl(queryParams: Map[String, String]): Either[OaiError, URL] =
     Try { buildUrl(queryParams) } match {
       case Success(url) => Right(url)
       case Failure(e) =>
@@ -122,7 +121,7 @@ object OaiMultiPageResponseBuilder extends UrlBuilder {
     *               See https://www.openarchives.org/OAI/openarchivesprotocol.html#ProtocolMessages
     * @return URL
     */
-  override def buildUrl(params: Map[String, String]): URL = {
+  def buildUrl(params: Map[String, String]): URL = {
     val url = new URL(params.getOrElse("endpoint",
       throw new RuntimeException("Endpoint not found")))
 
