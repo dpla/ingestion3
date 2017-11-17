@@ -12,9 +12,9 @@ import scala.util.{Failure, Success, Try}
 
 class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with UrlBuilder {
 
-  override def listAllRecordPages: TraversableOnce[Either[OaiError, OaiPage]] = {
+  lazy val endpoint = oaiConfiguration.endpoint
 
-    val endpoint = oaiConfiguration.endpoint
+  override def listAllRecordPages: TraversableOnce[Either[OaiError, OaiPage]] = {
 
     val metadataPrefix = oaiConfiguration.metadataPrefix.getOrElse(
       // Fatal exception.
@@ -36,7 +36,6 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
     val listResponse: List[Either[OaiError, OaiPage]] = setEither match {
       case Left(error) => List(Left(error))
       case Right(set) => {
-        val endpoint = oaiConfiguration.endpoint
 
         val metadataPrefix = oaiConfiguration.metadataPrefix.getOrElse(
           // Fatal exception.
@@ -53,10 +52,15 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
     listResponse.toIterator
   }
 
+  override def listAllSetPages: TraversableOnce[Either[OaiError, OaiPage]] = {
+    val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListSets")
+    val multiPageResponse = getMultiPageResponse(baseParams)
+    // TODO: Is there a better way to make a TraversableOnce return type?
+    multiPageResponse.toIterator
+  }
+
   override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage]):
     TraversableOnce[Either[OaiError, OaiRecord]] = ???
-
-  override def listAllSetPages: TraversableOnce[Either[OaiError, OaiPage]] = ???
 
   override def parsePageIntoSets(pageEither: Either[OaiError, OaiPage]):
     TraversableOnce[Either[OaiError, OaiSet]] = ???
