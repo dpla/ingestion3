@@ -10,8 +10,20 @@ import org.apache.spark.sql.{Row, SQLContext}
   * @param oaiMethods Implementation of the OaiMethods trait.
   * @param sqlContext Spark sqlContext.
   */
-class BlacklistOaiRelation(oaiConfiguration: OaiConfiguration, @transient oaiMethods: OaiMethods)
+class BlacklistOaiRelation(oaiConfiguration: OaiConfiguration, @transient val oaiMethods: OaiMethods)
                           (@transient override val sqlContext: SQLContext)
   extends OaiRelation {
-  override def buildScan(): RDD[Row] = ???
+  override def buildScan(): RDD[Row] = {
+    val sparkContext = sqlContext.sparkContext
+    val setPages = sparkContext.parallelize(oaiMethods.listAllSetPages().toSeq)
+    val sets = setPages.flatMap(oaiMethods.parsePageIntoSets)
+    val blacklist = sparkContext.broadcast(oaiConfiguration.blacklist.getOrElse(Array()).toSet)
+    val blacklistedSets = sets.filter {
+      case Right(OaiSet(set, _)) => !blacklist.value.contains(set)
+      case _ => true
+    }
+    val pages = blacklistedSets.flatMap(oaiMethods.listAllRecordPagesForSet)
+    val records = pages.flatMap(oaiMethods.parsePageIntoRecords)
+    records.map(OaiRelation.convertToOutputRow)
+  }
 }

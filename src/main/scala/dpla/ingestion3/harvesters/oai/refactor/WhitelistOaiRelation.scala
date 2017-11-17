@@ -12,5 +12,12 @@ import org.apache.spark.sql.{Row, SQLContext}
 class WhitelistOaiRelation(oaiConfiguration: OaiConfiguration, @transient oaiMethods: OaiMethods)
                           (@transient override val sqlContext: SQLContext)
   extends OaiRelation {
-  override def buildScan(): RDD[Row] = ???
+  override def buildScan(): RDD[Row] = {
+    val sparkContext = sqlContext.sparkContext
+    val whitelist = sparkContext.parallelize(oaiConfiguration.setlist.getOrElse(Array()))
+    val whitelistEithers = whitelist.map(set => Right(OaiSet(set, "")))
+    val pages = whitelistEithers.flatMap(oaiMethods.listAllRecordPagesForSet)
+    val records = pages.flatMap(oaiMethods.parsePageIntoRecords)
+    records.map(OaiRelation.convertToOutputRow)
+  }
 }

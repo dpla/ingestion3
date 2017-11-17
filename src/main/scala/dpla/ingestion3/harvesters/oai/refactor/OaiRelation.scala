@@ -1,5 +1,6 @@
 package dpla.ingestion3.harvesters.oai.refactor
 
+import dpla.ingestion3.harvesters.oai.OaiHarvesterException
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SQLContext}
 import org.apache.spark.sql.catalyst.ScalaReflection
@@ -34,19 +35,21 @@ abstract class OaiRelation extends BaseRelation with TableScan with Serializable
 }
 
 object OaiRelation {
+
   def getRelation(oaiMethods: OaiMethods, oaiConfig: OaiConfiguration, sqlContext: SQLContext): OaiRelation =
     (oaiConfig.setlist, oaiConfig.harvestAllSets, oaiConfig.blacklist) match {
       case (None, false, Some(blacklist)) => new BlacklistOaiRelation(oaiConfig, oaiMethods)(sqlContext)
       case (Some(setList), false, None) => new WhitelistOaiRelation(oaiConfig, oaiMethods)(sqlContext)
       case (None, false, None) => new AllRecordsOaiRelation(oaiConfig, oaiMethods)(sqlContext)
       case (None, true, None) => new AllSetsOaiRelation(oaiConfig, oaiMethods)(sqlContext)
+      case _ => throw OaiHarvesterException("Unable to determine harvest type from parameters.")
     }
 
-  def convertToOutputRow(oaiRecordEither: Either[OaiRecord, OaiError]): Row =
+  def convertToOutputRow(oaiRecordEither: Either[OaiError, OaiRecord]): Row =
     oaiRecordEither match {
-      case Left(oaiRecord: OaiRecord) =>
+      case Right(oaiRecord: OaiRecord) =>
         Row(None, oaiRecord, None)
-      case Right(oaiError: OaiError) =>
+      case Left(oaiError: OaiError) =>
         Row(None, None, oaiError)
     }
 

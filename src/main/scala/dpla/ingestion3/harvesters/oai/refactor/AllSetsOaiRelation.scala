@@ -10,7 +10,7 @@ import org.apache.spark.sql.{Row, SQLContext}
   * @param sqlContext Spark sqlContext.
   */
 
-class AllSetsOaiRelation(oaiConfiguration: OaiConfiguration, @transient oaiMethods: OaiMethods)
+class AllSetsOaiRelation(oaiConfiguration: OaiConfiguration, @transient val oaiMethods: OaiMethods)
                         (@transient override val sqlContext: SQLContext)
   extends OaiRelation {
 
