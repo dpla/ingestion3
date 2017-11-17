@@ -6,27 +6,38 @@ import scala.xml.{Node, NodeSeq, XML}
 /**
   * OAI-PMH harvester for DPLA's Ingestion3 system
   */
+
+// TODO: Refactor to be a class instead of an object
 object OaiXmlParser {
 
   /**
     * Get the resumptionToken from the response
     *
-    * @param page String
-    *             The String response from an OAI request
+    * @param pageEither Either[OaiError, OaiPage]
+    *                   OaiError a previously incurred error.
+    *                   OaiPage a single page OAI response.
+    *
     * @return Option[String]
-    *         The resumptionToken to fetch the next set of records
-    *         or None if no more records can be fetched. An
-    *         empty string does not mean all records were successfully
-    *         harvested (an error could have occurred when fetching), only
-    *         that there are no more records that can be fetched.
+    *         The resumptionToken to fetch the next page response.
+    *         or None if no more records can be fetched.
+    *         No resumption token does not necessarily mean that all pages
+    *         were successfully fetched (an error could have occurred),
+    *         only that no more pages can be fetched.
     */
-  def getResumptionToken(page: String): Option[String] = {
-    val pattern = """<resumptionToken.*>(.*)</resumptionToken>""".r
-    pattern.findFirstMatchIn(page) match {
-      case Some(m) => Some(m.group(1))
-      case _ => None
+  def getResumptionToken(pageEither: Either[OaiError, OaiPage]):
+    Option[String] = pageEither match {
+      // If the pageEither is an error, return None.
+      case Left(error) => None
+      // Otherwise, attempt to parse a resumption token.
+      // Use a regex String match to find the resumption token b/c it is too
+      // costly to map the String to XML at this point.
+      case Right(oaiPage) =>
+        val pattern = """<resumptionToken.*>(.*)</resumptionToken>""".r
+        pattern.findFirstMatchIn(oaiPage.page) match {
+          case Some(m) => Some(m.group(1))
+          case _ => None
+        }
     }
-  }
 
   /**
     * Parse an OaiPage into an XML Node.
