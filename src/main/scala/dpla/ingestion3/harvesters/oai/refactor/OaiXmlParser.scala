@@ -82,7 +82,12 @@ object OaiXmlParser {
     xmlEither match {
       case Left(error) => Seq(Left(error))
       case Right(xml) =>
-        ???
+        for (set <- xml \ "ListSets" \ "set")
+          yield {
+            val id = getSetIdentifier(set)
+            val oaiSet = OaiSet(id, set.toString)
+            Right(oaiSet)
+          }
     }
   }
 
@@ -135,4 +140,13 @@ object OaiXmlParser {
     */
   private def getSetIdsFromRecord(record: Node): Seq[String] =
     for (set <- record \ "header" \ "setSpec") yield set.text
+
+  /**
+    * Accepts a set from an OAI feed an returns the OAI identifier
+    *
+    * @param set Node
+    *            The original set from the OAI feed
+    * @return The local identifier
+    */
+  private def getSetIdentifier(set: Node): String = (set \ "setSpec").text
 }
