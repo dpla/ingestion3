@@ -2,23 +2,24 @@ package dpla.ingestion3.harvesters.oai.refactor
 
 import scala.collection.TraversableOnce
 
+/**
+  * TODO:  Would it be easier for OaiProtocol to take the args (endpoint: String,
+  * metadataPrefix: Option[String] rather than a whole OaiConfiguration?
+  *
+  * @param oaiConfiguration
+  */
+
 class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods {
 
-  lazy val endpoint = oaiConfiguration.endpoint
+  lazy val endpoint: String = oaiConfiguration.endpoint
+  lazy val metadataPrefix: Option[String] = oaiConfiguration.metadataPrefix
 
   override def listAllRecordPages: TraversableOnce[Either[OaiError, OaiPage]] = {
+    val responseBuilder = new OaiMultiPageResponseBuilder(endpoint,
+      "ListRecords", metadataPrefix)
 
-    val metadataPrefix = oaiConfiguration.metadataPrefix.getOrElse(
-      // Fatal exception.
-      throw new RuntimeException("metadataPrefix not found")
-    )
-
-    val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListRecords")
-    val opts = Map("metadataPrefix" -> metadataPrefix)
-
-    val multiPageResponse = OaiMultiPageResponseBuilder.getResponse(baseParams, opts)
-    // TODO: This is a convenient but probably not very useful way to make the
-    // return type a TraversableOnce until I figure out a better way.
+    val multiPageResponse = responseBuilder.getResponse
+    // TODO: Is there a better way to make a TraversableOnce return type?
     multiPageResponse.toIterator
   }
 
@@ -29,15 +30,10 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods {
       case Left(error) => List(Left(error))
       case Right(set) => {
 
-        val metadataPrefix = oaiConfiguration.metadataPrefix.getOrElse(
-          // Fatal exception.
-          throw new RuntimeException("metadataPrefix not found")
-        )
+        val responseBuilder = new OaiMultiPageResponseBuilder(endpoint,
+          "ListRecords", metadataPrefix, Some(set.id))
 
-        val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListRecords")
-        val opts = Map("metadataPrefix" -> metadataPrefix, "set" -> set.id)
-
-        OaiMultiPageResponseBuilder.getResponse(baseParams, opts)
+        responseBuilder.getResponse
       }
     }
     // TODO: Is there a better way to make a TraversableOnce return type?
@@ -45,8 +41,8 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods {
   }
 
   override def listAllSetPages: TraversableOnce[Either[OaiError, OaiPage]] = {
-    val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListSets")
-    val multiPageResponse = OaiMultiPageResponseBuilder.getResponse(baseParams)
+    val responseBuilder = new OaiMultiPageResponseBuilder(endpoint, "ListSets")
+    val multiPageResponse = responseBuilder.getResponse
     // TODO: Is there a better way to make a TraversableOnce return type?
     multiPageResponse.toIterator
   }
