@@ -32,13 +32,13 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, @transient val o
     pagesEitherRdd.map(OaiRelation.convertToOutputRow)
   }
 
-  private def handleCsvRow(row: Row): Either[OaiError, OaiPage] =
+  private[refactor] def handleCsvRow(row: Row): Either[OaiError, OaiPage] =
     row.getString(0) match {
       case "page" => Right(OaiPage(row.getString(1)))
       case "error" => Left(OaiError(row.getString(1), Option(row.getString(2))))
     }
 
-  private def cacheTempFile(tempFile: File): Unit = {
+  private[refactor] def cacheTempFile(tempFile: File): Unit = {
     val fileWriter = new FileWriter(tempFile)
     val writerSettings = new CsvWriterSettings
     val writer = new CsvWriter(fileWriter, writerSettings)
