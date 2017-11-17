@@ -60,7 +60,15 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
   }
 
   override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage]):
-    TraversableOnce[Either[OaiError, OaiRecord]] = ???
+    TraversableOnce[Either[OaiError, OaiRecord]] = {
+
+    val responseList: List[Either[OaiError, OaiRecord]] = pageEither match {
+      case Left(error) => List(Left(error))
+      case Right(page) => {
+
+      }
+    }
+  }
 
   override def parsePageIntoSets(pageEither: Either[OaiError, OaiPage]):
     TraversableOnce[Either[OaiError, OaiSet]] = ???
