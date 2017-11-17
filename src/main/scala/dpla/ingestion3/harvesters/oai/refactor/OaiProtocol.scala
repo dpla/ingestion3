@@ -13,7 +13,7 @@ import scala.util.{Failure, Success, Try}
 class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with UrlBuilder {
 
   override def listAllRecordPages:
-    TraversableOnce[Either[OaiPage, OaiError]] = {
+    TraversableOnce[Either[OaiError, OaiPage]] = {
 
     val endpoint = oaiConfiguration.endpoint
 
@@ -31,13 +31,13 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
     multiPageResponse.toIterator
   }
 
-  override def listAllRecordPagesForSet(setEither: Either[OaiSet, OaiError]):
-    TraversableOnce[Either[OaiPage, OaiError]] = ???
+  override def listAllRecordPagesForSet(setEither: Either[OaiError, OaiSet]):
+    TraversableOnce[Either[OaiError, OaiPage]] = ???
 
-  override def parsePageIntoRecords(pageEither: Either[OaiPage, OaiError]):
-    TraversableOnce[Either[OaiRecord, OaiError]] = ???
+  override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage]):
+    TraversableOnce[Either[OaiError, OaiRecord]] = ???
 
-  override def listAllSets: TraversableOnce[Either[OaiSet, OaiError]] = ???
+  override def listAllSets: TraversableOnce[Either[OaiError, OaiSet]] = ???
 
   /**
     * Get all pages of results from an OAI feed.
@@ -63,17 +63,17 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
     *         and OaiErrors.
     */
   def getMultiPageResponse(baseParams: Map[String, String], opts: Map[String, String] = Map()):
-    List[Either[OaiPage, OaiError]] = {
+    List[Either[OaiError, OaiPage]] = {
 
     @tailrec
-    def loop(data: List[Either[OaiPage, OaiError]]): List[Either[OaiPage, OaiError]] = {
+    def loop(data: List[Either[OaiError, OaiPage]]): List[Either[OaiError, OaiPage]] = {
 
       data.headOption match {
         // Stops the harvest if an OaiError was trapped and returns everything
         // harvested up that this point plus the error.
-        case Some(Right(_)) => data
+        case Some(Left(_)) => data
         // If it was a valid page response then extract data and call the next page.
-        case Some(Left(previous)) =>
+        case Some(Right(previous)) =>
           val text = previous.page
           val token = OaiResponseProcessor.getResumptionToken(text)
 
@@ -111,15 +111,15 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
     * @param queryParams parameters for a single OAI request.
     * @return OaiPage or OaiError
     */
-  def getSinglePageResponse(queryParams: Map[String, String]): Either[OaiPage, OaiError] = {
+  def getSinglePageResponse(queryParams: Map[String, String]): Either[OaiError, OaiPage] = {
     getUrl(queryParams) match {
       // Error building URL
-      case Right(error) => Right(error)
-      case Left(url) => {
+      case Left(error) => Left(error)
+      case Right(url) => {
         HttpUtils.makeGetRequest(url) match {
           // HTTP error
-          case Failure(e) => Right(OaiError(e.toString, Some(url.toString)))
-          case Success(page) => Left(OaiPage(page))
+          case Failure(e) => Left(OaiError(e.toString, Some(url.toString)))
+          case Success(page) => Right(OaiPage(page))
         }
       }
     }
@@ -129,16 +129,16 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
     * Tries to build a URL from the parameters
     *
     * @param queryParams HTTP parameters
-    * @return Either[URL, OaiError]
+    * @return Either[OaiError, URL]
     */
-  def getUrl(queryParams: Map[String, String]): Either[URL, OaiError] =
+  def getUrl(queryParams: Map[String, String]): Either[OaiError, URL] =
   Try { buildUrl(queryParams) } match {
-    case Success(url) => Left(url)
+    case Success(url) => Right(url)
     case Failure(e) =>
       val queryString = queryParams.map(_.productIterator.mkString(":")).mkString("|")
       val errorString = e.toString
       val msg = s"Failed to make URL with params $queryString.  $errorString"
-      Right(OaiError(msg))
+      Left(OaiError(msg))
   }
 
   /**
