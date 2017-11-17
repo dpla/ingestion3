@@ -62,12 +62,10 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
   override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage]):
     TraversableOnce[Either[OaiError, OaiRecord]] = {
 
-    val responseList: List[Either[OaiError, OaiRecord]] = pageEither match {
-      case Left(error) => List(Left(error))
-      case Right(page) => {
-
-      }
-    }
+    val xmlEither = OaiXmlParser.parsePageIntoXml(pageEither)
+    val records = OaiXmlParser.parseXmlIntoRecords(xmlEither)
+    // TODO: Is there a better way to make a TraversableOnce return type?
+    records.toIterator
   }
 
   override def parsePageIntoSets(pageEither: Either[OaiError, OaiPage]):
@@ -109,7 +107,7 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Ur
         // If it was a valid page response then extract data and call the next page.
         case Some(Right(previous)) =>
           val text = previous.page
-          val token = OaiResponseProcessor.getResumptionToken(text)
+          val token = OaiXmlParser.getResumptionToken(text)
 
           token match {
             // If the page does not contain a token, return everything harvested
