@@ -6,7 +6,7 @@ import scala.xml.{Node, NodeSeq, XML}
 /**
   * OAI-PMH harvester for DPLA's Ingestion3 system
   */
-object OaiResponseProcessor {
+object OaiXmlParser {
 
   /**
     * Get the resumptionToken from the response
@@ -29,22 +29,60 @@ object OaiResponseProcessor {
   }
 
   /**
+    * Parse an OaiPage into an XML Node.
+    * Return an OaiError if the XML is invalid or if it contains an error message.
+    *
+    * @param pageEither
+    * @return
+    */
+  def parsePageIntoXml(pageEither: Either[OaiError, OaiPage]):
+    Either[OaiError, Node] = {
+
+    pageEither match {
+      case Left(error) => Left(error)
+      case Right(page) =>
+        parseStringIntoXml(page.page) match {
+          case Failure(e) => Left(OaiError(e.toString))
+          case Success(xml) => Right(xml)
+        }
+    }
+  }
+
+  /**
     * Parses records from an OaiSource.
     *
-    * @param page:  OaiPage
-    *               The single-page response to a single OAI query.
+    * @param xmlEither:  Either[OaiError, Node]
+    *                    Node - an XML node containing 0-n records
+    *                    OaiError = a previously incurred error.
     *
-    * @return OaiResponse
-    *         OaiRecordsPage - all the records appearing on the page OR
+    * @return Seq[Either[OaiError, OaiRecord]]
+    *         OaiRecord - a record appearing in the XML node
     *         OaiError - an error incurred during the process of parsing the records.
     */
 
-  def getRecordsFromPage(page: OaiPage): OaiResponse = {
-    getXml(page.page) match {
-      case Failure(e) => OaiError(e.toString)
-      case Success(xml) =>
-        val records = getRecordsFromXml(xml)
-        RecordsPage(records)
+  def parseXmlIntoRecords(xmlEither: Either[OaiError, Node]):
+    Seq[Either[OaiError, OaiRecord]] = {
+
+    xmlEither match {
+      case Left(error) => Seq(Left(error))
+      case Right(xml) =>
+        val xmlRecords: NodeSeq = (xml \ "ListRecords" \ "record")
+
+        // Remove empty nodes
+        val nodes: NodeSeq = xmlRecords.flatMap(record =>
+          record.headOption match {
+            case Some(node) => node
+            case _ => None
+          }
+        )
+
+        // Map nodes to OaiRecords
+        nodes.map(node => {
+          val id = getRecordIdentifier(node)
+          val setIds = getSetIdsFromRecord(node)
+          val oaiRecord = OaiRecord(id, node.toString, setIds)
+          Right(oaiRecord)
+        })
     }
   }
 
@@ -58,38 +96,24 @@ object OaiResponseProcessor {
     *         An valid XML node, OR
     *         A failure if the XML is invalid or contains an OAI error message.
     */
-  private def getXml(string: String): Try[Node] = Try {
+  private def parseStringIntoXml(string: String): Try[Node] = Try {
     val xml = XML.loadString(string)
-    getOaiErrorCode(xml)
+    checkForOaiError(xml)
     xml
   }
 
   /**
-    * Parse an error message from an XML node.  Throw an excepetion if an error
-    * is found.
+    * Parse an error message from an XML node.
+    * Throw an exception if an error is found.
     *
     * @param xml: NodeSeq
     *             The XML that may include an error message.
     * @return Unit
     * @throws RuntimeException
     */
-  private def getOaiErrorCode(xml: NodeSeq): Unit = {
+  private def checkForOaiError(xml: NodeSeq): Unit = {
     if ((xml \ "error").nonEmpty)
       throw new RuntimeException((xml \ "error").text.trim)
-  }
-
-  // Parse all records from XML
-  private def getRecordsFromXml(xml: Node): Seq[OaiRecord] = {
-    val xmlRecords: NodeSeq = (xml \ "ListRecords" \ "record")
-
-    xmlRecords.flatMap(record =>
-      record.headOption match {
-        case Some(node) =>
-          val id = getRecordIdentifier(node)
-          val setIds = getSetIdsFromRecord(node)
-          Some(OaiRecord(id, node.toString, setIds ))
-        case _ => None
-      })
   }
 
   // TODO: To ensure continuity of IDs between ingestion systems and generalize the ID
