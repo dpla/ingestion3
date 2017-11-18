@@ -51,8 +51,10 @@ object OaiXmlParser {
 
     pageEither match {
       case Left(error) => Left(error)
-      case Right(page) =>
-        parseStringIntoXml(page.page) match {
+      case Right(oaiPage) =>
+        val xmlTry: Try[Node] = Try { XML.loadString(oaiPage.page) }
+
+        xmlTry match {
           case Failure(e) => Left(OaiError(e.toString))
           case Success(xml) => Right(xml)
         }
@@ -60,104 +62,70 @@ object OaiXmlParser {
   }
 
   /**
-    * Parses records from an OaiSource.
+    * Parse XML into OaiRecord, or OaiError if the XML contains an OAI error.
     *
     * @param xmlEither:  Either[OaiError, Node]
     *                    Node - an XML node containing 0-n records
     *                    OaiError = a previously incurred error.
     *
     * @return Seq[Either[OaiError, OaiRecord]]
-    *         OaiRecord - a record appearing in the XML node
-    *         OaiError - an error incurred during the process of parsing the records.
+    *         OaiRecord - a record appearing in the XML node.
+    *         OaiError - an error appearing in the XML node, or a previously
+    *         incurred error.
     */
-
   def parseXmlIntoRecords(xmlEither: Either[OaiError, Node]):
-    Seq[Either[OaiError, OaiRecord]] = {
-
-    xmlEither match {
-      case Left(error) => Seq(Left(error))
+    Seq[Either[OaiError, OaiRecord]] = xmlEither match {
+      case Left(e) => Seq(Left(e))
       case Right(xml) =>
-        for (record <- xml \ "ListRecords" \ "record")
-          yield {
-            val id = getRecordIdentifier(record)
-            val setIds = getSetIdsFromRecord(record)
-            val oaiRecord = OaiRecord(id, record.toString, setIds)
-            Right(oaiRecord)
-          }
+        getError(xml) match {
+          // If the XML contains an error, return an OaiError
+          case Some(e) => Seq(Left(e))
+          // Otherwise, parse records from the XML
+          case None => getRecords(xml).map(Right(_))
+        }
     }
-  }
 
+  /**
+    * Parse XML into OaiSet, or OaiError if the XML contains an OAI error.
+    *
+    * @param xmlEither:  Either[OaiError, Node]
+    *                    Node - an XML node containing 0-n sets.
+    *                    OaiError = a previously incurred error.
+    *
+    * @return Seq[Either[OaiError, OaiSet]]
+    *         OaiSet - a set appearing in the XML node.
+    *         OaiError - an error appearing in the XML node, or a previously
+    *         incurred error.
+    */
   def parseXmlIntoSets(xmlEither: Either[OaiError, Node]):
-    Seq[Either[OaiError, OaiSet]] = {
-
-    xmlEither match {
-      case Left(error) => Seq(Left(error))
+    Seq[Either[OaiError, OaiSet]] = xmlEither match {
+      case Left(e) => Seq(Left(e))
       case Right(xml) =>
-        for (set <- xml \ "ListSets" \ "set")
-          yield {
-            val id = getSetIdentifier(set)
-            val oaiSet = OaiSet(id, set.toString)
-            Right(oaiSet)
-          }
+        getError(xml) match {
+          // If the XML contains an error, return an OaiError
+          case Some(e) => Seq(Left(e))
+          // Otherwise, parse records from the XML
+          case None => getSets(xml).map(Right(_))
+        }
     }
+
+  def getRecords(xml: Node): Seq[OaiRecord] =
+    for (record <- xml \ "ListRecords" \ "record")
+      yield {
+        val id = (record \ "header" \ "identifier").text
+        val setIds = for (set <- record \ "header" \ "setSpec") yield set.text
+        OaiRecord(id, record.toString, setIds)
+      }
+
+  def getSets(xml: Node): Seq[OaiSet] =
+    for (set <- xml \ "ListSets" \ "set")
+      yield {
+        val id = (set \ "setSpec").text
+        OaiSet(id, set.toString)
+      }
+
+  def getError(xml: Node): Option[OaiError] = {
+    val error = (xml \ "error")
+    if (error.nonEmpty) Some(OaiError(error.text.trim)) else None
   }
-
-  /**
-    * Try to parse XML from a given String, representing a valid OAI response.
-    *
-    * @param string String
-    *               A string response from an OAI feed.
-    *
-    * @return Try[Node]
-    *         An valid XML node, OR
-    *         A failure if the XML is invalid or contains an OAI error message.
-    */
-  def parseStringIntoXml(string: String): Try[Node] = Try {
-    val xml = XML.loadString(string)
-    checkForOaiError(xml)
-    xml
-  }
-
-  /**
-    * Parse an error message from an XML node.
-    * Throw an exception if an error is found.
-    *
-    * @param xml: NodeSeq
-    *             The XML that may include an error message.
-    * @return Unit
-    * @throws RuntimeException
-    */
-  def checkForOaiError(xml: NodeSeq): Unit = {
-    if ((xml \ "error").nonEmpty)
-      throw new RuntimeException((xml \ "error").text.trim)
-  }
-
-  // TODO: To ensure continuity of IDs between ingestion systems and generalize the ID
-  /**
-    * Accepts a record from an OAI feed an returns the OAI identifier
-    *
-    * @param record The original record from the OAI feed
-    * @return The local OAI identifier
-    */
-  def getRecordIdentifier(record: Node): String =
-    (record \ "header" \ "identifier").text
-
-  /**
-    * Get all set ids from a single record.
-    * Return empty Seq if none exist.
-    *
-    * @return Seq[String]
-    *         The set ids.
-    */
-  def getSetIdsFromRecord(record: Node): Seq[String] =
-    for (set <- record \ "header" \ "setSpec") yield set.text
-
-  /**
-    * Accepts a set from an OAI feed an returns the OAI identifier
-    *
-    * @param set Node
-    *            The original set from the OAI feed
-    * @return The local identifier
-    */
-  def getSetIdentifier(set: Node): String = (set \ "setSpec").text
 }
