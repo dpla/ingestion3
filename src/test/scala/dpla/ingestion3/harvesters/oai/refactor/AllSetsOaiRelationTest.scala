@@ -1,6 +1,7 @@
 package dpla.ingestion3.harvesters.oai.refactor
 
 import com.holdenkarau.spark.testing.SharedSparkContext
+import org.apache.spark.sql.SparkSession
 import org.scalatest.FlatSpec
 
 class AllSetsOaiRelationTest extends FlatSpec with SharedSparkContext {
@@ -27,12 +28,12 @@ class AllSetsOaiRelationTest extends FlatSpec with SharedSparkContext {
     )
   }
 
-
-  private lazy val relation = new AllSetsOaiRelation(oaiConfiguration, oaiMethods)(sc)
+  private lazy val sqlContext = SparkSession.builder().getOrCreate().sqlContext
+  private lazy val relation = new AllSetsOaiRelation(oaiConfiguration, oaiMethods)(sqlContext)
 
 
   "An AllSetsOaiRelation" should "build a scan using OaiMethods" in {
     val rdd = relation.buildScan()
-    println(rdd)
+    assert(rdd.count === 8)
   }
 }

@@ -42,7 +42,7 @@ lazy val root = (project in file("."))
       "org.rogach" % "scallop_2.11" % "3.0.3",
       //"org.scalamock" %% "scalamock-scalatest-support" % "3.6.0" % "test",
       "org.scalamock" %% "scalamock" % "4.0.0" % "test",
-      "com.holdenkarau" %% "spark-testing-base" % "2.2.0_0.8.0" % "test",
+      "com.holdenkarau" %% "spark-testing-base" % "2.1.0_0.8.0" % "test",
       "com.typesafe" % "config" % "1.3.1",
       "com.amazonaws" % "aws-java-sdk-s3" % "1.10.6",
       "org.apache.hadoop" % "hadoop-aws" % "2.8.1",
