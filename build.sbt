@@ -11,10 +11,10 @@ lazy val root = (project in file("."))
 
       /**
         * @sw I updated spark core and spark sql from 2.0.1 to 2.1.0 to
-        *    resovle the bulid issues I was having (couldn't resolve
+        *     resovle the bulid issues I was having (couldn't resolve
         *    org.arpache.spark.Schema)
         *
-        *    TODO test with 2.0.1 on someone else's machine during PR review?
+        *     TODO test with 2.0.1 on someone else's machine during PR review?
         */
       "org.apache.spark" %% "spark-core" % "2.1.0" exclude("org.scalatest", "scalatest_2.11"),
       "org.apache.spark" %% "spark-sql" % "2.1.0" exclude("org.scalatest", "scalatest_2.11"),
@@ -42,6 +42,7 @@ lazy val root = (project in file("."))
       "org.rogach" % "scallop_2.11" % "3.0.3",
       //"org.scalamock" %% "scalamock-scalatest-support" % "3.6.0" % "test",
       "org.scalamock" %% "scalamock" % "4.0.0" % "test",
+      "com.holdenkarau" %% "spark-testing-base" % "2.2.0_0.8.0" % "test",
       "com.typesafe" % "config" % "1.3.1",
       "com.amazonaws" % "aws-java-sdk-s3" % "1.10.6",
       "org.apache.hadoop" % "hadoop-aws" % "2.8.1",
