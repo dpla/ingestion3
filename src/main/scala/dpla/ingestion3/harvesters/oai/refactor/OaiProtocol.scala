@@ -9,7 +9,7 @@ import scala.collection.TraversableOnce
   * @param oaiConfiguration
   */
 
-class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods {
+class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Serializable {
 
   lazy val endpoint: String = oaiConfiguration.endpoint
   lazy val metadataPrefix: Option[String] = oaiConfiguration.metadataPrefix
