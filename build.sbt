@@ -1,4 +1,5 @@
 
+
 lazy val root = (project in file("."))
   .configs(IntegrationTest)
   .settings(
@@ -6,6 +7,7 @@ lazy val root = (project in file("."))
     version := "0.0.1",
     scalaVersion := "2.11.8",
     Defaults.itSettings,
+    parallelExecution in Test := false,
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.0.1" % "it,test",
 
