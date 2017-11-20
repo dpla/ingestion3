@@ -10,11 +10,11 @@ import org.apache.spark.sql.{Row, SQLContext}
 /**
   * OaiRelation for harvests that don't specify sets.
   *
-  * @param oaiMethods        Implementation of the OaiMethods trait.
-  * @param sqlContext        Spark sqlContext.
+  * @param oaiMethods Implementation of the OaiMethods trait.
+  * @param sqlContext Spark sqlContext.
   */
 
-class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, @transient val oaiMethods: OaiMethods)
+class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiMethods)
                            (@transient override val sqlContext: SQLContext)
   extends OaiRelation {
 
@@ -25,7 +25,7 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, @transient val o
     tempFileToRdd(tempFile)
   }
 
-  private def tempFileToRdd(tempFile: File): RDD[Row] = {
+  private[refactor] def tempFileToRdd(tempFile: File): RDD[Row] = {
     val csvRdd = sqlContext.read.csv(tempFile.getAbsolutePath).rdd
     val eitherRdd = csvRdd.map(handleCsvRow)
     val pagesEitherRdd = eitherRdd.flatMap(oaiMethods.parsePageIntoRecords)
@@ -33,9 +33,13 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, @transient val o
   }
 
   private[refactor] def handleCsvRow(row: Row): Either[OaiError, OaiPage] =
-    row.getString(0) match {
-      case "page" => Right(OaiPage(row.getString(1)))
-      case "error" => Left(OaiError(row.getString(1), Option(row.getString(2))))
+    row.toSeq match {
+      case Seq("page", page: String, _) =>
+        Right(OaiPage(page))
+      case Seq("error", message: String, null) =>
+        Left(OaiError(message, None))
+      case Seq("error", message: String, url: String) =>
+        Left(OaiError(message, Some(url)))
     }
 
   private[refactor] def cacheTempFile(tempFile: File): Unit = {
@@ -45,16 +49,21 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, @transient val o
 
     try {
       for (page <- oaiMethods.listAllRecordPages())
-        writer.writeRow(eitherToArray(page))
+        writer.writeRow(eitherToArray(page): _*)
 
     } finally {
       IOUtils.closeQuietly(fileWriter)
     }
   }
 
-  private def eitherToArray(either: Either[OaiError, OaiPage]) = either match {
-    case Right(OaiPage(string)) => Seq("page", string, null)
-    case Left(OaiError(message, url)) => Seq("error", message, url)
-  }
+  private[refactor] def eitherToArray(either: Either[OaiError, OaiPage]): Seq[String] =
+    either match {
+      case Right(OaiPage(string)) =>
+        Seq("page", string, null)
+      case Left(OaiError(message, None)) =>
+        Seq("error", message, null)
+      case Left(OaiError(message, Some(url))) =>
+        Seq("error", message, url)
+    }
 
 }

@@ -10,7 +10,7 @@ import org.apache.spark.sql.{Row, SQLContext}
   * @param oaiMethods Implementation of the OaiMethods trait.
   * @param sqlContext Spark sqlContext.
   */
-class BlacklistOaiRelation(oaiConfiguration: OaiConfiguration, @transient val oaiMethods: OaiMethods)
+class BlacklistOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiMethods)
                           (@transient override val sqlContext: SQLContext)
   extends OaiRelation {
   override def buildScan(): RDD[Row] = {
