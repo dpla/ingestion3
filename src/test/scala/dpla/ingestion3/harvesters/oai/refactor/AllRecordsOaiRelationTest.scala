@@ -33,7 +33,8 @@ class AllRecordsOaiRelationTest extends FlatSpec with SharedSparkContext {
     override def parsePageIntoSets(pageEither: Either[OaiError, OaiPage]) = ???
   }
 
-  private lazy val relation = new AllRecordsOaiRelation(oaiConfiguration, oaiMethods)(sc)
+  private lazy val sqlContext = SparkSession.builder().getOrCreate().sqlContext
+  private lazy val relation = new AllRecordsOaiRelation(oaiConfiguration, oaiMethods)(sqlContext)
 
   "a AllRecordsOaiRelation" should "parse a CSV row into an Either[OaiError, OaiPage]" in {
     val pageRow = Row("page", "abcd", null)
