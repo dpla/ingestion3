@@ -26,7 +26,7 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Se
   override def listAllRecordPagesForSet(setEither: Either[OaiError, OaiSet]):
     TraversableOnce[Either[OaiError, OaiPage]] = {
 
-    val listResponse: List[Either[OaiError, OaiPage]] = setEither match {
+    val listResponse = setEither match {
       case Left(error) => List(Left(error))
       case Right(set) => {
 
