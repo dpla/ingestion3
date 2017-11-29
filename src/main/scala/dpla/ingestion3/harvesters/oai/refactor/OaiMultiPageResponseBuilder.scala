@@ -26,33 +26,25 @@ class OaiMultiPageResponseBuilder(endpoint: String,
     * @return Un-parsed response page from OAI requests, including OaiPages
     *         and OaiErrors.
     */
-  def getResponse: List[Either[OaiError, OaiPage]] = {
+  def getResponse: Iterable[Either[OaiError, OaiPage]] = new Iterable[Either[OaiError, OaiPage]] {
+    override def iterator = new Iterator[Either[OaiError, OaiPage]]() {
 
-    @tailrec
-    def loop(data: List[Either[OaiError, OaiPage]]):
-      List[Either[OaiError, OaiPage]] = {
+      var onDeck: Option[Either[OaiError, OaiPage]] = Some(getSinglePage(buildUrl()))
 
-      data.headOption match {
-        case Some(pageEither) =>
-          getResumptionToken(pageEither) match {
-            // If the previous response did not contain a resumption token,
-            // return everything harvested up to this point.
-            case None => data
-            // Otherwise, get the next page response.
-            case Some(token) =>
-              val url: Try[URL] = buildUrl(Some(token))
-              val nextResponse: Either[OaiError, OaiPage] = getSinglePage(url)
-              loop(nextResponse :: data)
+      override def hasNext: Boolean = onDeck.isDefined
+
+      override def next(): Either[OaiError, OaiPage] = onDeck match {
+        case None => Left(OaiError("Called next() on end of iterator.", None))
+        case Some(last) =>
+          val response = last
+          val resumptionToken = getResumptionToken(last)
+          resumptionToken match {
+            case None => onDeck = None
+            case Some(_) => onDeck = Some(getSinglePage(buildUrl(resumptionToken)))
           }
-        // If data is empty, return it.
-        // This is only reached if something really strange happened.
-        case _ => data
+          response
       }
     }
-
-    val url: Try[URL] = buildUrl()
-    val firstResponse: Either[OaiError, OaiPage] = getSinglePage(url)
-    loop(List(firstResponse))
   }
 
   /**
@@ -87,7 +79,6 @@ class OaiMultiPageResponseBuilder(endpoint: String,
     * cannot be present in any request that contains a resumptionToken.
     *
     * @see https://www.openarchives.org/OAI/openarchivesprotocol.html#ProtocolMessages
-    *
     * @param resumptionToken An OAI resumption token
     * @return Try[URL]
     */
@@ -119,7 +110,6 @@ class OaiMultiPageResponseBuilder(endpoint: String,
     * @param pageEither Either[OaiError, OaiPage]
     *                   OaiError a previously incurred error.
     *                   OaiPage a single page OAI response.
-    *
     * @return Option[String]
     *         The resumptionToken to fetch the next page response.
     *         or None if no more records can be fetched.
@@ -128,7 +118,7 @@ class OaiMultiPageResponseBuilder(endpoint: String,
     *         only that no more pages can be fetched.
     */
   def getResumptionToken(pageEither: Either[OaiError, OaiPage]):
-    Option[String] = pageEither match {
+  Option[String] = pageEither match {
 
     // If the pageEither is an error, return None.
     case Left(error) => None
