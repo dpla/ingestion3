@@ -55,7 +55,7 @@ object AvroUtils {
     val datumWriter = new GenericDatumWriter[GenericRecord](schema)
     val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
     dataFileWriter.setCodec(CodecFactory.deflateCodec(1))
-    dataFileWriter.setSyncInterval(1024 * 1024 * 2) //2M
+    dataFileWriter.setSyncInterval(1024 * 100) //100k
     dataFileWriter.create(schema, outputFile)
   }
 }

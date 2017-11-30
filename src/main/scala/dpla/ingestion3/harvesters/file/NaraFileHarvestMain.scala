@@ -72,6 +72,7 @@ object NaraFileHarvestMain {
           val xml = XML.loadString(new String(data))
           val items = handleXML(xml)
           val entryName = tarResult.entryName
+          logger.info(entryName)
 
           val counts = for {
             itemOption <- items
