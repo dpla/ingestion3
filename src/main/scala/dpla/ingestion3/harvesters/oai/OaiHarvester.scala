@@ -30,12 +30,12 @@ class OaiHarvester(shortName: String,
 
     // Run harvest.
     val harvestedData: DataFrame = spark.read
-      .format("dpla.ingestion3.harvesters.oai")
+      .format("dpla.ingestion3.harvesters.oai.refactor")
       .options(readerOptions)
       .load()
 
     // Log errors.
-    harvestedData.select("error.message", "error.errorSource.url")
+    harvestedData.select("error.message", "error.url")
       .where("error is not null")
       .collect
       .foreach(row => harvestLogger.warn(s"OAI harvest error ${row.getString(0)} when fetching ${row.getString(1)}" ))
@@ -49,8 +49,6 @@ class OaiHarvester(shortName: String,
       .withColumn("ingestDate", lit(unixEpoch))
       .withColumn("provider", lit(shortName))
       .withColumn("mimetype", lit(mimeType))
-
-    harvestLogger.info(s"Saving to $outputDir")
 
     // Write harvested data to file.
     finalData

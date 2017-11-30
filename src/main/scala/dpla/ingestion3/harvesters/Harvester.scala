@@ -80,8 +80,9 @@ abstract class Harvester(shortName: String,
         Success(recordCount)
 
       case Failure(f) =>
+
         // Return the failure up to executor
-        // harvestLogger.fatal(s"Unable to harvest records. ${f.getMessage}")
+        harvestLogger.fatal(s"Unable to harvest records. ${f.printStackTrace()}")
         Failure(f)
     }
 
