@@ -34,8 +34,6 @@ class CdlHarvester(shortName: String,
   ).collect{ case (key, Some(value)) => key -> value } // remove None values
 
   override protected def localApiHarvest: Unit = {
-    harvestLogger.info(s"Query params: ${queryParams.toString}")
-
     implicit val formats = DefaultFormats
 
     // Mutable vars for controlling harvest loop
@@ -46,6 +44,7 @@ class CdlHarvester(shortName: String,
     val startTime = System.currentTimeMillis()
 
     while(continueHarvest) getSinglePage(cursorMark) match {
+      // Handle errors
       case error: ApiError with ApiResponse =>
         harvestLogger.error("Error returned by request %s\n%s\n%s".format(
           error.errorSource.url.getOrElse("Undefined url"),
@@ -53,6 +52,7 @@ class CdlHarvester(shortName: String,
           error.message
         ))
         continueHarvest = false
+      // Handle a successful response
       case src: ApiSource with ApiResponse =>
         src.text match {
           case Some(docs) =>
@@ -68,17 +68,19 @@ class CdlHarvester(shortName: String,
             cursorMark = (json \\ "cursorMark").extract[String]
             val nextCursorMark = (json \\ "nextCursorMark").extract[String]
 
-            cursorMark.matches(nextCursorMark) match {
-              case true => continueHarvest = false
-              case false => cursorMark = nextCursorMark
+            if (cursorMark.matches(nextCursorMark)) {
+              continueHarvest = false
+            } else {
+              cursorMark = nextCursorMark
             }
-          case None =>
-            harvestLogger.error(s"The body of the response is empty. Stopping run.\nCdlSource >> ${src.toString}")
+
+          case _ =>
+            harvestLogger.error(s"Response body is empty.\n" +
+              s"URL: ${src.url.getOrElse("!!! URL not set !!!")}\n" +
+              s"Params: ${src.queryParams}\n" +
+              s"Body: ${src.text}")
             continueHarvest = false
         }
-      case _ =>
-        harvestLogger.error("Harvest returned None")
-        continueHarvest = false
     }
   }
 
@@ -91,16 +93,21 @@ class CdlHarvester(shortName: String,
     * @return ApiSource or ApiError
     */
   private def getSinglePage(cursorMark: String): ApiResponse = {
+    val apiKey = queryParams.getOrElse("api_key", "")
+    val headers = Some(Map("X-Authentication-Token" -> apiKey))
     val url = buildUrl(queryParams.updated("cursorMark", cursorMark))
-        HttpUtils.makeGetRequest(url) match {
-          case Failure(e) =>
-            ApiError(e.toString, ApiSource(queryParams, Some(url.toString)))
-          case Success(response) => response.isEmpty match {
-            case true => ApiError("Response body is empty", ApiSource(queryParams, Some(url.toString)))
-            case false => ApiSource(queryParams, Some(url.toString), Some(response))
-          }
-        }
+
+    harvestLogger.info(s"Requesting ${url.toString}")
+
+    HttpUtils.makeGetRequest(url, headers) match {
+      case Failure(e) =>
+        ApiError(e.toString, ApiSource(queryParams, Some(url.toString)))
+      case Success(response) => response.isEmpty match {
+        case true => ApiError("Response body is empty", ApiSource(queryParams, Some(url.toString)))
+        case false => ApiSource(queryParams, Some(url.toString), Some(response))
       }
+    }
+  }
 
   /**
     * Constructs the URL for CDL API requests
@@ -110,13 +117,13 @@ class CdlHarvester(shortName: String,
     */
   override protected def buildUrl(params: Map[String, String]): URL =
     new URIBuilder()
-    .setScheme("https")
-    .setHost("solr.calisphere.org")
-    .setPath("/solr/query")
-    .setParameter("q", queryParams.getOrElse("query", "*:*"))
-    .setParameter("cursorMark", queryParams.getOrElse("cursorMark", "*"))
-    .setParameter("rows", queryParams.getOrElse("rows", "10"))
-    .setParameter("sort", "id desc")
-    .build()
-    .toURL
+      .setScheme("https")
+      .setHost("solr.calisphere.org")
+      .setPath("/solr/query")
+      .setParameter("q", params.getOrElse("query", "*:*"))
+      .setParameter("cursorMark", params.getOrElse("cursorMark", "*"))
+      .setParameter("rows", params.getOrElse("rows", "10"))
+      .setParameter("sort", "id desc")
+      .build()
+      .toURL
 }
