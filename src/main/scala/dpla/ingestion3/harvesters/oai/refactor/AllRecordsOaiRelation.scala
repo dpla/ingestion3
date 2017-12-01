@@ -18,8 +18,8 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiM
   extends OaiRelation {
 
   override def buildScan(): RDD[Row] = {
-    val tempFile = new File("oai.txt") // File.createTempFile("oai", ".txt")
-    // tempFile.deleteOnExit()
+    val tempFile = File.createTempFile("oai", ".txt")
+    tempFile.deleteOnExit()
     cacheTempFile(tempFile)
     tempFileToRdd(tempFile)
   }
@@ -57,8 +57,7 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiM
 
     try {
       for (page <- oaiMethods.listAllRecordPages()) {
-        val pageArr = t(eitherToArray(page): _*)
-        val line = pageArr
+        val line = t(eitherToArray(page): _*)
           .filter(o => o.isInstanceOf[String])
           .map(l => l.toString)
           .toArray
