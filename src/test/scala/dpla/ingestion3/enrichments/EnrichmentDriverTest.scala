@@ -14,29 +14,6 @@ class EnrichmentDriverTest extends FlatSpec with BeforeAndAfter {
 
   val driver = new EnrichmentDriver(i3Conf())
 
-  val mappedRecord = OreAggregation(
-    dataProvider = EdmAgent(),
-    dplaUri = new URI("https://example.org/item/123"), //uri of the record on our site
-    originalRecord = "", //map v4 specifies this as a ref, but that's LDP maybe?
-    provider = EdmAgent(),
-    isShownAt = EdmWebResource(new URI("http://foo.com")),
-    sourceResource = DplaSourceResource(
-      date = Seq(EdmTimeSpan(
-        originalSourceDate = Some("4.3.2015"),
-        prefLabel = None,
-        begin = None,
-        end = None
-      )),
-      language = Seq(SkosConcept(
-        providedLabel = Some("eng"),
-        note = None,
-        scheme = None,
-        exactMatch = Seq(),
-        closeMatch = Seq())
-      )
-    )
-  )
-
   "EnrichmentDriver" should " enrich both language and date" in {
     val expectedValue = MappedRecordsFixture.mappedRecord.copy(sourceResource = DplaSourceResource(
       date = Seq(new EdmTimeSpan(

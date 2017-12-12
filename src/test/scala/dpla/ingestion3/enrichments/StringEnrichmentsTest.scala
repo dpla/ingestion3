@@ -1,103 +1,44 @@
 package dpla.ingestion3.enrichments
 
+import dpla.ingestion3.data.MappedRecordsFixture
+import dpla.ingestion3.model._
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 class StringEnrichmentsTest extends FlatSpec with BeforeAndAfter {
-  val enrichments = new StringEnrichments
 
-  "convertToSentenceCase" should "capitalize the first character in each " +
-    "sentence." in {
-    val originalValue = "this is a sentence about Moomins. this is another about Snorks."
-    val enrichedValue = enrichments.convertToSentenceCase(originalValue)
-    val expectedValue = "This is a sentence about Moomins. This is another about Snorks."
+  val stringEnrichments = new StringEnrichments
 
-    assert(enrichedValue === expectedValue)
+  "enrich" should " reduce duplicate whitespace" in {
+    val originalString = "foo  bar"
+    val expectedString = "foo bar"
+
+    val mappedRecord = MappedRecordsFixture.mappedRecord.copy(
+      sourceResource = DplaSourceResource(title = Seq(originalString))
+    )
+
+    val expectedRecord= MappedRecordsFixture.mappedRecord.copy(
+      sourceResource = DplaSourceResource(title = Seq(expectedString))
+    )
+
+    val enrichedRecord = stringEnrichments.enrich(mappedRecord)
+
+    assert(enrichedRecord === expectedRecord)
   }
 
-  "splitAtSemiColons" should "split a string around semi-colon" in {
-    val originalValue = "subject-one; subject-two; subject-three"
-    val enrichedValue = enrichments.splitAtSemicolons(originalValue)
-    val expectedValue = Array("subject-one", "subject-two", "subject-three")
+  "enrich" should " remove HTML markup" in {
+    val expectedString = "foo bar baz buzz"
+    val originalString = f"<p>$expectedString%s</p>"
 
-    assert(enrichedValue === expectedValue)
+    val mappedRecord = MappedRecordsFixture.mappedRecord.copy(
+      sourceResource = DplaSourceResource(title = Seq(originalString))
+    )
+
+    val expectedRecord= MappedRecordsFixture.mappedRecord.copy(
+      sourceResource = DplaSourceResource(title = Seq(expectedString))
+    )
+
+    val enrichedRecord = stringEnrichments.enrich(mappedRecord)
+
+    assert(enrichedRecord === expectedRecord)
   }
-
-  "splitAtDelimiter" should "split a string around comma." in {
-    val originalValue = "subject-one, subject-two; subject-three"
-    val enrichedValue = enrichments.splitAtDelimiter(originalValue, ",")
-    val expectedValue = Array("subject-one", "subject-two; subject-three")
-
-    assert(enrichedValue === expectedValue)
-  }
-
-  "stripHMTL" should "remove html from a string" in {
-    val expectedValue = "foo bar baz buzz"
-    val originalValue = f"<p>$expectedValue%s</p>"
-    val enrichedValue = enrichments.stripHTML(originalValue)
-    assert(enrichedValue === expectedValue)
-  }
-
-  it should "handle strings with unbalanced and invalid html" in {
-    val expectedValue = "foo bar baz buzz"
-    val originalValue = f"<p>$expectedValue%s</i><html>"
-    val enrichedValue = enrichments.stripHTML(originalValue)
-    assert(enrichedValue === expectedValue)
-  }
-
-  it should "passthrough strings that do not contain html" in {
-    val expectedValue = "foo bar baz buzz"
-    val originalValue = expectedValue
-    val enrichedValue = enrichments.stripHTML(originalValue)
-    assert(enrichedValue === expectedValue)
-  }
-
-  it should "not emit HTML entities" in {
-    val expectedValue = "foo bar baz > buzz"
-    val originalValue = expectedValue
-    val enrichedValue = enrichments.stripHTML(originalValue)
-    assert(enrichedValue === expectedValue)
-  }
-
-  it should "not turn html entities into html" in {
-    val originalValue = "foo bar baz &lt;p&gt; buzz"
-    val expectedValue = "foo bar baz  buzz"
-    val enrichedValue = enrichments.stripHTML(originalValue)
-    assert(enrichedValue === expectedValue)
-  }
-
-  "stripPunctuation" should "strip all punctuation from the given string" in {
-    val originalValue = "\t\"It's @#$,.! OK\"\n"
-    val enrichedValue = enrichments.stripPunctuation(originalValue)
-    val expectedValue = "\t\"It's  OK\"\n"
-    assert(enrichedValue === expectedValue)
-  }
-
-  "stripLeadingPunctuation" should "strip leading punctuation from the " +
-      "given string" in {
-    val originalValue = "@#$,.!\t \"It's OK\""
-    val enrichedValue = enrichments.stripPunctuation(originalValue)
-    val expectedValue = "\t \"It's OK\""
-    assert(enrichedValue === expectedValue)
-  }
-
-  "stripEndingPunctuation" should "strip ending punctuation from the " +
-    "given string" in {
-    val originalValue = "\"It's OK\" @#$,.!"
-    val enrichedValue = enrichments.stripPunctuation(originalValue)
-    val expectedValue = "\"It's OK\" "
-    assert(enrichedValue === expectedValue)
-  }
-
-  "limitCharacters" should "limit the number of characters in long strings" in {
-    val longString = "Now is the time for all good people to come to the aid of the party."
-    val enrichedValue = enrichments.limitCharacters(longString, 10)
-    assert(enrichedValue.length === 10)
-  }
-
-  it should "not limit strings shorter or equal to the limit" in {
-    val shortString = "Now is the time"
-    val enrichedValue = enrichments.limitCharacters(shortString, shortString.length)
-    assert(enrichedValue.length === shortString.length)
-  }
-
 }

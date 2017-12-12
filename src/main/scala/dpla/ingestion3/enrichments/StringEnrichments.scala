@@ -1,68 +1,105 @@
 package dpla.ingestion3.enrichments
 
-import org.apache.commons.lang.StringEscapeUtils
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document.OutputSettings
-import org.jsoup.nodes.Entities.EscapeMode
-import org.jsoup.safety.Whitelist
-
-import scala.util.matching.Regex
+import dpla.ingestion3.model._
+import dpla.ingestion3.enrichments.StringUtils._
+import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 
 /**
-  * String enrichments
+  * Universal String enrichments.
   *
   */
 class StringEnrichments {
 
-  type SingleStringEnrichment = (String) => String
-  type MultiStringEnrichment = (String) => Array[String]
-
   /**
-    * Accepts a String value and splits it around periods. Strips
-    * trailing and leading whitespace from those "sentences" and
-    * capitalizes the first character of each sentence leaving all
-    * other characters alone.
+    * Main entry point.
     *
-    * We do not assume that all upper case characters should be
-    * downcased.
-    *
+    * @param record OreAggregation
+    * @return enriched OreAggregation
     */
-  val convertToSentenceCase: SingleStringEnrichment = (value) => {
-    val pattern: Regex = """.*?(\.)""".r
-    val sentences = for( t <- pattern findAllIn value) yield t.trim.capitalize
-    // rejoin the sentences and add back the whitespace that was trimmed off
-    sentences.mkString(" ")
+  def enrich(record: OreAggregation): OreAggregation = {
+    record.copy(
+      sourceResource = enrichSourceResource(record.sourceResource),
+      dataProvider = enrichEdmAgent(record.dataProvider),
+      hasView = record.hasView.map(enrichEdmWebResource(_)),
+      intermediateProvider = record.intermediateProvider.map(enrichEdmAgent(_)),
+      isShownAt = enrichEdmWebResource(record.isShownAt),
+      `object` = record.`object`.map(enrichEdmWebResource(_)),
+      preview = record.preview.map(enrichEdmWebResource(_)),
+      provider = enrichEdmAgent(record.provider)
+    )
   }
 
-  val limitCharacters: (String, Int) => (String) = (value, length) => {
-    if (value.length > length) value.substring(0, length)
-    else value
-  }
+  def enrichSourceResource(sourceResource: DplaSourceResource): DplaSourceResource =
+    sourceResource.copy(
+      alternateTitle = sourceResource.alternateTitle.map(_.stripHTML.reduceWhitespace),
+      collection = sourceResource.collection.map(enrichDcmiTypeCollection(_)),
+      contributor = sourceResource.contributor.map(enrichEdmAgent(_)),
+      creator = sourceResource.creator.map(enrichEdmAgent(_)),
+      date = sourceResource.date.map(enrichEdmTimeSpan(_)),
+      description = sourceResource.description.map(_.stripHTML.reduceWhitespace),
+      extent = sourceResource.extent.map(_.stripHTML.reduceWhitespace),
+      format = sourceResource.format.map(_.stripHTML.reduceWhitespace),
+      genre = sourceResource.genre.map(enrichSkosConcept(_)),
+      identifier = sourceResource.identifier.map(_.stripHTML.reduceWhitespace),
+      language = sourceResource.language.map(enrichSkosConcept(_)),
+      place = sourceResource.place.map(enrichDplaPlace(_)),
+      publisher = sourceResource.publisher.map(enrichEdmAgent(_)),
+      relation = sourceResource.relation.map(enrichRelation(_)),
+      replacedBy = sourceResource.replacedBy.map(_.stripHTML.reduceWhitespace),
+      replaces = sourceResource.replaces.map(_.stripHTML.reduceWhitespace),
+      rights = sourceResource.rights.map(_.stripHTML.reduceWhitespace),
+      rightsHolder = sourceResource.rightsHolder.map(enrichEdmAgent(_)),
+      subject = sourceResource.subject.map(enrichSkosConcept(_)),
+      temporal = sourceResource.temporal.map(enrichEdmTimeSpan(_)),
+      title = sourceResource.title.map(_.stripHTML.reduceWhitespace),
+      `type` = sourceResource.`type`.map(_.stripHTML.reduceWhitespace)
+    )
 
-  /**
-    * Splits a String value around a given delimiter.
-    */
-  val splitAtDelimiter: (String, String) => Array[String] = (value, delimiter) => {
-    value.split(delimiter).map(_.trim)
-  }
+  def enrichEdmAgent(edmAgent: EdmAgent): EdmAgent =
+    edmAgent.copy(
+      name = edmAgent.name.map(_.stripHTML.reduceWhitespace)
+    )
 
-  val splitAtSemicolons: MultiStringEnrichment = splitAtDelimiter(_, ";")
+  def enrichEdmWebResource(edmWebResource: EdmWebResource): EdmWebResource =
+    edmWebResource.copy(
+      fileFormat = edmWebResource.fileFormat.map(_.stripHTML.reduceWhitespace),
+      dcRights = edmWebResource.dcRights.map(_.stripHTML.reduceWhitespace),
+      edmRights = edmWebResource.edmRights.map(_.stripHTML.reduceWhitespace)
+    )
 
-  val stripEndingPunctuation: SingleStringEnrichment = (value) => {
-    value.replace("""[^\w\'\"\s]+$""", "")
-  }
+  def enrichSkosConcept(skosConcept: SkosConcept): SkosConcept =
+    skosConcept.copy(
+      concept = skosConcept.concept.map(_.stripHTML.reduceWhitespace)
+    )
 
-  val stripHTML: SingleStringEnrichment = (value) => {
-    val unescaped = StringEscapeUtils.unescapeHtml(value)
-    val cleaned = Jsoup.clean(unescaped, "", Whitelist.none(), new OutputSettings().escapeMode(EscapeMode.xhtml))
-    StringEscapeUtils.unescapeHtml(cleaned)
-  }
+  def enrichEdmTimeSpan(edmTimeSpan: EdmTimeSpan): EdmTimeSpan =
+    edmTimeSpan.copy(
+      prefLabel = edmTimeSpan.prefLabel.map(_.stripHTML.reduceWhitespace),
+      begin = edmTimeSpan.begin.map(_.stripHTML.reduceWhitespace),
+      end = edmTimeSpan.end.map(_.stripHTML.reduceWhitespace)
+    )
 
-  val stripLeadingPunctuation: SingleStringEnrichment = (value) => {
-    value.replace("""^[^\w\'\"\s]+""", "")
-  }
+  def enrichDplaPlace(dplaPlace: DplaPlace): DplaPlace =
+    dplaPlace.copy(
+      name = dplaPlace.name.map(_.stripHTML.reduceWhitespace),
+      city = dplaPlace.city.map(_.stripHTML.reduceWhitespace),
+      county = dplaPlace.county.map(_.stripHTML.reduceWhitespace),
+      state = dplaPlace.state.map(_.stripHTML.reduceWhitespace),
+      country = dplaPlace.country.map(_.stripHTML.reduceWhitespace),
+      region = dplaPlace.region.map(_.stripHTML.reduceWhitespace),
+      coordinates = dplaPlace.coordinates.map(_.stripHTML.reduceWhitespace)
+    )
 
-  val stripPunctuation: SingleStringEnrichment = (value) => {
-    value.replaceAll("""[^\w\'\"\s]""", "")
+  def enrichDcmiTypeCollection(collection: DcmiTypeCollection): DcmiTypeCollection =
+    collection.copy(
+      title = collection.title.map(_.stripHTML.reduceWhitespace),
+      description = collection.description.map(_.stripHTML.reduceWhitespace)
+    )
+
+  def enrichRelation(relation: LiteralOrUri): LiteralOrUri = {
+    if (relation.isInstanceOf[String])
+      relation.toString.stripHTML.reduceWhitespace.asInstanceOf[LiteralOrUri]
+    else
+      relation
   }
 }
