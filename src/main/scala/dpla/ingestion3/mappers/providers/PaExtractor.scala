@@ -95,7 +95,8 @@ class PaExtractor(rawData: String, shortName: String) extends Extractor with Xml
     if (contributors.nonEmpty)
       nameOnlyAgent(contributors.last)
     else
-      throw new Exception("Missing required property dataProvider because dc:contributor is empty")
+      throw new Exception(s"Missing required property dataProvider because " +
+        s"dc:contributor is empty for ${getProviderId()}")
   }
 
   def isUrl(url: String): Boolean = Try {new URL(url) }.isSuccess
