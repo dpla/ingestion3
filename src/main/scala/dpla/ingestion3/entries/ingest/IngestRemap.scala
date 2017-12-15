@@ -63,10 +63,10 @@ object IngestRemap {
 
     // Json-l
     logger.info(s"Saving JSON-L output to: $jsonlDataOut")
-    executeJsonL(sparkConf, mapDataOut, jsonlDataOut, logger)
+    executeJsonL(sparkConf, enrichDataOut, jsonlDataOut, logger)
 
     // Reports
-//    executeAllReports(sparkConf, mapDataOut, baseRptOut, logger)
+    executeAllReports(sparkConf, enrichDataOut, baseRptOut, logger)
 
     logger.info("Ingest remapping complete")
   }
