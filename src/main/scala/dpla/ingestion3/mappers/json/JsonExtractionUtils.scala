@@ -48,10 +48,10 @@ trait JsonExtractionUtils {
     *
     */
   def extractStrings(jValue: JValue): Seq[String] = jValue match {
-    case JArray(array) => array.flatMap(entry => extractString(entry)).distinct
-    case JObject(fields) => fields.flatMap({case (_, value) => extractString(value)}).distinct
+    case JArray(array) => array.flatMap(entry => extractString(entry))
+    case JObject(fields) => fields.flatMap({case (_, value) => extractString(value)})
     case _ => extractString(jValue) match {
-      case Some(stringValue) => Seq(stringValue).distinct
+      case Some(stringValue) => Seq(stringValue)
       case None => Seq()
     }
   }
