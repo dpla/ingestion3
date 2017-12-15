@@ -2,6 +2,7 @@ package dpla.ingestion3.enrichments
 
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.model._
+import dpla.ingestion3.enrichments.StandardEnrichmentUtils._
 
 import scala.util.Try
 
@@ -18,7 +19,6 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
     override def port = conf.twofishes.port.getOrElse("8081")
   }
 
-  val stringEnrichment = new StringEnrichments()
   val dateEnrichment = new ParseDateEnrichment()
   val spatialEnrichment = new SpatialEnrichment(Geocoder)
   val langEnrichment = LanguageMapper
@@ -34,11 +34,17 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
     * @return An enriched record
     */
   def enrich(record: OreAggregation): Try[OreAggregation] = Try {
-    record.copy(
+
+    val enriched = record
+      .deDuplicate
+      .standardStringEnrichments
+
+    enriched.copy(
       sourceResource = record.sourceResource.copy(
         date = record.sourceResource.date.map(d => dateEnrichment.parse(d)),
         language = record.sourceResource.language.map(l => LanguageMapper.mapLanguage(l)),
         place = record.sourceResource.place.map(p => spatialEnrichment.enrich(p))
       ))
   }
+
 }
