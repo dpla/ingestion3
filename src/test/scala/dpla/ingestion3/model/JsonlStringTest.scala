@@ -37,7 +37,7 @@ class JsonlStringTest extends FlatSpec {
     val collection = jvalue \ "_source" \ "sourceResource" \ "collection"
     assert(collection.isInstanceOf[JArray])
     assert(
-      compact(render(collection(0))) == "{\"title\":\"The Collection\"}"
+      compact(render(collection(0))) == "{\"title\":\"The Collection\",\"description\":\"The Archives of Some Department, U. of X\"}"
     )
   }
 

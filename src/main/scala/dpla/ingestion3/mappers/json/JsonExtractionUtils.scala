@@ -71,4 +71,18 @@ trait JsonExtractionUtils {
     case _ => None
   }
 
+
+  /**
+    * Wraps the JValue in JArray if it is not already a JArray
+    * Addresses the problem of inconsistent data types in value field.
+    * e.g. '"prop": ["val1"]' vs '"prop": "val1"'
+    *
+    * @param jvalue
+    * @return
+    */
+  def iterify(jvalue: JValue): JArray = jvalue match {
+    case JArray(j) => JArray(j)
+    case JNothing => JArray(List())
+    case _ => JArray(List(jvalue))
+  }
 }

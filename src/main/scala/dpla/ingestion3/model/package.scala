@@ -101,7 +101,10 @@ package object model {
           ("@id" ->
             (record.dplaUri.toString + "#SourceResource")) ~
           ("collection" ->
-            record.sourceResource.collection.map {c => "title" -> c.title}) ~
+            record.sourceResource.collection.map {c =>
+              ("title" -> c.title) ~
+              ("description" -> c.description)
+            }) ~
           ("contributor" -> record.sourceResource.contributor.map{c => c.name}) ~
           ("creator" -> record.sourceResource.creator.map{c => c.name}) ~
           ("date" ->
@@ -116,9 +119,10 @@ package object model {
           ("identifier" -> record.sourceResource.identifier) ~
           ("language" ->
             record.sourceResource.language.map { lang =>
-              "name" -> lang.concept.getOrElse(
-                          lang.providedLabel.getOrElse(""))
-               // FIXME what other SkosConcept fields do we need in the index for language?
+              ("name" -> lang.concept.getOrElse(
+                          lang.providedLabel.getOrElse(""))) ~
+              ("iso639_3" -> lang.providedLabel.getOrElse(""))
+              // FIXME what other SkosConcept fields do we need in the index for language?
             }) ~
           ("publisher" -> record.sourceResource.publisher.map{p => p.name}) ~
           ("relation" ->
