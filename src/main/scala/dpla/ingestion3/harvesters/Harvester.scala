@@ -66,22 +66,29 @@ abstract class Harvester(shortName: String,
     val startTime = System.currentTimeMillis()
 
     // Call local implementation.
-    runHarvest match {
+    val harvestResult = runHarvest match {
 
       case Success(df) =>
         // Log details about the successful harvest.
         val endTime = System.currentTimeMillis()
+        val recordCount = df.count()
+
         harvestLogger.info(s"Records saving to $outputDir")
-        harvestLogger.info(Utils.summarizeResults(endTime-startTime, df.count()))
+        harvestLogger.info(Utils.harvestSummary(endTime-startTime, recordCount))
         validateSchema(df)
 
+        Success(recordCount)
+
       case Failure(f) =>
-        // Log the failure.
-        harvestLogger.fatal(s"Unable to harvest records. ${f.getMessage}")
+        // Return the failure up to executor
+        // harvestLogger.fatal(s"Unable to harvest records. ${f.getMessage}")
+        Failure(f)
     }
 
     // Shut down spark session.
     sc.stop()
+
+    harvestResult
   }
 
   protected lazy val outputFile = new File(outputDir)

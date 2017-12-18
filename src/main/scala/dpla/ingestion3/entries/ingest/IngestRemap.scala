@@ -1,13 +1,10 @@
 package dpla.ingestion3.entries.ingest
 
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
-import dpla.ingestion3.entries.ingest.EnrichEntry.executeEnrichment
-import dpla.ingestion3.entries.ingest.JsonlEntry.executeJsonL
-import dpla.ingestion3.entries.ingest.MappingEntry.executeMapping
 import dpla.ingestion3.entries.reports.ReporterMain.executeAllReports
+import dpla.ingestion3.executors.{MappingExecutor, JsonlExecutor, EnrichExecutor}
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
-
 /**
   * Single entry point to run harvest, mapping, enrichment, indexing jobs and all reports.
   * Support running against an already harvested data set and running a fresh harvest
@@ -18,7 +15,9 @@ import org.apache.spark.SparkConf
   *   3)  --conf    A path to the application configuration file
   *   4)  --name    Provider short name
   */
-object IngestRemap {
+object IngestRemap extends MappingExecutor
+  with JsonlExecutor
+  with EnrichExecutor {
 
   def main(args: Array[String]): Unit = {
 
@@ -55,7 +54,7 @@ object IngestRemap {
     // TODO These processes should return some flag or metric to help determine whether to proceed
     // Mapping
     logger.info(s"Saving mapping output to: $mapDataOut")
-     executeMapping(sparkConf, harvestDataOut, mapDataOut, shortName, logger)
+    executeMapping(sparkConf, harvestDataOut, mapDataOut, shortName, logger)
 
     // Enrichment
     logger.info(s"Saving enrichment output to: $enrichDataOut")
@@ -63,7 +62,7 @@ object IngestRemap {
 
     // Json-l
     logger.info(s"Saving JSON-L output to: $jsonlDataOut")
-    executeJsonL(sparkConf, enrichDataOut, jsonlDataOut, logger)
+    executeJsonl(sparkConf, enrichDataOut, jsonlDataOut, logger)
 
     // Reports
     executeAllReports(sparkConf, enrichDataOut, baseRptOut, logger)
