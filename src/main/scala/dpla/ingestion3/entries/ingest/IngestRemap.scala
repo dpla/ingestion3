@@ -1,8 +1,7 @@
 package dpla.ingestion3.entries.ingest
 
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
-import dpla.ingestion3.entries.reports.ReporterMain.executeAllReports
-import dpla.ingestion3.executors.{MappingExecutor, JsonlExecutor, EnrichExecutor}
+import dpla.ingestion3.executors.{EnrichExecutor, JsonlExecutor, MappingExecutor}
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
 /**
@@ -56,16 +55,17 @@ object IngestRemap extends MappingExecutor
     logger.info(s"Saving mapping output to: $mapDataOut")
     executeMapping(sparkConf, harvestDataOut, mapDataOut, shortName, logger)
 
-    // Enrichment
-    logger.info(s"Saving enrichment output to: $enrichDataOut")
-    executeEnrichment(sparkConf, mapDataOut, enrichDataOut, shortName, logger, conf)
+//    // Enrichment
+//    logger.info(s"Saving enrichment output to: $enrichDataOut")
+//    executeEnrichment(sparkConf, mapDataOut, enrichDataOut, shortName, logger, conf)
 
     // Json-l
     logger.info(s"Saving JSON-L output to: $jsonlDataOut")
-    executeJsonl(sparkConf, enrichDataOut, jsonlDataOut, logger)
+//    executeJsonl(sparkConf, enrichDataOut, jsonlDataOut, logger)
+    executeJsonl(sparkConf, mapDataOut, jsonlDataOut, logger)
 
     // Reports
-    executeAllReports(sparkConf, enrichDataOut, baseRptOut, logger)
+//    executeAllReports(sparkConf, mapDataOut, baseRptOut, logger)
 
     logger.info("Ingest remapping complete")
   }
