@@ -17,7 +17,7 @@ import org.apache.spark.util.LongAccumulator
 
 import scala.util.{Failure, Success, Try}
 
-trait EnrichExecutor {
+trait EnrichExecutor extends Serializable {
 
   /**
     * Execute the enrichments
