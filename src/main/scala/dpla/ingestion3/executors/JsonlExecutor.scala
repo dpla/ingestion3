@@ -8,7 +8,7 @@ import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{Dataset, SparkSession}
 
-trait JsonlExecutor {
+trait JsonlExecutor extends Serializable {
 
   /**
     * Generate JSON-L files from AVRO file

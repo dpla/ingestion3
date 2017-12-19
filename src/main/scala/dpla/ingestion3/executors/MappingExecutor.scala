@@ -16,7 +16,7 @@ import org.apache.spark.util.LongAccumulator
 
 import scala.util.{Failure, Success}
 
-trait MappingExecutor {
+trait MappingExecutor extends Serializable {
 
   /**
     * Performs the mapping for the given provider
