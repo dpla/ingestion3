@@ -10,7 +10,8 @@ import dpla.ingestion3.confs.i3Conf
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
 
 import scala.util.Try
-import scala.xml.Node
+import scala.xml.NodeSeq
+
 
 
 object Utils {
@@ -83,9 +84,9 @@ object Utils {
     * @param xml An XML node
     * @return Formatted String representation of the node
     */
-  def formatXml(xml: Node): String ={
+  def formatXml(xml: NodeSeq): String ={
     val prettyPrinter = new scala.xml.PrettyPrinter(80, 2)
-    prettyPrinter.format(xml).toString
+    prettyPrinter.format(xml.head).toString
   }
 
   /**

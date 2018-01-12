@@ -1,37 +1,18 @@
-<<<<<<< HEAD
-package dpla.ingestion3.mappers.providers
+package dpla.ingestion3.mappers
 
-import java.io
 import java.net.URI
 
-import dpla.ingestion3.model.{EdmAgent, OreAggregation}
+import dpla.ingestion3.model.EdmAgent
 import org.apache.commons.codec.digest.DigestUtils
 
 import scala.util.{Failure, Success, Try}
 
-/**
-  * Interface that all provider extractors implement.
-  */
+trait MappingRules[T] {
 
-trait Extractor {
   // Base item uri
   private val baseDplaItemUri = "http://dp.la/api/items/"
 
-  def build(): Try[OreAggregation]
   def agent: EdmAgent
-
-  /**
-    *
-    * @param stringUri
-    * @return
-    */
-  def createUri(stringUri: String): URI = {
-    Try { new URI(stringUri) } match {
-      case Success(uri) => uri
-      case Failure(_) => throw new RuntimeException(s"Invalid URI $stringUri in ${getProviderId()} ")
-    }
-  }
-
 
   /**
     * Does the provider use a prefix (typically their provider abbreviation) to
@@ -48,8 +29,7 @@ trait Extractor {
     * @return String Record identifier
     * @throws Exception If ID can not be extracted
     */
-  @throws(classOf[ExtractorException])
-  def getProviderId(): String
+  def getProviderId()(implicit data: T): String
 
   /**
     * The value to salt the identifier with. Not all providers
@@ -72,7 +52,7 @@ trait Extractor {
     *
     * @return String
     */
-  def buildProviderBaseId(): String = {
+  def buildProviderBaseId()(implicit data: T): String = {
     def idErrorMsg(): String = {
       s"Unable to mint ID given values of:\n" +
         s"useProviderName: ${useProviderName()}\n" +
@@ -88,7 +68,7 @@ trait Extractor {
       }
     } match {
       case Success(id) => id
-      case Failure(_) => throw ExtractorException(idErrorMsg())
+      case Failure(_) => throw new RuntimeException(idErrorMsg())
     }
 
   }
@@ -102,36 +82,13 @@ trait Extractor {
     *
     * @return String MD5 hash of the base ID
     */
-  protected def mintDplaId(): String = DigestUtils.md5Hex(buildProviderBaseId())
+  protected def mintDplaId()(implicit data: T): String = DigestUtils.md5Hex(buildProviderBaseId())
 
   /**
     * Builds the item URI
     *
     * @return URI
     */
-  protected def mintDplaItemUri(): URI = new URI(s"$baseDplaItemUri${mintDplaId()}")
-}
+  protected def mintDplaItemUri()(implicit data: T): URI = new URI(s"$baseDplaItemUri${mintDplaId()}")
 
-case class ExtractorException(message: String) extends Exception(message)
-=======
-//package dpla.ingestion3.mappers.providers
-//
-//import java.net.URI
-//
-//import dpla.ingestion3.model.{EdmAgent, OreAggregation}
-//import org.apache.commons.codec.digest.DigestUtils
-//
-//import scala.util.{Failure, Success, Try}
-//
-///**
-//  * Interface that all provider extractors implement.
-//  */
-//
-//trait Extractor {
-//
-//  def build(): Try[OreAggregation]
-//
-//}
-//
-//case class ExtractorException(message: String) extends Exception(message)
->>>>>>> DO NOT MERGE
+}
