@@ -53,6 +53,14 @@ trait IdMinter[T] {
     * @return String
     */
   protected def buildProviderBaseId()(implicit data: T): String = {
+
+    def idErrorMsg(): String = {
+      s"Unable to mint ID given values of:\n" +
+        s"useProviderName: $useProviderName\n" +
+        s"getProviderName: $getProviderName\n" +
+        s"getProviderId: $getProviderId\n"
+    }
+
     Try {
       if (useProviderName) {
         s"$getProviderName--$getProviderId"
@@ -82,17 +90,4 @@ trait IdMinter[T] {
     * @return URI
     */
   protected def mintDplaItemUri()(implicit data: T): URI = new URI(s"$baseDplaItemUri${mintDplaId()}")
-
-  /**
-    * Error message
-    *
-    * @return Formatted error message
-    */
-  def idErrorMsg(): String = {
-    s"Unable to mint ID given values of:\n" +
-      s"useProviderName: $useProviderName\n" +
-      s"getProviderName: $getProviderName\n" +
-      s"getProviderId: $getProviderId\n"
-  }
-
 }
