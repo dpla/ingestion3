@@ -1,28 +1,29 @@
 package dpla.ingestion3.mappers.providers
 
-import java.net.{URI, URL}
+import java.net.URI
 
 import dpla.ingestion3.mappers.ExtractionUtils.XmlExtractionUtils._
-import dpla.ingestion3.mappers.{ExtractionMapper, MappingRules}
+import dpla.ingestion3.mappers.{ExtractionMapper, IdMinter}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
-import scala.util.Try
 import scala.xml.NodeSeq
 
-class PaExtractor(shortName: String) extends MappingRules[NodeSeq] with ExtractionMapper[NodeSeq] {
+// TODO Fixup how shortname is passed down into Extractor
+class PaExtractor(shortName: String) extends IdMinter[NodeSeq] with ExtractionMapper[NodeSeq] {
 
-  // ID minting functions
-  override def useProviderName(): Boolean = false
+  // Implementation of IdMinter trait methods
+  override def useProviderName: Boolean = false
 
-  override def getProviderName(): String = shortName
+  override def getProviderName: String = shortName
 
-  override def getProviderId()(implicit data: NodeSeq): String =
+  override def getProviderId(implicit data: NodeSeq): String =
     extractString(data \ "header" \ "identifier")
     .getOrElse[String](throw new RuntimeException(s"No ID for record $data"))
+
 
   // SourceResource mapping
   override def collection(data: NodeSeq): Seq[DcmiTypeCollection] =
@@ -62,7 +63,7 @@ class PaExtractor(shortName: String) extends MappingRules[NodeSeq] with Extracti
     extractStrings(data \ "metadata" \\ "relation").drop(1).map(eitherStringOrUri)
 
   override def rights(data: NodeSeq): Seq[String] =
-    extractStrings(data \ "metadata" \\ "rights").filter(r => !isUrl(r))
+    extractStrings(data \ "metadata" \\ "rights").filter(r => !Utils.isUrl(r))
 
   override def subject(data: NodeSeq): Seq[SkosConcept] =
     extractStrings(data \ "metadata" \\ "subject").map(nameOnlyConcept)
@@ -82,14 +83,14 @@ class PaExtractor(shortName: String) extends MappingRules[NodeSeq] with Extracti
       nameOnlyAgent(contributors.last)
     else
       throw new Exception(s"Missing required property dataProvider because " +
-        s"dc:contributor is empty for ${getProviderId()(data)}")
+        s"dc:contributor is empty for ${getProviderId(data)}")
   }
 
   override def edmRights(data: NodeSeq): ZeroToOne[URI] =
-    extractStrings(data \ "metadata" \\ "rights").find(r => isUrl(r)).map(new URI(_))
+    extractStrings(data \ "metadata" \\ "rights").find(r => Utils.isUrl(r)).map(new URI(_))
 
   override def isShownAt(data: NodeSeq) =
-    EdmWebResource(uri = itemUri()(data), fileFormat = extractStrings("dc:format")(data))
+    EdmWebResource(uri = itemUri(data), fileFormat = extractStrings("dc:format")(data))
 
   override def originalRecord(data: NodeSeq): ExactlyOne[String] = Utils.formatXml(data)
 
@@ -98,18 +99,8 @@ class PaExtractor(shortName: String) extends MappingRules[NodeSeq] with Extracti
     uri = Some(new URI("http://dp.la/api/contributor/pa"))
   )
 
-  // TODO Figure out Jvalue/sidecar
   override def sidecar(data: NodeSeq): JValue =
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId()(data) )
-
-  // Helper methods
-  /**
-    *
-    * @param url
-    * @return
-    */
-  // TODO Move this to Utils?
-  def isUrl(url: String): Boolean = Try {new URL(url) }.isSuccess
 
   /**
     * Extracts the external link to the object from the second occurrence
@@ -118,33 +109,11 @@ class PaExtractor(shortName: String) extends MappingRules[NodeSeq] with Extracti
     * @return URI
     * @throws Exception If dc:identifier does not occur twice
     */
-  def itemUri()(implicit data: NodeSeq): ExactlyOne[URI] = {
+  def itemUri(implicit data: NodeSeq): ExactlyOne[URI] = {
     val ids = extractStrings(data \ "metadata" \\ "identifier")
     if (ids.size >= 2)
       new URI(ids(1))
     else
-      throw new Exception(s"dc:identifier does not occur at least twice for: ${getProviderId()}")
+      throw new Exception(s"dc:identifier does not occur at least twice for: $getProviderId")
   }
-
-  override def hasView(data: NodeSeq) = ???
-
-  override def intermediateProvider(data: NodeSeq) = ???
-
-  override def `object`(data: NodeSeq) = ???
-
-  override def preview(data: NodeSeq) = ???
-
-  override def alternateTitle(data: NodeSeq) = ???
-
-  override def extent(data: NodeSeq) = ???
-
-  override def replacedBy(data: NodeSeq) = ???
-
-  override def replaces(data: NodeSeq) = ???
-
-  override def rightsHolder(data: NodeSeq) = ???
-
-  override def temporal(data: NodeSeq) = ???
-
-  override def agent: EdmAgent = ???
 }

@@ -111,8 +111,6 @@ object Utils {
   }
 
   // TODO These *Summary methods should be refactored and normalized when we fixup logging
-
-
   /**
     * Print the results of an activity
     *
