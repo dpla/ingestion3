@@ -1,6 +1,7 @@
 package dpla.ingestion3.utils
 
 import java.io.{File, PrintWriter}
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
@@ -8,6 +9,7 @@ import java.util.concurrent.TimeUnit
 import dpla.ingestion3.confs.i3Conf
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
 
+import scala.util.Try
 import scala.xml.NodeSeq
 
 
@@ -107,9 +109,17 @@ object Utils {
       true)
   }
 
+  /**
+    * Attempts to create a URL object from the string value. If successful
+    * returns True, False otherwise
+    *
+    * @param url String URL
+    * @return Boolean
+    */
+  def isUrl(url: String): Boolean = Try {new URL(url) }.isSuccess
+
+
   // TODO These *Summary methods should be refactored and normalized when we fixup logging
-
-
   /**
     * Print the results of an activity
     *

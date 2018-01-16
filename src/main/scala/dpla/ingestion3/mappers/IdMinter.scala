@@ -2,17 +2,14 @@ package dpla.ingestion3.mappers
 
 import java.net.URI
 
-import dpla.ingestion3.model.EdmAgent
 import org.apache.commons.codec.digest.DigestUtils
 
 import scala.util.{Failure, Success, Try}
 
-trait MappingRules[T] {
+trait IdMinter[T] {
 
   // Base item uri
   private val baseDplaItemUri = "http://dp.la/api/items/"
-
-  def agent: EdmAgent
 
   /**
     * Does the provider use a prefix (typically their provider abbreviation) to
@@ -20,7 +17,7 @@ trait MappingRules[T] {
     *
     * @return Boolean
     */
-  def useProviderName(): Boolean
+  def useProviderName: Boolean
 
   /**
     * Extract the record's "persistent" identifier. Implementations should raise
@@ -29,14 +26,14 @@ trait MappingRules[T] {
     * @return String Record identifier
     * @throws Exception If ID can not be extracted
     */
-  def getProviderId()(implicit data: T): String
+  def getProviderId(implicit data: T): String
 
   /**
     * The value to salt the identifier with. Not all providers
     * use this. If not, an empty string should be used
     * @return
     */
-  def getProviderName(): String
+  def getProviderName: String
 
   /**
     * Builds the ID to be hashed by either concatenating the provider's
@@ -55,16 +52,16 @@ trait MappingRules[T] {
   def buildProviderBaseId()(implicit data: T): String = {
     def idErrorMsg(): String = {
       s"Unable to mint ID given values of:\n" +
-        s"useProviderName: ${useProviderName()}\n" +
-        s"getProviderName: ${getProviderName()}\n" +
-        s"getProviderId: ${getProviderId()}\n"
+        s"useProviderName: $useProviderName\n" +
+        s"getProviderName: $getProviderName\n" +
+        s"getProviderId: $getProviderId\n"
     }
     Try {
-      useProviderName() match {
+      useProviderName match {
         // use prefix of provider short name
-        case true => s"${getProviderName()}--${getProviderId()}"
+        case true => s"$getProviderName--$getProviderId"
         // do not use prefix
-        case false => getProviderId()
+        case false => getProviderId
       }
     } match {
       case Success(id) => id
