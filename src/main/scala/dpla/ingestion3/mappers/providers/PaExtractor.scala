@@ -15,7 +15,7 @@ import scala.xml.NodeSeq
 // TODO Fixup how shortname is passed down into Extractor
 class PaExtractor(shortName: String) extends IdMinter[NodeSeq] with ExtractionMapper[NodeSeq] {
 
-  // Implementation of IdMinter trait methods
+  // IdMinter methods
   override def useProviderName: Boolean = false
 
   override def getProviderName: String = shortName
@@ -74,6 +74,7 @@ class PaExtractor(shortName: String) extends IdMinter[NodeSeq] with ExtractionMa
   override def `type`(data: NodeSeq): Seq[String] =
     extractStrings(data \ "metadata" \\ "type").filter(isDcmiType).map(_.toLowerCase)
 
+
   // OreAggregation
   override def dplaUri(data: NodeSeq): URI = mintDplaItemUri()(data)
 
@@ -102,6 +103,8 @@ class PaExtractor(shortName: String) extends IdMinter[NodeSeq] with ExtractionMa
   override def sidecar(data: NodeSeq): JValue =
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId()(data) )
 
+
+  // Helper methods
   /**
     * Extracts the external link to the object from the second occurrence
     * of the dc:identifier property
