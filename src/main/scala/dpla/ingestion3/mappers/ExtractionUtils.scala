@@ -4,7 +4,8 @@ import java.net.URI
 
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
-import org.json4s.JsonAST.JValue
+import org.json4s.JValue
+import org.json4s.JsonAST._
 
 import scala.xml.{NodeSeq, XML}
 
@@ -140,12 +141,79 @@ object ExtractionUtils {
     with ExtractionParser[JValue] {
     override def parse(data: String): JValue = org.json4s.jackson.JsonMethods.parse(data)
 
-    override def extractStrings(fieldname: String)(implicit data: JValue): Seq[String] = ???
+    /**
+      * Pulls a single string from the implicit json data.
+      *
+      * @param fieldName Name of field to extract string from.
+      * @param json      JSON document or subdocument
+      * @return Some(string) if one could be found. Will fail
+      *         on non-primitive values like arrays or objects.
+      */
+    def extractString(fieldName: String)(implicit json: JValue): Option[String]
+    = extractString(json \ fieldName)
 
-    override def extractStrings(data: JValue): Seq[String] = ???
+    /**
+      * Pulls a Seq[String] of values from the implicit json daa
+      *
+      * @param fieldName Name of field to extract string from.
+      * @param json      JSON document or subdocument
+      * @return A Seq[String].
+      *
+      *         If the field is an array, the Seq will contain the array contents,
+      *         if they were themselves primitive values.
+      *
+      *         If the field is an object, the Seq will contain the object field
+      *         values, if those were primitive values.
+      *
+      *         If the field is a primitive, a Seq with a single member is returned.
+      *
+      *         Otherwise, an empty Seq is returned.
+      */
+    def extractStrings(fieldName: String)(implicit json: JValue): Seq[String]
+    = extractStrings(json \ fieldName)
 
-    override def extractString(fieldname: String)(implicit data: JValue): Option[String] = ???
+    /**
+      * @see definition of extractStrings(fieldName: String), save for this version
+      *      can be called with a parameter that generates a JValue, such as json4s'
+      *      path-walking syntax: jsonTree \ "someChild" \\ "someDecendant"
+      *
+      */
+    def extractStrings(jValue: JValue): Seq[String] = jValue match {
+      case JArray(array) => array.flatMap(entry => extractString(entry))
+      case JObject(fields) => fields.flatMap({case (_, value) => extractString(value)})
+      case _ => extractString(jValue) match {
+        case Some(stringValue) => Seq(stringValue)
+        case None => Seq()
+      }
+    }
 
-    override def extractString(data: JValue): Option[String] = ???
+    /**
+      * @see definition of extractString(fieldName: String), save for this version
+      *      can be called with a parameter that generates a JValue, such as json4s'
+      *      path-walking syntax: jsonTree \ "someChild" \\ "someDecendant"
+      *
+      */
+    def extractString(jValue: JValue): Option[String] = jValue match {
+      case JBool(bool) => Some(bool.toString)
+      case JDecimal(decimal) => Some(decimal.toString)
+      case JDouble(double) => Some(double.toString)
+      case JInt(int) => Some(int.toString())
+      case JString(string) => Some(string)
+      case _ => None
+    }
+
+    /**
+      * Wraps the JValue in JArray if it is not already a JArray
+      * Addresses the problem of inconsistent data types in value field.
+      * e.g. '"prop": ["val1"]' vs '"prop": "val1"'
+      *
+      * @param jvalue
+      * @return
+      */
+    def iterify(jvalue: JValue): JArray = jvalue match {
+      case JArray(j) => JArray(j)
+      case JNothing => JArray(List())
+      case _ => JArray(List(jvalue))
+    }
   }
 }
