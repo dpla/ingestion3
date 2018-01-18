@@ -36,7 +36,7 @@ trait IdMinter[T] {
     * @see buildProviderBaseId
     * @return String Provider shortname
     */
-  def getProviderName: String
+  def getProviderName: String = ""
 
   /**
     * Builds the ID to be hashed by either concatenating the provider's
