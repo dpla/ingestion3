@@ -2,8 +2,7 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
-import dpla.ingestion3.mappers.ExtractionUtils.XmlExtractionUtils._
-import dpla.ingestion3.mappers.{ExtractionMapper, IdMinter}
+import dpla.ingestion3.mappers._
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -12,13 +11,17 @@ import org.json4s.JsonDSL._
 
 import scala.xml.NodeSeq
 
-// TODO Fixup how shortname is passed down into Extractor
-class PaExtractor(shortName: String) extends IdMinter[NodeSeq] with ExtractionMapper[NodeSeq] {
+class PaExtractor() extends Mapper[NodeSeq] with IdMinter[NodeSeq] with XmlExtractor {
+
+      // override def parse(doc: String): NodeSeq = XmlExtractionUtils.parse(doc)
+
+  // val extractor: Extractor
+  // val xml = parser.parse("""<xml></xml>""")
 
   // IdMinter methods
   override def useProviderName: Boolean = false
 
-  override def getProviderName: String = shortName
+  // getProviderName is not implemented here because useProviderName is false
 
   override def getProviderId(implicit data: NodeSeq): String =
     extractString(data \ "header" \ "identifier")
