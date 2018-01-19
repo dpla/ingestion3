@@ -12,15 +12,25 @@ import scala.util.Try
 import scala.xml.{NodeSeq, XML}
 
 
+/**
+  *
+  */
+object Mapper {
 
-
-object MyMapper {
-
+  /**
+    * Executes the transformation of the provided original record to DPLA MAP OreAggregation
+    *
+    * @param shortname String Provider's shortname/abbreviation used to load its mapper, parser
+    *                  and harvester from Registry
+    * @param data String Original record to transform
+    * @return
+    */
   def build(shortname: String, data: String): Try[OreAggregation] = {
 
     val reg = ProviderRegistry.lookupRegister(shortname)
       .getOrElse(throw new RuntimeException(s"Failed to load registry for '$shortname'"))
 
+    // Parse the string representation into
     val originalRecord = reg.parser.parse(data)
     val mapper = reg.mapper
 
@@ -37,14 +47,34 @@ object MyMapper {
         provider = mapper.provider(originalRecord),
         edmRights = mapper.edmRights(originalRecord),
         sidecar = mapper.sidecar(originalRecord),
-        sourceResource = DplaSourceResource()
+        sourceResource = DplaSourceResource(
+          alternateTitle = mapper.alternateTitle(originalRecord),
+          collection = mapper.collection(originalRecord),
+          contributor = mapper.contributor(originalRecord),
+          creator = mapper.creator(originalRecord),
+          date = mapper.date(originalRecord),
+          description = mapper.description(originalRecord),
+          extent = mapper.extent(originalRecord),
+          format = mapper.format(originalRecord),
+          genre = mapper.genre(originalRecord),
+          identifier = mapper.identifier(originalRecord),
+          language = mapper.language(originalRecord),
+          place = mapper.place(originalRecord),
+          publisher = mapper.publisher(originalRecord),
+          relation = mapper.relation(originalRecord),
+          replacedBy = mapper.replacedBy(originalRecord),
+          replaces = mapper.replaces(originalRecord),
+          rights = mapper.rights(originalRecord),
+          rightsHolder = mapper.rightsHolder(originalRecord),
+          subject = mapper.subject(originalRecord),
+          temporal = mapper.temporal(originalRecord),
+          title = mapper.title(originalRecord),
+          `type`= mapper.`type`(originalRecord)
+        )
       )
     }
   }
 }
-
-
-
 
 trait MappingTools[T] {
   type Parser
@@ -53,13 +83,13 @@ trait MappingTools[T] {
 }
 
 trait XmlMappingTools extends MappingTools[NodeSeq] {
-  override type Parser = Parser
+  override type Parser = XmlParser
   override type Extractor = XmlExtractor
   override type ParsedRepresentation = NodeSeq
 }
 
 trait JsonMappingTools extends MappingTools[JValue] {
-  override type Parser = Parser
+  override type Parser = JsonParser
   override type Extractor = JsonExtractor
   override type ParsedRepresentation = JValue
 }
@@ -151,7 +181,7 @@ trait Extractor[T] {
 /**
   * XML Extractor
   */
-class XmlExtractor extends Extractor[NodeSeq] {
+trait XmlExtractor extends Extractor[NodeSeq] {
 
   /**
     *
@@ -198,7 +228,7 @@ class XmlExtractor extends Extractor[NodeSeq] {
 /**
   * Json extractor
   */
-class JsonExtractor extends Extractor[JValue] {
+trait JsonExtractor extends Extractor[JValue] {
 
 
   /**
