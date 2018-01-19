@@ -74,7 +74,7 @@ class PaExtractor() extends Mapper[NodeSeq] with IdMinter[NodeSeq] with XmlExtra
 
 
   // OreAggregation
-  override def dplaUri(data: NodeSeq): URI = mintDplaItemUri()(data)
+  override def dplaUri(data: NodeSeq): URI = mintDplaItemUri(data)
 
   override def dataProvider(data: NodeSeq): EdmAgent = {
     val contributors = extractStrings(data \ "metadata" \\ "contributor")
@@ -99,7 +99,7 @@ class PaExtractor() extends Mapper[NodeSeq] with IdMinter[NodeSeq] with XmlExtra
   )
 
   override def sidecar(data: NodeSeq): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId()(data) )
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data) )
 
 
   // Helper methods
