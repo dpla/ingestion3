@@ -8,6 +8,8 @@ import java.util.concurrent.TimeUnit
 
 import dpla.ingestion3.confs.i3Conf
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
+import org.json4s.jackson.JsonMethods._
+import org.json4s.JValue
 
 import scala.util.Try
 import scala.xml.NodeSeq
@@ -54,6 +56,14 @@ object Utils {
     if (file.exists && !file.delete)
       throw new Exception(s"Unable to delete ${file.getAbsolutePath}")
   }
+
+  /**
+    * Pretty prints JSOn
+    *
+    * @param data JSON 
+    * @return
+    */
+  def formatJson(data: JValue): String = pretty(render(data))
 
   /**
     * Format numbers with commas
