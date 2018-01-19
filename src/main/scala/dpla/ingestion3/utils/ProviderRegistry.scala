@@ -1,7 +1,7 @@
 package dpla.ingestion3.utils
 
 import dpla.ingestion3.harvesters.Harvester
-import dpla.ingestion3.mappers.{XmlExtractionParser, XmlExtractor, XmlParser}
+import dpla.ingestion3.mappers.XmlParser
 import dpla.ingestion3.mappers.providers._
 
 import scala.util.Try
@@ -16,19 +16,13 @@ import scala.util.Try
 object ProviderRegistry {
 
 
+  /**
+    *
+    * @param short
+    * @return
+    */
   def lookupRegister(short: String) = Try {
     registry.getOrElse(short, noExtractorException(short))
-  }
-
-  /**
-    * Get a provider's Extractor class given its short name.
-    * @param short: String provider short name
-    * @return provider's Extractor class as Success/Failure
-    * @throws RuntimeException if short name is not recognized or Extractor class
-    *                          is not found
-    */
-  def lookupExtractorClass(short: String) = Try {
-    // registry.getOrElse(short, noExtractorException(short))
   }
 
   /**
@@ -50,24 +44,28 @@ object ProviderRegistry {
                                 )
 
   private val registry = Map(
+    // TODO Uncomment and fixup other provider mappers
 //    "cdl" -> Register(
-//      Some(classOf[CdlExtractor]),
-//      Some(classOf[CdlHarvester])
+//      mapper = new CdlExtractor,
+//      harvesterClass = Some(classOf[CdlHarvester]),
+//      parser = new JsonParser
 //    ),
 //    "mdl" -> Register(
-//      Some(classOf[MdlExtractor]),
-//      Some(classOf[MdlHarvester])
+//      mapper = new MdlExtractor(),
+//      harvesterClass = Some(classOf[MdlHarvester]),
+//      parser = new JsonParser
 //    ),
 //    "nara" -> Register(
-//      Some(classOf[NaraExtractor])
+//      mapper = new NaraExtractorm(),
+//      parser = new XmlParser
 //    ),
     "pa" -> Register(
-      new PaExtractor(),
-      None,
-      new XmlParser()
+      mapper = new PaExtractor,
+      parser = new XmlParser
     )
-//    "wi" -> Register(
-//      Some(classOf[WiExtractor])
+//    ,"wi" -> Register(
+//      mapper = new WiExtractor,
+//      parser = new XmlParser
 //    )
   )
 

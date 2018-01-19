@@ -35,16 +35,16 @@ object MappingRefactorTest {
       </record>
 
     // val xml = XmlExtractionUtils.parse(record)
-
-    val extractor = new PaExtractor("pa")
-
-    println(extractor.collection(xml))
-
-    println(extractor.contributor(xml))
-
-    println(extractor.`type`(xml))
-
-    println(extractor.date(xml))
+//
+//    val extractor = new PaExtractor("pa")
+//
+//    println(extractor.collection(xml))
+//
+//    println(extractor.contributor(xml))
+//
+//    println(extractor.`type`(xml))
+//
+//    println(extractor.date(xml))
 
   }
 

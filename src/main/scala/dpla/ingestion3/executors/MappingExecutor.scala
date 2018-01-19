@@ -3,8 +3,7 @@ package dpla.ingestion3.executors
 import java.io.File
 
 import com.databricks.spark.avro._
-import dpla.ingestion3.mappers.providers.PaExtractor
-import dpla.ingestion3.mappers.{Mapper, MyMapper}
+import dpla.ingestion3.mappers.Mapper
 import dpla.ingestion3.model
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -60,24 +59,14 @@ trait MappingExecutor extends Serializable {
     // Load the harvested record dataframe
     val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
 
-    // Look up a registered Extractor class with the given shortName.
-//    val extractorClass = ProviderRegistry.lookupExtractorClass(shortName) match {
-//      case Success(extClass) => extClass
-//      case Failure(e) =>
-//        logger.fatal(e.getMessage)
-//        throw e
-//    }
-
-    // TODO Ask @michael about this generic type checking and casting. This Mapper[Either[Jvalue,NodeSeq]]
-    val extractorClass = classOf[PaExtractor]
-
     // Run the mapping over the Dataframe
     val documents: Dataset[String] = harvestedRecords.select("document").as[String]
 
+    val dplaMap = new DplaMap()
+
     val mappingResults: Dataset[(Row, String)] =
-      val dplaMap = new DplaMap()
       documents.map(document =>
-        dplaMap.map(extractorClass, document, shortName,
+        dplaMap.map(document, shortName,
           totalCount, successCount, failureCount)
       )(tupleRowStringEncoder)
         .persist(StorageLevel.DISK_ONLY)
@@ -117,11 +106,10 @@ trait MappingExecutor extends Serializable {
 }
 
 
-class DplaMap {
+class DplaMap extends Serializable {
   /**
     * Perform the mapping for a single record
     *
-    * @param extractorClass Provider's extractor class
     * @param document The harvested record to map
     * @param shortName Provider short name
     * @param totalCount Accumulator to track the number of records processed
@@ -131,8 +119,7 @@ class DplaMap {
     *           - (Row, null) on successful mapping
     *           - (null, Error message) on mapping failure
     */
-  def map(extractorClass: Class[_ <: Mapper[T]],
-          document: String,
+  def map(document: String,
           shortName: String,
           totalCount: LongAccumulator,
           successCount: LongAccumulator,
@@ -140,10 +127,7 @@ class DplaMap {
 
     totalCount.add(1)
 
-    val et = extractorClass.getConstructor(classOf[String]).newInstance(shortName)
-
-    MyMapper.build(et, document) match {
-
+    Mapper.build(shortName, document) match {
       case Success(dplaMapData) =>
         successCount.add(1)
         (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
