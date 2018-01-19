@@ -101,8 +101,6 @@ trait MappingExecutor extends Serializable {
     // Clean up checkpoint directory, created above
     Utils.deleteRecursively(new File("/tmp/checkpoint"))
   }
-
-
 }
 
 

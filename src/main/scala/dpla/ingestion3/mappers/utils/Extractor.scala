@@ -21,8 +21,6 @@ trait Extractor[T] {
   def extractStrings(data: T): Seq[String]
 }
 
-
-
 /**
   * XML Extractor
   */

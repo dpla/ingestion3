@@ -5,10 +5,6 @@ import dpla.ingestion3.utils.ProviderRegistry
 
 import scala.util.Try
 
-
-/**
-  *
-  */
 object Mapper {
 
   /**
@@ -21,25 +17,26 @@ object Mapper {
     */
   def build(shortname: String, data: String): Try[OreAggregation] = {
 
-    val reg = ProviderRegistry.lookupRegister(shortname)
+    val register = ProviderRegistry.lookupRegister(shortname)
       .getOrElse(throw new RuntimeException(s"Failed to load registry for '$shortname'"))
 
-    // Parse the string representation into
-    val originalRecord = reg.parser.parse(data)
-    val mapper = reg.mapper
+    // Parse the string representation into NodeSeq, JValue or other appropriate representation
+    val originalRecord = register.parser.parse(data)
+    // Gets the mapper class from the ProviderRegistry register
+    val mapper = register.mapper
 
     Try {
       OreAggregation(
         dplaUri = mapper.dplaUri(originalRecord),
         dataProvider = mapper.dataProvider(originalRecord),
-        originalRecord = data,
+        edmRights = mapper.edmRights(originalRecord),
         hasView = mapper.hasView(originalRecord),
         intermediateProvider = mapper.intermediateProvider(originalRecord),
         isShownAt = mapper.isShownAt(originalRecord),
         `object` = mapper.`object`(originalRecord), // full size image
+        originalRecord = data,
         preview = mapper.preview(originalRecord), // thumbnail
         provider = mapper.provider(originalRecord),
-        edmRights = mapper.edmRights(originalRecord),
         sidecar = mapper.sidecar(originalRecord),
         sourceResource = DplaSourceResource(
           alternateTitle = mapper.alternateTitle(originalRecord),

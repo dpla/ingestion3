@@ -2,7 +2,6 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
-import dpla.ingestion3.mappers._
 import dpla.ingestion3.mappers.utils.{IdMinter, Mapper, XmlExtractor}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToOne}
 import dpla.ingestion3.model._
