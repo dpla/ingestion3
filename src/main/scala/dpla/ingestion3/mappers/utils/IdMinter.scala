@@ -82,12 +82,12 @@ trait IdMinter[T] {
     *
     * @return String MD5 hash of the base ID
     */
-  protected def mintDplaId()(implicit data: T): String = DigestUtils.md5Hex(buildProviderBaseId())
+  protected def mintDplaId(implicit data: T): String = DigestUtils.md5Hex(buildProviderBaseId())
 
   /**
     * Builds the item URI
     *
     * @return URI
     */
-  protected def mintDplaItemUri()(implicit data: T): URI = new URI(s"$baseDplaItemUri${mintDplaId()}")
+  protected def mintDplaItemUri(implicit data: T): URI = new URI(s"$baseDplaItemUri$mintDplaId")
 }

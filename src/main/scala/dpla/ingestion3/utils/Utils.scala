@@ -59,7 +59,7 @@ object Utils {
   /**
     * Pretty prints JSOn
     *
-    * @param data JSON 
+    * @param data JSON
     * @return
     */
   def formatJson(data: JValue): String = pretty(render(data))
