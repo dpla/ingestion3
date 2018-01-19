@@ -3,6 +3,7 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.mappers._
+import dpla.ingestion3.mappers.utils.{IdMinter, Mapper, XmlExtractor}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -12,11 +13,6 @@ import org.json4s.JsonDSL._
 import scala.xml.NodeSeq
 
 class PaExtractor() extends Mapper[NodeSeq] with IdMinter[NodeSeq] with XmlExtractor {
-
-      // override def parse(doc: String): NodeSeq = XmlExtractionUtils.parse(doc)
-
-  // val extractor: Extractor
-  // val xml = parser.parse("""<xml></xml>""")
 
   // IdMinter methods
   override def useProviderName: Boolean = false

@@ -1,4 +1,4 @@
-package dpla.ingestion3.mappers
+package dpla.ingestion3.mappers.utils
 
 import java.net.URI
 
