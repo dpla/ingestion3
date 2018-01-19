@@ -1,8 +1,8 @@
 package dpla.ingestion3.utils
 
 import dpla.ingestion3.harvesters.Harvester
-import dpla.ingestion3.mappers.XmlParser
 import dpla.ingestion3.mappers.providers._
+import dpla.ingestion3.mappers.utils.XmlParser
 
 import scala.util.Try
 
