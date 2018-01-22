@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
-import dpla.ingestion3.mappers.utils.{IdMinter, JsonExtractor, Mapper}
+import dpla.ingestion3.mappers.utils.{IdMinter, JsonExtractor, Mapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
 import dpla.ingestion3.utils.Utils
@@ -10,7 +10,7 @@ import org.json4s.JValue
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
-class CdlExtractor() extends Mapper[JValue] with IdMinter[JValue] with JsonExtractor {
+class CdlExtractor() extends Mapping[JValue] with IdMinter[JValue] with JsonExtractor {
 
   // ID minting functions
   override def useProviderName: Boolean = true
