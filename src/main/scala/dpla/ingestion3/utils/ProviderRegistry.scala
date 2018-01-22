@@ -60,7 +60,7 @@ object ProviderRegistry {
 //      parser = new XmlParser
 //    ),
     "pa" -> Register(
-      mapper = new PaExtractor,
+      mapper = new PaMapping,
       parser = new XmlParser
     )
 //    ,"wi" -> Register(

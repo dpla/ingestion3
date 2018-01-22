@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
-import dpla.ingestion3.mappers.utils.{IdMinter, Mapper, XmlExtractor}
+import dpla.ingestion3.mappers.utils.{IdMinter, XmlExtractor, XmlMapping}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -11,7 +11,7 @@ import org.json4s.JsonDSL._
 
 import scala.xml.NodeSeq
 
-class PaExtractor() extends Mapper[NodeSeq] with IdMinter[NodeSeq] with XmlExtractor {
+class PaMapping extends XmlMapping with XmlExtractor with IdMinter[NodeSeq] {
 
   // IdMinter methods
   override def useProviderName: Boolean = false

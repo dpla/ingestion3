@@ -125,14 +125,16 @@ class DplaMap extends Serializable {
 
     totalCount.add(1)
 
-    Mapper.build(shortName, document) match {
-      case Success(dplaMapData) =>
-        successCount.add(1)
-        (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
-      case Failure(exception) =>
-        failureCount.add(1)
-        (null, s"${exception.getMessage}\n" +
-          s"${exception.getStackTrace.mkString("\n")}")
-    }
+    (Row(), "")
+
+//    Mapper.build(shortName, document) match {
+//      case Success(dplaMapData) =>
+//        successCount.add(1)
+//        (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
+//      case Failure(exception) =>
+//        failureCount.add(1)
+//        (null, s"${exception.getMessage}\n" +
+//          s"${exception.getStackTrace.mkString("\n")}")
+//    }
   }
 }
