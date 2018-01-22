@@ -2,6 +2,7 @@ package dpla.ingestion3.enrichments
 
 import java.net.URI
 
+import dpla.ingestion3.enrichments.DcmiTypeEnforcer.dcmiType
 import org.eclipse.rdf4j.model.IRI
 import dpla.ingestion3.mappers.rdf.DCMIType
 import dpla.ingestion3.model.SkosConcept
@@ -120,6 +121,17 @@ object DcmiTypeMapper extends VocabEnforcer[String] {
   )
 
   val mapDcmiType: (String) => Option[IRI] = mapVocab(_, DcmiTypeMap)
+}
+
+object DcmiTypeStringMapper extends VocabEnforcer[String] {
+
+  val mapDcmiTypeString: (IRI) => String = {
+    case dcmiType.InteractiveResource => "InteractiveResource"
+    case dcmiType.MovingImage => "Moving Image"
+    case dcmiType.PhysicalObject => "Physical Object"
+    case dcmiType.StillImage => "Still Image"
+    case iri => iri.getLocalName
+  }
 }
 
 /**
