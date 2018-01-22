@@ -1,30 +1,23 @@
-package dpla.ingestion3.mappers.providers
+package dpla.ingestion3.mappers.utils
 
 import java.net.URI
 
-import dpla.ingestion3.model.{EdmAgent, OreAggregation}
 import org.apache.commons.codec.digest.DigestUtils
 
 import scala.util.{Failure, Success, Try}
 
-/**
-  * Interface that all provider extractors implement.
-  */
+trait IdMinter[T] {
 
-trait Extractor {
   // Base item uri
   private val baseDplaItemUri = "http://dp.la/api/items/"
 
-  def build(): Try[OreAggregation]
-  def agent: EdmAgent
-
   /**
-    * Does the provider use a prefix (typically their provider abbreviation) to
-    * salt the identifier?
+    * Does the provider use a prefix (typically their provider shortname/abbreviation) to
+    * salt the base identifier?
     *
     * @return Boolean
     */
-  def useProviderName(): Boolean
+  def useProviderName: Boolean
 
   /**
     * Extract the record's "persistent" identifier. Implementations should raise
@@ -33,15 +26,17 @@ trait Extractor {
     * @return String Record identifier
     * @throws Exception If ID can not be extracted
     */
-  @throws(classOf[ExtractorException])
-  def getProviderId(): String
+  def getProviderId(implicit data: T): String
 
   /**
-    * The value to salt the identifier with. Not all providers
-    * use this. If not, an empty string should be used
-    * @return
+    * The provider's shortname abbreviation which is the value used to salt the
+    * local identifier with when minting the DPLA identifier. Not all providers
+    * use this "shortname--id" ID construction.
+    *
+    * @see buildProviderBaseId
+    * @return String Provider shortname
     */
-  def getProviderName(): String
+  def getProviderName: String = ""
 
   /**
     * Builds the ID to be hashed by either concatenating the provider's
@@ -57,25 +52,25 @@ trait Extractor {
     *
     * @return String
     */
-  def buildProviderBaseId(): String = {
+  protected def buildProviderBaseId()(implicit data: T): String = {
+
     def idErrorMsg(): String = {
       s"Unable to mint ID given values of:\n" +
-        s"useProviderName: ${useProviderName()}\n" +
-        s"getProviderName: ${getProviderName()}\n" +
-        s"getProviderId: ${getProviderId()}\n"
+        s"useProviderName: $useProviderName\n" +
+        s"getProviderName: $getProviderName\n" +
+        s"getProviderId: $getProviderId\n"
     }
+
     Try {
-      useProviderName() match {
-        // use prefix of provider short name
-        case true => s"${getProviderName()}--${getProviderId()}"
-        // do not use prefix
-        case false => getProviderId()
+      if (useProviderName) {
+        s"$getProviderName--$getProviderId"
+      } else {
+        getProviderId
       }
     } match {
       case Success(id) => id
-      case Failure(_) => throw ExtractorException(idErrorMsg())
+      case Failure(_) => throw new RuntimeException(idErrorMsg())
     }
-
   }
 
   /**
@@ -87,14 +82,12 @@ trait Extractor {
     *
     * @return String MD5 hash of the base ID
     */
-  protected def mintDplaId(): String = DigestUtils.md5Hex(buildProviderBaseId())
+  protected def mintDplaId(implicit data: T): String = DigestUtils.md5Hex(buildProviderBaseId())
 
   /**
     * Builds the item URI
     *
     * @return URI
     */
-  protected def mintDplaItemUri(): URI = new URI(s"$baseDplaItemUri${mintDplaId()}")
+  protected def mintDplaItemUri(implicit data: T): URI = new URI(s"$baseDplaItemUri$mintDplaId")
 }
-
-case class ExtractorException(message: String) extends Exception(message)

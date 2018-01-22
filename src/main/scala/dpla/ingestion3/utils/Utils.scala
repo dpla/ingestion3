@@ -1,14 +1,18 @@
 package dpla.ingestion3.utils
 
 import java.io.{File, PrintWriter}
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 import dpla.ingestion3.confs.i3Conf
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
+import org.json4s.jackson.JsonMethods._
+import org.json4s.JValue
 
-import scala.xml.Node
+import scala.util.Try
+import scala.xml.NodeSeq
 
 
 object Utils {
@@ -53,6 +57,14 @@ object Utils {
   }
 
   /**
+    * Pretty prints JSOn
+    *
+    * @param data JSON
+    * @return
+    */
+  def formatJson(data: JValue): String = pretty(render(data))
+
+  /**
     * Format numbers with commas
     * @param n A number
     * @return xxx,xxx
@@ -81,9 +93,9 @@ object Utils {
     * @param xml An XML node
     * @return Formatted String representation of the node
     */
-  def formatXml(xml: Node): String ={
+  def formatXml(xml: NodeSeq): String ={
     val prettyPrinter = new scala.xml.PrettyPrinter(80, 2)
-    prettyPrinter.format(xml).toString
+    prettyPrinter.format(xml.head).toString
   }
 
   /**
@@ -107,9 +119,17 @@ object Utils {
       true)
   }
 
+  /**
+    * Attempts to create a URL object from the string value. If successful
+    * returns True, False otherwise
+    *
+    * @param url String URL
+    * @return Boolean
+    */
+  def isUrl(url: String): Boolean = Try {new URL(url) }.isSuccess
+
+
   // TODO These *Summary methods should be refactored and normalized when we fixup logging
-
-
   /**
     * Print the results of an activity
     *

@@ -1,14 +1,78 @@
-package dpla.ingestion3.mappers.json
-
+package dpla.ingestion3.mappers.utils
 
 import org.json4s.JValue
 import org.json4s.JsonAST._
 
+import scala.xml.NodeSeq
+
+
 /**
-  * Utils to help extract data from JSON documents.
+  * For ripping data out of original records
   *
+  * @tparam T
   */
-trait JsonExtractionUtils {
+trait Extractor[T] {
+  // Extract zero or one value
+  def extractString(fieldname: String)(implicit data: T): Option[String]
+  def extractString(data: T): Option[String]
+
+  // Extract zero to many values
+  def extractStrings(fieldname: String)(implicit data: T): Seq[String]
+  def extractStrings(data: T): Seq[String]
+}
+
+/**
+  * XML Extractor
+  */
+trait XmlExtractor extends Extractor[NodeSeq] {
+
+  /**
+    *
+    * @param fieldName
+    * @param xml
+    * @return
+    */
+  override def extractString(fieldName: String)(implicit xml: NodeSeq): Option[String]
+  = extractString(xml \ fieldName)
+
+  /**
+    *
+    */
+  def extractStrings(fieldName: String)(implicit xml: NodeSeq): Seq[String]
+  = extractStrings(xml \ fieldName)
+
+  /**
+    *
+    * @param xValue
+    * @return
+    */
+  override def extractString(xValue: NodeSeq): Option[String] = {
+    xValue match {
+      case v if v.text.nonEmpty => Some(v.text)
+      case _ => None
+    }
+  }
+
+  /**
+    * TODO swing back and deeper dive into NodeSeq vs JValue/JObject
+    *
+    * @param xValue
+    * @return Seq[String]
+    */
+  override def extractStrings(xValue: NodeSeq): Seq[String] = xValue match {
+    case v if v.size > 1 => v.flatMap(value => extractString(value))
+    case _ => extractString(xValue) match {
+      case Some(stringValue) => Seq(stringValue)
+      case _ => Seq()
+    }
+  }
+}
+
+/**
+  * Json extractor
+  */
+trait JsonExtractor extends Extractor[JValue] {
+
 
   /**
     * Pulls a single string from the implicit json data.
@@ -64,13 +128,12 @@ trait JsonExtractionUtils {
     */
   def extractString(jValue: JValue): Option[String] = jValue match {
     case JBool(bool) => Some(bool.toString)
-    case JDecimal(decimal) => Some(decimal.toString())
-    case JDouble(double) => Some(double.toString())
+    case JDecimal(decimal) => Some(decimal.toString)
+    case JDouble(double) => Some(double.toString)
     case JInt(int) => Some(int.toString())
     case JString(string) => Some(string)
     case _ => None
   }
-
 
   /**
     * Wraps the JValue in JArray if it is not already a JArray

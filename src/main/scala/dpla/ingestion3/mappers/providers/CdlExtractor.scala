@@ -2,67 +2,91 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
-import dpla.ingestion3.mappers.json.JsonExtractionUtils
-import dpla.ingestion3.model.{DplaSourceResource, EdmWebResource, OreAggregation, _}
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
+import dpla.ingestion3.mappers.utils.{IdMinter, JsonExtractor, Mapping}
+import dpla.ingestion3.model.DplaMapData._
+import dpla.ingestion3.model.{EdmAgent, _}
+import dpla.ingestion3.utils.Utils
+import org.json4s.JValue
 import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods._
 
-import scala.util.Try
-
-class CdlExtractor(rawData: String, shortName: String)
-  extends Extractor with JsonExtractionUtils {
-
-  implicit val json: JValue = parse(rawData)
+class CdlExtractor() extends Mapping[JValue] with IdMinter[JValue] with JsonExtractor {
 
   // ID minting functions
-  override def useProviderName(): Boolean = true
+  override def useProviderName: Boolean = true
 
-  override def getProviderName(): String = shortName
+  // Hard coded to prevent accidental changes to base ID
+  override def getProviderName: String = "cdl"
 
-  override def getProviderId(): String = extractString("id")(json)
-    .getOrElse(throw ExtractorException(s"No ID for record: ${compact(json)}"))
+  override def getProviderId(implicit data: JValue): String = extractString("id")(data)
+    .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
-  def build: Try[OreAggregation] = {
-    Try {
-      OreAggregation(
-        dplaUri = mintDplaItemUri(),
-        sidecar = ("prehashId", buildProviderBaseId()) ~
-                  ("dplaId", mintDplaId()),
-        sourceResource = DplaSourceResource(
-          alternateTitle = extractStrings("alternative_title_ss"),
-          collection = extractStrings("collection_name").map(nameOnlyCollection),
-          contributor = extractStrings("contributor_ss").map(nameOnlyAgent),
-          creator = extractStrings("creator_ss").map(nameOnlyAgent),
-          date = extractStrings("date_ss").map(stringOnlyTimeSpan),
-          description = extractStrings("description_ss"),
-          extent = extractStrings("extent_ss"),
-          format = extractStrings("format"),
-          genre = extractStrings("genre_ss").map(nameOnlyConcept),
-          identifier = extractStrings("identifier_ss"),
-          language = extractStrings("language_ss").map(nameOnlyConcept),
-          place = extractStrings("coverage_ss").map(nameOnlyPlace),
-          publisher = extractStrings("publisher_ss").map(nameOnlyAgent),
-          relation = extractStrings("relation_ss").map(eitherStringOrUri),
-          rights = extractStrings("rights_ss")
-            ++ extractStrings("rights_note_ss")
-            ++ extractStrings("rights_date_ss"),
-          rightsHolder = extractStrings("rightsholder_ss").map(nameOnlyAgent),
-          subject = extractStrings("subject_ss").map(nameOnlyConcept),
-          temporal = extractStrings("temporal_ss").map(stringOnlyTimeSpan),
-          title = extractStrings("title_ss"),
-          `type` = extractStrings("type")
-        ),
-        dataProvider = nameOnlyAgent(provider(json)),
-        originalRecord = rawData,
-        preview = thumbnail(json),
-        provider = agent,
-        isShownAt = uriOnlyWebResource(providerUri(json))
-      )
-    }
-  }
 
-  def provider(json: JValue): String = {
+  // OreAggregation fields
+  override def dplaUri(data: JValue): ExactlyOne[URI] = mintDplaItemUri(data)
+
+  override def sidecar(data: JValue): JValue = ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
+
+  override def dataProvider(data: JValue): ExactlyOne[EdmAgent] = nameOnlyAgent(getDataProvider(data))
+
+  override def originalRecord(data: JValue): ExactlyOne[String] = Utils.formatJson(data)
+
+  override def preview(data: JValue): ZeroToOne[EdmWebResource] = thumbnail(data)
+
+  override def provider(data: JValue): ExactlyOne[EdmAgent] = EdmAgent(
+    name = Some("California Digital Library"),
+    uri = Some(new URI("http://dp.la/api/contributor/cdl"))
+  )
+
+  override def isShownAt(data: JValue): ExactlyOne[EdmWebResource] = uriOnlyWebResource(providerUri(data))
+
+
+  // SourceResource
+  override def alternateTitle(data: JValue): ZeroToMany[String] = extractStrings("alternative_title_ss")(data)
+
+  override def collection(data: JValue): ZeroToMany[DcmiTypeCollection] =
+    extractStrings("collection_name")(data).map(nameOnlyCollection)
+
+  override def contributor(data: JValue): ZeroToMany[EdmAgent] = extractStrings("contributor_ss")(data).map(nameOnlyAgent)
+
+  override def creator(data: JValue): ZeroToMany[EdmAgent] = extractStrings("creator_ss")(data).map(nameOnlyAgent)
+
+  override def date(data: JValue): ZeroToMany[EdmTimeSpan] = extractStrings("date_ss")(data).map(stringOnlyTimeSpan)
+
+  override def description(data: JValue): ZeroToMany[String] = extractStrings("description_ss")(data)
+
+  override def extent(data: JValue): ZeroToMany[String] = extractStrings("extent_ss")(data)
+
+  override def format(data: JValue): ZeroToMany[String] = extractStrings("format")(data)
+
+  override def genre(data: JValue): ZeroToMany[SkosConcept] = extractStrings("genre_ss")(data).map(nameOnlyConcept)
+
+  override def identifier(data: JValue): ZeroToMany[String] = extractStrings("identifier_ss")(data)
+
+  override def language(data: JValue): ZeroToMany[SkosConcept] = extractStrings("language_ss")(data).map(nameOnlyConcept)
+
+  override def place(data: JValue): ZeroToMany[DplaPlace] = extractStrings("coverage_ss")(data).map(nameOnlyPlace)
+
+  override def publisher(data: JValue): ZeroToMany[EdmAgent] = extractStrings("publisher_ss")(data).map(nameOnlyAgent)
+
+  override def relation(data: JValue): ZeroToMany[LiteralOrUri] = extractStrings("relation_ss")(data).map(eitherStringOrUri)
+
+  override def rights(data: JValue): AtLeastOne[String] =
+    extractStrings("rights_ss")(data) ++ extractStrings("rights_note_ss")(data) ++ extractStrings("rights_date_ss")(data)
+
+  override def rightsHolder(data: JValue): ZeroToMany[EdmAgent] = extractStrings("rightsholder_ss")(data).map(nameOnlyAgent)
+
+  override def subject(data: JValue): ZeroToMany[SkosConcept] = extractStrings("subject_ss")(data).map(nameOnlyConcept)
+
+  override def temporal(data: JValue): ZeroToMany[EdmTimeSpan] = extractStrings("temporal_ss")(data).map(stringOnlyTimeSpan)
+
+  override def title(data: JValue): AtLeastOne[String] = extractStrings("title_ss")(data)
+
+  override def `type`(data: JValue): ZeroToMany[String] = extractStrings("type")(data)
+
+
+  // Helper methods
+  def getDataProvider(json: JValue): String = {
     val campus = extractStrings("campus_name")(json).headOption
     val repository = extractStrings("repository_name")(json).headOption
     (campus, repository) match {
@@ -81,11 +105,6 @@ class CdlExtractor(rawData: String, shortName: String)
       )
       case None => None
     }
-
-  def agent = EdmAgent(
-    name = Some("California Digital Library"),
-    uri = Some(new URI("http://dp.la/api/contributor/cdl"))
-  )
 
   def providerUri(json: JValue): URI =
     extractString("url_item")(json) match {

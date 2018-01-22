@@ -1,8 +1,8 @@
 package dpla.ingestion3.utils
 
 import dpla.ingestion3.harvesters.Harvester
-import dpla.ingestion3.harvesters.api.{CdlHarvester, MdlHarvester}
 import dpla.ingestion3.mappers.providers._
+import dpla.ingestion3.mappers.utils.XmlParser
 
 import scala.util.Try
 
@@ -15,16 +15,14 @@ import scala.util.Try
   */
 object ProviderRegistry {
 
+
   /**
-    * Get a provider's Extractor class given its short name.
-    * @param short: String provider short name
-    * @return provider's Extractor class as Success/Failure
-    * @throws RuntimeException if short name is not recognized or Extractor class
-    *                          is not found
+    *
+    * @param short
+    * @return
     */
-  def lookupExtractorClass(short: String): Try[Class[_ <: Extractor]] = Try {
+  def lookupRegister(short: String) = Try {
     registry.getOrElse(short, noExtractorException(short))
-      .extractorClass.getOrElse(noExtractorException(short))
   }
 
   /**
@@ -39,27 +37,36 @@ object ProviderRegistry {
       .harvesterClass.getOrElse(noHarvesterException(short))
   }
 
-  private case class Register(extractorClass: Option[Class[_ <: Extractor]] = None,
-                              harvesterClass: Option[Class[_ <: Harvester]] = None)
+  case class Register[T, Mapper[T], Parser[T]](
+                                  mapper: Mapper[T],
+                                  harvesterClass: Option[Class[_ <: Harvester]] = None,
+                                  parser: Parser[T]
+                                )
 
-  private val registry: Map[String, Register] = Map(
-    "cdl" -> Register(
-      Some(classOf[CdlExtractor]),
-      Some(classOf[CdlHarvester])
-    ),
-    "mdl" -> Register(
-      Some(classOf[MdlExtractor]),
-      Some(classOf[MdlHarvester])
-    ),
-    "nara" -> Register(
-      Some(classOf[NaraExtractor])
-    ),
+  private val registry = Map(
+    // TODO Uncomment and fixup other provider mappers
+//    "cdl" -> Register(
+//      mapper = new CdlExtractor,
+//      harvesterClass = Some(classOf[CdlHarvester]),
+//      parser = new JsonParser
+//    ),
+//    "mdl" -> Register(
+//      mapper = new MdlExtractor(),
+//      harvesterClass = Some(classOf[MdlHarvester]),
+//      parser = new JsonParser
+//    ),
+//    "nara" -> Register(
+//      mapper = new NaraExtractorm(),
+//      parser = new XmlParser
+//    ),
     "pa" -> Register(
-      Some(classOf[PaExtractor])
-    ),
-    "wi" -> Register(
-      Some(classOf[WiExtractor])
+      mapper = new PaMapping,
+      parser = new XmlParser
     )
+//    ,"wi" -> Register(
+//      mapper = new WiExtractor,
+//      parser = new XmlParser
+//    )
   )
 
   private def noExtractorException(short: String) = {
