@@ -60,6 +60,14 @@ class PropertyValueReport (
       org.apache.spark.sql.Encoders.kryo[OreAggregation]
 
     val rptDataset: Dataset[PropertyValueRpt] = token match {
+      case "dataProvider" =>
+        ds.map(oreAggregation => {
+          PropertyValueRpt(
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
+            value = extractValue(Seq(oreAggregation.dataProvider))
+          )
+        })
       case "edmRights" =>
         ds.map(oreAggregation => {
           PropertyValueRpt(
@@ -68,6 +76,15 @@ class PropertyValueReport (
             value = extractValue(oreAggregation.edmRights.toSeq)
           )
         })
+      case "isShownAt" =>
+        ds.map(oreAggregation => {
+          PropertyValueRpt(
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
+            value = extractValue(Seq(oreAggregation.isShownAt))
+          )
+        })
+
       case "sourceResource.alternateTitle" =>
         ds.map(oreAggregation => {
           PropertyValueRpt(

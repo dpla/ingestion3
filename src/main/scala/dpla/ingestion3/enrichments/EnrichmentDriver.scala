@@ -40,10 +40,10 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
       .standardStringEnrichments
 
     enriched.copy(
-      sourceResource = record.sourceResource.copy(
-        date = record.sourceResource.date.map(d => dateEnrichment.parse(d)),
-        language = record.sourceResource.language.map(l => LanguageMapper.mapLanguage(l)),
-        place = record.sourceResource.place.map(p => spatialEnrichment.enrich(p))
+      sourceResource = enriched.sourceResource.copy(
+        date = enriched.sourceResource.date.map(d => dateEnrichment.parse(d)),
+        language = enriched.sourceResource.language.map(l => LanguageMapper.mapLanguage(l)),
+        place = enriched.sourceResource.place.map(p => spatialEnrichment.enrich(p))
       ))
   }
 

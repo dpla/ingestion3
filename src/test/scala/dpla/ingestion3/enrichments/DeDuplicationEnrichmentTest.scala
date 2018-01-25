@@ -25,7 +25,7 @@ class DeDuplicationEnrichmentTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedRecord === expectedRecord)
   }
 
-  "enrich" should " remove duplicate entities" in {
+  "enrich" should " remove duplicate collection entities" in {
     def collection = DcmiTypeCollection(title = Some("foo"))
     val originalValue = Seq(collection, collection)
     val expectedValue = Seq(collection)
@@ -36,6 +36,27 @@ class DeDuplicationEnrichmentTest extends FlatSpec with BeforeAndAfter {
 
     val expectedRecord= MappedRecordsFixture.mappedRecord.copy(
       sourceResource = DplaSourceResource(collection = expectedValue)
+    )
+
+    val enrichedRecord = deDuplicationEnrichment.enrich(mappedRecord)
+
+    assert(enrichedRecord === expectedRecord)
+  }
+
+  "enrich" should " remove duplicate EdmAgent entities" in {
+    def agentA= nameOnlyAgent("Tom Jones")
+    def agentB= nameOnlyAgent("Rick Rolls")
+    def agentC= nameOnlyAgent("Samwell Gamgee")
+
+    val originalValue = Seq(agentA, agentC, agentA, agentB)
+    val expectedValue = Seq(agentA, agentC, agentB)
+
+    val mappedRecord = MappedRecordsFixture.mappedRecord.copy(
+      sourceResource = DplaSourceResource(creator = originalValue)
+    )
+
+    val expectedRecord = MappedRecordsFixture.mappedRecord.copy(
+      sourceResource = DplaSourceResource(creator = expectedValue)
     )
 
     val enrichedRecord = deDuplicationEnrichment.enrich(mappedRecord)
