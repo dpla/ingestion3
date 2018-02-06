@@ -129,7 +129,8 @@ class ParseDateEnrichment extends Serializable {
       "MM/dd/yyyy",
       "MM.dd.yyyy",
       "MM-dd-yyyy",
-      "MMM, yyyy"
+      "MMM, yyyy",
+      "yyyy"
     )
 
     @tailrec

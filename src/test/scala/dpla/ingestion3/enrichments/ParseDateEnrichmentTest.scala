@@ -131,6 +131,19 @@ class ParseDateEnrichmentTest extends FlatSpec
     assert(enrichment.parse(originalDate) === enrichedDate)
   }
 
+  it should "parse YYYY-YYYY date to iso date" in {
+    val date = "2001-2003"
+    val originalDate = EdmTimeSpan(originalSourceDate = Some(date))
+    val enrichedDate = EdmTimeSpan(
+      originalSourceDate = Some(date),
+      prefLabel = Some("2001-2003"),
+      begin = Some("2001-01-01"),
+      end = Some("2003-01-01")
+    )
+
+    assert(enrichment.parse(originalDate) === enrichedDate)
+  }
+
   it should "parse Month, Year to iso date" in {
     val date = "July, 2015"
     val originalDate = EdmTimeSpan(originalSourceDate = Some(date))
