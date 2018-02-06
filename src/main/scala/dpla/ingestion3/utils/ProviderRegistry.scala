@@ -54,6 +54,9 @@ object ProviderRegistry {
     "nara" -> Register(
       Some(classOf[NaraExtractor])
     ),
+    "ohio" -> Register(
+      Some(classOf[OhioExtractor])
+    ),
     "pa" -> Register(
       Some(classOf[PaExtractor])
     ),

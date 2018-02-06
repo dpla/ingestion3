@@ -80,8 +80,12 @@ class PropertyDistinctValueReport(
     }
 
     val rptDs = token match {
+      case "dataProvider" =>
+        ds.map(dplaMapData => PropertyDistinctValueRpt(extractValue(Seq(dplaMapData.dataProvider))))
       case "edmRights" =>
         ds.map(dplaMapData => PropertyDistinctValueRpt(extractValue(dplaMapData.edmRights.toSeq)))
+      case "isShownAt" =>
+        ds.map(dplaMapData => PropertyDistinctValueRpt(extractValue(Seq(dplaMapData.isShownAt.uri))))
       case "sourceResource.alternateTitle" =>
         ds.map(dplaMapData => PropertyDistinctValueRpt(extractValue(dplaMapData.sourceResource.alternateTitle)))
       case "sourceResource.collection.title" =>
