@@ -69,7 +69,8 @@ class StringEnrichments {
 
   def enrichSkosConcept(skosConcept: SkosConcept): SkosConcept =
     skosConcept.copy(
-      concept = skosConcept.concept.map(_.stripHTML.reduceWhitespace)
+      concept = skosConcept.concept.map(_.stripHTML.reduceWhitespace),
+      providedLabel = skosConcept.providedLabel.map(_.stripHTML.reduceWhitespace)
     )
 
   def enrichEdmTimeSpan(edmTimeSpan: EdmTimeSpan): EdmTimeSpan =
