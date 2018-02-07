@@ -8,8 +8,6 @@ import org.jsoup.safety.Whitelist
 
 import scala.util.matching.Regex
 
-import util.control.Breaks._
-
 /**
   * String enrichments
   *
@@ -49,9 +47,10 @@ object StringUtils {
       * @return
       */
     val findAndRemoveAll: Set[String] => String = (stopWords) => {
+      // FIXME this is a case sensitive operation.
       value.splitAtDelimiter(" ")
         .filterNot(stopWords)
-           .filter(_.nonEmpty)
+        .filter(_.nonEmpty)
         .mkString(" ")
     }
 
