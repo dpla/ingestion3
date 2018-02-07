@@ -96,26 +96,28 @@ object StringUtils {
       */
     val capitalizeFirstChar: SingleStringEnrichment = {
       val charIndex = findFirstChar(value)
-      replaceCharAt(value, charIndex, value.charAt(charIndex).toUpper )
+      if (charIndex >= 0)
+        replaceCharAt(value, charIndex, value.charAt(charIndex).toUpper )
+      else
+        value
     }
 
-    private def replaceCharAt(s: String, pos: Int, c: Char): String =
-      s.substring(0, pos) + c + s.substring(pos + 1)
+    /**
+      * Replaces the character at the specified index in s with c
+      * @param s String value
+      * @param pos Index
+      * @param c New char
+      * @return A new String with Char c at index pos
+      */
+    private def replaceCharAt(s: String, pos: Int, c: Char): String = s.substring(0, pos) + c + s.substring(pos + 1)
 
     /**
-      * Iterates over the string to find the first alphanumeric char and returns the index
+      * Iterates over the string to find the first alphanumeric char
+      * and returns the index
+      *
       * @param str
       * @return
       */
-    private def findFirstChar(str: String): Int = {
-      var iter = 0
-      breakable {
-        str.foreach(chr => {
-          if(chr.isLetterOrDigit) break
-          else iter = iter + 1
-        })
-      }
-      iter
-    }
+    private def findFirstChar(str: String): Int = str.indexWhere(_.isLetterOrDigit)
   }
 }
