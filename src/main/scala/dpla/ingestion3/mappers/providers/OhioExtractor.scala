@@ -19,8 +19,8 @@ class OhioExtractor(rawData: String, shortName: String) extends Extractor with X
 
   // These values will be stripped out of the format field
   // FIXME Regex to ignore/include punctuation?
-  private val formatsToRemove = Set("application/pdf", "audio/mpeg", "Charset=ISO-8859-1", "Charset=iso-8859-1",
-    "charset=UTF-8", "charset=utf-8", "Charset=windows-1252", "HTML", "image/jp2", "image/jpeg", "image/jpg",
+  private val formatsToRemove = Set("application/pdf", "audio/mpeg", "charset=ISO-8859-1", "charset=iso-8859-1",
+    "charset=UTF-8", "charset=utf-8", "charset=windows-1252", "HTML", "image/jp2", "image/jpeg", "image/jpg",
     "image/png", "image/tiff", "JPEG 2000", "jpeg", "jpeg2000", "JPEG2000", "jpg", "mp3", "PDF", "pdf", "text/html",
     "text/pdf", "tif", "video/jpeg", "video/jpeg2000", "video/mp4", "video/mpeg")
 
