@@ -119,23 +119,30 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.capitalizeFirstChar
     assert(enrichedValue === "3 blind mice")
   }
-
   it should "capitalize the t in three blind mice" in {
     val originalValue = "three blind mice"
     val enrichedValue = originalValue.capitalizeFirstChar
     assert(enrichedValue === "Three blind mice")
   }
-
   it should "capitalize the v in ...vacationland..." in {
     val originalValue = "...vacationland..."
     val enrichedValue = originalValue.capitalizeFirstChar
     assert(enrichedValue === "...Vacationland...")
   }
-
   it should "capitalize the t in '  telephone'" in {
     val originalValue = "  telephone"
     val enrichedValue = originalValue.capitalizeFirstChar
     assert(enrichedValue === "  Telephone")
+  }
+  it should "not capitalize anything in a string with alphanumeric characters" in {
+    val originalValue = "...@..|}"
+    val enrichedValue = originalValue.capitalizeFirstChar
+    assert(enrichedValue === "...@..|}")
+  }
+  it should "not capitalize anything in an empty string" in {
+    val originalValue = ""
+    val enrichedValue = originalValue.capitalizeFirstChar
+    assert(enrichedValue === "")
   }
 
   "findAndRemoveAll" should "remove all stop words from the given string" in {
