@@ -43,7 +43,16 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
       sourceResource = enriched.sourceResource.copy(
         date = enriched.sourceResource.date.map(d => dateEnrichment.parse(d)),
         language = enriched.sourceResource.language.map(l => LanguageMapper.mapLanguage(l)),
-        place = enriched.sourceResource.place.map(p => spatialEnrichment.enrich(p))
+        place = enriched.sourceResource.place.map(p => spatialEnrichment.enrich(p)),
+        `type` = enriched.sourceResource.`type`.map(t => {
+          // Cast original type value to lower case and map it to DCMIType IRIs (@see DcmiTypeMap).
+          // If it can be mapped to a valid DCMIType IRI then lookup the local label for that IRI
+          // and then convert label to lower case.
+            DcmiTypeMapper.mapDcmiType(t.toLowerCase) match {
+              case Some(typeIri) => DcmiTypeStringMapper.mapDcmiTypeString(typeIri).toLowerCase
+            }
+          }
+        )
       ))
   }
 
