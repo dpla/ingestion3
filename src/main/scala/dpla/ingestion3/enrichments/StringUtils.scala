@@ -8,6 +8,8 @@ import org.jsoup.safety.Whitelist
 
 import scala.util.matching.Regex
 
+import util.control.Breaks._
+
 /**
   * String enrichments
   *
@@ -42,10 +44,22 @@ object StringUtils {
     }
 
     /**
+      * Removes all target strings from the source string
+      *
+      * @return
+      */
+    val findAndRemoveAll: Set[String] => String = (stopWords) => {
+      value.splitAtDelimiter(" ")
+        .filterNot(stopWords)
+           .filter(_.nonEmpty)
+        .mkString(" ")
+    }
+
+    /**
       * Splits a String value around a given delimiter.
       */
     val splitAtDelimiter: (String) => Array[String] = (delimiter) => {
-      value.split(delimiter).map(_.trim)
+      value.split(delimiter).map(_.trim).filter(_.nonEmpty)
     }
 
     val stripEndingPunctuation: SingleStringEnrichment = {
@@ -68,6 +82,40 @@ object StringUtils {
 
     val reduceWhitespace: SingleStringEnrichment = {
       value.replaceAll("  ", " ")
+    }
+
+    /**
+      * Find and capitalize the first character in a given string
+      *
+      * 3 blind mice -> 3 blind mice
+      * three blind mice -> Three blind mice.
+      * ...vacationland... -> ...Vacationland...
+      *   The first bike ->   The first bike
+      *
+      * @return
+      */
+    val capitalizeFirstChar: SingleStringEnrichment = {
+      val charIndex = findFirstChar(value)
+      replaceCharAt(value, charIndex, value.charAt(charIndex).toUpper )
+    }
+
+    private def replaceCharAt(s: String, pos: Int, c: Char): String =
+      s.substring(0, pos) + c + s.substring(pos + 1)
+
+    /**
+      * Iterates over the string to find the first alphanumeric char and returns the index
+      * @param str
+      * @return
+      */
+    private def findFirstChar(str: String): Int = {
+      var iter = 0
+      breakable {
+        str.foreach(chr => {
+          if(chr.isLetterOrDigit) break
+          else iter = iter + 1
+        })
+      }
+      iter
     }
   }
 }
