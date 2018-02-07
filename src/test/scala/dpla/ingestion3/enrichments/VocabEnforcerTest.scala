@@ -60,6 +60,20 @@ class VocabEnforcerTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === expectedValue)
   }
 
+  it should " an enriched SkosConcept object when given a valid iso-639 regardless of case" +
+    "abbreviation" in {
+    val originalValue = Seq(SkosConcept(providedLabel = Option("ENG")))
+    val expectedValue = Seq(SkosConcept(
+      providedLabel = Option("ENG"),
+      concept = Option("English"),
+      scheme = Option(new URI("http://lexvo.org/id/iso639-3/"))
+    ))
+
+    val enrichedValue = originalValue.map(LanguageMapper.mapLanguage)
+
+    assert(enrichedValue === expectedValue)
+  }
+
   it should "return an unenriched SkosConcept object when given a invalid iso-639 " +
     "abbreviation. E.g. the return value should match the original value" in {
     val originalValue = SkosConcept(providedLabel = Option("b__"))
