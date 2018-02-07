@@ -173,6 +173,15 @@ class PropertyValueReport (
             value = extractValue(oreAggregation.sourceResource.language)
           )
         })
+      case "sourceResource.language.concept" =>
+        ds.map(oreAggregation => {
+          PropertyValueRpt(
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
+            value = oreAggregation.sourceResource.language.map(l =>
+              l.concept.getOrElse("__MISSING SkosConcept.concept__"))
+          )
+        })
       case "sourceResource.place.name" =>
         ds.map(oreAggregation => {
           PropertyValueRpt(
