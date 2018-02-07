@@ -122,4 +122,15 @@ class OaiResponseProcessorTest extends FlatSpec with Matchers with MockFactory {
     val token = OaiResponseProcessor.getResumptionToken(text)
     assert(token === None)
   }
+
+  "isDeleted" should "returns false if not marked as deleted" in {
+    val xml = <oai><header><record></record></header></oai>
+    val status = OaiResponseProcessor.isDeleted(xml)
+    assert(status === false)
+  }
+  it should "returns true if marked as deleted" in {
+    val xml = <oai><header status="deleted"><record></record></header></oai>
+    val status = OaiResponseProcessor.isDeleted(xml)
+    assert(status === true)
+  }
 }
