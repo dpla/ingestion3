@@ -118,11 +118,18 @@ package object model {
           ("format" -> record.sourceResource.format) ~
           ("identifier" -> record.sourceResource.identifier) ~
           ("language" ->
+            // FIXME The SkosConcept object needs refinement in MAP5.1 to address some of the modeling issues
+            // 1. Tracking ISO-639 term abbreviations
+            // 2. Recording ISO-639 term labels
+            // 3. Recording unenriched original value
             record.sourceResource.language.map { lang =>
+              // If lang was enriched then the concept property has been set and it should be mapped to the name
+              // property in ElasticSearch. If the lang value could not be enriched then use the original provided
+              // value. Always map the enriched concept label to the iso639_3 field.
               ("name" -> lang.concept.getOrElse(
-                          lang.providedLabel.getOrElse(""))) ~
-              ("iso639_3" -> lang.providedLabel.getOrElse(""))
-              // FIXME what other SkosConcept fields do we need in the index for language?
+                lang.providedLabel.getOrElse("")
+              )) ~
+              ("iso639_3" -> lang.concept)
             }) ~
           ("publisher" -> record.sourceResource.publisher.map{p => p.name}) ~
           ("relation" ->
