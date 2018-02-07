@@ -22,6 +22,14 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === expectedValue)
   }
 
+  "splitAtDelimiter" should "drop empty values" in {
+    val originalValue = "subject-one; ; subject-three"
+    val enrichedValue = originalValue.splitAtDelimiter(";")
+    val expectedValue = Array("subject-one", "subject-three")
+
+    assert(enrichedValue === expectedValue)
+  }
+
   "splitAtDelimiter" should "split a string around comma." in {
     val originalValue = "subject-one, subject-two; subject-three"
     val enrichedValue = originalValue.splitAtDelimiter(",")
@@ -106,4 +114,34 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === "foo bar")
   }
 
+  "capitalizeFirstChar" should "not capitalize the b in 3 blind mice because it is preceded by 3" in {
+    val originalValue = "3 blind mice"
+    val enrichedValue = originalValue.capitalizeFirstChar
+    assert(enrichedValue === "3 blind mice")
+  }
+
+  it should "capitalize the t in three blind mice" in {
+    val originalValue = "three blind mice"
+    val enrichedValue = originalValue.capitalizeFirstChar
+    assert(enrichedValue === "Three blind mice")
+  }
+
+  it should "capitalize the v in ...vacationland..." in {
+    val originalValue = "...vacationland..."
+    val enrichedValue = originalValue.capitalizeFirstChar
+    assert(enrichedValue === "...Vacationland...")
+  }
+
+  it should "capitalize the t in '  telephone'" in {
+    val originalValue = "  telephone"
+    val enrichedValue = originalValue.capitalizeFirstChar
+    assert(enrichedValue === "  Telephone")
+  }
+
+  "findAndRemoveAll" should "remove all stop words from the given string" in {
+    val stopWords = Set("jp2", "application/xml")
+    val originalValue = "application/xml photograph   jp2"
+    val enrichedValue = originalValue.findAndRemoveAll(stopWords)
+    assert(enrichedValue === "photograph")
+  }
 }
