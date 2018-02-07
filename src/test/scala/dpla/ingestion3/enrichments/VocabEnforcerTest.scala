@@ -51,8 +51,7 @@ class VocabEnforcerTest extends FlatSpec with BeforeAndAfter {
     val originalValue = Seq(SkosConcept(providedLabel = Option("eng")))
     val expectedValue = Seq(SkosConcept(
       providedLabel = Option("eng"),
-      concept = Option("English"),
-      scheme = Option(new URI("http://lexvo.org/id/iso639-3/"))
+      concept = Option("English")
     ))
 
     val enrichedValue = originalValue.map(LanguageMapper.mapLanguage)
@@ -65,8 +64,7 @@ class VocabEnforcerTest extends FlatSpec with BeforeAndAfter {
     val originalValue = Seq(SkosConcept(providedLabel = Option("ENG")))
     val expectedValue = Seq(SkosConcept(
       providedLabel = Option("ENG"),
-      concept = Option("English"),
-      scheme = Option(new URI("http://lexvo.org/id/iso639-3/"))
+      concept = Option("English")
     ))
 
     val enrichedValue = originalValue.map(LanguageMapper.mapLanguage)

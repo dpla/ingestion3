@@ -24,10 +24,11 @@ trait VocabEnforcer[T] {
     * Accepts a SkosConcept from the mapped record and attempts to lookup the mapped value
     * in an external vocabulary returning the preferred form.
     */
-  val matchToSkosVocab: (SkosConcept, Map[SkosConcept,SkosConcept]) => SkosConcept = (originalValue, skosVocab) => {
+  val matchToSkosVocab: (SkosConcept, Map[String,String]) => SkosConcept = (originalValue, skosVocab) => {
     // convert to lower case
-    val lcOrigingalValue = originalValue.copy(providedLabel = Option(originalValue.providedLabel.get.toLowerCase))
-    val enrichedLexvo = skosVocab.getOrElse(lcOrigingalValue, originalValue)
+    // val lcOrigingalValue = originalValue.copy(providedLabel = Option(originalValue.providedLabel.getOrElse("").toLowerCase))
+    val lcTerm = originalValue.providedLabel.getOrElse("").toLowerCase()
+    val enrichedLexvo = skosVocab.get(lcTerm)
 
     // If the lookup performed above returned a match then we need to merge the providedLabel value
     // from originalValue with the enriched concept and scheme values. If no match was found these
@@ -35,9 +36,11 @@ trait VocabEnforcer[T] {
 
     // For languages: The concept property should only contain ISO-639 term values. If not match is
     // found then it should remain blank and the original value remains in providedLabel.
+    // FIXME Scheme not used
+    // val schemeUri = Some(new URI("http://lexvo.org/id/iso639-3/"))
+
     SkosConcept(
-      concept = enrichedLexvo.concept,
-      scheme = enrichedLexvo.scheme,
+      concept = enrichedLexvo,
       providedLabel = originalValue.providedLabel
     )
   }
@@ -143,26 +146,18 @@ object DcmiTypeStringMapper extends VocabEnforcer[String] {
   */
 object LanguageMapper extends VocabEnforcer[String] {
   // Reads a file
-  val readFile:(String) => Iterator[String] = (path) => {
+  private val readFile:(String) => Iterator[String] = (path) => {
     val stream = getClass.getResourceAsStream(path)
     Source.fromInputStream(stream).getLines
   }
 
   // Create the language lookup map
-  val iso639Map = {
+  private val iso639Map: Map[String, String] = {
     // TODO: Make the path to the ISO data file configurable
-    // TODO: Find a clearer way to write the parsing of that file
-    // TODO: Does additional data need to be read in to more completely instantiate these objects?
     readFile("/iso-639-3.tab")
       .map(_.split("\t"))
-      .map(f => {
-        val languageAbbv = Some(f(0))
-        val languageTerm = Some(f(1))
-        val schemeUri = Some(new URI("http://lexvo.org/id/iso639-3/"))
-        // Create a tuple >> (SkosConcept(Some("eng")), SkosConcept(term, scheme)) that will be used to perform
-        // lookups when enriching a value
-        (SkosConcept(providedLabel = languageAbbv), SkosConcept(concept = languageTerm, scheme = schemeUri))
-      })
+      // Map abbreviations to terms. For example, eng -> English
+      .map(f => f(0) -> f(1))
       .toMap
   }
   // Attempt to enrich the original record value
