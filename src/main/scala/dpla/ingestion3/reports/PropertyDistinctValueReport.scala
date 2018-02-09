@@ -84,6 +84,8 @@ class PropertyDistinctValueReport(
         ds.map(dplaMapData => PropertyDistinctValueRpt(extractValue(Seq(dplaMapData.dataProvider))))
       case "edmRights" =>
         ds.map(dplaMapData => PropertyDistinctValueRpt(extractValue(dplaMapData.edmRights.toSeq)))
+      case "intermediateProvider" =>
+        ds.map(dplaMapData => PropertyDistinctValueRpt(extractValue(dplaMapData.intermediateProvider.toSeq)))
       case "isShownAt" =>
         ds.map(dplaMapData => PropertyDistinctValueRpt(extractValue(Seq(dplaMapData.isShownAt.uri))))
       case "sourceResource.alternateTitle" =>

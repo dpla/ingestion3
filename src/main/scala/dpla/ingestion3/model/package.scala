@@ -84,6 +84,7 @@ package object model {
         ("dataProvider" -> record.dataProvider.name) ~
         ("ingestDate" -> ingestDate) ~
         ("ingestType" -> "item") ~
+        ("intermediateProvider" -> record.intermediateProvider.map(p => p.name)) ~
         ("isShownAt" -> record.isShownAt.uri.toString) ~
         ("object" -> record.`preview`.map{o => o.uri.toString}) ~ // in dpla map 3, object is the thumbnail
         ("rights" -> record.edmRights.map(r => r.toString)) ~
