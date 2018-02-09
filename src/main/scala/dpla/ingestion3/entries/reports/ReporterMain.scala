@@ -15,6 +15,7 @@ object ReporterMain {
     "dataProvider",
     "isShownAt",
     "edmRights",
+    "intermediateProvider",
     "sourceResource.collection.title",
     "sourceResource.contributor.name",
     "sourceResource.creator.name",

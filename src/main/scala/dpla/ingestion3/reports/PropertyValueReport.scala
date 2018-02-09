@@ -76,6 +76,14 @@ class PropertyValueReport (
             value = extractValue(oreAggregation.edmRights.toSeq)
           )
         })
+      case "intermediateProvider" =>
+        ds.map(oreAggregation => {
+          PropertyValueRpt(
+            dplaUri = oreAggregation.dplaUri.toString,
+            localUri = oreAggregation.isShownAt.uri.toString,
+            value = extractValue(Seq(oreAggregation.intermediateProvider))
+          )
+        })
       case "isShownAt" =>
         ds.map(oreAggregation => {
           PropertyValueRpt(

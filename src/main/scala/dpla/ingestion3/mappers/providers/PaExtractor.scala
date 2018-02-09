@@ -67,6 +67,7 @@ class PaExtractor(rawData: String, shortName: String) extends Extractor with Xml
       //below will throw if not enough contributors
       dataProvider = extractDataProvider(),
       edmRights = extractStrings(xml \ "metadata" \\ "rights").find(r => isUrl(r)).map(new URI(_)),
+      intermediateProvider = extractStrings(xml \ "metadata" \\ "source").map(nameOnlyAgent).headOption,
       originalRecord = Utils.formatXml(xml),
       provider = agent,
       isShownAt = EdmWebResource(uri = itemUri(), fileFormat = extractStrings("dc:format")),
