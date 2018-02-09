@@ -20,23 +20,15 @@ class EnrichmentDriverTest extends FlatSpec with BeforeAndAfter {
         prefLabel = Some("2012-05-07"),
         originalSourceDate = Some("5.7.2012")
       )),
-      language = Seq(SkosConcept(
-
-        /*
-         * FIXME: I think that providedLabel and concept are reversed.
-         * Concept is supposed to be the "The preferred form of the name of the
-         * concept," per
-         * http://dp.la/info/wp-content/uploads/2015/03/MAPv4.pdf
-         * Provided label is what the provider gave us. The language code is
-         * not "English", it's "eng", according to
-         * http://www.lexvo.org/page/term/eng/English
-         */
-        providedLabel = Some("eng"),
-        concept = Some("English"),
-        scheme = Some(new URI("http://lexvo.org/id/iso639-3/")))
-
+      language = Seq(
+        SkosConcept(
+          providedLabel = Some("eng"),
+          concept = Some("English")
+        )
+      ),
+      `type` = Seq("sound")
       )
-    ))
+    )
 
     val enrichedRecord = driver.enrich(MappedRecordsFixture.mappedRecord)
 

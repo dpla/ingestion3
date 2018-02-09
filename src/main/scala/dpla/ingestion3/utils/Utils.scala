@@ -1,6 +1,7 @@
 package dpla.ingestion3.utils
 
 import java.io.{File, PrintWriter}
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
@@ -8,6 +9,7 @@ import java.util.concurrent.TimeUnit
 import dpla.ingestion3.confs.i3Conf
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
 
+import scala.util.Try
 import scala.xml.Node
 
 
@@ -130,6 +132,14 @@ object Utils {
     s"Throughput: ${Utils.formatNumber(recordsPerSecond)} records per second"
   }
 
+  /**
+    * Tries to create a URL object from the string
+    *
+    * @param url String url
+    * @return True if a URL object can be made from url
+    *         False if it fails (malformed url, invalid characters, not a url)
+    */
+  def isUrl(url: String): Boolean = Try {new URL(url) }.isSuccess
 
   /**
     * Print mapping summary information

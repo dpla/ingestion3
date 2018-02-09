@@ -25,6 +25,7 @@ object ReporterMain {
     "sourceResource.genre",
     "sourceResource.identifier",
     "sourceResource.language.providedLabel",
+    "sourceResource.language.concept",
     "sourceResource.place.name",
     "sourceResource.publisher.name",
     "sourceResource.relation",

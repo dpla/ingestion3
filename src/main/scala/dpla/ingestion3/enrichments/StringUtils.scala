@@ -42,10 +42,23 @@ object StringUtils {
     }
 
     /**
+      * Removes all target strings from the source string
+      *
+      * @return
+      */
+    val findAndRemoveAll: Set[String] => String = (stopWords) => {
+      // FIXME this is a case sensitive operation.
+      value.splitAtDelimiter(" ")
+        .filterNot(stopWords)
+        .filter(_.nonEmpty)
+        .mkString(" ")
+    }
+
+    /**
       * Splits a String value around a given delimiter.
       */
     val splitAtDelimiter: (String) => Array[String] = (delimiter) => {
-      value.split(delimiter).map(_.trim)
+      value.split(delimiter).map(_.trim).filter(_.nonEmpty)
     }
 
     val stripEndingPunctuation: SingleStringEnrichment = {
@@ -69,5 +82,41 @@ object StringUtils {
     val reduceWhitespace: SingleStringEnrichment = {
       value.replaceAll("  ", " ")
     }
+
+    /**
+      * Find and capitalize the first character in a given string
+      *
+      * 3 blind mice -> 3 blind mice
+      * three blind mice -> Three blind mice.
+      * ...vacationland... -> ...Vacationland...
+      *   The first bike ->   The first bike
+      *
+      * @return
+      */
+    val capitalizeFirstChar: SingleStringEnrichment = {
+      val charIndex = findFirstChar(value)
+      if (charIndex >= 0)
+        replaceCharAt(value, charIndex, value.charAt(charIndex).toUpper )
+      else
+        value
+    }
+
+    /**
+      * Replaces the character at the specified index in s with c
+      * @param s String value
+      * @param pos Index
+      * @param c New char
+      * @return A new String with Char c at index pos
+      */
+    private def replaceCharAt(s: String, pos: Int, c: Char): String = s.substring(0, pos) + c + s.substring(pos + 1)
+
+    /**
+      * Iterates over the string to find the first alphanumeric char
+      * and returns the index
+      *
+      * @param str
+      * @return
+      */
+    private def findFirstChar(str: String): Int = str.indexWhere(_.isLetterOrDigit)
   }
 }

@@ -38,11 +38,16 @@ object OaiResponseProcessor {
       xmlRecords.flatMap(record =>
         record.headOption match {
           case Some(node) =>
-            val id = getRecordIdentifier(node)
-            val setIds = getSetIdsFromRecord(node)
-            // Drop the entire page text from source when returning OaiRecord. Embedding the entire
-            // page text was triggering Out of Memory exceptions even on small harvests (200,000 records)
-            Some(OaiRecord(id, node.toString, setIds, source.copy(text = None) ))
+            // Do not harvest records marked as deleted
+            if (isDeleted(node)) {
+              None
+            } else {
+              val id = getRecordIdentifier(node)
+              val setIds = getSetIdsFromRecord(node)
+              // Drop the entire page text from source when returning OaiRecord. Embedding the entire
+              // page text was triggering Out of Memory exceptions even on small harvests (200,000 records)
+              Some(OaiRecord(id, node.toString, setIds, source.copy(text = None)))
+            }
           case _ => None
       })
     }
@@ -192,5 +197,17 @@ object OaiResponseProcessor {
     val xml = XML.loadString(string)
     getOaiErrorCode(xml)
     xml
+  }
+
+  /**
+    * Checks the header status property to determine if the record is marked as deleted
+    * @param node
+    * @return
+    */
+  def isDeleted(node: NodeSeq): Boolean = {
+    (node \ "header").\@("status") match {
+      case "deleted" => true
+      case _ => false
+    }
   }
 }

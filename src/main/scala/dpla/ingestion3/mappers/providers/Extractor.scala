@@ -1,5 +1,6 @@
 package dpla.ingestion3.mappers.providers
 
+import java.io
 import java.net.URI
 
 import dpla.ingestion3.model.{EdmAgent, OreAggregation}
@@ -17,6 +18,19 @@ trait Extractor {
 
   def build(): Try[OreAggregation]
   def agent: EdmAgent
+
+  /**
+    *
+    * @param stringUri
+    * @return
+    */
+  def createUri(stringUri: String): URI = {
+    Try { new URI(stringUri) } match {
+      case Success(uri) => uri
+      case Failure(_) => throw new RuntimeException(s"Invalid URI $stringUri in ${getProviderId()} ")
+    }
+  }
+
 
   /**
     * Does the provider use a prefix (typically their provider abbreviation) to

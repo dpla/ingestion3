@@ -108,6 +108,10 @@ class PropertyDistinctValueReport(
         ds.map(dplaMapData => PropertyDistinctValueRpt(extractValue(dplaMapData.sourceResource.identifier)))
       case "sourceResource.language.providedLabel" =>
         ds.map(dplaMapData => PropertyDistinctValueRpt(extractValue(dplaMapData.sourceResource.language)))
+      // Special mapping for concept
+      case "sourceResource.language.concept" =>
+        ds.map(dplaMapData => PropertyDistinctValueRpt(dplaMapData.sourceResource.language.map(l =>
+          l.concept.getOrElse("__MISSING SkosConcept.concept__"))))
       case "sourceResource.place.name" =>
         ds.map(dplaMapData => PropertyDistinctValueRpt(extractValue(dplaMapData.sourceResource.place)))
       case "sourceResource.publisher.name" =>

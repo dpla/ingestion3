@@ -27,7 +27,8 @@ object MappedRecordsFixture {
         scheme = None,
         exactMatch = Seq(),
         closeMatch = Seq())
-      )
+      ),
+      `type` = Seq("audio")
     )
   )
 }
