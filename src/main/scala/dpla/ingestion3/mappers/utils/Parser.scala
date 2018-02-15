@@ -1,19 +1,12 @@
 package dpla.ingestion3.mappers.utils
 
 import org.json4s.JValue
-
 import scala.xml.{NodeSeq, XML}
-
-/**
-  * Parses original records
-  *
-  * @tparam T
-  */
 
 /**
   * XML parser
   */
-class XmlParser extends Parser[Document[NodeSeq]] {
+class XmlParser extends Parser[NodeSeq] {
   override def parse(data: String): Document[NodeSeq] = Document(XML.loadString(data))
 }
 
@@ -21,5 +14,5 @@ class XmlParser extends Parser[Document[NodeSeq]] {
   * JSON parser
   */
 class JsonParser extends Parser[JValue] {
-  override def parse(data: String): JValue = org.json4s.jackson.JsonMethods.parse(data)
+  override def parse(data: String): Document[JValue] = Document(org.json4s.jackson.JsonMethods.parse(data))
 }
