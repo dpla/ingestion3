@@ -3,9 +3,7 @@ package dpla.ingestion3.executors
 import java.io.File
 
 import com.databricks.spark.avro._
-import dpla.ingestion3.mappers.Mapper
 import dpla.ingestion3.model
-import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
@@ -13,8 +11,6 @@ import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
-
-import scala.util.{Failure, Success}
 
 trait MappingExecutor extends Serializable {
 

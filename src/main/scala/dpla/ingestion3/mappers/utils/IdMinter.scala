@@ -26,7 +26,7 @@ trait IdMinter[T] {
     * @return String Record identifier
     * @throws Exception If ID can not be extracted
     */
-  def getProviderId(implicit data: T): String
+  def getProviderId(implicit data: Document[T]): String
 
   /**
     * The provider's shortname abbreviation which is the value used to salt the
@@ -52,7 +52,7 @@ trait IdMinter[T] {
     *
     * @return String
     */
-  protected def buildProviderBaseId()(implicit data: T): String = {
+  protected def buildProviderBaseId()(implicit data: Document[T]): String = {
 
     def idErrorMsg(): String = {
       s"Unable to mint ID given values of:\n" +
@@ -82,12 +82,12 @@ trait IdMinter[T] {
     *
     * @return String MD5 hash of the base ID
     */
-  protected def mintDplaId(implicit data: T): String = DigestUtils.md5Hex(buildProviderBaseId())
+  protected def mintDplaId(implicit data: Document[T]): String = DigestUtils.md5Hex(buildProviderBaseId())
 
   /**
     * Builds the item URI
     *
     * @return URI
     */
-  protected def mintDplaItemUri(implicit data: T): URI = new URI(s"$baseDplaItemUri$mintDplaId")
+  protected def mintDplaItemUri(implicit data: Document[T]): URI = new URI(s"$baseDplaItemUri$mintDplaId")
 }
