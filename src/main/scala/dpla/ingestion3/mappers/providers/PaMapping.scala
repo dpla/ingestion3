@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
-import dpla.ingestion3.mappers.utils.{IdMinter, XmlExtractor, XmlMapping}
+import dpla.ingestion3.mappers.utils.{Document, IdMinter, XmlExtractor, XmlMapping}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -10,8 +10,11 @@ import org.json4s.JValue
 import org.json4s.JsonDSL._
 
 import scala.xml.NodeSeq
+import dpla.ingestion3.mappers.utils.Mapping
+class PaMapping extends Mapping[Document[NodeSeq]] with XmlExtractor with IdMinter[NodeSeq] {
 
-class PaMapping extends XmlMapping with XmlExtractor with IdMinter[NodeSeq] {
+
+  implicit def unwrap(document: Document[NodeSeq]): NodeSeq = document.get
 
   // IdMinter methods
   override def useProviderName: Boolean = false
@@ -24,10 +27,10 @@ class PaMapping extends XmlMapping with XmlExtractor with IdMinter[NodeSeq] {
 
 
   // SourceResource mapping
-  override def collection(data: NodeSeq): Seq[DcmiTypeCollection] =
-    extractStrings(data \ "metadata" \\ "relation").headOption.map(nameOnlyCollection).toSeq
+  override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
+    extractStrings(data.get \ "metadata" \\ "relation").headOption.map(nameOnlyCollection).toSeq
 
-  override def contributor(data: NodeSeq): Seq[EdmAgent] =
+  override def contributor(implicit data: NodeSeq): Seq[EdmAgent] =
     extractStrings(data \ "metadata" \\ "contributor").dropRight(1).map(nameOnlyAgent)
 
   override def creator(data: NodeSeq): Seq[EdmAgent] =

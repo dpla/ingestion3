@@ -9,15 +9,12 @@ import scala.xml.{NodeSeq, XML}
   *
   * @tparam T
   */
-trait Parser[T] {
-  def parse(data: String): T
-}
 
 /**
   * XML parser
   */
-class XmlParser extends Parser[NodeSeq] {
-  override def parse(data: String): NodeSeq = XML.loadString(data)
+class XmlParser extends Parser[Document[NodeSeq]] {
+  override def parse(data: String): Document[NodeSeq] = Document(XML.loadString(data))
 }
 
 /**
