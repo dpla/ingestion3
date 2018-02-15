@@ -8,8 +8,11 @@ import org.json4s.JValue
 import scala.util.Try
 import scala.xml.NodeSeq
 
+trait Mapper[T, +E] {
+  def map(document: Document[T], mapping: Mapping[T]): Try[OreAggregation]
+}
 
-// FIXME
+// FIXME Can these be rewritten generically?
 class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
 
   override def map(document: Document[NodeSeq], mapping: Mapping[NodeSeq]): Try[OreAggregation] = {
