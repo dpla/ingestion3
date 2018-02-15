@@ -9,15 +9,13 @@ import org.json4s.JValue
 import scala.util.Try
 import scala.xml.NodeSeq
 
-trait Mapper[T, E] {
-  def map(document: T, mapping: Mapping[T]): Try[OreAggregation]
-}
+
 
 
 // FIXME
-class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
+class XmlMapper extends Mapper[Document[NodeSeq], XmlMapping] {
 
-  override def map(document: NodeSeq, mapping: Mapping[NodeSeq]): Try[OreAggregation] = {
+  override def map(document: Document[NodeSeq], mapping: Mapping[NodeSeq]): Try[OreAggregation] = {
     Try {
       OreAggregation(
         dplaUri = mapping.dplaUri(document),
@@ -60,7 +58,7 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
   }
 }
 
-class JsonMapper extends Mapper[JValue, _ <: JsonMapping] {
+class JsonMapper extends Mapper[JValue, JsonMapping] {
   override def map(document: JValue, mapping: Mapping[JValue]): Try[OreAggregation] = {
     Try {
       OreAggregation(
