@@ -47,11 +47,9 @@ object ProviderRegistry {
     "cdl" -> Register(
       profile = new CdlProfile
     ),
-//    "mdl" -> Register(
-//      mapper = new MdlExtractor(),
-//      harvesterClass = Some(classOf[MdlHarvester]),
-//      parser = new JsonParser
-//    ),
+    "mdl" -> Register(
+        profile = new MdlProfile
+    ),
 //    "nara" -> Register(
 //      mapper = new NaraExtractorm(),
 //      parser = new XmlParser

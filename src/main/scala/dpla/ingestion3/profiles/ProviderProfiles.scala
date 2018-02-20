@@ -1,5 +1,6 @@
 package dpla.ingestion3.profiles
 
+import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.api.CdlHarvester
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.mappers.providers._
@@ -17,6 +18,16 @@ class CdlProfile extends JsonProfile {
 }
 
 /**
+  * Minnesota Digital Library
+  */
+class MdlProfile extends JsonProfile {
+  type Mapping = MdlMapping
+
+  override def getHarvester: Class[_ <: Harvester] = ???
+  override def getMapping = new MdlMapping
+}
+
+/**
   * Pennsylvania Hub
   */
 class PaProfile extends XmlProfile {
@@ -27,6 +38,9 @@ class PaProfile extends XmlProfile {
   override def getMapping = new PaMapping
 }
 
+/**
+  *
+  */
 class WiProfile extends XmlProfile {
   type Mapping = WiMapping
 
