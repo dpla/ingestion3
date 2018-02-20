@@ -26,3 +26,10 @@ class PaProfile extends XmlProfile {
   override def getHarvester = classOf[OaiHarvester]
   override def getMapping = new PaMapping
 }
+
+class WiProfile extends XmlProfile {
+  type Mapping = WiMapping
+
+  override def getHarvester = ???
+  override def getMapping = new WiMapping
+}
