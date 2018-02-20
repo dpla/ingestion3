@@ -25,7 +25,8 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
   // OreAggregation fields
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = mintDplaItemUri(data)
 
-  override def sidecar(data: Document[JValue]): JValue = ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
+  override def sidecar(data: Document[JValue]): JValue =
+    ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
 
   override def dataProvider(data: Document[JValue]): ExactlyOne[EdmAgent] = nameOnlyAgent(getDataProvider(data))
 
@@ -38,47 +39,65 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
     uri = Some(new URI("http://dp.la/api/contributor/cdl"))
   )
 
-  override def isShownAt(data: Document[JValue]): ExactlyOne[EdmWebResource] = uriOnlyWebResource(providerUri(data))
-
+  override def isShownAt(data: Document[JValue]): ExactlyOne[EdmWebResource] =
+    uriOnlyWebResource(providerUri(data))
 
   // SourceResource
-  override def alternateTitle(data: Document[JValue]): ZeroToMany[String] = extractStrings("alternative_title_ss")(data)
+  override def alternateTitle(data: Document[JValue]): ZeroToMany[String] =
+    extractStrings("alternative_title_ss")(data)
 
   override def collection(data: Document[JValue]): ZeroToMany[DcmiTypeCollection] =
     extractStrings("collection_name")(data).map(nameOnlyCollection)
 
-  override def contributor(data: Document[JValue]): ZeroToMany[EdmAgent] = extractStrings("contributor_ss")(data).map(nameOnlyAgent)
+  override def contributor(data: Document[JValue]): ZeroToMany[EdmAgent] =
+    extractStrings("contributor_ss")(data).map(nameOnlyAgent)
 
-  override def creator(data: Document[JValue]): ZeroToMany[EdmAgent] = extractStrings("creator_ss")(data).map(nameOnlyAgent)
+  override def creator(data: Document[JValue]): ZeroToMany[EdmAgent] =
+    extractStrings("creator_ss")(data).map(nameOnlyAgent)
 
-  override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] = extractStrings("date_ss")(data).map(stringOnlyTimeSpan)
+  override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
+    extractStrings("date_ss")(data).map(stringOnlyTimeSpan)
 
-  override def description(data: Document[JValue]): ZeroToMany[String] = extractStrings("description_ss")(data)
+  override def description(data: Document[JValue]): ZeroToMany[String] =
+    extractStrings("description_ss")(data)
 
-  override def extent(data: Document[JValue]): ZeroToMany[String] = extractStrings("extent_ss")(data)
+  override def extent(data: Document[JValue]): ZeroToMany[String] =
+    extractStrings("extent_ss")(data)
 
-  override def format(data: Document[JValue]): ZeroToMany[String] = extractStrings("format")(data)
+  override def format(data: Document[JValue]): ZeroToMany[String] =
+    extractStrings("format")(data)
 
-  override def genre(data: Document[JValue]): ZeroToMany[SkosConcept] = extractStrings("genre_ss")(data).map(nameOnlyConcept)
+  override def genre(data: Document[JValue]): ZeroToMany[SkosConcept] =
+    extractStrings("genre_ss")(data).map(nameOnlyConcept)
 
-  override def identifier(data: Document[JValue]): ZeroToMany[String] = extractStrings("identifier_ss")(data)
+  override def identifier(data: Document[JValue]): ZeroToMany[String] =
+    extractStrings("identifier_ss")(data)
 
-  override def language(data: Document[JValue]): ZeroToMany[SkosConcept] = extractStrings("language_ss")(data).map(nameOnlyConcept)
+  override def language(data: Document[JValue]): ZeroToMany[SkosConcept] =
+    extractStrings("language_ss")(data).map(nameOnlyConcept)
 
-  override def place(data: Document[JValue]): ZeroToMany[DplaPlace] = extractStrings("coverage_ss")(data).map(nameOnlyPlace)
+  override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
+    extractStrings("coverage_ss")(data).map(nameOnlyPlace)
 
-  override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] = extractStrings("publisher_ss")(data).map(nameOnlyAgent)
+  override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
+    extractStrings("publisher_ss")(data).map(nameOnlyAgent)
 
-  override def relation(data: Document[JValue]): ZeroToMany[LiteralOrUri] = extractStrings("relation_ss")(data).map(eitherStringOrUri)
+  override def relation(data: Document[JValue]): ZeroToMany[LiteralOrUri] =
+    extractStrings("relation_ss")(data).map(eitherStringOrUri)
 
   override def rights(data: Document[JValue]): AtLeastOne[String] =
-    extractStrings("rights_ss")(data) ++ extractStrings("rights_note_ss")(data) ++ extractStrings("rights_date_ss")(data)
+    extractStrings("rights_ss")(data) ++
+      extractStrings("rights_note_ss")(data) ++
+        extractStrings("rights_date_ss")(data)
 
-  override def rightsHolder(data: Document[JValue]): ZeroToMany[EdmAgent] = extractStrings("rightsholder_ss")(data).map(nameOnlyAgent)
+  override def rightsHolder(data: Document[JValue]): ZeroToMany[EdmAgent] =
+    extractStrings("rightsholder_ss")(data).map(nameOnlyAgent)
 
-  override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] = extractStrings("subject_ss")(data).map(nameOnlyConcept)
+  override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
+    extractStrings("subject_ss")(data).map(nameOnlyConcept)
 
-  override def temporal(data: Document[JValue]): ZeroToMany[EdmTimeSpan] = extractStrings("temporal_ss")(data).map(stringOnlyTimeSpan)
+  override def temporal(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
+    extractStrings("temporal_ss")(data).map(stringOnlyTimeSpan)
 
   override def title(data: Document[JValue]): AtLeastOne[String] = extractStrings("title_ss")(data)
 
