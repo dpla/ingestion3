@@ -1,6 +1,6 @@
 package dpla.ingestion3.utils
 
-import dpla.ingestion3.profiles.{CdlProfile, PaProfile}
+import dpla.ingestion3.profiles._
 
 import scala.util.Try
 
@@ -58,11 +58,10 @@ object ProviderRegistry {
 //    ),
     "pa" -> Register(
       profile = new PaProfile
+    ),
+    "wi" -> Register(
+      profile = new WiProfile
     )
-//    ,"wi" -> Register(
-//      mapper = new WiExtractor,
-//      parser = new XmlParser
-//    )
   )
 
   private def noProfileException(short: String) = {
