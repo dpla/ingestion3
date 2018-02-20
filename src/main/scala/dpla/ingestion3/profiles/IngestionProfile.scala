@@ -1,5 +1,6 @@
 package dpla.ingestion3.profiles
 
+import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.mappers.{JsonMapper, Mapper, XmlMapper}
 import dpla.ingestion3.mappers.utils.{JsonParser, Mapping, Parser, XmlParser}
 import dpla.ingestion3.model.OreAggregation
@@ -10,6 +11,7 @@ import scala.xml.NodeSeq
 
 trait IngestionProfile[T] {
 
+  def getHarvester: Class[_ <: Harvester]
   def getParser: Parser[T]
   def getMapper: Mapper[T, Mapping[T]]
   def getMapping: Mapping[T]

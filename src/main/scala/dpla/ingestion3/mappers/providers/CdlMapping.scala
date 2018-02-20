@@ -10,7 +10,7 @@ import org.json4s.JValue
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
-class CdlExtractor() extends Mapping[JValue] with IdMinter[JValue] with JsonExtractor {
+class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtractor {
 
   // ID minting functions
   override def useProviderName: Boolean = true

@@ -1,8 +1,6 @@
 package dpla.ingestion3.utils
 
-import dpla.ingestion3.harvesters.Harvester
-import dpla.ingestion3.mappers.providers._
-import dpla.ingestion3.mappers.utils.XmlParser
+import dpla.ingestion3.profiles.{CdlProfile, PaProfile}
 
 import scala.util.Try
 
@@ -10,46 +8,45 @@ import scala.util.Try
   * Main entry point for accessing a provider's associated classes based on its
   * short name.
   *
-  * @example ProviderRegistry.lookupExtractor("nara") => Success[ classOf[NaraExtractor] ]
-  *          ProviderRegistry.lookupHarvester("badShortName") => Failure
   */
 object ProviderRegistry {
 
 
   /**
     *
-    * @param short
+    * @param short Provider shortname
     * @return
     */
   def lookupRegister(short: String) = Try {
-    registry.getOrElse(short, noExtractorException(short))
+    registry.getOrElse(short, noProfileException(short))
   }
 
   /**
-    * Get a provider's Harvester class given its short name.
-    * @param short: String provider short name
-    * @return provider's Harvester class as Success/Failure
-    * @throws RuntimeException if short name is not recognized or Harvester class
-    *                          is not found
+    * Get a providers ingestion profile
+    *
+    * @param short Provider shortname
+    * @return
     */
-  def lookupHarvesterClass(short: String): Try[Class[_ <: Harvester]] = Try {
-    registry.getOrElse(short, noHarvesterException(short))
-      .harvesterClass.getOrElse(noHarvesterException(short))
+  def lookupProfile(short: String) = Try {
+    registry.getOrElse(short, noProfileException(short)).profile
   }
 
-  case class Register[T, Mapper[T], Parser[T]](
-                                  mapper: Mapper[T],
-                                  harvesterClass: Option[Class[_ <: Harvester]] = None,
-                                  parser: Parser[T]
-                                )
+  /**
+    *
+    * @param short
+    * @return
+    */
+  def lookupHarvesterClass(short: String) = Try {
+    registry.getOrElse(short, noProfileException(short)).profile.getHarvester
+  }
+
+  case class Register[IngestionProfile] (profile: IngestionProfile)
 
   private val registry = Map(
     // TODO Uncomment and fixup other provider mappers
-//    "cdl" -> Register(
-//      mapper = new CdlExtractor,
-//      harvesterClass = Some(classOf[CdlHarvester]),
-//      parser = new JsonParser
-//    ),
+    "cdl" -> Register(
+      profile = new CdlProfile
+    ),
 //    "mdl" -> Register(
 //      mapper = new MdlExtractor(),
 //      harvesterClass = Some(classOf[MdlHarvester]),
@@ -60,8 +57,7 @@ object ProviderRegistry {
 //      parser = new XmlParser
 //    ),
     "pa" -> Register(
-      mapper = new PaMapping,
-      parser = new XmlParser
+      profile = new PaProfile
     )
 //    ,"wi" -> Register(
 //      mapper = new WiExtractor,
@@ -69,13 +65,8 @@ object ProviderRegistry {
 //    )
   )
 
-  private def noExtractorException(short: String) = {
-    val msg = s"No Extractor class for '$short' found in ProviderRegistry."
-    throw new RuntimeException(msg)
-  }
-
-  private def noHarvesterException(short: String) = {
-    val msg = s"No Harvester class for '$short' found in ProviderRegistry."
+  private def noProfileException(short: String) = {
+    val msg = s"No ingestion profile for '$short' found in ProviderRegistry."
     throw new RuntimeException(msg)
   }
 }

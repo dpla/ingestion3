@@ -4,13 +4,16 @@ import java.io.File
 
 import com.databricks.spark.avro._
 import dpla.ingestion3.model
-import dpla.ingestion3.utils.Utils
+import dpla.ingestion3.model.RowConverter
+import dpla.ingestion3.utils.{ProviderRegistry, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
+
+import scala.util.{Failure, Success}
 
 trait MappingExecutor extends Serializable {
 
@@ -121,16 +124,21 @@ class DplaMap extends Serializable {
 
     totalCount.add(1)
 
-    (Row(), "")
+    val extractorClass = ProviderRegistry.lookupProfile(shortName) match {
+      case Success(extClass) => extClass
+      case Failure(e) =>
+        // logger.fatal(e.getMessage)
+        throw e
+    }
 
-//    Mapper.build(shortName, document) match {
-//      case Success(dplaMapData) =>
-//        successCount.add(1)
-//        (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
-//      case Failure(exception) =>
-//        failureCount.add(1)
-//        (null, s"${exception.getMessage}\n" +
-//          s"${exception.getStackTrace.mkString("\n")}")
-//    }
+    extractorClass.performMapping(document) match {
+      case Success(dplaMapData) =>
+        successCount.add(1)
+        (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
+      case Failure(exception) =>
+        failureCount.add(1)
+        (null, s"${exception.getMessage}\n" +
+          s"${exception.getStackTrace.mkString("\n")}")
+    }
   }
 }
