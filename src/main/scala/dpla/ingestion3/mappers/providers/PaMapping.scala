@@ -24,7 +24,7 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   // SourceResource mapping
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
-    extractStrings(data.get \ "metadata" \\ "relation").headOption.map(nameOnlyCollection).toSeq
+    extractStrings(data \ "metadata" \\ "relation").headOption.map(nameOnlyCollection).toSeq
 
   override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
     extractStrings(data \ "metadata" \\ "contributor").dropRight(1).map(nameOnlyAgent)
