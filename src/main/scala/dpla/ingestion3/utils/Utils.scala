@@ -7,6 +7,7 @@ import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.model.OreAggregation
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
 import org.json4s.jackson.JsonMethods._
 import org.json4s.JValue
@@ -73,6 +74,17 @@ object Utils {
   def formatNumber(n: Long): String = {
     val formatter = java.text.NumberFormat.getIntegerInstance
     formatter.format(n)
+  }
+
+  /**
+    * Formats an OreAggregation in a pretty way so it can be printed to the screen in a human readable format
+    *
+    * @param oreAgg
+    * @return
+    */
+  def formatOreAggregation(oreAgg: OreAggregation): String = {
+    import sext._
+    oreAgg.valueTreeString
   }
 
   /**
