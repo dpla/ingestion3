@@ -1,12 +1,11 @@
 package dpla.ingestion3.enrichments
 
-import java.net.URI
-
 import dpla.ingestion3.enrichments.DcmiTypeEnforcer.dcmiType
-import org.eclipse.rdf4j.model.IRI
 import dpla.ingestion3.mappers.rdf.DCMIType
 import dpla.ingestion3.model.SkosConcept
+import org.eclipse.rdf4j.model.IRI
 
+import scala.collection.immutable.ListMap
 import scala.io.Source
 
 trait VocabEnforcer[T] {
@@ -140,26 +139,51 @@ object DcmiTypeStringMapper extends VocabEnforcer[String] {
 }
 
 /**
-  * Reads in ISO-693-3 data from tab-delimited file and generates a
+  * Reads in iso693-X data from CSV files and generates a
   * map to reconcile language abbreviations to the full term
   *
   */
 object LanguageMapper extends VocabEnforcer[String] {
+
+  private val languageFiles = Seq(
+    // FIXME These should not be hard coded
+    "/languages/iso639-2.csv",
+    "/languages/iso639-3.csv",
+    "/languages/dpla-lang.csv")
+
   // Reads a file
-  private val readFile:(String) => Iterator[String] = (path) => {
+  private def readFile(path: String): Map[String, String] = {
     val stream = getClass.getResourceAsStream(path)
-    Source.fromInputStream(stream).getLines
+    Source.fromInputStream(stream)
+      .getLines()
+      .filterNot(l => l.startsWith("#")) // Ignore lines that start with #
+      .map(line => line.split(",")) // Split line on comma
+      .map(cols => cols(0) -> cols(1).replaceAll("\"", "")) // Remove double quotes from labels
+      .toMap
   }
 
   // Create the language lookup map
-  private val iso639Map: Map[String, String] = {
-    // TODO: Make the path to the ISO data file configurable
-    readFile("/iso-639-3.tab")
-      .map(_.split("\t"))
-      // Map abbreviations to terms. For example, eng -> English
-      .map(f => f(0) -> f(1))
-      .toMap
-  }
-  // Attempt to enrich the original record value
-  val mapLanguage: (SkosConcept) => SkosConcept = matchToSkosVocab(_, iso639Map)
+  private val languageMap  =
+    /**
+      * Spark could be used with pattern matching to load CSV for TAB files in a dir
+      * but that seems like overkill here. Probably the best way to go for now is supporting
+      * passing a list of file paths to load and then we can inject those values via a config
+      * or some other extensible way in the future. The Seq() can be hard coded for now.
+      */
+    languageFiles.flatMap(file => readFile(file)).toMap
+
+  /**
+    * Takes the SkosConcept value created during mapping and attempts find a prefLabel for that
+    * term by looking up SkosConcept.providedLabel against iso639-x codes in languageMap. Returns
+    * either the original SkosConcept value for a new SkosCocnept with the ISO label in SkosConcept.concept
+    * and the original value in SkosConcept.providedLabel
+    */
+  val mapLanguage: (SkosConcept) => SkosConcept = matchToSkosVocab(_, languageMap)
+
+
+  /**
+    * Gets an ordered version of the language map
+    * @return
+    */
+  def getLanuageMap = ListMap(languageMap.toSeq.sortBy(_._1):_*)
 }
