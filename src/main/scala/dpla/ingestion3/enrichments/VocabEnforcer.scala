@@ -147,13 +147,14 @@ object LanguageMapper extends VocabEnforcer[String] {
 
   private val languageFiles = Seq(
     // FIXME These should not be hard coded
-    "src/main/resources/languages/iso639-2.csv",
-    "src/main/resources/languages/iso639-3.csv",
-    "src/main/resources/languages/dpla-lang.csv")
+    "/languages/iso639-2.csv",
+    "/languages/iso639-3.csv",
+    "/languages/dpla-lang.csv")
 
   // Reads a file
   private def readFile(path: String): Map[String, String] = {
-    Source.fromFile(path)
+    val stream = getClass.getResourceAsStream(path)
+    Source.fromInputStream(stream)
       .getLines()
       .filterNot(l => l.startsWith("#")) // Ignore lines that start with #
       .map(line => line.split(",")) // Split line on comma
