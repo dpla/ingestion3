@@ -1,8 +1,6 @@
 package dpla.ingestion3.mappers.utils
 
-import org.json4s.JValue
 import org.json4s.JsonAST._
-
 import scala.xml.NodeSeq
 
 
@@ -32,14 +30,14 @@ trait XmlExtractor extends Extractor[NodeSeq] {
     * @param xml
     * @return
     */
-  override def extractString(fieldName: String)(implicit xml: NodeSeq): Option[String]
-  = extractString(xml \ fieldName)
+  override def extractString(fieldName: String)(implicit xml: NodeSeq): Option[String] =
+    extractString(xml \ fieldName)
 
   /**
     *
     */
-  def extractStrings(fieldName: String)(implicit xml: NodeSeq): Seq[String]
-  = extractStrings(xml \ fieldName)
+  def extractStrings(fieldName: String)(implicit xml: NodeSeq): Seq[String] =
+    extractStrings(xml \ fieldName)
 
   /**
     *
@@ -72,8 +70,6 @@ trait XmlExtractor extends Extractor[NodeSeq] {
   * Json extractor
   */
 trait JsonExtractor extends Extractor[JValue] {
-
-
   /**
     * Pulls a single string from the implicit json data.
     *

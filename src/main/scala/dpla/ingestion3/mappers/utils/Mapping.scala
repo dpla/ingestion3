@@ -4,12 +4,10 @@ import java.net.URI
 
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
-import org.json4s.JValue
+import org.json4s.JsonAST.JValue
 
 import scala.xml.NodeSeq
 
-
-//noinspection TypeAnnotation
 trait Mapping[T] {
 
   implicit def unwrap(document: Document[T]): T = document.get
