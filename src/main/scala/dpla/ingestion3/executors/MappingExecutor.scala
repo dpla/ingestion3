@@ -137,8 +137,7 @@ class DplaMap extends Serializable {
         (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
       case Failure(exception) =>
         failureCount.add(1)
-        (null, s"${exception.getMessage}\n" +
-          s"${exception.getStackTrace.mkString("\n")}")
+        (null, s"${exception.getMessage}\n")
     }
   }
 }
