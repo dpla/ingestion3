@@ -139,6 +139,7 @@ trait JsonExtractor extends Extractor[JValue] {
     * @param jvalue
     * @return
     */
+  // TODO Can we make this an implicit?
   def iterify(jvalue: JValue): JArray = jvalue match {
     case JArray(j) => JArray(j)
     case JNothing => JArray(List())
