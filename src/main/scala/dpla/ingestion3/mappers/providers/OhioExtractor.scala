@@ -2,21 +2,18 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
-import dpla.ingestion3.enrichments.StringUtils._
-import dpla.ingestion3.mappers.xml.XmlExtractionUtils
-import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany, ZeroToOne}
+import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
+import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
+import dpla.ingestion3.enrichments.StringUtils._
+import org.json4s.JValue
 import org.json4s.JsonDSL._
 
-import scala.util.Try
 import scala.xml._
 
 
-class OhioExtractor(rawData: String, shortName: String) extends Extractor with XmlExtractionUtils {
-
-  implicit val xml: Elem = XML.loadString(rawData)
-
+class OhioExtractor extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] {
   // These values will be stripped out of the format field
   // FIXME Regex to ignore/include punctuation?
   private val formatsToRemove = Set("application/pdf", "audio/mpeg", "charset=ISO-8859-1", "charset=iso-8859-1",
@@ -27,91 +24,122 @@ class OhioExtractor(rawData: String, shortName: String) extends Extractor with X
   // ID minting functions
   override def useProviderName(): Boolean = false
 
-  override def getProviderName(): String = shortName
+  override def getProviderName(): String = "ohio"
 
-  override def getProviderId(): String = extractString(xml \ "header" \ "identifier")
-    .getOrElse(throw ExtractorException(s"No ID for record $xml")
+  override def getProviderId(implicit data: Document[NodeSeq]): String =
+    extractString(data \ "header" \ "identifier")
+    .getOrElse(throw ExtractorException(s"No ID for record $data")
   )
 
-  def build(): Try[OreAggregation] = Try {
-    OreAggregation(
-      dplaUri = mintDplaItemUri(),
-      sidecar = ("prehashId", buildProviderBaseId()) ~
-                ("dplaId", mintDplaId()),
-      sourceResource = DplaSourceResource(
-        alternateTitle = extractStrings(xml \ "metadata" \\ "alternative"),
-        // This method of using NodeSeq is required because of namespace issues.
-        collection = extractStrings(xml \ "metadata" \\ "isPartOf").headOption.map(nameOnlyCollection).toSeq,
-        contributor = extractStrings(xml \ "metadata" \\ "contributor").map(nameOnlyAgent),
-        creator = extractStrings(xml \ "metadata" \\ "creator").map(nameOnlyAgent),
-        date = extractStrings(xml \ "metadata" \\ "date")
-          .flatMap(_.splitAtDelimiter(";"))
-          .map(stringOnlyTimeSpan),
-        description = extractStrings(xml \ "metadata" \\ "description"),
-        extent = extractStrings(xml \ "metadata" \ "extent"),     // FIXME nothing mapped, no data?
-        format = extractStrings(xml \ "metadata" \\ "format")
-          .flatMap(_.splitAtDelimiter(";"))
-          .map(_.findAndRemoveAll(formatsToRemove))
-          .filter(_.nonEmpty)
-          .map(_.capitalizeFirstChar),
-        identifier = extractStrings(xml \ "metadata" \\ "identifier"),
-        language = extractStrings(xml \ "metadata" \\ "language")
-          .flatMap(_.splitAtDelimiter(";"))
-          .map(nameOnlyConcept),
-        place = extractStrings(xml \ "metadata" \\ "spatial")
-          .flatMap(_.split(";"))
-          .map(nameOnlyPlace),
-        publisher = extractStrings(xml \ "metadata" \\ "publisher").map(nameOnlyAgent),
-        relation = extractStrings(xml \ "metadata" \\ "relation").map(eitherStringOrUri),
-        rights = extractDcRights(),
-        rightsHolder = extractStrings(xml \ "metadata" \\ "rightsHolder").map(nameOnlyAgent),
-        subject = extractStrings(xml \ "metadata" \\ "subject")
-          .flatMap(_.splitAtDelimiter(";"))
-          .map(_.capitalizeFirstChar)
-          .map(nameOnlyConcept),
-        title = extractStrings(xml \ "metadata" \\ "title"),
-        `type` = extractStrings(xml \ "metadata" \\ "type")
-      ),
-      dataProvider = extractDataProvider(), // required
-      edmRights = extractEdmRights(),
-      originalRecord = Utils.formatXml(xml),
-      provider = agent,
-      isShownAt = extractIsShownAt(),
-      preview = extractStrings(xml \ "metadata" \\ "preview")
-        .map(uri => uriOnlyWebResource(createUri(uri)))
-        .headOption
-    )
-  }
+  // SourceResource mapping
+  override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings(data \ "metadata" \\ "alternative")
 
-  def agent = EdmAgent(
-    name = Some("Ohio Digital Network"),
-    uri = Some(createUri("http://dp.la/api/contributor/ohio"))
-  )
+  override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
+    extractStrings(data \ "metadata" \\ "isPartOf").headOption.map(nameOnlyCollection).toSeq
 
-  def extractDataProvider(): ExactlyOne[EdmAgent] = {
-    val contributors = extractStrings(xml \ "metadata" \\ "dataProvider")
+  override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
+    extractStrings(data \ "metadata" \\ "contributor").map(nameOnlyAgent)
+
+  override def creator(data: Document[NodeSeq]): Seq[EdmAgent] =
+    extractStrings(data \ "metadata" \\ "creator").map(nameOnlyAgent)
+
+  override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
+    extractStrings(data \ "metadata" \\ "date")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(stringOnlyTimeSpan)
+
+  override def description(data: Document[NodeSeq]): Seq[String] =
+    extractStrings(data \ "metadata" \\ "description")
+
+  override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings(data \ "metadata" \ "extent")
+
+  override def format(data: Document[NodeSeq]): Seq[String] =
+    extractStrings(data \ "metadata" \\ "format")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(_.findAndRemoveAll(formatsToRemove))
+      .filter(_.nonEmpty)
+      .map(_.capitalizeFirstChar)
+
+  override def identifier(data: Document[NodeSeq]): Seq[String] =
+    extractStrings(data \ "metadata" \\ "identifier")
+
+  override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
+    extractStrings(data \ "metadata" \\ "language")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(nameOnlyConcept)
+
+  override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
+    extractStrings(data \ "metadata" \\ "spatial")
+            .flatMap(_.split(";"))
+            .map(nameOnlyPlace)
+
+  override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
+    extractStrings(data \ "metadata" \\ "publisher").map(nameOnlyAgent)
+
+  override def relation(data: Document[NodeSeq]): Seq[LiteralOrUri] =
+    extractStrings(data \ "metadata" \\ "relation").map(eitherStringOrUri)
+
+  override def rights(data: Document[NodeSeq]): Seq[String] =
+    (data \ "metadata" \\ "rights").map(r => {
+      r.prefix match {
+        case "dc" => r.text
+        case _ => ""
+      }
+    }).filter(_.isEmpty)
+
+  override def rightsHolder(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+    extractStrings(data \ "metadata" \\ "rightsHolder").map(nameOnlyAgent)
+
+  override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
+    extractStrings(data \ "metadata" \\ "subject")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(_.capitalizeFirstChar)
+      .map(nameOnlyConcept)
+
+  override def title(data: Document[NodeSeq]): Seq[String] =
+    extractStrings(data \ "metadata" \\ "title")
+
+  override def `type`(data: Document[NodeSeq]): Seq[String] =
+    extractStrings(data \ "metadata" \\ "type")
+
+
+  // OreAggregation
+  override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
+
+  override def dataProvider(data: Document[NodeSeq]): EdmAgent = {
+    val contributors = extractStrings(data \ "metadata" \\ "dataProvider")
     if (contributors.nonEmpty)
       nameOnlyAgent(contributors.head)
     else
-      throw new Exception(s"Missing required property metadata/dataProvider is empty for ${getProviderId()}")
+      throw new Exception(s"Missing required property metadata/dataProvider is empty for ${getProviderId(data)}")
   }
 
-  def extractDcRights(): ZeroToMany[String] = {
-    (xml \ "metadata" \\ "rights").map(r => r.prefix match {
-      case "dc" => r.text
-      case _ => ""
-    }).filter(_.isEmpty)
-  }
-
-  def extractEdmRights(): ZeroToOne[URI] = {
-    (xml \ "metadata" \\ "rights").map(r => r.prefix match {
-      case "edm" => createUri(r.text)
+  override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] = {
+    (data \ "metadata" \\ "rights").map(r => r.prefix match {
+      case "edm" => Utils.createUri(r.text)
     }).headOption
   }
 
-  def extractIsShownAt(): ExactlyOne[EdmWebResource] = {
+  override def isShownAt(data: Document[NodeSeq]) =
     uriOnlyWebResource(
-      createUri(extractString(xml \ "metadata" \\ "isShownAt")
-        .getOrElse(throw new RuntimeException(s"No isShownAt property in record ${getProviderId()}"))))
-  }
+      Utils.createUri(extractString(data \ "metadata" \\ "isShownAt")
+        .getOrElse(throw new RuntimeException(s"No isShownAt property in record ${getProviderId(data)}"))))
+
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+
+  override def preview(data: Document[NodeSeq]): ZeroToOne[EdmWebResource] =
+    extractStrings(data \ "metadata" \\ "preview")
+      .map(uri => uriOnlyWebResource(Utils.createUri(uri)))
+      .headOption
+
+  override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
+
+  override def sidecar(data: Document[NodeSeq]): JValue =
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+  def agent = EdmAgent(
+    name = Some("Ohio Digital Network"),
+    uri = Some(Utils.createUri("http://dp.la/api/contributor/ohio"))
+  )
 }
