@@ -44,10 +44,7 @@ object ProviderRegistry {
     // FIXME Register is redundant here and should be removed  
     "cdl" -> Register(profile = new CdlProfile),
     "mdl" -> Register(profile = new MdlProfile),
-//    "nara" -> Register(
-//      mapper = new NaraExtractorm(),
-//      parser = new XmlParser
-//    ),
+    "nara" -> Register(profile = new NaraProfile),
     "pa" -> Register(profile = new PaProfile),
     "wi" -> Register(profile = new WiProfile)
   )

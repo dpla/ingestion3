@@ -11,6 +11,7 @@ import scala.xml.NodeSeq
 
 trait IngestionProfile[T] {
 
+  // TODO This should not be an instance of a Class
   def getHarvester: Class[_ <: Harvester]
   def getParser: Parser[T]
   def getMapper: Mapper[T, Mapping[T]]
