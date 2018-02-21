@@ -1,7 +1,7 @@
 package dpla.ingestion3.utils
 
 import java.io.{File, PrintWriter}
-import java.net.URL
+import java.net.{URI, URL}
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
@@ -12,7 +12,7 @@ import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
 import org.json4s.jackson.JsonMethods._
 import org.json4s.JValue
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
 
@@ -44,6 +44,18 @@ object Utils {
     val appender = Utils.getFileAppender(shortName, operation)
     logger.addAppender(appender)
     logger
+  }
+
+  /**
+    *
+    * @param stringUri
+    * @return
+    */
+  def createUri(stringUri: String): URI = {
+    Try { new URI(stringUri) } match {
+      case Success(uri) => uri
+      case Failure(_) => throw new RuntimeException(s"Invalid URI $stringUri in ${getProviderId()} ")
+    }
   }
 
   /**
