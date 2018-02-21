@@ -39,11 +39,12 @@ class PaProfile extends XmlProfile {
 }
 
 /**
-  *
+  * Recollection Wisconsin
   */
 class WiProfile extends XmlProfile {
   type Mapping = WiMapping
 
+  // FIXME
   override def getHarvester = ???
   override def getMapping = new WiMapping
 }

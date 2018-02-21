@@ -10,8 +10,6 @@ import scala.util.Try
   *
   */
 object ProviderRegistry {
-
-
   /**
     *
     * @param short Provider shortname
@@ -43,23 +41,15 @@ object ProviderRegistry {
   case class Register[IngestionProfile] (profile: IngestionProfile)
 
   private val registry = Map(
-    // TODO Uncomment and fixup other provider mappers
-    "cdl" -> Register(
-      profile = new CdlProfile
-    ),
-    "mdl" -> Register(
-        profile = new MdlProfile
-    ),
+    // FIXME Register is redundant here and should be removed  
+    "cdl" -> Register(profile = new CdlProfile),
+    "mdl" -> Register(profile = new MdlProfile),
 //    "nara" -> Register(
 //      mapper = new NaraExtractorm(),
 //      parser = new XmlParser
 //    ),
-    "pa" -> Register(
-      profile = new PaProfile
-    ),
-    "wi" -> Register(
-      profile = new WiProfile
-    )
+    "pa" -> Register(profile = new PaProfile),
+    "wi" -> Register(profile = new WiProfile)
   )
 
   private def noProfileException(short: String) = {

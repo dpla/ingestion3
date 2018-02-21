@@ -2,16 +2,18 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
-import dpla.ingestion3.mappers.utils.{Document, IdMinter, JsonExtractor, Mapping}
+import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s.JsonDSL._
-import org.json4s.{JValue, _}
 import org.json4s.jackson.JsonMethods._
+import org.json4s._
 
-// FIXME Why is the implict conversion not working for JValue when it is for NodeSeq?
-class MdlMapping extends Mapping[JValue] with JsonExtractor with IdMinter[JValue] {
+
+// FIXME Why is the implicit conversion not working for JValue when it is for NodeSeq?
+class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] {
+
   // ID minting functions
   override def useProviderName: Boolean = true
 
@@ -26,21 +28,22 @@ class MdlMapping extends Mapping[JValue] with JsonExtractor with IdMinter[JValue
     nameOnlyAgent(extractString(unwrap(data) \\ "record" \ "dataProvider")
       .getOrElse(throw new RuntimeException("No data provider")))
 
-  override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = new URI(mintDplaId(data))
+  override def dplaUri(data: Document[JValue]): ExactlyOne[URI] =
+    new URI(mintDplaId(data))
 
   override def isShownAt(data: Document[JValue]): ExactlyOne[EdmWebResource] =
-    uriOnlyWebResource(uri(unwrap(data)  \\ "record" \ "isShownAt"))
+    uriOnlyWebResource(uri(unwrap(data) \\ "record" \ "isShownAt"))
 
-  override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(data)
+  override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
+    Utils.formatJson(data)
 
   override def preview(data: Document[JValue]): ZeroToOne[EdmWebResource] =
-    thumbnail(unwrap(data)  \\ "record" \ "object")
+    thumbnail(unwrap(data) \\ "record" \ "object")
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = agent
 
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
-
 
   // SourceResource
   override def collection(data: Document[JValue]): ZeroToMany[DcmiTypeCollection] =
@@ -56,7 +59,7 @@ class MdlMapping extends Mapping[JValue] with JsonExtractor with IdMinter[JValue
     extractDate(unwrap(data)  \\ "record" \ "sourceResource" \ "date")
 
   override def description(data: Document[JValue]): ZeroToMany[String] =
-    extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "description")
+    extractStrings(unwrap(data) \\ "record" \ "sourceResource" \ "description")
 
   override def extent(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data)  \\ "record" \\ "extent")
