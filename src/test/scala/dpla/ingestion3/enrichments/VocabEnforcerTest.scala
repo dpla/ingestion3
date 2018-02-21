@@ -81,6 +81,19 @@ class VocabEnforcerTest extends FlatSpec with BeforeAndAfter {
 
     assert(enrichedValue === expectedValue)
   }
+
+  it should "return an enriched SkosConcept object when given a DPLA specific code" +
+    "(en us)" in {
+    val originalValue = SkosConcept(providedLabel = Option("en us"))
+    val expectedValue = SkosConcept(
+      providedLabel = Option("en us"),
+      concept = Option("English")
+    )
+
+    val enrichedValue = LanguageMapper.mapLanguage(originalValue)
+
+    assert(enrichedValue === expectedValue)
+  }
 }
 
 
