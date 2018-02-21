@@ -104,6 +104,10 @@ object ReporterMain {
       logger.info(s"Executing thumbnail report for $rptOpt")
       executeReport(sparkConf, input, s"$baseOutput/thumbnail/$rptOpt", "thumbnail", Array(rptOpt), logger)
     })
+
+    // Enrichment meta information
+    // TODO we should export the version of the language map used to enrich the data so there is a closer 1:1
+    // relationship that data folks can follow-up on.
   }
 
   /**
