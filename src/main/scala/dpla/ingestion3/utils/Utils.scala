@@ -9,8 +9,8 @@ import java.util.concurrent.TimeUnit
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.model.OreAggregation
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
-import org.json4s.jackson.JsonMethods._
 import org.json4s.JValue
+import org.json4s.jackson.JsonMethods._
 
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
@@ -54,7 +54,7 @@ object Utils {
   def createUri(stringUri: String): URI = {
     Try { new URI(stringUri) } match {
       case Success(uri) => uri
-      case Failure(_) => throw new RuntimeException(s"Invalid URI $stringUri in ${getProviderId()} ")
+      case Failure(_) => throw new RuntimeException(s"Invalid URI $stringUri")
     }
   }
 
