@@ -28,7 +28,7 @@ class OhioExtractor extends Mapping[NodeSeq] with XmlExtractor with IdMinter[Nod
 
   override def getProviderId(implicit data: Document[NodeSeq]): String =
     extractString(data \ "header" \ "identifier")
-    .getOrElse(throw ExtractorException(s"No ID for record $data")
+    .getOrElse(throw new RuntimeException(s"No ID for record $data")
   )
 
   // SourceResource mapping
