@@ -4,108 +4,144 @@ import java.net.URI
 
 import dpla.ingestion3.enrichments.{DcmiTypeMapper, DcmiTypeStringMapper, VocabEnforcer}
 import dpla.ingestion3.mappers.rdf.DCMIType
-import dpla.ingestion3.mappers.xml.XmlExtractionUtils
+import dpla.ingestion3.mappers.utils._
+import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
+import dpla.ingestion3.utils.Utils
 import org.eclipse.rdf4j.model.IRI
+import org.json4s.JsonAST
 import org.json4s.JsonDSL._
 
-import scala.util.Try
-import scala.xml.{Node, NodeSeq, XML}
+import scala.xml.{Node, NodeSeq}
 
 
-class NaraExtractor(rawData: String, shortName: String) extends Extractor with XmlExtractionUtils with Serializable {
-
-  implicit val xml: NodeSeq = XML.loadString(rawData)
+class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] {
 
   // ID minting functions
   override def useProviderName(): Boolean = true
 
-  override def getProviderName(): String = shortName
+  override def getProviderName(): String = "nara"
 
   // itemUri will throw an exception if an ID is missing
-  override def getProviderId(): String = extractString("naId").getOrElse(throw ExtractorException("Can't find naId"))
+  override def getProviderId(implicit data: Document[NodeSeq]): String =
+    extractString("naId")(data).getOrElse(throw MappingException("Can't find naId"))
 
-  def itemUri(implicit xml: NodeSeq): URI =
-    extractString("naId").map(naId => new URI("http://catalog.archives.gov/id/" + naId))
-      .getOrElse(throw ExtractorException("Couldn't load item url."))
+  def itemUri(implicit data: Document[NodeSeq]): URI =
+    extractString("naId")(data).map(naId => new URI("http://catalog.archives.gov/id/" + naId))
+      .getOrElse(throw MappingException("Couldn't load item url."))
 
-  override def build(): Try[OreAggregation] = {
-    Try {
-      OreAggregation(
-        dplaUri = mintDplaItemUri(),
-        sidecar = ("prehashId", buildProviderBaseId()) ~ ("dplaId", mintDplaId()),
-        sourceResource = DplaSourceResource(
-          collection = collection(xml).map(nameOnlyCollection),
-          contributor = contributor(xml).map(nameOnlyAgent),
-          creator = creator(xml).map(nameOnlyAgent),
-          date = date(xml),
-          description = extractStrings("scopeAndContentNote"),
-          extent = extractStrings(xml \ "physicalOccurrenceArray" \\ "extent"),
-          format = format(xml),
-          identifier = extractStrings("naId"),
-          language = extractStrings(xml \\ "languageArray" \ "language" \ "termName").map(nameOnlyConcept),
-          place =
-            extractStrings(xml \\ "geographicReferenceArray" \ "geographicPlaceName" \ "termName").map(nameOnlyPlace),
-          publisher = publisher(xml).map(nameOnlyAgent),
-          relation = relation(xml).map(Left(_)),
-          rights = rights(xml),
-          subject = extractStrings(xml \\ "topicalSubjectArray" \ "topicalSubject" \ "termName").map(nameOnlyConcept),
-          title = extractStrings("title"),
-          `type` = types(xml)
-        ),
-        dataProvider = dataProvider(xml),
-        originalRecord = rawData,
-        provider = agent,
-        isShownAt = uriOnlyWebResource(itemUri(xml)),
-        preview = preview(xml).headOption
-      )
-    }
+  // OreAggregation
+  override def dataProvider(data: Document[NodeSeq]): EdmAgent = {
+    val referenceUnit = (for {
+      physicalOccurrenceArray <- data \ "physicalOccurrenceArray"
+      copyStatus = (physicalOccurrenceArray \\ "copyStatus" \ "termName").text
+      //todo Preservation-Reproduction-Reference
+      if copyStatus.contains("Reproduction-Reference") || copyStatus.contains("Preservation")
+      referenceUnit = (physicalOccurrenceArray \\ "referenceUnit" \ "termName").text
+    } yield referenceUnit).headOption
+    nameOnlyAgent(referenceUnit.getOrElse("National Records and Archives Administration"))
   }
 
-  def preview(xml: NodeSeq): Seq[EdmWebResource] = for {
-    digitalObject <- xml \ "digitalObjectArray" \ "digitalObject"
-    accessFileName = (digitalObject \ "accessFilename").text
-    termName = (digitalObject \ "objectType" \ "termName").text
-    if termName.contains("Image") && termName.contains("JPG")
-  } yield uriOnlyWebResource(new URI(accessFileName.trim))
+  override def dplaUri(data: Document[NodeSeq]): URI =
+    mintDplaItemUri(data)
 
-  def agent = EdmAgent(
+  override def isShownAt(data: Document[NodeSeq]): EdmWebResource =
+    uriOnlyWebResource(itemUri(data))
+
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
+
+  override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] =
+    agent
+
+  override def preview(data: Document[NodeSeq]): ZeroToOne[EdmWebResource] =
+    extractPreview(data).headOption
+
+  override def sidecar(data: Document[NodeSeq]): JsonAST.JValue =
+    ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
+
+  // SourceResource
+  override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
+    extractCollection(data).map(nameOnlyCollection)
+
+  override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
+    extractContributor(data).map(nameOnlyAgent)
+
+  override def creator(data: Document[NodeSeq]): Seq[EdmAgent] =
+    extractCreator(data).map(nameOnlyAgent)
+
+  override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
+    extractDate(data)
+
+  override def description(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings("scopeAndContentNote")(data)
+
+  override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings(data \ "physicalOccurrenceArray" \\ "extent")
+
+  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractFormat(data)
+
+  override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings("naId")(data)
+
+  override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
+    extractStrings(data \\ "languageArray" \ "language" \ "termName").map(nameOnlyConcept)
+
+  override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
+    extractStrings(data \\ "geographicReferenceArray" \ "geographicPlaceName" \ "termName").map(nameOnlyPlace)
+
+  override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+    extractPublisher(data).map(nameOnlyAgent)
+
+  override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
+    extractRelation(data).map(Left(_))
+
+  override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
+    extractRights(data)
+
+  override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
+    extractStrings(data \\ "topicalSubjectArray" \ "topicalSubject" \ "termName").map(nameOnlyConcept)
+
+  override def title(data: Document[NodeSeq]): AtLeastOne[String] =
+    extractStrings("title")(data)
+
+  override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractTypes(data)
+
+
+
+  // Helper methods
+  private def agent = EdmAgent(
     name = Some("National Archives and Records Administration"),
     uri = Some(new URI("http://dp.la/api/contributor/nara"))
   )
 
-  def format(xml: NodeSeq): Seq[String] =
-    (extractStrings(xml \\ "specificRecordsTypeArray" \\ "specificRecordsType" \ "termName") ++
-      extractStrings(xml \\ "mediaOccurrenceArray" \\ "specificMediaType" \ "termName") ++
-      extractStrings(xml \\ "mediaOccurrenceArray" \\ "color" \ "termName") ++
-      extractStrings(xml \\ "mediaOccurrenceArray" \\ "dimensions" \ "termName") ++
-      extractStrings(xml \\ "mediaOccurrenceArray" \\ "generalMediaType" \ "termName")).distinct
-
-  def collection(xml: NodeSeq): Seq[String] = {
+  private def extractCollection(data: NodeSeq): Seq[String] = {
     val parentRecordGroupIds = for {
-      prg <- xml \\ "parentRecordGroup" \\ "title"
+      prg <- data \\ "parentRecordGroup" \\ "title"
     } yield prg.text
 
     val parentCollectionIds = for {
-      pc <- xml \\ "parentCollection" \ "title"
+      pc <- data \\ "parentCollection" \ "title"
     } yield pc.text
 
     if (parentRecordGroupIds.nonEmpty) parentRecordGroupIds else parentCollectionIds
   }
 
-  def contributor(xml: NodeSeq): Seq[String] = {
+  private def extractContributor(data: NodeSeq): Seq[String] = {
 
     //TODO: not handling multiple display values. haven't found example yet.
 
     val organizationalContributors = for {
-      org <- xml \\ "organizationalContributorArray" \ "organizationalContributor"
+      org <- data \\ "organizationalContributorArray" \ "organizationalContributor"
       name = (org \ "contributor" \ "termName").text
       _type = (org \ "contributorType" \ "termName").text
       if !_type.contains("Publisher")
     } yield name
 
     val personalContributors = for {
-      person <- xml \\ "personalContributorArray" \ "personalContributor"
+      person <- data \\ "personalContributorArray" \ "personalContributor"
       name = (person \ "contributor" \ "termName").text
       //_type = (person \ "contributorType" \ "TermName").text
     } yield name
@@ -113,18 +149,18 @@ class NaraExtractor(rawData: String, shortName: String) extends Extractor with X
     organizationalContributors ++ personalContributors
   }
 
-  def creator(xml: NodeSeq): Seq[String] = {
+  private def extractCreator(data: NodeSeq): Seq[String] = {
     //TODO: not handling multiple display values. haven't found example yet.
     val organizationalCreators =
       for {
-        creatingOrganization <- xml \\ "creatingOrganizationArray" \ "creatingOrganization"
+        creatingOrganization <- data \\ "creatingOrganizationArray" \ "creatingOrganization"
         creator <- (creatingOrganization \ "creator" \ "termName").headOption.map(_.text)
         creatorType = (creatingOrganization \ "creatorType" \ "termName").headOption.map(_.text)
         if creatorType.getOrElse("").contains("Most Recent")
       } yield creator
 
     val individualCreators = for {
-      creator <- xml \\ "creatingIndividualArray" \ "creatingIndividual" \ "creator" \ "termName"
+      creator <- data \\ "creatingIndividualArray" \ "creatingIndividual" \ "creator" \ "termName"
     } yield creator.text
 
     if (organizationalCreators.nonEmpty)
@@ -133,10 +169,10 @@ class NaraExtractor(rawData: String, shortName: String) extends Extractor with X
       individualCreators
   }
 
-  def date(xml: NodeSeq): Seq[EdmTimeSpan] = {
+  private def extractDate(data: NodeSeq): Seq[EdmTimeSpan] = {
 
     val coverageDates = for {
-      coverageDate <- xml \\ "coverageDates"
+      coverageDate <- data \\ "coverageDates"
       coverageStartDate = (coverageDate \ "coverageStartDate" \ "logicalDate").headOption
       coverageEndDate = (coverageDate \ "coverageEndDate" \ "logicalDate").headOption
       //dateQualifier = coverageDate \ "dateQualifier" //todo not sure what to do with qualifier in EDTF
@@ -151,15 +187,15 @@ class NaraExtractor(rawData: String, shortName: String) extends Extractor with X
       )
     }
 
-    val copyrightDates = simpleDate(xml \\ "copyrightDateArray" \ "proposableQualifiableDate")
-    val productionDates = simpleDate(xml \\ "productionDateArray" \ "proposableQualifiableDate")
+    val copyrightDates = simpleDate(data \\ "copyrightDateArray" \ "proposableQualifiableDate")
+    val productionDates = simpleDate(data \\ "productionDateArray" \ "proposableQualifiableDate")
 
     //todo not sure what to do with logicalDate
-    val broadcastDates = simpleDate(xml \\ "broadcastDateArray" \ "proposableQualifiableDate")
-    val releaseDates = simpleDate(xml \\ "releaseDateArray" \ "proposableQualifiableDate")
+    val broadcastDates = simpleDate(data \\ "broadcastDateArray" \ "proposableQualifiableDate")
+    val releaseDates = simpleDate(data \\ "releaseDateArray" \ "proposableQualifiableDate")
 
     val lastResort = for {
-      inclusiveDate <- xml \ "parentFileUnit" \ "parentSeries" \ "inclusiveDates"
+      inclusiveDate <- data \ "parentFileUnit" \ "parentSeries" \ "inclusiveDates"
       inclusiveStartDate = removeTime((inclusiveDate \ "inclusiveStartDate" \ "logicalDate").text)
       inclusiveEndDate = removeTime((inclusiveDate \ "inclusiveEndDate" \ "logicalDate").text)
     } yield {
@@ -180,6 +216,14 @@ class NaraExtractor(rawData: String, shortName: String) extends Extractor with X
       //get the first non-empty one, or an empty one if they're all empty
     ).find(_.nonEmpty).getOrElse(Seq())
   }
+
+
+  private def extractFormat(data: NodeSeq): Seq[String] =
+    (extractStrings(data \\ "specificRecordsTypeArray" \\ "specificRecordsType" \ "termName") ++
+      extractStrings(data \\ "mediaOccurrenceArray" \\ "specificMediaType" \ "termName") ++
+      extractStrings(data \\ "mediaOccurrenceArray" \\ "color" \ "termName") ++
+      extractStrings(data \\ "mediaOccurrenceArray" \\ "dimensions" \ "termName") ++
+      extractStrings(data \\ "mediaOccurrenceArray" \\ "generalMediaType" \ "termName")).distinct
 
   /**
     * removes the time portion of an ISO-8601 datetime
@@ -226,16 +270,23 @@ class NaraExtractor(rawData: String, shortName: String) extends Extractor with X
       }
   }
 
-  def publisher(xml: NodeSeq): Seq[String] = {
+  private def extractPreview(data: Document[NodeSeq]) = for {
+    digitalObject <- data \ "digitalObjectArray" \ "digitalObject"
+    accessFileName = (digitalObject \ "accessFilename").text
+    termName = (digitalObject \ "objectType" \ "termName").text
+    if termName.contains("Image") && termName.contains("JPG")
+  } yield uriOnlyWebResource(new URI(accessFileName.trim))
+
+  private def extractPublisher(data: NodeSeq): Seq[String] = {
 
     val orgs = for {
-      org <- xml \\ "organizationalContributorArray" \ "organizationalContributor"
+      org <- data \\ "organizationalContributorArray" \ "organizationalContributor"
       if (org \ "contributorType" \ "termName").text == "Publisher"
       name <- org \ "termName"
     } yield name.text
 
     val persons = for {
-      person <- xml \\ "personalContributorArray" \ "personalContributor"
+      person <- data \\ "personalContributorArray" \ "personalContributor"
       if (person \ "contributorType" \ "termName").text == "Publisher"
       name <- person \ "termName"
     } yield name.text
@@ -243,10 +294,10 @@ class NaraExtractor(rawData: String, shortName: String) extends Extractor with X
     orgs ++ persons
   }
 
-  def relation(xml: NodeSeq): Seq[String] = {
+  private def extractRelation(data: NodeSeq): Seq[String] = {
 
     val parentFileUnitRelation = for {
-      parentFileUnit <- xml \\ "parentFileUnit"
+      parentFileUnit <- data \\ "parentFileUnit"
       value1 = (parentFileUnit \ "title").text
       value2 = (parentFileUnit \ "parentSeries" \ "title").text
       value3a = (parentFileUnit \ "parentRecordGroup" \ "title").text
@@ -255,7 +306,7 @@ class NaraExtractor(rawData: String, shortName: String) extends Extractor with X
     } yield Seq(value3, value2, value1).filter(_.nonEmpty).mkString(" ; ")
 
     val parentSeriesRelation = for {
-      parentSeries <- xml \\ "parentSeries"
+      parentSeries <- data \\ "parentSeries"
       value2 = (parentSeries \ "title").text
       value3a = (parentSeries \ "parentRecordGroup" \ "title").text
       value3b = (parentSeries \ "parentCollection" \ "title").text
@@ -263,7 +314,7 @@ class NaraExtractor(rawData: String, shortName: String) extends Extractor with X
     } yield Seq(value3, value2).filter(_.nonEmpty).mkString(" ; ")
 
     val mediaTypes = for (
-      title <- xml \ "microformPublicationArray" \ "microformPublication" \ "title"
+      title <- data \ "microformPublicationArray" \ "microformPublication" \ "title"
     ) yield title.text
 
     val parents = if (parentFileUnitRelation.nonEmpty) parentFileUnitRelation
@@ -273,30 +324,19 @@ class NaraExtractor(rawData: String, shortName: String) extends Extractor with X
     (parents ++ mediaTypes).distinct
   }
 
-  def rights(xml: NodeSeq): Seq[String] = for {
-    useRestriction <- xml \ "useRestriction"
+  private def extractRights(data: NodeSeq): Seq[String] = for {
+    useRestriction <- data \ "useRestriction"
     value1 = (useRestriction \ "note").text
     value2 = (useRestriction \ "specificUseRestrictionArray" \ "specificUseRestriction" \ "termName").text
     value3 = (useRestriction \ "status" \ "termName").text
   } yield Seq(value2, value1, value3).filter(_.nonEmpty).mkString(" ; ")
 
 
-  def types(xml: NodeSeq): Seq[String] = for {
-    stringType <- extractStrings(xml \\ "generalRecordsTypeArray" \ "generalRecordsType" \ "termName")
+  private def extractTypes(data: NodeSeq): Seq[String] = for {
+    stringType <- extractStrings(data \\ "generalRecordsTypeArray" \ "generalRecordsType" \ "termName")
     mappedType <- NaraTypeVocabEnforcer.mapNaraType(stringType)
   } yield {
     mappedType
-  }
-
-  def dataProvider(xml: NodeSeq): EdmAgent = {
-    val referenceUnit = (for {
-      physicalOccurrenceArray <- xml \ "physicalOccurrenceArray"
-      copyStatus = (physicalOccurrenceArray \\ "copyStatus" \ "termName").text
-      //todo Preservation-Reproduction-Reference
-      if copyStatus.contains("Reproduction-Reference") || copyStatus.contains("Preservation")
-      referenceUnit = (physicalOccurrenceArray \\ "referenceUnit" \ "termName").text
-    } yield referenceUnit).headOption
-    nameOnlyAgent(referenceUnit.getOrElse("National Records and Archives Administration"))
   }
 }
 

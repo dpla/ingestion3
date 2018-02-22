@@ -1,16 +1,20 @@
 package dpla.ingestion3.utils
 
 import java.io.{File, PrintWriter}
-import java.net.URL
+import java.net.{URI, URL}
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.model.OreAggregation
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
+import org.json4s.JValue
+import org.json4s.jackson.JsonMethods._
 
-import scala.util.Try
-import scala.xml.Node
+import scala.util.{Failure, Success, Try}
+import scala.xml.NodeSeq
+
 
 
 object Utils {
@@ -22,11 +26,11 @@ object Utils {
     * @param ext File extension to filter by
     * @return The number of files that match the extension
     */
-   def countFiles(outDir: File, ext: String): Long = {
-     outDir.list()
-       .par
-       .count(fileName => fileName.endsWith(ext))
-   }
+  def countFiles(outDir: File, ext: String): Long = {
+    outDir.list()
+      .par
+      .count(fileName => fileName.endsWith(ext))
+  }
 
   /**
     * Creates and returns a logger object
@@ -43,6 +47,18 @@ object Utils {
   }
 
   /**
+    *
+    * @param stringUri
+    * @return
+    */
+  def createUri(stringUri: String): URI = {
+    Try { new URI(stringUri) } match {
+      case Success(uri) => uri
+      case Failure(_) => throw new RuntimeException(s"Invalid URI $stringUri")
+    }
+  }
+
+  /**
     * Delete a directory
     * Taken from http://stackoverflow.com/questions/25999255/delete-directory-recursively-in-scala#25999465
     * @param file File or directory to delete
@@ -53,6 +69,14 @@ object Utils {
     if (file.exists && !file.delete)
       throw new Exception(s"Unable to delete ${file.getAbsolutePath}")
   }
+
+  /**
+    * Prettify JSON
+    *
+    * @param data JSON
+    * @return Formatted JSON string
+    */
+  def formatJson(data: JValue): String = pretty(render(data))
 
   /**
     * Format numbers with commas
@@ -83,9 +107,9 @@ object Utils {
     * @param xml An XML node
     * @return Formatted String representation of the node
     */
-  def formatXml(xml: Node): String ={
+  def formatXml(xml: NodeSeq): String ={
     val prettyPrinter = new scala.xml.PrettyPrinter(80, 2)
-    prettyPrinter.format(xml).toString
+    prettyPrinter.format(xml.head).toString
   }
 
   /**
@@ -110,8 +134,6 @@ object Utils {
   }
 
   // TODO These *Summary methods should be refactored and normalized when we fixup logging
-
-
   /**
     * Print the results of an activity
     *
@@ -128,8 +150,8 @@ object Utils {
     val recordsPerSecond: Long = recordCount/(runtime/1000)
 
     s"\n\nRecord count: ${Utils.formatNumber(recordCount)}\n" +
-    s"Runtime: ${formatRuntime(runtime)}\n" +
-    s"Throughput: ${Utils.formatNumber(recordsPerSecond)} records per second"
+      s"Runtime: ${formatRuntime(runtime)}\n" +
+      s"Throughput: ${Utils.formatNumber(recordsPerSecond)} records per second"
   }
 
   /**
