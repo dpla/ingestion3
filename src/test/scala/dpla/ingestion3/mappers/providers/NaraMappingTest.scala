@@ -18,13 +18,6 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
   val itemUri = new URI("http://catalog.archives.gov/id/2132862")
   val extractor = new NaraMapping
 
-//  "A NaraExtractor" should "successfully extract from a valid document" in {
-//    extractor.build() match {
-//      case Success(data) => succeed
-//      case Failure(exception) => fail(exception)
-//    }
-//  }
-
   it should "use the provider shortname in minting IDs" in
     assert(extractor.useProviderName())
 
@@ -132,11 +125,6 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
     val dataProvider = extractor.dataProvider(xml)
     assert(dataProvider === nameOnlyAgent("National Archives at Chicago"))
   }
-
-  // FIXME string is reformatted (prettified) when mapping to OrignalRecord field. What is a better comparison?
-//  it should "contain the original record" in {
-//    assert(xmlString === build.originalRecord)
-//  }
 
   it should "contain the hub agent as the provider" in {
     assert(
