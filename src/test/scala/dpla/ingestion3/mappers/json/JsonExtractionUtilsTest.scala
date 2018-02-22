@@ -1,9 +1,10 @@
 package dpla.ingestion3.mappers.json
 
+import dpla.ingestion3.mappers.utils.JsonExtractor
 import org.scalatest._
 import org.json4s.JsonAST._
 
-class JsonExtractionUtilsTest extends FlatSpec with JsonExtractionUtils {
+class JsonExtractorTest extends FlatSpec with JsonExtractor {
 
   "A JsonExtractionUtils" should "extract strings from a field named by a string" in {
     val jvalue = JObject(JField("foo", JString("bar")))
