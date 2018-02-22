@@ -1,16 +1,20 @@
 package dpla.ingestion3.utils
 
 import java.io.{File, PrintWriter}
-import java.net.URL
+import java.net.{URI, URL}
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.model.OreAggregation
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
+import org.json4s.JValue
+import org.json4s.jackson.JsonMethods._
 
-import scala.util.Try
-import scala.xml.Node
+import scala.util.{Failure, Success, Try}
+import scala.xml.NodeSeq
+
 
 
 object Utils {
@@ -43,6 +47,18 @@ object Utils {
   }
 
   /**
+    *
+    * @param stringUri
+    * @return
+    */
+  def createUri(stringUri: String): URI = {
+    Try { new URI(stringUri) } match {
+      case Success(uri) => uri
+      case Failure(_) => throw new RuntimeException(s"Invalid URI $stringUri")
+    }
+  }
+
+  /**
     * Delete a directory
     * Taken from http://stackoverflow.com/questions/25999255/delete-directory-recursively-in-scala#25999465
     * @param file File or directory to delete
@@ -55,6 +71,14 @@ object Utils {
   }
 
   /**
+    * Pretty prints JSOn
+    *
+    * @param data JSON
+    * @return
+    */
+  def formatJson(data: JValue): String = pretty(render(data))
+
+  /**
     * Format numbers with commas
     * @param n A number
     * @return xxx,xxx
@@ -62,6 +86,17 @@ object Utils {
   def formatNumber(n: Long): String = {
     val formatter = java.text.NumberFormat.getIntegerInstance
     formatter.format(n)
+  }
+
+  /**
+    * Formats an OreAggregation in a pretty way so it can be printed to the screen in a human readable format
+    *
+    * @param oreAgg
+    * @return
+    */
+  def formatOreAggregation(oreAgg: OreAggregation): String = {
+    import sext._
+    oreAgg.valueTreeString
   }
 
   /**
@@ -83,9 +118,9 @@ object Utils {
     * @param xml An XML node
     * @return Formatted String representation of the node
     */
-  def formatXml(xml: Node): String ={
+  def formatXml(xml: NodeSeq): String ={
     val prettyPrinter = new scala.xml.PrettyPrinter(80, 2)
-    prettyPrinter.format(xml).toString
+    prettyPrinter.format(xml.head).toString
   }
 
   /**
@@ -110,8 +145,6 @@ object Utils {
   }
 
   // TODO These *Summary methods should be refactored and normalized when we fixup logging
-
-
   /**
     * Print the results of an activity
     *

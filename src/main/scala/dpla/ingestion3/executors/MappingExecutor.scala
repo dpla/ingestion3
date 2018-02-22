@@ -3,7 +3,6 @@ package dpla.ingestion3.executors
 import java.io.File
 
 import com.databricks.spark.avro._
-import dpla.ingestion3.mappers.providers.Extractor
 import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
@@ -59,20 +58,14 @@ trait MappingExecutor extends Serializable {
     // Load the harvested record dataframe
     val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
 
-    // Look up a registered Extractor class with the given shortName.
-    val extractorClass = ProviderRegistry.lookupExtractorClass(shortName) match {
-      case Success(extClass) => extClass
-      case Failure(e) =>
-        logger.fatal(e.getMessage)
-        throw e
-    }
-
     // Run the mapping over the Dataframe
     val documents: Dataset[String] = harvestedRecords.select("document").as[String]
 
+    val dplaMap = new DplaMap()
+
     val mappingResults: Dataset[(Row, String)] =
       documents.map(document =>
-        map(extractorClass, document, shortName,
+        dplaMap.map(document, shortName,
           totalCount, successCount, failureCount)
       )(tupleRowStringEncoder)
         .persist(StorageLevel.DISK_ONLY)
@@ -107,11 +100,13 @@ trait MappingExecutor extends Serializable {
     // Clean up checkpoint directory, created above
     Utils.deleteRecursively(new File("/tmp/checkpoint"))
   }
+}
 
+
+class DplaMap extends Serializable {
   /**
     * Perform the mapping for a single record
     *
-    * @param extractorClass Provider's extractor class
     * @param document The harvested record to map
     * @param shortName Provider short name
     * @param totalCount Accumulator to track the number of records processed
@@ -121,22 +116,28 @@ trait MappingExecutor extends Serializable {
     *           - (Row, null) on successful mapping
     *           - (null, Error message) on mapping failure
     */
-  private def map(extractorClass: Class[_ <: Extractor],
-                  document: String,
-                  shortName: String,
-                  totalCount: LongAccumulator,
-                  successCount: LongAccumulator,
-                  failureCount: LongAccumulator): (Row, String) = {
+  def map(document: String,
+          shortName: String,
+          totalCount: LongAccumulator,
+          successCount: LongAccumulator,
+          failureCount: LongAccumulator): (Row, String) = {
 
     totalCount.add(1)
-    extractorClass.getConstructor(classOf[String], classOf[String]).newInstance(document, shortName).build() match {
+
+    val extractorClass = ProviderRegistry.lookupProfile(shortName) match {
+      case Success(extClass) => extClass
+      case Failure(e) =>
+        // logger.fatal(e.getMessage)
+        throw e
+    }
+
+    extractorClass.performMapping(document) match {
       case Success(dplaMapData) =>
         successCount.add(1)
         (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
       case Failure(exception) =>
         failureCount.add(1)
-        (null, s"${exception.getMessage}\n" +
-          s"${exception.getStackTrace.mkString("\n")}")
+        (null, s"${exception.getMessage}\n")
     }
   }
 }

@@ -65,7 +65,7 @@ object IngestRemap extends MappingExecutor
     executeJsonl(sparkConf, enrichDataOut, jsonlDataOut, logger)
 
     // Reports
-    executeAllReports(sparkConf, enrichDataOut, baseRptOut, logger)
+    executeAllReports(sparkConf, mapDataOut, baseRptOut, logger)
 
     logger.info("Ingest remapping complete")
   }
