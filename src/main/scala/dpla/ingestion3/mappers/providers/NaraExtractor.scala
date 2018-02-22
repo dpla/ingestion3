@@ -36,12 +36,13 @@ class NaraExtractor extends Mapping[NodeSeq] with XmlExtractor with IdMinter[Nod
 
   override def dataProvider(xml: Document[NodeSeq]): EdmAgent = {
     val referenceUnit = (for {
-      itemPhysicalOccurrence <- xml \ "physicalOccurrenceArray" \ "itemPhysicalOccurrence"
-      copyStatus = (itemPhysicalOccurrence \ "copyStatus" \ "termName").text
+      itemPhysicalOccurrence <- xml \\ "physicalOccurrenceArray" \ "itemPhysicalOccurrence"
+      copyStatus = (itemPhysicalOccurrence \"copyStatus" \ "termName").text
       if copyStatus == "Reproduction-Reference" || copyStatus == "Preservation"
-      referenceUnit = (itemPhysicalOccurrence \ "referenceUnit" \ "termName").text
+      referenceUnit = (itemPhysicalOccurrence \\ "referenceUnit" \\ "termName").text
     } yield referenceUnit).headOption
 
+    println(referenceUnit)
     nameOnlyAgent(referenceUnit.getOrElse("National Records and Archives Administration"))
   }
 
@@ -77,7 +78,7 @@ class NaraExtractor extends Mapping[NodeSeq] with XmlExtractor with IdMinter[Nod
     extractStrings("scopeAndContentNote")(data)
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings("extent")(data)
+    extractStrings(data \\ "extent")
 
   override def format(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \\ "specificRecordsTypeArray" \ "specificRecordsType" \ "termName")
@@ -120,14 +121,15 @@ class NaraExtractor extends Mapping[NodeSeq] with XmlExtractor with IdMinter[Nod
   )
 
   def extractCollection(xml: NodeSeq): Seq[String] = {
+    // TODO Follow-up how were these tests passing with only a single \?
     val parentRecordGroupIds = for {
-      prg <- xml \ "parentRecordGroup"
-      prgId <- prg \ "naId" :: prg \ "title" :: prg \ "recordGroupNumber" :: Nil
+      prg <- xml \\ "parentRecordGroup"
+      prgId <- prg \\ "naId" :: prg \\ "title" :: prg \\ "recordGroupNumber" :: Nil
     } yield prgId.text
 
     val parentCollectionIds = for {
-      pc <- xml \ "parentCollection"
-      pcId <- pc \ "naId" :: pc \ "title" :: Nil
+      pc <- xml \\ "parentCollection"
+      pcId <- pc \\ "naId" :: pc \\ "title" :: Nil
     } yield pcId.text
 
     if (parentRecordGroupIds.nonEmpty) parentRecordGroupIds else parentCollectionIds
