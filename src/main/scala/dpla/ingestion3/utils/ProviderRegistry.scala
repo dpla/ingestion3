@@ -45,6 +45,7 @@ object ProviderRegistry {
     "cdl" -> Register(profile = new CdlProfile),
     "mdl" -> Register(profile = new MdlProfile),
     "nara" -> Register(profile = new NaraProfile),
+    "ohio" -> Register(profile = new OhioProfile),
     "pa" -> Register(profile = new PaProfile),
     "wi" -> Register(profile = new WiProfile)
   )
