@@ -249,4 +249,32 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
     assert(nameOnlyAgent("John F. Kennedy Library") === dataProvider)
   }
+
+  it should "extract the default dataProvider value if none exist" in {
+    // DPLA ID 0f7032c62e1cb4b6939694b0a808124c
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <physicalOccurrenceArray>
+                  <itemPhysicalOccurrence>
+                    <copyStatus>
+                      <naId>10031433</naId>
+                      <termName>Preservation-Reproduction</termName>
+                    </copyStatus>
+                  </itemPhysicalOccurrence>
+                  <itemPhysicalOccurrence>
+                    <copyStatus>
+                      <termName>Reference</termName>
+                    </copyStatus>
+                  </itemPhysicalOccurrence>
+                  <itemPhysicalOccurrence>
+                    <copyStatus>
+                      <termName>Reproduction-Reference</termName>
+                    </copyStatus>
+                  </itemPhysicalOccurrence>
+                </physicalOccurrenceArray>
+              </item>
+
+    val dataProvider = extractor.dataProvider(Document(xml))
+
+    assert(nameOnlyAgent("National Records and Archives Administration") === dataProvider)
+  }
 }
