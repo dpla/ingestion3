@@ -206,4 +206,47 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
     println(extractor.dataProvider(Document(xml)))
 
   }
+
+  it should "extract a single dataProvider value" in {
+    // DPLA ID 0f7032c62e1cb4b6939694b0a808124c
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <physicalOccurrenceArray>
+                  <itemPhysicalOccurrence>
+                    <copyStatus>
+                      <naId>10031433</naId>
+                      <termName>Preservation-Reproduction</termName>
+                    </copyStatus>
+                    <referenceUnitArray>
+                      <referenceUnit>
+                        <termName>John F. Kennedy Library</termName>
+                      </referenceUnit>
+                    </referenceUnitArray>
+                  </itemPhysicalOccurrence>
+                  <itemPhysicalOccurrence>
+                    <copyStatus>
+                      <termName>Reference</termName>
+                    </copyStatus>
+                    <referenceUnitArray>
+                      <referenceUnit>
+                        <termName>John F. Kennedy Library</termName>
+                      </referenceUnit>
+                    </referenceUnitArray>
+                  </itemPhysicalOccurrence>
+                  <itemPhysicalOccurrence>
+                    <copyStatus>
+                      <termName>Reproduction-Reference</termName>
+                    </copyStatus>
+                    <referenceUnitArray>
+                      <referenceUnit>
+                        <termName>John F. Kennedy Library</termName>
+                      </referenceUnit>
+                    </referenceUnitArray>
+                  </itemPhysicalOccurrence>
+                </physicalOccurrenceArray>
+              </item>
+
+    val dataProvider = extractor.dataProvider(Document(xml))
+
+    assert(nameOnlyAgent("John F. Kennedy Library") === dataProvider)
+  }
 }
