@@ -43,17 +43,25 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
       sourceResource = enriched.sourceResource.copy(
         date = enriched.sourceResource.date.map(d => dateEnrichment.parse(d)),
         language = enriched.sourceResource.language.map(l => LanguageMapper.mapLanguage(l)),
-        place = enriched.sourceResource.place.map(p => spatialEnrichment.enrich(p)),
-        `type` = enriched.sourceResource.`type`.map(t => {
-          // Cast original type value to lower case and map it to DCMIType IRIs (@see DcmiTypeMap).
-          // If it can be mapped to a valid DCMIType IRI then lookup the local label for that IRI
-          // and then convert label to lower case.
-            DcmiTypeMapper.mapDcmiType(t.toLowerCase) match {
-              case Some(typeIri) => DcmiTypeStringMapper.mapDcmiTypeString(typeIri).toLowerCase
-            }
-          }
+        // FIXME Place enrichment commented out until issues with Twofishes can be resolved
+        // place = enriched.sourceResource.place.map(p => spatialEnrichment.enrich(p)),
+
+        /**
+          Type enrichment
+          ----------------
+          Lower case the original string value and try to map to DCMIType IRIs (@see mapDcmiType()).
+          If the original type value can be mapped to a valid IRI then mapDcmiTypeToString() maps the
+          IRI to a string label and lowercases that label. The lowercase IRI label (without the corresponding
+          IRI) is the enriched value.
+
+          Original values that cannot be mapped to a DCMIType IRI are dropped.
+         */
+        `type` = enriched.sourceResource.`type`
+          .flatMap(t => DcmiTypeMapper.mapDcmiType(t.toLowerCase()))
+          .map(DcmiTypeStringMapper.mapDcmiTypeString)
+          .map(_.toLowerCase)
         )
-      ))
+      )
   }
 
 }
