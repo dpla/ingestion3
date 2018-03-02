@@ -93,8 +93,8 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.relation(xml) === expected)
   }
 
-  it should "extract the no rights value if the prefix is not 'dc'" in
-    assert(extractor.rights(xml) === Seq(""))
+  it should "extract no rights value if the prefix is not 'dc'" in
+    assert(extractor.rights(xml) === Seq())
 
   it should "extract rights value if the prefix is 'dc'" in {
     val rightsXml: Document[NodeSeq] = Document(<record xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata><dc:rights>rights statement</dc:rights></metadata></record>)

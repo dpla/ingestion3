@@ -88,7 +88,7 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
         case "dc" => r.text
         case _ => ""
       }
-    }) // FIXME This shouldn't be returning Seq("") if no dc:rights exist
+    }).filter(_.nonEmpty)
 
   override def rightsHolder(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "rightsHolder").map(nameOnlyAgent)
