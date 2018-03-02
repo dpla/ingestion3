@@ -35,6 +35,7 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \\ "alternative")
 
+  // Only use the first isPartOf instance
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
     extractStrings(data \ "metadata" \\ "isPartOf").headOption.map(nameOnlyCollection).toSeq
 
@@ -53,7 +54,7 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     extractStrings(data \ "metadata" \\ "description")
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "metadata" \ "extent")
+    extractStrings(data \ "metadata" \\ "extent")
 
   override def format(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "metadata" \\ "format")
@@ -87,7 +88,7 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
         case "dc" => r.text
         case _ => ""
       }
-    }).filter(_.isEmpty)
+    }).filter(_.nonEmpty)
 
   override def rightsHolder(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "rightsHolder").map(nameOnlyAgent)
@@ -138,6 +139,8 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
 
   override def sidecar(data: Document[NodeSeq]): JValue =
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+
+  // Helper method
   def agent = EdmAgent(
     name = Some("Ohio Digital Network"),
     uri = Some(Utils.createUri("http://dp.la/api/contributor/ohio"))
