@@ -43,8 +43,7 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
       sourceResource = enriched.sourceResource.copy(
         date = enriched.sourceResource.date.map(d => dateEnrichment.parse(d)),
         language = enriched.sourceResource.language.map(l => LanguageMapper.mapLanguage(l)),
-        // FIXME Place enrichment commented out until issues with Twofishes can be resolved
-        // place = enriched.sourceResource.place.map(p => spatialEnrichment.enrich(p)),
+        place = enriched.sourceResource.place.map(p => spatialEnrichment.enrich(p)),
 
         /**
           Type enrichment
