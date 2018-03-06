@@ -61,22 +61,47 @@ object StringUtils {
       value.split(delimiter).map(_.trim).filter(_.nonEmpty)
     }
 
-    val stripEndingPunctuation: SingleStringEnrichment = {
-      value.replace("""[^\w\'\"\s]+$""", "")
+    /**
+      * Removes leading and trailing: colons, semi-colons, commas
+      * slashes, hyphens and whitespace characters (whitespace, tab, new line and line feed)
+      *
+      */
+
+    val cleanupEndingPunctuation: SingleStringEnrichment = {
+      // FIXME this is going to be problematic if the last character
+      // is valid but not alphanumeric (e.g. ends with a " or ')
+      val endIndex = value.lastIndexWhere(_.isLetterOrDigit)
+
+
+      if (endIndex == -1)
+        // If there is nothing to cleanup then return the existing string
+        value
+      else {
+        val start = value.substring(0, endIndex + 1)
+        val cleanEnd = value
+          .substring(endIndex+1)
+          .replaceAll(beginAndEndPunctuationToRemove, "")
+        start.concat(cleanEnd)
+      }
+    }
+
+    val cleanupLeadingPunctuation: SingleStringEnrichment = {
+      val beginIndex = value.indexWhere(_.isLetterOrDigit)
+
+      if (beginIndex == -1)
+        // If there is nothing to cleanup than return the original string
+        value
+      else
+        value
+          .substring(0, beginIndex)
+          .replaceAll(beginAndEndPunctuationToRemove, "")
+          .concat(value.substring(beginIndex))
     }
 
     val stripHTML: SingleStringEnrichment = {
       val unescaped = StringEscapeUtils.unescapeHtml(value)
       val cleaned = Jsoup.clean(unescaped, "", Whitelist.none(), new OutputSettings().escapeMode(EscapeMode.xhtml))
       StringEscapeUtils.unescapeHtml(cleaned)
-    }
-
-    val stripLeadingPunctuation: SingleStringEnrichment = {
-      value.replace("""^[^\w\'\"\s]+""", "")
-    }
-
-    val stripPunctuation: SingleStringEnrichment = {
-      value.replaceAll("""[^\w\'\"\s]""", "")
     }
 
     val reduceWhitespace: SingleStringEnrichment = {
@@ -117,6 +142,23 @@ object StringUtils {
       * @param str
       * @return
       */
-    private def findFirstChar(str: String): Int = str.indexWhere(_.isLetterOrDigit)
+    private def findFirstChar(str: String): Int = {
+      str.indexWhere(_.isLetterOrDigit)
+    }
+
+    /**
+      * Punctuation and whitespace characters that should be removed
+      * from leading and trailing parts of string
+      *
+      *   semicolon (;)
+      *   colon (:)
+      *   slash (/)
+      *   comma (,)
+      *   hyphen (-)
+      *   new line (/n)
+      *   tab (/t)
+      *   carriage return (/r)
+      */
+    private def beginAndEndPunctuationToRemove = """[;:/,-\\t\\r\\n\s]"""
   }
 }

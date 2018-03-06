@@ -73,26 +73,73 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === expectedValue)
   }
 
-  "stripPunctuation" should "strip all punctuation from the given string" in {
-    val originalValue = "\t\"It's @#$,.! OK\"\n"
-    val enrichedValue = originalValue.stripPunctuation
-    val expectedValue = "\t\"It's  OK\"\n"
+  "cleanupLeadingPunctuation" should "strip leading punctuation from a string" in {
+    val originalValue = ":  ;; --  It's @@ OK --- "
+    val enrichedValue = originalValue.cleanupLeadingPunctuation
+    val expectedValue = "It's @@ OK --- "
     assert(enrichedValue === expectedValue)
   }
 
-  "stripLeadingPunctuation" should "strip leading punctuation from the " +
-      "given string" in {
-    val originalValue = "@#$,.!\t \"It's OK\""
-    val enrichedValue = originalValue.stripPunctuation
-    val expectedValue = "\t \"It's OK\""
+  it should "remove whitespace" in {
+    val originalValue = "   A good string "
+    val enrichedValue = originalValue.cleanupLeadingPunctuation
+    val expectedValue = "A good string "
     assert(enrichedValue === expectedValue)
   }
 
-  "stripEndingPunctuation" should "strip ending punctuation from the " +
-    "given string" in {
-    val originalValue = "\"It's OK\" @#$,.!"
-    val enrichedValue = originalValue.stripPunctuation
-    val expectedValue = "\"It's OK\" "
+  it should "remove tabs" in {
+    val originalValue = "\t\t\tA \tgood string "
+    val enrichedValue = originalValue.cleanupLeadingPunctuation
+    val expectedValue = "A \tgood string "
+    assert(enrichedValue === expectedValue)
+  }
+
+  it should "remove new line characters" in {
+    val originalValue = "\n\n\r\nA good string "
+    val enrichedValue = originalValue.cleanupLeadingPunctuation
+    val expectedValue = "A good string "
+    assert(enrichedValue === expectedValue)
+  }
+
+  it should "do nothing if there is no punctuation" in {
+    val originalValue = "A good string "
+    val enrichedValue = originalValue.cleanupLeadingPunctuation
+    val expectedValue = "A good string "
+    assert(enrichedValue === expectedValue)
+  }
+
+  "cleanupEndingPunctuation" should "strip punctuation following the last letter or digit character" in {
+    val originalValue = ".. It's OK  ;; .. ,, // \n"
+    val enrichedValue = originalValue.cleanupEndingPunctuation
+    val expectedValue = ".. It's OK"
+    assert(enrichedValue === expectedValue)
+  }
+
+  it should "remove whitespace" in {
+    val originalValue = "A good string   "
+    val enrichedValue = originalValue.cleanupEndingPunctuation
+    val expectedValue = "A good string"
+    assert(enrichedValue === expectedValue)
+  }
+
+  it should "remove tabs" in {
+    val originalValue = "A \tgood string\t\t\t"
+    val enrichedValue = originalValue.cleanupEndingPunctuation
+    val expectedValue = "A \tgood string"
+    assert(enrichedValue === expectedValue)
+  }
+
+  it should "remove new line characters" in {
+    val originalValue = "A good string\n\n\r\n"
+    val enrichedValue = originalValue.cleanupEndingPunctuation
+    val expectedValue = "A good string"
+    assert(enrichedValue === expectedValue)
+  }
+
+  it should "do nothing if there is no ending punctuation" in {
+    val originalValue = "A good string"
+    val enrichedValue = originalValue.cleanupEndingPunctuation
+    val expectedValue = "A good string"
     assert(enrichedValue === expectedValue)
   }
 
