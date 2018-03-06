@@ -155,9 +155,10 @@ object StringUtils {
       *   slash (/)
       *   comma (,)
       *   hyphen (-)
-      *   new line (/n)
-      *   tab (/t)
-      *   carriage return (/r)
+      *   new line (\n)
+      *   tab (\t)
+      *   carriage return (\r)
+      *   whitespace (\s)
       */
     private def beginAndEndPunctuationToRemove = """[;:/,-\\t\\r\\n\s]"""
   }
