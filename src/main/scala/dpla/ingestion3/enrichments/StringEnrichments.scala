@@ -51,13 +51,20 @@ class StringEnrichments {
       rightsHolder = sourceResource.rightsHolder.map(enrichEdmAgent(_)),
       subject = sourceResource.subject.map(enrichSkosConcept(_)),
       temporal = sourceResource.temporal.map(enrichEdmTimeSpan(_)),
-      title = sourceResource.title.map(_.stripHTML.reduceWhitespace),
+      title = sourceResource.title.map(_.stripHTML
+        .reduceWhitespace
+        .cleanupLeadingPunctuation
+        .cleanupEndingPunctuation),
       `type` = sourceResource.`type`.map(_.stripHTML.reduceWhitespace)
     )
 
   def enrichEdmAgent(edmAgent: EdmAgent): EdmAgent =
     edmAgent.copy(
-      name = edmAgent.name.map(_.stripHTML.reduceWhitespace)
+      name = edmAgent.name.map(
+        _.stripHTML
+          .reduceWhitespace
+          .cleanupLeadingPunctuation
+          .cleanupEndingPunctuation)
     )
 
   def enrichEdmWebResource(edmWebResource: EdmWebResource): EdmWebResource =
@@ -69,8 +76,14 @@ class StringEnrichments {
 
   def enrichSkosConcept(skosConcept: SkosConcept): SkosConcept =
     skosConcept.copy(
-      concept = skosConcept.concept.map(_.stripHTML.reduceWhitespace),
-      providedLabel = skosConcept.providedLabel.map(_.stripHTML.reduceWhitespace)
+      concept = skosConcept.concept.map(_.stripHTML
+        .reduceWhitespace
+        .cleanupLeadingPunctuation
+        .cleanupEndingPunctuation),
+      providedLabel = skosConcept.providedLabel.map(_.stripHTML
+        .reduceWhitespace
+        .cleanupLeadingPunctuation
+        .cleanupEndingPunctuation)
     )
 
   def enrichEdmTimeSpan(edmTimeSpan: EdmTimeSpan): EdmTimeSpan =
