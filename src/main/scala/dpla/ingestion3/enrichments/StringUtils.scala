@@ -104,8 +104,11 @@ object StringUtils {
       StringEscapeUtils.unescapeHtml(cleaned)
     }
 
+    /**
+      * Reduce multiple whitespace values to a single
+      */
     val reduceWhitespace: SingleStringEnrichment = {
-      value.replaceAll("  ", " ")
+      value.replaceAll(" +", " ")
     }
 
     /**

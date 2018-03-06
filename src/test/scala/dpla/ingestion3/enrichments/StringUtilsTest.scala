@@ -161,6 +161,18 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === "foo bar")
   }
 
+  it should "reduce five whitespaces to one whitespace" in {
+    val originalValue = "foo     bar"
+    val enrichedValue = originalValue.reduceWhitespace
+    assert(enrichedValue === "foo bar")
+  }
+
+  it should "reduce multiple occurrences duplicate whitespace to single whitespace" in {
+    val originalValue = " foo   bar  choo  "
+    val enrichedValue = originalValue.reduceWhitespace
+    assert(enrichedValue === " foo bar choo ")
+  }
+
   "capitalizeFirstChar" should "not capitalize the b in 3 blind mice because it is preceded by 3" in {
     val originalValue = "3 blind mice"
     val enrichedValue = originalValue.capitalizeFirstChar
