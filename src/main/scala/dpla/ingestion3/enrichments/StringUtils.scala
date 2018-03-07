@@ -129,6 +129,7 @@ object StringUtils {
         value
     }
 
+
     /**
       * Replaces the character at the specified index in s with c
       * @param s String value
@@ -142,7 +143,7 @@ object StringUtils {
       * Iterates over the string to find the first alphanumeric char
       * and returns the index
       *
-      * @param str
+      * @param str String to search
       * @return
       */
     private def findFirstChar(str: String): Int = {
@@ -164,5 +165,56 @@ object StringUtils {
       *   whitespace (\s)
       */
     private def beginAndEndPunctuationToRemove = """[;:/,-\\t\\r\\n\s]"""
+
+    /**
+      * Removes matching leading and trailing brackets (square, round and curly braces)
+      * from a string
+      */
+    val stripBrackets: SingleStringEnrichment = {
+      val replacementRegex = for( (p, r) <- bracketPatterns if value.matches(p)) yield r
+      // TODO is there a cleaner or safer way to convert Iterator[String] to String than mkString?
+      value.replaceAll(replacementRegex.mkString, "")
+    }
+
+    /**
+      * Bracket patterns to search for and the corresponding replacement regex
+      *
+      * E.x.
+      *   pattern to search for -> pattern to replace matches
+      *   if it starts with ( and ends with ) -> get the first ( and last )
+      *   """^(\(.*\)$)""" -> """^(\()|(\))$"""
+      *
+      *
+      * @return Map[String, String]
+      */
+    private def bracketPatterns = {
+      brackets.map(bracket => baseBracketSearchPattern(bracket) -> baseBracketReplacePattern(bracket))
+    }
+
+    /**
+      * Constructs the regex pattern to search a string
+      *
+      * @param bracket Bracket pairs to search for
+      * @return String Regex
+      */
+    def baseBracketSearchPattern(bracket: Bracket): String =
+      """^([\n\r\s]*\""" + bracket.openChar + """.*\""" + bracket.closeChar + """[\n\r\s]*)"""
+
+    /**
+      * Constructs the regex pattern to perform a replacement
+      *
+      * @param bracket Bracket pairs to search for
+      * @return String Regex
+      */
+    private def baseBracketReplacePattern(bracket: Bracket) =
+      """^([\n\r\s]*\""" + bracket.openChar + """[\n\r\s]*)|([\n\r\s]*\""" + bracket.closeChar + """[\n\r\s]*)$"""
+
+    private def brackets = Seq(
+      Bracket("{","}"),
+      Bracket("(",")"),
+      Bracket("[","]")
+    )
+
+    case class Bracket(openChar: String, closeChar: String)
   }
 }
