@@ -95,7 +95,11 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
     extractStrings("rightsholder_ss")(data).map(nameOnlyAgent)
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings("subject_ss")(data).map(nameOnlyConcept)
+    extractStrings("subject_ss")(data)
+      .map(_.cleanupLeadingPunctuation)
+      .map(_.cleanupEndingPunctuation)
+      .map(_.stripEndingPeriod)
+      .map(nameOnlyConcept)
 
   override def temporal(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
     extractStrings("temporal_ss")(data).map(stringOnlyTimeSpan)
