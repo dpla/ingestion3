@@ -210,4 +210,41 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.findAndRemoveAll(stopWords)
     assert(enrichedValue === "photograph")
   }
+
+  "stripBrackets" should "remove leading and trailing ( )" in {
+    val originalValue = "(hello)"
+    val enrichedValue = originalValue.stripBrackets
+    assert(enrichedValue === "hello")
+  }
+  it should "remove leading and trailing [ ]" in {
+    val originalValue = "[hello]"
+    val enrichedValue = originalValue.stripBrackets
+    assert(enrichedValue === "hello")
+  }
+  it should "remove leading and trailing { }" in {
+    val originalValue = "{hello}"
+    val enrichedValue = originalValue.stripBrackets
+    assert(enrichedValue === "hello")
+  }
+  it should "ignore whitespace and remove leading and trailing { } " in {
+    val originalValue = " \t{hello} \n"
+    val enrichedValue = originalValue.stripBrackets
+    assert(enrichedValue === "hello")
+  }
+  it should "leave interior brackets alone" in {
+    val originalValue = "Hello ()[]{} Goodbye"
+    val enrichedValue = originalValue.stripBrackets
+    assert(enrichedValue === "Hello ()[]{} Goodbye")
+  }
+  it should "remove surrounding brackets and interior brackets alone" in {
+    val originalValue = "( {Hello ()[]{} Goodbye)"
+    val enrichedValue = originalValue.stripBrackets
+    assert(enrichedValue === "{Hello ()[]{} Goodbye")
+  }
+  it should "do nothing with unmatched brackets" in {
+    val originalValue = "(Hello"
+    val enrichedValue = originalValue.stripBrackets
+    assert(enrichedValue === "(Hello")
+  }
+
 }
