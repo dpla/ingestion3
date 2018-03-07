@@ -114,7 +114,7 @@ object DcmiTypeMapper extends VocabEnforcer[String] {
     "sound" -> dcmiType.Sound,
     "specimen" -> dcmiType.Image,
     "statue" -> dcmiType.Image,
-    "stillimage" -> dcmiType.StillImage,
+    "stillimage" -> dcmiType.Image,
     "text" -> dcmiType.Text,
     "textile" -> dcmiType.Image,
     "tool" -> dcmiType.Image,
