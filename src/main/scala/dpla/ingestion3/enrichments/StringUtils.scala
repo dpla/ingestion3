@@ -104,6 +104,17 @@ object StringUtils {
       StringEscapeUtils.unescapeHtml(cleaned)
     }
 
+
+    /**
+      * Removes singular periods from the end of a string. Ignores and removes trailing whitespace
+      */
+    val stripEndingPeriod: SingleStringEnrichment = {
+      if (value.matches(""".*?[^\.]\.[\n\r\s]*$"""))
+        value.replaceAll("""\.[\n\r\s]*$""", "")
+      else
+        value
+    }
+
     /**
       * Reduce multiple whitespace values to a single
       */
