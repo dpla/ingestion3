@@ -173,17 +173,17 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === " foo bar choo ")
   }
 
-  "capitalizeFirstChar" should "not capitalize the b in 3 blind mice because it is preceded by 3" in {
+  "capitalizeFirstChar" should "not capitalize the b in '3 blind mice'" in {
     val originalValue = "3 blind mice"
     val enrichedValue = originalValue.capitalizeFirstChar
     assert(enrichedValue === "3 blind mice")
   }
-  it should "capitalize the t in three blind mice" in {
+  it should "capitalize the t in 'three blind mice'" in {
     val originalValue = "three blind mice"
     val enrichedValue = originalValue.capitalizeFirstChar
     assert(enrichedValue === "Three blind mice")
   }
-  it should "capitalize the v in ...vacationland..." in {
+  it should "capitalize the v in '...vacationland...'" in {
     val originalValue = "...vacationland..."
     val enrichedValue = originalValue.capitalizeFirstChar
     assert(enrichedValue === "...Vacationland...")
