@@ -210,7 +210,7 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.findAndRemoveAll(stopWords)
     assert(enrichedValue === "photograph")
   }
-
+  
   "stripBrackets" should "remove leading and trailing ( )" in {
     val originalValue = "(hello)"
     val enrichedValue = originalValue.stripBrackets
@@ -247,4 +247,34 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === "(Hello")
   }
 
+  "stripEndingPeriod" should "remove a single trailing period" in {
+    val originalValue = "Hello."
+    val enrichedValue = originalValue.stripEndingPeriod
+    val expectedValue = "Hello"
+    assert(enrichedValue === expectedValue)
+  }
+  it should "not remove ellipsis" in {
+    val originalValue = "Hello..."
+    val enrichedValue = originalValue.stripEndingPeriod
+    val expectedValue = "Hello..."
+    assert(enrichedValue === expectedValue)
+  }
+  it should "not remove leading or interior periods" in {
+    val originalValue = "H.e.l.l.o."
+    val enrichedValue = originalValue.stripEndingPeriod
+    val expectedValue = "H.e.l.l.o"
+    assert(enrichedValue === expectedValue)
+  }
+  it should "return the original value if only given a single period (e.g. '.')" in {
+    val originalValue = "."
+    val enrichedValue = originalValue.stripEndingPeriod
+    val expectedValue = "."
+    assert(enrichedValue === expectedValue)
+  }
+  it should "remove a trailing period if it followed by whitespace" in {
+    val originalValue = "Hello.  "
+    val enrichedValue = originalValue.stripEndingPeriod
+    val expectedValue = "Hello"
+    assert(enrichedValue === expectedValue)
+  }
 }
