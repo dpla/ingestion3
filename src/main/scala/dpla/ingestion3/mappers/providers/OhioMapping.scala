@@ -59,9 +59,9 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   override def format(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "metadata" \\ "format")
       .flatMap(_.splitAtDelimiter(";"))
-      .map(_.findAndRemoveAll(formatsToRemove))
-      .filter(_.nonEmpty)
+      .map(_.stripInvalidFormats)
       .map(_.capitalizeFirstChar)
+      .filter(_.nonEmpty)
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "metadata" \\ "identifier")

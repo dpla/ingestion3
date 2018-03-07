@@ -204,13 +204,37 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === "")
   }
 
-  "findAndRemoveAll" should "remove all stop words from the given string" in {
-    val stopWords = Set("jp2", "application/xml")
+  "stripInvalidFormats" should "remove all stop words from the given string" in {
     val originalValue = "application/xml photograph   jp2"
-    val enrichedValue = originalValue.findAndRemoveAll(stopWords)
+    val enrichedValue = originalValue.stripInvalidFormats
     assert(enrichedValue === "photograph")
   }
-  
+  it should "not case about case" in {
+    val originalValue = "application/XML Photograph   jp2"
+    val enrichedValue = originalValue.stripInvalidFormats
+    assert(enrichedValue === "Photograph")
+  }
+  it should "remove stop words that contain white space e.g. 'JPEG 2000'" in {
+    val originalValue = "JPEG 2000 Photograph"
+    val enrichedValue = originalValue.stripInvalidFormats
+    assert(enrichedValue === "Photograph")
+  }
+  it should "leave the original value alone if it contains no stopwords" in {
+    val originalValue = "Photograph"
+    val enrichedValue = originalValue.stripInvalidFormats
+    assert(enrichedValue === "Photograph")
+  }
+  it should "return empty string if format only contains stop words" in {
+    val originalValue = "  text/pdf tif  video/jpeg  \t video/jpeg2000"
+    val enrichedValue = originalValue.stripInvalidFormats
+    assert(enrichedValue === "")
+  }
+  it should "remove invalid values that contain reserved regex chars" in {
+    val originalValue = "3gpdash-qoe-report+xml photograph  "
+    val enrichedValue = originalValue.stripInvalidFormats
+    assert(enrichedValue === "photograph")
+  }
+
   "stripBrackets" should "remove leading and trailing ( )" in {
     val originalValue = "(hello)"
     val enrichedValue = originalValue.stripBrackets

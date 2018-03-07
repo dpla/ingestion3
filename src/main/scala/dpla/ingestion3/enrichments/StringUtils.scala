@@ -1,5 +1,6 @@
 package dpla.ingestion3.enrichments
 
+import dpla.ingestion3.utils.FlatFileIO
 import org.apache.commons.lang.StringEscapeUtils
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document.OutputSettings
@@ -13,7 +14,6 @@ import scala.util.matching.Regex
   *
   */
 object StringUtils {
-
   implicit class Enrichments(value: String) {
 
     type SingleStringEnrichment = String
@@ -42,19 +42,6 @@ object StringUtils {
     }
 
     /**
-      * Removes all target strings from the source string
-      *
-      * @return
-      */
-    val findAndRemoveAll: Set[String] => String = (stopWords) => {
-      // FIXME this is a case sensitive operation.
-      value.splitAtDelimiter(" ")
-        .filterNot(stopWords)
-        .filter(_.nonEmpty)
-        .mkString(" ")
-    }
-
-    /**
       * Splits a String value around a given delimiter.
       */
     val splitAtDelimiter: (String) => Array[String] = (delimiter) => {
@@ -66,7 +53,6 @@ object StringUtils {
       * slashes, hyphens and whitespace characters (whitespace, tab, new line and line feed)
       *
       */
-
     val cleanupEndingPunctuation: SingleStringEnrichment = {
       // FIXME this is going to be problematic if the last character
       // is valid but not alphanumeric (e.g. ends with a " or ')
@@ -135,11 +121,10 @@ object StringUtils {
     val capitalizeFirstChar: SingleStringEnrichment = {
       val charIndex = findFirstChar(value)
       if (charIndex >= 0)
-        replaceCharAt(value, charIndex, value.charAt(charIndex).toUpper )
+        replaceCharAt(value, charIndex, value.charAt(charIndex).toUpper)
       else
         value
     }
-
 
     /**
       * Replaces the character at the specified index in s with c
@@ -177,7 +162,10 @@ object StringUtils {
       */
     private def beginAndEndPunctuationToRemove = """[;:/,-\\t\\r\\n\s]"""
 
+
     /**
+      * Bracket removal normalization
+      *
       * Removes matching leading and trailing brackets (square, round and curly braces)
       * from a string
       */
@@ -226,6 +214,66 @@ object StringUtils {
       Bracket("[","]")
     )
 
+    /**
+      * Case class that represents a pair of enclosing strings that
+      * @param openChar String that indicates start of enclosure
+      * @param closeChar String that indicates end of enclosure
+      */
     case class Bracket(openChar: String, closeChar: String)
+
+
+
+    /**
+      * Format IMT, MIME, content-type filtering normalization
+      *
+      */
+    // TODO These file references should not be hard coded
+    // TODO See VocabEnforcer -- there is some duplicate functionality that could be cleaned up
+    private def formatStopwordFiles = Seq(
+      "/formats/ohio.csv",
+      "/formats/iana-imt-types.csv"
+    )
+
+    /**
+      * Reads files listed in formatStopwordFiles and builds a Set[String]
+      * from the uncommented lines in those files
+      *
+      * @return Set[String]
+      */
+    private def getFormatStopwords: Set[String] = {
+      val fileIo = new FlatFileIO()
+      formatStopwordFiles
+        .flatMap(file => fileIo.readFileAsSeq(file))
+        .filterNot(line => line.startsWith("#"))
+        .map(_.toLowerCase())
+        .toSet
+    }
+
+    /**
+      * Gets invalid format terms by reading files specified by formatStopwordFiles. Takes those
+      * terms and constructs a massive regular expression. Removes those invalid terms from the
+      * provided string as well as empty/duplicate whitespace. This filter is case insensitive.
+      *
+      */
+    val stripInvalidFormats: SingleStringEnrichment = {
+      // TODO Move this out of the method so the file aren't re-read for every record
+      // Get stop words from files and escape forward slashes
+      // in the stop words list
+      val stopWords = getFormatStopwords
+        .map(
+          // TODO is there a better way to 'auto-escape' reserved regex chars?
+          _.replace("""/""", """\/""")
+          .replace("""+""", """\+""")
+          .replace("""-""", """\-"""))
+
+      // Create on big'ol regex from those stop words that ignores
+      // case and white space.
+      val regex = "(?i)" + stopWords
+        .map(word => s"($word)")
+        .mkString("|")
+
+      // Perform the removal and trim white space
+      value.replaceAll(regex, "").trim
+    }
   }
 }

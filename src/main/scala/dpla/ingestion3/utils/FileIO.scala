@@ -38,6 +38,16 @@ class FlatFileIO extends FileIO {
     IOUtils.closeQuietly(stream)
     result
   }
+
+  /**
+    * Reads a file and returns a Seq[String]
+    * @param name
+    * @return
+    */
+  def readFileAsSeq(name: String): Seq[String] = {
+    // FIXME This is a lazy kludge.
+    readFileAsString(name).split("""\n""").toSeq
+  }
 }
 
 /**
