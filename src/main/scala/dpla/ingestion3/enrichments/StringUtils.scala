@@ -266,8 +266,13 @@ object StringUtils {
           .replace("""+""", """\+""")
           .replace("""-""", """\-"""))
 
-      // Create on big'ol regex from those stop words that ignores
-      // case and white space.
+
+      // FIXME There is a case not easily addressed here where a stop word term exists inside a larger term.
+      //  Is this actually a problem? E.g. application/xmlphotograph will become photograph
+      //  This might be more of a problem with IANA term list because it contains values like 'http', 'index',
+      //  and 'widget'. Need to discuss with @gretchen
+
+      // Create on big'ol regex from those stop words that ignores case
       val regex = "(?i)" + stopWords
         .map(word => s"($word)")
         .mkString("|")
