@@ -240,6 +240,28 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === "photograph")
   }
 
+  it should "remove 'jpeg' and 'jpeg 2000' from 'jpeg jpeg 2000 photograph image'" in {
+    val originalValue = "jpeg jpeg 2000 photograph image"
+    val enrichedValue = originalValue.stripInvalidFormats
+    assert(enrichedValue === "photograph image")
+  }
+  it should "remove 'jpeg' and 'jpeg 2000' from 'jpeg photograph image jpeg 2000'" in {
+    val originalValue = "jpeg photograph image jpeg 2000"
+    val enrichedValue = originalValue.stripInvalidFormats
+    assert(enrichedValue === "photograph image")
+  }
+  it should "remove 'font-woff - DEPRECATED in favor of font/woff' from 'document font-woff - DEPRECATED in favor of font/woff'" in {
+    val originalValue = "document font-woff - DEPRECATED in favor of font/woff"
+    val enrichedValue = originalValue.stripInvalidFormats
+    assert(enrichedValue === "document")
+  }
+  it should "remove 'tiff' and 'image/tiff' from '  tiff photo image/tiff  '" in {
+    val originalValue = "  tiff photo image/tiff  "
+    val enrichedValue = originalValue.stripInvalidFormats
+    assert(enrichedValue === "photo")
+  }
+
+
   "stripBrackets" should "remove leading and trailing ( )" in {
     val originalValue = "(hello)"
     val enrichedValue = originalValue.stripBrackets

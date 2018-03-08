@@ -235,17 +235,32 @@ object StringUtils {
     )
 
     /**
-      * Reads files listed in formatStopwordFiles and builds a Set[String]
-      * from the uncommented lines in those files
+      * Reads files listed in formatStopwordFiles and builds an
+      * ordered Set[String] (ordered by white space count descending)
       *
       * @return Set[String]
       */
     private def getFormatStopwords: Set[String] = {
       val fileIo = new FlatFileIO()
-      formatStopwordFiles
+      // reads in terms from file
+      val stopWords = formatStopwordFiles
         .flatMap(file => fileIo.readFileAsSeq(file))
-        .filterNot(line => line.startsWith("#"))
-        .map(_.toLowerCase())
+        .filterNot(line => line.startsWith("#")) // drop lines that begin with #
+
+      // Order the stop words by number of whitespaces. This will create term
+      // precedence when constructing the search regex so that 'jpeg 2000' will
+      // be found and replaced before 'jpeg'.
+      stopWords
+        .map(term => term.count(_ == ' ')) // count the number of white spaces
+        .zip(stopWords) // zip white space count and term
+        .sorted // sort white space count ascending
+        .reverse // sort white space count descending
+        .map(_._2) // pull out the term
+        // TODO is there a better way to 'auto-escape' reserved regex chars?
+        .map(
+          _.replace("""/""", """\/""")
+          .replace("""+""", """\+""")
+          .replace("""-""", """\-"""))
         .toSet
     }
 
@@ -257,22 +272,16 @@ object StringUtils {
       */
     val stripInvalidFormats: SingleStringEnrichment = {
       // TODO Move this out of the method so the file aren't re-read for every record
-      // Get stop words from files and escape forward slashes
-      // in the stop words list
+      // Get stop words from files
       val stopWords = getFormatStopwords
-        .map(
-          // TODO is there a better way to 'auto-escape' reserved regex chars?
-          _.replace("""/""", """\/""")
-          .replace("""+""", """\+""")
-          .replace("""-""", """\-"""))
-
 
       // FIXME There is a case not easily addressed here where a stop word term exists inside a larger term.
       //  Is this actually a problem? E.g. application/xmlphotograph will become photograph
       //  This might be more of a problem with IANA term list because it contains values like 'http', 'index',
       //  and 'widget'. Need to discuss with @gretchen
 
-      // Create on big'ol regex from those stop words that ignores case
+      // Create a regex from those stop words that ignores case
+        // (?i)(jpeg)|(jpeg 2000)|(application\/text)...n
       val regex = "(?i)" + stopWords
         .map(word => s"($word)")
         .mkString("|")
