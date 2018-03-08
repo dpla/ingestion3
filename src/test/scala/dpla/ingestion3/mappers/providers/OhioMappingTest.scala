@@ -118,7 +118,9 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct relation" in {
-    val expected = Seq("College of Musical Arts Programs; MUSIC 003; Music Library and Bill Schurk Sound Archives; University Libraries; Bowling Green State University", "Faculty Artist Concert").map(eitherStringOrUri)
+    val expected = Seq("College of Musical Arts Programs; MUSIC 003; Music Library " +
+      "and Bill Schurk Sound Archives; University Libraries; " +
+      "Bowling Green State University", "Faculty Artist Concert").map(eitherStringOrUri)
     assert(extractor.relation(xml) === expected)
   }
 
@@ -161,7 +163,13 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = nameOnlyAgent("Bowling Green State University Libraries")
     assert(extractor.dataProvider(xml) === expected)
   }
-  // TODO assert failure test for dataProvider
+  it should "throw an exception if no dataProvider" in {
+    val xml = <record><metadata></metadata></record>
+    assertThrows[Exception] {
+      extractor.dataProvider(Document(xml))
+    }
+  }
+
   it should "extract the correct edmRights" in {
     val expected = Some(new URI("http://rightsstatements.org/page/NoC-US/1.0/"))
     assert(extractor.edmRights(xml) === expected)
@@ -170,8 +178,13 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/collections/item/14058"))
     assert(extractor.isShownAt(xml) === expected)
   }
+  it should "throw an Exception if no isShownAt" in {
+    val xml = <record><metadata></metadata></record>
+    assertThrows[Exception] {
+      extractor.isShownAt(Document(xml))
+    }
+  }
   // TODO isShownAt multiple instances
-  // TODO isShownAt assert failure if not provided
   it should "extract the correct preview" in {
     val expected = Some(uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/files/thumbnails/26e197915e9107914faa33ac166ead5a.jpg")))
     assert(extractor.preview(xml) === expected)
