@@ -78,7 +78,7 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct formats" in {
-    val expected = Seq("Image", "Photograph")
+    val expected = Seq("image", "photograph")
     assert(extractor.format(xml) === expected)
   }
 
