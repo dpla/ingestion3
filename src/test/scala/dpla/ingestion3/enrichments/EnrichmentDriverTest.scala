@@ -22,7 +22,7 @@ class EnrichmentDriverTest extends FlatSpec with BeforeAndAfter {
       )),
       language = Seq(
         SkosConcept(
-          providedLabel = Some("eng"),
+          providedLabel = Some("Eng"),
           concept = Some("English")
         )
       ),
