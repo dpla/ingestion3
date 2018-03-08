@@ -93,9 +93,18 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.identifier(xml) === expected)
   }
 
-  it should "extract the correct language" in {
+  it should "extract the correct language when the value contains ';'" in {
     val expected = Seq("english", "eng").map(nameOnlyConcept)
     assert(extractor.language(xml) === expected)
+  }
+  it should "extract the correct language" in {
+    val xml: NodeSeq =
+      <record><metadata>
+        <dcterms:language>english</dcterms:language>
+        <dcterms:language>eng</dcterms:language>
+      </metadata></record>
+    val expected = Seq("english", "eng").map(nameOnlyConcept)
+    assert(extractor.language(Document(xml)) === expected)
   }
 
   it should "extract the correct place values and split around ;" in {
