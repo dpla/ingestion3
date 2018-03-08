@@ -22,8 +22,13 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct provider identifier " in
     assert(extractor.getProviderId(xml) === "urn:ohiodplahub.library.ohio.gov:bgsu_12:oai:digitalgallery.bgsu.edu:14058")
 
-  // TODO write fail test for id selection?
-  
+  it should "throw an Exception if document does not contain a provider identifier" in {
+    val xml = <record><metadata></metadata></record>
+    assertThrows[Exception] {
+      extractor.getProviderId(Document(xml))
+    }
+  }
+
   it should "extract the correct alternate titles " in {
     val expected = Seq("Alt title one", "Alt title two")
     assert(extractor.alternateTitle(xml) === expected)
@@ -185,7 +190,6 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
       extractor.isShownAt(Document(xml))
     }
   }
-  // TODO isShownAt multiple instances
   it should "extract the correct preview" in {
     val expected = Some(uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/files/thumbnails/26e197915e9107914faa33ac166ead5a.jpg")))
     assert(extractor.preview(xml) === expected)

@@ -126,8 +126,11 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
 
   override def isShownAt(data: Document[NodeSeq]) =
     uriOnlyWebResource(
-      Utils.createUri(extractString(data \ "metadata" \\ "isShownAt")
-        .getOrElse(throw new RuntimeException(s"No isShownAt property in record ${getProviderId(data)}"))))
+      Utils.createUri(extractStrings(data \ "metadata" \\ "isShownAt")
+        .headOption
+        .getOrElse(
+          throw new RuntimeException(s"No isShownAt property in record ${getProviderId(data)}")
+        )))
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
