@@ -1,0 +1,32 @@
+# DPLA specific IMT/MIME values to remove from the format field
+# These values came from the Ohio mapping
+application/pdf
+application/xml
+audio/mpeg
+charset=ISO-8859-1
+charset=iso-8859-1
+charset=UTF-8
+charset=utf-8
+charset=windows-1252
+HTML
+image/jp2
+image/jpeg
+image/jpg
+image/png
+image/tiff
+JPEG 2000
+jpeg
+jpeg2000
+jpg
+jp2
+mp3
+PDF
+pdf
+text/html
+text/pdf
+tif
+tiff
+video/jpeg
+video/jpeg2000
+video/mp4
+video/mpeg

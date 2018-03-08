@@ -153,6 +153,7 @@ object LanguageMapper extends VocabEnforcer[String] {
 
   // Reads a file
   private def readFile(path: String): Map[String, String] = {
+    // TODO Most of this top part is duplicating functionality in FlatFileIo.readFileAsString()
     val stream = getClass.getResourceAsStream(path)
     Source.fromInputStream(stream)
       .getLines()
