@@ -30,7 +30,10 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
 
   // Only use the first isPartOf instance
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
-    extractStrings(data \ "metadata" \\ "isPartOf").headOption.map(nameOnlyCollection).toSeq
+    extractStrings(data \ "metadata" \\ "isPartOf")
+      .headOption
+      .map(nameOnlyCollection)
+      .toSeq
 
   override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
     extractStrings(data \ "metadata" \\ "contributor")
@@ -73,10 +76,12 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
       .map(nameOnlyPlace)
 
   override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
-    extractStrings(data \ "metadata" \\ "publisher").map(nameOnlyAgent)
+    extractStrings(data \ "metadata" \\ "publisher")
+      .map(nameOnlyAgent)
 
   override def relation(data: Document[NodeSeq]): Seq[LiteralOrUri] =
-    extractStrings(data \ "metadata" \\ "relation").map(eitherStringOrUri)
+    extractStrings(data \ "metadata" \\ "relation")
+      .map(eitherStringOrUri)
 
   override def rights(data: Document[NodeSeq]): Seq[String] =
     (data \ "metadata" \\ "rights").map(r => {
@@ -87,7 +92,8 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     }).filter(_.nonEmpty)
 
   override def rightsHolder(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    extractStrings(data \ "metadata" \\ "rightsHolder").map(nameOnlyAgent)
+    extractStrings(data \ "metadata" \\ "rightsHolder")
+      .map(nameOnlyAgent)
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
     extractStrings(data \ "metadata" \\ "subject")
@@ -106,11 +112,12 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): EdmAgent = {
-    val contributors = extractStrings(data \ "metadata" \\ "dataProvider")
-    if (contributors.nonEmpty)
-      nameOnlyAgent(contributors.head)
-    else
-      throw new Exception(s"Missing required property metadata/dataProvider is empty for ${getProviderId(data)}")
+    extractStrings(data \ "metadata" \\ "dataProvider")
+      .map(nameOnlyAgent)
+      .headOption // take the first value
+      .getOrElse( // return the first value or throw an exception
+        throw new Exception(s"Missing required property metadata/dataProvider is empty for ${getProviderId(data)}")
+      )
   }
 
   override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] = {
