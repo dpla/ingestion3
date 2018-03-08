@@ -31,9 +31,7 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   // Only use the first isPartOf instance
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
     extractStrings(data \ "metadata" \\ "isPartOf")
-      .headOption
       .map(nameOnlyCollection)
-      .toSeq
 
   override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
     extractStrings(data \ "metadata" \\ "contributor")

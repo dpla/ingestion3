@@ -23,14 +23,15 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.getProviderId(xml) === "urn:ohiodplahub.library.ohio.gov:bgsu_12:oai:digitalgallery.bgsu.edu:14058")
 
   // TODO write fail test for id selection?
-
+  
   it should "extract the correct alternate titles " in {
     val expected = Seq("Alt title one", "Alt title two")
     assert(extractor.alternateTitle(xml) === expected)
   }
 
-  it should "extract the correct collection title" in {
-    val expected = Seq("College of Musical Arts Programs").map(nameOnlyCollection)
+  it should "extract the correct collection titles" in {
+    val expected = Seq("College of Musical Arts Programs", "A second collection")
+      .map(nameOnlyCollection)
     assert(extractor.collection(xml) === expected)
   }
 
