@@ -225,7 +225,7 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === "Photograph")
   }
   it should "return empty string if format only contains stop words" in {
-    val originalValue = "  text/pdf tif  video/jpeg  \t video/jpeg2000"
+    val originalValue = "  text/pdf tif video/jpeg \t jpeg2000 "
     val enrichedValue = originalValue.stripInvalidFormats
     assert(enrichedValue === "")
   }

@@ -92,7 +92,7 @@ object StringUtils {
 
 
     /**
-      * Removes singular periods from the end of a string. Ignores and removes trailing whitespace
+      * Removes singular period from the end of a string. Ignores and removes trailing whitespace
       */
     val stripEndingPeriod: SingleStringEnrichment = {
       if (value.matches(""".*?[^\.]\.[\n\r\s]*$"""))
@@ -222,10 +222,10 @@ object StringUtils {
     case class Bracket(openChar: String, closeChar: String)
 
 
-
     /**
-      * Format IMT, MIME, content-type filtering normalization
+      * Returns a list of files to use for generating the format stop words list
       *
+      * @return
       */
     // TODO These file references should not be hard coded
     // TODO See VocabEnforcer -- there is some duplicate functionality that could be cleaned up
@@ -256,8 +256,8 @@ object StringUtils {
         .sorted // sort white space count ascending
         .reverse // sort white space count descending
         .map(_._2) // pull out the term
-        // TODO is there a better way to 'auto-escape' reserved regex chars?
         .map(
+          // TODO is there a better way to escape reserved regex chars?
           _.replace("""/""", """\/""")
           .replace("""+""", """\+""")
           .replace("""-""", """\-"""))
@@ -271,19 +271,18 @@ object StringUtils {
       *
       */
     val stripInvalidFormats: SingleStringEnrichment = {
-      // TODO Move this out of the method so the file aren't re-read for every record
-      // Get stop words from files
+      // TODO Move this out of the method so the file aren't re-read for every record (see VocabEnforcer also)
       val stopWords = getFormatStopwords
 
       // FIXME There is a case not easily addressed here where a stop word term exists inside a larger term.
-      //  Is this actually a problem? E.g. application/xmlphotograph will become photograph
+      //  Is this actually a problem? E.g. 'application/xmlphotograph' will become 'photograph'
       //  This might be more of a problem with IANA term list because it contains values like 'http', 'index',
       //  and 'widget'. Need to discuss with @gretchen
 
       // Create a regex from those stop words that ignores case
-        // (?i)(jpeg)|(jpeg 2000)|(application\/text)...n
+      // Example: (?i)(jpeg 2000)|(jpeg)|(application\/text)
       val regex = "(?i)" + stopWords
-        .map(word => s"($word)")
+        .map(w => s"($w)")
         .mkString("|")
 
       // Perform the removal and trim white space
