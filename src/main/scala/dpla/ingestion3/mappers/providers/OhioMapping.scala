@@ -33,10 +33,14 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     extractStrings(data \ "metadata" \\ "isPartOf").headOption.map(nameOnlyCollection).toSeq
 
   override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
-    extractStrings(data \ "metadata" \\ "contributor").map(nameOnlyAgent)
+    extractStrings(data \ "metadata" \\ "contributor")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(nameOnlyAgent)
 
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] =
-    extractStrings(data \ "metadata" \\ "creator").map(nameOnlyAgent)
+    extractStrings(data \ "metadata" \\ "creator")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(nameOnlyAgent)
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
     extractStrings(data \ "metadata" \\ "date")

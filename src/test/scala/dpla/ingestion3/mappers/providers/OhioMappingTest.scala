@@ -38,10 +38,30 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("Kantorksi, Valrie", "Pope, Ann").map(nameOnlyAgent)
     assert(extractor.contributor(xml) == expected)
   }
+  it should "extract the correct contributors when the value contains a ';'" in {
+    val xml: NodeSeq =
+      <record><metadata>
+        <dcterms:contributor>Scott; Ted</dcterms:contributor>
+        <dcterms:contributor>John</dcterms:contributor>
+      </metadata></record>
+
+    val expected = Seq("Scott", "Ted", "John").map(nameOnlyAgent)
+    assert(extractor.contributor(Document(xml)) == expected)
+  }
 
   it should "extract the correct creators" in {
     val expected = Seq("Sam G.", "Merry B.").map(nameOnlyAgent)
     assert(extractor.creator(xml) == expected)
+  }
+  it should "extract the correct creators when the value contains a ';'" in {
+    val xml: NodeSeq =
+      <record><metadata>
+        <dcterms:creator>Huey; Lewy</dcterms:creator>
+        <dcterms:creator>Dewy</dcterms:creator>
+      </metadata></record>
+
+    val expected = Seq("Huey", "Lewy", "Dewy").map(nameOnlyAgent)
+    assert(extractor.creator(Document(xml)) == expected)
   }
 
   it should "extract the correct dates and split around ;" in {
