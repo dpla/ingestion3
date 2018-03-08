@@ -76,14 +76,22 @@ class StringEnrichments {
 
   def enrichSkosConcept(skosConcept: SkosConcept): SkosConcept =
     skosConcept.copy(
-      concept = skosConcept.concept.map(_.stripHTML
-        .reduceWhitespace
-        .cleanupLeadingPunctuation
-        .cleanupEndingPunctuation),
-      providedLabel = skosConcept.providedLabel.map(_.stripHTML
-        .reduceWhitespace
-        .cleanupLeadingPunctuation
-        .cleanupEndingPunctuation)
+      concept = skosConcept.concept.map(
+        _.stripHTML
+          .reduceWhitespace
+          .cleanupLeadingPunctuation
+          .cleanupEndingPunctuation
+          .stripBrackets
+          .stripEndingPeriod
+          .capitalizeFirstChar),
+      providedLabel = skosConcept.providedLabel.map(
+        _.stripHTML
+          .reduceWhitespace
+          .cleanupLeadingPunctuation
+          .cleanupEndingPunctuation
+          .stripBrackets
+          .stripEndingPeriod
+          .capitalizeFirstChar)
     )
 
   def enrichEdmTimeSpan(edmTimeSpan: EdmTimeSpan): EdmTimeSpan =
