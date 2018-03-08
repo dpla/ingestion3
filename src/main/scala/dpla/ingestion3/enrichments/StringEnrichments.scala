@@ -54,7 +54,8 @@ class StringEnrichments {
       title = sourceResource.title.map(_.stripHTML
         .reduceWhitespace
         .cleanupLeadingPunctuation
-        .cleanupEndingPunctuation),
+        .cleanupEndingPunctuation
+        .stripBrackets),
       `type` = sourceResource.`type`.map(_.stripHTML.reduceWhitespace)
     )
 
