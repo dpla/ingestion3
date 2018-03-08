@@ -38,7 +38,9 @@ class StringEnrichments {
       date = sourceResource.date.map(enrichEdmTimeSpan(_)),
       description = sourceResource.description.map(_.stripHTML.reduceWhitespace),
       extent = sourceResource.extent.map(_.stripHTML.reduceWhitespace),
-      format = sourceResource.format.map(_.stripHTML.reduceWhitespace.capitalizeFirstChar),
+      format = sourceResource.format.map(_.stripHTML
+        .reduceWhitespace
+        .capitalizeFirstChar),
       genre = sourceResource.genre.map(enrichSkosConcept(_)),
       identifier = sourceResource.identifier.map(_.stripHTML.reduceWhitespace),
       language = sourceResource.language.map(enrichSkosConcept(_)),
