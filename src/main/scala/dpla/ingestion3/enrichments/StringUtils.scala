@@ -230,38 +230,27 @@ object StringUtils {
     // TODO These file references should not be hard coded
     // TODO See VocabEnforcer -- there is some duplicate functionality that could be cleaned up
     private def formatStopwordFiles = Seq(
-      "/formats/ohio.csv",
-      "/formats/iana-imt-types.csv"
+      "/formats/ohio.csv"
+      , "/formats/iana-imt-types.csv"
     )
 
     /**
-      * Reads files listed in formatStopwordFiles and builds an
-      * ordered Set[String] (ordered by white space count descending)
+      * Reads files listed in formatStopwordFiles
       *
-      * @return Set[String]
+      * @return Seq[String]
       */
-    private def getFormatStopwords: Set[String] = {
+    private def getFormatStopwords = {
       val fileIo = new FlatFileIO()
       // reads in terms from file
-      val stopWords = formatStopwordFiles
+      formatStopwordFiles
         .flatMap(file => fileIo.readFileAsSeq(file))
         .filterNot(line => line.startsWith("#")) // drop lines that begin with #
-
-      // Order the stop words by number of whitespaces. This will create term
-      // precedence when constructing the search regex so that 'jpeg 2000' will
-      // be found and replaced before 'jpeg'.
-      stopWords
-        .map(term => term.count(_ == ' ')) // count the number of white spaces
-        .zip(stopWords) // zip white space count and term
-        .sorted // sort white space count ascending
-        .reverse // sort white space count descending
-        .map(_._2) // pull out the term
+        .distinct
         .map(
           // TODO is there a better way to escape reserved regex chars?
           _.replace("""/""", """\/""")
           .replace("""+""", """\+""")
           .replace("""-""", """\-"""))
-        .toSet
     }
 
     /**
@@ -274,15 +263,11 @@ object StringUtils {
       // TODO Move this out of the method so the file aren't re-read for every record (see VocabEnforcer also)
       val stopWords = getFormatStopwords
 
-      // FIXME There is a case not easily addressed here where a stop word term exists inside a larger term.
-      //  Is this actually a problem? E.g. 'application/xmlphotograph' will become 'photograph'
-      //  This might be more of a problem with IANA term list because it contains values like 'http', 'index',
-      //  and 'widget'. Need to discuss with @gretchen
-
-      // Create a regex from those stop words that ignores case
-      // Example: (?i)(jpeg 2000)|(jpeg)|(application\/text)
+      // Create a regex from those stop words that ignores case. Use look ahead (?=)
+      // and look behind (?<=) to check that the match is surrounded by one or more white space
+      // OR is either the begin or end of the string
       val regex = "(?i)" + stopWords
-        .map(w => s"($w)")
+        .map(w => """((?<=(^|\s+))""" + w + """(?=($|\s+)))""")
         .mkString("|")
 
       // Perform the removal and trim white space

@@ -234,12 +234,11 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.stripInvalidFormats
     assert(enrichedValue === "photograph")
   }
-  it should "remove a stop word if it exists within another term" in {
+  it should "not remove a stop word if it exists within another term" in {
     val originalValue = "application/xmlphotograph"
     val enrichedValue = originalValue.stripInvalidFormats
-    assert(enrichedValue === "photograph")
+    assert(enrichedValue === "application/xmlphotograph")
   }
-
   it should "remove 'jpeg' and 'jpeg 2000' from 'jpeg jpeg 2000 photograph image'" in {
     val originalValue = "jpeg jpeg 2000 photograph image"
     val enrichedValue = originalValue.stripInvalidFormats
@@ -260,7 +259,11 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.stripInvalidFormats
     assert(enrichedValue === "photo")
   }
-
+  it should "not remove 'tif' from 'Stock certificates'" in {
+    val originalValue = "Stock certificates"
+    val enrichedValue = originalValue.stripInvalidFormats
+    assert(enrichedValue === "Stock certificates")
+  }
 
   "stripBrackets" should "remove leading and trailing ( )" in {
     val originalValue = "(hello)"
