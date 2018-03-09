@@ -16,6 +16,9 @@ import scala.util.matching.Regex
 object StringUtils {
   implicit class Enrichments(value: String) {
 
+    // TODO Move this out of the method so the file aren't re-read for every record (see VocabEnforcer also)
+    lazy val stopWords = getFormatStopwords
+
     type SingleStringEnrichment = String
     type MultiStringEnrichment = Array[String]
 
@@ -29,14 +32,14 @@ object StringUtils {
       * downcased.
       *
       */
-    val convertToSentenceCase: SingleStringEnrichment = {
+    lazy val convertToSentenceCase: SingleStringEnrichment = {
       val pattern: Regex = """.*?(\.)""".r
       val sentences = for( t <- pattern findAllIn value) yield t.trim.capitalize
       // rejoin the sentences and add back the whitespace that was trimmed off
       sentences.mkString(" ")
     }
 
-    val limitCharacters: (Int) => (String) = (length) => {
+    lazy val limitCharacters: (Int) => (String) = (length) => {
       if (value.length > length) value.substring(0, length)
       else value
     }
@@ -44,7 +47,7 @@ object StringUtils {
     /**
       * Splits a String value around a given delimiter.
       */
-    val splitAtDelimiter: (String) => Array[String] = (delimiter) => {
+    lazy val splitAtDelimiter: (String) => Array[String] = (delimiter) => {
       value.split(delimiter).map(_.trim).filter(_.nonEmpty)
     }
 
@@ -53,7 +56,7 @@ object StringUtils {
       * slashes, hyphens and whitespace characters (whitespace, tab, new line and line feed)
       *
       */
-    val cleanupEndingPunctuation: SingleStringEnrichment = {
+    lazy val cleanupEndingPunctuation: SingleStringEnrichment = {
       // FIXME this is going to be problematic if the last character
       // is valid but not alphanumeric (e.g. ends with a " or ')
       val endIndex = value.lastIndexWhere(_.isLetterOrDigit)
@@ -71,7 +74,7 @@ object StringUtils {
       }
     }
 
-    val cleanupLeadingPunctuation: SingleStringEnrichment = {
+    lazy val cleanupLeadingPunctuation: SingleStringEnrichment = {
       val beginIndex = value.indexWhere(_.isLetterOrDigit)
 
       if (beginIndex == -1)
@@ -84,7 +87,7 @@ object StringUtils {
           .concat(value.substring(beginIndex))
     }
 
-    val stripHTML: SingleStringEnrichment = {
+    lazy val stripHTML: SingleStringEnrichment = {
       val unescaped = StringEscapeUtils.unescapeHtml(value)
       val cleaned = Jsoup.clean(unescaped, "", Whitelist.none(), new OutputSettings().escapeMode(EscapeMode.xhtml))
       StringEscapeUtils.unescapeHtml(cleaned)
@@ -94,7 +97,7 @@ object StringUtils {
     /**
       * Removes singular period from the end of a string. Ignores and removes trailing whitespace
       */
-    val stripEndingPeriod: SingleStringEnrichment = {
+    lazy val stripEndingPeriod: SingleStringEnrichment = {
       if (value.matches(""".*?[^\.]\.[\n\r\s]*$"""))
         value.replaceAll("""\.[\n\r\s]*$""", "")
       else
@@ -104,7 +107,7 @@ object StringUtils {
     /**
       * Reduce multiple whitespace values to a single
       */
-    val reduceWhitespace: SingleStringEnrichment = {
+    lazy val reduceWhitespace: SingleStringEnrichment = {
       value.replaceAll(" +", " ")
     }
 
@@ -118,7 +121,7 @@ object StringUtils {
       *
       * @return
       */
-    val capitalizeFirstChar: SingleStringEnrichment = {
+    lazy val capitalizeFirstChar: SingleStringEnrichment = {
       val charIndex = findFirstChar(value)
       if (charIndex >= 0)
         replaceCharAt(value, charIndex, value.charAt(charIndex).toUpper)
@@ -229,8 +232,12 @@ object StringUtils {
       */
     // TODO These file references should not be hard coded
     // TODO See VocabEnforcer -- there is some duplicate functionality that could be cleaned up
+
     private def formatStopwordFiles = Seq(
       "/formats/ohio.csv"
+      // FIXME The full IANA types adds 1,200 terms and doubles the Ohio runtime from 2:00 min to 4:00 min.
+      // FIXME how to prevent regenerating the list every time, or should we use a more limited set of terms?
+      // Removed the bulk of the IANA terms to get performance back down to 2:00 min
       , "/formats/iana-imt-types.csv"
     )
 
@@ -259,19 +266,12 @@ object StringUtils {
       * provided string as well as empty/duplicate whitespace. This filter is case insensitive.
       *
       */
-    val stripInvalidFormats: SingleStringEnrichment = {
-      // TODO Move this out of the method so the file aren't re-read for every record (see VocabEnforcer also)
-      val stopWords = getFormatStopwords
-
-      // Create a regex from those stop words that ignores case. Use look ahead (?=)
-      // and look behind (?<=) to check that the match is surrounded by one or more white space
-      // OR is either the begin or end of the string
-      val regex = "(?i)" + stopWords
-        .map(w => """((?<=(^|\s+))""" + w + """(?=($|\s+)))""")
-        .mkString("|")
-
-      // Perform the removal and trim white space
-      value.replaceAll(regex, "").trim
+    lazy val stripInvalidFormats: SingleStringEnrichment = {
+      // Create regular expressions that are case insensitive with the stop words from the files.
+      // Use look ahead (?=) and look behind (?<=) to check that the match is surrounded by one or
+      // more white space OR is either the begin or end of the string
+      lazy val regex = stopWords.map(w => """(?i)((?<=(^|\s+))""" + w + """(?=($|\s+)))""")
+      regex.foldLeft(value) { case (string, pattern) => string.replaceAll(pattern, "").trim }
     }
   }
 }
