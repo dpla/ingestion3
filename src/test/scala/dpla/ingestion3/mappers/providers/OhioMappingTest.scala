@@ -22,15 +22,21 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct provider identifier " in
     assert(extractor.getProviderId(xml) === "urn:ohiodplahub.library.ohio.gov:bgsu_12:oai:digitalgallery.bgsu.edu:14058")
 
-  // TODO write fail test for id selection?
+  it should "throw an Exception if document does not contain a provider identifier" in {
+    val xml = <record><metadata></metadata></record>
+    assertThrows[Exception] {
+      extractor.getProviderId(Document(xml))
+    }
+  }
 
   it should "extract the correct alternate titles " in {
     val expected = Seq("Alt title one", "Alt title two")
     assert(extractor.alternateTitle(xml) === expected)
   }
 
-  it should "extract the correct collection title" in {
-    val expected = Seq("College of Musical Arts Programs").map(nameOnlyCollection)
+  it should "extract the correct collection titles" in {
+    val expected = Seq("College of Musical Arts Programs", "A second collection")
+      .map(nameOnlyCollection)
     assert(extractor.collection(xml) === expected)
   }
 
@@ -38,10 +44,30 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("Kantorksi, Valrie", "Pope, Ann").map(nameOnlyAgent)
     assert(extractor.contributor(xml) == expected)
   }
+  it should "extract the correct contributors when the value contains a ';'" in {
+    val xml: NodeSeq =
+      <record><metadata>
+        <dcterms:contributor>Scott; Ted</dcterms:contributor>
+        <dcterms:contributor>John</dcterms:contributor>
+      </metadata></record>
+
+    val expected = Seq("Scott", "Ted", "John").map(nameOnlyAgent)
+    assert(extractor.contributor(Document(xml)) == expected)
+  }
 
   it should "extract the correct creators" in {
     val expected = Seq("Sam G.", "Merry B.").map(nameOnlyAgent)
     assert(extractor.creator(xml) == expected)
+  }
+  it should "extract the correct creators when the value contains a ';'" in {
+    val xml: NodeSeq =
+      <record><metadata>
+        <dcterms:creator>Huey; Lewy</dcterms:creator>
+        <dcterms:creator>Dewy</dcterms:creator>
+      </metadata></record>
+
+    val expected = Seq("Huey", "Lewy", "Dewy").map(nameOnlyAgent)
+    assert(extractor.creator(Document(xml)) == expected)
   }
 
   it should "extract the correct dates and split around ;" in {
@@ -58,7 +84,7 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct formats" in {
-    val expected = Seq("Image", "Photograph")
+    val expected = Seq("image", "photograph")
     assert(extractor.format(xml) === expected)
   }
 
@@ -73,9 +99,18 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.identifier(xml) === expected)
   }
 
-  it should "extract the correct language" in {
+  it should "extract the correct language when the value contains ';'" in {
     val expected = Seq("english", "eng").map(nameOnlyConcept)
     assert(extractor.language(xml) === expected)
+  }
+  it should "extract the correct language" in {
+    val xml: NodeSeq =
+      <record><metadata>
+        <dcterms:language>english</dcterms:language>
+        <dcterms:language>eng</dcterms:language>
+      </metadata></record>
+    val expected = Seq("english", "eng").map(nameOnlyConcept)
+    assert(extractor.language(Document(xml)) === expected)
   }
 
   it should "extract the correct place values and split around ;" in {
@@ -89,7 +124,9 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct relation" in {
-    val expected = Seq("College of Musical Arts Programs; MUSIC 003; Music Library and Bill Schurk Sound Archives; University Libraries; Bowling Green State University", "Faculty Artist Concert").map(eitherStringOrUri)
+    val expected = Seq("College of Musical Arts Programs; MUSIC 003; Music Library " +
+      "and Bill Schurk Sound Archives; University Libraries; " +
+      "Bowling Green State University", "Faculty Artist Concert").map(eitherStringOrUri)
     assert(extractor.relation(xml) === expected)
   }
 
@@ -132,7 +169,13 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = nameOnlyAgent("Bowling Green State University Libraries")
     assert(extractor.dataProvider(xml) === expected)
   }
-  // TODO assert failure test for dataProvider
+  it should "throw an exception if no dataProvider" in {
+    val xml = <record><metadata></metadata></record>
+    assertThrows[Exception] {
+      extractor.dataProvider(Document(xml))
+    }
+  }
+
   it should "extract the correct edmRights" in {
     val expected = Some(new URI("http://rightsstatements.org/page/NoC-US/1.0/"))
     assert(extractor.edmRights(xml) === expected)
@@ -141,8 +184,12 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/collections/item/14058"))
     assert(extractor.isShownAt(xml) === expected)
   }
-  // TODO isShownAt multiple instances
-  // TODO isShownAt assert failure if not provided
+  it should "throw an Exception if no isShownAt" in {
+    val xml = <record><metadata></metadata></record>
+    assertThrows[Exception] {
+      extractor.isShownAt(Document(xml))
+    }
+  }
   it should "extract the correct preview" in {
     val expected = Some(uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/files/thumbnails/26e197915e9107914faa33ac166ead5a.jpg")))
     assert(extractor.preview(xml) === expected)

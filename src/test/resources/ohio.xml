@@ -39,8 +39,7 @@
         <dcterms:extent>21.5 centimeters high, 14 centimeters wide</dcterms:extent>
         <dcterms:identifier>FA19900209</dcterms:identifier>
         <dcterms:isPartOf>College of Musical Arts Programs</dcterms:isPartOf>
-        <!-- Test collection value -->
-        <dcterms:isPartOf>SHOULD NOT BE A COLLECTION VALUE</dcterms:isPartOf>
+        <dcterms:isPartOf>A second collection</dcterms:isPartOf>
         <!-- Test language value -->
         <dcterms:language>english;eng</dcterms:language>
         <!-- Test publisher data -->

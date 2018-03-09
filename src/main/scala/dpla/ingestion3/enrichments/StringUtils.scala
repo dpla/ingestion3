@@ -1,5 +1,6 @@
 package dpla.ingestion3.enrichments
 
+import dpla.ingestion3.enrichments.FormatStopWords._
 import dpla.ingestion3.utils.FlatFileIO
 import org.apache.commons.lang.StringEscapeUtils
 import org.jsoup.Jsoup
@@ -14,6 +15,7 @@ import scala.util.matching.Regex
   *
   */
 object StringUtils {
+
   implicit class Enrichments(value: String) {
 
     type SingleStringEnrichment = String
@@ -29,14 +31,14 @@ object StringUtils {
       * downcased.
       *
       */
-    val convertToSentenceCase: SingleStringEnrichment = {
+    lazy val convertToSentenceCase: SingleStringEnrichment = {
       val pattern: Regex = """.*?(\.)""".r
       val sentences = for( t <- pattern findAllIn value) yield t.trim.capitalize
       // rejoin the sentences and add back the whitespace that was trimmed off
       sentences.mkString(" ")
     }
 
-    val limitCharacters: (Int) => (String) = (length) => {
+    lazy val limitCharacters: (Int) => (String) = (length) => {
       if (value.length > length) value.substring(0, length)
       else value
     }
@@ -44,18 +46,18 @@ object StringUtils {
     /**
       * Splits a String value around a given delimiter.
       */
-    val splitAtDelimiter: (String) => Array[String] = (delimiter) => {
+    lazy val splitAtDelimiter: (String) => Array[String] = (delimiter) => {
       value.split(delimiter).map(_.trim).filter(_.nonEmpty)
     }
 
     /**
-      * Removes leading and trailing: colons, semi-colons, commas
-      * slashes, hyphens and whitespace characters (whitespace, tab, new line and line feed)
+      * Removes trailing colons, semi-colons, commas, slashes, hyphens and whitespace
+      * characters (whitespace, tab, new line and line feed) that follow the last letter
+      * or digit
       *
       */
-    val cleanupEndingPunctuation: SingleStringEnrichment = {
-      // FIXME this is going to be problematic if the last character
-      // is valid but not alphanumeric (e.g. ends with a " or ')
+    lazy val cleanupEndingPunctuation: SingleStringEnrichment = {
+      // FIXME rewrite as a regular expression
       val endIndex = value.lastIndexWhere(_.isLetterOrDigit)
 
 
@@ -71,11 +73,16 @@ object StringUtils {
       }
     }
 
-    val cleanupLeadingPunctuation: SingleStringEnrichment = {
+    /**
+      * Removes leading colons, semi-colons, commas, slashes, hyphens and whitespace
+      * characters (whitespace, tab, new line and line feed) that precede the first letter
+      * or digit
+      *
+      */
+    lazy val cleanupLeadingPunctuation: SingleStringEnrichment = {
       val beginIndex = value.indexWhere(_.isLetterOrDigit)
 
       if (beginIndex == -1)
-        // If there is nothing to cleanup than return the original string
         value
       else
         value
@@ -84,7 +91,7 @@ object StringUtils {
           .concat(value.substring(beginIndex))
     }
 
-    val stripHTML: SingleStringEnrichment = {
+    lazy val stripHTML: SingleStringEnrichment = {
       val unescaped = StringEscapeUtils.unescapeHtml(value)
       val cleaned = Jsoup.clean(unescaped, "", Whitelist.none(), new OutputSettings().escapeMode(EscapeMode.xhtml))
       StringEscapeUtils.unescapeHtml(cleaned)
@@ -94,7 +101,7 @@ object StringUtils {
     /**
       * Removes singular period from the end of a string. Ignores and removes trailing whitespace
       */
-    val stripEndingPeriod: SingleStringEnrichment = {
+    lazy val stripEndingPeriod: SingleStringEnrichment = {
       if (value.matches(""".*?[^\.]\.[\n\r\s]*$"""))
         value.replaceAll("""\.[\n\r\s]*$""", "")
       else
@@ -104,7 +111,7 @@ object StringUtils {
     /**
       * Reduce multiple whitespace values to a single
       */
-    val reduceWhitespace: SingleStringEnrichment = {
+    lazy val reduceWhitespace: SingleStringEnrichment = {
       value.replaceAll(" +", " ")
     }
 
@@ -118,7 +125,7 @@ object StringUtils {
       *
       * @return
       */
-    val capitalizeFirstChar: SingleStringEnrichment = {
+    lazy val capitalizeFirstChar: SingleStringEnrichment = {
       val charIndex = findFirstChar(value)
       if (charIndex >= 0)
         replaceCharAt(value, charIndex, value.charAt(charIndex).toUpper)
@@ -171,7 +178,6 @@ object StringUtils {
       */
     val stripBrackets: SingleStringEnrichment = {
       val replacementRegex = for( (p, r) <- bracketPatterns if value.matches(p)) yield r
-      // TODO is there a cleaner or safer way to convert Iterator[String] to String than mkString?
       value.replaceAll(replacementRegex.mkString, "")
     }
 
@@ -221,57 +227,64 @@ object StringUtils {
       */
     case class Bracket(openChar: String, closeChar: String)
 
-
-    /**
-      * Returns a list of files to use for generating the format stop words list
-      *
-      * @return
-      */
-    // TODO These file references should not be hard coded
-    // TODO See VocabEnforcer -- there is some duplicate functionality that could be cleaned up
-    private def formatStopwordFiles = Seq(
-      "/formats/ohio.csv"
-      , "/formats/iana-imt-types.csv"
-    )
-
-    /**
-      * Reads files listed in formatStopwordFiles
-      *
-      * @return Seq[String]
-      */
-    private def getFormatStopwords = {
-      val fileIo = new FlatFileIO()
-      // reads in terms from file
-      formatStopwordFiles
-        .flatMap(file => fileIo.readFileAsSeq(file))
-        .filterNot(line => line.startsWith("#")) // drop lines that begin with #
-        .distinct
-        .map(
-          // TODO is there a better way to escape reserved regex chars?
-          _.replace("""/""", """\/""")
-          .replace("""+""", """\+""")
-          .replace("""-""", """\-"""))
-    }
-
     /**
       * Gets invalid format terms by reading files specified by formatStopwordFiles. Takes those
       * terms and constructs a massive regular expression. Removes those invalid terms from the
       * provided string as well as empty/duplicate whitespace. This filter is case insensitive.
       *
       */
-    val stripInvalidFormats: SingleStringEnrichment = {
-      // TODO Move this out of the method so the file aren't re-read for every record (see VocabEnforcer also)
-      val stopWords = getFormatStopwords
-
-      // Create a regex from those stop words that ignores case. Use look ahead (?=)
-      // and look behind (?<=) to check that the match is surrounded by one or more white space
-      // OR is either the begin or end of the string
-      val regex = "(?i)" + stopWords
-        .map(w => """((?<=(^|\s+))""" + w + """(?=($|\s+)))""")
-        .mkString("|")
-
-      // Perform the removal and trim white space
-      value.replaceAll(regex, "").trim
+    lazy val stripInvalidFormats: SingleStringEnrichment = {
+      // Create regular expressions that are case insensitive with the stop words from the files.
+      // Use look ahead (?=) and look behind (?<=) to check that the match is surrounded by one or
+      // more white space OR is either the begin or end of the string
+      lazy val regex = stopWords.map(w => """(?i)((?<=(^|\s+))""" + w + """(?=($|\s+)))""")
+      regex.foldLeft(value) { case (string, pattern) => string.replaceAll(pattern, "").trim }
     }
+  }
+}
+
+
+/**
+  * TODO ---
+  *   Placeholder object until a further review and *hopefully* a refactor with VocabEnforcer
+  *   to simplify the loading of resource text/csv files that contain authority data or stop
+  *   words
+  *   - File references should not be hard coded
+  *   - Prevent regenerating the list every time
+  */
+object FormatStopWords {
+
+  lazy val stopWords: Set[String] = getFormatStopwords
+
+  /**
+    * TODO This file list should be stored in a config file and not hard coded
+    * Returns a Seq of file paths to use for generating the format stop words list
+    *
+    * @return
+    */
+  private def formatStopwordFiles: Seq[String] = Seq(
+    "/formats/ohio.csv"
+    , "/formats/iana-imt-types.csv"
+  )
+
+  /**
+    * Reads files listed in formatStopwordFiles, ignores lines that begin with #
+    * and escapes reserved characters in regular expressions
+    *
+    * @return Set[String]
+    */
+  private def getFormatStopwords: Set[String] = {
+    val fileIo = new FlatFileIO()
+    // reads in terms from file
+    formatStopwordFiles
+      .flatMap(file => fileIo.readFileAsSeq(file))
+      .filterNot(line => line.startsWith("#")) // drop lines that begin with #
+      .distinct
+      .map(
+        // TODO is there a better way to escape reserved regex chars?
+        _.replace("""/""", """\/""")
+          .replace("""+""", """\+""")
+          .replace("""-""", """\-"""))
+      .toSet
   }
 }

@@ -38,7 +38,9 @@ class StringEnrichments {
       date = sourceResource.date.map(enrichEdmTimeSpan(_)),
       description = sourceResource.description.map(_.stripHTML.reduceWhitespace),
       extent = sourceResource.extent.map(_.stripHTML.reduceWhitespace),
-      format = sourceResource.format.map(_.stripHTML.reduceWhitespace.capitalizeFirstChar),
+      format = sourceResource.format.map(_.stripHTML
+        .reduceWhitespace
+        .capitalizeFirstChar),
       genre = sourceResource.genre.map(enrichSkosConcept(_)),
       identifier = sourceResource.identifier.map(_.stripHTML.reduceWhitespace),
       language = sourceResource.language.map(enrichSkosConcept(_)),
@@ -54,7 +56,8 @@ class StringEnrichments {
       title = sourceResource.title.map(_.stripHTML
         .reduceWhitespace
         .cleanupLeadingPunctuation
-        .cleanupEndingPunctuation),
+        .cleanupEndingPunctuation
+        .stripBrackets),
       `type` = sourceResource.`type`.map(_.stripHTML.reduceWhitespace)
     )
 
@@ -76,14 +79,22 @@ class StringEnrichments {
 
   def enrichSkosConcept(skosConcept: SkosConcept): SkosConcept =
     skosConcept.copy(
-      concept = skosConcept.concept.map(_.stripHTML
-        .reduceWhitespace
-        .cleanupLeadingPunctuation
-        .cleanupEndingPunctuation),
-      providedLabel = skosConcept.providedLabel.map(_.stripHTML
-        .reduceWhitespace
-        .cleanupLeadingPunctuation
-        .cleanupEndingPunctuation)
+      concept = skosConcept.concept.map(
+        _.stripHTML
+          .reduceWhitespace
+          .cleanupLeadingPunctuation
+          .cleanupEndingPunctuation
+          .stripBrackets
+          .stripEndingPeriod
+          .capitalizeFirstChar),
+      providedLabel = skosConcept.providedLabel.map(
+        _.stripHTML
+          .reduceWhitespace
+          .cleanupLeadingPunctuation
+          .cleanupEndingPunctuation
+          .stripBrackets
+          .stripEndingPeriod
+          .capitalizeFirstChar)
     )
 
   def enrichEdmTimeSpan(edmTimeSpan: EdmTimeSpan): EdmTimeSpan =
