@@ -230,7 +230,7 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === "")
   }
   it should "remove invalid values that contain reserved regex chars" in {
-    val originalValue = "3gpdash-qoe-report+xml photograph  "
+    val originalValue = "kpml-response+xml photograph  "
     val enrichedValue = originalValue.stripInvalidFormats
     assert(enrichedValue === "photograph")
   }
@@ -249,8 +249,8 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.stripInvalidFormats
     assert(enrichedValue === "photograph image")
   }
-  it should "remove 'font-woff - DEPRECATED in favor of font/woff' from 'document font-woff - DEPRECATED in favor of font/woff'" in {
-    val originalValue = "document font-woff - DEPRECATED in favor of font/woff"
+  it should "remove 'kpml-response+xml' from 'document kpml-response+xml'" in {
+    val originalValue = "document kpml-response+xml"
     val enrichedValue = originalValue.stripInvalidFormats
     assert(enrichedValue === "document")
   }
