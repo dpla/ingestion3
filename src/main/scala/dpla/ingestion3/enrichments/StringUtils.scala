@@ -1,5 +1,6 @@
 package dpla.ingestion3.enrichments
 
+import dpla.ingestion3.enrichments.FormatStopWords._
 import dpla.ingestion3.utils.FlatFileIO
 import org.apache.commons.lang.StringEscapeUtils
 import org.jsoup.Jsoup
@@ -14,10 +15,8 @@ import scala.util.matching.Regex
   *
   */
 object StringUtils {
-  implicit class Enrichments(value: String) {
 
-    // TODO Move this out of the method so the file aren't re-read for every record (see VocabEnforcer also)
-    lazy val stopWords = getFormatStopwords
+  implicit class Enrichments(value: String) {
 
     type SingleStringEnrichment = String
     type MultiStringEnrichment = Array[String]
@@ -52,13 +51,13 @@ object StringUtils {
     }
 
     /**
-      * Removes leading and trailing: colons, semi-colons, commas
-      * slashes, hyphens and whitespace characters (whitespace, tab, new line and line feed)
+      * Removes trailing colons, semi-colons, commas, slashes, hyphens and whitespace
+      * characters (whitespace, tab, new line and line feed) that follow the last letter
+      * or digit
       *
       */
     lazy val cleanupEndingPunctuation: SingleStringEnrichment = {
-      // FIXME this is going to be problematic if the last character
-      // is valid but not alphanumeric (e.g. ends with a " or ')
+      // FIXME rewrite as a regular expression
       val endIndex = value.lastIndexWhere(_.isLetterOrDigit)
 
 
@@ -74,11 +73,16 @@ object StringUtils {
       }
     }
 
+    /**
+      * Removes leading colons, semi-colons, commas, slashes, hyphens and whitespace
+      * characters (whitespace, tab, new line and line feed) that precede the first letter
+      * or digit
+      *
+      */
     lazy val cleanupLeadingPunctuation: SingleStringEnrichment = {
       val beginIndex = value.indexWhere(_.isLetterOrDigit)
 
       if (beginIndex == -1)
-        // If there is nothing to cleanup than return the original string
         value
       else
         value
@@ -174,7 +178,6 @@ object StringUtils {
       */
     val stripBrackets: SingleStringEnrichment = {
       val replacementRegex = for( (p, r) <- bracketPatterns if value.matches(p)) yield r
-      // TODO is there a cleaner or safer way to convert Iterator[String] to String than mkString?
       value.replaceAll(replacementRegex.mkString, "")
     }
 
@@ -224,42 +227,6 @@ object StringUtils {
       */
     case class Bracket(openChar: String, closeChar: String)
 
-
-    /**
-      * Returns a list of files to use for generating the format stop words list
-      *
-      * @return
-      */
-    // TODO These file references should not be hard coded
-    // TODO See VocabEnforcer -- there is some duplicate functionality that could be cleaned up
-
-    private def formatStopwordFiles = Seq(
-      "/formats/ohio.csv"
-      // FIXME The full IANA types adds 1,200 terms and doubles the Ohio runtime from 2:00 min to 4:00 min.
-      // FIXME how to prevent regenerating the list every time, or should we use a more limited set of terms?
-      // Removed the bulk of the IANA terms to get performance back down to 2:00 min
-      , "/formats/iana-imt-types.csv"
-    )
-
-    /**
-      * Reads files listed in formatStopwordFiles
-      *
-      * @return Seq[String]
-      */
-    private def getFormatStopwords = {
-      val fileIo = new FlatFileIO()
-      // reads in terms from file
-      formatStopwordFiles
-        .flatMap(file => fileIo.readFileAsSeq(file))
-        .filterNot(line => line.startsWith("#")) // drop lines that begin with #
-        .distinct
-        .map(
-          // TODO is there a better way to escape reserved regex chars?
-          _.replace("""/""", """\/""")
-          .replace("""+""", """\+""")
-          .replace("""-""", """\-"""))
-    }
-
     /**
       * Gets invalid format terms by reading files specified by formatStopwordFiles. Takes those
       * terms and constructs a massive regular expression. Removes those invalid terms from the
@@ -273,5 +240,51 @@ object StringUtils {
       lazy val regex = stopWords.map(w => """(?i)((?<=(^|\s+))""" + w + """(?=($|\s+)))""")
       regex.foldLeft(value) { case (string, pattern) => string.replaceAll(pattern, "").trim }
     }
+  }
+}
+
+
+/**
+  * TODO ---
+  *   Placeholder object until a further review and *hopefully* a refactor with VocabEnforcer
+  *   to simplify the loading of resource text/csv files that contain authority data or stop
+  *   words
+  *   - File references should not be hard coded
+  *   - Prevent regenerating the list every time
+  */
+object FormatStopWords {
+
+  lazy val stopWords: Set[String] = getFormatStopwords
+
+  /**
+    * TODO This file list should be stored in a config file and not hard coded
+    * Returns a Seq of file paths to use for generating the format stop words list
+    *
+    * @return
+    */
+  private def formatStopwordFiles: Seq[String] = Seq(
+    "/formats/ohio.csv"
+    , "/formats/iana-imt-types.csv"
+  )
+
+  /**
+    * Reads files listed in formatStopwordFiles, ignores lines that begin with #
+    * and escapes reserved characters in regular expressions
+    *
+    * @return Set[String]
+    */
+  private def getFormatStopwords: Set[String] = {
+    val fileIo = new FlatFileIO()
+    // reads in terms from file
+    formatStopwordFiles
+      .flatMap(file => fileIo.readFileAsSeq(file))
+      .filterNot(line => line.startsWith("#")) // drop lines that begin with #
+      .distinct
+      .map(
+        // TODO is there a better way to escape reserved regex chars?
+        _.replace("""/""", """\/""")
+          .replace("""+""", """\+""")
+          .replace("""-""", """\-"""))
+      .toSet
   }
 }
