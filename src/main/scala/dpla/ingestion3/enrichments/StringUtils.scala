@@ -1,7 +1,5 @@
 package dpla.ingestion3.enrichments
 
-import dpla.ingestion3.enrichments.FormatStopWords._
-import dpla.ingestion3.utils.FlatFileIO
 import org.apache.commons.lang.StringEscapeUtils
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document.OutputSettings
@@ -20,6 +18,14 @@ object StringUtils {
 
     type SingleStringEnrichment = String
     type MultiStringEnrichment = Array[String]
+
+    /**
+      * Applies the provided set of patterns and removes matches from the original string.
+      * This depends on the content of the patterns and will work in both directions
+      * (allowed and blocked terms lists)
+      */
+    lazy val applyFilter: Set[String] => String = (termList) => termList
+      .foldLeft(value) { case (string, pattern) => string.replaceAll(pattern, "").trim }
 
     /**
       * Accepts a String value and splits it around periods. Strips
@@ -226,65 +232,5 @@ object StringUtils {
       * @param closeChar String that indicates end of enclosure
       */
     case class Bracket(openChar: String, closeChar: String)
-
-    /**
-      * Gets invalid format terms by reading files specified by formatStopwordFiles. Takes those
-      * terms and constructs a massive regular expression. Removes those invalid terms from the
-      * provided string as well as empty/duplicate whitespace. This filter is case insensitive.
-      *
-      */
-    lazy val stripInvalidFormats: SingleStringEnrichment = {
-      // Create regular expressions that are case insensitive with the stop words from the files.
-      // Use look ahead (?=) and look behind (?<=) to check that the match is surrounded by one or
-      // more white space OR is either the begin or end of the string
-      lazy val regex = stopWords.map(w => """(?i)((?<=(^|\s+))""" + w + """(?=($|\s+)))""")
-      regex.foldLeft(value) { case (string, pattern) => string.replaceAll(pattern, "").trim }
-    }
-  }
-}
-
-
-/**
-  * TODO ---
-  *   Placeholder object until a further review and *hopefully* a refactor with VocabEnforcer
-  *   to simplify the loading of resource text/csv files that contain authority data or stop
-  *   words
-  *   - File references should not be hard coded
-  *   - Prevent regenerating the list every time
-  */
-object FormatStopWords {
-
-  lazy val stopWords: Set[String] = getFormatStopwords
-
-  /**
-    * TODO This file list should be stored in a config file and not hard coded
-    * Returns a Seq of file paths to use for generating the format stop words list
-    *
-    * @return
-    */
-  private def formatStopwordFiles: Seq[String] = Seq(
-    "/formats/ohio.csv"
-    , "/formats/iana-imt-types.csv"
-  )
-
-  /**
-    * Reads files listed in formatStopwordFiles, ignores lines that begin with #
-    * and escapes reserved characters in regular expressions
-    *
-    * @return Set[String]
-    */
-  private def getFormatStopwords: Set[String] = {
-    val fileIo = new FlatFileIO()
-    // reads in terms from file
-    formatStopwordFiles
-      .flatMap(file => fileIo.readFileAsSeq(file))
-      .filterNot(line => line.startsWith("#")) // drop lines that begin with #
-      .distinct
-      .map(
-        // TODO is there a better way to escape reserved regex chars?
-        _.replace("""/""", """\/""")
-          .replace("""+""", """\+""")
-          .replace("""-""", """\-"""))
-      .toSet
   }
 }

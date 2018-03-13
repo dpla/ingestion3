@@ -2,8 +2,11 @@ package dpla.ingestion3.enrichments
 
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 import dpla.ingestion3.enrichments.StringUtils._
+import dpla.ingestion3.enrichments.filters.DigitalSurrogateBlockList
 
 class StringUtilsTest extends FlatSpec with BeforeAndAfter {
+
+  val formatStopWords = DigitalSurrogateBlockList.termList
 
   "convertToSentenceCase" should "capitalize the first character in each " +
     "sentence." in {
@@ -204,64 +207,64 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === "")
   }
 
-  "stripInvalidFormats" should "remove all stop words from the given string" in {
+  "applyFilter(DigitalSurrogateBlockList)" should "remove all stop words from the given string" in {
     val originalValue = "application/xml photograph   jp2"
-    val enrichedValue = originalValue.stripInvalidFormats
+    val enrichedValue = originalValue.applyFilter(formatStopWords)
     assert(enrichedValue === "photograph")
   }
   it should "not case about case" in {
     val originalValue = "application/XML Photograph   jp2"
-    val enrichedValue = originalValue.stripInvalidFormats
+    val enrichedValue = originalValue.applyFilter(formatStopWords)
     assert(enrichedValue === "Photograph")
   }
   it should "remove stop words that contain white space e.g. 'JPEG 2000'" in {
     val originalValue = "JPEG 2000 Photograph"
-    val enrichedValue = originalValue.stripInvalidFormats
+    val enrichedValue = originalValue.applyFilter(formatStopWords)
     assert(enrichedValue === "Photograph")
   }
   it should "leave the original value alone if it contains no stopwords" in {
     val originalValue = "Photograph"
-    val enrichedValue = originalValue.stripInvalidFormats
+    val enrichedValue = originalValue.applyFilter(formatStopWords)
     assert(enrichedValue === "Photograph")
   }
   it should "return empty string if format only contains stop words" in {
     val originalValue = "  text/pdf tif video/jpeg \t jpeg2000 "
-    val enrichedValue = originalValue.stripInvalidFormats
+    val enrichedValue = originalValue.applyFilter(formatStopWords)
     assert(enrichedValue === "")
   }
   it should "remove invalid values that contain reserved regex chars" in {
     val originalValue = "kpml-response+xml photograph  "
-    val enrichedValue = originalValue.stripInvalidFormats
+    val enrichedValue = originalValue.applyFilter(formatStopWords)
     assert(enrichedValue === "photograph")
   }
   it should "not remove a stop word if it exists within another term" in {
     val originalValue = "application/xmlphotograph"
-    val enrichedValue = originalValue.stripInvalidFormats
+    val enrichedValue = originalValue.applyFilter(formatStopWords)
     assert(enrichedValue === "application/xmlphotograph")
   }
   it should "remove 'jpeg' and 'jpeg 2000' from 'jpeg jpeg 2000 photograph image'" in {
     val originalValue = "jpeg jpeg 2000 photograph image"
-    val enrichedValue = originalValue.stripInvalidFormats
+    val enrichedValue = originalValue.applyFilter(formatStopWords)
     assert(enrichedValue === "photograph image")
   }
   it should "remove 'jpeg' and 'jpeg 2000' from 'jpeg photograph image jpeg 2000'" in {
     val originalValue = "jpeg photograph image jpeg 2000"
-    val enrichedValue = originalValue.stripInvalidFormats
+    val enrichedValue = originalValue.applyFilter(formatStopWords)
     assert(enrichedValue === "photograph image")
   }
   it should "remove 'kpml-response+xml' from 'document kpml-response+xml'" in {
     val originalValue = "document kpml-response+xml"
-    val enrichedValue = originalValue.stripInvalidFormats
+    val enrichedValue = originalValue.applyFilter(formatStopWords)
     assert(enrichedValue === "document")
   }
   it should "remove 'tiff' and 'image/tiff' from '  tiff photo image/tiff  '" in {
     val originalValue = "  tiff photo image/tiff  "
-    val enrichedValue = originalValue.stripInvalidFormats
+    val enrichedValue = originalValue.applyFilter(formatStopWords)
     assert(enrichedValue === "photo")
   }
   it should "not remove 'tif' from 'Stock certificates'" in {
     val originalValue = "Stock certificates"
-    val enrichedValue = originalValue.stripInvalidFormats
+    val enrichedValue = originalValue.applyFilter(formatStopWords)
     assert(enrichedValue === "Stock certificates")
   }
 
