@@ -83,11 +83,36 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.extent(xml) === expected)
   }
 
-  it should "extract the correct formats" in {
-    val expected = Seq("image", "photograph")
+  it should "extract the correct format" in {
+    val xml: Document[NodeSeq] = Document(<record><metadata>
+      <dcterms:format>photograph</dcterms:format>
+    </metadata></record>)
+    val expected = Seq("photograph")
     assert(extractor.format(xml) === expected)
   }
-
+  it should "extract the correct format and remove values in that are stop words ('image')" in {
+    val xml: Document[NodeSeq] = Document(<record><metadata>
+      <dcterms:format>photograph</dcterms:format>
+      <dcterms:format>image</dcterms:format>
+    </metadata></record>)
+    val expected = Seq("photograph")
+    assert(extractor.format(xml) === expected)
+  }
+  it should "extract the correct format and remove values in that are stop words from the same string" in {
+    val xml: Document[NodeSeq] = Document(<record><metadata>
+      <dcterms:format>photograph image</dcterms:format>
+    </metadata></record>)
+    val expected = Seq("photograph")
+    assert(extractor.format(xml) === expected)
+  }
+  it should "extract the correct format when splitting on ';'  and remove values in that are stop words" in {
+    val xml: Document[NodeSeq] = Document(<record><metadata>
+      <dcterms:format>photograph; image</dcterms:format>
+      <dcterms:format>archival box</dcterms:format>
+    </metadata></record>)
+    val expected = Seq("photograph", "archival box")
+    assert(extractor.format(xml) === expected)
+  }
   it should "extract no format when values are in format blacklist" in {
     val xml: Document[NodeSeq] = Document(<record><metadata><dcterms:format>image/jpeg</dcterms:format></metadata></record>)
     val expected = Seq()
