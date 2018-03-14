@@ -146,9 +146,7 @@ object StringUtils {
       * Reduce multiple whitespace values to a single and removes
       * leading and trailing white space
       */
-    lazy val reduceWhitespace: SingleStringEnrichment = {
-      value.replaceAll(" +", " ").trim
-    }
+    lazy val reduceWhitespace: SingleStringEnrichment = value.replaceAll(" +", " ").trim
 
     /**
       * Find and capitalize the first character in a given string

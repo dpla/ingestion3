@@ -10,11 +10,13 @@ import dpla.ingestion3.utils.FlatFileIO
   * This trait is implemented for a number of base filters (DigitalSurrogateBlockList,
   * FormatTypeBlockList) but can be extended in a provider mapping with a custom term list.
   *
-  * // Example custom block list
-  * import dpla.ingestion3.enrichments.FilterRegex._
-  * object ProviderBlockList extends FilterList {
-  *   override val termList = Set[...].map(_.blockListRegex)
-  * }
+  * Example custom block list
+  *
+  *   import dpla.ingestion3.enrichments.FilterRegex._
+  *
+  *   object ProviderBlockList extends FilterList {
+  *     override val termList = Set[...].map(_.blockListRegex)
+  *   }
   *
   */
 trait FilterList {
@@ -58,8 +60,9 @@ object FilterRegex {
       *
       * TODO better support for plural forms
       * TODO better support for punctuation separating terms
+      * TODO support for multi-line matching
       */
-    val blockListRegex: String = """(?i)((^|(\s|[a-zA-z0-9]))""" + escapeRegex(value) + """((s|,)+|\s|$+))"""
+    val blockListRegex: String = """(?i)((\b|(\s|[a-zA-z0-9]))""" + escapeRegex(value) + """((s|,)+|\s|$+))"""
 
     val allowListRegex: String = """(?i)((?<=(^|\s+))""" + escapeRegex(value) + """(?=($|\s+)))"""
 

@@ -12,7 +12,8 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
       "jpeg",
       "jpeg/2000",
       "tiff",
-      "application/tiff"
+      "bitmap image",
+      "application+pdf"
     ).map(_.blockListRegex)
   }
 
@@ -234,107 +235,115 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === "")
   }
 
-  "applyBlockFilter() with block list " should "remove all stop words from the given string" in {
-    val originalValue = "application/tiff photograph   jpeg"
+  "applyBlockFilter" should "remove a stop word from the given string ('photograph jpeg' -> 'photograph')" in {
+    val originalValue = "photograph jpeg"
     val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
     assert(enrichedValue === "photograph")
   }
-  it should "not case about case" in {
-    val originalValue = "application/XML Photograph   jp2"
-    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
-    assert(enrichedValue === "Photograph")
-  }
-  it should "remove stop words that contain white space e.g. 'JPEG 2000'" in {
-    val originalValue = "JPEG 2000 Photograph"
-    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
-    assert(enrichedValue === "Photograph")
-  }
-  it should "leave the original value alone if it contains no stopwords" in {
-    val originalValue = "Photograph"
-    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
-    assert(enrichedValue === "Photograph")
-  }
-  it should "return empty string if format only contains stop words" in {
-    val originalValue = "  text/pdf tif video/jpeg \t jpeg2000 "
-    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
-    assert(enrichedValue === "")
-  }
-  it should "remove invalid values that contain reserved regex chars" in {
-    val originalValue = "kpml-response+xml photograph  "
-    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
+  it should "remove stop words regardless of case ('JPEg ' -> 'photograph'" in {
+    val originalValue = "JPEg photograph"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
     assert(enrichedValue === "photograph")
   }
-  it should "not remove a stop word if it exists within another term" in {
-    val originalValue = "application/xmlphotograph"
-    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
-    assert(enrichedValue === "application/xmlphotograph")
+  it should "remove multiple stop words ('jpeg photograph tiff' -> 'photograph'" in {
+    val originalValue = "jpeg photograph tiff"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
+    assert(enrichedValue === "photograph")
   }
-  it should "remove 'jpeg' and 'jpeg 2000' from 'jpeg jpeg 2000 photograph image'" in {
-    val originalValue = "jpeg jpeg 2000 photograph image"
-    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
-    assert(enrichedValue === "photograph image")
+  it should "remove stop words that contain white space e.g. 'bitmap image'" in {
+    val originalValue = "bitmap image Photograph"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
+    assert(enrichedValue === "Photograph")
+  }
+  it should "leave the original value alone if it contains no stop words" in {
+    val originalValue = "Photograph"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
+    assert(enrichedValue === "Photograph")
+  }
+  it should "return empty string if it only contains stop words" in {
+    val originalValue = "tiff jpeg"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
+    assert(enrichedValue === "")
+  }
+  it should "remove invalid values that contain reserved regex chars ('application+pdf photograph' -> 'photograph')" in {
+    val originalValue = "application+pdf photograph"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
+    assert(enrichedValue === "photograph")
+  }
+  it should "not remove a stop word ('jpeg') if it exists within another term ('jpegphotograph')" in {
+    val originalValue = "jpegphotograph"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
+    assert(enrichedValue === "jpegphotograph")
+  }
+  it should "not remove a stop word ('tif') if it exists within another term ('Stock certificates)'" in {
+    val originalValue = "Stock certificates"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
+    assert(enrichedValue === "Stock certificates")
+  }
+  it should "remove the same stop word repeated '" in {
+    val originalValue = "jpeg jpeg photograph jpeg jpeg"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
+    assert(enrichedValue === "photograph")
   }
   it should "remove 'jpeg' and 'jpeg/2000' from 'jpeg photograph image jpeg/2000'" in {
     val originalValue = "jpeg photograph image jpeg/2000"
     val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
     assert(enrichedValue === "photograph image")
   }
-  it should "remove 'kpml-response+xml' from 'document kpml-response+xml'" in {
-    val originalValue = "document kpml-response+xml"
-    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
-    assert(enrichedValue === "document")
-  }
-  it should "remove 'tiff' and 'image/tiff' from '  tiff photo image/tiff  '" in {
-    val originalValue = "  tiff photo image/tiff  "
-    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
-    assert(enrichedValue === "photo")
-  }
-  it should "not remove 'tif' from 'Stock certificates'" in {
-    val originalValue = "Stock certificates"
-    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
-    assert(enrichedValue === "Stock certificates")
-  }
-  it should "remove 'jpeg' and 'jpeg/2000' from 'file, jpeg, bmp, jpeg/2000'" in {
+  it should "remove 'jpeg, ' and 'jpeg/2000' from 'file, jpeg, bmp, jpeg/2000'" in {
     val originalValue = "file, jpeg, bmp, jpeg/2000"
     val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
     assert(enrichedValue === "file, bmp,")
   }
-  it should "remove plurals of stopwords (jpegs, photograph)" in {
+  it should "remove plurals of stop words (jpegs, photograph)" in {
     val originalValue = "jpegs, photograph"
     val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
     assert(enrichedValue === "photograph")
   }
-
-  "applyAllowFilter()" should "retain only allowed words in the given string" in {
-    val originalValue = "moving image shit list"
+  it should "remove multiple combinations of a stop word (jpeg jpegs photograph)" in {
+    val originalValue = "jpeg jpegs photograph"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
+    assert(enrichedValue === "photograph")
+  }
+  /**
+    * jpeg,photo
+    * jpeg, photo
+    * jpeg, tiff photo
+    * jpeg, tiff, photo
+    * jpeg,  photo
+    *
+    */
+  "applyAllowFilter" should "retain only allowed words ('moving image' from 'moving image motion picture''" in {
+    val originalValue = "moving image motion picture"
     val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
     assert(enrichedValue === "moving image")
   }
-  it should "retain only allowed words in the given string ('moving image image')" in {
+  it should "retain only allowed words ('moving image image' remains 'moving image image')" in {
     val originalValue = "moving image image"
     val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
     assert(enrichedValue === "moving image image")
   }
-  it should "ignore punctuation" in {
-    val originalValue = "moving image, image and print"
-    val allowList = AllowList.termList
-    val enrichedValue = originalValue.applyAllowFilter(allowList)
+  it should "ignore commas ('moving image, image' remains 'moving image, image')" in {
+    val originalValue = "moving image, image"
+    val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
     assert(enrichedValue === "moving image, image")
   }
-  it should "remove 'and pictures'" in {
+  it should "ignore extraneous white space ('  moving image,  image  ' remains 'moving image, image')" in {
+    val originalValue = " moving image,  image  "
+    val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
+    assert(enrichedValue === "moving image, image")
+  }
+  it should "match on plural 's' and retain term ('images and pictures' becomes 'images')" in {
     val originalValue = "images and pictures"
-    val allowList = AllowList
-      .termList
     val enrichedValue = originalValue
-      .applyAllowFilter(allowList)
+      .applyAllowFilter(AllowList.termList)
 
     assert(enrichedValue === "images")
   }
-  // FIXME Do more tests with applyAllowList
-
-
-
-
+  /**
+    * FIXME Do more tests for applyAllowList
+    *  -
+    */
 
 
   "stripBrackets" should "remove leading and trailing ( )" in {
