@@ -1,5 +1,5 @@
 package dpla.ingestion3.enrichments
-
+import dpla.ingestion3.enrichments.FilterRegex._
 import org.apache.commons.lang.StringEscapeUtils
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document.OutputSettings
@@ -19,13 +19,41 @@ object StringUtils {
     type SingleStringEnrichment = String
     type MultiStringEnrichment = Array[String]
 
+
+    /**
+      * Preserves only those terms specified in termList and removes all other values
+      *
+      * - Ignores punctuations when identifying terms on the allow list
+      * - Ignores punctuation when removing the term.
+      * - Ignores case
+      * - Matches on some plurals (s)
+      *
+      * Examples
+      *   - moving image, image and tome -> moving image, image
+      *   - images and pictures -> images
+      */
+    lazy val applyAllowFilter: Set[String] => String = (allowList) => {
+      // Remove terms in allowList from the original string
+      val nonAllowedTerms = applyBlockFilter(allowList)
+        // Split the remaining non-allowed terms on white space
+        //    Note: This assumption may not hold in all cases and those edges
+        //    cases should be clearly documented.
+        .split(" ")
+        // Create a new set of regular expressions with the non-allowed terms
+        // with a different base pattern that is less greedy to preserve punctuation
+        // TODO Is this the wanted behavior. Follow-up with GG on 3/16
+        .map(FilterRegex.Regex(_).allowListRegex)
+        .toSet
+
+      applyBlockFilter(nonAllowedTerms).reduceWhitespace
+    }
     /**
       * Applies the provided set of patterns and removes matches from the original string.
-      * This depends on the content of the patterns and will work in both directions
-      * (allowed and blocked terms lists)
       */
-    lazy val applyFilter: Set[String] => String = (termList) => termList
-      .foldLeft(value) { case (string, pattern) => string.replaceAll(pattern, "").trim }
+    lazy val applyBlockFilter: Set[String] => String = (termList) => termList
+      .foldLeft(value) {
+        case (string, pattern) => string.replaceAll(pattern, " ").reduceWhitespace
+      }
 
     /**
       * Accepts a String value and splits it around periods. Strips
@@ -34,7 +62,7 @@ object StringUtils {
       * other characters alone.
       *
       * We do not assume that all upper case characters should be
-      * downcased.
+      * down-cased.
       *
       */
     lazy val convertToSentenceCase: SingleStringEnrichment = {
@@ -115,10 +143,11 @@ object StringUtils {
     }
 
     /**
-      * Reduce multiple whitespace values to a single
+      * Reduce multiple whitespace values to a single and removes
+      * leading and trailing white space
       */
     lazy val reduceWhitespace: SingleStringEnrichment = {
-      value.replaceAll(" +", " ")
+      value.replaceAll(" +", " ").trim
     }
 
     /**

@@ -18,8 +18,9 @@ import dpla.ingestion3.utils.FlatFileIO
   *
   */
 trait FilterList {
-  // Set of terms to filter by
+  // Set of terms to filter around (either block list or allow list)
   val termList: Set[String]
+
   // File paths to source termList from
   val files: Seq[String] = Seq("")
 
@@ -42,9 +43,9 @@ trait FilterList {
 object FilterRegex {
   implicit class Regex(value: String) {
     // A regex appropriate for removing a stop word from the original value
-    val blockListRegex: String = """(?i)((?<=(^|\s+))""" + escapeRegex(value) + """(?=($|\s|s+)))"""
-    // TODO impalement allow list pattern
-    // val allowListRegex = ???
+    val blockListRegex: String = """(?i)((^|\s|,|s+)""" + escapeRegex(value) + """($|\s|s|,+))"""
+
+    val allowListRegex: String = """(?i)((?<=(^|\s+))""" + escapeRegex(value) + """(?=($|\s+)))"""
 
     /**
       * Escapes reserved regular expression characters in string

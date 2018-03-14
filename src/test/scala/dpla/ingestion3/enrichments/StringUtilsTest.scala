@@ -3,10 +3,32 @@ package dpla.ingestion3.enrichments
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 import dpla.ingestion3.enrichments.StringUtils._
 import dpla.ingestion3.enrichments.filters.DigitalSurrogateBlockList
+import dpla.ingestion3.enrichments.FilterRegex._
 
 class StringUtilsTest extends FlatSpec with BeforeAndAfter {
 
+  object BlockList extends FilterList {
+    override val termList: Set[String] = Set(
+      "jpeg",
+      "jpeg/2000",
+      "tiff",
+      "application/tiff"
+    ).map(_.blockListRegex)
+  }
+
+  object AllowList extends FilterList {
+    override val termList: Set[String] = Set(
+      "moving image",
+      "film",
+      "audio",
+      "image"
+    ).map(_.blockListRegex)
+  }
+
+  // TODO replace this with local term list so tests are not bound to production values
   val formatStopWords = DigitalSurrogateBlockList.termList
+
+  // TODO applyBlockFilter with custom (simplified) block and allow lists
 
   "convertToSentenceCase" should "capitalize the first character in each " +
     "sentence." in {
@@ -171,9 +193,14 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "reduce multiple occurrences duplicate whitespace to single whitespace" in {
-    val originalValue = " foo   bar  choo  "
+    val originalValue = "foo   bar  choo"
     val enrichedValue = originalValue.reduceWhitespace
-    assert(enrichedValue === " foo bar choo ")
+    assert(enrichedValue === "foo bar choo")
+  }
+  it should "reduce remove leading and trailing white space" in {
+    val originalValue = "   foo bar  choo "
+    val enrichedValue = originalValue.reduceWhitespace
+    assert(enrichedValue === "foo bar choo")
   }
 
   "capitalizeFirstChar" should "not capitalize the b in '3 blind mice'" in {
@@ -207,66 +234,103 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === "")
   }
 
-  "applyFilter(DigitalSurrogateBlockList)" should "remove all stop words from the given string" in {
-    val originalValue = "application/xml photograph   jp2"
-    val enrichedValue = originalValue.applyFilter(formatStopWords)
+  "applyBlockFilter() with block list " should "remove all stop words from the given string" in {
+    val originalValue = "application/tiff photograph   jpeg"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
     assert(enrichedValue === "photograph")
   }
   it should "not case about case" in {
     val originalValue = "application/XML Photograph   jp2"
-    val enrichedValue = originalValue.applyFilter(formatStopWords)
+    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
     assert(enrichedValue === "Photograph")
   }
   it should "remove stop words that contain white space e.g. 'JPEG 2000'" in {
     val originalValue = "JPEG 2000 Photograph"
-    val enrichedValue = originalValue.applyFilter(formatStopWords)
+    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
     assert(enrichedValue === "Photograph")
   }
   it should "leave the original value alone if it contains no stopwords" in {
     val originalValue = "Photograph"
-    val enrichedValue = originalValue.applyFilter(formatStopWords)
+    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
     assert(enrichedValue === "Photograph")
   }
   it should "return empty string if format only contains stop words" in {
     val originalValue = "  text/pdf tif video/jpeg \t jpeg2000 "
-    val enrichedValue = originalValue.applyFilter(formatStopWords)
+    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
     assert(enrichedValue === "")
   }
   it should "remove invalid values that contain reserved regex chars" in {
     val originalValue = "kpml-response+xml photograph  "
-    val enrichedValue = originalValue.applyFilter(formatStopWords)
+    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
     assert(enrichedValue === "photograph")
   }
   it should "not remove a stop word if it exists within another term" in {
     val originalValue = "application/xmlphotograph"
-    val enrichedValue = originalValue.applyFilter(formatStopWords)
+    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
     assert(enrichedValue === "application/xmlphotograph")
   }
   it should "remove 'jpeg' and 'jpeg 2000' from 'jpeg jpeg 2000 photograph image'" in {
     val originalValue = "jpeg jpeg 2000 photograph image"
-    val enrichedValue = originalValue.applyFilter(formatStopWords)
+    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
     assert(enrichedValue === "photograph image")
   }
   it should "remove 'jpeg' and 'jpeg 2000' from 'jpeg photograph image jpeg 2000'" in {
     val originalValue = "jpeg photograph image jpeg 2000"
-    val enrichedValue = originalValue.applyFilter(formatStopWords)
+    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
     assert(enrichedValue === "photograph image")
   }
   it should "remove 'kpml-response+xml' from 'document kpml-response+xml'" in {
     val originalValue = "document kpml-response+xml"
-    val enrichedValue = originalValue.applyFilter(formatStopWords)
+    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
     assert(enrichedValue === "document")
   }
   it should "remove 'tiff' and 'image/tiff' from '  tiff photo image/tiff  '" in {
     val originalValue = "  tiff photo image/tiff  "
-    val enrichedValue = originalValue.applyFilter(formatStopWords)
+    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
     assert(enrichedValue === "photo")
   }
   it should "not remove 'tif' from 'Stock certificates'" in {
     val originalValue = "Stock certificates"
-    val enrichedValue = originalValue.applyFilter(formatStopWords)
+    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
     assert(enrichedValue === "Stock certificates")
   }
+  it should "remove 'jpeg' and 'jpeg/2000' from 'file, jpeg, bmp, jpeg/2000'" in {
+    val originalValue = "file, jpeg, bmp, jpeg/2000"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
+    assert(enrichedValue === "file, bmp,")
+  }
+
+  "applyAllowFilter()" should "retain only allowed words in the given string" in {
+    val originalValue = "moving image shit list"
+    val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
+    assert(enrichedValue === "moving image")
+  }
+  it should "retain only allowed words in the given string ('moving image image')" in {
+    val originalValue = "moving image image"
+    val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
+    assert(enrichedValue === "moving image image")
+  }
+  it should "ignore punctuation" in {
+    val originalValue = "moving image, image and print"
+    val allowList = AllowList.termList
+    val enrichedValue = originalValue.applyAllowFilter(allowList)
+    assert(enrichedValue === "moving image, image")
+  }
+  it should "remove 'and pictures'" in {
+    val originalValue = "images and pictures"
+    val allowList = AllowList
+      .termList
+    val enrichedValue = originalValue
+      .applyAllowFilter(allowList)
+
+    assert(enrichedValue === "images")
+  }
+  // FIXME Do more tests with applyAllowList
+
+
+
+
+
 
   "stripBrackets" should "remove leading and trailing ( )" in {
     val originalValue = "(hello)"
