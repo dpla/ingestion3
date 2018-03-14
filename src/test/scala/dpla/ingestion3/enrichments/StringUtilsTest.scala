@@ -274,9 +274,9 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
     assert(enrichedValue === "photograph image")
   }
-  it should "remove 'jpeg' and 'jpeg 2000' from 'jpeg photograph image jpeg 2000'" in {
-    val originalValue = "jpeg photograph image jpeg 2000"
-    val enrichedValue = originalValue.applyBlockFilter(formatStopWords)
+  it should "remove 'jpeg' and 'jpeg/2000' from 'jpeg photograph image jpeg/2000'" in {
+    val originalValue = "jpeg photograph image jpeg/2000"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
     assert(enrichedValue === "photograph image")
   }
   it should "remove 'kpml-response+xml' from 'document kpml-response+xml'" in {
@@ -298,6 +298,11 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     val originalValue = "file, jpeg, bmp, jpeg/2000"
     val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
     assert(enrichedValue === "file, bmp,")
+  }
+  it should "remove plurals of stopwords (jpegs, photograph)" in {
+    val originalValue = "jpegs, photograph"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
+    assert(enrichedValue === "photograph")
   }
 
   "applyAllowFilter()" should "retain only allowed words in the given string" in {

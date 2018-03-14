@@ -42,8 +42,24 @@ trait FilterList {
   */
 object FilterRegex {
   implicit class Regex(value: String) {
-    // A regex appropriate for removing a stop word from the original value
-    val blockListRegex: String = """(?i)((^|\s|,|s+)""" + escapeRegex(value) + """($|\s|s|,+))"""
+    /**
+      * A regex appropriate for removing a stop word from the original value.
+      *
+      *  Matches on:
+      *   - Case insensitive
+      *   - Starts with one or more of either: start of sting OR (white space OR alphanumeric A-Z 0-9)
+      *   - Ends with one ore more of amy: (letter s OR comma) OR white space OR end of string
+      *
+      * Matches of 'jpeg'
+      *   - jpeg photograph -> 'jpeg '
+      *   - jpeg, photograph -> 'jpeg, '
+      *   - jpegs, photograph -> 'jpegs, '
+      *   - digital files and jpegs -> ' jpegs'
+      *
+      * TODO better support for plural forms
+      * TODO better support for punctuation separating terms
+      */
+    val blockListRegex: String = """(?i)((^|(\s|[a-zA-z0-9]))""" + escapeRegex(value) + """((s|,)+|\s|$+))"""
 
     val allowListRegex: String = """(?i)((?<=(^|\s+))""" + escapeRegex(value) + """(?=($|\s+)))"""
 

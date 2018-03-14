@@ -41,14 +41,14 @@ object StringUtils {
         .split(" ")
         // Create a new set of regular expressions with the non-allowed terms
         // with a different base pattern that is less greedy to preserve punctuation
-        // TODO Is this the wanted behavior. Follow-up with GG on 3/16
+        // TODO Is this the wanted behavior? Follow-up with GG on 3/16
         .map(FilterRegex.Regex(_).allowListRegex)
         .toSet
 
       applyBlockFilter(nonAllowedTerms).reduceWhitespace
     }
     /**
-      * Applies the provided set of patterns and removes matches from the original string.
+      * Applies the provided set of patterns and removes matches from the original string
       */
     lazy val applyBlockFilter: Set[String] => String = (termList) => termList
       .foldLeft(value) {
