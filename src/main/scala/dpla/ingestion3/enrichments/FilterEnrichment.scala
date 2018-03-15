@@ -40,30 +40,43 @@ trait FilterList {
 }
 
 /**
-  * Stores standardized regular expressions used to create block and allow patterns
+  * Standardized regular expression templates used to create block and allow patterns.
   */
 object FilterRegex {
   implicit class Regex(value: String) {
     /**
-      * A regex appropriate for removing a stop word from the original value.
+      * A regex appropriate for removing all occurrences stop word from the original value.
       *
       *  Matches on:
-      *   - Case insensitive
-      *   - Starts with one or more of either: start of sting OR (white space OR alphanumeric A-Z 0-9)
-      *   - Ends with one ore more of amy: (letter s OR comma) OR white space OR end of string
+      *   1) Case insensitive
+      *   2) Starts with one or more of any:
+      *     a) Word boundary (\b)
+      *     c) Alphanumeric (a-zA-Z0-9)
+      *   3) Ends with one ore more of either
+      *     a) 's' OR comma (s|,)+
+      *     b) white space OR end of string (\s+|$)+
       *
-      * Matches of 'jpeg'
-      *   - jpeg photograph -> 'jpeg '
-      *   - jpeg, photograph -> 'jpeg, '
-      *   - jpegs, photograph -> 'jpegs, '
-      *   - digital files and jpegs -> ' jpegs'
+      * Matches when using 'jpeg' for a block term
+      *   - 'jpeg  ' -> 'jpeg  '
+      *   - 'jpeg photograph' -> 'jpeg '
+      *   - 'jpeg photograph jpeg' -> 'jpeg  jpeg'
       *
-      * TODO better support for plural forms
-      * TODO better support for punctuation separating terms
-      * TODO support for multi-line matching
+      * TODO Work with Gretchen to properly define this and any other matching regex
+      *   - Follow-up 3/16
+      * TODO Support for plurals
+      * TODO Support for ignoring punctuation separating terms
+      *   - Remove trailing punctuation or apply split() e.g. fixup trailing comma here > 'film, dvd' -> 'film,'
+      *   - Identify all valid word separating punctuation (e.x. /+\- are not valid word terminators)
+      * TODO Support for multi-line matching
+      *
       */
-    val blockListRegex: String = """(?i)((\b|(\s|[a-zA-z0-9]))""" + escapeRegex(value) + """((s|,)+|\s|$+))"""
+    // Original version
+    // val blockListRegex: String = """(?i)((\b|\s+|[a-zA-z0-9]+)""" + escapeRegex(value) + """((s|,)+|\s+|$))"""
+    val blockListRegex: String = """(?i)((\b|\s+|[a-zA-z0-9]+)""" + escapeRegex(value) + """(\s+|\b))"""
 
+    /**
+      *
+      */
     val allowListRegex: String = """(?i)((?<=(^|\s+))""" + escapeRegex(value) + """(?=($|\s+)))"""
 
     /**
