@@ -50,34 +50,33 @@ object FilterRegex {
       *  Matches on:
       *   1) Case insensitive
       *   2) Starts with one or more of any:
-      *     a) Word boundary (\b)
-      *     c) Alphanumeric (a-zA-Z0-9)
-      *   3) Ends with one ore more of either
-      *     a) 's' OR comma (s|,)+
-      *     b) white space OR end of string (\s+|$)+
+      *     a) Start of string
+      *     b) White space
+      *   3) Ends with one or more of either
+      *     a) White space
+      *     b) End of string
       *
       * Matches when using 'jpeg' for a block term
-      *   - 'jpeg  ' -> 'jpeg  '
-      *   - 'jpeg photograph' -> 'jpeg '
-      *   - 'jpeg photograph jpeg' -> 'jpeg  jpeg'
+      *   - 'jpeg' -> 'jpeg'
+      *   - ' jpeg ' -> 'jpeg'
+      *   - 'JPEG' -> 'JPEG'
       *
-      * TODO Work with Gretchen to properly define this and any other matching regex
-      *   - Follow-up 3/16
+      *
       * TODO Support for plurals
+      * TODO Support for multiple matches
       * TODO Support for ignoring punctuation separating terms
-      *   - Remove trailing punctuation or apply split() e.g. fixup trailing comma here > 'film, dvd' -> 'film,'
-      *   - Identify all valid word separating punctuation (e.x. /+\- are not valid word terminators)
       * TODO Support for multi-line matching
-      *
       */
-    // Original version
-    // val blockListRegex: String = """(?i)((\b|\s+|[a-zA-z0-9]+)""" + escapeRegex(value) + """((s|,)+|\s+|$))"""
-    val blockListRegex: String = """(?i)((\b|\s+|[a-zA-z0-9]+)""" + escapeRegex(value) + """(\s+|\b))"""
+    val blockListRegex: String = """(?i)^\s*""" + escapeRegex(value) + """\s*$"""
 
     /**
+      * A regex for retaining terms on an allowed list
       *
+      * Examples with allowList=['film','image'] (original -> filtered)
+      *  - film DVD -> film
+      *  - image and picture -> image
       */
-    val allowListRegex: String = """(?i)((?<=(^|\s+))""" + escapeRegex(value) + """(?=($|\s+)))"""
+    val allowListRegex: String = """(?i)((?<=^|\s+)""" + escapeRegex(value) + """(?=($|\s+)))"""
 
     /**
       * Escapes reserved regular expression characters in string

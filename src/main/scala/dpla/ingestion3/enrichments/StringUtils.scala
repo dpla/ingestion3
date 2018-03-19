@@ -21,30 +21,34 @@ object StringUtils {
 
 
     /**
-      * Preserves only those terms specified in termList and removes all other values
+      * Accepts a set of Strings to preserve in the original value. Those string values
+      * can be literal strings or regular expressions. Regular expressions can allow for
+      * filtering out terms while:
+      *   - ignoring white space
+      *   - ignoring case
+      *   - ignoring punctuation
+      *   - Greedy matching on plurals
       *
-      * - Ignores punctuations when identifying terms on the allow list
-      * - Ignores punctuation when removing the term.
-      * - Ignores case
-      * - Matches on some plurals (s)
+      * Construction and testing of those regular expressions is dependent on the user
       *
-      * Examples
-      *   - moving image, image and tome -> moving image, image
-      *   - images and pictures -> images
       */
     lazy val applyAllowFilter: Set[String] => String = (allowList) => {
-      // Remove terms in allowList from the original string
-      val nonAllowedTerms = applyBlockFilter(allowList)
-        // Split the remaining non-allowed terms on white space
-        //    Note: This assumption may not hold in all cases and those edges
-        //    cases should be clearly documented.
+
+      val nonAllowedTerms =
+        // Remove terms in allowList from the original string
+        applyBlockFilter(allowList)
+        // Split the remaining terms (e.g. the terms to remove) on white space
+        // This allows for filtering of specific words from a string but that functionality
+        // is not yet a requirement of this filter.
+        // FIXME This assumption may not hold in all cases and they should be clearly documented
         .split(" ")
-        // Create a new set of regular expressions with the non-allowed terms
-        // with a different base pattern that is less greedy to preserve punctuation
-        // TODO Is this the wanted behavior? Follow-up with GG on 3/16
+        // Create a new set of regular expressions from the non-allowed terms
+        // with a different base pattern
         .map(FilterRegex.Regex(_).allowListRegex)
         .toSet
-
+      // Applies the block filter using nonAllowedTerms created from the original
+      // string to the original string. Trims leading/trailing whitespace and
+      // reduces extra interior whitespace
       applyBlockFilter(nonAllowedTerms).reduceWhitespace
     }
     /**

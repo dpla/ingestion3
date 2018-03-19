@@ -98,13 +98,6 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("photograph")
     assert(extractor.format(xml) === expected)
   }
-  it should "extract the correct format and remove values in that are stop words from the same string" in {
-    val xml: Document[NodeSeq] = Document(<record><metadata>
-      <dcterms:format>photograph image</dcterms:format>
-    </metadata></record>)
-    val expected = Seq("photograph")
-    assert(extractor.format(xml) === expected)
-  }
   it should "extract the correct format when splitting on ';'  and remove values in that are stop words" in {
     val xml: Document[NodeSeq] = Document(<record><metadata>
       <dcterms:format>photograph; image</dcterms:format>

@@ -7,6 +7,7 @@ import dpla.ingestion3.enrichments.FilterRegex._
 
 class StringUtilsTest extends FlatSpec with BeforeAndAfter {
 
+  // Helper objects
   object BlockList extends FilterList {
     override val termList: Set[String] = Set(
       "jpeg",
@@ -14,7 +15,7 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
       "tiff",
       "bitmap image",
       "application+pdf"
-    ) // .map(_.blockListRegex) These should just be strict term matches so we are not conflating tests between applyBlockList and blockListRegex
+    ).map(_.blockListRegex) // TODO Should this term list be testing the blockListRegex or just literal term?
   }
 
   object AllowList extends FilterList {
@@ -23,14 +24,10 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
       "film",
       "audio",
       "image"
-    ).map(_.blockListRegex)
+    ).map(_.blockListRegex) // TODO Should this term list be testing the blockListRegex or just literal term?
   }
 
-  // TODO replace this with local term list so tests are not bound to production values
-  val formatStopWords = DigitalSurrogateBlockList.termList
-
-  // TODO applyBlockFilter with custom (simplified) block and allow lists
-
+  // Tests
   "convertToSentenceCase" should "capitalize the first character in each sentence" in {
     val originalValue = "this is a sentence about Moomins. this is another about Snorks."
     val enrichedValue = originalValue.convertToSentenceCase
@@ -238,25 +235,20 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     * applyBlockFilter tests
     * @see FilterRegexTest blockListRegex tests
     */
-  "applyBlockFilter" should "remove ' jpeg' from 'photograph jpeg'" in {
-    val originalValue = "photograph jpeg"
+  "applyBlockFilter" should "remove a block term" in {
+    val originalValue = "jpeg"
     val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
-    assert(enrichedValue === "photograph")
+    assert(enrichedValue === "")
   }
-  it should "remove 'jpeg and 'tiff' from 'jpeg photograph tiff''" in {
-    val originalValue = "jpeg photograph tiff"
+  it should "remove a block term with extra white space" in {
+    val originalValue = "  jpeg  "
     val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
-    assert(enrichedValue === "photograph")
+    assert(enrichedValue === "")
   }
-  it should "remove 'bitmap image' from 'bitmap image photograph'" in {
-    val originalValue = "bitmap image Photograph"
+  it should "not remove a block term if it is not an exact match" in {
+    val originalValue = "jpeg photo"
     val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
-    assert(enrichedValue === "Photograph")
-  }
-  it should "remove all 'jpeg's from 'jpeg jpeg photograph jpeg jpeg'" in {
-    val originalValue = "jpeg jpeg photograph jpeg jpeg"
-    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
-    assert(enrichedValue === "photograph")
+    assert(enrichedValue === "jpeg photo")
   }
   /**
     * applyAllowFilter
@@ -264,48 +256,46 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     *
     */
 
-  "applyAllowFilter" should "retain only the allowed term ('moving image' in 'moving image dvd'" in {
-    val originalValue = "moving image dvd"
+  "applyAllowFilter" should "retain only the allowed term ('moving image' in 'moving image'" in {
+    val originalValue = "moving image"
     val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
     assert(enrichedValue === "moving image")
   }
-  it should "match duplicate values('image videocassette image')" in {
-    val originalValue = "image videocassette image"
+  it should "remove a term that is not on the allow list" in {
+    val originalValue = "dvd"
     val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
-    assert(enrichedValue === "image image")
+    assert(enrichedValue === "")
   }
-  it should "retain all allowed words ('moving image film' in'moving image dvd film')" in {
-    val originalValue = "moving image dvd film"
+  it should "ignore extraneous white space ('  moving image  ' remains 'moving image')" in {
+    val originalValue = " moving image      "
     val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
-    assert(enrichedValue === "moving image film")
+    assert(enrichedValue === "moving image")
   }
-  it should "ignore commas and retain all allowed terms ('moving image, film' remains 'moving image, film')" in {
-    val originalValue = "moving image, image"
+  it should "match regardless of case ('MOVING image')" in {
+    val originalValue = "MOVING image"
     val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
-    assert(enrichedValue === "moving image, image")
+    assert(enrichedValue === "MOVING image")
   }
-  it should "ignore extraneous white space ('  moving image  film ' remains 'moving image film')" in {
-    val originalValue = " moving image    film  "
-    val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
-    assert(enrichedValue === "moving image film")
-  }
-  it should "ignore extraneous white space and remove non-allowed terms " +
-    "('  moving image  film  dvd  ' remains 'moving image film')" in {
-    val originalValue = " moving image    film  dvd   "
-    val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
-    assert(enrichedValue === "moving image film")
-  }
-  // FIXME trailing comma removal @see FilterEnrichment.singleWordBlockTermRegex todo list
-  it should "ignore extraneous white space and commas ('  moving image,  film, dvd  ' remains 'moving image, film')" in {
-    val originalValue = " moving image,    film, dvd  "
-    val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
-    assert(enrichedValue === "moving image, film,")
-  }
-  it should "match regardless of case ('Image videocassette IMAge')" in {
-    val originalValue = "Image videocassette IMAge"
-    val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
-    assert(enrichedValue === "Image IMAge")
-  }
+
+//  TODO Term filtering within string (ignore commas) not yet supported
+//  it should "ignore commas and retain all allowed terms ('moving image, film' remains 'moving image, film')" in {
+//    val originalValue = "moving image, image"
+//    val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
+//    assert(enrichedValue === "moving image, image")
+//  }
+  //  TODO Term filtering within string not yet supported
+//  it should "retain all allowed words ('moving image film' in'moving image dvd film')" in {
+//    val originalValue = "moving image dvd film"
+//    val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
+//    assert(enrichedValue === "moving image film")
+//  }
+//  TODO Term filtering within string (extra whitespace) not yet supported
+//  it should "ignore extraneous white space and remove non-allowed terms " +
+//    "('  moving image    dvd  ' removes 'dvd')" in {
+//    val originalValue = " moving image    dvd   "
+//    val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
+//    assert(enrichedValue === "moving image")
+//  }
 
   /**
     * Strip Brackets
