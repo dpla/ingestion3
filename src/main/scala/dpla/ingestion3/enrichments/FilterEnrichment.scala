@@ -24,7 +24,7 @@ trait FilterList {
   val termList: Set[String]
 
   // File paths to source termList from
-  val files: Seq[String] = Seq("")
+  val files: Seq[String] = Seq()
 
   /**
     * Reads files listed in `files` member. Ignores lines that begin with '#'
