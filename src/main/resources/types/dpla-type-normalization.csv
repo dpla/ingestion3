@@ -1,0 +1,75 @@
+# The pattern match applied to these terms is case-insensitive
+# local type term,DCMI type
+Cartographic,Image
+Drawing,Image
+Illumination,Image
+Image,Image
+Mixed material,Image
+Notated music,Image
+Painting,Image
+Photograph,Image
+Postcard,Image
+Poster,Image
+Print,Image
+Stillimage,Image
+Still image,Image
+Color slide,Image
+Collodion,Image
+negative,Image
+Monochromatic,Image
+Book,Text
+Correspondence,Text
+Journal,Text
+Magazine,Text
+Manuscript,Text
+Publication,Text
+Text,Text
+Writing,Text
+Written,Text
+document,Text
+certificate,Text
+Email message,Text
+Memorandum,Text
+Periodical,Text
+letter,Text
+report,Text
+Pamphlet,Text
+transcript,Text
+article,Text
+Press release,Text
+Essay,Text
+Manual,Text
+ledger,Text
+Diary,Text
+Diaries,Text
+Receipt,Text
+Logs,Text
+Deposition,Text
+Audio,Sound
+Oral history recording,Sound
+Recording,Sound
+Sound,Sound
+Film,Moving Image
+Motion picture,Moving Image
+Moving image,Moving Image
+Movingimage,Moving Image
+Video,Moving Image
+Appliance,Physical Object
+Container,Physical Object
+Costume,Physical Object
+Equipment,Physical Object
+Frame,Physical Object
+Furniture,Physical Object
+Jewelry,Physical Object
+Object,Physical Object
+Physicalobject,Physical Object
+Physical Object,Physical Object
+Sample book,Physical Object
+Sculpture,Physical Object
+Specimen,Physical Object
+Statue,Physical Object
+Textile,Physical Object
+Tool,Physical Object
+Electronic resource,Interactive Resource
+Online exhibit,Interactive Resource
+Video game,Interactive Resource
