@@ -1,7 +1,5 @@
 package dpla.ingestion3.enrichments
-
-import dpla.ingestion3.enrichments.FormatStopWords._
-import dpla.ingestion3.utils.FlatFileIO
+import dpla.ingestion3.enrichments.FilterRegex._
 import org.apache.commons.lang.StringEscapeUtils
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document.OutputSettings
@@ -21,6 +19,46 @@ object StringUtils {
     type SingleStringEnrichment = String
     type MultiStringEnrichment = Array[String]
 
+
+    /**
+      * Accepts a set of Strings to preserve in the original value. Those string values
+      * can be literal strings or regular expressions. Regular expressions can allow for
+      * filtering out terms while:
+      *   - ignoring white space
+      *   - ignoring case
+      *   - ignoring punctuation
+      *   - Greedy matching on plurals
+      *
+      * Construction and testing of those regular expressions is dependent on the user
+      *
+      */
+    lazy val applyAllowFilter: Set[String] => String = (allowList) => {
+
+      val nonAllowedTerms =
+        // Remove terms in allowList from the original string
+        applyBlockFilter(allowList)
+        // Split the remaining terms (e.g. the terms to remove) on white space
+        // This allows for filtering of specific words from a string but that functionality
+        // is not yet a requirement of this filter.
+        // FIXME This assumption may not hold in all cases and they should be clearly documented
+        .split(" ")
+        // Create a new set of regular expressions from the non-allowed terms
+        // with a different base pattern
+        .map(FilterRegex.Regex(_).allowListRegex)
+        .toSet
+      // Applies the block filter using nonAllowedTerms created from the original
+      // string to the original string. Trims leading/trailing whitespace and
+      // reduces extra interior whitespace
+      applyBlockFilter(nonAllowedTerms).reduceWhitespace
+    }
+    /**
+      * Applies the provided set of patterns and removes all matches from the original string
+      */
+    lazy val applyBlockFilter: Set[String] => String = (termList) => termList
+      .foldLeft(value) {
+        case (string, pattern) => string.replaceAll(pattern, "").reduceWhitespace
+      }
+
     /**
       * Accepts a String value and splits it around periods. Strips
       * trailing and leading whitespace from those "sentences" and
@@ -28,7 +66,7 @@ object StringUtils {
       * other characters alone.
       *
       * We do not assume that all upper case characters should be
-      * downcased.
+      * down-cased.
       *
       */
     lazy val convertToSentenceCase: SingleStringEnrichment = {
@@ -109,11 +147,10 @@ object StringUtils {
     }
 
     /**
-      * Reduce multiple whitespace values to a single
+      * Reduce multiple whitespace values to a single and removes
+      * leading and trailing white space
       */
-    lazy val reduceWhitespace: SingleStringEnrichment = {
-      value.replaceAll(" +", " ")
-    }
+    lazy val reduceWhitespace: SingleStringEnrichment = value.replaceAll(" +", " ").trim
 
     /**
       * Find and capitalize the first character in a given string
@@ -226,65 +263,5 @@ object StringUtils {
       * @param closeChar String that indicates end of enclosure
       */
     case class Bracket(openChar: String, closeChar: String)
-
-    /**
-      * Gets invalid format terms by reading files specified by formatStopwordFiles. Takes those
-      * terms and constructs a massive regular expression. Removes those invalid terms from the
-      * provided string as well as empty/duplicate whitespace. This filter is case insensitive.
-      *
-      */
-    lazy val stripInvalidFormats: SingleStringEnrichment = {
-      // Create regular expressions that are case insensitive with the stop words from the files.
-      // Use look ahead (?=) and look behind (?<=) to check that the match is surrounded by one or
-      // more white space OR is either the begin or end of the string
-      lazy val regex = stopWords.map(w => """(?i)((?<=(^|\s+))""" + w + """(?=($|\s+)))""")
-      regex.foldLeft(value) { case (string, pattern) => string.replaceAll(pattern, "").trim }
-    }
-  }
-}
-
-
-/**
-  * TODO ---
-  *   Placeholder object until a further review and *hopefully* a refactor with VocabEnforcer
-  *   to simplify the loading of resource text/csv files that contain authority data or stop
-  *   words
-  *   - File references should not be hard coded
-  *   - Prevent regenerating the list every time
-  */
-object FormatStopWords {
-
-  lazy val stopWords: Set[String] = getFormatStopwords
-
-  /**
-    * TODO This file list should be stored in a config file and not hard coded
-    * Returns a Seq of file paths to use for generating the format stop words list
-    *
-    * @return
-    */
-  private def formatStopwordFiles: Seq[String] = Seq(
-    "/formats/ohio.csv"
-    , "/formats/iana-imt-types.csv"
-  )
-
-  /**
-    * Reads files listed in formatStopwordFiles, ignores lines that begin with #
-    * and escapes reserved characters in regular expressions
-    *
-    * @return Set[String]
-    */
-  private def getFormatStopwords: Set[String] = {
-    val fileIo = new FlatFileIO()
-    // reads in terms from file
-    formatStopwordFiles
-      .flatMap(file => fileIo.readFileAsSeq(file))
-      .filterNot(line => line.startsWith("#")) // drop lines that begin with #
-      .distinct
-      .map(
-        // TODO is there a better way to escape reserved regex chars?
-        _.replace("""/""", """\/""")
-          .replace("""+""", """\+""")
-          .replace("""-""", """\-"""))
-      .toSet
   }
 }

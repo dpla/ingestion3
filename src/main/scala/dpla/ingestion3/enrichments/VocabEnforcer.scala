@@ -20,23 +20,20 @@ trait VocabEnforcer[T] {
   }
 
   /**
+    * FIXME This doesn't work with MapVocab b/c the
     * Accepts a SkosConcept from the mapped record and attempts to lookup the mapped value
     * in an external vocabulary returning the preferred form.
+    *
+    *  If the lookup performed above returned a match then we need to merge the providedLabel value
+    *  from originalValue with the enriched concept and scheme values. If no match was found these
+    *  step are essentially no-ops (setting None values).
+    *
+    *  For languages: The concept property should only contain ISO-639 term values. If not match is
+    *  found then it should remain blank and the original value remains in providedLabel.
     */
   val matchToSkosVocab: (SkosConcept, Map[String,String]) => SkosConcept = (originalValue, skosVocab) => {
-    // convert to lower case
-    // val lcOrigingalValue = originalValue.copy(providedLabel = Option(originalValue.providedLabel.getOrElse("").toLowerCase))
     val lcTerm = originalValue.providedLabel.getOrElse("").toLowerCase()
     val enrichedLexvo = skosVocab.get(lcTerm)
-
-    // If the lookup performed above returned a match then we need to merge the providedLabel value
-    // from originalValue with the enriched concept and scheme values. If no match was found these
-    // step are essentially no-ops (setting None values).
-
-    // For languages: The concept property should only contain ISO-639 term values. If not match is
-    // found then it should remain blank and the original value remains in providedLabel.
-    // FIXME Scheme not used
-    // val schemeUri = Some(new URI("http://lexvo.org/id/iso639-3/"))
 
     SkosConcept(
       concept = enrichedLexvo,
@@ -129,6 +126,8 @@ object DcmiTypeMapper extends VocabEnforcer[String] {
 
 object DcmiTypeStringMapper extends VocabEnforcer[String] {
 
+  // FIXME since these are already overriding the IRI label why can't they
+  // resolve to lower case values (@see the type enrichment _.toLowerCase)
   val mapDcmiTypeString: (IRI) => String = {
     case dcmiType.InteractiveResource => "InteractiveResource"
     case dcmiType.MovingImage => "Moving Image"
@@ -186,5 +185,5 @@ object LanguageMapper extends VocabEnforcer[String] {
     * Gets an ordered version of the language map
     * @return
     */
-  def getLanuageMap = ListMap(languageMap.toSeq.sortBy(_._1):_*)
+  def getLanguageMap = ListMap(languageMap.toSeq.sortBy(_._1):_*)
 }

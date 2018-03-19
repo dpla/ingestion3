@@ -7,6 +7,7 @@ import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, 
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import dpla.ingestion3.enrichments.StringUtils._
+import dpla.ingestion3.enrichments.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
@@ -57,7 +58,8 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   override def format(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "metadata" \\ "format")
       .flatMap(_.splitAtDelimiter(";"))
-      .map(_.stripInvalidFormats)
+      .map(_.applyBlockFilter(DigitalSurrogateBlockList.termList ++
+        FormatTypeValuesBlockList.termList))
       .filter(_.nonEmpty)
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
@@ -114,8 +116,8 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
       .map(nameOnlyAgent)
       .headOption // take the first value
       .getOrElse( // return the first value or throw an exception
-        throw new Exception(s"Missing required property metadata/dataProvider is empty for ${getProviderId(data)}")
-      )
+      throw new Exception(s"Missing required property metadata/dataProvider is empty for ${getProviderId(data)}")
+    )
   }
 
   override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] = {
@@ -124,7 +126,7 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     }).headOption
   }
 
-  override def isShownAt(data: Document[NodeSeq]) =
+  override def isShownAt(data: Document[NodeSeq]): EdmWebResource =
     uriOnlyWebResource(
       Utils.createUri(extractStrings(data \ "metadata" \\ "isShownAt")
         .headOption

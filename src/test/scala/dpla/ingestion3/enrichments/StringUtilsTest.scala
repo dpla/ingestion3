@@ -1,16 +1,35 @@
 package dpla.ingestion3.enrichments
 
-import org.scalatest.{BeforeAndAfter, FlatSpec}
 import dpla.ingestion3.enrichments.StringUtils._
+import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 class StringUtilsTest extends FlatSpec with BeforeAndAfter {
 
-  "convertToSentenceCase" should "capitalize the first character in each " +
-    "sentence." in {
+  // Helper objects
+  object BlockList extends FilterList {
+    override val termList: Set[String] = Set(
+      "jpeg",
+      "jpeg/2000",
+      "tiff",
+      "bitmap image",
+      "application+pdf"
+    )
+  }
+
+  object AllowList extends FilterList {
+    override val termList: Set[String] = Set(
+      "moving image",
+      "film",
+      "audio",
+      "image"
+    )
+  }
+
+  // Tests
+  "convertToSentenceCase" should "capitalize the first character in each sentence" in {
     val originalValue = "this is a sentence about Moomins. this is another about Snorks."
     val enrichedValue = originalValue.convertToSentenceCase
     val expectedValue = "This is a sentence about Moomins. This is another about Snorks."
-
     assert(enrichedValue === expectedValue)
   }
 
@@ -18,23 +37,18 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     val originalValue = "subject-one; subject-two; subject-three"
     val enrichedValue = originalValue.splitAtDelimiter(";")
     val expectedValue = Array("subject-one", "subject-two", "subject-three")
-
     assert(enrichedValue === expectedValue)
   }
-
-  "splitAtDelimiter" should "drop empty values" in {
+  it should "drop empty values" in {
     val originalValue = "subject-one; ; subject-three"
     val enrichedValue = originalValue.splitAtDelimiter(";")
     val expectedValue = Array("subject-one", "subject-three")
-
     assert(enrichedValue === expectedValue)
   }
-
-  "splitAtDelimiter" should "split a string around comma." in {
+  it should "split a string around comma." in {
     val originalValue = "subject-one, subject-two; subject-three"
     val enrichedValue = originalValue.splitAtDelimiter(",")
     val expectedValue = Array("subject-one", "subject-two; subject-three")
-
     assert(enrichedValue === expectedValue)
   }
 
@@ -44,28 +58,24 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.stripHTML
     assert(enrichedValue === expectedValue)
   }
-
-  it should "handle strings with unbalanced and invalid html" in {
+  it should "remove unbalanced and invalid html from a given string" in {
     val expectedValue = "foo bar baz buzz"
     val originalValue = f"<p>$expectedValue%s</i><html>"
     val enrichedValue = originalValue.stripHTML
     assert(enrichedValue === expectedValue)
   }
-
-  it should "passthrough strings that do not contain html" in {
+  it should "not modify strings that do not contain html markup" in {
     val expectedValue = "foo bar baz buzz"
     val originalValue = expectedValue
     val enrichedValue = originalValue.stripHTML
     assert(enrichedValue === expectedValue)
   }
-
   it should "not emit HTML entities" in {
     val expectedValue = "foo bar baz > buzz"
     val originalValue = expectedValue
     val enrichedValue = originalValue.stripHTML
     assert(enrichedValue === expectedValue)
   }
-
   it should "not turn html entities into html" in {
     val originalValue = "foo bar baz &lt;p&gt; buzz"
     val expectedValue = "foo bar baz  buzz"
@@ -79,28 +89,24 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     val expectedValue = "It's @@ OK --- "
     assert(enrichedValue === expectedValue)
   }
-
   it should "remove whitespace" in {
     val originalValue = "   A good string "
     val enrichedValue = originalValue.cleanupLeadingPunctuation
     val expectedValue = "A good string "
     assert(enrichedValue === expectedValue)
   }
-
   it should "remove tabs" in {
     val originalValue = "\t\t\tA \tgood string "
     val enrichedValue = originalValue.cleanupLeadingPunctuation
     val expectedValue = "A \tgood string "
     assert(enrichedValue === expectedValue)
   }
-
   it should "remove new line characters" in {
     val originalValue = "\n\n\r\nA good string "
     val enrichedValue = originalValue.cleanupLeadingPunctuation
     val expectedValue = "A good string "
     assert(enrichedValue === expectedValue)
   }
-
   it should "do nothing if there is no punctuation" in {
     val originalValue = "A good string "
     val enrichedValue = originalValue.cleanupLeadingPunctuation
@@ -114,28 +120,24 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     val expectedValue = ".. It's OK"
     assert(enrichedValue === expectedValue)
   }
-
   it should "remove whitespace" in {
     val originalValue = "A good string   "
     val enrichedValue = originalValue.cleanupEndingPunctuation
     val expectedValue = "A good string"
     assert(enrichedValue === expectedValue)
   }
-
   it should "remove tabs" in {
     val originalValue = "A \tgood string\t\t\t"
     val enrichedValue = originalValue.cleanupEndingPunctuation
     val expectedValue = "A \tgood string"
     assert(enrichedValue === expectedValue)
   }
-
   it should "remove new line characters" in {
     val originalValue = "A good string\n\n\r\n"
     val enrichedValue = originalValue.cleanupEndingPunctuation
     val expectedValue = "A good string"
     assert(enrichedValue === expectedValue)
   }
-
   it should "do nothing if there is no ending punctuation" in {
     val originalValue = "A good string"
     val enrichedValue = originalValue.cleanupEndingPunctuation
@@ -148,7 +150,6 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     val enrichedValue = longString.limitCharacters(10)
     assert(enrichedValue.size === 10)
   }
-
   it should "not limit strings shorter or equal to the limit" in {
     val shortString = "Now is the time"
     val enrichedValue = shortString.limitCharacters(shortString.length)
@@ -160,17 +161,20 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.reduceWhitespace
     assert(enrichedValue === "foo bar")
   }
-
   it should "reduce five whitespaces to one whitespace" in {
     val originalValue = "foo     bar"
     val enrichedValue = originalValue.reduceWhitespace
     assert(enrichedValue === "foo bar")
   }
-
   it should "reduce multiple occurrences duplicate whitespace to single whitespace" in {
-    val originalValue = " foo   bar  choo  "
+    val originalValue = "foo   bar  choo"
     val enrichedValue = originalValue.reduceWhitespace
-    assert(enrichedValue === " foo bar choo ")
+    assert(enrichedValue === "foo bar choo")
+  }
+  it should "reduce remove leading and trailing white space" in {
+    val originalValue = "   foo bar  choo "
+    val enrichedValue = originalValue.reduceWhitespace
+    assert(enrichedValue === "foo bar choo")
   }
 
   "capitalizeFirstChar" should "not capitalize the b in '3 blind mice'" in {
@@ -204,65 +208,46 @@ class StringUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === "")
   }
 
-  "stripInvalidFormats" should "remove all stop words from the given string" in {
-    val originalValue = "application/xml photograph   jp2"
-    val enrichedValue = originalValue.stripInvalidFormats
-    assert(enrichedValue === "photograph")
-  }
-  it should "not case about case" in {
-    val originalValue = "application/XML Photograph   jp2"
-    val enrichedValue = originalValue.stripInvalidFormats
-    assert(enrichedValue === "Photograph")
-  }
-  it should "remove stop words that contain white space e.g. 'JPEG 2000'" in {
-    val originalValue = "JPEG 2000 Photograph"
-    val enrichedValue = originalValue.stripInvalidFormats
-    assert(enrichedValue === "Photograph")
-  }
-  it should "leave the original value alone if it contains no stopwords" in {
-    val originalValue = "Photograph"
-    val enrichedValue = originalValue.stripInvalidFormats
-    assert(enrichedValue === "Photograph")
-  }
-  it should "return empty string if format only contains stop words" in {
-    val originalValue = "  text/pdf tif video/jpeg \t jpeg2000 "
-    val enrichedValue = originalValue.stripInvalidFormats
+  "applyBlockFilter" should "remove a block term" in {
+    val originalValue = "jpeg"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
     assert(enrichedValue === "")
   }
-  it should "remove invalid values that contain reserved regex chars" in {
-    val originalValue = "kpml-response+xml photograph  "
-    val enrichedValue = originalValue.stripInvalidFormats
-    assert(enrichedValue === "photograph")
+  it should "remove a block term if surrounded by extra white space" in {
+    val originalValue = "  jpeg  "
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
+    assert(enrichedValue === "")
   }
-  it should "not remove a stop word if it exists within another term" in {
-    val originalValue = "application/xmlphotograph"
-    val enrichedValue = originalValue.stripInvalidFormats
-    assert(enrichedValue === "application/xmlphotograph")
-  }
-  it should "remove 'jpeg' and 'jpeg 2000' from 'jpeg jpeg 2000 photograph image'" in {
-    val originalValue = "jpeg jpeg 2000 photograph image"
-    val enrichedValue = originalValue.stripInvalidFormats
-    assert(enrichedValue === "photograph image")
-  }
-  it should "remove 'jpeg' and 'jpeg 2000' from 'jpeg photograph image jpeg 2000'" in {
-    val originalValue = "jpeg photograph image jpeg 2000"
-    val enrichedValue = originalValue.stripInvalidFormats
-    assert(enrichedValue === "photograph image")
-  }
-  it should "remove 'kpml-response+xml' from 'document kpml-response+xml'" in {
-    val originalValue = "document kpml-response+xml"
-    val enrichedValue = originalValue.stripInvalidFormats
-    assert(enrichedValue === "document")
-  }
-  it should "remove 'tiff' and 'image/tiff' from '  tiff photo image/tiff  '" in {
-    val originalValue = "  tiff photo image/tiff  "
-    val enrichedValue = originalValue.stripInvalidFormats
+  it should "remove a blocked term from a string" in {
+    val originalValue = "jpeg photo"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
     assert(enrichedValue === "photo")
   }
-  it should "not remove 'tif' from 'Stock certificates'" in {
-    val originalValue = "Stock certificates"
-    val enrichedValue = originalValue.stripInvalidFormats
-    assert(enrichedValue === "Stock certificates")
+  it should "return the original string if it does not contain a blocked term" in {
+    val originalValue = "photo"
+    val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
+    assert(enrichedValue === "photo")
+  }
+
+  "applyAllowFilter" should "return the original string if it matches the allow list" in {
+    val originalValue = "moving image"
+    val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
+    assert(enrichedValue === "moving image")
+  }
+  it should "not match if the string contains an allowed term" in {
+    val originalValue = "film 8mm"
+    val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
+    assert(enrichedValue === "film 8mm")
+  }
+  it should "return an empty string if the original string is not on the allow list" in {
+    val originalValue = "dvd"
+    val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
+    assert(enrichedValue === "")
+  }
+  it should "match and remove extraneous white space ('  moving image  ' returns 'moving image')" in {
+    val originalValue = " moving image      "
+    val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
+    assert(enrichedValue === "moving image")
   }
 
   "stripBrackets" should "remove leading and trailing ( )" in {
