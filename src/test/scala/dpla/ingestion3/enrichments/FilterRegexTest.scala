@@ -48,5 +48,6 @@ class FilterRegexTest extends FlatSpec with BeforeAndAfter with Matchers {
     "  jpeg 2000 " should fullyMatch regex multiWordBlockTermRegex // 2x 1x
     "  jpeg 2000   " should fullyMatch regex multiWordBlockTermRegex // 2x 2x
   }
+
   // AllowListRegex Tests
 }

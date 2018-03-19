@@ -52,11 +52,11 @@ object StringUtils {
       applyBlockFilter(nonAllowedTerms).reduceWhitespace
     }
     /**
-      * Applies the provided set of patterns and removes matches from the original string
+      * Applies the provided set of patterns and removes all matches from the original string
       */
     lazy val applyBlockFilter: Set[String] => String = (termList) => termList
       .foldLeft(value) {
-        case (string, pattern) => string.replaceAll(pattern, " ").reduceWhitespace
+        case (string, pattern) => string.replaceAll(pattern, "").reduceWhitespace
       }
 
     /**
