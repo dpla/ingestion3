@@ -63,7 +63,7 @@ object FilterRegex {
       * TODO Support for ignoring punctuation separating terms
       * TODO Support for multi-line matching
       */
-    val blockListRegex: String = """(?i)^\s*""" + escapeRegex(value) + """\s*$"""
+    val blockListRegex: String = """(?i)^\s*""" + escape(value) + """\s*$"""
 
     /**
       * A regex for retaining terms on an allowed list
@@ -82,7 +82,7 @@ object FilterRegex {
       fairly straight forward but as they get more complex it will probably be necessary
       to have different regexs when identifying patterns to exclude and patterns to retain
     */
-    val allowListRegex: String = """(?i)^\s*""" + escapeRegex(value) + """\s*$"""
+    val allowListRegex: String = """(?i)^\s*""" + escape(value) + """\s*$"""
 
     /**
       * Escapes reserved regular expression characters in string
@@ -91,7 +91,7 @@ object FilterRegex {
       * @return String
       */
     // TODO is there a better way to escape reserved regex chars?
-    private def escapeRegex(string: String): String =
+    private def escape(string: String): String =
       string
         .replace("""/""", """\/""")
         .replace("""+""", """\+""")

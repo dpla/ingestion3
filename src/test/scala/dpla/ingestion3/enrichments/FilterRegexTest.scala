@@ -1,7 +1,6 @@
 package dpla.ingestion3.enrichments
 
 import dpla.ingestion3.enrichments.FilterRegex._
-import org.scalatest.{BeforeAndAfter, FlatSpec}
 import org.scalatest._
 
 import scala.util.matching
