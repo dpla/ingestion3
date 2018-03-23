@@ -6,12 +6,12 @@ import dpla.ingestion3.model.OreAggregation
   * Standard enrichments.
   *
   */
-object StandardEnrichmentUtils {
+object StandardNormalizations {
 
-  implicit class StandardRecordEnrichments(record: OreAggregation) {
+  implicit class StandardRecordNormalizations(record: OreAggregation) {
 
-    lazy val deDuplicationEnrichment = new DeDuplicationEnrichment
-    lazy val stringEnrichments = new StringEnrichments
+    lazy val deDuplicationEnrichment = new Deduplication
+    lazy val stringEnrichments = new StringNormalizations
 
     def deDuplicate: OreAggregation = deDuplicationEnrichment.enrich(record)
 

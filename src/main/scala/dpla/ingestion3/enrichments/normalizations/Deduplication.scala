@@ -6,7 +6,7 @@ import dpla.ingestion3.model._
   * Enrichment to remove duplicate values in multi-value fields.
   *
   */
-class DeDuplicationEnrichment {
+class Deduplication {
 
   /**
     * Main entry point.

@@ -12,9 +12,9 @@ import scala.util.matching.Regex
   * String enrichments
   *
   */
-object StringUtils {
+object StringNormalizationUtils {
 
-  implicit class Enrichments(value: String) {
+  implicit class Normalizations(value: String) {
 
     type SingleStringEnrichment = String
     type MultiStringEnrichment = Array[String]
