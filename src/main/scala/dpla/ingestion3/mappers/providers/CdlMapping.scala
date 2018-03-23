@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
-import dpla.ingestion3.enrichments.StringUtils._
+import dpla.ingestion3.enrichments.normalizations.StringUtils._
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, JsonExtractor, Mapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}

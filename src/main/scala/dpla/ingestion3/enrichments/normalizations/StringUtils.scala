@@ -1,5 +1,5 @@
-package dpla.ingestion3.enrichments
-import dpla.ingestion3.enrichments.FilterRegex._
+package dpla.ingestion3.enrichments.normalizations
+
 import org.apache.commons.lang.StringEscapeUtils
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document.OutputSettings

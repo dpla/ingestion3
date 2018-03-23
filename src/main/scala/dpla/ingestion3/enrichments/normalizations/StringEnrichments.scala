@@ -1,8 +1,8 @@
-package dpla.ingestion3.enrichments
+package dpla.ingestion3.enrichments.normalizations
 
-import dpla.ingestion3.model._
-import dpla.ingestion3.enrichments.StringUtils._
+import StringUtils._
 import dpla.ingestion3.model.DplaMapData.LiteralOrUri
+import dpla.ingestion3.model._
 
 /**
   * Universal String enrichments.

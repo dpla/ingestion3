@@ -1,4 +1,4 @@
-package dpla.ingestion3.enrichments
+package dpla.ingestion3.enrichments.normalizations
 
 import dpla.ingestion3.model._
 

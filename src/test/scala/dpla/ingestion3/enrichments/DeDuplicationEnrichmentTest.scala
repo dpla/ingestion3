@@ -1,6 +1,7 @@
 package dpla.ingestion3.enrichments
 
 import dpla.ingestion3.data.MappedRecordsFixture
+import dpla.ingestion3.enrichments.normalizations.DeDuplicationEnrichment
 import dpla.ingestion3.model._
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 

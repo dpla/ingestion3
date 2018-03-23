@@ -6,8 +6,8 @@ import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
-import dpla.ingestion3.enrichments.StringUtils._
-import dpla.ingestion3.enrichments.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.normalizations.StringUtils._
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
