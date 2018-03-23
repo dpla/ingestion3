@@ -37,7 +37,7 @@ trait EnrichExecutor extends Serializable {
     // Verify that twofishes is reachable
     Utils.pingTwofishes(i3conf)
 
-    logger.info("Enrichments started")
+    logger.info("Normalizations started")
 
     val spark = SparkSession.builder()
       .config(sparkConf)

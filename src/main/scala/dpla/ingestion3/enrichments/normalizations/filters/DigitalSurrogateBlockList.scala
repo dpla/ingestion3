@@ -1,7 +1,7 @@
-package dpla.ingestion3.enrichments.filters
+package dpla.ingestion3.enrichments.normalizations.filters
 
-import dpla.ingestion3.enrichments.FilterList
-import dpla.ingestion3.enrichments.FilterRegex._
+import dpla.ingestion3.enrichments.normalizations.FilterList
+import dpla.ingestion3.enrichments.normalizations.FilterRegex._
 
 
 /**

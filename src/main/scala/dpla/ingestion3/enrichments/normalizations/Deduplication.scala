@@ -1,4 +1,4 @@
-package dpla.ingestion3.enrichments
+package dpla.ingestion3.enrichments.normalizations
 
 import dpla.ingestion3.model._
 
@@ -6,7 +6,7 @@ import dpla.ingestion3.model._
   * Enrichment to remove duplicate values in multi-value fields.
   *
   */
-class DeDuplicationEnrichment {
+class Deduplication {
 
   /**
     * Main entry point.

@@ -1,12 +1,13 @@
 package dpla.ingestion3.enrichments
 
 import dpla.ingestion3.data.MappedRecordsFixture
+import dpla.ingestion3.enrichments.normalizations.StringNormalizations
 import dpla.ingestion3.model._
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 
-class StringEnrichmentsTest extends FlatSpec with BeforeAndAfter {
+class StringNormalizationsTest extends FlatSpec with BeforeAndAfter {
 
-  val stringEnrichments = new StringEnrichments
+  val stringEnrichments = new StringNormalizations
 
   "enrich" should " reduce duplicate whitespace" in {
     val originalString = "foo  bar"

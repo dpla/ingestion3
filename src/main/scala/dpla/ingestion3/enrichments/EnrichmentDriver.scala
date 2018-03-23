@@ -2,7 +2,7 @@ package dpla.ingestion3.enrichments
 
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.model._
-import dpla.ingestion3.enrichments.StandardEnrichmentUtils._
+import dpla.ingestion3.enrichments.normalizations.StandardNormalizations._
 
 import scala.util.Try
 
