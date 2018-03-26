@@ -87,10 +87,15 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] =
     extractStrings(data \ "metadata" \\ "rights").find(r => Utils.isUrl(r)).map(new URI(_))
 
+  override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
+    extractStrings(data \ "metadata" \\ "source").map(nameOnlyAgent).headOption
+
   override def isShownAt(data: Document[NodeSeq]) =
     EdmWebResource(uri = itemUri(data), fileFormat = extractStrings("dc:format")(data))
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+
+  override def preview(data: Document[NodeSeq]): ZeroToOne[EdmWebResource] = thumbnail(data)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = EdmAgent(
     name = Some("PA Digital"),
@@ -115,5 +120,22 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
       new URI(ids(1))
     else
       throw new Exception(s"dc:identifier does not occur at least twice for: ${getProviderId(data)}")
+  }
+
+  /**
+    *  Get the last occurrence of the identifier property, there
+    *  must be at least three dc:identifier properties for there
+    *  to be a thumbnail
+    *
+    * @param data
+    * @return
+    */
+
+  def thumbnail(implicit data: Document[NodeSeq]): ZeroToOne[EdmWebResource] = {
+    val ids = extractStrings(data \ "metadata" \\ "identifier")
+    if (ids.size > 2)
+      Option(uriOnlyWebResource(new URI(ids.last)))
+    else
+      None
   }
 }
