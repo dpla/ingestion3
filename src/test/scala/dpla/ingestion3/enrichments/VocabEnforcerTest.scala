@@ -1,9 +1,6 @@
 package dpla.ingestion3.enrichments
 
-import java.net.URI
-
 import dpla.ingestion3.mappers.rdf.DCMIType
-import dpla.ingestion3.model.SkosConcept
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 class VocabEnforcerTest extends FlatSpec with BeforeAndAfter {
@@ -42,55 +39,6 @@ class VocabEnforcerTest extends FlatSpec with BeforeAndAfter {
     val originalValue = "images"
     val expectedValue = false
     val enrichedValue = DcmiTypeEnforcer.enforceDcmiType(originalValue)
-
-    assert(enrichedValue === expectedValue)
-  }
-
-  "Lexvo enrichment " should " an enriched SkosConcept object when given a valid iso-639 " +
-    "abbreviation" in {
-    val originalValue = Seq(SkosConcept(providedLabel = Option("eng")))
-    val expectedValue = Seq(SkosConcept(
-      providedLabel = Option("eng"),
-      concept = Option("English")
-    ))
-
-    val enrichedValue = originalValue.map(LanguageMapper.mapLanguage)
-
-    assert(enrichedValue === expectedValue)
-  }
-
-  it should " an enriched SkosConcept object when given a valid iso-639 regardless of case" +
-    "abbreviation" in {
-    val originalValue = Seq(SkosConcept(providedLabel = Option("ENG")))
-    val expectedValue = Seq(SkosConcept(
-      providedLabel = Option("ENG"),
-      concept = Option("English")
-    ))
-
-    val enrichedValue = originalValue.map(LanguageMapper.mapLanguage)
-
-    assert(enrichedValue === expectedValue)
-  }
-
-  it should "return an unenriched SkosConcept object when given a invalid iso-639 " +
-    "abbreviation. E.g. the return value should match the original value" in {
-    val originalValue = SkosConcept(providedLabel = Option("b__"))
-    val expectedValue = SkosConcept(providedLabel = Option("b__"))
-
-    val enrichedValue = LanguageMapper.mapLanguage(originalValue)
-
-    assert(enrichedValue === expectedValue)
-  }
-
-  it should "return an enriched SkosConcept object when given a DPLA specific code" +
-    "(en us)" in {
-    val originalValue = SkosConcept(providedLabel = Option("en us"))
-    val expectedValue = SkosConcept(
-      providedLabel = Option("en us"),
-      concept = Option("English")
-    )
-
-    val enrichedValue = LanguageMapper.mapLanguage(originalValue)
 
     assert(enrichedValue === expectedValue)
   }

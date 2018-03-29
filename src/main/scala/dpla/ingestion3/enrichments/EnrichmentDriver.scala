@@ -15,13 +15,12 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
     * @see SpatialEnrichmentIntegrationTest
     */
   object Geocoder extends Twofisher {
-    override def hostname = conf.twofishes.hostname.getOrElse("localhost")
-    override def port = conf.twofishes.port.getOrElse("8081")
+    override def hostname: String = conf.twofishes.hostname.getOrElse("localhost")
+    override def port: String = conf.twofishes.port.getOrElse("8081")
   }
 
   val dateEnrichment = new ParseDateEnrichment()
   val spatialEnrichment = new SpatialEnrichment(Geocoder)
-  val langEnrichment = LanguageMapper
 
   /**
     * Applies a set of common enrichments that need to be run for all providers
@@ -42,7 +41,7 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
     enriched.copy(
       sourceResource = enriched.sourceResource.copy(
         date = enriched.sourceResource.date.map(d => dateEnrichment.parse(d)),
-        language = enriched.sourceResource.language.map(l => LanguageMapper.mapLanguage(l)),
+        language = enriched.sourceResource.language.map(l => LanguageMapper.enrich(l)),
         place = enriched.sourceResource.place.map(p => spatialEnrichment.enrich(p)),
 
         /**
