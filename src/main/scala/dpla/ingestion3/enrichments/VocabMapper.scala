@@ -1,41 +1,51 @@
 package dpla.ingestion3.enrichments
 
 /**
-  * Generic vocab mapper
+  * Generic vocab mapper lookup
   *
   * @tparam T Class of vocab (e.g. SkosConcept, String, EdmAgent)
   */
-trait VocabMapper[T] extends Vocab[T] {
-  // Mapping of uncontrolled/non-preferred values to controlled terms
-  // TODO Create subclass of Map[String, T] with overloaded equals or elemEquals to support case agnostic matching
-  val vocab: Map[String, T]
 
-  /**
-    * Returns enriched version of value or value
-    * @param value Original value
-    * @return T
-    */
-  override def enrich(value: T): T =
-    mapVocab(value, vocab) // .getOrElse(value)
+class MapperLookup[T]
+  (normalizationFunc: (T) => String,
+   mergeFunc: (T,T) => T,
+   validationFunc: (T,T) => Boolean) {
 
-  /**
-    *
-    * @param value Original term
-    * @param vocab Controlled vocabulary to lookup term against
-    * @return
-    */
-  def mapVocab(value: T, vocab: Map[String, T]): T =
-    vocab.get(value.toString).asInstanceOf[T]
+  private val data = scala.collection.mutable.Map[String, T]()
+
+  //noinspection TypeAnnotation
+  def add(originalRecord: T) = data += normalizationFunc(originalRecord) -> originalRecord
+
+  def lookup(originalRecord: T): Option[T] = data.get(normalizationFunc(originalRecord))
+
+  def merge(originalRecord: T, enrichedRecord: T) = mergeFunc(originalRecord, enrichedRecord)
+
+  def validate(originalRecord: T): Option[T] = data.values.find(validationFunc(originalRecord, _))
+
+  def print(): Unit = data.keys.foreach(key => println(s"$key -> ${data.get(key)}"))
 }
 
 /**
-  * Loads vocabulary terms
- */
-trait VocabMapLoader[T] extends Vocab[T] {
+  * VocabMapper
+  *
+  * @tparam T
+  */
+trait VocabMapper[T] {
   /**
-    * Load vocabulary terms from any source
+    * Returns either an enriched version of T or None
     *
-    * @return Map[String, T]
+    * @param value Original value
+    * @return T
     */
-  def loadVocab: Map[String, T]
+  def enrich(value: T): Option[T]
+
+  /**
+    * Determines if the original value is already a standard term in the
+    * controlled vocabulary. 'English' does not need to be enriched b/c it
+    * is already in the correct form
+    *
+    * @param value Original value
+    * @return T
+    */
+  def validate(value: T): Option[T]
 }
