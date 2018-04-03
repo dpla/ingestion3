@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
-import dpla.ingestion3.enrichments.{DcmiTypeMapper, DcmiTypeStringMapper, VocabEnforcer}
+import dpla.ingestion3.enrichments.TypeMapper
 import dpla.ingestion3.mappers.rdf.DCMIType
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.model.DplaMapData._
@@ -333,15 +333,17 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   } yield Seq(value2, value1, value3).filter(_.nonEmpty).mkString(" ; ")
 
 
-  private def extractTypes(data: NodeSeq): Seq[String] = for {
-    stringType <- extractStrings(data \\ "generalRecordsTypeArray" \ "generalRecordsType" \ "termName")
-    mappedType <- NaraTypeVocabEnforcer.mapNaraType(stringType)
-  } yield {
-    mappedType
+  private def extractTypes(data: NodeSeq): Seq[String] = {
+    for {
+      stringType <- extractStrings(data \\ "generalRecordsTypeArray" \ "generalRecordsType" \ "termName")
+      mappedType <- NaraTypeVocabEnforcer.mapNaraType(stringType)
+    } yield {
+      mappedType
+    }
   }
 }
 
-object NaraTypeVocabEnforcer extends VocabEnforcer[String] {
+object NaraTypeVocabEnforcer {
   val dcmiTypes = DCMIType()
   val naraVocab: Map[String, IRI] = Map(
     "architectural and engineering drawings" -> dcmiTypes.Image,
@@ -353,11 +355,11 @@ object NaraTypeVocabEnforcer extends VocabEnforcer[String] {
     "sound recordings" -> dcmiTypes.Sound,
     "textual records" -> dcmiTypes.Text,
     "web pages" -> dcmiTypes.InteractiveResource
-  ) ++ DcmiTypeMapper.DcmiTypeMap
+  )
+
+  val naraTypeMapper = new TypeMapper
+  naraTypeMapper.addVocab(naraVocab)
 
   def mapNaraType(value: String): Option[String] =
-    mapVocab(value.toLowerCase, naraVocab)
-      .map(foo => DcmiTypeStringMapper.mapDcmiTypeString(foo).toLowerCase)
-
-
+    naraTypeMapper.enrich(value)
 }

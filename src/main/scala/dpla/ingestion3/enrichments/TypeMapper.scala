@@ -1,16 +1,16 @@
 package dpla.ingestion3.enrichments
-
-import dpla.ingestion3.enrichments.DcmiTypeEnforcer.dcmiType
+import dpla.ingestion3.mappers.rdf.DCMIType
 import org.eclipse.rdf4j.model.IRI
 
 class TypeMapper extends VocabMapper[String] {
 
   private val typeLookup = new MapperLookup[String](
-    (term: String) => normalizationFunc(term),
-    (prov: String, enriched: String) => enriched // Merge function is not needed for type mapper
+    (term: String) => normalizationFunc(term)
   )
 
-  private def normalizationFunc(term: String): String = term.toLowerCase().trim
+  private def normalizationFunc(term: String): String = term.toLowerCase.trim
+
+  val dcmiType = DCMIType()
 
   val DcmiTypeMap: Map[String, IRI] = Map(
     "appliance" -> dcmiType.Image,
@@ -67,23 +67,55 @@ class TypeMapper extends VocabMapper[String] {
     "written" -> dcmiType.Text
   )
 
+
+  /**
+    * Create a Map[String,String] from the DcmiTypeMap[String, IRI]
+    * mapping the non-standard term to a an appropriate web label
+    * representation of the IRI. The final map is loaded into
+    * `typeLookup`.
+    *
+    * Example:
+    * ('tools' -> DcmiType.Image) -> ('tools' -> 'image')
+    * ('statue' -> DcmiType.PhysicalObject) -> ('statue' -> 'physical object')
+    *
+    * @return
+    */
+  private def loadVocab = addVocab(DcmiTypeMap)
+
   // Load vocab
   loadVocab
 
-  private def mapDcmiTypeString(iri: IRI): String = iri match
-  {
-    case dcmiType.InteractiveResource => "interactive resource"
-    case dcmiType.MovingImage => "moving image"
-    case dcmiType.PhysicalObject => "physical object"
-    case dcmiType.StillImage => "still image"
-    case _ => iri.getLocalName.toLowerCase()
+  /**
+    * Gets the web label representation of the given IRI
+    *
+    * @param iri
+    * @return String
+    */
+  private def getTypeLabel(iri: IRI): String = { iri match {
+      case dcmiType.InteractiveResource => "interactive resource"
+      case dcmiType.MovingImage => "moving image"
+      case dcmiType.PhysicalObject => "physical object"
+      case dcmiType.StillImage => "still image"
+      case _ => iri.getLocalName.toLowerCase()
+    }
   }
 
-  private def loadVocab =
-    typeLookup.add(
-      DcmiTypeMap.map(p => p._1 -> mapDcmiTypeString(p._2))
-    )
+  private def convertMap(map: Map[String, IRI]): Map[String,String] =
+    map.map(p => p._1 -> getTypeLabel(p._2))
 
+
+  //noinspection TypeAnnotation
+  def addVocab(vocabulary: Map[String, Any]) = vocabulary match {
+    case iri: Map[String, IRI] => typeLookup.add(convertMap(iri))
+    case str: Map[String, String] => typeLookup.add(str)
+  }
+
+  /**
+    * Find the original value in the controlled vocabulary
+    *
+    * @param value Original value
+    * @return T Value from the controlled vocabulary if found
+    */
   override def enrich(value: String): Option[String] =
     typeLookup.lookup(value)
 }

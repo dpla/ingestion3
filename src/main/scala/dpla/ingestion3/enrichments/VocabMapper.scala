@@ -6,24 +6,24 @@ package dpla.ingestion3.enrichments
   * @tparam T Class of vocab (e.g. SkosConcept, String, EdmAgent)
   */
 
-class MapperLookup[T](
-                       normalizationFunc: (T) => String,
-                       mergeFunc: (T,T) => T
-                     ) {
+class MapperLookup[T](normalizationFunc: (T) => String) {
 
   private val data = scala.collection.mutable.Map[String, T]()
 
   // Kludge for type map
-  def add(vocabulary: Map[String, T]) = data ++= vocabulary
+  def add(vocabulary: Map[String, T]) = data ++= vocabulary.toList
 
   //noinspection TypeAnnotation
   def add(vocab: T) = data += normalizationFunc(vocab) -> vocab
 
-  def lookup(originalRecord: T): Option[T] = data.get(normalizationFunc(originalRecord))
-
-  def merge(originalRecord: T, enrichedRecord: T) = mergeFunc(originalRecord, enrichedRecord)
+  def lookup(originalRecord: T): Option[T] =
+    data.get(normalizationFunc(originalRecord))
 
   def print(): Unit = data.keys.foreach(key => println(s"$key -> ${data.get(key)}"))
+}
+
+class MapperMerge[T](mergeFunc: (T,T) => T){
+  def merge(originalRecord: T, enrichedRecord: T) = mergeFunc(originalRecord, enrichedRecord)
 }
 
 /**
