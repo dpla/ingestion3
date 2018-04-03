@@ -333,14 +333,12 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   } yield Seq(value2, value1, value3).filter(_.nonEmpty).mkString(" ; ")
 
 
-  private def extractTypes(data: NodeSeq): Seq[String] = {
-    for {
+  private def extractTypes(data: NodeSeq): Seq[String] = for {
       stringType <- extractStrings(data \\ "generalRecordsTypeArray" \ "generalRecordsType" \ "termName")
       mappedType <- NaraTypeVocabEnforcer.mapNaraType(stringType)
     } yield {
       mappedType
     }
-  }
 }
 
 object NaraTypeVocabEnforcer {
@@ -360,6 +358,5 @@ object NaraTypeVocabEnforcer {
   val naraTypeMapper = new TypeMapper
   naraTypeMapper.addVocab(naraVocab)
 
-  def mapNaraType(value: String): Option[String] =
-    naraTypeMapper.enrich(value)
+  def mapNaraType(value: String): Option[String] = naraTypeMapper.enrich(value)
 }

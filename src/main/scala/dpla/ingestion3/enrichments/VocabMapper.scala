@@ -41,15 +41,3 @@ trait VocabMapper[T] {
   def enrich(value: T): Option[T]
 
 }
-
-trait VocabValidator[T] {
-  /**
-    * Determines if the original value is already a standard term in the
-    * controlled vocabulary. 'English' does not need to be enriched b/c it
-    * is already in the correct form
-    *
-    * @param value Original value
-    * @return T
-    */
-  def validate(value: T): Option[T]
-}

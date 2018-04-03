@@ -6,7 +6,7 @@ import dpla.ingestion3.utils.FileLoader
 /**
   * Language mapping examples
   */
-class LanguageMapper extends FileLoader with VocabMapper[SkosConcept] with VocabValidator[SkosConcept] {
+class LanguageMapper extends FileLoader with VocabMapper[SkosConcept] {
 
   // Files to source vocabulary from
   private val fileList = Seq(
@@ -16,10 +16,6 @@ class LanguageMapper extends FileLoader with VocabMapper[SkosConcept] with Vocab
   )
 
   private val lookup = new MapperLookup[SkosConcept](
-    (term: SkosConcept) => normalizationFunc(term)
-  )
-
-  private val validator = new MapperLookup[SkosConcept](
     (term: SkosConcept) => normalizationFunc(term)
   )
 
@@ -77,7 +73,7 @@ class LanguageMapper extends FileLoader with VocabMapper[SkosConcept] with Vocab
         concept = Some(langTerm)
     ))
     // Use full term for lookup key
-    validator.add(
+    lookup.add(
       SkosConcept(
         providedLabel = Some(langTerm),
         concept = Some(langTerm)
@@ -100,30 +96,15 @@ class LanguageMapper extends FileLoader with VocabMapper[SkosConcept] with Vocab
     lookup.lookup(originalValue)
 
   /**
-    * Get enriched form of the given language by comparing
-    * full terms.
-    * Example:
-    *   'english' -> 'English'
-    *
-    * @param originalValue Original value
-    * @return T Enriched value
-    */
-  override def validate(originalValue: SkosConcept): Option[SkosConcept] = {
-    validator.lookup(originalValue)
-  }
-
-  // Does both abv > term enrichment and validation of original value as matching controlled vocab
-  /**
     * Performs both full-term validation and abbreviation mapping
     * @param value Original value to be enriched
     * @return SkosConcept Enriched version of original value or original value if
     *         enrichment was not possible
     */
   def enrichLanguage(value: SkosConcept): SkosConcept = {
-    (enrich(value), validate(value)) match {
-      case (Some(e), _) => merger.merge(value, e)
-      case (None, Some(v)) => merger.merge(value, v)
-      case (_, _) => value
+    enrich(value) match {
+      case Some(e) => merger.merge(value, e)
+      case _ => value
     }
   }
 
