@@ -6,21 +6,22 @@ package dpla.ingestion3.enrichments
   * @tparam T Class of vocab (e.g. SkosConcept, String, EdmAgent)
   */
 
-class MapperLookup[T]
-  (normalizationFunc: (T) => String,
-   mergeFunc: (T,T) => T,
-   validationFunc: (T,T) => Boolean) {
+class MapperLookup[T](
+                       normalizationFunc: (T) => String,
+                       mergeFunc: (T,T) => T
+                     ) {
 
   private val data = scala.collection.mutable.Map[String, T]()
 
+  // Kludge for type map
+  def add(vocabulary: Map[String, T]) = data ++= vocabulary
+
   //noinspection TypeAnnotation
-  def add(originalRecord: T) = data += normalizationFunc(originalRecord) -> originalRecord
+  def add(vocab: T) = data += normalizationFunc(vocab) -> vocab
 
   def lookup(originalRecord: T): Option[T] = data.get(normalizationFunc(originalRecord))
 
   def merge(originalRecord: T, enrichedRecord: T) = mergeFunc(originalRecord, enrichedRecord)
-
-  def validate(originalRecord: T): Option[T] = data.values.find(validationFunc(originalRecord, _))
 
   def print(): Unit = data.keys.foreach(key => println(s"$key -> ${data.get(key)}"))
 }
@@ -39,6 +40,9 @@ trait VocabMapper[T] {
     */
   def enrich(value: T): Option[T]
 
+}
+
+trait VocabValidator[T] {
   /**
     * Determines if the original value is already a standard term in the
     * controlled vocabulary. 'English' does not need to be enriched b/c it

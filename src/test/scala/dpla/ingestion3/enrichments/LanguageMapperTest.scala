@@ -52,7 +52,7 @@ class LanguageMapperTest extends FlatSpec with BeforeAndAfter {
       providedLabel = Option("English"),
       concept = Option("English")
     )
-    assert(languageMapper.enrichLanguage(originalValue) === expectedValue)
+    assert(languageMapper.validate(originalValue) === Option(expectedValue))
   }
 
 }
