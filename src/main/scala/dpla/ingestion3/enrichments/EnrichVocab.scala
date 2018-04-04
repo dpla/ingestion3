@@ -1,7 +1,7 @@
 package dpla.ingestion3.enrichments
 
 /**
-  * Generic vocab mapper lookup
+  * Generic vocabulary builder and and term lookup
   *
   * @tparam T Class of vocab (e.g. SkosConcept, String, EdmAgent)
   */
@@ -40,14 +40,25 @@ class VocabLookup[T](normalizationFunc: (T) => String) {
   def print = data.keys.foreach(key => println(s"$key->${data.getOrElse(key, "*NO VALUE FOR KEY*")}"))
 }
 
+/**
+  * Meerge vocabulary terms
+  *
+  * @param mergeFunc Defines how to perform the merge
+  */
 class VocabMerge[T](mergeFunc: (T,T) => T){
+  /**
+    * Merge original and enriched values into a single term
+    * @param originalRecord
+    * @param enrichedRecord
+    * @return
+    */
   def merge(originalRecord: T, enrichedRecord: T) = mergeFunc(originalRecord, enrichedRecord)
 }
 
 /**
-  * VocabMapper
+  * Vocabulary enrichment
   *
-  * @tparam T
+  * @tparam T Class of vocabulary to enrich
   */
 trait VocabEnrichment[T] {
   /**
