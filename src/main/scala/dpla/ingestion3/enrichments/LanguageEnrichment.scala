@@ -6,7 +6,7 @@ import dpla.ingestion3.utils.FileLoader
 /**
   * Language mapping examples
   */
-class LanguageMapper extends FileLoader with VocabMapper[SkosConcept] {
+class LanguageEnrichment extends FileLoader with VocabEnrichment[SkosConcept] {
 
   // Files to source vocabulary from
   private val fileList = Seq(
@@ -15,11 +15,13 @@ class LanguageMapper extends FileLoader with VocabMapper[SkosConcept] {
     "/languages/dpla-lang.csv"
   )
 
-  private val lookup = new MapperLookup[SkosConcept](
+  // performs term lookup
+  private val lookup = new VocabLookup[SkosConcept](
     (term: SkosConcept) => normalizationFunc(term)
   )
 
-  private val merger = new MapperMerge[SkosConcept](
+  // combine two SkosConcepts
+  private val merger = new VocabMerge[SkosConcept](
     (prov: SkosConcept, enriched: SkosConcept) => mergeFunc(prov, enriched)
   )
 
@@ -49,20 +51,19 @@ class LanguageMapper extends FileLoader with VocabMapper[SkosConcept] {
     *
     * @return
     */
-  //noinspection TypeAnnotation
-  private def loadVocab(): Unit =
+  //noinspection TypeAnnotation,UnitMethodIsParameterless
+  private def loadVocab =
     getVocabFromCsvFiles(files).foreach(term => addLangConcept(term(0), term(1)))
 
-  // Load the vocab(s)
-  loadVocab()
+  // Load the vocab
+  loadVocab
 
   /**
-    * Create SkosConcepts from provLabel and concept and add to
-    * `lookup` and `validator`
+    * Adds to lookup map SkosConcepts using both provLabel and concept
+    * for the lookup key
     *
     * @param langAbbv Language abbreviation
     * @param langTerm Full language term
-    * @return
     */
   //noinspection TypeAnnotation
   private def addLangConcept(langAbbv: String, langTerm: String): Unit = {
@@ -107,7 +108,5 @@ class LanguageMapper extends FileLoader with VocabMapper[SkosConcept] {
       case _ => value
     }
   }
-
-
 }
 

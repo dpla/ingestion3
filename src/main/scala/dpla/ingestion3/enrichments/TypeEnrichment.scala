@@ -2,16 +2,17 @@ package dpla.ingestion3.enrichments
 import dpla.ingestion3.mappers.rdf.DCMIType
 import org.eclipse.rdf4j.model.IRI
 
-class TypeMapper extends VocabMapper[String] {
+class TypeEnrichment extends VocabEnrichment[String] {
 
-  private val typeLookup = new MapperLookup[String](
+  // Performs term lookup
+  private val typeLookup = new VocabLookup[String](
     (term: String) => normalizationFunc(term)
   )
-
+  // Normalizes retrieval and accessed terms
   private def normalizationFunc(term: String): String = term.toLowerCase.trim
 
+  // DCMIType mappings
   val dcmiType = DCMIType()
-
   val DcmiTypeMap: Map[String, IRI] = Map(
     "appliance" -> dcmiType.Image,
     "audio" -> dcmiType.Sound,
@@ -100,10 +101,20 @@ class TypeMapper extends VocabMapper[String] {
     }
   }
 
-  private def convertMap(map: Map[String, IRI]): Map[String,String] =
-    map.map(p => p._1 -> getTypeLabel(p._2))
+  /**
+    * Convert a Map[String,IRI] to Map[String,String]
+    *
+    * @param vocabMap Map[String,IRI]
+    * @return Map[String,String]
+    */
+  private def convertMap(vocabMap: Map[String, IRI]): Map[String,String] =
+    vocabMap.map(p => p._1 -> getTypeLabel(p._2))
 
-
+  /**
+    * Add a vocab map to `typeLookup` vocabulary
+    *
+    * @param vocabulary Map[String,Any]
+    */
   //noinspection TypeAnnotation
   def addVocab(vocabulary: Map[String, Any]) = vocabulary match {
     case iri: Map[String, IRI] => typeLookup.add(convertMap(iri))

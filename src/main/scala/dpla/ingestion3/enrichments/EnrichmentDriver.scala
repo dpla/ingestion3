@@ -21,8 +21,8 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
 
   val dateEnrichment = new ParseDateEnrichment()
   val spatialEnrichment = new SpatialEnrichment(Geocoder)
-  val languageMapper = new LanguageMapper
-  val typeMapper = new TypeMapper
+  val languageMapper = new LanguageEnrichment
+  val typeMapper = new TypeEnrichment
 
   /**
     * Applies a set of common enrichments that need to be run for all providers

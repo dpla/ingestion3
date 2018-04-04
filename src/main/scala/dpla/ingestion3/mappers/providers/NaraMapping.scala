@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
-import dpla.ingestion3.enrichments.TypeMapper
+import dpla.ingestion3.enrichments.TypeEnrichment
 import dpla.ingestion3.mappers.rdf.DCMIType
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.model.DplaMapData._
@@ -355,7 +355,7 @@ object NaraTypeVocabEnforcer {
     "web pages" -> dcmiTypes.InteractiveResource
   )
 
-  val naraTypeMapper = new TypeMapper
+  val naraTypeMapper = new TypeEnrichment
   naraTypeMapper.addVocab(naraVocab)
 
   def mapNaraType(value: String): Option[String] = naraTypeMapper.enrich(value)
