@@ -41,16 +41,17 @@ class VocabLookup[T](normalizationFunc: (T) => String) {
 }
 
 /**
-  * Meerge vocabulary terms
+  * Merge vocabulary terms
   *
   * @param mergeFunc Defines how to perform the merge
   */
 class VocabMerge[T](mergeFunc: (T,T) => T){
   /**
-    * Merge original and enriched values into a single term
-    * @param originalRecord
-    * @param enrichedRecord
-    * @return
+    * Merge original and enriched values into a single value
+    *
+    * @param originalRecord Value from mapped record
+    * @param enrichedRecord Value returned by enrichment process
+    * @return A single record
     */
   def merge(originalRecord: T, enrichedRecord: T) = mergeFunc(originalRecord, enrichedRecord)
 }
