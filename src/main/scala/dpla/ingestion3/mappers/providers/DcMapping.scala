@@ -3,6 +3,7 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToOne}
 import dpla.ingestion3.model._
@@ -45,9 +46,13 @@ class DcMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     extractStrings(data \ "metadata" \\ "description") ++
       extractStrings(data \ "metadata" \\ "source")
 
-  override def format(data: Document[NodeSeq]): Seq[String] = // TODO confirm enrichments applied at mapping
-    extractStrings(data \ "metadata" \\ "format") ++
-      extractStrings(data \ "metadata" \\ "type")
+  override def format(data: Document[NodeSeq]): Seq[String] =
+    (extractStrings(data \ "metadata" \\ "format") ++
+      extractStrings(data \ "metadata" \\ "type"))
+      .map(_.applyBlockFilter(
+          DigitalSurrogateBlockList.termList ++
+          FormatTypeValuesBlockList.termList)
+        ).filter(_.nonEmpty)
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "metadata" \\ "identifier")
@@ -64,6 +69,14 @@ class DcMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     extractStrings(data \ "metadata" \\ "publisher")
       .map(nameOnlyAgent)
 
+  override def rights(data: Document[NodeSeq]): Seq[String] =
+    (data \ "metadata" \\ "rights").flatMap(r => {
+      r.prefix match {
+        case "dc" => Option(r.text)
+        case _ => None
+      }
+    })
+
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
     extractStrings(data \ "metadata" \\ "subject")
       .flatMap(_.splitAtDelimiter(";"))
@@ -73,8 +86,8 @@ class DcMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     extractStrings(data \ "metadata" \\ "title")
 
   override def `type`(data: Document[NodeSeq]): Seq[String] =
-    extractStrings(data \ "metadata" \\ "type") ++
-      extractStrings(data \ "metadata" \\ "format")
+    (extractStrings(data \ "metadata" \\ "type") ++
+      extractStrings(data \ "metadata" \\ "format"))
     .flatMap(_.splitAtDelimiter(";"))
 
 
@@ -91,8 +104,9 @@ class DcMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   }
 
   override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] = {
-    (data \ "metadata" \\ "rights").map(r => r.prefix match {
-      case "edm" => Utils.createUri(r.text)
+    (data \ "metadata" \\ "rights").flatMap(r => r.prefix match {
+      case "edm" => Option(Utils.createUri(r.text))
+      case _ => None
     }).headOption
   }
 
