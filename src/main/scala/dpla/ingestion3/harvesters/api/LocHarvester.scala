@@ -33,6 +33,9 @@ class LocHarvester(shortName: String,
     "c" -> conf.harvest.rows
   ).collect{ case (key, Some(value)) => key -> value } // remove None values
 
+  /**
+    * Entry method for invoking LC harvest
+    */
   override protected def localApiHarvest: Unit = {
     implicit val formats = DefaultFormats
     // Get sets from conf
@@ -46,50 +49,41 @@ class LocHarvester(shortName: String,
       var continueHarvest = true
       var page = "1"
 
-      println(s"Collection: $collection")
+      harvestLogger.info(s"Processing sitemaps for collection: $collection")
+
       while(continueHarvest) getSinglePage(page, collection) match {
         // Handle errors
         case error: ApiError with ApiResponse =>
-          harvestLogger.error("Error returned by request %s\n%s\n%s".format(
-            error.errorSource.url.getOrElse("Undefined url"),
-            error.errorSource.queryParams,
-            error.message
-          ))
+          logError(error)
           continueHarvest = false
         // Handle a successful response
-        case src: ApiSource with ApiResponse =>
-          src.text match {
-            case Some(docs) =>
-              // Parse xml to get URLs for items
-              val xml = XML.loadString(docs)
-              val locItemUrls = xml \\ "url" \\ "loc"
-
-              // Extract URLs from site map and append to itemUrls
-              itemUrls = itemUrls ++ locItemUrls
-                .filter(url => url.text.contains("www.loc.gov/item/"))
-                .map(node => buildItemUrl(node.text))
-
-              // Loop control
-              if (locItemUrls.size != queryParams.getOrElse("c", "10").toInt)
-                continueHarvest = false
-              else
-                page = (page.toInt + 1).toString
-
-            case _ =>
-              harvestLogger.error(s"Response body is empty.\n" +
-                s"URL: ${src.url.getOrElse("!!! URL not set !!!")}\n" +
-                s"Params: ${src.queryParams}\n" +
-                s"Body: ${src.text}")
+        case src: ApiSource with ApiResponse => src.text match {
+          case Some(docs) =>
+            val xml = XML.loadString(docs)
+            val locItemNodes = xml \\ "url" \\ "loc"
+            // Extract URLs from site map, filter out non-harvestable URLs and
+            // append valid URLs to itemUrls List
+            itemUrls = itemUrls ++ locItemNodes
+              .filter(url => url.text.contains("www.loc.gov/item/"))
+              .map(node => buildItemUrl(node.text))
+            // Loop control
+            if (locItemNodes.size != queryParams.getOrElse("c", "10").toInt)
               continueHarvest = false
-          }
+            else
+              page = (page.toInt + 1).toString
+          // Handle empty response from API
+          case _ =>
+            logError(ApiError("Response body is empty", src))
+            continueHarvest = false
+        }
       }
     })
-
+    // Log results of item gathering
     harvestLogger.info(s"Fetched ${itemUrls.size} urls")
     if(itemUrls.distinct.size != itemUrls.size)
       harvestLogger.info(s"${itemUrls.distinct.size} distinct values. " +
         s"${itemUrls.size-itemUrls.distinct.size} duplicates}")
-
+    // Fetch items
     val locFetched = fetchLocRecords(itemUrls.distinct)
 
     // @see ApiHarvester
@@ -97,9 +91,10 @@ class LocHarvester(shortName: String,
   }
 
   /**
+    * Fetch all items from LC
     *
-    * @param urls
-    * @return
+    * @param urls Seq[URL] URLs to fetch
+    * @return List[ApiResponse] List containing ApiErrors and ApiRecords
     */
   def fetchLocRecords(urls: Seq[URL]): List[ApiResponse] = {
     sc.parallelize(urls).map(url => {
@@ -107,19 +102,15 @@ class LocHarvester(shortName: String,
         case Failure(e) =>
           ApiError(e.getStackTrace.mkString("\n\t"),
             ApiSource(Map("" -> ""), Option(url.toString), None)  )
-
         case Success(response) =>
           Try { parse(response) } match {
-
-            case Success(json) => {
+            case Success(json) =>
               val recordId = (json \\ "item" \\ "id").toString
-
               if(recordId.nonEmpty)
                 ApiRecord(recordId, compact(render(json)))
               else
                 ApiError("Missing required property 'id'",
                   ApiSource(Map("" -> ""), Option(url.toString), Option(compact(render(json)))))
-            }
             case Failure(parseError) =>
               ApiError(parseError.getStackTrace.mkString("\n\t"),
                 ApiSource(Map("" -> ""), Option(url.toString), Option(response))  )
@@ -139,9 +130,6 @@ class LocHarvester(shortName: String,
     */
   private def getSinglePage(sp: String, collection: String): ApiResponse = {
     val url = buildUrl(queryParams.updated("sp", sp).updated("collection", collection))
-
-    harvestLogger.info(s"Requesting ${url.toString}")
-
     HttpUtils.makeGetRequest(url) match {
       case Failure(e) =>
         ApiError(e.toString, ApiSource(queryParams, Some(url.toString)))
@@ -163,7 +151,8 @@ class LocHarvester(shortName: String,
     new URIBuilder()
       .setScheme("http")
       .setHost("www.loc.gov")
-      .setPath(s"/collections/${params.getOrElse("collection", throw new RuntimeException("No collection specified"))}")
+      .setPath(s"/collections/${params.getOrElse("collection",
+        throw new RuntimeException("No collection specified"))}")
       .setParameter("c", params.getOrElse("c", "10"))
       .setParameter("fo", "sitemap")
       .setParameter("sp", params.getOrElse("sp", "1"))
@@ -171,9 +160,10 @@ class LocHarvester(shortName: String,
       .toURL
 
   /**
+    * Constructs a URL to request the JSON view of an item in LC's API
     *
-    * @param urlStr URL String
-    * @return
+    * @param urlStr String
+    * @return URL
     */
   def buildItemUrl(urlStr: String): URL = {
     val url = new URL(urlStr)
@@ -186,5 +176,20 @@ class LocHarvester(shortName: String,
       .setParameter("at", "item")
       .build()
       .toURL
+  }
+
+  /**
+    * Log error messages
+    *
+    * @param error ApiError
+    * @param msg Error message
+    */
+  def logError(error: ApiError, msg: Option[String] = None): Unit = {
+    harvestLogger.error("%s  %s\n%s\n%s".format(
+      msg.getOrElse("URL: "),
+      error.errorSource.url.getOrElse("!!! Undefined URL !!!"),
+      error.errorSource.queryParams,
+      error.message
+    ))
   }
 }
