@@ -15,6 +15,10 @@ import scala.xml._
 
 
 class DcMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] {
+
+  val formatBlockList: Set[String] = DigitalSurrogateBlockList.termList ++
+    FormatTypeValuesBlockList.termList
+
   // ID minting functions
   override def useProviderName(): Boolean = false // TODO confirm prefix
 
@@ -49,10 +53,8 @@ class DcMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   override def format(data: Document[NodeSeq]): Seq[String] =
     (extractStrings(data \ "metadata" \\ "format") ++
       extractStrings(data \ "metadata" \\ "type"))
-      .map(_.applyBlockFilter(
-          DigitalSurrogateBlockList.termList ++
-          FormatTypeValuesBlockList.termList)
-        ).filter(_.nonEmpty)
+      .map(_.applyBlockFilter(formatBlockList))
+      .filter(_.nonEmpty)
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "metadata" \\ "identifier")
