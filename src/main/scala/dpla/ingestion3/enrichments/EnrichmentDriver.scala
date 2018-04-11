@@ -15,13 +15,14 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
     * @see SpatialEnrichmentIntegrationTest
     */
   object Geocoder extends Twofisher {
-    override def hostname = conf.twofishes.hostname.getOrElse("localhost")
-    override def port = conf.twofishes.port.getOrElse("8081")
+    override def hostname: String = conf.twofishes.hostname.getOrElse("localhost")
+    override def port: String = conf.twofishes.port.getOrElse("8081")
   }
 
   val dateEnrichment = new ParseDateEnrichment()
   val spatialEnrichment = new SpatialEnrichment(Geocoder)
-  val langEnrichment = LanguageMapper
+  val languageEnrichment = new LanguageEnrichment
+  val typeEnrichment= new TypeEnrichment
 
   /**
     * Applies a set of common enrichments that need to be run for all providers
@@ -42,25 +43,11 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
     enriched.copy(
       sourceResource = enriched.sourceResource.copy(
         date = enriched.sourceResource.date.map(d => dateEnrichment.parse(d)),
-        language = enriched.sourceResource.language.map(l => LanguageMapper.mapLanguage(l)),
-        place = enriched.sourceResource.place.map(p => spatialEnrichment.enrich(p)),
-
-        /**
-          Type enrichment
-          ----------------
-          Lower case the original string value and try to map to DCMIType IRIs (@see mapDcmiType()).
-          If the original type value can be mapped to a valid IRI then mapDcmiTypeToString() maps the
-          IRI to a string label and lowercases that label. The lowercase IRI label (without the corresponding
-          IRI) is the enriched value.
-
-          Original values that cannot be mapped to a DCMIType IRI are dropped.
-         */
-        `type` = enriched.sourceResource.`type`
-          .flatMap(t => DcmiTypeMapper.mapDcmiType(t.toLowerCase()))
-          .map(DcmiTypeStringMapper.mapDcmiTypeString)
-          .map(_.toLowerCase)
-        )
+        language = enriched.sourceResource.language.map(languageEnrichment.enrichLanguage),
+        `type` = enriched.sourceResource.`type`.flatMap(typeEnrichment.enrich),
+        place = enriched.sourceResource.place.map(p => spatialEnrichment.enrich(p))
       )
+    )
   }
 
 }
