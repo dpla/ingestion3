@@ -17,6 +17,17 @@ class CdlProfile extends JsonProfile {
 }
 
 /**
+  * District Digital
+  */
+class DcProfile extends XmlProfile {
+  type Mapping = DcMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new DcMapping
+
+}
+
+/**
   * Minnesota Digital Library
   */
 class MdlProfile extends JsonProfile {
