@@ -1,4 +1,3 @@
-
 package dpla.ingestion3.harvesters.api
 
 import java.net.URL
@@ -10,7 +9,8 @@ import org.apache.log4j.Logger
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
 
-import scala.util.{Failure, Success}
+import scala.collection.mutable.ListBuffer
+import scala.util.{Failure, Success, Try}
 import scala.xml.XML
 
 /**
@@ -35,17 +35,18 @@ class LocHarvester(shortName: String,
 
   override protected def localApiHarvest: Unit = {
     implicit val formats = DefaultFormats
+    // Get sets from conf
+    val collections = conf.harvest.setlist
+      .getOrElse(throw new RuntimeException("No sets")).split(",")
 
-    // Mutable vars for controlling harvest loop
-    var continueHarvest = true
-    var page = "1"
-
-    // Runtime tracking
-    val startTime = System.currentTimeMillis()
-
-    val collections = conf.harvest.setlist.getOrElse(throw new RuntimeException("No sets")).split(",")
+    var itemUrls: ListBuffer[URL] = new ListBuffer[URL]()
 
     collections.foreach( collection => {
+      // Mutable vars for controlling harvest loop
+      var continueHarvest = true
+      var page = "1"
+
+      println(s"Collection: $collection")
       while(continueHarvest) getSinglePage(page, collection) match {
         // Handle errors
         case error: ApiError with ApiResponse =>
@@ -63,21 +64,16 @@ class LocHarvester(shortName: String,
               val xml = XML.loadString(docs)
               val locItemUrls = xml \\ "url" \\ "loc"
 
-              val urls = locItemUrls
-                .filterNot(url => url.contains("www.loc.gov/item/"))
+              // Extract URLs from site map and append to itemUrls
+              itemUrls = itemUrls ++ locItemUrls
+                .filter(url => url.text.contains("www.loc.gov/item/"))
                 .map(node => buildItemUrl(node.text))
 
-              val locRecords = fetchLocRecords(urls)
-
-              // @see ApiHarvester
-              saveOut(locRecords.flatten.toList)
-
               // Loop control
-              if (locItemUrls.size != queryParams.getOrElse("c", "10").toInt) {
+              if (locItemUrls.size != queryParams.getOrElse("c", "10").toInt)
                 continueHarvest = false
-              } else {
+              else
                 page = (page.toInt + 1).toString
-              }
 
             case _ =>
               harvestLogger.error(s"Response body is empty.\n" +
@@ -88,6 +84,16 @@ class LocHarvester(shortName: String,
           }
       }
     })
+
+    harvestLogger.info(s"Fetched ${itemUrls.size} urls")
+    if(itemUrls.distinct.size != itemUrls.size)
+      harvestLogger.info(s"${itemUrls.distinct.size} distinct values. " +
+        s"${itemUrls.size-itemUrls.distinct.size} duplicates}")
+
+    val locFetched = fetchLocRecords(itemUrls.distinct)
+
+    // @see ApiHarvester
+    saveOutAll(locFetched)
   }
 
   /**
@@ -95,14 +101,30 @@ class LocHarvester(shortName: String,
     * @param urls
     * @return
     */
-  def fetchLocRecords(urls: Seq[URL]): Seq[Option[ApiRecord]] = {
-    sc.parallelize(urls).map(r => {
-      HttpUtils.makeGetRequest(r) match {
+  def fetchLocRecords(urls: Seq[URL]): List[ApiResponse] = {
+    sc.parallelize(urls).map(url => {
+      HttpUtils.makeGetRequest(url) match {
         case Failure(e) =>
-          throw new Exception(e)
+          ApiError(e.getStackTrace.mkString("\n\t"),
+            ApiSource(Map("" -> ""), Option(url.toString), None)  )
+
         case Success(response) =>
-          val parsedRsp = parse(response)
-          Some(ApiRecord((parse(response) \\ "item" \\ "id").toString, compact(render(parsedRsp))))
+          Try { parse(response) } match {
+
+            case Success(json) => {
+              val recordId = (json \\ "item" \\ "id").toString
+
+              if(recordId.nonEmpty)
+                ApiRecord(recordId, compact(render(json)))
+              else
+                ApiError("Missing required property 'id'",
+                  ApiSource(Map("" -> ""), Option(url.toString), Option(compact(render(json)))))
+            }
+            case Failure(parseError) =>
+              ApiError(parseError.getStackTrace.mkString("\n\t"),
+                ApiSource(Map("" -> ""), Option(url.toString), Option(response))  )
+          }
+
       }
     }).collect().toList
   }
@@ -153,7 +175,7 @@ class LocHarvester(shortName: String,
     * @param urlStr URL String
     * @return
     */
-  def buildItemUrl(urlStr: String) = {
+  def buildItemUrl(urlStr: String): URL = {
     val url = new URL(urlStr)
 
     new URIBuilder()

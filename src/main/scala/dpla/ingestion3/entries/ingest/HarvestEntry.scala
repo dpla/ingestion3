@@ -4,6 +4,8 @@ import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.executors.HarvestExecutor
 import dpla.ingestion3.utils.Utils
 
+import scala.util.Failure
+
 /**
   * Entry point for running a harvest.
   *
@@ -31,6 +33,9 @@ object HarvestEntry extends HarvestExecutor {
     val providerConf: i3Conf = i3Conf.load()
 
     // Execute harvest.
-    execute(shortName, dataOut, providerConf, harvestLogger)
+    execute(shortName, dataOut, providerConf, harvestLogger) match {
+      case Failure(error) => error.printStackTrace()
+      case _ =>
+    }
   }
 }

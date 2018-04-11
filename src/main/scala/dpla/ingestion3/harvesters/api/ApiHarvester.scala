@@ -68,11 +68,26 @@ abstract class ApiHarvester(shortName: String,
     })
   }
 
+  def saveOutErrors(errors: List[ApiError]): Unit = {
+    errors.foreach(error => {
+      harvestLogger.error(s"URL: ${error.errorSource.url.get}\nMessage: ${error.message} \n\n")
+    })
+  }
+
+  protected def saveOutAll(msgs: List[ApiResponse]): Unit = {
+
+    val docs = msgs.collect { case a: ApiRecord => a }
+    val errors = msgs.collect { case a: ApiError => a }
+
+    saveOut(docs)
+    saveOutErrors(errors)
+  }
+
   /**
     * Generalized driver for ApiHarvesters invokes localApiHarvest() method and reports
     * summary information.
     */
-  protected def runHarvest: Try[DataFrame] = Try{
+  protected def runHarvest: Try[DataFrame] = Try {
 
     avroWriter.setFlushOnEveryBlock(true)
 
@@ -80,6 +95,7 @@ abstract class ApiHarvester(shortName: String,
     localApiHarvest
 
     avroWriter.close()
+    harvestLogger.info(s"Records saved to $outputDir")
 
     spark.read.avro(outputDir)
   }

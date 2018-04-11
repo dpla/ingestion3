@@ -52,7 +52,7 @@ abstract class Harvester(shortName: String,
   /**
     * Entry point for running a harvest.
     */
-  def harvest = {
+  def harvest: Try[Long] = {
 
     // If the output directory already exists it is a local path
     // then delete it and its contents.
@@ -65,29 +65,19 @@ abstract class Harvester(shortName: String,
 
     val startTime = System.currentTimeMillis()
 
-    // Call local implementation.
+    // Call local implementation of runHarvest()
     val harvestResult = runHarvest match {
-
       case Success(df) =>
-        // Log details about the successful harvest.
-        val endTime = System.currentTimeMillis()
-        val recordCount = df.count()
-
-        harvestLogger.info(s"Records saving to $outputDir")
-        harvestLogger.info(Utils.harvestSummary(endTime-startTime, recordCount))
         validateSchema(df)
-
+        val recordCount = df.count()
+        harvestLogger.info(Utils.harvestSummary(System.currentTimeMillis()-startTime, recordCount))
         Success(recordCount)
-
-      case Failure(f) =>
-        // Return the failure up to executor
-        // harvestLogger.fatal(s"Unable to harvest records. ${f.getMessage}")
-        Failure(f)
+      case Failure(f) => Failure(f)
     }
 
     // Shut down spark session.
     sc.stop()
-
+    // Count of record or Failure
     harvestResult
   }
 
@@ -116,7 +106,7 @@ abstract class Harvester(shortName: String,
     */
   protected lazy val spark: SparkSession = {
     val sparkConf = new SparkConf()
-      .setAppName(s"Harvest: ${shortName}")
+      .setAppName(s"Harvest: $shortName")
 
     val sparkMaster = conf.spark.sparkMaster.getOrElse("local[1]")
     sparkConf.setMaster(sparkMaster)
