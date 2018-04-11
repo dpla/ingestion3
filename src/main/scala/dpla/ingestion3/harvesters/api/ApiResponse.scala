@@ -33,7 +33,7 @@ case class ApiError(message: String,
   * @param document
   */
 case class ApiRecord(id: String,
-                     document: String)
+                     document: String) extends ApiResponse
 
 /**
   *
