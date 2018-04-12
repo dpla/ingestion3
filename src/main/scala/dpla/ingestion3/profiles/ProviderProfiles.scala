@@ -1,7 +1,7 @@
 package dpla.ingestion3.profiles
 
 import dpla.ingestion3.harvesters.Harvester
-import dpla.ingestion3.harvesters.api.CdlHarvester
+import dpla.ingestion3.harvesters.api.{CdlHarvester, LocHarvester}
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.mappers.providers._
 
@@ -24,7 +24,16 @@ class DcProfile extends XmlProfile {
 
   override def getHarvester = classOf[OaiHarvester]
   override def getMapping = new DcMapping
+}
 
+/**
+  * Library of Congress
+  */
+class LocProfile extends JsonProfile {
+  type Mapping = CdlMapping // FIXME Placeholder until LC mapping is written
+
+  override def getHarvester = classOf[LocHarvester]
+  override def getMapping = new CdlMapping
 }
 
 /**
