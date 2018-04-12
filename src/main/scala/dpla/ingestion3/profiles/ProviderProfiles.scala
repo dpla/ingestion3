@@ -17,7 +17,6 @@ class CdlProfile extends JsonProfile {
 }
 
 /**
-<<<<<<< HEAD
   * District Digital
   */
 class DcProfile extends XmlProfile {
