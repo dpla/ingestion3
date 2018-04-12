@@ -118,7 +118,13 @@ class StringNormalizationUtilsTest extends FlatSpec with BeforeAndAfter {
   "cleanupEndingPunctuation" should "strip punctuation following the last letter or digit character" in {
     val originalValue = ".. It's OK  ;; .. ,, // \n"
     val enrichedValue = originalValue.cleanupEndingPunctuation
-    val expectedValue = ".. It's OK"
+    val expectedValue = ".. It's OK.."
+    assert(enrichedValue === expectedValue)
+  }
+  it should "not remove .) from Synagogues -- Washington (D.C.)" in {
+    val originalValue = "Synagogues -- Washington (D.C.)"
+    val enrichedValue = originalValue.cleanupEndingPunctuation
+    val expectedValue = "Synagogues -- Washington (D.C.)"
     assert(enrichedValue === expectedValue)
   }
   it should "remove whitespace" in {
@@ -256,6 +262,11 @@ class StringNormalizationUtilsTest extends FlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.stripBrackets
     assert(enrichedValue === "hello")
   }
+  it should "remove [ ] from [Discharge of Four Army Reserve Soldiers]" in {
+    val originalValue = "[Discharge of Four Army Reserve Soldiers]"
+    val enrichedValue = originalValue.stripBrackets
+    assert(enrichedValue === "Discharge of Four Army Reserve Soldiers")
+  }
   it should "remove leading and trailing [ ]" in {
     val originalValue = "[hello]"
     val enrichedValue = originalValue.stripBrackets
@@ -315,6 +326,12 @@ class StringNormalizationUtilsTest extends FlatSpec with BeforeAndAfter {
     val originalValue = "Hello.  "
     val enrichedValue = originalValue.stripEndingPeriod
     val expectedValue = "Hello"
+    assert(enrichedValue === expectedValue)
+  }
+  it should "not remove a period followed by a closing paren" in {
+    val originalValue = "Synagogues -- Washington (D.C.)"
+    val enrichedValue = originalValue.stripEndingPeriod
+    val expectedValue = "Synagogues -- Washington (D.C.)"
     assert(enrichedValue === expectedValue)
   }
 }

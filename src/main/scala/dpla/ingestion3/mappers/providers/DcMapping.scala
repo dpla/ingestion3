@@ -16,8 +16,9 @@ import scala.xml._
 
 class DcMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] {
 
-  val formatBlockList: Set[String] = DigitalSurrogateBlockList.termList ++
-    FormatTypeValuesBlockList.termList
+  val formatBlockList: Set[String] =
+    DigitalSurrogateBlockList.termList ++
+      FormatTypeValuesBlockList.termList
 
   // ID minting functions
   override def useProviderName(): Boolean = false // TODO confirm prefix
@@ -64,7 +65,7 @@ class DcMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
       .map(nameOnlyConcept)
 
   override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
-    extractStrings(data \ "metadata" \\ "place")
+    extractStrings(data \ "metadata" \\ "Place")
       .map(nameOnlyPlace)
 
   override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =

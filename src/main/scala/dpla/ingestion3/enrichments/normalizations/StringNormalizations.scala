@@ -55,9 +55,9 @@ class StringNormalizations {
       temporal = sourceResource.temporal.map(enrichEdmTimeSpan(_)),
       title = sourceResource.title.map(_.stripHTML
         .reduceWhitespace
+        .stripBrackets
         .cleanupLeadingPunctuation
-        .cleanupEndingPunctuation
-        .stripBrackets),
+        .cleanupEndingPunctuation),
       `type` = sourceResource.`type`.map(_.stripHTML.reduceWhitespace)
     )
 
