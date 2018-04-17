@@ -80,8 +80,8 @@ class DcMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct place values" in {
     val xml: NodeSeq =
       <record><metadata>
-        <place>Ohio--Terrace Park</place>
-        <place>Cincinnati, OH</place>
+        <Place>Ohio--Terrace Park</Place>
+        <Place>Cincinnati, OH</Place>
       </metadata></record>
     val expected = Seq("Ohio--Terrace Park", "Cincinnati, OH").map(nameOnlyPlace)
     assert(extractor.place(Document(xml)) === expected)
