@@ -11,9 +11,6 @@ import org.json4s.JValue
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
-
-// TODO Should there be an implicit unwrapping of JSON values when calling extract*(JValue)
-
 class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtractor {
 
   // ID minting functions
