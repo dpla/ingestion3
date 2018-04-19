@@ -17,7 +17,7 @@ import org.json4s.jackson.JsonMethods._
 class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtractor {
 
   // ID minting functions
-  override def useProviderName: Boolean = true
+  override def useProviderName: Boolean = false
 
   // Hard coded to prevent accidental changes to base ID
   override def getProviderName: String =
@@ -39,7 +39,7 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
     nameOnlyAgent(
       extractStrings(data.get \\ "repository").headOption
         .getOrElse("Missing required property " +
-        "'repository' for dataProvider mapping"))
+          "'repository' for dataProvider mapping"))
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
     Utils.formatJson(data)
@@ -67,7 +67,6 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
     val otherTitles = extractStrings(data.get \ "item" \ "other-titles")
     val alternateTitle = extractStrings(data.get \ "item" \ "alternate_title")
 
-    // This seems stupid
     if (otherTitle.nonEmpty) otherTitle
     else if (otherTitles.nonEmpty) otherTitles
     else alternateTitle
@@ -83,11 +82,7 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
     val contributorNames = extractStrings(data.get \\ "contributor_names")
     val lcContributors = extractStrings(data.get \\ "contributors")
 
-    val contributors =
-      if(contributorNames.nonEmpty) contributorNames
-      else lcContributors
-
-    contributors.map(nameOnlyAgent)
+    (if (contributorNames.nonEmpty) contributorNames else lcContributors).map(nameOnlyAgent)
   }
 
   override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] = {
@@ -95,8 +90,7 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
     val date = extractStrings(data.get \\ "date")
     val dates = extractStrings(data.get \\ "dates")
 
-    if (date.nonEmpty) date.map(stringOnlyTimeSpan)
-    else dates.map(stringOnlyTimeSpan)
+    (if (date.nonEmpty) date else dates).map(stringOnlyTimeSpan)
   }
 
   override def description(data: Document[JValue]): ZeroToMany[String] =
@@ -114,8 +108,7 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
       extractStrings(data.get \ "item" \ "genre")
     val formatType = extractStrings(data.get \ "item" \ "format" \ "type")
 
-    if (typeGenre.nonEmpty) typeGenre
-    else formatType
+    if (typeGenre.nonEmpty) typeGenre else formatType
   }
 
   override def identifier(data: Document[JValue]): ZeroToMany[String] =
@@ -151,8 +144,7 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
     val types = extractStrings(data.get \ "item" \ "type")
     val formatKeys = extractKeys(data.get \ "item" \ "format")
 
-    if (types.nonEmpty) types
-    else formatKeys
+    if (types.nonEmpty) types else formatKeys
   }
 
   // Helper methods
