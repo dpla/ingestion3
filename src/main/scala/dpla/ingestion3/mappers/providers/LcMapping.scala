@@ -24,7 +24,7 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
     "loc"
 
   override def getProviderId(implicit data: Document[JValue]): String =
-    extractString(data.get \ "item" \ "id") // TODO confirm basis field for DPLA ID
+    extractString(unwrap(data) \ "item" \ "id") // TODO confirm basis field for DPLA ID
       .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
   // OreAggregation fields
@@ -37,7 +37,7 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
   override def dataProvider(data: Document[JValue]): ExactlyOne[EdmAgent] =
     // item['repository']
     nameOnlyAgent(
-      extractStrings(data.get \\ "repository").headOption
+      extractStrings(unwrap(data) \\ "repository").headOption
         .getOrElse("Missing required property " +
           "'repository' for dataProvider mapping"))
 
@@ -48,7 +48,7 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
   override def preview(data: Document[JValue]): ZeroToOne[EdmWebResource] =
     // resource['image'] (First instance)
     // TODO Confirm mapping, "image_url" might be new field
-    extractStrings(data.get \ "item" \ "resource" \ "image")
+    extractStrings(unwrap(data) \ "item" \ "resource" \ "image")
       .headOption.map(uri => uriOnlyWebResource(new URI(uri)))
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
@@ -63,9 +63,9 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
   // SourceResource
   override def alternateTitle(data: Document[JValue]): ZeroToMany[String] = {
     // item['other-title'] OR item['other-titles'] OR item['alternate_title']
-    val otherTitle = extractStrings(data.get \ "item" \ "other-title")
-    val otherTitles = extractStrings(data.get \ "item" \ "other-titles")
-    val alternateTitle = extractStrings(data.get \ "item" \ "alternate_title")
+    val otherTitle = extractStrings(unwrap(data) \ "item" \ "other-title")
+    val otherTitles = extractStrings(unwrap(data) \ "item" \ "other-titles")
+    val alternateTitle = extractStrings(unwrap(data) \ "item" \ "alternate_title")
 
     if (otherTitle.nonEmpty) otherTitle
     else if (otherTitles.nonEmpty) otherTitles
@@ -74,56 +74,56 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
 
   override def collection(data: Document[JValue]): ZeroToMany[DcmiTypeCollection] =
     // [partof['title'] for partof in item['partof']
-    extractStrings(data.get \\ "partof" \ "title")
+    extractStrings(unwrap(data) \\ "partof" \ "title")
       .map(nameOnlyCollection)
 
   override def contributor(data: Document[JValue]): ZeroToMany[EdmAgent] = {
     // item['contributor_names'] OR name in item['contributors']]
-    val contributorNames = extractStrings(data.get \\ "contributor_names")
-    val lcContributors = extractStrings(data.get \\ "contributors")
+    val contributorNames = extractStrings(unwrap(data) \\ "contributor_names")
+    val lcContributors = extractStrings(unwrap(data) \\ "contributors")
 
     (if (contributorNames.nonEmpty) contributorNames else lcContributors).map(nameOnlyAgent)
   }
 
   override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] = {
     // item['date'] OR item['dates']
-    val date = extractStrings(data.get \\ "date")
-    val dates = extractStrings(data.get \\ "dates")
+    val date = extractStrings(unwrap(data) \\ "date")
+    val dates = extractStrings(unwrap(data) \\ "dates")
 
     (if (date.nonEmpty) date else dates).map(stringOnlyTimeSpan)
   }
 
   override def description(data: Document[JValue]): ZeroToMany[String] =
     // item['description'] AND item['created_published']
-    extractStrings(data.get \ "item" \ "description") ++
-      extractStrings(data.get \ "item" \ "created_published" )
+    extractStrings(unwrap(data) \ "item" \ "description") ++
+      extractStrings(unwrap(data) \ "item" \ "created_published" )
 
   override def extent(data: Document[JValue]): ZeroToMany[String] =
     // item['medium']
-    extractStrings(data.get \ "item" \ "medium")
+    extractStrings(unwrap(data) \ "item" \ "medium")
 
   override def format(data: Document[JValue]): ZeroToMany[String] = {
     // (item['type'] AND item['genre']) OR type in item['format']],
-    val typeGenre = extractStrings(data.get \ "item" \ "type") ++
-      extractStrings(data.get \ "item" \ "genre")
-    val formatType = extractStrings(data.get \ "item" \ "format" \ "type")
+    val typeGenre = extractStrings(unwrap(data) \ "item" \ "type") ++
+      extractStrings(unwrap(data) \ "item" \ "genre")
+    val formatType = extractStrings(unwrap(data) \ "item" \ "format" \ "type")
 
     if (typeGenre.nonEmpty) typeGenre else formatType
   }
 
   override def identifier(data: Document[JValue]): ZeroToMany[String] =
     // item['id']
-    extractStrings(data.get \ "item" \ "id")
+    extractStrings(unwrap(data) \ "item" \ "id")
 
   override def language(data: Document[JValue]): ZeroToMany[SkosConcept] = {
     // item['language']].keys
-    extractKeys(data.get \ "item" \ "language").map(nameOnlyConcept)
+    extractKeys(unwrap(data) \ "item" \ "language").map(nameOnlyConcept)
   }
 
   override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
     // item['location']].keys
     // loc.gov/item: item['coordinates']   << lat // TODO How should this integrate?
-    extractKeys(data.get \ "item" \ "location")
+    extractKeys(unwrap(data) \ "item" \ "location")
       .map(_.capitalizeFirstChar) // capitalize first char since we are using json keys
       .map(nameOnlyPlace)
 
@@ -133,16 +133,16 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
     // item['subject_headings']
-    extractStrings(data.get \ "item" \ "subject_headings").map(nameOnlyConcept)
+    extractStrings(unwrap(data) \ "item" \ "subject_headings").map(nameOnlyConcept)
 
   override def title(data: Document[JValue]): AtLeastOne[String] =
     // item['title']
-    extractStrings(data.get \ "item" \ "title")
+    extractStrings(unwrap(data) \ "item" \ "title")
 
   override def `type`(data: Document[JValue]): ZeroToMany[String] = {
     // item['type'] OR item['format']].keys
-    val types = extractStrings(data.get \ "item" \ "type")
-    val formatKeys = extractKeys(data.get \ "item" \ "format")
+    val types = extractStrings(unwrap(data) \ "item" \ "type")
+    val formatKeys = extractKeys(unwrap(data) \ "item" \ "format")
 
     if (types.nonEmpty) types else formatKeys
   }
