@@ -78,8 +78,8 @@ trait JsonExtractor extends Extractor[JValue] {
     * @return Some(string) if one could be found. Will fail
     *         on non-primitive values like arrays or objects.
     */
-  def extractString(fieldName: String)(implicit json: JValue): Option[String]
-  = extractString(json \ fieldName)
+  def extractString(fieldName: String)(implicit json: JValue): Option[String] =
+    extractString(json \ fieldName)
 
   /**
     * Pulls a Seq[String] of values from the implicit json daa
@@ -98,8 +98,8 @@ trait JsonExtractor extends Extractor[JValue] {
     *
     *         Otherwise, an empty Seq is returned.
     */
-  def extractStrings(fieldName: String)(implicit json: JValue): Seq[String]
-  = extractStrings(json \ fieldName)
+  def extractStrings(fieldName: String)(implicit json: JValue): Seq[String] =
+    extractStrings(json \ fieldName)
 
   /**
     * @see definition of extractStrings(fieldName: String), save for this version
