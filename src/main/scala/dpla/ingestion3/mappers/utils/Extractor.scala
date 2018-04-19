@@ -132,6 +132,18 @@ trait JsonExtractor extends Extractor[JValue] {
   }
 
   /**
+    * Sometimes we need to map the keys
+    *
+    * @param jValue
+    * @return
+    */
+  def extractKeys(jValue: JValue): Seq[String] = jValue match {
+    case JArray(array) => array.flatMap(entry => extractKeys(entry))
+    case JObject(fields) => fields.map(field => field._1)
+    case _ => Seq()
+  }
+
+  /**
     * Wraps the JValue in JArray if it is not already a JArray
     * Addresses the problem of inconsistent data types in value field.
     * e.g. '"prop": ["val1"]' vs '"prop": "val1"'

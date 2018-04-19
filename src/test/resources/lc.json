@@ -1,0 +1,220 @@
+{
+  "item": {
+    "library_of_congress_control_number": "73691632",
+    "source_collection": [],
+    "display_offsite": true,
+    "creator": null,
+    "access_restricted": false,
+    "site": [
+      "ammem",
+      "catalog"
+    ],
+    "original_format": [
+      "map"
+    ],
+    "genre": [],
+    "subject_headings": [
+      "New Jersey--Boundaries--New York (State)--Maps, Manuscript--Early works to 1800",
+      "New York (State)--Boundaries--New Jersey--Maps, Manuscript--Early works to 1800",
+      "Manuscript maps--Early works to 1800",
+      "United States--New Jersey",
+      "United States--New York (State)"
+    ],
+    "created_published": [
+      "[1769?]"
+    ],
+    "extract_urls": [
+      "http://www.loc.gov/item/73691632#gmd.mar",
+      "http://lccn.loc.gov/73691632#catalog"
+    ],
+    "id": "http://www.loc.gov/item/73691632/",
+    "contents": [],
+    "subject": [
+      "new jersey",
+      "boundaries",
+      "new york (state)",
+      "maps, manuscript",
+      "early works to 1800",
+      "manuscript maps",
+      "united states"
+    ],
+    "index": 1,
+    "digital_id": [
+      "http://hdl.loc.gov/loc.gmd/g3811f.ar124400"
+    ],
+    "call_number": [
+      "G3811.F7 1769 .L5"
+    ],
+    "group": [
+      "gmd.mar",
+      "catalog",
+      "general-maps",
+      "main-catalog"
+    ],
+    "score": 11.362809,
+    "location_country": [
+      "united states"
+    ],
+    "title": "Lines run in the Jersies for determining boundaries between that Province & New York.",
+    "description": [
+      "Scale ca. 1:740,000. Title from verso. Manuscript, pen-and-ink. On verso: No 33. LC Maps of North America, 1750-1789, 1244 Available also through the Library of Congress Web site as a raster image. Vault AACR2"
+    ],
+    "related_items": [],
+    "online_format": [
+      "image"
+    ],
+    "subjects": [
+      {
+        "boundaries": "https://www.loc.gov/search/?at=item&fa=subject:boundaries&fo=json"
+      },
+      {
+        "early works to 1800": "https://www.loc.gov/search/?at=item&fa=subject:early+works+to+1800&fo=json"
+      },
+      {
+        "manuscript maps": "https://www.loc.gov/search/?at=item&fa=subject:manuscript+maps&fo=json"
+      },
+      {
+        "maps, manuscript": "https://www.loc.gov/search/?at=item&fa=subject:maps,+manuscript&fo=json"
+      },
+      {
+        "new jersey": "https://www.loc.gov/search/?at=item&fa=subject:new+jersey&fo=json"
+      },
+      {
+        "new york (state)": "https://www.loc.gov/search/?at=item&fa=subject:new+york+%28state%29&fo=json"
+      },
+      {
+        "united states": "https://www.loc.gov/search/?at=item&fa=subject:united+states&fo=json"
+      }
+    ],
+    "location": [
+      {
+        "new jersey": "https://www.loc.gov/search/?at=item&fa=location:new+jersey&fo=json"
+      },
+      {
+        "new york": "https://www.loc.gov/search/?at=item&fa=location:new+york&fo=json"
+      },
+      {
+        "new york (state)": "https://www.loc.gov/search/?at=item&fa=location:new+york+%28state%29&fo=json"
+      },
+      {
+        "united states": "https://www.loc.gov/search/?at=item&fa=location:united+states&fo=json"
+      }
+    ],
+    "_version_": 1595492341134655500,
+    "type": [
+      "map"
+    ],
+    "mime_type": [
+      "image/gif",
+      "image/tiff",
+      "image/jpeg",
+      "image/jp2"
+    ],
+    "digitized": true,
+    "rights_advisory": [],
+    "medium": [
+      "map, on sheet 39 x 29 cm."
+    ],
+    "reproduction_number": [],
+    "repository": [
+      "Library of Congress Geography and Map Division Washington, D.C. 20540-4650 USA dcu"
+    ],
+    "format": [
+      {
+        "map": "https://www.loc.gov/search/?at=item&fa=original_format:map&fo=json"
+      }
+    ],
+    "partof": [
+      {
+        "count": 1344,
+        "url": "https://www.loc.gov/collections/american-revolutionary-war-maps/?at=item&fo=json",
+        "title": "american revolution and its era: maps and charts of north america and the west indies, 1750-1789"
+      },
+      {
+        "count": 4344,
+        "url": "https://www.loc.gov/collections/military-battles-and-campaigns/?at=item&fo=json",
+        "title": "military battles and campaigns"
+      },
+      {
+        "count": 16740,
+        "url": "https://www.loc.gov/search/?at=item&fa=partof:geography+and+map+division&fo=json",
+        "title": "geography and map division"
+      },
+      {
+        "count": 492795,
+        "url": "https://www.loc.gov/search/?at=item&fa=partof:american+memory&fo=json",
+        "title": "american memory"
+      },
+      {
+        "count": 919981,
+        "url": "https://www.loc.gov/search/?at=item&fa=partof:catalog&fo=json",
+        "title": "catalog"
+      }
+    ],
+    "timestamp": "2018-03-20T21:07:47.679Z",
+    "campaigns": [],
+    "extract_timestamp": "2018-03-20T21:00:06.179Z",
+    "date": "1769",
+    "shelf_id": "G3811.F7 1769 .L5",
+    "other_title": [],
+    "location_state": [
+      "new jersey",
+      "new york (state)"
+    ],
+    "dates": [
+      {
+        "1769": "https://www.loc.gov/search/?at=item&dates=1769/1769&fo=json"
+      }
+    ],
+    "language": [
+      {
+        "english": "https://www.loc.gov/search/?at=item&fa=language:english&fo=json"
+      }
+    ],
+    "rights": [
+      "<p>The maps in the Map Collections materials were either published prior to \r1922, produced by the United States government, or both (see catalogue \rrecords that accompany each map for information regarding date of \rpublication and source). The Library of Congress is providing access to \rthese materials for educational and research purposes and is not aware of \rany U.S. copyright protection (see Title 17 of the United States Code) or any \rother restrictions in the Map Collection materials.\r</p>\r<p>Note that the written permission of the copyright owners and/or other rights \rholders (such as publicity and/or privacy rights) is required for distribution, \rreproduction, or other use of protected items beyond that allowed by fair use \ror other statutory exemptions.  Responsibility for making an independent \rlegal assessment of an item and securing any necessary permissions \rultimately rests with persons desiring to use the item.\r</p>\r<p>Credit Line: Library of Congress, Geography and Map Division. </p>"
+    ],
+    "url": "https://www.loc.gov/item/73691632/",
+    "notes": [
+      "Scale ca. 1:740,000.",
+      "Title from verso.",
+      "Manuscript, pen-and-ink.",
+      "On verso: No 33.",
+      "LC Maps of North America, 1750-1789, 1244",
+      "Available also through the Library of Congress Web site as a raster image.",
+      "Vault",
+      "AACR2"
+    ],
+    "control_number": "",
+    "summary": [],
+    "hassegments": false,
+    "image_url": [
+      "//cdn.loc.gov/service/gmd/gmd381/g3811/g3811f/ar124400.gif",
+      "//cdn.loc.gov/service/gmd/gmd381/g3811/g3811f/ar124400.gif#h=199&w=150",
+      "//tile.loc.gov/image-services/iiif/service:gmd:gmd381:g3811:g3811f:ar124400/full/pct:12.5/0/default.jpg#h=591&w=445",
+      "//tile.loc.gov/image-services/iiif/service:gmd:gmd381:g3811:g3811f:ar124400/full/pct:25/0/default.jpg#h=1183&w=891"
+    ],
+    "other_formats": [
+      {
+        "link": "https://lccn.loc.gov/73691632/marcxml",
+        "label": "MARCXML Record"
+      },
+      {
+        "link": "https://lccn.loc.gov/73691632/mods",
+        "label": "MODS Record"
+      },
+      {
+        "link": "https://lccn.loc.gov/73691632/dc",
+        "label": "Dublin Core Record"
+      }
+    ],
+    "aka": [
+      "http://www.loc.gov/item/73691632/",
+      "http://hdl.loc.gov/loc.gmd/g3811f.ar124400",
+      "http://www.loc.gov/resource/g3811f.ar124400/",
+      "http://lccn.loc.gov/73691632"
+    ],
+    "contributor_names": [],
+    "access_advisory": []
+  }
+}
