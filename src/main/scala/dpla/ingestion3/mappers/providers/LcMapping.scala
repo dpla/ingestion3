@@ -67,9 +67,11 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
     val otherTitles = extractStrings(unwrap(data) \ "item" \ "other-titles")
     val alternateTitle = extractStrings(unwrap(data) \ "item" \ "alternate_title")
 
-    if (otherTitle.nonEmpty) otherTitle
-    else if (otherTitles.nonEmpty) otherTitles
-    else alternateTitle
+    (otherTitle.nonEmpty, otherTitles.nonEmpty) match {
+      case (true, _) => otherTitle
+      case (false, true) => otherTitles
+      case _ => alternateTitle
+    }
   }
 
   override def collection(data: Document[JValue]): ZeroToMany[DcmiTypeCollection] =
