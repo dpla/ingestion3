@@ -18,10 +18,10 @@ import scala.util.Try
 /**
   * File base harvester
   *
-  * @param shortName
-  * @param conf
-  * @param outputDir
-  * @param logger
+  * @param shortName Provider short name
+  * @param conf Configurations
+  * @param outputDir Output path
+  * @param logger Logger
   */
 abstract class FileHarvester(shortName: String,
                              conf: i3Conf,
@@ -33,7 +33,12 @@ abstract class FileHarvester(shortName: String,
   val schemaStr: String = new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc")
   val schema: Schema = new Schema.Parser().parse(schemaStr)
 
-  protected def localFileHarvest: Unit
+  /**
+    * Performs harvest
+    *
+    * To be defined in implementing class
+    */
+  protected def localFileHarvest(): Unit
 
   /**
     * This is lazy b/c queryParams should be printed before avroWriter is set.
@@ -48,7 +53,7 @@ abstract class FileHarvester(shortName: String,
   }
 
   /**
-    * Generalized driver for ApiHarvesters invokes localApiHarvest() method and reports
+    * Generalized driver for FileHarvesters invokes localApiHarvest() method and reports
     * summary information.
     */
   protected def runHarvest: Try[DataFrame] = Try {
@@ -56,12 +61,27 @@ abstract class FileHarvester(shortName: String,
     avroWriter.setFlushOnEveryBlock(true)
 
     // Calls the local implementation
-    localFileHarvest
+    localFileHarvest()
 
     avroWriter.close()
-    logger.info(s"Records saved to $outputDir")
+
+    logger.info(s"Saving to $outputDir")
 
     spark.read.avro(outputDir)
+  }
+
+
+  /**
+    * Writes errors and documents to log file and avro file respectively
+    *
+    * @param msgs List[ApiResponse]
+    */
+  protected def saveOutAll(msgs: List[ApiResponse]): Unit = {
+    val docs = msgs.collect { case a: ApiRecord => a }
+    val errors = msgs.collect { case a: ApiError => a }
+
+    saveOutRecords(docs)
+    saveOutErrors(errors)
   }
 
   /**
@@ -69,8 +89,7 @@ abstract class FileHarvester(shortName: String,
     *
     * @param docs - List of ApiRecords to save out
     */
-  protected def saveOut(docs: List[ApiRecord]): Unit = {
-
+  protected def saveOutRecords(docs: List[ApiRecord]): Unit =
     docs.foreach(doc => {
       val startTime = System.currentTimeMillis()
       val unixEpoch = startTime / 1000L
@@ -84,21 +103,14 @@ abstract class FileHarvester(shortName: String,
       genericRecord.put("mimetype", mimeType)
       avroWriter.append(genericRecord)
     })
-  }
 
-  def saveOutErrors(errors: List[ApiError]): Unit = {
+  /**
+    * Writes errors out to log file
+    *
+    * @param errors List[ApiErrors}
+    */
+  def saveOutErrors(errors: List[ApiError]): Unit =
     errors.foreach(error => {
       logger.error(s"URL: ${error.errorSource.url.get}\nMessage: ${error.message} \n\n")
     })
-  }
-
-  protected def saveOutAll(msgs: List[ApiResponse]): Unit = {
-
-    val docs = msgs.collect { case a: ApiRecord => a }
-    val errors = msgs.collect { case a: ApiError => a }
-
-    saveOut(docs)
-    saveOutErrors(errors)
-  }
-
 }

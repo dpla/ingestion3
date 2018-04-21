@@ -42,14 +42,12 @@ trait HarvestExecutor {
     val harvester: Harvester = harvestType match {
       case "oai" =>
         new OaiHarvester(shortName, conf, outputDir, logger)
-      case "api" =>
-        registeredHarvester(shortName, outputDir, conf, logger)
-      case "file" =>
-        registeredHarvester(shortName, outputDir, conf, logger)
       case "pss" =>
         new PssHarvester(shortName, conf, outputDir, logger)
       case "rs" =>
         new RsHarvester(shortName, conf, outputDir, logger)
+      case t if Seq("api", "file").contains(t) =>
+        registeredHarvester(shortName, outputDir, conf, logger)
       case _ =>
         val msg = s"Harvest type not recognized."
         logger.fatal(msg)

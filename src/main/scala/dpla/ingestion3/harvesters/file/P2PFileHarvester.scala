@@ -21,7 +21,7 @@ import scala.util.{Failure, Success, Try}
 class P2PFileExtractor extends JsonExtractor
 
 /**
-  * Entry for performing a CO-WY file harvest
+  * Entry for performing a plains2peaks file harvest
   */
 class P2PFileHarvester(shortName: String,
                        conf: i3Conf,
@@ -29,13 +29,15 @@ class P2PFileHarvester(shortName: String,
                        harvestLogger: Logger)
   extends FileHarvester(shortName, conf, outputDir, harvestLogger) {
 
-  // Holds the output of handleXML
+  /**
+    * Holds the output of handleJson
+    */
   case class JsonResult(id: String, itemJson: String)
 
   /**
     * Case class to hold the results of a ZipEntry.
     *
-    * @param entryName Path of the entry in the tarfile
+    * @param entryName Path of the entry in the zipfile
     * @param data      Holds the data for the entry, or None if it's a directory.
     */
   case class ZipResult(entryName: String, data: Option[Array[Byte]])
@@ -45,33 +47,32 @@ class P2PFileHarvester(shortName: String,
   private val logger = LogManager.getLogger(getClass)
 
   /**
-    *
+    * Parses and extracts ZipInputStream and writes
+    * parses records out.
     *
     * @param schema     Parsed Avro schema
-    * @param zipResult  Case class representing extracted item from the tar
+    * @param zipResult  Case class representing extracted items from the zip
     * @return Count of metadata items found.
     */
   def handleFile(schema: Schema,
                  zipResult: ZipResult,
-                 unixEpoch: Long): Try[Int] = {
+                 unixEpoch: Long): Try[Int] =
+
     zipResult.data match {
       case None =>
         Success(0) // a directory, no results
       case Some(data) =>
         Try {
           val json = parse(new String(data))
-          val item = handleJson(json)
           val entryName = zipResult.entryName
-          logger.info(s"Entry name: $entryName")
 
-          item match {
-            case Some(i) =>
-              // println(i.id)
+          handleJson(json) match {
+            case Some(item) =>
               val genericRecord = new GenericData.Record(schema)
-              genericRecord.put("id", i.id)
+              genericRecord.put("id", item.id)
               genericRecord.put("ingestDate", unixEpoch)
               genericRecord.put("provider", "p2p")
-              genericRecord.put("document", i.itemJson)
+              genericRecord.put("document", item.itemJson)
               genericRecord.put("mimetype", "application_json")
               avroWriter.append(genericRecord)
               1
@@ -79,19 +80,23 @@ class P2PFileHarvester(shortName: String,
           }
         }
     }
-  }
 
   /**
-    * Takes
+    * Parses JValue to extract item local item id and renders compact
+    * full record
     *
-    * @param json Root of the xml document
-    * @return List of Options of id/item pairs.
+    * @param json Full JSON item record
+    * @return Option[JsonResult]
     */
   def handleJson(json: JValue): Option[JsonResult] =
-  // TODO Ensure we are consistantly extracting the same ID for a record (filename might be a safer option?)
     Option(JsonResult(
+      // item id
+      // TODO Are we consistently extracting the same ID for a record? Are filenames a safer option?
       extractor.extractStrings(json \ "@graph" \ "@id").find(_.startsWith("https://plains2peaks.org/"))
-        .getOrElse(throw new RuntimeException("Missing ID")), compact(render(json))))
+        .getOrElse(throw new RuntimeException("Missing ID")),
+      // item
+      compact(render(json))
+    ))
 
   /**
     * Loads .zip files
@@ -133,21 +138,27 @@ class P2PFileHarvester(shortName: String,
     */
   override protected val mimeType: String = "application_json"
 
+  /**
+    * Executes the plains2peaks harvest
+    */
   protected def localFileHarvest: Unit = {
     val startTime = System.currentTimeMillis()
     val unixEpoch = startTime / 1000L
-    val inFile = new File(conf.harvest.endpoint.getOrElse("in"))
+    val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
-    inFile.listFiles(new ZipFileFilter).foreach( inFile => {
+    inFiles.listFiles(new ZipFileFilter).foreach( inFile => {
       val inputStream = getInputStream(inFile)
         .getOrElse(throw new IllegalArgumentException("Couldn't load ZIP files."))
-      for (zipResult <- iter(inputStream)) yield {
+
+      val recordCount = (for (zipResult <- iter(inputStream)) yield {
         handleFile(schema, zipResult, unixEpoch) match {
           case Failure(exception) =>
             logger.error(s"Caught exception on $inFile.", exception)
-          case Success(_) =>
+            0
+          case Success(count) =>
+            count
         }
-      }
+      }).sum
       IOUtils.closeQuietly(inputStream)
     })
   }
