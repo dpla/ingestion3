@@ -111,6 +111,7 @@ abstract class FileHarvester(shortName: String,
     */
   def saveOutErrors(errors: List[ApiError]): Unit =
     errors.foreach(error => {
-      logger.error(s"URL: ${error.errorSource.url.get}\nMessage: ${error.message} \n\n")
+      logger.error(s"URL: ${error.errorSource.url.getOrElse("No url")}" +
+        s"\nMessage: ${error.message} \n\n")
     })
 }
