@@ -2,7 +2,7 @@ package dpla.ingestion3.harvesters.file
 
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.Harvester
-import org.apache.avro.Schema
+import org.apache.avro.generic.GenericData
 import org.apache.log4j.Logger
 
 import scala.util.Try
@@ -47,6 +47,23 @@ abstract class FileHarvester(shortName: String,
     */
   def handleFile(fileResult: FileResult,
                  unixEpoch: Long): Try[Int]
+
+  /**
+    * Writes item out
+    *
+    * @param unixEpoch Timestamp of the harvest
+    * @param item Harvested record
+    */
+  def writeOut(unixEpoch: Long,
+               item: ParsedResult): Unit = {
+    val genericRecord = new GenericData.Record(schema)
+    genericRecord.put("id", item.id)
+    genericRecord.put("ingestDate", unixEpoch)
+    genericRecord.put("provider", shortName)
+    genericRecord.put("document", item.item)
+    genericRecord.put("mimetype", mimeType)
+    avroWriter.append(genericRecord)
+  }
 
   /**
     *

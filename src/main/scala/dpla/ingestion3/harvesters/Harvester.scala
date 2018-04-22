@@ -3,11 +3,10 @@ package dpla.ingestion3.harvesters
 import java.io.File
 import java.net.URL
 
-import com.amazonaws.auth.{AWSCredentialsProviderChain, DefaultAWSCredentialsProviderChain}
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.api.{ApiError, ApiRecord, ApiResponse}
-import dpla.ingestion3.utils.{AvroUtils, FlatFileIO, Utils}
+import dpla.ingestion3.utils.{AvroUtils, AwsUtils, FlatFileIO, Utils}
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.{GenericData, GenericRecord}
@@ -32,20 +31,35 @@ import scala.util.{Failure, Success, Try}
   *
   * @param shortName [String] Provider short name
   * @param conf [i3Conf] contains configs for the harvester.
-  * @param outputPathStr [String] outputPathStr for the harvested data.
+  * @param outStr [String] outputPathStr for the harvested data.
   * @param logger [Logger] for the harvester.
   */
 abstract class Harvester(shortName: String,
                          conf: i3Conf,
-                         outputPathStr: String,
-                         logger: Logger) {
+                         outStr: String,
+                         logger: Logger)
+  extends AwsUtils {
+
+  protected lazy val avroWriter: DataFileWriter[GenericRecord] = {
+    val path = if (outStr.endsWith("/")) outStr else outStr + "/"
+    fileIo.deletePathContents(outStr)
+    AvroUtils.getAvroWriter(new File(path + filename), schema)
+  }
+  avroWriter.setFlushOnEveryBlock(true)
+
+  protected lazy val fileIo = new FlatFileIO()
+
+  protected val filename: String = s"${shortName}_${System.currentTimeMillis()}"
 
   /**
     * Abstract method mimeType should store the mimeType of the harvested data.
     */
   protected val mimeType: String
 
-  protected val filename: String = s"${shortName}_${System.currentTimeMillis()}"
+  protected lazy val outputPath = new File(outStr)
+
+  protected lazy val schemaStr: String = fileIo.readFileAsString("/avro/OriginalRecord.avsc")
+  protected lazy val schema: Schema = new Schema.Parser().parse(schemaStr)
 
   /**
     * Initiate a spark session using the configs specified in the i3Conf.
@@ -55,6 +69,8 @@ abstract class Harvester(shortName: String,
     *
     * @return SparkSession
     */
+  protected lazy val sc: SparkContext = spark.sparkContext
+
   protected lazy val spark: SparkSession = {
     val sparkConf = new SparkConf()
       .setAppName(s"Harvest: $shortName")
@@ -68,27 +84,10 @@ abstract class Harvester(shortName: String,
       .getOrCreate()
   }
 
-  protected lazy val sc: SparkContext = spark.sparkContext
-
-  protected lazy val outputPath = new File(outputPathStr)
-
-  // AWS access credentials
-  // Only set AWS key properties in Spark if output destination is s3
-  if (outputPathStr.startsWith("s3")) {
+  // Only set AWS key properties in SparkContext if output destination is s3
+  if (outStr.startsWith("s3")) {
     sc.hadoopConfiguration.set("fs.s3a.access.key", s3AccessKey)
     sc.hadoopConfiguration.set("fs.s3a.secret.key", s3SecretKey)
-  }
-  protected lazy val s3AccessKey: String = awsCredentials.getCredentials.getAWSAccessKeyId
-  protected lazy val s3SecretKey: String = awsCredentials.getCredentials.getAWSSecretKey
-
-  protected lazy val schemaStr: String =
-    new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc")
-  protected lazy val schema: Schema = new Schema.Parser().parse(schemaStr)
-
-  protected lazy val avroWriter: DataFileWriter[GenericRecord] = {
-    val path = if (outputPathStr.endsWith("/")) outputPathStr else outputPathStr + "/"
-    new File(path).mkdirs
-    AvroUtils.getAvroWriter(new File(path + filename), schema)
   }
 
   /**
@@ -99,7 +98,7 @@ abstract class Harvester(shortName: String,
     * @return Try[Long] Number of harvested records or Failure
     */
   def harvest: Try[Long] = {
-    new FlatFileIO().deletePathContents(outputPathStr)
+    fileIo.deletePathContents(outStr)
 
     val start = System.currentTimeMillis()
 
@@ -125,79 +124,18 @@ abstract class Harvester(shortName: String,
     */
   protected def localHarvest(): Unit
 
-
-  /**
-    * DefaultAWSCredentialsProviderChain looks for AWS keys in the following order:
-    *   1. Environment Variables
-    *   2. Java System Properties
-    *   3. Credential profiles file at the default location (~/.aws/credentials)
-    *   4. Instance profile credentials delivered through the Amazon EC2 metadata service
-    *
-    * @return
-    */
-  def awsCredentials = new AWSCredentialsProviderChain(new DefaultAWSCredentialsProviderChain)
-
   /**
     * Generalized driver for FileHarvesters invokes localApiHarvest() method and reports
     * summary information.
     */
   protected def runHarvest: Try[DataFrame] = Try {
-
-    avroWriter.setFlushOnEveryBlock(true)
-
     // Calls the local implementation
     localHarvest()
-
     avroWriter.close()
-
-    logger.info(s"Saving to $outputPathStr")
-
-    spark.read.avro(outputPathStr)
+    logger.info(s"Saving to $outStr")
+    // Reads the saved avro file back
+    spark.read.avro(outStr)
   }
-
-  /**
-    * Writes errors and documents to log file and avro file respectively
-    *
-    * @param msgs List[ApiResponse]
-    */
-  protected def saveOutAll(msgs: List[ApiResponse]): Unit = {
-    val docs = msgs.collect { case a: ApiRecord => a }
-    val errors = msgs.collect { case a: ApiError => a }
-
-    saveOutRecords(docs)
-    saveOutErrors(errors)
-  }
-
-  /**
-    * Saves the records
-    *
-    * @param docs - List of ApiRecords to save out
-    */
-  protected def saveOutRecords(docs: List[ApiRecord]): Unit =
-    docs.foreach(doc => {
-      val startTime = System.currentTimeMillis()
-      val unixEpoch = startTime / 1000L
-
-      val genericRecord = new GenericData.Record(schema)
-
-      genericRecord.put("id", doc.id)
-      genericRecord.put("ingestDate", unixEpoch)
-      genericRecord.put("provider", shortName)
-      genericRecord.put("document", doc.document)
-      genericRecord.put("mimetype", mimeType)
-      avroWriter.append(genericRecord)
-    })
-
-  /**
-    * Writes errors out to log file
-    *
-    * @param errors List[ApiErrors}
-    */
-  protected def saveOutErrors(errors: List[ApiError]): Unit =
-    errors.foreach(error => {
-      logger.error(s"URL: ${error.errorSource.url.getOrElse("No url")}" +
-        s"\nMessage: ${error.message} \n\n")
-    })
 
   /**
     * Check that harvested DataFrame meets the expected schema.
@@ -234,27 +172,6 @@ abstract class Harvester(shortName: String,
         Expected fields: ${expectedFields.mkString(", ")}"""
       logger.warn(msg)
     }
-  }
-}
-
-/**
-  * Harvester Exceptions
-  */
-object HarvesterExceptions {
-
-  def throwMissingArgException(arg: String) = {
-    val msg = s"Missing argument: $arg"
-    throw new IllegalArgumentException(msg)
-  }
-
-  def throwUnrecognizedArgException(arg: String) = {
-    val msg = s"Unrecognized argument: $arg"
-    throw new IllegalArgumentException(msg)
-  }
-
-  def throwValidationException(arg: String) = {
-    val msg = s"Validation error: $arg"
-    throw new IllegalArgumentException(msg)
   }
 }
 

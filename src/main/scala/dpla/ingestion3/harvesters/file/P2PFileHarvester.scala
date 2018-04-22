@@ -5,7 +5,6 @@ import java.util.zip.ZipInputStream
 
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.mappers.utils.JsonExtractor
-import org.apache.avro.generic.GenericData
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.json4s.jackson.JsonMethods._
@@ -78,18 +77,12 @@ class P2PFileHarvester(shortName: String,
         Success(0) // a directory, no results
       case Some(data) => Try {
         Try {
-          parse(new String(data))
+          parse(new String(data)) // parse string to json
         } match {
           case Success(json) =>
-            getJsonResult(json) match {
+            getJsonResult(json) match { // extract id from json and compact the body
               case Some(item) =>
-                val genericRecord = new GenericData.Record(schema)
-                genericRecord.put("id", item.id)
-                genericRecord.put("ingestDate", unixEpoch)
-                genericRecord.put("provider", "p2p")
-                genericRecord.put("document", item.item)
-                genericRecord.put("mimetype", mimeType)
-                avroWriter.append(genericRecord)
+                writeOut(unixEpoch, item)
                 1
               case _ => 0
             }

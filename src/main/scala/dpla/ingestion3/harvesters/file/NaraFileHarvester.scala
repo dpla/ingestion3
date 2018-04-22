@@ -85,19 +85,14 @@ class NaraFileHarvester(shortName: String,
           val xml = XML.loadString(new String(data))
           val items = handleXML(xml)
           val entryName = tarResult.entryName
+          // log the file name
           logger.info(entryName)
 
           val counts = for {
             itemOption <- items
-            item <- itemOption //filters out the Nones
+            item <- itemOption // filters out the Nones
           } yield {
-            val genericRecord = new GenericData.Record(schema)
-            genericRecord.put("id", item.id)
-            genericRecord.put("ingestDate", unixEpoch)
-            genericRecord.put("provider", "NARA")
-            genericRecord.put("document", item.item)
-            genericRecord.put("mimetype", mimeType)
-            avroWriter.append(genericRecord)
+            writeOut(unixEpoch, item)
             1
           }
           counts.sum
@@ -134,8 +129,7 @@ class NaraFileHarvester(shortName: String,
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime  / 1000L
     val inFile = new File(conf.harvest.endpoint.getOrElse("in"))
-
-    println(inFile)
+    // TODO Support harvesting from more than one file...
     val inputStream = getInputStream(inFile)
       .getOrElse(throw new IllegalArgumentException("Couldn't load tar file."))
 
@@ -144,7 +138,6 @@ class NaraFileHarvester(shortName: String,
         case Failure(exception) =>
           logger.error(s"Caught exception on $inFile.", exception)
           0
-
         case Success(count) =>
           count
       }
@@ -161,6 +154,4 @@ class NaraFileHarvester(shortName: String,
     */
   def xmlToString(node: Node): String =
     Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
-
-
 }
