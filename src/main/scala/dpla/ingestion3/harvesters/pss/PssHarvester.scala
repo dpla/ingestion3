@@ -17,6 +17,8 @@ class PssHarvester(shortName: String,
 
   override protected val mimeType: String = "application_json"
 
+  override protected def localHarvest(): Unit = ???
+
   override protected def runHarvest: Try[DataFrame] = Try{
 
     val endpoint = conf.harvest.endpoint

@@ -25,7 +25,7 @@ class MdlHarvester(shortName: String,
     "rows" -> conf.harvest.rows.getOrElse("10")
   )
 
-  override protected def localApiHarvest: Unit = {
+  override protected def localHarvest: Unit = {
     implicit val formats = DefaultFormats
 
     // Mutable vars for controlling harvest loop
@@ -51,7 +51,7 @@ class MdlHarvester(shortName: String,
               ApiRecord((doc \\ "record_id").toString, compact(render(doc)))
             })
 
-            saveOut(mdlRecords)
+            saveOutRecords(mdlRecords)
 
             // Number of records returned < number of records requested
             val rows = queryParams.getOrElse("rows", "10").toInt

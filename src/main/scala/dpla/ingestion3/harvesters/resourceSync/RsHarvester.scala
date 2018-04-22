@@ -18,6 +18,8 @@ class RsHarvester(shortName: String,
   // TODO Do all RS enpoints support JSON?
   override protected val mimeType: String = "application_json"
 
+  override protected def localHarvest(): Unit = ???
+
   override protected def runHarvest: Try[DataFrame] = Try{
 
     // Set options.

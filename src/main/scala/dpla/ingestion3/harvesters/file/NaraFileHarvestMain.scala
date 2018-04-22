@@ -17,6 +17,8 @@ import scala.util.{Failure, Success, Try}
 import scala.xml.{MinimizeMode, Node, Utility, XML}
 
 
+// TODO This can be deleted in favor of NaraFileHarvester
+
 object NaraFileHarvestMain {
 
 
@@ -193,7 +195,7 @@ class NaraFileHarvestConf(arguments: Seq[String]) extends ScallopConf(arguments)
   )
 
   val outputFile: ScallopOption[String] = opt[String](
-    "outputFile",
+    "outputPath",
     required = true,
     noshort = true,
     validate = _.nonEmpty

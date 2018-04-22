@@ -17,6 +17,8 @@ class OaiHarvester(shortName: String,
 
   override protected val mimeType: String = "application_xml"
 
+  override protected def localHarvest(): Unit = ???
+
   override protected def runHarvest: Try[DataFrame] = Try{
     // Set options.
     val readerOptions: Map[String, String] = Map(

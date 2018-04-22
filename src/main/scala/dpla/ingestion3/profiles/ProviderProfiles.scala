@@ -2,7 +2,7 @@ package dpla.ingestion3.profiles
 
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.api.{CdlHarvester, LocHarvester}
-import dpla.ingestion3.harvesters.file.P2PFileHarvester
+import dpla.ingestion3.harvesters.file.{NaraFileHarvester, P2PFileHarvester}
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.mappers.providers._
 
@@ -14,7 +14,6 @@ class CdlProfile extends JsonProfile {
 
   override def getHarvester = classOf[CdlHarvester]
   override def getMapping = new CdlMapping
-
 }
 
 /**
@@ -53,7 +52,7 @@ class MdlProfile extends JsonProfile {
 class NaraProfile extends XmlProfile {
   type Mapping = NaraMapping
 
-  override def getHarvester: Class[_ <: Harvester] = ???
+  override def getHarvester: Class[_ <: Harvester] = classOf[NaraFileHarvester]
   override def getMapping = new NaraMapping
 }
 
@@ -72,7 +71,7 @@ class OhioProfile extends XmlProfile {
   * - Colorado and Wyoming
   */
 class P2PProfile extends JsonProfile {
-  type Mapping = CdlMapping // FIXME Placehoder
+  type Mapping = CdlMapping // FIXME Placeholder
 
   override def getHarvester = classOf[P2PFileHarvester]
   override def getMapping = new CdlMapping
