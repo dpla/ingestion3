@@ -38,7 +38,6 @@ class TypeEnrichment extends VocabEnrichment[String] {
     "diary" -> dcmiType.Text,
     "document" -> dcmiType.Text,
     "drawing" -> dcmiType.Image,
-    "electronic component" -> dcmiType.Image,
     "electronic resource" -> dcmiType.InteractiveResource,
     "email message" -> dcmiType.Text,
     "equipment" -> dcmiType.PhysicalObject,
