@@ -99,9 +99,9 @@ class StringNormalizations {
 
   def enrichEdmTimeSpan(edmTimeSpan: EdmTimeSpan): EdmTimeSpan =
     edmTimeSpan.copy(
-      prefLabel = edmTimeSpan.prefLabel.map(_.stripHTML.reduceWhitespace),
-      begin = edmTimeSpan.begin.map(_.stripHTML.reduceWhitespace),
-      end = edmTimeSpan.end.map(_.stripHTML.reduceWhitespace)
+      prefLabel = edmTimeSpan.prefLabel.map(_.stripHTML.reduceWhitespace.stripDblQuotes),
+      begin = edmTimeSpan.begin.map(_.stripHTML.reduceWhitespace.stripDblQuotes),
+      end = edmTimeSpan.end.map(_.stripHTML.reduceWhitespace.stripDblQuotes)
     )
 
   def enrichDplaPlace(dplaPlace: DplaPlace): DplaPlace =

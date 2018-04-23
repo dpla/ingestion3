@@ -334,4 +334,9 @@ class StringNormalizationUtilsTest extends FlatSpec with BeforeAndAfter {
     val expectedValue = "Synagogues -- Washington (D.C.)"
     assert(enrichedValue === expectedValue)
   }
+  
+  "stripDblQuotes" should "remove all double quotes" in {
+    val originalValue = """ "Hello John" """
+    assert(originalValue.stripDblQuotes == " Hello John ")
+  }
 }
