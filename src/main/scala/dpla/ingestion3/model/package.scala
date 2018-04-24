@@ -15,11 +15,22 @@ import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.prefs.EmptyValueStrategy
 
-
 package object model {
 
-  val DcmiTypes =
-    Set("collection", "dataset", "event", "image", "interactiveresource", "service", "software", "sound", "text")
+  val DcmiTypes = Set(
+      "collection",
+      "dataset",
+      "event",
+      "image",
+      "interactiveresource",
+      "movingimage",
+      "physicalobject",
+      "service",
+      "software",
+      "sound",
+      "stillimage",
+      "text"
+    )
 
   def nameOnlyAgent(string: String): EdmAgent = EdmAgent(name = Some(string))
 
