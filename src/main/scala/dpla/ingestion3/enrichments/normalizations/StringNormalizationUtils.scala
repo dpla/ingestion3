@@ -104,9 +104,8 @@ object StringNormalizationUtils {
         value
       else {
         val start = value.substring(0, endIndex + 1)
-        val cleanEnd = value
-          .substring(endIndex+1)
-          .replaceAll(beginAndEndPunctuationToRemove, "")
+        val end = value.substring(endIndex+1)
+        val cleanEnd = end.replaceAll(beginAndEndPunctuationToRemove,"")
         start.concat(cleanEnd)
       }
     }
@@ -204,7 +203,7 @@ object StringNormalizationUtils {
       *   carriage return (\r)
       *   whitespace (\s)
       */
-    private def beginAndEndPunctuationToRemove = """[;:/,-\\t\\r\\n\s]"""
+    private def beginAndEndPunctuationToRemove = """[-;:,\/\\t\\r\\n\s]"""
 
 
     /**

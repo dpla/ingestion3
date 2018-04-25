@@ -11,9 +11,10 @@ import dpla.ingestion3.enrichments.normalizations.FilterRegex._
 object DigitalSurrogateBlockList extends FilterList {
   lazy val termList: Set[String] = getTermsFromFiles.map(_.blockListRegex)
 
-  // Where to get digital surrogate block list terms
+  // Defines where to get digital surrogate and format block terms
   override val files: Seq[String] = Seq(
     // TODO This file list should be stored in a config file and not hard coded
+    "/formats/dc.csv",
     "/formats/ohio.csv",
     "/formats/iana-imt-types.csv"
   )

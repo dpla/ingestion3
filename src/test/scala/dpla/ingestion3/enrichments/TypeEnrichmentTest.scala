@@ -8,7 +8,7 @@ class TypeEnrichmentTest  extends FlatSpec with BeforeAndAfter {
 
   "Type mapper" should "return an enriched string for 'appliance'" in {
     val originalValue = "appliance"
-    val expectedValue = Some("image")
+    val expectedValue = Some("physical object")
     assert(typeEnrichment.enrich(originalValue) === expectedValue)
   }
   it should "return an enriched string for 'Image'" in {
