@@ -3,6 +3,7 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, JsonExtractor, Mapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
@@ -67,6 +68,9 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
 
   override def format(data: Document[JValue]): ZeroToMany[String] =
     extractStrings("format")(data)
+      .map(_.applyBlockFilter(DigitalSurrogateBlockList.termList ++
+        FormatTypeValuesBlockList.termList))
+      .filter(_.nonEmpty)
 
   override def genre(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings("genre_ss")(data).map(nameOnlyConcept)
@@ -89,7 +93,8 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
   override def rights(data: Document[JValue]): AtLeastOne[String] =
     extractStrings("rights_ss")(data) ++
       extractStrings("rights_note_ss")(data) ++
-      extractStrings("rights_date_ss")(data)
+      extractStrings("rights_date_ss")(data) ++
+      extractStrings("rightsholder_ss")(data)
 
   override def rightsHolder(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings("rightsholder_ss")(data).map(nameOnlyAgent)
