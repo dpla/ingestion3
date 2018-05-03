@@ -96,9 +96,6 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
       extractStrings("rights_date_ss")(data) ++
       extractStrings("rightsholder_ss")(data)
 
-  override def rightsHolder(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings("rightsholder_ss")(data).map(nameOnlyAgent)
-
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings("subject_ss")(data)
       .map(_.cleanupLeadingPunctuation)
