@@ -8,8 +8,7 @@ import dpla.ingestion3.enrichments.normalizations.FilterList
 object ExtentIdentificationList extends FilterList {
   lazy val termList: Set[String] = Set(
     "^.*[^a-zA-Z]x[^a-zA-Z].*$", // 1 x 2 OR 1 X 2 OR 1x2 but not 1 xerox
-    // "^[0-9]+$", // only non-alpha chars, redundant with alpha-start
-    "^[0-9].*" // starts with non alpha char
+    "^[0-9].*" // starts with number
   )
 }
 
