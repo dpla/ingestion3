@@ -1,5 +1,6 @@
 package dpla.ingestion3.enrichments.normalizations
 
+import dpla.ingestion3.enrichments.normalizations.filters.{ExtentExceptionsList, ExtentIdentificationList}
 import org.apache.commons.lang.StringEscapeUtils
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document.OutputSettings
@@ -32,24 +33,25 @@ object StringNormalizationUtils {
       *
       */
     lazy val applyAllowFilter: Set[String] => String = (allowList) => {
-      val nonAllowedTerms =
+      // val nonAllowedTerms =
         // Remove terms in allowList from the original string
-        applyBlockFilter(allowList)
+        val termsToRemove = applyBlockFilter(allowList)
         // Split the remaining terms (e.g. the terms to remove) on white space
         // This allows for filtering of specific words from a string but that functionality
         // is not yet a requirement of this filter.
         // FIXME This assumption may not hold in all cases and they should be clearly documented
-        .split(" ")
+        //  .split(" ")
         // Create a new set of regular expressions from the non-allowed terms
         // with a different base pattern
-        .map(FilterRegex.Regex(_).allowListRegex)
-        .toSet
+
+      val nonAllowedTerms = Seq(termsToRemove).map(FilterRegex.Regex(_).allowListRegex).toSet
 
       // Applies the block filter using nonAllowedTerms created from the original
       // string to the original string. Trims leading/trailing whitespace and
       // reduces extra interior whitespace
       applyBlockFilter(nonAllowedTerms).reduceWhitespace
     }
+
     /**
       * Applies the provided set of patterns and removes all matches from the original string
       */
@@ -57,6 +59,7 @@ object StringNormalizationUtils {
       .foldLeft(value) {
         case (string, pattern) => string.replaceAll(pattern, "").reduceWhitespace
       }
+
 
     /**
       * Find and capitalize the first character in a given string
@@ -129,6 +132,14 @@ object StringNormalizationUtils {
       // rejoin the sentences and add back the whitespace that was trimmed off
       sentences.mkString(" ")
     }
+
+    /**
+      *
+      */
+    lazy val extractExtents: SingleStringEnrichment =
+      value
+        .applyAllowFilter(ExtentIdentificationList.termList) // allow things that look like extents
+        .applyBlockFilter(ExtentExceptionsList.termList) // block exceptions
 
     /**
       * Truncates the string at the specified length
