@@ -7,7 +7,7 @@ import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, 
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
@@ -53,13 +53,16 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     extractStrings(data \ "metadata" \\ "description")
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "metadata" \\ "extent")
+    extractStrings(data \ "metadata" \\ "extent") ++
+      extentFromFormat(data)
 
   override def format(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "metadata" \\ "format")
       .flatMap(_.splitAtDelimiter(";"))
-      .map(_.applyBlockFilter(DigitalSurrogateBlockList.termList ++
-        FormatTypeValuesBlockList.termList))
+      .map(_.applyBlockFilter(
+         DigitalSurrogateBlockList.termList ++
+         FormatTypeValuesBlockList.termList ++
+        ExtentIdentificationList.termList))
       .filter(_.nonEmpty)
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
@@ -151,4 +154,16 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     name = Some("Ohio Digital Network"),
     uri = Some(Utils.createUri("http://dp.la/api/contributor/ohio"))
   )
+
+  /**
+    * Extracts values from format field and returns values that appear to be
+    * extent statements
+    * @param data
+    * @return
+    */
+  def extentFromFormat(data: Document[NodeSeq]): ZeroToMany[String] =
+     extractStrings(data \ "metadata" \\ "format")
+       .flatMap(_.splitAtDelimiter(";"))
+       .map(_.extractExtents)
+       .filter(_.nonEmpty)
 }

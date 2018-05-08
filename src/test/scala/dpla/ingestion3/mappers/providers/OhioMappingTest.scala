@@ -93,9 +93,17 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct format and remove values in that are stop words ('image')" in {
     val xml: Document[NodeSeq] = Document(<record><metadata>
       <dcterms:format>photograph</dcterms:format>
+      <dcterms:format>1 x 2 x 3</dcterms:format>
       <dcterms:format>image</dcterms:format>
     </metadata></record>)
     val expected = Seq("photograph")
+    assert(extractor.format(xml) === expected)
+  }
+  it should "extract nothing if the format value looks like an extent" in {
+    val xml: Document[NodeSeq] = Document(<record><metadata>
+      <dcterms:format>1 score (3 p.) 33 cm</dcterms:format>
+    </metadata></record>)
+    val expected = Seq()
     assert(extractor.format(xml) === expected)
   }
   it should "extract the correct format when splitting on ';'  and remove values in that are stop words" in {
@@ -211,5 +219,16 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct preview" in {
     val expected = Some(uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/files/thumbnails/26e197915e9107914faa33ac166ead5a.jpg")))
     assert(extractor.preview(xml) === expected)
+  }
+
+  // Extent format helper
+  it should "extract extent values from format" in {
+    val xml: NodeSeq = <record><metadata>
+        <format>1 x 2 x 3</format>
+        <format>written</format>
+      </metadata></record>
+
+    val expected = Seq("1 x 2 x 3")
+    assert(extractor.extentFromFormat(Document(xml)) === expected)
   }
 }
