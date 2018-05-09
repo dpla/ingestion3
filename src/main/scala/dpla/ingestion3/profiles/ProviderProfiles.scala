@@ -72,10 +72,10 @@ class OhioProfile extends XmlProfile {
   * - Colorado and Wyoming
   */
 class P2PProfile extends JsonProfile {
-  type Mapping = _
+  type Mapping = CdlMapping // FIXME placeholder
 
   override def getHarvester = classOf[P2PFileHarvester]
-  override def getMapping = _
+  override def getMapping = new CdlMapping
 }
 /**
   * Pennsylvania Hub
