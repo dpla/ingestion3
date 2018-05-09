@@ -48,6 +48,19 @@ class FlatFileIO extends FileIO {
     // FIXME This is a lazy kludge.
     readFileAsString(name).split("""\n""").toSeq
   }
+
+  /**
+    * Creates missing parent directories or deletes existing all
+    * files on the path
+    * @param pathStr
+    */
+  def deletePathContents(pathStr: String): Unit = {
+    val path = new File(pathStr)
+    path.getParentFile.mkdirs()
+    if (path.exists & !pathStr.startsWith("s3")) {
+      Utils.deleteRecursively(path)
+    }
+  }
 }
 
 /**

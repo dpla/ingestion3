@@ -36,7 +36,7 @@ class LocHarvester(shortName: String,
   /**
     * Entry method for invoking LC harvest
     */
-  override protected def localApiHarvest: Unit = {
+  override protected def localHarvest: Unit = {
     implicit val formats = DefaultFormats
     // Get sets from conf
     val collections = conf.harvest.setlist

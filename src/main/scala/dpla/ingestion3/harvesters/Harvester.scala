@@ -3,9 +3,13 @@ package dpla.ingestion3.harvesters
 import java.io.File
 import java.net.URL
 
-import com.amazonaws.auth.{AWSCredentialsProviderChain, DefaultAWSCredentialsProviderChain}
+import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.utils.Utils
+import dpla.ingestion3.harvesters.api.{ApiError, ApiRecord, ApiResponse}
+import dpla.ingestion3.utils.{AvroUtils, AwsUtils, FlatFileIO, Utils}
+import org.apache.avro.Schema
+import org.apache.avro.file.DataFileWriter
+import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -27,74 +31,35 @@ import scala.util.{Failure, Success, Try}
   *
   * @param shortName [String] Provider short name
   * @param conf [i3Conf] contains configs for the harvester.
-  * @param outputDir [String] outputDir for the harvested data.
-  * @param harvestLogger [Logger] for the harvester.
+  * @param outStr [String] outputPathStr for the harvested data.
+  * @param logger [Logger] for the harvester.
   */
 abstract class Harvester(shortName: String,
                          conf: i3Conf,
-                         outputDir: String,
-                         harvestLogger: Logger) {
-  /**
-    * Abstract method runHarvest() should:
-    *   1. Run a harvest.
-    *   2. Save harvested data.
-    *   3. Return a Try[DataFrame] of the harvested data.
-    *
-    * @return Try[DataFrame]
-    */
-  protected def runHarvest: Try[DataFrame]
+                         outStr: String,
+                         logger: Logger)
+  extends AwsUtils {
+
+  protected lazy val avroWriter: DataFileWriter[GenericRecord] = {
+    val path = if (outStr.endsWith("/")) outStr else outStr + "/"
+    fileIo.deletePathContents(outStr)
+    AvroUtils.getAvroWriter(new File(path + filename), schema)
+  }
+  avroWriter.setFlushOnEveryBlock(true)
+
+  protected lazy val fileIo = new FlatFileIO()
+
+  protected val filename: String = s"${shortName}_${System.currentTimeMillis()}"
 
   /**
     * Abstract method mimeType should store the mimeType of the harvested data.
     */
   protected val mimeType: String
 
-  /**
-    * Entry point for running a harvest.
-    */
-  def harvest: Try[Long] = {
+  protected lazy val outputPath = new File(outStr)
 
-    // If the output directory already exists it is a local path
-    // then delete it and its contents.
-    // TODO Move this into a shell script
-    outputFile.getParentFile.mkdirs()
-    if (outputFile.exists & !outputDir.startsWith("s3")) {
-      harvestLogger.info(s"Deleting $outputDir...")
-      Utils.deleteRecursively(outputFile)
-    }
-
-    val startTime = System.currentTimeMillis()
-
-    // Call local implementation of runHarvest()
-    val harvestResult = runHarvest match {
-      case Success(df) =>
-        validateSchema(df)
-        val recordCount = df.count()
-        harvestLogger.info(Utils.harvestSummary(System.currentTimeMillis()-startTime, recordCount))
-        Success(recordCount)
-      case Failure(f) => Failure(f)
-    }
-
-    // Shut down spark session.
-    sc.stop()
-    // Count of record or Failure
-    harvestResult
-  }
-
-  protected lazy val outputFile = new File(outputDir)
-  protected lazy val s3AccessKey: String = awsCredentials.getCredentials.getAWSAccessKeyId
-  protected lazy val s3SecretKey: String = awsCredentials.getCredentials.getAWSSecretKey
-
-  /**
-    * DefaultAWSCredentialsProviderChain looks for AWS keys in the following order:
-    *   1. Environment Variables
-    *   2. Java System Properties
-    *   3. Credential profiles file at the default location (~/.aws/credentials)
-    *   4. Instance profile credentials delivered through the Amazon EC2 metadata service
-    *
-    * @return
-    */
-  def awsCredentials = new AWSCredentialsProviderChain(new DefaultAWSCredentialsProviderChain)
+  protected lazy val schemaStr: String = fileIo.readFileAsString("/avro/OriginalRecord.avsc")
+  protected lazy val schema: Schema = new Schema.Parser().parse(schemaStr)
 
   /**
     * Initiate a spark session using the configs specified in the i3Conf.
@@ -104,6 +69,8 @@ abstract class Harvester(shortName: String,
     *
     * @return SparkSession
     */
+  protected lazy val sc: SparkContext = spark.sparkContext
+
   protected lazy val spark: SparkSession = {
     val sparkConf = new SparkConf()
       .setAppName(s"Harvest: $shortName")
@@ -117,12 +84,57 @@ abstract class Harvester(shortName: String,
       .getOrCreate()
   }
 
-  protected lazy val sc: SparkContext = spark.sparkContext
-
-  // Only set AWS keys if output destination is s3
-  if (outputDir.startsWith("s3")) {
+  // Only set AWS key properties in SparkContext if output destination is s3
+  if (outStr.startsWith("s3")) {
     sc.hadoopConfiguration.set("fs.s3a.access.key", s3AccessKey)
     sc.hadoopConfiguration.set("fs.s3a.secret.key", s3SecretKey)
+  }
+
+  /**
+    * Entry point for performing harvest. Deletes existing data on path,
+    * executes harvest, validates result against schema and returns the
+    * count of successfully harvested records or failures.
+    *
+    * @return Try[Long] Number of harvested records or Failure
+    */
+  def harvest: Try[Long] = {
+    fileIo.deletePathContents(outStr)
+
+    val start = System.currentTimeMillis()
+
+    // Call local implementation of runHarvest()
+    val harvestResult = runHarvest match {
+      case Success(df) =>
+        validateSchema(df)
+        val recordCount = df.count()
+        logger.info(Utils.harvestSummary(System.currentTimeMillis()-start, recordCount))
+        Success(recordCount)
+      case Failure(f) => Failure(f)
+    }
+    // Shut down spark session.
+    sc.stop()
+    // Count of record or Failure
+    harvestResult
+  }
+
+  /**
+    * Performs specific harvest (OAI, p2p, Cdl, PSS)
+    *
+    * To be defined in implementing class
+    */
+  protected def localHarvest(): Unit
+
+  /**
+    * Generalized driver for FileHarvesters invokes localApiHarvest() method and reports
+    * summary information.
+    */
+  protected def runHarvest: Try[DataFrame] = Try {
+    // Calls the local implementation
+    localHarvest()
+    avroWriter.close()
+    logger.info(s"Saving to $outStr")
+    // Reads the saved avro file back
+    spark.read.avro(outStr)
   }
 
   /**
@@ -158,29 +170,8 @@ abstract class Harvester(shortName: String,
         s"""Harvested DataFrame did not match expected schema.\n
         Actual fields: ${actualFields.mkString(", ")}\n
         Expected fields: ${expectedFields.mkString(", ")}"""
-      harvestLogger.warn(msg)
+      logger.warn(msg)
     }
-  }
-}
-
-/**
-  * Harvester Exceptions
-  */
-object HarvesterExceptions {
-
-  def throwMissingArgException(arg: String) = {
-    val msg = s"Missing argument: $arg"
-    throw new IllegalArgumentException(msg)
-  }
-
-  def throwUnrecognizedArgException(arg: String) = {
-    val msg = s"Unrecognized argument: $arg"
-    throw new IllegalArgumentException(msg)
-  }
-
-  def throwValidationException(arg: String) = {
-    val msg = s"Validation error: $arg"
-    throw new IllegalArgumentException(msg)
   }
 }
 

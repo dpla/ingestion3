@@ -33,7 +33,7 @@ class CdlHarvester(shortName: String,
     "api_key" -> conf.harvest.apiKey
   ).collect{ case (key, Some(value)) => key -> value } // remove None values
 
-  override protected def localApiHarvest: Unit = {
+  override protected def localHarvest: Unit = {
     implicit val formats = DefaultFormats
 
     // Mutable vars for controlling harvest loop
@@ -62,7 +62,7 @@ class CdlHarvester(shortName: String,
             })
 
             // @see ApiHarvester
-            saveOut(cdlRecords)
+            saveOutRecords(cdlRecords)
 
             // Loop control
             cursorMark = (json \\ "cursorMark").extract[String]
