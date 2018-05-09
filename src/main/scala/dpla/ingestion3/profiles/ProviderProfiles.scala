@@ -2,6 +2,7 @@ package dpla.ingestion3.profiles
 
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.api.{CdlHarvester, LocHarvester}
+import dpla.ingestion3.harvesters.file.P2PFileHarvester
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.mappers.providers._
 
@@ -66,6 +67,16 @@ class OhioProfile extends XmlProfile {
   override def getMapping = new OhioMapping
 }
 
+/**
+  * P2P (Plains2Peaks)
+  * - Colorado and Wyoming
+  */
+class P2PProfile extends JsonProfile {
+  type Mapping = CdlMapping // FIXME placeholder
+
+  override def getHarvester = classOf[P2PFileHarvester]
+  override def getMapping = new CdlMapping
+}
 /**
   * Pennsylvania Hub
   */

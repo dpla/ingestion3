@@ -2,6 +2,7 @@ package dpla.ingestion3.executors
 
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.Harvester
+import dpla.ingestion3.harvesters.file.FileHarvester
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.harvesters.pss.PssHarvester
 import dpla.ingestion3.harvesters.resourceSync.RsHarvester
@@ -41,12 +42,12 @@ trait HarvestExecutor {
     val harvester: Harvester = harvestType match {
       case "oai" =>
         new OaiHarvester(shortName, conf, outputDir, logger)
-      case "api" =>
-        registeredHarvester(shortName, outputDir, conf, logger)
       case "pss" =>
         new PssHarvester(shortName, conf, outputDir, logger)
       case "rs" =>
         new RsHarvester(shortName, conf, outputDir, logger)
+      case t if Seq("api", "file").contains(t) =>
+        registeredHarvester(shortName, outputDir, conf, logger)
       case _ =>
         val msg = s"Harvest type not recognized."
         logger.fatal(msg)
