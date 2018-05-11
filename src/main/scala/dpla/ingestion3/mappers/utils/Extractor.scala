@@ -82,7 +82,7 @@ trait JsonExtractor extends Extractor[JValue] {
     extractString(json \ fieldName)
 
   /**
-    * Pulls a Seq[String] of values from the implicit json daa
+    * Pulls a Seq[String] of values from the implicit json
     *
     * @param fieldName Name of field to extract string from.
     * @param json      JSON document or subdocument
@@ -98,8 +98,19 @@ trait JsonExtractor extends Extractor[JValue] {
     *
     *         Otherwise, an empty Seq is returned.
     */
-  def extractStrings(fieldName: String)(implicit json: JValue): Seq[String] =
-    extractStrings(json \ fieldName)
+  def extractStrings(fieldName: String)(implicit json: JValue): Seq[String]
+    = extractStrings(json \ fieldName)
+
+  /**
+    * Pulls a Seq[String] of values from the implicit json from the specified field name
+    * at any depth
+    *
+    * @param fieldName
+    * @param json
+    * @return
+    */
+  def extractStringsDeep(fieldName: String)(implicit json: JValue): Seq[String]
+    = extractStrings(json \\ fieldName)
 
   /**
     * @see definition of extractStrings(fieldName: String), save for this version
