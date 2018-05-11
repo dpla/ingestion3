@@ -3,7 +3,7 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, JsonExtractor, Mapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
@@ -64,12 +64,15 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
     extractStrings("description_ss")(data)
 
   override def extent(data: Document[JValue]): ZeroToMany[String] =
-    extractStrings("extent_ss")(data)
+    extractStrings("extent_ss")(data) ++
+      extentFromFormat(data)
 
   override def format(data: Document[JValue]): ZeroToMany[String] =
     extractStrings("format")(data)
-      .map(_.applyBlockFilter(DigitalSurrogateBlockList.termList ++
-        FormatTypeValuesBlockList.termList))
+      .map(_.applyBlockFilter(
+        DigitalSurrogateBlockList.termList ++
+        FormatTypeValuesBlockList.termList ++
+        ExtentIdentificationList.termList))
       .filter(_.nonEmpty)
 
   override def genre(data: Document[JValue]): ZeroToMany[SkosConcept] =
@@ -138,4 +141,16 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
       case Some(url) => new URI(url)
       case None => throw new Exception("Unable to determine URL of item on provider's site")
     }
+
+  /**
+    * Extracts values from format field and returns only those values which appear to be
+    * extent statements
+    *
+    * @param data Original record
+    * @return ZeroToMany[String] Extent values
+    */
+  def extentFromFormat(data: Document[JValue]): ZeroToMany[String] =
+    extractStrings("format")(data)
+      .map(_.extractExtents)
+      .filter(_.nonEmpty)
 }
