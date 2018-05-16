@@ -40,16 +40,23 @@ abstract class Harvester(shortName: String,
                          logger: Logger)
   extends AwsUtils {
 
-  protected lazy val avroWriter: DataFileWriter[GenericRecord] = {
+  private val avroWriter: DataFileWriter[GenericRecord]  = {
+    val filename = s"${shortName}_${System.currentTimeMillis()}.avro"
     val path = if (outStr.endsWith("/")) outStr else outStr + "/"
-    fileIo.deletePathContents(outStr)
-    AvroUtils.getAvroWriter(new File(path + filename), schema)
+    val outputDir = new File(path)
+    outputDir.mkdirs()
+    if (!outputDir.exists) throw new RuntimeException(s"Output directory ${path} does not exist")
+    logger.info(s"Writing output to ${path}")
+
+    val avroWriter = AvroUtils.getAvroWriter(new File(path + filename), schema)
+    avroWriter.setFlushOnEveryBlock(true)
+    avroWriter
   }
-  avroWriter.setFlushOnEveryBlock(true)
+
+  protected def getAvroWriter(): DataFileWriter[GenericRecord] = avroWriter
 
   protected lazy val fileIo = new FlatFileIO()
 
-  protected val filename: String = s"${shortName}_${System.currentTimeMillis()}"
 
   /**
     * Abstract method mimeType should store the mimeType of the harvested data.
@@ -98,8 +105,6 @@ abstract class Harvester(shortName: String,
     * @return Try[Long] Number of harvested records or Failure
     */
   def harvest: Try[Long] = {
-    fileIo.deletePathContents(outStr)
-
     val start = System.currentTimeMillis()
 
     // Call local implementation of runHarvest()

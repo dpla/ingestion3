@@ -35,9 +35,6 @@ abstract class FileHarvester(shortName: String,
     */
   case class ParsedResult(id: String, item: String)
 
-  override protected val filename: String =
-    s"${shortName}_${System.currentTimeMillis()}.avro"
-
   /**
     * Parses and extracts ZipInputStream and writes
     * parses records out.
@@ -56,6 +53,7 @@ abstract class FileHarvester(shortName: String,
     */
   def writeOut(unixEpoch: Long,
                item: ParsedResult): Unit = {
+    val avroWriter = getAvroWriter()
     val genericRecord = new GenericData.Record(schema)
     genericRecord.put("id", item.id)
     genericRecord.put("ingestDate", unixEpoch)

@@ -23,8 +23,6 @@ abstract class ApiHarvester(shortName: String,
   // Abstract method queryParams should set base query parameters for API call.
   protected val queryParams: Map[String, String]
 
-  override protected val filename: String = s"${shortName}_${System.currentTimeMillis()}" +
-    ".avro"
 
   /**
     * Writes errors and documents to log file and avro file respectively
@@ -45,7 +43,8 @@ abstract class ApiHarvester(shortName: String,
     *
     * @param docs - List of ApiRecords to save out
     */
-  protected def saveOutRecords(docs: List[ApiRecord]): Unit =
+  protected def saveOutRecords(docs: List[ApiRecord]): Unit = {
+    val avroWriter = getAvroWriter()
     // TODO Integrate this with File harvester save out methods 
     docs.foreach(doc => {
       val startTime = System.currentTimeMillis()
@@ -60,7 +59,7 @@ abstract class ApiHarvester(shortName: String,
       genericRecord.put("mimetype", mimeType)
       avroWriter.append(genericRecord)
     })
-
+  }
   /**
     * Writes errors out to log file
     *
