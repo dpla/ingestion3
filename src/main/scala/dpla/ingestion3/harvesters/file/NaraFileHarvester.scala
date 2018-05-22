@@ -129,14 +129,23 @@ class NaraFileHarvester(shortName: String,
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime  / 1000L
     val inFile = new File(conf.harvest.endpoint.getOrElse("in"))
-    // TODO Support harvesting from more than one file...
-    val inputStream = getInputStream(inFile)
+
+    if (inFile.isDirectory)
+      for (file: File <- inFile.listFiles())
+        harvestFile(file, unixEpoch)
+    else
+      harvestFile(inFile, unixEpoch)
+
+  }
+
+  private def harvestFile(file: File, unixEpoch: Long): Unit = {
+    val inputStream = getInputStream(file)
       .getOrElse(throw new IllegalArgumentException("Couldn't load tar file."))
 
     val recordCount = (for (tarResult <- iter(inputStream)) yield {
       handleFile(tarResult, unixEpoch) match {
         case Failure(exception) =>
-          logger.error(s"Caught exception on $inFile.", exception)
+          logger.error(s"Caught exception on ${tarResult.entryName}.", exception)
           0
         case Success(count) =>
           count
