@@ -61,7 +61,7 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
     extractStrings("date_ss")(data).map(stringOnlyTimeSpan)
 
   override def description(data: Document[JValue]): ZeroToMany[String] =
-    extractStrings("description_ss")(data)
+    extractStrings("description")(data)
 
   override def extent(data: Document[JValue]): ZeroToMany[String] =
     extractStrings("extent_ss")(data) ++
