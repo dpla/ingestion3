@@ -35,6 +35,7 @@ class DatePatternMatchTest extends FlatSpec with BeforeAndAfter with Matchers wi
   }
 
   it should "match yyyy MMM generated values" in {
+
     val yearMonthGen: Gen[String] = for {
       y <- yearGen
       d1 <- delimGen
@@ -80,5 +81,4 @@ class DatePatternMatchTest extends FlatSpec with BeforeAndAfter with Matchers wi
 
     check( forAll(yearMonthDayGen) { datePatternMatcher.identifyPattern(_) === Some("yyyy m(m) d(d)") } )
   }
-
 }
