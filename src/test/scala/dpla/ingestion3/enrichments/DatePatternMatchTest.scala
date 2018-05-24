@@ -9,27 +9,76 @@ import org.scalatest.prop.Checkers
 class DatePatternMatchTest extends FlatSpec with BeforeAndAfter with Matchers with Checkers {
   val datePatternMatcher = new DatePatternMatch()
 
-  val yyyyGen: Gen[Int] = Gen.choose(1000,2018)
+  val yearGen: Gen[Int] = Gen.choose(1000,2018)
+  val dayGen: Gen[Int] = Gen.choose(1, 31)
   val delimGen: Gen[String] = Gen.oneOf("-", "/", " ")
-  val monthGen: Gen[String] = Gen.oneOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul",
-    "Aug", "Sep", "Oct", "Nov", "Dec")
+  val monthStrGen: Gen[String] = Gen.oneOf(
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+  val monthGen: Gen[String] = Gen.oneOf(
+    "01", "1",
+    "02", "2",
+    "03", "3",
+    "04", "4",
+    "05", "5",
+    "06", "6",
+    "07", "7",
+    "08", "8",
+    "09", "9",
+    "10", "11", "12")
 
-  val yearMonthGen: Gen[String] = for {
-    n <- yyyyGen
-    m <- delimGen
-    o <- monthGen
-  } yield n + m + o
 
   "identifyPattern" should "match any year between 1000 and 2019" in {
-    check(forAll(yyyyGen) { n => {
+    check(forAll(yearGen) { n => {
       datePatternMatcher.identifyPattern(n.toString).isDefined
     }})
   }
 
   it should "match yyyy MMM generated values" in {
-    check(forAll(yearMonthGen) { n => {
-      println(n)
-      datePatternMatcher.identifyPattern(n) === Some("yyyy MMM")
+    val yearMonthGen: Gen[String] = for {
+      y <- yearGen
+      d1 <- delimGen
+      m <- monthStrGen
+    } yield y + d1 + m
+
+    check( forAll(yearMonthGen) { datePatternMatcher.identifyPattern(_) === Some("yyyy MMM") })
+  }
+
+  it should "match MMM yyyy generated values" in {
+    val monthYearGen: Gen[String] = for {
+      m <- monthStrGen
+      d1 <- delimGen
+      y <- yearGen
+    } yield m + d1 + y
+
+
+    check( Prop.forAllNoShrink(monthYearGen) { p => {
+      datePatternMatcher.identifyPattern(p) === Some("MMM yyyy")
     }})
   }
+
+  it should "match yyyy MMM d(d) generated values" in {
+    val yearMonthDayGen: Gen[String] = for {
+      y <- yearGen
+      d1 <- delimGen
+      m <- monthStrGen
+      d2 <- delimGen
+      d <- dayGen
+    } yield y + d1 + m + d2 + d
+
+    check( forAll(yearMonthDayGen) { datePatternMatcher.identifyPattern(_) === Some("yyyy MMM d(d)") } )
+  }
+
+  it should "match yyyy MM dd generated values" in {
+    val yearMonthDayGen: Gen[String] = for {
+      y <- yearGen
+      d1 <- delimGen
+      m <- monthGen
+      d2 <- delimGen
+      d <- dayGen
+    } yield y + d1 + m + d2 + d
+
+    check( forAll(yearMonthDayGen) { datePatternMatcher.identifyPattern(_) === Some("yyyy m(m) d(d)") } )
+  }
+
 }
