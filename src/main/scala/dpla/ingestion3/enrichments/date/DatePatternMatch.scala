@@ -14,21 +14,11 @@ object DatePatterns {
     DatePattern(s"\\d{4}$delim\\d{1,2}$delim\\d{1,2}", "yyyy m(m) d(d)"), // 1942 02 12 OR 1874-01-15 OR 1987/1/3
 
     // alpha month
-
-    DatePattern(s"\\d{4}$delim[a-zA-Z]{3}", "yyyy MMM"), // 1954 Mar
-    DatePattern(s"[a-zA-Z]{3}$delim\\d{4}", "MMM yyyy"), // Mar 1954
-    DatePattern(s"\\d{4}$delim[a-zA-Z]{3}$delim\\d{1,2}", "yyyy MMM d(d)") // 1954 Mar 02
-
-    // Date range
-
 //    s"\\d{4}$delimiter\\d{1,2}" -> "yyyy-m(m)", // 1934-01
 //    s"\\d{4}$delimiter\\d{4}" -> "yyyy yyyy", // 1942/1943
 //    s"\\d{4}$delimiter\\d{1,2}$delimiter\\d{1,2}$delimiter\\d{4}$delimiter\\d{1,2}$delimiter\\d{1,2}"
 //      -> "yyyy m(m) d(d) yyyy m(m) d(d)", // 1850-01-01/1950-12-31
 
-//    "century" -> "century", // 19th century
-
-    // Indeterminate
   )
 }
 

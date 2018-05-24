@@ -81,4 +81,5 @@ class DatePatternMatchTest extends FlatSpec with BeforeAndAfter with Matchers wi
 
     check( forAll(yearMonthDayGen) { datePatternMatcher.identifyPattern(_) === Some("yyyy m(m) d(d)") } )
   }
+
 }
