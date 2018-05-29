@@ -10,7 +10,26 @@ class DatePatternMatchTest extends FlatSpec with BeforeAndAfter with Matchers wi
   val datePatternMatcher = new DatePatternMatch()
 
   val yearGen: Gen[Int] = Gen.choose(1000,2018)
-  val dayGen: Gen[Int] = Gen.choose(1, 31)
+
+  val dayGen: Gen[String] = Gen.oneOf(
+    "01", "1",
+    "02", "2",
+    "03", "3",
+    "04", "4",
+    "05", "5",
+    "06", "6",
+    "07", "7",
+    "08", "8",
+    "09", "9",
+    "10", "11", "12",
+    "13", "14", "15",
+    "16", "17", "18",
+    "19", "20", "21",
+    "22", "23", "24",
+    "25", "26", "27",
+    "28", "29", "30", "31")
+
+
   val delimGen: Gen[String] = Gen.oneOf("-", "/", " ")
   val monthStrGen: Gen[String] = Gen.oneOf(
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -79,7 +98,21 @@ class DatePatternMatchTest extends FlatSpec with BeforeAndAfter with Matchers wi
       d <- dayGen
     } yield y + d1 + m + d2 + d
 
-    check( forAll(yearMonthDayGen) { datePatternMatcher.identifyPattern(_) === Some("yyyy m(m) d(d)") } )
+    check( Prop.forAllNoShrink(yearMonthDayGen) { p =>
+      println(p)
+      datePatternMatcher.identifyPattern(p) === Some("yyyy m(m) d(d)") } )
+  }
+
+  it should "match yyyy m(m) generated values" in {
+    val yearMonthGen: Gen[String] = for {
+      y <- yearGen
+      d1 <- delimGen
+      m <- monthGen
+    } yield y + d1 + m
+
+    check( Prop.forAllNoShrink(yearMonthGen) { p => {
+      println(p + " " + datePatternMatcher.identifyPattern(p))
+      datePatternMatcher.identifyPattern(p) === Some("yyyy m(m)") } } )
   }
 
 }
