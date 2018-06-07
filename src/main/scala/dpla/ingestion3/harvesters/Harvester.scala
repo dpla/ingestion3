@@ -3,6 +3,7 @@ package dpla.ingestion3.harvesters
 import java.io.File
 import java.net.URL
 
+import com.amazonaws.auth.{AWSCredentialsProviderChain, DefaultAWSCredentialsProviderChain}
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.utils.{AvroUtils, AwsUtils, FlatFileIO, Utils}
@@ -66,6 +67,46 @@ abstract class Harvester(shortName: String,
 
   protected lazy val schemaStr: String = fileIo.readFileAsString("/avro/OriginalRecord.avsc")
   protected lazy val schema: Schema = new Schema.Parser().parse(schemaStr)
+
+  // Call local implementation.
+  val harvestResult = runHarvest match {
+
+    case Success(df) =>
+      // Log details about the successful harvest.
+      val endTime = System.currentTimeMillis()
+      val recordCount = df.count()
+
+      logger.info(s"Records saving to $outputPath")
+      validateSchema(df)
+
+      Success(recordCount)
+
+    case Failure(f) =>
+
+      // Return the failure up to executor
+      logger.fatal(s"Unable to harvest records. ${f.printStackTrace()}")
+      Failure(f)
+  }
+
+  // Shut down spark session.
+  sc.stop()
+
+  harvestResult
+
+  protected lazy val outputFile = new File(outStr)
+  override lazy val s3AccessKey: String = awsCredentials.getCredentials.getAWSAccessKeyId
+  override lazy val s3SecretKey: String = awsCredentials.getCredentials.getAWSSecretKey
+
+  /**
+    * DefaultAWSCredentialsProviderChain looks for AWS keys in the following order:
+    *   1. Environment Variables
+    *   2. Java System Properties
+    *   3. Credential profiles file at the default location (~/.aws/credentials)
+    *   4. Instance profile credentials delivered through the Amazon EC2 metadata service
+    *
+    * @return
+    */
+  def awsCredentials = new AWSCredentialsProviderChain(new DefaultAWSCredentialsProviderChain)
 
   /**
     * Initiate a spark session using the configs specified in the i3Conf.

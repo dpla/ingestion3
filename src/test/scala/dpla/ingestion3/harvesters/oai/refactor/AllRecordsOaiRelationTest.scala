@@ -60,7 +60,6 @@ class AllRecordsOaiRelationTest extends FlatSpec with SharedSparkContext {
     val tempFile = File.createTempFile("oai", "test")
     relation.cacheTempFile(tempFile)
     val lines = FileUtils.readLines(tempFile).toIndexedSeq
-
     assert(lines(0) === "page,<item>blah</item>,")
     assert(lines(1) === "page,<item>blah2</item>,")
     assert(lines(2) === "page,<item>blah3</item>,")
@@ -78,6 +77,7 @@ class AllRecordsOaiRelationTest extends FlatSpec with SharedSparkContext {
   }
 
   it should "parse Rows into OaiPages and OaiErrors" in {
+
     assert(relation.handleCsvRow(Row("page", "foo", "")) === Right(OaiPage("foo")))
     assert(relation.handleCsvRow(Row("error", "sorry", "")) === Left(OaiError("sorry", None)))
   }
