@@ -1,8 +1,10 @@
 package dpla.ingestion3.entries.ingest
 
+import java.io.File
+
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.executors.HarvestExecutor
-import dpla.ingestion3.utils.Utils
+import dpla.ingestion3.utils.{FlatFileIO, Utils}
 
 import scala.util.Failure
 
@@ -27,6 +29,12 @@ object HarvestEntry extends HarvestExecutor {
 
     // Get mapping logger.
     val harvestLogger = Utils.createLogger("harvest", shortName)
+
+    // Delete dataOut if exists
+    if (new File(dataOut).exists()) {
+      harvestLogger.warn(s"$dataOut already exists. Deleting")
+      new FlatFileIO().deletePathContents(dataOut)
+    }
 
     // Load configuration from file.
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
