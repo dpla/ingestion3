@@ -5,11 +5,10 @@ import java.net.URL
 
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.api.{ApiError, ApiRecord, ApiResponse}
 import dpla.ingestion3.utils.{AvroUtils, AwsUtils, FlatFileIO, Utils}
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
-import org.apache.avro.generic.{GenericData, GenericRecord}
+import org.apache.avro.generic.GenericRecord
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}

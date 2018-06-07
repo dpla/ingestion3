@@ -20,9 +20,9 @@ class AllRecordsOaiRelationTest extends FlatSpec with SharedSparkContext {
     )
 
     override def listAllRecordPages() = Seq(
-      Right(OaiPage("blah")),
-      Right(OaiPage("blah2")),
-      Right(OaiPage("blah3")),
+      Right(OaiPage("<item>blah</item>")),
+      Right(OaiPage("<item>blah2</item>")),
+      Right(OaiPage("<item>blah3</item>")),
       Left(OaiError("oops", None))
     )
 
@@ -37,8 +37,8 @@ class AllRecordsOaiRelationTest extends FlatSpec with SharedSparkContext {
   private lazy val relation = new AllRecordsOaiRelation(oaiConfiguration, oaiMethods)(sqlContext)
 
   "a AllRecordsOaiRelation" should "parse a CSV row into an Either[OaiError, OaiPage]" in {
-    val pageRow = Row("page", "abcd", null)
-    val errorRow1 = Row("error", "abcd", null)
+    val pageRow = Row("page", "abcd", "")
+    val errorRow1 = Row("error", "abcd", "")
     val errorRow2 = Row("error", "efgh", "foo")
 
     val page = relation.handleCsvRow(pageRow)
@@ -60,9 +60,10 @@ class AllRecordsOaiRelationTest extends FlatSpec with SharedSparkContext {
     val tempFile = File.createTempFile("oai", "test")
     relation.cacheTempFile(tempFile)
     val lines = FileUtils.readLines(tempFile).toIndexedSeq
-    assert(lines(0) === "page,blah,")
-    assert(lines(1) === "page,blah2,")
-    assert(lines(2) === "page,blah3,")
+
+    assert(lines(0) === "page,<item>blah</item>,")
+    assert(lines(1) === "page,<item>blah2</item>,")
+    assert(lines(2) === "page,<item>blah3</item>,")
     assert(lines(3) === "error,oops,")
     tempFile.delete
   }
@@ -77,19 +78,19 @@ class AllRecordsOaiRelationTest extends FlatSpec with SharedSparkContext {
   }
 
   it should "parse Rows into OaiPages and OaiErrors" in {
-    assert(relation.handleCsvRow(Row("page", "foo", null)) === Right(OaiPage("foo")))
-    assert(relation.handleCsvRow(Row("error", "sorry", null)) === Left(OaiError("sorry", None)))
+    assert(relation.handleCsvRow(Row("page", "foo", "")) === Right(OaiPage("foo")))
+    assert(relation.handleCsvRow(Row("error", "sorry", "")) === Left(OaiError("sorry", None)))
   }
 
-  it should "render Either[OaiError,OaiPage] into approprate Seqs" in {
+  it should "render Either[OaiError,OaiPage] into appropriate Seqs" in {
     assert(
-      relation.eitherToArray(Left(OaiError("sorry", None))) === Seq("error", "sorry", null)
+      relation.eitherToArray(Left(OaiError("sorry", None))) === Seq("error", "sorry", "")
     )
     assert(
       relation.eitherToArray(Left(OaiError("sorry", Some("bar")))) === Seq("error", "sorry", "bar")
     )
     assert(
-      relation.eitherToArray(Right(OaiPage("pagey"))) === Seq("page", "pagey", null)
+      relation.eitherToArray(Right(OaiPage("<item>pagey</item>"))) === Seq("page", "<item>pagey</item>", "")
     )
   }
 

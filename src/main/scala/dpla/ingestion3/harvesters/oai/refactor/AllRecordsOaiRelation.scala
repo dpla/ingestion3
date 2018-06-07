@@ -74,9 +74,9 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiM
     either match {
       case Right(OaiPage(string)) =>
         import scala.xml._
-        Seq("page", xml.Utility.trim(XML.loadString(string)).toString(), null)
+        Seq("page", xml.Utility.trim(XML.loadString(string)).toString(), "")
       case Left(OaiError(message, None)) =>
-        Seq("error", message, null)
+        Seq("error", message, "")
       case Left(OaiError(message, Some(url))) =>
         Seq("error", message, url)
     }
