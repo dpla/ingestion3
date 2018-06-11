@@ -73,8 +73,7 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiM
   private[refactor] def eitherToArray(either: Either[OaiError, OaiPage]): Seq[String] =
     either match {
       case Right(OaiPage(string)) =>
-        import scala.xml._
-        Seq("page", xml.Utility.trim(XML.loadString(string)).toString(), null)
+        Seq("page", string, null)
       case Left(OaiError(message, None)) =>
         Seq("error", message, null)
       case Left(OaiError(message, Some(url))) =>
