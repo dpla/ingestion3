@@ -37,8 +37,8 @@ class AllRecordsOaiRelationTest extends FlatSpec with SharedSparkContext {
   private lazy val relation = new AllRecordsOaiRelation(oaiConfiguration, oaiMethods)(sqlContext)
 
   "a AllRecordsOaiRelation" should "parse a CSV row into an Either[OaiError, OaiPage]" in {
-    val pageRow = Row("page", "abcd", null)
-    val errorRow1 = Row("error", "abcd", null)
+    val pageRow = Row("page", "abcd", "")
+    val errorRow1 = Row("error", "abcd", "")
     val errorRow2 = Row("error", "efgh", "foo")
 
     val page = relation.handleCsvRow(pageRow)
@@ -60,10 +60,11 @@ class AllRecordsOaiRelationTest extends FlatSpec with SharedSparkContext {
     val tempFile = File.createTempFile("oai", "test")
     relation.cacheTempFile(tempFile)
     val lines = FileUtils.readLines(tempFile).toIndexedSeq
-    assert(lines(0) === "page,blah,")
-    assert(lines(1) === "page,blah2,")
-    assert(lines(2) === "page,blah3,")
-    assert(lines(3) === "error,oops,")
+    assert(lines(0) === "\"page\",\"blah\",\"\"")
+    assert(lines(1) === "\"page\",\"blah2\",\"\"")
+    assert(lines(2) === "\"page\",\"blah3\",\"\"")
+    assert(lines(3) === "\"error\",\"oops\",\"\"")
+    assert(lines(3) === "\"error\",\"oops\",\"\"")
     tempFile.delete
   }
 
@@ -77,8 +78,8 @@ class AllRecordsOaiRelationTest extends FlatSpec with SharedSparkContext {
   }
 
   it should "parse Rows into OaiPages and OaiErrors" in {
-    assert(relation.handleCsvRow(Row("page", "foo", null)) === Right(OaiPage("foo")))
-    assert(relation.handleCsvRow(Row("error", "sorry", null)) === Left(OaiError("sorry", None)))
+    assert(relation.handleCsvRow(Row("page", "foo", "")) === Right(OaiPage("foo")))
+    assert(relation.handleCsvRow(Row("error", "sorry", "")) === Left(OaiError("sorry", None)))
   }
 
   it should "render Either[OaiError,OaiPage] into approprate Seqs" in {
