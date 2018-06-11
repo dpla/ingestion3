@@ -12,12 +12,6 @@ class OaiConfigurationTest extends FlatSpec {
     assert(config.endpoint === endpoint)
   }
 
-  it should "recognize when an endpoint is not reachable" in {
-    val endpoint = "http://www.ffdf123.com"
-    val config = OaiConfiguration(defaults.updated("endpoint", endpoint))
-    assertThrows[Exception](config.endpoint)
-  }
-
   it should "throw when no endpoint is given" in {
     val config = OaiConfiguration(defaults)
     assertThrows[Exception](config.endpoint)
