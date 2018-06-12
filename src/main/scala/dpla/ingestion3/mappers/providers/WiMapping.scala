@@ -100,7 +100,7 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   override def dataProvider(data: Document[NodeSeq]): EdmAgent = {
     extractString(data \ "metadata" \\ "dataProvider") match {
       case Some(provider) => nameOnlyAgent(provider)
-      case None => throw new Exception("Missing required property dataProvider")
+      case None => throw new Exception(s"Record ${getProviderId(data)} is missing required property dataProvider")
     }
   }
 
@@ -111,7 +111,7 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   override def isShownAt(data: Document[NodeSeq]): EdmWebResource = {
     extractString(data \ "metadata" \\ "isShownAt") match {
       case Some(uri) => uriOnlyWebResource(new URI(uri))
-      case None => throw new Exception("Missing required property isShownAt")
+      case None => throw new RuntimeException(s"Record ${getProviderId(data)} is missing required property isShownAt")
     }
   }
 
