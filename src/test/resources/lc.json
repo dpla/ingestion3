@@ -208,6 +208,11 @@
         "label": "Dublin Core Record"
       }
     ],
+    "resource": [
+      {
+        "image": "http:images.com"
+      }
+    ],
     "aka": [
       "http://www.loc.gov/item/73691632/",
       "http://hdl.loc.gov/loc.gmd/g3811f.ar124400",

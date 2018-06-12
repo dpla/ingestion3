@@ -31,20 +31,29 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
 
-  override def dataProvider(data: Document[JValue]): ExactlyOne[EdmAgent] =
-    // item['repository']
-    nameOnlyAgent(
-      extractStrings(unwrap(data) \\ "repository").headOption
-        .getOrElse("Missing required property " +
-          "'repository' for dataProvider mapping"))
+  override def dataProvider(data: Document[JValue]): ExactlyOne[EdmAgent] = {
+    val dps = extractStrings(unwrap(data) \\ "repository")
+    val dpName = dps.headOption match {
+      case Some(dp) => {
+        if(dp.startsWith("Library of Congress")) {
+          "Library of Congress"
+        } else if(dp.startsWith("Library of Virginia Richmend, VA" )) {
+          "Library of Virginia"
+        } else if(dp.startsWith("Virginia Historical Society")) {
+          "Virginia Historical Society"
+        } else
+          throw new RuntimeException(s"'repository' value, $dp, is not a valid term")
+      }
+      case _ => throw new RuntimeException("Missing required property " +
+        "'repository' for dataProvider mapping")
+    }
+    nameOnlyAgent(dpName)
+  }
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
     Utils.formatJson(data)
 
-  // TODO Add test
   override def preview(data: Document[JValue]): ZeroToOne[EdmWebResource] =
-    // resource['image'] (First instance)
-    // TODO Confirm mapping, "image_url" might be new field
     extractStrings(unwrap(data) \ "item" \ "resource" \ "image")
       .headOption.map(uri => uriOnlyWebResource(new URI(uri)))
 
@@ -139,9 +148,9 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
     extractStrings(unwrap(data) \ "item" \ "title")
 
   override def `type`(data: Document[JValue]): ZeroToMany[String] = {
-    // item['type'] OR item['format']].keys
+    // item['type'] OR item['original_format']].keys
     val types = extractStrings(unwrap(data) \ "item" \ "type")
-    val formatKeys = extractKeys(unwrap(data) \ "item" \ "format")
+    val formatKeys = extractKeys(unwrap(data) \ "item" \ "original_format")
 
     if (types.nonEmpty) types else formatKeys
   }
