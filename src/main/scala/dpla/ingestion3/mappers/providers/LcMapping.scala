@@ -35,20 +35,15 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
     val dps = extractStrings(unwrap(data) \\ "repository")
     val dpName = dps.headOption match {
       case Some(dp) => {
-        if(dp.startsWith("Library of Congress")) {
-          "Library of Congress"
-        } else if(dp.startsWith("Library of Virginia Richmond, VA" )) {
-          "Library of Virginia"
-        } else if(dp.startsWith("Virginia Historical Society")) {
-          "Virginia Historical Society"
-        } else {
-          val dpError =
-            if(dp.isEmpty) "<EMPTY STRING>"
-              else dp
-          throw new RuntimeException(
-            s"Record ${getProviderId(data)} has invalid 'repository' value: $dpError")
+        dp match {
+          case s if s.startsWith("Library of Congress") => "Library of Congress"
+          case s if s.startsWith("Library of Virginia Richmond, VA") => "Library of Virginia"
+          case s if s.startsWith("Virginia Historical Society") => "Virginia Historical Society"
+          case _ =>
+            val dpError = if(dp.isEmpty) "<EMPTY STRING>" else dp
+            throw new RuntimeException(s"Record ${getProviderId(data)} " +
+              s"has invalid 'repository' value: $dpError")
         }
-
       }
       case _ => throw new RuntimeException("Missing required property " +
         "'repository' for dataProvider mapping")
