@@ -5,6 +5,7 @@ import java.io.{File, FileWriter}
 import com.opencsv.CSVWriter
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SQLContext}
+import org.apache.spark.storage.StorageLevel
 
 /**
   * OaiRelation for harvests that don't specify sets.
@@ -29,8 +30,10 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiM
       .read
       .format("com.databricks.spark.csv")
       .option("header", "false")
-      .option("mode", "FAILFAST")
-      .load(tempFile.getAbsolutePath).rdd
+      //.option("mode", "FAILFAST")
+      .load(tempFile.getAbsolutePath)
+      .rdd
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     val eitherRdd = csvRdd.map(handleCsvRow)
     val pagesEitherRdd = eitherRdd.flatMap(oaiMethods.parsePageIntoRecords)
@@ -43,6 +46,8 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiM
         Right(OaiPage(page))
       // Changed from null to "" b/c empty strings are are written out
       // to the csv in lieu of null. See padTo() in cacheTempFile().
+      case Seq("error", message: String, "") =>
+        Left(OaiError(message, None))
       case Seq("error", message: String, "") =>
         Left(OaiError(message, None))
       case Seq("error", message: String, url: String) =>
@@ -62,7 +67,6 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiM
           .map(l => l.toString)
           .toArray
           .padTo(3,"")
-
         writer.writeNext(line)
       }
     } finally {
@@ -73,9 +77,9 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiM
   private[refactor] def eitherToArray(either: Either[OaiError, OaiPage]): Seq[String] =
     either match {
       case Right(OaiPage(string)) =>
-        Seq("page", string, null)
+        Seq("page", string.replaceAll("\n", " "), "")
       case Left(OaiError(message, None)) =>
-        Seq("error", message, null)
+        Seq("error", message, "")
       case Left(OaiError(message, Some(url))) =>
         Seq("error", message, url)
     }

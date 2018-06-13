@@ -80,17 +80,18 @@ class AllRecordsOaiRelationTest extends FlatSpec with SharedSparkContext {
   it should "parse Rows into OaiPages and OaiErrors" in {
     assert(relation.handleCsvRow(Row("page", "foo", "")) === Right(OaiPage("foo")))
     assert(relation.handleCsvRow(Row("error", "sorry", "")) === Left(OaiError("sorry", None)))
+    assert(relation.handleCsvRow(Row("page", "sorry\nsucker", "")) === Right(OaiPage("sorry\nsucker")))
   }
 
   it should "render Either[OaiError,OaiPage] into approprate Seqs" in {
     assert(
-      relation.eitherToArray(Left(OaiError("sorry", None))) === Seq("error", "sorry", null)
+      relation.eitherToArray(Left(OaiError("sorry", None))) === Seq("error", "sorry", "")
     )
     assert(
       relation.eitherToArray(Left(OaiError("sorry", Some("bar")))) === Seq("error", "sorry", "bar")
     )
     assert(
-      relation.eitherToArray(Right(OaiPage("pagey"))) === Seq("page", "pagey", null)
+      relation.eitherToArray(Right(OaiPage("pagey"))) === Seq("page", "pagey", "")
     )
   }
 
