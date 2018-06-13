@@ -3,6 +3,7 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, JsonExtractor, Mapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
@@ -12,6 +13,10 @@ import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
 class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtractor {
+
+  val formatBlockList: Set[String] =
+    DigitalSurrogateBlockList.termList ++
+      FormatTypeValuesBlockList.termList
 
   // ID minting functions
   override def useProviderName: Boolean = false
@@ -113,11 +118,13 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
 
   override def format(data: Document[JValue]): ZeroToMany[String] = {
     // (item['type'] AND item['genre']) OR type in item['format']],
-    val typeGenre = extractStrings(unwrap(data) \ "item" \ "type") ++
-      extractStrings(unwrap(data) \ "item" \ "genre")
-    val formatType = extractStrings(unwrap(data) \ "item" \ "format" \ "type")
+    val format =
+      extractStrings(unwrap(data) \ "item" \ "type") ++
+      extractStrings(unwrap(data) \ "item" \ "genre") ++
+      extractStrings(unwrap(data) \ "item" \ "format" \ "type")
 
-    if (typeGenre.nonEmpty) typeGenre else formatType
+    format.map(_.applyBlockFilter(formatBlockList))
+      .filter(_.nonEmpty)
   }
 
   override def identifier(data: Document[JValue]): ZeroToMany[String] =
@@ -150,10 +157,9 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
 
   override def `type`(data: Document[JValue]): ZeroToMany[String] = {
     // item['type'] OR item['original_format']].keys
-    val types = extractStrings(unwrap(data) \ "item" \ "type")
-    val formatKeys = extractKeys(unwrap(data) \ "item" \ "original_format")
-
-    if (types.nonEmpty) types else formatKeys
+    extractStrings(unwrap(data) \ "item" \ "type") ++
+    extractKeys(unwrap(data) \ "item" \ "original_format") ++
+    format(data)
   }
 
   // Helper methods
