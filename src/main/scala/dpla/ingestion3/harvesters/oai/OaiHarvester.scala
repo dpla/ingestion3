@@ -6,6 +6,7 @@ import dpla.ingestion3.harvesters.Harvester
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
+import org.apache.spark.storage.StorageLevel
 
 import scala.util.Try
 
@@ -36,6 +37,7 @@ class OaiHarvester(shortName: String,
       .format("dpla.ingestion3.harvesters.oai.refactor")
       .options(readerOptions)
       .load()
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Log errors.
     harvestedData.select("error.message", "error.url")

@@ -33,7 +33,6 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiM
       //.option("mode", "FAILFAST")
       .load(tempFile.getAbsolutePath)
       .rdd
-      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     val eitherRdd = csvRdd.map(handleCsvRow)
     val pagesEitherRdd = eitherRdd.flatMap(oaiMethods.parsePageIntoRecords)
