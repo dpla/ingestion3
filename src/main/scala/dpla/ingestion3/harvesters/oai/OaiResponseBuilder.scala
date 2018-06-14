@@ -76,11 +76,11 @@ class OaiResponseBuilder (endpoint: String)
     * to a set.
     * @param opts Optional OAI args, eg. metadataPrefix
     */
-  def getAllRecords(opts: Map[String, String]): RDD[OaiResponse] = {
+  def getAllRecords(opts: Map[String, String], removeDeleted: Boolean): RDD[OaiResponse] = {
     val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListRecords")
     val multiPageResponse = getMultiPageResponse(baseParams, opts)
     val responseRdd = sqlContext.sparkContext.parallelize(multiPageResponse)
-    val recordsRdd = responseRdd.map(response => parseRecordsResponse(response))
+    val recordsRdd = responseRdd.map(response => parseRecordsResponse(response, removeDeleted))
     recordsRdd.union(getAllSets)
   }
 
@@ -91,7 +91,7 @@ class OaiResponseBuilder (endpoint: String)
     * @param opts Optional OAI args, eg. metadataPrefix
     */
   def getRecordsBySets(setResponses: RDD[OaiResponse],
-                       opts: Map[String, String] = Map()): RDD[OaiResponse] = {
+                       opts: Map[String, String] = Map(), removeDeleted: Boolean): RDD[OaiResponse] = {
 
     val baseParams = Map("endpoint" -> endpoint, "verb" -> "ListRecords")
 
@@ -115,7 +115,7 @@ class OaiResponseBuilder (endpoint: String)
       setId => {
         val options = opts + ("set" -> setId)
         val multiPageResponse = getMultiPageResponse(baseParams, options)
-        multiPageResponse.map(response => parseRecordsResponse(response))
+        multiPageResponse.map(response => parseRecordsResponse(response, removeDeleted))
       }
     )
 
@@ -123,9 +123,9 @@ class OaiResponseBuilder (endpoint: String)
     records.union(setResponses)
   }
 
-  def parseRecordsResponse(response: OaiResponse): OaiResponse = {
+  def parseRecordsResponse(response: OaiResponse, removeDeleted: Boolean): OaiResponse = {
     response match {
-      case page: OaiSource => OaiResponseProcessor.getRecords(page)
+      case page: OaiSource => OaiResponseProcessor.getRecords(page, removeDeleted)
       case _ => response
     }
   }

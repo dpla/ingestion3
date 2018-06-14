@@ -27,7 +27,8 @@ class OaiHarvester(shortName: String,
       "harvestAllSets" -> conf.harvest.harvestAllSets,
       "setlist" -> conf.harvest.setlist,
       "blacklist" -> conf.harvest.blacklist,
-      "endpoint" -> conf.harvest.endpoint
+      "endpoint" -> conf.harvest.endpoint,
+      "removeDeleted" -> Some("true")
     ).collect{ case (key, Some(value)) => key -> value } // remove None values
 
     // Run harvest.

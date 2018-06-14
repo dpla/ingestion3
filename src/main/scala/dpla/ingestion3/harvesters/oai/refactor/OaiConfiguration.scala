@@ -52,6 +52,8 @@ case class OaiConfiguration(parameters: Map[String, String]) {
 
   def blacklist: Option[Array[String]] = parameters.get("blacklist").map(parseSets)
 
+  def filterDeleted: Option[String] = parameters.get("filterDeleted")
+
   private [this] val oaiVerbs = Set("ListRecords", "ListSets")
 
   private[this] def parseSets(sets: String): Array[String] = sets.split(",").map(_.trim)
