@@ -139,7 +139,7 @@ trait JsonExtractor extends Extractor[JValue] {
     */
   def extractKeys(jValue: JValue): Seq[String] = jValue match {
     case JArray(array) => array.flatMap(entry => extractKeys(entry))
-    case JObject(fields) => fields.map(field => field._1)
+    case JObject(fields) => fields.map { case(field, _) => field }
     case _ => Seq()
   }
 
