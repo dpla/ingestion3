@@ -88,7 +88,7 @@ class LcMappingTest extends FlatSpec with BeforeAndAfter {
 
   // TODO Add test for extracting format keys
   it should "extract the correct type" in {
-    val expected = Seq("map")
+    val expected = Seq("map", "map")
     assert(extractor.`type`(json) == expected)
   }
  }
