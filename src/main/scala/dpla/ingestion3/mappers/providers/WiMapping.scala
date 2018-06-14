@@ -11,6 +11,7 @@ import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
+import scala.util.{Failure, Success, Try}
 import scala.xml._
 
 class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] {
@@ -105,21 +106,32 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   }
 
   override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] =
-    extractStrings(data \ "metadata" \\ "rights").find(r => Utils.isUrl(r)).map(new URI(_))
+    // Will quietly drop any invalid URIs
+    extractStrings(data \ "metadata" \\ "rights").find(r => Utils.isUri(r)).map(new URI(_))
 
-  // TODO Catch unmintable URI
   override def isShownAt(data: Document[NodeSeq]): EdmWebResource = {
     extractString(data \ "metadata" \\ "isShownAt") match {
-      case Some(uri) => uriOnlyWebResource(new URI(uri))
+      case Some(uri) =>
+        Try(new URI(uri)) match {
+          case Success(u) => uriOnlyWebResource(u)
+          case Failure(f) => throw new RuntimeException(s"Error mapping required property isShownAt in record " +
+            s"${getProviderId(data)}. Unable to mint URI from '$uri': ${f.getMessage}")
+        }
       case None => throw new RuntimeException(s"Record ${getProviderId(data)} is missing required property isShownAt")
     }
   }
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
-  // TODO Catch unmintable URI
   override def preview(data: Document[NodeSeq]): ZeroToOne[EdmWebResource] =
-    extractString(data \ "metadata" \\ "preview").map(x => uriOnlyWebResource(new URI(x)))
+    extractString(data \ "metadata" \\ "preview").map(x =>
+      Try(new URI(x)) match {
+        case Success(u) => uriOnlyWebResource(u)
+        case Failure(f) => throw new RuntimeException(s"Error mapping preview in record ${getProviderId(data)}. " +
+          s"Unable to mint URI from '$x': ${f.getMessage}")
+      }
+      // uriOnlyWebResource(x)
+    )
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
