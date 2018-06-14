@@ -161,7 +161,16 @@ object Utils {
     * @return True if a URL object can be made from url
     *         False if it fails (malformed url, invalid characters, not a url)
     */
-  def isUrl(url: String): Boolean = Try {new URL(url) }.isSuccess
+  def isUrl(url: String): Boolean = Try { new URL(url) }.isSuccess
+
+  /**
+    * Tries to create a URI object from the string
+    *
+    * @param uri String uri
+    * @return True if a URI object can be made from uri
+    *         False if it fails (malformed uri, invalid characters, not a uri)
+    */
+  def isUri(uri: String): Boolean = Try { new URI(uri) }.isSuccess
 
   /**
     * Print mapping summary information
