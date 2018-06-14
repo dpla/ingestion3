@@ -115,7 +115,6 @@ class OaiResponseProcessorTest extends FlatSpec with Matchers with MockFactory {
     val expectedToken = "90d421891feba6922f57a59868d7bcd1"
     val text = validRecordSource.text.getOrElse("")
     val token = OaiResponseProcessor.getResumptionToken(text)
-    val token = OaiResponseProcessor.getResumptionToken(text)
     assert(token === Some(expectedToken))
   }
   it should "return None in absence of resumption token" in {
