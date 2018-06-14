@@ -17,7 +17,7 @@ class TypeEnrichment extends VocabEnrichment[String] {
   val DcmiTypeMap: Map[String, IRI] = Map(
     "appliance" -> dcmiType.Image,
     "administrative record" -> dcmiType.Text,
-    "aerial photographs" -> dcmitType.Image,
+    "aerial photographs" -> dcmiType.Image,
     "albumen prints" -> dcmiType.Image,
     "appliance" -> dcmiType.PhysicalObject,
     "architectural drawing" -> dcmiType.Image,
