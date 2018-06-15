@@ -2,6 +2,8 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
@@ -12,6 +14,11 @@ import org.json4s.JsonDSL._
 import scala.xml._
 
 class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] {
+
+  val formatBlockList: Set[String] =
+    DigitalSurrogateBlockList.termList ++
+      ExtentIdentificationList.termList
+
   // ID minting functions
   // TODO confirm WI does not use prefix.
   override def useProviderName(): Boolean = false
@@ -39,9 +46,19 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   override def description(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "metadata" \\ "description")
 
-  override def format(data: Document[NodeSeq]): Seq[String] =
-    extractStrings(data \ "metadata" \\ "format").filterNot(isDcmiType) ++
-      extractStrings(data \ "metadata" \\ "medium").filterNot(isDcmiType)
+  override def extent(data: Document[NodeSeq]): Seq[String] = {
+    (extractStrings(data \ "metadata" \\ "format") ++
+      extractStrings(data \ "metadata" \\ "medium"))
+      .map(_.applyAllowFilter(ExtentIdentificationList.termList))
+      .filter(_.nonEmpty)
+  }
+  override def format(data: Document[NodeSeq]): Seq[String] = {
+    (extractStrings(data \ "metadata" \\ "format") ++
+      extractStrings(data \ "metadata" \\ "medium"))
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(_.applyBlockFilter(formatBlockList))
+      .filter(_.nonEmpty)
+  }
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "metadata" \\ "identifier")
@@ -66,7 +83,9 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     extractStrings(data \ "metadata" \\ "rightsHolder").map(nameOnlyAgent)
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
-    extractStrings(data \ "metadata" \\ "subject").map(nameOnlyConcept)
+    extractStrings(data \ "metadata" \\ "subject")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(nameOnlyConcept)
 
   override def title(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "metadata" \\ "title")
