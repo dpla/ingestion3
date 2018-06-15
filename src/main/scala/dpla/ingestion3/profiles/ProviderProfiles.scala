@@ -60,7 +60,7 @@ class NaraProfile extends XmlProfile {
   * Ohio Hub
   */
 class OhioProfile extends XmlProfile {
-  type Mapping = PaMapping
+  type Mapping = OhioMapping
 
   override def getHarvester = classOf[OaiHarvester]
   override def getMapping = new OhioMapping
