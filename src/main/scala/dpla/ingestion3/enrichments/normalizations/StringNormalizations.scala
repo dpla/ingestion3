@@ -66,6 +66,8 @@ class StringNormalizations {
       name = edmAgent.name.map(
         _.stripHTML
           .reduceWhitespace
+          .stripBrackets
+          .stripEndingPeriod
           .cleanupLeadingPunctuation
           .cleanupEndingPunctuation)
     )
