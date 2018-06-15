@@ -112,10 +112,10 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   override def isShownAt(data: Document[NodeSeq]): EdmWebResource = {
     extractString(data \ "metadata" \\ "isShownAt") match {
       case Some(uri) =>
-        Try(new URI(uri)) match {
-          case Success(u) => uriOnlyWebResource(u)
-          case Failure(f) => throw new RuntimeException(s"Error mapping required property isShownAt in record " +
-            s"${getProviderId(data)}. Unable to mint URI from '$uri': ${f.getMessage}")
+        if(Utils.isUri(uri)) {
+          uriOnlyWebResource(new URI(uri))
+        } else { throw new RuntimeException(s"Error mapping required property isShownAt in record " +
+            s"${getProviderId(data)}. Unable to mint URI from '$uri'")
         }
       case None => throw new RuntimeException(s"Record ${getProviderId(data)} is missing required property isShownAt")
     }
