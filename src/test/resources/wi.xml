@@ -1,0 +1,85 @@
+<record>
+    <header>
+        <identifier>urn:ohiodplahub.library.ohio.gov:bgsu_12:oai:digitalgallery.bgsu.edu:14058</identifier>
+        <datestamp>2018-02-20</datestamp>
+        <setSpec>bgsu_12</setSpec>
+    </header>
+    <metadata>
+        <oai_qdc:qualifieddc
+                xmlns:oai_qdc="http://worldcat.org/xmlschemas/qdc-1.0/"
+                xmlns:dcterms="http://purl.org/dc/terms/"
+                xmlns:edm="http://www.europeana.eu/schemas/edm/"
+                xmlns="http://www.loc.gov/mods/v3"
+                xmlns:oclcdc="http://worldcat.org/xmlschemas/oclcdc-1.0/"
+                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                xmlns:dc="http://purl.org/dc/elements/1.1/"
+                xmlns:oai-pmh="http://www.openarchives.org/OAI/2.0/">
+            <!-- Test alt titles -->
+            <dc:alternative>Alt title one</dc:alternative>
+            <dc:alternative>Alt title two</dc:alternative>
+            <dc:date>1990-02-09</dc:date>
+            <!-- Test dates -->
+            <dc:date>2008; 2016</dc:date>
+            <dc:format>image/jpeg</dc:format>
+            <dc:format>image;photograph</dc:format>
+            <dc:relation>College of Musical Arts Programs; MUSIC 003; Music Library and Bill Schurk Sound Archives; University Libraries; Bowling Green State University</dc:relation>
+            <dc:relation>Faculty Artist Concert</dc:relation>
+            <dcterms:contributor>Kantorksi, Valrie</dcterms:contributor>
+            <dcterms:contributor>Pope, Ann</dcterms:contributor>
+
+            <!--Test creators -->
+            <dcterms:creator>Sam G.</dcterms:creator>
+            <dcterms:creator>Merry B.</dcterms:creator>
+
+            <!-- Test descriptions -->
+            <dcterms:description>A description</dcterms:description>
+            <dcterms:description>A second description</dcterms:description>
+
+            <dcterms:extent>21.5 centimeters high, 14 centimeters wide</dcterms:extent>
+            <dcterms:identifier>FA19900209</dcterms:identifier>
+            <dcterms:isPartOf>College of Musical Arts Programs</dcterms:isPartOf>
+            <dcterms:isPartOf>A second collection</dcterms:isPartOf>
+            <!-- Test language value -->
+            <dcterms:language>english;eng</dcterms:language>
+            <!-- Test publisher data -->
+            <dcterms:publisher>Hottee Trusty</dcterms:publisher>
+            <dcterms:publisher>Big 'ol publisher</dcterms:publisher>
+
+            <dcterms:rightsHolder>Eric Rights Holder</dcterms:rightsHolder>
+            <!-- Test spatial data-->
+            <dcterms:spatial>Ohio--Terrace Park</dcterms:spatial>
+            <dcterms:spatial>Cincinnati, OH</dcterms:spatial>
+            <dcterms:spatial>Hamilton County;Butler County</dcterms:spatial>
+
+            <dcterms:subject>Recital programs</dcterms:subject>
+            <dcterms:temporal>1989-1990</dcterms:temporal>
+            <dcterms:title>Valrie Kantorski &amp; Ann Pope</dcterms:title>
+            <dcterms:type>Image</dcterms:type>
+            <dcterms:type>Text</dcterms:type>
+            <edm:dataProvider>Bowling Green State University Libraries</edm:dataProvider>
+            <edm:isShownAt>https://digitalgallery.bgsu.edu/collections/item/14058</edm:isShownAt>
+            <edm:preview>https://digitalgallery.bgsu.edu/files/thumbnails/26e197915e9107914faa33ac166ead5a.jpg</edm:preview>
+            <edm:rights>http://rightsstatements.org/page/NoC-US/1.0/</edm:rights>
+
+        </oai_qdc:qualifieddc></metadata>
+    <about>
+        <oaiProvenance:provenance
+                xmlns:oaiProvenance="http://www.openarchives.org/OAI/2.0/provenance"
+                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/provenance http://www.openarchives.org/OAI/2.0/provenance.xsd">
+            <oaiProvenance:originDescription
+                    harvestDate="2018-02-20"
+                    altered="true">
+                <oaiProvenance:baseURL>https://digitalgallery.bgsu.edu/oai-pmh-repository/request</oaiProvenance:baseURL>
+                <oaiProvenance:identifier>oai:digitalgallery.bgsu.edu:14058</oaiProvenance:identifier>
+                <oaiProvenance:datestamp>2018-02-20</oaiProvenance:datestamp>
+                <oaiProvenance:metadataNamespace>http://worldcat.org/xmlschemas/qdc-1.0/
+                    http://worldcat.org/xmlschemas/qdc/1.0/qdc-1.0.xsd
+                    http://purl.org/net/oclcterms
+                    http://worldcat.org/xmlschemas/oclcterms/1.4/oclcterms-1.4.xsd
+                </oaiProvenance:metadataNamespace>
+            </oaiProvenance:originDescription>
+        </oaiProvenance:provenance>
+    </about>
+</record>

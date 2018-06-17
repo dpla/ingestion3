@@ -3,13 +3,14 @@ package dpla.ingestion3.executors
 import java.io.File
 
 import com.databricks.spark.avro._
+import dpla.ingestion3.messages.{MessageProcessor, Tabulator}
 import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
+import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
@@ -35,6 +36,7 @@ trait MappingExecutor extends Serializable {
     logger.info("Mapping started")
     val spark = SparkSession.builder()
       .config(sparkConf)
+      .config("spark.ui.showConsoleProgress", false)
       .getOrCreate()
 
     val sc = spark.sparkContext
@@ -59,7 +61,7 @@ trait MappingExecutor extends Serializable {
     val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
 
     // Run the mapping over the Dataframe
-    val documents: Dataset[String] = harvestedRecords.select("document").as[String]
+    val documents: Dataset[String] = harvestedRecords.select("document").as[String] // .limit(50)
 
     val dplaMap = new DplaMap()
 
@@ -78,22 +80,56 @@ trait MappingExecutor extends Serializable {
       .filter(tuple => Option(tuple._1).isDefined)
       .map(tuple => tuple._1)(oreAggregationEncoder)
 
-    val failures:  Array[String] = mappingResults
-      .filter(tuple => Option(tuple._2).isDefined)
-      .map(tuple => tuple._2).collect()
+    // Begin new error handling
+    import org.apache.spark.sql.functions.explode
+
+    val messages = MessageProcessor.getAllMessages(successResults)
+
+    val messagesExploded = messages
+      .withColumn("level", explode($"level")) // weird syntax errors in other files with $
+      .withColumn("message", explode($"message"))
+      .withColumn("field", explode($"field"))
+      .withColumn("value", explode($"value"))
+      .withColumn("id", explode($"id"))
+      .distinct() // I ended up with qaudruplication of all messages. I suspect `explode` but the dataset might be recomputed..no better option atm.
+
+    val warnings = MessageProcessor.getErrors(messagesExploded)
+    val errors = MessageProcessor.getErrors(messagesExploded)
+
+    // get counts
+    val warnCount = warnings.count()
+    val errorCount = errors.count()
+    val validCount = successResults.select("dplaUri").where("size(messages) == 0").count()
+    val attemptedCount = successResults.count()
+
+    val recordErrorCount = MessageProcessor.getDistinctIdCount(errors)
+    val recordWarnCount = MessageProcessor.getDistinctIdCount(warnings)
+
+
+    // Make a table
+    val sumTable = List(List("Status", "Count"),
+                        List("Attempted", Utils.formatNumber(attemptedCount)),
+                        List("Valid", Utils.formatNumber(validCount)),
+                        List("Warning", ""),
+                        List("- Messages", Utils.formatNumber(warnCount)),
+                        List("- Records", Utils.formatNumber(recordWarnCount)),
+                        List("Error", ""),
+                        List("- Messages", Utils.formatNumber(errorCount)),
+                        List("- Records", Utils.formatNumber(recordErrorCount)))
+    // format the table
+    val formattedTable = Tabulator.format(sumTable)
+    // log the table
+    logger.info("\n" + formattedTable) // new line pad to get everything on the same line
+    // Write warn and error messages to CSV files. These should all share the same timestamp, minor work TBD
+    val msgOutDir = s"$dataOut/../logs"
+    logger.info(s"Ingest messages saved to: $msgOutDir")
+    Utils.writeLogs(msgOutDir, "all", messagesExploded, shortName)
+    Utils.writeLogs(msgOutDir, "error", errors, shortName)
+    Utils.writeLogs(msgOutDir, "warn", warnings, shortName)
+
+    // End new error handling / message processing
 
     successResults.toDF().write.avro(dataOut)
-
-    // Summarize results
-    Utils.mappingSummary(
-      totalCount.value,
-      successCount.value,
-      failureCount.value,
-      failures,
-      dataOut,
-      shortName,
-      logger
-    )
 
     spark.stop()
 
@@ -131,13 +167,7 @@ class DplaMap extends Serializable {
         throw e
     }
 
-    extractorClass.performMapping(document) match {
-      case Success(dplaMapData) =>
-        successCount.add(1)
-        (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
-      case Failure(exception) =>
-        failureCount.add(1)
-        (null, s"${exception.getMessage}")
-    }
+    val mappedDocument = extractorClass.performMapping(document)
+    (RowConverter.toRow(mappedDocument, model.sparkSchema), null)
   }
 }

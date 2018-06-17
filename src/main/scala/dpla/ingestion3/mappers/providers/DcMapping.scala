@@ -5,6 +5,7 @@ import java.net.URI
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
+import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -97,7 +98,8 @@ class DcMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[NodeSeq]): EdmAgent = {
+  override def dataProvider(data: Document[NodeSeq])
+                           (implicit msgCollector: MessageCollector[IngestMessage]): EdmAgent = {
     extractStrings(data \ "metadata" \\ "dataProvider")
       .map(nameOnlyAgent)
       .headOption // take the first value
@@ -113,7 +115,8 @@ class DcMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     }).headOption
   }
 
-  override def isShownAt(data: Document[NodeSeq]): EdmWebResource =
+  override def isShownAt(data: Document[NodeSeq])
+                        (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
     uriOnlyWebResource(
       Utils.createUri(extractStrings(data \ "metadata" \\ "isShownAt")
         .headOption
@@ -123,7 +126,8 @@ class DcMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
-  override def preview(data: Document[NodeSeq]): ZeroToOne[EdmWebResource] =
+  override def preview(data: Document[NodeSeq])
+                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
     extractStrings(data \ "metadata" \\ "preview")
       .map(uri => uriOnlyWebResource(Utils.createUri(uri)))
       .headOption
