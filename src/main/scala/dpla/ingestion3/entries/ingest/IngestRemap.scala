@@ -53,20 +53,15 @@ object IngestRemap extends MappingExecutor
 
     // TODO These processes should return some flag or metric to help determine whether to proceed
     // Mapping
-    logger.info(s"Saving mapping output to: $mapDataOut")
     executeMapping(sparkConf, harvestDataOut, mapDataOut, shortName, logger)
 
     // Enrichment
-    logger.info(s"Saving enrichment output to: $enrichDataOut")
     executeEnrichment(sparkConf, mapDataOut, enrichDataOut, shortName, logger, conf)
 
     // Json-l
-    logger.info(s"Saving JSON-L output to: $jsonlDataOut")
     executeJsonl(sparkConf, enrichDataOut, jsonlDataOut, logger)
 
     // Reports
     executeAllReports(sparkConf, enrichDataOut, baseRptOut, logger)
-
-    logger.info("Ingest remapping complete")
   }
 }

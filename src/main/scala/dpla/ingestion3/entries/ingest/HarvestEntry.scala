@@ -3,6 +3,7 @@ package dpla.ingestion3.entries.ingest
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.executors.HarvestExecutor
 import dpla.ingestion3.utils.Utils
+import org.apache.spark.SparkConf
 
 import scala.util.Failure
 
@@ -32,10 +33,13 @@ object HarvestEntry extends HarvestExecutor {
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
     val providerConf: i3Conf = i3Conf.load()
 
+    val sparkConf = new SparkConf()
+      .setAppName("Harvest")
+      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+      .set("spark.kryoserializer.buffer.max", "200")
+      .setMaster(providerConf.spark.sparkMaster.getOrElse("local[*]"))
+
     // Execute harvest.
-    execute(shortName, dataOut, providerConf, harvestLogger) match {
-      case Failure(error) => error.printStackTrace()
-      case _ =>
-    }
+    execute(sparkConf, shortName, dataOut, providerConf, harvestLogger)
   }
 }

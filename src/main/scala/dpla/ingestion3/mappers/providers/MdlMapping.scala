@@ -2,22 +2,21 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
-import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.ExtentIdentificationList
 import dpla.ingestion3.mappers.utils._
+import dpla.ingestion3.messages.{IngestMessageTemplates, IngestMessage, MessageCollector}
+
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
-import org.json4s
+
 import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
+import scala.util.{Failure, Success, Try}
 
 // FIXME Why is the implicit conversion not working for JValue when it is for NodeSeq?
-class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] {
-
-  val extentList: Set[String] = ExtentIdentificationList.termList
+class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] with IngestMessageTemplates {
 
   // ID minting functions
   override def useProviderName: Boolean = true
@@ -26,23 +25,42 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] {
 
   override def getProviderId(implicit data: Document[JValue]): String =
     extractString(unwrap(data) \ "record" \ "isShownAt")
-      .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
+       .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
   // OreAggregration
-  override def dataProvider(data: Document[JValue]): ExactlyOne[EdmAgent] =
-    nameOnlyAgent(extractString(unwrap(data) \\ "record" \ "dataProvider")
-      .getOrElse(throw new RuntimeException("No data provider")))
+  override def dataProvider(data: Document[JValue])
+                           (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmAgent] =
+    extractString(unwrap(data) \\ "record" \ "dataProvider").map(nameOnlyAgent) match {
+      case Some(dp) => dp
+      case None => msgCollector.add(missingRequiredError(getProviderId(data), "dataProvider"))
+        nameOnlyAgent("") // FIXME this shouldn't have to return an empty value.
+    }
 
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] =
     new URI(mintDplaId(data))
 
-  override def isShownAt(data: Document[JValue]): ExactlyOne[EdmWebResource] =
-    uriOnlyWebResource(uri(unwrap(data) \\ "record" \ "isShownAt"))
+  override def isShownAt(data: Document[JValue])
+                        (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
+    extractStrings(unwrap(data) \\ "record" \ "isShownAt").flatMap(uriStr => {
+      Try { new URI(uriStr)} match {
+        case Success(uri) => Option(uriOnlyWebResource(uri))
+        case Failure(f) =>
+          msgCollector.add(
+            mintUriError(id = getProviderId(data), field = "isShownAt", value = uriStr))
+          None
+      }
+    }).headOption match {
+      case None =>
+        msgCollector.add(missingRequiredError(id = getProviderId(data), field = "isShownAt")) // record error message
+        uriOnlyWebResource(new URI("")) // TODO Fix this -- it requires an Exception thrown or empty EdmWebResource
+      case Some(s) => s
+    }
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
     Utils.formatJson(data)
 
-  override def preview(data: Document[JValue]): ZeroToOne[EdmWebResource] =
+  override def preview(data: Document[JValue])
+                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
     thumbnail(unwrap(data) \\ "record" \ "object")
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = agent
@@ -66,33 +84,22 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] {
   override def description(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \\ "record" \ "sourceResource" \ "description")
 
-  override def edmRights(data: Document[json4s.JValue]): ZeroToOne[URI] =
-    extractString(unwrap(data) \\ "record" \ "rights").map(new URI(_))
-
   override def extent(data: Document[JValue]): ZeroToMany[String] =
-    extractStrings(unwrap(data) \\ "record" \\ "extent")
-      .map(_.applyAllowFilter(extentList))
-      .filter(_.nonEmpty)
+    extractStrings(unwrap(data)  \\ "record" \\ "extent")
 
   override def format(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "format")
-      .map(_.applyBlockFilter(extentList))
-      .filter(_.nonEmpty)
 
   override def genre(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "type").map(nameOnlyConcept)
 
-  override def language(data: Document[JValue]): ZeroToMany[SkosConcept] = {
-    val code: Seq[SkosConcept] =
-      extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "language" \ "iso636_3").map(nameOnlyConcept)
-    if (code.nonEmpty)
-      code
-    else
+  override def language(data: Document[JValue]): ZeroToMany[SkosConcept] =
+    extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "language" \ "iso636_3").map(nameOnlyConcept) ++
       extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "language" \ "name").map(nameOnlyConcept)
-  }
 
   override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
     place(unwrap(data) \\ "record" \ "sourceResource" \ "spatial")
+
 
   override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "publisher").map(nameOnlyAgent)
@@ -143,7 +150,9 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] {
 
   def thumbnail(thumbnail: JValue): Option[EdmWebResource] =
     extractString(thumbnail) match {
-      case Some(t) => Some(uriOnlyWebResource(new URI(t)))
+      case Some(t) => Some(
+        uriOnlyWebResource(new URI(t))
+      )
       case None => None
     }
 
@@ -151,11 +160,4 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] {
     name = Some("Minnesota Digital Library"),
     uri = Some(new URI("http://dp.la/api/contributor/mdl"))
   )
-
-  def uri(uri: JValue): URI = {
-    extractString(uri) match {
-      case Some(t) => new URI(t)
-      case _ => throw new RuntimeException(s"isShownAt is missing. Cannot map record.")
-    }
-  }
 }

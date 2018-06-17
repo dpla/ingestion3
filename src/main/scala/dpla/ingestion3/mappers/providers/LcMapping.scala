@@ -5,7 +5,7 @@ import java.net.URI
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, JsonExtractor, Mapping}
-import dpla.ingestion3.messages.{IngestErrors, IngestMessage, MessageCollector}
+import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
 import dpla.ingestion3.utils.Utils
@@ -13,7 +13,7 @@ import org.json4s.JValue
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
-class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtractor with IngestErrors {
+class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtractor {
 
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
@@ -37,7 +37,8 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
 
-  override def dataProvider(data: Document[JValue]) (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmAgent] = {
+  override def dataProvider(data: Document[JValue])
+                           (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmAgent] = {
     val dps = extractStrings(unwrap(data) \\ "repository")
     val dpName = dps.headOption match {
       case Some(dp) => {
@@ -60,7 +61,8 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
     Utils.formatJson(data)
 
-  override def preview(data: Document[JValue]): ZeroToOne[EdmWebResource] =
+  override def preview(data: Document[JValue])
+                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
     extractStrings(unwrap(data) \ "item" \ "resource" \ "image")
       .headOption.map(uri => uriOnlyWebResource(new URI(uri)))
 
@@ -69,7 +71,8 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
     uri = Some(new URI("http://dp.la/api/contributor/lc"))
   )
 
-  override def isShownAt(data: Document[JValue]): ExactlyOne[EdmWebResource] =
+  override def isShownAt(data: Document[JValue])
+                        (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmWebResource] =
     // item['url']
     uriOnlyWebResource(providerUri(data))
 

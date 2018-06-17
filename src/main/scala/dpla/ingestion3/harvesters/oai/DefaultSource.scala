@@ -33,9 +33,17 @@ class DefaultSource extends RelationProvider {
     val harvestAllSets: Boolean = getHarvestAllSets(parameters)
     val setlist: Option[Array[String]] = getSetlist(parameters)
     val blacklist: Option[Array[String]] = getBlacklist(parameters)
+    val removeDeleted: Boolean = getRemoveDeleted(parameters)
 
-    new OaiRelation(endpoint, verb, metadataPrefix, harvestAllSets, setlist, blacklist)(sqlContext)
+    new OaiRelation(endpoint, verb, metadataPrefix, harvestAllSets, setlist, blacklist, removeDeleted)(sqlContext)
   }
+
+  def getRemoveDeleted(parameters: Map[String, String]): Boolean =
+    parameters.get("removeDeleted") match {
+      case Some("true") => true
+      case Some("false") => false
+      case _ => false
+    }
 
   def getEndpoint(parameters: Map[String, String]): String = {
     val endpoint = parameters.get("endpoint")

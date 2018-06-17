@@ -3,6 +3,7 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.mappers.utils.Document
+import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.FlatFileIO
 import org.json4s.JsonAST._
@@ -10,6 +11,7 @@ import org.json4s.jackson.JsonMethods._
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 class LcMappingTest extends FlatSpec with BeforeAndAfter {
+  implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
   val shortName = "loc"
   val jsonString: String = new FlatFileIO().readFileAsString("/lc.json")
   val json: Document[JValue] = Document(parse(jsonString))
@@ -17,7 +19,7 @@ class LcMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "extract the correct dataProvider" in {
     val expected = nameOnlyAgent("Library of Congress")
-    assert(extractor.dataProvider(json) === expected)
+    assert(extractor.dataProvider(json)(msgCollector) === expected)
   }
 
   it should "extract the correct provider id" in {
@@ -27,12 +29,12 @@ class LcMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "extract the correct URL for isShownAt" in {
     val expected = uriOnlyWebResource(new URI("https://www.loc.gov/item/73691632/"))
-    assert(extractor.isShownAt(json) === expected)
+    assert(extractor.isShownAt(json)(msgCollector) === expected)
   }
 
   it should "extract the correct url for preview" in {
     val expected = Option(uriOnlyWebResource(new URI("http:images.com")))
-    assert(extractor.preview(json) === expected)
+    assert(extractor.preview(json)(msgCollector) === expected)
   }
   // TODO test extraction of other-titles and alternate_title
   it should "extract the correct alternate title" in {

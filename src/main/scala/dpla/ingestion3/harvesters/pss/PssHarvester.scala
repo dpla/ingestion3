@@ -2,24 +2,26 @@ package dpla.ingestion3.harvesters.pss
 
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.Harvester
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.functions._
 import com.databricks.spark.avro._
+import org.apache.spark.SparkConf
 
 import scala.util.Try
 
-class PssHarvester(shortName: String,
+class PssHarvester(spark: SparkSession,
+                   shortName: String,
                    conf: i3Conf,
                    outputDir: String,
                    harvestLogger: Logger)
-  extends Harvester(shortName, conf, outputDir, harvestLogger) {
+  extends Harvester(spark, shortName, conf, outputDir, harvestLogger) {
 
   override protected val mimeType: String = "application_json"
 
   override protected def localHarvest(): Unit = ???
 
-  override protected def runHarvest: Try[DataFrame] = Try{
+  override def harvest: Try[Long] = Try{
 
     val endpoint = conf.harvest.endpoint
       .getOrElse(throw new RuntimeException("No endpoint specified."))
@@ -44,6 +46,6 @@ class PssHarvester(shortName: String,
       .avro(outputDir)
 
     // Return DataFrame.
-    finalData
+    finalData.count()
   }
 }

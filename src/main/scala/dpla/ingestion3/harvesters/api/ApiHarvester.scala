@@ -1,9 +1,10 @@
 package dpla.ingestion3.harvesters.api
 
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.{Harvester, UrlBuilder}
+import dpla.ingestion3.harvesters.Harvester
 import org.apache.avro.generic.GenericData
 import org.apache.log4j.Logger
+import org.apache.spark.sql.SparkSession
 
 /**
   * API base harvester
@@ -13,12 +14,12 @@ import org.apache.log4j.Logger
   * @param outputDir Output path
   * @param logger    Logger
   */
-abstract class ApiHarvester(shortName: String,
+abstract class ApiHarvester(spark: SparkSession,
+                            shortName: String,
                             conf: i3Conf,
                             outputDir: String,
                             logger: Logger)
-  extends Harvester(shortName, conf, outputDir, logger)
-    with UrlBuilder {
+  extends Harvester(spark, shortName, conf, outputDir, logger) {
 
   // Abstract method queryParams should set base query parameters for API call.
   protected val queryParams: Map[String, String]
@@ -35,6 +36,7 @@ abstract class ApiHarvester(shortName: String,
 
     saveOutRecords(docs)
     saveOutErrors(errors)
+
   }
 
   /**
@@ -44,13 +46,15 @@ abstract class ApiHarvester(shortName: String,
     * @param docs - List of ApiRecords to save out
     */
   protected def saveOutRecords(docs: List[ApiRecord]): Unit = {
-    val avroWriter = getAvroWriter()
+
+    val avroWriter = getAvroWriter
+
     // TODO Integrate this with File harvester save out methods 
     docs.foreach(doc => {
       val startTime = System.currentTimeMillis()
       val unixEpoch = startTime / 1000L
 
-      val genericRecord = new GenericData.Record(schema)
+      val genericRecord = new GenericData.Record(Harvester.schema)
 
       genericRecord.put("id", doc.id)
       genericRecord.put("ingestDate", unixEpoch)

@@ -3,6 +3,7 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, JsonExtractor, Mapping}
+import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
 import dpla.ingestion3.utils.Utils
@@ -32,7 +33,8 @@ class P2PMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
   // OreAggregation fields
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[JValue]): ExactlyOne[EdmAgent] =
+  override def dataProvider(data: Document[JValue])
+                           (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmAgent] =
     extractStringsDeep("edm:dataProvider")(data)
       .map(nameOnlyAgent)
       .headOption
@@ -41,13 +43,15 @@ class P2PMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
   override def edmRights(data: Document[JValue]): ZeroToOne[URI] =
     extractString(data.get \ "@graph" \ "edm:rights" \ "@id").map(new URI(_))
 
-  override def isShownAt(data: Document[JValue]): ExactlyOne[EdmWebResource] =
+  override def isShownAt(data: Document[JValue])
+                        (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmWebResource] =
     extractString(data.get \ "@graph" \ "edm:isShownAt" \ "@id").map(new URI(_)).map(uriOnlyWebResource)
       .getOrElse(throw new RuntimeException(s"Missing required property edm:isShownAt\\@id for ${getProviderId(data)}"))
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(data)
 
-  override def preview(data: Document[JValue]): ZeroToOne[EdmWebResource] =
+  override def preview(data: Document[JValue])
+                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
     extractString(data.get \ "@graph" \ "edm:preview" \ "@id").map(new URI(_)).map(uriOnlyWebResource)
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(

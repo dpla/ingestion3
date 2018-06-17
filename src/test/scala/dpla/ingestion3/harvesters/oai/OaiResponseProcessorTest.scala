@@ -32,26 +32,26 @@ class OaiResponseProcessorTest extends FlatSpec with Matchers with MockFactory {
   }
 
   "getRecords" should "return a RecordsPage if source contains records" in {
-    val response = OaiResponseProcessor.getRecords(validRecordSource)
+    val response = OaiResponseProcessor.getRecords(validRecordSource, false)
     assert(response.getClass.getName === "dpla.ingestion3.harvesters.oai.RecordsPage")
   }
   it should "return an OaiError if source contains OAI error message" in {
-    val response = OaiResponseProcessor.getRecords(errorSource)
+    val response = OaiResponseProcessor.getRecords(errorSource, false)
     assert(response.getClass.getName === "dpla.ingestion3.harvesters.oai.OaiError")
   }
   it should "return an OaiError if source contains invalid XML" in {
-    val response = OaiResponseProcessor.getRecords(invalidXmlSource)
+    val response = OaiResponseProcessor.getRecords(invalidXmlSource, false)
     assert(response.getClass.getName === "dpla.ingestion3.harvesters.oai.OaiError")
   }
   it should "return the correct number of records" in {
-    val response = OaiResponseProcessor.getRecords(validRecordSource)
+    val response = OaiResponseProcessor.getRecords(validRecordSource, false)
     response match {
       case r: RecordsPage => assert(r.records.size === 10)
       case _ => fail
     }
   }
   it should "return empty sequence if XML page contains no records" in {
-    val response = OaiResponseProcessor.getRecords(validSetSource)
+    val response = OaiResponseProcessor.getRecords(validSetSource, false)
     response match {
       case r: RecordsPage => assert(r.records.size === 0)
       case _ => fail
@@ -59,7 +59,7 @@ class OaiResponseProcessorTest extends FlatSpec with Matchers with MockFactory {
   }
   it should "parse record ids" in {
     val expectedId = "oai:libcollab.temple.edu:fedora-system:ContentModel-3.0"
-    val response = OaiResponseProcessor.getRecords(validRecordSource)
+    val response = OaiResponseProcessor.getRecords(validRecordSource, false)
     response match {
       // Use contains instead of === to handle whitespace in test data.
       case r: RecordsPage => assert(r.records(0).id.contains(expectedId))
@@ -68,7 +68,7 @@ class OaiResponseProcessorTest extends FlatSpec with Matchers with MockFactory {
   }
   it should "parse set ids" in {
     val expectedId = "foobar"
-    val response = OaiResponseProcessor.getRecords(validRecordSource)
+    val response = OaiResponseProcessor.getRecords(validRecordSource, false)
     response match {
       // Use contains instead of === to handle whitespace in test data.
       case r: RecordsPage => assert(r.records(0).setIds(0).contains(expectedId))

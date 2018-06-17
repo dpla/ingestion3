@@ -3,15 +3,18 @@ package dpla.ingestion3.utils
 import java.io.{File, PrintWriter}
 import java.net.{URI, URL}
 import java.text.SimpleDateFormat
+import java.time.format.DateTimeFormatter
+import java.time.{Instant, ZoneId, ZonedDateTime}
 import java.util.Calendar
-import java.util.concurrent.TimeUnit
 
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.model.OreAggregation
+import org.apache.commons.lang.StringUtils
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
+import org.apache.spark.sql.{Dataset, Row, SaveMode}
 import org.json4s.JValue
 import org.json4s.jackson.JsonMethods._
 
+import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
@@ -95,10 +98,25 @@ object Utils {
     * @return Runtime formatted as MM:ss
     */
   def formatRuntime(runtime: Long): String = {
-    val minutes: Long = TimeUnit.MILLISECONDS.toMinutes(runtime)
-    val seconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) -
-      TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(runtime))
-    s"$minutes:$seconds"
+    val runDuration = Duration.create(runtime, MILLISECONDS)
+    val hr = StringUtils.leftPad( runDuration.toHours.toString, 2, "0" )
+    val min = StringUtils.leftPad( (runDuration.toMinutes  % 60).round.toString, 2, "0" )
+    val sec =  StringUtils.leftPad( (runDuration.toSeconds % 60).round.toString, 2, "0" )
+    val ms =  StringUtils.rightPad( (runDuration.toMillis % 1000).round.toString, 3, "0" )
+
+    s"$hr:$min:$sec.$ms"
+  }
+
+  /**
+    * Formats time given in ms since epoch as 'MM/dd/yyyy HH:mm:ss'
+    * @param currentTimeInMs Long
+    * @return
+    */
+  def formatDateTime(currentTimeInMs: Long): String = {
+    val instant = Instant.ofEpochMilli(currentTimeInMs)
+    val dtUtc = ZonedDateTime.ofInstant(instant, ZoneId.of("America/New_York"))
+    val dtFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss")
+    dtFormatter.format(dtUtc)
   }
 
   /**
@@ -200,6 +218,36 @@ object Utils {
       new File(s"${logDir.getAbsolutePath}/$shortName-mapping-errors-${System.currentTimeMillis()}.log"))
     errors.foreach(f => pw.write(s"$f\n"))
     pw.close()
+  }
+
+  /**
+    *
+    * @param out
+    * @param name
+    * @param df
+    * @param shortName
+    */
+  def writeLogsAsCsv(out: String, name: String, df: Dataset[Row], shortName: String): Unit = {
+    df.coalesce(1)
+      .write
+      .mode(SaveMode.Overwrite)
+      .option("header", "true")
+      .csv(out)
+  }
+
+  /**
+    *
+    * @param out
+    * @param name
+    * @param df
+    * @param shortName
+    */
+  def writeLogsAsTxt(out: String, name: String, df: Dataset[String], shortName: String): Unit = {
+    df.coalesce(1)
+      .write
+      .mode(SaveMode.Overwrite)
+      .option("header", "false")
+      .csv(out)
   }
 
   /**
