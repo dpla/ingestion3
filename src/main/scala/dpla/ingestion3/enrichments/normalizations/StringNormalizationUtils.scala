@@ -7,6 +7,7 @@ import org.jsoup.nodes.Document.OutputSettings
 import org.jsoup.nodes.Entities.EscapeMode
 import org.jsoup.safety.Whitelist
 
+import scala.util.{Failure, Success, Try}
 import scala.util.matching.Regex
 
 /**
@@ -53,7 +54,10 @@ object StringNormalizationUtils {
       */
     lazy val applyBlockFilter: Set[String] => String = (termList) => termList
       .foldLeft(value) {
-        case (string, pattern) => string.replaceAll(pattern, "").reduceWhitespace
+        case (string, pattern) => Try { string.replaceAll(pattern, "").reduceWhitespace } match {
+          case Success(s) => s // return the clean pattern
+          case Failure(f) => string // return original value TODO log the failure
+        }
       }
 
 

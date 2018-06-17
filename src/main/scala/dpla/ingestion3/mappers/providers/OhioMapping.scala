@@ -2,19 +2,21 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
-import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
-import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
-import dpla.ingestion3.model._
-import dpla.ingestion3.utils.Utils
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
+import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
+import dpla.ingestion3.messages.{IngestErrors, IngestMessage, MessageCollector}
+import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
+import dpla.ingestion3.model.{uriOnlyWebResource, _}
+import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
+import scala.util.{Failure, Success, Try}
 import scala.xml._
 
 
-class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] {
+class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] with IngestErrors  {
   // ID minting functions
   override def useProviderName(): Boolean = false
 
@@ -114,13 +116,15 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[NodeSeq]): EdmAgent = {
+  override def dataProvider(data: Document[NodeSeq])
+                           (implicit msgCollector: MessageCollector[IngestMessage]): EdmAgent = {
     extractStrings(data \ "metadata" \\ "dataProvider")
       .map(nameOnlyAgent)
-      .headOption // take the first value
-      .getOrElse( // return the first value or throw an exception
-      throw new Exception(s"Missing required property metadata/dataProvider is empty for ${getProviderId(data)}")
-    )
+      .headOption match {
+        case Some(dp) => dp
+        case None => msgCollector.add(missingRequiredError(getProviderId(data), "dataProvider"))
+          nameOnlyAgent("")  // FIXME this shouldn't have to return an empty value.
+       }
   }
 
   override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] = {
@@ -129,20 +133,37 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     }).headOption
   }
 
-  override def isShownAt(data: Document[NodeSeq]): EdmWebResource =
-    uriOnlyWebResource(
-      Utils.createUri(extractStrings(data \ "metadata" \\ "isShownAt")
-        .headOption
-        .getOrElse(
-          throw new RuntimeException(s"No isShownAt property in record ${getProviderId(data)}")
-        )))
+  override def isShownAt(data: Document[NodeSeq])
+                        (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
+    extractStrings(data \ "metadata" \\ "isShownAt").flatMap(uriStr => {
+      Try { new URI(uriStr)} match {
+        case Success(uri) => Option(uriOnlyWebResource(uri))
+        case Failure(f) =>
+          msgCollector.add(
+            mintUriError(f.getMessage, getProviderId(data), "isShownAt", uriStr))
+          None
+      }
+    }).headOption match {
+      case None =>
+        msgCollector.add(missingRequiredError(id = getProviderId(data), field = "isShownAt")) // record error message
+        uriOnlyWebResource(new URI("")) // FIXME it requires an Exception thrown or empty EdmWebResource
+      case Some(s) => s
+    }
+
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
-  override def preview(data: Document[NodeSeq]): ZeroToOne[EdmWebResource] =
-    extractStrings(data \ "metadata" \\ "preview")
-      .map(uri => uriOnlyWebResource(Utils.createUri(uri)))
-      .headOption
+  override def preview(data: Document[NodeSeq])
+                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] = {
+    extractStrings(data \ "metadata" \\ "preview").flatMap(uriStr =>
+      Try { new URI(uriStr) } match {
+        case Success(uri) => Option(uriOnlyWebResource(uri))
+        case Failure(f) => { // Unable to mint URI from value
+          msgCollector.add(mintUriError(f.getMessage, getProviderId(data), "preview", uriStr))
+          None // FIXME stub return value for now
+        }
+      }).headOption // Only checks for valid data because this is not a required field
+  }
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 

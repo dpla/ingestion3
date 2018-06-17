@@ -1,5 +1,6 @@
 package dpla.ingestion3.model
 
+import dpla.ingestion3.messages.IngestMessage
 import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
@@ -32,11 +33,20 @@ object RowConverter {
         oreAggregation.preview.map(fromEdmWebResource).orNull, //8
         fromEdmAgent(oreAggregation.provider), //9
         oreAggregation.edmRights.map(_.toString).orNull, //10
-        compact(render(oreAggregation.sidecar))
+        compact(render(oreAggregation.sidecar)),
+        oreAggregation.messages.map(fromIngestMessage)
       ),
       sqlSchema
     )
   }
+
+  private[model] def fromIngestMessage(im: IngestMessage): Row = Row(
+    im.message, // 0
+    im.level, // 1
+    im.id, // 2
+    im.field, // 3
+    im.value // 4
+  )
 
   private[model] def fromEdmWebResource(wr: EdmWebResource): Row = Row(
     wr.uri.toString, //0

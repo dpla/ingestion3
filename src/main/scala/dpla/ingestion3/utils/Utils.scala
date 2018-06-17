@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.model.OreAggregation
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
+import org.apache.spark.sql.{Dataset, Row, SaveMode}
 import org.json4s.JValue
 import org.json4s.jackson.JsonMethods._
 
@@ -200,6 +201,25 @@ object Utils {
       new File(s"${logDir.getAbsolutePath}/$shortName-mapping-errors-${System.currentTimeMillis()}.log"))
     errors.foreach(f => pw.write(s"$f\n"))
     pw.close()
+  }
+
+  /**
+    *
+    * @param outDir
+    * @param name
+    * @param df
+    * @param shortName
+    */
+  def writeLogs(outDir: String, name: String, df: Dataset[Row], shortName: String): Unit = {
+    val logDir = new File(s"$outDir/../logs")
+    logDir.mkdirs()
+    val out = s"${logDir.getAbsolutePath}/$shortName-map-$name-${System.currentTimeMillis()}"
+    // logger.info(s"Writing error CSVs to: $out)
+    df.coalesce(1)
+      .write
+      .mode(SaveMode.Overwrite)
+      .option("header", "true")
+      .csv(out)
   }
 
   /**
