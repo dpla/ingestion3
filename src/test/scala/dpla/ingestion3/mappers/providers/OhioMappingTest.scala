@@ -3,6 +3,7 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.mappers.utils.Document
+import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.utils.FlatFileIO
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 import dpla.ingestion3.model._
@@ -11,6 +12,7 @@ import scala.xml.{NodeSeq, XML}
 
 class OhioMappingTest extends FlatSpec with BeforeAndAfter {
 
+  implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
   val shortName = "ohio"
   val xmlString: String = new FlatFileIO().readFileAsString("/ohio.xml")
   val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))

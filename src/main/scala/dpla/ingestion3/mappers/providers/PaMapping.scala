@@ -3,6 +3,7 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
+import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -75,7 +76,8 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[NodeSeq]): EdmAgent = {
+  override def dataProvider(data: Document[NodeSeq])
+                           (implicit msgCollector: MessageCollector[IngestMessage]): EdmAgent = {
     val contributors = extractStrings(data \ "metadata" \\ "contributor")
     if (contributors.nonEmpty)
       nameOnlyAgent(contributors.last)
@@ -90,12 +92,14 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
     extractStrings(data \ "metadata" \\ "source").map(nameOnlyAgent).headOption
 
-  override def isShownAt(data: Document[NodeSeq]) =
+  override def isShownAt(data: Document[NodeSeq])
+                        (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
     EdmWebResource(uri = itemUri(data), fileFormat = extractStrings("dc:format")(data))
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
-  override def preview(data: Document[NodeSeq]): ZeroToOne[EdmWebResource] = thumbnail(data)
+  override def preview(data: Document[NodeSeq])
+                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] = thumbnail(data)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = EdmAgent(
     name = Some("PA Digital"),

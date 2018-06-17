@@ -5,6 +5,7 @@ import java.net.URI
 import dpla.ingestion3.enrichments.TypeEnrichment
 import dpla.ingestion3.mappers.rdf.DCMIType
 import dpla.ingestion3.mappers.utils._
+import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -31,7 +32,8 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
       .getOrElse(throw MappingException("Couldn't load item url."))
 
   // OreAggregation
-  override def dataProvider(data: Document[NodeSeq]): EdmAgent = {
+  override def dataProvider(data: Document[NodeSeq])
+                           (implicit msgCollector: MessageCollector[IngestMessage]): EdmAgent = {
     val referenceUnit = (for {
       physicalOccurrenceArray <- data \ "physicalOccurrenceArray"
       copyStatus = (physicalOccurrenceArray \\ "copyStatus" \ "termName").text
@@ -46,7 +48,8 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   override def dplaUri(data: Document[NodeSeq]): URI =
     mintDplaItemUri(data)
 
-  override def isShownAt(data: Document[NodeSeq]): EdmWebResource =
+  override def isShownAt(data: Document[NodeSeq])
+                        (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
     uriOnlyWebResource(itemUri(data))
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
@@ -55,7 +58,8 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] =
     agent
 
-  override def preview(data: Document[NodeSeq]): ZeroToOne[EdmWebResource] =
+  override def preview(data: Document[NodeSeq])
+                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
     extractPreview(data).headOption
 
   override def sidecar(data: Document[NodeSeq]): JsonAST.JValue =

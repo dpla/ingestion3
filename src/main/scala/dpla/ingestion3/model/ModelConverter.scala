@@ -2,6 +2,7 @@ package dpla.ingestion3.model
 
 import java.net.URI
 
+import dpla.ingestion3.messages.IngestMessage
 import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import org.apache.spark.sql.Row
 import org.json4s.JsonAST.{JNothing, JValue}
@@ -32,7 +33,8 @@ object ModelConverter {
     preview = toOptionEdmWebResource(row.getStruct(8)),
     provider = toEdmAgent(row.getStruct(9)),
     edmRights = optionalUri(row, 10),
-    sidecar = optionalJValue(row, 11)
+    sidecar = optionalJValue(row, 11),
+    messages = toMulti(row, 12, toIngestMessage)
   )
 
   private[model] def toSourceResource(row: Row): DplaSourceResource = DplaSourceResource(
@@ -116,6 +118,14 @@ object ModelConverter {
     scheme = optionalUri(row, 4),
     exactMatch = uriSeq(row, 5),
     closeMatch = uriSeq(row, 6)
+  )
+
+  private[model] def toIngestMessage(row: Row): IngestMessage = IngestMessage(
+    message = requiredString(row, 0),
+    level = requiredString(row, 1),
+    id = requiredString(row, 2),
+    field = requiredString(row, 3),
+    value = requiredString(row, 4)
   )
 
   private[model] def toMulti[T](row: Row, fieldPosition: Integer, f: (Row) => T): Seq[T] = {
