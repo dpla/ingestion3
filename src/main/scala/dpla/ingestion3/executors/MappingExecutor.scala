@@ -1,9 +1,11 @@
 package dpla.ingestion3.executors
 
 import java.io.File
+import java.time.format.DateTimeFormatter
+import java.time.{Instant, ZoneId, ZonedDateTime}
 
 import com.databricks.spark.avro._
-import dpla.ingestion3.messages.{MessageProcessor, Tabulator}
+import dpla.ingestion3.messages.{MappingSummary, MappingSummaryData, MessageProcessor, Tabulator}
 import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
@@ -61,7 +63,7 @@ trait MappingExecutor extends Serializable {
     val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
 
     // Run the mapping over the Dataframe
-    val documents: Dataset[String] = harvestedRecords.select("document").as[String] // .limit(50)
+    val documents: Dataset[String] = harvestedRecords.select("document").as[String].limit(50)
 
     val dplaMap = new DplaMap()
 
@@ -116,10 +118,26 @@ trait MappingExecutor extends Serializable {
                         List("Error", ""),
                         List("- Messages", Utils.formatNumber(errorCount)),
                         List("- Records", Utils.formatNumber(recordErrorCount)))
-    // format the table
-    val formattedTable = Tabulator.format(sumTable)
-    // log the table
-    logger.info("\n" + formattedTable) // new line pad to get everything on the same line
+    // format and log the table
+//    val formattedTable = Tabulator.format(sumTable)
+//    logger.info("\n" + formattedTable) // new line pad to get everything on the same line
+
+    // TODO -- Move this off to the MappingSummary generator (it should accept a long)
+    val instant = Instant.ofEpochMilli(System.currentTimeMillis())
+    val dtUtc = ZonedDateTime.ofInstant(instant, ZoneId.of("America/New_York"))
+    val dtFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss")
+    val dateTime = dtFormatter.format(dtUtc)
+
+    val mappingSummary = MappingSummaryData(
+      shortName,
+      dateTime,
+      attemptedCount,
+      validCount,
+      warnCount,
+      errorCount,
+      recordWarnCount,
+      recordErrorCount)
+    logger.info(MappingSummary.getSummary(mappingSummary))
 
     // TODO Relocate this log code
     // Write warn and error messages to CSV files. These should all share the same timestamp, minor work TBD
