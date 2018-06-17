@@ -205,15 +205,12 @@ object Utils {
 
   /**
     *
-    * @param outDir
+    * @param out
     * @param name
     * @param df
     * @param shortName
     */
-  def writeLogs(outDir: String, name: String, df: Dataset[Row], shortName: String): Unit = {
-    val logDir = new File(s"$outDir/../logs")
-    logDir.mkdirs()
-    val out = s"${logDir.getAbsolutePath}/$shortName-map-$name-${System.currentTimeMillis()}"
+  def writeLogs(out: String, name: String, df: Dataset[Row], shortName: String): Unit = {
     // logger.info(s"Writing error CSVs to: $out)
     df.coalesce(1)
       .write
