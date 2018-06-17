@@ -93,14 +93,14 @@ trait MappingExecutor extends Serializable {
       .withColumn("id", explode($"id"))
       .distinct() // I ended up with qaudruplication of all messages. I suspect `explode` but the dataset might be recomputed..no better option atm.
 
-    val warnings = MessageProcessor.getErrors(messagesExploded)
+    val warnings = MessageProcessor.getWarnings(messagesExploded)
     val errors = MessageProcessor.getErrors(messagesExploded)
 
     // get counts
+    val attemptedCount = successResults.count()
+    val validCount = successResults.select("dplaUri").where("size(messages) == 0").count()
     val warnCount = warnings.count()
     val errorCount = errors.count()
-    val validCount = successResults.select("dplaUri").where("size(messages) == 0").count()
-    val attemptedCount = successResults.count()
 
     val recordErrorCount = MessageProcessor.getDistinctIdCount(errors)
     val recordWarnCount = MessageProcessor.getDistinctIdCount(warnings)
@@ -120,14 +120,19 @@ trait MappingExecutor extends Serializable {
     val formattedTable = Tabulator.format(sumTable)
     // log the table
     logger.info("\n" + formattedTable) // new line pad to get everything on the same line
-    // Write warn and error messages to CSV files. These should all share the same timestamp, minor work TBD
-    val msgOutDir = s"$dataOut/../logs"
-    logger.info(s"Ingest messages saved to: $msgOutDir")
-    Utils.writeLogs(msgOutDir, "all", messagesExploded, shortName)
-    Utils.writeLogs(msgOutDir, "error", errors, shortName)
-    Utils.writeLogs(msgOutDir, "warn", warnings, shortName)
 
-    // End new error handling / message processing
+    // TODO Relocate this log code
+    // Write warn and error messages to CSV files. These should all share the same timestamp, minor work TBD
+    val baseLogDir = s"$dataOut/../logs/"
+    val time = System.currentTimeMillis().toString
+    val logList = List("all" -> messagesExploded, "error" -> errors, "warn" -> warnings)
+    def getSpecificLogDir(name: String, time: String) = s"$shortName-$time-map-$name"
+
+    logList.foreach { case (name: String, data: Dataset[Row]) =>
+      val path = baseLogDir + getSpecificLogDir(name, time)
+      Utils.writeLogs(path, name, data, shortName)
+      logger.info(s"Saved ${name.toUpperCase} log to: ${new File(path).getCanonicalPath}")
+    }
 
     successResults.toDF().write.avro(dataOut)
 
@@ -162,9 +167,7 @@ class DplaMap extends Serializable {
 
     val extractorClass = ProviderRegistry.lookupProfile(shortName) match {
       case Success(extClass) => extClass
-      case Failure(e) =>
-        // logger.fatal(e.getMessage)
-        throw e
+      case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
     }
 
     val mappedDocument = extractorClass.performMapping(document)

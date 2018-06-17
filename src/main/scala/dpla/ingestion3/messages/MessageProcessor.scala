@@ -11,13 +11,11 @@ object MessageProcessor {
       .where("size(messages) != 0")
   }
   def getErrors(ds: Dataset[Row]): Dataset[Row] = {
-    ds.select("id" ,"level").where("level=='ERROR'").distinct()
+    ds.select("message", "level", "field", "id", "value").where("level=='ERROR'").distinct()
   }
-
   def getWarnings(ds: Dataset[Row]): Dataset[Row] = {
-    ds.select("id" ,"level").where("level=='WARN'").distinct()
+    ds.select("message", "level", "field", "id", "value").where("level=='WARN'").distinct()
   }
-
   def getDistinctIdCount(df: Dataset[Row]): Long = {
     df.select("id").groupBy("id").count().count()
   }
