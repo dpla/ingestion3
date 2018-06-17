@@ -13,6 +13,7 @@ import org.json4s.JsonDSL._
 
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
+
 class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
   with IngestMessageTemplates with IngestValidations {
 
@@ -81,7 +82,6 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   override def dataProvider(data: Document[NodeSeq])
                            (implicit msgCollector: MessageCollector[IngestMessage]): EdmAgent = {
-
     extractStrings(data \ "metadata" \\ "contributor").lastOption match {
       case Some(lastContributor) => nameOnlyAgent(lastContributor)
       case None =>

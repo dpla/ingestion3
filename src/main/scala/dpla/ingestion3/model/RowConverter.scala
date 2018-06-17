@@ -46,7 +46,7 @@ object RowConverter {
     im.id, // 2
     im.field, // 3
     im.value, // 4
-    im.enrichedValue // 5`
+    im.enrichedValue // 5
   )
 
   private[model] def fromEdmWebResource(wr: EdmWebResource): Row = Row(

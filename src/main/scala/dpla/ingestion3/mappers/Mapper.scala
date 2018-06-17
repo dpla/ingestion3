@@ -1,7 +1,5 @@
 package dpla.ingestion3.mappers
 
-import java.net.URI
-
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model._
@@ -80,6 +78,7 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
     implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
 
     val mapResult = Try (
+
       OreAggregation(
         dplaUri = mapping.dplaUri(document),
         dataProvider = mapping.dataProvider(document),

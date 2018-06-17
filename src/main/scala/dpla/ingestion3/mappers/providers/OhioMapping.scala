@@ -139,6 +139,7 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   override def isShownAt(data: Document[NodeSeq])
                         (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
     extractStrings(data \ "metadata" \\ "isShownAt").flatMap(uriStr => {
+
       validateUri(uriStr) match {
         case Success(uri) => Option(uriOnlyWebResource(uri))
         case Failure(_) =>
