@@ -3,7 +3,9 @@ package dpla.ingestion3.executors
 import java.io.File
 
 import com.databricks.spark.avro._
+
 import dpla.ingestion3.messages._
+
 import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.reports.summary._
@@ -66,7 +68,7 @@ trait MappingExecutor extends Serializable {
     val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
 
     // Run the mapping over the Dataframe
-    val documents: Dataset[String] = harvestedRecords.select("document").as[String]
+    val documents: Dataset[String] = harvestedRecords.select("document").as[String] // .limit(50)
 
     val dplaMap = new DplaMap()
 

@@ -7,12 +7,12 @@ import dpla.ingestion3.messages.{IngestMessageTemplates, IngestMessage, MessageC
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
+
 import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
 import scala.util.{Failure, Success, Try}
-
 
 // FIXME Why is the implicit conversion not working for JValue when it is for NodeSeq?
 class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] with IngestMessageTemplates {

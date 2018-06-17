@@ -18,6 +18,7 @@ object IngestLogLevel {
   * @param value The original value (if available)
   */
 case class IngestMessage(message: String,
+
                          level: String,
                          id: String,
                          field: String,
