@@ -42,15 +42,15 @@ object MessageProcessor{
                 |id1 == level1 AND level1 == enrichedValue1
                 |""".stripMargin)
   }
-  def getErrors(ds: Dataset[Row]): Dataset[Row] = {
+
+  def getErrors(ds: Dataset[Row]): Dataset[Row] =
     ds.select("message", "level", "field", "id", "value").where(s"level=='${IngestLogLevel.error}'").distinct()
-  }
-  def getWarnings(ds: Dataset[Row]): Dataset[Row] = {
+
+  def getWarnings(ds: Dataset[Row]): Dataset[Row] =
     ds.select("message", "level", "field", "id", "value").where(s"level=='${IngestLogLevel.warn}'").distinct()
-  }
-  def getDistinctIdCount(df: Dataset[Row]): Long = {
+
+  def getDistinctIdCount(df: Dataset[Row]): Long =
     df.select("id").groupBy("id").count().count()
-  }
 
   /**
     * Builds group by and count summary from `ds`. For example:
