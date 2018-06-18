@@ -116,12 +116,12 @@ trait MappingExecutor extends Serializable {
     val warnMsgDets = MessageProcessor.getMessageFieldSummary(warnings).mkString("\n")
 
     val timeInMs = System.currentTimeMillis()
-    val dateTime = Utils.formatDateTime(timeInMs)
+    val dateTimeStr = Utils.formatDateTime(timeInMs)
 
     logger.info(s"Message summary")
     val mappingSummary = MappingSummaryData(
       shortName,
-      dateTime,
+      dateTimeStr,
       attemptedCount,
       validCount,
       warnCount,
@@ -139,15 +139,18 @@ trait MappingExecutor extends Serializable {
     val baseLogDir = s"$dataOut/../logs/"
     val time = timeInMs.toString
 
-    val f = sc.parallelize(failures).toDS().map(r => Row(r))
+    val exceptions = sc.parallelize(failures).toDS()
 
-    val logFileList = List("all" -> messagesExploded, "error" -> errors, "warn" -> warnings, "exceptions" -> f)
-      .filter { case  (_, data: Dataset[Row]) => data.count() > 0 }
+    val logFileList = List("all" -> messagesExploded, "error" -> errors, "warn" -> warnings, "exceptions" -> exceptions)
+      .filter { case  (_, data: Dataset[_]) => data.count() > 0 }
 
     logFileList.foreach {
-      case (name: String, data: Dataset[Row]) => {
+      case (name: String, data: Dataset[_]) => {
         val path = baseLogDir + s"$shortName-$time-map-$name"
-        Utils.writeLogsAsCsv(path, name, data, shortName)
+        data match {
+          case dr: Dataset[Row] =>  Utils.writeLogsAsCsv(path, name, dr, shortName)
+          case ds: Dataset[String] =>  Utils.writeLogsAsTxt(path, name, ds, shortName)
+        }
         logger.info(s"Saved ${name.toUpperCase} log to: ${new File(path).getCanonicalPath}")
       }
     }
