@@ -159,11 +159,4 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wi
     name = Some("Minnesota Digital Library"),
     uri = Some(new URI("http://dp.la/api/contributor/mdl"))
   )
-//
-//  def uri(uri: JValue): URI = {
-//    extractString(uri) match {
-//      case Some(t) => new URI(t)
-//      case _ => throw new RuntimeException(s"isShownAt is missing. Cannot map record.")
-//    }
-//  }
 }
