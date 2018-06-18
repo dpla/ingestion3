@@ -11,6 +11,7 @@ import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
+import org.apache.spark.sql.functions.explode
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
@@ -87,8 +88,6 @@ trait MappingExecutor extends Serializable {
       .map(tuple => tuple._2).collect()
 
     // Begin new error and message handling
-    import org.apache.spark.sql.functions.explode
-
     val messages = MessageProcessor.getAllMessages(successResults)
 
     val messagesExploded = messages
@@ -140,9 +139,10 @@ trait MappingExecutor extends Serializable {
     val baseLogDir = s"$dataOut/../logs/"
     val time = timeInMs.toString
 
-    val f = sc.parallelize(failures).toDS()
+    val f = sc.parallelize(failures).toDS().map(r => Row(r))
 
-    val logFileList = List("all" -> messagesExploded, "error" -> errors, "warn" -> warnings, "exceptions" -> f).filter(t => t._2.count() > 0)
+    val logFileList = List("all" -> messagesExploded, "error" -> errors, "warn" -> warnings, "exceptions" -> f)
+      .filter { case  (_, data: Dataset[Row]) => data.count() > 0 }
 
     logFileList.foreach {
       case (name: String, data: Dataset[Row]) => {
@@ -150,10 +150,6 @@ trait MappingExecutor extends Serializable {
         Utils.writeLogsAsCsv(path, name, data, shortName)
         logger.info(s"Saved ${name.toUpperCase} log to: ${new File(path).getCanonicalPath}")
       }
-      case (name: String, data: Dataset[String]) =>
-        val path = baseLogDir + s"$shortName-$time-map-$name"
-        Utils.writeLogsAsTxt(path, name, data, shortName)
-        logger.info(s"Saved ${name.toUpperCase} log to: ${new File(path).getCanonicalPath}")
     }
 
     successResults.toDF().write.avro(dataOut)
