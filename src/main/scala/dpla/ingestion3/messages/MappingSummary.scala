@@ -39,7 +39,6 @@ object MappingSummary {
     * @return String Synopsis of the mapping process
     */
   def getSummary(data: MappingSummaryData): String = {
-
     // prettify all the digits!
     val attemptedStr = Utils.formatNumber(data.attempted)
     val mappedStr = Utils.formatNumber(data.mapped)
@@ -47,9 +46,8 @@ object MappingSummary {
     val errorStr = Utils.formatNumber(data.error)
     val warnRecordsStr = Utils.formatNumber(data.warnRecords)
     val errorRecordsStr = Utils.formatNumber(data.errorRecords)
-
     val lineBreak = "-"*80
-    // report.
+
       s"""
         |$lineBreak
         |${StringUtils.leftPad("Summary", 43, " ")}
@@ -87,8 +85,6 @@ object MappingSummary {
         |      Better luck next time!
         |${"-"*80}
         |""".stripMargin
-
-
   }
 
 }
