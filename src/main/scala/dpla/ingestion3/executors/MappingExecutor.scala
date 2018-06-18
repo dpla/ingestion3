@@ -5,10 +5,11 @@ import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
 
 import com.databricks.spark.avro._
-import dpla.ingestion3.messages.{MappingSummary, MappingSummaryData, MessageProcessor, Tabulator}
+import dpla.ingestion3.messages.{MappingSummary, MappingSummaryData, MessageFieldRpt, MessageProcessor}
 import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
+import org.apache.commons.lang.StringUtils
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
@@ -16,7 +17,7 @@ import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 trait MappingExecutor extends Serializable {
 
@@ -63,7 +64,7 @@ trait MappingExecutor extends Serializable {
     val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
 
     // Run the mapping over the Dataframe
-    val documents: Dataset[String] = harvestedRecords.select("document").as[String].limit(50)
+    val documents: Dataset[String] = harvestedRecords.select("document").as[String] // .limit(50)
 
     val dplaMap = new DplaMap()
 
@@ -83,7 +84,45 @@ trait MappingExecutor extends Serializable {
       .map(tuple => tuple._1)(oreAggregationEncoder)
 
     // Begin new error handling
-    import org.apache.spark.sql.functions.explode
+    import org.apache.spark.sql.functions.{explode, _}
+
+    /**
+      *
+      * @param ds
+      * @return
+      */
+    def getMessageFieldSummary(ds: Dataset[Row]): Array[String] = {
+
+      import spark.implicits._
+
+      val d2 = ds.select("message", "field", "id")
+        .groupBy("message", "field")
+        .agg(count("id")).as("count")
+        .orderBy("message","field")
+        .orderBy(desc("count(id)"))
+
+      val msgRptDs = d2.map( { case Row(msg: String, field: String, count: Long) => MessageFieldRpt(msg, field, count) })
+
+      val singleColDs = msgRptDs.select(concat(col("msg"), lit("|"),col("field"), lit("|"),col("count"))).as("label")
+
+        val rowAsString = singleColDs
+          .collect()
+          .map(row => row.getString(0))
+
+      val splitLines = rowAsString.map(_.split("\\|"))
+
+      val msgFieldRptArray = splitLines.map(arr =>
+          MessageFieldRpt(
+            msg = arr(0), field = arr(1),
+            Try {arr(2).toLong} match { case Success(s) => s case Failure(_) => -1 }
+        ))
+
+      msgFieldRptArray.map { case (k: MessageFieldRpt) =>
+        s"${StringUtils.rightPad(k.msg, 25, " ")} " +
+        s"${StringUtils.rightPad(k.field, 15, " ")} " +
+        s"${StringUtils.leftPad(Utils.formatNumber(k.count), 6, " ")}"
+      }
+    }
 
     val messages = MessageProcessor.getAllMessages(successResults)
 
@@ -107,6 +146,8 @@ trait MappingExecutor extends Serializable {
     val recordErrorCount = MessageProcessor.getDistinctIdCount(errors)
     val recordWarnCount = MessageProcessor.getDistinctIdCount(warnings)
 
+    val errorMsgDets = getMessageFieldSummary(errors).mkString("\n")
+    val warnMsgDets = getMessageFieldSummary(warnings).mkString("\n")
 
     // Make a table
     val sumTable = List(List("Status", "Count"),
@@ -136,7 +177,10 @@ trait MappingExecutor extends Serializable {
       warnCount,
       errorCount,
       recordWarnCount,
-      recordErrorCount)
+      recordErrorCount,
+      errorMsgDets,
+      warnMsgDets
+    )
     logger.info(MappingSummary.getSummary(mappingSummary))
 
     // TODO Relocate this log code
