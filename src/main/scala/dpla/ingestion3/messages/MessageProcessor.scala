@@ -1,6 +1,5 @@
 package dpla.ingestion3.messages
 
-
 import dpla.ingestion3.utils.Utils
 import org.apache.commons.lang.StringUtils
 import org.apache.spark.sql.functions._

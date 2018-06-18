@@ -11,9 +11,11 @@ import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
 import org.apache.log4j.Logger
+import org.apache.spark
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
+import org.apache.spark.sql.functions._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
@@ -83,7 +85,6 @@ trait MappingExecutor extends Serializable {
     val successResults: Dataset[Row] = mappingResults
       .filter(tuple => Option(tuple._1).isDefined)
       .map(tuple => tuple._1)(oreAggregationEncoder)
-
 
     val endTime = System.currentTimeMillis()
 
