@@ -4,6 +4,8 @@ import java.net.URI
 
 import com.databricks.spark.avro.SchemaConverters
 import dpla.ingestion3.data.EnrichedRecordFixture
+import dpla.ingestion3.messages.{IngestErrors, IngestMessage}
+import dpla.ingestion3.model.DplaMapData.ZeroToMany
 import dpla.ingestion3.utils.FlatFileIO
 import org.apache.avro.Schema
 import org.apache.spark.sql.Row
@@ -30,6 +32,8 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
     Seq(urlString3, urlString2),
     Seq(urlString3, urlString1)
   )
+
+  val testIngestMessage = Row("msg", "ERROR", "123", "isShownAt", "htt://umd.edmo")
 
   val testEdmWebResource = Row(urlString1, Seq("foo"), Seq("bar"), "baz")
 
@@ -265,7 +269,8 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
         testEdmWebResource,
         testEdmAgent,
         urlString1,
-        """"{"field": "value"}"""
+        """"{"field": "value"}""",
+        Seq(testIngestMessage)
       )
     )
 

@@ -11,9 +11,11 @@ import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
 import org.apache.commons.lang.StringUtils
 import org.apache.log4j.Logger
+import org.apache.spark
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
+import org.apache.spark.sql.functions._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
@@ -36,8 +38,10 @@ trait MappingExecutor extends Serializable {
                       shortName: String,
                       logger: Logger): Unit = {
 
-    logger.info("Mapping started")
-    val spark = SparkSession.builder()
+    logger.info(s"${shortName.toUpperCase} mapping started")
+
+    // @michael Any issues with making SparkSession implicit?
+    implicit val spark: SparkSession = SparkSession.builder()
       .config(sparkConf)
       .config("spark.ui.showConsoleProgress", false)
       .getOrCreate()
@@ -83,62 +87,30 @@ trait MappingExecutor extends Serializable {
       .filter(tuple => Option(tuple._1).isDefined)
       .map(tuple => tuple._1)(oreAggregationEncoder)
 
-    // Begin new error handling
+    val failures:  Array[String] = mappingResults
+      .filter(tuple => Option(tuple._2).isDefined)
+      .map(tuple => tuple._2).collect()
+
+    // Begin new error and message handling
     import org.apache.spark.sql.functions.{explode, _}
-
-    /**
-      *
-      * @param ds
-      * @return
-      */
-    def getMessageFieldSummary(ds: Dataset[Row]): Array[String] = {
-
-      import spark.implicits._
-
-      val d2 = ds.select("message", "field", "id")
-        .groupBy("message", "field")
-        .agg(count("id")).as("count")
-        .orderBy("message","field")
-        .orderBy(desc("count(id)"))
-
-      val msgRptDs = d2.map( { case Row(msg: String, field: String, count: Long) => MessageFieldRpt(msg, field, count) })
-
-      val singleColDs = msgRptDs.select(concat(col("msg"), lit("|"),col("field"), lit("|"),col("count"))).as("label")
-
-        val rowAsString = singleColDs
-          .collect()
-          .map(row => row.getString(0))
-
-      val splitLines = rowAsString.map(_.split("\\|"))
-
-      val msgFieldRptArray = splitLines.map(arr =>
-          MessageFieldRpt(
-            msg = arr(0), field = arr(1),
-            Try {arr(2).toLong} match { case Success(s) => s case Failure(_) => -1 }
-        ))
-
-      msgFieldRptArray.map { case (k: MessageFieldRpt) =>
-        s"${StringUtils.rightPad(k.msg, 25, " ")} " +
-        s"${StringUtils.rightPad(k.field, 15, " ")} " +
-        s"${StringUtils.leftPad(Utils.formatNumber(k.count), 6, " ")}"
-      }
-    }
 
     val messages = MessageProcessor.getAllMessages(successResults)
 
     val messagesExploded = messages
-      .withColumn("level", explode($"level")) // weird syntax errors in other files with $
+      .withColumn("level", explode($"level"))
       .withColumn("message", explode($"message"))
       .withColumn("field", explode($"field"))
       .withColumn("value", explode($"value"))
       .withColumn("id", explode($"id"))
-      .distinct() // I ended up with qaudruplication of all messages. I suspect `explode` but the dataset might be recomputed..no better option atm.
+      .distinct()
+    // Calling distinct here because I was ending up with qaudruplication of all messages.
+    // I suspect `explode` but the dataset might be recomputed unnecessarily
 
     val warnings = MessageProcessor.getWarnings(messagesExploded)
     val errors = MessageProcessor.getErrors(messagesExploded)
 
     // get counts
-    val attemptedCount = successResults.count()
+    val attemptedCount = mappingResults.count() // successResults.count()
     val validCount = successResults.select("dplaUri").where("size(messages) == 0").count()
     val warnCount = warnings.count()
     val errorCount = errors.count()
@@ -146,29 +118,13 @@ trait MappingExecutor extends Serializable {
     val recordErrorCount = MessageProcessor.getDistinctIdCount(errors)
     val recordWarnCount = MessageProcessor.getDistinctIdCount(warnings)
 
-    val errorMsgDets = getMessageFieldSummary(errors).mkString("\n")
-    val warnMsgDets = getMessageFieldSummary(warnings).mkString("\n")
+    val errorMsgDets = MessageProcessor.getMessageFieldSummary(errors).mkString("\n")
+    val warnMsgDets = MessageProcessor.getMessageFieldSummary(warnings).mkString("\n")
 
-    // Make a table
-    val sumTable = List(List("Status", "Count"),
-                        List("Attempted", Utils.formatNumber(attemptedCount)),
-                        List("Valid", Utils.formatNumber(validCount)),
-                        List("Warning", ""),
-                        List("- Messages", Utils.formatNumber(warnCount)),
-                        List("- Records", Utils.formatNumber(recordWarnCount)),
-                        List("Error", ""),
-                        List("- Messages", Utils.formatNumber(errorCount)),
-                        List("- Records", Utils.formatNumber(recordErrorCount)))
-    // format and log the table
-//    val formattedTable = Tabulator.format(sumTable)
-//    logger.info("\n" + formattedTable) // new line pad to get everything on the same line
+    val timeInMs = System.currentTimeMillis()
+    val dateTime = Utils.formatDateTime(timeInMs)
 
-    // TODO -- Move this off to the MappingSummary generator (it should accept a long)
-    val instant = Instant.ofEpochMilli(System.currentTimeMillis())
-    val dtUtc = ZonedDateTime.ofInstant(instant, ZoneId.of("America/New_York"))
-    val dtFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss")
-    val dateTime = dtFormatter.format(dtUtc)
-
+    logger.info(s"Message summary")
     val mappingSummary = MappingSummaryData(
       shortName,
       dateTime,
@@ -181,19 +137,28 @@ trait MappingExecutor extends Serializable {
       errorMsgDets,
       warnMsgDets
     )
-    logger.info(MappingSummary.getSummary(mappingSummary))
 
-    // TODO Relocate this log code
+    logger.info(MappingSummary.getSummary(mappingSummary))
+    logger.info(s"Number of exceptions ${failures.length}")
+
     // Write warn and error messages to CSV files. These should all share the same timestamp, minor work TBD
     val baseLogDir = s"$dataOut/../logs/"
-    val time = System.currentTimeMillis().toString
-    val logList = List("all" -> messagesExploded, "error" -> errors, "warn" -> warnings)
-    def getSpecificLogDir(name: String, time: String) = s"$shortName-$time-map-$name"
+    val time = timeInMs.toString
 
-    logList.foreach { case (name: String, data: Dataset[Row]) =>
-      val path = baseLogDir + getSpecificLogDir(name, time)
-      Utils.writeLogs(path, name, data, shortName)
-      logger.info(s"Saved ${name.toUpperCase} log to: ${new File(path).getCanonicalPath}")
+    val f = sc.parallelize(failures).toDS()
+
+    val logFileList = List("all" -> messagesExploded, "error" -> errors, "warn" -> warnings, "exceptions" -> f).filter(t => t._2.count() > 0)
+
+    logFileList.foreach {
+      case (name: String, data: Dataset[Row]) => {
+        val path = baseLogDir + s"$shortName-$time-map-$name"
+        Utils.writeLogsAsCsv(path, name, data, shortName)
+        logger.info(s"Saved ${name.toUpperCase} log to: ${new File(path).getCanonicalPath}")
+      }
+      case (name: String, data: Dataset[String]) =>
+        val path = baseLogDir + s"$shortName-$time-map-$name"
+        Utils.writeLogsAsTxt(path, name, data, shortName)
+        logger.info(s"Saved ${name.toUpperCase} log to: ${new File(path).getCanonicalPath}")
     }
 
     successResults.toDF().write.avro(dataOut)
@@ -231,6 +196,7 @@ class DplaMap extends Serializable {
       case Success(extClass) => extClass
       case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
     }
+
 
     val mappedDocument = extractorClass.performMapping(document)
     (RowConverter.toRow(mappedDocument, model.sparkSchema), null)

@@ -3,6 +3,8 @@ package dpla.ingestion3.utils
 import java.io.{File, PrintWriter}
 import java.net.{URI, URL}
 import java.text.SimpleDateFormat
+import java.time.format.DateTimeFormatter
+import java.time.{Instant, ZoneId, ZonedDateTime}
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
@@ -100,6 +102,18 @@ object Utils {
     val seconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) -
       TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(runtime))
     s"$minutes:$seconds"
+  }
+
+  /**
+    * Formats time given in ms since epoch as 'MM/dd/yyyy HH:mm:ss'
+    * @param currentTimeInMs Long
+    * @return
+    */
+  def formatDateTime(currentTimeInMs: Long): String = {
+    val instant = Instant.ofEpochMilli(currentTimeInMs)
+    val dtUtc = ZonedDateTime.ofInstant(instant, ZoneId.of("America/New_York"))
+    val dtFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss")
+    dtFormatter.format(dtUtc)
   }
 
   /**
@@ -210,12 +224,28 @@ object Utils {
     * @param df
     * @param shortName
     */
-  def writeLogs(out: String, name: String, df: Dataset[Row], shortName: String): Unit = {
+  def writeLogsAsCsv(out: String, name: String, df: Dataset[Row], shortName: String): Unit = {
     // logger.info(s"Writing error CSVs to: $out)
     df.coalesce(1)
       .write
       .mode(SaveMode.Overwrite)
       .option("header", "true")
+      .csv(out)
+  }
+
+  /**
+    *
+    * @param out
+    * @param name
+    * @param df
+    * @param shortName
+    */
+  def writeLogsAsTxt(out: String, name: String, df: Dataset[String], shortName: String): Unit = {
+    // logger.info(s"Writing error CSVs to: $out)
+    df.coalesce(1)
+      .write
+      .mode(SaveMode.Overwrite)
+      .option("header", "false")
       .csv(out)
   }
 

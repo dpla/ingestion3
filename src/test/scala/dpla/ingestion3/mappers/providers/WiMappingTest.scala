@@ -21,10 +21,10 @@ class WiMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "extract the correct isShownAt" in {
     val expected = uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/collections/item/14058"))
-    assert(extractor.isShownAt(xml) === expected)
+    assert(extractor.isShownAt(xml)(msgCollector) === expected)
   }
 
-  it should "throw a runtime exception if missing isShownAt" in {
+  it should "record an error message if missing isShownAt" in {
     val xml =
       <record>
         <header>
@@ -36,11 +36,11 @@ class WiMappingTest extends FlatSpec with BeforeAndAfter {
         </metadata>
       </record>
 
-    assertThrows[RuntimeException] {
-      extractor.isShownAt(Document(xml))
-    }
-
-    msgCollector.getAll().foreach(println(_))
-    // msgCollector.getAll().fi
+    extractor.isShownAt(Document(xml))
+    assert(msgCollector
+      .getAll()
+      .contains(
+        extractor.missingRequiredError("urn:ohiodplahub.library.ohio.gov:bgsu_12:oai:digitalgallery.bgsu.edu:14058", "isShownAt")
+      ))
   }
 }

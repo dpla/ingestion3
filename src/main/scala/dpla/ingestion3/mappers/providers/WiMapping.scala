@@ -134,7 +134,7 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
       Try { new URI(uriStr)} match {
         case Success(uri) => Option(uriOnlyWebResource(uri))
         case Failure(f) =>
-          msgCollector.add(mintUriError(getProviderId(data),msg="", "isShownAt", uriStr))
+          msgCollector.add(mintUriError(id = getProviderId(data),field = "isShownAt", value = uriStr))
           None
       }
     }).headOption match {
@@ -153,7 +153,7 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
       Try(new URI(uriStr)) match {
         case Success(u) => uriOnlyWebResource(u)
         case Failure(_) =>
-          msgCollector.add(mintUriError(getProviderId(data), msg="", "preview", uriStr))
+          msgCollector.add(mintUriError(id = getProviderId(data), field = "preview", value = uriStr))
           uriOnlyWebResource(new URI(""))
       }
     )
