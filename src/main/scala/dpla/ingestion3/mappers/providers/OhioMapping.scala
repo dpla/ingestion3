@@ -140,13 +140,12 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
         case Success(uri) => Option(uriOnlyWebResource(uri))
         case Failure(f) =>
           msgCollector.add(
-            mintUriError(f.getMessage, getProviderId(data), "isShownAt", uriStr))
+            mintUriError(id = getProviderId(data), field = "isShownAt", value = uriStr))
           None
       }
     }).headOption match {
-      case None =>
-        msgCollector.add(missingRequiredError(id = getProviderId(data), field = "isShownAt")) // record error message
-        uriOnlyWebResource(new URI("")) // FIXME it requires an Exception thrown or empty EdmWebResource
+      case None => msgCollector.add(missingRequiredError(getProviderId(data),"isShownAt")) // record error message
+        uriOnlyWebResource(new URI("")) // FIXME model should be changed to not compel empty EdmWebResource
       case Some(s) => s
     }
 
@@ -158,10 +157,9 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     extractStrings(data \ "metadata" \\ "preview").flatMap(uriStr =>
       Try { new URI(uriStr) } match {
         case Success(uri) => Option(uriOnlyWebResource(uri))
-        case Failure(f) => { // Unable to mint URI from value
-          msgCollector.add(mintUriError(f.getMessage, getProviderId(data), "preview", uriStr))
+        case Failure(f) =>
+          msgCollector.add(mintUriError(id = getProviderId(data), field = "preview", value = uriStr))
           None // FIXME stub return value for now
-        }
       }).headOption // Only checks for valid data because this is not a required field
   }
 

@@ -3,9 +3,9 @@ package dpla.ingestion3.messages
 // trait IngestErrorMessages {
 
 trait IngestErrors {
-  def mintUriError(id: String, msg: String, field: String, value: String): IngestMessage =
+  def mintUriError(id: String, msg: Option[String] = None, field: String, value: String): IngestMessage =
     IngestMessage(
-      message = s"Unable to mint URI $msg",
+      message = s"Unable to mint URI ${msg.getOrElse("")}",
       id = id,
       field = field,
       value = value
