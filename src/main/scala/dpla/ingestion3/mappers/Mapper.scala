@@ -78,7 +78,6 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
     implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
 
     val mapResult = Try (
-
       OreAggregation(
         dplaUri = mapping.dplaUri(document),
         dataProvider = mapping.dataProvider(document),

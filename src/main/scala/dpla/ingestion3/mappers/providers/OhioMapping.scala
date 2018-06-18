@@ -156,7 +156,6 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
 
   override def preview(data: Document[NodeSeq])
                       (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] = {
-
     val uris = extractStrings(data \ "metadata" \\ "preview")
       .map(u => validateUri(u) getOrElse msgCollector.add(mintUriError(getProviderId(data), "preview", u)))
     uris.map { case u: URI => uriOnlyWebResource(u) }.headOption

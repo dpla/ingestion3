@@ -4,7 +4,11 @@ import java.net.URI
 
 import com.databricks.spark.avro.SchemaConverters
 import dpla.ingestion3.data.EnrichedRecordFixture
+<<<<<<< HEAD
 import dpla.ingestion3.messages.{IngestMessageTemplates, IngestMessage}
+=======
+import dpla.ingestion3.messages.{IngestErrors, IngestMessage}
+>>>>>>> Bridge work to handle both IngestMessages and Exceptions
 import dpla.ingestion3.model.DplaMapData.ZeroToMany
 import dpla.ingestion3.utils.FlatFileIO
 import org.apache.avro.Schema
@@ -33,7 +37,11 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
     Seq(urlString3, urlString1)
   )
 
+<<<<<<< HEAD
   val testIngestMessage = Row("msg", "ERROR", "123", "type", "StillImage", "images")
+=======
+  val testIngestMessage = Row("msg", "ERROR", "123", "isShownAt", "htt://umd.edmo")
+>>>>>>> Bridge work to handle both IngestMessages and Exceptions
 
   val testEdmWebResource = Row(urlString1, Seq("foo"), Seq("bar"), "baz")
 

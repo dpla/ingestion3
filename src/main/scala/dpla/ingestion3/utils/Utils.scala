@@ -227,7 +227,6 @@ object Utils {
     * @param df
     * @param shortName
     */
-
   def writeLogsAsCsv(out: String, name: String, df: Dataset[Row], shortName: String): Unit = {
     df.coalesce(1)
       .write
