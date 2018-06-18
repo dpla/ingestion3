@@ -1,19 +1,43 @@
 package dpla.ingestion3.messages
 
 import dpla.ingestion3.utils.Utils
+import org.apache.commons.lang.StringUtils
 
+/**
+  *
+  * @param shortName
+  * @param runTime
+  * @param attempted
+  * @param mapped
+  * @param warn
+  * @param error
+  * @param warnRecords
+  * @param errorRecords
+  * @param errorMsgDetails
+  * @param warnMsgDetails
+  */
 case class MappingSummaryData(
                                shortName: String,
                                runTime: String,
                                attempted: Long,
                                mapped: Long,
+
                                warn: Long,
                                error: Long,
+
                                warnRecords: Long,
-                               errorRecords: Long
-                               )
+                               errorRecords: Long,
+
+                               errorMsgDetails: String,
+                               warnMsgDetails: String
+                             )
 object MappingSummary {
 
+  /**
+    * Big picutre summary in one String
+    * @param data MappingSummaryData Results of individual steps (failures, successes, warnings and errors)
+    * @return String Synopsis of the mapping process
+    */
   def getSummary(data: MappingSummaryData): String = {
 
     // prettify all the digits!
@@ -24,56 +48,43 @@ object MappingSummary {
     val warnRecordsStr = Utils.formatNumber(data.warnRecords)
     val errorRecordsStr = Utils.formatNumber(data.errorRecords)
 
+    val lineBreak = "-"*80
     // report.
       s"""
-        |${"-"*80}
-        |Mapping report for ${data.shortName.toUpperCase}.
-        |Ran on ${data.runTime.replaceFirst(" ", " at ")}
+        |$lineBreak
+        |${StringUtils.leftPad("Summary", 43, " ")}
+        |$lineBreak
+        |Provider: ${data.shortName.toUpperCase}
+        |Date:     ${data.runTime}
         |
         |Attempted to map:     $attemptedStr
         |Successfully mapped:  $mappedStr
         |                      ${"-"*attemptedStr.length}
-        |Failures:             ${Utils.formatNumber(data.attempted-data.mapped)}
+        |Failed:               ${Utils.formatNumber(data.attempted-data.mapped)}
         |
         |
-        |---------------------------
-        |Errors and Warnings Summary
-        |---------------------------
+        |$lineBreak
+        |${StringUtils.leftPad("Errors and Warnings Summary", 53 ," ")}
+        |$lineBreak
         |Warnings (messages):  $warnStr
-        |- Records             $warnRecordsStr
+        |Warnings (records):   $warnRecordsStr
         |
         |Errors (messages):    $errorStr
-        |- Records             $errorRecordsStr
+        |Errors (records):     $errorRecordsStr
         |
         |
-        |---------------------------
-        |Errors and Warnings Detail   (FAKE)
-        |---------------------------
-        |WARN
-        |----
-        |  Unable to mint URI
-        |    - preview         150
-        |    - edmRights       50
-        |  Field too long
-        |    - description     5,000
+        |$lineBreak
+        |${StringUtils.leftPad("Errors and Warnings Detail (messages)", 58 ," ")}
+        |$lineBreak
+        |WARNINGS
+        |--------
+        |${if(data.warnMsgDetails.nonEmpty) data.warnMsgDetails else "* No Warnings *"}
         |
-        |ERROR
-        |-----
-        |  Unable to mint URI
-        |    - isShownAt       12
+        |ERRORS
+        |------
+        |${if(data.errorMsgDetails.nonEmpty) data.errorMsgDetails else "* No Errors *"}
         |
-        |
-        |-------------
-        |TROUBLEMAKERS  (FAKE)
-        |-------------
-        |  identifier_xyz
-        |    - WARN preview
-        |    - ERROR isShownAt
-        |    - ERROR rights
-        |
-        |
-        |
-        |Better luck next time!
+        |      Better luck next time!
         |${"-"*80}
         |""".stripMargin
 
