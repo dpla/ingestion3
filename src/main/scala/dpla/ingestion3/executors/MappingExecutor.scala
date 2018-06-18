@@ -1,25 +1,20 @@
 package dpla.ingestion3.executors
 
 import java.io.File
-import java.time.format.DateTimeFormatter
-import java.time.{Instant, ZoneId, ZonedDateTime}
 
 import com.databricks.spark.avro._
-import dpla.ingestion3.messages.{MappingSummary, MappingSummaryData, MessageFieldRpt, MessageProcessor}
+import dpla.ingestion3.messages.{MappingSummary, MappingSummaryData, MessageProcessor}
 import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
-import org.apache.commons.lang.StringUtils
 import org.apache.log4j.Logger
-import org.apache.spark
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
-import org.apache.spark.sql.functions._
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 trait MappingExecutor extends Serializable {
 
@@ -68,7 +63,7 @@ trait MappingExecutor extends Serializable {
     val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
 
     // Run the mapping over the Dataframe
-    val documents: Dataset[String] = harvestedRecords.select("document").as[String] // .limit(50)
+    val documents: Dataset[String] = harvestedRecords.select("document").as[String]
 
     val dplaMap = new DplaMap()
 
@@ -92,7 +87,7 @@ trait MappingExecutor extends Serializable {
       .map(tuple => tuple._2).collect()
 
     // Begin new error and message handling
-    import org.apache.spark.sql.functions.{explode, _}
+    import org.apache.spark.sql.functions.explode
 
     val messages = MessageProcessor.getAllMessages(successResults)
 
@@ -196,7 +191,6 @@ class DplaMap extends Serializable {
       case Success(extClass) => extClass
       case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
     }
-
 
     val mappedDocument = extractorClass.performMapping(document)
     (RowConverter.toRow(mappedDocument, model.sparkSchema), null)
