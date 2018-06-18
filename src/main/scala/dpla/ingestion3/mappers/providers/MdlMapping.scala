@@ -45,7 +45,7 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wi
         case Success(uri) => Option(uriOnlyWebResource(uri))
         case Failure(f) =>
           msgCollector.add(
-            mintUriError(f.getMessage, getProviderId(data), "isShownAt", uriStr))
+            mintUriError(id = getProviderId(data), field = "isShownAt", value = uriStr))
           None
       }
     }).headOption match {
