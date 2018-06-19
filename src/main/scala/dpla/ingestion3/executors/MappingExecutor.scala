@@ -68,7 +68,7 @@ trait MappingExecutor extends Serializable {
     val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
 
     // Run the mapping over the Dataframe
-    val documents: Dataset[String] = harvestedRecords.select("document").as[String].limit(50)
+    val documents: Dataset[String] = harvestedRecords.select("document").as[String]
 
     val dplaMap = new DplaMap()
 
