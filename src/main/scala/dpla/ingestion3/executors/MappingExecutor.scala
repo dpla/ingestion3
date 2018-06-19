@@ -151,7 +151,29 @@ trait MappingExecutor extends Serializable {
 
     val baseLogDir = s"$dataOut/../logs/"
 
+<<<<<<< HEAD
     val exceptionsDS = sc.parallelize(exceptions).toDS()
+=======
+    val summaryData = MappingSummaryData(
+      shortName,
+      dateTimeStr,
+      attemptedCount,
+      validCount,
+      warnCount,
+      errorCount,
+      recordWarnCount,
+      recordErrorCount,
+      errorMsgDets,
+      warnMsgDets,
+      exceptions.length
+    )
+    // Write warn and error messages to CSV files
+    logger.info(s"Message summary")
+    logger.info(MappingSummary.getSummary(summaryData))
+    logger.info(s"Number of exceptions ${exceptions.length}")
+
+    val exceptionsDs = sc.parallelize(exceptions).toDS()
+>>>>>>> Add exception count to summary report message
 
     val logFileList = List(
       "all" -> messages,

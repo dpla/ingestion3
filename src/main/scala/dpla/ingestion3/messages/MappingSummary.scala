@@ -8,7 +8,6 @@ import org.apache.commons.lang.StringUtils
 /**
   *
   */
-
 object MappingSummary {
 
   def centerPad(a: String, b: String, seperator: String = ".", width: Int = 80) =
@@ -38,7 +37,6 @@ object MappingSummary {
 
       s"""
         |$lineBreak
-<<<<<<< HEAD
         |${ReportFormattingUtils.center("Mapping Summary")}
         |
         |${ReportFormattingUtils.centerPad("Provider", data.shortName.toUpperCase)}
@@ -51,35 +49,17 @@ object MappingSummary {
         |
         |
         |${ReportFormattingUtils.center("Errors, Warnings and Exceptions")}
-=======
-        |${center("Summary")}
-        |
-        |${centerPad("Provider", data.shortName.toUpperCase)}
-        |${centerPad("Date", data.timeSummary.runTime)}
-        |
-        |${centerPad("Attempted to map", attemptedStr)}
-        |${centerPad("Successfully mapped", mappedStr)}
-        |${centerPad("Failed", failedCountStr)}
-        |
-        |
-        |${center("Errors and Warnings Summary")}
-        |
-        |${centerPad("Warnings (messages)", warnStr)}
-        |${centerPad("Warnings (records)", warnRecordsStr)}
-        |
-        |${centerPad("Errors (messages)", errorStr)}
-        |${centerPad("Errors (records)", errorRecordsStr)}
->>>>>>> Large refactor get exceptions and messages playing nicely with each other.
         |
         |Messages
         |${ReportFormattingUtils.centerPad("- Errors", errorStr)}
         |${ReportFormattingUtils.centerPad("- Warnings", warnStr)}
         |
-<<<<<<< HEAD
         |Records
         |${ReportFormattingUtils.centerPad("- Errors", errorRecordsStr)}
         |${ReportFormattingUtils.centerPad("- Warnings", warnRecordsStr)}
         |${ReportFormattingUtils.centerPad("- Exceptions", exceptionCountStr)}
+        |
+        |${centerPad("Exceptions (records)", exceptionCountStr)}
         |
         |
         |${if(data.messageSummary.warningCount > 0 && data.messageSummary.errorCount > 0)
@@ -96,15 +76,8 @@ object MappingSummary {
           ReportFormattingUtils.center("Log Files")
           logFileMsg
           }
-        |${if(data.messageSummary.warningMessageDetails.nonEmpty) "Warnings\n--------\n" + data.messageSummary.warningMessageDetails else "* No Warnings *"}
         |
-        |${if(data.messageSummary.errorMessageDetails.nonEmpty) "Errors\n-------\n" + data.messageSummary.errorMessageDetails else "* No Errors *"}
-        |
-        |
-        |${center("Better  luck next time!")}
-=======
-        |${StringUtils.leftPad("Errors and Warnings Detail (messages)", 58 ," ")}
-        |
+        |${centerPad("Errors and Warnings Detail", exceptionCountStr)}
         |${if(data.messageSummary.warningMessageDetails.nonEmpty) "Warnings\n--------\n" + data.messageSummary.warningMessageDetails else "* No Warnings *"}
         |
         |${if(data.messageSummary.errorMessageDetails.nonEmpty) "Errors\n-------\n" + data.messageSummary.errorMessageDetails else "* No Errors *"}
@@ -112,7 +85,6 @@ object MappingSummary {
         |
         |${center("Better  luck next time!")}
         |$lineBreak
->>>>>>> Large refactor get exceptions and messages playing nicely with each other.
         |""".stripMargin
   }
 }
