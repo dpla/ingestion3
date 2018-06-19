@@ -67,7 +67,7 @@ trait MappingExecutor extends Serializable {
     val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
 
     // Run the mapping over the Dataframe
-    val documents: Dataset[String] = harvestedRecords.select("document").as[String].limit(50)
+    val documents: Dataset[String] = harvestedRecords.select("document").as[String]
 
     val dplaMap = new DplaMap()
 
@@ -224,7 +224,6 @@ class DplaMap extends Serializable {
       case (Some(oreAgg), Some(exception)) => (RowConverter.toRow(oreAgg, model.sparkSchema), exception)
       case (Some(oreAgg), None) => (RowConverter.toRow(oreAgg, model.sparkSchema), null)
       case (None, Some(exception)) => (null, exception)
-
       case _ => (null, null)
     }
   }

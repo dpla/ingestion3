@@ -155,6 +155,7 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   override def preview(data: Document[NodeSeq])
                       (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
+
     extractString(data \ "metadata" \\ "preview").map(uriStr =>
       validateUri(uriStr) match {
         case Success(u) => uriOnlyWebResource(u)

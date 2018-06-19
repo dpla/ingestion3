@@ -18,6 +18,7 @@ import scala.xml._
 
 
 class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
+
   with IngestMessageTemplates with IngestValidations {
 
   // ID minting functions
@@ -139,7 +140,6 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   override def isShownAt(data: Document[NodeSeq])
                         (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
     extractStrings(data \ "metadata" \\ "isShownAt").flatMap(uriStr => {
-
       validateUri(uriStr) match {
         case Success(uri) => Option(uriOnlyWebResource(uri))
         case Failure(_) =>
@@ -156,6 +156,7 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
 
   override def preview(data: Document[NodeSeq])
                       (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] = {
+
     val uris = extractStrings(data \ "metadata" \\ "preview")
       .map(u => validateUri(u) getOrElse msgCollector.add(mintUriError(getProviderId(data), "preview", u)))
     uris.map { case u: URI => uriOnlyWebResource(u) }.headOption

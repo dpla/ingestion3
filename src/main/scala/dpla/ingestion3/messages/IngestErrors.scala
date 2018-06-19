@@ -5,9 +5,9 @@ import java.net.URI
 import scala.util.{Failure, Success, Try}
 
 trait IngestErrors {
-  def mintUriError(id: String, msg: Option[String] = None, field: String, value: String): IngestMessage =
+  def mintUriError(id: String, field: String, value: String, msg: Option[String] = None): IngestMessage =
     IngestMessage(
-      message = s"Unable to mint URI: $msg",
+      message = s"Unable to mint URI ${msg.getOrElse("NO URI")}".trim,
       id = id,
       field = field,
       value = value

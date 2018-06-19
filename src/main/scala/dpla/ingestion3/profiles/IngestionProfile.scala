@@ -16,12 +16,8 @@ trait IngestionProfile[T] {
   def getMapper: Mapper[T, Mapping[T]]
   def getMapping: Mapping[T]
 
-<<<<<<< HEAD
 
   def performMapping(data: String): (Option[OreAggregation], Option[String]) = {
-=======
-  def performMapping(data: String): (Option[OreAggregation], Option[Exception]) = {
->>>>>>> Large refactor get exceptions and messages playing nicely with each other.
     val parser = getParser
     val mapping = getMapping
     val mapper = getMapper

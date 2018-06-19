@@ -1,5 +1,7 @@
 package dpla.ingestion3.mappers
 
+import java.net.URI
+
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model._
@@ -70,6 +72,7 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
           messages = msgCollector.getAll()
         )
       }
+
     getReturnValue(mapResult)
   }
 }
