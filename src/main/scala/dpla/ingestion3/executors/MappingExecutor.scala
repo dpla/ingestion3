@@ -67,7 +67,7 @@ trait MappingExecutor extends Serializable {
     val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
 
     // Run the mapping over the Dataframe
-    val documents: Dataset[String] = harvestedRecords.select("document").as[String]
+    val documents: Dataset[String] = harvestedRecords.select("document").as[String].limit(50)
 
     val dplaMap = new DplaMap()
 
@@ -82,6 +82,7 @@ trait MappingExecutor extends Serializable {
     val successResults: Dataset[Row] = mappingResults
       .filter(tuple => Option(tuple._1).isDefined)
       .map(tuple => tuple._1)(oreAggregationEncoder)
+
 
     val endTime = System.currentTimeMillis()
 
@@ -152,14 +153,16 @@ trait MappingExecutor extends Serializable {
 
     val exceptionsDS = sc.parallelize(exceptions).toDS()
 
-    val logFileList = List("All" -> messages,
-      "Errors" -> errors,
-      "Warnings" -> warnings,
-      "Exceptions" -> exceptionsDS)
-      .filter { case (_, data: Dataset[_]) => data.count() > 0 }
+    val logFileList = List(
+      "all" -> messages,
+      "errors" -> errors,
+      "warnings" -> warnings,
+      "exceptions" -> exceptionsDS
+    ).filter { case (_, data: Dataset[_]) => data.count() > 0 }
 
     val logFileSeq = logFileList.map {
       case (name: String, data: Dataset[_]) => {
+
         val path = baseLogDir + s"$shortName-$endTime-map-$name"
         data match {
           case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)
@@ -215,7 +218,6 @@ class DplaMap extends Serializable {
           totalCount: LongAccumulator,
           successCount: LongAccumulator,
           failureCount: LongAccumulator): (Row, String) = {
-
     totalCount.add(1)
 
     val extractorClass = ProviderRegistry.lookupProfile(shortName) match {
