@@ -63,7 +63,7 @@ trait MappingExecutor extends Serializable {
     val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
 
     // Run the mapping over the Dataframe
-    val documents: Dataset[String] = harvestedRecords.select("document").as[String].limit(50)
+    val documents: Dataset[String] = harvestedRecords.select("document").as[String]
 
     val dplaMap = new DplaMap()
 
@@ -209,11 +209,11 @@ class DplaMap extends Serializable {
       case Success(extClass) => extClass
       case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
     }
-//    (Option[OreAggregation], Option[Exception])
+
     extractorClass.performMapping(document) match {
-      case (Some(oreAgg), Some(exception)) => (RowConverter.toRow(oreAgg, model.sparkSchema), exception.getMessage)
-      case(Some(oreAgg), None) => (RowConverter.toRow(oreAgg, model.sparkSchema), null)
-      case(None, Some(exception)) => (null, exception.getMessage)
+      case (Some(oreAgg), Some(exception)) => (RowConverter.toRow(oreAgg, model.sparkSchema), exception)
+      case (Some(oreAgg), None) => (RowConverter.toRow(oreAgg, model.sparkSchema), null)
+      case (None, Some(exception)) => (null, exception)
       case _ => (null, null)
     }
   }

@@ -5,7 +5,7 @@ import java.net.URI
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
-import dpla.ingestion3.messages.{IngestErrors, IngestMessage, MessageCollector}
+import dpla.ingestion3.messages.{IngestErrors, IngestMessage, IngestValidations, MessageCollector}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -15,7 +15,8 @@ import org.json4s.JsonDSL._
 import scala.util.{Failure, Success, Try}
 import scala.xml._
 
-class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] with IngestErrors {
+class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
+  with IngestErrors with IngestValidations{
 
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
@@ -136,11 +137,13 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   override def preview(data: Document[NodeSeq])
                       (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
-    extractString(data \ "metadata" \\ "preview").flatMap(uriStr =>
-      Try(new URI(uriStr)) match {
-        case Success(uri) => Option(uriOnlyWebResource(uri))
-        case Failure(_) => msgCollector.add(mintUriError(id = getProviderId(data), field = "preview", value = uriStr))
-          None
+
+    extractString(data \ "metadata" \\ "preview").map(uriStr =>
+      validateUri(uriStr) match {
+        case Success(u) => uriOnlyWebResource(u)
+        case Failure(_) =>
+          msgCollector.add(mintUriError(getProviderId(data), "preview", uriStr))
+          uriOnlyWebResource(new URI(""))
       }
     )
 

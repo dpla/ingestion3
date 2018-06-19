@@ -135,7 +135,7 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     validateUri(uriString) match {
       case Success(uri) => uri
       case Failure(_) => msgCollector.add(
-        mintUriError(id = getProviderId(data), field = "second identifier", value = uriString))
+        mintUriError(getProviderId(data), "second identifier", uriString))
         new URI("")
     }
   }
