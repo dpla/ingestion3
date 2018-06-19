@@ -151,6 +151,7 @@ trait MappingExecutor extends Serializable {
 
     val baseLogDir = s"$dataOut/../logs/"
 
+
     val exceptionsDS = sc.parallelize(exceptions).toDS()
 
     val logFileList = List(

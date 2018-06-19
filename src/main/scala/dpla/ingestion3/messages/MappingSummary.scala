@@ -8,6 +8,7 @@ import org.apache.commons.lang.StringUtils
 /**
   *
   */
+
 object MappingSummary {
 
   def centerPad(a: String, b: String, seperator: String = ".", width: Int = 80) =
@@ -22,6 +23,7 @@ object MappingSummary {
     */
   def getSummary(data: MappingSummaryData): String = {
     // prettify all the digits!
+
     val attemptedStr = Utils.formatNumber(data.operationSummary.recordsAttempted)
     val mappedStr = Utils.formatNumber(data.operationSummary.recordsSuccessful)
     val warnStr = Utils.formatNumber(data.messageSummary.warningCount)
@@ -33,7 +35,6 @@ object MappingSummary {
     val logFileMsg =
       if(data.operationSummary.logFiles.nonEmpty) data.operationSummary.logFiles.mkString("\n")
       else ""
-
     val lineBreak = "-"*80
 
       s"""
@@ -57,12 +58,12 @@ object MappingSummary {
         |${centerPad("Provider", data.shortName.toUpperCase)}
         |${centerPad("Date", data.timeSummary.runTime)}
         |
-        |${centerPad("Attempted to map", attemptedStr)}
-        |${centerPad("Successfully mapped", mappedStr)}
+        |${centerPad("Attempted", attemptedStr)}
+        |${centerPad("Successful", mappedStr)}
         |${centerPad("Failed", failedCountStr)}
         |
         |
-        |${center("Errors and Warnings Summary")}
+        |${center("Errors, Warnings and Exceptions Summary")}
         |
         |${centerPad("Warnings (messages)", warnStr)}
         |${centerPad("Warnings (records)", warnRecordsStr)}
@@ -89,6 +90,8 @@ object MappingSummary {
         |${if(data.messageSummary.errorMessageDetails.nonEmpty)
           "\nErrors\n" + data.messageSummary.errorMessageDetails else ""}
         |
+        |${centerPad("Exceptions (records)", exceptionCountStr)}
+        |
         |
         |${if(logFileMsg.nonEmpty)
           ReportFormattingUtils.center("Log Files")
@@ -97,9 +100,15 @@ object MappingSummary {
 =======
         |${StringUtils.leftPad("Errors and Warnings Detail (messages)", 58 ," ")}
         |
+<<<<<<< HEAD
         |${if(data.messageSummary.warningMessageDetails.nonEmpty) "Warnings\n--------\n" + data.messageSummary.warningMessageDetails else "* No Warnings *"}
         |
         |${if(data.messageSummary.errorMessageDetails.nonEmpty) "Errors\n-------\n" + data.messageSummary.errorMessageDetails else "* No Errors *"}
+=======
+        |${if(data.messageSummary.warningMessageDetails.nonEmpty) "Warnings\n~~~~~~~~\n" + data..messageSummary.warningMessageDetails else "* No Warnings *"}
+        |
+        |${if(data..messageSummary.errorMessageDetails.nonEmpty) "Errors\n~~~~~~\n" + data..messageSummary.errorMessageDetails else "* No Errors *"}
+>>>>>>> Add exception count to summary report message
         |
         |
         |${center("Better  luck next time!")}
