@@ -79,8 +79,13 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     extractStrings(data \ "metadata" \\ "relation").map(eitherStringOrUri)
 
   override def rights(data: Document[NodeSeq]): Seq[String] =
-    extractStrings(data \ "metadata" \\ "rights") ++
-      extractStrings(data \ "metadata" \\ "accessRights")
+    ((data \ "metadata" \\ "rights") ++
+      (data \ "metadata" \\ "accessRights")).map(rights => {
+        rights.prefix match {
+          case "dc" => rights.text
+          case _ => ""
+        }
+      })
 
   override def rightsHolder(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "rightsHolder").map(nameOnlyAgent)
