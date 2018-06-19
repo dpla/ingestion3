@@ -154,7 +154,8 @@ trait MappingExecutor extends Serializable {
       recordWarnCount,
       recordErrorCount,
       errorMsgDets,
-      warnMsgDets
+      warnMsgDets,
+      exceptions.length
     )
     // Write warn and error messages to CSV files
     logger.info(s"Message summary")

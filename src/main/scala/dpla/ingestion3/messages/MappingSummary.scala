@@ -21,15 +21,13 @@ case class MappingSummaryData(
                                runTime: String,
                                attempted: Long,
                                mapped: Long,
-
                                warn: Long,
                                error: Long,
-
                                warnRecords: Long,
                                errorRecords: Long,
-
                                errorMsgDetails: String,
-                               warnMsgDetails: String
+                               warnMsgDetails: String,
+                               exceptionCount: Long
                              )
 object MappingSummary {
 
@@ -52,6 +50,7 @@ object MappingSummary {
     val warnRecordsStr = Utils.formatNumber(data.warnRecords)
     val errorRecordsStr = Utils.formatNumber(data.errorRecords)
     val failedCountStr = Utils.formatNumber(data.attempted-data.mapped)
+    val exceptionCountStr = Utils.formatNumber(data.exceptionCount)
     val lineBreak = "-"*80
 
       s"""
@@ -61,12 +60,12 @@ object MappingSummary {
         |${centerPad("Provider", data.shortName.toUpperCase)}
         |${centerPad("Date", data.runTime)}
         |
-        |${centerPad("Attempted to map", attemptedStr)}
-        |${centerPad("Successfully mapped", mappedStr)}
+        |${centerPad("Attempted", attemptedStr)}
+        |${centerPad("Successful", mappedStr)}
         |${centerPad("Failed", failedCountStr)}
         |
         |
-        |${center("Errors and Warnings Summary")}
+        |${center("Errors, Warnings and Exceptions Summary")}
         |
         |${centerPad("Warnings (messages)", warnStr)}
         |${centerPad("Warnings (records)", warnRecordsStr)}
@@ -74,12 +73,14 @@ object MappingSummary {
         |${centerPad("Errors (messages)", errorStr)}
         |${centerPad("Errors (records)", errorRecordsStr)}
         |
+        |${centerPad("Exceptions (records)", exceptionCountStr)}
+        |
         |
         |${StringUtils.leftPad("Errors and Warnings Detail (messages)", 58 ," ")}
         |
-        |${if(data.warnMsgDetails.nonEmpty) "Warnings\n--------\n" + data.warnMsgDetails else "* No Warnings *"}
+        |${if(data.warnMsgDetails.nonEmpty) "Warnings\n~~~~~~~~\n" + data.warnMsgDetails else "* No Warnings *"}
         |
-        |${if(data.errorMsgDetails.nonEmpty) "Errors\n-------\n" + data.errorMsgDetails else "* No Errors *"}
+        |${if(data.errorMsgDetails.nonEmpty) "Errors\n~~~~~~\n" + data.errorMsgDetails else "* No Errors *"}
         |
         |
         |${center("Better  luck next time!")}
