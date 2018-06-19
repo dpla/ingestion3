@@ -1,0 +1,57 @@
+{
+  "@graph": [
+    {
+      "edm:aggregatedCHO": {
+        "@id": "https://digitalcc.coloradocollege.edu/islandora/object/coccc:7829"
+      },
+      "edm:dataProvider": "Colorado College",
+      "edm:provider": {
+        "@id": "https://plains2peaks.org/"
+      },
+      "@id": "https://plains2peaks.org/0a00aa9c-0b9e-11e8-a081-005056c00008",
+      "edm:rights": {
+        "@id": "http://rightsstatements.org/vocab/InC/1.0/"
+      },
+      "edm:isShownAt": {
+        "@id": "https://digitalcc.coloradocollege.edu/islandora/object/coccc:7829"
+      },
+      "@type": "ore:Aggregation",
+      "edm:preview": {
+        "@id": "https://digitalcc.coloradocollege.edu/islandora/object/coccc:7829/datastream/TN"
+      }
+    },
+    {
+      "dc:date": [
+        "20th century"
+      ],
+      "dcterm:creator": [
+        "Berry, Edwin"
+      ],
+      "dcterm:alternative": [
+        "Alt title 1"
+      ],
+      "dcterm:title": [
+        "El terengue"
+      ],
+      "@id": "https://digitalcc.coloradocollege.edu/islandora/object/coccc:7829",
+      "dcterm:contributor": "Cobos, Ruben",
+      "dcterm:language": [
+        "Spanish"
+      ],
+      "dcterm:description": "Tome, New Mexico. No listing in Cobos index. Quality: good/fair. PLEASE NOTE: this should be number 15 of 17 songs on the audiofile.",
+      "@type": "dpla:SourceResource",
+      "dcterm:subject": [
+        "lullaby",
+        "Folk music",
+        "New Mexico"
+      ]
+    }
+  ],
+  "@context": {
+    "dpla": "http://dp.la/about/map/",
+    "ore": "http://www.openarchives.org/ore/terms/",
+    "dc": "http://purl.org/dc/elements/1.1/",
+    "edm": "http://www.europeana.eu/schemas/edm/",
+    "dcterm": "http://purl.org/dc/terms/"
+  }
+}
