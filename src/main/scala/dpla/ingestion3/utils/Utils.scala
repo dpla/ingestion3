@@ -159,9 +159,9 @@ object Utils {
     *
     * @param url String url
     * @return True if a URL object can be made from url
-    *         False if it fails (malformed url, invalid characters, not a url)
+    *         False if it fails (malformed url, invalid characters, not a url, empty string)
     */
-  def isUrl(url: String): Boolean = Try { new URL(url) }.isSuccess
+  def isUrl(url: String): Boolean = url.trim.nonEmpty && Try { new URL(url) }.isSuccess
 
   /**
     * Tries to create a URI object from the string

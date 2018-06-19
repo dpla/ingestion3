@@ -33,7 +33,7 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   override def alternateTitle(data: Document[NodeSeq]): Seq[String] = extractStrings(data \ "metadata" \\ "alternative")
 
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
-    extractStrings(data \ "metadata" \\ "isPartOf").headOption.map(nameOnlyCollection).toSeq
+    extractStrings(data \ "metadata" \\ "isPartOf").map(nameOnlyCollection)
 
   override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
     extractStrings(data \ "metadata" \\ "contributor").dropRight(1).map(nameOnlyAgent)
@@ -46,10 +46,12 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   override def description(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "metadata" \\ "description")
+      .map(_.limitCharacters(1000))
 
   override def extent(data: Document[NodeSeq]): Seq[String] = {
     (extractStrings(data \ "metadata" \\ "format") ++
-      extractStrings(data \ "metadata" \\ "medium"))
+      extractStrings(data \ "metadata" \\ "medium") ++
+      extractStrings(data \ "metadata" \\ "extent"))
       .map(_.applyAllowFilter(ExtentIdentificationList.termList))
       .filter(_.nonEmpty)
   }
@@ -77,8 +79,13 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     extractStrings(data \ "metadata" \\ "relation").map(eitherStringOrUri)
 
   override def rights(data: Document[NodeSeq]): Seq[String] =
-    extractStrings(data \ "metadata" \\ "rights") ++
-      extractStrings(data \ "metadata" \\ "accessRights")
+    ((data \ "metadata" \\ "rights") ++
+      (data \ "metadata" \\ "accessRights")).map(rights => {
+        rights.prefix match {
+          case "dc" => rights.text
+          case _ => ""
+        }
+      })
 
   override def rightsHolder(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "rightsHolder").map(nameOnlyAgent)
@@ -105,9 +112,17 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     }
   }
 
-  override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] =
+  override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] = {
     // Will quietly drop any invalid URIs
-    extractStrings(data \ "metadata" \\ "rights").find(r => Utils.isUri(r)).map(new URI(_))
+    val edmRights = (data \ "metadata" \\ "rights").map(rights => {
+      rights.prefix match {
+        case "edm" => rights.text
+        case _ => ""
+      }
+    })
+
+    edmRights.find(Utils.isUri).map(new URI(_))
+  }
 
   override def isShownAt(data: Document[NodeSeq]): EdmWebResource = {
     extractString(data \ "metadata" \\ "isShownAt") match {
