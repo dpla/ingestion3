@@ -74,7 +74,6 @@ object MessageProcessor{
     }
 
     val dsCount = ds.count()
-
     val bottomLine = if (dsCount > 0)
       s"- Total${"."*(80-7-Utils.formatNumber(dsCount).length)}${Utils.formatNumber(dsCount)}"
     else ""

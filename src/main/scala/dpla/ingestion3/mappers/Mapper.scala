@@ -75,7 +75,6 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
 
 class JsonMapper extends Mapper[JValue, JsonMapping] {
   override def map(document: Document[JValue], mapping: Mapping[JValue]): (Option[OreAggregation], Option[String]) = {
-
     implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
 
     val mapResult = Try (

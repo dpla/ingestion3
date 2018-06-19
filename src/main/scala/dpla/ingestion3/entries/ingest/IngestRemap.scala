@@ -63,7 +63,7 @@ object IngestRemap extends MappingExecutor
 
     // Reports
     executeAllReports(sparkConf, enrichDataOut, baseRptOut, logger)
-
+    
     logger.info("Ingest remapping complete")
   }
 }
