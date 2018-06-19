@@ -2,11 +2,14 @@ package dpla.ingestion3.messages
 
 import dpla.ingestion3.reports.summary.{MappingSummaryData, ReportFormattingUtils}
 import dpla.ingestion3.utils.Utils
+import org.apache.commons.lang.StringUtils
 
 
 /**
   *
   */
+
+
 object MappingSummary {
 
   def centerPad(a: String, b: String, seperator: String = ".", width: Int = 80) =
