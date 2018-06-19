@@ -1,11 +1,13 @@
 package dpla.ingestion3.messages
 
-// trait IngestErrorMessages {
+import java.net.URI
+
+import scala.util.{Failure, Success, Try}
 
 trait IngestErrors {
   def mintUriError(id: String, msg: Option[String] = None, field: String, value: String): IngestMessage =
     IngestMessage(
-      message = s"Unable to mint URI ${msg.getOrElse("")}",
+      message = s"Unable to mint URI ${msg.getOrElse("")}".trim,
       id = id,
       field = field,
       value = value
@@ -19,4 +21,8 @@ trait IngestErrors {
       field = field,
       value = "MISSING"
     )
+}
+
+trait IngestValidations extends IngestErrors{
+  def validateUri(uriStr: String): Try[URI] = Try { new URI(uriStr) }
 }

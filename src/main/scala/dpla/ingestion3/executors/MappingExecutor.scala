@@ -11,7 +11,6 @@ import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
-import org.apache.spark.sql.functions.explode
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
@@ -64,7 +63,7 @@ trait MappingExecutor extends Serializable {
     val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
 
     // Run the mapping over the Dataframe
-    val documents: Dataset[String] = harvestedRecords.select("document").as[String]
+    val documents: Dataset[String] = harvestedRecords.select("document").as[String].limit(50)
 
     val dplaMap = new DplaMap()
 
@@ -76,32 +75,56 @@ trait MappingExecutor extends Serializable {
         .persist(StorageLevel.DISK_ONLY)
         .checkpoint()
 
-    // Delete the output location if it exists
+    val successResults: Dataset[Row] = mappingResults
+      .filter(tuple => Option(tuple._1).isDefined)
+      .map(tuple => tuple._1)(oreAggregationEncoder)
+
+    buildFinalReport(successResults, mappingResults, shortName, dataOut)(spark, logger)
+
+    // FIXME This is something else's responsibility
     Utils.deleteRecursively(new File(dataOut))
+
+    successResults.toDF().write.avro(dataOut)
+
+    spark.stop()
+
+    // Clean up checkpoint directory, created above
+    Utils.deleteRecursively(new File("/tmp/checkpoint"))
+  }
+
+  /**
+    * Creates a summary report of the ingest by using the MappingSummary object
+    *
+    * @param successResults
+    * @param mappingResults
+    * @param shortName
+    * @param spark
+    * @return
+    */
+  def buildFinalReport(successResults: Dataset[Row],
+                       mappingResults: Dataset[(Row, String)],
+                       shortName: String,
+                       dataOut: String)(implicit spark: SparkSession,
+                                          logger: Logger): Unit = {
+    import spark.implicits._
+
+    // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
+    val oreAggregationEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
+
+    val sc = spark.sparkContext
 
     val successResults: Dataset[Row] = mappingResults
       .filter(tuple => Option(tuple._1).isDefined)
       .map(tuple => tuple._1)(oreAggregationEncoder)
 
-    val failures:  Array[String] = mappingResults
+    val exceptions: Array[String] = mappingResults
       .filter(tuple => Option(tuple._2).isDefined)
       .map(tuple => tuple._2).collect()
 
-    // Begin new error and message handling
-    val messages = MessageProcessor.getAllMessages(successResults)
+    val messages = MessageProcessor.getAllMessages(successResults)(spark)
 
-    val messagesExploded = messages
-      .withColumn("level", explode($"level"))
-      .withColumn("message", explode($"message"))
-      .withColumn("field", explode($"field"))
-      .withColumn("value", explode($"value"))
-      .withColumn("id", explode($"id"))
-      .distinct()
-    // Calling distinct here because I was ending up with qaudruplication of all messages.
-    // I suspect `explode` but the dataset might be recomputed unnecessarily
-
-    val warnings = MessageProcessor.getWarnings(messagesExploded)
-    val errors = MessageProcessor.getErrors(messagesExploded)
+    val warnings = MessageProcessor.getWarnings(messages)
+    val errors = MessageProcessor.getErrors(messages)
 
     // get counts
     val attemptedCount = mappingResults.count() // successResults.count()
@@ -117,9 +140,11 @@ trait MappingExecutor extends Serializable {
 
     val timeInMs = System.currentTimeMillis()
     val dateTimeStr = Utils.formatDateTime(timeInMs)
+    val timeStr = timeInMs.toString
 
-    logger.info(s"Message summary")
-    val mappingSummary = MappingSummaryData(
+    val baseLogDir = s"$dataOut/../logs/"
+
+    val summaryData = MappingSummaryData(
       shortName,
       dateTimeStr,
       attemptedCount,
@@ -131,36 +156,29 @@ trait MappingExecutor extends Serializable {
       errorMsgDets,
       warnMsgDets
     )
+    // Write warn and error messages to CSV files
+    logger.info(s"Message summary")
+    logger.info(MappingSummary.getSummary(summaryData))
+    logger.info(s"Number of exceptions ${exceptions.length}")
 
-    logger.info(MappingSummary.getSummary(mappingSummary))
-    logger.info(s"Number of exceptions ${failures.length}")
+    val exceptionsDs = sc.parallelize(exceptions).toDS()
 
-    // Write warn and error messages to CSV files. These should all share the same timestamp, minor work TBD
-    val baseLogDir = s"$dataOut/../logs/"
-    val time = timeInMs.toString
-
-    val exceptions = sc.parallelize(failures).toDS()
-
-    val logFileList = List("all" -> messagesExploded, "error" -> errors, "warn" -> warnings, "exceptions" -> exceptions)
-      .filter { case  (_, data: Dataset[_]) => data.count() > 0 }
+    val logFileList = List("all" -> messages,
+      "error" -> errors,
+      "warn" -> warnings,
+      "exceptions" -> exceptionsDs)
+      .filter { case (_, data: Dataset[_]) => data.count() > 0 }
 
     logFileList.foreach {
       case (name: String, data: Dataset[_]) => {
-        val path = baseLogDir + s"$shortName-$time-map-$name"
+        val path = baseLogDir + s"$shortName-$timeStr-map-$name"
         data match {
-          case dr: Dataset[Row] =>  Utils.writeLogsAsCsv(path, name, dr, shortName)
-          case ds: Dataset[String] =>  Utils.writeLogsAsTxt(path, name, ds, shortName)
+          case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)
+          case ds: Dataset[String] => Utils.writeLogsAsTxt(path, name, ds, shortName)
         }
         logger.info(s"Saved ${name.toUpperCase} log to: ${new File(path).getCanonicalPath}")
       }
     }
-
-    successResults.toDF().write.avro(dataOut)
-
-    spark.stop()
-
-    // Clean up checkpoint directory, created above
-    Utils.deleteRecursively(new File("/tmp/checkpoint"))
   }
 }
 
@@ -190,15 +208,12 @@ class DplaMap extends Serializable {
       case Success(extClass) => extClass
       case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
     }
-
+//    (Option[OreAggregation], Option[Exception])
     extractorClass.performMapping(document) match {
-      case Success(dplaMapData) =>
-        successCount.add(1)
-        (RowConverter.toRow(dplaMapData, model.sparkSchema), null)
-      case Failure(exception) =>
-        failureCount.add(1)
-        (null, s"${exception.getMessage}\n")
+      case (Some(oreAgg), Some(exception)) => (RowConverter.toRow(oreAgg, model.sparkSchema), exception.getMessage)
+      case(Some(oreAgg), None) => (RowConverter.toRow(oreAgg, model.sparkSchema), null)
+      case(None, Some(exception)) => (null, exception.getMessage)
+      case _ => (null, null)
     }
-
   }
 }

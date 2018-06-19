@@ -10,12 +10,12 @@ import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
 trait Mapper[T, +E] {
-  def map(document: Document[T], mapping: Mapping[T]): Try[OreAggregation]
+  def map(document: Document[T], mapping: Mapping[T]): (Option[OreAggregation], Option[Exception])
 }
 
 class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
-  override def map(document: Document[NodeSeq], mapping: Mapping[NodeSeq]): Try[OreAggregation] = {
-
+//  override def map(document: Document[NodeSeq], mapping: Mapping[NodeSeq]): Try[OreAggregation] = {
+  override def map(document: Document[NodeSeq], mapping: Mapping[NodeSeq]): (Option[OreAggregation], Option[Exception]) = {
     implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
       val mapResult = Try {
         OreAggregation(
@@ -61,16 +61,17 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
     // Bridge to work with both messages and exceptions
     mapResult match {
       case Success(s) => s.messages.find(m => m.level.equalsIgnoreCase("error")) match {
-        case None => mapResult
-        case Some(msg) => Failure(new RuntimeException(msg.formatMessage()))
+        case None => (Option(s), None)
+        case Some(msg) => (Option(s), Option(new RuntimeException(msg.formatMessage())))
+          // Failure(new RuntimeException(msg.formatMessage()))
       } // Is there a fatal message in there? If so throw an Exception
-      case Failure(f) => Failure(f)
+      case Failure(f) => (None, Option(new Exception(f.getMessage)))
     }
   }
 }
 
 class JsonMapper extends Mapper[JValue, JsonMapping] {
-  override def map(document: Document[JValue], mapping: Mapping[JValue]): Try[OreAggregation] = {
+  override def map(document: Document[JValue], mapping: Mapping[JValue]): (Option[OreAggregation], Option[Exception]) = {
 
     implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
 
@@ -116,10 +117,11 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
     }
     mapResult match {
       case Success(s) => s.messages.find(m => m.level.equalsIgnoreCase("error")) match {
-        case None => mapResult
-        case Some(msg) => Failure(new RuntimeException(msg.formatMessage()))
+        case None => (Option(s), None)
+        case Some(msg) => (Option(s), Option(new RuntimeException(msg.formatMessage())))
+        // Failure(new RuntimeException(msg.formatMessage()))
       } // Is there a fatal message in there? If so throw an Exception
-      case Failure(f) => Failure(f)
+      case Failure(f) => (None, Option(new Exception(f.getMessage)))
     }
   }
 }

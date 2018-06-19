@@ -33,6 +33,11 @@ case class MappingSummaryData(
                              )
 object MappingSummary {
 
+  def centerPad(a: String, b: String, seperator: String = ".", width: Int = 80) =
+    s"$a${seperator*(80-a.length-b.length)}$b"
+  def center(a: String, seperator: String = " ",width: Int = 80): String =
+    StringUtils.leftPad(a, (width+a.length)/2, seperator)
+
   /**
     * Big picutre summary in one String
     * @param data MappingSummaryData Results of individual steps (failures, successes, warnings and errors)
@@ -46,44 +51,39 @@ object MappingSummary {
     val errorStr = Utils.formatNumber(data.error)
     val warnRecordsStr = Utils.formatNumber(data.warnRecords)
     val errorRecordsStr = Utils.formatNumber(data.errorRecords)
+    val failedCountStr = Utils.formatNumber(data.attempted-data.mapped)
     val lineBreak = "-"*80
 
       s"""
         |$lineBreak
-        |${StringUtils.leftPad("Summary", 43, " ")}
-        |$lineBreak
-        |Provider: ${data.shortName.toUpperCase}
-        |Date:     ${data.runTime}
+        |${center("Summary")}
         |
-        |Attempted to map:     $attemptedStr
-        |Successfully mapped:  $mappedStr
-        |                      ${"-"*attemptedStr.length}
-        |Failed:               ${Utils.formatNumber(data.attempted-data.mapped)}
+        |${centerPad("Provider", data.shortName.toUpperCase)}
+        |${centerPad("Date", data.runTime)}
         |
-        |
-        |$lineBreak
-        |${StringUtils.leftPad("Errors and Warnings Summary", 53 ," ")}
-        |$lineBreak
-        |Warnings (messages):  $warnStr
-        |Warnings (records):   $warnRecordsStr
-        |
-        |Errors (messages):    $errorStr
-        |Errors (records):     $errorRecordsStr
+        |${centerPad("Attempted to map", attemptedStr)}
+        |${centerPad("Successfully mapped", mappedStr)}
+        |${centerPad("Failed", failedCountStr)}
         |
         |
-        |$lineBreak
+        |${center("Errors and Warnings Summary")}
+        |
+        |${centerPad("Warnings (messages)", warnStr)}
+        |${centerPad("Warnings (records)", warnRecordsStr)}
+        |
+        |${centerPad("Errors (messages)", errorStr)}
+        |${centerPad("Errors (records)", errorRecordsStr)}
+        |
+        |
         |${StringUtils.leftPad("Errors and Warnings Detail (messages)", 58 ," ")}
+        |
+        |${if(data.warnMsgDetails.nonEmpty) "Warnings\n--------\n" + data.warnMsgDetails else "* No Warnings *"}
+        |
+        |${if(data.errorMsgDetails.nonEmpty) "Errors\n-------\n" + data.errorMsgDetails else "* No Errors *"}
+        |
+        |
+        |${center("Better  luck next time!")}
         |$lineBreak
-        |WARNINGS
-        |--------
-        |${if(data.warnMsgDetails.nonEmpty) data.warnMsgDetails else "* No Warnings *"}
-        |
-        |ERRORS
-        |------
-        |${if(data.errorMsgDetails.nonEmpty) data.errorMsgDetails else "* No Errors *"}
-        |
-        |      Better luck next time!
-        |${"-"*80}
         |""".stripMargin
   }
 
