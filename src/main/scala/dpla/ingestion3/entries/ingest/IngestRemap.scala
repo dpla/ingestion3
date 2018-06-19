@@ -59,7 +59,7 @@ object IngestRemap extends MappingExecutor
     executeEnrichment(sparkConf, mapDataOut, enrichDataOut, shortName, logger, conf)
 
     // Json-l
-    executeJsonl(sparkConf, enrichDataOut, jsonlDataOut, logger)
+    executeEnrichment(sparkConf, mapDataOut, enrichDataOut, shortName, logger, conf)
 
     // Reports
     executeAllReports(sparkConf, enrichDataOut, baseRptOut, logger)
