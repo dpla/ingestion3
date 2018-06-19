@@ -105,9 +105,9 @@ object MappingSummary {
         |
         |${if(data.messageSummary.errorMessageDetails.nonEmpty) "Errors\n-------\n" + data.messageSummary.errorMessageDetails else "* No Errors *"}
 =======
-        |${if(data.messageSummary.warningMessageDetails.nonEmpty) "Warnings\n~~~~~~~~\n" + data..messageSummary.warningMessageDetails else "* No Warnings *"}
-        |
-        |${if(data..messageSummary.errorMessageDetails.nonEmpty) "Errors\n~~~~~~\n" + data..messageSummary.errorMessageDetails else "* No Errors *"}
+        |${if(data.messageSummary.warningMessageDetails.nonEmpty) "Warnings\n~~~~~~~~\n" + data.messageSummary.warningMessageDetails else "* No Warnings *"}
+
+        |${if(data.messageSummary.errorMessageDetails.nonEmpty) "Errors\n~~~~~~\n" + data.messageSummary.errorMessageDetails else "* No Errors *"}
 >>>>>>> Add exception count to summary report message
         |
         |
