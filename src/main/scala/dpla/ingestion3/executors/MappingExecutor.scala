@@ -67,7 +67,7 @@ trait MappingExecutor extends Serializable {
     val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
 
     // Run the mapping over the Dataframe
-    val documents: Dataset[String] = harvestedRecords.select("document").as[String]
+    val documents: Dataset[String] = harvestedRecords.select("document").as[String].limit(50)
 
     val dplaMap = new DplaMap()
 
@@ -89,12 +89,10 @@ trait MappingExecutor extends Serializable {
     val finalReport = buildFinalReport(successResults, mappingResults, shortName, dataOut, startTime, endTime)(spark)
     // Format the summary report and write it log file
     logger.info(MappingSummary.getSummary(finalReport))
-
     // FIXME This is something else's responsibility
     Utils.deleteRecursively(new File(dataOut))
 
     successResults.where("size(messages.level) == 0").toDF().write.avro(dataOut)
-
     spark.stop()
 
     // Clean up checkpoint directory, created above
@@ -222,11 +220,11 @@ class DplaMap extends Serializable {
       case Success(extClass) => extClass
       case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
     }
-
     extractorClass.performMapping(document) match {
       case (Some(oreAgg), Some(exception)) => (RowConverter.toRow(oreAgg, model.sparkSchema), exception)
       case (Some(oreAgg), None) => (RowConverter.toRow(oreAgg, model.sparkSchema), null)
       case (None, Some(exception)) => (null, exception)
+
       case _ => (null, null)
     }
   }

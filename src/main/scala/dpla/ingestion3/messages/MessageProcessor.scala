@@ -11,7 +11,6 @@ import scala.util.{Failure, Success, Try}
 case class MessageFieldRpt(msg: String, field: String, count: Long)
 
 object MessageProcessor{
-
   def getAllMessages(ds: Dataset[Row])
                     (implicit spark: SparkSession): Dataset[Row] = {
     import spark.implicits._
@@ -102,9 +101,12 @@ object MessageProcessor{
 //  }
 
   /**
+    * Builds group by and count summary from `ds`. For example:
+    *  Unable to mint URI       isShownAt   5
+    *  Missing required field   isShownAt   1
     *
     * @param ds
-    * @return
+    * @return String
     */
   def getMessageFieldSummary(ds: Dataset[Row])(implicit spark: SparkSession): Array[String] = {
 
@@ -133,10 +135,24 @@ object MessageProcessor{
         Try {arr(2).toLong} match { case Success(s) => s case Failure(_) => -1 }
       ))
 
-    msgFieldRptArray.map { case (k: MessageFieldRpt) =>
-      s"${StringUtils.rightPad(k.msg, 25, " ")} " +
-        s"${StringUtils.rightPad(k.field, 15, " ")} " +
-        s"${StringUtils.leftPad(Utils.formatNumber(k.count), 6, " ")}"
+    val topLine = msgFieldRptArray.map { case (k: MessageFieldRpt) =>
+      s"${StringUtils.rightPad(k.msg.take(40) + " " + k.field.take(20), 70, ".")}" +
+        s"${StringUtils.leftPad(Utils.formatNumber(k.count), 10, ".")}"
+      case _ => ""
     }
+
+    val dsCount = ds.count()
+//    val (lineWidth, bottomLine) = if (dsCount > 0) {
+//      val lineWidth = topLine.headOption.getOrElse("").length
+//      val padding = lineWidth-dsCount.toString.length+1
+//      (lineWidth, s"${StringUtils.leftPad(Utils.formatNumber(dsCount), padding, " ") }")
+//    } else (0,"")
+
+    val bottomLine = if (dsCount > 0)
+      s"Total${"."*(80-5-Utils.formatNumber(dsCount).length)}${Utils.formatNumber(dsCount)}"
+    else ""
+
+    (topLine ++ Array(bottomLine)).filter(_.nonEmpty)
+//    (topLine ++ Array("-"* lineWidth, bottomLine)).filter(_.nonEmpty)
   }
 }
