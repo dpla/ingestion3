@@ -3,10 +3,12 @@ package dpla.ingestion3.executors
 import java.io.File
 
 import com.databricks.spark.avro._
-import dpla.ingestion3.messages.{MappingSummary, MappingSummaryData, MessageProcessor}
+import dpla.ingestion3.messages._
 import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
+import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
+import org.apache.commons.lang.StringUtils
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
@@ -33,12 +35,12 @@ trait MappingExecutor extends Serializable {
                       shortName: String,
                       logger: Logger): Unit = {
 
-    logger.info(s"${shortName.toUpperCase} mapping started")
+    val startTime = System.currentTimeMillis()
 
     // @michael Any issues with making SparkSession implicit?
     implicit val spark: SparkSession = SparkSession.builder()
       .config(sparkConf)
-      .config("spark.ui.showConsoleProgress", false)
+      .config("spark.ui.showConsoleProgress", value = false)
       .getOrCreate()
 
     val sc = spark.sparkContext
@@ -46,6 +48,8 @@ trait MappingExecutor extends Serializable {
     // Consider cluster / EMR usage.
     // See https://github.com/dpla/ingestion3/pull/105
     sc.setCheckpointDir("/tmp/checkpoint")
+
+    // TODO Is it faster easier to use a counter than query a DF in most cases?
     val totalCount: LongAccumulator = sc.longAccumulator("Total Record Count")
     val successCount: LongAccumulator = sc.longAccumulator("Successful Record Count")
     val failureCount: LongAccumulator = sc.longAccumulator("Failed Record Count")
@@ -79,12 +83,17 @@ trait MappingExecutor extends Serializable {
       .filter(tuple => Option(tuple._1).isDefined)
       .map(tuple => tuple._1)(oreAggregationEncoder)
 
-    buildFinalReport(successResults, mappingResults, shortName, dataOut)(spark, logger)
+    val endTime = System.currentTimeMillis()
+
+    // Collect the values needed to generate the report
+    val finalReport = buildFinalReport(successResults, mappingResults, shortName, dataOut, startTime, endTime)(spark)
+    // Format the summary report and write it log file
+    logger.info(MappingSummary.getSummary(finalReport))
 
     // FIXME This is something else's responsibility
     Utils.deleteRecursively(new File(dataOut))
 
-    successResults.toDF().write.avro(dataOut)
+    successResults.where("size(messages.level) == 0").toDF().write.avro(dataOut)
 
     spark.stop()
 
@@ -104,8 +113,9 @@ trait MappingExecutor extends Serializable {
   def buildFinalReport(successResults: Dataset[Row],
                        mappingResults: Dataset[(Row, String)],
                        shortName: String,
-                       dataOut: String)(implicit spark: SparkSession,
-                                          logger: Logger): Unit = {
+                       dataOut: String,
+                       startTime: Long,
+                       endTime: Long)(implicit spark: SparkSession): MappingSummaryData = {
     import spark.implicits._
 
     // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
@@ -130,7 +140,7 @@ trait MappingExecutor extends Serializable {
     val attemptedCount = mappingResults.count() // successResults.count()
     val validCount = successResults.select("dplaUri").where("size(messages) == 0").count()
     val warnCount = warnings.count()
-    val errorCount = errors.count()
+    val errorCount = errors.distinct().count()
 
     val recordErrorCount = MessageProcessor.getDistinctIdCount(errors)
     val recordWarnCount = MessageProcessor.getDistinctIdCount(warnings)
@@ -138,48 +148,51 @@ trait MappingExecutor extends Serializable {
     val errorMsgDets = MessageProcessor.getMessageFieldSummary(errors).mkString("\n")
     val warnMsgDets = MessageProcessor.getMessageFieldSummary(warnings).mkString("\n")
 
-    val timeInMs = System.currentTimeMillis()
-    val dateTimeStr = Utils.formatDateTime(timeInMs)
-    val timeStr = timeInMs.toString
-
     val baseLogDir = s"$dataOut/../logs/"
 
-    val summaryData = MappingSummaryData(
-      shortName,
-      dateTimeStr,
-      attemptedCount,
-      validCount,
-      warnCount,
-      errorCount,
-      recordWarnCount,
-      recordErrorCount,
-      errorMsgDets,
-      warnMsgDets,
-      exceptions.length
-    )
-    // Write warn and error messages to CSV files
-    logger.info(s"Message summary")
-    logger.info(MappingSummary.getSummary(summaryData))
-    logger.info(s"Number of exceptions ${exceptions.length}")
+    val exceptionsDS = sc.parallelize(exceptions).toDS()
 
-    val exceptionsDs = sc.parallelize(exceptions).toDS()
-
-    val logFileList = List("all" -> messages,
-      "error" -> errors,
-      "warn" -> warnings,
-      "exceptions" -> exceptionsDs)
+    val logFileList = List("All" -> messages,
+      "Errors" -> errors,
+      "Warnings" -> warnings,
+      "Exceptions" -> exceptionsDS)
       .filter { case (_, data: Dataset[_]) => data.count() > 0 }
 
-    logFileList.foreach {
+    val logFileSeq = logFileList.map {
       case (name: String, data: Dataset[_]) => {
-        val path = baseLogDir + s"$shortName-$timeStr-map-$name"
+        val path = baseLogDir + s"$shortName-$endTime-map-$name"
         data match {
           case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)
           case ds: Dataset[String] => Utils.writeLogsAsTxt(path, name, ds, shortName)
         }
-        logger.info(s"Saved ${name.toUpperCase} log to: ${new File(path).getCanonicalPath}")
+        ReportFormattingUtils.centerPad(name, new File(path).getCanonicalPath)
       }
     }
+    // time summary
+    val timeSummary = TimeSummary(
+      Utils.formatDateTime(startTime),
+      Utils.formatDateTime(endTime),
+      Utils.formatRuntime(endTime-startTime)
+    )
+    // operation summary
+    val operationSummary = OperationSummary(
+      attemptedCount,
+      validCount,
+      recordErrorCount,
+      logFileSeq
+    )
+    // messages summary
+    val messageSummary = MessageSummary(
+      errorCount,
+      exceptions.length,
+      warnCount,
+      recordErrorCount,
+      recordWarnCount,
+      errorMsgDets,
+      warnMsgDets
+    )
+
+    MappingSummaryData(shortName, operationSummary, timeSummary, messageSummary)
   }
 }
 
