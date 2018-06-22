@@ -8,7 +8,9 @@ import dpla.ingestion3.enrichments.EnrichmentDriver
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
 import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
+
 import dpla.ingestion3.reports.PrepareEnrichmentReport
+
 import dpla.ingestion3.reports.summary.{EnrichmentOpsSummary, EnrichmentSummaryData, OperationSummary, TimeSummary}
 import dpla.ingestion3.utils.{HttpUtils, Utils}
 import org.apache.log4j.Logger
@@ -151,7 +153,6 @@ trait EnrichExecutor extends Serializable {
                      placeImprovedCount: LongAccumulator): (Row, String) = {
     driver.enrich(dplaMapData) match {
       case Success(enriched) =>
-
         implicit val msgs = new MessageCollector[IngestMessage]()
 
         val oreAggMitMsgs = PrepareEnrichmentReport.prepareEnrichedData(enriched, dplaMapData)(msgs)

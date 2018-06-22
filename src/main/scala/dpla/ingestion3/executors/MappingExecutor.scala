@@ -10,6 +10,7 @@ import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
+import org.apache.commons.lang.StringUtils
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
@@ -151,29 +152,7 @@ trait MappingExecutor extends Serializable {
 
     val baseLogDir = s"$dataOut/../logs/"
 
-<<<<<<< HEAD
     val exceptionsDS = sc.parallelize(exceptions).toDS()
-=======
-    val summaryData = MappingSummaryData(
-      shortName,
-      dateTimeStr,
-      attemptedCount,
-      validCount,
-      warnCount,
-      errorCount,
-      recordWarnCount,
-      recordErrorCount,
-      errorMsgDets,
-      warnMsgDets,
-      exceptions.length
-    )
-    // Write warn and error messages to CSV files
-    logger.info(s"Message summary")
-    logger.info(MappingSummary.getSummary(summaryData))
-    logger.info(s"Number of exceptions ${exceptions.length}")
-
-    val exceptionsDs = sc.parallelize(exceptions).toDS()
->>>>>>> Add exception count to summary report message
 
     val logFileList = List(
       "all" -> messages,
