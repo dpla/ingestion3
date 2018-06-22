@@ -17,6 +17,16 @@ class LanguageEnrichmentTest extends FlatSpec with BeforeAndAfter {
     )
     assert(languageEnrichment.enrichLanguage(originalValue) === expectedValue)
   }
+  it should "return an enriched SkosConcept for 'en'" in {
+    val originalValue = SkosConcept(
+      providedLabel = Some("en")
+    )
+    val expectedValue = SkosConcept(
+      providedLabel = Some("en"),
+      concept = Some("English")
+    )
+    assert(languageEnrichment.enrichLanguage(originalValue) === expectedValue)
+  }
   it should "return the original SkosConcept when given a invalid language code" in {
     val originalValue = SkosConcept(providedLabel = Option("b__"))
     assert(languageEnrichment.enrichLanguage(originalValue) === originalValue)

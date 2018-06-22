@@ -12,6 +12,7 @@ class LanguageEnrichment extends FileLoader with VocabEnrichment[SkosConcept] {
   private val fileList = Seq(
     "/languages/iso639-2.csv",
     "/languages/iso639-3.csv",
+    "/languages/iso639-1.csv",
     "/languages/dpla-lang.csv"
   )
 
