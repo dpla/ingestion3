@@ -9,6 +9,7 @@ import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
+import org.apache.commons.lang.StringUtils
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
@@ -93,6 +94,7 @@ trait MappingExecutor extends Serializable {
     Utils.deleteRecursively(new File(dataOut))
 
     successResults.where("size(messages.level) == 0").toDF().write.avro(dataOut)
+
     spark.stop()
 
     // Clean up checkpoint directory, created above

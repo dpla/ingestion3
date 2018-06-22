@@ -12,6 +12,7 @@ import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
 import dpla.ingestion3.reports.PrepareEnrichmentReport
 
 import dpla.ingestion3.reports.summary._
+
 import dpla.ingestion3.utils.{HttpUtils, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
@@ -167,7 +168,6 @@ trait EnrichExecutor extends Serializable {
 
     // Log error messages.
     failures.foreach(logger.error(_))
-
   }
 
   private def enrich(dplaMapData: OreAggregation,
@@ -185,7 +185,6 @@ trait EnrichExecutor extends Serializable {
         (RowConverter.toRow(oreAggMitMsgs, model.sparkSchema), null)
       case Failure(exception) =>
         (null, s"${exception.getMessage}")
-
     }
   }
 }
