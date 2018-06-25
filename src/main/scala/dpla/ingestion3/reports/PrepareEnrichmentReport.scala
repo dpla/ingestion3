@@ -23,6 +23,7 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
       .centerPad("- " + row(1).toString.trim, Utils.formatNumber(row.getLong(2))))
       .mkString("\n")
   }
+
   /**
     *
     * @param enriched
