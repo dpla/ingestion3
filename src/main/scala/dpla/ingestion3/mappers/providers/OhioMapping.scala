@@ -5,7 +5,7 @@ import java.net.URI
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
-import dpla.ingestion3.messages.{IngestErrors, IngestMessage, IngestValidations, MessageCollector}
+import dpla.ingestion3.messages.{IngestMessageTemplates, IngestMessage, IngestValidations, MessageCollector}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model.{uriOnlyWebResource, _}
 import dpla.ingestion3.utils.Utils
@@ -17,7 +17,7 @@ import scala.xml._
 
 
 class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
-  with IngestErrors with IngestValidations {
+  with IngestMessageTemplates with IngestValidations {
   // ID minting functions
   override def useProviderName(): Boolean = false
 
