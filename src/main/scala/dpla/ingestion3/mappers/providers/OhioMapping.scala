@@ -18,7 +18,6 @@ import scala.xml._
 
 
 class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
-
   with IngestMessageTemplates with IngestValidations {
 
   // ID minting functions
