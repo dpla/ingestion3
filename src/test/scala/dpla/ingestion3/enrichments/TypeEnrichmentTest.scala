@@ -16,6 +16,11 @@ class TypeEnrichmentTest  extends FlatSpec with BeforeAndAfter {
     val expectedValue = Some("image")
     assert(typeEnrichment.enrich(originalValue) === expectedValue)
   }
+  it should "return an enriched string for 'book'" in {
+    val originalValue = "book"
+    val expectedValue = Some("text")
+    assert(typeEnrichment.enrich(originalValue) === expectedValue)
+  }
   it should "return None for 'bucket'" in {
     val originalValue = "Bucket"
     val expectedValue = None

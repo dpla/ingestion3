@@ -78,8 +78,8 @@ trait JsonExtractor extends Extractor[JValue] {
     * @return Some(string) if one could be found. Will fail
     *         on non-primitive values like arrays or objects.
     */
-  def extractString(fieldName: String)(implicit json: JValue): Option[String]
-  = extractString(json \ fieldName)
+  def extractString(fieldName: String)(implicit json: JValue): Option[String] =
+    extractString(json \ fieldName)
 
   /**
     * Pulls a Seq[String] of values from the implicit json daa
@@ -98,8 +98,8 @@ trait JsonExtractor extends Extractor[JValue] {
     *
     *         Otherwise, an empty Seq is returned.
     */
-  def extractStrings(fieldName: String)(implicit json: JValue): Seq[String]
-  = extractStrings(json \ fieldName)
+  def extractStrings(fieldName: String)(implicit json: JValue): Seq[String] =
+    extractStrings(json \ fieldName)
 
   /**
     * @see definition of extractStrings(fieldName: String), save for this version
@@ -129,6 +129,18 @@ trait JsonExtractor extends Extractor[JValue] {
     case JInt(int) => Some(int.toString())
     case JString(string) => Some(string)
     case _ => None
+  }
+
+  /**
+    * Sometimes we need to map the keys
+    *
+    * @param jValue
+    * @return
+    */
+  def extractKeys(jValue: JValue): Seq[String] = jValue match {
+    case JArray(array) => array.flatMap(entry => extractKeys(entry))
+    case JObject(fields) => fields.map { case(field, _) => field }
+    case _ => Seq()
   }
 
   /**

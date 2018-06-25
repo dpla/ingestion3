@@ -30,10 +30,10 @@ class DcProfile extends XmlProfile {
   * Library of Congress
   */
 class LocProfile extends JsonProfile {
-  type Mapping = CdlMapping // FIXME Placeholder until LC mapping is written
+  type Mapping = LcMapping
 
   override def getHarvester = classOf[LocHarvester]
-  override def getMapping = new CdlMapping
+  override def getMapping = new LcMapping
 }
 
 /**
