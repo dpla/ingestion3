@@ -4,10 +4,11 @@ import java.net.URI
 
 import scala.util.{Failure, Success, Try}
 
-trait IngestMessageTemplates {
+trait
+IngestErrors {
   def mintUriError(id: String, field: String, value: String, msg: Option[String] = None): IngestMessage =
     IngestMessage(
-      message = s"Unable to mint URI ${msg.getOrElse("")}".trim,
+      message = s"Unable to mint URI ${msg.getOrElse("")}",
       level = IngestLogLevel.error,
       id = id,
       field = field,
@@ -22,28 +23,8 @@ trait IngestMessageTemplates {
       field = field,
       value = "MISSING"
     )
-
-  def enrichedValue(id: String, field: String, origValue: String, enrichValue: String): IngestMessage =
-    IngestMessage(
-      message = s"Enriched value",
-      level = IngestLogLevel.info,
-      id = id,
-      field = field,
-      value = origValue
-      // enrichedValue = Option(enrichValue) // TODO fixup and uncomment
-    )
-
-  def originalValue(id: String, field: String, value: String): IngestMessage =
-    IngestMessage(
-      message = s"Original value",
-      level = IngestLogLevel.info,
-      id = id,
-      field = field,
-      value = value
-      // enrichedValue = Option("Not enriched") // TODO see above
-    )
 }
 
-trait IngestValidations extends IngestMessageTemplates{
+trait IngestValidations extends IngestErrors{
   def validateUri(uriStr: String): Try[URI] = Try { new URI(uriStr) }
 }
