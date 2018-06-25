@@ -68,23 +68,17 @@ object MessageProcessor{
       ))
 
     val topLine = msgFieldRptArray.map { case (k: MessageFieldRpt) =>
-      s"${StringUtils.rightPad(k.msg.take(40) + " " + k.field.take(20), 70, ".")}" +
+      s"- ${StringUtils.rightPad(k.msg.take(40) + " " + k.field.take(20), 68, ".")}" +
         s"${StringUtils.leftPad(Utils.formatNumber(k.count), 10, ".")}"
       case _ => ""
     }
 
     val dsCount = ds.count()
-//    val (lineWidth, bottomLine) = if (dsCount > 0) {
-//      val lineWidth = topLine.headOption.getOrElse("").length
-//      val padding = lineWidth-dsCount.toString.length+1
-//      (lineWidth, s"${StringUtils.leftPad(Utils.formatNumber(dsCount), padding, " ") }")
-//    } else (0,"")
 
     val bottomLine = if (dsCount > 0)
-      s"Total${"."*(80-5-Utils.formatNumber(dsCount).length)}${Utils.formatNumber(dsCount)}"
+      s"- Total${"."*(80-7-Utils.formatNumber(dsCount).length)}${Utils.formatNumber(dsCount)}"
     else ""
 
     (topLine ++ Array(bottomLine)).filter(_.nonEmpty)
-//    (topLine ++ Array("-"* lineWidth, bottomLine)).filter(_.nonEmpty)
   }
 }

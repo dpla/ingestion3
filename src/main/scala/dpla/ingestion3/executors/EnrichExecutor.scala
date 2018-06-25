@@ -8,6 +8,7 @@ import dpla.ingestion3.enrichments.EnrichmentDriver
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
 import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
+import dpla.ingestion3.reports.PrepareEnrichmentReport
 import dpla.ingestion3.reports.summary.{EnrichmentOpsSummary, EnrichmentSummaryData, OperationSummary, TimeSummary}
 import dpla.ingestion3.utils.{HttpUtils, Utils}
 import org.apache.log4j.Logger
@@ -41,7 +42,7 @@ trait EnrichExecutor extends Serializable {
 
     val startTime = System.currentTimeMillis()
 
-    val spark = SparkSession.builder()
+    implicit val spark = SparkSession.builder()
       .config(sparkConf)
       .config("spark.ui.showConsoleProgress", false)
       .getOrCreate()
@@ -72,8 +73,8 @@ trait EnrichExecutor extends Serializable {
       val driver = new EnrichmentDriver(i3conf)
       Try{ ModelConverter.toModel(row) } match {
         case Success(dplaMapData) =>
-          enrich(dplaMapData, driver, improvedCount, typeImprovedCount, dateImprovedCount,
-            lamgImprovedCount, placeImprovedCount)
+          enrich(dplaMapData, driver, improvedCount, typeImprovedCount,
+                  dateImprovedCount, lamgImprovedCount, placeImprovedCount)
         case Failure(err) =>
           (null, s"Error parsing mapped data: ${err.getMessage}\n" +
             s"${err.getStackTrace.mkString("\n")}")
@@ -89,6 +90,9 @@ trait EnrichExecutor extends Serializable {
     val failures:  Array[String] = enrichResults
       .filter(tuple => Option(tuple._2).isDefined)
       .map(tuple => tuple._2).collect()
+
+    // Get all the messages for all records
+    val messages = MessageProcessor.getAllMessages(successResults)(spark)
 
     // Delete the output location if it exists
     Utils.deleteRecursively(new File(dataOut))
@@ -118,7 +122,8 @@ trait EnrichExecutor extends Serializable {
       typeImprovedCount.count,
       dateImprovedCount.count,
       lamgImprovedCount.count,
-      placeImprovedCount.count
+      placeImprovedCount.count,
+      langSummary = PrepareEnrichmentReport.generateLanguageReport(messages)
     )
 
     val summaryData = EnrichmentSummaryData(shortName, operationSummary, timeSummary, enrichOpSummary)
@@ -145,23 +150,17 @@ trait EnrichExecutor extends Serializable {
                      placeImprovedCount: LongAccumulator): (Row, String) = {
     driver.enrich(dplaMapData) match {
       case Success(enriched) =>
-        // check for improvement
-        if (!dplaMapData.sourceResource.`type`.equals(enriched.sourceResource.`type`))
-          typeImprovedCount.add(1)
-        if (!dplaMapData.sourceResource.date.equals(enriched.sourceResource.date))
-          dateImprovedCount.add(1)
-        if (!dplaMapData.sourceResource.language.equals(enriched.sourceResource.language))
-          langImprovedCount.add(1)
-        if (!dplaMapData.sourceResource.place.equals(enriched.sourceResource.place))
-          placeImprovedCount.add(1)
 
-        if(!dplaMapData.sourceResource.equals(enriched.sourceResource))
+        implicit val msgs = new MessageCollector[IngestMessage]()
+
+        val oreAggMitMsgs = PrepareEnrichmentReport.prepareEnrichedData(enriched, dplaMapData)(msgs)
+
+        if(!dplaMapData.sourceResource.equals(oreAggMitMsgs.sourceResource))
           improvedCount.add(1) // captures normalizations and enrichments
 
-        (RowConverter.toRow(enriched, model.sparkSchema), null)
+        (RowConverter.toRow(oreAggMitMsgs, model.sparkSchema), null)
       case Failure(exception) =>
-        (null, s"${exception.getMessage}\n" +
-          s"${exception.getStackTrace.mkString("\n")}")
+        (null, s"${exception.getMessage}")
 
     }
   }

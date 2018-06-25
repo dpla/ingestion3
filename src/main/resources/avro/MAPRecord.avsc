@@ -1082,8 +1082,7 @@
     },
   {
     "name":
-    "messages"
-    ,
+    "messages",
     "type": {
       "name": "MessagesIngestMessageArray",
       "type": "array",

@@ -55,9 +55,10 @@ object IngestRemap extends MappingExecutor
     // Mapping
     executeMapping(sparkConf, harvestDataOut, mapDataOut, shortName, logger)
 
+
 //    // Enrichment
 //    logger.info(s"Saving enrichment output to: $enrichDataOut")
-//    executeEnrichment(sparkConf, mapDataOut, enrichDataOut, shortName, logger, conf)
+    executeEnrichment(sparkConf, mapDataOut, enrichDataOut, shortName, logger, conf)
 //
 //    // Json-l
 //    logger.info(s"Saving JSON-L output to: $jsonlDataOut")
