@@ -54,6 +54,7 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
       .map(_.applyAllowFilter(ExtentIdentificationList.termList))
       .filter(_.nonEmpty)
   }
+
   override def format(data: Document[NodeSeq]): Seq[String] = {
     (extractStrings(data \ "metadata" \\ "format") ++
       extractStrings(data \ "metadata" \\ "medium"))
@@ -104,14 +105,15 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
                            (implicit msgCollector: MessageCollector[IngestMessage]): EdmAgent = {
     extractString(data \ "metadata" \\ "dataProvider").map(nameOnlyAgent) match {
       case Some(dp) => dp
-      case None => msgCollector.add( missingRequiredError(getProviderId(data), "dataProvider") )
-        nameOnlyAgent("")  // FIXME this shouldn't have to return an empty value.
+      case None => msgCollector.add(missingRequiredError(getProviderId(data), "dataProvider"))
+        nameOnlyAgent("") // FIXME this shouldn't have to return an empty value.
     }
   }
 
   override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] =
     // Will quietly drop any invalid URIs
     extractStrings(data \ "metadata" \\ "rights").find(r => Utils.isUri(r)).map(new URI(_))
+
 
   override def isShownAt(data: Document[NodeSeq])
                         (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource = {
@@ -134,12 +136,11 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   override def preview(data: Document[NodeSeq])
                       (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
-    extractString(data \ "metadata" \\ "preview").map(uriStr =>
+    extractString(data \ "metadata" \\ "preview").flatMap(uriStr =>
       Try(new URI(uriStr)) match {
-        case Success(u) => uriOnlyWebResource(u)
-        case Failure(_) =>
-          msgCollector.add(mintUriError(id = getProviderId(data), field = "preview", value = uriStr))
-          uriOnlyWebResource(new URI(""))
+        case Success(uri) => Option(uriOnlyWebResource(uri))
+        case Failure(_) => msgCollector.add(mintUriError(id = getProviderId(data), field = "preview", value = uriStr))
+          None
       }
     )
 
