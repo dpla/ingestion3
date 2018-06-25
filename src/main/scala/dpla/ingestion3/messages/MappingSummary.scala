@@ -4,7 +4,6 @@ import dpla.ingestion3.reports.summary.{MappingSummaryData, ReportFormattingUtil
 import dpla.ingestion3.utils.Utils
 import org.apache.commons.lang.StringUtils
 
-
 /**
   *
   */
@@ -34,7 +33,7 @@ object MappingSummary {
 
       s"""
         |$lineBreak
-        |${ReportFormattingUtils.center("~~~~~~~~ Mapping Summary ~~~~~~~~")}
+        |${ReportFormattingUtils.center("Mapping Summary")}
         |
         |${ReportFormattingUtils.centerPad("Provider", data.shortName.toUpperCase)}
         |${ReportFormattingUtils.centerPad("Start date", data.timeSummary.startTime)}
@@ -45,7 +44,7 @@ object MappingSummary {
         |${ReportFormattingUtils.centerPad("Failed", failedCountStr)}
         |
         |
-        |${ReportFormattingUtils.center("~~~~~~~~ Errors, Warnings and Exceptions ~~~~~~~~")}
+        |${ReportFormattingUtils.center("Errors, Warnings and Exceptions")}
         |
         |Messages
         |${ReportFormattingUtils.centerPad("- Errors", errorStr)}
