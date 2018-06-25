@@ -133,6 +133,7 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     edmRights.find(Utils.isUri).map(new URI(_))
   }
 
+
   override def isShownAt(data: Document[NodeSeq])
                         (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource = {
     extractStrings(data \ "metadata" \\ "isShownAt").flatMap(uriStr => {
