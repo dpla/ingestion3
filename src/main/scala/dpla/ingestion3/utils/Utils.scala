@@ -6,16 +6,15 @@ import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
 import java.util.Calendar
-import java.util.concurrent.TimeUnit
 
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.model.OreAggregation
 import org.apache.commons.lang.StringUtils
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
 import org.apache.spark.sql.{Dataset, Row, SaveMode}
 import org.json4s.JValue
 import org.json4s.jackson.JsonMethods._
 
+import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
@@ -99,8 +98,6 @@ object Utils {
     * @return Runtime formatted as MM:ss
     */
   def formatRuntime(runtime: Long): String = {
-
-    import scala.concurrent.duration._
     val runDuration = Duration.create(runtime, MILLISECONDS)
     val hr = StringUtils.leftPad( runDuration.toHours.toString, 2, "0" )
     val min = StringUtils.leftPad( (runDuration.toMinutes  % 60).round.toString, 2, "0" )

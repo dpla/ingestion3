@@ -1,10 +1,11 @@
 package dpla.ingestion3.reports
 
-import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector, MessageFieldRpt}
+import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
 import dpla.ingestion3.model.OreAggregation
 import dpla.ingestion3.reports.summary.ReportFormattingUtils
 import dpla.ingestion3.utils.Utils
-import org.apache.spark.sql.{Dataset, RelationalGroupedDataset, Row}
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{Dataset, Row}
 
 object PrepareEnrichmentReport extends IngestMessageTemplates {
   def generateReport(dataset: Dataset[Row]) = {
@@ -18,7 +19,6 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     * @return
     */
   def generateLanguageReport(ds: Dataset[Row]) = {
-    import org.apache.spark.sql.functions._
     val t = ds
       .select("level", "message", "id", "field")
       .where("field=='language'")
