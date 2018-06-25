@@ -1099,7 +1099,7 @@
               "type": {
                 "name": "LevelEnum",
                 "type": "enum",
-                "symbols": ["info", "warn", "error"]
+                "symbols": ["info", "warn", "error", "fatal"]
               }
             },
             {
