@@ -26,16 +26,14 @@ object MappingSummary {
     val failedCountStr = Utils.formatNumber(data.operationSummary.recordsFailed)
     val exceptionCountStr = Utils.formatNumber(data.messageSummary.execeptionCount)
     val logFileMsg =
-      if(data.operationSummary.logFiles.nonEmpty)
-        data.operationSummary.logFiles.mkString("\n")
-      else
-        "No log files"
+      if(data.operationSummary.logFiles.nonEmpty) data.operationSummary.logFiles.mkString("\n")
+      else ""
 
     val lineBreak = "-"*80
 
       s"""
         |$lineBreak
-        |${ReportFormattingUtils.center("~~~~~~~~ Mapping Summary ~~~~~~~~")}
+        |${ReportFormattingUtils.center("Mapping Summary")}
         |
         |${ReportFormattingUtils.centerPad("Provider", data.shortName.toUpperCase)}
         |${ReportFormattingUtils.centerPad("Start date", data.timeSummary.startTime)}
@@ -46,7 +44,7 @@ object MappingSummary {
         |${ReportFormattingUtils.centerPad("Failed", failedCountStr)}
         |
         |
-        |${ReportFormattingUtils.center("~~~~~~~~ Errors, Warnings and Exceptions ~~~~~~~~")}
+        |${ReportFormattingUtils.center("Errors, Warnings and Exceptions")}
         |
         |Messages
         |${ReportFormattingUtils.centerPad("- Errors", errorStr)}
@@ -58,19 +56,18 @@ object MappingSummary {
         |${ReportFormattingUtils.centerPad("- Exceptions", exceptionCountStr)}
         |
         |
-        |${ReportFormattingUtils.center("~~~~~~~~ Error and Warning Message Summary ~~~~~~~~")}
-        |
-        |${if(data.messageSummary.warningMessageDetails.nonEmpty)
-          "Warnings\n" + data.messageSummary.warningMessageDetails else "No Warnings"}
-        |
+        |${if(data.messageSummary.warningCount > 0 && data.messageSummary.errorCount > 0)
+          ReportFormattingUtils.center("Error and Warning Message Summary") else ""}
+        |${if(data.messageSummary.warningCount > 0)
+          "\nWarnings\n" + data.messageSummary.warningMessageDetails else ""}
         |${if(data.messageSummary.errorMessageDetails.nonEmpty)
-          "Errors\n" + data.messageSummary.errorMessageDetails else "No Errors"}
+          "\nErrors\n" + data.messageSummary.errorMessageDetails else ""}
         |
         |
-        |${ReportFormattingUtils.center("Log Files")}
-        |
-        |$logFileMsg
-        |
+        |${if(logFileMsg.nonEmpty)
+          ReportFormattingUtils.center("Log Files")
+          logFileMsg
+          }
         |""".stripMargin
   }
 
