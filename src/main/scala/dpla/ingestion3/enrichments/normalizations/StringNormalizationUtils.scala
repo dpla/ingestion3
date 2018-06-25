@@ -54,13 +54,9 @@ object StringNormalizationUtils {
       */
     lazy val applyBlockFilter: Set[String] => String = (termList) => termList
       .foldLeft(value) {
-        case (string, pattern) => Try { string.replaceAll(pattern, "").reduceWhitespace } match {
-          case Success(s) => s // return the clean pattern
-          case Failure(f) => string // return original value TODO log the failure
-        }
+        case (string, pattern) => Option(string.replaceAll(pattern, "").reduceWhitespace).getOrElse(string)
       }
-
-
+    
     /**
       * Find and capitalize the first character in a given string
       *
