@@ -34,7 +34,7 @@ object MappingSummary {
 
       s"""
         |$lineBreak
-        |${ReportFormattingUtils.center("Mapping Summary")}
+        |${ReportFormattingUtils.center("~~~~~~~~ Mapping Summary ~~~~~~~~")}
         |
         |${ReportFormattingUtils.centerPad("Provider", data.shortName.toUpperCase)}
         |${ReportFormattingUtils.centerPad("Start date", data.timeSummary.startTime)}
@@ -45,7 +45,7 @@ object MappingSummary {
         |${ReportFormattingUtils.centerPad("Failed", failedCountStr)}
         |
         |
-        |${ReportFormattingUtils.center("Errors, Warnings and Exceptions")}
+        |${ReportFormattingUtils.center("~~~~~~~~ Errors, Warnings and Exceptions ~~~~~~~~")}
         |
         |Messages
         |${ReportFormattingUtils.centerPad("- Errors", errorStr)}
@@ -58,7 +58,7 @@ object MappingSummary {
         |
         |${ReportFormattingUtils.centerPad("Exceptions (records)", exceptionCountStr)}
         |
-        |${StringUtils.leftPad("Error and Warning Message Summary", 58 ," ")}
+        |${ReportFormattingUtils.center("~~~~~~~~ Error and Warning Message Summary ~~~~~~~~")}
         |
         |${if(data.messageSummary.warningCount > 0 || data.messageSummary.errorCount > 0)
           ReportFormattingUtils.center("Error and Warning Message Summary") else ""}

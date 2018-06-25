@@ -125,8 +125,13 @@ object ModelConverter {
     level = requiredString(row, 1),
     id = requiredString(row, 2),
     field = requiredString(row, 3),
+<<<<<<< HEAD
     value = requiredString(row, 4),
     enrichedValue = requiredString(row, 5) // TODO Fixup and add back
+=======
+    value = requiredString(row, 4)
+    // enrichedValue = optionalString(row, 5) // TODO Fixup and add back
+>>>>>>> Initial work on Enrichment reports
   )
 
   private[model] def toMulti[T](row: Row, fieldPosition: Integer, f: (Row) => T): Seq[T] = {
