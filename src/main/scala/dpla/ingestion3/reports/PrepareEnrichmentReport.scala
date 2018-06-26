@@ -8,6 +8,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Dataset, Row}
 
 object PrepareEnrichmentReport extends IngestMessageTemplates {
+
   def generateFieldReport(ds: Dataset[Row], field: String) = {
     val queryResult = ds
       .select("level", "message", "id", "field")
@@ -22,7 +23,6 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
       .centerPad("- " + row(1).toString.trim, Utils.formatNumber(row.getLong(2))))
       .mkString("\n")
   }
-
   /**
     *
     * @param enriched
