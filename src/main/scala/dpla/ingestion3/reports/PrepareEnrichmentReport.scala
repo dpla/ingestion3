@@ -1,7 +1,7 @@
 package dpla.ingestion3.reports
 
 import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
-import dpla.ingestion3.model.OreAggregation
+import dpla.ingestion3.model.{DplaPlace, OreAggregation}
 import dpla.ingestion3.reports.summary.ReportFormattingUtils
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.sql.functions._
@@ -35,6 +35,7 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     // Get messages
     prepareLangauge(enriched)
     prepareType(original, enriched)
+    preparePlace(enriched)
     // Put collected messages into copy of enriched
     enriched.copy(messages = msgs.getAll())
   }
@@ -61,6 +62,31 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
           "language",
           l.providedLabel.getOrElse("")))
     })
+  }
+
+  /**
+    *
+    * @param enriched
+    * @param msgs
+    * @return
+    */
+  def preparePlace(enriched: OreAggregation)
+                     (implicit msgs: MessageCollector[IngestMessage]) = {
+
+    enriched.sourceResource.place.map( p => {
+      if(p.city.isDefined | p.coordinates.isDefined | p.country.isDefined | p.region.isDefined | p.state.isDefined) {
+        msgs.add( enrichedValue((enriched.sidecar \\ "dplaId").values.toString, "place", p.name.getOrElse(""), printPlace(p)))
+      } else {
+        println(s"False ${p}")
+      }
+
+    })
+  }
+
+  def printPlace(place: DplaPlace) = {
+    s"""
+       |${place.country} - ${place.region} - ${place.state} - ${place.county} - ${place.city}
+     """.stripMargin
   }
 
   /**

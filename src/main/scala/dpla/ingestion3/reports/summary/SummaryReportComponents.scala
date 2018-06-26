@@ -46,5 +46,6 @@ case class EnrichmentOpsSummary(
                                  langImproved: Long,
                                  placeImprove: Long,
                                  langSummary: String,
-                                 typeSummary: String
+                                 typeSummary: String,
+                                 placeSummary: String
                                )

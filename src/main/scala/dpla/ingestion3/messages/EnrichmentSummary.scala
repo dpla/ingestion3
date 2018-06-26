@@ -22,7 +22,7 @@ object EnrichmentSummary {
     val lineBreak = "-"*80
 
     s"""
-       |$lineBreak
+       |
        |${ReportFormattingUtils.center("Enrichment Summary")}
        |
        |${ReportFormattingUtils.centerPad("Provider", data.shortName.toUpperCase)}
@@ -38,6 +38,7 @@ object EnrichmentSummary {
        |${data.enrichmentOpSummary.typeSummary}
        |${ReportFormattingUtils.centerPad("Language", langImproved)}
        |${data.enrichmentOpSummary.langSummary}
+       |
        |${ReportFormattingUtils.centerPad("Place", placeImproved)}
        |${ReportFormattingUtils.centerPad("Date", dateImproved)}
        |
