@@ -123,7 +123,8 @@ trait EnrichExecutor extends Serializable {
       dateImprovedCount.count,
       lamgImprovedCount.count,
       placeImprovedCount.count,
-      langSummary = PrepareEnrichmentReport.generateLanguageReport(messages)
+      langSummary = PrepareEnrichmentReport.generateFieldReport(messages, "language"),
+      typeSummary = PrepareEnrichmentReport.generateFieldReport(messages, "type")
     )
 
     val summaryData = EnrichmentSummaryData(shortName, operationSummary, timeSummary, enrichOpSummary)

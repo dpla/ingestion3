@@ -8,31 +8,21 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Dataset, Row}
 
 object PrepareEnrichmentReport extends IngestMessageTemplates {
-  def generateReport(dataset: Dataset[Row]) = {
 
-    val languageSummary = generateLanguageReport(dataset)
-  }
-
-  /**
-    *
-    * @param ds
-    * @return
-    */
-  def generateLanguageReport(ds: Dataset[Row]) = {
-    val t = ds
+  def generateFieldReport(ds: Dataset[Row], field: String) = {
+    val queryResult = ds
       .select("level", "message", "id", "field")
-      .where("field=='language'")
+      .where(s"field=='$field'")
       .drop("field")
       .groupBy("level", "message")
       .agg(count("id")).as("count")
       .orderBy("level","message")
       .orderBy(desc("count(id)"))
 
-    t.collect().map(row => ReportFormattingUtils
+    queryResult.collect().map(row => ReportFormattingUtils
       .centerPad("- " + row(1).toString.trim, Utils.formatNumber(row.getLong(2))))
       .mkString("\n")
   }
-
   /**
     *
     * @param enriched
@@ -42,8 +32,10 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     */
   def prepareEnrichedData(enriched: OreAggregation, original: OreAggregation)
                          (implicit msgs: MessageCollector[IngestMessage]) = {
+    // Get messages
     prepareLangauge(enriched)
     prepareType(original, enriched)
+    // Put collected messages into copy of enriched
     enriched.copy(messages = msgs.getAll())
   }
 
@@ -80,19 +72,16 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     */
   def prepareType(original: OreAggregation, enriched: OreAggregation)
                  (implicit msgs: MessageCollector[IngestMessage]) = {
-    val enrichTypeValue: String = enriched.sourceResource.`type`.headOption.getOrElse("")
-    val originalTypeValue: String = original.sourceResource.`type`.headOption.getOrElse("")
+    val enrichTypeValues = enriched.sourceResource.`type`
+    val originalTypeValues = original.sourceResource.`type`
 
-    (enrichTypeValue == originalTypeValue, originalTypeValue.nonEmpty) match {
-      case (false, true) => // valid enrichment orig <> enrich and orig is not empty
-        msgs.add(enrichedValue(
-          (enriched.sidecar \\ "dplaId").values.toString,
-          "type",
-          original.sourceResource.`type`.headOption.getOrElse(""),
-          enriched.sourceResource.`type`.headOption.getOrElse("")))
-      case (false, false) => // not a valid enrichment b/c it is empty
-      case (_,_) => // doesn't matter, no enrichment
-    }
+    val typeTuples = enrichTypeValues zip originalTypeValues
 
+    typeTuples.map( { case (e: String, o: String) => {
+      if(e != o)
+        msgs.add(enrichedValue( (enriched.sidecar \\ "dplaId").values.toString, "type", o, e))
+      else
+        msgs.add(originalValue( (enriched.sidecar \\ "dplaId").values.toString, "type", o))
+    }})
   }
 }

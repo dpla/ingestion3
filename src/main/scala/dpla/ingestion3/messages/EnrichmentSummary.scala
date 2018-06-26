@@ -35,6 +35,7 @@ object EnrichmentSummary {
        |
        |${ReportFormattingUtils.center("Field Improvements")}
        |${ReportFormattingUtils.centerPad("Type", typeImproved)}
+       |${data.enrichmentOpSummary.typeSummary}
        |${ReportFormattingUtils.centerPad("Date", dateImproved)}
        |${ReportFormattingUtils.centerPad("Language", langImproved)}
        |${data.enrichmentOpSummary.langSummary}
