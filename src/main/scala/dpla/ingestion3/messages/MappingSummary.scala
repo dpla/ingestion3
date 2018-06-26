@@ -58,7 +58,7 @@ object MappingSummary {
         |${centerPad("Exceptions (records)", exceptionCountStr)}
         |
         |
-        |${if(data.messageSummary.warningCount > 0 && data.messageSummary.errorCount > 0)
+        |${if(data.messageSummary.warningCount > 0 || data.messageSummary.errorCount > 0)
           ReportFormattingUtils.center("Error and Warning Message Summary") else ""}
         |${if(data.messageSummary.warningCount > 0)
           "\nWarnings\n" + data.messageSummary.warningMessageDetails else ""}

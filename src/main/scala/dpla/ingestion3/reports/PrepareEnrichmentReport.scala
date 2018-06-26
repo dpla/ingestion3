@@ -32,10 +32,13 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     */
   def prepareEnrichedData(enriched: OreAggregation, original: OreAggregation)
                          (implicit msgs: MessageCollector[IngestMessage]) = {
-    // Get messages
+    // Get messages for each field
     prepareLangauge(enriched)
     prepareType(original, enriched)
     preparePlace(enriched)
+
+    // messages are correctly collected
+
     // Put collected messages into copy of enriched
     enriched.copy(messages = msgs.getAll())
   }
@@ -50,17 +53,18 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
                      (implicit msgs: MessageCollector[IngestMessage]) = {
 
     enriched.sourceResource.language.map( l => {
-      if(l.concept.getOrElse("") != l.providedLabel.getOrElse(" "))
+      if(l.concept.getOrElse("") != l.providedLabel.getOrElse(" ")){
         msgs.add(enrichedValue(
           (enriched.sidecar \\ "dplaId").values.toString,
           "language",
-          l.providedLabel.getOrElse(""),
-          l.concept.getOrElse("")))
-      else
+          l.providedLabel.getOrElse("AADS"),
+          l.concept.getOrElse("SFSFSD")))
+      }else
         msgs.add(originalValue(
           (enriched.sidecar \\ "dplaId").values.toString,
           "language",
-          l.providedLabel.getOrElse("")))
+          l.providedLabel.getOrElse(""))
+        )
     })
   }
 
@@ -76,17 +80,19 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     enriched.sourceResource.place.map( p => {
       if(p.city.isDefined | p.coordinates.isDefined | p.country.isDefined | p.region.isDefined | p.state.isDefined) {
         msgs.add( enrichedValue((enriched.sidecar \\ "dplaId").values.toString, "place", p.name.getOrElse(""), printPlace(p)))
-      } else {
-        println(s"False ${p}")
       }
-
     })
   }
 
   def printPlace(place: DplaPlace) = {
+    // TODO How else to format?
     s"""
-       |${place.country} - ${place.region} - ${place.state} - ${place.county} - ${place.city}
-     """.stripMargin
+       |${place.country.getOrElse("")}
+       |${place.region.getOrElse("")}
+       |${place.state.getOrElse("")}
+       |${place.county.getOrElse("")}
+       |${place.city.getOrElse("")}
+     """.stripMargin.split("\n").filter(_.nonEmpty).mkString("\n")
   }
 
   /**

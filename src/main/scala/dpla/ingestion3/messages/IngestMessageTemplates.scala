@@ -30,8 +30,8 @@ trait IngestMessageTemplates {
       level = "INFO",
       id = id,
       field = field,
-      value = origValue
-      // enrichedValue = Option(enrichValue) // TODO fixup and uncomment
+      value = origValue,
+      enrichedValue = enrichValue
     )
 
   def originalValue(id: String, field: String, value: String): IngestMessage =
@@ -40,8 +40,8 @@ trait IngestMessageTemplates {
       level = "INFO",
       id = id,
       field = field,
-      value = value
-      // enrichedValue = Option("Not enriched") // TODO see above
+      value = value,
+      enrichedValue = "Not enriched"
     )
 }
 

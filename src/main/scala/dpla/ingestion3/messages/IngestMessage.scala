@@ -23,8 +23,8 @@ case class IngestMessage(message: String,
                          level: String,
                          id: String,
                          field: String,
-                         value: String = "_missing_"
-                         // enrichedValue: Option[String] = Some("No enriched value available")
+                         value: String = "_missing_",
+                         enrichedValue: String = ""
                         ) {
 
   def formatMessage(): String = {

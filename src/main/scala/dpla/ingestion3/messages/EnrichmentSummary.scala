@@ -42,6 +42,10 @@ object EnrichmentSummary {
        |${ReportFormattingUtils.centerPad("Place", placeImproved)}
        |${ReportFormattingUtils.centerPad("Date", dateImproved)}
        |
+       |${ReportFormattingUtils.center("Log Files")}
+       |${data.operationSummary.logFiles.mkString("\n")}
+       |
+       |
        |${ReportFormattingUtils.center("Better  luck next time!")}
        |$lineBreak
        |""".stripMargin

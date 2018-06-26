@@ -5,22 +5,42 @@ import org.apache.commons.lang.StringUtils
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 
+import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 case class MessageFieldRpt(msg: String, field: String, count: Long)
 
 object MessageProcessor{
+
   def getAllMessages(ds: Dataset[Row])
                     (implicit spark: SparkSession): Dataset[Row] = {
     import spark.implicits._
-    ds.select("messages.message", "messages.level", "messages.field", "messages.id", "messages.value")
-      .where("size(messages) != 0")
-      .withColumn("level", explode($"level"))
-      .withColumn("message", explode($"message"))
-      .withColumn("field", explode($"field"))
-      .withColumn("value", explode($"value"))
-      .withColumn("id", explode($"id"))
-      .distinct()
+
+    ds.select($"messages.message",
+              $"messages.value",
+              $"messages.field",
+              $"messages.id",
+              $"messages.level",
+              $"messages.enrichedValue")
+      .createOrReplaceTempView("messageTbl")
+
+    spark.sql("""SELECT
+                |level_exp AS level,
+                |message_exp AS message,
+                |field_exp AS field,
+                |value_exp AS value,
+                |enrichedValue_exp AS enrichedValue,
+                |id_exp AS id
+                |FROM messageTbl
+                |LATERAL VIEW posexplode(message) message_exp AS message1, message_exp
+                |LATERAL VIEW posexplode(value) value_exp AS value1, value_exp
+                |LATERAL VIEW posexplode(field) field_exp AS field1, field_exp
+                |LATERAL VIEW posexplode(id) id_exp AS id1, id_exp
+                |LATERAL VIEW posexplode(level) level_exp AS level1, level_exp
+                |LATERAL VIEW posexplode(enrichedValue) enrichedValue_exp AS enrichedValue1, enrichedValue_exp
+                |WHERE message1 == value1 AND value1 == field1 AND field1 == id1 AND
+                |id1 == level1 AND level1 == enrichedValue1
+                |""".stripMargin)
   }
   def getErrors(ds: Dataset[Row]): Dataset[Row] = {
     ds.select("message", "level", "field", "id", "value").where(s"level=='${IngestLogLevel.error}'").distinct()
