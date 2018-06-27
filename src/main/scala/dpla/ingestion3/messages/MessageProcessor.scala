@@ -2,7 +2,6 @@ package dpla.ingestion3.messages
 
 import dpla.ingestion3.utils.Utils
 import org.apache.commons.lang.StringUtils
-import org.apache.spark.SparkConf
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 
@@ -10,12 +9,18 @@ import scala.util.{Failure, Success, Try}
 
 case class MessageFieldRpt(msg: String, field: String, count: Long)
 
-object MessageProcessor {
-  // Come back please...
-
-  def getAllMessages(ds: Dataset[Row]): Dataset[Row] = {
+object MessageProcessor{
+  def getAllMessages(ds: Dataset[Row])
+                    (implicit spark: SparkSession): Dataset[Row] = {
+    import spark.implicits._
     ds.select("messages.message", "messages.level", "messages.field", "messages.id", "messages.value")
       .where("size(messages) != 0")
+      .withColumn("level", explode($"level"))
+      .withColumn("message", explode($"message"))
+      .withColumn("field", explode($"field"))
+      .withColumn("value", explode($"value"))
+      .withColumn("id", explode($"id"))
+      .distinct()
   }
   def getErrors(ds: Dataset[Row]): Dataset[Row] = {
     ds.select("message", "level", "field", "id", "value").where("level=='ERROR'").distinct()
@@ -28,9 +33,12 @@ object MessageProcessor {
   }
 
   /**
+    * Builds group by and count summary from `ds`. For example:
+    *  Unable to mint URI       isShownAt   5
+    *  Missing required field   isShownAt   1
     *
     * @param ds
-    * @return
+    * @return String
     */
   def getMessageFieldSummary(ds: Dataset[Row])(implicit spark: SparkSession): Array[String] = {
 
@@ -59,10 +67,18 @@ object MessageProcessor {
         Try {arr(2).toLong} match { case Success(s) => s case Failure(_) => -1 }
       ))
 
-    msgFieldRptArray.map { case (k: MessageFieldRpt) =>
-      s"${StringUtils.rightPad(k.msg, 25, " ")} " +
-        s"${StringUtils.rightPad(k.field, 15, " ")} " +
-        s"${StringUtils.leftPad(Utils.formatNumber(k.count), 6, " ")}"
+    val topLine = msgFieldRptArray.map { case (k: MessageFieldRpt) =>
+      s"- ${StringUtils.rightPad(k.msg.take(40) + " " + k.field.take(20), 68, ".")}" +
+        s"${StringUtils.leftPad(Utils.formatNumber(k.count), 10, ".")}"
+      case _ => ""
     }
+
+    val dsCount = ds.count()
+
+    val bottomLine = if (dsCount > 0)
+      s"- Total${"."*(80-7-Utils.formatNumber(dsCount).length)}${Utils.formatNumber(dsCount)}"
+    else ""
+
+    (topLine ++ Array(bottomLine)).filter(_.nonEmpty)
   }
 }
