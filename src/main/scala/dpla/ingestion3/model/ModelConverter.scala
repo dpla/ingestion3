@@ -126,6 +126,7 @@ object ModelConverter {
     id = requiredString(row, 2),
     field = requiredString(row, 3),
     value = requiredString(row, 4)
+    // enrichedValue = optionalString(row, 5) // TODO Fixup and add back
   )
 
   private[model] def toMulti[T](row: Row, fieldPosition: Integer, f: (Row) => T): Seq[T] = {

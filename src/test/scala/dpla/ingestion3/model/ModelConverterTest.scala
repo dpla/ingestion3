@@ -4,7 +4,7 @@ import java.net.URI
 
 import com.databricks.spark.avro.SchemaConverters
 import dpla.ingestion3.data.EnrichedRecordFixture
-import dpla.ingestion3.messages.{IngestErrors, IngestMessage}
+import dpla.ingestion3.messages.{IngestMessageTemplates, IngestMessage}
 import dpla.ingestion3.model.DplaMapData.ZeroToMany
 import dpla.ingestion3.utils.FlatFileIO
 import org.apache.avro.Schema

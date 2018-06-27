@@ -5,7 +5,7 @@ import java.net.URI
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
-import dpla.ingestion3.messages.{IngestErrors, IngestMessage, MessageCollector}
+import dpla.ingestion3.messages.{IngestMessageTemplates, IngestMessage, IngestValidations, MessageCollector}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model.{uriOnlyWebResource, _}
 import dpla.ingestion3.utils.Utils
@@ -16,7 +16,8 @@ import scala.util.{Failure, Success, Try}
 import scala.xml._
 
 
-class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] with IngestErrors  {
+class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
+  with IngestMessageTemplates with IngestValidations {
   // ID minting functions
   override def useProviderName(): Boolean = false
 
@@ -136,17 +137,15 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   override def isShownAt(data: Document[NodeSeq])
                         (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
     extractStrings(data \ "metadata" \\ "isShownAt").flatMap(uriStr => {
-      Try { new URI(uriStr)} match {
+      validateUri(uriStr) match {
         case Success(uri) => Option(uriOnlyWebResource(uri))
-        case Failure(f) =>
-          msgCollector.add(
-            mintUriError(id = getProviderId(data), field = "isShownAt", value = uriStr))
-          None
+        case Failure(_) =>
+          msgCollector.add(mintUriError(getProviderId(data), "isShownAt", uriStr))
+          throw new RuntimeException("Problem creating URI in isShownAt")
       }
-    }).headOption match {
-      case None => msgCollector.add(missingRequiredError(getProviderId(data),"isShownAt")) // record error message
-        uriOnlyWebResource(new URI("")) // FIXME model should be changed to not compel empty EdmWebResource
-      case Some(s) => s
+    }).headOption.getOrElse {
+      msgCollector.add(missingRequiredError(getProviderId(data),"isShownAt"))
+       throw new RuntimeException("Required property isShownAt missing")
     }
 
 
@@ -154,13 +153,10 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
 
   override def preview(data: Document[NodeSeq])
                       (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] = {
-    extractStrings(data \ "metadata" \\ "preview").flatMap(uriStr =>
-      Try { new URI(uriStr) } match {
-        case Success(uri) => Option(uriOnlyWebResource(uri))
-        case Failure(f) =>
-          msgCollector.add(mintUriError(id = getProviderId(data), field = "preview", value = uriStr))
-          None // FIXME stub return value for now
-      }).headOption // Only checks for valid data because this is not a required field
+
+    val uris = extractStrings(data \ "metadata" \\ "preview")
+      .map(u => validateUri(u) getOrElse msgCollector.add(mintUriError(getProviderId(data), "preview", u)))
+    uris.map { case u: URI => uriOnlyWebResource(u) }.headOption
   }
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
