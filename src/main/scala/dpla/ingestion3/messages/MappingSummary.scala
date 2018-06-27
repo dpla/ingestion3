@@ -39,7 +39,6 @@ object MappingSummary {
 
       s"""
         |$lineBreak
-<<<<<<< HEAD
         |${ReportFormattingUtils.center("Mapping Summary")}
         |
         |${ReportFormattingUtils.centerPad("Provider", data.shortName.toUpperCase)}
@@ -52,31 +51,11 @@ object MappingSummary {
         |
         |
         |${ReportFormattingUtils.center("Errors, Warnings and Exceptions")}
-=======
-        |${center("Summary")}
-        |
-        |${centerPad("Provider", data.shortName.toUpperCase)}
-        |${centerPad("Date", data.timeSummary.runTime)}
-        |
-        |${centerPad("Attempted", attemptedStr)}
-        |${centerPad("Successful", mappedStr)}
-        |${centerPad("Failed", failedCountStr)}
-        |
-        |
-        |${center("Errors, Warnings and Exceptions Summary")}
-        |
-        |${centerPad("Warnings (messages)", warnStr)}
-        |${centerPad("Warnings (records)", warnRecordsStr)}
-        |
-        |${centerPad("Errors (messages)", errorStr)}
-        |${centerPad("Errors (records)", errorRecordsStr)}
->>>>>>> Large refactor get exceptions and messages playing nicely with each other.
         |
         |Messages
         |${ReportFormattingUtils.centerPad("- Errors", errorStr)}
         |${ReportFormattingUtils.centerPad("- Warnings", warnStr)}
         |
-<<<<<<< HEAD
         |Records
         |${ReportFormattingUtils.centerPad("- Errors", errorRecordsStr)}
         |${ReportFormattingUtils.centerPad("- Warnings", warnRecordsStr)}
@@ -97,24 +76,12 @@ object MappingSummary {
           ReportFormattingUtils.center("Log Files")
           logFileMsg
           }
-=======
-        |${StringUtils.leftPad("Errors and Warnings Detail (messages)", 58 ," ")}
-        |
-<<<<<<< HEAD
         |${if(data.messageSummary.warningMessageDetails.nonEmpty) "Warnings\n--------\n" + data.messageSummary.warningMessageDetails else "* No Warnings *"}
         |
         |${if(data.messageSummary.errorMessageDetails.nonEmpty) "Errors\n-------\n" + data.messageSummary.errorMessageDetails else "* No Errors *"}
-=======
-        |${if(data.messageSummary.warningMessageDetails.nonEmpty) "Warnings\n~~~~~~~~\n" + data.messageSummary.warningMessageDetails else "* No Warnings *"}
-
-        |${if(data.messageSummary.errorMessageDetails.nonEmpty) "Errors\n~~~~~~\n" + data.messageSummary.errorMessageDetails else "* No Errors *"}
->>>>>>> Add exception count to summary report message
         |
         |
         |${center("Better  luck next time!")}
-        |$lineBreak
->>>>>>> Large refactor get exceptions and messages playing nicely with each other.
         |""".stripMargin
   }
-
 }
