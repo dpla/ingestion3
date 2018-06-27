@@ -52,7 +52,6 @@ class DatePatternMatchTest extends FlatSpec with BeforeAndAfter with Matchers wi
       datePatternMatcher.identifyPattern(n.toString).isDefined
     }})
   }
-
   it should "match yyyy MMM generated values" in {
 
     val yearMonthGen: Gen[String] = for {
