@@ -6,15 +6,15 @@ import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
 import java.util.Calendar
-import java.util.concurrent.TimeUnit
 
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.model.OreAggregation
+import org.apache.commons.lang.StringUtils
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
 import org.apache.spark.sql.{Dataset, Row, SaveMode}
 import org.json4s.JValue
 import org.json4s.jackson.JsonMethods._
 
+import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
@@ -98,10 +98,13 @@ object Utils {
     * @return Runtime formatted as MM:ss
     */
   def formatRuntime(runtime: Long): String = {
-    val minutes: Long = TimeUnit.MILLISECONDS.toMinutes(runtime)
-    val seconds: Long = TimeUnit.MILLISECONDS.toSeconds(runtime) -
-      TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(runtime))
-    s"$minutes:$seconds"
+    val runDuration = Duration.create(runtime, MILLISECONDS)
+    val hr = StringUtils.leftPad( runDuration.toHours.toString, 2, "0" )
+    val min = StringUtils.leftPad( (runDuration.toMinutes  % 60).round.toString, 2, "0" )
+    val sec =  StringUtils.leftPad( (runDuration.toSeconds % 60).round.toString, 2, "0" )
+    val ms =  StringUtils.rightPad( (runDuration.toMillis % 1000).round.toString, 3, "0" )
+
+    s"$hr:$min:$sec.$ms"
   }
 
   /**

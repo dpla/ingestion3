@@ -1,36 +1,13 @@
 package dpla.ingestion3.messages
 
+import dpla.ingestion3.reports.summary.{MappingSummaryData, ReportFormattingUtils}
 import dpla.ingestion3.utils.Utils
 import org.apache.commons.lang.StringUtils
 
+
 /**
   *
-  * @param shortName
-  * @param runTime
-  * @param attempted
-  * @param mapped
-  * @param warn
-  * @param error
-  * @param warnRecords
-  * @param errorRecords
-  * @param errorMsgDetails
-  * @param warnMsgDetails
   */
-case class MappingSummaryData(
-                               shortName: String,
-                               runTime: String,
-                               attempted: Long,
-                               mapped: Long,
-
-                               warn: Long,
-                               error: Long,
-
-                               warnRecords: Long,
-                               errorRecords: Long,
-
-                               errorMsgDetails: String,
-                               warnMsgDetails: String
-                             )
 object MappingSummary {
 
   /**
@@ -40,50 +17,57 @@ object MappingSummary {
     */
   def getSummary(data: MappingSummaryData): String = {
     // prettify all the digits!
-    val attemptedStr = Utils.formatNumber(data.attempted)
-    val mappedStr = Utils.formatNumber(data.mapped)
-    val warnStr = Utils.formatNumber(data.warn)
-    val errorStr = Utils.formatNumber(data.error)
-    val warnRecordsStr = Utils.formatNumber(data.warnRecords)
-    val errorRecordsStr = Utils.formatNumber(data.errorRecords)
+    val attemptedStr = Utils.formatNumber(data.operationSummary.recordsAttempted)
+    val mappedStr = Utils.formatNumber(data.operationSummary.recordsSuccessful)
+    val warnStr = Utils.formatNumber(data.messageSummary.warningCount)
+    val errorStr = Utils.formatNumber(data.messageSummary.errorCount)
+    val warnRecordsStr = Utils.formatNumber(data.messageSummary.warningRecordCount)
+    val errorRecordsStr = Utils.formatNumber(data.messageSummary.errorRecordCount)
+    val failedCountStr = Utils.formatNumber(data.operationSummary.recordsFailed)
+    val exceptionCountStr = Utils.formatNumber(data.messageSummary.execeptionCount)
+    val logFileMsg =
+      if(data.operationSummary.logFiles.nonEmpty) data.operationSummary.logFiles.mkString("\n")
+      else ""
+
     val lineBreak = "-"*80
 
       s"""
         |$lineBreak
-        |${StringUtils.leftPad("Summary", 43, " ")}
-        |$lineBreak
-        |Provider: ${data.shortName.toUpperCase}
-        |Date:     ${data.runTime}
+        |${ReportFormattingUtils.center("Mapping Summary")}
         |
-        |Attempted to map:     $attemptedStr
-        |Successfully mapped:  $mappedStr
-        |                      ${"-"*attemptedStr.length}
-        |Failed:               ${Utils.formatNumber(data.attempted-data.mapped)}
+        |${ReportFormattingUtils.centerPad("Provider", data.shortName.toUpperCase)}
+        |${ReportFormattingUtils.centerPad("Start date", data.timeSummary.startTime)}
+        |${ReportFormattingUtils.centerPad("Runtime", data.timeSummary.runTime)}
         |
-        |
-        |$lineBreak
-        |${StringUtils.leftPad("Errors and Warnings Summary", 53 ," ")}
-        |$lineBreak
-        |Warnings (messages):  $warnStr
-        |Warnings (records):   $warnRecordsStr
-        |
-        |Errors (messages):    $errorStr
-        |Errors (records):     $errorRecordsStr
+        |${ReportFormattingUtils.centerPad("Attempted", attemptedStr)}
+        |${ReportFormattingUtils.centerPad("Successful", mappedStr)}
+        |${ReportFormattingUtils.centerPad("Failed", failedCountStr)}
         |
         |
-        |$lineBreak
-        |${StringUtils.leftPad("Errors and Warnings Detail (messages)", 58 ," ")}
-        |$lineBreak
-        |WARNINGS
-        |--------
-        |${if(data.warnMsgDetails.nonEmpty) data.warnMsgDetails else "* No Warnings *"}
+        |${ReportFormattingUtils.center("Errors, Warnings and Exceptions")}
         |
-        |ERRORS
-        |------
-        |${if(data.errorMsgDetails.nonEmpty) data.errorMsgDetails else "* No Errors *"}
+        |Messages
+        |${ReportFormattingUtils.centerPad("- Errors", errorStr)}
+        |${ReportFormattingUtils.centerPad("- Warnings", warnStr)}
         |
-        |      Better luck next time!
-        |${"-"*80}
+        |Records
+        |${ReportFormattingUtils.centerPad("- Errors", errorRecordsStr)}
+        |${ReportFormattingUtils.centerPad("- Warnings", warnRecordsStr)}
+        |${ReportFormattingUtils.centerPad("- Exceptions", exceptionCountStr)}
+        |
+        |
+        |${if(data.messageSummary.warningCount > 0 && data.messageSummary.errorCount > 0)
+          ReportFormattingUtils.center("Error and Warning Message Summary") else ""}
+        |${if(data.messageSummary.warningCount > 0)
+          "\nWarnings\n" + data.messageSummary.warningMessageDetails else ""}
+        |${if(data.messageSummary.errorMessageDetails.nonEmpty)
+          "\nErrors\n" + data.messageSummary.errorMessageDetails else ""}
+        |
+        |
+        |${if(logFileMsg.nonEmpty)
+          ReportFormattingUtils.center("Log Files")
+          logFileMsg
+          }
         |""".stripMargin
   }
 

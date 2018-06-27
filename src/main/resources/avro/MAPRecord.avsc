@@ -1082,33 +1082,36 @@
     },
   {
     "name":
-    "messages"
-    ,
+    "messages",
     "type": {
       "name": "MessagesIngestMessageArray",
       "type": "array",
       "items": {
-      "name": "MessagesIngestMessage",
-      "type": "record",
-      "fields": [ {
-      "name": "message",
-      "type": "string"
-    }, {
-      "name": "level",
-      "type": "string"
-    }, {
-      "name": "id",
-      "type": "string"
-    }, {
-      "name": "field",
-      "type": "string"
-    }, {
-      "name": "value",
-      "type": "string"
+        "name": "MessagesIngestMessage",
+        "type": "record",
+        "fields": [
+          {
+            "name": "message",
+            "type": "string"
+          },
+          {
+            "name": "level",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "field",
+            "type": "string"
+          },
+          {
+            "name": "value",
+            "type": "string"
+          }]
+        }
+      }
     }
-      ]
-    }
-    }
-  }
   ]
 }
