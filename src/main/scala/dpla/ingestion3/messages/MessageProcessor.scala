@@ -23,10 +23,10 @@ object MessageProcessor{
       .distinct()
   }
   def getErrors(ds: Dataset[Row]): Dataset[Row] = {
-    ds.select("message", "level", "field", "id", "value").where("level=='ERROR'").distinct()
+    ds.select("message", "level", "field", "id", "value").where(s"level=='${IngestLogLevel.error}'").distinct()
   }
   def getWarnings(ds: Dataset[Row]): Dataset[Row] = {
-    ds.select("message", "level", "field", "id", "value").where("level=='WARN'").distinct()
+    ds.select("message", "level", "field", "id", "value").where(s"level=='${IngestLogLevel.warn}'").distinct()
   }
   def getDistinctIdCount(df: Dataset[Row]): Long = {
     df.select("id").groupBy("id").count().count()
