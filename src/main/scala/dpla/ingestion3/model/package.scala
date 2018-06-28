@@ -32,15 +32,6 @@ package object model {
       "text"
     )
 
-  def emptyOreAggregation: OreAggregation = OreAggregation(
-    dplaUri = new URI(""),
-    dataProvider = nameOnlyAgent(""),
-    originalRecord = "",
-    sourceResource = DplaSourceResource(),
-    isShownAt = uriOnlyWebResource(new URI("")),
-    provider = nameOnlyAgent("")
-  )
-
   def nameOnlyAgent(string: String): EdmAgent = EdmAgent(name = Some(string))
 
   def nameOnlyPlace(string: String): DplaPlace = DplaPlace(name = Some(string))

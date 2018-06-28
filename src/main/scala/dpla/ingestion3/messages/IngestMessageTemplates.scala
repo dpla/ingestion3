@@ -7,10 +7,11 @@ import scala.util.{Failure, Success, Try}
 trait IngestMessageTemplates {
   def mintUriError(id: String, field: String, value: String, msg: Option[String] = None): IngestMessage =
     IngestMessage(
+      message = s"Unable to mint URI ${msg.getOrElse("")}".trim,
+      level = "ERROR",
       id = id,
       field = field,
-      value = value,
-      message = s"Unable to mint URI ${msg.getOrElse("")}".trim
+      value = value
     )
 
   def missingRequiredError(id: String, field: String): IngestMessage =
