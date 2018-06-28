@@ -19,6 +19,7 @@ object DatePatterns {
 //    s"\\d{4}$delimiter\\d{1,2}" -> "yyyy-m(m)", // 1934-01
 
 
+
 //    s"\\d{4}$delimiter\\d{4}" -> "yyyy yyyy", // 1942/1943
 //    s"\\d{4}$delimiter\\d{1,2}$delimiter\\d{1,2}$delimiter\\d{4}$delimiter\\d{1,2}$delimiter\\d{1,2}"
 //      -> "yyyy m(m) d(d) yyyy m(m) d(d)", // 1850-01-01/1950-12-31

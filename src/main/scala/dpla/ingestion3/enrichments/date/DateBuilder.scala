@@ -11,11 +11,12 @@ case class EdtfPatternMap(regexPattern: String, dateTimePattern: String, label: 
 
 
 object DateBuilderPatterns {
+  protected val delim = "\\s*[\\/-]*\\s*"
+
   val dateTimeFormatPatterns = Array(
     DateTimeFormat.forPattern("yyyy").getParser,
-    DateTimeFormat.forPattern("yyyy-MM-dd").getParser,
     DateTimeFormat.forPattern("yyyy MM dd").getParser,
-    DateTimeFormat.forPattern("yyyy/MM/dd").getParser,
+    DateTimeFormat.forPattern("yyyy MMM dd").getParser,
     DateTimeFormat.forPattern("yyyy MMM").getParser,
     DateTimeFormat.forPattern("MMM yyyy").getParser
   )
@@ -24,11 +25,25 @@ object DateBuilderPatterns {
 }
 
 class DateBuilder {
+  /**
+    *
+    * @param date
+    * @return
+    */
   def buildDateObject(date: String): Option[LocalDate] = {
 
-    Try { DateBuilderPatterns.formatter.parseDateTime(date)} match {
+    val normalizedDate = normalizeDate(date)
+
+    Try { DateBuilderPatterns.formatter.parseDateTime(normalizedDate)} match {
       case Success(formattedDate) => Option(formattedDate.toLocalDate)
       case Failure(_) => None
     }
   }
+
+  /**
+    *
+    * @param date
+    * @return
+    */
+  def normalizeDate(date: String): String = date.replaceAll("[\\/-]", " ")
 }
