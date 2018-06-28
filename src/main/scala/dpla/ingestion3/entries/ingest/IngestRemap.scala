@@ -55,17 +55,14 @@ object IngestRemap extends MappingExecutor
     // Mapping
     executeMapping(sparkConf, harvestDataOut, mapDataOut, shortName, logger)
 
-
-//    // Enrichment
-//    logger.info(s"Saving enrichment output to: $enrichDataOut")
+    // Enrichment
     executeEnrichment(sparkConf, mapDataOut, enrichDataOut, shortName, logger, conf)
-//
-//    // Json-l
-//    logger.info(s"Saving JSON-L output to: $jsonlDataOut")
-//    executeJsonl(sparkConf, enrichDataOut, jsonlDataOut, logger)
-//
-//    // Reports
-//    executeAllReports(sparkConf, enrichDataOut, baseRptOut, logger)
+
+    // Json-l
+    executeEnrichment(sparkConf, mapDataOut, enrichDataOut, shortName, logger, conf)
+
+    // Reports
+    executeAllReports(sparkConf, enrichDataOut, baseRptOut, logger)
 
     logger.info("Ingest remapping complete")
   }

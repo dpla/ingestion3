@@ -9,6 +9,7 @@ import dpla.ingestion3.messages.{IngestMessageTemplates, IngestMessage, IngestVa
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
+
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
