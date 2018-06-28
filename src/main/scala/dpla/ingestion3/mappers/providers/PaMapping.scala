@@ -3,7 +3,7 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
-import dpla.ingestion3.messages.{IngestMessageTemplates, IngestMessage, IngestValidations, MessageCollector}
+import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, IngestValidations, MessageCollector}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -14,6 +14,7 @@ import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
   with IngestMessageTemplates with IngestValidations {
+
 
   // IdMinter methods
   override def useProviderName: Boolean = false
