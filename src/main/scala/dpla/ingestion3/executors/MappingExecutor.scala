@@ -8,7 +8,6 @@ import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
-import org.apache.commons.lang.StringUtils
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
@@ -83,6 +82,7 @@ trait MappingExecutor extends Serializable {
       .filter(tuple => Option(tuple._1).isDefined)
       .map(tuple => tuple._1)(oreAggregationEncoder)
 
+
     val endTime = System.currentTimeMillis()
 
     // Collect the values needed to generate the report
@@ -150,16 +150,19 @@ trait MappingExecutor extends Serializable {
 
     val baseLogDir = s"$dataOut/../logs/"
 
+
     val exceptionsDS = sc.parallelize(exceptions).toDS()
 
-    val logFileList = List("All" -> messages,
-      "Errors" -> errors,
-      "Warnings" -> warnings,
-      "Exceptions" -> exceptionsDS)
-      .filter { case (_, data: Dataset[_]) => data.count() > 0 }
+    val logFileList = List(
+      "all" -> messages,
+      "errors" -> errors,
+      "warnings" -> warnings,
+      "exceptions" -> exceptionsDS
+    ).filter { case (_, data: Dataset[_]) => data.count() > 0 }
 
     val logFileSeq = logFileList.map {
       case (name: String, data: Dataset[_]) => {
+
         val path = baseLogDir + s"$shortName-$endTime-map-$name"
         data match {
           case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)
@@ -215,7 +218,6 @@ class DplaMap extends Serializable {
           totalCount: LongAccumulator,
           successCount: LongAccumulator,
           failureCount: LongAccumulator): (Row, String) = {
-
     totalCount.add(1)
 
     val extractorClass = ProviderRegistry.lookupProfile(shortName) match {
