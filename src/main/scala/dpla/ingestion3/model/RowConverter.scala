@@ -33,8 +33,8 @@ object RowConverter {
         oreAggregation.preview.map(fromEdmWebResource).orNull, //8
         fromEdmAgent(oreAggregation.provider), //9
         oreAggregation.edmRights.map(_.toString).orNull, //10
-        compact(render(oreAggregation.sidecar)),
-        oreAggregation.messages.map(fromIngestMessage)
+        compact(render(oreAggregation.sidecar)), //11
+        oreAggregation.messages.map(fromIngestMessage) //12
       ),
       sqlSchema
     )
@@ -45,7 +45,8 @@ object RowConverter {
     im.level, // 1
     im.id, // 2
     im.field, // 3
-    im.value // 4
+    im.value, // 4
+    im.enrichedValue // 5`
   )
 
   private[model] def fromEdmWebResource(wr: EdmWebResource): Row = Row(

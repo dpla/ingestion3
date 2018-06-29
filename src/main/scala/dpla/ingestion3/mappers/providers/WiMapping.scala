@@ -6,6 +6,7 @@ import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
 import dpla.ingestion3.messages.{IngestMessageTemplates, IngestMessage, IngestValidations, MessageCollector}
+
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -153,7 +154,6 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   override def preview(data: Document[NodeSeq])
                       (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
-
     extractString(data \ "metadata" \\ "preview").map(uriStr =>
       validateUri(uriStr) match {
         case Success(u) => uriOnlyWebResource(u)

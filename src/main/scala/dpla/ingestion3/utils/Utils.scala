@@ -228,7 +228,6 @@ object Utils {
     * @param shortName
     */
   def writeLogsAsCsv(out: String, name: String, df: Dataset[Row], shortName: String): Unit = {
-    // logger.info(s"Writing error CSVs to: $out)
     df.coalesce(1)
       .write
       .mode(SaveMode.Overwrite)

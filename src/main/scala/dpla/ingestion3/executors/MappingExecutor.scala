@@ -3,11 +3,14 @@ package dpla.ingestion3.executors
 import java.io.File
 
 import com.databricks.spark.avro._
+
 import dpla.ingestion3.messages._
+
 import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
+import org.apache.commons.lang.StringUtils
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
@@ -82,7 +85,6 @@ trait MappingExecutor extends Serializable {
       .filter(tuple => Option(tuple._1).isDefined)
       .map(tuple => tuple._1)(oreAggregationEncoder)
 
-
     val endTime = System.currentTimeMillis()
 
     // Collect the values needed to generate the report
@@ -150,7 +152,6 @@ trait MappingExecutor extends Serializable {
 
     val baseLogDir = s"$dataOut/../logs/"
 
-
     val exceptionsDS = sc.parallelize(exceptions).toDS()
 
     val logFileList = List(
@@ -162,7 +163,6 @@ trait MappingExecutor extends Serializable {
 
     val logFileSeq = logFileList.map {
       case (name: String, data: Dataset[_]) => {
-
         val path = baseLogDir + s"$shortName-$endTime-map-$name"
         data match {
           case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)

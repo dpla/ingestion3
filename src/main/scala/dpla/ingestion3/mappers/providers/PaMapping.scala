@@ -4,6 +4,7 @@ import java.net.URI
 
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
 import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, IngestValidations, MessageCollector}
+
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -15,7 +16,6 @@ import scala.xml.NodeSeq
 class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
   with IngestMessageTemplates with IngestValidations {
 
-
   // IdMinter methods
   override def useProviderName: Boolean = false
 
@@ -25,7 +25,6 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   override def getProviderId(implicit data: Document[NodeSeq]): String =
     extractString(data \ "header" \ "identifier")
       .getOrElse[String](throw new RuntimeException(s"No ID for record $data"))
-
 
   // SourceResource mapping
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
@@ -82,6 +81,7 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   override def dataProvider(data: Document[NodeSeq])
                            (implicit msgCollector: MessageCollector[IngestMessage]): EdmAgent = {
+
     extractStrings(data \ "metadata" \\ "contributor").lastOption match {
       case Some(lastContributor) => nameOnlyAgent(lastContributor)
       case None =>

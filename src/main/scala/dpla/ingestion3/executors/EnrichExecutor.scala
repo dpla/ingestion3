@@ -8,8 +8,10 @@ import dpla.ingestion3.enrichments.EnrichmentDriver
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
 import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
+
 import dpla.ingestion3.reports.PrepareEnrichmentReport
-import dpla.ingestion3.reports.summary.{EnrichmentOpsSummary, EnrichmentSummaryData, OperationSummary, TimeSummary}
+
+import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{HttpUtils, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
@@ -73,8 +75,7 @@ trait EnrichExecutor extends Serializable {
       val driver = new EnrichmentDriver(i3conf)
       Try{ ModelConverter.toModel(row) } match {
         case Success(dplaMapData) =>
-          enrich(dplaMapData, driver, improvedCount, typeImprovedCount,
-                  dateImprovedCount, lamgImprovedCount, placeImprovedCount)
+          enrich(dplaMapData, driver, improvedCount)
         case Failure(err) =>
           (null, s"Error parsing mapped data: ${err.getMessage}\n" +
             s"${err.getStackTrace.mkString("\n")}")
@@ -102,8 +103,33 @@ trait EnrichExecutor extends Serializable {
       .format("com.databricks.spark.avro")
       .save(dataOut)
 
-    // build the information for reporting
     val endTime = System.currentTimeMillis()
+
+    val typeMessages = messages.filter("field='type'")
+    val dateMessages = messages.filter("field='date'")
+    val langMessages = messages.filter("field='language'")
+    val placeMessages = messages.filter("field='place'")
+
+    val logEnrichedFields = List(
+      "all" -> messages,
+      "type" -> typeMessages,
+      "date" -> dateMessages,
+      "language" -> langMessages,
+      "place" -> placeMessages
+    )
+      .filter { case (_, data: Dataset[_]) => data.count() > 0 }
+
+    val logFileSeq = logEnrichedFields.map {
+      case (name: String, data: Dataset[_]) => {
+        val path = dataOut + "/../logs/"+ s"$shortName-$endTime-enrich-$name"
+        data match {
+          case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)
+        }
+        ReportFormattingUtils.centerPad(name, new File(path).getCanonicalPath)
+      }
+    }
+
+    // build the information for reporting
     val attemptedCount = mappedRows.count()
 
     val timeSummary = TimeSummary(
@@ -115,16 +141,18 @@ trait EnrichExecutor extends Serializable {
     val operationSummary = OperationSummary(
       attemptedCount,
       improvedCount.count,
-      attemptedCount-improvedCount.count
+      attemptedCount-improvedCount.count,
+      logFileSeq
     )
 
     val enrichOpSummary = EnrichmentOpsSummary(
-      typeImprovedCount.count,
-      dateImprovedCount.count,
-      lamgImprovedCount.count,
-      placeImprovedCount.count,
+      typeMessages.count,
+      dateMessages.count,
+      langMessages.count,
+      placeMessages.count,
       langSummary = PrepareEnrichmentReport.generateFieldReport(messages, "language"),
-      typeSummary = PrepareEnrichmentReport.generateFieldReport(messages, "type")
+      typeSummary = PrepareEnrichmentReport.generateFieldReport(messages, "type"),
+      placeSummary = PrepareEnrichmentReport.generateFieldReport(messages, "place")
     )
 
     val summaryData = EnrichmentSummaryData(shortName, operationSummary, timeSummary, enrichOpSummary)
@@ -144,14 +172,9 @@ trait EnrichExecutor extends Serializable {
 
   private def enrich(dplaMapData: OreAggregation,
                      driver: EnrichmentDriver,
-                     improvedCount: LongAccumulator,
-                     typeImprovedCount: LongAccumulator,
-                     dateImprovedCount: LongAccumulator,
-                     langImprovedCount: LongAccumulator,
-                     placeImprovedCount: LongAccumulator): (Row, String) = {
+                     improvedCount: LongAccumulator): (Row, String) = {
     driver.enrich(dplaMapData) match {
       case Success(enriched) =>
-
         implicit val msgs = new MessageCollector[IngestMessage]()
 
         val oreAggMitMsgs = PrepareEnrichmentReport.prepareEnrichedData(enriched, dplaMapData)(msgs)

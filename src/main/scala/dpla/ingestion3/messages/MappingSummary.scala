@@ -2,19 +2,12 @@ package dpla.ingestion3.messages
 
 import dpla.ingestion3.reports.summary.{MappingSummaryData, ReportFormattingUtils}
 import dpla.ingestion3.utils.Utils
-import org.apache.commons.lang.StringUtils
 
 
 /**
   *
   */
-
 object MappingSummary {
-
-  def centerPad(a: String, b: String, seperator: String = ".", width: Int = 80) =
-    s"$a${seperator*(80-a.length-b.length)}$b"
-  def center(a: String, seperator: String = " ",width: Int = 80): String =
-    StringUtils.leftPad(a, (width+a.length)/2, seperator)
 
   /**
     * Big picutre summary in one String
@@ -23,7 +16,6 @@ object MappingSummary {
     */
   def getSummary(data: MappingSummaryData): String = {
     // prettify all the digits!
-
     val attemptedStr = Utils.formatNumber(data.operationSummary.recordsAttempted)
     val mappedStr = Utils.formatNumber(data.operationSummary.recordsSuccessful)
     val warnStr = Utils.formatNumber(data.messageSummary.warningCount)
@@ -35,6 +27,7 @@ object MappingSummary {
     val logFileMsg =
       if(data.operationSummary.logFiles.nonEmpty) data.operationSummary.logFiles.mkString("\n")
       else ""
+
     val lineBreak = "-"*80
 
       s"""
@@ -61,27 +54,35 @@ object MappingSummary {
         |${ReportFormattingUtils.centerPad("- Warnings", warnRecordsStr)}
         |${ReportFormattingUtils.centerPad("- Exceptions", exceptionCountStr)}
         |
+        |${ReportFormattingUtils.centerPad("Exceptions (records)", exceptionCountStr)}
         |
-        |${if(data.messageSummary.warningCount > 0 && data.messageSummary.errorCount > 0)
+        |
+        |${if(data.messageSummary.warningCount > 0 || data.messageSummary.errorCount > 0)
           ReportFormattingUtils.center("Error and Warning Message Summary") else ""}
         |${if(data.messageSummary.warningCount > 0)
           "\nWarnings\n" + data.messageSummary.warningMessageDetails else ""}
         |${if(data.messageSummary.errorMessageDetails.nonEmpty)
           "\nErrors\n" + data.messageSummary.errorMessageDetails else ""}
         |
-        |${centerPad("Exceptions (records)", exceptionCountStr)}
+        |${ReportFormattingUtils.center("~~~~~~~~ Error and Warning Message Summary ~~~~~~~~")}
+        |
+        |${if(logFileMsg.nonEmpty)
+          ReportFormattingUtils.center("Log Files")
+          logFileMsg
+          }
+        |
+        |${ReportFormattingUtils.centerPad("Errors and Warnings Detail", exceptionCountStr)}
+        |${if(data.messageSummary.warningMessageDetails.nonEmpty) "Warnings\n--------\n" + data.messageSummary.warningMessageDetails else "* No Warnings *"}
+        |
+        |${if(data.messageSummary.errorMessageDetails.nonEmpty) "Errors\n-------\n" + data.messageSummary.errorMessageDetails else "* No Errors *"}
+        |
+        |${ReportFormattingUtils.center("Log Files")}
         |
         |
         |${if(logFileMsg.nonEmpty)
           ReportFormattingUtils.center("Log Files")
           logFileMsg
           }
-        |${if(data.messageSummary.warningMessageDetails.nonEmpty) "Warnings\n--------\n" + data.messageSummary.warningMessageDetails else "* No Warnings *"}
-        |
-        |${if(data.messageSummary.errorMessageDetails.nonEmpty) "Errors\n-------\n" + data.messageSummary.errorMessageDetails else "* No Errors *"}
-        |
-        |
-        |${center("Better  luck next time!")}
         |""".stripMargin
   }
 }
