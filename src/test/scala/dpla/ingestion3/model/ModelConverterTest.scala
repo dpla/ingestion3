@@ -33,7 +33,7 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
     Seq(urlString3, urlString1)
   )
 
-  val testIngestMessage = Row("msg", "ERROR", "123", "isShownAt", "htt://umd.edmo")
+  val testIngestMessage = Row("msg", "ERROR", "123", "type", "StillImage", "images")
 
   val testEdmWebResource = Row(urlString1, Seq("foo"), Seq("bar"), "baz")
 

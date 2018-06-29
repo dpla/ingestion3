@@ -1,7 +1,7 @@
 package dpla.ingestion3.reports
 
 import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
-import dpla.ingestion3.model.OreAggregation
+import dpla.ingestion3.model.{DplaPlace, OreAggregation}
 import dpla.ingestion3.reports.summary.ReportFormattingUtils
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.sql.functions._
@@ -32,9 +32,13 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     */
   def prepareEnrichedData(enriched: OreAggregation, original: OreAggregation)
                          (implicit msgs: MessageCollector[IngestMessage]) = {
-    // Get messages
+    // Get messages for each field
     prepareLangauge(enriched)
     prepareType(original, enriched)
+    preparePlace(enriched)
+
+    // messages are correctly collected
+
     // Put collected messages into copy of enriched
     enriched.copy(messages = msgs.getAll())
   }
@@ -49,18 +53,46 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
                      (implicit msgs: MessageCollector[IngestMessage]) = {
 
     enriched.sourceResource.language.map( l => {
-      if(l.concept.getOrElse("") != l.providedLabel.getOrElse(" "))
+      if(l.concept.getOrElse("") != l.providedLabel.getOrElse(" ")){
         msgs.add(enrichedValue(
           (enriched.sidecar \\ "dplaId").values.toString,
           "language",
-          l.providedLabel.getOrElse(""),
-          l.concept.getOrElse("")))
-      else
+          l.providedLabel.getOrElse("AADS"),
+          l.concept.getOrElse("SFSFSD")))
+      }else
         msgs.add(originalValue(
           (enriched.sidecar \\ "dplaId").values.toString,
           "language",
-          l.providedLabel.getOrElse("")))
+          l.providedLabel.getOrElse(""))
+        )
     })
+  }
+
+  /**
+    *
+    * @param enriched
+    * @param msgs
+    * @return
+    */
+  def preparePlace(enriched: OreAggregation)
+                     (implicit msgs: MessageCollector[IngestMessage]) = {
+
+    enriched.sourceResource.place.map( p => {
+      if(p.city.isDefined | p.coordinates.isDefined | p.country.isDefined | p.region.isDefined | p.state.isDefined) {
+        msgs.add( enrichedValue((enriched.sidecar \\ "dplaId").values.toString, "place", p.name.getOrElse(""), printPlace(p)))
+      }
+    })
+  }
+
+  def printPlace(place: DplaPlace) = {
+    // TODO How else to format?
+    s"""
+       |${place.country.getOrElse("")}
+       |${place.region.getOrElse("")}
+       |${place.state.getOrElse("")}
+       |${place.county.getOrElse("")}
+       |${place.city.getOrElse("")}
+     """.stripMargin.split("\n").filter(_.nonEmpty).mkString("\n")
   }
 
   /**
