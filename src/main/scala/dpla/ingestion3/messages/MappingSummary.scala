@@ -2,7 +2,6 @@ package dpla.ingestion3.messages
 
 import dpla.ingestion3.reports.summary.{MappingSummaryData, ReportFormattingUtils}
 import dpla.ingestion3.utils.Utils
-import org.apache.commons.lang.StringUtils
 
 
 /**
@@ -55,7 +54,7 @@ object MappingSummary {
         |${ReportFormattingUtils.centerPad("- Warnings", warnRecordsStr)}
         |${ReportFormattingUtils.centerPad("- Exceptions", exceptionCountStr)}
         |
-        |${centerPad("Exceptions (records)", exceptionCountStr)}
+        |${ReportFormattingUtils.centerPad("Exceptions (records)", exceptionCountStr)}
         |
         |
         |${if(data.messageSummary.warningCount > 0 || data.messageSummary.errorCount > 0)
@@ -72,7 +71,7 @@ object MappingSummary {
           logFileMsg
           }
         |
-        |${centerPad("Errors and Warnings Detail", exceptionCountStr)}
+        |${ReportFormattingUtils.centerPad("Errors and Warnings Detail", exceptionCountStr)}
         |${if(data.messageSummary.warningMessageDetails.nonEmpty) "Warnings\n--------\n" + data.messageSummary.warningMessageDetails else "* No Warnings *"}
         |
         |${if(data.messageSummary.errorMessageDetails.nonEmpty) "Errors\n-------\n" + data.messageSummary.errorMessageDetails else "* No Errors *"}
