@@ -44,7 +44,7 @@ object OaiXmlParser {
     *         OaiError - an error appearing in the XML node, or a previously
     *         incurred error.
     */
-  def parseXmlIntoRecords(xmlEither: Either[OaiError, Node]):
+  def parseXmlIntoRecords(xmlEither: Either[OaiError, Node], removeDeleted: Boolean):
     Seq[Either[OaiError, OaiRecord]] = xmlEither match {
       case Left(e) => Seq(Left(e))
       case Right(xml) =>
@@ -52,7 +52,7 @@ object OaiXmlParser {
           // If the XML contains an error, return an OaiError
           case Some(e) => Seq(Left(e))
           // Otherwise, parse records from the XML
-          case None => getRecords(xml).map(Right(_))
+          case None => getRecords(xml, removeDeleted).map(Right(_))
         }
     }
 
@@ -80,13 +80,14 @@ object OaiXmlParser {
         }
     }
 
-  def getRecords(xml: Node): Seq[OaiRecord] =
-    for (record <- xml \ "ListRecords" \ "record")
-      yield {
-        val id = (record \ "header" \ "identifier").text
-        val setIds = for (set <- record \ "header" \ "setSpec") yield set.text
-        OaiRecord(id, record.toString, setIds)
-      }
+  def getRecords(xml: Node, removeDeleted: Boolean): Seq[OaiRecord] =
+    for {
+      record <- xml \ "ListRecords" \ "record"
+      id = (record \ "header" \ "identifier").text
+      setIds = for (set <- record \ "header" \ "setSpec") yield set.text
+      status = (record \ "header" \ "@status").headOption.getOrElse(<foo>foo</foo>).text
+      if !removeDeleted || status != "deleted"
+    } yield OaiRecord(id, record.toString, setIds)
 
   def getSets(xml: Node): Seq[OaiSet] =
     for (set <- xml \ "ListSets" \ "set")

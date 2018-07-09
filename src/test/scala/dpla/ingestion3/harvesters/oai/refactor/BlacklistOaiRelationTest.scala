@@ -13,7 +13,7 @@ class BlacklistOaiRelationTest extends FlatSpec with SharedSparkContext {
 
   private val oaiMethods = new OaiMethods with Serializable {
 
-    override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage]) = Seq(
+    override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage], removeDeleted: Boolean) = Seq(
       Right(OaiRecord("a", "document", Seq()))
     )
 

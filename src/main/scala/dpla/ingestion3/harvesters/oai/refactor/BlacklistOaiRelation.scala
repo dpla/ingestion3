@@ -23,7 +23,7 @@ class BlacklistOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiMe
       case _ => true
     }
     val pages = blacklistedSets.flatMap(oaiMethods.listAllRecordPagesForSet)
-    val records = pages.flatMap(oaiMethods.parsePageIntoRecords)
+    val records = pages.flatMap(oaiMethods.parsePageIntoRecords(_, oaiConfiguration.removeDeleted))
     records.map(OaiRelation.convertToOutputRow)
   }
 }

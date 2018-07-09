@@ -47,11 +47,11 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Se
     multiPageResponse.toIterator
   }
 
-  override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage]):
+  override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage], removeDeleted: Boolean):
     TraversableOnce[Either[OaiError, OaiRecord]] = {
 
     val xmlEither = OaiXmlParser.parsePageIntoXml(pageEither)
-    val records = OaiXmlParser.parseXmlIntoRecords(xmlEither)
+    val records = OaiXmlParser.parseXmlIntoRecords(xmlEither, removeDeleted)
     // TODO: Is there a better way to make a TraversableOnce return type?
     records.toIterator
   }

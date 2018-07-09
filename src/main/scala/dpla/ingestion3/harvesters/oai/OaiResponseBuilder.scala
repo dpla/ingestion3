@@ -1,11 +1,8 @@
 package dpla.ingestion3.harvesters.oai
 
 import java.net.URL
-import java.nio.charset.Charset
 
-import dpla.ingestion3.harvesters.UrlBuilder
 import dpla.ingestion3.utils.HttpUtils
-import org.apache.http.client.fluent.Request
 import org.apache.http.client.utils.URIBuilder
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
@@ -20,7 +17,7 @@ import scala.util.{Failure, Success, Try}
 
 class OaiResponseBuilder (endpoint: String)
                          (@transient val sqlContext: SQLContext)
-  extends Serializable with UrlBuilder {
+  extends Serializable {
 
   /**
     * Get one to many pages of sets, and any errors that occurred in the process
@@ -184,7 +181,9 @@ class OaiResponseBuilder (endpoint: String)
     * @return OaiSource or OaiError
     */
   def getSinglePageResponse(queryParams: Map[String, String]): OaiResponse = {
-    getUrl(queryParams) match {
+    Try {
+      buildUrl(queryParams)
+    } match {
       // Error building URL
       case Failure(e) =>
         val source = OaiSource(queryParams)
@@ -209,14 +208,6 @@ class OaiResponseBuilder (endpoint: String)
   }
 
   /**
-    * Tries to build a URL from the parameters
-    *
-    * @param queryParams HTTP parameters
-    * @return Try[URL]
-    */
-  def getUrl(queryParams: Map[String, String]): Try[URL] = Try { buildUrl(queryParams) }
-
-  /**
     * Builds an OAI request
     *
     * @param params Map of parameters needed to construct the URL
@@ -224,7 +215,7 @@ class OaiResponseBuilder (endpoint: String)
     *               See https://www.openarchives.org/OAI/openarchivesprotocol.html#ProtocolMessages
     * @return URL
     */
-  override def buildUrl(params: Map[String, String]): URL = {
+  def buildUrl(params: Map[String, String]): URL = {
     // Required properties, not sure if this is the right style
     assume(params.get("endpoint").isDefined)
     assume(params.get("verb").isDefined)

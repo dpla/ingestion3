@@ -52,7 +52,10 @@ case class OaiConfiguration(parameters: Map[String, String]) {
 
   def blacklist: Option[Array[String]] = parameters.get("blacklist").map(parseSets)
 
-  def filterDeleted: Option[String] = parameters.get("filterDeleted")
+  def removeDeleted: Boolean = parameters.get("removeDeleted") match {
+    case Some("true") => true
+    case _ => false
+  }
 
   private [this] val oaiVerbs = Set("ListRecords", "ListSets")
 

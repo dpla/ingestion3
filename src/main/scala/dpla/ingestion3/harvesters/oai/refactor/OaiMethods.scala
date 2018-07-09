@@ -12,7 +12,7 @@ trait OaiMethods {
   def listAllRecordPagesForSet(setEither: Either[OaiError, OaiSet]):
     TraversableOnce[Either[OaiError, OaiPage]]
 
-  def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage]):
+  def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage], removeDeleted: Boolean):
     TraversableOnce[Either[OaiError, OaiRecord]]
 
   def listAllSetPages(): TraversableOnce[Either[OaiError, OaiPage]]

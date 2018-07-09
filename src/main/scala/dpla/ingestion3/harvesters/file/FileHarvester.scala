@@ -1,9 +1,10 @@
 package dpla.ingestion3.harvesters.file
 
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.Harvester
+import dpla.ingestion3.harvesters.{AvroHelper, Harvester}
 import org.apache.avro.generic.GenericData
 import org.apache.log4j.Logger
+import org.apache.spark.sql.SparkSession
 
 import scala.util.Try
 
@@ -15,11 +16,12 @@ import scala.util.Try
   * @param outputDir Output path
   * @param logger Logger
   */
-abstract class FileHarvester(shortName: String,
+abstract class FileHarvester(spark: SparkSession,
+                             shortName: String,
                              conf: i3Conf,
                              outputDir: String,
                              logger: Logger)
-  extends Harvester(shortName, conf, outputDir, logger) {
+  extends Harvester(spark, shortName, conf, outputDir, logger) {
 
 
   /**
@@ -50,11 +52,12 @@ abstract class FileHarvester(shortName: String,
     *
     * @param unixEpoch Timestamp of the harvest
     * @param item Harvested record
+    *
     */
-  def writeOut(unixEpoch: Long,
-               item: ParsedResult): Unit = {
-    val avroWriter = getAvroWriter()
-    val genericRecord = new GenericData.Record(schema)
+  //todo this is in harvester?
+  def writeOut(unixEpoch: Long, item: ParsedResult): Unit = {
+    val avroWriter = AvroHelper.avroWriter(shortName, outputDir, Harvester.schema)
+    val genericRecord = new GenericData.Record(Harvester.schema)
     genericRecord.put("id", item.id)
     genericRecord.put("ingestDate", unixEpoch)
     genericRecord.put("provider", shortName)

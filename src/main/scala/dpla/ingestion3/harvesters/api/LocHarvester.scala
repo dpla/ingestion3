@@ -6,6 +6,7 @@ import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.utils.HttpUtils
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
+import org.apache.spark.sql.SparkSession
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
 
@@ -20,11 +21,12 @@ import scala.xml.XML
   * https://libraryofcongress.github.io/data-exploration/
   *
   */
-class LocHarvester(shortName: String,
+class LocHarvester(spark: SparkSession,
+                   shortName: String,
                    conf: i3Conf,
                    outputDir: String,
                    harvestLogger: Logger)
-  extends ApiHarvester(shortName, conf, outputDir, harvestLogger) {
+  extends ApiHarvester(spark, shortName, conf, outputDir, harvestLogger) {
 
   override protected val mimeType: String = "application_json"
 
@@ -97,7 +99,7 @@ class LocHarvester(shortName: String,
     * @return List[ApiResponse] List containing ApiErrors and ApiRecords
     */
   def fetchLocRecords(urls: Seq[URL]): List[ApiResponse] = {
-    sc.parallelize(urls).map(url => {
+    spark.sparkContext.parallelize(urls).map(url => {
       HttpUtils.makeGetRequest(url) match {
         case Failure(e) =>
           ApiError(e.getStackTrace.mkString("\n\t"),
@@ -147,7 +149,7 @@ class LocHarvester(shortName: String,
     * @param params URL parameters
     * @return
     */
-  override protected def buildUrl(params: Map[String, String]): URL =
+  def buildUrl(params: Map[String, String]): URL =
     new URIBuilder()
       .setScheme("http")
       .setHost("www.loc.gov")

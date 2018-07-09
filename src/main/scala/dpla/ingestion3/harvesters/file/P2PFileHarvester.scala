@@ -7,6 +7,8 @@ import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.SparkSession
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
 
@@ -21,11 +23,12 @@ class P2PFileExtractor extends JsonExtractor
 /**
   * Entry for performing a plains2peaks file harvest
   */
-class P2PFileHarvester(shortName: String,
+class P2PFileHarvester(spark: SparkSession,
+                       shortName: String,
                        conf: i3Conf,
                        outputDir: String,
                        logger: Logger)
-  extends FileHarvester(shortName, conf, outputDir, logger) {
+  extends FileHarvester(spark, shortName, conf, outputDir, logger) {
 
   protected val extractor = new P2PFileExtractor()
 

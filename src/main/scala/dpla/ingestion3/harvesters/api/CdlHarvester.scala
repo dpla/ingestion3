@@ -7,6 +7,7 @@ import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.utils.HttpUtils
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
+import org.apache.spark.sql.SparkSession
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
 
@@ -19,11 +20,12 @@ import scala.util.{Failure, Success}
   * https://help.oac.cdlib.org/support/solutions/articles/9000101639-calisphere-api
   *
   */
-class CdlHarvester(shortName: String,
+class CdlHarvester(spark: SparkSession,
+                   shortName: String,
                    conf: i3Conf,
                    outputDir: String,
                    harvestLogger: Logger)
-  extends ApiHarvester(shortName, conf, outputDir, harvestLogger) {
+  extends ApiHarvester(spark, shortName, conf, outputDir, harvestLogger) {
 
   override protected val mimeType: String = "application_json"
 
@@ -115,7 +117,7 @@ class CdlHarvester(shortName: String,
     * @param params URL parameters
     * @return
     */
-  override protected def buildUrl(params: Map[String, String]): URL =
+  def buildUrl(params: Map[String, String]): URL =
     new URIBuilder()
       .setScheme("https")
       .setHost("solr.calisphere.org")

@@ -7,6 +7,8 @@ import dpla.ingestion3.confs.i3Conf
 import org.apache.avro.generic.GenericData
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.SparkSession
 import org.apache.tools.bzip2.CBZip2InputStream
 import org.apache.tools.tar.TarInputStream
 
@@ -14,11 +16,13 @@ import scala.util.{Failure, Success, Try}
 import scala.xml.{MinimizeMode, Node, Utility, XML}
 
 
-class NaraFileHarvester(shortName: String,
-                      conf: i3Conf,
-                      outputDir: String,
-                      logger: Logger)
-  extends FileHarvester(shortName, conf, outputDir, logger) {
+class NaraFileHarvester(
+                         spark: SparkSession,
+                         shortName: String,
+                         conf: i3Conf,
+                         outputDir: String,
+                         logger: Logger)
+  extends FileHarvester(spark, shortName, conf, outputDir, logger) {
 
   override protected val mimeType: String = "application_xml"
 

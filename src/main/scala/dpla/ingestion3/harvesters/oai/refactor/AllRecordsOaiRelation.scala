@@ -5,7 +5,6 @@ import java.io.{File, FileWriter}
 import com.opencsv.CSVWriter
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SQLContext}
-import org.apache.spark.storage.StorageLevel
 
 /**
   * OaiRelation for harvests that don't specify sets.
@@ -35,7 +34,7 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiM
       .rdd
 
     val eitherRdd = csvRdd.map(handleCsvRow)
-    val pagesEitherRdd = eitherRdd.flatMap(oaiMethods.parsePageIntoRecords)
+    val pagesEitherRdd = eitherRdd.flatMap(oaiMethods.parsePageIntoRecords(_, oaiConfiguration.removeDeleted))
     pagesEitherRdd.map(OaiRelation.convertToOutputRow)
   }
 
