@@ -19,7 +19,6 @@ case class MessageSummary(
                            warningCount: Long = -1,   // message warning
                            errorRecordCount: Long = -1, // 1:1 if exception 1:n if from message
                            warningRecordCount: Long = -1, // 1:n a record can raise many warnings
-
                            errorMessageDetails: String = "", // error messages
                            warningMessageDetails: String  = "" // warning messages
                          )

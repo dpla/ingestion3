@@ -2,11 +2,12 @@ package dpla.ingestion3.messages
 
 import dpla.ingestion3.reports.summary.{MappingSummaryData, ReportFormattingUtils}
 import dpla.ingestion3.utils.Utils
-
+import org.apache.commons.lang.StringUtils
 
 /**
   *
   */
+
 object MappingSummary {
 
   /**
@@ -54,35 +55,17 @@ object MappingSummary {
         |${ReportFormattingUtils.centerPad("- Warnings", warnRecordsStr)}
         |${ReportFormattingUtils.centerPad("- Exceptions", exceptionCountStr)}
         |
-        |${ReportFormattingUtils.centerPad("Exceptions (records)", exceptionCountStr)}
-        |
-        |
         |${if(data.messageSummary.warningCount > 0 || data.messageSummary.errorCount > 0)
-          ReportFormattingUtils.center("Error and Warning Message Summary") else ""}
-        |${if(data.messageSummary.warningCount > 0)
-          "\nWarnings\n" + data.messageSummary.warningMessageDetails else ""}
+            ReportFormattingUtils.center("Message Summary") else ""}
+        |${if(data.messageSummary.warningMessageDetails.nonEmpty)
+            "Warnings\n" + data.messageSummary.warningMessageDetails else ""}
         |${if(data.messageSummary.errorMessageDetails.nonEmpty)
-          "\nErrors\n" + data.messageSummary.errorMessageDetails else ""}
-        |
-        |${ReportFormattingUtils.center("~~~~~~~~ Error and Warning Message Summary ~~~~~~~~")}
+            "Errors\n" + data.messageSummary.errorMessageDetails else ""}
         |
         |${if(logFileMsg.nonEmpty)
-          ReportFormattingUtils.center("Log Files")
-          logFileMsg
-          }
-        |
-        |${ReportFormattingUtils.centerPad("Errors and Warnings Detail", exceptionCountStr)}
-        |${if(data.messageSummary.warningMessageDetails.nonEmpty) "Warnings\n--------\n" + data.messageSummary.warningMessageDetails else "* No Warnings *"}
-        |
-        |${if(data.messageSummary.errorMessageDetails.nonEmpty) "Errors\n-------\n" + data.messageSummary.errorMessageDetails else "* No Errors *"}
-        |
-        |${ReportFormattingUtils.center("Log Files")}
-        |
-        |
-        |${if(logFileMsg.nonEmpty)
-          ReportFormattingUtils.center("Log Files")
-          logFileMsg
-          }
-        |""".stripMargin
+            ReportFormattingUtils.center("Log Files") + "\n\n" + logFileMsg
+          else ""
+        }
+        |""".stripMargin.trim
   }
 }

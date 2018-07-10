@@ -4,6 +4,7 @@ import java.net.URI
 
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.{IngestMessageTemplates, IngestMessage, MessageCollector}
+
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils

@@ -243,7 +243,6 @@ object Utils {
     * @param shortName
     */
   def writeLogsAsTxt(out: String, name: String, df: Dataset[String], shortName: String): Unit = {
-    // logger.info(s"Writing error CSVs to: $out)
     df.coalesce(1)
       .write
       .mode(SaveMode.Overwrite)

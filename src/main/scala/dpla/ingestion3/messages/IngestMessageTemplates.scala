@@ -2,14 +2,13 @@ package dpla.ingestion3.messages
 
 import java.net.URI
 
-import scala.util.{Failure, Success, Try}
-
+import scala.util.Try
 
 trait IngestMessageTemplates {
   def mintUriError(id: String, field: String, value: String, msg: Option[String] = None): IngestMessage =
     IngestMessage(
-      message = s"Unable to mint URI ${msg.getOrElse("")}",
-      level = IngestLogLevel.error,
+      message = s"Unable to mint URI ${msg.getOrElse("NO URI")}".trim,
+      level = IngestLogLevel.warn,
       id = id,
       field = field,
       value = value
@@ -27,17 +26,17 @@ trait IngestMessageTemplates {
   def enrichedValue(id: String, field: String, origValue: String, enrichValue: String): IngestMessage =
     IngestMessage(
       message = s"Enriched value",
-      level = "INFO",
+      level = IngestLogLevel.info,
       id = id,
       field = field,
       value = origValue,
-      enrichedValue = enrichValue
+      enrichedValue = "Not enriched"
     )
 
   def originalValue(id: String, field: String, value: String): IngestMessage =
     IngestMessage(
       message = s"Original value",
-      level = "INFO",
+      level = IngestLogLevel.info,
       id = id,
       field = field,
       value = value,
@@ -45,6 +44,6 @@ trait IngestMessageTemplates {
     )
 }
 
-trait IngestValidations extends IngestMessageTemplates{
+trait IngestValidations extends IngestMessageTemplates {
   def validateUri(uriStr: String): Try[URI] = Try { new URI(uriStr) }
 }

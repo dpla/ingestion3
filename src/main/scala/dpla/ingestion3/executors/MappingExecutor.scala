@@ -5,7 +5,6 @@ import java.io.File
 import com.databricks.spark.avro._
 
 import dpla.ingestion3.messages._
-
 import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.reports.summary._
@@ -91,7 +90,6 @@ trait MappingExecutor extends Serializable {
     val finalReport = buildFinalReport(successResults, mappingResults, shortName, dataOut, startTime, endTime)(spark)
     // Format the summary report and write it log file
     logger.info(MappingSummary.getSummary(finalReport))
-
     // FIXME This is something else's responsibility
     Utils.deleteRecursively(new File(dataOut))
 
@@ -125,7 +123,7 @@ trait MappingExecutor extends Serializable {
 
     val sc = spark.sparkContext
 
-    val successResults: Dataset[Row] = mappingResults
+    val results: Dataset[Row] = mappingResults
       .filter(tuple => Option(tuple._1).isDefined)
       .map(tuple => tuple._1)(oreAggregationEncoder)
 
@@ -133,22 +131,21 @@ trait MappingExecutor extends Serializable {
       .filter(tuple => Option(tuple._2).isDefined)
       .map(tuple => tuple._2).collect()
 
-    val messages = MessageProcessor.getAllMessages(successResults)(spark)
-
+    val messages = MessageProcessor.getAllMessages(results)(spark)
     val warnings = MessageProcessor.getWarnings(messages)
-    val errors = MessageProcessor.getErrors(messages)
+    val errors =   MessageProcessor.getErrors(messages)
 
     // get counts
     val attemptedCount = mappingResults.count() // successResults.count()
-    val validCount = successResults.select("dplaUri").where("size(messages) == 0").count()
+    val validCount = results.select("dplaUri").where("size(messages) == 0").count()
     val warnCount = warnings.count()
     val errorCount = errors.distinct().count()
 
     val recordErrorCount = MessageProcessor.getDistinctIdCount(errors)
     val recordWarnCount = MessageProcessor.getDistinctIdCount(warnings)
 
-    val errorMsgDets = MessageProcessor.getMessageFieldSummary(errors).mkString("\n")
-    val warnMsgDets = MessageProcessor.getMessageFieldSummary(warnings).mkString("\n")
+    val errorMsgDetails = MessageProcessor.getMessageFieldSummary(errors).mkString("\n")
+    val warnMsgDetails = MessageProcessor.getMessageFieldSummary(warnings).mkString("\n")
 
     val baseLogDir = s"$dataOut/../logs/"
 
@@ -191,8 +188,8 @@ trait MappingExecutor extends Serializable {
       warnCount,
       recordErrorCount,
       recordWarnCount,
-      errorMsgDets,
-      warnMsgDets
+      errorMsgDetails,
+      warnMsgDetails
     )
 
     MappingSummaryData(shortName, operationSummary, timeSummary, messageSummary)
@@ -224,7 +221,6 @@ class DplaMap extends Serializable {
       case Success(extClass) => extClass
       case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
     }
-
     extractorClass.performMapping(document) match {
       case (Some(oreAgg), Some(exception)) => (RowConverter.toRow(oreAgg, model.sparkSchema), exception)
       case (Some(oreAgg), None) => (RowConverter.toRow(oreAgg, model.sparkSchema), null)

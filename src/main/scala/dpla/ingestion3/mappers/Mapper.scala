@@ -30,6 +30,7 @@ trait Mapper[T, +E] {
 
 class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
   override def map(document: Document[NodeSeq], mapping: Mapping[NodeSeq]): (Option[OreAggregation], Option[String]) = {
+
     implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
       val mapResult = Try {
         OreAggregation(
@@ -71,12 +72,14 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
           messages = msgCollector.getAll()
         )
       }
+
     getReturnValue(mapResult)
   }
 }
 
 class JsonMapper extends Mapper[JValue, JsonMapping] {
   override def map(document: Document[JValue], mapping: Mapping[JValue]): (Option[OreAggregation], Option[String]) = {
+
     implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
 
     val mapResult = Try (

@@ -17,8 +17,9 @@ import org.json4s.JsonDSL._
 import scala.util.{Failure, Success, Try}
 import scala.xml._
 
+
 class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
-  with IngestMessageTemplates with IngestValidations{
+  with IngestMessageTemplates with IngestValidations {
 
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
@@ -154,6 +155,7 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   override def preview(data: Document[NodeSeq])
                       (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
+
     extractString(data \ "metadata" \\ "preview").map(uriStr =>
       validateUri(uriStr) match {
         case Success(u) => uriOnlyWebResource(u)
