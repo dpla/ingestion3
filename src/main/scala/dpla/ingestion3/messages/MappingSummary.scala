@@ -66,8 +66,6 @@ object MappingSummary {
         |${if(data.messageSummary.errorMessageDetails.nonEmpty)
           "\nErrors\n" + data.messageSummary.errorMessageDetails else ""}
         |
-        |${ReportFormattingUtils.center("~~~~~~~~ Error and Warning Message Summary ~~~~~~~~")}
-        |
         |${if(logFileMsg.nonEmpty)
           ReportFormattingUtils.center("Log Files")
           logFileMsg

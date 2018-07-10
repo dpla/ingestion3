@@ -8,6 +8,7 @@ trait IngestMessageTemplates {
   def mintUriError(id: String, field: String, value: String, msg: Option[String] = None): IngestMessage =
     IngestMessage(
       message = s"Unable to mint URI ${msg.getOrElse("NO URI")}".trim,
+      level = IngestLogLevel.error,
       id = id,
       field = field,
       value = value

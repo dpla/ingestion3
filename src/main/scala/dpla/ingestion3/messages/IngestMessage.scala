@@ -18,7 +18,6 @@ object IngestLogLevel {
   * @param enrichedValue The enriched value, default is empty string
   */
 case class IngestMessage(message: String,
-
                          level: String,
                          id: String,
                          field: String,
