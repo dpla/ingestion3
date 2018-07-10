@@ -37,8 +37,9 @@ trait HarvestExecutor {
     logger.info(s"Provider short name: $shortName")
 
     //todo build spark here
-
-    val spark = ???
+    val spark = SparkSession.builder()
+      .config(sparkConf)
+      .getOrCreate()
 
     // Get and log harvest type.
     val harvestType = conf.harvest.harvestType
