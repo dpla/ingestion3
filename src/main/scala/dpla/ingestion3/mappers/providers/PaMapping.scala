@@ -22,7 +22,7 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   // getProviderName is not implemented here because useProviderName is false
 
-  // TODO Add message collect
+  // TODO Add message collect here
   override def getProviderId(implicit data: Document[NodeSeq]): String =
     extractString(data \ "header" \ "identifier")
       .getOrElse[String](throw new RuntimeException(s"No ID for record $data"))
@@ -113,8 +113,6 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   override def sidecar(data: Document[NodeSeq]): JValue =
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data) )
 
-
-  // Helper methods
   /**
     * Extracts the external link to the object from the second occurrence
     * of the dc:identifier property
@@ -135,8 +133,7 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
     validateUri(uriString) match {
       case Success(uri) => uri
-      case Failure(_) => msgCollector.add(
-        mintUriError(getProviderId(data), "second identifier", uriString))
+      case Failure(_) => msgCollector.add(mintUriError(getProviderId(data), "second identifier", uriString))
         new URI("")
     }
   }
