@@ -29,10 +29,6 @@ class DatePatternMatchTest extends FlatSpec with BeforeAndAfter with Matchers wi
     "25", "26", "27",
     "28", "29", "30", "31")
 
-<<<<<<< HEAD
-
-=======
->>>>>>> Fixup more merge conflicts
   val delimGen: Gen[String] = Gen.oneOf("-", "/", " ")
   val monthStrGen: Gen[String] = Gen.oneOf(
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
