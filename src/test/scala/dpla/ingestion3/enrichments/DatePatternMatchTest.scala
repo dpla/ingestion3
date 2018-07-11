@@ -48,7 +48,7 @@ class DatePatternMatchTest extends FlatSpec with BeforeAndAfter with Matchers wi
     "08", "8",
     "09", "9",
     "10", "11", "12")
-  
+
   "identifyPattern" should "match any year between 1000 and 2019" in {
     check(forAll(yearGen) { n => {
       datePatternMatcher.identifyPattern(n.toString).isDefined

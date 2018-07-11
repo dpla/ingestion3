@@ -35,7 +35,7 @@ class DateBuilderTest extends FlatSpec with BeforeAndAfter with Matchers with Ch
     "22", "23", "24",
     "25", "26", "27",
     "28")
-    // "29", "30") // FIXME how to deal with Feb 29, Nov 31
+  // "29", "30") // FIXME how to deal with Feb 29, Nov 31
   val monthStrGen: Gen[String] = Gen.oneOf(
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
@@ -72,10 +72,10 @@ class DateBuilderTest extends FlatSpec with BeforeAndAfter with Matchers with Ch
     check(Prop.forAllNoShrink(yearGen) { date =>
       val dateStr = date.toString
       val expectedDate = Option(dateStr + "-01-01") // TODO should this return yyyy or yyyy-mm-dd
-      val generatedDate = dateBulder.buildDateObject(dateStr) match {
-        case Some(d) => Some(d.toString)
-        case None => None
-      }
+    val generatedDate = dateBulder.buildDateObject(dateStr) match {
+      case Some(d) => Some(d.toString)
+      case None => None
+    }
       generatedDate === expectedDate
     })
   }
