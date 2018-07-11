@@ -29,7 +29,10 @@ class DatePatternMatchTest extends FlatSpec with BeforeAndAfter with Matchers wi
     "25", "26", "27",
     "28", "29", "30", "31")
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> Fixup more merge conflicts
   val delimGen: Gen[String] = Gen.oneOf("-", "/", " ")
   val monthStrGen: Gen[String] = Gen.oneOf(
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -45,13 +48,13 @@ class DatePatternMatchTest extends FlatSpec with BeforeAndAfter with Matchers wi
     "08", "8",
     "09", "9",
     "10", "11", "12")
-
-
+  
   "identifyPattern" should "match any year between 1000 and 2019" in {
     check(forAll(yearGen) { n => {
       datePatternMatcher.identifyPattern(n.toString).isDefined
     }})
   }
+
   it should "match yyyy MMM generated values" in {
 
     val yearMonthGen: Gen[String] = for {
