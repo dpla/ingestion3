@@ -9,7 +9,7 @@ import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
-import org.apache.commons.lang.StringUtils
+import org.apache.spark.sql.functions.{col, array_contains}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
@@ -93,7 +93,7 @@ trait MappingExecutor extends Serializable {
     // FIXME This is something else's responsibility
     Utils.deleteRecursively(new File(dataOut))
 
-    successResults.where("size(messages.level) == 0").toDF().write.avro(dataOut)
+    successResults.select("*").filter(!array_contains(col("messages.level"), "error")).toDF().write.avro(dataOut)
 
     spark.stop()
 
