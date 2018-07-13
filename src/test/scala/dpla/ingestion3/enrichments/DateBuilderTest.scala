@@ -2,7 +2,6 @@ package dpla.ingestion3.enrichments
 
 import dpla.ingestion3.enrichments.date.DateBuilder
 import org.apache.commons.lang.StringUtils
-import org.joda.time.DateTime
 import org.scalacheck.{Gen, Prop}
 import org.scalatest._
 import org.scalatest.prop.Checkers
@@ -76,10 +75,10 @@ class DateBuilderTest extends FlatSpec with BeforeAndAfter with Matchers with Ch
     check(Prop.forAllNoShrink(yearGen) { date =>
       val dateStr = date.toString
       val expectedDate = Option(dateStr + "-01-01") // TODO should this return yyyy or yyyy-mm-dd
-    val generatedDate = dateBulder.buildDateObject(dateStr) match {
-      case Some(d) => Some(d.toString)
-      case None => None
-    }
+      val generatedDate = dateBulder.buildDateObject(dateStr) match {
+        case Some(d) => Some(d.toString)
+        case None => None
+      }
       generatedDate === expectedDate
     })
   }

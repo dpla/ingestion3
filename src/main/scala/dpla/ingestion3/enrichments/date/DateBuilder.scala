@@ -74,5 +74,5 @@ class DateBuilder {
     * @param date Date string
     * @return Normalized date string
     */
-  def normalizeDate(date: String): String = date.replaceAll(delimiters, " ")
+  def normalizeDate(date: String): String = date.replaceAll("[\\/-]", " ")
 }
