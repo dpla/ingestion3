@@ -1,6 +1,6 @@
 package dpla.ingestion3.enrichments.date
 
-import org.joda.time.LocalDate
+import org.joda.time.{LocalDate, format}
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, DateTimeFormatterBuilder}
 
 import scala.util.{Failure, Success, Try}
@@ -13,7 +13,6 @@ import scala.util.{Failure, Success, Try}
   */
 case class EdtfPatternMap(regexPattern: String, dateTimePattern: String, label: String)
 
-
 /**
   *
   */
@@ -23,11 +22,29 @@ object DateBuilderPatterns {
 
   // Support date patterns
   val dateTimeFormatPatterns = Array(
+    // Single date
     DateTimeFormat.forPattern("yyyy").getParser,
+    DateTimeFormat.forPattern("yyyy MM").getParser,
     DateTimeFormat.forPattern("yyyy MM dd").getParser,
-    DateTimeFormat.forPattern("yyyy MMM dd").getParser,
     DateTimeFormat.forPattern("yyyy MMM").getParser,
+    DateTimeFormat.forPattern("yyyy MMM dd").getParser,
     DateTimeFormat.forPattern("MMM yyyy").getParser
+
+    // Patterns to be implemented
+    // yyyy-MM | 1934-01
+
+    // Date ranges
+    // yyyy-yyyy | 1935-1956
+    // yyyy-MM-dd/yyyy-MM-dd | 1850-01-01/1950-12-31
+
+    // Periods
+    // century -> | 19th century
+
+    // Indeterminate
+    //    "n.d." -> "indeterminate (n.d.)", // n.d.
+    //    "un" -> "indeterminate (un*)", // unknown
+    //    "no" -> "indeterminate (no*)", // no(t) dated
+    //    "^[a-zA-Z]*$" -> "indeterminate (no digits)"  // early bronze age
   )
 
   val formatter: DateTimeFormatter = new DateTimeFormatterBuilder().append(null, dateTimeFormatPatterns).toFormatter

@@ -17,7 +17,9 @@ class DateBuilderTest extends FlatSpec with BeforeAndAfter with Matchers with Ch
                         )
 
   val dateBulder= new DateBuilder()
+
   val yearGen: Gen[Int] = Gen.choose(1000,2018)
+
   val dayGen: Gen[String] = Gen.oneOf(
     "01", "1",
     "02", "2",
@@ -36,6 +38,7 @@ class DateBuilderTest extends FlatSpec with BeforeAndAfter with Matchers with Ch
     "25", "26", "27",
     "28")
   // "29", "30") // FIXME how to deal with Feb 29, Nov 31
+
   val monthStrGen: Gen[String] = Gen.oneOf(
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
@@ -66,6 +69,7 @@ class DateBuilderTest extends FlatSpec with BeforeAndAfter with Matchers with Ch
     "08", "8",
     "09", "9",
     "10", "11", "12")
+
   val delim = "\\s*[\\/-]*\\s*"
 
   "buildDateObject" should "create a valid DateTime object for dates between 1000 and 2019" in {
@@ -131,6 +135,16 @@ class DateBuilderTest extends FlatSpec with BeforeAndAfter with Matchers with Ch
 
   it should "create a valid label for yyyy MMM dd" in {
     val date = "1984 Nov 1"
+    val expectedDate = Option("1984-11-01")
+    val generatedDate = dateBulder.buildDateObject(date) match {
+      case Some(d) => Some(d.toString)
+      case None => None
+    }
+    generatedDate === expectedDate
+  }
+
+  it should "create a valid label for yyyy-MM" in {
+    val date = "1984 11"
     val expectedDate = Option("1984-11-01")
     val generatedDate = dateBulder.buildDateObject(date) match {
       case Some(d) => Some(d.toString)
