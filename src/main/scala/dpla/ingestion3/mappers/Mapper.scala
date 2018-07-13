@@ -3,15 +3,16 @@ package dpla.ingestion3.mappers
 import java.net.URI
 
 import dpla.ingestion3.mappers.utils._
-import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
+import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils._
 import org.json4s.JsonAST._
 
+import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
-trait Mapper[T, +E] {
+trait Mapper[T, +E] extends IngestMessageTemplates {
   def map(document: Document[T], mapping: Mapping[T]): (Option[OreAggregation], Option[String])
 
   /**
@@ -24,7 +25,13 @@ trait Mapper[T, +E] {
                     (implicit msgCollector: MessageCollector[IngestMessage]): (Some[OreAggregation], Option[String]) =
     map match {
       case Success(s) => (Some(s.copy(messages = msgCollector.getAll())), None)
-      case Failure(f) => (Some(emptyOreAggregation.copy(messages = msgCollector.getAll())), Some(f.getMessage))
+      case Failure(f) => {
+        if (msgCollector.getAll().isEmpty)
+          (Some(emptyOreAggregation.copy(messages = ListBuffer(emptyRecord()))), Some(f.getMessage))
+        else
+          (Some(emptyOreAggregation.copy(messages = msgCollector.getAll())), Some(f.getMessage))
+      }
+
     }
 }
 
