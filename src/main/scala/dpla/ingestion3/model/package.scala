@@ -50,6 +50,18 @@ package object model {
 
   def eitherStringOrUri(uri: URI): LiteralOrUri = new Right(uri)
 
+  def emptyOreAggregation = OreAggregation(
+    dplaUri = new URI(""),
+    dataProvider = nameOnlyAgent(""),
+    isShownAt = uriOnlyWebResource(new URI("")),
+    originalRecord = "",
+    provider = nameOnlyAgent(""),
+    sourceResource = DplaSourceResource(
+      rights = Seq(""),
+      title = Seq("")
+    )
+  )
+
   lazy val ingestDate: String = {
     val now = Calendar.getInstance().getTime
     val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")

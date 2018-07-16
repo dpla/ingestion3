@@ -3,16 +3,20 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.mappers.utils._
+import dpla.ingestion3.messages.{IngestMessageTemplates, IngestMessage, MessageCollector}
+
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
-import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods._
-import org.json4s._
 
+import org.json4s.JsonDSL._
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
+
+import scala.util.{Failure, Success, Try}
 
 // FIXME Why is the implicit conversion not working for JValue when it is for NodeSeq?
-class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] {
+class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] with IngestMessageTemplates {
 
   // ID minting functions
   override def useProviderName: Boolean = true
@@ -21,23 +25,42 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] {
 
   override def getProviderId(implicit data: Document[JValue]): String =
     extractString(unwrap(data) \ "record" \ "isShownAt")
-      .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
+       .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
   // OreAggregration
-  override def dataProvider(data: Document[JValue]): ExactlyOne[EdmAgent] =
-    nameOnlyAgent(extractString(unwrap(data) \\ "record" \ "dataProvider")
-      .getOrElse(throw new RuntimeException("No data provider")))
+  override def dataProvider(data: Document[JValue])
+                           (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmAgent] =
+    extractString(unwrap(data) \\ "record" \ "dataProvider").map(nameOnlyAgent) match {
+      case Some(dp) => dp
+      case None => msgCollector.add(missingRequiredError(getProviderId(data), "dataProvider"))
+        nameOnlyAgent("") // FIXME this shouldn't have to return an empty value.
+    }
 
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] =
     new URI(mintDplaId(data))
 
-  override def isShownAt(data: Document[JValue]): ExactlyOne[EdmWebResource] =
-    uriOnlyWebResource(uri(unwrap(data) \\ "record" \ "isShownAt"))
+  override def isShownAt(data: Document[JValue])
+                        (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
+    extractStrings(unwrap(data) \\ "record" \ "isShownAt").flatMap(uriStr => {
+      Try { new URI(uriStr)} match {
+        case Success(uri) => Option(uriOnlyWebResource(uri))
+        case Failure(f) =>
+          msgCollector.add(
+            mintUriError(id = getProviderId(data), field = "isShownAt", value = uriStr))
+          None
+      }
+    }).headOption match {
+      case None =>
+        msgCollector.add(missingRequiredError(id = getProviderId(data), field = "isShownAt")) // record error message
+        uriOnlyWebResource(new URI("")) // TODO Fix this -- it requires an Exception thrown or empty EdmWebResource
+      case Some(s) => s
+    }
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
     Utils.formatJson(data)
 
-  override def preview(data: Document[JValue]): ZeroToOne[EdmWebResource] =
+  override def preview(data: Document[JValue])
+                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
     thumbnail(unwrap(data) \\ "record" \ "object")
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = agent
@@ -137,11 +160,4 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] {
     name = Some("Minnesota Digital Library"),
     uri = Some(new URI("http://dp.la/api/contributor/mdl"))
   )
-
-  def uri(uri: JValue): URI = {
-    extractString(uri) match {
-      case Some(t) => new URI(t)
-      case _ => throw new RuntimeException(s"isShownAt is missing. Cannot map record.")
-    }
-  }
 }

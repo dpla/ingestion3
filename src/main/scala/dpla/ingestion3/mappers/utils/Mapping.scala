@@ -2,6 +2,7 @@ package dpla.ingestion3.mappers.utils
 
 import java.net.URI
 
+import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
 import org.json4s.JsonAST.JValue
@@ -14,13 +15,23 @@ trait Mapping[T] {
 
   // OreAggregation
   def dplaUri(data: Document[T]): ExactlyOne[URI]
-  def dataProvider(data: Document[T]): ExactlyOne[EdmAgent]
+  def dataProvider(data: Document[T])
+                  (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmAgent]
   def originalRecord(data: Document[T]): ExactlyOne[String]
   def hasView(data: Document[T]): ZeroToMany[EdmWebResource] = Seq()
   def intermediateProvider(data: Document[T]): ZeroToOne[EdmAgent] = None
-  def isShownAt(data: Document[T]): ExactlyOne[EdmWebResource]
+
+
+  // def isShownAt(data: Document[T]): ExactlyOne[EdmWebResource]
+  def isShownAt(data: Document[T])
+               (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmWebResource]
+
   def `object`(data: Document[T]): ZeroToOne[EdmWebResource] = None // full size image
-  def preview(data: Document[T]): ZeroToOne[EdmWebResource] = None // thumbnail
+
+
+  def preview(data: Document[T])
+             (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] = None // thumbnail
+
   def provider(data: Document[T]): ExactlyOne[EdmAgent]
   def edmRights(data: Document[T]): ZeroToOne[URI] = None
   def sidecar(data: Document[T]): JValue
