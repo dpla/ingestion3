@@ -1,7 +1,7 @@
 package dpla.ingestion3.profiles
 
 import dpla.ingestion3.harvesters.Harvester
-import dpla.ingestion3.harvesters.api.{CdlHarvester, LocHarvester}
+import dpla.ingestion3.harvesters.api.{CdlHarvester, LocHarvester, MdlHarvester}
 import dpla.ingestion3.harvesters.file.{NaraFileHarvester, P2PFileHarvester}
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.mappers.providers._
@@ -42,7 +42,7 @@ class LocProfile extends JsonProfile {
 class MdlProfile extends JsonProfile {
   type Mapping = MdlMapping
 
-  override def getHarvester: Class[_ <: Harvester] = ???
+  override def getHarvester: Class[_ <: Harvester] = classOf[MdlHarvester]
   override def getMapping = new MdlMapping
 }
 
