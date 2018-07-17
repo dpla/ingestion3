@@ -42,6 +42,15 @@ trait IngestMessageTemplates {
       value = value,
       enrichedValue = "Not enriched"
     )
+
+  def emptyRecord(): IngestMessage =
+    IngestMessage(
+      message = s"Empty record, no errors",
+      level = IngestLogLevel.error,
+      id = "Unknown",
+      field = "N/A",
+      value = "N/A"
+    )
 }
 
 trait IngestValidations extends IngestMessageTemplates {
