@@ -2,17 +2,22 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
+import dpla.ingestion3.enrichments.normalizations.filters.ExtentIdentificationList
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
+import org.json4s
 import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods._
 import org.json4s._
+import org.json4s.jackson.JsonMethods._
 
 
 // FIXME Why is the implicit conversion not working for JValue when it is for NodeSeq?
 class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] {
+
+  val extentList: Set[String] = ExtentIdentificationList.termList
 
   // ID minting functions
   override def useProviderName: Boolean = true
@@ -61,22 +66,33 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] {
   override def description(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \\ "record" \ "sourceResource" \ "description")
 
+  override def edmRights(data: Document[json4s.JValue]): ZeroToOne[URI] =
+    extractString(unwrap(data) \\ "record" \ "rights").map(new URI(_))
+
   override def extent(data: Document[JValue]): ZeroToMany[String] =
-    extractStrings(unwrap(data)  \\ "record" \\ "extent")
+    extractStrings(unwrap(data) \\ "record" \\ "extent")
+      .map(_.applyAllowFilter(extentList))
+      .filter(_.nonEmpty)
 
   override def format(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "format")
+      .map(_.applyBlockFilter(extentList))
+      .filter(_.nonEmpty)
 
   override def genre(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "type").map(nameOnlyConcept)
 
-  override def language(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "language" \ "iso636_3").map(nameOnlyConcept) ++
+  override def language(data: Document[JValue]): ZeroToMany[SkosConcept] = {
+    val code: Seq[SkosConcept] =
+      extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "language" \ "iso636_3").map(nameOnlyConcept)
+    if (code.nonEmpty)
+      code
+    else
       extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "language" \ "name").map(nameOnlyConcept)
+  }
 
   override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
     place(unwrap(data) \\ "record" \ "sourceResource" \ "spatial")
-
 
   override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "publisher").map(nameOnlyAgent)
@@ -127,9 +143,7 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] {
 
   def thumbnail(thumbnail: JValue): Option[EdmWebResource] =
     extractString(thumbnail) match {
-      case Some(t) => Some(
-        uriOnlyWebResource(new URI(t))
-      )
+      case Some(t) => Some(uriOnlyWebResource(new URI(t)))
       case None => None
     }
 
