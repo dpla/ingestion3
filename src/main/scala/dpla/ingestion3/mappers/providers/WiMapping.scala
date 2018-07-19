@@ -21,8 +21,9 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
       ExtentIdentificationList.termList
 
   // ID minting functions
-  // TODO confirm WI does not use prefix.
-  override def useProviderName(): Boolean = false
+  override def useProviderName: Boolean = true
+
+  override def getProviderName: String = "wisconsin"
 
   override def getProviderId(implicit data: Document[NodeSeq]): String =
     extractString(data \ "header" \ "identifier")
