@@ -42,7 +42,9 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     extractStrings(data \ "metadata" \\ "creator").map(nameOnlyAgent)
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
-    extractStrings(data \ "metadata" \\ "date").map(stringOnlyTimeSpan)
+    (extractStrings(data \ "metadata" \\ "date") ++
+      extractStrings(data \ "metadata" \\ "temporal"))
+      .map(stringOnlyTimeSpan)
 
   override def description(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "metadata" \\ "description")
