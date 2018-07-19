@@ -56,7 +56,7 @@ abstract class FileHarvester(spark: SparkSession,
     */
   //todo this is in harvester?
   def writeOut(unixEpoch: Long, item: ParsedResult): Unit = {
-    val avroWriter = AvroHelper.avroWriter(shortName, outputDir, Harvester.schema)
+    val avroWriter = getAvroWriter
     val genericRecord = new GenericData.Record(Harvester.schema)
     genericRecord.put("id", item.id)
     genericRecord.put("ingestDate", unixEpoch)
