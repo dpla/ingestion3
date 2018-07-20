@@ -46,9 +46,6 @@ trait MappingExecutor extends Serializable {
 
     val sc = spark.sparkContext
     // TODO: assign checkpoint directory based on a configurable setting.
-    // Consider cluster / EMR usage.
-    // See https://github.com/dpla/ingestion3/pull/105
-    sc.setCheckpointDir("/tmp/checkpoint")
 
     // TODO Is it faster easier to use a counter than query a DF in most cases?
     val totalCount: LongAccumulator = sc.longAccumulator("Total Record Count")
@@ -77,8 +74,7 @@ trait MappingExecutor extends Serializable {
         dplaMap.map(document, shortName,
           totalCount, successCount, failureCount)
       )(tupleRowStringEncoder)
-        .persist(StorageLevel.DISK_ONLY)
-        .checkpoint()
+        .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     val successResults: Dataset[Row] = mappingResults
       .filter(tuple => Option(tuple._1).isDefined)
