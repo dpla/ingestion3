@@ -5,7 +5,7 @@ import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.Harvester
 import org.apache.log4j.Logger
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.apache.spark.storage.StorageLevel
 
 import scala.util.{Success, Try}
@@ -19,9 +19,7 @@ class OaiHarvester(spark: SparkSession,
 
   override protected val mimeType: String = "application_xml"
 
-  override protected def localHarvest(): Unit = ???
-
-  override def harvest: Try[Long] = Try {
+  override protected def localHarvest(): Unit = {
     // Set options.
     val readerOptions: Map[String, String] = Map(
       "verb" -> conf.harvest.verb,
@@ -60,9 +58,8 @@ class OaiHarvester(spark: SparkSession,
     finalData
       .write
       .format("com.databricks.spark.avro")
+      .mode(SaveMode.Overwrite)
       .option("avroSchema", finalData.schema.toString)
       .avro(outputDir)
-
-    finalData.count()
   }
 }
