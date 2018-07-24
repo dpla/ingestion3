@@ -82,8 +82,7 @@ trait EnrichExecutor extends Serializable {
             s"${err.getStackTrace.mkString("\n")}")
       }
     })(tupleRowStringEncoder)
-      .persist(StorageLevel.DISK_ONLY)
-      .checkpoint()
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     val successResults: Dataset[Row] = enrichResults
       .filter(tuple => Option(tuple._1).isDefined)
