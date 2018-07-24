@@ -87,10 +87,10 @@ class PaProfile extends XmlProfile {
 }
 
 /**
-  * Pennsylvania Hub
+  * South Dakota
   */
 class SdProfile extends JsonProfile {
-  type Mapping = PaMapping
+  type Mapping = SdMapping
 
   override def getHarvester = classOf[MdlHarvester]
   override def getMapping = new SdMapping
