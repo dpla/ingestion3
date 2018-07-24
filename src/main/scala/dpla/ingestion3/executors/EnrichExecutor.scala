@@ -51,10 +51,6 @@ trait EnrichExecutor extends Serializable {
       .getOrCreate()
 
     val sc = spark.sparkContext
-    // TODO: assign checkpoint directory based on a configurable setting.
-    // Consider cluster / EMR usage.
-    // See https://github.com/dpla/ingestion3/pull/105
-    sc.setCheckpointDir("/tmp/checkpoint")
     val improvedCount: LongAccumulator = sc.longAccumulator("Improved Record Count")
     val typeImprovedCount: LongAccumulator = sc.longAccumulator("Improved Type Count")
     val lamgImprovedCount: LongAccumulator = sc.longAccumulator("Improved Language Count")
