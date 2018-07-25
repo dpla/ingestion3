@@ -87,6 +87,16 @@ class PaProfile extends XmlProfile {
 }
 
 /**
+  * South Dakota
+  */
+class SdProfile extends JsonProfile {
+  type Mapping = SdMapping
+
+  override def getHarvester = classOf[MdlHarvester]
+  override def getMapping = new SdMapping
+}
+
+/**
   * Recollection Wisconsin
   */
 class WiProfile extends XmlProfile {
