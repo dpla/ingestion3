@@ -5,6 +5,7 @@ import java.net.URI
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, JsonExtractor, Mapping}
+import dpla.ingestion3.messages.{IngestErrors, IngestMessage, MessageCollector}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
 import dpla.ingestion3.utils.Utils
@@ -12,7 +13,7 @@ import org.json4s.JValue
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
-class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtractor {
+class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtractor with IngestErrors {
 
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
@@ -36,7 +37,7 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
 
-  override def dataProvider(data: Document[JValue]): ExactlyOne[EdmAgent] = {
+  override def dataProvider(data: Document[JValue]) (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmAgent] = {
     val dps = extractStrings(unwrap(data) \\ "repository")
     val dpName = dps.headOption match {
       case Some(dp) => {
