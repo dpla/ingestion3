@@ -5,6 +5,7 @@ import java.net.URI
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, JsonExtractor, Mapping}
+import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
 import dpla.ingestion3.utils.Utils
@@ -30,18 +31,21 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
 
-  override def dataProvider(data: Document[JValue]): ExactlyOne[EdmAgent] = nameOnlyAgent(getDataProvider(data))
+  override def dataProvider(data: Document[JValue])
+                           (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmAgent] = nameOnlyAgent(getDataProvider(data))
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(data)
 
-  override def preview(data: Document[JValue]): ZeroToOne[EdmWebResource] = thumbnail(data)
+  override def preview(data: Document[JValue])
+                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] = thumbnail(data)
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
     name = Some("California Digital Library"),
     uri = Some(new URI("http://dp.la/api/contributor/cdl"))
   )
 
-  override def isShownAt(data: Document[JValue]): ExactlyOne[EdmWebResource] =
+  override def isShownAt(data: Document[JValue])
+                        (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
     uriOnlyWebResource(providerUri(data))
 
   // SourceResource

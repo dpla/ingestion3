@@ -4,22 +4,22 @@ import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.Harvester
 import org.apache.log4j.Logger
-import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+import org.apache.spark.storage.StorageLevel
 
-import scala.util.Try
+import scala.util.{Success, Try}
 
-class OaiHarvester(shortName: String,
+class OaiHarvester(spark: SparkSession,
+                   shortName: String,
                    conf: i3Conf,
                    outputDir: String,
                    harvestLogger: Logger)
-  extends Harvester(shortName, conf, outputDir, harvestLogger) {
+  extends Harvester(spark, shortName, conf, outputDir, harvestLogger) {
 
   override protected val mimeType: String = "application_xml"
 
-  override protected def localHarvest(): Unit = ???
-
-  override protected def runHarvest: Try[DataFrame] = Try{
+  override protected def localHarvest(): Unit = {
     // Set options.
     val readerOptions: Map[String, String] = Map(
       "verb" -> conf.harvest.verb,
@@ -27,17 +27,19 @@ class OaiHarvester(shortName: String,
       "harvestAllSets" -> conf.harvest.harvestAllSets,
       "setlist" -> conf.harvest.setlist,
       "blacklist" -> conf.harvest.blacklist,
-      "endpoint" -> conf.harvest.endpoint
+      "endpoint" -> conf.harvest.endpoint,
+      "removeDeleted" -> Some("true")
     ).collect{ case (key, Some(value)) => key -> value } // remove None values
 
     // Run harvest.
     val harvestedData: DataFrame = spark.read
-      .format("dpla.ingestion3.harvesters.oai")
+      .format("dpla.ingestion3.harvesters.oai.refactor")
       .options(readerOptions)
       .load()
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Log errors.
-    harvestedData.select("error.message", "error.errorSource.url")
+    harvestedData.select("error.message", "error.url")
       .where("error is not null")
       .collect
       .foreach(row => harvestLogger.warn(s"OAI harvest error ${row.getString(0)} when fetching ${row.getString(1)}" ))
@@ -52,15 +54,12 @@ class OaiHarvester(shortName: String,
       .withColumn("provider", lit(shortName))
       .withColumn("mimetype", lit(mimeType))
 
-    harvestLogger.info(s"Saving to $outputDir")
-
     // Write harvested data to file.
     finalData
       .write
       .format("com.databricks.spark.avro")
+      .mode(SaveMode.Overwrite)
       .option("avroSchema", finalData.schema.toString)
       .avro(outputDir)
-
-    finalData
   }
 }

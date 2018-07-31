@@ -2,9 +2,9 @@ package dpla.ingestion3.model
 
 import java.net.URI
 
+import dpla.ingestion3.messages.IngestMessage
 import dpla.ingestion3.model.DplaMapData._
-import org.json4s.JValue
-import org.json4s.JNothing
+import org.json4s.{JNothing, JValue}
 
 /**
   * Contains type definitions that express cardinality of fields
@@ -37,7 +37,8 @@ case class OreAggregation(
                            preview: ZeroToOne[EdmWebResource] = None, // thumbnail
                            provider: ExactlyOne[EdmAgent],
                            edmRights: ZeroToOne[URI] = None,
-                           sidecar: JValue = JNothing
+                           sidecar: JValue = JNothing,
+                           messages: ZeroToMany[IngestMessage] = Seq[IngestMessage]()
                          )
 
 /**

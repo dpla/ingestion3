@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 
 import okhttp3.{OkHttpClient, Request}
 
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 /**
   * Utility object for making and working with HTTP requests. Uses the OkHttp library.
@@ -40,11 +40,12 @@ object HttpUtils {
     * @return
     */
   def validateUrl(url: String): Boolean = {
-    httpClient
-      .newCall(constructRequest(new URL(url)))
-      .execute
-      .isSuccessful
+    Try { new URL(url) } match {
+      case Success(_) => true
+      case Failure(_) => false
+    }
   }
+
 
   /**
     * Executes the Request

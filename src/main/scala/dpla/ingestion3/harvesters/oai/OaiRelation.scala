@@ -17,7 +17,9 @@ class OaiRelation (endpoint: String,
                    metadataPrefix: Option[String],
                    harvestAllSets: Boolean,
                    setlist: Option[Array[String]],
-                   blacklist: Option[Array[String]])
+                   blacklist: Option[Array[String]],
+                   removeDeleted: Boolean
+                  )
                   (@transient val sqlContext: SQLContext)
   extends BaseRelation with TableScan with Serializable {
 
@@ -59,10 +61,10 @@ class OaiRelation (endpoint: String,
     setResponses match {
       case Some(sets) =>
         // If there are sets to be harvested from:
-        oaiResponseBuilder.getRecordsBySets(sets, options)
+        oaiResponseBuilder.getRecordsBySets(sets, options, removeDeleted)
       case None =>
         // If there are no sets to be harvested from:
-        oaiResponseBuilder.getAllRecords(options)
+        oaiResponseBuilder.getAllRecords(options, removeDeleted)
     }
   }
 

@@ -7,6 +7,7 @@ import org.jsoup.nodes.Document.OutputSettings
 import org.jsoup.nodes.Entities.EscapeMode
 import org.jsoup.safety.Whitelist
 
+import scala.util.{Failure, Success, Try}
 import scala.util.matching.Regex
 
 /**
@@ -53,10 +54,9 @@ object StringNormalizationUtils {
       */
     lazy val applyBlockFilter: Set[String] => String = (termList) => termList
       .foldLeft(value) {
-        case (string, pattern) => string.replaceAll(pattern, "").reduceWhitespace
+        case (string, pattern) => Option(string.replaceAll(pattern, "").reduceWhitespace).getOrElse(string)
       }
-
-
+    
     /**
       * Find and capitalize the first character in a given string
       *
