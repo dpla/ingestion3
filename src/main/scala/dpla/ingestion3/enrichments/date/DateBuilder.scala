@@ -1,37 +1,34 @@
 package dpla.ingestion3.enrichments.date
 
-import org.joda.time.LocalDate
-import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, DateTimeFormatterBuilder}
-
+import java.text.SimpleDateFormat
+import dpla.ingestion3.model._
 import scala.util.{Failure, Success, Try}
 
 /**
   *
-  * @param regexPattern Patten to match against
-  * @param dateTimePattern Pattern to transform into
-  * @param label Label for this pattern to pattern transformation
+  * @param parser
+  * @param format
   */
-case class EdtfPatternMap(regexPattern: String, dateTimePattern: String, label: String)
+case class EdtfPatternMap(parser: SimpleDateFormat, format: SimpleDateFormat)
 
 /**
   *
   */
 object DateBuilderPatterns {
-  // Support date patterns
-  val dateTimeFormatPatterns = Array(
-    // Single date
-    DateTimeFormat.forPattern("yyyy").getParser,
-    DateTimeFormat.forPattern("yyyy MM").getParser,
-    DateTimeFormat.forPattern("yyyy MM dd").getParser,
-    DateTimeFormat.forPattern("yyyy MMM").getParser,
-    DateTimeFormat.forPattern("yyyy MMM dd").getParser,
-    DateTimeFormat.forPattern("MMM yyyy").getParser
 
+  val edtfPatterns = Seq(
+    EdtfPatternMap(new SimpleDateFormat("yyyy MM dd"),  new SimpleDateFormat("yyyy-MM-dd")),
+    EdtfPatternMap(new SimpleDateFormat("yyyy MMM dd"),    new SimpleDateFormat("yyyy-MM-dd")),
+    EdtfPatternMap(new SimpleDateFormat("MMM yyyy"),    new SimpleDateFormat("yyyy-MM")),
+    EdtfPatternMap(new SimpleDateFormat("yyyy MMM"),    new SimpleDateFormat("yyyy-MM")),
+    EdtfPatternMap(new SimpleDateFormat("yyyy MM"),     new SimpleDateFormat("yyyy-MM")),
+    EdtfPatternMap(new SimpleDateFormat("yyyy"),        new SimpleDateFormat("yyyy"))
 
-    // TODO Patterns to be implemented
+    // TODO Date patterns to be implemented
+
     // Date ranges
-    //  yyyy-yyyy | 1935-1956
-    //  yyyy-MM-dd/yyyy-MM-dd | 1850-01-01/1950-12-31
+    // yyyy-yyyy | 1935-1956
+    // yyyy-MM-dd/yyyy-MM-dd | 1850-01-01/1950-12-31
 
     // Periods
     //  century -> | 19th century
@@ -42,8 +39,6 @@ object DateBuilderPatterns {
     //  "no" -> "indeterminate (no*)", // no(t) dated
     //  "^[a-zA-Z]*$" -> "indeterminate (no digits)"  // early bronze age
   )
-
-  val formatter: DateTimeFormatter = new DateTimeFormatterBuilder().append(null, dateTimeFormatPatterns).toFormatter
 }
 
 /**
@@ -51,20 +46,29 @@ object DateBuilderPatterns {
   */
 class DateBuilder {
   protected val delimiters = "\\s*[\\/-]*\\s*"
+
   /**
-    * Parses a string value into a Joda LocalDate object
     *
-    * @param date Original date value to parse
+    * @param date
     * @return
     */
-  def buildDateObject(date: String): Option[LocalDate] = {
-
+  def buildEdmTimeSpan(date: String): EdmTimeSpan = {
     val normalizedDate = normalizeDate(date)
+    DateBuilderPatterns.edtfPatterns.foreach(edtf => {
+      Try { edtf.parser.parse(normalizedDate) } match {
+        case Success(parsedDate) =>
+          val formattedDte = edtf.format.format(parsedDate)
+          return EdmTimeSpan(
+            originalSourceDate = Option(date),
+            prefLabel = Option(formattedDte),
+            begin = Option(formattedDte),
+            end = Option(formattedDte)
+          )
+        case Failure(f) => None
+      }
 
-    Try { DateBuilderPatterns.formatter.parseDateTime(normalizedDate)} match {
-      case Success(formattedDate) => Option(formattedDate.toLocalDate)
-      case Failure(_) => None
-    }
+    })
+    stringOnlyTimeSpan(date)
   }
 
   /**
