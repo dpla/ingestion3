@@ -45,6 +45,7 @@ object ProviderRegistry {
 
     "cdl" -> Register(profile = new CdlProfile),
     "dc" -> Register(profile = new DcProfile),
+    "esdn" -> Register(profile = new EsdnProfile),
     "loc" -> Register(profile = new LocProfile),
     "mdl" -> Register(profile = new MdlProfile),
     "nara" -> Register(profile = new NaraProfile),
