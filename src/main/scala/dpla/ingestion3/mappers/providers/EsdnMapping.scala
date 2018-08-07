@@ -6,7 +6,7 @@ import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
 import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
-import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
+import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{nameOnlyAgent, _}
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
@@ -31,11 +31,6 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     extractString(data \ "header" \ "identifier")
       .getOrElse(throw new RuntimeException(s"No ID for record $data")
       )
-
-  def getByAtt(e: Elem, att: String, value: String) = {
-    def filterAtribute(node: Node, att: String, value: String) =  (node \ ("@" + att)).text == value
-    e \\ "_" filter { n=> filterAtribute(n, att, value)}
-  }
 
   // SourceResource mapping
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
@@ -64,17 +59,17 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] = {
     // Get dateCreated values with only a keyDate attribute
-    val dateCreated = (data \ "originInfo" \\ "dateCreated")
+    val dateCreated = (data \\ "originInfo" \\ "dateCreated")
       .flatMap(node => getByAtt(node.asInstanceOf[Elem], "keyDate", "yes"))
       .filter(node => node.attributes.get("point").isEmpty)
       .flatMap(node => extractStrings(node))
     // Get dateCreated values with a keyDate=yes attribute and point=start attribute
-    val earlyDate = (data \ "originInfo" \\ "dateCreated")
+    val earlyDate = (data \\ "originInfo" \\ "dateCreated")
       .flatMap(node => getByAtt(node.asInstanceOf[Elem], "keyDate", "yes"))
       .flatMap(node => getByAtt(node.asInstanceOf[Elem], "point", "start"))
       .flatMap(node => extractStrings(node))
     // Get dateCreated values with point=end attribute
-    val lateDate = (data \ "originInfo" \\ "dateCreated")
+    val lateDate = (data \\ "originInfo" \\ "dateCreated")
       .flatMap(node => getByAtt(node.asInstanceOf[Elem], "point", "end"))
       .flatMap(node => extractStrings(node))
 
@@ -100,15 +95,17 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   override def format(data: Document[NodeSeq]): Seq[String] =
     (extractStrings(data \\ "physicalDescription" \\ "form") ++
       extractStrings(data \\ "genre") ++
-        extractStrings(data \\ "typeOfResource"))
+      extractStrings(data \\ "typeOfResource"))
+      .flatMap(_.splitAtDelimiter(";"))
       .map(_.applyBlockFilter(formatBlockList))
       .filter(_.nonEmpty)
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
-    extractStrings(data \\ "identifier")
+    extractStrings(data \ "metadata" \ "mods" \ "identifier")
 
   override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
     extractStrings(data \\ "language" \\ "languageTerm")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyConcept)
 
   override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
@@ -116,12 +113,19 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
       .map(nameOnlyPlace)
 
   override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
-    extractStrings(data \ "originInfo" \\ "publisher")
+    extractStrings(data \\ "originInfo" \\ "publisher")
       .map(nameOnlyAgent)
 
   override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
     extractStrings(data \\ "relatedItem" \\ "titleInfo" \\ "title")
       .map(eitherStringOrUri)
+      .distinct
+
+  //  <accessCondition> when the @type="use and reproduction" attribute is not present
+  override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
+    (data \ "metadata" \ "mods" \ "accessCondition")
+      .filterNot({ n => filterAtribute(n, "type", "use and reproduction") })
+      .flatMap(extractStrings)
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
     extractStrings(data \\ "subject" \\ "topic")
@@ -131,7 +135,7 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     extractStrings(data \\ "subject" \\ "temporal").map(stringOnlyTimeSpan)
 
   override def title(data: Document[NodeSeq]): Seq[String] =
-    (data \\ "metadata" \ "mods" \ "titleInfo")
+    (data \ "metadata" \ "mods" \ "titleInfo")
       .filter(node => node.attributes.isEmpty)
       .flatMap(node => extractStrings(node \ "title"))
 
@@ -148,25 +152,21 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
       .flatMap(extractStrings)
       .map(nameOnlyAgent)
       .headOption match {
-        case Some(s) => s
-        case _ =>
-          msgCollector.add(missingRequiredError(getProviderId(data), "dataProvider"))
-          nameOnlyAgent("") // FIXME this shouldn't have to return an empty value.
-      }
+      case Some(s) => s
+      case _ =>
+        msgCollector.add(missingRequiredError(getProviderId(data), "dataProvider"))
+        nameOnlyAgent("") // FIXME this shouldn't have to return an empty value.
+    }
 
-  override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] = {
-    val rightsUris =
-      (data \ "metadata" \ "mods" \ "accessCondition")
-        .flatMap(node => getByAtt(node.asInstanceOf[Elem], "type", "use and reproduction"))
-
-      rightsUris
-        .flatMap(node => node.attribute("xlink"))
-        .flatMap(n => extractString(n.head))
+  override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] =
+    (data \ "metadata" \ "mods" \ "accessCondition")
+      .flatMap(node => getByAtt(node.asInstanceOf[Elem], "type", "use and reproduction"))
+      .flatMap(node => node.attribute(node.getNamespace("xlink"), "href"))
+      .flatMap(n => extractString(n.head))
         .headOption match {
           case Some(uri) => Some(Utils.createUri(uri))
           case _ => None
-      }
-  }
+        }
 
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
     (data \ "metadata" \ "mods" \ "note")
@@ -200,7 +200,7 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   override def preview(data: Document[NodeSeq])
                       (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
     (data \ "metadata" \ "mods" \ "location" \ "url")
-      .flatMap(node => getByAtt(node.asInstanceOf[Elem], "usage", "preview"))
+      .flatMap(node => getByAtt(node.asInstanceOf[Elem], "access", "preview"))
       .flatMap(extractStrings)
       .headOption match {
         case Some(s: String) => Some(uriOnlyWebResource(Utils.createUri(s)))
@@ -217,4 +217,12 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     name = Some("Empire State Digital Network"),
     uri = Some(Utils.createUri("http://dp.la/api/contributor/esdn"))
   )
+
+
+  // TODO move these methods into XML parsing lib
+  def filterAtribute(node: Node, att: String, value: String): Boolean = (node \ ("@" + att)).text.toLowerCase == value
+
+  def getByAtt(e: Elem, att: String, value: String): NodeSeq = {
+    e \\ "_" filter { n => filterAtribute(n, att, value) }
+  }
 }

@@ -1,11 +1,11 @@
-   <record>
+   <record xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
         <header>
             <identifier>oai:repox.ist.utl.pt:bklynsheetmusic_collection:oai:dcmny.org:bklynsheetmusic_55</identifier>
             <datestamp>2018-03-05</datestamp>
             <setSpec>bklynsheetmusic_collection</setSpec>
         </header>
         <metadata>
-            <mods>
+            <mods xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-4.xsd" version="3.4" xmlns="http://www.loc.gov/mods/v3" xmlns:mods="http://www.loc.gov/mods/v3" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                 <titleInfo>
                     <title>And a Genuine Gold Plated Chain and Charm complete, $8.00 [advertisement]</title>
                 </titleInfo>
@@ -38,9 +38,11 @@
                 <accessCondition type="use and reproduction">
                     While many images in the Brooklyn Collection are unrestricted, we do not own reproduction rights to all materials. Be aware of the several kinds of rights that might apply: copyright, licensing and trademarks. The end user assumes all responsibility for copyright questions.
                 </accessCondition>
-
-                <accessCondition type="use and reproduction" xlink="http://rights.org">
+                <accessCondition type="use and reproduction" xlink:href="http://rightsstatements.org/vocab/InC-EDU/1.0/">
+                    In Copyright – Educational Use Permitted
                 </accessCondition>
+                <accessCondition type="not use and reproduction" >rights 1</accessCondition>
+                <accessCondition>rights 2</accessCondition>
                 <relatedItem type="host">
                     <titleInfo>
                         <title>Brooklyn Sheet Music Collection</title>
