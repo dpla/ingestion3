@@ -16,7 +16,7 @@ trait FileLoader {
     * @return
     */
   def getVocabFromCsvFiles(files: Seq[String]): Set[Array[String]] =
-    getVocabFromFiles(files).map(_.split(","))
+    getVocabFromFiles(files).map(_.split(",", 2))
 
   /**
     *
