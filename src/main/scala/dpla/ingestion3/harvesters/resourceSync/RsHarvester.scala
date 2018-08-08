@@ -17,11 +17,10 @@ class RsHarvester(spark: SparkSession,
   extends Harvester(spark, shortName, conf, outputDir, harvestLogger) {
 
   // TODO Do all RS enpoints support JSON?
-  override protected val mimeType: String = "application_json"
+  override def mimeType: String = "application_json"
 
-  override protected def localHarvest(): Unit = ???
 
-  override def harvest: Try[Long] = Try{
+  override def localHarvest: Unit = Try {
 
     // Set options.
     val readerOptions: Map[String, String] = Map(
@@ -55,9 +54,5 @@ class RsHarvester(spark: SparkSession,
       .format("com.databricks.spark.avro")
       .option("avroSchema", finalData.schema.toString)
       .avro(outputDir)
-
-    // Return DataFrame.
-    finalData.count()
-
   }
 }

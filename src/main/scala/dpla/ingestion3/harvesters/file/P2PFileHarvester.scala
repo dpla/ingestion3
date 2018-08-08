@@ -30,9 +30,9 @@ class P2PFileHarvester(spark: SparkSession,
                        logger: Logger)
   extends FileHarvester(spark, shortName, conf, outputDir, logger) {
 
-  protected val extractor = new P2PFileExtractor()
+  def mimeType: String = "application_json"
 
-  override protected val mimeType: String = "application_json"
+  protected val extractor = new P2PFileExtractor()
 
   /**
     * Loads .zip files
@@ -118,7 +118,7 @@ class P2PFileHarvester(spark: SparkSession,
   /**
     * Executes the plains2peaks harvest
     */
-  protected def localHarvest(): Unit = {
+  override def localHarvest(): Unit = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))

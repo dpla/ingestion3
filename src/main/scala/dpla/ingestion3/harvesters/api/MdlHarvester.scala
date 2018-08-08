@@ -21,14 +21,14 @@ class MdlHarvester(spark: SparkSession,
                    harvestLogger: Logger)
   extends ApiHarvester(spark, shortName, conf, outputDir, harvestLogger) {
 
-  override protected val mimeType: String = "application_json"
+  def mimeType: String = "application_json"
 
   override protected val queryParams: Map[String, String] = Map(
     "query" -> conf.harvest.query.getOrElse("*:*"),
     "rows" -> conf.harvest.rows.getOrElse("10")
   )
 
-  override protected def localHarvest: Unit = {
+  override def localHarvest: Unit = {
     implicit val formats = DefaultFormats
 
     // Mutable vars for controlling harvest loop
