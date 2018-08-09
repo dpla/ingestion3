@@ -1,5 +1,7 @@
 package dpla.ingestion3.entries.ingest
 
+import java.io.File
+
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.executors.MappingExecutor
 import dpla.ingestion3.utils.Utils
@@ -48,6 +50,8 @@ object MappingEntry extends MappingExecutor {
       .setAppName(s"Mapping: $shortName")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .setMaster(sparkMaster)
+
+    Utils.deleteRecursively(new File(dataOut))
 
     // Log config file location and provider short name.
     executeMapping(sparkConf, dataIn, dataOut, shortName, logger)

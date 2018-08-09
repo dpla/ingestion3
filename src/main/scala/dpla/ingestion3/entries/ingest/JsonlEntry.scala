@@ -1,5 +1,7 @@
 package dpla.ingestion3.entries.ingest
 
+import java.io.File
+
 import dpla.ingestion3.executors.JsonlExecutor
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
@@ -34,6 +36,8 @@ object JsonlEntry extends JsonlExecutor {
       new SparkConf()
       .setAppName("jsonl")
       .setMaster("local[*]")
+
+    Utils.deleteRecursively(new File(outputName))
 
     executeJsonl(sparkConf, inputName, outputName, Utils.createLogger("jsonl"))
   }
