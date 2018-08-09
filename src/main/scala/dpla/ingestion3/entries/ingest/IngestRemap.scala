@@ -54,7 +54,6 @@ object IngestRemap extends MappingExecutor
       .setMaster(sparkMaster)
 
 
-    Utils.deleteRecursively(new File(harvestDataOut))
     Utils.deleteRecursively(new File(mapDataOut))
     Utils.deleteRecursively(new File(enrichDataOut))
     Utils.deleteRecursively(new File(jsonlDataOut))
