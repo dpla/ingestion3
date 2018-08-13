@@ -86,15 +86,10 @@ trait MappingExecutor extends Serializable {
     val finalReport = buildFinalReport(successResults, mappingResults, shortName, dataOut, startTime, endTime)(spark)
     // Format the summary report and write it log file
     logger.info(MappingSummary.getSummary(finalReport))
-    // FIXME This is something else's responsibility
-    Utils.deleteRecursively(new File(dataOut))
 
     successResults.where("size(messages.level) == 0").toDF().write.avro(dataOut)
 
     spark.stop()
-
-    // Clean up checkpoint directory, created above
-    Utils.deleteRecursively(new File("/tmp/checkpoint"))
   }
 
   /**

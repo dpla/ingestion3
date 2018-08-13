@@ -28,7 +28,7 @@ class LocHarvester(spark: SparkSession,
                    harvestLogger: Logger)
   extends ApiHarvester(spark, shortName, conf, outputDir, harvestLogger) {
 
-  override protected val mimeType: String = "application_json"
+  def mimeType: String = "application_json"
 
   override protected val queryParams: Map[String, String] = Map(
     "query" -> conf.harvest.query,
@@ -38,7 +38,7 @@ class LocHarvester(spark: SparkSession,
   /**
     * Entry method for invoking LC harvest
     */
-  override protected def localHarvest: Unit = {
+  override def localHarvest: Unit = {
     implicit val formats = DefaultFormats
     // Get sets from conf
     val collections = conf.harvest.setlist

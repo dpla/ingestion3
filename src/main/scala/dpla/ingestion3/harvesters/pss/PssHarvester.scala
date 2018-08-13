@@ -17,11 +17,9 @@ class PssHarvester(spark: SparkSession,
                    harvestLogger: Logger)
   extends Harvester(spark, shortName, conf, outputDir, harvestLogger) {
 
-  override protected val mimeType: String = "application_json"
+  override def mimeType: String = "application_json"
 
-  override protected def localHarvest(): Unit = ???
-
-  override def harvest: Try[Long] = Try{
+  override def localHarvest: Unit = Try{
 
     val endpoint = conf.harvest.endpoint
       .getOrElse(throw new RuntimeException("No endpoint specified."))
@@ -44,8 +42,7 @@ class PssHarvester(spark: SparkSession,
       .format("com.databricks.spark.avro")
       .option("avroSchema", finalData.schema.toString)
       .avro(outputDir)
-
-    // Return DataFrame.
-    finalData.count()
   }
+
+  override def cleanUp(): Unit = Unit
 }

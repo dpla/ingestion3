@@ -23,9 +23,6 @@ trait JsonlExecutor extends Serializable {
 
     logger.info("Starting JSON-L export")
 
-    // Delete the output location if it exists
-    Utils.deleteRecursively(new File(dataOut))
-
     val spark = SparkSession
       .builder()
       .config(sparkConf)
