@@ -1,7 +1,7 @@
 package dpla.ingestion3.harvesters.api
 
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.Harvester
+import dpla.ingestion3.harvesters.{Harvester, LocalHarvester}
 import org.apache.avro.generic.GenericData
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
@@ -19,7 +19,7 @@ abstract class ApiHarvester(spark: SparkSession,
                             conf: i3Conf,
                             outputDir: String,
                             logger: Logger)
-  extends Harvester(spark, shortName, conf, outputDir, logger) {
+  extends LocalHarvester(spark, shortName, conf, outputDir, logger) {
 
   // Abstract method queryParams should set base query parameters for API call.
   protected val queryParams: Map[String, String]

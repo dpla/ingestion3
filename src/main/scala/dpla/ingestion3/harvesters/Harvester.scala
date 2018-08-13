@@ -17,8 +17,41 @@ import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.util.{Failure, Success, Try}
 
+abstract class Harvester(spark: SparkSession,
+                         shortName: String,
+                         conf: i3Conf,
+                         outStr: String,
+                         logger: Logger) {
+  def harvest: Try[Long] = {
+    val start = System.currentTimeMillis()
+
+    // Call local implementation of runHarvest()
+    Try {
+      // Calls the local implementation
+      localHarvest()
+      logger.info(s"Saving to $outStr")
+      cleanUp()
+      // Reads the saved avro file back
+      spark.read.avro(outStr)
+    } match {
+      case Success(df) =>
+        Harvester.validateSchema(df)
+        val recordCount = df.count()
+        logger.info(Utils.harvestSummary(System.currentTimeMillis() - start, recordCount))
+        Success(recordCount)
+      case Failure(f) => Failure(f)
+    }
+  }
+
+  def mimeType: String
+
+  def localHarvest(): Unit
+
+  def cleanUp(): Unit = Unit
+
+}
 /**
-  * Abstract class for all harvesters.
+  * Abstract class for local harvesters.
   *
   * The harvester abstract class has methods to manage aspects of a harvest
   * that are common among all providers, including:
@@ -34,72 +67,30 @@ import scala.util.{Failure, Success, Try}
   * @param outStr    [String] outputPathStr for the harvested data.
   * @param logger    [Logger] for the harvester.
   */
-abstract class Harvester(spark: SparkSession,
-                         shortName: String,
-                         conf: i3Conf,
-                         outStr: String,
-                         logger: Logger) {
-
-
+abstract class LocalHarvester(
+                               spark: SparkSession,
+                               shortName: String,
+                               conf: i3Conf,
+                               outStr: String,
+                               logger: Logger)
+  extends Harvester(spark, shortName, conf, outStr, logger) {
 
   private val avroWriter: DataFileWriter[GenericRecord] =
     AvroHelper.avroWriter(shortName, outStr, Harvester.schema)
 
   def getAvroWriter: DataFileWriter[GenericRecord] = avroWriter
 
-  /**
-    * Abstract method mimeType should store the mimeType of the harvested data.
-    */
-  protected val mimeType: String
+  override def cleanUp(): Unit = avroWriter.close()
 
-  protected lazy val outputPath = new File(outStr)
+}
 
-  /**
-    * Entry point for performing harvest. Executes harvest, validates result
-    * against schema and returns the count of successfully harvested records
-    * or failures. Defers to localHarvest implementation to gather actual
-    * records.
-    *
-    * @return Try[Long] Number of harvested records or Failure
-    */
-  def harvest: Try[Long] = {
-    val start = System.currentTimeMillis()
+object Harvester {
 
-    // Call local implementation of runHarvest()
-    Try {
-      // Calls the local implementation
-      localHarvest()
-      logger.info(s"Saving to $outStr")
-      // Reads the saved avro file back
-      avroWriter.close()
-      spark.read.avro(outStr)
-    } match {
-      case Success(df) =>
-        validateSchema(df)
-        val recordCount = df.count()
-        logger.info(Utils.harvestSummary(System.currentTimeMillis() - start, recordCount))
-        Success(recordCount)
-      case Failure(f) => Failure(f)
-    }
-  }
+  // Schema for harvested records.
+  val schema: Schema =
+    new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc"))
 
-  /**
-    * Template method for implementations to override. Expectation is that
-    * at the end of the execution of this method, avro files in the correct
-    * schema will be available in the folder at path outStr.
-    *
-    * To be defined in implementing class
-    */
-  protected def localHarvest(): Unit
-
-  /**
-    * Check that harvested DataFrame meets the expected schema.
-    * If not, log a warning.
-    * This is for debugging - it will not stop a harvest from completing.
-    *
-    * @param df [DataFrame] The final DataFrame from the harvest.
-    */
-  private def validateSchema(df: DataFrame): Unit = {
+  def validateSchema(df: DataFrame): Unit = {
     val idSt = StructField("id", StringType, true)
     val docSt = StructField("document", StringType, true)
     val dateSt = StructField("ingestDate", LongType, false)
@@ -125,15 +116,8 @@ abstract class Harvester(spark: SparkSession,
         s"""Harvested DataFrame did not match expected schema.\n
         Actual fields: ${actualFields.mkString(", ")}\n
         Expected fields: ${expectedFields.mkString(", ")}"""
-      logger.warn(msg)
+      Logger.getLogger(Harvester.getClass).warn(msg)
     }
   }
-}
-
-object Harvester {
-
-  // Schema for harvested records.
-  val schema: Schema =
-    new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc"))
 }
 

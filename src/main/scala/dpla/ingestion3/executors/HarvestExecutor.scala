@@ -46,7 +46,9 @@ trait HarvestExecutor {
       .getOrElse(throw new RuntimeException("No harvest type specified."))
     logger.info(s"Harvest type: $harvestType")
     val harvester = buildHarvester(spark, shortName, outputDir, conf, logger, harvestType)
-    harvester.harvest
+    val result = harvester.harvest
+    spark.stop()
+    result
   }
 
   private def buildHarvester(spark: SparkSession, shortName: String, outputDir: String, conf: i3Conf, logger: Logger, harvestType: String) = {

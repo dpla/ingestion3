@@ -1,5 +1,7 @@
 package dpla.ingestion3.entries.ingest
 
+import java.io.File
+
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
 import dpla.ingestion3.executors.{EnrichExecutor, JsonlExecutor, MappingExecutor}
 import dpla.ingestion3.entries.reports.ReporterMain._
@@ -50,6 +52,12 @@ object IngestRemap extends MappingExecutor
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryoserializer.buffer.max", "200")
       .setMaster(sparkMaster)
+
+
+    Utils.deleteRecursively(new File(mapDataOut))
+    Utils.deleteRecursively(new File(enrichDataOut))
+    Utils.deleteRecursively(new File(jsonlDataOut))
+    Utils.deleteRecursively(new File(baseRptOut))
 
     // TODO These processes should return some flag or metric to help determine whether to proceed
     // Mapping

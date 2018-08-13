@@ -1,5 +1,7 @@
 package dpla.ingestion3.entries.ingest
 
+import java.io.File
+
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.executors.HarvestExecutor
 import dpla.ingestion3.utils.Utils
@@ -38,6 +40,8 @@ object HarvestEntry extends HarvestExecutor {
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryoserializer.buffer.max", "200")
       .setMaster(providerConf.spark.sparkMaster.getOrElse("local[*]"))
+
+    Utils.deleteRecursively(new File(dataOut))
 
     // Execute harvest.
     execute(sparkConf, shortName, dataOut, providerConf, harvestLogger)

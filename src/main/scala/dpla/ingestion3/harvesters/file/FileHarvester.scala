@@ -1,7 +1,7 @@
 package dpla.ingestion3.harvesters.file
 
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.{AvroHelper, Harvester}
+import dpla.ingestion3.harvesters.{AvroHelper, Harvester, LocalHarvester}
 import org.apache.avro.generic.GenericData
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
@@ -9,6 +9,7 @@ import org.apache.spark.sql.SparkSession
 import scala.util.Try
 
 /**
+  *
   * File based harvester
   *
   * @param shortName Provider short name
@@ -21,7 +22,7 @@ abstract class FileHarvester(spark: SparkSession,
                              conf: i3Conf,
                              outputDir: String,
                              logger: Logger)
-  extends Harvester(spark, shortName, conf, outputDir, logger) {
+  extends LocalHarvester(spark, shortName, conf, outputDir, logger) {
 
 
   /**
@@ -66,11 +67,4 @@ abstract class FileHarvester(spark: SparkSession,
     avroWriter.append(genericRecord)
   }
 
-  /**
-    *
-    * @param inputStream
-    * @return
-    */
-  // TODO Generalize inputStream param
-  // protected def iter(inputStream: Any): Stream[FileResult]
 }

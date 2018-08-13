@@ -24,7 +24,7 @@ class NaraFileHarvester(
                          logger: Logger)
   extends FileHarvester(spark, shortName, conf, outputDir, logger) {
 
-  override protected val mimeType: String = "application_xml"
+  def mimeType: String = "application_xml"
 
   /**
     * Loads .gz, .tgz, .bz, and .tbz2, and plain old .tar files.
@@ -129,7 +129,7 @@ class NaraFileHarvester(
   /**
     * Executes the plains2peaks harvest
     */
-  protected def localHarvest(): Unit = {
+  override def localHarvest(): Unit = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime  / 1000L
     val inFile = new File(conf.harvest.endpoint.getOrElse("in"))

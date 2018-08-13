@@ -91,9 +91,6 @@ trait EnrichExecutor extends Serializable {
     // Get all the messages for all records
     val messages = MessageProcessor.getAllMessages(successResults)(spark)
 
-    // Delete the output location if it exists
-    Utils.deleteRecursively(new File(dataOut))
-
     // Save mapped records out to Avro file
     successResults.toDF().write
       .format("com.databricks.spark.avro")
@@ -157,9 +154,6 @@ trait EnrichExecutor extends Serializable {
     logger.info(EnrichmentSummary.getSummary(summaryData))
 
     sc.stop()
-
-    // Clean up checkpoint directory, created above
-    Utils.deleteRecursively(new File("/tmp/checkpoint"))
 
     // Log error messages.
     failures.foreach(logger.error(_))
