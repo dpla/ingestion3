@@ -278,8 +278,8 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   private def extractPreview(data: Document[NodeSeq]) = for {
     digitalObject <- data \ "digitalObjectArray" \ "digitalObject"
     accessFileName = (digitalObject \ "accessFilename").text
-    termName = (digitalObject \ "objectType" \ "termName").text
-    if termName.contains("Image") && termName.contains("JPG")
+    termName = (digitalObject \ "objectType" \ "termName").text.toLowerCase
+    if termName.contains("image") && (termName.contains("jpg") || termName.contains("gif"))
   } yield uriOnlyWebResource(new URI(accessFileName.trim))
 
   private def extractPublisher(data: NodeSeq): Seq[String] = {
