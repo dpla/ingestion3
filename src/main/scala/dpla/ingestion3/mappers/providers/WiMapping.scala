@@ -128,7 +128,7 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     // Will quietly drop any invalid URIs
     val edmRights = (data \ "metadata" \\ "rights").map(rights => {
       rights.prefix match {
-        case "edm" => rights.text
+        case "edm" => rights.text.trim
         case _ => ""
       }
     })
