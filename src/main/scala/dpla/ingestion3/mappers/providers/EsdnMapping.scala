@@ -27,7 +27,7 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
 
   override def getProviderName(): String = "esdn"
 
-  override def getProviderId(implicit data: Document[NodeSeq]): String = // TODO confirm w/gretchen
+  override def getProviderId(implicit data: Document[NodeSeq]): String =
     extractString(data \ "header" \ "identifier")
       .getOrElse(throw new RuntimeException(s"No ID for record $data")
       )
@@ -38,14 +38,14 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
       .map(node => getByAttribute(node.asInstanceOf[Elem], "type", "alternative"))
       .flatMap(altTitle => extractStrings(altTitle \ "title"))
 
-  override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] = // done
+  override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
     (data \\ "relatedItem")
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "displayLabel", "collection"))
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "host"))
       .flatMap(collection => extractStrings(collection \ "titleInfo" \ "title"))
       .map(nameOnlyCollection)
 
-  override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] = // done
+  override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
     (data \\ "name")
       .filter(node => (node \ "role" \ "roleTerm").text.equalsIgnoreCase("contributor"))
       .flatMap(n => extractStrings(n \ "namePart"))
@@ -76,7 +76,7 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     (dateCreated.nonEmpty, earlyDate.nonEmpty, lateDate.nonEmpty) match {
       case (true, _, _) => dateCreated.map(stringOnlyTimeSpan)
       case (false, true, true) => Seq(EdmTimeSpan(
-        originalSourceDate = Some(s"${earlyDate.head}-${lateDate.head}"),
+        originalSourceDate = Some(s"${earlyDate.headOption.getOrElse("")}-${lateDate.headOption.getOrElse("")}"),
         begin = earlyDate.headOption,
         end = lateDate.headOption
       ))
