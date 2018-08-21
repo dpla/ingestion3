@@ -31,6 +31,13 @@ import scala.util.{Failure, Success, Try}
   *    - error: String, any error that occurred while attempting to call the
   *                     thumbnail URI and get its dimensions
   *
+  * The "preview" report (i.e. params = "preview" returns all records that have
+  * a preview URL
+  * The resulting DataFrame has the following columns:
+  *   - localUri: String the provider URI for the item
+  *   - previewUri: String the URI used for the thumbnail/preview in the DPLA portal
+  *   - dplaUri: String, DPLA's URI for the item
+  *
   * @param inputURI String, path to the data sample
   * @param outputURI String, path to write output
   * @param params Array[String], string value can be "missing" OR "dimensions"
@@ -74,6 +81,7 @@ class ThumbnailReport (
     token match {
       case "missing" => missingReport(ds, spark)
       case "dimensions" => dimensionsReport(ds, spark)
+      case "preview" => previewReport(ds, spark)
       case x => throw new RuntimeException(s"Unrecognized thumbnail report name '${x}'")
     }
 
@@ -102,6 +110,29 @@ class ThumbnailReport (
     thumbnailData.select("localUri", "dplaUri")
       .filter("hasImageType = TRUE")
       .filter("hasPreview = FALSE")
+  }
+
+  /**
+    * Get all records with a preview url
+    */
+  def previewReport(ds: Dataset[OreAggregation], spark: SparkSession): DataFrame = {
+    import spark.implicits._
+
+    val thumbnailData: Dataset[Thumbnail] = ds.map(dplaMapData => {
+
+      val hasPreview = previewUri(dplaMapData).nonEmpty
+
+      val preview: Option[String] = previewUri(dplaMapData).map(_.toString)
+
+      Thumbnail(
+        localUri(dplaMapData),
+        dplaUri(dplaMapData),
+        preview.getOrElse(""),
+        hasPreview)
+    })
+
+    thumbnailData.select("localUri", "dplaUri", "previewUri")
+      .filter("hasPreview = TRUE")
   }
 
   /**
@@ -137,14 +168,14 @@ class ThumbnailReport (
     * @return String, the DPLA URI for an item
     */
   def localUri(oreAggregation: OreAggregation): String =
-    oreAggregation.dplaUri.toString
+    oreAggregation.isShownAt.uri.toString
 
   /**
     * @param oreAggregation
     * @return String, the provider URI for an item
     */
   def dplaUri(oreAggregation: OreAggregation): String =
-    oreAggregation.isShownAt.toString
+    oreAggregation.dplaUri.toString
 
   /**
     * @param oreAggregation
@@ -186,6 +217,11 @@ class ThumbnailReport (
 case class MissingThumbnail(localUri: String,
                             dplaUri: String,
                             hasImageType: Boolean,
+                            hasPreview: Boolean)
+
+case class Thumbnail(localUri: String,
+                            dplaUri: String,
+                            previewUri: String,
                             hasPreview: Boolean)
 
 case class ThumbnailDimensions(localUri: String,
