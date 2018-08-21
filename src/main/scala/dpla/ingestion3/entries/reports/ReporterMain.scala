@@ -42,7 +42,8 @@ object ReporterMain {
   )
 
   private val thumbnailOpts = Seq(
-    "missing"
+    "missing",
+    "preview"
     // "dimensions" // Left out for performance considerations
   )
 
