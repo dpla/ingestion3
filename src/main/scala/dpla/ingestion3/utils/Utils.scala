@@ -50,12 +50,12 @@ object Utils {
   }
 
   /**
-    *
+    * Mint a URI
     * @param stringUri
     * @return
     */
   def createUri(stringUri: String): URI = {
-    Try { new URI(stringUri) } match {
+    Try { new URI(stringUri.trim) } match {
       case Success(uri) => uri
       case Failure(_) => throw new RuntimeException(s"Invalid URI $stringUri")
     }

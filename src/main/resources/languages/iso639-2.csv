@@ -17,7 +17,7 @@ ale,Aleut
 alg,Algonquian languages
 alt,Southern Altai
 amh,Amharic
-ang,"English, Old (ca.450-1100)"
+ang,English, Old (ca.450-1100)
 anp,Angika
 apa,Apache languages
 ara,Arabic
@@ -93,9 +93,9 @@ cnr,Montenegrin
 cop,Coptic
 cor,Cornish
 cos,Corsican
-cpe,"Creoles and pidgins, English based"
-cpf,"Creoles and pidgins, French-based"
-cpp,"Creoles and pidgins, Portuguese-based"
+cpe,Creoles and pidgins, English based
+cpf,Creoles and pidgins, French-based
+cpp,Creoles and pidgins, Portuguese-based
 cre,Cree
 crh,Crimean Tatar; Crimean Turkish
 crp,Creoles and pidgins
@@ -115,7 +115,7 @@ doi,Dogri
 dra,Dravidian languages
 dsb,Lower Sorbian
 dua,Duala
-dum,"Dutch, Middle (ca.1050-1350)"
+dum,Dutch, Middle (ca.1050-1350)
 dut,Dutch; Flemish
 dyu,Dyula
 dzo,Dzongkha
@@ -124,7 +124,7 @@ egy,Egyptian (Ancient)
 eka,Ekajuk
 elx,Elamite
 eng,English
-enm,"English, Middle (1100-1500)"
+enm,English, Middle (1100-1500)
 epo,Esperanto
 est,Estonian
 ewe,Ewe
@@ -138,8 +138,8 @@ fin,Finnish
 fiu,Finno-Ugrian languages
 fon,Fon
 fre,French
-frm,"French, Middle (ca.1400-1600)"
-fro,"French, Old (842-ca.1400)"
+frm,French, Middle (ca.1400-1600)
+fro,French, Old (842-ca.1400)
 frr,Northern Frisian
 frs,Eastern Frisian
 fry,Western Frisian
@@ -157,14 +157,14 @@ gla,Gaelic; Scottish Gaelic
 gle,Irish
 glg,Galician
 glv,Manx
-gmh,"German, Middle High (ca.1050-1500)"
-goh,"German, Old High (ca.750-1050)"
+gmh,German, Middle High (ca.1050-1500)
+goh,German, Old High (ca.750-1050)
 gon,Gondi
 gor,Gorontalo
 got,Gothic
 grb,Grebo
-grc,"Greek, Ancient (to 1453)"
-gre,"Greek, Modern (1453-)"
+grc,Greek, Ancient (to 1453)
+gre,Greek, Modern (1453-)
 grn,Guarani
 gsw,Swiss German; Alemannic; Alsatian
 guj,Gujarati
@@ -278,7 +278,7 @@ may,Malay
 mdf,Moksha
 mdr,Mandar
 men,Mende
-mga,"Irish, Middle (900-1200)"
+mga,Irish, Middle (900-1200)
 mic,Mi'kmaq; Micmac
 min,Minangkabau
 mis,Uncoded languages
@@ -303,19 +303,19 @@ nai,North American Indian languages
 nap,Neapolitan
 nau,Nauru
 nav,Navajo; Navaho
-nbl,"Ndebele, South; South Ndebele"
-nde,"Ndebele, North; North Ndebele"
+nbl,Ndebele, South; South Ndebele
+nde,Ndebele, North; North Ndebele
 ndo,Ndonga
-nds,"Low German; Low Saxon; German, Low; Saxon, Low"
+nds,Low German; Low Saxon; German, Low; Saxon, Low
 nep,Nepali
 new,Nepal Bhasa; Newari
 nia,Nias
 nic,Niger-Kordofanian languages
 niu,Niuean
-nno,"Norwegian Nynorsk; Nynorsk, Norwegian"
-nob,"Bokmål, Norwegian; Norwegian Bokmål"
+nno,Norwegian Nynorsk; Nynorsk, Norwegian
+nob,Bokmål, Norwegian; Norwegian Bokmål
 nog,Nogai
-non,"Norse, Old"
+non,Norse, Old
 nor,Norwegian
 nqo,N'Ko
 nso,Pedi; Sepedi; Northern Sotho
@@ -332,7 +332,7 @@ ori,Oriya
 orm,Oromo
 osa,Osage
 oss,Ossetian; Ossetic
-ota,"Turkish, Ottoman (1500-1928)"
+ota,Turkish, Ottoman (1500-1928)
 oto,Otomian languages
 paa,Papuan languages
 pag,Pangasinan
@@ -341,7 +341,7 @@ pam,Pampanga; Kapampangan
 pan,Panjabi; Punjabi
 pap,Papiamento
 pau,Palauan
-peo,"Persian, Old (ca.600-400 B.C.)"
+peo,Persian, Old (ca.600-400 B.C.)
 per,Persian
 phi,Philippine languages
 phn,Phoenician
@@ -350,7 +350,7 @@ pol,Polish
 pon,Pohnpeian
 por,Portuguese
 pra,Prakrit languages
-pro,"Provençal, Old (to 1500)"
+pro,Provençal, Old (to 1500)
 pus,Pushto; Pashto
 qaa-qtz,Reserved for local use
 que,Quechua
@@ -377,7 +377,7 @@ scn,Sicilian
 sco,Scots
 sel,Selkup
 sem,Semitic languages
-sga,"Irish, Old (to 900)"
+sga,Irish, Old (to 900)
 sgn,Sign Languages
 shn,Shan
 sid,Sidamo
@@ -400,7 +400,7 @@ snk,Soninke
 sog,Sogdian
 som,Somali
 son,Songhai languages
-sot,"Sotho, Southern"
+sot,Sotho, Southern
 spa,Spanish; Castilian
 srd,Sardinian
 srn,Sranan Tongo

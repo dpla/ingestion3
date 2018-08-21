@@ -1,7 +1,8 @@
 package dpla.ingestion3.mappers.utils
 
 import org.json4s.JsonAST._
-import scala.xml.NodeSeq
+
+import scala.xml.{Elem, Node, NodeSeq}
 
 
 /**
@@ -63,6 +64,27 @@ trait XmlExtractor extends Extractor[NodeSeq] {
       case Some(stringValue) => Seq(stringValue)
       case _ => Seq()
     }
+  }
+
+  /**
+    * Exclude nodes that do not have an attribute that matches att and value parameters
+    *
+    * @param node Node XML node to examine
+    * @param att String name of attribute
+    * @param value String value of attribute
+    * @return Boolean
+    */
+  def filterAttribute(node: Node, att: String, value: String): Boolean = (node \ ("@" + att)).text.toLowerCase == value
+
+  /**
+    * Get Nodes that match the given attribute name and attribute value
+    * @param e Elem to examine
+    * @param att String name of attribute
+    * @param value String value of attribute
+    * @return NodeSeq of matching nodes 
+    */
+  def getByAttribute(e: Elem, att: String, value: String): NodeSeq = {
+    e \\ "_" filter { n => filterAttribute(n, att, value) }
   }
 }
 

@@ -1,0 +1,109 @@
+   <record xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <header>
+            <identifier>oai:repox.ist.utl.pt:bklynsheetmusic_collection:oai:dcmny.org:bklynsheetmusic_55</identifier>
+            <datestamp>2018-03-05</datestamp>
+            <setSpec>bklynsheetmusic_collection</setSpec>
+        </header>
+        <metadata>
+            <mods xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-4.xsd" version="3.4" xmlns="http://www.loc.gov/mods/v3" xmlns:mods="http://www.loc.gov/mods/v3" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <titleInfo>
+                    <title>And a Genuine Gold Plated Chain and Charm complete, $8.00 [advertisement]</title>
+                </titleInfo>
+                <titleInfo type="alternative">
+                    <title>Alternate Title</title>
+                </titleInfo>
+                <name type="corporate">
+                    <namePart>F. A. Cotharin</namePart>
+                    <role>
+                        <roleTerm authority="marcrelator" type="text">Creator</roleTerm>
+                    </role>
+                </name>
+
+                <name>
+                    <namePart>Contributor</namePart>
+                    <role>
+                        <roleTerm>contributor</roleTerm>
+                    </role>
+                </name>
+
+                <name>
+                    <namePart>Creator</namePart>
+                    <role>
+                        <roleTerm>Creator</roleTerm>
+                    </role>
+                </name>
+
+                <abstract>Back cover of Lilly Lee. Business ads: Hayden &amp; Glidden, G. Schlueter &amp; Mendez, Wm. Gorden, Markham &amp;amp Johnson, Olivier &amp; Co., Gage's, James Sweet, Deverall's, P. Weigel &amp; Son.</abstract>
+                <identifier type="local">sm0003</identifier>
+                <accessCondition type="use and reproduction">
+                    While many images in the Brooklyn Collection are unrestricted, we do not own reproduction rights to all materials. Be aware of the several kinds of rights that might apply: copyright, licensing and trademarks. The end user assumes all responsibility for copyright questions.
+                </accessCondition>
+                <accessCondition type="use and reproduction" xlink:href="http://rightsstatements.org/vocab/InC-EDU/1.0/">
+                    In Copyright – Educational Use Permitted
+                </accessCondition>
+                <accessCondition type="not use and reproduction" >rights 1</accessCondition>
+                <accessCondition>rights 2</accessCondition>
+                <relatedItem type="host">
+                    <titleInfo>
+                        <title>Brooklyn Sheet Music Collection</title>
+                    </titleInfo>
+                </relatedItem>
+                <relatedItem type="host" displayLabel="collection">
+                    <titleInfo>
+                        <title>Collection Title</title>
+                    </titleInfo>
+                </relatedItem>
+                <location>
+                    <physicalLocation>Brooklyn Public Library, Brooklyn Collection</physicalLocation>
+                    <url usage="primary display" access="object in context">http://isurl.com</url>
+                </location>
+
+
+                <note type="content">Description</note>
+
+                <note>Publisher street address: 62 &amp; 64 Gold Street</note>
+                <note>Back of sheet music featuring ads: cigars, confectionery, photographers, oyster &amp; chop house, merchant tailors, french hair store,  milliner, diamonds and watches.</note>
+                    <relatedItem xlink:href="http://eagle.brooklynpubliclibrary.org/Repository/ml.asp?Issue=BEG/1872/05/21&amp;ID=Ar00244&amp;Mode=Gif"/>
+                <genre authority="lctgm">Sheet music covers</genre>
+                <genre authority="lctgm">Advertisements</genre>
+                <subject authority="lcsh">
+                    <topic>United States--New York (State)--New York--Brooklyn</topic>
+                </subject>
+                <subject authority="lcsh">
+                    <topic>Music publishing industry</topic>
+                </subject>
+                <subject authority="lcsh">
+                    <topic>Advertising</topic>
+                </subject>
+                <subject authority="lcsh">
+                    <topic>Merchants</topic>
+                </subject>
+                <typeOfResource>still image</typeOfResource>
+                <typeOfResource>text</typeOfResource>
+                <physicalDescription>
+                    <internetMediaType>image/jpeg</internetMediaType>
+                    <digitalOrigin>reformatted digital</digitalOrigin>
+                    <extent>Extent</extent>
+                    <form>Form</form>
+                </physicalDescription>
+                <genre>Genre</genre>
+                <originInfo>
+                    <publisher>F. A. Cotharin</publisher>
+                    <place>
+                        <placeTerm type="text">New York</placeTerm>
+                    </place>
+                    <dateIssued encoding="iso8601">1878</dateIssued>
+                </originInfo>
+                <identifier type="uri">http://dcmny.org/islandora/object/bklynsheetmusic%3A55</identifier>
+            </mods></metadata>
+        <about>
+            <oaiProvenance:provenance xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/provenance http://www.openarchives.org/OAI/2.0/provenance.xsd">
+                <oaiProvenance:originDescription harvestDate="2018-03-05" altered="true">
+                    <oaiProvenance:baseURL>http://dcmny.org/oai2</oaiProvenance:baseURL>
+                    <oaiProvenance:identifier>oai:dcmny.org:bklynsheetmusic_55</oaiProvenance:identifier>
+                    <oaiProvenance:datestamp>2018-03-05</oaiProvenance:datestamp>
+                    <oaiProvenance:metadataNamespace>http://www.loc.gov/standards/mods/</oaiProvenance:metadataNamespace>
+                </oaiProvenance:originDescription>
+            </oaiProvenance:provenance>
+        </about>
+    </record>

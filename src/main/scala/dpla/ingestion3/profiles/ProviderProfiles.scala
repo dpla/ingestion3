@@ -27,6 +27,17 @@ class DcProfile extends XmlProfile {
 }
 
 /**
+  * District Digital
+  */
+class EsdnProfile extends XmlProfile {
+  type Mapping = EsdnMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new EsdnMapping
+}
+
+
+/**
   * Library of Congress
   */
 class LocProfile extends JsonProfile {
