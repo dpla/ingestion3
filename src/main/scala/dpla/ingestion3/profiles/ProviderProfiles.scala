@@ -61,7 +61,7 @@ class MdlProfile extends JsonProfile {
   * (Montana) Big Sky Digital Network
   */
 class MtProfile extends XmlProfile {
-  type Mapping = OhioMapping
+  type Mapping = MtMapping
 
   override def getHarvester: Class[_ <: Harvester] = classOf[OaiHarvester]
   override def getMapping = new MtMapping

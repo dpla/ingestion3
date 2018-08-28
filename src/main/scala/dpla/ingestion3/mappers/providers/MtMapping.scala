@@ -31,25 +31,25 @@ class MtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     extractString(data \\ "header" \ "identifier").getOrElse(throw new RuntimeException(s"No ID for record $data"))
 
   // SourceResource mapping
-  override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
+  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
     // first instance of <mods:relatedItem><mods:titleInfo><mods:title>
     extractStrings(data \\ "relatedItem" \ "titleInfo" \ "title")
       .map(nameOnlyCollection)
       .take(1)
 
-  override def creator(data: Document[NodeSeq]): Seq[EdmAgent] =
+  override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     // <mods:name><mods:namePart> when <mods:role><mods:roleTerm> equals Creator
   (data \\ "name")
     .map(node => node.filter(n => (n \\ "roleTerm").text.equalsIgnoreCase("creator")))
     .flatMap(n => extractStrings(n \ "namePart"))
     .map(nameOnlyAgent)
 
-  override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
+  override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
   // <mods:originInfo><mods:dateCreated>
     extractStrings(data \\ "originInfo" \ "dateCreated")
       .map(stringOnlyTimeSpan)
 
-  override def description(data: Document[NodeSeq]): Seq[String] =
+  override def description(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:note> @type=content
     (data \\ "metadata" \ "mods" \ "note")
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "type", "content"))
@@ -58,18 +58,18 @@ class MtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \\ "physicalDescription" \ "extent")
 
-  override def format(data: Document[NodeSeq]): Seq[String] =
+  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:physicalDescription><form>
     extractStrings(data \\ "physicalDescription" \ "form")
       .map(_.applyBlockFilter(formatBlockList))
       .filter(_.nonEmpty)
 
-  override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
+  override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
   // <mods:subject><mods:geographic>
     extractStrings(data \\ "subject" \ "geographic")
       .map(nameOnlyPlace)
 
-  override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
+  override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
   // <mods:originInfo><mods:publisher>
     extractStrings(data \\ "originInfo" \ "publisher")
       .map(nameOnlyAgent)
@@ -80,16 +80,16 @@ class MtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
       .filter({ n => filterAttribute(n, "type", "local rights statements") })
       .flatMap(extractStrings)
 
-  override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
+  override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
   // <mods:subject><mods:topic>
     extractStrings(data \\ "subject" \ "topic")
       .map(nameOnlyConcept)
 
-  override def title(data: Document[NodeSeq]): Seq[String] =
+  override def title(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:titleInfo><mods:title>
     extractStrings(data \\ "mods" \ "titleInfo" \\ "title")
 
-  override def `type`(data: Document[NodeSeq]): Seq[String] =
+  override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:typeofresource>
     extractStrings(data \\ "typeOfResource")
 
@@ -104,11 +104,11 @@ class MtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     .flatMap(extractStrings)
     .map(nameOnlyAgent)
     .headOption match {
-    case Some(s) => s
-    case _ =>
-      msgCollector.add(missingRequiredError(getProviderId(data), "dataProvider"))
-      nameOnlyAgent("") // FIXME this shouldn't have to return an empty value.
-  }
+      case Some(s) => s
+      case _ =>
+        msgCollector.add(missingRequiredError(getProviderId(data), "dataProvider"))
+        nameOnlyAgent("") // FIXME this shouldn't have to return an empty value.
+    }
 
   override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] = {
     // <mods:accessCondition>@type=use and reproduction @xlink:href =[this is the value to be mapped]
@@ -117,8 +117,8 @@ class MtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
       .flatMap(node => node.attribute(node.getNamespace("xlink"), "href"))
       .flatMap(n => extractString(n.head))
       .headOption match {
-      case Some(uri) => Some(Utils.createUri(uri))
-      case _ => None
+        case Some(uri) => Some(Utils.createUri(uri))
+        case _ => None
     }
   }
 

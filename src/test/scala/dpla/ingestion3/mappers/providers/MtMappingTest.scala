@@ -66,17 +66,6 @@ class MtMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct rights value" in {
     assert(extractor.rights(xml) === Seq("Copyright to this collection is held by the Maureen and Mike Mansfield Library, University of Montana-Missoula. For further information please contact Archives and Special Collections at the University of Montana, Mansfield Library: http://www.lib.umt.edu/asc"))
   }
-//  it should "extract the correct edmRights " in {
-//    val xml: Document[NodeSeq] = Document(
-//    <record xmlns:dc="http://purl.org/dc/elements/1.1/">
-//      <metadata>
-//        <dc:rights>Eric Rights Holder</dc:rights>
-//        <edm:rights>http://rights.holder.edu</edm:rights>
-//      </metadata>
-//    </record>)
-//    val expected = Option(new URI("http://rights.holder.edu"))
-//    assert(extractor.edmRights(xml) === expected)
-//  }
   it should "extract the correct subjects" in {
     val expected = Seq(
       "Patricia Goedicke", "American literature--Montana",
@@ -91,10 +80,6 @@ class MtMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("text")
     assert(extractor.`type`(xml) === expected)
   }
-//  it should "create the correct DPLA URI" in {
-//    val expected = new URI("http://dp.la/api/items/130137a53d59ee27d7dab4e0078e1220")
-//    assert(extractor.dplaUri(xml) === expected)
-//  }
   it should "extract the correct dataProvider" in {
     val expected = nameOnlyAgent("University of Montana--Missoula. Mansfield Library")
     assert(extractor.dataProvider(xml) === expected)
