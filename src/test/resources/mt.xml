@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+    <responseDate>2018-08-15T17:06:18Z</responseDate>
+    <request verb="GetRecord" identifier="oai:the.european.library.UMr8:oai:scholarworks.umt.edu:goedicke-1008" metadataPrefix="mods">http://repox.msl.mt.gov:8080/repox/OAIHandler</request>
+    <GetRecord>
+        <record>
+            <header>
+                <identifier>oai:the.european.library.UMr8:oai:scholarworks.umt.edu:goedicke-1008</identifier>
+                <datestamp>2018-07-12</datestamp>
+                <setSpec>UMr8</setSpec>
+            </header>
+            <metadata>
+                <mods xmlns="http://www.loc.gov/mods/v3" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xs="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-4.xsd" version="3.4">
+                    <relatedItem>
+                        <titleInfo>
+                            <title>Collection Title</title>
+                        </titleInfo>
+                    </relatedItem>
+                    <titleInfo>
+                        <title>Reading notes for 2nd Wind 2001</title>
+                    </titleInfo>
+                    <note type="ownership">University of Montana--Missoula. Mansfield Library</note>
+                    <note type="content">Description</note>
+                    <name>
+                        <namePart>Goedicke, Patricia</namePart>
+                        <role>
+                            <roleTerm>Creator</roleTerm>
+                        </role>
+                    </name>
+                    <physicalDescription>
+                        <internetMediaType>application/pdf</internetMediaType>
+                        <extent>Extent</extent>
+                        <form>Format</form>
+                        <form>jpeg</form>
+                    </physicalDescription>
+                    <accessCondition type="local rights statements">Copyright to this collection is held by the Maureen and Mike Mansfield Library, University of Montana-Missoula. For further information please contact Archives and Special Collections at the University of Montana, Mansfield Library: http://www.lib.umt.edu/asc</accessCondition>
+                    <originInfo>
+                        <dateCreated>2001-10-07T07:00:00Z</dateCreated>
+                        <publisher>Publisher</publisher>
+                    </originInfo>
+                    <location>Series I: Works by Patricia Goedicke, 1945-2006</location>
+                    <typeOfResource>text</typeOfResource>
+                    <location>
+                        <url usage="primary display" access="object in context">https://scholarworks.umt.edu/goedicke/9</url>
+                    </location>
+                    <location>
+                        <url access="preview">https://scholarworks.umt.edu/goedicke/1008/thumbnail.jpg</url>
+                    </location>
+                    <subject>
+                        <topic>Patricia Goedicke</topic>
+                    </subject>
+                    <subject>
+                        <topic>American literature--Montana</topic>
+                    </subject>
+                    <subject>
+                        <topic>American literature--20th century</topic>
+                    </subject>
+                    <subject>
+                        <geographic>Geographic</geographic>
+                    </subject>
+                    <subject>
+                        <topic>documents</topic>
+                    </subject>
+                </mods>
+            </metadata>
+            <about>
+                <oaiProvenance:provenance xmlns:oaiProvenance="http://www.openarchives.org/OAI/2.0/provenance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/provenance http://www.openarchives.org/OAI/2.0/provenance.xsd">
+                    <oaiProvenance:originDescription harvestDate="2018-07-12" altered="true">
+                        <oaiProvenance:baseURL>https://scholarworks.umt.edu/do/oai/</oaiProvenance:baseURL>
+                        <oaiProvenance:identifier>oai:scholarworks.umt.edu:goedicke-1008</oaiProvenance:identifier>
+                        <oaiProvenance:datestamp>2018-07-12</oaiProvenance:datestamp>
+                        <oaiProvenance:metadataNamespace>https://resources.bepress.com/assets/xsd/</oaiProvenance:metadataNamespace>
+                    </oaiProvenance:originDescription>
+                </oaiProvenance:provenance>
+            </about>
+        </record>
+    </GetRecord>
+</OAI-PMH>

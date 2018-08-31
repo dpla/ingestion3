@@ -58,6 +58,17 @@ class MdlProfile extends JsonProfile {
 }
 
 /**
+  * (Montana) Big Sky Digital Network
+  */
+class MtProfile extends XmlProfile {
+  type Mapping = MtMapping
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[OaiHarvester]
+  override def getMapping = new MtMapping
+}
+
+
+/**
   * National Archives and Records Administration
   */
 class NaraProfile extends XmlProfile {

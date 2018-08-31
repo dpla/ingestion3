@@ -48,6 +48,7 @@ object ProviderRegistry {
     "esdn" -> Register(profile = new EsdnProfile),
     "loc" -> Register(profile = new LocProfile),
     "mdl" -> Register(profile = new MdlProfile),
+    "mt" -> Register(profile = new MtProfile),
     "nara" -> Register(profile = new NaraProfile),
     "ohio" -> Register(profile = new OhioProfile),
     "p2p" -> Register(profile = new P2PProfile), // plains2peaks
