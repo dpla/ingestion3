@@ -2,8 +2,7 @@ package dpla.ingestion3.utils
 
 import java.time.format.DateTimeFormatter
 import java.time.LocalDateTime
-import java.io.{BufferedWriter, ByteArrayInputStream, File, FileWriter}
-
+import java.io.ByteArrayInputStream
 import com.amazonaws.services.s3.model.{ObjectMetadata, PutObjectRequest, PutObjectResult}
 import com.amazonaws.services.s3.AmazonS3Client
 
@@ -99,7 +98,8 @@ class OutputHelper(root: String,
    */
   lazy val manifestLocalOutPath: String = s"$directory$manifestKey"
 
-  lazy val s3client: AmazonS3Client = new AmazonS3Client()
+  lazy val s3client: AmazonS3Client = new AmazonS3Client
+  lazy val flatFileIO: FlatFileIO = new FlatFileIO
 
   /*
    * Write a manifest file in the given outputPath directory.
@@ -135,16 +135,16 @@ class OutputHelper(root: String,
     data.map{ case(k, v) => s"$k: $v" }.mkString("\n")
   }
 
-  // Write a String to a local file.
-  // @return: Canonical path
-  // TODO: Move to more general FileIO Util?
+  /*
+   * Write a String to a local file.
+   *
+   * @param outPath: Output path
+   * @param text: Text string to be written to local file
+   *
+   * @return Try[String]: Path of output file.
+   */
   def writeLocalFile(outPath: String, text: String): Try[String] = Try {
-    val file: File = new File(outPath)
-    file.getParentFile.mkdirs
-    val bw: BufferedWriter = new BufferedWriter(new FileWriter(file))
-    bw.write(text)
-    bw.close
-    file.getCanonicalPath
+    flatFileIO.writeFile(text, outPath)
   }
 
   /*
@@ -154,7 +154,7 @@ class OutputHelper(root: String,
    * @param key: S3 file key
    * @param text: Text string to be written to S3 file
    *
-   * @return: ETag (HTTP entity tag).
+   * @return: Try[String] ETag (HTTP entity tag).
    *          Identifier for specific version of the resource just written.
    */
   def writeS3File(bucket: String, key: String, text: String): Try[String] = Try {

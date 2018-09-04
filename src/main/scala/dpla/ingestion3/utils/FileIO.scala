@@ -21,10 +21,12 @@ class FlatFileIO extends FileIO {
     *
     * @param record String
     * @param outputFile String
+    *
+    * @return String representation of the file path
     */
-  def writeFile(record: String, outputFile: String): Unit = {
+  def writeFile(record: String, outputFile: String): String = {
     val outFile = new File(outputFile).toPath
-    Files.write(outFile, record.getBytes("utf8"), CREATE, TRUNCATE_EXISTING)
+    Files.write(outFile, record.getBytes("utf8"), CREATE, TRUNCATE_EXISTING).toString
   }
 
   /**
@@ -87,5 +89,5 @@ object AvroUtils {
   *
   */
 trait FileIO {
-  def writeFile(record: String, outputFile: String): Unit
+  def writeFile(record: String, outputFile: String): String
 }
