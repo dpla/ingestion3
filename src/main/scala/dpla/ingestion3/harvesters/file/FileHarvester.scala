@@ -20,9 +20,8 @@ import scala.util.Try
 abstract class FileHarvester(spark: SparkSession,
                              shortName: String,
                              conf: i3Conf,
-                             outputDir: String,
                              logger: Logger)
-  extends LocalHarvester(spark, shortName, conf, outputDir, logger) {
+  extends LocalHarvester(spark, shortName, conf, logger) {
 
 
   /**

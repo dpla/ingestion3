@@ -25,9 +25,8 @@ import com.databricks.spark.avro._
 class LocHarvester(spark: SparkSession,
                    shortName: String,
                    conf: i3Conf,
-                   outputDir: String,
                    harvestLogger: Logger)
-  extends ApiHarvester(spark, shortName, conf, outputDir, harvestLogger) {
+  extends ApiHarvester(spark, shortName, conf, harvestLogger) {
 
   def mimeType: String = "application_json"
 

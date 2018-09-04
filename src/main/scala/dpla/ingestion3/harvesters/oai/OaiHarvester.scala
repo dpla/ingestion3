@@ -11,9 +11,8 @@ import org.apache.spark.storage.StorageLevel
 class OaiHarvester(spark: SparkSession,
                    shortName: String,
                    conf: i3Conf,
-                   outputDir: String,
                    harvestLogger: Logger)
-  extends Harvester(spark, shortName, conf, outputDir, harvestLogger) {
+  extends Harvester(spark, shortName, conf, harvestLogger) {
 
   override def mimeType: String = "application_xml"
 

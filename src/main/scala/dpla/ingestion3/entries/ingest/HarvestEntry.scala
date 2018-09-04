@@ -1,7 +1,5 @@
 package dpla.ingestion3.entries.ingest
 
-import java.io.File
-
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.executors.HarvestExecutor
 import dpla.ingestion3.utils.Utils
@@ -22,7 +20,7 @@ object HarvestEntry extends HarvestExecutor {
     // Read in command line args.
     val cmdArgs = new CmdArgs(args)
 
-    val outputDir = cmdArgs.getOutput()
+    val dataOut = cmdArgs.getOutput()
     val confFile = cmdArgs.getConfigFile()
     val shortName = cmdArgs.getProviderName()
 
@@ -32,8 +30,6 @@ object HarvestEntry extends HarvestExecutor {
     // Load configuration from file.
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
     val providerConf: i3Conf = i3Conf.load()
-
-    val dataOut: String = Utils.outputPath(outputDir, shortName, "harvest")
 
     val sparkConf = new SparkConf()
       .setAppName("Harvest")

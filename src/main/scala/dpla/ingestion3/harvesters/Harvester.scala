@@ -2,7 +2,6 @@ package dpla.ingestion3.harvesters
 
 import java.io.File
 
-import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
@@ -12,41 +11,15 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-import scala.util.{Failure, Success, Try}
-
 abstract class Harvester(spark: SparkSession,
                          shortName: String,
                          conf: i3Conf,
-                         outStr: String,
                          logger: Logger) {
-  def harvest: Try[Long] = {
-    val start = System.currentTimeMillis()
 
-    // Call local implementation of runHarvest()
-    Try {
-      // Calls the local implementation
-      val harvestData: DataFrame = localHarvest()
-
-      // Write harvested data to output file.
-      harvestData
-        .write
-        .format("com.databricks.spark.avro")
-        .option("avroSchema", harvestData.schema.toString)
-        .avro(outStr)
-
-      logger.info(s"Saving to $outStr")
-      cleanUp()
-
-      // Reads the saved avro file back
-      spark.read.avro(outStr)
-    } match {
-      case Success(df) =>
-        Harvester.validateSchema(df)
-        val recordCount = df.count()
-        logger.info(Utils.harvestSummary(System.currentTimeMillis() - start, recordCount))
-        Success(recordCount)
-      case Failure(f) => Failure(f)
-    }
+  def harvest: DataFrame = {
+    val harvestData: DataFrame = localHarvest()
+    cleanUp()
+    harvestData
   }
 
   def mimeType: String
@@ -77,9 +50,8 @@ abstract class LocalHarvester(
                                spark: SparkSession,
                                shortName: String,
                                conf: i3Conf,
-                               outStr: String,
                                logger: Logger)
-  extends Harvester(spark, shortName, conf, outStr, logger) {
+  extends Harvester(spark, shortName, conf, logger) {
 
   // Temporary output path.
   // Harvests that use AvroWriter cannot be written directly to S3.
