@@ -5,9 +5,6 @@ import dpla.ingestion3.harvesters.Harvester
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.lit
-import com.databricks.spark.avro._
-
-import scala.util.Try
 
 class RsHarvester(spark: SparkSession,
                   shortName: String,
@@ -20,7 +17,7 @@ class RsHarvester(spark: SparkSession,
   override def mimeType: String = "application_json"
 
 
-  override def localHarvest: Unit = Try {
+  override def localHarvest: DataFrame = {
 
     // Set options.
     val readerOptions: Map[String, String] = Map(
@@ -42,17 +39,12 @@ class RsHarvester(spark: SparkSession,
     val startTime = System.currentTimeMillis()
     val unixEpoch = startTime / 1000L
 
-    val finalData: DataFrame = harvestedData
+    // Return DataFrame
+    harvestedData
       .select("record.id", "record.document")
       .where("document is not null")
       .withColumn("ingestDate", lit(unixEpoch))
       .withColumn("provider", lit(shortName))
       .withColumn("mimetype", lit(mimeType))
-
-    // Write harvested data to file.
-    finalData.write
-      .format("com.databricks.spark.avro")
-      .option("avroSchema", finalData.schema.toString)
-      .avro(outputDir)
   }
 }

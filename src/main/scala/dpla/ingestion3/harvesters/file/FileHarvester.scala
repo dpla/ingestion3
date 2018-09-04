@@ -1,7 +1,7 @@
 package dpla.ingestion3.harvesters.file
 
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.{AvroHelper, Harvester, LocalHarvester}
+import dpla.ingestion3.harvesters.{Harvester, LocalHarvester}
 import org.apache.avro.generic.GenericData
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession

@@ -7,10 +7,10 @@ import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.utils.HttpUtils
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
+import com.databricks.spark.avro._
 
 import scala.util.{Failure, Success}
 
@@ -28,7 +28,7 @@ class MdlHarvester(spark: SparkSession,
     "rows" -> conf.harvest.rows.getOrElse("10")
   )
 
-  override def localHarvest: Unit = {
+  override def localHarvest: DataFrame = {
     implicit val formats = DefaultFormats
 
     // Mutable vars for controlling harvest loop
@@ -70,6 +70,9 @@ class MdlHarvester(spark: SparkSession,
         harvestLogger.error("Harvest returned None")
         continueHarvest = false
     }
+
+    // Read harvested data into Spark DataFrame and return.
+    spark.read.avro(tmpOutStr)
   }
 
 
