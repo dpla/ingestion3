@@ -35,7 +35,7 @@ abstract class Harvester(spark: SparkSession,
       logger.info(s"Saving to $outStr")
       cleanUp()
 
-      // Read the saved avro file back
+      // Reads the saved avro file back
       spark.read.avro(outStr)
     } match {
       case Success(df) =>
@@ -93,6 +93,7 @@ abstract class LocalHarvester(
 
   override def cleanUp(): Unit = {
     avroWriter.close()
+    // Delete temporary output directory and files.
     new FlatFileIO().deletePathContents(tmpOutStr)
   }
 }
