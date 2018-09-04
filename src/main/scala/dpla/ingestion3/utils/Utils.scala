@@ -270,7 +270,7 @@ object Utils {
    * Get output path for a harvest, mapping, enrichment, or indexing activity.
    *
    * Example return value:
-   *   s3://dpla-master-dataset/cdl/harvest/20170209/20170209_104428-cdl-OriginalRecord.avro
+   *   s3://dpla-master-dataset/cdl/harvest/20170209_104428-cdl-OriginalRecord.avro
    *
    * @see https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/TECH/pages/84512319/Ingestion+3+Storage+Specification
    */
@@ -278,11 +278,13 @@ object Utils {
 
     val timestamp = DateTime.now.toString("yyyyMMdd_HHmmss")
 
+    // TODO: report schema
     val schema = activity match {
       case "harvest" => "OriginalRecord"
       case "mapping" => "MAP4_0.MAPRecord"
       case "enrichment" => "MAP4_0.EnrichRecord"
       case "jsonl" => "MAP3_1.IndexRecord"
+      case "reports" => ???
       case _ => throw new RuntimeException(s"Activity '$activity' not recognized")
     }
 

@@ -49,6 +49,7 @@ lazy val root = (project in file("."))
       "com.amazonaws" % "aws-java-sdk-s3" % "1.10.6",
       "org.apache.hadoop" % "hadoop-aws" % "2.8.1",
       "com.squareup.okhttp3" % "okhttp" % "3.8.0",
-      "com.opencsv" % "opencsv" % "3.7"
+      "com.opencsv" % "opencsv" % "3.7",
+      "joda-time" % "joda-time" % "2.1"
     )
   )
