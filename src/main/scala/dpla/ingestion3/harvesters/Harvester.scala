@@ -1,11 +1,13 @@
 package dpla.ingestion3.harvesters
 
+import java.io.File
+
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
-import org.apache.avro.generic.{GenericRecord}
+import org.apache.avro.generic.GenericRecord
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -86,6 +88,9 @@ abstract class LocalHarvester(
   //   then written to their final destination.
   val tmpOutStr = s"/tmp/$shortName"
 
+  // Delete temporary output directory and files if they already exist.
+  Utils.deleteRecursively(new File(tmpOutStr))
+
   private val avroWriter: DataFileWriter[GenericRecord] =
     AvroHelper.avroWriter(shortName, tmpOutStr, Harvester.schema)
 
@@ -94,7 +99,7 @@ abstract class LocalHarvester(
   override def cleanUp(): Unit = {
     avroWriter.close()
     // Delete temporary output directory and files.
-    new FlatFileIO().deletePathContents(tmpOutStr)
+    Utils.deleteRecursively(new File(tmpOutStr))
   }
 }
 
