@@ -11,6 +11,7 @@ import dpla.ingestion3.confs.i3Conf
 import org.apache.commons.lang.StringUtils
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
 import org.apache.spark.sql.{Dataset, Row, SaveMode}
+import org.joda.time.DateTime
 import org.json4s.JValue
 import org.json4s.jackson.JsonMethods._
 
@@ -263,5 +264,32 @@ object Utils {
 
     if (HttpUtils.validateUrl(url)) Unit
     else throw new RuntimeException(s"Cannot reach Twofishes at $url")
+  }
+
+  /*
+   * Get output path for a harvest, mapping, enrichment, or indexing activity.
+   *
+   * Example return value:
+   *   s3://dpla-master-dataset/cdl/harvest/20170209/20170209_104428-cdl-OriginalRecord.avro
+   *
+   * @see https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/TECH/pages/84512319/Ingestion+3+Storage+Specification
+   */
+  def outputPath(directory: String, shortName: String, activity: String): String = {
+
+    val timestamp = DateTime.now.toString("yyyyMMdd_HHmmss")
+
+    val schema = activity match {
+      case "harvest" => "OriginalRecord"
+      case "mapping" => "MAP4_0.MAPRecord"
+      case "enrichment" => "MAP4_0.EnrichRecord"
+      case "jsonl" => "MAP3_1.IndexRecord"
+      case _ => throw new RuntimeException(s"Activity '$activity' not recognized")
+    }
+
+    val fileType = if (activity == "jsonl") "jsonl" else "avro"
+
+    val dirWithSlash = if (directory.endsWith("/")) directory else s"$directory/"
+
+    s"$dirWithSlash$shortName/$activity/$timestamp-$shortName-$schema.$fileType"
   }
 }
