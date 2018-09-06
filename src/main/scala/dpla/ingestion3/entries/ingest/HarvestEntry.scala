@@ -41,10 +41,6 @@ object HarvestEntry extends HarvestExecutor {
       .set("spark.kryoserializer.buffer.max", "200")
       .setMaster(providerConf.spark.sparkMaster.getOrElse("local[*]"))
 
-    // TODO: Is this still necessary, considering that file paths are timestamped to the second?
-    // TODO: If this is still necessary, handle S3 case.
-    Utils.deleteRecursively(new File(dataOut))
-
     // Execute harvest.
     execute(sparkConf, shortName, dataOut, providerConf, harvestLogger)
   }
