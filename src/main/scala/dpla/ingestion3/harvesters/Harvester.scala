@@ -1,19 +1,16 @@
 package dpla.ingestion3.harvesters
 
 import java.io.File
-import java.net.URL
 
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.api.{ApiError, ApiRecord, ApiResponse}
-import dpla.ingestion3.utils.{AvroUtils, AwsUtils, FlatFileIO, Utils}
+import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
-import org.apache.avro.generic.{GenericData, GenericRecord}
+import org.apache.avro.generic.GenericRecord
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.util.{Failure, Success, Try}
 
@@ -28,9 +25,18 @@ abstract class Harvester(spark: SparkSession,
     // Call local implementation of runHarvest()
     Try {
       // Calls the local implementation
-      localHarvest()
+      val harvestData: DataFrame = localHarvest()
+
+      // Write harvested data to output file.
+      harvestData
+        .write
+        .format("com.databricks.spark.avro")
+        .option("avroSchema", harvestData.schema.toString)
+        .avro(outStr)
+
       logger.info(s"Saving to $outStr")
       cleanUp()
+
       // Reads the saved avro file back
       spark.read.avro(outStr)
     } match {
@@ -45,7 +51,7 @@ abstract class Harvester(spark: SparkSession,
 
   def mimeType: String
 
-  def localHarvest(): Unit
+  def localHarvest(): DataFrame
 
   def cleanUp(): Unit = Unit
 
@@ -75,13 +81,27 @@ abstract class LocalHarvester(
                                logger: Logger)
   extends Harvester(spark, shortName, conf, outStr, logger) {
 
+  // Temporary output path.
+  // Harvests that use AvroWriter cannot be written directly to S3.
+  // Instead, they are written to this temp path,
+  //   then loaded into a spark DataFrame,
+  //   then written to their final destination.
+  // TODO: make tmp path configurable rather than hard-coded
+  val tmpOutStr = s"/tmp/$shortName"
+
+  // Delete temporary output directory and files if they already exist.
+  Utils.deleteRecursively(new File(tmpOutStr))
+
   private val avroWriter: DataFileWriter[GenericRecord] =
-    AvroHelper.avroWriter(shortName, outStr, Harvester.schema)
+    AvroHelper.avroWriter(shortName, tmpOutStr, Harvester.schema)
 
   def getAvroWriter: DataFileWriter[GenericRecord] = avroWriter
 
-  override def cleanUp(): Unit = avroWriter.close()
-
+  override def cleanUp(): Unit = {
+    avroWriter.close()
+    // Delete temporary output directory and files.
+    Utils.deleteRecursively(new File(tmpOutStr))
+  }
 }
 
 object Harvester {

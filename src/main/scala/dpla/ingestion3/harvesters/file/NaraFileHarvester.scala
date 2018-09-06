@@ -4,13 +4,12 @@ import java.io.{File, FileInputStream}
 import java.util.zip.GZIPInputStream
 
 import dpla.ingestion3.confs.i3Conf
-import org.apache.avro.generic.GenericData
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
-import org.apache.spark.SparkConf
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.tools.bzip2.CBZip2InputStream
 import org.apache.tools.tar.TarInputStream
+import com.databricks.spark.avro._
 
 import scala.util.{Failure, Success, Try}
 import scala.xml.{MinimizeMode, Node, Utility, XML}
@@ -129,7 +128,7 @@ class NaraFileHarvester(
   /**
     * Executes the plains2peaks harvest
     */
-  override def localHarvest(): Unit = {
+  override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime  / 1000L
     val inFile = new File(conf.harvest.endpoint.getOrElse("in"))
@@ -140,6 +139,8 @@ class NaraFileHarvester(
     else
       harvestFile(inFile, unixEpoch)
 
+    // Read harvested data into Spark DataFrame and return.
+    spark.read.avro(tmpOutStr)
   }
 
   private def harvestFile(file: File, unixEpoch: Long): Unit = {

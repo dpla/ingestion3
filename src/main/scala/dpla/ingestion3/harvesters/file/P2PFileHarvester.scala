@@ -7,10 +7,10 @@ import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
-import org.apache.spark.SparkConf
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
+import com.databricks.spark.avro._
 
 import scala.util.{Failure, Success, Try}
 
@@ -118,7 +118,7 @@ class P2PFileHarvester(spark: SparkSession,
   /**
     * Executes the plains2peaks harvest
     */
-  override def localHarvest(): Unit = {
+  override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
@@ -137,6 +137,9 @@ class P2PFileHarvester(spark: SparkSession,
       }).sum
       IOUtils.closeQuietly(inputStream)
     })
+
+    // Read harvested data into Spark DataFrame and return.
+    spark.read.avro(tmpOutStr)
   }
 }
 

@@ -6,13 +6,14 @@ import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.utils.HttpUtils
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 import scala.xml.XML
+import com.databricks.spark.avro._
 
 /**
   * Class for harvesting records from the Library of Congress's API
@@ -38,7 +39,7 @@ class LocHarvester(spark: SparkSession,
   /**
     * Entry method for invoking LC harvest
     */
-  override def localHarvest: Unit = {
+  override def localHarvest: DataFrame = {
     implicit val formats = DefaultFormats
     // Get sets from conf
     val collections = conf.harvest.setlist
@@ -90,6 +91,9 @@ class LocHarvester(spark: SparkSession,
 
     // @see ApiHarvester
     saveOutAll(locFetched)
+
+    // Read harvested data into Spark DataFrame and return.
+    spark.read.avro(tmpOutStr)
   }
 
   /**

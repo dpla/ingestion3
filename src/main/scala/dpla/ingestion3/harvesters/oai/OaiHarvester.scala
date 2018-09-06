@@ -1,6 +1,5 @@
 package dpla.ingestion3.harvesters.oai
 
-import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.Harvester
 import org.apache.log4j.Logger
@@ -18,7 +17,7 @@ class OaiHarvester(spark: SparkSession,
 
   override def mimeType: String = "application_xml"
 
-  override def localHarvest(): Unit = {
+  override def localHarvest(): DataFrame = {
     // Set options.
     val readerOptions: Map[String, String] = Map(
       "verb" -> conf.harvest.verb,
@@ -46,19 +45,13 @@ class OaiHarvester(spark: SparkSession,
     val startTime = System.currentTimeMillis()
     val unixEpoch = startTime / 1000L
 
-    val finalData: DataFrame = harvestedData
+    // return DataFrame
+    harvestedData
       .select("record.id", "record.document")
       .where("document is not null")
       .withColumn("ingestDate", lit(unixEpoch))
       .withColumn("provider", lit(shortName))
       .withColumn("mimetype", lit(mimeType))
-
-    // Write harvested data to file.
-    finalData
-      .write
-      .format("com.databricks.spark.avro")
-      .option("avroSchema", finalData.schema.toString)
-      .avro(outputDir)
   }
 
   override def cleanUp(): Unit = Unit

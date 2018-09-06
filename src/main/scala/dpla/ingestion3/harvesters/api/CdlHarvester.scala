@@ -7,9 +7,10 @@ import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.utils.HttpUtils
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
+import com.databricks.spark.avro._
 
 import scala.util.{Failure, Success}
 
@@ -35,7 +36,7 @@ class CdlHarvester(spark: SparkSession,
     "api_key" -> conf.harvest.apiKey
   ).collect{ case (key, Some(value)) => key -> value } // remove None values
 
-  override def localHarvest: Unit = {
+  override def localHarvest: DataFrame = {
     implicit val formats = DefaultFormats
 
     // Mutable vars for controlling harvest loop
@@ -84,6 +85,8 @@ class CdlHarvester(spark: SparkSession,
             continueHarvest = false
         }
     }
+    // Read harvested data into Spark DataFrame and return.
+    spark.read.avro(tmpOutStr)
   }
 
   /**
