@@ -7,13 +7,11 @@ import dpla.ingestion3.executors.HarvestExecutor
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
 
-import scala.util.Failure
-
 /**
   * Entry point for running a harvest.
   *
   * Expects three command-line args:
-  *   --output  Path to output directory
+  *   --output  Path to output directory or S3 bucket
   *   --conf    Path to conf file
   *   --name    Provider short name
   */
@@ -24,7 +22,7 @@ object HarvestEntry extends HarvestExecutor {
     // Read in command line args.
     val cmdArgs = new CmdArgs(args)
 
-    val dataOut = cmdArgs.getOutput()
+    val outputDir = cmdArgs.getOutput()
     val confFile = cmdArgs.getConfigFile()
     val shortName = cmdArgs.getProviderName()
 
@@ -35,13 +33,13 @@ object HarvestEntry extends HarvestExecutor {
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
     val providerConf: i3Conf = i3Conf.load()
 
+    val dataOut: String = Utils.outputPath(outputDir, shortName, "harvest")
+
     val sparkConf = new SparkConf()
       .setAppName("Harvest")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryoserializer.buffer.max", "200")
       .setMaster(providerConf.spark.sparkMaster.getOrElse("local[*]"))
-
-    Utils.deleteRecursively(new File(dataOut))
 
     // Execute harvest.
     execute(sparkConf, shortName, dataOut, providerConf, harvestLogger)
