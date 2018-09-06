@@ -4,14 +4,13 @@ import java.io.{File, PrintWriter}
 import java.net.{URI, URL}
 import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
-import java.time.{Instant, ZoneId, ZonedDateTime}
+import java.time.{Instant, LocalDateTime, ZoneId, ZonedDateTime}
 import java.util.Calendar
 
 import dpla.ingestion3.confs.i3Conf
 import org.apache.commons.lang.StringUtils
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
 import org.apache.spark.sql.{Dataset, Row, SaveMode}
-import org.joda.time.DateTime
 import org.json4s.JValue
 import org.json4s.jackson.JsonMethods._
 
@@ -277,7 +276,8 @@ object Utils {
    */
   def outputPath(directory: String, shortName: String, activity: String): String = {
 
-    val timestamp = DateTime.now.toString("yyyyMMdd_HHmmss")
+    val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
+    val timestamp: String = LocalDateTime.now.format(formatter)
 
     // TODO: handle "reports" case
     val schema = activity match {
