@@ -285,7 +285,6 @@ object Utils {
       case "mapping" => "MAP4_0.MAPRecord"
       case "enrichment" => "MAP4_0.EnrichRecord"
       case "jsonl" => "MAP3_1.IndexRecord"
-      case "reports" => ???
       case _ => throw new RuntimeException(s"Activity '$activity' not recognized")
     }
 
