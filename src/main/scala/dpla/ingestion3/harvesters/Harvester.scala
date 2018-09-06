@@ -86,6 +86,7 @@ abstract class LocalHarvester(
   // Instead, they are written to this temp path,
   //   then loaded into a spark DataFrame,
   //   then written to their final destination.
+  // TODO: make tmp path configurable rather than hard-coded
   val tmpOutStr = s"/tmp/$shortName"
 
   // Delete temporary output directory and files if they already exist.
