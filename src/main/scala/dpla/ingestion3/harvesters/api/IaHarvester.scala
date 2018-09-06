@@ -8,9 +8,10 @@ import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
 import org.json4s.DefaultFormats
+import org.json4s.JsonAST.JValue
 import org.json4s.jackson.JsonMethods.{compact, parse, render}
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class IaHarvester (spark: SparkSession,
                    shortName: String,
@@ -25,6 +26,7 @@ class IaHarvester (spark: SparkSession,
     "q" -> conf.harvest.query
   ).collect{ case (key, Some(value)) => key -> value } // remove None values
 
+  //noinspection UnitInMap
   override def localHarvest: Unit = {
     implicit val formats: DefaultFormats.type = DefaultFormats
 
@@ -48,19 +50,36 @@ class IaHarvester (spark: SparkSession,
         case src: ApiSource with ApiResponse =>
           src.text match {
             case Some(docs) =>
-              val json = parse(docs)
-              val iaRecords = (json \\ "items").children.map(doc => {
-                ApiRecord((doc \\ "identifier").toString, compact(render(doc)))
-              })
+                Try { parse(docs) } match {
+                  case Success(json: JValue) => {
+                    val iaRecords = (json \\ "items").children.map(doc => {
+                      val identifier = (doc \\ "identifier").toString
+                      if (identifier.nonEmpty)
+                        ApiRecord(identifier, compact(render(doc)))
+                      else
+                        harvestLogger.error(
+                          s"""No identifier in original record
+                             |URL: ${src.url.getOrElse("Not set")}
+                             |Params: ${src.queryParams}
+                             |Body: $doc
+                             |""".stripMargin)
+                    }).collect{case a: ApiRecord => a }
 
-              // @see ApiHarvester
-              saveOutRecords(iaRecords)
+                    // @see ApiHarvester
+                    saveOutRecords(iaRecords)
 
-              // Loop control
-              cursor = (json \\ "cursor").extractOrElse[String]("")
+                    // Loop control
+                    cursor = (json \\ "cursor").extractOrElse[String]("")
 
-              if (cursor.isEmpty)
-                continueHarvest = false
+                    if (cursor.isEmpty)
+                      continueHarvest = false
+                }
+                case Failure(f) => harvestLogger.error(s"Unable to parse response\n" +
+                  s"URL: ${src.url.getOrElse("Not set")}\n" +
+                  s"Params: ${src.queryParams}\n" +
+                  s"Body: $docs\n" +
+                  s"Error: ${f.getMessage}")
+              }
             // Handle unknown case
             case _ =>
               harvestLogger.error(s"Response body is empty.\n" +
