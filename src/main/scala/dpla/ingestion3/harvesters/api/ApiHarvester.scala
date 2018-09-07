@@ -17,9 +17,8 @@ import org.apache.spark.sql.SparkSession
 abstract class ApiHarvester(spark: SparkSession,
                             shortName: String,
                             conf: i3Conf,
-                            outputDir: String,
                             logger: Logger)
-  extends LocalHarvester(spark, shortName, conf, outputDir, logger) {
+  extends LocalHarvester(spark, shortName, conf, logger) {
 
   // Abstract method queryParams should set base query parameters for API call.
   protected val queryParams: Map[String, String]

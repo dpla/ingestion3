@@ -26,9 +26,8 @@ class P2PFileExtractor extends JsonExtractor
 class P2PFileHarvester(spark: SparkSession,
                        shortName: String,
                        conf: i3Conf,
-                       outputDir: String,
                        logger: Logger)
-  extends FileHarvester(spark, shortName, conf, outputDir, logger) {
+  extends FileHarvester(spark, shortName, conf, logger) {
 
   def mimeType: String = "application_json"
 

@@ -4,7 +4,7 @@ import java.io.{File, PrintWriter}
 import java.net.{URI, URL}
 import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
-import java.time.{Instant, LocalDateTime, ZoneId, ZonedDateTime}
+import java.time.{Instant, ZoneId, ZonedDateTime}
 import java.util.Calendar
 
 import dpla.ingestion3.confs.i3Conf
@@ -26,7 +26,7 @@ object Utils {
     * Count the number of files in the given directory, outDir.
     *
     * @param outDir Directory to count
-    * @param ext File extension to filter by
+    * @param ext    File extension to filter by
     * @return The number of files that match the extension
     */
   def countFiles(outDir: File, ext: String): Long = {
@@ -51,11 +51,14 @@ object Utils {
 
   /**
     * Mint a URI
+    *
     * @param stringUri
     * @return
     */
   def createUri(stringUri: String): URI = {
-    Try { new URI(stringUri.trim) } match {
+    Try {
+      new URI(stringUri.trim)
+    } match {
       case Success(uri) => uri
       case Failure(_) => throw new RuntimeException(s"Invalid URI $stringUri")
     }
@@ -64,6 +67,7 @@ object Utils {
   /**
     * Delete a directory
     * Taken from http://stackoverflow.com/questions/25999255/delete-directory-recursively-in-scala#25999465
+    *
     * @param file File or directory to delete
     */
   def deleteRecursively(file: File): Unit = {
@@ -83,6 +87,7 @@ object Utils {
 
   /**
     * Format numbers with commas
+    *
     * @param n A number
     * @return xxx,xxx
     */
@@ -99,16 +104,17 @@ object Utils {
     */
   def formatRuntime(runtime: Long): String = {
     val runDuration = Duration.create(runtime, MILLISECONDS)
-    val hr = StringUtils.leftPad( runDuration.toHours.toString, 2, "0" )
-    val min = StringUtils.leftPad( (runDuration.toMinutes  % 60).round.toString, 2, "0" )
-    val sec =  StringUtils.leftPad( (runDuration.toSeconds % 60).round.toString, 2, "0" )
-    val ms =  StringUtils.rightPad( (runDuration.toMillis % 1000).round.toString, 3, "0" )
+    val hr = StringUtils.leftPad(runDuration.toHours.toString, 2, "0")
+    val min = StringUtils.leftPad((runDuration.toMinutes % 60).round.toString, 2, "0")
+    val sec = StringUtils.leftPad((runDuration.toSeconds % 60).round.toString, 2, "0")
+    val ms = StringUtils.rightPad((runDuration.toMillis % 1000).round.toString, 3, "0")
 
     s"$hr:$min:$sec.$ms"
   }
 
   /**
     * Formats time given in ms since epoch as 'MM/dd/yyyy HH:mm:ss'
+    *
     * @param currentTimeInMs Long
     * @return
     */
@@ -125,7 +131,7 @@ object Utils {
     * @param xml An XML node
     * @return Formatted String representation of the node
     */
-  def formatXml(xml: NodeSeq): String ={
+  def formatXml(xml: NodeSeq): String = {
     val prettyPrinter = new scala.xml.PrettyPrinter(80, 2)
     prettyPrinter.format(xml.head).toString
   }
@@ -134,7 +140,7 @@ object Utils {
     * Uses runtime information to create a log4j file appender.
     *
     * @param provider - Name partner
-    * @param process - Process name [harvest, mapping, enrichment]
+    * @param process  - Process name [harvest, mapping, enrichment]
     * @return FileAppender
     */
   def getFileAppender(provider: String, process: String): FileAppender = {
@@ -157,15 +163,15 @@ object Utils {
     *
     * Example:
     *
-    *   Record count: 242,924
-    *   Runtime: 4:24
-    *   Throughput: 920 records per second
+    * Record count: 242,924
+    * Runtime: 4:24
+    * Throughput: 920 records per second
     *
-    * @param runtime Runtime in milliseconds
+    * @param runtime     Runtime in milliseconds
     * @param recordCount Number of records output
     */
   def harvestSummary(runtime: Long, recordCount: Long): String = {
-    val recordsPerSecond: Long = recordCount/(runtime/1000)
+    val recordsPerSecond: Long = recordCount / (runtime / 1000)
 
     s"\n\nRecord count: ${Utils.formatNumber(recordCount)}\n" +
       s"Runtime: ${formatRuntime(runtime)}\n" +
@@ -179,7 +185,9 @@ object Utils {
     * @return True if a URL object can be made from url
     *         False if it fails (malformed url, invalid characters, not a url, empty string)
     */
-  def isUrl(url: String): Boolean = url.trim.nonEmpty && Try { new URL(url) }.isSuccess
+  def isUrl(url: String): Boolean = url.trim.nonEmpty && Try {
+    new URL(url)
+  }.isSuccess
 
   /**
     * Tries to create a URI object from the string
@@ -188,16 +196,18 @@ object Utils {
     * @return True if a URI object can be made from uri
     *         False if it fails (malformed uri, invalid characters, not a uri)
     */
-  def isUri(uri: String): Boolean = Try { new URI(uri) }.isSuccess
+  def isUri(uri: String): Boolean = Try {
+    new URI(uri)
+  }.isSuccess
 
   /**
     * Print mapping summary information
     *
     * @param harvestCount Number of harvested records
-    * @param mapCount Number of mapped records
-    * @param errors Number of mapping failures
-    * @param outDir Location to save mapping output
-    * @param shortName Provider short name
+    * @param mapCount     Number of mapped records
+    * @param errors       Number of mapping failures
+    * @param outDir       Location to save mapping output
+    * @param shortName    Provider short name
     */
   def mappingSummary(harvestCount: Long,
                      mapCount: Long,
@@ -263,35 +273,5 @@ object Utils {
 
     if (HttpUtils.validateUrl(url)) Unit
     else throw new RuntimeException(s"Cannot reach Twofishes at $url")
-  }
-
-  /*
-   * Get output path for a harvest, mapping, enrichment, or indexing activity.
-   *
-   * @example:
-   *   outputPath("s3://dpla-master-dataset", "cdl", "harvest") =>
-   *   "s3://dpla-master-dataset/cdl/harvest/20170209_104428-cdl-OriginalRecord.avro"
-   *
-   * @see https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/TECH/pages/84512319/Ingestion+3+Storage+Specification
-   */
-  def outputPath(directory: String, shortName: String, activity: String): String = {
-
-    val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
-    val timestamp: String = LocalDateTime.now.format(formatter)
-
-    // TODO: handle "reports" case
-    val schema = activity match {
-      case "harvest" => "OriginalRecord"
-      case "mapping" => "MAP4_0.MAPRecord"
-      case "enrichment" => "MAP4_0.EnrichRecord"
-      case "jsonl" => "MAP3_1.IndexRecord"
-      case _ => throw new RuntimeException(s"Activity '$activity' not recognized")
-    }
-
-    val fileType = if (activity == "jsonl") "jsonl" else "avro"
-
-    val dirWithSlash = if (directory.endsWith("/")) directory else s"$directory/"
-
-    s"$dirWithSlash$shortName/$activity/$timestamp-$shortName-$schema.$fileType"
   }
 }

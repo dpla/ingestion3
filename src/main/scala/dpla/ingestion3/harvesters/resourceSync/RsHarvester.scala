@@ -9,9 +9,8 @@ import org.apache.spark.sql.functions.lit
 class RsHarvester(spark: SparkSession,
                   shortName: String,
                   conf: i3Conf,
-                  outputDir: String,
                   harvestLogger: Logger)
-  extends Harvester(spark, shortName, conf, outputDir, harvestLogger) {
+  extends Harvester(spark, shortName, conf, harvestLogger) {
 
   // TODO Do all RS enpoints support JSON?
   override def mimeType: String = "application_json"
