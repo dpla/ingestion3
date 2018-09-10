@@ -1,7 +1,7 @@
 package dpla.ingestion3.profiles
 
 import dpla.ingestion3.harvesters.Harvester
-import dpla.ingestion3.harvesters.api.{CdlHarvester, LocHarvester, MdlHarvester}
+import dpla.ingestion3.harvesters.api.{CdlHarvester, IaHarvester, LocHarvester, MdlHarvester}
 import dpla.ingestion3.harvesters.file.{NaraFileHarvester, P2PFileHarvester}
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.mappers.providers._
@@ -36,6 +36,15 @@ class EsdnProfile extends XmlProfile {
   override def getMapping = new EsdnMapping
 }
 
+/**
+  * Internet Archive
+  */
+class IaProfile extends JsonProfile {
+  type Mapping = CdlMapping // FIXME
+
+  override def getHarvester = classOf[IaHarvester]
+  override def getMapping = new CdlMapping // FIXME
+}
 
 /**
   * Library of Congress
