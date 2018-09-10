@@ -87,7 +87,10 @@ trait HarvestExecutor {
           "Provider" -> shortName,
           "Record count" -> recordCount.toString
         )
-        outputHelper.writeManifest(manifestOpts)
+        outputHelper.writeManifest(manifestOpts) match {
+          case Success(s) => logger.info(s"Manifest written.")
+          case Failure(f) => logger.warn(s"Manifest failed to write: $f")
+        }
 
         Success(recordCount)
       case Failure(f) => Failure(f)
@@ -122,5 +125,4 @@ trait HarvestExecutor {
         throw new RuntimeException(msg)
     }
   }
-
 }

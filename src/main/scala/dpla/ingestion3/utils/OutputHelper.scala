@@ -2,9 +2,9 @@ package dpla.ingestion3.utils
 
 import java.time.format.DateTimeFormatter
 import java.time.LocalDateTime
-import java.io.{BufferedWriter, File, FileWriter}
+import java.io.{BufferedWriter, ByteArrayInputStream, File, FileWriter}
 
-import com.amazonaws.services.s3.model.{PutObjectRequest, PutObjectResult}
+import com.amazonaws.services.s3.model.{ObjectMetadata, PutObjectRequest, PutObjectResult}
 import com.amazonaws.services.s3.AmazonS3Client
 
 import scala.util.Try
@@ -49,7 +49,7 @@ class OutputHelper(root: String,
 
     // TODO: handle "reports" case
     // TODO: handle "logs" case
-    // TODO: make schema configurable?
+    // TODO: make schema configurable - could use sealed case classes for activities
     val schema: String = activity match {
       case "harvest" => "OriginalRecord"
       case "map" => "MAP4_0.MAPRecord"
@@ -99,14 +99,6 @@ class OutputHelper(root: String,
    */
   lazy val manifestLocalOutPath: String = s"$directory$manifestKey"
 
-  /*
-   * Get directory for temporary files.
-   * If system property is not set, uses "/tmp" as default.
-   * TODO: Move to more general File IO Util
-   */
-  lazy val tempDirectory: String = System.getProperty("java.io.tmpdir", "/tmp")
-
-  // TODO Move to more general File IO Util
   lazy val s3client: AmazonS3Client = new AmazonS3Client()
 
   /*
@@ -115,7 +107,7 @@ class OutputHelper(root: String,
    * @param outputPath: The directory in which the manifest file is to be written.
    * @param opts: Optional data points to be included in the manifest file.
    */
-  def writeManifest(opts: Map[String, String]): Unit = {
+  def writeManifest(opts: Map[String, String]): Try[String] = {
 
     val text: String = manifestText(opts)
 
@@ -144,30 +136,31 @@ class OutputHelper(root: String,
   }
 
   // Write a String to a local file.
-  // TODO: Move to more general FileIO Util
-  def writeLocalFile(outPath: String, text: String): File = {
+  // @return: Canonical path
+  // TODO: Move to more general FileIO Util?
+  def writeLocalFile(outPath: String, text: String): Try[String] = Try {
     val file: File = new File(outPath)
     file.getParentFile.mkdirs
     val bw: BufferedWriter = new BufferedWriter(new FileWriter(file))
     bw.write(text)
-    bw.close()
-    file
+    bw.close
+    file.getCanonicalPath
   }
 
-  // Write a String to an S3 file.
-  // TODO: Move to a more general FileIO Util
-  def writeS3File(bucket: String, key: String, text: String): PutObjectResult = {
-    // Write to a temporary local file
-    val tempOut: String = s"$tempDirectory/$key"
-    val tempFile: File = writeLocalFile(tempOut, text)
-
-    // Upload temporary file to s3
+  /*
+   * Write a String to an S3 file.
+   *
+   * @param bucket: S3 bucket (do not include trailing slash or "s3a://" prefix)
+   * @param key: S3 file key
+   * @param text: Text string to be written to S3 file
+   *
+   * @return: ETag (HTTP entity tag).
+   *          Identifier for specific version of the resource just written.
+   */
+  def writeS3File(bucket: String, key: String, text: String): Try[String] = Try {
+    val in = new ByteArrayInputStream(text.getBytes("utf-8"))
     val putObjectResult: PutObjectResult =
-      s3client.putObject(new PutObjectRequest(bucket, key, tempFile))
-
-    // Delete temporary file
-    tempFile.delete
-
-    putObjectResult
+      s3client.putObject(new PutObjectRequest(bucket, key, in, new ObjectMetadata))
+    putObjectResult.getETag
   }
 }
