@@ -23,16 +23,14 @@ trait HarvestExecutor {
     * @param shortName Provider short name (e.g. cdl, mdl, nara, loc).
     * @see ProviderRegistry.register() for the authoritative
     *      list of provider short names.
-    * @param outputDir Location to save output from harvest
     * @param conf      Configurations read from application configuration file
     * @param logger    Logger object
-    * @return Try[Long] The number of successfully harvested records
     */
   def execute(sparkConf: SparkConf,
               shortName: String,
               dataOut: String,
               conf: i3Conf,
-              logger: Logger): Try[Long] = {
+              logger: Logger): Unit = {
 
     // Log config file location and provider short name.
     logger.info(s"Harvest initiated")
@@ -53,17 +51,18 @@ trait HarvestExecutor {
     // This start time is used for documentation and output file naming.
     val startDateTime = LocalDateTime.now
 
-    val outputHelper: OutputHelper =
-      new OutputHelper(dataOut, shortName, "harvest", startDateTime)
-
     // This start time is used to measure the duration of harvest.
     val start = System.currentTimeMillis()
 
+    val outputHelper: OutputHelper =
+      new OutputHelper(dataOut, shortName, "harvest", startDateTime)
+
+    val outputPath = outputHelper.outputPath
+
     // Call local implementation of runHarvest()
-    val result: Try[Long] = Try {
+    Try {
       // Calls the local implementation
       val harvestData: DataFrame = harvester.harvest
-      val outputPath = outputHelper.outputPath
 
       // Write harvested data to output file.
       harvestData
@@ -72,15 +71,14 @@ trait HarvestExecutor {
         .option("avroSchema", harvestData.schema.toString)
         .avro(outputPath)
 
-      logger.info(s"Saving to $outputPath")
-
       // Reads the saved avro file back
       spark.read.avro(outputPath)
     } match {
       case Success(df) =>
         Harvester.validateSchema(df)
         val recordCount = df.count()
-        logger.info(Utils.harvestSummary(System.currentTimeMillis() - start, recordCount))
+
+        logger.info(Utils.harvestSummary(outputPath, System.currentTimeMillis() - start, recordCount))
 
         val manifestOpts: Map[String, String] = Map(
           "Activity" -> "Harvest",
@@ -92,12 +90,10 @@ trait HarvestExecutor {
           case Failure(f) => logger.warn(s"Manifest failed to write: $f")
         }
 
-        Success(recordCount)
-      case Failure(f) => Failure(f)
+      case Failure(f) => logger.error(s"Harvest failure: ${f.getMessage}")
     }
 
     spark.stop()
-    result
   }
 
   private def buildHarvester(spark: SparkSession, shortName: String, conf: i3Conf, logger: Logger, harvestType: String) = {

@@ -170,10 +170,11 @@ object Utils {
     * @param runtime     Runtime in milliseconds
     * @param recordCount Number of records output
     */
-  def harvestSummary(runtime: Long, recordCount: Long): String = {
+  def harvestSummary(out: String, runtime: Long, recordCount: Long): String = {
     val recordsPerSecond: Long = recordCount / (runtime / 1000)
 
-    s"\n\nRecord count: ${Utils.formatNumber(recordCount)}\n" +
+    s"\n\nSaved to: $out\n" +
+      s"Record count: ${Utils.formatNumber(recordCount)}\n" +
       s"Runtime: ${formatRuntime(runtime)}\n" +
       s"Throughput: ${Utils.formatNumber(recordsPerSecond)} records per second"
   }
