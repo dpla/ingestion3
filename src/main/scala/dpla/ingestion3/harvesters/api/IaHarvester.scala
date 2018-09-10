@@ -2,11 +2,12 @@ package dpla.ingestion3.harvesters.api
 
 import java.net.URL
 
+import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.utils.HttpUtils
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.JsonMethods.{compact, parse, render}
@@ -16,18 +17,24 @@ import scala.util.{Failure, Success, Try}
 class IaHarvester (spark: SparkSession,
                    shortName: String,
                    conf: i3Conf,
-                   outputDir: String,
                    harvestLogger: Logger)
-  extends ApiHarvester(spark, shortName, conf, outputDir, harvestLogger) {
+  extends ApiHarvester(spark, shortName, conf, harvestLogger) {
 
+  //
   def mimeType: String = "application_json"
 
+  /**
+    *
+    */
   override protected val queryParams: Map[String, String] = Map(
     "q" -> conf.harvest.query
   ).collect{ case (key, Some(value)) => key -> value } // remove None values
 
-  //noinspection UnitInMap
-  override def localHarvest: Unit = {
+
+  /**
+    *
+    */
+  override def localHarvest(): DataFrame = {
     implicit val formats: DefaultFormats.type = DefaultFormats
 
     val iaCollections = conf.harvest.setlist.getOrElse("").split(",")
@@ -36,6 +43,8 @@ class IaHarvester (spark: SparkSession,
       // Mutable vars for controlling harvest loop
       var continueHarvest = true
       var cursor = ""
+
+      queryParams.updated("q", s"collection:$collection")
 
       while(continueHarvest) getSinglePage(cursor, collection) match {
         // Handle errors
@@ -90,6 +99,8 @@ class IaHarvester (spark: SparkSession,
           }
       }
     })
+
+    spark.read.avro(tmpOutStr)
   }
 
   /**
@@ -101,7 +112,12 @@ class IaHarvester (spark: SparkSession,
     * @return ApiSource or ApiError
     */
   private def getSinglePage(cursor: String, collection: String): ApiResponse = {
-    val url = buildUrl(queryParams.updated("cursor", cursor).filter(_._2.nonEmpty))
+    val url = buildUrl(
+      queryParams
+        .updated("cursor", cursor)
+        .updated("q", s"collection:$collection")
+        .filter(_._2.nonEmpty)
+    )
 
     harvestLogger.info(s"Requesting ${url.toString}")
 
