@@ -11,7 +11,6 @@ import org.apache.spark.sql.SparkSession
   *
   * @param shortName Provider short name
   * @param conf      Configurations
-  * @param outputDir Output path
   * @param logger    Logger
   */
 abstract class ApiHarvester(spark: SparkSession,

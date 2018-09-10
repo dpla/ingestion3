@@ -43,7 +43,6 @@ abstract class Harvester(spark: SparkSession,
   *
   * @param shortName [String] Provider short name
   * @param conf      [i3Conf] contains configs for the harvester.
-  * @param outStr    [String] outputPathStr for the harvested data.
   * @param logger    [Logger] for the harvester.
   */
 abstract class LocalHarvester(
