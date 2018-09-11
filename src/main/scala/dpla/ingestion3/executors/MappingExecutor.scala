@@ -92,10 +92,12 @@ trait MappingExecutor extends Serializable {
 
     val endTime = System.currentTimeMillis()
 
-//    // Collect the values needed to generate the report
-//    val finalReport = buildFinalReport(successResults, mappingResults, shortName, outputPath, startTime, endTime)(spark)
-//    // Format the summary report and write it log file
-//    logger.info(MappingSummary.getSummary(finalReport))
+    val reportsBasePath = outputHelper.reportsBasePath
+
+    // Collect the values needed to generate the report
+    val finalReport = buildFinalReport(successResults, mappingResults, shortName, reportsBasePath, startTime, endTime)(spark)
+    // Format the summary report and write it log file
+    logger.info(MappingSummary.getSummary(finalReport))
 
     successResults.where("size(messages.level) == 0").toDF().write.avro(outputPath)
 
@@ -125,7 +127,7 @@ trait MappingExecutor extends Serializable {
   def buildFinalReport(successResults: Dataset[Row],
                        mappingResults: Dataset[(Row, String)],
                        shortName: String,
-                       dataOut: String,
+                       reportsBasePath: String,
                        startTime: Long,
                        endTime: Long)(implicit spark: SparkSession): MappingSummaryData = {
     import spark.implicits._
@@ -159,8 +161,6 @@ trait MappingExecutor extends Serializable {
     val errorMsgDetails = MessageProcessor.getMessageFieldSummary(errors).mkString("\n")
     val warnMsgDetails = MessageProcessor.getMessageFieldSummary(warnings).mkString("\n")
 
-    val baseLogDir = s"$dataOut/../logs/"
-
     val exceptionsDS = sc.parallelize(exceptions).toDS()
 
     val logFileList = List(
@@ -172,7 +172,7 @@ trait MappingExecutor extends Serializable {
 
     val logFileSeq = logFileList.map {
       case (name: String, data: Dataset[_]) => {
-        val path = baseLogDir + s"$shortName-$endTime-map-$name"
+        val path = s"$reportsBasePath$name"
         data match {
           case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)
           case ds: Dataset[String] => Utils.writeLogsAsTxt(path, name, ds, shortName)
