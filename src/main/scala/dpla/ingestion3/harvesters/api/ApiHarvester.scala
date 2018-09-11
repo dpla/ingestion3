@@ -22,6 +22,7 @@ abstract class ApiHarvester(spark: SparkSession,
   // Abstract method queryParams should set base query parameters for API call.
   protected val queryParams: Map[String, String]
 
+  override def cleanUp(): Unit = Unit
 
   /**
     * Writes errors and documents to log file and avro file respectively
