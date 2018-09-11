@@ -30,15 +30,19 @@ object IngestRemap extends MappingExecutor
     val confFile = cmdArgs.getConfigFile()
     val shortName = cmdArgs.getProviderName()
 
+    // Get logger
+    val logger = Utils.createLogger("ingest", shortName)
+
     // Outputs
-    val harvestDataOut = cmdArgs.getInput()
+    val harvestDataOut = Utils.getMostRecent(  cmdArgs.getInput() )
+      .getOrElse(throw new RuntimeException("Unable to load harvest data"))
+
+    logger.info(s"Using harvest data from $harvestDataOut")
+
     val mapDataOut = baseDataOut+"/mapped"
     val enrichDataOut = baseDataOut+"/enriched"
     val jsonlDataOut = baseDataOut+"/json-l"
     val baseRptOut = baseDataOut+"/reports"
-
-    // Get logger
-    val logger = Utils.createLogger("ingest", shortName)
 
     // Load configuration from file.
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
