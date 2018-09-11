@@ -101,7 +101,7 @@ class OutputHelper(root: String,
    * Get path to reports directory.
    * Include root bucket/directory and trailing "/".
    */
-  lazy val reportsBasePath: String = s"$directory$shortName/$activity/$timestamp/reports/"
+  lazy val logsBasePath: String = s"$directory$shortName/$activity/$timestamp/logs/"
 
   lazy val s3client: AmazonS3Client = new AmazonS3Client
   lazy val flatFileIO: FlatFileIO = new FlatFileIO

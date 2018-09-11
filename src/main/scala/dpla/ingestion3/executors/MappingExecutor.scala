@@ -92,10 +92,10 @@ trait MappingExecutor extends Serializable {
 
     val endTime = System.currentTimeMillis()
 
-    val reportsBasePath = outputHelper.reportsBasePath
+    val logsBasePath = outputHelper.logsBasePath
 
     // Collect the values needed to generate the report
-    val finalReport = buildFinalReport(successResults, mappingResults, shortName, reportsBasePath, startTime, endTime)(spark)
+    val finalReport = buildFinalReport(successResults, mappingResults, shortName, logsBasePath, startTime, endTime)(spark)
     // Format the summary report and write it log file
     logger.info(MappingSummary.getSummary(finalReport))
 
@@ -127,7 +127,7 @@ trait MappingExecutor extends Serializable {
   def buildFinalReport(successResults: Dataset[Row],
                        mappingResults: Dataset[(Row, String)],
                        shortName: String,
-                       reportsBasePath: String,
+                       logsBasePath: String,
                        startTime: Long,
                        endTime: Long)(implicit spark: SparkSession): MappingSummaryData = {
     import spark.implicits._
@@ -172,7 +172,7 @@ trait MappingExecutor extends Serializable {
 
     val logFileSeq = logFileList.map {
       case (name: String, data: Dataset[_]) => {
-        val path = s"$reportsBasePath$name"
+        val path = s"$logsBasePath$name"
         data match {
           case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)
           case ds: Dataset[String] => Utils.writeLogsAsTxt(path, name, ds, shortName)

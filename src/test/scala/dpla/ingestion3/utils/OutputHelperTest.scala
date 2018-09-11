@@ -78,8 +78,8 @@ class OutputHelperTest extends FlatSpec {
     assert(helper.manifestLocalOutPath === path)
   }
 
-  "reportsBasePath" should "create correct base path for reports" in {
-    val basePath = "s3a://my-bucket/foo/harvest/20180910_095702/reports/"
-    assert(outputHelper.reportsBasePath === basePath)
+  "logsBasePath" should "create correct base path for reports" in {
+    val basePath = "s3a://my-bucket/foo/harvest/20180910_095702/logs/"
+    assert(outputHelper.logsBasePath === basePath)
   }
 }
