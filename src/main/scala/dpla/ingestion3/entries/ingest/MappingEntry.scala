@@ -1,7 +1,5 @@
 package dpla.ingestion3.entries.ingest
 
-import java.io.File
-
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.executors.MappingExecutor
 import dpla.ingestion3.utils.Utils

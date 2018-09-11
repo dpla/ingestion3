@@ -2,7 +2,7 @@ package dpla.ingestion3.utils
 
 import java.time.LocalDateTime
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.FlatSpec
 
 class OutputHelperTest extends FlatSpec {
 
