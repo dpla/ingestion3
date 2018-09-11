@@ -1,15 +1,14 @@
 package dpla.ingestion3.executors
 
 import java.io.File
+import java.time.LocalDateTime
 
 import com.databricks.spark.avro._
-
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.reports.summary._
-import dpla.ingestion3.utils.{ProviderRegistry, Utils}
-import org.apache.commons.lang.StringUtils
+import dpla.ingestion3.utils.{OutputHelper, ProviderRegistry, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
@@ -36,7 +35,18 @@ trait MappingExecutor extends Serializable {
                       shortName: String,
                       logger: Logger): Unit = {
 
+    // This start time is used for documentation and output file naming.
+    val startDateTime = LocalDateTime.now
+
+    // This start time is used to measure the duration of mapping.
     val startTime = System.currentTimeMillis()
+
+    val outputHelper: OutputHelper =
+      new OutputHelper(dataOut, shortName, "map", startDateTime)
+
+    val outputPath = outputHelper.outputPath
+
+    logger.info(outputPath)
 
     // @michael Any issues with making SparkSession implicit?
     implicit val spark: SparkSession = SparkSession.builder()
@@ -82,12 +92,12 @@ trait MappingExecutor extends Serializable {
 
     val endTime = System.currentTimeMillis()
 
-    // Collect the values needed to generate the report
-    val finalReport = buildFinalReport(successResults, mappingResults, shortName, dataOut, startTime, endTime)(spark)
-    // Format the summary report and write it log file
-    logger.info(MappingSummary.getSummary(finalReport))
+//    // Collect the values needed to generate the report
+//    val finalReport = buildFinalReport(successResults, mappingResults, shortName, outputPath, startTime, endTime)(spark)
+//    // Format the summary report and write it log file
+//    logger.info(MappingSummary.getSummary(finalReport))
 
-    successResults.where("size(messages.level) == 0").toDF().write.avro(dataOut)
+    successResults.where("size(messages.level) == 0").toDF().write.avro(outputPath)
 
     spark.stop()
   }

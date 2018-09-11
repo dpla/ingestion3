@@ -51,8 +51,6 @@ object MappingEntry extends MappingExecutor {
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .setMaster(sparkMaster)
 
-    Utils.deleteRecursively(new File(dataOut))
-
     // Log config file location and provider short name.
     executeMapping(sparkConf, dataIn, dataOut, shortName, logger)
   }
