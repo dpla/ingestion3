@@ -99,6 +99,17 @@ trait MappingExecutor extends Serializable {
 
     successResults.where("size(messages.level) == 0").toDF().write.avro(outputPath)
 
+    val manifestOpts: Map[String, String] = Map(
+      "Activity" -> "Mapping",
+      "Provider" -> shortName,
+      "Record count" -> successResults.count.toString,
+      "Input" -> dataIn
+    )
+    outputHelper.writeManifest(manifestOpts) match {
+      case Success(s) => logger.info(s"Manifest written to $s.")
+      case Failure(f) => logger.warn(s"Manifest failed to write: $f")
+    }
+
     spark.stop()
   }
 
