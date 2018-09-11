@@ -3,6 +3,7 @@ package dpla.ingestion3.utils
 import java.time.format.DateTimeFormatter
 import java.time.LocalDateTime
 import java.io.ByteArrayInputStream
+
 import com.amazonaws.services.s3.model.{ObjectMetadata, PutObjectRequest, PutObjectResult}
 import com.amazonaws.services.s3.AmazonS3Client
 
@@ -33,6 +34,8 @@ class OutputHelper(root: String,
   require(!root.startsWith("s3://") && !root.startsWith("s3n://"),
     "s3a protocol required for writing output")
 
+  val timestamp: String = startDateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+
   /*
    * File name for a harvest, mapping, enrichment, indexing (etc.) activity.
    * For full output path, including root directory/bucket, use `outputPath'
@@ -41,10 +44,6 @@ class OutputHelper(root: String,
    * Evaluate on instantiation so that invalid `activity' is caught immediately.
    */
   val fileKey: String = {
-
-    val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
-
-    val timestamp: String = startDateTime.format(formatter)
 
     // TODO: handle "reports" case
     // TODO: handle "logs" case
@@ -59,7 +58,7 @@ class OutputHelper(root: String,
 
     val fileType: String = if (activity == "jsonl") "jsonl" else "avro"
 
-    s"$shortName/$activity/$timestamp-$shortName-$schema.$fileType"
+    s"$shortName/$activity/$timestamp/$schema.$fileType"
   }
 
   /*
@@ -98,6 +97,12 @@ class OutputHelper(root: String,
    */
   lazy val manifestLocalOutPath: String = s"$directory$manifestKey"
 
+  /*
+   * Get path to reports directory.
+   * Include root bucket/directory and trailing "/".
+   */
+  lazy val reportsBasePath: String = s"$directory$shortName/$activity/$timestamp/reports/"
+
   lazy val s3client: AmazonS3Client = new AmazonS3Client
   lazy val flatFileIO: FlatFileIO = new FlatFileIO
 
@@ -126,11 +131,10 @@ class OutputHelper(root: String,
    */
   val manifestText: Map[String, String] => String = (opts: Map[String, String]) => {
 
-    val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+    val date: String = startDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 
     // Add date/time to given `opts'
-    val data: Map[String, String] =
-      opts + ("Start date/time" -> startDateTime.format(formatter))
+    val data: Map[String, String] = opts + ("Start date/time" -> date)
 
     data.map{ case(k, v) => s"$k: $v" }.mkString("\n")
   }

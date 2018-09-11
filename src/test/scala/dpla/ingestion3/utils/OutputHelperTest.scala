@@ -32,32 +32,32 @@ class OutputHelperTest extends FlatSpec {
   }
 
   "outputPath" should "create correct harvest output path" in {
-    val path = "s3a://my-bucket/foo/harvest/20180910_095702-foo-OriginalRecord.avro"
+    val path = "s3a://my-bucket/foo/harvest/20180910_095702/OriginalRecord.avro"
     assert(outputHelper.outputPath === path)
   }
 
   "outputPath" should "create correct map output path" in {
     val helper = new OutputHelper(root, shortName, "map", dateTime)
-    val path = "s3a://my-bucket/foo/map/20180910_095702-foo-MAP4_0.MAPRecord.avro"
+    val path = "s3a://my-bucket/foo/map/20180910_095702/MAP4_0.MAPRecord.avro"
     assert(helper.outputPath === path)
   }
 
   "outputPath" should "create correct enrich output path" in {
     val helper = new OutputHelper(root, shortName, "enrich", dateTime)
-    val path = "s3a://my-bucket/foo/enrich/20180910_095702-foo-MAP4_0.EnrichRecord.avro"
+    val path = "s3a://my-bucket/foo/enrich/20180910_095702/MAP4_0.EnrichRecord.avro"
     assert(helper.outputPath === path)
   }
 
   "outputPath" should "create correct jsonl output path" in {
     val helper = new OutputHelper(root, shortName, "jsonl", dateTime)
-    val path = "s3a://my-bucket/foo/jsonl/20180910_095702-foo-MAP3_1.IndexRecord.jsonl"
+    val path = "s3a://my-bucket/foo/jsonl/20180910_095702/MAP3_1.IndexRecord.jsonl"
     assert(helper.outputPath === path)
   }
 
   "outputPath" should "create correct local output path" in {
     val localRoot = "/path/to/local"
     val helper = new OutputHelper(localRoot, shortName, activity, dateTime)
-    val path = "/path/to/local/foo/harvest/20180910_095702-foo-OriginalRecord.avro"
+    val path = "/path/to/local/foo/harvest/20180910_095702/OriginalRecord.avro"
     assert(helper.outputPath === path)
   }
 
@@ -67,14 +67,19 @@ class OutputHelperTest extends FlatSpec {
   }
 
   "manifestKey" should "create correct manifest key" in {
-    val key = "foo/harvest/20180910_095702-foo-OriginalRecord.avro/_MANIFEST"
+    val key = "foo/harvest/20180910_095702/OriginalRecord.avro/_MANIFEST"
     assert(outputHelper.manifestKey === key)
   }
 
   "manifestLocalOutPath" should "create correct local output path for manifest" in {
     val localRoot = "/path/to/local/"
     val helper = new OutputHelper(localRoot, shortName, activity, dateTime)
-    val path = "/path/to/local/foo/harvest/20180910_095702-foo-OriginalRecord.avro/_MANIFEST"
+    val path = "/path/to/local/foo/harvest/20180910_095702/OriginalRecord.avro/_MANIFEST"
     assert(helper.manifestLocalOutPath === path)
+  }
+
+  "reportsBasePath" should "create correct base path for reports" in {
+    val basePath = "s3a://my-bucket/foo/harvest/20180910_095702/reports/"
+    assert(outputHelper.reportsBasePath === basePath)
   }
 }
