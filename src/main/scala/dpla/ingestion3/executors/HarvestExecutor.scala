@@ -86,7 +86,7 @@ trait HarvestExecutor {
           "Record count" -> recordCount.toString
         )
         outputHelper.writeManifest(manifestOpts) match {
-          case Success(s) => logger.info(s"Manifest written.")
+          case Success(s) => logger.info(s"Manifest written to $s.")
           case Failure(f) => logger.warn(s"Manifest failed to write: $f")
         }
 
