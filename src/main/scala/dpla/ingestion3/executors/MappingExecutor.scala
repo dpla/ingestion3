@@ -46,8 +46,6 @@ trait MappingExecutor extends Serializable {
 
     val outputPath = outputHelper.outputPath
 
-    logger.info(outputPath)
-
     // @michael Any issues with making SparkSession implicit?
     implicit val spark: SparkSession = SparkSession.builder()
       .config(sparkConf)

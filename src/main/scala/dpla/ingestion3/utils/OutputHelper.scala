@@ -46,7 +46,6 @@ class OutputHelper(root: String,
   val fileKey: String = {
 
     // TODO: handle "reports" case
-    // TODO: handle "logs" case
     // TODO: make schema configurable - could use sealed case classes for activities
     val schema: String = activity match {
       case "harvest" => "OriginalRecord"
