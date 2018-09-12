@@ -21,6 +21,8 @@ import scala.util.Try
  * @see https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/TECH/pages/84512319/Ingestion+3+Storage+Specification
  *      for details on file naming conventions
  *
+ * The convention in this class is that methods with "path" in the name include
+ * the root bucket/directory while methods with "key" do not.
  */
 class OutputHelper(root: String,
                    shortName: String,
@@ -49,15 +51,15 @@ class OutputHelper(root: String,
     // TODO: make schema configurable - could use sealed case classes for activities
     val schema: String = activity match {
       case "harvest" => "OriginalRecord"
-      case "map" => "MAP4_0.MAPRecord"
-      case "enrich" => "MAP4_0.EnrichRecord"
+      case "mapping" => "MAP4_0.MAPRecord"
+      case "enrichment" => "MAP4_0.EnrichRecord"
       case "jsonl" => "MAP3_1.IndexRecord"
       case _ => throw new IllegalArgumentException(s"Activity '$activity' not recognized")
     }
 
     val fileType: String = if (activity == "jsonl") "jsonl" else "avro"
 
-    s"$shortName/$activity/$timestamp/$schema.$fileType"
+    s"$shortName/$activity/$timestamp-$shortName-$schema.$fileType"
   }
 
   /*
@@ -100,7 +102,7 @@ class OutputHelper(root: String,
    * Get path to reports directory.
    * Include root bucket/directory and trailing "/".
    */
-  lazy val logsBasePath: String = s"$directory$shortName/$activity/$timestamp/logs/"
+  lazy val logsBasePath: String = s"$directory$fileKey/_LOGS/"
 
   lazy val s3client: AmazonS3Client = new AmazonS3Client
   lazy val flatFileIO: FlatFileIO = new FlatFileIO

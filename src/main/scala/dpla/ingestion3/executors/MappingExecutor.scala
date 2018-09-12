@@ -42,7 +42,7 @@ trait MappingExecutor extends Serializable {
     val startTime = System.currentTimeMillis()
 
     val outputHelper: OutputHelper =
-      new OutputHelper(dataOut, shortName, "map", startDateTime)
+      new OutputHelper(dataOut, shortName, "mapping", startDateTime)
 
     val outputPath = outputHelper.outputPath
 
@@ -88,16 +88,19 @@ trait MappingExecutor extends Serializable {
       .filter(tuple => Option(tuple._1).isDefined)
       .map(tuple => tuple._1)(oreAggregationEncoder)
 
-    val endTime = System.currentTimeMillis()
-
-    val logsBasePath = outputHelper.logsBasePath
-
-    // Collect the values needed to generate the report
-    val finalReport = buildFinalReport(successResults, mappingResults, shortName, logsBasePath, startTime, endTime)(spark)
-    // Format the summary report and write it log file
-    logger.info(MappingSummary.getSummary(finalReport))
-
+    // Results must be written before _LOGS.
+    // Otherwise, spark interpret the `successResults' `outputPath' as
+    // already existing, and will fail to write.
     successResults.where("size(messages.level) == 0").toDF().write.avro(outputPath)
+
+//    val endTime = System.currentTimeMillis()
+
+//    val logsBasePath = outputHelper.logsBasePath
+
+//    // Collect the values needed to generate the report
+//    val finalReport = buildFinalReport(successResults, mappingResults, shortName, logsBasePath, startTime, endTime)(spark)
+//    // Format the summary report and write it log file
+//    logger.info(MappingSummary.getSummary(finalReport))
 
     val manifestOpts: Map[String, String] = Map(
       "Activity" -> "Mapping",
@@ -166,7 +169,7 @@ trait MappingExecutor extends Serializable {
       "errors" -> errors,
       "warnings" -> warnings,
       "exceptions" -> exceptionsDS
-    ).filter { case (_, data: Dataset[_]) => data.count() > 0 }
+    )//.filter { case (_, data: Dataset[_]) => data.count() > 0 }
 
     val logFileSeq = logFileList.map {
       case (name: String, data: Dataset[_]) => {
