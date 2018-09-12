@@ -157,6 +157,24 @@ object Utils {
       true)
   }
 
+  /**
+    * Sorts the contents of the given path to find the most recent folder
+    * within the provided path that ends with '.avro'
+    *
+    * @return Option[String] Absolute path to the most recent data within folder
+    *
+    */
+  def getMostRecent(path: String): Option[String] = {
+    val rootFile = new File(path)
+
+    rootFile
+      .listFiles()
+      .filter(f => f.getName.endsWith(".avro"))
+      .map(f => f.getAbsolutePath)
+      .sorted
+      .lastOption
+  }
+
   // TODO These *Summary methods should be refactored and normalized when we fixup logging
   /**
     * Print the results of an activity
