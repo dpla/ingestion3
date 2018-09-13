@@ -22,6 +22,8 @@ class MtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     DigitalSurrogateBlockList.termList ++
       ExtentIdentificationList.termList
 
+  val extentAllowAlist = ExtentIdentificationList.termList
+
   // ID minting functions
   override def useProviderName(): Boolean = true
 
@@ -57,6 +59,8 @@ class MtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \\ "physicalDescription" \ "extent")
+      .map(_.applyAllowFilter(extentAllowAlist))
+      .filter(_.nonEmpty)
 
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:physicalDescription><form>
