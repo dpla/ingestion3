@@ -40,10 +40,10 @@ class EsdnProfile extends XmlProfile {
   * Internet Archive
   */
 class IaProfile extends JsonProfile {
-  type Mapping = CdlMapping // FIXME
+  type Mapping = IaMapping // FIXME
 
   override def getHarvester = classOf[IaHarvester]
-  override def getMapping = new CdlMapping // FIXME
+  override def getMapping = new IaMapping // FIXME
 }
 
 /**
