@@ -45,7 +45,7 @@ class MtMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.description(xml) == Seq("Description"))
 
   it should "extract the correct extent" in
-    assert(extractor.extent(xml) == Seq("Extent"))
+    assert(extractor.extent(xml) == Seq())
 
   it should "extract the correct format" in {
     val expected = Seq("Format")
