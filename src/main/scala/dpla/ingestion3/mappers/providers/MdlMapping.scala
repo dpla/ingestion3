@@ -48,7 +48,7 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wi
       case None => None
     }
 
-  override def intermediateProvider(data: Document[_root_.org.json4s.JsonAST.JValue]): ZeroToOne[EdmAgent] =
+  override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
     extractString(unwrap(data) \ "record" \ "intermediateProvider").map(nameOnlyAgent)
 
   override def isShownAt(data: Document[JValue])
