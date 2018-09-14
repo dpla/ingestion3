@@ -1,0 +1,75 @@
+{
+  "record_id" : "94d1b3b8487d91222cd1b185ebf528b8f0142b90",
+  "published" : true,
+  "tags" : [ "dpla_oai2", "sd", "dpla", "dplaingest" ],
+  "import_job_name" : "Digital Library of South Dakota",
+  "import_job_id" : 71,
+  "ingested_at" : "2018-07-21T11:14:56Z",
+  "record" : {
+    "object" : "http://explore.digitalsd.org/utils/getthumbnail/collection/Hobo/id/7431",
+    "rights" : "http://rightsstatements.org/vocab/InC-EDU/1.0/",
+    "@context" : "http://dp.la/api/items/context",
+    "provider" : "Minnesota Digital Library",
+    "isShownAt" : "http://explore.digitalsd.org/cdm/ref/collection/Hobo/id/7431",
+    "identifier" : "oai:explore.digitalsd.org:Hobo/7431",
+    "batch_param" : "",
+    "record_hash" : "94d1b3b8487d91222cd1b185ebf528b8f0142b90",
+    "dataProvider" : "South Dakota State University",
+    "originalRecord" : {
+      "header" : {
+        "setSpec" : "Hobo",
+        "datestamp" : "2017-11-14",
+        "identifier" : "oai:explore.digitalsd.org:Hobo/7431"
+      },
+      "metadata" : {
+        "dc" : {
+          "date" : "2012",
+          "type" : "Still Image",
+          "title" : "Singer in the spotlight",
+          "format" : "Color photographs",
+          "rights" : "http://rightsstatements.org/vocab/InC-EDU/1.0/",
+          "creator" : "DesLauriers, Scott",
+          "subject" : "Preserving Historic Hobo Day; South Dakota State University -- Hobo Day; 100 Years of Hobo Day; Hobo Day Committee",
+          "coverage" : "Brookings (Brookings County : South Dakota)",
+          "relation" : [ "Preserving Historic Hobo Day - Funded by a 2016 Common Heritage grant from the National Endowment for the Humanities", "Hobo Day - SDSU" ],
+          "xmlns:dc" : "http://purl.org/dc/elements/1.1/",
+          "publisher" : "South Dakota State University",
+          "xmlns:xsi" : "http://www.w3.org/2001/XMLSchema-instance",
+          "identifier" : [ "PHHD-1031", "http://explore.digitalsd.org/cdm/ref/collection/Hobo/id/7431" ],
+          "contributor" : "DesLauriers, Scott",
+          "description" : "Hobo Day Committee member in costume sings into microphone during 100 Years of Hobo Day event",
+          "xmlns:oai_dc" : "http://www.openarchives.org/OAI/2.0/oai_dc/",
+          "xsi:schemaLocation" : "http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd"
+        }
+      }
+    },
+    "sourceResource" : {
+      "date" : {
+        "displayDate" : "2012"
+      },
+      "type" : [ "image" ],
+      "title" : "Singer in the spotlight",
+      "format" : [ "Color photographs" ],
+      "creator" : "DesLauriers, Scott",
+      "subject" : [ {
+        "name" : "100 Years of Hobo Day"
+      }, {
+        "name" : "Hobo Day Committee"
+      }, {
+        "name" : "South Dakota State University"
+      }, {
+        "name" : "Hobo Day"
+      }, {
+        "name" : "Preserving Historic Hobo Day"
+      } ],
+      "relation" : [ [ "Preserving Historic Hobo Day - Funded by a 2016 Common Heritage grant from the National Endowment for the Humanities" ], [ "Hobo Day - SDSU" ] ],
+      "collection" : {
+        "title" : "SDSU - Hobo Day Collection",
+        "description" : "Enter all material related to Hobo Day"
+      },
+      "contributor" : "DesLauriers, Scott",
+      "description" : "Hobo Day Committee member in costume sings into microphone during 100 Years of Hobo Day event"
+    },
+    "intermediateProvider" : "Digital Library of South Dakota"
+  }
+}

@@ -2,13 +2,14 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URI
 
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
+import dpla.ingestion3.enrichments.normalizations.filters.ExtentIdentificationList
 import dpla.ingestion3.mappers.utils._
-import dpla.ingestion3.messages.{IngestMessageTemplates, IngestMessage, MessageCollector}
-
+import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
-
+import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
@@ -17,6 +18,8 @@ import scala.util.{Failure, Success, Try}
 
 // FIXME Why is the implicit conversion not working for JValue when it is for NodeSeq?
 class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] with IngestMessageTemplates {
+
+  val formatBlockList: Set[String] = ExtentIdentificationList.termList
 
   // ID minting functions
   override def useProviderName: Boolean = true
@@ -27,7 +30,7 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wi
     extractString(unwrap(data) \ "record" \ "isShownAt")
        .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
-  // OreAggregration
+  // OreAggregation
   override def dataProvider(data: Document[JValue])
                            (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmAgent] =
     extractString(unwrap(data) \\ "record" \ "dataProvider").map(nameOnlyAgent) match {
@@ -38,6 +41,15 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wi
 
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] =
     new URI(mintDplaId(data))
+
+  override def edmRights(data: Document[json4s.JValue]): ZeroToOne[URI] =
+    extractString(unwrap(data)  \\ "record" \ "rights") match {
+      case Some(t) => Some(new URI(t))
+      case None => None
+    }
+
+  override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
+    extractString(unwrap(data) \ "record" \ "intermediateProvider").map(nameOnlyAgent)
 
   override def isShownAt(data: Document[JValue])
                         (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
@@ -88,27 +100,32 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wi
     extractStrings(unwrap(data)  \\ "record" \\ "extent")
 
   override def format(data: Document[JValue]): ZeroToMany[String] =
-    extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "format")
+    extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "format").map(_.applyBlockFilter(formatBlockList))
 
   override def genre(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "type").map(nameOnlyConcept)
 
-  override def language(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "language" \ "iso636_3").map(nameOnlyConcept) ++
-      extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "language" \ "name").map(nameOnlyConcept)
+  override def language(data: Document[JValue]): ZeroToMany[SkosConcept] = {
+    val codes = extractStrings(unwrap(data) \\ "record" \ "sourceResource" \ "language" \ "iso636_3").map(nameOnlyConcept)
+    val names = extractStrings(unwrap(data) \\ "record" \ "sourceResource" \ "language" \ "name").map(nameOnlyConcept)
+
+    if (codes.nonEmpty)
+      codes
+    else
+      names
+  }
 
   override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
-    place(unwrap(data) \\ "record" \ "sourceResource" \ "spatial")
-
+    place(unwrap(data) \\ "record" \\ "sourceResource" \ "spatial")
 
   override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "publisher").map(nameOnlyAgent)
+    extractStrings(unwrap(data)  \\ "record" \\ "sourceResource" \ "publisher").map(nameOnlyAgent)
 
   override def rights(data: Document[JValue]): AtLeastOne[String] =
-    extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "rights")
+    extractStrings(unwrap(data)  \\ "record" \\ "sourceResource" \ "rights")
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "subject" \ "name").map(nameOnlyConcept)
+    extractStrings(unwrap(data)  \\ "record" \\ "sourceResource" \ "subject" \ "name").map(nameOnlyConcept)
 
   override def title(data: Document[JValue]): AtLeastOne[String] =
     extractStrings(unwrap(data)  \\ "record" \ "sourceResource" \ "title")
