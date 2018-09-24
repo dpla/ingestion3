@@ -3,7 +3,7 @@ package dpla.ingestion3.mappers.providers
 import java.net.URI
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
 import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
@@ -87,6 +87,7 @@ class MtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
   // <mods:subject><mods:topic>
     extractStrings(data \\ "subject" \ "topic")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyConcept)
 
   override def title(data: Document[NodeSeq]): ZeroToMany[String] =
