@@ -39,7 +39,11 @@ class OaiHarvester(spark: SparkSession,
     harvestedData.select("error.message", "error.url")
       .where("error is not null")
       .collect
-      .foreach(row => harvestLogger.warn(s"OAI harvest error ${row.getString(0)} when fetching ${row.getString(1)}" ))
+      .foreach(row => {
+          harvestLogger.warn(s"OAI harvest error ${row.getString(0)} when fetching ${row.getString(1)}" )
+          println(row)
+        }
+      )
 
     val startTime = System.currentTimeMillis()
     val unixEpoch = startTime / 1000L

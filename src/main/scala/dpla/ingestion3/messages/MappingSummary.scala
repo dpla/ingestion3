@@ -25,6 +25,7 @@ object MappingSummary {
     val errorRecordsStr = Utils.formatNumber(data.messageSummary.errorRecordCount)
     val failedCountStr = Utils.formatNumber(data.operationSummary.recordsFailed)
     val exceptionCountStr = Utils.formatNumber(data.messageSummary.execeptionCount)
+
     val logFileMsg =
       if(data.operationSummary.logFiles.nonEmpty) data.operationSummary.logFiles.mkString("\n")
       else ""

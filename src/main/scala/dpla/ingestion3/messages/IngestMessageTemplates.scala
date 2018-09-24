@@ -41,7 +41,7 @@ trait IngestMessageTemplates {
 
   def emptyRecord(): IngestMessage =
     IngestMessage(
-      message = s"Empty record, no errors",
+      message = s"Empty record",
       level = IngestLogLevel.error,
       id = "Unknown",
       field = "N/A",

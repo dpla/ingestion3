@@ -43,19 +43,19 @@ object ProviderRegistry {
   private val registry = Map(
     // FIXME Register is redundant here and should be removed
 
-    "cdl" -> Register(profile = new CdlProfile),
-    "dc" -> Register(profile = new DcProfile),
-    "esdn" -> Register(profile = new EsdnProfile),
-    "ia" -> Register(profile = new IaProfile),
-    "loc" -> Register(profile = new LocProfile),
-    "mdl" -> Register(profile = new MdlProfile),
-    "mt" -> Register(profile = new MtProfile),
-    "nara" -> Register(profile = new NaraProfile),
-    "ohio" -> Register(profile = new OhioProfile),
-    "p2p" -> Register(profile = new P2PProfile), // plains2peaks
-    "pa" -> Register(profile = new PaProfile),
-    "sd" -> Register(profile = new SdProfile),
-    "wi" -> Register(profile = new WiProfile)
+//    "cdl" -> Register(profile = new CdlProfile),
+//    "dc" -> Register(profile = new DcProfile),
+//    "esdn" -> Register(profile = new EsdnProfile),
+//    "ia" -> Register(profile = new IaProfile),
+//    "loc" -> Register(profile = new LocProfile),
+//    "mdl" -> Register(profile = new MdlProfile),
+//    "mt" -> Register(profile = new MtProfile),
+//    "nara" -> Register(profile = new NaraProfile),
+    "ohio" -> Register(profile = new OhioProfile)
+//    "p2p" -> Register(profile = new P2PProfile), // plains2peaks
+//    "pa" -> Register(profile = new PaProfile),
+//    "sd" -> Register(profile = new SdProfile),
+//    "wi" -> Register(profile = new WiProfile)
   )
 
   private def noProfileException(short: String) = {

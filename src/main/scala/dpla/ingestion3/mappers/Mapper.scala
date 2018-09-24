@@ -23,12 +23,7 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                     (implicit msgCollector: MessageCollector[IngestMessage]): (Some[OreAggregation], Option[String]) =
     map match {
       case Success(s) => (Some(s.copy(messages = msgCollector.getAll())), None)
-      case Failure(f) => {
-        if (msgCollector.getAll().isEmpty)
-          (Some(emptyOreAggregation.copy(messages = ListBuffer(emptyRecord()))), Some(f.getMessage))
-        else
-          (Some(emptyOreAggregation.copy(messages = msgCollector.getAll())), Some(f.getMessage))
-      }
+      case Failure(f) => (Some(emptyOreAggregation.copy(messages = msgCollector.getAll())), Some(f.getMessage))
 
     }
 }

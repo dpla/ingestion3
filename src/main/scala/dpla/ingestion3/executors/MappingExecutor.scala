@@ -86,6 +86,7 @@ trait MappingExecutor extends Serializable {
 
     val successResults: Dataset[Row] = mappingResults
       .filter(tuple => Option(tuple._1).isDefined)
+      .filter(tuple => Option(tuple._2).isEmpty)
       .map(tuple => tuple._1)(oreAggregationEncoder)
 
     // Results must be written before _LOGS.
@@ -109,7 +110,8 @@ trait MappingExecutor extends Serializable {
     val logsBasePath = outputHelper.logsBasePath
 
     // Collect the values needed to generate the report
-    val finalReport = buildFinalReport(successResults, mappingResults, shortName, logsBasePath, startTime, endTime)(spark)
+    val finalReport = buildFinalReport(mappingResults, shortName, logsBasePath, startTime, endTime)(spark)
+    
     // Format the summary report and write it log file
     logger.info(MappingSummary.getSummary(finalReport))
 
@@ -122,14 +124,12 @@ trait MappingExecutor extends Serializable {
   /**
     * Creates a summary report of the ingest by using the MappingSummary object
     *
-    * @param successResults
     * @param mappingResults
     * @param shortName
     * @param spark
     * @return
     */
-  def buildFinalReport(successResults: Dataset[Row],
-                       mappingResults: Dataset[(Row, String)],
+  def buildFinalReport(mappingResults: Dataset[(Row, String)],
                        shortName: String,
                        logsBasePath: String,
                        startTime: Long,
@@ -154,10 +154,10 @@ trait MappingExecutor extends Serializable {
     val errors =   MessageProcessor.getErrors(messages)
 
     // get counts
-    val attemptedCount = mappingResults.count() // successResults.count()
+    val attemptedCount = mappingResults.count()
     val validCount = results.select("dplaUri").where("size(messages) == 0").count()
     val warnCount = warnings.count()
-    val errorCount = errors.distinct().count()
+    val errorCount = errors.count()
 
     val recordErrorCount = MessageProcessor.getDistinctIdCount(errors)
     val recordWarnCount = MessageProcessor.getDistinctIdCount(warnings)
