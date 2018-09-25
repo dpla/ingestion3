@@ -65,12 +65,14 @@ class MtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:physicalDescription><form>
     extractStrings(data \\ "physicalDescription" \ "form")
+      .flatMap(_.split(";"))
       .map(_.applyBlockFilter(formatBlockList))
       .filter(_.nonEmpty)
 
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
   // <mods:subject><mods:geographic>
     extractStrings(data \\ "subject" \ "geographic")
+      .flatMap(_.split(";"))
       .map(nameOnlyPlace)
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
