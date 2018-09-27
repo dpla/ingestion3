@@ -1,11 +1,7 @@
 package dpla.ingestion3.model
 
-import java.net.URI
-
 import com.databricks.spark.avro.SchemaConverters
 import dpla.ingestion3.data.EnrichedRecordFixture
-import dpla.ingestion3.messages.{IngestMessageTemplates, IngestMessage}
-import dpla.ingestion3.model.DplaMapData.ZeroToMany
 import dpla.ingestion3.utils.FlatFileIO
 import org.apache.avro.Schema
 import org.apache.spark.sql.Row
@@ -162,13 +158,13 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
   it should "convertRowsToEdmAgent" in {
     val edmAgent = ModelConverter.toEdmAgent(testEdmAgent)
     val uri = edmAgent.uri.orNull
-    assert(edmAgent.uri.map(_.toString).orNull === testEdmAgent(0))
+    assert(edmAgent.uri.map(_.value).orNull === testEdmAgent(0))
     assert(edmAgent.name.orNull === testEdmAgent(1))
     assert(edmAgent.providedLabel.orNull === testEdmAgent(2))
     assert(edmAgent.note.orNull === testEdmAgent(3))
-    assert(edmAgent.scheme.map(_.toString).orNull === testEdmAgent(4))
-    assert(edmAgent.exactMatch.map(_.toString) === testEdmAgent.getSeq[String](5))
-    assert(edmAgent.closeMatch.map(_.toString) === testEdmAgent.getSeq[String](6))
+    assert(edmAgent.scheme.map(_.value).orNull === testEdmAgent(4))
+    assert(edmAgent.exactMatch.map(_.value) === testEdmAgent.getSeq[String](5))
+    assert(edmAgent.closeMatch.map(_.value) === testEdmAgent.getSeq[String](6))
   }
 
   it should "handle LiteralOrUri" in {

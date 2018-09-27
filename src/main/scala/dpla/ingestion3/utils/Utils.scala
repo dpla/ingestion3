@@ -50,21 +50,6 @@ object Utils {
   }
 
   /**
-    * Mint a URI
-    *
-    * @param stringUri
-    * @return
-    */
-  def createUri(stringUri: String): URI = {
-    Try {
-      new URI(stringUri.trim)
-    } match {
-      case Success(uri) => uri
-      case Failure(_) => throw new RuntimeException(s"Invalid URI $stringUri")
-    }
-  }
-
-  /**
     * Delete a directory
     * Taken from http://stackoverflow.com/questions/25999255/delete-directory-recursively-in-scala#25999465
     *
@@ -206,17 +191,6 @@ object Utils {
     */
   def isUrl(url: String): Boolean = url.trim.nonEmpty && Try {
     new URL(url)
-  }.isSuccess
-
-  /**
-    * Tries to create a URI object from the string
-    *
-    * @param uri String uri
-    * @return True if a URI object can be made from uri
-    *         False if it fails (malformed uri, invalid characters, not a uri)
-    */
-  def isUri(uri: String): Boolean = Try {
-    new URI(uri)
   }.isSuccess
 
   /**

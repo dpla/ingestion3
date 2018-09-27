@@ -1,7 +1,5 @@
 package dpla.ingestion3.mappers.providers
 
-import java.net.URI
-
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, JsonExtractor, Mapping}
@@ -41,7 +39,7 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
     name = Some("California Digital Library"),
-    uri = Some(new URI("http://dp.la/api/contributor/cdl"))
+    uri = Some(URI("http://dp.la/api/contributor/cdl"))
   )
 
   override def isShownAt(data: Document[JValue])

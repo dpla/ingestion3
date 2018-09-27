@@ -15,15 +15,8 @@ trait RdfValueUtils {
   def literal(string: String): Literal =
     valueFactory.createLiteral(string)
 
-  def iri(uri: java.net.URI): IRI =
-    valueFactory.createIRI(uri.toString)
-
-  def iri(namespace: String, uri: java.net.URI): IRI =
-    valueFactory.createIRI(namespace, uri.toString)
-
-
-  def iri(string: String): IRI =
-    valueFactory.createIRI(string)
+  def iri(uri: String): IRI =
+    valueFactory.createIRI(uri)
 
   def iri(namespace: String, localName: String): IRI =
     valueFactory.createIRI(namespace, localName)

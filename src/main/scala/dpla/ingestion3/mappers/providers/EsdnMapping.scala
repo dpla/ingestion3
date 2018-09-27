@@ -1,7 +1,5 @@
 package dpla.ingestion3.mappers.providers
 
-import java.net.URI
-
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
@@ -164,7 +162,7 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
       .flatMap(node => node.attribute(node.getNamespace("xlink"), "href"))
       .flatMap(n => extractString(n.head))
         .headOption match {
-          case Some(uri) => Some(Utils.createUri(uri))
+          case Some(uri) => Some(URI(uri))
           case _ => None
         }
 
@@ -203,7 +201,7 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "access", "preview"))
       .flatMap(extractStrings)
       .headOption match {
-        case Some(s: String) => Some(uriOnlyWebResource(Utils.createUri(s)))
+        case Some(s: String) => Some(uriOnlyWebResource(URI(s)))
         case _ => None
       }
 
@@ -215,6 +213,6 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   // Helper method
   def agent = EdmAgent(
     name = Some("Empire State Digital Network"),
-    uri = Some(Utils.createUri("http://dp.la/api/contributor/esdn"))
+    uri = Some(URI("http://dp.la/api/contributor/esdn"))
   )
 }

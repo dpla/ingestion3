@@ -1,7 +1,5 @@
 package dpla.ingestion3.model
 
-import java.net.URI
-
 import dpla.ingestion3.messages.IngestMessage
 import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import org.apache.spark.sql.Row

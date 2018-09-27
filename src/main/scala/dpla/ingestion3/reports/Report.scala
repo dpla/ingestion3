@@ -2,7 +2,6 @@ package dpla.ingestion3.reports
 
 
 import java.io.File
-import java.net.URI
 
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils

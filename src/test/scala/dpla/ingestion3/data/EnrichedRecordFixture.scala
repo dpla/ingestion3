@@ -1,7 +1,5 @@
 package dpla.ingestion3.data
 
-import java.net.URI
-
 import dpla.ingestion3.model._
 import org.json4s.jackson.JsonMethods.parse
 import org.json4s.JsonDSL._

@@ -1,10 +1,10 @@
 package dpla.ingestion3.model
 
-import java.net.URI
-
 import dpla.ingestion3.messages.IngestMessage
 import dpla.ingestion3.model.DplaMapData._
 import org.json4s.{JNothing, JValue}
+
+import scala.util.Try
 
 /**
   * Contains type definitions that express cardinality of fields
@@ -123,3 +123,8 @@ case class EdmTimeSpan(
                         begin: ZeroToOne[String] = None,
                         end: ZeroToOne[String] = None
                       )
+
+
+case class URI(value: String) {
+  def validate: Boolean = Try { new URI(value) }.isSuccess
+}
