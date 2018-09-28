@@ -47,7 +47,6 @@ object MappingEntry extends MappingExecutor {
     val sparkConf = new SparkConf()
       .setAppName(s"Mapping: $shortName")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-      .set("spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version", "2")
       .setMaster(sparkMaster)
 
     // Log config file location and provider short name.

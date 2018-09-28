@@ -93,15 +93,6 @@ trait MappingExecutor extends Serializable {
     // already existing, and will fail to write.
     successResults.where("size(messages.level) == 0").toDF().write.avro(outputPath)
 
-//    val endTime = System.currentTimeMillis()
-
-//    val logsBasePath = outputHelper.logsBasePath
-
-//    // Collect the values needed to generate the report
-//    val finalReport = buildFinalReport(successResults, mappingResults, shortName, logsBasePath, startTime, endTime)(spark)
-//    // Format the summary report and write it log file
-//    logger.info(MappingSummary.getSummary(finalReport))
-
     val manifestOpts: Map[String, String] = Map(
       "Activity" -> "Mapping",
       "Provider" -> shortName,
@@ -112,6 +103,15 @@ trait MappingExecutor extends Serializable {
       case Success(s) => logger.info(s"Manifest written to $s.")
       case Failure(f) => logger.warn(s"Manifest failed to write: $f")
     }
+
+    val endTime = System.currentTimeMillis()
+
+    val logsBasePath = outputHelper.logsBasePath
+
+    // Collect the values needed to generate the report
+    val finalReport = buildFinalReport(successResults, mappingResults, shortName, logsBasePath, startTime, endTime)(spark)
+    // Format the summary report and write it log file
+    logger.info(MappingSummary.getSummary(finalReport))
 
     spark.stop()
   }
