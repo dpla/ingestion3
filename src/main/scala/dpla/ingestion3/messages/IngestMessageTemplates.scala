@@ -1,6 +1,16 @@
 package dpla.ingestion3.messages
 
 trait IngestMessageTemplates {
+
+  def moreThanOneValueInfo(id: String, field: String, value: String, msg: Option[String] = None): IngestMessage =
+    IngestMessage(
+      message = s"More than one value provided to single value field".trim,
+      level = IngestLogLevel.info,
+      id = id,
+      field = field,
+      value = value
+    )
+
   def mintUriError(id: String, field: String, value: String, msg: Option[String] = None): IngestMessage =
     IngestMessage(
       message = s"Unable to mint URI ${msg.getOrElse("NO URI")}".trim,
@@ -46,5 +56,14 @@ trait IngestMessageTemplates {
       id = "Unknown",
       field = "N/A",
       value = "N/A"
+    )
+
+  def exception(id: String, exception: Throwable): IngestMessage =
+    IngestMessage(
+      message = s"Exception (see error report)",
+      level = IngestLogLevel.error,
+      id = id,
+      field = "",
+      value = exception.getMessage.replaceAll("\n", " -- ")
     )
 }
