@@ -72,12 +72,12 @@ object IngestRemap extends MappingExecutor
     val mapDataOut = executeMapping(sparkConf, harvestDataOut, baseDataOut, shortName, logger)
 
     // Enrichment
-    // executeEnrichment(sparkConf, mapDataOut, enrichDataOut, shortName, logger, conf)
+    executeEnrichment(sparkConf, mapDataOut, enrichDataOut, shortName, logger, conf)
 
     // Json-l
-    executeJsonl(sparkConf, mapDataOut, jsonlDataOut, logger)
+    executeJsonl(sparkConf, enrichDataOut, jsonlDataOut, logger)
 
     // Reports
-    // executeAllReports(sparkConf, enrichDataOut, baseRptOut, logger)
+    executeAllReports(sparkConf, enrichDataOut, baseRptOut, logger)
   }
 }
