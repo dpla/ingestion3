@@ -1,7 +1,6 @@
 package dpla.ingestion3.mappers.utils
 
-import java.net.URI
-
+import dpla.ingestion3.model.URI
 import org.apache.commons.codec.digest.DigestUtils
 
 import scala.util.{Failure, Success, Try}
@@ -89,5 +88,5 @@ trait IdMinter[T] {
     *
     * @return URI
     */
-  protected def mintDplaItemUri(implicit data: Document[T]): URI = new URI(s"$baseDplaItemUri$mintDplaId")
+  protected def mintDplaItemUri(implicit data: Document[T]): URI = URI(s"$baseDplaItemUri$mintDplaId")
 }

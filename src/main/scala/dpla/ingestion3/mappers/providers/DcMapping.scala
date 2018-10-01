@@ -1,7 +1,5 @@
 package dpla.ingestion3.mappers.providers
 
-import java.net.URI
-
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
@@ -110,7 +108,7 @@ class DcMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] = {
     (data \ "metadata" \\ "rights").flatMap(r => r.prefix match {
-      case "edm" => Option(Utils.createUri(r.text))
+      case "edm" => Option(URI(r.text))
       case _ => None
     }).headOption
   }
@@ -118,7 +116,7 @@ class DcMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   override def isShownAt(data: Document[NodeSeq])
                         (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
     uriOnlyWebResource(
-      Utils.createUri(extractStrings(data \ "metadata" \\ "isShownAt")
+      URI(extractStrings(data \ "metadata" \\ "isShownAt")
         .headOption
         .getOrElse(
           throw new RuntimeException(s"No isShownAt property in record ${getProviderId(data)}")
@@ -129,7 +127,7 @@ class DcMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   override def preview(data: Document[NodeSeq])
                       (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
     extractStrings(data \ "metadata" \\ "preview")
-      .map(uri => uriOnlyWebResource(Utils.createUri(uri)))
+      .map(uri => uriOnlyWebResource(URI(uri)))
       .headOption
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
@@ -140,6 +138,6 @@ class DcMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   // Helper method
   def agent = EdmAgent(
     name = Some("District Digital"),
-    uri = Some(Utils.createUri("http://dp.la/api/contributor/dc"))
+    uri = Some(URI("http://dp.la/api/contributor/dc"))
   )
 }

@@ -1,7 +1,5 @@
 package dpla.ingestion3.mappers.providers
 
-import java.net.URI
-
 import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.FlatFileIO

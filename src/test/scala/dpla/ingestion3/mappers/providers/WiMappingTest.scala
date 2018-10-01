@@ -1,7 +1,5 @@
 package dpla.ingestion3.mappers.providers
 
-import java.net.URI
-
 import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model._
@@ -20,7 +18,7 @@ class WiMappingTest extends FlatSpec with BeforeAndAfter {
 
 
   it should "extract the correct isShownAt" in {
-    val expected = uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/collections/item/14058"))
+    val expected = uriOnlyWebResource(URI("https://digitalgallery.bgsu.edu/collections/item/14058"))
     assert(extractor.isShownAt(xml)(msgCollector) === expected)
   }
 

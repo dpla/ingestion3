@@ -1,9 +1,9 @@
 package dpla.ingestion3.reports
 
-import java.net.URI
-import javax.imageio.ImageIO
+import java.net.URL
 
-import dpla.ingestion3.model.OreAggregation
+import javax.imageio.ImageIO
+import dpla.ingestion3.model.{OreAggregation, URI}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, Dataset, Encoder, SparkSession}
 
@@ -210,7 +210,7 @@ class ThumbnailReport (
     *         Otherwise returns Failure(Exception)
     */
   def bufferedImg(uri: URI) : Try[java.awt.image.BufferedImage] = Try {
-    ImageIO.read(uri.toURL)
+    ImageIO.read(new URL(uri.value))
   }
 }
 

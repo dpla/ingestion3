@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.rdf
 
 
 import dpla.ingestion3.model._
-import org.eclipse.rdf4j.model.{Model, Resource}
+import org.eclipse.rdf4j.model.{IRI, Model, Resource}
 
 /**
   * This class handles mapping DplaMapData to the RDF4J Model domain
@@ -23,7 +23,7 @@ class DplaRdfMapper(doc: OreAggregation) extends RdfBuilderUtils {
 
   def mapSourceResource(): Unit = {
     val sourceResource = doc.sourceResource
-    createResource(doc.dplaUri.resolve("#sourceResource"))
+    createResource(doc.dplaUri.value + "#sourceResource")
     setType(dpla.SourceResource)
     map(dc.date, sourceResource.date.map(edmTimespan))
     map(dcTerms.title, sourceResource.title)
@@ -43,7 +43,7 @@ class DplaRdfMapper(doc: OreAggregation) extends RdfBuilderUtils {
     //links the SourceResource in the record to the Aggregation
     map(edm.aggregatedCHO, iri(oreAggregation.dplaUri.toString + "#sourceResource"))
     //links the top level edm:WebResource to the Aggregation
-    map(edm.isShownAt, iri(doc.isShownAt.uri))
+    map(edm.isShownAt, iri(doc.isShownAt.uri.value))
     map(edm.provider, edmAgent(oreAggregation.provider))
     map(dpla.originalRecord, oreAggregation.originalRecord) //TODO what to do with ORs
     map(edm.dataProvider, edmAgent(oreAggregation.dataProvider))

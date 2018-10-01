@@ -1,8 +1,7 @@
 package dpla.ingestion3.mappers.rdf
 
-import java.net.URI
-
 import dpla.ingestion3.model.DplaMapData.{ZeroToMany, ZeroToOne}
+import dpla.ingestion3.model.URI
 import org.eclipse.rdf4j.model.{IRI, Model, Resource, Value}
 import org.eclipse.rdf4j.model.util.ModelBuilder
 
@@ -22,7 +21,11 @@ trait RdfBuilderUtils extends RdfValueUtils with DefaultVocabularies {
 
   //convenience method for type coercion
   def createResource(uri: URI): Resource =
-    innerCreateResource(iri(uri.toString))
+    innerCreateResource(iri(uri.value))
+
+  def createResource(uri: String): Resource =
+    innerCreateResource(iri(uri))
+
 
   //convenience method to avoid passing None
   def createResource(): Resource =
@@ -31,7 +34,7 @@ trait RdfBuilderUtils extends RdfValueUtils with DefaultVocabularies {
   //convenience method for type coercion
   def createResource(option: ZeroToOne[URI]): Resource = {
     option match {
-      case Some(uri) => innerCreateResource(iri(uri))
+      case Some(uri) => innerCreateResource(iri(uri.value))
       case None => innerCreateResource(bnode())
     }
   }
@@ -44,13 +47,13 @@ trait RdfBuilderUtils extends RdfValueUtils with DefaultVocabularies {
 
   def map(predicate: IRI, list: ZeroToMany[_]): Unit =
     for (item <- list) item match {
-      case value: URI => builder.add(predicate, iri(value))
+      case URI(value) => builder.add(predicate, iri(value))
       case value: String => builder.add(predicate, literal(value))
     }
 
   def map(predicate: IRI, option: ZeroToOne[_]): Unit =
     option match {
-      case Some(value: URI) => builder.add(predicate, iri(value))
+      case Some(URI(value)) => builder.add(predicate, iri(value))
       case Some(value: String) => builder.add(predicate, literal(value))
       case _ => Unit
     }

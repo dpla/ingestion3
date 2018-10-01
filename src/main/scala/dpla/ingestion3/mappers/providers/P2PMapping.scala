@@ -1,7 +1,5 @@
 package dpla.ingestion3.mappers.providers
 
-import java.net.URI
-
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, JsonExtractor, Mapping}
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model.DplaMapData._

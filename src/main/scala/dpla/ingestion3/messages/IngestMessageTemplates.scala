@@ -1,9 +1,5 @@
 package dpla.ingestion3.messages
 
-import java.net.URI
-
-import scala.util.Try
-
 trait IngestMessageTemplates {
   def mintUriError(id: String, field: String, value: String, msg: Option[String] = None): IngestMessage =
     IngestMessage(
@@ -51,8 +47,4 @@ trait IngestMessageTemplates {
       field = "N/A",
       value = "N/A"
     )
-}
-
-trait IngestValidations extends IngestMessageTemplates {
-  def validateUri(uriStr: String): Try[URI] = Try { new URI(uriStr) }
 }

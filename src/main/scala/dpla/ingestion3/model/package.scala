@@ -1,6 +1,5 @@
 package dpla.ingestion3
 
-import java.net.URI
 import java.text.SimpleDateFormat
 import java.util.{Calendar, TimeZone}
 

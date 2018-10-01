@@ -1,7 +1,5 @@
 package dpla.ingestion3.data
 
-import java.net.URI
-
 import dpla.ingestion3.model._
 
 object MappedRecordsFixture {

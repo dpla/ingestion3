@@ -1,9 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
-import java.net.URI
-
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
-import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, IngestValidations, MessageCollector}
+import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
 
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToOne}
 import dpla.ingestion3.model._
@@ -15,7 +13,7 @@ import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
 class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
-  with IngestMessageTemplates with IngestValidations {
+  with IngestMessageTemplates {
 
   // IdMinter methods
   override def useProviderName: Boolean = false
@@ -91,7 +89,7 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   }
 
   override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] =
-    extractStrings(data \ "metadata" \\ "rights").find(r => Utils.isUrl(r)).map(new URI(_))
+    extractStrings(data \ "metadata" \\ "rights").map(URI).headOption
 
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
     extractStrings(data \ "metadata" \\ "source").map(nameOnlyAgent).headOption
@@ -124,17 +122,11 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
               msgCollector: MessageCollector[IngestMessage]): ExactlyOne[URI] = {
     val ids = extractStrings(data \ "metadata" \\ "identifier")
 
-    val uriString = Try {ids(1) } match {
-      case Success(t) => t
+    Try {ids(1) } match {
+      case Success(t) => URI(t)
       case Failure(_: IndexOutOfBoundsException) =>
         msgCollector.add(missingRequiredError(getProviderId(data), "second identifier"))
         return new URI("") // force return here
-    }
-
-    validateUri(uriString) match {
-      case Success(uri) => uri
-      case Failure(_) => msgCollector.add(mintUriError(getProviderId(data), "second identifier", uriString))
-        new URI("")
     }
   }
 

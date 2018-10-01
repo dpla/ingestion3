@@ -1,7 +1,5 @@
 package dpla.ingestion3.mappers.providers
 
-import java.net.URI
-
 import dpla.ingestion3.enrichments.TypeEnrichment
 import dpla.ingestion3.mappers.rdf.DCMIType
 import dpla.ingestion3.mappers.utils._

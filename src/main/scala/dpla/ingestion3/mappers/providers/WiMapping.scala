@@ -1,11 +1,9 @@
 package dpla.ingestion3.mappers.providers
 
-import java.net.URI
-
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
-import dpla.ingestion3.messages.{IngestMessageTemplates, IngestMessage, IngestValidations, MessageCollector}
+import dpla.ingestion3.messages.{IngestMessageTemplates, IngestMessage, MessageCollector}
 
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
@@ -19,7 +17,7 @@ import scala.xml._
 
 
 class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
-  with IngestMessageTemplates with IngestValidations {
+  with IngestMessageTemplates {
 
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
@@ -133,7 +131,7 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
       }
     })
 
-    edmRights.find(Utils.isUri).map(new URI(_))
+    edmRights.map(URI).headOption
   }
 
 
@@ -158,15 +156,7 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   override def preview(data: Document[NodeSeq])
                       (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
-
-    extractString(data \ "metadata" \\ "preview").map(uriStr =>
-      validateUri(uriStr) match {
-        case Success(u) => uriOnlyWebResource(u)
-        case Failure(_) =>
-          msgCollector.add(mintUriError(getProviderId(data), "preview", uriStr))
-          uriOnlyWebResource(new URI(""))
-      }
-    )
+    extractString(data \ "metadata" \\ "preview").map(str => uriOnlyWebResource(URI(str)))
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 

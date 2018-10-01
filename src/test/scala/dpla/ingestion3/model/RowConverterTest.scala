@@ -1,7 +1,5 @@
 package dpla.ingestion3.model
 
-import java.net.URI
-
 import com.databricks.spark.avro.SchemaConverters
 import dpla.ingestion3.data.EnrichedRecordFixture
 import dpla.ingestion3.utils.FlatFileIO
