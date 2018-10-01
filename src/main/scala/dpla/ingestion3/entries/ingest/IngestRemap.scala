@@ -34,12 +34,12 @@ object IngestRemap extends MappingExecutor
     val logger = Utils.createLogger("ingest", shortName)
 
     // Outputs
+
     val harvestDataOut = Utils.getMostRecent(  cmdArgs.getInput() )
       .getOrElse(throw new RuntimeException("Unable to load harvest data"))
 
     logger.info(s"Using harvest data from $harvestDataOut")
-
-    val mapDataOut = baseDataOut+"/mapped"
+    
     val enrichDataOut = baseDataOut+"/enriched"
     val jsonlDataOut = baseDataOut+"/json-l"
     val baseRptOut = baseDataOut+"/reports"
@@ -58,14 +58,13 @@ object IngestRemap extends MappingExecutor
       .setMaster(sparkMaster)
 
 
-    Utils.deleteRecursively(new File(mapDataOut))
     Utils.deleteRecursively(new File(enrichDataOut))
     Utils.deleteRecursively(new File(jsonlDataOut))
     Utils.deleteRecursively(new File(baseRptOut))
 
     // TODO These processes should return some flag or metric to help determine whether to proceed
     // Mapping
-    executeMapping(sparkConf, harvestDataOut, mapDataOut, shortName, logger)
+    val mapDataOut = executeMapping(sparkConf, harvestDataOut, baseDataOut, shortName, logger)
 
     // Enrichment
     executeEnrichment(sparkConf, mapDataOut, enrichDataOut, shortName, logger, conf)

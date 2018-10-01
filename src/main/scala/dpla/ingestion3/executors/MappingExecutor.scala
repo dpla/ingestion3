@@ -33,7 +33,7 @@ trait MappingExecutor extends Serializable {
                       dataIn: String,
                       dataOut: String,
                       shortName: String,
-                      logger: Logger): Unit = {
+                      logger: Logger): String = {
 
     // This start time is used for documentation and output file naming.
     val startDateTime = LocalDateTime.now
@@ -114,6 +114,9 @@ trait MappingExecutor extends Serializable {
     logger.info(MappingSummary.getSummary(finalReport))
 
     spark.stop()
+
+    // Return output destination of mapped records
+    outputPath
   }
 
   /**
