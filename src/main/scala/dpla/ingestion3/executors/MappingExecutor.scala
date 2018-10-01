@@ -16,6 +16,7 @@ import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
+import scala.collection.mutable
 import scala.util.{Failure, Success}
 
 trait MappingExecutor extends Serializable {
@@ -66,9 +67,6 @@ trait MappingExecutor extends Serializable {
     // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
     val oreAggregationEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
 
-    val tupleRowStringEncoder: ExpressionEncoder[(Row, String)] =
-      ExpressionEncoder.tuple(RowEncoder(model.sparkSchema), ExpressionEncoder())
-
     // Load the harvested record dataframe
     val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
 
@@ -77,17 +75,22 @@ trait MappingExecutor extends Serializable {
 
     val dplaMap = new DplaMap()
 
-    val mappingResults: Dataset[(Row, String)] =
+    // All attempted records
+    val mappingResults: Dataset[Row] =
       documents.map(document =>
         dplaMap.map(document, shortName,
           totalCount, successCount, failureCount)
-      )(tupleRowStringEncoder)
+      )(oreAggregationEncoder)
         .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     val successResults: Dataset[Row] = mappingResults
-      .filter(tuple => Option(tuple._1).isDefined)
-      .filter(tuple => Option(tuple._2).isEmpty)
-      .map(tuple => tuple._1)(oreAggregationEncoder)
+      .filter(oreAggRow => {
+        !oreAggRow // not
+          .getAs[mutable.WrappedArray[Row]]("messages") // get all messages
+          .map(msg => msg.getString(1)) // extract the levels into a list
+          .contains(IngestLogLevel.error) // does that list contain any errors?
+      })
+      .map(oreAggValid => oreAggValid)(oreAggregationEncoder) // Why is this needed? Aren't they already encoded above?
 
     // Results must be written before _LOGS.
     // Otherwise, spark interpret the `successResults' `outputPath' as
@@ -111,8 +114,9 @@ trait MappingExecutor extends Serializable {
 
     // Collect the values needed to generate the report
     val finalReport = buildFinalReport(mappingResults, shortName, logsBasePath, startTime, endTime)(spark)
-    
+
     // Format the summary report and write it log file
+    // TODO Create MappingSummary.getEmailSummary() and
     logger.info(MappingSummary.getSummary(finalReport))
 
     spark.stop()
@@ -124,12 +128,15 @@ trait MappingExecutor extends Serializable {
   /**
     * Creates a summary report of the ingest by using the MappingSummary object
     *
-    * @param mappingResults
-    * @param shortName
-    * @param spark
-    * @return
+    * @param mappingResults All attempted records
+    * @param shortName Provider short name
+    * @param logsBasePath Root directory to write to
+    * @param startTime Start time of operation
+    * @param endTime End time of operation
+    * @param spark SparkSession
+    * @return MappingSummaryData
     */
-  def buildFinalReport(mappingResults: Dataset[(Row, String)],
+  def buildFinalReport(mappingResults: Dataset[Row],
                        shortName: String,
                        logsBasePath: String,
                        startTime: Long,
@@ -139,15 +146,7 @@ trait MappingExecutor extends Serializable {
     // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
     val oreAggregationEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
 
-    val sc = spark.sparkContext
-
-    val results: Dataset[Row] = mappingResults
-      .filter(tuple => Option(tuple._1).isDefined)
-      .map(tuple => tuple._1)(oreAggregationEncoder)
-
-    val exceptions: Array[String] = mappingResults
-      .filter(tuple => Option(tuple._2).isDefined)
-      .map(tuple => tuple._2).collect()
+    val results: Dataset[Row] = mappingResults.map(oreAgg => oreAgg)(oreAggregationEncoder)
 
     val messages = MessageProcessor.getAllMessages(results)(spark)
     val warnings = MessageProcessor.getWarnings(messages)
@@ -165,22 +164,19 @@ trait MappingExecutor extends Serializable {
     val errorMsgDetails = MessageProcessor.getMessageFieldSummary(errors).mkString("\n")
     val warnMsgDetails = MessageProcessor.getMessageFieldSummary(warnings).mkString("\n")
 
-    val exceptionsDS = sc.parallelize(exceptions).toDS()
+    // TODO Fixup log file write location
+    val baseLogDir = s"$dataOut/../logs/"
 
     val logFileList = List(
       "all" -> messages,
       "errors" -> errors,
-      "warnings" -> warnings,
-      "exceptions" -> exceptionsDS
-    )
+      "warnings" -> warnings
+    ).filter { case (_, data: Dataset[_]) => data.count() > 0 }
 
     val logFileSeq = logFileList.map {
-      case (name: String, data: Dataset[_]) => {
-        val path = s"$logsBasePath$name"
-        data match {
-          case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)
-          case ds: Dataset[String] => Utils.writeLogsAsTxt(path, name, ds, shortName)
-        }
+      case (name: String, data: Dataset[Row]) => {
+        val path = baseLogDir + s"$shortName-$endTime-map-$name"
+        Utils.writeLogsAsCsv(path, name, data, shortName)
         ReportFormattingUtils.centerPad(name, new File(path).getCanonicalPath)
       }
     }
@@ -200,7 +196,6 @@ trait MappingExecutor extends Serializable {
     // messages summary
     val messageSummary = MessageSummary(
       errorCount,
-      exceptions.length,
       warnCount,
       recordErrorCount,
       recordWarnCount,
@@ -222,26 +217,20 @@ class DplaMap extends Serializable {
     * @param totalCount Accumulator to track the number of records processed
     * @param successCount Accumulator to track the number of records successfully mapped
     * @param failureCount Accumulator to track the number of records that failed to map
-    * @return A tuple (Row, String)
-    *           - (Row, null) on successful mapping
-    *           - (null, Error message) on mapping failure
+    * @return A Row representing the mapping results (both success and failure)
     */
   def map(document: String,
           shortName: String,
           totalCount: LongAccumulator,
           successCount: LongAccumulator,
-          failureCount: LongAccumulator): (Row, String) = {
+          failureCount: LongAccumulator): Row = {
     totalCount.add(1)
 
     val extractorClass = ProviderRegistry.lookupProfile(shortName) match {
       case Success(extClass) => extClass
       case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
     }
-    extractorClass.performMapping(document) match {
-      case (Some(oreAgg), Some(exception)) => (RowConverter.toRow(oreAgg, model.sparkSchema), exception)
-      case (Some(oreAgg), None) => (RowConverter.toRow(oreAgg, model.sparkSchema), null)
-      case (None, Some(exception)) => (null, exception)
-      case _ => (null, null)
-    }
+    val oreAggregation = extractorClass.performMapping(document)
+    RowConverter.toRow(oreAggregation, model.sparkSchema)
   }
 }

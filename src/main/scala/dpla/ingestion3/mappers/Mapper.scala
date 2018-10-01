@@ -8,13 +8,11 @@ import dpla.ingestion3.utils.Utils._
 import org.json4s.DefaultFormats
 import org.json4s.JsonAST._
 
-import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
 trait Mapper[T, +E] extends IngestMessageTemplates {
-  // TODO This no longer needs to return Tuple, could simmply return Option[OreAggregation]
-  def map(document: Document[T], mapping: Mapping[T]): (Option[OreAggregation], Option[String])
+  def map(document: Document[T], mapping: Mapping[T]): OreAggregation
 
   /**
     * Performs validation checks against dataProvider values
@@ -104,7 +102,7 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
 }
 
 class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
-  override def map(document: Document[NodeSeq], mapping: Mapping[NodeSeq]): (Option[OreAggregation], Option[String]) = {
+  override def map(document: Document[NodeSeq], mapping: Mapping[NodeSeq]): OreAggregation = {
 
     implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
 
@@ -155,21 +153,20 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
         messages = msgCollector.getAll()
       )
     } match {
-      case Success(s) => (Some(s), None)
+      case Success(oreAggregation) => oreAggregation
       case Failure(f) => {
         implicit val formats: DefaultFormats.type = DefaultFormats
         val providerId = (mapping.sidecar(document) \\ "prehashId").extractOrElse[String]("Unknown")
         msgCollector.add(exception(providerId, f))
-        val failedOreAgg = emptyOreAggregation.copy(messages = msgCollector.getAll())
         // Return an empty oreAggregation that contains all the messages generated from failed mapping
-        (Some(failedOreAgg), None)
+        emptyOreAggregation.copy(messages = msgCollector.getAll())
       }
     }
   }
 }
 
 class JsonMapper extends Mapper[JValue, JsonMapping] {
-  override def map(document: Document[JValue], mapping: Mapping[JValue]): (Option[OreAggregation], Option[String]) = {
+  override def map(document: Document[JValue], mapping: Mapping[JValue]): OreAggregation = {
 
     implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
 
@@ -213,16 +210,15 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
         messages = msgCollector.getAll()
       )
     ) match {
-      case Success(s) => (Some(s), None)
+      case Success(oreAggregation) => oreAggregation
       case Failure(f) => {
         implicit val formats: DefaultFormats.type = DefaultFormats
         val providerId = (mapping.sidecar(document) \\ "prehashId").extractOrElse[String]("Unknown")
         msgCollector.add(exception(providerId, f))
         val failedOreAgg = emptyOreAggregation.copy(messages = msgCollector.getAll())
         // Return an empty oreAggregation that contains all the messages generated from failed mapping
-        (Some(failedOreAgg), None)
+        failedOreAgg
       }
     }
-
   }
 }

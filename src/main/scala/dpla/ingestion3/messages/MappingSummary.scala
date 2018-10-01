@@ -24,7 +24,6 @@ object MappingSummary {
     val warnRecordsStr = Utils.formatNumber(data.messageSummary.warningRecordCount)
     val errorRecordsStr = Utils.formatNumber(data.messageSummary.errorRecordCount)
     val failedCountStr = Utils.formatNumber(data.operationSummary.recordsFailed)
-    val exceptionCountStr = Utils.formatNumber(data.messageSummary.execeptionCount)
 
     val logFileMsg =
       if(data.operationSummary.logFiles.nonEmpty) data.operationSummary.logFiles.mkString("\n")
@@ -45,7 +44,7 @@ object MappingSummary {
         |${ReportFormattingUtils.centerPad("Failed", failedCountStr)}
         |
         |
-        |${ReportFormattingUtils.center("Errors, Warnings and Exceptions")}
+        |${ReportFormattingUtils.center("Errors and Warnings")}
         |
         |Messages
         |${ReportFormattingUtils.centerPad("- Errors", errorStr)}
@@ -54,7 +53,6 @@ object MappingSummary {
         |Records
         |${ReportFormattingUtils.centerPad("- Errors", errorRecordsStr)}
         |${ReportFormattingUtils.centerPad("- Warnings", warnRecordsStr)}
-        |${ReportFormattingUtils.centerPad("- Exceptions", exceptionCountStr)}
         |
         |${if(data.messageSummary.warningCount > 0 || data.messageSummary.errorCount > 0)
             ReportFormattingUtils.center("Message Summary") else ""}
