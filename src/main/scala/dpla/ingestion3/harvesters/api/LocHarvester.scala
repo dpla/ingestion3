@@ -105,8 +105,12 @@ class LocHarvester(spark: SparkSession,
     spark.sparkContext.parallelize(urls).map(url => {
       HttpUtils.makeGetRequest(url) match {
         case Failure(e) =>
+          val urlString = Try { url.toString } match {
+            case Success(urlStr) => Some(urlStr)
+            case _ => None
+          }
           ApiError(e.getStackTrace.mkString("\n\t"),
-            ApiSource(Map("" -> ""), Option(url.toString), None)  )
+            ApiSource(Map("" -> ""), urlString, None)  )
         case Success(response) =>
           Try { parse(response) } match {
             case Success(json) =>
