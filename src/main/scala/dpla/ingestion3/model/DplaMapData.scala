@@ -1,5 +1,7 @@
 package dpla.ingestion3.model
 
+import java.net.URI
+
 import dpla.ingestion3.messages.IngestMessage
 import dpla.ingestion3.model.DplaMapData._
 import org.json4s.{JNothing, JValue}
@@ -91,7 +93,9 @@ case class EdmAgent(
                      scheme: ZeroToOne[URI] = None,
                      exactMatch: ZeroToMany[URI] = Seq(),
                      closeMatch: ZeroToMany[URI] = Seq()
-                   )
+                   ) {
+  def print: String = name.getOrElse("")
+}
 
 case class DcmiTypeCollection(
                                title: ZeroToOne[String] = None,
@@ -126,5 +130,6 @@ case class EdmTimeSpan(
 
 
 case class URI(value: String) {
-  def validate: Boolean = Try { new URI(value) }.isSuccess
+  def validate: Boolean = Try { new java.net.URI(value) }.isSuccess
+  def print: String = value
 }
