@@ -31,20 +31,20 @@ trait IngestMessageTemplates {
 
   def missingRights(id: String): IngestMessage =
     IngestMessage(
-      message = s"Missing rights",
+      message = s"Missing required field",
       level = IngestLogLevel.error,
       id = id,
-      field = "rights/edmRights",
-      value = "MISSING"
+      field = "rights or edmRights",
+      value = ""
     )
 
   def duplicateRights(id: String): IngestMessage =
     IngestMessage(
-      message = s"Duplicate rights",
+      message = s"Duplicate",
       level = IngestLogLevel.warn,
       id = id,
       field = "rights and edmRights",
-      value = "Rights defined in both rights and edmRights"
+      value = "both rights and edmRights are defined"
     )
 
   def enrichedValue(id: String, field: String, origValue: String, enrichValue: String): IngestMessage =
