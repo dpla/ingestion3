@@ -13,7 +13,7 @@ trait IngestMessageTemplates {
 
   def mintUriError(id: String, field: String, value: String, msg: Option[String] = None): IngestMessage =
     IngestMessage(
-      message = s"Unable to mint URI ${msg.getOrElse("NO URI")}".trim,
+      message = s"Unable to mint URI ${msg.getOrElse("No URI")}".trim,
       level = IngestLogLevel.warn,
       id = id,
       field = field,
@@ -27,6 +27,24 @@ trait IngestMessageTemplates {
       id = id,
       field = field,
       value = "MISSING"
+    )
+
+  def missingRights(id: String): IngestMessage =
+    IngestMessage(
+      message = s"Missing rights",
+      level = IngestLogLevel.error,
+      id = id,
+      field = "rights/edmRights",
+      value = "MISSING"
+    )
+
+  def duplicateRights(id: String): IngestMessage =
+    IngestMessage(
+      message = s"Duplicate rights",
+      level = IngestLogLevel.warn,
+      id = id,
+      field = "rights and edmRights",
+      value = "Rights defined in both rights and edmRights"
     )
 
   def enrichedValue(id: String, field: String, origValue: String, enrichValue: String): IngestMessage =
@@ -64,6 +82,6 @@ trait IngestMessageTemplates {
       level = IngestLogLevel.error,
       id = id,
       field = "",
-      value = exception.getMessage.replaceAll("\n", " -- ")
+      value = exception.getMessage.replaceAll("\n", " | ")
     )
 }
