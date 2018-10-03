@@ -159,13 +159,13 @@ class OutputHelper(root: String,
    * @param key: S3 file key
    * @param text: Text string to be written to S3 file
    *
-   * @return: Try[String] ETag (HTTP entity tag).
+   * @return: Try[String] Path of written file.
    *          Identifier for specific version of the resource just written.
    */
   def writeS3File(bucket: String, key: String, text: String): Try[String] = Try {
     val in = new ByteArrayInputStream(text.getBytes("utf-8"))
-    val putObjectResult: PutObjectResult =
-      s3client.putObject(new PutObjectRequest(bucket, key, in, new ObjectMetadata))
-    putObjectResult.getETag
+    s3client.putObject(new PutObjectRequest(bucket, key, in, new ObjectMetadata))
+    // Return filepath
+    s"$bucket/$key"
   }
 }
