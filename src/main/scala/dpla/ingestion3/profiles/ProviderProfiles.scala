@@ -1,7 +1,7 @@
 package dpla.ingestion3.profiles
 
 import dpla.ingestion3.harvesters.Harvester
-import dpla.ingestion3.harvesters.api.{CdlHarvester, IaHarvester, LocHarvester, MdlHarvester}
+import dpla.ingestion3.harvesters.api._
 import dpla.ingestion3.harvesters.file.{NaraFileHarvester, P2PFileHarvester}
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.mappers.providers._
@@ -75,6 +75,17 @@ class MtProfile extends XmlProfile {
   override def getHarvester: Class[_ <: Harvester] = classOf[OaiHarvester]
   override def getMapping = new MtMapping
 }
+
+/**
+  * Mountain West Digital Library
+  */
+class MwdlProfile extends XmlProfile {
+  type Mapping = MtMapping // FIXME When MWDL mapping implemented
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[MwdlHarvester]
+  override def getMapping = new MtMapping  // FIXME When mapping implemented
+}
+
 
 
 /**
