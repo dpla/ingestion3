@@ -87,6 +87,15 @@ class OutputHelper(root: String,
   lazy val bucketName: String = Try{ directory.split("/")(2) }.getOrElse("")
 
   /*
+   * Parse any directories nested under an S3 bucket.
+   * Does not include leading slash.
+   * Includes trailing slash.
+   * @example if `root' = "s3://foo/bar/bat/" then `bucketNestedDir' = "bar/bat"
+   */
+  lazy val bucketNestedDir: String = directory.stripPrefix("s3a://")
+    .stripPrefix(bucketName).stripPrefix("/")
+
+  /*
    * Get path to manifest file, not including local root directory or s3 bucket.
    * Manifest will be in the same directory as activity output files.
    * Does not include starting "/".
@@ -118,7 +127,7 @@ class OutputHelper(root: String,
     val text: String = manifestText(opts)
 
     if (outputPath.startsWith("s3a://"))
-      writeS3File(bucketName, manifestKey, text)
+      writeS3File(bucketName, s"$bucketNestedDir$manifestKey", text)
     else
       writeLocalFile(manifestLocalOutPath, text)
   }
