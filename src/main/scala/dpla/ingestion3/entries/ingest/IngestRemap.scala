@@ -40,9 +40,10 @@ object IngestRemap extends MappingExecutor
 
     logger.info(s"Using harvest data from $harvestDataOut")
     
-    val enrichDataOut = baseDataOut+"/enriched"
-    val jsonlDataOut = baseDataOut+"/json-l"
-    val baseRptOut = baseDataOut+"/reports"
+    val enrichDataOut = baseDataOut+"/"+shortName+"/enriched"
+    val jsonlDataOut = baseDataOut+"/"+shortName+"/json-l"
+    val baseRptOut = baseDataOut+"/"+shortName+"/reports"
+
 
     // Load configuration from file.
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
@@ -56,7 +57,6 @@ object IngestRemap extends MappingExecutor
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryoserializer.buffer.max", "200")
       .setMaster(sparkMaster)
-
 
     Utils.deleteRecursively(new File(enrichDataOut))
     Utils.deleteRecursively(new File(jsonlDataOut))
