@@ -66,6 +66,13 @@ class OutputHelperTest extends FlatSpec {
     assert(outputHelper.bucketName === bucket)
   }
 
+  "bucketNestedDir" should "parse s3 nested directory from given root" in {
+    val nestedRoot = "s3a://foo/bar/bat/"
+    val nestedDir = "bar/bat/"
+    val helper = new OutputHelper(nestedRoot, shortName, activity, dateTime)
+    assert(helper.bucketNestedDir === nestedDir)
+  }
+
   "manifestKey" should "create correct manifest key" in {
     val key = "foo/harvest/20180910_095702-foo-OriginalRecord.avro/_MANIFEST"
     assert(outputHelper.manifestKey === key)
