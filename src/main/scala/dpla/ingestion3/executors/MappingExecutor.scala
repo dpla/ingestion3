@@ -172,7 +172,7 @@ trait MappingExecutor extends Serializable {
       "errors" -> errors,
       "warnings" -> warnings,
       "exceptions" -> exceptionsDS
-    )//.filter { case (_, data: Dataset[_]) => data.count() > 0 }
+    )
 
     val logFileSeq = logFileList.map {
       case (name: String, data: Dataset[_]) => {
