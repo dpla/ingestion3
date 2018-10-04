@@ -12,16 +12,16 @@ lazy val root = (project in file("."))
       "org.scalatest" %% "scalatest" % "3.0.1" % "it,test",
 
       /**
-        * @sw I updated spark core and spark sql from 2.0.1 to 2.1.0 to
-        *     resovle the bulid issues I was having (couldn't resolve
-        *    org.arpache.spark.Schema)
-        *
-        *     TODO test with 2.0.1 on someone else's machine during PR review?
+        * The following dependencies enable S3 file writes:
+        *   spark 2.3.1
+        *   spark-avro 4.0.0
+        *   aws-java-sdk 1.7.4
+        *   hadoop-aws 2.7.6
         */
-      "org.apache.spark" %% "spark-core" % "2.1.0" exclude("org.scalatest", "scalatest_2.11"),
-      "org.apache.spark" %% "spark-sql" % "2.1.0" exclude("org.scalatest", "scalatest_2.11"),
+      "org.apache.spark" %% "spark-core" % "2.3.1" exclude("org.scalatest", "scalatest_2.11"),
+      "org.apache.spark" %% "spark-sql" % "2.3.1" exclude("org.scalatest", "scalatest_2.11"),
       "org.apache.ant" % "ant" % "1.10.1",
-      "com.databricks" %% "spark-avro" % "3.2.0",
+      "com.databricks" %% "spark-avro" % "4.0.0",
       "org.json4s" %% "json4s-core" % "3.2.11" % "provided",
       "org.json4s" %% "json4s-jackson" % "3.2.11" % "provided",
       "org.eclipse.rdf4j" % "rdf4j" % "2.2",
@@ -46,8 +46,8 @@ lazy val root = (project in file("."))
       "org.scalamock" %% "scalamock" % "4.0.0" % "test",
       "com.holdenkarau" %% "spark-testing-base" % "2.1.0_0.8.0" % "test",
       "com.typesafe" % "config" % "1.3.1",
-      "com.amazonaws" % "aws-java-sdk-s3" % "1.10.6",
-      "org.apache.hadoop" % "hadoop-aws" % "2.8.1",
+      "com.amazonaws" % "aws-java-sdk" % "1.7.4",
+      "org.apache.hadoop" % "hadoop-aws" % "2.7.6",
       "com.squareup.okhttp3" % "okhttp" % "3.8.0",
       "com.opencsv" % "opencsv" % "3.7"
     )

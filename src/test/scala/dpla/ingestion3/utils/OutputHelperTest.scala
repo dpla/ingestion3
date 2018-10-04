@@ -2,7 +2,7 @@ package dpla.ingestion3.utils
 
 import java.time.LocalDateTime
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.FlatSpec
 
 class OutputHelperTest extends FlatSpec {
 
@@ -36,15 +36,15 @@ class OutputHelperTest extends FlatSpec {
     assert(outputHelper.outputPath === path)
   }
 
-  "outputPath" should "create correct map output path" in {
-    val helper = new OutputHelper(root, shortName, "map", dateTime)
-    val path = "s3a://my-bucket/foo/map/20180910_095702-foo-MAP4_0.MAPRecord.avro"
+  "outputPath" should "create correct mapping output path" in {
+    val helper = new OutputHelper(root, shortName, "mapping", dateTime)
+    val path = "s3a://my-bucket/foo/mapping/20180910_095702-foo-MAP4_0.MAPRecord.avro"
     assert(helper.outputPath === path)
   }
 
-  "outputPath" should "create correct enrich output path" in {
-    val helper = new OutputHelper(root, shortName, "enrich", dateTime)
-    val path = "s3a://my-bucket/foo/enrich/20180910_095702-foo-MAP4_0.EnrichRecord.avro"
+  "outputPath" should "create correct enrichment output path" in {
+    val helper = new OutputHelper(root, shortName, "enrichment", dateTime)
+    val path = "s3a://my-bucket/foo/enrichment/20180910_095702-foo-MAP4_0.EnrichRecord.avro"
     assert(helper.outputPath === path)
   }
 
@@ -66,6 +66,13 @@ class OutputHelperTest extends FlatSpec {
     assert(outputHelper.bucketName === bucket)
   }
 
+  "bucketNestedDir" should "parse s3 nested directory from given root" in {
+    val nestedRoot = "s3a://foo/bar/bat/"
+    val nestedDir = "bar/bat/"
+    val helper = new OutputHelper(nestedRoot, shortName, activity, dateTime)
+    assert(helper.bucketNestedDir === nestedDir)
+  }
+
   "manifestKey" should "create correct manifest key" in {
     val key = "foo/harvest/20180910_095702-foo-OriginalRecord.avro/_MANIFEST"
     assert(outputHelper.manifestKey === key)
@@ -76,5 +83,10 @@ class OutputHelperTest extends FlatSpec {
     val helper = new OutputHelper(localRoot, shortName, activity, dateTime)
     val path = "/path/to/local/foo/harvest/20180910_095702-foo-OriginalRecord.avro/_MANIFEST"
     assert(helper.manifestLocalOutPath === path)
+  }
+
+  "logsBasePath" should "create correct base path for reports" in {
+    val basePath = "s3a://my-bucket/foo/harvest/20180910_095702-foo-OriginalRecord.avro/_LOGS/"
+    assert(outputHelper.logsBasePath === basePath)
   }
 }

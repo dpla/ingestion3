@@ -3,6 +3,7 @@ package dpla.ingestion3.utils
 import java.time.format.DateTimeFormatter
 import java.time.LocalDateTime
 import java.io.ByteArrayInputStream
+
 import com.amazonaws.services.s3.model.{ObjectMetadata, PutObjectRequest, PutObjectResult}
 import com.amazonaws.services.s3.AmazonS3Client
 
@@ -20,6 +21,8 @@ import scala.util.Try
  * @see https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/TECH/pages/84512319/Ingestion+3+Storage+Specification
  *      for details on file naming conventions
  *
+ * The convention in this class is that methods with "path" in the name include
+ * the root bucket/directory while methods with "key" do not.
  */
 class OutputHelper(root: String,
                    shortName: String,
@@ -33,6 +36,8 @@ class OutputHelper(root: String,
   require(!root.startsWith("s3://") && !root.startsWith("s3n://"),
     "s3a protocol required for writing output")
 
+  val timestamp: String = startDateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+
   /*
    * File name for a harvest, mapping, enrichment, indexing (etc.) activity.
    * For full output path, including root directory/bucket, use `outputPath'
@@ -42,17 +47,12 @@ class OutputHelper(root: String,
    */
   val fileKey: String = {
 
-    val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
-
-    val timestamp: String = startDateTime.format(formatter)
-
     // TODO: handle "reports" case
-    // TODO: handle "logs" case
     // TODO: make schema configurable - could use sealed case classes for activities
     val schema: String = activity match {
       case "harvest" => "OriginalRecord"
-      case "map" => "MAP4_0.MAPRecord"
-      case "enrich" => "MAP4_0.EnrichRecord"
+      case "mapping" => "MAP4_0.MAPRecord"
+      case "enrichment" => "MAP4_0.EnrichRecord"
       case "jsonl" => "MAP3_1.IndexRecord"
       case _ => throw new IllegalArgumentException(s"Activity '$activity' not recognized")
     }
@@ -87,6 +87,15 @@ class OutputHelper(root: String,
   lazy val bucketName: String = Try{ directory.split("/")(2) }.getOrElse("")
 
   /*
+   * Parse any directories nested under an S3 bucket.
+   * Does not include leading slash.
+   * Includes trailing slash.
+   * @example if `root' = "s3://foo/bar/bat/" then `bucketNestedDir' = "bar/bat"
+   */
+  lazy val bucketNestedDir: String = directory.stripPrefix("s3a://")
+    .stripPrefix(bucketName).stripPrefix("/")
+
+  /*
    * Get path to manifest file, not including local root directory or s3 bucket.
    * Manifest will be in the same directory as activity output files.
    * Does not include starting "/".
@@ -97,6 +106,12 @@ class OutputHelper(root: String,
    * Get path to manifest with local root directory.
    */
   lazy val manifestLocalOutPath: String = s"$directory$manifestKey"
+
+  /*
+   * Get path to reports directory.
+   * Include root bucket/directory and trailing "/".
+   */
+  lazy val logsBasePath: String = s"$directory$fileKey/_LOGS/"
 
   lazy val s3client: AmazonS3Client = new AmazonS3Client
   lazy val flatFileIO: FlatFileIO = new FlatFileIO
@@ -112,7 +127,7 @@ class OutputHelper(root: String,
     val text: String = manifestText(opts)
 
     if (outputPath.startsWith("s3a://"))
-      writeS3File(bucketName, manifestKey, text)
+      writeS3File(bucketName, s"$bucketNestedDir$manifestKey", text)
     else
       writeLocalFile(manifestLocalOutPath, text)
   }
@@ -126,11 +141,10 @@ class OutputHelper(root: String,
    */
   val manifestText: Map[String, String] => String = (opts: Map[String, String]) => {
 
-    val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+    val date: String = startDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 
     // Add date/time to given `opts'
-    val data: Map[String, String] =
-      opts + ("Start date/time" -> startDateTime.format(formatter))
+    val data: Map[String, String] = opts + ("Start date/time" -> date)
 
     data.map{ case(k, v) => s"$k: $v" }.mkString("\n")
   }
@@ -154,13 +168,13 @@ class OutputHelper(root: String,
    * @param key: S3 file key
    * @param text: Text string to be written to S3 file
    *
-   * @return: Try[String] ETag (HTTP entity tag).
+   * @return: Try[String] Path of written file.
    *          Identifier for specific version of the resource just written.
    */
   def writeS3File(bucket: String, key: String, text: String): Try[String] = Try {
     val in = new ByteArrayInputStream(text.getBytes("utf-8"))
-    val putObjectResult: PutObjectResult =
-      s3client.putObject(new PutObjectRequest(bucket, key, in, new ObjectMetadata))
-    putObjectResult.getETag
+    s3client.putObject(new PutObjectRequest(bucket, key, in, new ObjectMetadata))
+    // Return filepath
+    s"$bucket/$key"
   }
 }

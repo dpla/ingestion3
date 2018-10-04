@@ -1,15 +1,14 @@
 package dpla.ingestion3.executors
 
 import java.io.File
+import java.time.LocalDateTime
 
 import com.databricks.spark.avro._
-
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.reports.summary._
-import dpla.ingestion3.utils.{ProviderRegistry, Utils}
-import org.apache.commons.lang.StringUtils
+import dpla.ingestion3.utils.{OutputHelper, ProviderRegistry, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
@@ -34,9 +33,18 @@ trait MappingExecutor extends Serializable {
                       dataIn: String,
                       dataOut: String,
                       shortName: String,
-                      logger: Logger): Unit = {
+                      logger: Logger): String = {
 
+    // This start time is used for documentation and output file naming.
+    val startDateTime = LocalDateTime.now
+
+    // This start time is used to measure the duration of mapping.
     val startTime = System.currentTimeMillis()
+
+    val outputHelper: OutputHelper =
+      new OutputHelper(dataOut, shortName, "mapping", startDateTime)
+
+    val outputPath = outputHelper.outputPath
 
     // @michael Any issues with making SparkSession implicit?
     implicit val spark: SparkSession = SparkSession.builder()
@@ -80,16 +88,35 @@ trait MappingExecutor extends Serializable {
       .filter(tuple => Option(tuple._1).isDefined)
       .map(tuple => tuple._1)(oreAggregationEncoder)
 
+    // Results must be written before _LOGS.
+    // Otherwise, spark interpret the `successResults' `outputPath' as
+    // already existing, and will fail to write.
+    successResults.where("size(messages.level) == 0").toDF().write.avro(outputPath)
+
+    val manifestOpts: Map[String, String] = Map(
+      "Activity" -> "Mapping",
+      "Provider" -> shortName,
+      "Record count" -> successResults.count.toString,
+      "Input" -> dataIn
+    )
+    outputHelper.writeManifest(manifestOpts) match {
+      case Success(s) => logger.info(s"Manifest written to $s.")
+      case Failure(f) => logger.warn(s"Manifest failed to write: $f")
+    }
+
     val endTime = System.currentTimeMillis()
 
+    val logsBasePath = outputHelper.logsBasePath
+
     // Collect the values needed to generate the report
-    val finalReport = buildFinalReport(successResults, mappingResults, shortName, dataOut, startTime, endTime)(spark)
+    val finalReport = buildFinalReport(successResults, mappingResults, shortName, logsBasePath, startTime, endTime)(spark)
     // Format the summary report and write it log file
     logger.info(MappingSummary.getSummary(finalReport))
 
-    successResults.where("size(messages.level) == 0").toDF().write.avro(dataOut)
-
     spark.stop()
+
+    // Return output destination of mapped records
+    outputPath
   }
 
   /**
@@ -104,7 +131,7 @@ trait MappingExecutor extends Serializable {
   def buildFinalReport(successResults: Dataset[Row],
                        mappingResults: Dataset[(Row, String)],
                        shortName: String,
-                       dataOut: String,
+                       logsBasePath: String,
                        startTime: Long,
                        endTime: Long)(implicit spark: SparkSession): MappingSummaryData = {
     import spark.implicits._
@@ -138,8 +165,6 @@ trait MappingExecutor extends Serializable {
     val errorMsgDetails = MessageProcessor.getMessageFieldSummary(errors).mkString("\n")
     val warnMsgDetails = MessageProcessor.getMessageFieldSummary(warnings).mkString("\n")
 
-    val baseLogDir = s"$dataOut/../logs/"
-
     val exceptionsDS = sc.parallelize(exceptions).toDS()
 
     val logFileList = List(
@@ -147,11 +172,11 @@ trait MappingExecutor extends Serializable {
       "errors" -> errors,
       "warnings" -> warnings,
       "exceptions" -> exceptionsDS
-    ).filter { case (_, data: Dataset[_]) => data.count() > 0 }
+    )
 
     val logFileSeq = logFileList.map {
       case (name: String, data: Dataset[_]) => {
-        val path = baseLogDir + s"$shortName-$endTime-map-$name"
+        val path = s"$logsBasePath$name"
         data match {
           case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)
           case ds: Dataset[String] => Utils.writeLogsAsTxt(path, name, ds, shortName)

@@ -34,15 +34,21 @@ object IngestRemap extends MappingExecutor
     val logger = Utils.createLogger("ingest", shortName)
 
     // Outputs
-    val harvestDataOut = Utils.getMostRecent(  cmdArgs.getInput() )
-      .getOrElse(throw new RuntimeException("Unable to load harvest data"))
+
+    // If harvest data is NOT on S3, get most recent data.
+    // Else, use the given S3 input filepath.
+    // TODO: get most recent S3 data.
+    val harvestDataOut = if (!baseDataOut.startsWith("s3a://")) {
+      Utils.getMostRecent( cmdArgs.getInput )
+        .getOrElse(throw new RuntimeException("Unable to load harvest data"))
+    } else cmdArgs.getInput
 
     logger.info(s"Using harvest data from $harvestDataOut")
+    
+    val enrichDataOut = baseDataOut+"/"+shortName+"/enriched"
+    val jsonlDataOut = baseDataOut+"/"+shortName+"/json-l"
+    val baseRptOut = baseDataOut+"/"+shortName+"/reports"
 
-    val mapDataOut = baseDataOut+"/mapped"
-    val enrichDataOut = baseDataOut+"/enriched"
-    val jsonlDataOut = baseDataOut+"/json-l"
-    val baseRptOut = baseDataOut+"/reports"
 
     // Load configuration from file.
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
@@ -57,15 +63,13 @@ object IngestRemap extends MappingExecutor
       .set("spark.kryoserializer.buffer.max", "200")
       .setMaster(sparkMaster)
 
-
-    Utils.deleteRecursively(new File(mapDataOut))
     Utils.deleteRecursively(new File(enrichDataOut))
     Utils.deleteRecursively(new File(jsonlDataOut))
     Utils.deleteRecursively(new File(baseRptOut))
 
     // TODO These processes should return some flag or metric to help determine whether to proceed
     // Mapping
-    executeMapping(sparkConf, harvestDataOut, mapDataOut, shortName, logger)
+    val mapDataOut = executeMapping(sparkConf, harvestDataOut, baseDataOut, shortName, logger)
 
     // Enrichment
     executeEnrichment(sparkConf, mapDataOut, enrichDataOut, shortName, logger, conf)
