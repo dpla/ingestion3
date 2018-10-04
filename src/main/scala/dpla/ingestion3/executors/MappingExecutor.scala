@@ -83,6 +83,8 @@ trait MappingExecutor extends Serializable {
       )(oreAggregationEncoder)
         .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
+    // Removes records from mappingResults that have at least one IngestMessage
+    // with a level of IngestLogLevel.error
     val successResults: Dataset[Row] = mappingResults
       .filter(oreAggRow => {
         !oreAggRow // not
@@ -90,17 +92,16 @@ trait MappingExecutor extends Serializable {
           .map(msg => msg.getString(1)) // extract the levels into a list
           .contains(IngestLogLevel.error) // does that list contain any errors?
       })
-      .map(oreAggValid => oreAggValid)(oreAggregationEncoder) // Why is this needed? Aren't they already encoded above?
 
     // Results must be written before _LOGS.
     // Otherwise, spark interpret the `successResults' `outputPath' as
     // already existing, and will fail to write.
-    successResults.where("size(messages.level) == 0").toDF().write.avro(outputPath)
+    successResults.toDF().write.avro(outputPath)
 
     val manifestOpts: Map[String, String] = Map(
       "Activity" -> "Mapping",
       "Provider" -> shortName,
-      "Record count" -> successResults.count.toString,
+      "Record count" -> Utils.formatNumber(successResults.count),
       "Input" -> dataIn
     )
     outputHelper.writeManifest(manifestOpts) match {
@@ -128,7 +129,7 @@ trait MappingExecutor extends Serializable {
   /**
     * Creates a summary report of the ingest by using the MappingSummary object
     *
-    * @param mappingResults All attempted records
+    * @param results All attempted records
     * @param shortName Provider short name
     * @param logsBasePath Root directory to write to
     * @param startTime Start time of operation
@@ -136,7 +137,7 @@ trait MappingExecutor extends Serializable {
     * @param spark SparkSession
     * @return MappingSummaryData
     */
-  def buildFinalReport(mappingResults: Dataset[Row],
+  def buildFinalReport(results: Dataset[Row],
                        shortName: String,
                        logsBasePath: String,
                        startTime: Long,
@@ -144,17 +145,23 @@ trait MappingExecutor extends Serializable {
     import spark.implicits._
 
     // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
-    val oreAggregationEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
+    // val oreAggregationEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
 
-    val results: Dataset[Row] = mappingResults.map(oreAgg => oreAgg)(oreAggregationEncoder)
+    // val results: Dataset[Row] = mappingResults.map(oreAgg => oreAgg)(oreAggregationEncoder)
 
     val messages = MessageProcessor.getAllMessages(results)(spark)
     val warnings = MessageProcessor.getWarnings(messages)
     val errors =   MessageProcessor.getErrors(messages)
 
     // get counts
-    val attemptedCount = mappingResults.count()
-    val validCount = results.select("dplaUri").where("size(messages) == 0").count()
+    val attemptedCount = results.count()
+    val validRecordCount = results.filter(oreAggRow => { // FIXME This is duplicating work in MappingExecutor
+      !oreAggRow // not
+        .getAs[mutable.WrappedArray[Row]]("messages") // get all messages
+        .map(msg => msg.getString(1)) // extract the levels into a list
+        .contains(IngestLogLevel.error) // does that list contain any errors?
+    }).count()
+
     val warnCount = warnings.count()
     val errorCount = errors.count()
 
@@ -164,9 +171,6 @@ trait MappingExecutor extends Serializable {
     val errorMsgDetails = MessageProcessor.getMessageFieldSummary(errors).mkString("\n")
     val warnMsgDetails = MessageProcessor.getMessageFieldSummary(warnings).mkString("\n")
 
-    // TODO Fixup log file write location
-    val baseLogDir = s"$dataOut/../logs/"
-
     val logFileList = List(
       "all" -> messages,
       "errors" -> errors,
@@ -175,7 +179,7 @@ trait MappingExecutor extends Serializable {
 
     val logFileSeq = logFileList.map {
       case (name: String, data: Dataset[Row]) => {
-        val path = baseLogDir + s"$shortName-$endTime-map-$name"
+        val path = logsBasePath + s"$shortName-$endTime-map-$name"
         Utils.writeLogsAsCsv(path, name, data, shortName)
         ReportFormattingUtils.centerPad(name, new File(path).getCanonicalPath)
       }
@@ -189,7 +193,7 @@ trait MappingExecutor extends Serializable {
     // operation summary
     val operationSummary = OperationSummary(
       attemptedCount,
-      validCount,
+      validRecordCount,
       recordErrorCount,
       logFileSeq
     )
