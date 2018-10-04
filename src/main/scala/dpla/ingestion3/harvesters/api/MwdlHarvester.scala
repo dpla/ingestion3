@@ -3,16 +3,10 @@ package dpla.ingestion3.harvesters.api
 
 import java.net.URL
 
-import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.utils.{HttpUtils, Utils}
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
-import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.json4s.DefaultFormats
-
-import scala.util.{Failure, Success}
-import scala.xml.XML
+import org.apache.spark.sql.SparkSession
 
 /**
   * Class for harvesting records from the MWDL Primo endpoint
@@ -35,8 +29,8 @@ class MwdlHarvester(spark: SparkSession,
       .setScheme("http")
       .setHost("utah-primoprod.hosted.exlibrisgroup.com")
       .setPath("/PrimoWebServices/xservice/search/brief")
-      .setParameter("indx", params.getOrElse("indx", "1")) // pagination value
-      .setParameter("bulkSize", params.getOrElse("rows", "10"))
+      .setParameter("indx", params.getOrElse("indx", "1")) // record offset
+      .setParameter("bulkSize", params.getOrElse("rows", "10")) // records per page
       .setParameter("institution", "MWDL")
       .setParameter("loc", "local,scope:(mw)")
       .setParameter("query", params.getOrElse("query", throw new RuntimeException("No query parameter provided")))
