@@ -68,10 +68,12 @@ object IngestRemap extends MappingExecutor
 
     // TODO These processes should return some flag or metric to help determine whether to proceed
     // Mapping
-    val mapDataOut = executeMapping(sparkConf, harvestDataOut, baseDataOut, shortName, logger)
+    val mapDataOut: String =
+      executeMapping(sparkConf, harvestDataOut, baseDataOut, shortName, logger)
 
     // Enrichment
-    val enrichDataOut = executeEnrichment(sparkConf, mapDataOut, baseDataOut, shortName, logger, conf)
+    val enrichDataOut: String =
+      executeEnrichment(sparkConf, mapDataOut, baseDataOut, shortName, logger, conf)
 
     // Json-l
     executeJsonl(sparkConf, enrichDataOut, jsonlDataOut, logger)

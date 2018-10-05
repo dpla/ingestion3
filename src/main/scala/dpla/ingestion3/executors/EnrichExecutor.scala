@@ -99,6 +99,8 @@ trait EnrichExecutor extends Serializable {
       .format("com.databricks.spark.avro")
       .save(outputPath)
 
+    // Create and write manifest.
+
     val manifestOpts: Map[String, String] = Map(
       "Activity" -> "Enrichment",
       "Provider" -> shortName,
@@ -110,6 +112,8 @@ trait EnrichExecutor extends Serializable {
       case Success(s) => logger.info(s"Manifest written to $s.")
       case Failure(f) => logger.warn(s"Manifest failed to write: $f")
     }
+
+    // Write logs and summary reports.
 
     val endTime = System.currentTimeMillis()
 
@@ -129,7 +133,7 @@ trait EnrichExecutor extends Serializable {
 
     val logFileSeq = logEnrichedFields.map {
       case (name: String, data: Dataset[_]) => {
-        val path = outputHelper.logsBasePath+s"$shortName-$endTime-map-$name"
+        val path = outputHelper.logsBasePath+s"$shortName-$endTime-enrich-$name"
         data match {
           case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)
         }
