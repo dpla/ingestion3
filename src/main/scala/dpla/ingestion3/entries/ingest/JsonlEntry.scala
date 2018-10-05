@@ -39,6 +39,6 @@ object JsonlEntry extends JsonlExecutor {
       .setAppName("jsonl")
       .setMaster("local[*]")
 
-    executeJsonl(sparkConf, shortName, dataIn, dataOut, Utils.createLogger("jsonl"))
+    executeJsonl(sparkConf, dataIn, dataOut, shortName, Utils.createLogger("jsonl"))
   }
 }

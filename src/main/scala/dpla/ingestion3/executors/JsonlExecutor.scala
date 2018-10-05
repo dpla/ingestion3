@@ -19,9 +19,9 @@ trait JsonlExecutor extends Serializable {
     * @param dataOut Location to save JSON-L
     */
   def executeJsonl(sparkConf: SparkConf,
-                   shortName: String,
                    dataIn: String,
                    dataOut: String,
+                   shortName: String,
                    logger: Logger): String = {
 
     // This start time is used for documentation and output file naming.
