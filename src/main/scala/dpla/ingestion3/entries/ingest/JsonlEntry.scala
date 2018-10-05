@@ -1,5 +1,6 @@
 package dpla.ingestion3.entries.ingest
 
+import dpla.ingestion3.confs.CmdArgs
 import dpla.ingestion3.executors.JsonlExecutor
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
@@ -9,32 +10,35 @@ import org.apache.spark.SparkConf
   * JSONL text, which can be bulk loaded into a DPLA Ingestion1 index, in
   * Elasticsearch 0.90
   *
-  * Arguments:
-  *   1) The path or URL to the mapped / enriched data (file, directory, or s3
-  *      URI)
-  *   2) The path or URL to the output (directory or s3 "folder")
+  * Expects three parameters:
+  * 1) a path to the harvested data
+  * 2) a path to output the mapped data
+  * 3) provider short name (e.g. 'mdl', 'cdl', 'harvard')
   *
-  * The output directory will contain one file named "part-*" that constitutes
-  * the JSONL.
-  *
-  *   Usage
-  *   -----
-  *   To invoke via sbt:
-  *     sbt "run-main dpla.ingestion3.entries.JsonlEntry /input/path /output/path"
-  *
+  * Usage
+  * -----
+  * To invoke via sbt:
+  * sbt "run-main dpla.ingestion3.JsonlEntry
+  *       --input=/input/path/to/enriched/
+  *       --output=/output/path/to/jsonl/
+  *       --name=shortName"
   */
 object JsonlEntry extends JsonlExecutor {
 
   def main(args: Array[String]): Unit = {
 
-    val inputName = args(0)
-    val outputName = args(1)
+    // Read in command line args.
+    val cmdArgs = new CmdArgs(args)
+
+    val dataIn = cmdArgs.getInput()
+    val dataOut = cmdArgs.getOutput()
+    val shortName = cmdArgs.getProviderName()
 
     val sparkConf =
       new SparkConf()
       .setAppName("jsonl")
       .setMaster("local[*]")
 
-    executeJsonl(sparkConf, inputName, outputName, Utils.createLogger("jsonl"))
+    executeJsonl(sparkConf, shortName, dataIn, dataOut, Utils.createLogger("jsonl"))
   }
 }
