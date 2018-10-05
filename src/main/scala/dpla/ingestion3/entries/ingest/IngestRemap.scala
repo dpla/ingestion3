@@ -29,6 +29,7 @@ object IngestRemap extends MappingExecutor
     val baseDataOut = cmdArgs.getOutput()
     val confFile = cmdArgs.getConfigFile()
     val shortName = cmdArgs.getProviderName()
+    val input = cmdArgs.getInput()
 
     // Get logger
     val logger = Utils.createLogger("ingest", shortName)
@@ -38,10 +39,10 @@ object IngestRemap extends MappingExecutor
     // If harvest data is NOT on S3, get most recent data.
     // Else, use the given S3 input filepath.
     // TODO: get most recent S3 data.
-    val harvestDataOut = if (!baseDataOut.startsWith("s3a://")) {
-      Utils.getMostRecent( cmdArgs.getInput )
+    val harvestDataOut = if (!input.startsWith("s3a://")) {
+      Utils.getMostRecent(input)
         .getOrElse(throw new RuntimeException("Unable to load harvest data"))
-    } else cmdArgs.getInput
+    } else input
 
     logger.info(s"Using harvest data from $harvestDataOut")
 
