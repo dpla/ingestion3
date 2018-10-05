@@ -68,7 +68,7 @@ trait MappingExecutor extends Serializable {
     val oreAggregationEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
 
     // Load the harvested record dataframe
-    val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
+    val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024).limit(100)
 
     // Run the mapping over the Dataframe
     val documents: Dataset[String] = harvestedRecords.select("document").as[String]
