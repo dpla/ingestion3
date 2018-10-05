@@ -40,10 +40,10 @@ class EsdnProfile extends XmlProfile {
   * Internet Archive
   */
 class IaProfile extends JsonProfile {
-  type Mapping = IaMapping // FIXME
+  type Mapping = IaMapping
 
   override def getHarvester = classOf[IaHarvester]
-  override def getMapping = new IaMapping // FIXME
+  override def getMapping = new IaMapping
 }
 
 /**
@@ -85,8 +85,6 @@ class MwdlProfile extends XmlProfile {
   override def getHarvester: Class[_ <: Harvester] = classOf[MwdlHarvester]
   override def getMapping = new MtMapping  // FIXME When mapping implemented
 }
-
-
 
 /**
   * National Archives and Records Administration
