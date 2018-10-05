@@ -1,7 +1,5 @@
 package dpla.ingestion3.entries.ingest
 
-import java.io.File
-
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.executors.EnrichExecutor
 import dpla.ingestion3.utils.Utils
@@ -48,8 +46,6 @@ object EnrichEntry extends EnrichExecutor {
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryoserializer.buffer.max", "200")
       .setMaster(i3Conf.spark.sparkMaster.getOrElse("local[*]"))
-
-    Utils.deleteRecursively(new File(dataOut))
 
     executeEnrichment(sparkConf, dataIn, dataOut, shortName, enrichLogger, i3Conf)
   }

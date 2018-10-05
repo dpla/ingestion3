@@ -29,6 +29,7 @@ object IngestRemap extends MappingExecutor
     val baseDataOut = cmdArgs.getOutput()
     val confFile = cmdArgs.getConfigFile()
     val shortName = cmdArgs.getProviderName()
+    val input = cmdArgs.getInput()
 
     // Get logger
     val logger = Utils.createLogger("ingest", shortName)
@@ -38,14 +39,13 @@ object IngestRemap extends MappingExecutor
     // If harvest data is NOT on S3, get most recent data.
     // Else, use the given S3 input filepath.
     // TODO: get most recent S3 data.
-    val harvestDataOut = if (!baseDataOut.startsWith("s3a://")) {
-      Utils.getMostRecent( cmdArgs.getInput )
+    val harvestDataOut = if (!input.startsWith("s3a://")) {
+      Utils.getMostRecent(input)
         .getOrElse(throw new RuntimeException("Unable to load harvest data"))
-    } else cmdArgs.getInput
+    } else input
 
     logger.info(s"Using harvest data from $harvestDataOut")
-    
-    val enrichDataOut = baseDataOut+"/"+shortName+"/enriched"
+
     val jsonlDataOut = baseDataOut+"/"+shortName+"/json-l"
     val baseRptOut = baseDataOut+"/"+shortName+"/reports"
 
@@ -63,16 +63,17 @@ object IngestRemap extends MappingExecutor
       .set("spark.kryoserializer.buffer.max", "200")
       .setMaster(sparkMaster)
 
-    Utils.deleteRecursively(new File(enrichDataOut))
     Utils.deleteRecursively(new File(jsonlDataOut))
     Utils.deleteRecursively(new File(baseRptOut))
 
     // TODO These processes should return some flag or metric to help determine whether to proceed
     // Mapping
-    val mapDataOut = executeMapping(sparkConf, harvestDataOut, baseDataOut, shortName, logger)
+    val mapDataOut: String =
+      executeMapping(sparkConf, harvestDataOut, baseDataOut, shortName, logger)
 
     // Enrichment
-    executeEnrichment(sparkConf, mapDataOut, enrichDataOut, shortName, logger, conf)
+    val enrichDataOut: String =
+      executeEnrichment(sparkConf, mapDataOut, baseDataOut, shortName, logger, conf)
 
     // Json-l
     executeJsonl(sparkConf, enrichDataOut, jsonlDataOut, logger)

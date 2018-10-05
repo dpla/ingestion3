@@ -1,6 +1,7 @@
 package dpla.ingestion3.executors
 
 import java.io.File
+import java.time.LocalDateTime
 
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
@@ -8,12 +9,9 @@ import dpla.ingestion3.enrichments.EnrichmentDriver
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
 import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
-
 import dpla.ingestion3.reports.PrepareEnrichmentReport
-
 import dpla.ingestion3.reports.summary._
-
-import dpla.ingestion3.utils.{HttpUtils, Utils}
+import dpla.ingestion3.utils.{OutputHelper, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
@@ -38,12 +36,21 @@ trait EnrichExecutor extends Serializable {
                         dataOut: String,
                         shortName: String,
                         logger: Logger,
-                        i3conf: i3Conf): Unit = {
+                        i3conf: i3Conf): String = {
 
     // Verify that twofishes is reachable
     // Utils.pingTwofishes(i3conf)
 
+    // This start time is used for documentation and output file naming.
+    val startDateTime = LocalDateTime.now
+
+    // This start time is used to measure the duration of enrichment.
     val startTime = System.currentTimeMillis()
+
+    val outputHelper =
+      new OutputHelper(dataOut, shortName, "enrichment", startDateTime)
+
+    val outputPath = outputHelper.outputPath
 
     implicit val spark = SparkSession.builder()
       .config(sparkConf)
@@ -52,10 +59,6 @@ trait EnrichExecutor extends Serializable {
 
     val sc = spark.sparkContext
     val improvedCount: LongAccumulator = sc.longAccumulator("Improved Record Count")
-    val typeImprovedCount: LongAccumulator = sc.longAccumulator("Improved Type Count")
-    val lamgImprovedCount: LongAccumulator = sc.longAccumulator("Improved Language Count")
-    val dateImprovedCount: LongAccumulator = sc.longAccumulator("Improved Date Count")
-    val placeImprovedCount: LongAccumulator = sc.longAccumulator("Improved Place Count")
 
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
@@ -94,7 +97,23 @@ trait EnrichExecutor extends Serializable {
     // Save mapped records out to Avro file
     successResults.toDF().write
       .format("com.databricks.spark.avro")
-      .save(dataOut)
+      .save(outputPath)
+
+    // Create and write manifest.
+
+    val manifestOpts: Map[String, String] = Map(
+      "Activity" -> "Enrichment",
+      "Provider" -> shortName,
+      "Record count" -> successResults.count.toString,
+      "Input" -> dataIn
+    )
+
+    outputHelper.writeManifest(manifestOpts) match {
+      case Success(s) => logger.info(s"Manifest written to $s.")
+      case Failure(f) => logger.warn(s"Manifest failed to write: $f")
+    }
+
+    // Write logs and summary reports.
 
     val endTime = System.currentTimeMillis()
 
@@ -114,11 +133,13 @@ trait EnrichExecutor extends Serializable {
 
     val logFileSeq = logEnrichedFields.map {
       case (name: String, data: Dataset[_]) => {
-        val path = dataOut + "/../logs/"+ s"$shortName-$endTime-enrich-$name"
+        val path = outputHelper.logsBasePath + s"$shortName-$endTime-enrich-$name"
         data match {
           case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)
         }
-        ReportFormattingUtils.centerPad(name, new File(path).getCanonicalPath)
+        val canonicalPath = if (path.startsWith("s3a://")) path else
+          new File(path).getCanonicalPath
+        ReportFormattingUtils.centerPad(name, canonicalPath)
       }
     }
 
@@ -157,6 +178,9 @@ trait EnrichExecutor extends Serializable {
 
     // Log error messages.
     failures.foreach(logger.error(_))
+
+    // Return output destination of enriched records.
+    outputPath
   }
 
   private def enrich(dplaMapData: OreAggregation,
