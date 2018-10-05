@@ -116,7 +116,7 @@ class IaHarvester (spark: SparkSession,
       queryParams
         .updated("cursor", cursor)
         .updated("q", s"collection:$collection")
-        .filter(_._2.nonEmpty)
+        .filter{ case (k: String, v: String) => v.nonEmpty}
     )
 
     harvestLogger.info(s"Requesting ${url.toString}")
