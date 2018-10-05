@@ -179,8 +179,8 @@ trait EnrichExecutor extends Serializable {
     // Log error messages.
     failures.foreach(logger.error(_))
 
-    // TODO: Return correct string
-    ""
+    // Return output destination of enriched records.
+    outputPath
   }
 
   private def enrich(dplaMapData: OreAggregation,
