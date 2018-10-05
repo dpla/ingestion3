@@ -11,7 +11,9 @@ import scala.xml.NodeSeq
 class MapperTest extends FlatSpec with BeforeAndAfter with IngestMessageTemplates {
 
   class MapTest extends Mapper[NodeSeq, XmlMapping] {
-    override def map(document: Document[NodeSeq], mapping: Mapping[NodeSeq]): OreAggregation = ???
+    // Stubbed implementation
+    override def map(document: Document[NodeSeq], mapping: Mapping[NodeSeq]): OreAggregation =
+      emptyOreAggregation
   }
 
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
