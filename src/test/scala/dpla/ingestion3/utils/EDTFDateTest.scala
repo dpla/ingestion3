@@ -1,5 +1,6 @@
 package dpla.ingestion3.utils
 
+import dpla.ingestion3.utils.EDTFDate.DateRangeStrings
 import org.scalatest.FlatSpec
 
 
@@ -22,8 +23,8 @@ class EDTFDateTest extends FlatSpec {
       ("2017-21", "2017") // season syntax, e.g. Spring, 2017.
     )
     for (d <- dates) {
-      val rv: Option[(String, String)] = EDTFDate.rangeForExactDate(d._1)
-      assert(rv.getOrElse(("", "")) == (d._2, d._2))
+      val rv = EDTFDate.rangeForExactDate(d._1)
+      assert(rv.getOrElse(("", "")) == DateRangeStrings(d._2, d._2))
     }
   }
 
@@ -37,8 +38,8 @@ class EDTFDateTest extends FlatSpec {
       ("1999-uu-uu", "1999-01-01", "1999-12-31")
     )
     for (d <- dates) {
-      val rv: Option[(String, String)] = EDTFDate.rangeForExactDate(d._1)
-      assert(rv.getOrElse(("", "")) == (d._2, d._3))
+      val rv = EDTFDate.rangeForExactDate(d._1)
+      assert(rv.getOrElse(("", "")) == DateRangeStrings(d._2, d._3))
     }
   }
 
@@ -55,7 +56,7 @@ class EDTFDateTest extends FlatSpec {
     // Known issue: it doesn't reject impossible dates like 2017-02-29,
     // 2017-11-31, etc.
     for (d <- dates) {
-      val rv: Option[(String, String)] = EDTFDate.rangeForExactDate(d)
+      val rv = EDTFDate.rangeForExactDate(d)
       assert(rv.getOrElse(None) == None)
     }
   }
@@ -68,8 +69,8 @@ class EDTFDateTest extends FlatSpec {
       ("2004-01-01T10:10:10+05:00", "2004-01-01")
     )
     for (d <- dates) {
-      val rv: Option[(String, String)] = EDTFDate.rangeForDateAndTime(d._1)
-      assert(rv.getOrElse(("", "")) == (d._2, d._2))
+      val rv = EDTFDate.rangeForDateAndTime(d._1)
+      assert(rv.getOrElse(("", "")) == DateRangeStrings(d._2, d._2))
     }
   }
 
@@ -90,8 +91,8 @@ class EDTFDateTest extends FlatSpec {
       ("644/unknown", "644", "")
     )
     for (d <- dates) {
-      val rv: Option[(String, String)] = EDTFDate.rangeForInterval(d._1)
-      assert(rv.getOrElse(("", "")) == (d._2, d._3))
+      val rv = EDTFDate.rangeForInterval(d._1)
+      assert(rv.getOrElse(("", "")) == DateRangeStrings(d._2, d._3))
     }
   }
 
@@ -101,7 +102,7 @@ class EDTFDateTest extends FlatSpec {
       "unknown-10-10/2017-1-1"   // "unknown" must be whole date
     )
     for (d <- dates) {
-      val rv: Option[(String, String)] = EDTFDate.rangeForInterval(d)
+      val rv = EDTFDate.rangeForInterval(d)
       assert(rv.getOrElse(None) == None)
     }
   }
@@ -114,8 +115,8 @@ class EDTFDateTest extends FlatSpec {
       ("y-10000/open", "-10000", "")
     )
     for (d <- dates) {
-      val rv: Option[(String, String)] = EDTFDate.rangeForOpenInterval(d._1)
-      assert(rv.getOrElse(("", "")) == (d._2, d._3))
+      val rv = EDTFDate.rangeForOpenInterval(d._1)
+      assert(rv.getOrElse(("", "")) == DateRangeStrings(d._2, d._3))
     }
   }
 
@@ -125,7 +126,7 @@ class EDTFDateTest extends FlatSpec {
       "open/open"
     )
     for (d <- dates) {
-      val rv: Option[(String, String)] = EDTFDate.rangeForOpenInterval(d)
+      val rv = EDTFDate.rangeForOpenInterval(d)
       assert(rv.getOrElse(None) == None)
     }
   }
@@ -143,8 +144,8 @@ class EDTFDateTest extends FlatSpec {
       ("1900/open", "1900", "")
     )
     for (d <- dates) {
-      val rv: Option[(String, String)] = EDTFDate.rangeForEDTF(d._1)
-      assert(rv.getOrElse("", "") == (d._2, d._3))
+      val rv = EDTFDate.rangeForEDTF(d._1)
+      assert(rv.getOrElse("", "") == DateRangeStrings(d._2, d._3))
     }
   }
 }
