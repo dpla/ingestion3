@@ -17,7 +17,7 @@ class WhitelistOaiRelationTest extends FlatSpec with SharedSparkContext {
       Right(OaiRecord("a", "document", Seq()))
     )
 
-    override def listAllRecordPages() =  ???
+    override def listAllRecordPages = listAllSetPages()
 
     override def listAllSetPages() = Seq(
       Right(OaiPage("1")),
