@@ -58,7 +58,7 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
     if (values.size > 1) { collector.add(moreThanOneValueInfo(providerId, "edmRights", values.mkString(" | "))) }
     values.foreach(value => {
       if (!value.validate)
-        collector.add(mintUriError(providerId, "edmRights", value.print))
+        collector.add(mintUriError(providerId, "edmRights", value.toString))
     })
     values.find(_.validate)
   }
