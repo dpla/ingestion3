@@ -59,10 +59,6 @@ trait EnrichExecutor extends Serializable {
 
     val sc = spark.sparkContext
     val improvedCount: LongAccumulator = sc.longAccumulator("Improved Record Count")
-    val typeImprovedCount: LongAccumulator = sc.longAccumulator("Improved Type Count")
-    val lamgImprovedCount: LongAccumulator = sc.longAccumulator("Improved Language Count")
-    val dateImprovedCount: LongAccumulator = sc.longAccumulator("Improved Date Count")
-    val placeImprovedCount: LongAccumulator = sc.longAccumulator("Improved Place Count")
 
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._

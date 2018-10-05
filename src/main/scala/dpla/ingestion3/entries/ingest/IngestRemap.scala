@@ -44,8 +44,7 @@ object IngestRemap extends MappingExecutor
     } else cmdArgs.getInput
 
     logger.info(s"Using harvest data from $harvestDataOut")
-    
-    val enrichDataOut = baseDataOut+"/"+shortName+"/enriched"
+
     val jsonlDataOut = baseDataOut+"/"+shortName+"/json-l"
     val baseRptOut = baseDataOut+"/"+shortName+"/reports"
 
@@ -63,7 +62,6 @@ object IngestRemap extends MappingExecutor
       .set("spark.kryoserializer.buffer.max", "200")
       .setMaster(sparkMaster)
 
-    Utils.deleteRecursively(new File(enrichDataOut))
     Utils.deleteRecursively(new File(jsonlDataOut))
     Utils.deleteRecursively(new File(baseRptOut))
 
@@ -72,7 +70,7 @@ object IngestRemap extends MappingExecutor
     val mapDataOut = executeMapping(sparkConf, harvestDataOut, baseDataOut, shortName, logger)
 
     // Enrichment
-    executeEnrichment(sparkConf, mapDataOut, enrichDataOut, shortName, logger, conf)
+    val enrichDataOut = executeEnrichment(sparkConf, mapDataOut, baseDataOut, shortName, logger, conf)
 
     // Json-l
     executeJsonl(sparkConf, enrichDataOut, jsonlDataOut, logger)
