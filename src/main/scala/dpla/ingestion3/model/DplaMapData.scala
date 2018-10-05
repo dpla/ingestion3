@@ -131,5 +131,6 @@ case class EdmTimeSpan(
 
 case class URI(value: String) {
   def validate: Boolean = Try { new java.net.URI(value) }.isSuccess
-  def print: String = value
+
+  override def toString: String = value
 }
