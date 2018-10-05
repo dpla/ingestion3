@@ -69,7 +69,7 @@ trait JsonlExecutor extends Serializable {
     )
 
     outputHelper.writeManifest(manifestOpts) match {
-      case Success(s) => logger.info(s"Mainifest written to $s")
+      case Success(s) => logger.info(s"Manifest written to $s")
       case Failure(f) => logger.warn(s"Manifest failed to write: $f")
     }
 
