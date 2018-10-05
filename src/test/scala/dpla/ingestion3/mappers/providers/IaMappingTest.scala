@@ -15,85 +15,127 @@ class IaMappingTest extends FlatSpec with BeforeAndAfter {
   val json: Document[JValue] = Document(parse(jsonString))
   val extractor = new IaMapping
 
-//  it should "extract the correct rights" in {
-//    val expected = Seq("For rights relating to this resource, visit https://www.loc.gov/item/73691632/")
-//    assert(extractor.rights(json) === expected)
-//  }
-//
-//  it should "extract the correct dataProvider" in {
-//    val expected = Seq(nameOnlyAgent("Library of Congress"))
-//    assert(extractor.dataProvider(json) === expected)
-//  }
-//
-//  it should "extract the correct provider id" in {
-//    val expected = "http://www.loc.gov/item/73691632/"
-//    assert(extractor.getProviderId(json) == expected)
-//  }
+  it should "extract the correct rights" in {
+    val expected = Seq("Access to the Internet Archive’s Collections is granted for scholarship " +
+    "and research purposes only. Some of the content available through the Archive may be governed " +
+      "by local, national, and/or international laws and regulations, and your use of such content " +
+      "is solely at your own risk")
+    assert(extractor.rights(json) === expected)
+  }
+
+  it should "extract the correct dataProvider" in {
+    val expected = Seq(nameOnlyAgent("Elms College"))
+    assert(extractor.dataProvider(json) === expected)
+  }
+
+  it should "extract the correct provider id" in {
+    val expected = "artofdyingwell00bell"
+    assert(extractor.getProviderId(json) == expected)
+  }
 
   it should "extract the correct URL for isShownAt" in {
     val expected = Seq(stringOnlyWebResource("http://www.archive.org/details/artofdyingwell00bell"))
     assert(extractor.isShownAt(json) === expected)
   }
 
-//  it should "extract the correct url for preview" in {
-//    val expected = Seq(uriOnlyWebResource(URI("http:images.com")))
-//    assert(extractor.preview(json) === expected)
-//  }
-//  // TODO test extraction of other-titles and alternate_title
-//  it should "extract the correct alternate title" in {
-//    val json = Document(parse(
-//      """{"item": {"other-title": ["alt title"], "other-titles": ["alt title 2"],"alternate_title": ["alt title 3"]}} """))
-//
-//    assert(extractor.alternateTitle(json) == Seq("alt title"))
-//  }
-//
-//  // TODO test correct extraction from `dates` and if both present s
-//  it should "extract the correct date" in {
-//    val expected = Seq("1769").map(stringOnlyTimeSpan)
-//    assert(extractor.date(json) == expected)
-//  }
-//
-//  it should "extract the correct description" in {
-//    val expected = Seq("Scale ca. 1:740,000. Title from verso. Manuscript, pen-and-ink. On verso: No 33. LC Maps of North America, 1750-1789, 1244 Available also through the Library of Congress Web site as a raster image. Vault AACR2", "[1769?]")
-//
-//    assert(extractor.description(json) == expected)
-//  }
-//
-//  it should "extract the correct extent" in {
-//    val expected = Seq("map, on sheet 39 x 29 cm.")
-//    assert(extractor.extent(json) == expected)
-//  }
-//
-//  // TODO test extraction from [item \ format \ type]
-//  it should "extract the correct format" in {
-//    val expected = Seq("map")
-//    assert(extractor.format(json) == expected)
-//  }
-//
-//  it should "extract the correct identifiers" in {
-//    val expected = Seq("http://www.loc.gov/item/73691632/")
-//    assert(extractor.identifier(json) == expected)
-//  }
-//
-//  it should "extract the correct language" in {
-//    val expected = Seq("english").map(nameOnlyConcept)
-//    assert(extractor.language(json) == expected)
-//  }
-//
-//  it should "extract the correct location" in {
-//    val expected = Seq("New jersey", "New york", "New york (state)","United states")
-//      .map(nameOnlyPlace)
-//    assert(extractor.place(json) == expected)
-//  }
-//
-//  it should "extract the correct title" in {
-//    val expected = Seq("Lines run in the Jersies for determining boundaries between that Province & New York.")
-//    assert(extractor.title(json) == expected)
-//  }
-//
-//  // TODO Add test for extracting format keys
-//  it should "extract the correct type" in {
-//    val expected = Seq("map", "map")
-//    assert(extractor.`type`(json) == expected)
-//  }
+  it should "extract the correct url for preview" in {
+    val expected = Seq(stringOnlyWebResource("https://archive.org/services/img/artofdyingwell00bell"))
+    assert(extractor.preview(json) === expected)
+  }
+
+  it should "extract the correct date" in {
+    val expected = Seq("1720-01-01T00:00:00Z").map(stringOnlyTimeSpan)
+    assert(extractor.date(json) == expected)
+  }
+
+  it should "extract the correct description" in {
+    val expected = Seq("With a final errata leaf; \"Publish'd for the benefit of the translatour\"; M.E. Barry Rare Book Collection. Special Collections, Alumnae Library, Elms College; Description based on print version record.")
+    assert(extractor.description(json) == expected)
+  }
+
+  it should "extract the correct language" in {
+    val expected = Seq("eng").map(nameOnlyConcept)
+    assert(extractor.language(json) == expected)
+  }
+
+  it should "extract the correct publisher" in {
+    val expected = Seq("Printed by I. Dalton. The Book may be had at Mr. Colstons, Mr. Jones, at Mr. Sunderland's coffee-house, Pilgrims coffee-house, Mrs. Whites")
+      .map(nameOnlyAgent)
+    assert(extractor.publisher(json) == expected)
+  }
+
+  it should "extract the correct subject" in {
+    val expected = Seq("Death--Religious aspects--Catholic Church--Early works to 1800", "Christian life" )
+      .map(nameOnlyConcept)
+    assert(extractor.subject(json) == expected)
+  }
+
+  it should "extract the correct title" in {
+    val expected = Seq("The art of dying well")
+    assert(extractor.title(json) == expected)
+  }
+
+  it should "extract the correct title and vol" in {
+    val json = org.json4s.jackson.JsonMethods.parse(
+      """{
+        |  "volume" : "vol 1.",
+        |  "title" : "The art of dying well"
+        |  }
+      """.stripMargin)
+    val expected = Seq("The art of dying well, vol 1.")
+    assert(extractor.title(Document(json)) == expected)
+  }
+
+  it should "extract the correct title and vol and issue" in {
+    val json = org.json4s.jackson.JsonMethods.parse(
+      """{
+        |  "issue" : "issue",
+        |  "volume" : "vol 1.",
+        |  "title" : "The art of dying well"
+        |  }
+      """.stripMargin)
+    val expected = Seq("The art of dying well, vol 1., issue")
+    assert(extractor.title(Document(json)) == expected)
+  }
+
+  it should "extract the correct multiple title and vol and issue" in {
+    val json = org.json4s.jackson.JsonMethods.parse(
+      """{
+        |  "issue" : "issue",
+        |  "volume" : "vol 1.",
+        |  "title" : ["The art of dying well", "Act 2"]
+        |  }
+      """.stripMargin)
+    val expected = Seq("The art of dying well, vol 1., issue", "Act 2")
+    assert(extractor.title(Document(json)) == expected)
+  }
+
+  it should "extract the correct multiple title and multiple vol and issue" in {
+    val json = org.json4s.jackson.JsonMethods.parse(
+      """{
+        |  "issue" : "issue",
+        |  "volume" : ["vol 1.", "vol 2."],
+        |  "title" : ["The art of dying well", "Act 2"]
+        |  }
+      """.stripMargin)
+    val expected = Seq("The art of dying well, vol 1., issue", "Act 2, vol 2.")
+    assert(extractor.title(Document(json)) == expected)
+  }
+
+  it should "extract the correct multiple title and multiple vol and multiple issue" in {
+    val json = org.json4s.jackson.JsonMethods.parse(
+      """{
+        |  "issue" : ["issue 1", "issue 1"],
+        |  "volume" : ["vol 1.", "vol 2."],
+        |  "title" : ["The art of dying well", "Act 2"]
+        |  }
+      """.stripMargin)
+    val expected = Seq("The art of dying well, vol 1., issue 1", "Act 2, vol 2., issue 1")
+    assert(extractor.title(Document(json)) == expected)
+  }
+
+  it should "extract the correct type" in {
+    val expected = Seq("texts")
+    assert(extractor.`type`(json) == expected)
+  }
  }
