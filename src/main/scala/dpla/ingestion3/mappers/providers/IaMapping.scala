@@ -1,9 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
-import java.net.URI
-
 import dpla.ingestion3.mappers.utils._
-import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
+import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -12,9 +10,6 @@ import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
-import scala.util.{Failure, Success, Try}
-
-// FIXME Why is the implicit conversion not working for JValue when it is for NodeSeq?
 class IaMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] with IngestMessageTemplates {
 
   // ID minting functions
@@ -27,38 +22,33 @@ class IaMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
        .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
   // OreAggregration
-  override def dataProvider(data: Document[JValue])
-                           (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmAgent] =
-    extractString(unwrap(data) \\ "contributor").map(nameOnlyAgent) match {
-      case Some(dp) => dp
-      case None => msgCollector.add(missingRequiredError(getProviderId(data), "dataProvider"))
-        nameOnlyAgent("") // FIXME this shouldn't have to return an empty value.
+  override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
+    extractStrings(unwrap(data) \\ "contributor").map(nameOnlyAgent)
+
+  override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = URI(mintDplaId(data))
+
+  override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
+    extractStrings(unwrap(data) \\ "licenseurl").map(URI)
+
+  override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
+    extractStrings(unwrap(data) \\ "collection").flatMap {
+      // transforms institution shortnames into properly formatted names
+      case "medicalheritagelibrary" => Some("Medical Heritage Library")
+      case "blc" => Some("Boston Library Consortium")
+      case _ => None
     }
+      .map(nameOnlyAgent)
+      .headOption
 
-  override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = new URI(mintDplaId(data))
-
-  override def edmRights(data: Document[json4s.JValue]): ZeroToOne[URI] =
-    extractString(unwrap(data) \\ "licenseurl").map(new URI(_))
-
-  override def isShownAt(data: Document[JValue])
-                        (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
-    extractStrings(unwrap(data) \\ "identifier").flatMap(identifier => {
-      val urlStr = "http://www.archive.org/details/" + identifier
-      Try { new URI(urlStr)} match {
-        case Success(uri) => Option(uriOnlyWebResource(uri))
-        case Failure(f) =>
-          msgCollector.add(
-            mintUriError(id = getProviderId(data), field = "isShownAt", value = urlStr))
-          None
-      }
-    }).headOption match {
-      case None =>
-        msgCollector.add(missingRequiredError(id = getProviderId(data), field = "isShownAt")) // record error message
-        uriOnlyWebResource(new URI("")) // TODO Fix this -- it requires an Exception thrown or empty EdmWebResource
-      case Some(s) => s
-    }
+  override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
+    extractStrings(unwrap(data) \\ "identifier")
+      .map(identifier => stringOnlyWebResource("http://www.archive.org/details/" + identifier))
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(data)
+
+  override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
+    extractStrings(unwrap(data) \\ "identifier")
+      .map(identifier => stringOnlyWebResource("https://archive.org/services/img/" + identifier))
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = agent
 
@@ -81,9 +71,16 @@ class IaMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
   override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data)  \\ "publisher").map(nameOnlyAgent)
 
-  override def rights(data: Document[_root_.org.json4s.JsonAST.JValue]): AtLeastOne[String] =
-    extractStrings(unwrap(data) \\ "rights") ++
+  override def rights(data: Document[JValue]): AtLeastOne[String] = {
+    val defaultRights = Seq("Access to the Internet Archive’s Collections is granted for scholarship " +
+      "and research purposes only. Some of the content available through the Archive may be governed " +
+      "by local, national, and/or international laws and regulations, and your use of such content " +
+      "is solely at your own risk")
+    val rights = extractStrings(unwrap(data) \\ "rights") ++
       extractStrings(unwrap(data) \\ "possible-copyright-status")
+
+    if(rights.nonEmpty) rights else defaultRights
+  }
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings(unwrap(data)  \\ "subject").map(nameOnlyConcept)
@@ -118,6 +115,6 @@ class IaMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
 
   def agent = EdmAgent(
     name = Some("Internet Archive"),
-    uri = Some(new URI("http://dp.la/api/contributor/ia"))
+    uri = Some(URI("http://dp.la/api/contributor/ia"))
   )
 }
