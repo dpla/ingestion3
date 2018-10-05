@@ -131,5 +131,13 @@ case class EdmTimeSpan(
 
 case class URI(value: String) {
   def validate: Boolean = Try { new java.net.URI(value) }.isSuccess
-  def print: String = value
+
+  /**
+    * toString is overridden so that when URI values are extracted
+    * the type is dropped. Otherwise calling URI("http://abc.com").toString()
+    * will return URI("http://abc.com") when it should return "http://abc.com"
+    *
+    * @return String value
+    */
+  override def toString: String = value
 }

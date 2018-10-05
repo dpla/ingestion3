@@ -145,7 +145,7 @@ class IaHarvester (spark: SparkSession,
       .setHost("archive.org")
       .setPath("/services/search/v1/scrape")
       .setParameter("q", params.getOrElse("q", "*:*"))
-      .setParameter("fields", "contributor,creator,date,description,language,licenseurl,mediatype,publisher,rights,subject,title,volume")
+      .setParameter("fields", "collection,contributor,creator,date,description,identifier,language,licenseurl,mediatype,publisher,rights,subject,title,volume")
 
     // A blank or empty cursor valid is not allowed
     if (params.get("cursor").isDefined)
