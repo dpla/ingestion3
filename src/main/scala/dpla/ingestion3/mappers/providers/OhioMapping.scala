@@ -25,8 +25,7 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
 
   override def getProviderId(implicit data: Document[NodeSeq]): String =
     extractString(data \ "header" \ "identifier")
-      .getOrElse(throw new RuntimeException(s"No ID for record $data")
-      )
+      .getOrElse(throw new RuntimeException(s"No ID for record $data"))
 
   // SourceResource mapping
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
@@ -113,42 +112,28 @@ class OhioMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   override def `type`(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "metadata" \\ "type")
 
-
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[NodeSeq])
-                           (implicit msgCollector: MessageCollector[IngestMessage]): EdmAgent = {
+  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "dataProvider")
       .map(nameOnlyAgent)
-      .headOption match {
-        case Some(dp) => dp
-        case None => msgCollector.add(missingRequiredError(getProviderId(data), "dataProvider"))
-          nameOnlyAgent("")  // FIXME this shouldn't have to return an empty value.
-       }
-  }
 
-  override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] = {
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
     (data \ "metadata" \\ "rights").map(r => r.prefix match {
       case "edm" => URI(r.text)
-    }).headOption
+    })
   }
 
-  override def isShownAt(data: Document[NodeSeq])
-                        (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
-    extractStrings(data \ "metadata" \\ "isShownAt").map(uriStr => uriOnlyWebResource(URI(uriStr))).headOption.getOrElse {
-      msgCollector.add(missingRequiredError(getProviderId(data),"isShownAt"))
-       throw new RuntimeException("Required property isShownAt missing")
-    }
-
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    extractStrings(data \ "metadata" \\ "isShownAt")
+      .map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
-  override def preview(data: Document[NodeSeq])
-                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] = {
-     extractStrings(data \ "metadata" \\ "preview").map(URI)
-      .map { case u: URI => uriOnlyWebResource(u) }.headOption
-  }
+  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    extractStrings(data \ "metadata" \\ "preview")
+      .map(stringOnlyWebResource)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 

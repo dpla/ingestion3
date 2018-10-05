@@ -3,7 +3,6 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, JsonExtractor, Mapping}
-import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
 import dpla.ingestion3.utils.Utils
@@ -29,22 +28,18 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
 
-  override def dataProvider(data: Document[JValue])
-                           (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmAgent] = nameOnlyAgent(getDataProvider(data))
+  override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] = Seq(nameOnlyAgent(getDataProvider(data)))
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(data)
 
-  override def preview(data: Document[JValue])
-                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] = thumbnail(data)
+  override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] = thumbnail(data)
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
     name = Some("California Digital Library"),
     uri = Some(URI("http://dp.la/api/contributor/cdl"))
   )
 
-  override def isShownAt(data: Document[JValue])
-                        (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
-    uriOnlyWebResource(providerUri(data))
+  override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] = providerUri(data)
 
   // SourceResource
   override def alternateTitle(data: Document[JValue]): ZeroToMany[String] =
@@ -116,11 +111,11 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
 
   override def `type`(data: Document[JValue]): ZeroToMany[String] = extractStrings("type")(data)
 
-
   // Helper methods
   def getDataProvider(json: JValue): String = {
     val campus = extractStrings("campus_name")(json).headOption
     val repository = extractStrings("repository_name")(json).headOption
+
     (campus, repository) match {
       case (Some(campusVal), Some(repositoryVal)) => campusVal + ", " + repositoryVal
       case (None, Some(repositoryVal)) => repositoryVal
@@ -128,21 +123,11 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
     }
   }
 
-  def thumbnail(json: JValue): Option[EdmWebResource] =
-    extractString("reference_image_md5")(json) match {
-      case Some(md5) => Some(
-        uriOnlyWebResource(
-          new URI("https://thumbnails.calisphere.org/clip/150x150/" + md5)
-        )
-      )
-      case None => None
-    }
+  def thumbnail(json: JValue): ZeroToMany[EdmWebResource] =
+    extractStrings("reference_image_md5")(json)
+      .map(md5 => stringOnlyWebResource("https://thumbnails.calisphere.org/clip/150x150/" + md5))
 
-  def providerUri(json: JValue): URI =
-    extractString("url_item")(json) match {
-      case Some(url) => new URI(url)
-      case None => throw new Exception("Unable to determine URL of item on provider's site")
-    }
+  def providerUri(json: JValue): ZeroToMany[EdmWebResource] = extractStrings("url_item")(json).map(stringOnlyWebResource)
 
   /**
     * Extracts values from format field and returns only those values which appear to be

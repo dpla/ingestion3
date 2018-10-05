@@ -1,12 +1,12 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.Document
+import dpla.ingestion3.model._
 import dpla.ingestion3.utils.FlatFileIO
-import org.json4s.JsonAST.{JField, JInt, JObject, JValue}
+import org.json4s.JString
+import org.json4s.JsonAST.JValue
 import org.json4s.jackson.JsonMethods._
 import org.scalatest.{BeforeAndAfter, FlatSpec}
-import dpla.ingestion3.model._
-import org.json4s.JString
 
 class P2PMappingTest extends FlatSpec with BeforeAndAfter {
 
@@ -17,10 +17,6 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "extract provider id" in {
     val expected = "https://plains2peaks.org/0a00aa9c-0b9e-11e8-a081-005056c00008"
-//     val p = (json.get \ "@graph").filterField {
-//       case JField("@type", JString("ore:Aggregation")) => true
-//       case _ => false
-//     }
 
     val id = (json.get \ "@graph").children.flatMap(elem => {
       elem \ "@type" match {
@@ -28,7 +24,6 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
         case _ => None
       }
     }).headOption
-    println(id)
 
     assert(extractor.getProviderId(json) === expected)
   }

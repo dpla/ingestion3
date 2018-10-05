@@ -2,8 +2,7 @@ package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
 import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
-
-import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToOne}
+import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
@@ -78,57 +77,37 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[NodeSeq])
-                           (implicit msgCollector: MessageCollector[IngestMessage]): EdmAgent = {
+  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     extractStrings(data \ "metadata" \\ "contributor").lastOption match {
-      case Some(lastContributor) => nameOnlyAgent(lastContributor)
-      case None =>
-        msgCollector.add(missingRequiredError(getProviderId(data), "dataProvider"))
-        nameOnlyAgent("") // FIXME this shouldn't have to return an empty value.
+      case Some(lastContributor) => Seq(nameOnlyAgent(lastContributor))
+      case None => Seq()
     }
   }
 
-  override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] =
-    extractStrings(data \ "metadata" \\ "rights").map(URI).headOption
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
+    extractStrings(data \ "metadata" \\ "rights").find(r => Utils.isUrl(r)).map(URI).toSeq
 
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
     extractStrings(data \ "metadata" \\ "source").map(nameOnlyAgent).headOption
 
-  override def isShownAt(data: Document[NodeSeq])
-                        (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
-    EdmWebResource(uri = itemUri(data, msgCollector), fileFormat = extractStrings("dc:format")(data))
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    Try { extractStrings(data \ "metadata" \\ "identifier")(1) } match {
+      case Success(t) =>
+        Seq(EdmWebResource(uri = URI(t), fileFormat = extractStrings("dc:format")(data)))
+      case Failure(_) => Seq()
+    }
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
-  override def preview(data: Document[NodeSeq])
-                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] = thumbnail(data)
+  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = thumbnail(data).toSeq
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = EdmAgent(
     name = Some("PA Digital"),
-    uri = Some(new URI("http://dp.la/api/contributor/pa"))
+    uri = Some(URI("http://dp.la/api/contributor/pa"))
   )
 
   override def sidecar(data: Document[NodeSeq]): JValue =
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data) )
-
-  /**
-    * Extracts the external link to the object from the second occurrence
-    * of the dc:identifier property
-    *
-    * @return URI
-    * @throws Exception If dc:identifier does not occur twice
-    */
-  def itemUri(implicit data: Document[NodeSeq],
-              msgCollector: MessageCollector[IngestMessage]): ExactlyOne[URI] = {
-    val ids = extractStrings(data \ "metadata" \\ "identifier")
-
-    Try {ids(1) } match {
-      case Success(t) => URI(t)
-      case Failure(_: IndexOutOfBoundsException) =>
-        msgCollector.add(missingRequiredError(getProviderId(data), "second identifier"))
-        return new URI("") // force return here
-    }
-  }
 
 /**
     *  Get the last occurrence of the identifier property, there
@@ -142,7 +121,7 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   def thumbnail(implicit data: Document[NodeSeq]): ZeroToOne[EdmWebResource] = {
     val ids = extractStrings(data \ "metadata" \\ "identifier")
     if (ids.size > 2)
-      Option(uriOnlyWebResource(new URI(ids.last)))
+      Option(uriOnlyWebResource(URI(ids.last)))
     else
       None
   }

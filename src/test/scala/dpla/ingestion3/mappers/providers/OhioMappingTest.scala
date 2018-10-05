@@ -190,34 +190,23 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.dplaUri(xml) === expected)
   }
 
-  // dataProvider
   it should "extract the correct dataProvider" in {
-    val expected = nameOnlyAgent("Bowling Green State University Libraries")
+    val expected = List(nameOnlyAgent("Bowling Green State University Libraries"))
     assert(extractor.dataProvider(xml) === expected)
-  }
-  it should "throw an exception if no dataProvider" in {
-    val xml = <record><metadata></metadata></record>
-    assertThrows[Exception] {
-      extractor.dataProvider(Document(xml))
-    }
   }
 
   it should "extract the correct edmRights" in {
-    val expected = Some(new URI("http://rightsstatements.org/page/NoC-US/1.0/"))
+    val expected = List(new URI("http://rightsstatements.org/page/NoC-US/1.0/"))
     assert(extractor.edmRights(xml) === expected)
   }
+
   it should "extract the correct isShownAt" in {
-    val expected = uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/collections/item/14058"))
+    val expected = List(uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/collections/item/14058")))
     assert(extractor.isShownAt(xml) === expected)
   }
-  it should "throw an Exception if no isShownAt" in {
-    val xml = <record><metadata></metadata></record>
-    assertThrows[Exception] {
-      extractor.isShownAt(Document(xml))
-    }
-  }
+
   it should "extract the correct preview" in {
-    val expected = Some(uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/files/thumbnails/26e197915e9107914faa33ac166ead5a.jpg")))
+    val expected = List(uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/files/thumbnails/26e197915e9107914faa33ac166ead5a.jpg")))
     assert(extractor.preview(xml) === expected)
   }
 

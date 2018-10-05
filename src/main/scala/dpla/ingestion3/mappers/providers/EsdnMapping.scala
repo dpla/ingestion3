@@ -3,14 +3,13 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
-import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
+import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{nameOnlyAgent, _}
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
-import scala.util.{Failure, Success, Try}
 import scala.xml._
 
 
@@ -143,28 +142,18 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[NodeSeq])
-                           (implicit msgCollector: MessageCollector[IngestMessage]): EdmAgent =
+  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     (data \ "metadata" \ "mods" \ "note")
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "ownership"))
       .flatMap(extractStrings)
       .map(nameOnlyAgent)
-      .headOption match {
-      case Some(s) => s
-      case _ =>
-        msgCollector.add(missingRequiredError(getProviderId(data), "dataProvider"))
-        nameOnlyAgent("") // FIXME this shouldn't have to return an empty value.
-    }
 
-  override def edmRights(data: Document[NodeSeq]): ZeroToOne[URI] =
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
     (data \ "metadata" \ "mods" \ "accessCondition")
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "use and reproduction"))
       .flatMap(node => node.attribute(node.getNamespace("xlink"), "href"))
       .flatMap(n => extractString(n.head))
-        .headOption match {
-          case Some(uri) => Some(URI(uri))
-          case _ => None
-        }
+      .map(URI)
 
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
     (data \ "metadata" \ "mods" \ "note")
@@ -173,37 +162,20 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
       .map(nameOnlyAgent)
       .headOption // take the first value
 
-  override def isShownAt(data: Document[NodeSeq])
-                        (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
-        (data \ "metadata" \ "mods" \ "location" \ "url")
-          .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "usage", "primary display"))
-          .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "access", "object in context"))
-          .flatMap(extractStrings)
-          .flatMap(uriStr => {
-            Try { new URI(uriStr)} match {
-              case Success(uri) => Option(uriOnlyWebResource(uri))
-              case Failure(f) =>
-                msgCollector.add(mintUriError(id = getProviderId(data), field = "isShownAt", value = uriStr))
-                None
-            }
-          }).headOption match {
-            case None =>
-              msgCollector.add(missingRequiredError(id = getProviderId(data), field = "isShownAt")) // record error message
-              uriOnlyWebResource(new URI("")) // TODO Fix this -- it requires an Exception thrown or empty EdmWebResource
-            case Some(s) => s
-          }
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    (data \ "metadata" \ "mods" \ "location" \ "url")
+      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "usage", "primary display"))
+      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "access", "object in context"))
+      .flatMap(extractStrings)
+      .map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
-  override def preview(data: Document[NodeSeq])
-                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
+  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     (data \ "metadata" \ "mods" \ "location" \ "url")
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "access", "preview"))
       .flatMap(extractStrings)
-      .headOption match {
-        case Some(s: String) => Some(uriOnlyWebResource(URI(s)))
-        case _ => None
-      }
+      .map(stringOnlyWebResource)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
@@ -216,3 +188,4 @@ class EsdnMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     uri = Some(URI("http://dp.la/api/contributor/esdn"))
   )
 }
+

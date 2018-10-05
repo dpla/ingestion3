@@ -1,3 +1,4 @@
+
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.Document
@@ -28,13 +29,13 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "have the correct DPLA ID" in {
     val dplaUri = extractor.dplaUri(xml)
-    assert(dplaUri === new URI("http://dp.la/api/items/805598afebf2c093272a5a044938be59"))
+    assert(dplaUri === URI("http://dp.la/api/items/805598afebf2c093272a5a044938be59"))
   }
 
   it should "express the right hub details" in {
     val agent = extractor.provider(xml)
     assert(agent.name === Some("National Archives and Records Administration"))
-    assert(agent.uri === Some(new URI("http://dp.la/api/contributor/nara")))
+    assert(agent.uri === Some(URI("http://dp.la/api/contributor/nara")))
   }
 
   it should "extract collections" in {
@@ -122,25 +123,25 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "extract dataProviders" in {
     val dataProvider = extractor.dataProvider(xml)
-    assert(dataProvider === nameOnlyAgent("National Archives at Chicago"))
+    assert(dataProvider === Seq(nameOnlyAgent("National Archives at Chicago")))
   }
 
   it should "contain the hub agent as the provider" in {
     assert(
       extractor.provider(xml) === EdmAgent(
         name = Some("National Archives and Records Administration"),
-        uri = Some(new URI("http://dp.la/api/contributor/nara"))
+        uri = Some(URI("http://dp.la/api/contributor/nara"))
       )
     )
   }
 
   it should "contain the correct isShownAt" in {
-    assert(extractor.isShownAt(xml) === uriOnlyWebResource(itemUri))
+    assert(extractor.isShownAt(xml) === Seq(uriOnlyWebResource(itemUri)))
   }
 
   //todo should we eliminate these default thumbnails?
   it should "find the item previews" in {
-    assert(extractor.preview(xml) === Some(uriOnlyWebResource(new URI("https://nara-media-001.s3.amazonaws.com/arcmedia/great-lakes/001/517805_a.jpg"))))
+    assert(extractor.preview(xml) === Seq(uriOnlyWebResource(URI("https://nara-media-001.s3.amazonaws.com/arcmedia/great-lakes/001/517805_a.jpg"))))
   }
 
   it should "extract dataProvider from records with fileUnitPhysicalOccurrence" in {
@@ -206,7 +207,7 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
   }
 
-  it should "extract a single dataProvider value" in {
+  it should "extract dataProvider values" in {
     // DPLA ID 0f7032c62e1cb4b6939694b0a808124c
     val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                 <physicalOccurrenceArray>
@@ -246,7 +247,7 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
     val dataProvider = extractor.dataProvider(Document(xml))
 
-    assert(nameOnlyAgent("John F. Kennedy Library") === dataProvider)
+    assert(Seq(nameOnlyAgent("John F. Kennedy Library")) === dataProvider)
   }
 
   it should "extract the default dataProvider value if none exist" in {
@@ -274,6 +275,6 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
     val dataProvider = extractor.dataProvider(Document(xml))
 
-    assert(nameOnlyAgent("National Records and Archives Administration") === dataProvider)
+    assert(Seq(nameOnlyAgent("National Records and Archives Administration")) === dataProvider)
   }
 }

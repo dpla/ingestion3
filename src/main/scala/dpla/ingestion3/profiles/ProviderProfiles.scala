@@ -27,7 +27,7 @@ class DcProfile extends XmlProfile {
 }
 
 /**
-  * District Digital
+  * Empire State Digital Network
   */
 class EsdnProfile extends XmlProfile {
   type Mapping = EsdnMapping
@@ -107,6 +107,7 @@ class P2PProfile extends JsonProfile {
   override def getHarvester = classOf[P2PFileHarvester]
   override def getMapping = new P2PMapping
 }
+
 /**
   * Pennsylvania Hub
   */

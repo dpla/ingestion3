@@ -79,27 +79,16 @@ class MtMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.`type`(xml) === expected)
   }
   it should "extract the correct dataProvider" in {
-    val expected = nameOnlyAgent("University of Montana--Missoula. Mansfield Library")
+    val expected = Seq(nameOnlyAgent("University of Montana--Missoula. Mansfield Library"))
     assert(extractor.dataProvider(xml) === expected)
   }
-  it should "throw an exception if no dataProvider" in {
-    val xml = <record><metadata></metadata></record>
-    assertThrows[Exception] {
-      extractor.dataProvider(Document(xml))
-    }
-  }
   it should "extract the correct isShownAt" in {
-    val expected = uriOnlyWebResource(new URI("https://scholarworks.umt.edu/goedicke/9"))
+    val expected = Seq(uriOnlyWebResource(URI("https://scholarworks.umt.edu/goedicke/9")))
     assert(extractor.isShownAt(xml) === expected)
   }
-  it should "throw an Exception if no isShownAt" in {
-    val xml = <record><metadata></metadata></record>
-    assertThrows[Exception] {
-      extractor.isShownAt(Document(xml))
-    }
-  }
   it should "extract the correct preview" in {
-    val expected = Some(uriOnlyWebResource(new URI("https://scholarworks.umt.edu/goedicke/1008/thumbnail.jpg")))
+    val expected = Seq(uriOnlyWebResource(URI("https://scholarworks.umt.edu/goedicke/1008/thumbnail.jpg")))
     assert(extractor.preview(xml) === expected)
   }
 }
+

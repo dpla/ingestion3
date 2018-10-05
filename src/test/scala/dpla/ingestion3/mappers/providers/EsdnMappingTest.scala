@@ -97,7 +97,7 @@ class EsdnMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct edmRights " in {
-    val expected = Option(new URI("http://rightsstatements.org/vocab/InC-EDU/1.0/"))
+    val expected = Seq(URI("http://rightsstatements.org/vocab/InC-EDU/1.0/"))
     assert(extractor.edmRights(xml) === expected)
   }
 
@@ -107,7 +107,7 @@ class EsdnMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct isShownAt" in {
-    val expected = uriOnlyWebResource(new URI("http://isurl.com"))
+    val expected = Seq(uriOnlyWebResource(URI("http://isurl.com")))
     assert(extractor.isShownAt(xml) === expected)
   }
 

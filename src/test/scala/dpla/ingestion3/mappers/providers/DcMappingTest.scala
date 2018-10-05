@@ -110,7 +110,7 @@ class DcMappingTest extends FlatSpec with BeforeAndAfter {
         <edm:rights>http://rights.holder.edu</edm:rights>
       </metadata>
     </record>)
-    val expected = Option(new URI("http://rights.holder.edu"))
+    val expected = Seq(URI("http://rights.holder.edu"))
     assert(extractor.edmRights(xml) === expected)
   }
   it should "extract the correct subjects" in {
@@ -131,27 +131,15 @@ class DcMappingTest extends FlatSpec with BeforeAndAfter {
   }
   // dataProvider
   it should "extract the correct dataProvider" in {
-    val expected = nameOnlyAgent("Bowling Green State University Libraries")
+    val expected = Seq(nameOnlyAgent("Bowling Green State University Libraries"))
     assert(extractor.dataProvider(xml) === expected)
   }
-  it should "throw an exception if no dataProvider" in {
-    val xml = <record><metadata></metadata></record>
-    assertThrows[Exception] {
-      extractor.dataProvider(Document(xml))
-    }
-  }
   it should "extract the correct isShownAt" in {
-    val expected = uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/collections/item/14058"))
+    val expected = Seq(uriOnlyWebResource(URI("https://digitalgallery.bgsu.edu/collections/item/14058")))
     assert(extractor.isShownAt(xml) === expected)
   }
-  it should "throw an Exception if no isShownAt" in {
-    val xml = <record><metadata></metadata></record>
-    assertThrows[Exception] {
-      extractor.isShownAt(Document(xml))
-    }
-  }
   it should "extract the correct preview" in {
-    val expected = Some(uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/files/thumbnails/26e197915e9107914faa33ac166ead5a.jpg")))
+    val expected = Seq(uriOnlyWebResource(URI("https://digitalgallery.bgsu.edu/files/thumbnails/26e197915e9107914faa33ac166ead5a.jpg")))
     assert(extractor.preview(xml) === expected)
   }
 }

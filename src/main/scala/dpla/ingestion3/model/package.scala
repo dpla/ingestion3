@@ -43,11 +43,17 @@ package object model {
 
   def uriOnlyWebResource(uri: URI): EdmWebResource = EdmWebResource(uri = uri)
 
+  def stringOnlyWebResource(uri: String): EdmWebResource = EdmWebResource(uri = new URI(uri))
+
   def isDcmiType(string: String): Boolean = DcmiTypes.contains(string.toLowerCase.replaceAll(" ", ""))
 
   def eitherStringOrUri(string: String): LiteralOrUri = new Left(string)
 
   def eitherStringOrUri(uri: URI): LiteralOrUri = new Right(uri)
+
+  def emptyEdmAgent = EdmAgent()
+
+  def emptyEdmWebResource = stringOnlyWebResource("")
 
   def emptyOreAggregation = OreAggregation(
     dplaUri = new URI(""),

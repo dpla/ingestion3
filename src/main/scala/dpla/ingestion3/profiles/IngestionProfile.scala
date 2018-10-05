@@ -17,7 +17,7 @@ trait IngestionProfile[T] {
   def getMapping: Mapping[T]
 
 
-  def performMapping(data: String): (Option[OreAggregation], Option[String]) = {
+  def performMapping(data: String): OreAggregation = {
     val parser = getParser
     val mapping = getMapping
     val mapper = getMapper

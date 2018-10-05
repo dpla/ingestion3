@@ -26,12 +26,11 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     extractString("naId")(data).getOrElse(throw MappingException("Can't find naId"))
 
   def itemUri(implicit data: Document[NodeSeq]): URI =
-    extractString("naId")(data).map(naId => new URI("http://catalog.archives.gov/id/" + naId))
+    extractString("naId")(data).map(naId => URI("http://catalog.archives.gov/id/" + naId))
       .getOrElse(throw MappingException("Couldn't load item url."))
 
   // OreAggregation
-  override def dataProvider(data: Document[NodeSeq])
-                           (implicit msgCollector: MessageCollector[IngestMessage]): EdmAgent = {
+  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     val referenceUnit = (for {
       physicalOccurrenceArray <- data \ "physicalOccurrenceArray"
       copyStatus = (physicalOccurrenceArray \\ "copyStatus" \ "termName").text
@@ -40,15 +39,14 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
       referenceUnit = (physicalOccurrenceArray \\ "referenceUnit" \ "termName").map(_.text).headOption
     } yield referenceUnit).head
 
-    nameOnlyAgent(referenceUnit.getOrElse("National Records and Archives Administration"))
+    Seq(nameOnlyAgent(referenceUnit.getOrElse("National Records and Archives Administration")))
   }
 
   override def dplaUri(data: Document[NodeSeq]): URI =
     mintDplaItemUri(data)
 
-  override def isShownAt(data: Document[NodeSeq])
-                        (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
-    uriOnlyWebResource(itemUri(data))
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    Seq(uriOnlyWebResource(itemUri(data)))
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
@@ -56,9 +54,8 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] =
     agent
 
-  override def preview(data: Document[NodeSeq])
-                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
-    extractPreview(data).headOption
+  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    extractPreview(data)
 
   override def sidecar(data: Document[NodeSeq]): JsonAST.JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
@@ -117,7 +114,7 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   // Helper methods
   private def agent = EdmAgent(
     name = Some("National Archives and Records Administration"),
-    uri = Some(new URI("http://dp.la/api/contributor/nara"))
+    uri = Some(URI("http://dp.la/api/contributor/nara"))
   )
 
   private def extractCollection(data: NodeSeq): Seq[String] = {
@@ -278,7 +275,7 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     accessFileName = (digitalObject \ "accessFilename").text
     termName = (digitalObject \ "objectType" \ "termName").text.toLowerCase
     if termName.contains("image") && (termName.contains("jpg") || termName.contains("gif"))
-  } yield uriOnlyWebResource(new URI(accessFileName.trim))
+  } yield stringOnlyWebResource(accessFileName.trim)
 
   private def extractPublisher(data: NodeSeq): Seq[String] = {
 
@@ -362,3 +359,4 @@ object NaraTypeVocabEnforcer {
 
   def mapNaraType(value: String): Option[String] = naraTypeMapper.enrich(value)
 }
+

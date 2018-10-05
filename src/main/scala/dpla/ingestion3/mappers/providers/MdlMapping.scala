@@ -3,7 +3,7 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.ExtentIdentificationList
 import dpla.ingestion3.mappers.utils._
-import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
+import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -11,8 +11,6 @@ import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
-
-import scala.util.{Failure, Success, Try}
 
 // FIXME Why is the implicit conversion not working for JValue when it is for NodeSeq?
 class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] with IngestMessageTemplates {
@@ -29,49 +27,26 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wi
        .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
   // OreAggregation
-  override def dataProvider(data: Document[JValue])
-                           (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmAgent] =
-    extractString(unwrap(data) \\ "record" \ "dataProvider").map(nameOnlyAgent) match {
-      case Some(dp) => dp
-      case None => msgCollector.add(missingRequiredError(getProviderId(data), "dataProvider"))
-        nameOnlyAgent("") // FIXME this shouldn't have to return an empty value.
-    }
+  override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
+    extractStrings(unwrap(data) \\ "record" \ "dataProvider").map(nameOnlyAgent)
 
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] =
     new URI(mintDplaId(data))
 
-  override def edmRights(data: Document[json4s.JValue]): ZeroToOne[URI] =
-    extractString(unwrap(data)  \\ "record" \ "rights") match {
-      case Some(t) => Some(new URI(t))
-      case None => None
-    }
+  override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
+    extractStrings(unwrap(data)  \\ "record" \ "rights").map(URI)
 
   override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
     extractString(unwrap(data) \ "record" \ "intermediateProvider").map(nameOnlyAgent)
 
-  override def isShownAt(data: Document[JValue])
-                        (implicit msgCollector: MessageCollector[IngestMessage]): EdmWebResource =
-    extractStrings(unwrap(data) \\ "record" \ "isShownAt").flatMap(uriStr => {
-      Try { new URI(uriStr)} match {
-        case Success(uri) => Option(uriOnlyWebResource(uri))
-        case Failure(f) =>
-          msgCollector.add(
-            mintUriError(id = getProviderId(data), field = "isShownAt", value = uriStr))
-          None
-      }
-    }).headOption match {
-      case None =>
-        msgCollector.add(missingRequiredError(id = getProviderId(data), field = "isShownAt")) // record error message
-        uriOnlyWebResource(new URI("")) // TODO Fix this -- it requires an Exception thrown or empty EdmWebResource
-      case Some(s) => s
-    }
+  override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
+    extractStrings(unwrap(data) \\ "record" \ "isShownAt").map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
     Utils.formatJson(data)
 
-  override def preview(data: Document[JValue])
-                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
-    thumbnail(unwrap(data) \\ "record" \ "object")
+  override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
+    extractStrings(unwrap(data) \\ "record" \ "object").map(stringOnlyWebResource)
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = agent
 
@@ -163,16 +138,8 @@ class MdlMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wi
       ))
   }
 
-  def thumbnail(thumbnail: JValue): Option[EdmWebResource] =
-    extractString(thumbnail) match {
-      case Some(t) => Some(
-        uriOnlyWebResource(new URI(t))
-      )
-      case None => None
-    }
-
   def agent = EdmAgent(
     name = Some("Minnesota Digital Library"),
-    uri = Some(new URI("http://dp.la/api/contributor/mdl"))
+    uri = Some(URI("http://dp.la/api/contributor/mdl"))
   )
 }

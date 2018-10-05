@@ -15,7 +15,6 @@ case class OperationSummary(
 
 case class MessageSummary(
                            errorCount: Long = -1, // number of errors (message and exception)
-                           execeptionCount: Long = -1, // number of exceptions thrown (1 per record)
                            warningCount: Long = -1,   // message warning
                            errorRecordCount: Long = -1, // 1:1 if exception 1:n if from message
                            warningRecordCount: Long = -1, // 1:n a record can raise many warnings

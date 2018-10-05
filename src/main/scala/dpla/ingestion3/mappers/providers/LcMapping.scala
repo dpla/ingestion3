@@ -3,7 +3,6 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, JsonExtractor, Mapping}
-import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
 import dpla.ingestion3.utils.Utils
@@ -35,44 +34,31 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
 
-  override def dataProvider(data: Document[JValue])
-                           (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmAgent] = {
-    val dps = extractStrings(unwrap(data) \\ "repository")
-    val dpName = dps.headOption match {
-      case Some(dp) => {
-        dp match {
-          case s if s.startsWith("Library of Congress") => "Library of Congress"
-          case s if s.startsWith("Library of Virginia Richmond, VA") => "Library of Virginia"
-          case s if s.startsWith("Virginia Historical Society") => "Virginia Historical Society"
-          case _ =>
-            val dpError = if(dp.isEmpty) "<EMPTY STRING>" else dp
-            throw new RuntimeException(s"Record ${getProviderId(data)} " +
-              s"has invalid 'repository' value: $dpError")
-        }
+  override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
+    extractStrings(unwrap(data) \\ "repository")
+      .flatMap {
+        case s if s.startsWith("Library of Congress") => Some("Library of Congress")
+        case s if s.startsWith("Library of Virginia Richmond, VA") => Some("Library of Virginia")
+        case s if s.startsWith("Virginia Historical Society") => Some("Virginia Historical Society")
+        case _ => None
       }
-      case _ => throw new RuntimeException("Missing required property " +
-        "'repository' for dataProvider mapping")
-    }
-    nameOnlyAgent(dpName)
-  }
+      .map(nameOnlyAgent)
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
     Utils.formatJson(data)
 
-  override def preview(data: Document[JValue])
-                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
+  override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \ "item" \ "resource" \ "image")
-      .headOption.map(uri => uriOnlyWebResource(new URI(uri)))
+      .map(stringOnlyWebResource)
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
     name = Some("Library of Congress"),
-    uri = Some(new URI("http://dp.la/api/contributor/lc"))
+    uri = Some(URI("http://dp.la/api/contributor/lc"))
   )
 
-  override def isShownAt(data: Document[JValue])
-                        (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmWebResource] =
+  override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     // item['url']
-    uriOnlyWebResource(providerUri(data))
+    extractStrings(unwrap(data) \ "item" \ "url").map(stringOnlyWebResource)
 
   // SourceResource
   override def alternateTitle(data: Document[JValue]): ZeroToMany[String] = {
@@ -147,7 +133,7 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
 
   override def rights(data: Document[JValue]): AtLeastOne[String] =
     // "For rights relating to this resource, visit " + same mapping for isShownAt
-    Seq(s"For rights relating to this resource, visit ${providerUri(data).toString}")
+  isShownAt(data).flatMap(edmWr => Seq(s"For rights relating to this resource, visit ${edmWr.uri.value}"))
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
     // item['subject_headings']
@@ -163,12 +149,5 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
     extractKeys(unwrap(data) \ "item" \ "original_format") ++
     format(data)
   }
-
-  // Helper methods
-  def providerUri(json: JValue): URI =
-    // item['url']
-    extractString(json \ "item" \ "url") match {
-      case Some(url) => new URI(url)
-      case None => throw new RuntimeException("Missing required property 'url' for 'isShownAt' mapping ")
-    }
 }
+

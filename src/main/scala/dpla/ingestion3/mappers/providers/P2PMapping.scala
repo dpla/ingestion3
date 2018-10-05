@@ -1,7 +1,6 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, JsonExtractor, Mapping}
-import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
 import dpla.ingestion3.utils.Utils
@@ -24,37 +23,30 @@ class P2PMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
         case JString("ore:Aggregation") => extractString("@id")(elem)
         case _ => None
       }
-    })
-      .headOption
+    }).headOption
       .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
   // OreAggregation fields
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[JValue])
-                           (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmAgent] =
+  override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStringsDeep("edm:dataProvider")(data)
       .map(nameOnlyAgent)
-      .headOption
-      .getOrElse(throw new RuntimeException(s"Missing required property edm:dataProvider for ${getProviderId(data)}"))
 
-  override def edmRights(data: Document[JValue]): ZeroToOne[URI] =
-    extractString(data.get \ "@graph" \ "edm:rights" \ "@id").map(new URI(_))
+  override def edmRights(data: Document[JValue]): ZeroToMany[URI] =
+    extractStrings(data.get \ "@graph" \ "edm:rights" \ "@id").map(URI)
 
-  override def isShownAt(data: Document[JValue])
-                        (implicit msgCollector: MessageCollector[IngestMessage]): ExactlyOne[EdmWebResource] =
-    extractString(data.get \ "@graph" \ "edm:isShownAt" \ "@id").map(new URI(_)).map(uriOnlyWebResource)
-      .getOrElse(throw new RuntimeException(s"Missing required property edm:isShownAt\\@id for ${getProviderId(data)}"))
+  override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
+    extractStrings(data.get \ "@graph" \ "edm:isShownAt" \ "@id").map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(data)
 
-  override def preview(data: Document[JValue])
-                      (implicit msgCollector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] =
-    extractString(data.get \ "@graph" \ "edm:preview" \ "@id").map(new URI(_)).map(uriOnlyWebResource)
+  override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
+    extractStrings(data.get \ "@graph" \ "edm:preview" \ "@id").map(stringOnlyWebResource)
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
     name = Some("Plains to Peaks Collective"),
-    uri = Some(new URI("http://dp.la/api/contributor/p2p"))
+    uri = Some(URI("http://dp.la/api/contributor/p2p"))
   )
 
   override def sidecar(data: Document[JValue]): JValue =

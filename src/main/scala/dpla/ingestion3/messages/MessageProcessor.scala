@@ -87,7 +87,7 @@ object MessageProcessor{
       ))
 
     val topLine = msgFieldRptArray.map { case (k: MessageFieldRpt) =>
-      s"- ${StringUtils.rightPad(k.msg.take(40) + " " + k.field.take(20), 68, ".")}" +
+      s"- ${StringUtils.rightPad((k.msg.take(40) + ", " + k.field.take(20)).trim, 68, ".")}" +
         s"${StringUtils.leftPad(Utils.formatNumber(k.count), 10, ".")}"
       case _ => ""
     }

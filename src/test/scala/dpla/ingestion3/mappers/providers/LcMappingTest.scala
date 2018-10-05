@@ -15,9 +15,14 @@ class LcMappingTest extends FlatSpec with BeforeAndAfter {
   val json: Document[JValue] = Document(parse(jsonString))
   val extractor = new LcMapping
 
+  it should "extract the correct rights" in {
+    val expected = Seq("For rights relating to this resource, visit https://www.loc.gov/item/73691632/")
+    assert(extractor.rights(json) === expected)
+  }
+
   it should "extract the correct dataProvider" in {
-    val expected = nameOnlyAgent("Library of Congress")
-    assert(extractor.dataProvider(json)(msgCollector) === expected)
+    val expected = Seq(nameOnlyAgent("Library of Congress"))
+    assert(extractor.dataProvider(json) === expected)
   }
 
   it should "extract the correct provider id" in {
@@ -26,13 +31,13 @@ class LcMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct URL for isShownAt" in {
-    val expected = uriOnlyWebResource(new URI("https://www.loc.gov/item/73691632/"))
-    assert(extractor.isShownAt(json)(msgCollector) === expected)
+    val expected = Seq(stringOnlyWebResource("https://www.loc.gov/item/73691632/"))
+    assert(extractor.isShownAt(json) === expected)
   }
 
   it should "extract the correct url for preview" in {
-    val expected = Option(uriOnlyWebResource(new URI("http:images.com")))
-    assert(extractor.preview(json)(msgCollector) === expected)
+    val expected = Seq(uriOnlyWebResource(URI("http:images.com")))
+    assert(extractor.preview(json) === expected)
   }
   // TODO test extraction of other-titles and alternate_title
   it should "extract the correct alternate title" in {

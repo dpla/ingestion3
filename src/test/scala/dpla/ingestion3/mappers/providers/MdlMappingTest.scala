@@ -1,3 +1,4 @@
+
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.Document
@@ -16,7 +17,7 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
   val extractor = new MdlMapping
 
   it should "extract correct edmRights" in {
-    val expected = Some(new URI("http://rightsstatements.org/vocab/InC-EDU/1.0/"))
+    val expected = Seq(URI("http://rightsstatements.org/vocab/InC-EDU/1.0/"))
 
     assert(extractor.edmRights(json) === expected)
   }
