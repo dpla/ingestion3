@@ -179,9 +179,8 @@ trait MappingExecutor extends Serializable {
 
     val logFileSeq = logFileList.map {
       case (name: String, data: Dataset[Row]) => {
-        val path = logsBasePath + s"$shortName-$endTime-map-$name"
-        Utils.writeLogsAsCsv(path, name, data, shortName)
-        ReportFormattingUtils.centerPad(name, new File(path).getCanonicalPath)
+        Utils.writeCsv(logsBasePath, name, data)
+        logsBasePath
       }
     }
     // time summary
