@@ -133,9 +133,9 @@ trait EnrichExecutor extends Serializable {
 
     val logFileSeq = logEnrichedFields.map {
       case (name: String, data: Dataset[_]) => {
-        val path = outputHelper.logsBasePath + s"$shortName-$endTime-enrich-$name"
+        val path = outputHelper.logsBasePath // + s"$shortName-$endTime-enrich-$name"
         data match {
-          case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)
+          case dr: Dataset[Row] => Utils.writeCsv(path, name, dr)
         }
         val canonicalPath = if (path.startsWith("s3a://")) path else
           new File(path).getCanonicalPath
