@@ -77,6 +77,6 @@ object IngestRemap extends MappingExecutor
     executeJsonl(sparkConf, enrichDataOut, baseDataOut, shortName, logger)
 
     // Reports
-    executeAllReports(sparkConf, enrichDataOut, baseRptOut, logger)
+    executeAllReports(sparkConf, enrichDataOut, baseRptOut, shortName, logger)
   }
 }

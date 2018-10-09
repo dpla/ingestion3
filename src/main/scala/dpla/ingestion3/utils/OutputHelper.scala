@@ -39,13 +39,35 @@ class OutputHelper(root: String,
   val timestamp: String = startDateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
 
   /*
+   * S3 bucket or root directory for output.
+   * Includes trailing slash.
+   * If S3 bucket, includes "s3a://" prefix.
+   */
+  lazy val directory: String = if (root.endsWith("/")) root else s"$root/"
+
+  /*
+   * Activity directory.
+   * Includes trailing slash.
+   * Does not include starting "/"
+   * For full directory path, including root directory/bucket, use `activityPath'
+   */
+  lazy val activityDirectory: String = s"$shortName/$activity/"
+
+  /*
+   * Path to activity directory.
+   * Includes trailing slash.
+   * Includes root directory or S3 bucket.
+   */
+  lazy val activityPath: String = s"$directory$activityDirectory"
+
+  /*
    * File name for a harvest, mapping, enrichment, indexing (etc.) activity.
    * For full output path, including root directory/bucket, use `outputPath'
    * Does not include starting "/"
    *
    * Evaluate on instantiation so that invalid `activity' is caught immediately.
    */
-  val fileKey: String = {
+  lazy val fileKey: String = {
 
     // TODO: handle "reports" case
     // TODO: make schema configurable - could use sealed case classes for activities
@@ -59,15 +81,8 @@ class OutputHelper(root: String,
 
     val fileType: String = if (activity == "jsonl") "jsonl" else "avro"
 
-    s"$shortName/$activity/$timestamp-$shortName-$schema.$fileType"
+    s"$activityDirectory$timestamp-$shortName-$schema.$fileType"
   }
-
-  /*
-   * S3 bucket or root directory for output.
-   * Includes trailing slash.
-   * If S3 bucket, includes "s3a://" prefix.
-   */
-  lazy val directory: String = if (root.endsWith("/")) root else s"$root/"
 
   /*
    * Full output path for a harvest, mapping, enrichment, indexing (etc.) activity.
