@@ -11,8 +11,8 @@ import org.apache.spark.SparkConf
   * Elasticsearch 0.90
   *
   * Expects three parameters:
-  * 1) a path to the harvested data
-  * 2) a path to output the mapped data
+  * 1) a path to the mapped/enriched data
+  * 2) a path to output the jsonl data
   * 3) provider short name (e.g. 'mdl', 'cdl', 'harvard')
   *
   * Usage
