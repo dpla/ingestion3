@@ -96,7 +96,7 @@ object ReporterMain {
     val outputHelper: OutputHelper =
       new OutputHelper(baseOutput, shortName, "reports", startDateTime)
 
-    val reportsPath = outputHelper.activityPath
+    val reportsPath = outputHelper.outputPath
 
     // Property value / Property distinct value
     fieldedRptList.map(rpt =>
