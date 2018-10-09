@@ -46,8 +46,6 @@ object IngestRemap extends MappingExecutor
 
     logger.info(s"Using harvest data from $harvestDataOut")
 
-    val baseRptOut = baseDataOut+"/"+shortName+"/reports"
-
 
     // Load configuration from file.
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
@@ -62,8 +60,6 @@ object IngestRemap extends MappingExecutor
       .set("spark.kryoserializer.buffer.max", "200")
       .setMaster(sparkMaster)
 
-    Utils.deleteRecursively(new File(baseRptOut))
-
     // TODO These processes should return some flag or metric to help determine whether to proceed
     // Mapping
     val mapDataOut: String =
@@ -77,6 +73,6 @@ object IngestRemap extends MappingExecutor
     executeJsonl(sparkConf, enrichDataOut, baseDataOut, shortName, logger)
 
     // Reports
-    executeAllReports(sparkConf, enrichDataOut, baseRptOut, shortName, logger)
+    executeAllReports(sparkConf, enrichDataOut, baseDataOut, shortName, logger)
   }
 }
