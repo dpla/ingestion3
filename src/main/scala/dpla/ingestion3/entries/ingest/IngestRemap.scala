@@ -46,7 +46,6 @@ object IngestRemap extends MappingExecutor
 
     logger.info(s"Using harvest data from $harvestDataOut")
 
-    val jsonlDataOut = baseDataOut+"/"+shortName+"/json-l"
     val baseRptOut = baseDataOut+"/"+shortName+"/reports"
 
 
@@ -63,7 +62,6 @@ object IngestRemap extends MappingExecutor
       .set("spark.kryoserializer.buffer.max", "200")
       .setMaster(sparkMaster)
 
-    Utils.deleteRecursively(new File(jsonlDataOut))
     Utils.deleteRecursively(new File(baseRptOut))
 
     // TODO These processes should return some flag or metric to help determine whether to proceed
@@ -76,7 +74,7 @@ object IngestRemap extends MappingExecutor
       executeEnrichment(sparkConf, mapDataOut, baseDataOut, shortName, logger, conf)
 
     // Json-l
-    executeJsonl(sparkConf, enrichDataOut, jsonlDataOut, logger)
+    executeJsonl(sparkConf, enrichDataOut, baseDataOut, shortName, logger)
 
     // Reports
     executeAllReports(sparkConf, enrichDataOut, baseRptOut, logger)

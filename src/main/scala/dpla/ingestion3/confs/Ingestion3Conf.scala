@@ -84,7 +84,7 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
 
   val configFile: ScallopOption[String] = opt[String](
     "conf",
-    required = true,
+    required = false,
     noshort = true,
     validate = _.endsWith(".conf"),
     descr = "Configuration file must end with .conf"
