@@ -50,7 +50,7 @@ class OutputHelperTest extends FlatSpec {
 
   "outputPath" should "create correct reports output path" in {
     val helper = new OutputHelper(root, shortName, "reports", dateTime)
-    val path = "s3a://my-bucket/foo/reports/"
+    val path = "s3a://my-bucket/foo/reports/20180910_095702-foo-reports"
     assert(helper.outputPath === path)
   }
 

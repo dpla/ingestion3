@@ -46,23 +46,8 @@ class OutputHelper(root: String,
   private lazy val directory: String = if (root.endsWith("/")) root else s"$root/"
 
   /*
-   * Activity directory.
-   * Includes trailing slash.
-   * Does not include starting "/"
-   * For full directory path, including root directory/bucket, use `activityPath'
-   */
-  private lazy val activityDirectory: String = s"$shortName/$activity/"
-
-  /*
-   * Full path to activity directory.
-   * Includes trailing slash.
-   * Includes root directory or S3 bucket.
-   */
-  private lazy val activityPath: String = s"$directory$activityDirectory"
-
-  /*
-   * File name for a harvest, mapping, enrichment, jsonl.
-   * For full output path, including root directory/bucket, use `filePath'
+   * File/directory name for an activity (harvest, mapping, enrichment etc.)
+   * For full output path, including root directory/bucket, use `outputPath'
    * Does not include starting "/"
    *
    * Evaluate on instantiation so that invalid `activity' is caught immediately.
@@ -71,23 +56,16 @@ class OutputHelper(root: String,
 
     // TODO: make schema configurable - could use sealed case classes for activities
     val schema: String = activity match {
-      case "harvest" => "OriginalRecord"
-      case "mapping" => "MAP4_0.MAPRecord"
-      case "enrichment" => "MAP4_0.EnrichRecord"
-      case "jsonl" => "MAP3_1.IndexRecord"
+      case "harvest" => "OriginalRecord.avro"
+      case "mapping" => "MAP4_0.MAPRecord.avro"
+      case "enrichment" => "MAP4_0.EnrichRecord.avro"
+      case "jsonl" => "MAP3_1.IndexRecord.jsonl"
+      case "reports" => "reports"
       case _ => throw new IllegalArgumentException(s"Activity '$activity' not recognized")
     }
 
-    val fileType: String = if (activity == "jsonl") "jsonl" else "avro"
-
-    s"$activityDirectory$timestamp-$shortName-$schema.$fileType"
+    s"$shortName/$activity/$timestamp-$shortName-$schema"
   }
-
-  /*
-   * Full path to file for harvest, mapping, enrichment, jsonl.
-   * Includes root directory/bucket.
-   */
-  private lazy val filePath: String = s"$directory$fileKey"
 
   /*
    * Full output path for any activity.
@@ -96,10 +74,7 @@ class OutputHelper(root: String,
    *   OutputHelper("s3a://dpla-master-dataset", "cdl", "harvest").outputPath =>
    *   "s3a://dpla-master-dataset/cdl/harvest/20170209_104428-cdl-OriginalRecord.avro"
    */
-  lazy val outputPath: String = {
-    if (activity == "reports") activityPath else filePath
-  }
-
+  lazy val outputPath: String = s"$directory$fileKey"
   /*
    * Parse S3 bucket name from given `root'.
    * Does not include trailing slash or "s3a://" prefix.
