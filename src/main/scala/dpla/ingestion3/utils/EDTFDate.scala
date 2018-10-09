@@ -84,19 +84,19 @@ object EDTFDate {
     * @param s  The string to consider
     * @return   Tuple of Strings (date, date)
     */
-  private def rangeForUnspecDate(s: String): (String, String) = {
+  private def rangeForUnspecDate(s: String): DateRangeStrings = {
     s match {
       case x if x matches """^\d{3}u$""" =>
-        (x.replaceFirst("u", "0"), x.replaceFirst("u", "9"))
+        DateRangeStrings(x.replaceFirst("u", "0"), x.replaceFirst("u", "9"))
       case x if x matches """^\d{2}uu$""" =>
-        (x.replaceFirst("uu", "00"), x.replaceFirst("uu", "99"))
+        DateRangeStrings(x.replaceFirst("uu", "00"), x.replaceFirst("uu", "99"))
       case x if x matches """^\d{4}-\d{2}-uu$""" =>
         val date = x.replaceAll("""^(\d{4}-\d{2})-uu$""", """$1""")
-        (date, date)
+        DateRangeStrings(date, date)
       case x if x matches """^\d{4}-uu-uu$""" =>
-        (x.replaceAll("""^(\d{4})-uu-uu$""", """$1-01-01"""),
+        DateRangeStrings(x.replaceAll("""^(\d{4})-uu-uu$""", """$1-01-01"""),
           x.replaceAll("""^(\d{4})-uu-uu$""", """$1-12-31"""))
-      case _ => ("", "")
+      case _ => DateRangeStrings("", "")
     }
   }
 
@@ -109,13 +109,13 @@ object EDTFDate {
     * @see      5.1.1 (Date) at
     *           https://www.loc.gov/standards/datetime/pre-submission.html
     */
-  def rangeForExactDate(s: String): Option[(String, String)] = {
+  def rangeForExactDate(s: String): Option[DateRangeStrings] = {
     dateRegex.findFirstMatchIn(s) match {
       case Some(matched) =>
         if (matched.group(1).contains("u")) {
           Some(rangeForUnspecDate(matched.group(1)))
         } else {
-          Some((clean(matched.group(1)), clean(matched.group(1))))
+          Some(DateRangeStrings(clean(matched.group(1)), clean(matched.group(1))))
         }
       case None => None
     }
@@ -130,9 +130,9 @@ object EDTFDate {
     * @see      5.1.2 (Date and Time) at
     *           https://www.loc.gov/standards/datetime/pre-submission.html
     */
-  def rangeForDateAndTime(s: String): Option[(String, String)] = {
+  def rangeForDateAndTime(s: String): Option[DateRangeStrings] = {
     dateAndTimeRegex.findFirstMatchIn(s) match {
-      case Some(matched) => Some((matched.group(1), matched.group(1)))
+      case Some(matched) => Some(DateRangeStrings(matched.group(1), matched.group(1)))
       case None => None
     }
   }
@@ -148,10 +148,10 @@ object EDTFDate {
     * @see      5.1.3 (Interval) and 5.2.3 (Extended Interval) at
     *           https://www.loc.gov/standards/datetime/pre-submission.html
     */
-  def rangeForInterval(s: String): Option[(String, String)] = {
+  def rangeForInterval(s: String): Option[DateRangeStrings] = {
     intervalRegex.findFirstMatchIn(s) match {
       case Some(matched) =>
-        Some((clean(matched.group(1)), clean(matched.group(2))))
+        Some(DateRangeStrings(clean(matched.group(1)), clean(matched.group(2))))
       case None => None
     }
   }
@@ -165,10 +165,10 @@ object EDTFDate {
     * @see      5.2.3 (Extended Interval) at
     *           https://www.loc.gov/standards/datetime/pre-submission.html
     */
-  def rangeForOpenInterval(s: String): Option[(String, String)] = {
+  def rangeForOpenInterval(s: String): Option[DateRangeStrings] = {
     openIntervalRegex.findFirstMatchIn(s) match {
       case Some(matched) =>
-        Some((clean(matched.group(1)), ""))
+        Some(DateRangeStrings(clean(matched.group(1)), ""))
       case None => None
     }
   }
@@ -180,7 +180,7 @@ object EDTFDate {
     * @return   Optional tuple of Strings (begin, end)
     * @see      https://www.loc.gov/standards/datetime/pre-submission.html
     */
-  def rangeForEDTF(s: String): Option[(String, String)] = {
+  def rangeForEDTF(s: String): Option[DateRangeStrings] = {
     rangeForExactDate(s) match {
       case Some(rv) => Some(rv)
       case None =>
@@ -199,5 +199,5 @@ object EDTFDate {
     }
   }
 
-
+  case class DateRangeStrings(begin: String, end: String)
 }

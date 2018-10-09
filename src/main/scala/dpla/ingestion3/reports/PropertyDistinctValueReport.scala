@@ -75,7 +75,7 @@ class PropertyDistinctValueReport(
     import spark.implicits._
 
     val token: String = getParams match {
-      case Some(p) => p.head
+      case Some(p) => p.headOption.getOrElse(throw new RuntimeException(s"No field specified"))
       case _ => throw new RuntimeException(s"No field specified")
     }
 

@@ -143,6 +143,6 @@ class SdProfile extends JsonProfile {
 class WiProfile extends XmlProfile {
   type Mapping = WiMapping
 
-  override def getHarvester = ???
+  override def getHarvester = classOf[OaiHarvester]
   override def getMapping = new WiMapping
 }

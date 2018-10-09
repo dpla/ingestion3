@@ -43,17 +43,17 @@ class AllRecordsOaiRelationTest extends FlatSpec with SharedSparkContext {
 
     val page = relation.handleCsvRow(pageRow)
     assert(page.isRight)
-    assert(page.right.get.page === pageRow.getString(1))
+    assert(page.right.getOrElse(throw new RuntimeException("No page")).page === pageRow.getString(1))
 
     val error1 = relation.handleCsvRow(errorRow1)
     assert(error1.isLeft)
-    assert(error1.left.get.message === errorRow1.getString(1))
-    assert(error1.left.get.url === None)
+    assert(error1.left.getOrElse(throw new RuntimeException("No page")).message === errorRow1.getString(1))
+    assert(error1.left.getOrElse(throw new RuntimeException("No page")).url === None)
 
     val error2 = relation.handleCsvRow(errorRow2)
     assert(error2.isLeft)
-    assert(error2.left.get.message === errorRow2.getString(1))
-    assert(error2.left.get.url === Some(errorRow2.getString(2)))
+    assert(error2.left.getOrElse(throw new RuntimeException("No page")).message === errorRow2.getString(1))
+    assert(error2.left.getOrElse(throw new RuntimeException("No page")).url === Some(errorRow2.getString(2)))
   }
 
   it should "write OAI harvest results to a temp file" in {

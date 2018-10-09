@@ -18,7 +18,7 @@ class P2PMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
   override def getProviderName: String = "p2p"
 
   override def getProviderId(implicit data: Document[JValue]): String =
-    (data.get \ "@graph").children.flatMap(elem => {
+    (unwrap(data) \ "@graph").children.flatMap(elem => {
       elem \ "@type" match {
         case JString("ore:Aggregation") => extractString("@id")(elem)
         case _ => None
@@ -34,15 +34,15 @@ class P2PMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
       .map(nameOnlyAgent)
 
   override def edmRights(data: Document[JValue]): ZeroToMany[URI] =
-    extractStrings(data.get \ "@graph" \ "edm:rights" \ "@id").map(URI)
+    extractStrings(unwrap(data) \ "@graph" \ "edm:rights" \ "@id").map(URI)
 
   override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
-    extractStrings(data.get \ "@graph" \ "edm:isShownAt" \ "@id").map(stringOnlyWebResource)
+    extractStrings(unwrap(data) \ "@graph" \ "edm:isShownAt" \ "@id").map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(data)
 
   override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
-    extractStrings(data.get \ "@graph" \ "edm:preview" \ "@id").map(stringOnlyWebResource)
+    extractStrings(unwrap(data) \ "@graph" \ "edm:preview" \ "@id").map(stringOnlyWebResource)
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
     name = Some("Plains to Peaks Collective"),

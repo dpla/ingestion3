@@ -18,8 +18,8 @@ class ParseDateEnrichment extends Serializable {
 
     EDTFDate.rangeForEDTF(str) match {
       case Some(range) =>
-        val begin = range._1 match { case "" => None case _ => Some(range._1)}
-        val end = range._2 match { case "" => None case _ => Some(range._2)}
+        val begin = range.begin match { case "" => None case _ => Some(range.begin)}
+        val end = range.end match { case "" => None case _ => Some(range.end)}
         return EdmTimeSpan(
           originalSourceDate = Some(dateString),
           prefLabel = Some(str),

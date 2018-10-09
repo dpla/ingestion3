@@ -1,6 +1,5 @@
 package dpla.ingestion3.mappers.utils
 
-import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
 import org.json4s.JsonAST.JValue
