@@ -178,8 +178,8 @@ object Utils {
     // and files are timestamped,
     // we can assume the last result will be from the most recent activity.
     val firstBatch: ObjectListing = s3client.listObjects(bucketName, prefix)
-    val objectListing: ObjectListing = lastBatch(firstBatch)
-    val objectSummaries: java.util.List[S3ObjectSummary] = objectListing.getObjectSummaries
+    val lastBatch: ObjectListing = getLastBatch(firstBatch)
+    val objectSummaries: java.util.List[S3ObjectSummary] = lastBatch.getObjectSummaries
     val lastKey = objectSummaries.get(objectSummaries.size - 1).getKey
 
     val suffix: String = lastKey.stripPrefix(prefix).stripPrefix("/").split("/")(0)
@@ -189,8 +189,8 @@ object Utils {
 
   // TODO: Handle network errors?
   @tailrec
-  def lastBatch(ol: ObjectListing): ObjectListing = {
-    if (ol.isTruncated) lastBatch(s3client.listNextBatchOfObjects(ol))
+  def getLastBatch(ol: ObjectListing): ObjectListing = {
+    if (ol.isTruncated) getLastBatch(s3client.listNextBatchOfObjects(ol))
     else ol
   }
 
