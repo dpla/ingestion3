@@ -6,6 +6,8 @@ import dpla.ingestion3.utils.{OutputHelper, Utils}
 import org.apache.spark.SparkConf
 import org.apache.log4j.Logger
 
+import scala.util.{Failure, Success}
+
 object ReporterMain {
 
   private val fieldedRptList = Seq(
@@ -88,7 +90,7 @@ object ReporterMain {
                         input: String,
                         baseOutput: String,
                         shortName: String,
-                        logger: Logger): Unit = {
+                        logger: Logger): String = {
 
     // This start time is used for documentation and output file naming.
     val startDateTime: LocalDateTime = LocalDateTime.now
@@ -120,6 +122,20 @@ object ReporterMain {
     // Enrichment meta information
     // TODO we should export the version of the language map used to enrich the data so there is a closer 1:1
     // relationship that data folks can follow-up on.
+
+    // Write manifest
+    val manifestOpts: Map[String, String] = Map(
+      "Activity" -> "Reports",
+      "Provider" -> shortName,
+      "Input" -> input
+    )
+    outputHelper.writeManifest(manifestOpts) match {
+      case Success(s) => logger.info(s"Manifest written to $s.")
+      case Failure(f) => logger.warn(s"Manifest failed to write: $f")
+    }
+
+    // Return reports path.
+    reportsPath
   }
 
   /**
