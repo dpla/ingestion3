@@ -39,46 +39,42 @@ class OutputHelper(root: String,
   val timestamp: String = startDateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
 
   /*
-   * File name for a harvest, mapping, enrichment, indexing (etc.) activity.
+   * S3 bucket or root directory for output.
+   * Includes trailing slash.
+   * If S3 bucket, includes "s3a://" prefix.
+   */
+  private lazy val directory: String = if (root.endsWith("/")) root else s"$root/"
+
+  /*
+   * File/directory name for an activity (harvest, mapping, enrichment etc.)
    * For full output path, including root directory/bucket, use `outputPath'
    * Does not include starting "/"
    *
    * Evaluate on instantiation so that invalid `activity' is caught immediately.
    */
-  val fileKey: String = {
+  private lazy val fileKey: String = {
 
-    // TODO: handle "reports" case
     // TODO: make schema configurable - could use sealed case classes for activities
     val schema: String = activity match {
-      case "harvest" => "OriginalRecord"
-      case "mapping" => "MAP4_0.MAPRecord"
-      case "enrichment" => "MAP4_0.EnrichRecord"
-      case "jsonl" => "MAP3_1.IndexRecord"
+      case "harvest" => "OriginalRecord.avro"
+      case "mapping" => "MAP4_0.MAPRecord.avro"
+      case "enrichment" => "MAP4_0.EnrichRecord.avro"
+      case "jsonl" => "MAP3_1.IndexRecord.jsonl"
+      case "reports" => "reports"
       case _ => throw new IllegalArgumentException(s"Activity '$activity' not recognized")
     }
 
-    val fileType: String = if (activity == "jsonl") "jsonl" else "avro"
-
-    s"$shortName/$activity/$timestamp-$shortName-$schema.$fileType"
+    s"$shortName/$activity/$timestamp-$shortName-$schema"
   }
 
   /*
-   * S3 bucket or root directory for output.
-   * Includes trailing slash.
-   * If S3 bucket, includes "s3a://" prefix.
-   */
-  lazy val directory: String = if (root.endsWith("/")) root else s"$root/"
-
-  /*
-   * Full output path for a harvest, mapping, enrichment, indexing (etc.) activity.
-   * For just the file name, use `fileName'
+   * Full output path for any activity.
    *
    * @example:
    *   OutputHelper("s3a://dpla-master-dataset", "cdl", "harvest").outputPath =>
    *   "s3a://dpla-master-dataset/cdl/harvest/20170209_104428-cdl-OriginalRecord.avro"
    */
   lazy val outputPath: String = s"$directory$fileKey"
-
   /*
    * Parse S3 bucket name from given `root'.
    * Does not include trailing slash or "s3a://" prefix.
@@ -113,8 +109,8 @@ class OutputHelper(root: String,
    */
   lazy val logsBasePath: String = s"$directory$fileKey/_LOGS/"
 
-  lazy val s3client: AmazonS3Client = new AmazonS3Client
-  lazy val flatFileIO: FlatFileIO = new FlatFileIO
+  private lazy val s3client: AmazonS3Client = new AmazonS3Client
+  private lazy val flatFileIO: FlatFileIO = new FlatFileIO
 
   /*
    * Write a manifest file in the given outputPath directory.
@@ -139,7 +135,7 @@ class OutputHelper(root: String,
    *              This is intentionally open-ended so that individual executors
    *              can include whatever data points are relevant to their activity.
    */
-  val manifestText: Map[String, String] => String = (opts: Map[String, String]) => {
+  private val manifestText: Map[String, String] => String = (opts: Map[String, String]) => {
 
     val date: String = startDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 

@@ -1,7 +1,7 @@
 package dpla.ingestion3.entries.reports
 
 import dpla.ingestion3.reports._
-import org.apache.log4j.{LogManager, Logger}
+import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 
 import scala.util.{Failure, Try}

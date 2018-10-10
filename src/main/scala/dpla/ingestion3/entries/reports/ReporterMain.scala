@@ -1,8 +1,12 @@
 package dpla.ingestion3.entries.reports
 
-import dpla.ingestion3.utils.Utils
+import java.time.LocalDateTime
+
+import dpla.ingestion3.utils.{OutputHelper, Utils}
 import org.apache.spark.SparkConf
 import org.apache.log4j.Logger
+
+import scala.util.{Failure, Success}
 
 object ReporterMain {
 
@@ -85,12 +89,21 @@ object ReporterMain {
   def executeAllReports(sparkConf: SparkConf,
                         input: String,
                         baseOutput: String,
-                        logger: Logger): Unit = {
+                        shortName: String,
+                        logger: Logger): String = {
+
+    // This start time is used for documentation and output file naming.
+    val startDateTime: LocalDateTime = LocalDateTime.now
+
+    val outputHelper: OutputHelper =
+      new OutputHelper(baseOutput, shortName, "reports", startDateTime)
+
+    val reportsPath = outputHelper.outputPath
 
     // Property value / Property distinct value
     fieldedRptList.map(rpt =>
       reportFields.map(field => {
-        val rptOut = s"$baseOutput/$rpt/$field"
+        val rptOut = s"$reportsPath/$rpt/$field"
         logger.info(s"Executing $rpt for $field")
         executeReport(sparkConf, input, rptOut, rpt, Array(field), logger)
       }
@@ -98,17 +111,31 @@ object ReporterMain {
 
     // Metadata completion report
     logger.info(s"Executing metadataCompleteness report")
-    executeReport(sparkConf, input, s"$baseOutput/metadataCompleteness", "metadataCompleteness", logger = logger)
+    executeReport(sparkConf, input, s"$reportsPath/metadataCompleteness", "metadataCompleteness", logger = logger)
 
     // thumbnail report options
     thumbnailOpts.foreach(rptOpt => {
       logger.info(s"Executing thumbnail report for $rptOpt")
-      executeReport(sparkConf, input, s"$baseOutput/thumbnail/$rptOpt", "thumbnail", Array(rptOpt), logger)
+      executeReport(sparkConf, input, s"$reportsPath/thumbnail/$rptOpt", "thumbnail", Array(rptOpt), logger)
     })
 
     // Enrichment meta information
     // TODO we should export the version of the language map used to enrich the data so there is a closer 1:1
     // relationship that data folks can follow-up on.
+
+    // Write manifest
+    val manifestOpts: Map[String, String] = Map(
+      "Activity" -> "Reports",
+      "Provider" -> shortName,
+      "Input" -> input
+    )
+    outputHelper.writeManifest(manifestOpts) match {
+      case Success(s) => logger.info(s"Manifest written to $s.")
+      case Failure(f) => logger.warn(s"Manifest failed to write: $f")
+    }
+
+    // Return reports path.
+    reportsPath
   }
 
   /**

@@ -25,12 +25,6 @@ class OutputHelperTest extends FlatSpec {
     )
   }
 
-  it should "throw exception if activity not recognized" in {
-    assertThrows[IllegalArgumentException](
-      new OutputHelper(root, shortName, "oops", dateTime)
-    )
-  }
-
   "outputPath" should "create correct harvest output path" in {
     val path = "s3a://my-bucket/foo/harvest/20180910_095702-foo-OriginalRecord.avro"
     assert(outputHelper.outputPath === path)
@@ -51,6 +45,12 @@ class OutputHelperTest extends FlatSpec {
   "outputPath" should "create correct jsonl output path" in {
     val helper = new OutputHelper(root, shortName, "jsonl", dateTime)
     val path = "s3a://my-bucket/foo/jsonl/20180910_095702-foo-MAP3_1.IndexRecord.jsonl"
+    assert(helper.outputPath === path)
+  }
+
+  "outputPath" should "create correct reports output path" in {
+    val helper = new OutputHelper(root, shortName, "reports", dateTime)
+    val path = "s3a://my-bucket/foo/reports/20180910_095702-foo-reports"
     assert(helper.outputPath === path)
   }
 
@@ -85,7 +85,7 @@ class OutputHelperTest extends FlatSpec {
     assert(helper.manifestLocalOutPath === path)
   }
 
-  "logsBasePath" should "create correct base path for reports" in {
+  "logsBasePath" should "create correct base path for logs" in {
     val basePath = "s3a://my-bucket/foo/harvest/20180910_095702-foo-OriginalRecord.avro/_LOGS/"
     assert(outputHelper.logsBasePath === basePath)
   }
