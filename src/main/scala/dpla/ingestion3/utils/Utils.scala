@@ -176,12 +176,14 @@ object Utils {
 
     // Given that `listObjects' returns results in alphabetical order,
     // and files are timestamped,
-    // we can assume the last result will be from the most recent activity.
+    // we can assume the last item on the last page of results
+    // will be from the most recent activity.
     val firstBatch: ObjectListing = s3client.listObjects(bucketName, prefix)
     val lastBatch: ObjectListing = getLastBatch(firstBatch)
     val objectSummaries: java.util.List[S3ObjectSummary] = lastBatch.getObjectSummaries
     val lastKey = objectSummaries.get(objectSummaries.size - 1).getKey
 
+    // Get the timestamped "folder" name, e.g. "20181003_171648-mdl-OriginalRecord.avro"
     val suffix: String = lastKey.stripPrefix(prefix).stripPrefix("/").split("/")(0)
 
     path.stripSuffix("/") + "/" + suffix
