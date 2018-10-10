@@ -39,8 +39,9 @@ object IngestRemap extends MappingExecutor
     // TODO: get most recent S3 data.
     val harvestDataOut = if (!input.startsWith("s3a://")) {
       Utils.getMostRecent(input)
-        .getOrElse(throw new RuntimeException("Unable to load harvest data"))
-    } else input
+    } else {
+      Utils.mostRecentS3(input)
+    }.getOrElse(throw new RuntimeException("Unable to load harvest data"))
 
     logger.info(s"Using harvest data from $harvestDataOut")
 
