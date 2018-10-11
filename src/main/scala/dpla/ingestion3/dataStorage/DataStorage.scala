@@ -29,7 +29,7 @@ package object dataStorage {
 
   /**
     * Parse an S3 address from a given String.
-    * 
+    *
     * @param path Path to an S3 folder
     * @return     The component parts of an S3 address
     *

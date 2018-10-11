@@ -75,22 +75,17 @@ object InputHelper {
     * @return         The full path of the most recent activity.
     */
   private def mostRecentS3(address: S3Address): Option[String] = {
-
-    val bucket = address.bucket
-    val prefix = address.prefix.getOrElse("")
-
     // Given that `listObjects' returns results in alphabetical order,
     // and activity folder names begin with a timestamp,
     // we can assume the last item on the last page of results
     // will be from the most recent activity.
-    val firstBatch: ObjectListing =  s3client.listObjects(bucket, prefix)
-    val lastBatch: ObjectListing = fetchLastS3Batch(firstBatch)
-    val objectSummaries: java.util.List[S3ObjectSummary] = lastBatch.getObjectSummaries
-    val lastKey = objectSummaries.get(objectSummaries.size - 1).getKey
+    val lastBatch: ObjectListing = fetchLastBatch(address)
+    val lastKey = fetchLastKey(lastBatch)
 
     // Get the folder directly under the given address.
-    val folder: String =
-      lastKey.stripPrefix(prefix).stripPrefix("/").split("/")(0)
+    val folder: String = lastKey.stripPrefix(address.prefix.getOrElse(""))
+                                .stripPrefix("/")
+                                .split("/")(0)
 
     val fullPath = S3Address.fullPath(address) + s"/$folder"
 
@@ -102,15 +97,35 @@ object InputHelper {
   }
 
   /**
-    * Get the last page of results from an S3 object listing.
+    * Get the last batch of results in a given S3 bucket/folder.
     *
-    * @param ol The first ObjectListing (result of an s3client listObject request)
-    * @return   The last ObjectListing
+    * @param address  The S3 bucket/folder.
+    * @return         The last batch of objects within the S3 bucket/folder.
     */
   // TODO: Handle network errors?
-  @tailrec
-  private def fetchLastS3Batch(ol: ObjectListing): ObjectListing = {
-    if (ol.isTruncated) fetchLastS3Batch(s3client.listNextBatchOfObjects(ol))
-    else ol
+  private def fetchLastBatch(address: S3Address): ObjectListing = {
+
+    @tailrec
+    def lastBatch(ol: ObjectListing): ObjectListing = {
+      // If there are more results, `ol.isTruncated' will return `true'
+      if (ol.isTruncated) lastBatch(s3client.listNextBatchOfObjects(ol))
+      else ol
+    }
+
+    val bucket = address.bucket
+    val prefix = address.prefix.getOrElse("")
+    val firstBatch: ObjectListing = s3client.listObjects(bucket, prefix)
+    lastBatch(firstBatch)
+  }
+
+  /**
+    * Get the last key from a batch of S3 object listings.
+    *
+    * @param ol An S3 ObjectListing (i.e. a batch of objects)
+    * @return   The last listed key.
+    */
+  private def fetchLastKey(ol: ObjectListing): String = {
+    val objectSummaries: java.util.List[S3ObjectSummary] = ol.getObjectSummaries
+    objectSummaries.get(objectSummaries.size - 1).getKey
   }
 }
