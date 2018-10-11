@@ -28,4 +28,14 @@ class DataStorageTest extends FlatSpec {
     val badPath = "s3a://"
     assertThrows[RuntimeException](parseS3Address(badPath))
   }
+
+  "S3Address.fullPath" should "compose full path" in {
+    val address = S3Address("s3a", "my-bucket", Some("prefix"))
+    assert(S3Address.fullPath(address) == "s3a://my-bucket/prefix")
+  }
+
+  "S3Address.fullPath" should "handle leading/trailing slashes" in {
+    val address = S3Address("s3a", "my-bucket/", Some("/prefix/"))
+    assert(S3Address.fullPath(address) == "s3a://my-bucket/prefix")
+  }
 }

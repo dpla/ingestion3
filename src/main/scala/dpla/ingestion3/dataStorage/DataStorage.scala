@@ -8,17 +8,23 @@ package object dataStorage {
 
   lazy val s3client: AmazonS3Client = new AmazonS3Client
 
+  /**
+    *
+    *
+    * @param protocol one of ["s3", "s3n", "s3a"]
+    * @param bucket
+    * @param prefix
+    */
   case class S3Address(protocol: String,
                        bucket: String,
-                       prefix: Option[String],
-                       suffix: Option[String] = None)
+                       prefix: Option[String])
 
   object S3Address {
-    def key(address: S3Address): String =
-      List(address.prefix, address.suffix).flatten.mkString("/")
-
+    // Get full S3 path. For sanity, handle leading/trailing slashes.
     def fullPath(address: S3Address): String =
-      address.protocol + "://" + address.bucket + "/" + S3Address.key(address)
+      address.protocol + "://" +
+        address.bucket.stripPrefix("/").stripSuffix("/") + "/" +
+        address.prefix.getOrElse("").stripPrefix("/").stripSuffix("/")
   }
 
   /**
