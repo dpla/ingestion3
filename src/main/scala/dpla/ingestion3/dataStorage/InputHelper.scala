@@ -57,7 +57,7 @@ object InputHelper {
 
     // Get the folder directly under the given address.
     val folder: Option[String] =
-      lastKey.stripPrefix(prefix).split("/").headOption
+      lastKey.stripPrefix(prefix).stripPrefix("/").split("/").headOption
 
     // Return the full S3 path.
     folder match {
