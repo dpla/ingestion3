@@ -6,8 +6,6 @@ package object dataStorage {
 
   lazy val s3Protocols: List[String] = List("s3", "s3a", "s3n")
 
-  lazy val validS3Protocols: List[String] = List("s3a")
-
   lazy val s3client: AmazonS3Client = new AmazonS3Client
 
   case class S3Address(protocol: String,
@@ -34,7 +32,7 @@ package object dataStorage {
     val protocol: String = path.split("://").headOption.getOrElse("")
 
     if (!s3Protocols.contains(protocol))
-      throw new RuntimeException(s"Unable to parse S3 protocol from $path")
+      throw new RuntimeException(s"Unable to parse S3 protocol from $path.")
 
     val bucket: String = path.split("/").lift(2) match {
       case Some(x) => x.stripSuffix("/")
