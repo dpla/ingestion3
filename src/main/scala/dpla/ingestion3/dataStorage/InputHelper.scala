@@ -86,7 +86,7 @@ object InputHelper {
 
     // Get the folder directly under the given address.
     val folder: String =
-      lastKey.stripPrefix(prefix).stripPrefix("/").split("/")("")
+      lastKey.stripPrefix(prefix).stripPrefix("/").split("/")(0)
 
     val fullPath = S3Address.fullPath(address) + s"/$folder"
 
