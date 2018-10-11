@@ -35,6 +35,11 @@ object InputHelper {
     }
   }
 
+  /**
+    *
+    * @param path
+    * @return
+    */
   def mostRecent(path: String): Option[String] = {
     Try(parseS3Address(path)) match {
       case Success(address) => mostRecentS3(address)
@@ -44,7 +49,7 @@ object InputHelper {
 
   /**
     * Sorts the contents of the given path to find the most recent folder
-    * within the provided path that ends with '.avro'
+    * within the provided path that is a valid activity path.
     *
     * @return Option[String] Absolute path to the most recent data within folder
     *
@@ -54,15 +59,13 @@ object InputHelper {
 
     rootFile
       .listFiles()
-      .filter(f => f.getName.endsWith(".avro"))
+      .filter(f => isActivityPath(f.getName))
       .map(f => f.getAbsolutePath)
       .sorted
       .lastOption
   }
 
   /**
-    * This assumes that the given address only contains properly formatted
-    * activity files.
     *
     * @param address
     * @return
@@ -73,7 +76,7 @@ object InputHelper {
     val prefix = address.prefix.getOrElse("")
 
     // Given that `listObjects' returns results in alphabetical order,
-    // and files are timestamped,
+    // and activity folder names begin with a timestamp,
     // we can assume the last item on the last page of results
     // will be from the most recent activity.
     val firstBatch: ObjectListing =  s3client.listObjects(bucket, prefix)
@@ -82,13 +85,15 @@ object InputHelper {
     val lastKey = objectSummaries.get(objectSummaries.size - 1).getKey
 
     // Get the folder directly under the given address.
-    val folder: Option[String] =
-      lastKey.stripPrefix(prefix).stripPrefix("/").split("/").headOption
+    val folder: String =
+      lastKey.stripPrefix(prefix).stripPrefix("/").split("/")("")
 
-    // Return the full S3 path.
-    folder match {
-      case Some(f) => Some(S3Address.fullPath(address) + s"/$f")
-      case None => None
+    val fullPath = S3Address.fullPath(address) + s"/$folder"
+
+    // Ensure that the return value is a valid activity path.
+    isActivityPath(fullPath) match {
+      case true => Some(fullPath)
+      case false => None
     }
   }
 
