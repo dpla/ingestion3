@@ -11,7 +11,8 @@ import scala.util.{Failure, Success, Try}
 object InputHelper {
 
   /**
-    * Check if a given path is a valid activity path.
+    * Check if a given local or S3 path is a valid activity path.
+    * An activity is a harvest, mapping, etc.
     *
     * A valid path will match the following pattern:
     *   8 digits (year month day)
@@ -23,8 +24,8 @@ object InputHelper {
     *   0-n characters (not "/") (schema)
     *   0-1 "/"
     *
-    * @param path
-    * @return Boolean
+    * @param path Local or S3 path that may or may not be an activity.
+    * @return     True if the path matches the pattern for an activity.
     */
   def isActivityPath(path: String): Boolean = {
     val activityPath: Regex = """\d{8}_\d{6}-[A-Za-z]*-[^/]*/?$""".r.unanchored
@@ -36,9 +37,11 @@ object InputHelper {
   }
 
   /**
+    * Get the most recent activity contained within a given local or S3 folder.
+    * The activity must be the immediate child of the given folder.
     *
-    * @param path
-    * @return
+    * @param path Path to a local or S3 folder.
+    * @return     Path to the most recent activity.
     */
   def mostRecent(path: String): Option[String] = {
     Try(parseS3Address(path)) match {
@@ -48,11 +51,11 @@ object InputHelper {
   }
 
   /**
-    * Sorts the contents of the given path to find the most recent folder
+    * Sorts the contents of the given path to find the most recent folder.
     * within the provided path that is a valid activity path.
+    * The activity must be the immediate child of the given folder.
     *
-    * @return Option[String] Absolute path to the most recent data within folder
-    *
+    * @return Option[String] Absolute path to the most recent activity.
     */
   private def mostRecentLocal(path: String): Option[String] = {
     val rootFile = new File(path)
@@ -66,9 +69,10 @@ object InputHelper {
   }
 
   /**
+    * Get the most recent activity from an S3 folder.
     *
-    * @param address
-    * @return
+    * @param address  The address of the S3 folder.
+    * @return         The full path of the most recent activity.
     */
   private def mostRecentS3(address: S3Address): Option[String] = {
 
@@ -97,6 +101,12 @@ object InputHelper {
     }
   }
 
+  /**
+    * Get the last page of results from an S3 object listing.
+    *
+    * @param ol The first ObjectListing (result of an s3client listObject request)
+    * @return   The last ObjectListing
+    */
   // TODO: Handle network errors?
   @tailrec
   private def fetchLastS3Batch(ol: ObjectListing): ObjectListing = {

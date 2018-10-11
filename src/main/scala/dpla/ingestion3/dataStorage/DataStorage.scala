@@ -9,11 +9,11 @@ package object dataStorage {
   lazy val s3client: AmazonS3Client = new AmazonS3Client
 
   /**
+    * Component parts of an S3 address.
     *
-    *
-    * @param protocol one of ["s3", "s3n", "s3a"]
-    * @param bucket
-    * @param prefix
+    * @param protocol One of ["s3", "s3n", "s3a"]
+    * @param bucket   The name of the S3 bucket
+    * @param prefix   Nested folder(s) beneath the bucket
     */
   case class S3Address(protocol: String,
                        bucket: String,
@@ -28,9 +28,10 @@ package object dataStorage {
   }
 
   /**
-    *
-    * @param path
-    * @return
+    * Parse an S3 address from a given String.
+    * 
+    * @param path Path to an S3 folder
+    * @return     The component parts of an S3 address
     *
     * @throws RuntimeException if unable to parse valid S3 address.
     */
