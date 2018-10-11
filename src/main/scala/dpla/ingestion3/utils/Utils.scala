@@ -18,8 +18,6 @@ import scala.concurrent.duration._
 import scala.util.Try
 import scala.xml.NodeSeq
 
-
-
 object Utils {
 
   /**
