@@ -5,9 +5,35 @@ import java.io.File
 import com.amazonaws.services.s3.model.{ObjectListing, S3ObjectSummary}
 
 import scala.annotation.tailrec
+import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 object InputHelper {
+
+  /**
+    * Check if a given path is a valid activity path.
+    *
+    * A valid path will match the following pattern:
+    *   8 digits (year month day)
+    *   underscore
+    *   6 digits (time)
+    *   dash
+    *   0-n letters (provider short name)
+    *   dash
+    *   0-n characters (not "/") (schema)
+    *   0-1 "/"
+    *
+    * @param path
+    * @return Boolean
+    */
+  def isActivityPath(path: String): Boolean = {
+    val activityPath: Regex = """\d{8}_\d{6}-[A-Za-z]*-[^/]*/?$""".r.unanchored
+
+    path match {
+      case activityPath() => true
+      case _ => false
+    }
+  }
 
   def mostRecent(path: String): Option[String] = {
     Try(parseS3Address(path)) match {
