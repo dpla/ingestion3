@@ -1,10 +1,14 @@
 package dpla.ingestion3
 
+import com.amazonaws.services.s3.AmazonS3Client
+
 package object dataStorage {
 
-  val s3Protocols: List[String] = List("s3", "s3a", "s3n")
+  lazy val s3Protocols: List[String] = List("s3", "s3a", "s3n")
 
-  val validS3Protocols: List[String] = List("s3a")
+  lazy val validS3Protocols: List[String] = List("s3a")
+
+  lazy val s3client: AmazonS3Client = new AmazonS3Client
 
   case class S3Address(protocol: String,
                        bucket: String,
@@ -23,6 +27,8 @@ package object dataStorage {
     *
     * @param path
     * @return
+    *
+    * @throws RuntimeException if unable to parse valid S3 address.
     */
   def parseS3Address(path: String): S3Address = {
     val protocol: String = path.split("://").headOption.getOrElse("")
