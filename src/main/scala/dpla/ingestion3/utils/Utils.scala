@@ -1,14 +1,12 @@
 package dpla.ingestion3.utils
 
 import java.io.{File, PrintWriter}
-import java.net.{URI, URL}
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
 import java.util.Calendar
 
-import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.{ObjectListing, S3ObjectSummary}
 import dpla.ingestion3.confs.i3Conf
 import org.apache.commons.lang.StringUtils
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
@@ -16,16 +14,13 @@ import org.apache.spark.sql.{Dataset, Row, SaveMode}
 import org.json4s.JValue
 import org.json4s.jackson.JsonMethods._
 
-import scala.annotation.tailrec
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 import scala.xml.NodeSeq
 
 
 
 object Utils {
-
-  lazy val s3client: AmazonS3Client = new AmazonS3Client
 
   /**
     * Count the number of files in the given directory, outDir.
@@ -145,55 +140,6 @@ object Utils {
       layout,
       s"log/$provider-$process-$date.log",
       true)
-  }
-
-  /**
-    * Sorts the contents of the given path to find the most recent folder
-    * within the provided path that ends with '.avro'
-    *
-    * @return Option[String] Absolute path to the most recent data within folder
-    *
-    */
-  def getMostRecent(path: String): Option[String] = {
-    val rootFile = new File(path)
-
-    rootFile
-      .listFiles()
-      .filter(f => f.getName.endsWith(".avro"))
-      .map(f => f.getAbsolutePath)
-      .sorted
-      .lastOption
-  }
-
-  /**
-    *
-    * @param path
-    * @return
-    */
-  def mostRecentS3(path: String): Try[String] = Try {
-    val bucketName: String = Try{ path.split("/")(2) }.getOrElse("")
-    val prefix: String = path.stripPrefix("s3a://").stripPrefix(bucketName).stripPrefix("/")
-
-    // Given that `listObjects' returns results in alphabetical order,
-    // and files are timestamped,
-    // we can assume the last item on the last page of results
-    // will be from the most recent activity.
-    val firstBatch: ObjectListing = s3client.listObjects(bucketName, prefix)
-    val lastBatch: ObjectListing = getLastBatch(firstBatch)
-    val objectSummaries: java.util.List[S3ObjectSummary] = lastBatch.getObjectSummaries
-    val lastKey = objectSummaries.get(objectSummaries.size - 1).getKey
-
-    // Get the timestamped "folder" name, e.g. "20181003_171648-mdl-OriginalRecord.avro"
-    val suffix: String = lastKey.stripPrefix(prefix).stripPrefix("/").split("/")(0)
-
-    path.stripSuffix("/") + "/" + suffix
-  }
-
-  // TODO: Handle network errors?
-  @tailrec
-  def getLastBatch(ol: ObjectListing): ObjectListing = {
-    if (ol.isTruncated) getLastBatch(s3client.listNextBatchOfObjects(ol))
-    else ol
   }
 
   // TODO These *Summary methods should be refactored and normalized when we fixup logging
