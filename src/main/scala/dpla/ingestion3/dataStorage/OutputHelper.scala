@@ -40,7 +40,6 @@ class OutputHelper(root: String,
     * @throws IllegalArgumentException if given root is S3 path with invalid
     *                                  protocol for writing files
     */
-  // TODO: use this in executors to test if path is s3
   val s3Address: Option[S3Address] = Try(parseS3Address(root)) match {
     // root is a valid S3 path
     case Success(a) => {
@@ -65,7 +64,7 @@ class OutputHelper(root: String,
       throw new IllegalArgumentException(s"Activity '$activity' not recognized")
   }
 
-  // TODO: Remove this dependency?  Move FilIO to dataStorage or re-implement method?
+  // TODO: Remove this dependency?  Move FileIO to dataStorage or re-implement method?
   private lazy val flatFileIO = new FlatFileIO
 
   private lazy val timestamp: String =
@@ -145,7 +144,6 @@ class OutputHelper(root: String,
    *
    * @return Try[String]: Path of output file.
    */
-  // TODO: repeats logic in utils.flatFileIO
   def writeLocalFile(outPath: String, text: String): Try[String] =
     Try { flatFileIO.writeFile(text, outPath) }
 
