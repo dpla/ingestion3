@@ -138,8 +138,10 @@ trait EnrichExecutor extends Serializable {
         data match {
           case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)
         }
-        val canonicalPath = if (path.startsWith("s3a://")) path else
-          new File(path).getCanonicalPath
+        val canonicalPath = outputHelper.s3Address match {
+          case Some(_) => path
+          case None => new File(path).getCanonicalPath
+        }
         ReportFormattingUtils.centerPad(name, canonicalPath)
       }
     }
