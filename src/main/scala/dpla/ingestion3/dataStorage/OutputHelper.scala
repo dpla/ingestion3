@@ -30,15 +30,26 @@ class OutputHelper(root: String,
                    activity: String,
                    startDateTime: LocalDateTime) {
 
-  // Evaluate on instantiation so invalid S3 protocol is caught immediately.
+  val s3WriteProtocol: String = "s3a"
+
+  /**
+    * If the given root is an S3 path, parse an S3Address.
+    * Evaluate on instantiation so invalid S3 protocol is caught immediately.
+    * This val can be used to check wither a given root is an S3 path or not.
+    *
+    * @throws IllegalArgumentException if given root is S3 path with invalid
+    *                                  protocol for writing files
+    */
   // TODO: use this in executors to test if path is s3
   val s3Address: Option[S3Address] = Try(parseS3Address(root)) match {
+    // root is a valid S3 path
     case Success(a) => {
       if (a.protocol != s3WriteProtocol)
         throw new IllegalArgumentException(
           s"$s3WriteProtocol protocol required for writing output")
       Some(a)
     }
+    // root is not a valid S3 path
     case Failure(_) => None
   }
 
