@@ -1,7 +1,7 @@
 package dpla.ingestion3.utils
 
 import java.io.{File, PrintWriter}
-import java.net.{URI, URL}
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
@@ -15,10 +15,8 @@ import org.json4s.JValue
 import org.json4s.jackson.JsonMethods._
 
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 import scala.xml.NodeSeq
-
-
 
 object Utils {
 
@@ -140,24 +138,6 @@ object Utils {
       layout,
       s"log/$provider-$process-$date.log",
       true)
-  }
-
-  /**
-    * Sorts the contents of the given path to find the most recent folder
-    * within the provided path that ends with '.avro'
-    *
-    * @return Option[String] Absolute path to the most recent data within folder
-    *
-    */
-  def getMostRecent(path: String): Option[String] = {
-    val rootFile = new File(path)
-
-    rootFile
-      .listFiles()
-      .filter(f => f.getName.endsWith(".avro"))
-      .map(f => f.getAbsolutePath)
-      .sorted
-      .lastOption
   }
 
   // TODO These *Summary methods should be refactored and normalized when we fixup logging

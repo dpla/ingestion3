@@ -1,6 +1,7 @@
 package dpla.ingestion3.entries.ingest
 
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
+import dpla.ingestion3.dataStorage.InputHelper
 import dpla.ingestion3.executors.{EnrichExecutor, JsonlExecutor, MappingExecutor}
 import dpla.ingestion3.entries.reports.ReporterMain._
 import dpla.ingestion3.utils.Utils
@@ -34,16 +35,16 @@ object IngestRemap extends MappingExecutor
 
     // Outputs
 
-    // If harvest data is NOT on S3, get most recent data.
-    // Else, use the given S3 input filepath.
-    // TODO: get most recent S3 data.
-    val harvestDataOut = if (!input.startsWith("s3a://")) {
-      Utils.getMostRecent(input)
-        .getOrElse(throw new RuntimeException("Unable to load harvest data"))
-    } else input
+    // If given input path is a harvest, use it as `harvestData'.
+    // If not, assume that it is a directory containing several harvests and
+    // get the most recent harvest from that directory.
+    val harvestData = InputHelper.isActivityPath(input) match {
+      case true => input
+      case false => InputHelper.mostRecent(input)
+        .getOrElse(throw new RuntimeException("Unable to load harvest data."))
+    }
 
-    logger.info(s"Using harvest data from $harvestDataOut")
-
+    logger.info(s"Using harvest data from $harvestData")
 
     // Load configuration from file.
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
@@ -61,7 +62,7 @@ object IngestRemap extends MappingExecutor
     // TODO These processes should return some flag or metric to help determine whether to proceed
     // Mapping
     val mapDataOut: String =
-      executeMapping(sparkConf, harvestDataOut, baseDataOut, shortName, logger)
+      executeMapping(sparkConf, harvestData, baseDataOut, shortName, logger)
 
     // Enrichment
     val enrichDataOut: String =
