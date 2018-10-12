@@ -8,7 +8,8 @@ import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.harvesters.pss.PssHarvester
 import dpla.ingestion3.harvesters.resourceSync.RsHarvester
-import dpla.ingestion3.utils.{OutputHelper, ProviderRegistry, Utils}
+import dpla.ingestion3.utils.{ProviderRegistry, Utils}
+import dpla.ingestion3.dataStorage.OutputHelper
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -57,7 +58,7 @@ trait HarvestExecutor {
     val outputHelper: OutputHelper =
       new OutputHelper(dataOut, shortName, "harvest", startDateTime)
 
-    val outputPath = outputHelper.outputPath
+    val outputPath = outputHelper.activityPath
 
     // Call local implementation of runHarvest()
     Try {

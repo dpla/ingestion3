@@ -6,6 +6,8 @@ package object dataStorage {
 
   lazy val s3Protocols: List[String] = List("s3", "s3a", "s3n")
 
+  lazy val s3WriteProtocol: String = "s3a"
+
   lazy val s3client: AmazonS3Client = new AmazonS3Client
 
   /**

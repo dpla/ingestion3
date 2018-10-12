@@ -1,0 +1,157 @@
+package dpla.ingestion3.dataStorage
+
+import dpla.ingestion3.utils.FlatFileIO
+
+import java.io.ByteArrayInputStream
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
+import com.amazonaws.services.s3.model.{ObjectMetadata, PutObjectRequest}
+
+import scala.util.{Failure, Success, Try}
+
+/*
+ * @param root: Root directory or AWS S3 bucket.
+ *              If `root' is an AWS S3 bucket, it should start with "s3a://".
+ * @param shortName: Provider short name
+ * @param activity: "harvest", "mapping", "enrichment", etc.
+ * @param startDateTime: start dateTime of the activity
+ *
+ * @throws IllegalArgumentException
+ *
+ * @see https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/TECH/pages/84512319/Ingestion+3+Storage+Specification
+ *      for details on file naming conventions
+ *
+ * The convention in this class is that methods with "path" in the name include
+ * the root bucket/directory while methods with "key" do not.
+ */
+class OutputHelper(root: String,
+                   shortName: String,
+                   activity: String,
+                   startDateTime: LocalDateTime) {
+
+  // Evaluate on instantiation so invalid S3 protocol is caught immediately.
+  // TODO: use this in executors to test if path is s3
+  val s3Address: Option[S3Address] = Try(parseS3Address(root)) match {
+    case Success(a) => {
+      if (a.protocol != s3WriteProtocol)
+        throw new IllegalArgumentException(
+          s"$s3WriteProtocol protocol required for writing output")
+      Some(a)
+    }
+    case Failure(_) => None
+  }
+
+  //Evaluate on instantiation so that invalid `activity' is caught immediately.
+  // TODO: make schema configurable - could use sealed case classes for activities
+  private val schema: String = activity match {
+    case "harvest" => "OriginalRecord.avro"
+    case "mapping" => "MAP4_0.MAPRecord.avro"
+    case "enrichment" => "MAP4_0.EnrichRecord.avro"
+    case "jsonl" => "MAP3_1.IndexRecord.jsonl"
+    case "reports" => "reports"
+    case _ =>
+      throw new IllegalArgumentException(s"Activity '$activity' not recognized")
+  }
+
+  // TODO: Remove this dependency?  Move FilIO to dataStorage or re-implement method?
+  private lazy val flatFileIO = new FlatFileIO
+
+  private lazy val timestamp: String =
+    startDateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+
+  /*
+   * S3 bucket or root directory for output.
+   * Includes trailing slash.
+   * If S3 bucket, includes "s3a://" prefix.
+   */
+  private lazy val rootPath: String =
+    if (root.endsWith("/")) root else s"$root/"
+
+  private val activityRelativePath: String =
+    s"$shortName/$activity/$timestamp-$shortName-$schema"
+
+  private lazy val manifestRelativePath: String =
+    s"$activityRelativePath/_MANIFEST"
+
+  private lazy val logsRelativePath: String =
+    s"$activityRelativePath/_LOGS"
+
+  lazy val activityPath = s"$rootPath$activityRelativePath"
+
+  lazy val manifestPath = s"$rootPath$manifestRelativePath"
+
+  lazy val logsPath = s"$rootPath$logsRelativePath"
+
+  /*
+   * Write a manifest file in the given outputPath directory.
+   *
+   * @param outputPath: The directory in which the manifest file is to be written.
+   * @param opts: Optional data points to be included in the manifest file.
+   */
+  def writeManifest(opts: Map[String, String]): Try[String] = {
+
+    val text: String = manifestText(opts)
+
+    s3Address match {
+      case Some(a) => {
+
+        val bucket = a.bucket
+        val key = Array(a.prefix, Some(manifestRelativePath)).flatten
+          .mkString("/")
+
+        writeS3File(bucket, key, text)
+      }
+      case None => writeLocalFile(manifestPath, text)
+    }
+  }
+
+  /*
+   * Create text for a manifest file.
+   *
+   * @param opts: Optional data points to be included in the manifest file.
+   *              This is intentionally open-ended so that individual executors
+   *              can include whatever data points are relevant to their activity.
+   */
+  private val manifestText: Map[String, String] => String = (opts: Map[String, String]) => {
+
+    val date: String = startDateTime
+      .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+
+    // Add date/time to given `opts'
+    val data: Map[String, String] = opts + ("Start date/time" -> date)
+
+    data.map{ case(k, v) => s"$k: $v" }.mkString("\n")
+  }
+
+  // TODO: Move file writers?
+
+  /*
+   * Write a String to a local file.
+   *
+   * @param outPath: Output path
+   * @param text: Text string to be written to local file
+   *
+   * @return Try[String]: Path of output file.
+   */
+  // TODO: repeats logic in utils.flatFileIO
+  def writeLocalFile(outPath: String, text: String): Try[String] =
+    Try { flatFileIO.writeFile(text, outPath) }
+
+  /*
+   * Write a String to an S3 file.
+   *
+   * @param bucket: S3 bucket (do not include trailing slash or "s3a://" prefix)
+   * @param key: S3 file key
+   * @param text: Text string to be written to S3 file
+   *
+   * @return: Try[String] Path of written file.
+   *          Identifier for specific version of the resource just written.
+   */
+  def writeS3File(bucket: String, key: String, text: String): Try[String] = Try {
+    val in = new ByteArrayInputStream(text.getBytes("utf-8"))
+    s3client.putObject(new PutObjectRequest(bucket, key, in, new ObjectMetadata))
+    // Return filepath
+    s"$bucket/$key"
+  }
+}
