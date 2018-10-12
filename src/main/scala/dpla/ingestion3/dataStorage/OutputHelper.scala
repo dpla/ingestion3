@@ -10,21 +10,18 @@ import com.amazonaws.services.s3.model.{ObjectMetadata, PutObjectRequest}
 
 import scala.util.{Failure, Success, Try}
 
-/*
- * @param root: Root directory or AWS S3 bucket.
- *              If `root' is an AWS S3 bucket, it should start with "s3a://".
- * @param shortName: Provider short name
- * @param activity: "harvest", "mapping", "enrichment", etc.
- * @param startDateTime: start dateTime of the activity
- *
- * @throws IllegalArgumentException
- *
- * @see https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/TECH/pages/84512319/Ingestion+3+Storage+Specification
- *      for details on file naming conventions
- *
- * The convention in this class is that methods with "path" in the name include
- * the root bucket/directory while methods with "key" do not.
- */
+/**
+  * @param root:          Root directory or AWS S3 bucket.
+  *                       If AWS S3 bucket, should start with "s3a://".
+  * @param shortName:     Provider short name
+  * @param activity:      "harvest", "mapping", "enrichment", etc.
+  * @param startDateTime: Start dateTime of the activity
+  *
+  * @throws               IllegalArgumentException
+  *
+  * @see https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/TECH/pages/84512319/Ingestion+3+Storage+Specification
+  *      for details on file naming conventions
+  */
 class OutputHelper(root: String,
                    shortName: String,
                    activity: String,
@@ -70,11 +67,11 @@ class OutputHelper(root: String,
   private lazy val timestamp: String =
     startDateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
 
-  /*
-   * S3 bucket or root directory for output.
-   * Includes trailing slash.
-   * If S3 bucket, includes "s3a://" prefix.
-   */
+  /**
+    * S3 bucket or root directory for output.
+    * Includes trailing slash.
+    * If S3 bucket, includes "s3a://" prefix.
+    */
   private lazy val rootPath: String =
     if (root.endsWith("/")) root else s"$root/"
 
@@ -93,36 +90,38 @@ class OutputHelper(root: String,
 
   lazy val logsPath = s"$rootPath$logsRelativePath"
 
-  /*
-   * Write a manifest file in the given outputPath directory.
-   *
-   * @param outputPath: The directory in which the manifest file is to be written.
-   * @param opts: Optional data points to be included in the manifest file.
-   */
+  /**
+    * Write a manifest file in the given outputPath directory.
+    *
+    * @param outputPath:  The directory in which the manifest file is to be written.
+    * @param opts:        Optional data points to be included in the manifest file.
+    *
+    * @return             Try[String]: Path of output file.
+    */
   def writeManifest(opts: Map[String, String]): Try[String] = {
 
     val text: String = manifestText(opts)
 
     s3Address match {
       case Some(a) => {
-
         val bucket = a.bucket
         val key = Array(a.prefix, Some(manifestRelativePath)).flatten
           .mkString("/")
-
         writeS3File(bucket, key, text)
       }
       case None => writeLocalFile(manifestPath, text)
     }
   }
 
-  /*
-   * Create text for a manifest file.
-   *
-   * @param opts: Optional data points to be included in the manifest file.
-   *              This is intentionally open-ended so that individual executors
-   *              can include whatever data points are relevant to their activity.
-   */
+  /**
+    * Create text for a manifest file.
+    *
+    * @param opts:  Optional data points to be included in the manifest file.
+    *               This is intentionally open-ended so that individual executors
+    *               can include whatever data points are relevant to their activity.
+    *
+    * @return       Text string.
+    */
   private val manifestText: Map[String, String] => String = (opts: Map[String, String]) => {
 
     val date: String = startDateTime
@@ -136,27 +135,26 @@ class OutputHelper(root: String,
 
   // TODO: Move file writers?
 
-  /*
-   * Write a String to a local file.
-   *
-   * @param outPath: Output path
-   * @param text: Text string to be written to local file
-   *
-   * @return Try[String]: Path of output file.
-   */
+  /**
+    * Write a String to a local file.
+    *
+    * @param outPath: Output path
+    * @param text:    Text string to be written to local file
+    *
+    * @return         Try[String]: Path of output file.
+    */
   def writeLocalFile(outPath: String, text: String): Try[String] =
     Try { flatFileIO.writeFile(text, outPath) }
 
-  /*
-   * Write a String to an S3 file.
-   *
-   * @param bucket: S3 bucket (do not include trailing slash or "s3a://" prefix)
-   * @param key: S3 file key
-   * @param text: Text string to be written to S3 file
-   *
-   * @return: Try[String] Path of written file.
-   *          Identifier for specific version of the resource just written.
-   */
+  /**
+    * Write a String to an S3 file.
+    *
+    * @param bucket:  S3 bucket (do not include trailing slash or "s3a://" prefix)
+    * @param key:     S3 file key
+    * @param text:    Text string to be written to S3 file
+    *
+    * @return:        Try[String] Path of written file.
+    */
   def writeS3File(bucket: String, key: String, text: String): Try[String] = Try {
     val in = new ByteArrayInputStream(text.getBytes("utf-8"))
     s3client.putObject(new PutObjectRequest(bucket, key, in, new ObjectMetadata))
