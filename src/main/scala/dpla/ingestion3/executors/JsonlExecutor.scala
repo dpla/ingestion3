@@ -3,7 +3,7 @@ package dpla.ingestion3.executors
 import java.time.LocalDateTime
 
 import dpla.ingestion3.model.{ModelConverter, jsonlRecord}
-import dpla.ingestion3.utils.OutputHelper
+import dpla.ingestion3.dataStorage.OutputHelper
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{Dataset, SparkSession}
@@ -30,7 +30,7 @@ trait JsonlExecutor extends Serializable {
     val outputHelper: OutputHelper =
       new OutputHelper(dataOut, shortName, "jsonl", startDateTime)
 
-    val outputPath: String = outputHelper.outputPath
+    val outputPath: String = outputHelper.activityPath
 
     logger.info("Starting JSON-L export")
 

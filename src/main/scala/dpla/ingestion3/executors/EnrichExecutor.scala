@@ -11,7 +11,8 @@ import dpla.ingestion3.model
 import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
 import dpla.ingestion3.reports.PrepareEnrichmentReport
 import dpla.ingestion3.reports.summary._
-import dpla.ingestion3.utils.{OutputHelper, Utils}
+import dpla.ingestion3.utils.Utils
+import dpla.ingestion3.dataStorage.OutputHelper
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
@@ -50,7 +51,7 @@ trait EnrichExecutor extends Serializable {
     val outputHelper =
       new OutputHelper(dataOut, shortName, "enrichment", startDateTime)
 
-    val outputPath = outputHelper.outputPath
+    val outputPath = outputHelper.activityPath
 
     implicit val spark = SparkSession.builder()
       .config(sparkConf)
@@ -133,12 +134,14 @@ trait EnrichExecutor extends Serializable {
 
     val logFileSeq = logEnrichedFields.map {
       case (name: String, data: Dataset[_]) => {
-        val path = outputHelper.logsBasePath + s"$shortName-$endTime-enrich-$name"
+        val path = outputHelper.logsPath + s"/$shortName-$endTime-enrich-$name"
         data match {
           case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)
         }
-        val canonicalPath = if (path.startsWith("s3a://")) path else
-          new File(path).getCanonicalPath
+        val canonicalPath = outputHelper.s3Address match {
+          case Some(_) => path
+          case None => new File(path).getCanonicalPath
+        }
         ReportFormattingUtils.centerPad(name, canonicalPath)
       }
     }
