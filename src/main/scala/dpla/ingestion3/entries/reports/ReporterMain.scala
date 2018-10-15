@@ -2,7 +2,8 @@ package dpla.ingestion3.entries.reports
 
 import java.time.LocalDateTime
 
-import dpla.ingestion3.utils.{OutputHelper, Utils}
+import dpla.ingestion3.utils.Utils
+import dpla.ingestion3.dataStorage.OutputHelper
 import org.apache.spark.SparkConf
 import org.apache.log4j.Logger
 
@@ -98,7 +99,7 @@ object ReporterMain {
     val outputHelper: OutputHelper =
       new OutputHelper(baseOutput, shortName, "reports", startDateTime)
 
-    val reportsPath = outputHelper.outputPath
+    val reportsPath = outputHelper.activityPath
 
     // Property value / Property distinct value
     fieldedRptList.map(rpt =>

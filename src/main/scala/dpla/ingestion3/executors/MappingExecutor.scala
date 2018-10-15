@@ -8,7 +8,8 @@ import dpla.ingestion3.messages._
 import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.reports.summary._
-import dpla.ingestion3.utils.{OutputHelper, ProviderRegistry, Utils}
+import dpla.ingestion3.utils.{ProviderRegistry, Utils}
+import dpla.ingestion3.dataStorage.OutputHelper
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
@@ -45,7 +46,7 @@ trait MappingExecutor extends Serializable {
     val outputHelper: OutputHelper =
       new OutputHelper(dataOut, shortName, "mapping", startDateTime)
 
-    val outputPath = outputHelper.outputPath
+    val outputPath = outputHelper.activityPath
 
     // @michael Any issues with making SparkSession implicit?
     implicit val spark: SparkSession = SparkSession.builder()
@@ -111,10 +112,10 @@ trait MappingExecutor extends Serializable {
 
     val endTime = System.currentTimeMillis()
 
-    val logsBasePath = outputHelper.logsBasePath
+    val logsPath = outputHelper.logsPath
 
     // Collect the values needed to generate the report
-    val finalReport = buildFinalReport(mappingResults, shortName, logsBasePath, startTime, endTime)(spark)
+    val finalReport = buildFinalReport(mappingResults, shortName, logsPath, startTime, endTime)(spark)
 
     // Format the summary report and write it log file
     // TODO Create MappingSummary.getEmailSummary() and
@@ -179,7 +180,7 @@ trait MappingExecutor extends Serializable {
 
     val logFileSeq = logFileList.map {
       case (name: String, data: Dataset[Row]) => {
-        val path = logsBasePath + s"$shortName-$endTime-map-$name"
+        val path = logsBasePath + s"/$shortName-$endTime-map-$name"
         Utils.writeLogsAsCsv(path, name, data, shortName)
         ReportFormattingUtils.centerPad(name, new File(path).getCanonicalPath)
       }
