@@ -1,6 +1,7 @@
 package dpla.ingestion3.enrichments
 
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.enrichments.date.DateBuilder
 import dpla.ingestion3.model._
 import dpla.ingestion3.enrichments.normalizations.StandardNormalizations._
 
@@ -19,7 +20,7 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
     override def port: String = conf.twofishes.port.getOrElse("8081")
   }
 
-  val dateEnrichment = new ParseDateEnrichment()
+  val dateEnrichment = new DateBuilder()
   val spatialEnrichment = new SpatialEnrichment(Geocoder)
   val languageEnrichment = new LanguageEnrichment
   val typeEnrichment= new TypeEnrichment
@@ -42,7 +43,7 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
 
     enriched.copy(
       sourceResource = enriched.sourceResource.copy(
-        // date = enriched.sourceResource.date.map(d => dateEnrichment.parse(d)),
+        date = enriched.sourceResource.date.map(d => dateEnrichment.buildEdmTimeSpan(d.originalSourceDate.getOrElse(""))),
         language = enriched.sourceResource.language.map(languageEnrichment.enrichLanguage),
         `type` = enriched.sourceResource.`type`.flatMap(typeEnrichment.enrich)
         //, place = enriched.sourceResource.place.map(p => spatialEnrichment.enrich(p))
