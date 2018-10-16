@@ -1,0 +1,113 @@
+<sear:DOC ID="157439" RANK="1.0" NO="1" SEARCH_ENGINE="Local Search Engine" SEARCH_ENGINE_TYPE="Local Search Engine">
+    <PrimoNMBib xmlns="http://www.exlibrisgroup.com/xsd/primo/primo_nm_bib">
+        <record>
+            <control>
+                <sourcerecordid>works_598</sourcerecordid>
+                <sourceid>digcoll_slc_27</sourceid>
+                <recordid>digcoll_slc_27works_598</recordid>
+                <originalsourceid>works_598</originalsourceid>
+                <sourcedbandrecordid>works_598</sourcedbandrecordid>
+                <addsrcrecordid>slc-27-131-1605</addsrcrecordid>
+                <sourceformat>Digital Entity</sourceformat>
+                <sourcesystem>Other</sourcesystem>
+            </control>
+            <display>
+                <relation>Publisher</relation>
+                <type>Text</type>
+                <title>Folio: To Do Something With the Sky</title>
+                <contributor>Salt Lake Community College (Creator)</contributor>
+                <publisher>Digitized by: Salt Lake Community College</publisher>
+                <creationdate>2012</creationdate>
+                <format>application/pdf</format>
+                <identifier>
+                    http://libarchive.slcc.edu/islandora/object/works%3A598
+                </identifier>
+                <subject>Art; Literature; Poetry; writing</subject>
+                <description>Fall 2012 issue of Folio.</description>
+                <language>eng</language>
+                <rights>https://creativecommons.org/licenses/by-nc/4.0/</rights>
+                <lds01>Salt Lake Community College Libraries</lds01>
+                <lds02>Salt Lake Community College Digital Archives</lds02>
+                <lds03>Salt Lake Community College Libraries</lds03>
+                <lds04>
+                    Salt Lake Community College Scholarly and Creative Works
+                </lds04>
+                <lds08>Place</lds08>
+                <lds18>Text</lds18>
+                <lds17>text</lds17>
+            </display>
+            <links>
+                <linktorsrc>
+                    $$Uhttp://libarchive.slcc.edu/islandora/object/works%3A598$$DOpen resource in a new window
+                </linktorsrc>
+                <thumbnail>$$Tdigcoll_slc_27_linktothumb$$DSee Thumbnail</thumbnail>
+            </links>
+            <search>
+                <creatorcontrib>Salt Lake Community College (Creator)</creatorcontrib>
+                <title>Folio: To Do Something With the Sky</title>
+                <description>Fall 2012 issue of Folio.</description>
+                <subject>Art; Literature; Poetry; writing</subject>
+                <sourceid>digcoll_slc_27</sourceid>
+                <recordid>digcoll_slc_27works_598</recordid>
+                <creationdate>2012</creationdate>
+                <addsrcrecordid>slc-27-131-1605</addsrcrecordid>
+                <scope>mw</scope>
+                <lsr01>slc</lsr01>
+                <lsr02>27</lsr02>
+                <lsr03>131</lsr03>
+                <lsr04>1605</lsr04>
+                <lsr09>Salt Lake Community College Libraries</lsr09>
+                <lsr10>Salt Lake Community College Digital Archives</lsr10>
+                <lsr12>Salt Lake Community College Libraries</lsr12>
+                <lsr13>Salt Lake Community College Scholarly and Creative Works</lsr13>
+                <rsrctype>text</rsrctype>
+            </search>
+            <sort>
+                <title>Folio: To Do Something With the Sky</title>
+                <creationdate>2012</creationdate>
+            </sort>
+            <facets>
+                <language>eng</language>
+                <creationdate>2012</creationdate>
+                <topic>Art</topic>
+                <topic> Literature</topic>
+                <topic> Poetry</topic>
+                <topic> writing</topic>
+                <collection>Digital Collections</collection>
+                <toplevel>online_resources</toplevel>
+                <format>application/pdf</format>
+                <genre>unknown</genre>
+                <lfc01>
+                    Salt Lake Community College Scholarly and Creative Works
+                </lfc01>
+                <lfc02>Salt Lake Community College Libraries</lfc02>
+                <lfc03>Salt Lake Community College Libraries</lfc03>
+                <lfc04>Salt Lake Community College Digital Archives</lfc04>
+                <prefilter>text</prefilter>
+                <rsrctype>text</rsrctype>
+                <newrecords>20180717_955</newrecords>
+                <frbrgroupid>409022471</frbrgroupid>
+                <frbrtype>6</frbrtype>
+            </facets>
+            <delivery>
+                <institution>MWDL</institution>
+                <delcategory>Online Resource</delcategory>
+            </delivery>
+            <ranking>
+                <booster1>1</booster1>
+                <booster2>1</booster2>
+            </ranking>
+            <addata>
+                <date>2012</date>
+                <pub>Digitized by: Salt Lake Community College</pub>
+            </addata>
+        </record>
+    </PrimoNMBib>
+    <sear:LINKS>
+        <sear:linktorsrc>
+            http://libarchive.slcc.edu/islandora/object/works%3A598
+        </sear:linktorsrc>
+        <sear:thumbnail>https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/</sear:thumbnail>
+        <sear:thumbnail>https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/</sear:thumbnail>
+    </sear:LINKS>
+</sear:DOC>
