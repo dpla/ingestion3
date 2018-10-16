@@ -80,10 +80,10 @@ class MtProfile extends XmlProfile {
   * Mountain West Digital Library
   */
 class MwdlProfile extends XmlProfile {
-  type Mapping = MtMapping // FIXME When MWDL mapping implemented
+  type Mapping = MwdlMapping
 
   override def getHarvester: Class[_ <: Harvester] = classOf[MwdlHarvester]
-  override def getMapping = new MtMapping  // FIXME When mapping implemented
+  override def getMapping = new MwdlMapping
 }
 
 /**
