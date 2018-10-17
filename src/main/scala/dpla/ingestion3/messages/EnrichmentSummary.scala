@@ -18,7 +18,6 @@ object EnrichmentSummary {
     val langImproved = Utils.formatNumber(data.enrichmentOpSummary.langImproved)
     val placeImproved = Utils.formatNumber(data.enrichmentOpSummary.placeImprove)
 
-    val failedCountStr = Utils.formatNumber(data.operationSummary.recordsFailed)
     val lineBreak = "-"*80
 
     s"""

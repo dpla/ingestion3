@@ -115,7 +115,6 @@ trait EnrichExecutor extends Serializable {
     }
 
     // Write logs and summary reports.
-
     val endTime = System.currentTimeMillis()
 
     val typeMessages = messages.filter("field='type'")
@@ -124,25 +123,20 @@ trait EnrichExecutor extends Serializable {
     val placeMessages = messages.filter("field='place'")
 
     val logEnrichedFields = List(
-      "all" -> messages,
       "type" -> typeMessages,
       "date" -> dateMessages,
       "language" -> langMessages,
       "place" -> placeMessages
-    )
-      .filter { case (_, data: Dataset[_]) => data.count() > 0 }
+    ).filter { case (_, data: Dataset[_]) => data.count() > 0 } // drop empty
 
     val logFileSeq = logEnrichedFields.map {
       case (name: String, data: Dataset[_]) => {
-        val path = outputHelper.logsPath + s"/$shortName-$endTime-enrich-$name"
-        data match {
-          case dr: Dataset[Row] => Utils.writeLogsAsCsv(path, name, dr, shortName)
-        }
-        val canonicalPath = outputHelper.s3Address match {
+        val path = outputHelper.logsPath + s"/$name"
+        Utils.writeLogsAsCsv(path, name, data, shortName)
+        outputHelper.s3Address match {
           case Some(_) => path
           case None => new File(path).getCanonicalPath
         }
-        ReportFormattingUtils.centerPad(name, canonicalPath)
       }
     }
 
@@ -172,10 +166,18 @@ trait EnrichExecutor extends Serializable {
       placeSummary = PrepareEnrichmentReport.generateFieldReport(messages, "place")
     )
 
+    // Calculate data points for enrichment summary
     val summaryData = EnrichmentSummaryData(shortName, operationSummary, timeSummary, enrichOpSummary)
+    // Builds text blob
+    val enrichSummary = EnrichmentSummary.getSummary(summaryData)
 
-    // Write warn and error messages to CSV files
-    logger.info(EnrichmentSummary.getSummary(summaryData))
+    // Write enrich summary to _SUMMARY
+    outputHelper.writeSummary(enrichSummary) match {
+      case Success(s) => logger.info(s"Summary written to $s.")
+      case Failure(f) => logger.warn(s"Summary failed to write: $f")
+    }
+    // For convenience
+    logger.info(enrichSummary)
 
     sc.stop()
 
