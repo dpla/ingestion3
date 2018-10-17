@@ -82,6 +82,9 @@ class OutputHelper(root: String,
   private lazy val manifestRelativePath: String =
     s"$activityRelativePath/_MANIFEST"
 
+  private lazy val summaryRelativePath: String =
+    s"$activityRelativePath/_SUMMARY"
+
   private lazy val logsRelativePath: String =
     s"$activityRelativePath/_LOGS"
 
@@ -89,12 +92,13 @@ class OutputHelper(root: String,
 
   lazy val manifestPath = s"$rootPath$manifestRelativePath"
 
+  lazy val summaryPath = s"$rootPath$summaryRelativePath"
+
   lazy val logsPath = s"$rootPath$logsRelativePath"
 
   /**
     * Write a manifest file in the given outputPath directory.
     *
-    * @param outputPath:  The directory in which the manifest file is to be written.
     * @param opts:        Optional data points to be included in the manifest file.
     *
     * @return             Try[String]: Path of output file.
@@ -115,9 +119,27 @@ class OutputHelper(root: String,
   }
 
   /**
+    * Write a summary file in the given outputPath directory.
+    *
+    * @param summary  Summary text blob
+    * @return         Try[String]: Path of the output file
+    */
+  def writeSummary(summary: String): Try[String] = {
+    s3Address match {
+      case Some(a) => {
+        val bucket = a.bucket
+        val key = Array(a.prefix, Some(summaryRelativePath)).flatten
+          .mkString("/")
+        writeS3File(bucket, key, summary)
+      }
+      case None => writeLocalFile(summaryPath, summary)
+    }
+  }
+
+  /**
     * Create text for a manifest file.
     *
-    * @param opts:  Optional data points to be included in the manifest file.
+    * opts:  Optional data points to be included in the manifest file.
     *               This is intentionally open-ended so that individual executors
     *               can include whatever data points are relevant to their activity.
     *
@@ -154,7 +176,7 @@ class OutputHelper(root: String,
     * @param key:     S3 file key
     * @param text:    Text string to be written to S3 file
     *
-    * @return:        Try[String] Path of written file.
+    * @return         Try[String] Path of written file.
     */
   def writeS3File(bucket: String, key: String, text: String): Try[String] = Try {
     val in = new ByteArrayInputStream(text.getBytes("utf-8"))

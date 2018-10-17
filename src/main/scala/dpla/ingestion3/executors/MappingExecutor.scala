@@ -1,15 +1,14 @@
 package dpla.ingestion3.executors
 
-import java.io.File
 import java.time.LocalDateTime
 
 import com.databricks.spark.avro._
+import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
 import dpla.ingestion3.model.RowConverter
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
-import dpla.ingestion3.dataStorage.OutputHelper
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
@@ -118,8 +117,13 @@ trait MappingExecutor extends Serializable {
     val finalReport = buildFinalReport(mappingResults, shortName, logsPath, startTime, endTime)(spark)
 
     // Format the summary report and write it log file
-    // TODO Create MappingSummary.getEmailSummary() and
-    logger.info(MappingSummary.getSummary(finalReport))
+    val mappingSummary = MappingSummary.getSummary(finalReport)
+    outputHelper.writeSummary(mappingSummary) match {
+      case Success(s) => logger.info(s"Summary written to $s.")
+      case Failure(f) => logger.warn(s"Summary failed to write: $f")
+    }
+    // Send the mapping summary to the console as well (for convenience)
+    logger.info(mappingSummary)
 
     spark.stop()
 
@@ -173,18 +177,17 @@ trait MappingExecutor extends Serializable {
     val warnMsgDetails = MessageProcessor.getMessageFieldSummary(warnings).mkString("\n")
 
     val logFileList = List(
-      "all" -> messages,
       "errors" -> errors,
       "warnings" -> warnings
     ).filter { case (_, data: Dataset[_]) => data.count() > 0 }
 
     val logFileSeq = logFileList.map {
-      case (name: String, data: Dataset[Row]) => {
-        val path = logsBasePath + s"/$shortName-$endTime-map-$name"
+      case (name: String, data: Dataset[Row]) =>
+        val path = s"$logsBasePath/$name"
         Utils.writeLogsAsCsv(path, name, data, shortName)
-        ReportFormattingUtils.centerPad(name, new File(path).getCanonicalPath)
-      }
+        path
     }
+
     // time summary
     val timeSummary = TimeSummary(
       Utils.formatDateTime(startTime),
