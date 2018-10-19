@@ -48,8 +48,8 @@ object ProviderRegistry {
     "esdn" -> Register(profile = new EsdnProfile),
     "getty" -> Register(profile = new GettyProfile),
     "ia" -> Register(profile = new IaProfile),
-    "loc" -> Register(profile = new LocProfile),
-    "mdl" -> Register(profile = new MdlProfile),
+    "lc" -> Register(profile = new LocProfile),
+    "minnesota" -> Register(profile = new MdlProfile),
     "mt" -> Register(profile = new MtProfile),
     "mwdl" -> Register(profile = new MwdlProfile),
     "nara" -> Register(profile = new NaraProfile),
@@ -57,7 +57,7 @@ object ProviderRegistry {
     "p2p" -> Register(profile = new P2PProfile), // plains2peaks
     "pa" -> Register(profile = new PaProfile),
     "sd" -> Register(profile = new SdProfile),
-    "wi" -> Register(profile = new WiProfile)
+    "wisconsin" -> Register(profile = new WiProfile)
   )
 
   private def noProfileException(short: String) = {
