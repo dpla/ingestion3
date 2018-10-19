@@ -1,15 +1,17 @@
 package dpla.ingestion3.enrichments.date
 
-import java.text.SimpleDateFormat
 import dpla.ingestion3.model._
 import scala.util.{Failure, Success, Try}
+import java.text.SimpleDateFormat
+import java.util.TimeZone
 
 /**
-  *
-  * @param parser
-  * @param format
+  * Maps expected source date patterns to standard format that is EDTF compliant
+  * @param parser Pattern to parse
+  * @param format Pattern to format original date to
   */
-case class EdtfPatternMap(parser: SimpleDateFormat, format: SimpleDateFormat)
+case class EdtfPatternMap(parser: String, format: String)
+
 
 /**
   *
@@ -17,14 +19,12 @@ case class EdtfPatternMap(parser: SimpleDateFormat, format: SimpleDateFormat)
 object DateBuilderPatterns {
 
   val edtfPatterns = Seq(
-    EdtfPatternMap(new SimpleDateFormat("yyyy MM dd"),  new SimpleDateFormat("yyyy-MM-dd")),
-    EdtfPatternMap(new SimpleDateFormat("yyyy MMM dd"),    new SimpleDateFormat("yyyy-MM-dd")),
-    EdtfPatternMap(new SimpleDateFormat("MMM yyyy"),    new SimpleDateFormat("yyyy-MM")),
-    EdtfPatternMap(new SimpleDateFormat("yyyy MMM"),    new SimpleDateFormat("yyyy-MM")),
-    EdtfPatternMap(new SimpleDateFormat("yyyy MM"),     new SimpleDateFormat("yyyy-MM")),
-    EdtfPatternMap(new SimpleDateFormat("yyyy"),        new SimpleDateFormat("yyyy"))
-
-    // TODO Date patterns to be implemented
+    EdtfPatternMap("yyyy MM dd", "yyyy-MM-dd"),
+    EdtfPatternMap("yyyy MMM dd", "yyyy-MM-dd"),
+    EdtfPatternMap("MMM yyyy", "yyyy-MM"),
+    EdtfPatternMap("yyyy MMM", "yyyy-MM"),
+    EdtfPatternMap("yyyy MM", "yyyy-MM"),
+    EdtfPatternMap("yyyy", "yyyy")
 
     // Date ranges
     // yyyy-yyyy | 1935-1956
@@ -49,24 +49,31 @@ class DateBuilder {
 
   /**
     *
-    * @param date
+    * @param date String  Date to attempt parsing and formatting as valid ETDF format
     * @return
     */
   def buildEdmTimeSpan(date: String): EdmTimeSpan = {
     val normalizedDate = normalizeDate(date)
     DateBuilderPatterns.edtfPatterns.foreach(edtf => {
-      Try { edtf.parser.parse(normalizedDate) } match {
-        case Success(parsedDate) =>
-          val formattedDte = edtf.format.format(parsedDate)
-          return EdmTimeSpan(
-            originalSourceDate = Option(date),
-            prefLabel = Option(formattedDte),
-            begin = Option(formattedDte),
-            end = Option(formattedDte)
-          )
-        case Failure(f) => None
-      }
+      // Perform a simple length comparision
+      if(edtf.parser.length == normalizedDate.length) {
+        // Get the parser
+        val parser = DateFormatCache.get(edtf.parser)
 
+        Try { parser.parse(normalizedDate) } match {
+          case Success(parsedDate) =>
+            val formatter = DateFormatCache.get(edtf.format)
+            val formattedDate = formatter.format(parsedDate)
+
+            return EdmTimeSpan(
+              originalSourceDate = Option(date),
+              prefLabel = Option(formattedDate),
+              begin = Option(formattedDate), // FIXME this will not pass muster for date ranges
+              end = Option(formattedDate) // FIXME this will not pass muster for date ranges
+            )
+          case Failure(_) => None
+        }
+      }
     })
     stringOnlyTimeSpan(date)
   }
@@ -79,4 +86,24 @@ class DateBuilder {
     * @return Normalized date string
     */
   def normalizeDate(date: String): String = date.replaceAll("[\\/-]", " ")
+}
+
+
+object DateFormatCache {
+
+  private val cache = new ThreadLocal[collection.mutable.Map[String, SimpleDateFormat]]
+  cache.set(collection.mutable.Map[String, SimpleDateFormat]())
+
+  def get(formatString: String): SimpleDateFormat = {
+    val localCache = cache.get()
+    localCache.get(formatString) match {
+      case None =>
+        val simpleDateFormat = new SimpleDateFormat(formatString)
+        simpleDateFormat.setTimeZone(TimeZone.getTimeZone("EST"))
+        simpleDateFormat.setLenient(true)
+        localCache.put(formatString, simpleDateFormat)
+        simpleDateFormat
+      case Some(simpleDateFormat) => simpleDateFormat
+    }
+  }
 }
