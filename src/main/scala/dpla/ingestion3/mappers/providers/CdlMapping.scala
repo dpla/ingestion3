@@ -101,6 +101,7 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
       .map(_.cleanupLeadingPunctuation)
       .map(_.cleanupEndingPunctuation)
       .map(_.stripEndingPeriod)
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyConcept)
 
   override def temporal(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
