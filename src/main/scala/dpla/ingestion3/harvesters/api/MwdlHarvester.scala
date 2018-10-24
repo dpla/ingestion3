@@ -34,8 +34,7 @@ class MwdlHarvester(spark: SparkSession,
       .setParameter("institution", "MWDL")
       .setParameter("loc", "local,scope:(mw)")
       .setParameter("query", params.getOrElse("query", throw new RuntimeException("No query parameter provided")))
-      .setParameter("query_exec", "facet_rtype,exact,collections")
-      .setParameter("query_exec", "facet_scope,exact,dd")
+      .setParameter("query_exc", "facet_rtype,exact,collections,facet_scope,exact,dd")
       .build()
       .toURL
 }

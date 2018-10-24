@@ -107,7 +107,11 @@
         <sear:linktorsrc>
             http://libarchive.slcc.edu/islandora/object/works%3A598
         </sear:linktorsrc>
-        <sear:thumbnail>https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/</sear:thumbnail>
-        <sear:thumbnail>https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/</sear:thumbnail>
+        <sear:thumbnail>
+            https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/
+        </sear:thumbnail>
+        <sear:thumbnail>
+            https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/
+        </sear:thumbnail>
     </sear:LINKS>
 </sear:DOC>
