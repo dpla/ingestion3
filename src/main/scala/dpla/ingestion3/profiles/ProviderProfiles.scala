@@ -117,6 +117,16 @@ class OhioProfile extends XmlProfile {
 }
 
 /**
+  * Oklahoma Hub
+  */
+class OklahomaProfile extends XmlProfile {
+  type Mapping = OklahomaMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new OklahomaMapping
+}
+
+/**
   * P2P (Plains2Peaks)
   * - Colorado and Wyoming
   */

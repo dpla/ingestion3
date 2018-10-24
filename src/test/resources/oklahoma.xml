@@ -1,0 +1,104 @@
+<record>
+    <header>
+        <identifier>oai:okhub:OKCES:oai:shareok.org:11244/50280</identifier>
+        <datestamp>2018-08-09</datestamp>
+        <setSpec>OKCES</setSpec>
+    </header>
+    <metadata>
+        <mods xmlns="http://www.loc.gov/mods/v3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xlink="http://www.w3.org/1999/xlink" version="3.5" xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-5.xsd">
+            <titleInfo>
+                <title>Home Fruit Planting Guide</title>
+            </titleInfo>
+            <titleInfo>
+                <title type="alternative">Alt Title</title>
+            </titleInfo>
+            <name>
+                <namePart>Hillock, David A.</namePart>
+                <role>
+                    <roleTerm type="text">creator</roleTerm>
+                </role>
+            </name>
+            <name>
+                <namePart>McCraw, B. Dean</namePart>
+                <role>
+                    <roleTerm type="text">creator</roleTerm>
+                </role>
+            </name>
+            <name>
+                <namePart>Oklahoma Cooperative Extension Service</namePart>
+                <role>
+                    <roleTerm type="text">contributor</roleTerm>
+                </role>
+            </name>
+            <typeOfResource>text</typeOfResource>
+            <genre authority="dct">text</genre>
+            <genre>newsletter</genre>
+            <subject>
+                <temporal>Temporal</temporal>
+            </subject>
+            <subject>
+                <topic>fruit--planting time</topic>
+            </subject>
+            <subject>
+                <topic>gardens--planning</topic>
+            </subject>
+            <subject>
+                <geographic>Oklahoma</geographic>
+            </subject>
+            <note type="content">The Oklahoma Cooperative Extension Service periodically issues revisions to its publications. The most current edition is made available. For access to an earlier edition, if available for this title, please contact the Oklahoma State University Library Archives by email at libscua@okstate.edu or by phone at 405-744-6311.</note>
+            <note type="content">Horticulture and Landscape Architecture</note>
+            <originInfo>
+                <publisher>Oklahoma State University. Division of Agricultural Sciences and Natural Resources. Cooperative Extension Service</publisher>
+            </originInfo>
+            <originInfo>
+                <dateCreated>2007</dateCreated>
+            </originInfo>
+            <physicalDescription>
+                <internetMediaType>application/pdf</internetMediaType>
+            </physicalDescription>
+            <physicalDescription>
+                <internetMediaType>application/pdf</internetMediaType>
+            </physicalDescription>
+            <physicalDescription>
+                <extent>Extent</extent>
+                <note>Phys Desc Note</note>
+            </physicalDescription>
+            <identifier type="local">oksd_hla_6222_2007-03</identifier>
+            <location>
+                <url usage="primary display" access="object in context">http://hdl.handle.net/11244/50280</url>
+            </location>
+            <location>
+                <url access="preview">http://img.preview/thumb</url>
+            </location>
+            <note type="ownership">Oklahoma State University Library</note>
+            <identifier type="hdl">http://hdl.handle.net/11244/50280</identifier>
+            <relatedItem type="series">
+                <titleInfo>
+                    <title>Oklahoma Cooperative Extension fact sheets ; HLA-6222</title>
+                </titleInfo>
+            </relatedItem>
+            <relatedItem type="host">
+                <titleInfo>
+                    <title>Oklahoma Cooperative Extension Service</title>
+                </titleInfo>
+            </relatedItem>
+            <language>
+                <languageTerm type="text">en_US</languageTerm>
+            </language>
+            <accessCondition type="local rights statement">The researcher assumes full responsibility for conforming with the laws of copyright. Whenever possible, the Oklahoma State University Archives will provide information about copyright owners and related information. Securing permission to publish or use material is the responsibility of the researcher. Note that unless specifically transferred to Oklahoma State University Libraries, any applicable copyrights may be held by another individual or entity. Copyright for material published by Oklahoma Agricultural and Mechanical College/Oklahoma State University is held by the Board of Regents for the Oklahoma Agricultural and Mechanical Colleges. All rights reserved. Further information about copyright policy can be obtained by contacting the OSU Archives by email at libscua@okstate.edu or by phone at 405-744-6311.</accessCondition>
+            <accessCondition type="use and reproduction" xlink:href="http://rightsstatements.org/vocab/InC-EDU/1.0/">
+                In Copyright – Educational Use Permitted
+            </accessCondition>
+        </mods>
+    </metadata>
+    <about>
+        <oaiProvenance:provenance xmlns:oaiProvenance="http://www.openarchives.org/OAI/2.0/provenance" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/provenance http://www.openarchives.org/OAI/2.0/provenance.xsd">
+            <oaiProvenance:originDescription harvestDate="2018-08-09" altered="true">
+                <oaiProvenance:baseURL>https://shareok.org/oai/request</oaiProvenance:baseURL>
+                <oaiProvenance:identifier>oai:shareok.org:11244/50280</oaiProvenance:identifier>
+                <oaiProvenance:datestamp>2018-08-09</oaiProvenance:datestamp>
+                <oaiProvenance:metadataNamespace>http://www.openarchives.org/OAI/2.0/</oaiProvenance:metadataNamespace>
+            </oaiProvenance:originDescription>
+        </oaiProvenance:provenance>
+    </about>
+</record>
