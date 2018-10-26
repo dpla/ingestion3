@@ -119,6 +119,22 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
   }
 
   /**
+    * Validates the presence of at least one value in a given field
+    *
+    * @param values Seq                   Values
+    * @param field String                 Name of field being validated
+    * @param providerId String            Local provider identifier
+    * @param collector MessageCollector   Ingest message collector
+    */
+  def validateRecommendedProperty[T](values: ZeroToMany[T], field: String, providerId: String)
+                                (implicit collector: MessageCollector[IngestMessage]): ZeroToMany[T] = {
+    if (values.isEmpty) {
+      collector.add(missingRecommendedWarning(providerId, field))
+    }
+    values
+  }
+
+  /**
     * Compares rights and edmRights and logs an error message if neither is set
     * and a warning message if both are set
     *
@@ -135,6 +151,22 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
       case(_,_) => // do nothing
     }
   }
+
+  /**
+    * Validates the presence of at least one title and logs a
+    * missing required property error if the Seq is empty
+    *
+    * @param titles Seq[String]           Values returned from rights mapping
+    * @param providerId String            The provider's local identifier
+    * @param collector MessageCollector   Ingest message collector
+    */
+  def validateTitle(titles: ZeroToMany[String], providerId: String)
+                   (implicit collector: MessageCollector[IngestMessage]): ZeroToMany[String] = {
+    if(titles.isEmpty) {
+      collector.add(missingRequiredError(providerId, "title"))
+    }
+    titles
+  }
 }
 
 class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
@@ -149,8 +181,20 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
     val validatedIsShownAt = validateIsShownAt(mapping.isShownAt(document), providerId)
     val validatedObject = validateObject(mapping.`object`(document), providerId)
     val validatedPreview = validatePreview(mapping.preview(document), providerId)
+    val validatedTitle = validateTitle(mapping.title(document), providerId)
 
     validateRights(mapping.rights(document), mapping.edmRights(document), providerId)
+
+    // Recommended field validation
+    val validatedCreator = validateRecommendedProperty(mapping.creator(document), "creator", providerId)
+    val validatedDate = validateRecommendedProperty(mapping.date(document), "date", providerId)
+    val validatedDescription = validateRecommendedProperty(mapping.description(document), "description", providerId)
+    val validatedFormat = validateRecommendedProperty(mapping.format(document), "format", providerId)
+    val validatedLanguage = validateRecommendedProperty(mapping.language(document), "language", providerId)
+    val validatedPlace = validateRecommendedProperty(mapping.place(document), "place", providerId)
+    val validatedPublisher = validateRecommendedProperty(mapping.publisher(document), "publisher", providerId)
+    val validatedSubject = validateRecommendedProperty(mapping.subject(document), "subject", providerId)
+    val validatedType = validateRecommendedProperty(mapping.`type`(document), "type", providerId)
 
     Try {
       OreAggregation(
@@ -169,25 +213,25 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
           alternateTitle = mapping.alternateTitle(document),
           collection = mapping.collection(document),
           contributor = mapping.contributor(document),
-          creator = mapping.creator(document),
-          date = mapping.date(document),
-          description = mapping.description(document),
+          creator = validatedCreator,
+          date = validatedDate,
+          description = validatedDescription,
           extent = mapping.extent(document),
-          format = mapping.format(document),
+          format = validatedFormat,
           genre = mapping.genre(document),
           identifier = mapping.identifier(document),
-          language = mapping.language(document),
-          place = mapping.place(document),
-          publisher = mapping.publisher(document),
+          language = validatedLanguage,
+          place = validatedPlace,
+          publisher = validatedPublisher,
           relation = mapping.relation(document),
           replacedBy = mapping.replacedBy(document),
           replaces = mapping.replaces(document),
           rights = mapping.rights(document),
           rightsHolder = mapping.rightsHolder(document),
-          subject = mapping.subject(document),
+          subject = validatedSubject,
           temporal = mapping.temporal(document),
-          title = mapping.title(document),
-          `type` = mapping.`type`(document)
+          title = validatedTitle,
+          `type` = validatedType
         ),
         messages = msgCollector.getAll()
       )
@@ -207,48 +251,67 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
     implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
     val providerId = (mapping.sidecar(document) \\ "prehashId").extractOrElse[String]("Unknown")
 
+    // Field validation
+    val validatedDataProvider = validateDataProvider(mapping.dataProvider(document), providerId)
+    val validatedEdmRights = validateEdmRights(mapping.edmRights(document), providerId)
+    val validatedIsShownAt = validateIsShownAt(mapping.isShownAt(document), providerId)
+    val validatedObject = validateObject(mapping.`object`(document), providerId)
+    val validatedPreview = validatePreview(mapping.preview(document), providerId)
+    val validatedTitle = validateTitle(mapping.title(document), providerId)
+
     validateRights(mapping.rights(document), mapping.edmRights(document), providerId)
 
-    Try (
+    // Recommended field validation
+    val validatedCreator = validateRecommendedProperty(mapping.creator(document), "creator", providerId)
+    val validatedDate = validateRecommendedProperty(mapping.date(document), "date", providerId)
+    val validatedDescription = validateRecommendedProperty(mapping.description(document), "description", providerId)
+    val validatedFormat = validateRecommendedProperty(mapping.format(document), "format", providerId)
+    val validatedLanguage = validateRecommendedProperty(mapping.language(document), "language", providerId)
+    val validatedPlace = validateRecommendedProperty(mapping.place(document), "place", providerId)
+    val validatedPublisher = validateRecommendedProperty(mapping.publisher(document), "publisher", providerId)
+    val validatedSubject = validateRecommendedProperty(mapping.subject(document), "subject", providerId)
+    val validatedType = validateRecommendedProperty(mapping.`type`(document), "type", providerId)
+
+    Try {
       OreAggregation(
         dplaUri = mapping.dplaUri(document),
-        dataProvider = validateDataProvider(mapping.dataProvider(document), providerId),
-        edmRights = validateEdmRights(mapping.edmRights(document), providerId),
+        dataProvider = validatedDataProvider,
+        edmRights = validatedEdmRights,
         hasView = mapping.hasView(document),
         intermediateProvider = mapping.intermediateProvider(document),
-        isShownAt = validateIsShownAt(mapping.isShownAt(document), providerId),
-        `object` = validateObject(mapping.`object`(document), providerId), // full size image
+        isShownAt = validatedIsShownAt,
+        `object` = validatedObject, // full size image
         originalRecord = formatJson(document.get),
-        preview = validatePreview(mapping.preview(document), providerId), // thumbnail
+        preview = validatedPreview, // thumbnail
         provider = mapping.provider(document),
         sidecar = mapping.sidecar(document),
         sourceResource = DplaSourceResource(
           alternateTitle = mapping.alternateTitle(document),
           collection = mapping.collection(document),
           contributor = mapping.contributor(document),
-          creator = mapping.creator(document),
-          date = mapping.date(document),
-          description = mapping.description(document),
+          creator = validatedCreator,
+          date = validatedDate,
+          description = validatedDescription,
           extent = mapping.extent(document),
-          format = mapping.format(document),
+          format = validatedFormat,
           genre = mapping.genre(document),
           identifier = mapping.identifier(document),
-          language = mapping.language(document),
-          place = mapping.place(document),
-          publisher = mapping.publisher(document),
+          language = validatedLanguage,
+          place = validatedPlace,
+          publisher = validatedPublisher,
           relation = mapping.relation(document),
           replacedBy = mapping.replacedBy(document),
           replaces = mapping.replaces(document),
           rights = mapping.rights(document),
           rightsHolder = mapping.rightsHolder(document),
-          subject = mapping.subject(document),
+          subject = validatedSubject,
           temporal = mapping.temporal(document),
-          title = mapping.title(document),
-          `type` = mapping.`type`(document)
+          title = validatedTitle,
+          `type` = validatedType
         ),
         messages = msgCollector.getAll()
       )
-    ) match {
+    } match {
       case Success(oreAggregation) => oreAggregation
       case Failure(f) => {
         msgCollector.add(exception(providerId, f))

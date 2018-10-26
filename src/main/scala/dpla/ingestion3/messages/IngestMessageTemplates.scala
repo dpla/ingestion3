@@ -20,6 +20,15 @@ trait IngestMessageTemplates {
       value = value
     )
 
+  def missingRecommendedWarning(id: String, field: String): IngestMessage =
+    IngestMessage(
+      message = s"Missing recommended field",
+      level = IngestLogLevel.warn,
+      id = id,
+      field = field,
+      value = "MISSING"
+    )
+
   def missingRequiredError(id: String, field: String): IngestMessage =
     IngestMessage(
       message = s"Missing required field",
