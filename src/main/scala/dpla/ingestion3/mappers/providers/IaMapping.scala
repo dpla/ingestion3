@@ -22,8 +22,16 @@ class IaMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
        .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
   // OreAggregration
-  override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data) \\ "contributor").map(nameOnlyAgent)
+  override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] = {
+    val candidateDataProviders =
+      extractStrings(unwrap(data) \\ "contributor")
+        .map(nameOnlyAgent)
+    if (candidateDataProviders isEmpty)
+      Seq(nameOnlyAgent("Internet Archive"))
+    else
+      candidateDataProviders
+  }
+
 
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = URI(mintDplaId(data))
 

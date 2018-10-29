@@ -4,7 +4,8 @@ import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.FlatFileIO
-import org.json4s.JsonAST._
+import org.json4s.JsonAST.{JNull, JObject, _}
+import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 
@@ -26,6 +27,15 @@ class IaMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct dataProvider" in {
     val expected = Seq(nameOnlyAgent("Elms College"))
     assert(extractor.dataProvider(json) === expected)
+  }
+
+  it should "have a default dataProvider" in {
+    val expected = Seq(nameOnlyAgent("Internet Archive"))
+
+    val cloneJson = json.get.asInstanceOf[JObject].merge(JObject(("contributor", JNull)))
+
+    assert(extractor.dataProvider(Document[JValue](cloneJson)) === expected)
+
   }
 
   it should "extract the correct provider id" in {
