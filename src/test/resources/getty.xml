@@ -1,0 +1,83 @@
+<sear:DOC ID="2828105" RANK="1.0" NO="39001" SEARCH_ENGINE="Local Search Engine" SEARCH_ENGINE_TYPE="Local Search Engine">
+    <PrimoNMBib>
+        <record>
+            <control>
+                <sourcerecordid>FL608236</sourcerecordid>
+                <sourceid>GETTY_OCP</sourceid>
+                <recordid>GETTY_OCPFL608236</recordid>
+                <sourceformat>XML</sourceformat>
+                <sourcesystem>Other</sourcesystem>
+            </control>
+            <display>
+                <contributor>Contributor</contributor>
+                <coverage>Place; Place2</coverage>
+                <type>digital entity</type>
+                <title>Tuscany--Siena--Montalcino--Museo Civico, Image 150</title>
+                <creationdate>1960-1990</creationdate>
+                <format>Image 150 of 365</format>
+                <source>GETTY_OCP</source>
+                <rights>Digital images courtesy of the Getty's <a href="http://www.getty.edu/about/opencontent.html">Open Content Program</a>.</rights>
+                <lds04>German-born photographer and scholar Max Hutzel (1911-1988) photographed in Italy from the early 1960s until his death. The result of this project, referred to by Hutzel as Foto Arte Minore, is thorough documentation of art historical development in Italy up to the 18th century, including objects of the Etruscans and the Romans, as well as early Medieval, Romanesque, Gothic, Renaissance and Baroque monuments. Images are organized by geographic region in Italy, then by province, city, site complex and monument.</lds04>
+                <lds09>Black-and-white prints (photographs)</lds09>
+                <lds14>86.P.8</lds14>
+                <lds26>Still image</lds26>
+                <lds28>Medieval: Entire manuscript. Manuscripts. Post-medieval: Sculpture and ceramics from local workshops (2nd half 12th century; Sienese maiolica; 14th century weapons</lds28>
+                <lds43>Foto Arte Minore / Max Hutzel (accession number 86.P.8)</lds43>
+                <lds45>The Getty Research Institute, Los Angeles.</lds45>
+                <lds47><a href="http://hdl.handle.net/10020/cat340573">Collection description</a></lds47>
+                <lds50>Hutzel, Max</lds50>
+                <publisher>Publisher</publisher>
+                <subject>Subject</subject>
+            </display>
+            <links>
+                <linktorsrc>$$Tgetty_rosetta_linktorscr$$DDisplay item</linktorsrc>
+                <thumbnail>$$Tgetty_rosetta_thumb</thumbnail>
+                <openurlfulltext>$$Topenurlfull_journal</openurlfulltext>
+                <lln03>$$Tgetty_rosetta_linktorscr$$D<img src="http://archives.getty.edu:30008/getty_images/digitalresources/hutzel/OCP/thumb/V1-FL451156_th.jpg" />
+                </lln03>
+                <lln04>$$Uhttp://hdl.handle.net/10020/86p8s14m048$$DRelated items</lln04>
+            </links>
+            <search>
+                <subject>Black-and-white prints (photographs)</subject>
+                <sourceid>GETTY_OCP</sourceid>
+                <recordid>GETTY_OCPFL608236</recordid>
+                <rsrctype>digital entity</rsrctype>
+                <searchscope>GETTY_OCP</searchscope>
+                <scope>GETTY_OCP</scope>
+            </search>
+            <sort>
+                <title>Tuscany--Siena--Montalcino--Museo Civico, Image 150</title>
+            </sort>
+            <facets>
+                <rsrctype>images</rsrctype>
+                <genre>Black-and-white prints (photographs)</genre>
+                <lfc02>GRI Digital Collections</lfc02>
+                <lfc05>DPLA</lfc05>
+                <newrecords>20180723_138</newrecords>
+                <frbrgroupid>58175849</frbrgroupid>
+                <frbrtype>6</frbrtype>
+            </facets>
+            <delivery>
+                <delcategory>Online Resource</delcategory>
+            </delivery>
+            <ranking>
+                <booster1>1</booster1>
+                <booster2>1</booster2>
+            </ranking>
+            <addata>
+                <btitle>Tuscany--Siena--Montalcino--Museo Civico, Image 150</btitle>
+                <format>book</format>
+                <genre>unknown</genre>
+                <ristype>GEN</ristype>
+            </addata>
+        </record>
+    </PrimoNMBib>
+    <sear:GETIT deliveryCategory="Online Resource" GetIt1="http://rosettaapp.getty.edu:1801/delivery/DeliveryManagerServlet?dps_pid=FL608236" GetIt2=""/>
+    <sear:LINKS>
+        <sear:linktorsrc>http://rosettaapp.getty.edu:1801/delivery/DeliveryManagerServlet?dps_pid=FL608236</sear:linktorsrc>
+        <sear:thumbnail>http://rosettaapp.getty.edu:1801/delivery/DeliveryManagerServlet?dps_pid=FL608236</sear:thumbnail>
+        <sear:thumbnail>http://rosettaapp.getty.edu:1801/delivery/DeliveryManagerServlet?dps_pid=FL608236</sear:thumbnail>
+        <sear:lln03>http://rosettaapp.getty.edu:1801/delivery/DeliveryManagerServlet?dps_pid=FL608236</sear:lln03>
+        <sear:lln04>http://hdl.handle.net/10020/86p8s14m048</sear:lln04>
+    </sear:LINKS>
+</sear:DOC>

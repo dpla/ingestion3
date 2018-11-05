@@ -1,6 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
+import dpla.ingestion3.enrichments.normalizations.filters.ExtentIdentificationList
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{nameOnlyAgent, _}
@@ -11,13 +12,15 @@ import org.json4s.JsonDSL._
 import scala.xml._
 
 
-class MwdlMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] {
+class GettyMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] {
 
-  private val baseIsShownAt = "http://utah-primoprod.hosted.exlibrisgroup.com/primo_library/libweb/action/dlDisplay.do?vid=MWDL&afterPDS=true&docId="
+  val extentAllowList: Set[String] =
+    ExtentIdentificationList.termList
+
   // ID minting functions
   override def useProviderName(): Boolean = true
 
-  override def getProviderName(): String = "mwdl"
+  override def getProviderName(): String = "getty"
 
   override def getProviderId(implicit data: Document[NodeSeq]): String =
     extractString(data \\ "PrimoNMBib" \ "record" \ "control" \ "recordid")
@@ -25,7 +28,9 @@ class MwdlMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
 
   // SourceResource mapping
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
-    extractStrings(data \\ "search" \ "lsr13")
+    // display/lds43 AND display/lds34
+    (extractStrings(data \\ "display" \ "lds43") ++
+      extractStrings(data \\ "display" \ "lds34"))
       .map(nameOnlyCollection)
 
   override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
@@ -34,82 +39,99 @@ class MwdlMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
       .map(nameOnlyAgent)
 
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] =
-    extractStrings(data \\ "display" \ "creator")
+    (extractStrings(data \\ "display" \ "creator") ++
+      extractStrings(data \\ "display" \ "lds50"))
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
-    // search/creationdate AND PrimoNMBib/record/display/creationdate
+    // display/creationdate
       extractStrings(data \\ "display" \ "creationdate")
-        .flatMap(_.splitAtDelimiter(";"))
-        .map(stringOnlyTimeSpan)
+      .map(stringOnlyTimeSpan)
 
   override def description(data: Document[NodeSeq]): Seq[String] =
-  // search/description (contains dc:description, dcterms:abstract, and dcterms:tableOfContents)
-    extractStrings(data \\ "search" \ "description")
-    .map(_.limitCharacters(1000))
+  // display/lds04 AND display/lds28
+    extractStrings(data \\ "display" \ "lds04") ++
+      extractStrings(data \\ "display" \ "lds28")
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \\ "display" \ "lds05")
+    extractStrings(data \\ "display" \ "format")
+      .map(_.applyAllowFilter(extentAllowList))
+
+  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
+    (extractStrings(data \\ "display" \ "lds09") ++
+      extractStrings(data \\ "display" \ "format"))
+      .map(_.applyBlockFilter(extentAllowList))
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
-    extractStrings(data \\ "control" \ "recordid")
+    extractStrings(data \\ "display" \ "lds14")
+      .flatMap(_.splitAtDelimiter(";"))
 
   override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
-    extractStrings(data \\ "facets" \ "language")
+    extractStrings(data \\ "display" \ "language")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyConcept)
 
   override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
-    extractStrings(data \\ "display" \ "lds08")
+    extractStrings(data \\ "display" \ "coverage")
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyPlace)
 
-  override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
-    extractStrings(data \\ "display" \ "relation")
+  override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
+    extractStrings(data \\ "display" \ "publisher")
       .flatMap(_.splitAtDelimiter(";"))
-      .map(eitherStringOrUri)
+      .map(nameOnlyAgent)
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
-    (data \\ "display" \ "rights")
+    // display/lds27 AND display/rights
+    ((data \\ "display" \ "rights") ++
+      (data \\ "display" \ "lds27"))
       .flatMap(extractStrings)
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
-  // display/subject
-    extractStrings(data \\ "display" \ "subject")
+  // display/subject AND display/lds49
+    (extractStrings(data \\ "display" \ "subject") ++
+      extractStrings(data \\ "display" \ "lds49"))
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyConcept)
 
-  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
-    extractStrings(data \\ "display" \ "lds09")
-      .map(stringOnlyTimeSpan)
-
   override def title(data: Document[NodeSeq]): Seq[String] =
-    extractStrings(data \\ "display" \ "title")
+    // display/title AND display/lds03
+    (extractStrings(data \\ "display" \ "title") ++
+      extractStrings(data \\ "display" \ "lds03"))
+      .flatMap(_.splitAtDelimiter(";"))
 
   override def `type`(data: Document[NodeSeq]): Seq[String] =
-  // facets/rsrctype
-    extractStrings(data \\ "facets" \ "rsrctype")
+    // display/lds26
+    extractStrings(data \\ "display" \ "lds26")
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    (data \\ "display" \ "lds03")
-      .flatMap(extractStrings)
-      .map(nameOnlyAgent)
+    Seq(nameOnlyAgent("Getty Research Institute"))
 
-  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-  // baseIsShownAt + control\recordid
-    (data \\ "control" \ "recordid")
-      .flatMap(extractStrings)
-      .map(baseIsShownAt + _)
-      .map(stringOnlyWebResource)
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
+    val baseIsShownAt =
+      "http://primo.getty.edu/primo_library/libweb/action/dlDisplay.do?vid=GRI-OCP&afterPDS=true&institution=01GRI&docId="
+
+    extractString(data \\"control" \ "sourceid") match {
+      case Some("GETTY_ROSETTA") =>
+        extractStrings(data \\ "display" \ "lds29")
+          .map(stringOnlyWebResource)
+      case Some("GETTY_OCP") =>
+        extractStrings(data \\ "control" \ "recordid")
+          .map(baseIsShownAt + _.trim)
+          .map(stringOnlyWebResource)
+      case _ => Seq()
+    }
+  }
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    (data \\ "LINKS" \ "thumbnail")
-      .flatMap(extractStrings)
+    // sear/thumbnail
+    extractStrings(data \\ "LINKS" \ "thumbnail")
       .map(stringOnlyWebResource)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
@@ -119,8 +141,8 @@ class MwdlMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
 
   // Helper method
   def agent = EdmAgent(
-    name = Some("Mountain West Digital Library"),
-    uri = Some(URI("http://dp.la/api/contributor/mwdl"))
+    name = Some("J. Paul Getty Trust"),
+    uri = Some(URI("http://dp.la/api/contributor/getty"))
   )
 }
 

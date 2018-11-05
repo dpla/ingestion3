@@ -40,10 +40,10 @@ class EsdnProfile extends XmlProfile {
   * J. Paul Getty Trust
   */
 class GettyProfile extends XmlProfile {
-  type Mapping = EsdnMapping // FIXME when mapping implemented
+  type Mapping = GettyMapping
 
   override def getHarvester = classOf[GettyHarvester]
-  override def getMapping = new EsdnMapping // FIXME when mapping implemented
+  override def getMapping = new GettyMapping
 }
 
 /**
