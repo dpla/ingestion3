@@ -39,7 +39,7 @@ class MwdlMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.contributor(xml) == expected)
   }
   it should "extract the correct dates" in {
-    val expected = Seq("2012", "2012").map(stringOnlyTimeSpan)
+    val expected = Seq("2012").map(stringOnlyTimeSpan)
     assert(extractor.date(xml) === expected)
   }
   it should "extract the correct description" in
@@ -48,10 +48,6 @@ class MwdlMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct place values" in {
     val expected = Seq("Place").map(nameOnlyPlace)
     assert(extractor.place(xml) === expected)
-  }
-  it should "extract the correct publishers" in {
-    val expected = Seq("Publisher").map(nameOnlyAgent)
-    assert(extractor.publisher(xml) === expected)
   }
   it should "extract the correct rights value" in {
     assert(extractor.rights(xml) === Seq("https://creativecommons.org/licenses/by-nc/4.0/"))
