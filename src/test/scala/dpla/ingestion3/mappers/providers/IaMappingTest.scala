@@ -4,7 +4,7 @@ import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.FlatFileIO
-import org.json4s.JsonAST.{JNull, JObject, _}
+import org.json4s.JsonAST.{JNull, JObject}
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.scalatest.{BeforeAndAfter, FlatSpec}
