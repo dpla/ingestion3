@@ -40,14 +40,14 @@ class MwdlMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
     // search/creationdate AND PrimoNMBib/record/display/creationdate
-    (extractStrings(data \\ "search" \\ "creationdate") ++
-      extractStrings(data \\ "display" \ "creationdate"))
-      .flatMap(_.splitAtDelimiter(";"))
-      .map(stringOnlyTimeSpan)
+      extractStrings(data \\ "display" \ "creationdate")
+        .flatMap(_.splitAtDelimiter(";"))
+        .map(stringOnlyTimeSpan)
 
   override def description(data: Document[NodeSeq]): Seq[String] =
   // search/description (contains dc:description, dcterms:abstract, and dcterms:tableOfContents)
     extractStrings(data \\ "search" \ "description")
+    .map(_.limitCharacters(1000))
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \\ "display" \ "lds05")
@@ -63,11 +63,6 @@ class MwdlMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     extractStrings(data \\ "display" \ "lds08")
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyPlace)
-
-  override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
-    extractStrings(data \\ "display" \ "relation")
-      .flatMap(_.splitAtDelimiter(";"))
-      .map(nameOnlyAgent)
 
   override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
     extractStrings(data \\ "display" \ "relation")

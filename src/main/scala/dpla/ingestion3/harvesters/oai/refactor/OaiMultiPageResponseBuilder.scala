@@ -64,7 +64,12 @@ class OaiMultiPageResponseBuilder(endpoint: String,
         HttpUtils.makeGetRequest(url) match {
           // HTTP error
           case Failure(e) => Left(OaiError(e.toString, Some(url.toString)))
-          case Success(page) => Right(OaiPage(page))
+          case Success(page) =>
+            val pattern = """<error.*>(.*)</error>""".r
+            pattern.findFirstMatchIn(page) match {
+              case Some(m) => Left(OaiError(m.group(1), Some(url.toString)))
+              case _ => Right(OaiPage(page))
+            }
         }
       }
     }

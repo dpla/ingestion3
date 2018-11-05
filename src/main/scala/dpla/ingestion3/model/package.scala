@@ -43,7 +43,7 @@ package object model {
 
   def uriOnlyWebResource(uri: URI): EdmWebResource = EdmWebResource(uri = uri)
 
-  def stringOnlyWebResource(uri: String): EdmWebResource = EdmWebResource(uri = URI(uri))
+  def stringOnlyWebResource(uri: String): EdmWebResource = EdmWebResource(uri = URI(uri.trim))
 
   def isDcmiType(string: String): Boolean = DcmiTypes.contains(string.toLowerCase.replaceAll(" ", ""))
 
