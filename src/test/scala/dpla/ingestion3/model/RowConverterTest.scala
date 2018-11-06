@@ -9,11 +9,12 @@ import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 class RowConverterTest extends FlatSpec with BeforeAndAfter {
 
-  val uri1 = new URI("http://hampsterdance.com")
-  val uri2 = new URI("http://zombo.com")
-  val uri3 = new URI("http://realultimatepower.net")
-  val uri4 = new URI("http://timecube.com")
-  val uri5 = new URI("http://ytmnd.com")
+  val uri1 = URI("http://hampsterdance.com")
+  val uri2 = URI("http://zombo.com")
+  val uri3 = URI("http://realultimatepower.net")
+  val uri4 = URI("http://timecube.com")
+  val uri5 = URI("http://ytmnd.com")
+  val refByUri = URI("http://isRef.by")
 
   val schema = new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
   val sqlSchema = SchemaConverters.toSqlType(schema).dataType.asInstanceOf[StructType]
@@ -66,7 +67,8 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
     uri = uri1,
     fileFormat = Seq("image/gif", "image/jpeg"),
     dcRights = Seq("free speech", "peaceful assembly"),
-    edmRights = Some("trial by jury")
+    edmRights = Some("trial by jury"),
+    isReferencedBy = Some(refByUri)
   )
 
   val emptyEdmWebResource = EdmWebResource(uri = uri1)
@@ -183,6 +185,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
     assert(row(1) === edmWebResource.fileFormat)
     assert(row(2) === edmWebResource.dcRights)
     assert(row(3) === edmWebResource.edmRights.orNull)
+    assert(row(4) === edmWebResource.isReferencedBy.toString)
   }
 
   it should "convert an empty EdmWebResource" in {
@@ -191,6 +194,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
     assert(row(1) === Seq())
     assert(row(2) === Seq())
     assert(row(3) === null)
+    assert(row(4) === emptyEdmWebResource.isReferencedBy.toString)
   }
 
   /*
