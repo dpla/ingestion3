@@ -18,6 +18,7 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
   val urlString1 = "http://example.com"
   val urlString2 = "http://google.com"
   val urlString3 = "http://yahoo.com"
+  val urlisRefBy = "http://isRefd.by/"
 
   val testEdmAgent = Row(
     urlString1,
@@ -31,7 +32,7 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
 
   val testIngestMessage = Row("msg", "ERROR", "123", "type", "StillImage", "images")
 
-  val testEdmWebResource = Row(urlString1, Seq("foo"), Seq("bar"), "baz")
+  val testEdmWebResource = Row(urlString1, Seq("foo"), Seq("bar"), "baz", urlisRefBy)
 
   val testEdmTimeSpan = Row("2012", "2013", "2014", "2015")
 
@@ -273,7 +274,7 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
     val edmAgent = ModelConverter.toEdmAgent(testEdmAgent)
     val edmWebResource = ModelConverter.toEdmWebResource(testEdmWebResource)
 
-    assert(testResult1.dplaUri === new URI(urlString1))
+    assert(testResult1.dplaUri === URI(urlString1))
     assert(testResult1.dataProvider === edmAgent)
     assert(testResult1.originalRecord === "an original record" )
     assert(testResult1.hasView === Seq(edmWebResource, edmWebResource))
@@ -281,15 +282,16 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
     assert(testResult1.`object` === Some(edmWebResource))
     assert(testResult1.preview === Some(edmWebResource))
     assert(testResult1.provider === edmAgent)
-    assert(testResult1.edmRights === Some(new URI(urlString1)))
+    assert(testResult1.edmRights === Some(URI(urlString1)))
   }
 
   it should "convert an EdmWebResource" in {
     val testResult = ModelConverter.toEdmWebResource(testEdmWebResource)
-    assert(testResult.uri === new URI(urlString1))
+    assert(testResult.uri === URI(urlString1))
     assert(testResult.fileFormat === Seq("foo"))
     assert(testResult.dcRights === Seq("bar"))
     assert(testResult.edmRights === Some("baz"))
+    assert(testResult.isReferencedBy === Some(URI(urlisRefBy)))
   }
 
   it should "convert a SourceResource" in {
