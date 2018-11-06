@@ -54,7 +54,7 @@ object RowConverter {
     wr.fileFormat, //1
     wr.dcRights, //2
     wr.edmRights.orNull, //3
-    wr.isReferencedBy.toString //4
+    wr.isReferencedBy.map(_.toString).orNull //4
   )
 
   private[model] def fromSourceResource(sr: DplaSourceResource): Row = Row(
