@@ -185,7 +185,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
     assert(row(1) === edmWebResource.fileFormat)
     assert(row(2) === edmWebResource.dcRights)
     assert(row(3) === edmWebResource.edmRights.orNull)
-    assert(row(4) === edmWebResource.isReferencedBy.toString)
+    assert(row(4) === edmWebResource.isReferencedBy.map(_.toString).orNull)
   }
 
   it should "convert an empty EdmWebResource" in {
@@ -194,7 +194,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
     assert(row(1) === Seq())
     assert(row(2) === Seq())
     assert(row(3) === null)
-    assert(row(4) === emptyEdmWebResource.isReferencedBy.toString)
+    assert(row(4) === emptyEdmWebResource.isReferencedBy.map(_.toString).orNull)
   }
 
   /*
