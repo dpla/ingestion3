@@ -1,7 +1,5 @@
 package dpla.ingestion3.model
 
-import java.net.URI
-
 import dpla.ingestion3.messages.IngestMessage
 import dpla.ingestion3.model.DplaMapData._
 import org.json4s.{JNothing, JValue}
@@ -81,7 +79,8 @@ case class EdmWebResource(
                            uri: ExactlyOne[URI],
                            fileFormat: ZeroToMany[String] = Seq(),
                            dcRights: ZeroToMany[String] = Seq(),
-                           edmRights: ZeroToOne[String] = None //todo should be a URI?
+                           edmRights: ZeroToOne[String] = None, //todo should be a URI?
+                           isReferencedBy: ZeroToOne[URI] = None
                          )
 
 

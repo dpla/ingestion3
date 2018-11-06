@@ -101,7 +101,8 @@ object ModelConverter {
     uri = requiredUri(row, 0),
     fileFormat = stringSeq(row, 1),
     dcRights = stringSeq(row, 2),
-    edmRights = optionalString(row, 3)
+    edmRights = optionalString(row, 3),
+    isReferencedBy = optionalUri(row, 4)
   )
 
   private[model] def toLiteralOrUri(row: Row): LiteralOrUri =

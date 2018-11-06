@@ -18,6 +18,7 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
   val urlString1 = "http://example.com"
   val urlString2 = "http://google.com"
   val urlString3 = "http://yahoo.com"
+  val urlisRefBy = "http://isRefd.by/"
 
   val testEdmAgent = Row(
     urlString1,
@@ -31,7 +32,7 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
 
   val testIngestMessage = Row("msg", "ERROR", "123", "type", "StillImage", "images")
 
-  val testEdmWebResource = Row(urlString1, Seq("foo"), Seq("bar"), "baz")
+  val testEdmWebResource = Row(urlString1, Seq("foo"), Seq("bar"), "baz", urlisRefBy)
 
   val testEdmTimeSpan = Row("2012", "2013", "2014", "2015")
 
