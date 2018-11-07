@@ -34,7 +34,11 @@ class MwdlHarvester(spark: SparkSession,
       .setParameter("institution", "MWDL")
       .setParameter("loc", "local,scope:(mw)")
       .setParameter("query", params.getOrElse("query", throw new RuntimeException("No query parameter provided")))
-      .setParameter("query_exc", "facet_rtype,exact,collections,facet_scope,exact,dd")
+      .setParameter("query_exc", "facet_rtype,exact,collections")
+      .addParameter("query_exc", "facet_local1,exact,University of Utah Theses and Dissertations")
+      .addParameter("query_exc", "facet_local1,exact,Utah Valley University Student Theses Collection")
+      .addParameter("query_exc", "facet_local1,exact,Harvard Peabody Site Reports")
+      .addParameter("query_exc", "facet_local1,exact, Westminster College Institutional Repository")
       .build()
       .toURL
 }
