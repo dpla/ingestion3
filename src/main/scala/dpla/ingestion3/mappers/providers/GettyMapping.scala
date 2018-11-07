@@ -50,18 +50,15 @@ class GettyMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[Node
       .map(stringOnlyTimeSpan)
 
   override def description(data: Document[NodeSeq]): Seq[String] =
-  // display/lds04 AND display/lds28
+  // display/lds04 AND display/lds28 AND display/format
     extractStrings(data \\ "display" \ "lds04") ++
-      extractStrings(data \\ "display" \ "lds28")
-
-  override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \\ "display" \ "format")
-      .map(_.applyAllowFilter(extentAllowList))
+      extractStrings(data \\ "display" \ "lds28") ++
+      extractStrings(data \\ "display" \ "format")
 
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
-    (extractStrings(data \\ "display" \ "lds09") ++
-      extractStrings(data \\ "display" \ "format"))
+    extractStrings(data \\ "display" \ "lds09")
       .map(_.applyBlockFilter(extentAllowList))
+      .filter(_.nonEmpty)
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \\ "display" \ "lds14")

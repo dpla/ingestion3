@@ -37,7 +37,7 @@ class GettyMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.date(xml) === expected)
   }
   it should "extract the correct description" in
-    assert(extractor.description(xml) == Seq("German-born photographer and scholar Max Hutzel (1911-1988) photographed in Italy from the early 1960s until his death. The result of this project, referred to by Hutzel as Foto Arte Minore, is thorough documentation of art historical development in Italy up to the 18th century, including objects of the Etruscans and the Romans, as well as early Medieval, Romanesque, Gothic, Renaissance and Baroque monuments. Images are organized by geographic region in Italy, then by province, city, site complex and monument.", "Medieval: Entire manuscript. Manuscripts. Post-medieval: Sculpture and ceramics from local workshops (2nd half 12th century; Sienese maiolica; 14th century weapons"))
+    assert(extractor.description(xml) == Seq("German-born photographer and scholar Max Hutzel (1911-1988) photographed in Italy from the early 1960s until his death. The result of this project, referred to by Hutzel as Foto Arte Minore, is thorough documentation of art historical development in Italy up to the 18th century, including objects of the Etruscans and the Romans, as well as early Medieval, Romanesque, Gothic, Renaissance and Baroque monuments. Images are organized by geographic region in Italy, then by province, city, site complex and monument.", "Medieval: Entire manuscript. Manuscripts. Post-medieval: Sculpture and ceramics from local workshops (2nd half 12th century; Sienese maiolica; 14th century weapons", "Image 150 of 365"))
 
   it should "extract the correct place values" in {
     val expected = Seq("Place", "Place2").map(nameOnlyPlace)
