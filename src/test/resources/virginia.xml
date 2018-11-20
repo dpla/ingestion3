@@ -35,4 +35,5 @@
     <edm:preview>https://iiif.lib.virginia.edu/iiif/uva-lib:857804/full/!300,300/0/default.jpg</edm:preview>
     <dcterms:isPartOf>University of Virginia Printing Services photograph file</dcterms:isPartOf>
     <dcterms:isPartOf>University of Virginia Visual History Collection</dcterms:isPartOf>
+    <dcterms:temporal>1800</dcterms:temporal>
 </mdRecord>

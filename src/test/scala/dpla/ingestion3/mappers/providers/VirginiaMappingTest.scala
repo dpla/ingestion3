@@ -124,6 +124,12 @@ class VirginiaMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.subject(xml) === expected)
   }
 
+  it should "extract the correct temporals" in {
+    val expected = Seq("1800")
+      .map(stringOnlyTimeSpan)
+    assert(extractor.temporal(xml) == expected)
+  }
+
   it should "extract the correct titles" in {
     val expected = Seq("Rambles of a runaway from Southern slavery")
     assert(extractor.title(xml) === expected)

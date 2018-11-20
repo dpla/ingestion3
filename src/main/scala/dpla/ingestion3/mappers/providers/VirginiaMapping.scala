@@ -75,6 +75,10 @@ class VirginiaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[N
     extractStrings(data \ "subject")
       .map(nameOnlyConcept)
 
+  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
+    extractStrings(data \ "temporal")
+      .map(stringOnlyTimeSpan)
+
   override def title(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "title")
 
