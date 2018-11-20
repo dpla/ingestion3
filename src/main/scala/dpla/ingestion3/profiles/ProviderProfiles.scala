@@ -158,6 +158,17 @@ class SdProfile extends JsonProfile {
 }
 
 /**
+  * Digital Virginias
+  */
+class VirginiaProfile extends XmlProfile {
+  type Mapping = VirginiaMapping
+
+  // TODO Set correct harvester
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new VirginiaMapping
+}
+
+/**
   * Recollection Wisconsin
   */
 class WiProfile extends XmlProfile {

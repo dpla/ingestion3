@@ -21,6 +21,7 @@ class VirginiaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[N
   // ID minting functions
   override def useProviderName(): Boolean = false
 
+  // TODO: Provider name ok?
   override def getProviderName(): String = "virginia"
 
   // TODO: What is persistent ID?
@@ -115,7 +116,5 @@ class VirginiaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[N
   )
 
   // TODO: extentFromFormat a la Ohio?
-
-  // TODO: subType
-  // TODO: temporal
+  // TODO: subType?
 }
