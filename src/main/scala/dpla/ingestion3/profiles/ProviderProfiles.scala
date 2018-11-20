@@ -160,12 +160,12 @@ class SdProfile extends JsonProfile {
 /**
   * Digital Virginias
   */
-class VirginiaProfile extends XmlProfile {
-  type Mapping = VirginiaMapping
+class VirginiasProfile extends XmlProfile {
+  type Mapping = VirginiasMapping
 
   // TODO Set correct harvester
   override def getHarvester = classOf[OaiHarvester]
-  override def getMapping = new VirginiaMapping
+  override def getMapping = new VirginiasMapping
 }
 
 /**

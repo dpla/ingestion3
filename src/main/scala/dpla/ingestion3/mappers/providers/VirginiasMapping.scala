@@ -1,30 +1,27 @@
 package dpla.ingestion3.mappers.providers
 
-import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
-import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
+import dpla.ingestion3.messages.IngestMessageTemplates
 
-import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
-import dpla.ingestion3.model.{uriOnlyWebResource, _}
+import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany}
+import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
-import scala.util.{Failure, Success}
 import scala.xml._
 
 
-class VirginiaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
+class VirginiasMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
   with IngestMessageTemplates {
 
   // ID minting functions
   override def useProviderName(): Boolean = false
 
   // TODO: Provider name ok?
-  override def getProviderName(): String = "virginia"
+  override def getProviderName(): String = "virginias"
 
-  // TODO: What is persistent ID?
+  // TODO: What field in virginias records should we use for persistent ID?
   override def getProviderId(implicit data: Document[NodeSeq]): String =
     extractString(data \ "identifier")
       .getOrElse(throw new RuntimeException(s"No ID for record $data"))
@@ -48,7 +45,7 @@ class VirginiaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[N
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "extent")
 
-  // TODO: apply block filters a la Ohio?
+  // TODO: Apply filters?
   override def format(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "medium")
 
@@ -67,11 +64,6 @@ class VirginiaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[N
     extractStrings(data \ "publisher")
       .map(nameOnlyAgent)
 
-  // TODO: Is this the rights statement field?
-  override def rights(data: Document[NodeSeq]): Seq[String] =
-    extractStrings(data \ "rights")
-
-  // TODO: capitalize first char a la Ohio?
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
     extractStrings(data \ "subject")
       .map(nameOnlyConcept)
@@ -93,6 +85,9 @@ class VirginiaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[N
     extractStrings(data \ "provenance")
       .map(nameOnlyAgent)
 
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
+    (data \ "rights").map(r => URI(r.text))
+
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "isShownAt")
       .map(stringOnlyWebResource)
@@ -109,12 +104,9 @@ class VirginiaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[N
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
 
   // Helper method
-  // TODO: correct URI?
+  // TODO: Is this the correct URI?
   def agent = EdmAgent(
     name = Some("Digital Virginias"),
-    uri = Some(URI("http://dp.la/api/contributor/virginia"))
+    uri = Some(URI("http://dp.la/api/contributor/virginias"))
   )
-
-  // TODO: extentFromFormat a la Ohio?
-  // TODO: subType?
 }

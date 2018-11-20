@@ -8,13 +8,13 @@ import dpla.ingestion3.model._
 
 import scala.xml.{NodeSeq, XML}
 
-class VirginiaMappingTest extends FlatSpec with BeforeAndAfter {
+class VirginiasMappingTest extends FlatSpec with BeforeAndAfter {
 
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
-  val shortName = "virginia"
-  val xmlString: String = new FlatFileIO().readFileAsString("/virginia.xml")
+  val shortName = "virginias"
+  val xmlString: String = new FlatFileIO().readFileAsString("/virginias.xml")
   val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))
-  val extractor = new VirginiaMapping
+  val extractor = new VirginiasMapping
 
   it should "not use the provider shortname in minting IDs "in
     assert(!extractor.useProviderName())
@@ -60,36 +60,6 @@ class VirginiaMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.extent(xml) === expected)
   }
 
-//  it should "extract the correct format" in {
-//    val xml: Document[NodeSeq] = Document(<record><metadata>
-//      <dcterms:format>photograph</dcterms:format>
-//    </metadata></record>)
-//    val expected = Seq("photograph")
-//    assert(extractor.format(xml) === expected)
-//  }
-//  it should "extract the correct format and remove values in that are stop words ('image')" in {
-//    val xml: Document[NodeSeq] = Document(<record><metadata>
-//      <dcterms:format>photograph</dcterms:format>
-//      <dcterms:format>1 x 2 x 3</dcterms:format>
-//      <dcterms:format>image</dcterms:format>
-//    </metadata></record>)
-//    val expected = Seq("photograph")
-//    assert(extractor.format(xml) === expected)
-//  }
-//  it should "extract nothing if the format value looks like an extent" in {
-//    val xml: Document[NodeSeq] = Document(<record><metadata>
-//      <dcterms:format>1 score (3 p.) 33 cm</dcterms:format>
-//    </metadata></record>)
-//    val expected = Seq()
-//    assert(extractor.format(xml) === expected)
-//  }
-
-//  it should "extract no format when values are in format blacklist" in {
-//    val xml: Document[NodeSeq] = Document(<record><metadata><dcterms:format>image/jpeg</dcterms:format></metadata></record>)
-//    val expected = Seq()
-//    assert(extractor.format(xml) === expected)
-//  }
-//
   it should "extract the correct identifier" in {
     val expected = Seq("uva-lib:1002813")
     assert(extractor.identifier(xml) === expected)
@@ -108,11 +78,6 @@ class VirginiaMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct publishers" in {
     val expected = Seq("Printed by J.M. Robb, Herald Office").map(nameOnlyAgent)
     assert(extractor.publisher(xml) === expected)
-  }
-
-  it should "extract rights value'" in {
-    val expected = Seq("http://rightsstatements.org/vocab/NoC-US/1.0/")
-    assert(extractor.rights(xml) === expected)
   }
 
   it should "extract the correct subjects" in {
@@ -148,6 +113,11 @@ class VirginiaMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct dataProvider" in {
     val expected = List(nameOnlyAgent("University of Virginia Library"))
     assert(extractor.dataProvider(xml) === expected)
+  }
+
+  it should "extract edmRights value'" in {
+    val expected = List(new URI("http://rightsstatements.org/vocab/NoC-US/1.0/"))
+    assert(extractor.edmRights(xml) === expected)
   }
 
   it should "extract the correct isShownAt" in {
