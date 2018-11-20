@@ -25,8 +25,7 @@ class VirginiasMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[
   override def getProviderId(implicit data: Document[NodeSeq]): String =
     extractString(data \ "identifier")
       .getOrElse(throw new RuntimeException(s"No ID for record $data"))
-
-  // Only use the first isPartOf instance
+  
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
     extractStrings(data \ "isPartOf")
       .map(nameOnlyCollection)
