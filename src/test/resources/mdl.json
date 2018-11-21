@@ -1,75 +1,114 @@
 {
-  "record_id" : "94d1b3b8487d91222cd1b185ebf528b8f0142b90",
-  "published" : true,
-  "tags" : [ "dpla_oai2", "sd", "dpla", "dplaingest" ],
-  "import_job_name" : "Digital Library of South Dakota",
-  "import_job_id" : 71,
-  "ingested_at" : "2018-07-21T11:14:56Z",
-  "record" : {
-    "object" : "http://explore.digitalsd.org/utils/getthumbnail/collection/Hobo/id/7431",
-    "rights" : "http://rightsstatements.org/vocab/InC-EDU/1.0/",
-    "@context" : "http://dp.la/api/items/context",
-    "provider" : "Minnesota Digital Library",
-    "isShownAt" : "http://explore.digitalsd.org/cdm/ref/collection/Hobo/id/7431",
-    "identifier" : "oai:explore.digitalsd.org:Hobo/7431",
-    "batch_param" : "",
-    "record_hash" : "94d1b3b8487d91222cd1b185ebf528b8f0142b90",
-    "dataProvider" : "South Dakota State University",
-    "originalRecord" : {
-      "header" : {
-        "setSpec" : "Hobo",
-        "datestamp" : "2017-11-14",
-        "identifier" : "oai:explore.digitalsd.org:Hobo/7431"
+  "record_id": "1PP792Z9DMQG9BEV7ME81BCR44",
+  "published": true,
+  "tags": [
+    "dpla_nonoai",
+    "dpla",
+    "dplaingest"
+  ],
+  "import_job_name": "MPR",
+  "import_job_id": 2,
+  "ingested_at": "2018-11-05T12:13:03Z",
+  "record": {
+    "rights": "www.fake.rights.url.org/public-domain",
+    "intermediateProvider": "one intermediate provider",
+    "object": "http://image.prview.org/thumb.jpg",
+    "title": "Hmong vendors learn the law on legal drug sales",
+    "format": "news bulletin",
+    "@context": "http://dp.la/api/items/context",
+    "provider": "Minnesota Digital Library",
+    "isShownAt": "https://archive.mpr.org/stories/2014/08/14/hmong-vendors-learn-the-law-on-legal-drug",
+    "identifier": "1PP792Z9DMQG9BEV7ME81BCR44",
+    "batch_param": "",
+    "record_hash": "1PP792Z9DMQG9BEV7ME81BCR44",
+    "dataProvider": "Minnesota Public Radio",
+    "originalRecord": {
+      "object": null,
+      "@context": "http://dp.la/api/items/context",
+      "provider": "Minnesota Digital Library",
+      "isShownAt": "https://archive.mpr.org/stories/2014/08/14/hmong-vendors-learn-the-law-on-legal-drug",
+      "dataProvider": "Minnesota Public Radio",
+      "originalRecord": {
+        "guid": "1PP792Z9DMQG9BEV7ME81BCR44"
       },
-      "metadata" : {
-        "dc" : {
-          "date" : "2012",
-          "type" : "Still Image",
-          "title" : "Singer in the spotlight",
-          "format" : "Color photographs",
-          "rights" : "http://rightsstatements.org/vocab/InC-EDU/1.0/",
-          "creator" : "DesLauriers, Scott",
-          "subject" : "Preserving Historic Hobo Day; South Dakota State University -- Hobo Day; 100 Years of Hobo Day; Hobo Day Committee",
-          "coverage" : "Brookings (Brookings County : South Dakota)",
-          "relation" : [ "Preserving Historic Hobo Day - Funded by a 2016 Common Heritage grant from the National Endowment for the Humanities", "Hobo Day - SDSU" ],
-          "xmlns:dc" : "http://purl.org/dc/elements/1.1/",
-          "publisher" : "South Dakota State University",
-          "xmlns:xsi" : "http://www.w3.org/2001/XMLSchema-instance",
-          "identifier" : [ "PHHD-1031", "http://explore.digitalsd.org/cdm/ref/collection/Hobo/id/7431" ],
-          "contributor" : "DesLauriers, Scott",
-          "description" : "Hobo Day Committee member in costume sings into microphone during 100 Years of Hobo Day event",
-          "xmlns:oai_dc" : "http://www.openarchives.org/OAI/2.0/oai_dc/",
-          "xsi:schemaLocation" : "http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd"
-        }
+      "sourceResource": {
+        "collection": ["collection3", "collection4"],
+        "contributor": ["contrib4", "contrib3"],
+        "date": {
+          "end": "2014",
+          "begin": "2014",
+          "displayDate": "faaje "
+        },
+        "title": "Hmong vendors learn the law on legal drug sales",
+        "rights": "http://minnesota.publicradio.org/about/site/terms/",
+        "creator": [
+          "fake creator"
+        ],
+        "subject": [
+          "MPR News Feature",
+          "Cultural Legacy Digitization (2016-2017)"
+        ],
+        "language": [
+          {
+            "name": "English",
+            "iso639_3": "eng"
+          }
+        ],
+        "type": ["fake image"],
+        "description": "A few blocks from the state Capitol, shoppers at the Hmongtown Marketplace can buy just about anything. The bustling center of small businesses is a favorite of the city's Hmong community because if offers fresh groceries, medicinal herbs, and prepared food. But a June 2013 raid found that some vendors in the marketplace also had drugs for sale. Ramsey County Prosecutors charged 14 people with selling misbranded drugs, possessing and selling drugs that require a license, selling syringes, and unlawfully possessing poison."
       }
     },
-    "sourceResource" : {
-      "date" : {
-        "displayDate" : "2012"
+    "sourceResource": {
+      "collection": [
+        {
+          "title": "collection1",
+          "description": "description1"
+        },
+        {
+          "title": "collection2"
+        }
+      ],
+      "contributor": ["contrib1", "contrib2"],
+      "creator": ["creator1", "creator2"],
+      "date": {
+        "end": "2014",
+        "begin": "2014",
+        "displayDate": "2014-08-14"
       },
-      "type" : [ "image" ],
-      "title" : "Singer in the spotlight",
-      "format" : [ "Color photographs" ],
-      "creator" : "DesLauriers, Scott",
-      "subject" : [ {
-        "name" : "100 Years of Hobo Day"
-      }, {
-        "name" : "Hobo Day Committee"
-      }, {
-        "name" : "South Dakota State University"
-      }, {
-        "name" : "Hobo Day"
-      }, {
-        "name" : "Preserving Historic Hobo Day"
-      } ],
-      "relation" : [ [ "Preserving Historic Hobo Day - Funded by a 2016 Common Heritage grant from the National Endowment for the Humanities" ], [ "Hobo Day - SDSU" ] ],
-      "collection" : {
-        "title" : "SDSU - Hobo Day Collection",
-        "description" : "Enter all material related to Hobo Day"
-      },
-      "contributor" : "DesLauriers, Scott",
-      "description" : "Hobo Day Committee member in costume sings into microphone during 100 Years of Hobo Day event"
-    },
-    "intermediateProvider" : "Digital Library of South Dakota"
+      "extent": ["extent1", "extent2"],
+      "format": ["1x2", "pencil on paper"],
+      "title": "Hmong vendors learn the law on legal drug sales",
+      "subject": [
+        {
+          "name": "MPR News Feature"
+        },
+        {
+          "name": "Reports"
+        },
+        {
+          "name": "Cultural Legacy Digitization (2016-2017)"
+        }
+      ],
+      "language": [
+        {
+          "name": "English",
+          "iso639_3": "eng"
+        }
+      ],
+      "description": "description",
+      "type": "image",
+      "rights": ["free text rights statement"],
+      "publisher": ["pub1"],
+      "spatial": [
+        {
+          "name": ["cincinnati", "ohio"],
+          "coordinates": ["1212.5151x1235.548", "151lat 431long"]
+        },
+        {
+          "name": ["hamilton county", "ohio"],
+          "coordinates": ["1.34 83.32", "151lat 431long"]
+        }
+      ]
+    }
   }
 }
