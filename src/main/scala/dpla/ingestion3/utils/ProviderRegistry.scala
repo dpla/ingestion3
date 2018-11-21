@@ -58,6 +58,7 @@ object ProviderRegistry {
     "p2p" -> Register(profile = new P2PProfile), // plains2peaks
     "pa" -> Register(profile = new PaProfile),
     "sd" -> Register(profile = new SdProfile),
+    "virginias" -> Register(profile = new VirginiasProfile),
     "wisconsin" -> Register(profile = new WiProfile)
   )
 
