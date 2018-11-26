@@ -36,7 +36,12 @@ class VaFileHarvester(spark: SparkSession,
     * Loads .zip files
     *
     * @param file File to parse
-    * @return TarInputstream of the tar contents
+    * @return ZipInputstream of the zip contents
+    *
+    *
+    * TODO: Because we're only handling zips in this class,
+    * and they should already be filtered by the FilenameFilter,
+    * I wonder if we even need the match statement here.
     */
   def getInputStream(file: File): Option[ZipInputStream] = {
     file.getName match {
@@ -79,7 +84,7 @@ class VaFileHarvester(spark: SparkSession,
     * but this won't blow the stack.
     *
     * @param zipInputStream
-    * @return Lazy stream of tar records
+    * @return Lazy stream of zip records
     */
   def iter(zipInputStream: ZipInputStream): Stream[FileResult] =
     Option(zipInputStream.getNextEntry) match {
