@@ -123,9 +123,8 @@ class NaraFileHarvester(
         FileResult(entry.getName, result) #:: iter(tarInputStream)
     }
 
-
   /**
-    * Executes the plains2peaks harvest
+    * Executes the nara harvest
     */
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()

@@ -1,43 +1,47 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{File, FileFilter, FileInputStream}
+import java.io.{File, FileInputStream}
 import java.util.zip.ZipInputStream
 
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.mappers.utils.JsonExtractor
+import dpla.ingestion3.mappers.utils.XmlExtractor
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.json4s.jackson.JsonMethods._
-import org.json4s.{JValue, _}
 import com.databricks.spark.avro._
 
 import scala.util.{Failure, Success, Try}
+import scala.xml.{MinimizeMode, Node, Utility, XML}
 
 
 /**
-  * Extracts values from parsed JSON
+  * Extracts values from parsed Xml
   */
-class P2PFileExtractor extends JsonExtractor
+class VaFileExtractor extends XmlExtractor
 
 /**
-  * Entry for performing a plains2peaks file harvest
+  * Entry for performing a Digital Virginias file harvest
   */
-class P2PFileHarvester(spark: SparkSession,
-                       shortName: String,
-                       conf: i3Conf,
-                       logger: Logger)
+class VaFileHarvester(spark: SparkSession,
+                      shortName: String,
+                      conf: i3Conf,
+                      logger: Logger)
   extends FileHarvester(spark, shortName, conf, logger) {
 
-  def mimeType: String = "application_json"
+  def mimeType: String = "application_xml"
 
-  protected val extractor = new P2PFileExtractor()
+  protected val extractor = new VaFileExtractor()
 
   /**
     * Loads .zip files
     *
     * @param file File to parse
-    * @return TarInputstream of the tar contents
+    * @return ZipInputstream of the zip contents
+    *
+    *
+    * TODO: Because we're only handling zips in this class,
+    * and they should already be filtered by the FilenameFilter,
+    * I wonder if we even need the match statement here.
     */
   def getInputStream(file: File): Option[ZipInputStream] = {
     file.getName match {
@@ -48,46 +52,27 @@ class P2PFileHarvester(spark: SparkSession,
   }
 
   /**
-    * Parses JValue to extract item local item id and renders compact
-    * full record
+    * Main logic for handling individual entries in the zip.
     *
-    * @param json Full JSON item record
-    * @return Option[ParsedResult]
-    */
-  def getJsonResult(json: JValue): Option[ParsedResult] =
-    Option(ParsedResult(
-      // item id
-      // TODO Are we consistently extracting the same ID for a record? Are filenames a safer option?
-      extractor.extractStrings(json \ "@graph" \ "@id").find(_.startsWith("https://plains2peaks.org/"))
-        .getOrElse(throw new RuntimeException("Missing ID")),
-      // item
-      compact(render(json))
-    ))
-
-  /**
-    * Parses and extracts ZipInputStream and writes
-    * parsed records out.
-    *
-    * @param zipResult  Case class representing extracted items from the zip
+    * @param zipResult  Case class representing extracted item from the zip
     * @return Count of metadata items found.
     */
   def handleFile(zipResult: FileResult,
                  unixEpoch: Long): Try[Int] =
-
     zipResult.data match {
       case None =>
-        Success(0) // a directory, no results
+        Success(0) //a directory, no results
+
       case Some(data) => Try {
         Try {
-          parse(new String(data)) // parse string to json
+          XML.loadString(new String(data)) // parse string to XML
         } match {
-          case Success(json) =>
-            getJsonResult(json) match { // extract id from json and compact the body
-              case Some(item) =>
-                writeOut(unixEpoch, item)
-                1
-              case _ => 0
-            }
+          case Success(xml) =>
+            val id: String = zipResult.entryName
+            val outputXml: String = xmlToString(xml)
+            val item: ParsedResult = ParsedResult(id, outputXml)
+            writeOut(unixEpoch, item)
+            1
           case _ => 0
         }
       }
@@ -99,7 +84,7 @@ class P2PFileHarvester(spark: SparkSession,
     * but this won't blow the stack.
     *
     * @param zipInputStream
-    * @return Lazy stream of tar records
+    * @return Lazy stream of zip records
     */
   def iter(zipInputStream: ZipInputStream): Stream[FileResult] =
     Option(zipInputStream.getNextEntry) match {
@@ -115,7 +100,7 @@ class P2PFileHarvester(spark: SparkSession,
     }
 
   /**
-    * Executes the plains2peaks harvest
+    * Executes the Digital Virginias harvest
     */
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
@@ -140,12 +125,13 @@ class P2PFileHarvester(spark: SparkSession,
     // Read harvested data into Spark DataFrame and return.
     spark.read.avro(tmpOutStr)
   }
-}
 
-/**
-  * FileFilter to filter out non-Zip files
-  * TODO: Move this?  It is also used by VaFileHarvester.
-  */
-class ZipFileFilter extends FileFilter {
-  override def accept(pathname: File): Boolean = pathname.getName.endsWith("zip")
+  /**
+    * Converts a Node to an xml string
+    *
+    * @param node The root of the tree to write to a string
+    * @return a String containing xml
+    */
+  def xmlToString(node: Node): String =
+    Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
 }
