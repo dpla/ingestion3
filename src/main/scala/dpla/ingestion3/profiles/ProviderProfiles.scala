@@ -2,7 +2,7 @@ package dpla.ingestion3.profiles
 
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.api._
-import dpla.ingestion3.harvesters.file.{NaraFileHarvester, P2PFileHarvester}
+import dpla.ingestion3.harvesters.file.{NaraFileHarvester, P2PFileHarvester, VaFileHarvester}
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.mappers.providers._
 
@@ -164,7 +164,7 @@ class VirginiasProfile extends XmlProfile {
   type Mapping = VirginiasMapping
 
   // TODO Set correct harvester
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester = classOf[VaFileHarvester]
   override def getMapping = new VirginiasMapping
 }
 
