@@ -162,8 +162,7 @@ class SdProfile extends JsonProfile {
   */
 class VirginiasProfile extends XmlProfile {
   type Mapping = VirginiasMapping
-
-  // TODO Set correct harvester
+  
   override def getHarvester = classOf[VaFileHarvester]
   override def getMapping = new VirginiasMapping
 }

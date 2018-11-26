@@ -144,6 +144,7 @@ class P2PFileHarvester(spark: SparkSession,
 
 /**
   * FileFilter to filter out non-Zip files
+  * TODO: Move this?  It is also used by VaFileHarvester.
   */
 class ZipFileFilter extends FileFilter {
   override def accept(pathname: File): Boolean = pathname.getName.endsWith("zip")
