@@ -2,7 +2,7 @@ package dpla.ingestion3.profiles
 
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.api._
-import dpla.ingestion3.harvesters.file.{NaraFileHarvester, P2PFileHarvester, VaFileHarvester}
+import dpla.ingestion3.harvesters.file._
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.mappers.providers._
 
@@ -74,6 +74,16 @@ class MdlProfile extends JsonProfile {
 
   override def getHarvester: Class[_ <: Harvester] = classOf[MdlHarvester]
   override def getMapping = new MdlMapping
+}
+
+/**
+  * Missouri
+  */
+class MoProfile extends JsonProfile {
+  type Mapping = MdlMapping // TODO: Set correct mapper
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[MoFileHarvester]
+  override def getMapping = new MdlMapping // TODO: Set correct Mapper
 }
 
 /**
