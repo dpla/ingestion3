@@ -37,7 +37,7 @@ class P2PFileHarvester(spark: SparkSession,
     * Loads .zip files
     *
     * @param file File to parse
-    * @return TarInputstream of the tar contents
+    * @return ZipInputstream of the zip contents
     */
   def getInputStream(file: File): Option[ZipInputStream] = {
     file.getName match {
@@ -99,7 +99,7 @@ class P2PFileHarvester(spark: SparkSession,
     * but this won't blow the stack.
     *
     * @param zipInputStream
-    * @return Lazy stream of tar records
+    * @return Lazy stream of zip records
     */
   def iter(zipInputStream: ZipInputStream): Stream[FileResult] =
     Option(zipInputStream.getNextEntry) match {
