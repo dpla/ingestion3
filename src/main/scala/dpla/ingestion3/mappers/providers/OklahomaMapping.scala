@@ -30,10 +30,10 @@ class OklahomaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[N
 
   // SourceResource mapping
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
-  // <mods:titleInfo><mods:title type=alternative>
-    (data \\ "titleInfo" \ "title")
+  // <mods:titleInfo type=alternative><mods:title>
+    (data \\ "titleInfo")
       .map(node => getByAttribute(node.asInstanceOf[Elem], "type", "alternative"))
-      .flatMap(extractStrings)
+      .flatMap(titleInfo => extractStrings(titleInfo \ "title"))
 
   override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
   // <mods:relatedItem type=host><mods:titleInfo><mods:title>
@@ -124,9 +124,9 @@ class OklahomaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[N
 
   override def title(data: Document[NodeSeq]): Seq[String] =
   // <mods:titleInfo><mods:title> when @type DOES NOT equal "alternative"
-    (data \\ "mods" \ "titleInfo" \ "title")
+    (data \\ "mods" \ "titleInfo")
       .filterNot({ n => filterAttribute(n, "type", "alternative") })
-      .flatMap(extractStrings)
+      .flatMap(titleInfo => extractStrings(titleInfo \ "title"))
 
   override def `type`(data: Document[NodeSeq]): Seq[String] =
   // <mods:typeofresource>
