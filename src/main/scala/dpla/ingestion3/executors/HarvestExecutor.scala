@@ -93,7 +93,7 @@ trait HarvestExecutor {
 
       case Failure(f) => logger.error(s"Harvest failure: ${f.getMessage}")
     }
-
+    harvester.cleanUp()
     spark.stop()
   }
 
