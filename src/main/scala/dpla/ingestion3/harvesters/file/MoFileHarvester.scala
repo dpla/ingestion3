@@ -1,6 +1,6 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{File, FileInputStream}
+import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
 import java.util.zip.ZipInputStream
 
 import dpla.ingestion3.confs.i3Conf
@@ -24,9 +24,9 @@ class MoFileExtractor extends JsonExtractor
   * Entry for performing a Missouri file harvest
   */
 class MoFileHarvester(spark: SparkSession,
-                       shortName: String,
-                       conf: i3Conf,
-                       logger: Logger)
+                      shortName: String,
+                      conf: i3Conf,
+                      logger: Logger)
   extends FileHarvester(spark, shortName, conf, logger) {
 
   def mimeType: String = "application_json"
@@ -69,30 +69,40 @@ class MoFileHarvester(spark: SparkSession,
     * @return Count of metadata items found.
     */
   def handleFile(zipResult: FileResult,
-                 unixEpoch: Long): Try[Int] =
+                 unixEpoch: Long): Try[Int] = {
 
-    zipResult.data match {
+    zipResult.bufferedData match {
       case None =>
         Success(0) // a directory, no results
       case Some(data) => Try {
-        Try {
-          parse(new String(data)) // parse string to json
-        } match {
-          case Success(json) =>
-            // Expect that input json is an array of objects
-            json.asInstanceOf[JArray].arr.map(j =>
-              getJsonResult(j) match {
-                case Some(item) => {
-                  writeOut(unixEpoch, item)
-                  1
-                }
-                case _ => 0
-              }
-            ).sum
-          case _ => 0
+
+        var line: String = data.readLine
+        var itemCount: Int = 0
+
+        while (line != null) {
+          val count = Try {
+
+            val json: JValue = parse(line.stripPrefix("[").stripPrefix(","))
+
+            getJsonResult(json) match {
+              case Some(item) =>
+                writeOut(unixEpoch, item)
+                1
+              case _ => 0
+            }
+          } match {
+            case Success(num) => num
+            case _ => 0
+          }
+
+          itemCount += count
+          line = data.readLine
         }
+
+        itemCount
       }
     }
+  }
 
   /**
     * Implements a stream of files from the zip
@@ -100,7 +110,7 @@ class MoFileHarvester(spark: SparkSession,
     * but this won't blow the stack.
     *
     * @param zipInputStream
-    * @return Lazy stream of tar records
+    * @return Lazy stream of zip records
     */
   def iter(zipInputStream: ZipInputStream): Stream[FileResult] =
     Option(zipInputStream.getNextEntry) match {
@@ -111,8 +121,8 @@ class MoFileHarvester(spark: SparkSession,
           if (entry.isDirectory)
             None
           else
-            Some(IOUtils.toByteArray(zipInputStream, entry.getSize))
-        FileResult(entry.getName, result) #:: iter(zipInputStream)
+            Some(new BufferedReader(new InputStreamReader(zipInputStream)))
+        FileResult(entry.getName, None, result) #:: iter(zipInputStream)
     }
 
   /**
@@ -124,7 +134,7 @@ class MoFileHarvester(spark: SparkSession,
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
     inFiles.listFiles(new ZipFileFilter).foreach( inFile => {
-      val inputStream = getInputStream(inFile)
+      val inputStream: ZipInputStream = getInputStream(inFile)
         .getOrElse(throw new IllegalArgumentException("Couldn't load ZIP files."))
       val recordCount = (for (result <- iter(inputStream)) yield {
         handleFile(result, unixEpoch) match {
