@@ -80,10 +80,10 @@ class MdlProfile extends JsonProfile {
   * Missouri
   */
 class MoProfile extends JsonProfile {
-  type Mapping = MdlMapping // TODO: Set correct mapper
+  type Mapping = MoMapping
 
   override def getHarvester: Class[_ <: Harvester] = classOf[MoFileHarvester]
-  override def getMapping = new MdlMapping // TODO: Set correct Mapper
+  override def getMapping = new MoMapping
 }
 
 /**
