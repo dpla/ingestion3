@@ -76,6 +76,7 @@ class MoFileHarvester(spark: SparkSession,
         Success(0) // a directory, no results
       case Some(data) => Try {
 
+        // Assume that each line of the file contains a single record.
         var line: String = data.readLine
         var itemCount: Int = 0
 
