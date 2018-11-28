@@ -84,7 +84,8 @@ class NaraFileHarvester(
 
       case Some(data) =>
         Try {
-          val xml = XML.loadString(new String(data))
+          val dataString = new String(data).replaceAll("<\\?xml.*\\?>", "")
+          val xml = XML.loadString(dataString)
           val items = handleXML(xml)
           val entryName = tarResult.entryName
           // log the file name

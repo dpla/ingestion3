@@ -7,6 +7,7 @@ import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.GenericRecord
+import org.apache.commons.io.FileUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -58,7 +59,7 @@ abstract class LocalHarvester(
   //   then loaded into a spark DataFrame,
   //   then written to their final destination.
   // TODO: make tmp path configurable rather than hard-coded
-  val tmpOutStr = s"/tmp/$shortName"
+  val tmpOutStr = new File(FileUtils.getTempDirectory, shortName).getAbsolutePath
 
   // Delete temporary output directory and files if they already exist.
   Utils.deleteRecursively(new File(tmpOutStr))
