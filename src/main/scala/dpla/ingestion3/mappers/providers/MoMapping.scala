@@ -29,7 +29,7 @@ class MoMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data) \ "dataProvider").map(nameOnlyAgent)
 
-  override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = URI(mintDplaId(data))
+  override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = mintDplaItemUri(data)
 
   override def hasView(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \ "hasView" \ "@id").map(stringOnlyWebResource)
