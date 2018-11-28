@@ -19,7 +19,6 @@ abstract class Harvester(spark: SparkSession,
 
   def harvest: DataFrame = {
     val harvestData: DataFrame = localHarvest()
-    cleanUp()
     harvestData
   }
 
