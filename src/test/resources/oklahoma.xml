@@ -9,8 +9,8 @@
             <titleInfo>
                 <title>Home Fruit Planting Guide</title>
             </titleInfo>
-            <titleInfo>
-                <title type="alternative">Alt Title</title>
+            <titleInfo type="alternative">
+                <title>Alt Title</title>
             </titleInfo>
             <name>
                 <namePart>Hillock, David A.</namePart>
