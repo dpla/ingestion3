@@ -23,6 +23,7 @@ class P2PMapping()
 
   override def getProviderId(implicit data: Document[NodeSeq]): String =
     extractString(data \\ "header" \ "identifier")
+    .map(_.trim)
       .getOrElse(throw new RuntimeException(s"No ID for record $data"))
 
   // OreAggregation fields
@@ -97,7 +98,7 @@ class P2PMapping()
     extractStrings(data \ "metadata" \ "mods" \ "abstract")
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "metadata" \ "mods" \ "phyiscialDescription" \ "extent")
+    extractStrings(data \ "metadata" \ "mods" \ "physicalDescription" \ "extent")
 
   override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "recordInfo" \ "recordIdentifier")
