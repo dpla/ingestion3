@@ -31,20 +31,20 @@ class P2PMapping()
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     for {
-      node <- data \ "mods" \ "note"
+      node <- data \ "metadata" \ "mods" \ "note"
       if node \@ "type" == "ownership"
     } yield nameOnlyAgent(node.text.trim)
 
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
     (for {
-      node <- data \ "mods" \ "note"
+      node <- data \ "metadata" \ "mods" \ "note"
       if node \@ "type" == "admin"
     } yield nameOnlyAgent(node.text.trim)).headOption
 
   //<mods:accessCondition type="use and reproduction">
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
     for {
-      node <- data \ "mods" \ "accessCondition"
+      node <- data \ "metadata" \ "mods" \ "accessCondition"
       if node \@ "type" == "use and reproduction"
     } yield URI(node.text.trim)
 
@@ -54,7 +54,7 @@ class P2PMapping()
   */
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     for {
-      node <- data \ "mods" \ "location" \ "url"
+      node <- data \ "metadata" \ "mods" \ "location" \ "url"
       if node \@ "access" == "object in context"
       if node \@ "usage" == "primary display"
     } yield uriOnlyWebResource(URI(node.text.trim))
@@ -65,7 +65,7 @@ class P2PMapping()
   //<mods:location><mods:url access="preview">
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     for {
-      node <- data \ "mods" \ "location" \ "url"
+      node <- data \ "metadata" \ "mods" \ "location" \ "url"
       if node \@ "access" == "preview"
     } yield uriOnlyWebResource(URI(node.text.trim))
 
@@ -79,36 +79,36 @@ class P2PMapping()
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     for {
-      name <- data \ "mods" \ "name"
+      name <- data \ "metadata" \ "mods" \ "name"
       if (name \ "role" \ "roleTerm").text.trim == "contributor"
     } yield nameOnlyAgent((name \ "namePart").text.trim)
 
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     for {
-      name <- data \ "mods" \ "name"
+      name <- data \ "metadata" \ "mods" \ "name"
       if (name \ "role" \ "roleTerm").text.trim == "creator"
     } yield nameOnlyAgent((name \ "namePart").text.trim)
 
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
-    extractStrings(data \ "mods" \ "originInfo" \ "dateCreated")
+    extractStrings(data \ "metadata" \ "mods" \ "originInfo" \ "dateCreated")
       .map(stringOnlyTimeSpan)
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "mods" \ "abstract")
+    extractStrings(data \ "metadata" \ "mods" \ "abstract")
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "mods" \ "phyiscialDescription" \ "extent")
+    extractStrings(data \ "metadata" \ "mods" \ "phyiscialDescription" \ "extent")
 
   override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "recordInfo" \ "recordIdentifier")
+    extractStrings(data \ "metadata" \ "recordInfo" \ "recordIdentifier")
 
   override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
-    extractStrings(data \ "mods" \ "language" \ "languageTerm")
+    extractStrings(data \ "metadata" \ "mods" \ "language" \ "languageTerm")
       .map(nameOnlyConcept)
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     for {
-      subjectNode <- data \ "mods" \ "subject"
+      subjectNode <- data \ "metadata" \ "mods" \ "subject"
       subject <-
         subjectNode \ "topic" ++
           subjectNode \ "name" ++
@@ -116,32 +116,32 @@ class P2PMapping()
     } yield nameOnlyConcept(subject.text.trim)
 
   override def title(data: Document[NodeSeq]): AtLeastOne[String] =
-    extractStrings(data \ "mods" \ "titleInfo" \ "title")
+    extractStrings(data \ "metadata" \ "mods" \ "titleInfo" \ "title")
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "mods" \ "typeOfResource")
+    extractStrings(data \ "metadata" \ "mods" \ "typeOfResource")
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    extractStrings(data \ "mods" \ "originInfo" \ "publisher")
+    extractStrings(data \ "metadata" \ "mods" \ "originInfo" \ "publisher")
       .map(nameOnlyAgent)
 
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "mods" \ "physicalDescription" \ "form")
+    extractStrings(data \ "metadata" \ "mods" \ "physicalDescription" \ "form")
 
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
-    extractStrings(data \ "mods" \ "subject" \ "geographic")
+    extractStrings(data \ "metadata" \ "mods" \ "subject" \ "geographic")
       .map(nameOnlyPlace)
 
   override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
     for {
-      relatedItem <- data \ "mods" \ "relatedItem"
+      relatedItem <- data \ "metadata" \ "mods" \ "relatedItem"
       if relatedItem \@ "type" == "series"
       relation <- relatedItem \ "titleInfo" \ "title"
     } yield Left(relation.text.trim)
 
   override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
     for {
-      relatedItem <- data \ "mods" \ "relatedItem"
+      relatedItem <- data \ "metadata" \ "mods" \ "relatedItem"
       if relatedItem \@ "type" == "host"
       collectionTitle <- relatedItem \ "titleInfo" \ "title"
     } yield nameOnlyCollection(collectionTitle.text.trim)
