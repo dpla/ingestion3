@@ -8,6 +8,7 @@ import dpla.ingestion3.mappers.utils.JsonExtractor
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.functions._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
 import com.databricks.spark.avro._
@@ -150,7 +151,10 @@ class MoFileHarvester(spark: SparkSession,
       IOUtils.closeQuietly(inputStream)
     })
 
-    // Read harvested data into Spark DataFrame and return.
-    spark.read.avro(tmpOutStr)
+    // Read harvested data into Spark DataFrame.
+    val df = spark.read.avro(tmpOutStr)
+
+    // Filter out records with "status":"deleted"
+    df.where(!col("document").like("%\"status\":\"deleted\"%"))
   }
 }
