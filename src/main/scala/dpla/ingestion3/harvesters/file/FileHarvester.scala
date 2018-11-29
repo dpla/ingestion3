@@ -28,8 +28,10 @@ abstract class FileHarvester(spark: SparkSession,
   /**
     * Case class to hold the results of a file
     *
-    * @param entryName Path of the entry in the file
-    * @param data      Holds the data for the entry, or None if it's a directory.
+    * @param entryName    Path of the entry in the file
+    * @param data         Holds the data for the entry, or None if it's a directory.
+    * @param bufferedData Holds a buffered reader for the entry if it's too
+    *                     large to be held in memory.
     */
   case class FileResult(entryName: String,
                         data: Option[Array[Byte]],

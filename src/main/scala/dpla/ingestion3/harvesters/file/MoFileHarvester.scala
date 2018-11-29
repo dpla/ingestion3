@@ -37,7 +37,7 @@ class MoFileHarvester(spark: SparkSession,
     * Loads .zip files
     *
     * @param file File to parse
-    * @return TarInputstream of the tar contents
+    * @return ZipInputstream of the zip contents
     */
   def getInputStream(file: File): Option[ZipInputStream] = {
     file.getName match {
@@ -83,6 +83,7 @@ class MoFileHarvester(spark: SparkSession,
         while (line != null) {
           val count = Try {
 
+            // Clean up leading/trailing characters
             val json: JValue = parse(line.stripPrefix("[").stripPrefix(","))
 
             getJsonResult(json) match {
