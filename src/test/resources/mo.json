@@ -17,17 +17,11 @@
       "Photograph of students posing on bench"
     ],
     "description": [
-      "Six students posing on a bench outside of the Education Building (now Hill Hall) with Siceluff Hall in the background, on the campus of Southwest Missouri State Teachers College (now Missouri State University).  Back: dated May 1940.  June Davis (standing).  Joan Ballman, unknown, Mary Lou Burkhart, Mary Lou Moon, Clara Lillian Moon (seated)."
+      "Six students posing on a bench."
     ],
     "subject": [
       {
         "name": "Schools--Missouri--Springfield"
-      },
-      {
-        "name": " Southwest Missouri State Teachers College. Greenwood Laboratory School"
-      },
-      {
-        "name": " Missouri State University"
       },
       {
         "name": " Alternative education"
@@ -36,18 +30,20 @@
         "name": " Springfield (Mo.)"
       },
       {
-        "name": " Students--Missouri--Springfield"
-      },
-      {
         "name": ""
       }
     ],
     "temporal": [
       {
         "displayDate": "1940-05"
+      },
+      {
+        "start": "1991",
+        "end": "1995",
+        "displayDate": "1991/1995"
       }
     ],
-    "rights": "Use of digital images found on this website is permitted for private or personal use only. This material may be protected by U.S. Copyright Law (Title 17, U.S. Code). Copyrighted materials may be used for research, instruction, and private study under the provisions of Fair Use, outlined in section 107 of copyright law. Publication, commercial use, or reproduction of this image or the accompanying data requires prior written permission from the copyright holder. User assumes all responsibility for obtaining the necessary permission to publish (including in digital format) from the copyright holder. For more information on using this image, contact Special Collections and Archives, Missouri State University: http://library.missouristate.edu/archives/generalinfo.htm",
+    "rights": "Use of digital images found on this website is permitted for private or personal use only.",
     "@id": "oai:digitalcollections.missouristate.edu:Hennicke/94",
     "language": [
       {
@@ -64,8 +60,13 @@
     "identifier": [
       "http://digitalcollections.missouristate.edu/cdm/ref/collection/Hennicke/id/94"
     ],
-    "creator": [],
-    "specType": []
+    "creator": [
+      "Leo. Feist",
+      "Herman Darewski Music"
+    ],
+    "specType": [
+      "Photograph/Pictorial Works"
+    ]
   },
   "@id": "missouri--urn:data.mohistory.org:msu_all:oai:digitalcollections.missouristate.edu:Hennicke/94"
 }
