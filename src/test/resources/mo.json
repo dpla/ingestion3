@@ -1,0 +1,72 @@
+{
+  "@context": "http://dp.la/api/items/context",
+  "isShownAt": "http://digitalcollections.missouristate.edu/cdm/ref/collection/Hennicke/id/94",
+  "dataProvider": "Missouri State University",
+  "@type": "ore:Aggregation",
+  "hasView": {
+    "@id": "http://digitalcollections.missouristate.edu/cdm/ref/collection/Hennicke/id/94"
+  },
+  "provider": {
+    "@id": "http://dp.la/api/contributor/missouri-hub",
+    "name": "Missouri Hub"
+  },
+  "object": "http://digitalcollections.missouristate.edu/utils/getthumbnail/collection/Hennicke/id/94",
+  "aggregatedCHO": "#sourceResource",
+  "sourceResource": {
+    "title": [
+      "Photograph of students posing on bench"
+    ],
+    "description": [
+      "Six students posing on a bench."
+    ],
+    "subject": [
+      {
+        "name": "Schools--Missouri--Springfield"
+      },
+      {
+        "name": " Alternative education"
+      },
+      {
+        "name": " Springfield (Mo.)"
+      },
+      {
+        "name": ""
+      }
+    ],
+    "temporal": [
+      {
+        "displayDate": "1940-05"
+      },
+      {
+        "start": "1991",
+        "end": "1995",
+        "displayDate": "1991/1995"
+      }
+    ],
+    "rights": "Use of digital images found on this website is permitted for private or personal use only.",
+    "@id": "oai:digitalcollections.missouristate.edu:Hennicke/94",
+    "language": [
+      {
+        "iso639_3": "eng",
+        "name": "English"
+      }
+    ],
+    "stateLocatedIn": [
+      {
+        "name": "Missouri"
+      }
+    ],
+    "format": "Book",
+    "identifier": [
+      "http://digitalcollections.missouristate.edu/cdm/ref/collection/Hennicke/id/94"
+    ],
+    "creator": [
+      "Leo. Feist",
+      "Herman Darewski Music"
+    ],
+    "specType": [
+      "Photograph/Pictorial Works"
+    ]
+  },
+  "@id": "missouri--urn:data.mohistory.org:msu_all:oai:digitalcollections.missouristate.edu:Hennicke/94"
+}

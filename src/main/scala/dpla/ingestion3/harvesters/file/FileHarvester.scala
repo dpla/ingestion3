@@ -1,5 +1,7 @@
 package dpla.ingestion3.harvesters.file
 
+import java.io.BufferedReader
+
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.{Harvester, LocalHarvester}
 import org.apache.avro.generic.GenericData
@@ -23,14 +25,17 @@ abstract class FileHarvester(spark: SparkSession,
                              logger: Logger)
   extends LocalHarvester(spark, shortName, conf, logger) {
 
-
   /**
     * Case class to hold the results of a file
     *
-    * @param entryName Path of the entry in the file
-    * @param data      Holds the data for the entry, or None if it's a directory.
+    * @param entryName    Path of the entry in the file
+    * @param data         Holds the data for the entry, or None if it's a directory.
+    * @param bufferedData Holds a buffered reader for the entry if it's too
+    *                     large to be held in memory.
     */
-  case class FileResult(entryName: String, data: Option[Array[Byte]])
+  case class FileResult(entryName: String,
+                        data: Option[Array[Byte]],
+                        bufferedData: Option[BufferedReader] = None)
 
   /**
     * Case class hold the parsed value from a given FileResult

@@ -1,6 +1,6 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{File, FileFilter, FileInputStream}
+import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
 import java.util.zip.ZipInputStream
 
 import dpla.ingestion3.confs.i3Conf
@@ -8,6 +8,7 @@ import dpla.ingestion3.mappers.utils.JsonExtractor
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.functions._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
 import com.databricks.spark.avro._
@@ -18,20 +19,20 @@ import scala.util.{Failure, Success, Try}
 /**
   * Extracts values from parsed JSON
   */
-class P2PFileExtractor extends JsonExtractor
+class MoFileExtractor extends JsonExtractor
 
 /**
-  * Entry for performing a plains2peaks file harvest
+  * Entry for performing a Missouri file harvest
   */
-class P2PFileHarvester(spark: SparkSession,
-                       shortName: String,
-                       conf: i3Conf,
-                       logger: Logger)
+class MoFileHarvester(spark: SparkSession,
+                      shortName: String,
+                      conf: i3Conf,
+                      logger: Logger)
   extends FileHarvester(spark, shortName, conf, logger) {
 
   def mimeType: String = "application_json"
 
-  protected val extractor = new P2PFileExtractor()
+  protected val extractor = new MoFileExtractor()
 
   /**
     * Loads .zip files
@@ -56,11 +57,8 @@ class P2PFileHarvester(spark: SparkSession,
     */
   def getJsonResult(json: JValue): Option[ParsedResult] =
     Option(ParsedResult(
-      // item id
-      // TODO Are we consistently extracting the same ID for a record? Are filenames a safer option?
-      extractor.extractStrings(json \ "@graph" \ "@id").find(_.startsWith("https://plains2peaks.org/"))
+      extractor.extractString(json \ "@id")
         .getOrElse(throw new RuntimeException("Missing ID")),
-      // item
       compact(render(json))
     ))
 
@@ -72,26 +70,42 @@ class P2PFileHarvester(spark: SparkSession,
     * @return Count of metadata items found.
     */
   def handleFile(zipResult: FileResult,
-                 unixEpoch: Long): Try[Int] =
+                 unixEpoch: Long): Try[Int] = {
 
-    zipResult.data match {
+    zipResult.bufferedData match {
       case None =>
         Success(0) // a directory, no results
       case Some(data) => Try {
-        Try {
-          parse(new String(data)) // parse string to json
-        } match {
-          case Success(json) =>
-            getJsonResult(json) match { // extract id from json and compact the body
+
+        // Assume that each line of the file contains a single record.
+        var line: String = data.readLine
+        var itemCount: Int = 0
+
+        while (line != null) {
+          val count = Try {
+
+            // Clean up leading/trailing characters
+            val json: JValue = parse(line.stripPrefix("[").stripPrefix(","))
+
+            getJsonResult(json) match {
               case Some(item) =>
                 writeOut(unixEpoch, item)
                 1
               case _ => 0
             }
-          case _ => 0
+          } match {
+            case Success(num) => num
+            case _ => 0
+          }
+
+          itemCount += count
+          line = data.readLine
         }
+
+        itemCount
       }
     }
+  }
 
   /**
     * Implements a stream of files from the zip
@@ -110,12 +124,12 @@ class P2PFileHarvester(spark: SparkSession,
           if (entry.isDirectory)
             None
           else
-            Some(IOUtils.toByteArray(zipInputStream, entry.getSize))
-        FileResult(entry.getName, result) #:: iter(zipInputStream)
+            Some(new BufferedReader(new InputStreamReader(zipInputStream)))
+        FileResult(entry.getName, None, result) #:: iter(zipInputStream)
     }
 
   /**
-    * Executes the plains2peaks harvest
+    * Executes the Missouri harvest
     */
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
@@ -123,7 +137,7 @@ class P2PFileHarvester(spark: SparkSession,
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
     inFiles.listFiles(new ZipFileFilter).foreach( inFile => {
-      val inputStream = getInputStream(inFile)
+      val inputStream: ZipInputStream = getInputStream(inFile)
         .getOrElse(throw new IllegalArgumentException("Couldn't load ZIP files."))
       val recordCount = (for (result <- iter(inputStream)) yield {
         handleFile(result, unixEpoch) match {
@@ -137,15 +151,10 @@ class P2PFileHarvester(spark: SparkSession,
       IOUtils.closeQuietly(inputStream)
     })
 
-    // Read harvested data into Spark DataFrame and return.
-    spark.read.avro(tmpOutStr)
-  }
-}
+    // Read harvested data into Spark DataFrame.
+    val df = spark.read.avro(tmpOutStr)
 
-/**
-  * FileFilter to filter out non-Zip files
-  * TODO: Move this?  It is also used by VaFileHarvester.
-  */
-class ZipFileFilter extends FileFilter {
-  override def accept(pathname: File): Boolean = pathname.getName.endsWith("zip")
+    // Filter out records with "status":"deleted"
+    df.where(!col("document").like("%\"status\":\"deleted\"%"))
+  }
 }
