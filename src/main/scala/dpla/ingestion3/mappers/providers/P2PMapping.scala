@@ -4,12 +4,17 @@ import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
+import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
 import scala.xml.NodeSeq
 
-class P2PMapping() extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] with IngestMessageTemplates {
+class P2PMapping()
+  extends XmlMapping
+    with XmlExtractor
+    with IdMinter[NodeSeq]
+    with IngestMessageTemplates {
 
   // ID minting functions
   override def useProviderName: Boolean = true
@@ -31,14 +36,39 @@ class P2PMapping() extends Mapping[NodeSeq] with XmlExtractor with IdMinter[Node
       if node \@ "type" == "ownership"
     } yield nameOnlyAgent(node.text.trim)
 
+  override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
+    (for {
+      node <- data \ "mods" \ "note"
+      if node \@ "type" == "admin"
+    } yield nameOnlyAgent(node.text.trim)).headOption
 
-  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = ???
+  //<mods:accessCondition type="use and reproduction">
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
+    for {
+      node <- data \ "mods" \ "accessCondition"
+      if node \@ "type" == "use and reproduction"
+    } yield URI(node.text.trim)
 
-  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = ???
+  /*
+    <mods:location>
+    <mods:url access=”object in context” usage="primary display">
+  */
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    for {
+      node <- data \ "mods" \ "location" \ "url"
+      if node \@ "access" == "object in context"
+      if node \@ "usage" == "primary display"
+    } yield uriOnlyWebResource(URI(node.text.trim))
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = ???
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
-  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = ???
+  //<mods:location><mods:url access="preview">
+  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    for {
+      node <- data \ "mods" \ "location" \ "url"
+      if node \@ "access" == "preview"
+    } yield uriOnlyWebResource(URI(node.text.trim))
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = EdmAgent(
     name = Some("Plains to Peaks Collective"),
@@ -47,9 +77,6 @@ class P2PMapping() extends Mapping[NodeSeq] with XmlExtractor with IdMinter[Node
 
   override def sidecar(data: Document[NodeSeq]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
-
-  // SourceResource
-  override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] = ???
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     for {
@@ -106,12 +133,6 @@ class P2PMapping() extends Mapping[NodeSeq] with XmlExtractor with IdMinter[Node
     extractStrings(data \ "mods" \ "subject" \ "geographic")
       .map(nameOnlyPlace)
 
-  override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
-    (for {
-      node <- data \ "mods" \ "note"
-      if node \@ "type" == "admin"
-    } yield nameOnlyAgent(node.text.trim)).headOption
-
   override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
     for {
       relatedItem <- data \ "mods" \ "relatedItem"
@@ -125,6 +146,5 @@ class P2PMapping() extends Mapping[NodeSeq] with XmlExtractor with IdMinter[Node
       if relatedItem \@ "type" == "host"
       collectionTitle <- relatedItem \ "titleInfo" \ "title"
     } yield nameOnlyCollection(collectionTitle.text.trim)
-
 
 }
