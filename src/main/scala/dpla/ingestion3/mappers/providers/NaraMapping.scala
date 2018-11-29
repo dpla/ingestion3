@@ -37,7 +37,7 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
       //todo Preservation-Reproduction-Reference
       if copyStatus.contains("Reproduction-Reference") || copyStatus.contains("Preservation")
       referenceUnit = (physicalOccurrenceArray \\ "referenceUnit" \ "termName").map(_.text).headOption
-    } yield referenceUnit).head
+    } yield referenceUnit).headOption.flatten
 
     Seq(nameOnlyAgent(referenceUnit.getOrElse("National Records and Archives Administration")))
   }
