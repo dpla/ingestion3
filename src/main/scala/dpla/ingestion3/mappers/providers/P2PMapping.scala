@@ -56,7 +56,6 @@ class P2PMapping()
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     for {
       node <- data \ "metadata" \ "mods" \ "location" \ "url"
-      if node \@ "access" == "object in context"
       if node \@ "usage" == "primary display"
     } yield uriOnlyWebResource(URI(node.text.trim))
 

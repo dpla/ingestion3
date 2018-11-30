@@ -68,12 +68,12 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
     assert(result === URI("http://rightsstatements.org/vocab/CNE/1.0/"))
   }
 
-it should "return the correct isShownAt" in {
+  it should "return the correct isShownAt" in {
     val result = mapping.isShownAt(
       metadata(
         <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
           <mods:location>
-            <mods:url access="object in context" usage="primary display">http://digital.denverlibrary.org/utils/getthumbnail/collection/p15330coll22/id/75547</mods:url>
+            <mods:url usage="primary display">http://digital.denverlibrary.org/utils/getthumbnail/collection/p15330coll22/id/75547</mods:url>
           </mods:location>
         </mods:mods>
       )
@@ -195,6 +195,133 @@ it should "return the correct isShownAt" in {
     assert(result === "1 photographic print on card mount : albumen ; 21 x 10 cm. (8 1/2 x 4 in.)")
   }
 
+  it should "extract language" in {
+    val result = mapping.language(
+      metadata(
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:language>
+            <mods:languageTerm>English</mods:languageTerm>
+          </mods:language>
+        </mods:mods>
+      )
+    ).head.providedLabel
+    assert(result === Some("English"))
+  }
+
+  it should "extract subject" in {
+    val result = mapping.subject(
+      metadata(
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:subject>
+            <mods:topic>Clothing &amp; dress--19th century</mods:topic>
+          </mods:subject>
+          <mods:subject>
+            <mods:name>Milton Bradley</mods:name>
+          </mods:subject>
+          <mods:subject>
+            <mods:genre>Funky outfits</mods:genre>
+          </mods:subject>
+        </mods:mods>
+      )
+    ).map(_.providedLabel.getOrElse(""))
+    assert(result.contains("Clothing & dress--19th century"))
+    assert(result.contains("Milton Bradley"))
+    assert(result.contains("Funky outfits"))
+  }
+
+  it should "extract title" in {
+    val result = mapping.title(
+      metadata(
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:titleInfo>
+            <mods:title>The English Paitent</mods:title>
+          </mods:titleInfo>
+        </mods:mods>
+      )
+    ).head
+    assert(result === "The English Paitent")
+  }
+
+
+  it should "extract type" in {
+    val result = mapping.`type`(
+      metadata(
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:typeOfResource>Image</mods:typeOfResource>
+        </mods:mods>
+      )
+    ).head
+    assert(result === "Image")
+  }
+
+  it should "extract publisher" in {
+    val result = mapping.publisher(
+      metadata(
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:originInfo>
+            <mods:publisher>The New York Times</mods:publisher>
+          </mods:originInfo>
+        </mods:mods>
+      )
+    ).head.name.getOrElse("")
+    assert(result === "The New York Times")
+  }
+
+  it should "extract format" in {
+    val result = mapping.format(
+      metadata(
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:physicalDescription>
+            <mods:form>Tubular Bells</mods:form>
+          </mods:physicalDescription>
+        </mods:mods>
+      )
+    ).head
+    assert(result === "Tubular Bells")
+  }
+
+  it should "extract place" in {
+    val result = mapping.place(
+      metadata(
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:subject>
+            <mods:geographic>Bag End</mods:geographic>
+          </mods:subject>
+        </mods:mods>
+      )
+    ).head.name.getOrElse("")
+    assert(result === "Bag End")
+  }
+
+  it should "extract relation" in {
+    val result = mapping.relation(
+      metadata(
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:relatedItem type="series">
+            <mods:titleInfo>
+              <mods:title>Game of Thrones</mods:title>
+            </mods:titleInfo>
+          </mods:relatedItem>
+        </mods:mods>
+      )
+    ).head
+    assert(result === Left("Game of Thrones"))
+  }
+
+  it should "extract collection" in {
+    val result = mapping.collection(
+      metadata(
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:relatedItem type="host">
+            <mods:titleInfo>
+              <mods:title>HBO Videos</mods:title>
+            </mods:titleInfo>
+          </mods:relatedItem>
+        </mods:mods>
+      )
+    ).head.title.getOrElse("")
+    assert(result === "HBO Videos")
+  }
 
 
 
