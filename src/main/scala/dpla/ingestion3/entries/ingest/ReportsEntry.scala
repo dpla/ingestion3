@@ -1,6 +1,6 @@
 package dpla.ingestion3.entries.ingest
 
-import dpla.ingestion3.confs.CmdArgs
+import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.entries.reports.ReporterMain.executeAllReports
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
@@ -12,7 +12,8 @@ import org.apache.spark.SparkConf
   * Expects three parameters:
   * 1) a path to the mapped/enriched data
   * 2) a path to output the reports
-  * 3) provider short name (e.g. 'mdl', 'cdl', 'harvard')
+  * 3) a path to the application configuration file
+  * 4) provider short name
   *
   * Usage
   * -----
@@ -20,6 +21,7 @@ import org.apache.spark.SparkConf
   * sbt "run-main dpla.ingestion3.ReportsEntry
   *       --input=/input/path/to/enriched/
   *       --output=/output/path/to/reports/
+  *       --conf=/path/to/application.conf
   *       --name=shortName"
   */
 object ReportsEntry {
@@ -32,6 +34,10 @@ object ReportsEntry {
     val dataIn = cmdArgs.getInput()
     val dataOut = cmdArgs.getOutput()
     val shortName = cmdArgs.getProviderName()
+    val confFile = cmdArgs.getConfigFile()
+
+    // Load configuration from file
+    val i3Conf: i3Conf = new Ingestion3Conf(confFile).load()
 
     // Get logger
     val logger = Utils.createLogger("reports", shortName)
@@ -39,7 +45,7 @@ object ReportsEntry {
     val sparkConf =
       new SparkConf()
         .setAppName("reports")
-        .setMaster("local[*]")
+        .setMaster(i3Conf.spark.sparkMaster.getOrElse("local[*]"))
 
     executeAllReports(sparkConf, dataIn, dataOut, shortName, logger)
   }
