@@ -28,10 +28,6 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
     assert(result === "oai:plains2peaks:Pine_River_2019-01:oai:prlibrary.cvlcollections.org:54")
   }
 
-  //TODO
-  it should "mint the correct DPLA URI" in {
-  }
-
   it should "return the correct data provider" in {
     val result = mapping.dataProvider(
       metadata(
@@ -107,10 +103,6 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
         uri = Some(URI("http://dp.la/api/contributor/p2p"))
       )
     )
-  }
-
-  it should "build a sidecar" in {
-    //todo
   }
 
   it should "extract a contributor" in {
