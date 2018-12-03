@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
-import dpla.ingestion3.model.{EdmAgent, URI}
+import dpla.ingestion3.model._
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 import scala.xml.NodeSeq
@@ -35,7 +35,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           <note type="ownership">Foo</note>
         </mods:mods>
       )
-    ).head.name
+    ).headOption.getOrElse(EdmAgent()).name
 
     assert(result === Some("Foo"))
   }
@@ -47,7 +47,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           <mods:note type="admin">Foo</mods:note>
         </mods:mods>
       )
-    ).head.name
+    ).headOption.getOrElse(EdmAgent()).name
     assert(result === Some("Foo"))
   }
 
@@ -60,7 +60,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:accessCondition>
         </mods:mods>
       )
-    ).head
+    ).headOption.getOrElse(EdmWebResource(uri = URI("")))
     assert(result === URI("http://rightsstatements.org/vocab/CNE/1.0/"))
   }
 
@@ -73,7 +73,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:location>
         </mods:mods>
       )
-    ).head.uri
+    ).headOption.getOrElse(EdmWebResource(uri = URI(""))).uri
     assert(result === URI("http://digital.denverlibrary.org/utils/getthumbnail/collection/p15330coll22/id/75547"))
   }
 
@@ -91,7 +91,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:location>
         </mods:mods>
       )
-    ).head.uri
+    ).headOption.getOrElse(EdmWebResource(uri = URI(""))).uri
     assert(result === URI("http://cdm16079.contentdm.oclc.org/cdm/ref/collection/p15330coll22/id/75547"))
   }
 
@@ -117,7 +117,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:name>
         </mods:mods>
       )
-    ).head.name
+    ).headOption.getOrElse(EdmAgent()).name
     assert(result === Some("Rinehart, A. E. (Alfred Evans)"))
   }
 
@@ -133,7 +133,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:name>
         </mods:mods>
       )
-    ).head.name
+    ).headOption.getOrElse(EdmAgent()).name
     assert(result === Some("Rinehart, A. E. (Alfred Evans)"))
   }
 
@@ -146,7 +146,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:originInfo>
         </mods:mods>
       )
-    ).head.originalSourceDate
+    ).headOption.getOrElse(EdmTimeSpan()).originalSourceDate
     assert(result === Some("[1890-1900?]"))
   }
 
@@ -157,7 +157,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           <mods:abstract>Studio portrait of a boy dressed in a tailored wool pinstripe suit with a jacket, cut out at the waist, and a skirt. The jacket has decorative braided cord frogs. He wears stockings and high leather shoes with buttons. He holds a cane with a carved handle and leans on a cement chair or bench.</mods:abstract>
         </mods:mods>
       )
-    ).head
+    ).headOption.getOrElse("")
     assert(result === "Studio portrait of a boy dressed in a tailored wool pinstripe suit with a jacket, cut out at the waist, and a skirt. The jacket has decorative braided cord frogs. He wears stockings and high leather shoes with buttons. He holds a cane with a carved handle and leans on a cement chair or bench.")
   }
 
@@ -170,7 +170,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:physicalDescription>
         </mods:mods>
       )
-    ).head
+    ).headOption.getOrElse("")
     assert(result === "1 photographic print on card mount : albumen ; 21 x 10 cm. (8 1/2 x 4 in.)")
   }
 
@@ -183,7 +183,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:physicalDescription>
         </mods:mods>
       )
-    ).head
+    ).headOption.getOrElse("")
     assert(result === "1 photographic print on card mount : albumen ; 21 x 10 cm. (8 1/2 x 4 in.)")
   }
 
@@ -196,7 +196,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:language>
         </mods:mods>
       )
-    ).head.providedLabel
+    ).headOption.getOrElse(SkosConcept()).providedLabel
     assert(result === Some("English"))
   }
 
@@ -230,7 +230,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:titleInfo>
         </mods:mods>
       )
-    ).head
+    ).headOption.getOrElse("")
     assert(result === "The English Paitent")
   }
 
@@ -242,7 +242,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           <mods:typeOfResource>Image</mods:typeOfResource>
         </mods:mods>
       )
-    ).head
+    ).headOption.getOrElse("")
     assert(result === "Image")
   }
 
@@ -255,7 +255,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:originInfo>
         </mods:mods>
       )
-    ).head.name.getOrElse("")
+    ).headOption.getOrElse(EdmAgent()).name.getOrElse("")
     assert(result === "The New York Times")
   }
 
@@ -268,7 +268,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:physicalDescription>
         </mods:mods>
       )
-    ).head
+    ).headOption.getOrElse("")
     assert(result === "Tubular Bells")
   }
 
@@ -296,7 +296,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:relatedItem>
         </mods:mods>
       )
-    ).head
+    ).headOption.getOrElse(Left(""))
     assert(result === Left("Game of Thrones"))
   }
 
@@ -311,7 +311,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:relatedItem>
         </mods:mods>
       )
-    ).head.title.getOrElse("")
+    ).headOption.getOrElse(DcmiTypeCollection()).title.getOrElse("")
     assert(result === "HBO Videos")
   }
 
