@@ -281,7 +281,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:subject>
         </mods:mods>
       )
-    ).head.name.getOrElse("")
+    ).headOption.getOrElse(DplaPlace()).name.getOrElse("")
     assert(result === "Bag End")
   }
 

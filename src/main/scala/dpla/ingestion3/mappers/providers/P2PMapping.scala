@@ -47,7 +47,7 @@ class P2PMapping()
     for {
       node <- data \ "metadata" \ "mods" \ "accessCondition"
       if node \@ "type" == "use and reproduction"
-    } yield URI(node.text.trim)
+  } yield URI(node.text.trim)
 
   /*
     <mods:location>
