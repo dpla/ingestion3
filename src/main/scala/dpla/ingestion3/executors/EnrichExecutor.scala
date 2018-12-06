@@ -88,10 +88,6 @@ trait EnrichExecutor extends Serializable {
       .filter(tuple => Option(tuple._1).isDefined)
       .map(tuple => tuple._1)(dplaMapDataRowEncoder)
 
-    val failures:  Array[String] = enrichResults
-      .filter(tuple => Option(tuple._2).isDefined)
-      .map(tuple => tuple._2).collect()
-
     // Get all the messages for all records
     val messages = MessageProcessor.getAllMessages(successResults)(spark)
 
@@ -180,9 +176,6 @@ trait EnrichExecutor extends Serializable {
     logger.info(enrichSummary)
 
     sc.stop()
-
-    // Log error messages.
-    failures.foreach(logger.error(_))
 
     // Return output destination of enriched records.
     outputPath
