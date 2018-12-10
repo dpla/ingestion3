@@ -24,7 +24,7 @@ class P2PMapping()
 
   override def getProviderId(implicit data: Document[NodeSeq]): String =
     extractString(data \\ "header" \ "identifier")
-    .map(_.trim)
+      .map(_.trim)
       .getOrElse(throw new RuntimeException(s"No ID for record $data"))
 
   // OreAggregation fields
@@ -48,7 +48,7 @@ class P2PMapping()
     for {
       node <- data \ "metadata" \ "mods" \ "accessCondition"
       if node \@ "type" == "use and reproduction"
-  } yield URI(node.text.trim)
+    } yield URI(node.text.trim)
 
   /*
     <mods:location>
