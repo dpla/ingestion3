@@ -14,6 +14,8 @@ import org.apache.spark.SparkConf
   * 1) a path to the mapped/enriched data
   * 2) a path to output the jsonl data
   * 3) provider short name (e.g. 'mdl', 'cdl', 'harvard')
+  * 4) spark master (optional parameter that overrides a --master param submitted
+  *    via spark-submit
   *
   * Usage
   * -----
@@ -22,6 +24,7 @@ import org.apache.spark.SparkConf
   *       --input=/input/path/to/enriched/
   *       --output=/output/path/to/jsonl/
   *       --name=shortName"
+  *       --sparkMaster=local[*]
   */
 object JsonlEntry extends JsonlExecutor {
 
@@ -33,11 +36,16 @@ object JsonlEntry extends JsonlExecutor {
     val dataIn = cmdArgs.getInput()
     val dataOut = cmdArgs.getOutput()
     val shortName = cmdArgs.getProviderName()
+    val sparkMaster: Option[String] = cmdArgs.getSparkMaster()
 
-    val sparkConf =
+    val baseConf =
       new SparkConf()
-      .setAppName("jsonl")
-      .setMaster("local[*]")
+        .setAppName(s"JSONL: $shortName")
+
+    val sparkConf = sparkMaster match {
+      case Some(m) => baseConf.setMaster(m)
+      case None => baseConf
+    }
 
     executeJsonl(sparkConf, dataIn, dataOut, shortName, Utils.createLogger("jsonl"))
   }

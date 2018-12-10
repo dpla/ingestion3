@@ -49,7 +49,6 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None) 
         query = getProp(providerConf, "harvest.query")
       ),
       i3Spark(
-        sparkMaster = getProp(providerConf, "spark.master"),
         // FIXME these should be removed
         sparkDriverMemory = getProp(providerConf, "spark.driverMemory"),
         sparkExecutorMemory= getProp(providerConf, "spark.executorMemory")
@@ -97,6 +96,12 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     validate = _.nonEmpty
   )
 
+  val sparkMaster: ScallopOption[String] = opt[String](
+    "sparkMaster",
+    required = false,
+    noshort = true
+  )
+
   /**
     * Gets the configuration file property from command line arguments
     *
@@ -133,6 +138,8 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     .map(_.toString)
     .getOrElse(throw new RuntimeException("No provider name specified."))
 
+  def getSparkMaster(): Option[String] = sparkMaster.toOption
+
   verify()
 }
 
@@ -140,20 +147,20 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
   * Classes for defining the application.conf file
   */
 case class Harvest (
-                      // General
-                      endpoint: Option[String] = None,
-                      setlist: Option[String] = None,
-                      blacklist: Option[String] = None,
-                      harvestType: Option[String] = None,
-                      // OAI
-                      verb: Option[String] = None,
-                      metadataPrefix: Option[String] = None,
-                      harvestAllSets: Option[String] = None,
-                      // API
-                      rows: Option[String] = None,
-                      query: Option[String] = None,
-                      apiKey: Option[String] = None
-                    )
+                     // General
+                     endpoint: Option[String] = None,
+                     setlist: Option[String] = None,
+                     blacklist: Option[String] = None,
+                     harvestType: Option[String] = None,
+                     // OAI
+                     verb: Option[String] = None,
+                     metadataPrefix: Option[String] = None,
+                     harvestAllSets: Option[String] = None,
+                     // API
+                     rows: Option[String] = None,
+                     query: Option[String] = None,
+                     apiKey: Option[String] = None
+                   )
 
 case class i3Conf(
                    provider: Option[String] = None,
@@ -163,12 +170,11 @@ case class i3Conf(
                  )
 
 case class i3Twofishes(
-                  hostname: Option[String] = None,
-                  port: Option[String] = None
-                )
+                        hostname: Option[String] = None,
+                        port: Option[String] = None
+                      )
 
 case class i3Spark (
-                     sparkMaster: Option[String] = None,
                      sparkDriverMemory: Option[String] = None,
                      sparkExecutorMemory: Option[String] = None
                    )

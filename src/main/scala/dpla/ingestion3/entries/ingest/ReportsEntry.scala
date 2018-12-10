@@ -14,6 +14,8 @@ import org.apache.spark.SparkConf
   * 2) a path to output the reports
   * 3) a path to the application configuration file
   * 4) provider short name
+  * 5) spark master (optional parameter that overrides a --master param submitted
+  *    via spark-submit
   *
   * Usage
   * -----
@@ -23,6 +25,7 @@ import org.apache.spark.SparkConf
   *       --output=/output/path/to/reports/
   *       --conf=/path/to/application.conf
   *       --name=shortName"
+  *       --sparkMaster=local[*]
   */
 object ReportsEntry {
 
@@ -35,6 +38,7 @@ object ReportsEntry {
     val dataOut = cmdArgs.getOutput()
     val shortName = cmdArgs.getProviderName()
     val confFile = cmdArgs.getConfigFile()
+    val sparkMaster: Option[String] = cmdArgs.getSparkMaster()
 
     // Load configuration from file
     val i3Conf: i3Conf = new Ingestion3Conf(confFile).load()
@@ -42,10 +46,14 @@ object ReportsEntry {
     // Get logger
     val logger = Utils.createLogger("reports", shortName)
 
-    val sparkConf =
+    val baseConf =
       new SparkConf()
-        .setAppName("reports")
-        .setMaster(i3Conf.spark.sparkMaster.getOrElse("local[*]"))
+        .setAppName(s"Reports: $shortName")
+
+    val sparkConf = sparkMaster match {
+      case Some(m) => baseConf.setMaster(m)
+      case None => baseConf
+    }
 
     executeAllReports(sparkConf, dataIn, dataOut, shortName, logger)
   }

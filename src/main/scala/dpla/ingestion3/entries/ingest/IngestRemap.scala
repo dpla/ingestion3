@@ -15,6 +15,8 @@ import org.apache.spark.SparkConf
   *   2)  --input   A path to the harvested data
   *   3)  --conf    A path to the application configuration file
   *   4)  --name    Provider short name
+  *   5)  --sparkMaster optional parameter that overrides a --master param submitted
+  * *                   via spark-submit (e.g. local[*])
   */
 object IngestRemap extends MappingExecutor
   with JsonlExecutor
@@ -29,6 +31,7 @@ object IngestRemap extends MappingExecutor
     val confFile = cmdArgs.getConfigFile()
     val shortName = cmdArgs.getProviderName()
     val input = cmdArgs.getInput()
+    val sparkMaster: Option[String] = cmdArgs.getSparkMaster()
 
     // Get logger
     val logger = Utils.createLogger("ingest", shortName)
@@ -50,19 +53,20 @@ object IngestRemap extends MappingExecutor
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
     val conf = i3Conf.load()
 
-    // Read spark master property from conf, default to 'local[1]' if not set
-    val sparkMaster = conf.spark.sparkMaster.getOrElse("local[1]")
-
-    val sparkConf = new SparkConf()
-      .setAppName(s"Mapping: $shortName")
+    val baseConf = new SparkConf()
+      .setAppName(s"IngestRemap: $shortName")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryoserializer.buffer.max", "200")
-      .setMaster(sparkMaster)
+
+    val sparkConf = sparkMaster match {
+      case Some(m) => baseConf.setMaster(m)
+      case None => baseConf
+    }
 
     // TODO These processes should return some flag or metric to help determine whether to proceed
     // Mapping
     val mapDataOut: String =
-      executeMapping(sparkConf, harvestData, baseDataOut, shortName, logger)
+    executeMapping(sparkConf, harvestData, baseDataOut, shortName, logger)
 
     // Enrichment
     val enrichDataOut: String =
