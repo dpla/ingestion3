@@ -1,5 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
@@ -88,7 +90,9 @@ class P2PMapping()
     for {
       name <- data \ "metadata" \ "mods" \ "name"
       if (name \ "role" \ "roleTerm").text.trim == "creator"
-    } yield nameOnlyAgent((name \ "namePart").text.trim)
+      nameText = (name \ "namePart").text.trim
+      if nameText.nonEmpty
+    } yield nameOnlyAgent(nameText)
 
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
     extractStrings(data \ "metadata" \ "mods" \ "originInfo" \ "dateCreated")
@@ -114,7 +118,9 @@ class P2PMapping()
         subjectNode \ "topic" ++
           subjectNode \ "name" ++
           subjectNode \ "genre"
-    } yield nameOnlyConcept(subject.text.trim)
+      subjectText = subject.text.trim
+      if subjectText.nonEmpty
+    } yield nameOnlyConcept(subjectText)
 
   override def title(data: Document[NodeSeq]): AtLeastOne[String] =
     extractStrings(data \ "metadata" \ "mods" \ "titleInfo" \ "title")
@@ -128,6 +134,14 @@ class P2PMapping()
 
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "physicalDescription" \ "form")
+      .map(
+        _.applyBlockFilter(
+          DigitalSurrogateBlockList.termList ++
+            ExtentIdentificationList.termList
+        )
+      )
+      .flatMap(_.splitAtDelimiter(";"))
+      .filter(_.nonEmpty)
 
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
     extractStrings(data \ "metadata" \ "mods" \ "subject" \ "geographic")
