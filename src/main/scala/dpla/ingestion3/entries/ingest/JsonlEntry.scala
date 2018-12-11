@@ -16,6 +16,8 @@ import org.apache.spark.SparkConf
   * 3) provider short name (e.g. 'mdl', 'cdl', 'harvard')
   * 4) spark master (optional parameter that overrides a --master param submitted
   *    via spark-submit
+  * 5) boolean indicating whether or not output should be consolidated into
+  *    a single file (defaults to false)
   *
   * Usage
   * -----
@@ -25,6 +27,7 @@ import org.apache.spark.SparkConf
   *       --output=/output/path/to/jsonl/
   *       --name=shortName"
   *       --sparkMaster=local[*]
+  *       --mergeOutput=true
   */
 object JsonlEntry extends JsonlExecutor {
 
@@ -37,6 +40,7 @@ object JsonlEntry extends JsonlExecutor {
     val dataOut = cmdArgs.getOutput()
     val shortName = cmdArgs.getProviderName()
     val sparkMaster: Option[String] = cmdArgs.getSparkMaster()
+    val mergeOutput: Boolean = cmdArgs.getMergeOutput()
 
     val baseConf =
       new SparkConf()
@@ -47,6 +51,8 @@ object JsonlEntry extends JsonlExecutor {
       case None => baseConf
     }
 
-    executeJsonl(sparkConf, dataIn, dataOut, shortName, Utils.createLogger("jsonl"))
+    val logger = Utils.createLogger("jsonl")
+
+    executeJsonl(sparkConf, dataIn, dataOut, shortName, mergeOutput, logger)
   }
 }
