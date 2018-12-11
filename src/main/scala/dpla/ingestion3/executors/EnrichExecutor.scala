@@ -74,6 +74,10 @@ trait EnrichExecutor extends Serializable {
     // Load the mapped records
     val mappedRows: DataFrame = spark.read.avro(dataIn)
 
+    // Wrapping an instance of EnrichmentDriver in an object allows it to be
+    // used in distributed operations. Without the object wrapper, it throws
+    // NotSerializableException errors, which originate in several of the
+    // individual enrichments.
     object SharedDriver {
       val driver = new EnrichmentDriver(i3conf)
       def get: EnrichmentDriver = driver
