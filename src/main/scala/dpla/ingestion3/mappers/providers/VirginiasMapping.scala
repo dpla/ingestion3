@@ -1,8 +1,9 @@
 package dpla.ingestion3.mappers.providers
 
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
 import dpla.ingestion3.messages.IngestMessageTemplates
-
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -11,9 +12,12 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
-
 class VirginiasMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
   with IngestMessageTemplates {
+
+  val formatBlockList: Set[String] =
+    DigitalSurrogateBlockList.termList ++
+      FormatTypeValuesBlockList.termList
 
   // ID minting functions
   override def useProviderName(): Boolean = false
@@ -44,9 +48,10 @@ class VirginiasMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "extent")
 
-  // TODO: Apply filters?
   override def format(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "medium")
+      .map(_.applyBlockFilter(formatBlockList))
+      .filter(_.nonEmpty)
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "identifier")
