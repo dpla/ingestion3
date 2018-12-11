@@ -13,7 +13,6 @@ import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
-import org.apache.spark.sql.functions.col
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
@@ -170,7 +169,6 @@ trait MappingExecutor extends Serializable {
     // Transformation
     val messages: DataFrame = MessageProcessor.getAllMessages(results)(spark)
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
-      .repartition(col("id"))
 
     val warnings: DataFrame = MessageProcessor.getWarnings(messages)
     val errors: DataFrame = MessageProcessor.getErrors(messages)
