@@ -17,7 +17,6 @@ import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
-import org.apache.spark.sql.functions.col
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
