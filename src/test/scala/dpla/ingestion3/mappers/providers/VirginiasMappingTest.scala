@@ -60,6 +60,29 @@ class VirginiasMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.extent(xml) === expected)
   }
 
+  it should "extract the correct format" in {
+    val expected = Seq("print")
+    assert(extractor.format(xml) === expected)
+  }
+
+  it should "extract the correct format and remove values in that are stop words ('image')" in {
+    val xml =
+      <mdRecord>
+        <dcterms:medium>image</dcterms:medium>
+        <dcterms:medium>photograph</dcterms:medium>
+      </mdRecord>
+    val expected = Seq("photograph")
+    assert(extractor.format(Document(xml)) === expected)
+  }
+
+  it should "extract no format when values are in format blacklist" in {
+    val xml =
+      <mdRecord>
+        <dcterms:medium>image/jpeg</dcterms:medium>
+      </mdRecord>
+    assert(extractor.format(Document(xml)) === Seq())
+  }
+
   it should "extract the correct identifier" in {
     val expected = Seq("uva-lib:1002813")
     assert(extractor.identifier(xml) === expected)
