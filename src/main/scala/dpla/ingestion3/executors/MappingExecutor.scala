@@ -6,13 +6,14 @@ import com.databricks.spark.avro._
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
-import dpla.ingestion3.model.RowConverter
+import dpla.ingestion3.model.{OreAggregation, RowConverter}
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
+import org.apache.spark.sql.functions.col
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
@@ -54,12 +55,9 @@ trait MappingExecutor extends Serializable {
       .getOrCreate()
 
     val sc = spark.sparkContext
-    // TODO: assign checkpoint directory based on a configurable setting.
 
-    // TODO Is it faster easier to use a counter than query a DF in most cases?
     val totalCount: LongAccumulator = sc.longAccumulator("Total Record Count")
     val successCount: LongAccumulator = sc.longAccumulator("Successful Record Count")
-    val failureCount: LongAccumulator = sc.longAccumulator("Failed Record Count")
 
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
@@ -68,7 +66,7 @@ trait MappingExecutor extends Serializable {
     val oreAggregationEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
 
     // Load the harvested record dataframe
-    val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1024)
+    val harvestedRecords: DataFrame = spark.read.avro(dataIn)
 
     // Run the mapping over the Dataframe
     val documents: Dataset[String] = harvestedRecords.select("document").as[String]
@@ -76,15 +74,16 @@ trait MappingExecutor extends Serializable {
     val dplaMap = new DplaMap()
 
     // All attempted records
+    // Transformation only
     val mappingResults: Dataset[Row] =
-      documents.map(document =>
-        dplaMap.map(document, shortName,
-          totalCount, successCount, failureCount)
-      )(oreAggregationEncoder)
-        .persist(StorageLevel.MEMORY_AND_DISK_SER)
+    documents.map(document =>
+      dplaMap.map(document, shortName, totalCount, successCount)
+    )(oreAggregationEncoder)
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Removes records from mappingResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
+    // Transformation only
     val successResults: Dataset[Row] = mappingResults
       .filter(oreAggRow => {
         !oreAggRow // not
@@ -98,10 +97,15 @@ trait MappingExecutor extends Serializable {
     // already existing, and will fail to write.
     successResults.toDF().write.avro(outputPath)
 
+    // Get counts from accumulators
+    val validRecordCount = successCount.count
+    val attemptedCount = totalCount.count
+
+    // Write manifest
     val manifestOpts: Map[String, String] = Map(
       "Activity" -> "Mapping",
       "Provider" -> shortName,
-      "Record count" -> Utils.formatNumber(successResults.count),
+      "Record count" -> Utils.formatNumber(validRecordCount),
       "Input" -> dataIn
     )
     outputHelper.writeManifest(manifestOpts) match {
@@ -114,7 +118,16 @@ trait MappingExecutor extends Serializable {
     val logsPath = outputHelper.logsPath
 
     // Collect the values needed to generate the report
-    val finalReport = buildFinalReport(mappingResults, shortName, logsPath, startTime, endTime)(spark)
+    // `mappingResults' are unpersisted during the execution of `buildFinalReport'
+    val finalReport =
+    buildFinalReport(
+      mappingResults,
+      shortName,
+      logsPath,
+      startTime,
+      endTime,
+      attemptedCount,
+      validRecordCount)(spark)
 
     // Format the summary report and write it log file
     val mappingSummary = MappingSummary.getSummary(finalReport)
@@ -146,47 +159,47 @@ trait MappingExecutor extends Serializable {
                        shortName: String,
                        logsBasePath: String,
                        startTime: Long,
-                       endTime: Long)(implicit spark: SparkSession): MappingSummaryData = {
+                       endTime: Long,
+                       attemptedCount: Long,
+                       validRecordCount: Long)(implicit spark: SparkSession): MappingSummaryData = {
     import spark.implicits._
 
     // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
     // val oreAggregationEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
 
-    // val results: Dataset[Row] = mappingResults.map(oreAgg => oreAgg)(oreAggregationEncoder)
+    // Transformation
+    val messages: DataFrame = MessageProcessor.getAllMessages(results)(spark)
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
+      .repartition(col("id"))
 
-    val messages = MessageProcessor.getAllMessages(results)(spark)
-    val warnings = MessageProcessor.getWarnings(messages)
-    val errors =   MessageProcessor.getErrors(messages)
+    val warnings: DataFrame = MessageProcessor.getWarnings(messages)
+    val errors: DataFrame = MessageProcessor.getErrors(messages)
 
-    // get counts
-    val attemptedCount = results.count()
-    val validRecordCount = results.filter(oreAggRow => { // FIXME This is duplicating work in MappingExecutor
-      !oreAggRow // not
-        .getAs[mutable.WrappedArray[Row]]("messages") // get all messages
-        .map(msg => msg.getString(1)) // extract the levels into a list
-        .contains(IngestLogLevel.error) // does that list contain any errors?
-    }).count()
+    // These actions evaluate `messages', `warnings', and `errors'
+    val warnCount: Long = warnings.count
+    val errorCount: Long = errors.count
 
-    val warnCount = warnings.count()
-    val errorCount = errors.count()
+    val logFileList: List[(String, Dataset[Row])] = List(
+      "errors" -> (errors, errorCount),
+      "warnings" -> (warnings, warnCount)
+    ).filter { case (_, (_, count: Long)) => count > 0 } // drop empty
+      .map{ case (key: String, (data: Dataset[_], _: Long)) => key -> data} // drop count
 
-    val recordErrorCount = MessageProcessor.getDistinctIdCount(errors)
-    val recordWarnCount = MessageProcessor.getDistinctIdCount(warnings)
-
-    val errorMsgDetails = MessageProcessor.getMessageFieldSummary(errors).mkString("\n")
-    val warnMsgDetails = MessageProcessor.getMessageFieldSummary(warnings).mkString("\n")
-
-    val logFileList = List(
-      "errors" -> errors,
-      "warnings" -> warnings
-    ).filter { case (_, data: Dataset[_]) => data.count() > 0 }
-
-    val logFileSeq = logFileList.map {
+    // write out warnings and errors
+    val logFileSeq: List[String] = logFileList.map {
       case (name: String, data: Dataset[Row]) =>
         val path = s"$logsBasePath/$name"
         Utils.writeLogsAsCsv(path, name, data, shortName)
         path
     }
+
+    val recordErrorCount: Long = MessageProcessor.getDistinctIdCount(errors)
+    val recordWarnCount: Long = MessageProcessor.getDistinctIdCount(warnings)
+
+    val errorMsgDetails: String =
+      MessageProcessor.getMessageFieldSummary(errors).mkString("\n")
+    val warnMsgDetails: String =
+      MessageProcessor.getMessageFieldSummary(warnings).mkString("\n")
 
     // time summary
     val timeSummary = TimeSummary(
@@ -230,15 +243,20 @@ class DplaMap extends Serializable {
   def map(document: String,
           shortName: String,
           totalCount: LongAccumulator,
-          successCount: LongAccumulator,
-          failureCount: LongAccumulator): Row = {
+          successCount: LongAccumulator): Row = {
     totalCount.add(1)
 
     val extractorClass = ProviderRegistry.lookupProfile(shortName) match {
       case Success(extClass) => extClass
       case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
     }
-    val oreAggregation = extractorClass.performMapping(document)
+    val oreAggregation: OreAggregation = extractorClass.performMapping(document)
+
+    val hasError: Boolean =
+      oreAggregation.messages.map(m => m.level).contains(IngestLogLevel.error)
+
+    if (!hasError) successCount.add(1)
+
     RowConverter.toRow(oreAggregation, model.sparkSchema)
   }
 }
