@@ -12,6 +12,8 @@ import org.apache.spark.SparkConf
   *   --output  Path to output directory or S3 bucket
   *   --conf    Path to conf file
   *   --name    Provider short name
+  *   --sparkMaster optional parameter that overrides a --master param submitted
+  *                 via spark-submit (e.g. local[*])
   */
 object HarvestEntry extends HarvestExecutor {
 
@@ -23,6 +25,7 @@ object HarvestEntry extends HarvestExecutor {
     val dataOut = cmdArgs.getOutput()
     val confFile = cmdArgs.getConfigFile()
     val shortName = cmdArgs.getProviderName()
+    val sparkMaster = cmdArgs.getSparkMaster()
 
     // Get mapping logger.
     val harvestLogger = Utils.createLogger("harvest", shortName)
@@ -31,11 +34,15 @@ object HarvestEntry extends HarvestExecutor {
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
     val providerConf: i3Conf = i3Conf.load()
 
-    val sparkConf = new SparkConf()
-      .setAppName("Harvest")
+    val baseConf = new SparkConf()
+      .setAppName(s"Harvest: $shortName")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryoserializer.buffer.max", "200")
-      .setMaster(providerConf.spark.sparkMaster.getOrElse("local[*]"))
+
+    val sparkConf = sparkMaster match {
+      case Some(m) => baseConf.setMaster(m)
+      case None => baseConf
+    }
 
     // Execute harvest.
     execute(sparkConf, shortName, dataOut, providerConf, harvestLogger)

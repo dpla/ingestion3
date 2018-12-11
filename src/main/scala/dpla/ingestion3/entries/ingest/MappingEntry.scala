@@ -12,6 +12,8 @@ import org.apache.spark.SparkConf
   * 2) a path to output the mapped data
   * 3) a path to the configuration file
   * 4) provider short name (e.g. 'mdl', 'cdl', 'harvard')
+  * 5) spark master (optional parameter that overrides a --master param submitted
+  *    via spark-submit)
   *
   * Usage
   * -----
@@ -21,6 +23,7 @@ import org.apache.spark.SparkConf
   *       --output=/output/path/to/mapped/
   *       --conf=/path/to/conf
   *       --name=shortName"
+  *       --sparkMaster=local[*]
   */
 
 object MappingEntry extends MappingExecutor {
@@ -33,6 +36,7 @@ object MappingEntry extends MappingExecutor {
     val dataOut = cmdArgs.getOutput()
     val confFile = cmdArgs.getConfigFile()
     val shortName = cmdArgs.getProviderName()
+    val sparkMaster: Option[String] = cmdArgs.getSparkMaster()
 
     // Get mapping logger.
     val logger = Utils.createLogger("mapping", shortName)
@@ -41,13 +45,14 @@ object MappingEntry extends MappingExecutor {
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
     val conf: i3Conf = i3Conf.load()
 
-    // Read spark master property from conf, default to 'local[1]' if not set
-    val sparkMaster = conf.spark.sparkMaster.getOrElse("local[1]")
-
-    val sparkConf = new SparkConf()
+    val baseConf = new SparkConf()
       .setAppName(s"Mapping: $shortName")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-      .setMaster(sparkMaster)
+
+    val sparkConf = sparkMaster match {
+      case Some(m) => baseConf.setMaster(m)
+      case None => baseConf
+    }
 
     // Log config file location and provider short name.
     executeMapping(sparkConf, dataIn, dataOut, shortName, logger)

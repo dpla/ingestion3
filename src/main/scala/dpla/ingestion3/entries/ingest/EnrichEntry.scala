@@ -11,6 +11,8 @@ import org.apache.spark.SparkConf
   *   2) a path to output the mapped data
   *   3) a path to the application configuration file
   *   4) provider short name
+  *   5) spark master (optional parameter that overrides a --master param submitted
+  *      via spark-submit
   *
   *   Usage
   *   -----
@@ -20,7 +22,7 @@ import org.apache.spark.SparkConf
   *     --output=/output/path/to/enriched.avro
   *     --conf=/path/to/application.conf
   *     --name=provider
-  *
+  *     --sparkMaster=local[*]
   */
 
 object EnrichEntry extends EnrichExecutor {
@@ -34,6 +36,7 @@ object EnrichEntry extends EnrichExecutor {
     val dataOut = cmdArgs.getOutput()
     val confFile = cmdArgs.getConfigFile()
     val shortName = cmdArgs.getProviderName()
+    val sparkMaster: Option[String] = cmdArgs.getSparkMaster()
 
     // Create enrichment logger.
     val enrichLogger = Utils.createLogger("enrichment", shortName)
@@ -41,11 +44,15 @@ object EnrichEntry extends EnrichExecutor {
     // Load configuration from file
     val i3Conf: i3Conf = new Ingestion3Conf(confFile).load()
 
-    val sparkConf = new SparkConf()
-      .setAppName("Enrichment")
+    val baseConf = new SparkConf()
+      .setAppName(s"Enrichment: $shortName")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryoserializer.buffer.max", "200")
-      .setMaster(i3Conf.spark.sparkMaster.getOrElse("local[*]"))
+
+    val sparkConf = sparkMaster match {
+      case Some(m) => baseConf.setMaster(m)
+      case None => baseConf
+    }
 
     executeEnrichment(sparkConf, dataIn, dataOut, shortName, enrichLogger, i3Conf)
   }
