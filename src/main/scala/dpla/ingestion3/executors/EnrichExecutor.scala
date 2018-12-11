@@ -130,7 +130,6 @@ trait EnrichExecutor extends Serializable {
     val messages: DataFrame = MessageProcessor
       .getAllMessages(successResults)(spark)
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
-      .repartition(col("id"))
 
     // Transformations.
     val typeMessages = messages.filter("field='type'")
