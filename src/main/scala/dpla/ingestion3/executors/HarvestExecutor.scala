@@ -88,10 +88,10 @@ trait HarvestExecutor {
         )
         outputHelper.writeManifest(manifestOpts) match {
           case Success(s) => logger.info(s"Manifest written to $s.")
-          case Failure(f) => logger.warn(s"Manifest failed to write: $f")
+          case Failure(f) => logger.warn(s"Manifest failed to write.", f)
         }
 
-      case Failure(f) => logger.error(s"Harvest failure: ${f.getMessage}")
+      case Failure(f) => logger.error(s"Harvest failure.", f)
     }
     harvester.cleanUp()
     spark.stop()

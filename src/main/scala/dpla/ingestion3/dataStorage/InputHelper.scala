@@ -28,8 +28,7 @@ object InputHelper {
     * @return     True if the path matches the pattern for an activity.
     */
   def isActivityPath(path: String): Boolean = {
-    val activityPath: Regex = """\d{8}_\d{6}-[A-Za-z]*-[^/]*/?$""".r.unanchored
-
+    val activityPath: Regex = """\d{8}_\d{6}-[A-Za-z0-9]*-[^/]*/?$""".r.unanchored
     path match {
       case activityPath() => true
       case _ => false

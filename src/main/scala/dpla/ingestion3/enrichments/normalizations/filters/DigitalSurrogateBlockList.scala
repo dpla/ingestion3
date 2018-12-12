@@ -16,6 +16,7 @@ object DigitalSurrogateBlockList extends FilterList {
     // TODO This file list should be stored in a config file and not hard coded
     "/formats/dc.csv",
     "/formats/ohio.csv",
+    "/formats/p2p.csv",
     "/formats/iana-imt-types.csv"
   )
 }

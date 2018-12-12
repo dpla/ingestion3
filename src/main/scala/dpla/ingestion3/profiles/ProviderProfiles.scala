@@ -140,10 +140,10 @@ class OklahomaProfile extends XmlProfile {
   * P2P (Plains2Peaks)
   * - Colorado and Wyoming
   */
-class P2PProfile extends JsonProfile {
+class P2PProfile extends XmlProfile {
   type Mapping = P2PMapping
 
-  override def getHarvester = classOf[P2PFileHarvester]
+  override def getHarvester = classOf[OaiHarvester]
   override def getMapping = new P2PMapping
 }
 
