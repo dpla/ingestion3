@@ -1,6 +1,5 @@
 package dpla.ingestion3.reports
 import dpla.ingestion3.model._
-import org.apache.spark.SparkConf
 import org.apache.spark.sql.functions.{col, explode}
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 
@@ -9,15 +8,13 @@ case class PropertyValueRpt(dplaUri: String,
                             value: Seq[String])
 
 class PropertyValueReport (
-                            val inputURI: String,
-                            val outputURI: String,
-                            val sparkConf: SparkConf,
+                            val input: Dataset[OreAggregation],
+                            val spark: SparkSession,
                             val params: Array[String]) extends Report with Serializable {
 
   override val sparkAppName: String = "PropertyValueReport"
-  override def getInputURI: String = inputURI
-  override def getOutputURI: String = outputURI
-  override def getSparkConf: SparkConf = sparkConf
+  override def getInput: Dataset[OreAggregation] = input
+  override def getSparkSession: SparkSession = spark
   override def getParams: Option[Array[String]] = {
     if (params.nonEmpty) {
       Some(params)

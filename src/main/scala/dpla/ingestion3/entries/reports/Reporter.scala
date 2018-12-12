@@ -1,8 +1,9 @@
 package dpla.ingestion3.entries.reports
 
+import dpla.ingestion3.model.OreAggregation
 import dpla.ingestion3.reports._
 import org.apache.log4j.Logger
-import org.apache.spark.SparkConf
+import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 
 import scala.util.{Failure, Try}
 
@@ -22,10 +23,9 @@ import scala.util.{Failure, Try}
   * @param reportParams     Additional parameters particular to the report
   */
 class Reporter (
-                 sparkConf: SparkConf,
+                 spark: SparkSession,
                  token: String,
-                 inputURI: String,
-                 outputURI: String,
+                 input: Dataset[OreAggregation],
                  reportParams: Array[String] = Array(),
                  logger: Logger
                ) {
@@ -33,29 +33,23 @@ class Reporter (
   private def getReport(token: String): Option[Report] = {
     token match {
       case "propertyDistinctValue" =>
-        Some(new PropertyDistinctValueReport(inputURI, outputURI, sparkConf, reportParams))
+        Some(new PropertyDistinctValueReport(input, spark, reportParams))
       case "propertyValue" =>
-        Some(new PropertyValueReport(inputURI, outputURI, sparkConf, reportParams))
+        Some(new PropertyValueReport(input, spark, reportParams))
       case "metadataCompleteness" =>
-        Some(new MetadataCompletenessReport(inputURI, outputURI, sparkConf, reportParams))
+        Some(new MetadataCompletenessReport(input, spark, reportParams))
       case "thumbnail" =>
-        Some(new ThumbnailReport(inputURI, outputURI, sparkConf, reportParams))
+        Some(new ThumbnailReport(input, spark, reportParams))
       case _ => None
     }
   }
 
-  def main(): Unit = {
-    val reportResult: Try[Unit] = getReport(token) match {
+  def main(): Try[DataFrame] = {
+    getReport(token) match {
       case Some(report) => report.run()
       case None => Failure(
         new RuntimeException(s"Report type $token is unknown")
       )
-    }
-    reportResult match {
-      case Failure(ex) =>
-        logger.error(ex.toString)
-        // logger.error("\n" + ex.getStackTrace.mkString("\n"))
-      case _ => Unit
     }
   }
 }

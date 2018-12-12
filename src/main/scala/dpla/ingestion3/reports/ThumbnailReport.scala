@@ -4,7 +4,6 @@ import java.net.URL
 
 import javax.imageio.ImageIO
 import dpla.ingestion3.model.{OreAggregation, URI}
-import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, Dataset, Encoder, SparkSession}
 
 import scala.util.{Failure, Success, Try}
@@ -43,15 +42,13 @@ import scala.util.{Failure, Success, Try}
   * @param params Array[String], string value can be "missing" OR "dimensions"
   */
 class ThumbnailReport (
-                            val inputURI: String,
-                            val outputURI: String,
-                            val sparkConf: SparkConf,
-                            val params: Array[String] = Array()) extends Report with Serializable {
+                        val input: Dataset[OreAggregation],
+                        val spark: SparkSession,
+                        val params: Array[String] = Array()) extends Report with Serializable {
 
   override val sparkAppName: String = "ThumbnailReport"
-  override def getInputURI: String = inputURI
-  override def getOutputURI: String = outputURI
-  override def getSparkConf: SparkConf = sparkConf
+  override def getInput: Dataset[OreAggregation] = input
+  override def getSparkSession: SparkSession = spark
   override def getParams: Option[Array[String]] = {
     params.nonEmpty match {
       case true => Some(params)
@@ -220,9 +217,9 @@ case class MissingThumbnail(localUri: String,
                             hasPreview: Boolean)
 
 case class Thumbnail(localUri: String,
-                            dplaUri: String,
-                            previewUri: String,
-                            hasPreview: Boolean)
+                     dplaUri: String,
+                     previewUri: String,
+                     hasPreview: Boolean)
 
 case class ThumbnailDimensions(localUri: String,
                                dplaUri: String,

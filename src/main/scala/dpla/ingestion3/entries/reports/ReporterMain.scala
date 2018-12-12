@@ -2,10 +2,13 @@ package dpla.ingestion3.entries.reports
 
 import java.time.LocalDateTime
 
+import com.databricks.spark.avro._
 import dpla.ingestion3.utils.Utils
 import dpla.ingestion3.dataStorage.OutputHelper
+import dpla.ingestion3.model.{ModelConverter, OreAggregation}
 import org.apache.spark.SparkConf
 import org.apache.log4j.Logger
+import org.apache.spark.sql.{DataFrame, Dataset, Encoder, SparkSession}
 
 import scala.util.{Failure, Success}
 
@@ -75,8 +78,26 @@ object ReporterMain {
     val sparkConf = new SparkConf().setMaster("local[1]")
     val logger = Utils.createLogger("reports")
 
+    // Start spark session
+    implicit val spark = SparkSession.builder()
+      .config(sparkConf)
+      .config("spark.ui.showConsoleProgress", false)
+      .getOrCreate()
+
+    val sc = spark.sparkContext
+
+    // Read data in
+    val inputDF: DataFrame = spark.read.avro(inputURI)
+
+    val mappedData: Dataset[OreAggregation] = dplaMapData(inputDF)
+
     // This is a pretty bogus default. Should read from config file...
-    executeReport(sparkConf, inputURI, outputURI, reportName, reportParams, logger)
+    val resultPath =
+      executeReport(spark, mappedData, outputURI, reportName, reportParams, logger)
+
+    sc.stop
+
+    resultPath
   }
 
 
@@ -101,23 +122,53 @@ object ReporterMain {
 
     val reportsPath = outputHelper.activityPath
 
-    // Property value / Property distinct value
-    fieldedRptList.map(rpt =>
-      reportFields.map(field => {
-        val rptOut = s"$reportsPath/$rpt/$field"
-        logger.info(s"Executing $rpt for $field")
-        executeReport(sparkConf, input, rptOut, rpt, Array(field), logger)
-      }
-    ))
+    // Start spark session
+    implicit val spark = SparkSession.builder()
+      .config(sparkConf)
+      .config("spark.ui.showConsoleProgress", false)
+      .getOrCreate()
+
+    val sc = spark.sparkContext
+
+    // Read data in
+    val inputDF: DataFrame = spark.read.avro(input)
+
+    val numPartitions: Int = inputDF.rdd.getNumPartitions
+
+    //    val mappedData: Dataset[OreAggregation] =
+    //      dplaMapData(inputDF).persist(StorageLevel.MEMORY_AND_DISK_SER)
+
+    def getMappedData: Dataset[OreAggregation] =  dplaMapData(inputDF)
 
     // Metadata completion report
     logger.info(s"Executing metadataCompleteness report")
-    executeReport(sparkConf, input, s"$reportsPath/metadataCompleteness", "metadataCompleteness", logger = logger)
+    executeReport(spark, getMappedData, s"$reportsPath/metadataCompleteness",
+      "metadataCompleteness", logger = logger)
 
-    // thumbnail report options
+    // mappedData is repartitioned before every subsequent job b/c it is
+    // consolidated to one node for writing out as CSV
+
+    // Thumbnail reports
     thumbnailOpts.foreach(rptOpt => {
       logger.info(s"Executing thumbnail report for $rptOpt")
-      executeReport(sparkConf, input, s"$reportsPath/thumbnail/$rptOpt", "thumbnail", Array(rptOpt), logger)
+      executeReport(spark, getMappedData, s"$reportsPath/thumbnail/$rptOpt",
+        "thumbnail", Array(rptOpt), logger)
+    })
+
+    // Property distinct value
+    reportFields.map(field => {
+      val rptOut = s"$reportsPath/propertyDistinctValue/$field"
+      logger.info(s"Executing propertyDistinctValue for $field")
+      executeReport(spark, getMappedData, rptOut, "propertyDistinctValue",
+        Array(field), logger)
+    })
+
+    // Property value
+    reportFields.map(field => {
+      val rptOut = s"$reportsPath/propertyValue/$field"
+      logger.info(s"Executing propertyValue for $field")
+      executeReport(spark, getMappedData, rptOut, "propertyValue",
+        Array(field), logger)
     })
 
     // Enrichment meta information
@@ -135,8 +186,18 @@ object ReporterMain {
       case Failure(f) => logger.warn(s"Manifest failed to write: $f")
     }
 
+    // Stop spark
+    sc.stop
+
     // Return reports path.
     reportsPath
+  }
+
+  def dplaMapData(input: DataFrame): Dataset[OreAggregation] = {
+    implicit val dplaMapDataEncoder: Encoder[OreAggregation] =
+      org.apache.spark.sql.Encoders.kryo[OreAggregation]
+
+    input.map(row => ModelConverter.toModel(row))
   }
 
   /**
@@ -149,14 +210,22 @@ object ReporterMain {
     * @param reportParams Supplemental report params
     * @return
     */
-  def executeReport(sparkConf: SparkConf,
-                    input: String,
+  def executeReport(spark: SparkSession,
+                    input: Dataset[OreAggregation],
                     output: String,
                     reportName: String,
                     reportParams: Array[String] = Array(),
                     logger: Logger): Unit = {
 
-    new Reporter(sparkConf, reportName, input, output, reportParams, logger)
-      .main()
+    new Reporter(spark, reportName, input, reportParams, logger).main() match {
+      case Success(rpt) =>
+        rpt.repartition(1)  // Otherwise multiple CSV files, do not use coalesce
+          .write
+          .format("com.databricks.spark.csv")
+          .option("header", "true")
+          .save(output)
+
+      case Failure(ex) => logger.error(ex.toString)
+    }
   }
 }
