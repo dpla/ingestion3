@@ -5,7 +5,6 @@ import org.apache.commons.lang.StringUtils
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 
-import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 case class MessageFieldRpt(msg: String, field: String, count: Long)
@@ -43,10 +42,12 @@ object MessageProcessor{
   }
 
   def getErrors(ds: Dataset[Row]): Dataset[Row] =
-    ds.select("message", "level", "field", "id", "value").where(s"level=='${IngestLogLevel.error}'").distinct()
+    ds.select("message", "level", "field", "id", "value")
+      .where(s"level=='${IngestLogLevel.error}'").distinct()
 
   def getWarnings(ds: Dataset[Row]): Dataset[Row] =
-    ds.select("message", "level", "field", "id", "value").where(s"level=='${IngestLogLevel.warn}'").distinct()
+    ds.select("message", "level", "field", "id", "value")
+      .where(s"level=='${IngestLogLevel.warn}'").distinct()
 
   def getDistinctIdCount(df: Dataset[Row]): Long =
     df.select("id").groupBy("id").count().count()
