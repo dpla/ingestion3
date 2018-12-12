@@ -60,6 +60,7 @@ trait JsonlExecutor extends Serializable {
     // data will be written out inside a JSON object (e.g. {'value': <doc>}) which is
     // invalid for our use
     mergeOutput match {
+      // repartition is notably faster than coalesce on moderately large datasets
       case true => indexRecords.repartition(1).write.text(outputPath)
       case false => indexRecords.write.text(outputPath)
     }
