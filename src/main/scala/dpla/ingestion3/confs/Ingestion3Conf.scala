@@ -102,6 +102,12 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     noshort = true
   )
 
+  val mergeOutput: ScallopOption[String] = opt[String](
+    "mergeOutput",
+    required = false,
+    noshort = true
+  )
+
   /**
     * Gets the configuration file property from command line arguments
     *
@@ -139,6 +145,8 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     .getOrElse(throw new RuntimeException("No provider name specified."))
 
   def getSparkMaster(): Option[String] = sparkMaster.toOption
+
+  def getMergeOutput(): Boolean = mergeOutput.toOption.getOrElse("false").toBoolean
 
   verify()
 }

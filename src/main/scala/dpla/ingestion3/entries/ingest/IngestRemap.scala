@@ -16,7 +16,9 @@ import org.apache.spark.SparkConf
   *   3)  --conf    A path to the application configuration file
   *   4)  --name    Provider short name
   *   5)  --sparkMaster optional parameter that overrides a --master param submitted
-  * *                   via spark-submit (e.g. local[*])
+  *                     via spark-submit (e.g. local[*])
+  *   6) --mergeOutput boolean indicating whether or not output should be
+  *                    consolidated into a single file (defaults to false)
   */
 object IngestRemap extends MappingExecutor
   with JsonlExecutor
@@ -32,6 +34,7 @@ object IngestRemap extends MappingExecutor
     val shortName = cmdArgs.getProviderName()
     val input = cmdArgs.getInput()
     val sparkMaster: Option[String] = cmdArgs.getSparkMaster()
+    val mergeOutput: Boolean = cmdArgs.getMergeOutput
 
     // Get logger
     val logger = Utils.createLogger("ingest", shortName)
@@ -73,7 +76,7 @@ object IngestRemap extends MappingExecutor
       executeEnrichment(sparkConf, mapDataOut, baseDataOut, shortName, logger, conf)
 
     // Json-l
-    executeJsonl(sparkConf, enrichDataOut, baseDataOut, shortName, logger)
+    executeJsonl(sparkConf, enrichDataOut, baseDataOut, shortName, mergeOutput, logger)
 
     // Reports
     executeAllReports(sparkConf, enrichDataOut, baseDataOut, shortName, logger)
