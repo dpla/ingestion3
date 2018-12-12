@@ -59,6 +59,9 @@ trait EnrichExecutor extends Serializable {
       .getOrCreate()
 
     val sc = spark.sparkContext
+
+    val attemptedCount: LongAccumulator = sc.longAccumulator("Total Mapped Record Count")
+    val successCount: LongAccumulator = sc.longAccumulator("Total Enriched Record Count")
     val improvedCount: LongAccumulator = sc.longAccumulator("Improved Record Count")
 
     // Need to keep this here despite what IntelliJ and Codacy say
@@ -70,42 +73,47 @@ trait EnrichExecutor extends Serializable {
     // Load the mapped records
     val mappedRows: DataFrame = spark.read.avro(dataIn)
 
+    // Wrapping an instance of EnrichmentDriver in an object allows it to be
+    // used in distributed operations. Without the object wrapper, it throws
+    // NotSerializableException errors, which originate in several of the
+    // individual enrichments.
+    object SharedDriver {
+      val driver = new EnrichmentDriver(i3conf)
+      def get: EnrichmentDriver = driver
+    }
+
     // Create the enrichment outside map function so it is not recreated for each record.
     // If the Twofishes host is not reachable it will die hard
+    // Transformation
     val enrichResults: Dataset[(Row, String)] = mappedRows.map(row => {
-      val driver = new EnrichmentDriver(i3conf)
+      val driver = SharedDriver.get
+      attemptedCount.add(1)
       Try{ ModelConverter.toModel(row) } match {
         case Success(dplaMapData) =>
-          enrich(dplaMapData, driver, improvedCount)
+          enrich(dplaMapData, driver, improvedCount, successCount)
         case Failure(err) =>
           (null, s"Error parsing mapped data: ${err.getMessage}\n" +
             s"${err.getStackTrace.mkString("\n")}")
       }
     })(tupleRowStringEncoder)
-      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
+    // Transforamtion
     val successResults: Dataset[Row] = enrichResults
       .filter(tuple => Option(tuple._1).isDefined)
       .map(tuple => tuple._1)(dplaMapDataRowEncoder)
-
-    val failures:  Array[String] = enrichResults
-      .filter(tuple => Option(tuple._2).isDefined)
-      .map(tuple => tuple._2).collect()
-
-    // Get all the messages for all records
-    val messages = MessageProcessor.getAllMessages(successResults)(spark)
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Save mapped records out to Avro file
+    // Action
     successResults.toDF().write
       .format("com.databricks.spark.avro")
       .save(outputPath)
 
     // Create and write manifest.
-
     val manifestOpts: Map[String, String] = Map(
       "Activity" -> "Enrichment",
       "Provider" -> shortName,
-      "Record count" -> successResults.count.toString,
+      "Record count" -> Utils.formatNumber(successCount.count),
       "Input" -> dataIn
     )
 
@@ -117,18 +125,33 @@ trait EnrichExecutor extends Serializable {
     // Write logs and summary reports.
     val endTime = System.currentTimeMillis()
 
+    // Get all the messages for all records.
+    val messages: DataFrame = MessageProcessor
+      .getAllMessages(successResults)(spark)
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
+
+    // Transformations.
     val typeMessages = messages.filter("field='type'")
     val dateMessages = messages.filter("field='date'")
     val langMessages = messages.filter("field='language'")
     val placeMessages = messages.filter("field='place'")
 
-    val logEnrichedFields = List(
-      "type" -> typeMessages,
-      "date" -> dateMessages,
-      "language" -> langMessages,
-      "place" -> placeMessages
-    ).filter { case (_, data: Dataset[_]) => data.count() > 0 } // drop empty
+    // Compute the counts of different message types.
+    // Actions
+    val typeMessagesCount: Long = typeMessages.count
+    val dateMessagesCount: Long = dateMessages.count
+    val langMessagesCount: Long = langMessages.count
+    val placeMessagesCount: Long = placeMessages.count
 
+    val logEnrichedFields: List[(String, Dataset[Row])] = List(
+      "type" -> (typeMessages, typeMessagesCount),
+      "date" -> (dateMessages, dateMessagesCount),
+      "language" -> (langMessages, langMessagesCount),
+      "place" -> (placeMessages, placeMessagesCount)
+    ).filter { case (_, (_, count: Long)) => count > 0 } // drop empty
+      .map{ case (key: String, (data: Dataset[_], _: Long)) => key -> data} // drop count
+
+    // This action re-evaluates `typeMessages', `dateMessages', etc.
     val logFileSeq = logEnrichedFields.map {
       case (name: String, data: Dataset[_]) => {
         val path = outputHelper.logsPath + s"/$name"
@@ -140,9 +163,6 @@ trait EnrichExecutor extends Serializable {
       }
     }
 
-    // build the information for reporting
-    val attemptedCount = mappedRows.count()
-
     val timeSummary = TimeSummary(
       Utils.formatDateTime(startTime),
       Utils.formatDateTime(endTime),
@@ -150,17 +170,18 @@ trait EnrichExecutor extends Serializable {
     )
 
     val operationSummary = OperationSummary(
-      attemptedCount,
+      attemptedCount.count,
       improvedCount.count,
-      attemptedCount-improvedCount.count,
+      attemptedCount.count-improvedCount.count,
       logFileSeq
     )
 
+    // `generateFieldReport' is a shuffle operation and an action
     val enrichOpSummary = EnrichmentOpsSummary(
-      typeMessages.count,
-      dateMessages.count,
-      langMessages.count,
-      placeMessages.count,
+      typeMessagesCount,
+      dateMessagesCount,
+      langMessagesCount,
+      placeMessagesCount,
       langSummary = PrepareEnrichmentReport.generateFieldReport(messages, "language"),
       typeSummary = PrepareEnrichmentReport.generateFieldReport(messages, "type"),
       placeSummary = PrepareEnrichmentReport.generateFieldReport(messages, "place")
@@ -181,24 +202,27 @@ trait EnrichExecutor extends Serializable {
 
     sc.stop()
 
-    // Log error messages.
-    failures.foreach(logger.error(_))
-
     // Return output destination of enriched records.
     outputPath
   }
 
   private def enrich(dplaMapData: OreAggregation,
                      driver: EnrichmentDriver,
-                     improvedCount: LongAccumulator): (Row, String) = {
+                     improvedCount: LongAccumulator,
+                     successCount: LongAccumulator): (Row, String) = {
     driver.enrich(dplaMapData) match {
       case Success(enriched) =>
         implicit val msgs = new MessageCollector[IngestMessage]()
 
-        val oreAggMitMsgs = PrepareEnrichmentReport.prepareEnrichedData(enriched, dplaMapData)(msgs)
+        val oreAggMitMsgs =
+          PrepareEnrichmentReport.prepareEnrichedData(enriched, dplaMapData)(msgs)
 
+        // count all records that were normalized or enriched
         if(!dplaMapData.sourceResource.equals(oreAggMitMsgs.sourceResource))
-          improvedCount.add(1) // captures normalizations and enrichments
+          improvedCount.add(1)
+
+        // count all records that did not have terminal errors
+        successCount.add(1)
 
         (RowConverter.toRow(oreAggMitMsgs, model.sparkSchema), null)
       case Failure(exception) =>
