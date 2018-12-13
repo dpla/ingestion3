@@ -134,12 +134,8 @@ object ReporterMain {
     // Read data in
     val inputDF: DataFrame = spark.read.avro(input)
 
-    val numPartitions: Int = inputDF.rdd.getNumPartitions
-
     val mappedData: Dataset[OreAggregation] =
       dplaMapData(inputDF).persist(StorageLevel.MEMORY_AND_DISK_SER)
-
-//    def getMappedData: Dataset[OreAggregation] =  dplaMapData(inputDF)
 
     // Metadata completion report
     logger.info(s"Executing metadataCompleteness report")
@@ -152,7 +148,6 @@ object ReporterMain {
     // Thumbnail reports
     thumbnailOpts.foreach(rptOpt => {
       logger.info(s"Executing thumbnail report for $rptOpt")
-      mappedData.repartition(numPartitions)
       executeReport(spark, mappedData, s"$reportsPath/thumbnail/$rptOpt",
         "thumbnail", Array(rptOpt), logger)
     })
@@ -161,7 +156,6 @@ object ReporterMain {
     reportFields.map(field => {
       val rptOut = s"$reportsPath/propertyDistinctValue/$field"
       logger.info(s"Executing propertyDistinctValue for $field")
-      mappedData.repartition(numPartitions)
       executeReport(spark, mappedData, rptOut, "propertyDistinctValue",
         Array(field), logger)
     })
@@ -170,7 +164,6 @@ object ReporterMain {
     reportFields.map(field => {
       val rptOut = s"$reportsPath/propertyValue/$field"
       logger.info(s"Executing propertyValue for $field")
-      mappedData.repartition(numPartitions)
       executeReport(spark, mappedData, rptOut, "propertyValue",
         Array(field), logger)
     })
@@ -233,24 +226,4 @@ object ReporterMain {
       case Failure(ex) => logger.error(ex.toString)
     }
   }
-
-//  def executePartitionedReport(spark: SparkSession,
-//                               input: Dataset[OreAggregation],
-//                               output: String,
-//                               reportName: String,
-//                               reportParams: Array[String] = Array(),
-//                               logger: Logger): Unit = {
-//
-//    new Reporter(spark, reportName, input, reportParams, logger).main() match {
-//      case Success(rpt) =>
-//        rpt
-//          .repartition(1)  // Otherwise multiple CSV files, do not use coalesce
-//          .write
-//          .format("com.databricks.spark.csv")
-//          .option("header", "true")
-//          .save(output)
-//
-//      case Failure(ex) => logger.error(ex.toString)
-//    }
-//  }
 }
