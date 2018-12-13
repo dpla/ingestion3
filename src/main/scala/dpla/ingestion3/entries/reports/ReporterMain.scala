@@ -73,10 +73,11 @@ object ReporterMain {
     }
     val inputURI = args(0)
     val outputURI = args(1)
+    val sparkMaster = args(2)
     val reportName = args(3)
     val reportParams = args.slice(4, args.length)
 
-    val sparkConf = new SparkConf().setMaster("local[1]")
+    val sparkConf = new SparkConf().setMaster(sparkMaster)
     val logger = Utils.createLogger("reports")
 
     // Start spark session
@@ -92,13 +93,9 @@ object ReporterMain {
 
     val mappedData: Dataset[OreAggregation] = dplaMapData(inputDF)
 
-    // This is a pretty bogus default. Should read from config file...
-    val resultPath =
-      executeReport(spark, mappedData, outputURI, reportName, reportParams, logger)
+    executeReport(spark, mappedData, outputURI, reportName, reportParams, logger)
 
     sc.stop
-
-    resultPath
   }
 
 
@@ -141,9 +138,6 @@ object ReporterMain {
     logger.info(s"Executing metadataCompleteness report")
     executeReport(spark, mappedData, s"$reportsPath/metadataCompleteness",
       "metadataCompleteness", logger = logger)
-
-    // mappedData is repartitioned before every subsequent job b/c it is
-    // consolidated to one node for writing out as CSV
 
     // Thumbnail reports
     thumbnailOpts.foreach(rptOpt => {
