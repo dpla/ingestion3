@@ -16,15 +16,16 @@ trait JsonlExecutor extends Serializable {
 
   /**
     * Generate JSON-L files from AVRO file
-    * @param sparkConf Spark configuration
-    * @param dataIn Data to transform into JSON-L
-    * @param dataOut Location to save JSON-L
+    * @param sparkConf  Spark configuration
+    * @param dataIn     Data to transform into JSON-L
+    * @param dataOut    Location to save JSON-L
+    * @param shortName  Provider shortname
+    * @param logger     Logger object
     */
   def executeJsonl(sparkConf: SparkConf,
                    dataIn: String,
                    dataOut: String,
                    shortName: String,
-                   mergeOutput: Boolean,
                    logger: Logger): String = {
 
     // This start time is used for documentation and output file naming.
@@ -59,11 +60,7 @@ trait JsonlExecutor extends Serializable {
     // This should always write out as #text() because if we use #json() then the
     // data will be written out inside a JSON object (e.g. {'value': <doc>}) which is
     // invalid for our use
-    mergeOutput match {
-      // repartition is notably faster than coalesce on moderately large datasets
-      case true => indexRecords.repartition(1).write.text(outputPath)
-      case false => indexRecords.write.text(outputPath)
-    }
+    indexRecords.write.text(outputPath)
 
     // Create and write manifest.
 
@@ -71,8 +68,7 @@ trait JsonlExecutor extends Serializable {
       "Activity" -> "JSON-L",
       "Provider" -> shortName,
       "Record count" -> indexCount.toString,
-      "Input" -> dataIn,
-      "Partition output" -> (!mergeOutput).toString
+      "Input" -> dataIn
     )
 
     outputHelper.writeManifest(manifestOpts) match {
