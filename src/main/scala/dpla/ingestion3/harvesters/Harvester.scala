@@ -69,6 +69,7 @@ abstract class LocalHarvester(
   def getAvroWriter: DataFileWriter[GenericRecord] = avroWriter
 
   override def cleanUp(): Unit = {
+    avroWriter.flush()
     avroWriter.close()
     // Delete temporary output directory and files.
     Utils.deleteRecursively(new File(tmpOutStr))
