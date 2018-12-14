@@ -2,7 +2,6 @@ package dpla.ingestion3.reports
 
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import dpla.ingestion3.model._
-import org.apache.spark.SparkConf
 import org.apache.spark.sql.functions.{col, explode}
 
 
@@ -37,11 +36,10 @@ case class PropertyDistinctValueRpt(value: Seq[String])
   *                         params(0): The DPLA MAP field to analyze
   */
 class PropertyDistinctValueReport(
-                            val inputURI: String,
-                            val outputURI: String,
-                            val sparkConf: SparkConf,
-                            val params: Array[String]
-                          ) extends Report with Serializable {
+                                   val input: Dataset[OreAggregation],
+                                   val spark: SparkSession,
+                                   val params: Array[String]
+                                 ) extends Report with Serializable {
 
   /*
    * We set instance fields from constructor arguments, and override accessor
@@ -52,9 +50,8 @@ class PropertyDistinctValueReport(
    *
    */
   override val sparkAppName: String = "PropertyDistinctValueReport"
-  override def getInputURI: String = inputURI
-  override def getOutputURI: String = outputURI
-  override def getSparkConf: SparkConf = sparkConf
+  override def getInput: Dataset[OreAggregation] = input
+  override def getSparkSession: SparkSession = spark
   override def getParams: Option[Array[String]] = {
     if (params.nonEmpty) Some(params) else None
   }
@@ -164,9 +161,9 @@ class PropertyDistinctValueReport(
 
     sqlContext.sql("""SELECT * FROM tmpPropValRpt""")
       .withColumn(colName, explode(col("value")))
-       .drop(col("value"))
-       .groupBy(colName)
-       .count()
-       .orderBy(colName, "count")
+      .drop(col("value"))
+      .groupBy(colName)
+      .count()
+      .orderBy(colName, "count")
   }
 }

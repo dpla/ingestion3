@@ -1,11 +1,6 @@
 package dpla.ingestion3.reports
 
-
-import java.io.File
-
 import dpla.ingestion3.model._
-import dpla.ingestion3.utils.Utils
-import org.apache.spark.SparkConf
 import org.apache.spark.sql._
 
 import scala.util.Try
@@ -35,10 +30,9 @@ trait Report {
    * Accessor methods are used to make the trait and its extending classes
    * more amenable to unit testing.
    */
-  def getInputURI: String
-  def getOutputURI: String
+  def getInput: Dataset[OreAggregation]
   def getParams: Option[Array[String]]
-  def getSparkConf: SparkConf
+  def getSparkSession: SparkSession
 
   /**
     * Run the report, opening the input and output and invoking the process()
@@ -47,13 +41,8 @@ trait Report {
     * @see Reporter.main()
     * @return Try object representing success or failure, for Reporter.main()
     */
-  def run(): Try[Unit] = Try {
-    val spark = SparkSession
-      .builder()
-      .config(getSparkConf)
-      .getOrCreate()
-
-    val sc = spark.sparkContext
+  def run(): Try[DataFrame] = Try {
+    val spark = getSparkSession
 
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
@@ -61,23 +50,9 @@ trait Report {
     implicit val dplaMapDataEncoder: Encoder[OreAggregation] =
       org.apache.spark.sql.Encoders.kryo[OreAggregation]
 
-    val input = spark
-        .read
-        .format("com.databricks.spark.avro")
-        .load(getInputURI).map(row => ModelConverter.toModel(row))
+    val input: Dataset[OreAggregation] = getInput
 
-    val output: DataFrame = process(input, spark)
-
-    Utils.deleteRecursively(new File(getOutputURI))
-    output
-      .repartition(1)  // Otherwise multiple CSV files
-      .write
-      .format("com.databricks.spark.csv")
-      .option("header", "true")
-      .save(getOutputURI)
-
-    sc.stop()
-
+    process(input, spark)
   }
 
   /**
