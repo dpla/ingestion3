@@ -30,6 +30,10 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
 
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] = Seq(nameOnlyAgent(getDataProvider(data)))
 
+  override def edmRights(data: Document[JValue]): ZeroToMany[URI] =
+    extractStrings("rights_uri")(data)
+    .map(URI)
+
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(data)
 
   override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] = thumbnail(data)
