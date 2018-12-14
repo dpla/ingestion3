@@ -44,6 +44,7 @@ object ProviderRegistry {
     // FIXME Register is redundant here and should be removed
 
     "cdl" -> Register(profile = new CdlProfile),
+    "ct" -> Register(profile = new CtProfile),
     "dc" -> Register(profile = new DcProfile),
     "esdn" -> Register(profile = new EsdnProfile),
     "getty" -> Register(profile = new GettyProfile),

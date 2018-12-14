@@ -175,7 +175,12 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
   override def map(document: Document[NodeSeq], mapping: Mapping[NodeSeq]): OreAggregation = {
 
     implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
-    val providerId = (mapping.sidecar(document) \\ "prehashId").extractOrElse[String]("Unknown")
+    val providerId = Try {
+      (mapping.sidecar(document) \\ "prehashId")
+    } match {
+      case Success(s) => s.extractOrElse[String]("Unknown")
+      case Failure(f) => s"Fatal error - Missing required ID $document"
+    }
 
     // Field validation
     val validatedDataProvider = validateDataProvider(mapping.dataProvider(document), providerId)
