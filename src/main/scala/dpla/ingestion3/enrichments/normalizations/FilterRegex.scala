@@ -54,6 +54,7 @@ object FilterRegex {
     // TODO is there a better way to escape reserved regex chars?
     private def escape(string: String): String =
       string
+        .replace("""\""", """\\""")
         .replace("""/""", """\/""")
         .replace("""+""", """\+""")
         .replace("""-""", """\-""")
