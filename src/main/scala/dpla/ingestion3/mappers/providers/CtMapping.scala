@@ -23,10 +23,10 @@ class CtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   override def getProviderName(): String = "ct"
 
-  // TODO: What field in CT records should we use for persistent ID?
   override def getProviderId(implicit data: Document[NodeSeq]): String =
-    extractString(data \ "identifier")
-      .getOrElse(throw new RuntimeException(s"No ID for record $data"))
+  isShownAtStrings(data)
+    .headOption
+    .getOrElse(throw new RuntimeException(s"No ID for record $data"))
 
   //  mods/titleInfo @type=alternative> children combined as follows (with a single space between):
   //  <nonSort> <title> <subTitle>  <partName> <partNumber>
@@ -142,9 +142,7 @@ class CtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
-
-  // FIXME There is no mapping for the required field dataProvider in the MAPv5 doc
-  // FIXME guessing this might be a valid mapping
+  
   // <note type="ownership">
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     (data \ "note").map(n => getByAttribute(n, "type", "ownership"))
@@ -173,7 +171,6 @@ class CtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
 
   // Helper method
-  // TODO: Is this the correct URI?
   def agent = EdmAgent(
     name = Some("Connecticut Digital Library"),
     uri = Some(URI("http://dp.la/api/contributor/ct"))
