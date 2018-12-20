@@ -24,6 +24,10 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
   it should "pass through the short name to ID minting" in
     assert(extractor.getProviderName() === shortName)
 
+  it should "extract provider ID" in {
+    assert(extractor.getProviderId(xml) === "2132862")
+  }
+
   it should "construct the correct item uri" in
     assert(extractor.itemUri(xml) === itemUri)
 
@@ -142,6 +146,10 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
   //todo should we eliminate these default thumbnails?
   it should "find the item previews" in {
     assert(extractor.preview(xml) === Seq(uriOnlyWebResource(URI("https://nara-media-001.s3.amazonaws.com/arcmedia/great-lakes/001/517805_a.jpg"))))
+  }
+
+  it should "correct preview URLs that begin with https://opaexport-conv.s3.amazonaws.com/" in {
+
   }
 
   it should "extract dataProvider from records with fileUnitPhysicalOccurrence" in {
