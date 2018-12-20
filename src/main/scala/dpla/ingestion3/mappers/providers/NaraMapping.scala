@@ -48,6 +48,9 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     Seq(uriOnlyWebResource(itemUri(data)))
 
+  override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    extractPreview(data)
+
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
 
