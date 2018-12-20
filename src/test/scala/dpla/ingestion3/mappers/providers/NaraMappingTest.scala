@@ -148,8 +148,52 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.preview(xml) === Seq(uriOnlyWebResource(URI("https://nara-media-001.s3.amazonaws.com/arcmedia/great-lakes/001/517805_a.jpg"))))
   }
 
-  it should "correct preview URLs that begin with https://opaexport-conv.s3.amazonaws.com/" in {
+  it should "not map previews with invalid term names" in {
+    val xml = <item>
+      <naId>51046777</naId>
+      <digitalObjectArray>
+        <digitalObject>
+          <accessFilename>https://nara-media-001.s3.amazonaws.com/arcmedia/great-lakes/001/517805_a.jpg</accessFilename>
+          <objectType>
+            <termName>NOT VALID</termName>
+          </objectType>
+        </digitalObject>
+      </digitalObjectArray>
+    </item>
 
+    assert(extractor.preview(Document(xml)) === Seq())
+  }
+
+  it should "correct preview URLs that begin with https://opaexport-conv.s3.amazonaws.com/" in {
+    val xml = <item>
+      <naId>51046777</naId>
+      <digitalObjectArray>
+        <digitalObject>
+          <accessFilename>https://opaexport-conv.s3.amazonaws.com/TB149/Civil_War_Service_Index/M545-CW_ServRecdIndexUnion_MI/M545_0042/images/2514.jpg</accessFilename>
+          <objectType>
+            <termName>Image (JPG)</termName>
+          </objectType>
+        </digitalObject>
+      </digitalObjectArray>
+    </item>
+
+    val correctUrl = "https://catalog.archives.gov/OpaAPI/media/51046777/content/TB149/Civil_War_Service_Index/M545-CW_ServRecdIndexUnion_MI/M545_0042/images/2514.jpg"
+    assert(extractor.preview(Document(xml)) === Seq(uriOnlyWebResource(URI(correctUrl))))
+  }
+
+  it should "not map previews that depend on providerIds if providerId is missing" in {
+    val xml = <item>
+      <digitalObjectArray>
+        <digitalObject>
+          <accessFilename>https://opaexport-conv.s3.amazonaws.com/TB149/Civil_War_Service_Index/M545-CW_ServRecdIndexUnion_MI/M545_0042/images/2514.jpg</accessFilename>
+          <objectType>
+            <termName>Image (JPG)</termName>
+          </objectType>
+        </digitalObject>
+      </digitalObjectArray>
+    </item>
+
+    assert(extractor.preview(Document(xml)) === Seq())
   }
 
   it should "extract dataProvider from records with fileUnitPhysicalOccurrence" in {
