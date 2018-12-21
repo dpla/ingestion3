@@ -3,7 +3,6 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.enrichments.TypeEnrichment
 import dpla.ingestion3.mappers.rdf.DCMIType
 import dpla.ingestion3.mappers.utils._
-import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -11,6 +10,7 @@ import org.eclipse.rdf4j.model.IRI
 import org.json4s.JsonAST
 import org.json4s.JsonDSL._
 
+import scala.util.{Try, Success, Failure}
 import scala.xml.{Node, NodeSeq}
 
 
@@ -47,6 +47,9 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     Seq(uriOnlyWebResource(itemUri(data)))
+
+  override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    extractPreview(data)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
@@ -270,12 +273,28 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
       }
   }
 
-  private def extractPreview(data: Document[NodeSeq]) = for {
+  private def extractPreview(data: Document[NodeSeq]): Seq[EdmWebResource] = for {
     digitalObject <- data \ "digitalObjectArray" \ "digitalObject"
-    accessFileName = (digitalObject \ "accessFilename").text
+    accessFileName = (digitalObject \ "accessFilename").text.trim
     termName = (digitalObject \ "objectType" \ "termName").text.toLowerCase
-    if termName.contains("image") && (termName.contains("jpg") || termName.contains("gif"))
-  } yield stringOnlyWebResource(accessFileName.trim)
+
+    badPrefix = "https://opaexport-conv.s3.amazonaws.com/"
+    url = accessFileName.startsWith(badPrefix) match {
+      case false => accessFileName
+      case true => {
+        Try { getProviderId(data) } match {
+          case Success(id) => "https://catalog.archives.gov/OpaAPI/media/" +
+            id + "/content/" + accessFileName.stripPrefix(badPrefix)
+          case Failure(_) => null
+        }
+      }
+    }
+
+    if termName.contains("image") &&
+      (termName.contains("jpg") || termName.contains("gif")) &&
+      url != null
+
+  } yield stringOnlyWebResource(url)
 
   private def extractPublisher(data: NodeSeq): Seq[String] = {
 
