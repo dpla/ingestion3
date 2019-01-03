@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mods xmlns:mods="http://www.loc.gov/mods/v3" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.loc.gov/mods/v3" version="3.5" xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-5.xsd">
+    <titleInfo>
+        <title>Anschluss</title>
+    </titleInfo>
+    <name authority="fast" type="personal" valueURI="http://id.worldcat.org/fast/255922">
+        <namePart>Dodd, Thomas J. (Thomas Joseph), 1907-1971</namePart>
+        <role>
+            <roleTerm authority="marcrelator" type="text">Collector</roleTerm>
+        </role>
+    </name>
+    <typeOfResource>text</typeOfResource>
+    <genre authority="aat" valueURI="300027590">legal documents</genre>
+    <genre authority="aat" valueURI="300027425">administrative records</genre>
+    <originInfo>
+        <dateIssued encoding="w3cdtf" keyDate="yes">1938</dateIssued>
+        <issuance>monographic</issuance>
+    </originInfo>
+    <physicalDescription>
+        <internetMediaType>image/jp2</internetMediaType>
+        <digitalOrigin>reformatted digital</digitalOrigin>
+        <note type="physical description">translated German documents</note>
+    </physicalDescription>
+    <abstract>The Common Plan or Conspiracy (Boxes 282-284) refers to Count I of the IMT indictment, namely conspiracy to commit unlawful aggression. This subseries consists of trial briefs and German documents used by the Allied prosecution team. The papers are arranged thematically as the conspiracy charge had economic, political, and military dimensions. This subseries includes detailed German war plans for invading such nations as Poland, France, Russia, Norway, and Yugoslavia. The minutes of high-level economic meetings on the mobilization for war also highlight these files. Includes: English and German language version of Document no. 2307-PS. Annotated.</abstract>
+    <note type="Preferred Citation">
+        Anschluss
+        , 282:7223, Thomas J. Dodd Papers. Archives &amp; Special Collections at the Thomas J. Dodd Research Center, University of Connecticut Libraries.</note>
+    <subject>
+        <topic authority="fast" valueURI="http://id.worldcat.org/fast/1709901">Nuremberg War Crime Trials (Germany : 1946-1949)</topic>
+        <topic authority="fast" valueURI="http://id.worldcat.org/fast/1156316">Trials (Conspiracy)</topic>
+        <topic authority="fast" valueURI="http://id.worldcat.org/fast/1033761">National socialism</topic>
+        <topic authority="fast" valueURI="http://id.worldcat.org/fast/809991">Anschluss movement (1918-1938)</topic>
+        <geographic>
+            <continent>North America</continent>
+        </geographic>
+        <geographic authority="tgn" valueURI="7000084">Germany (nation)</geographic>
+        <topic valueURI="http://id.worldcat.org/fast/815827">Aggression (International law)</topic>
+        <geographic authority="tgn" valueURI="1000062">Austria (nation)</geographic>
+        <topic authority="fast" valueURI="http://id.worldcat.org/fast/1170357">War--Planning</topic>
+        <topic authority="fast" valueURI="http://id.worldcat.org/fast/1020840">Militarism--Economic aspects</topic>
+        <name type="corporate" authority="fast" valueURI="http://id.worldcat.org/fast/1642697">
+            <namePart>Germany. Reichsregierung</namePart>
+        </name>
+    </subject>
+    <identifier type="local">MSS19940065:282:7223</identifier>
+    <accessCondition type="restrictions on access">The collection is open and available for research.</accessCondition>
+    <accessCondition type="use and reproduction" displayLabel="Intellectual Rights Statement">This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License, CC BY-NC.</accessCondition>
+    <recordInfo>
+        <recordCreationDate encoding="w3cdtf">2011-12-16T15:09-0500</recordCreationDate>
+        <recordOrigin>This finding aid was produced using the Archivists' Toolkit</recordOrigin>
+        <languageOfCataloging>
+            <languageTerm type="code" authority="iso639-3">eng</languageTerm>
+        </languageOfCataloging>
+        <descriptionStandard>Describing Archives: A Content Standard</descriptionStandard>
+        <recordContentSource>University of Connecticut Libraries</recordContentSource>
+        <languageOfCataloging>
+            <languageTerm type="code" authority="iso639-2b">eng</languageTerm>
+        </languageOfCataloging>
+    </recordInfo>
+    <identifier type="hdl">http://hdl.handle.net/11134/20002:1323</identifier>
+    <note type="ownership">Archives &amp; Special Collections at the Thomas J. Dodd Research Center, University of Connecticut Libraries</note>
+    <name type="corporate" authority="naf" valueURI="http://id.loc.gov/authorities/names/n50069897">
+        <namePart>International Military Tribunal</namePart>
+        <role>
+            <roleTerm type="text" authority="marcrelator">Contributor</roleTerm>
+        </role>
+    </name>
+    <name type="corporate" authority="naf" valueURI="http://id.loc.gov/authorities/names/n50069897">
+        <namePart>Creator</namePart>
+        <role>
+            <roleTerm type="text" authority="marcrelator">Creator</roleTerm>
+        </role>
+    </name>
+    <titleInfo type="alternative">
+        <title>Translation of Document 2307-PS</title>
+    </titleInfo>
+
+    <titleInfo type="alternative">
+        <nonSort>nonsort</nonSort>
+        <title>title</title>
+        <subTitle>subtitle</subTitle>
+        <partName>partname</partName>
+        <partNumber>partnumber</partNumber>
+    </titleInfo>
+
+    <titleInfo type="alternative">
+        <title>Law concerning the reunion of Austria with the German Reich of 13 March 1938</title>
+    </titleInfo>
+    <name type="corporate" authority="naf" valueURI="http://id.loc.gov/authorities/names/no98077600">
+        <namePart>Germany. Laws, etc. (Reichsgesetzblatt)</namePart>
+        <role>
+            <roleTerm type="text" authority="marcrelator">Contributor</roleTerm>
+        </role>
+    </name>
+    <genre authority="aat" valueURI="300027894">laws (documents)</genre>
+    <genre authority="aat" valueURI="300027389">translations (documents)</genre>
+    <note type="source note">Thomas J. Dodd Papers</note>
+    <note type="source identifier">MSS 1994.0065</note>
+</mods>

@@ -86,6 +86,10 @@ trait XmlExtractor extends Extractor[NodeSeq] {
   def getByAttribute(e: Elem, att: String, value: String): NodeSeq = {
     e \\ "_" filter { n => filterAttribute(n, att, value) }
   }
+
+  def getByAttribute(e: NodeSeq, att: String, value: String): NodeSeq = {
+    getByAttribute(e.asInstanceOf[Elem], att, value)
+  }
 }
 
 /**

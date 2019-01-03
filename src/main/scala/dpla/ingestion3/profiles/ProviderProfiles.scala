@@ -17,6 +17,16 @@ class CdlProfile extends JsonProfile {
 }
 
 /**
+  * Connecticut Digital Library
+  */
+class CtProfile extends XmlProfile {
+  type Mapping = CtMapping
+
+  override def getHarvester = classOf[VaFileHarvester] // CT reuses the VA zipped XML file harvester
+  override def getMapping = new CtMapping
+}
+
+/**
   * District Digital
   */
 class DcProfile extends XmlProfile {
