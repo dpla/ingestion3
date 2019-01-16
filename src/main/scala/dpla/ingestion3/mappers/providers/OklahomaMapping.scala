@@ -61,11 +61,18 @@ class OklahomaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[N
     extractStrings(data \\ "originInfo" \\ "dateCreated")
       .map(stringOnlyTimeSpan)
 
-  override def description(data: Document[NodeSeq]): Seq[String] =
-  // <mods:note type=content>
-    (data \\ "note")
+  override def description(data: Document[NodeSeq]): Seq[String] = {
+    // <mods:note type=content> OR <mods:abstract>
+    val note = (data \\ "note")
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "content"))
       .flatMap(node => extractStrings(node))
+    val abs = extractStrings(data \\ "abstract")
+
+    if (note.nonEmpty)
+      note
+    else
+      abs
+  }
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:physicalDescription><mods:extent>
@@ -102,15 +109,11 @@ class OklahomaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[N
       .flatMap(n => extractStrings(n \\ "titleInfo" \\ "title"))
       .map(eitherStringOrUri)
 
-
-
   //  <accessCondition> when the @type="use and reproduction" attribute is not present
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
     (data \ "metadata" \ "mods" \ "accessCondition")
       .filterNot({ n => filterAttribute(n, "type", "use and reproduction") })
       .flatMap(extractStrings)
-
-
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
   // <mods:subject><mods:topic>
@@ -124,9 +127,14 @@ class OklahomaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[N
 
   override def title(data: Document[NodeSeq]): Seq[String] =
   // <mods:titleInfo><mods:title> when @type DOES NOT equal "alternative"
+  // FIXME temporary kludge to publish title and altTitle to the search index. This is necessary because of a legacy bug
+  // in ingestion1 that put all title values [alt and primary] into the title field. Since altTitle is not available in
+  // the search index [only added in MAPv4] we need to shoehorn altTitle values into the title field here. This should be
+  // undone when altTitle becomes available in the API and added to the portal record view.
     (data \\ "mods" \ "titleInfo")
       .filterNot({ n => filterAttribute(n, "type", "alternative") })
-      .flatMap(titleInfo => extractStrings(titleInfo \ "title"))
+      .flatMap(titleInfo => extractStrings(titleInfo \ "title")) ++ // FIXME see above
+    alternateTitle(data)
 
   override def `type`(data: Document[NodeSeq]): Seq[String] =
   // <mods:typeofresource>
