@@ -63,7 +63,7 @@ trait IngestMessageTemplates {
       id = id,
       field = field,
       value = origValue,
-      enrichedValue = "Not enriched"
+      enrichedValue = enrichValue
     )
 
   def originalValue(id: String, field: String, value: String): IngestMessage =

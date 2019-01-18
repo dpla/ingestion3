@@ -36,8 +36,11 @@ object MessageProcessor{
                 |LATERAL VIEW posexplode(id) id_exp AS id1, id_exp
                 |LATERAL VIEW posexplode(level) level_exp AS level1, level_exp
                 |LATERAL VIEW posexplode(enrichedValue) enrichedValue_exp AS enrichedValue1, enrichedValue_exp
-                |WHERE message1 == value1 AND value1 == field1 AND field1 == id1 AND
-                |id1 == level1 AND level1 == enrichedValue1
+                |WHERE message1 == value1
+                | AND value1 == field1
+                | AND field1 == id1
+                | AND id1 == level1
+                | AND level1 == enrichedValue1
                 |""".stripMargin)
   }
 

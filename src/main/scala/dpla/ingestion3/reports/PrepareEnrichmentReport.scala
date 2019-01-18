@@ -1,7 +1,7 @@
 package dpla.ingestion3.reports
 
 import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
-import dpla.ingestion3.model.{DplaPlace, OreAggregation}
+import dpla.ingestion3.model.{DplaPlace, EdmTimeSpan, OreAggregation}
 import dpla.ingestion3.reports.summary.ReportFormattingUtils
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.sql.functions._
@@ -37,11 +37,51 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     prepareLangauge(enriched)
     prepareType(original, enriched)
     preparePlace(enriched)
+    prepareDate(original, enriched)
 
     // messages are correctly collected
 
     // Put collected messages into copy of enriched
     enriched.copy(messages = msgs.getAll())
+  }
+
+  /**
+    *
+    * @param original
+    * @param enriched
+    * @param msgs
+    * @return
+    */
+  def prepareDate(original: OreAggregation,
+                  enriched: OreAggregation)
+                     (implicit msgs: MessageCollector[IngestMessage]) = {
+
+    val enrichDateValues = enriched.sourceResource.date
+    val originalDateValues = original.sourceResource.date
+    val id = (enriched.sidecar \\ "dplaId").values.toString
+
+    val dateTuples = enrichDateValues zip originalDateValues
+
+    dateTuples.map( { case (e: EdmTimeSpan, o: EdmTimeSpan) =>
+      if( e.begin != o.begin || e.end != o.end) { // if the begin and end dates don't match then assume the record was improved
+        msgs.add(
+          enrichedValue(
+            id, // id
+            "date", // field
+            o.originalSourceDate.getOrElse(""), // original value
+            s"begin=${e.begin.getOrElse("")} end=${e.end.getOrElse("")}" // enriched values
+          )
+        )
+      }
+      else
+        msgs.add(
+          originalValue(
+            id, // id
+            "date", // field
+            o.originalSourceDate.getOrElse("") // original value
+          )
+        )
+    })
   }
 
   /**
@@ -54,12 +94,12 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
                      (implicit msgs: MessageCollector[IngestMessage]) = {
 
     enriched.sourceResource.language.map( l => {
-      if(l.concept.getOrElse("") != l.providedLabel.getOrElse(" ")){
+      if(l.concept.getOrElse("") != l.providedLabel.getOrElse("")){
         msgs.add(enrichedValue(
           (enriched.sidecar \\ "dplaId").values.toString,
           "language",
-          l.providedLabel.getOrElse("AADS"),
-          l.concept.getOrElse("SFSFSD")))
+          l.providedLabel.getOrElse(""),
+          l.concept.getOrElse("")))
       }else
         msgs.add(originalValue(
           (enriched.sidecar \\ "dplaId").values.toString,
