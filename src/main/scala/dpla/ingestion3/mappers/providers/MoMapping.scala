@@ -38,7 +38,7 @@ class MoMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
   override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \ "isShownAt").map(stringOnlyWebResource)
 
-  override def `object`(data: Document[JValue]): ZeroToMany[EdmWebResource] =
+  override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \ "object").map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
@@ -70,7 +70,8 @@ class MoMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
   // TODO: Confirm with team that this is an appropriate mapping
   // Initial analysis suggests that all languages have iso639_3 values
   override def language(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings(unwrap(data) \ "sourceResource" \ "language" \ "iso639_3").map(nameOnlyConcept)
+    extractStrings(unwrap(data) \ "sourceResource" \ "language" \ "iso639_3")
+      .map(nameOnlyConcept)
 
   override def rights(data: Document[JValue]): AtLeastOne[String] =
     extractStrings(unwrap(data) \ "sourceResource" \ "rights")
@@ -78,7 +79,7 @@ class MoMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings(unwrap(data)  \ "sourceResource" \ "subject" \ "name").map(nameOnlyConcept)
 
-  override def temporal(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
+  override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
      extractDate(unwrap(data) \ "sourceResource" \ "temporal")
 
   override def title(data: Document[JValue]): AtLeastOne[String] =
