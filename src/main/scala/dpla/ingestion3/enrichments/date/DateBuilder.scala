@@ -34,8 +34,8 @@ class DateBuilder {
     * @return Option[String]
     */
   def createBegin(str: String): Option[String] = str match {
-    case `str` if str.matches("[0-9]{4}") => Some(str)
-    case `str` if str.matches("[0-9]{4}-[0-9]{4}") => str.split("-").headOption
+    case `str` if str.matches("^[0-9]{4}$") => Some(str)
+    case `str` if str.matches("^[0-9]{4}-[0-9]{4}$") => str.split("-").headOption
     case _ => None
   }
 
@@ -46,8 +46,8 @@ class DateBuilder {
     * @return Option[String]
     */
   def createEnd(str: String): Option[String] = str match {
-      case `str` if str.matches("[0-9]{4}") => Some(str)
-      case `str` if str.matches("[0-9]{4}-[0-9]{4}") => str.split("-").lastOption
+      case `str` if str.matches("^[0-9]{4}$") => Some(str)
+      case `str` if str.matches("^[0-9]{4}-[0-9]{4}$") => str.split("-").lastOption
       case _ => None
     }
 }
