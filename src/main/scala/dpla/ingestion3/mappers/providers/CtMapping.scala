@@ -172,7 +172,7 @@ class CtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   // Helper method
   def agent = EdmAgent(
-    name = Some("Connecticut Digital Library"),
+    name = Some("Connecticut Digital Archive"),
     uri = Some(URI("http://dp.la/api/contributor/ct"))
   )
 
