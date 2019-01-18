@@ -184,7 +184,8 @@ trait EnrichExecutor extends Serializable {
       placeMessagesCount,
       langSummary = PrepareEnrichmentReport.generateFieldReport(messages, "language"),
       typeSummary = PrepareEnrichmentReport.generateFieldReport(messages, "type"),
-      placeSummary = PrepareEnrichmentReport.generateFieldReport(messages, "place")
+      placeSummary = PrepareEnrichmentReport.generateFieldReport(messages, "place"),
+      dateSummary = PrepareEnrichmentReport.generateFieldReport(messages, "date" )
     )
 
     // Calculate data points for enrichment summary

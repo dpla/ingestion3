@@ -101,6 +101,7 @@ class StringNormalizations {
 
   def enrichEdmTimeSpan(edmTimeSpan: EdmTimeSpan): EdmTimeSpan =
     edmTimeSpan.copy(
+      originalSourceDate = edmTimeSpan.originalSourceDate.map(_.stripHTML.reduceWhitespace),
       prefLabel = edmTimeSpan.prefLabel.map(_.stripHTML.reduceWhitespace.stripDblQuotes),
       begin = edmTimeSpan.begin.map(_.stripHTML.reduceWhitespace.stripDblQuotes),
       end = edmTimeSpan.end.map(_.stripHTML.reduceWhitespace.stripDblQuotes)

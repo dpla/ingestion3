@@ -53,6 +53,8 @@ package object model {
 
   def emptyEdmAgent = EdmAgent()
 
+  def emptyEdmTimeSpan = EdmTimeSpan()
+
   def emptyEdmWebResource: EdmWebResource = stringOnlyWebResource("")
 
   def emptyOreAggregation = OreAggregation(

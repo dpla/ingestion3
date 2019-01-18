@@ -37,9 +37,9 @@ object EnrichmentSummary {
        |${data.enrichmentOpSummary.typeSummary}
        |${ReportFormattingUtils.centerPad("Language", langImproved)}
        |${data.enrichmentOpSummary.langSummary}
-       |
-       |${ReportFormattingUtils.centerPad("Place", placeImproved)}
        |${ReportFormattingUtils.centerPad("Date", dateImproved)}
+       |${data.enrichmentOpSummary.dateSummary}
+       |
        |
        |${ReportFormattingUtils.center("Log Files")}
        |${data.operationSummary.logFiles.mkString("\n")}
