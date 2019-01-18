@@ -54,9 +54,9 @@ class MoMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   // object
-  it should "extract the correct object" in {
+  it should "extract the correct preview" in {
     val expected = List(stringOnlyWebResource("http://digitalcollections.missouristate.edu/utils/getthumbnail/collection/Hennicke/id/94"))
-    assert(extractor.`object`(json) === expected)
+    assert(extractor.preview(json) === expected)
   }
 
   // creator
@@ -109,12 +109,12 @@ class MoMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   // temporal
-  it should "extract the correct temporal with display, begin and end" in {
+  it should "extract the correct date with display, begin and end" in {
     val expected = List(
       EdmTimeSpan(originalSourceDate = Some("1940-05")),
       EdmTimeSpan(originalSourceDate = Some("1991/1995"), begin = Some("1991"), end = Some("1995"))
     )
-    assert(extractor.temporal(json) === expected)
+    assert(extractor.date(json) === expected)
   }
 
   // title
