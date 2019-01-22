@@ -7,7 +7,7 @@ import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.eclipse.rdf4j.model.IRI
-import org.json4s.{JValue, JsonAST}
+import org.json4s.JsonAST
 import org.json4s.JsonDSL._
 
 import scala.util.{Failure, Success, Try}
@@ -45,7 +45,7 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
   override def dplaUri(data: Document[NodeSeq]): URI =
     mintDplaItemUri(data)
 
-  override def originalId(data: Document[NodeSeq]): ZeroToOne[String] = Try{ Some(getProviderId(data)) }.getOrElse(None)
+  override def originalId(data: Document[NodeSeq]): ExactlyOne[String] = getProviderId(data)
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     Seq(uriOnlyWebResource(itemUri(data)))

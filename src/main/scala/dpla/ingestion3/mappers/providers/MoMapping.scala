@@ -3,7 +3,7 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.enrichments.normalizations.filters.ExtentIdentificationList
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
-import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
+import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s
@@ -11,7 +11,6 @@ import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
-import scala.util.Try
 
 class MoMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] with IngestMessageTemplates {
 
@@ -38,7 +37,7 @@ class MoMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \ "rights").map(URI)
 
-  override def originalId(data: Document[JValue]): ZeroToOne[String] = Try{ Some(getProviderId(data)) }.getOrElse(None)
+  override def originalId(data: Document[JValue]): ExactlyOne[String] = getProviderId(data)
 
   override def hasView(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \ "hasView" \ "@id").map(stringOnlyWebResource)

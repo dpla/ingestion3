@@ -39,7 +39,7 @@ case class OreAggregation(
                            edmRights: ZeroToOne[URI] = None,
                            sidecar: JValue = JNothing,
                            messages: ZeroToMany[IngestMessage] = Seq[IngestMessage](),
-                           originalId: ZeroToOne[String] = None
+                           originalId: ExactlyOne[String]
                          )
 
 /**

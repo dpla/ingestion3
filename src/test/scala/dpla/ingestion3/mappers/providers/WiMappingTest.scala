@@ -21,7 +21,7 @@ class WiMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "use the provider ID for the original ID" in
-    assert(extractor.getProviderId(xml) == extractor.originalId(xml).get)
+    assert(extractor.getProviderId(xml) == extractor.originalId(xml))
 
   it should "extract the correct isShownAt" in {
     val expected = Seq(uriOnlyWebResource(URI("https://digitalgallery.bgsu.edu/collections/item/14058")))

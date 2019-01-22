@@ -15,6 +15,6 @@ class PaMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "use the provider ID for the original ID" in {
     val xml = <record><header><identifier>foo</identifier></header></record>
-    assert(extractor.getProviderId(Document(xml)) == extractor.originalId(Document(xml)).get)
+    assert(extractor.getProviderId(Document(xml)) == extractor.originalId(Document(xml)))
   }
 }

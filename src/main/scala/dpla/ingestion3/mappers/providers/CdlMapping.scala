@@ -10,8 +10,6 @@ import org.json4s.JValue
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
-import scala.util.Try
-
 class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtractor {
 
   // ID minting functions
@@ -27,7 +25,7 @@ class CdlMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtrac
   // OreAggregation fields
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = mintDplaItemUri(data)
 
-  override def originalId(data: Document[JValue]): ZeroToOne[String] = Try{ Some(getProviderId(data)) }.getOrElse(None)
+  override def originalId(data: Document[JValue]): ExactlyOne[String] = getProviderId(data)
 
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))

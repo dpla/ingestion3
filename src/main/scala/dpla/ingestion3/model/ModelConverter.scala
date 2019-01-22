@@ -33,7 +33,7 @@ object ModelConverter {
     edmRights = optionalUri(row, 10),
     sidecar = optionalJValue(row, 11),
     messages = toMulti(row, 12, toIngestMessage),
-    originalId = optionalString(row, 13)
+    originalId = optionalString(row, 13).getOrElse("MISSING")
   )
 
   private[model] def toSourceResource(row: Row): DplaSourceResource = DplaSourceResource(

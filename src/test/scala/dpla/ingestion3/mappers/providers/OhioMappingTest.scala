@@ -23,7 +23,7 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.getProviderId(xml) === "urn:ohiodplahub.library.ohio.gov:bgsu_12:oai:digitalgallery.bgsu.edu:14058")
 
   it should "use the provider ID for the original ID" in
-    assert(extractor.getProviderId(xml) == extractor.originalId(xml).get)
+    assert(extractor.getProviderId(xml) == extractor.originalId(xml))
 
   it should "throw an Exception if document does not contain a provider identifier" in {
     val xml = <record><metadata></metadata></record>

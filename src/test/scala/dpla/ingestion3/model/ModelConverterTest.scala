@@ -284,7 +284,7 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
     assert(testResult1.preview === Some(edmWebResource))
     assert(testResult1.provider === edmAgent)
     assert(testResult1.edmRights === Some(URI(urlString1)))
-    assert(testResult1.originalId === Some("an original ID"))
+    assert(testResult1.originalId === "an original ID")
   }
 
   it should "convert an EdmWebResource" in {

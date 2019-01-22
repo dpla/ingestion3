@@ -32,7 +32,7 @@ class OklahomaMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "use the provider ID for the original ID" in
-    assert(extractor.getProviderId(xml) == extractor.originalId(xml).get)
+    assert(extractor.getProviderId(xml) == extractor.originalId(xml))
 
   it should "extract the correct alternate titles" in {
     val expected = Seq("Alt Title")

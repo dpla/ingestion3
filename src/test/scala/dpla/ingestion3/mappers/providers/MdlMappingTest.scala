@@ -30,7 +30,7 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "use the provider ID for the original ID" in
-    assert(extractor.getProviderId(json) == extractor.originalId(json).get)
+    assert(extractor.getProviderId(json) == extractor.originalId(json))
 
   // dataProvider
 

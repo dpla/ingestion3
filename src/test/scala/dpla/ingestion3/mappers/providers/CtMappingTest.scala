@@ -24,7 +24,7 @@ class CtMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "use the provider ID for the original ID" in
-    assert(extractor.getProviderId(xml) == extractor.originalId(xml).get)
+    assert(extractor.getProviderId(xml) == extractor.originalId(xml))
 
   it should "extract the correct alternate titles " in {
     val expected_1 = "Law concerning the reunion of Austria with the German Reich of 13 March 1938"

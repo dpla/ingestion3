@@ -30,7 +30,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "use the provider ID for the original ID" in {
     val xml = header(<identifier>foo</identifier>)
-    assert(mapping.getProviderId(xml) == mapping.originalId(xml).get)
+    assert(mapping.getProviderId(xml) == mapping.originalId(xml))
   }
 
   it should "return the correct data provider" in {

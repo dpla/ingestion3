@@ -10,8 +10,6 @@ import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
-import scala.util.Try
-
 class IaMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] with IngestMessageTemplates {
 
   // ID minting functions
@@ -37,7 +35,7 @@ class IaMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
 
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = URI(mintDplaId(data))
 
-  override def originalId(data: Document[JValue]): ZeroToOne[String] = Try{ Some(getProviderId(data)) }.getOrElse(None)
+  override def originalId(data: Document[JValue]): ExactlyOne[String] = getProviderId(data)
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \\ "licenseurl").map(URI)
