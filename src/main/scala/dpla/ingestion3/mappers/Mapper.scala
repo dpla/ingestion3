@@ -240,8 +240,8 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
           title = validatedTitle,
           `type` = validatedType
         ),
-        messages = msgCollector.getAll(),
-        originalId = mapping.originalId(document)
+        originalId = mapping.originalId(document),
+        messages = msgCollector.getAll()
       )
     } match {
       case Success(oreAggregation) => oreAggregation
@@ -317,8 +317,8 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
           title = validatedTitle,
           `type` = validatedType
         ),
-        messages = msgCollector.getAll(),
-        originalId = mapping.originalId(document)
+        originalId = mapping.originalId(document),
+        messages = msgCollector.getAll()
       )
     } match {
       case Success(oreAggregation) => oreAggregation
