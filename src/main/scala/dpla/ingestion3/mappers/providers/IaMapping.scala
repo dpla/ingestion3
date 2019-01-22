@@ -10,7 +10,7 @@ import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
-class IaMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] with IngestMessageTemplates {
+class IaMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
 
   // ID minting functions
   override def useProviderName: Boolean = true

@@ -12,7 +12,7 @@ import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
 
-class MoMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] with IngestMessageTemplates {
+class MoMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
 
   val formatBlockList: Set[String] = ExtentIdentificationList.termList
 

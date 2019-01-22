@@ -12,11 +12,7 @@ import org.json4s.JsonDSL._
 
 import scala.xml.NodeSeq
 
-class P2PMapping()
-  extends XmlMapping
-    with XmlExtractor
-    with IdMinter[NodeSeq]
-    with IngestMessageTemplates {
+class P2PMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
 
   // ID minting functions
   override def useProviderName: Boolean = true

@@ -14,7 +14,7 @@ import scala.util.{Failure, Success, Try}
 import scala.xml.{Node, NodeSeq}
 
 
-class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] {
+class NaraMapping extends XmlMapping with XmlExtractor {
 
   // ID minting functions
   override def useProviderName(): Boolean = true

@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.ExtentIdentificationList
-import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
+import dpla.ingestion3.mappers.utils.{Document, XmlMapping, XmlExtractor}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{nameOnlyAgent, _}
 import dpla.ingestion3.utils.Utils
@@ -12,7 +12,7 @@ import org.json4s.JsonDSL._
 import scala.xml._
 
 
-class GettyMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] {
+class GettyMapping extends XmlMapping with XmlExtractor {
 
   val extentAllowList: Set[String] =
     ExtentIdentificationList.termList

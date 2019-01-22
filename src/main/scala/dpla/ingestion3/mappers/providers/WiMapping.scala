@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList}
-import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
+import dpla.ingestion3.mappers.utils.{Document, XmlMapping, XmlExtractor}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany}
 import dpla.ingestion3.model._
@@ -13,7 +13,7 @@ import org.json4s.JsonDSL._
 import scala.xml._
 
 
-class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
+class WiMapping extends XmlMapping with XmlExtractor
   with IngestMessageTemplates {
 
   val formatBlockList: Set[String] =

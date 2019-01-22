@@ -1,7 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
+import dpla.ingestion3.mappers.utils.{Document, XmlMapping, XmlExtractor}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{nameOnlyAgent, _}
 import dpla.ingestion3.utils.Utils
@@ -11,7 +11,7 @@ import org.json4s.JsonDSL._
 import scala.xml._
 
 
-class MwdlMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] {
+class MwdlMapping extends XmlMapping with XmlExtractor {
 
   private val baseIsShownAt = "http://utah-primoprod.hosted.exlibrisgroup.com/primo_library/libweb/action/dlDisplay.do?vid=MWDL&afterPDS=true&docId="
   // ID minting functions
