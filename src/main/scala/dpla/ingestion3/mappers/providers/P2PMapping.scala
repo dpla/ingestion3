@@ -10,6 +10,7 @@ import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
+import scala.util.Try
 import scala.xml.NodeSeq
 
 class P2PMapping()
@@ -32,6 +33,8 @@ class P2PMapping()
   // OreAggregation fields
   override def dplaUri(data: Document[NodeSeq]): ExactlyOne[URI] =
     mintDplaItemUri(data)
+
+  override def originalId(data: Document[NodeSeq]): ZeroToOne[String] = Try{ Some(getProviderId(data)) }.getOrElse(None)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     for {

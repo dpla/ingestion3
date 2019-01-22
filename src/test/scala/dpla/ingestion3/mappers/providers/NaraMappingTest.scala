@@ -28,6 +28,9 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.getProviderId(xml) === "2132862")
   }
 
+  it should "use the provider ID for the original ID" in
+    assert(extractor.getProviderId(xml) == extractor.originalId(xml).get)
+
   it should "construct the correct item uri" in
     assert(extractor.itemUri(xml) === itemUri)
 

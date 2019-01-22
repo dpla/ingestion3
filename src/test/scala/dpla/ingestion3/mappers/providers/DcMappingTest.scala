@@ -26,6 +26,9 @@ class DcMappingTest extends FlatSpec with BeforeAndAfter {
       extractor.getProviderId(Document(xml))
     }
   }
+  it should "use the provider ID for the original ID" in
+    assert(extractor.getProviderId(xml) == extractor.originalId(xml).get)
+
   it should "extract the correct collection titles" in {
     val expected = Seq("College of Musical Arts Programs", "A second collection")
       .map(nameOnlyCollection)

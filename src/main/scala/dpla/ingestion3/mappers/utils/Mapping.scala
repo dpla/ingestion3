@@ -12,6 +12,7 @@ trait Mapping[T] {
 
   // OreAggregation
   def dplaUri(data: Document[T]): ExactlyOne[URI]
+  def originalId(data: Document[T]): ZeroToOne[String] = None
   def dataProvider(data: Document[T]): ZeroToMany[EdmAgent]
   def originalRecord(data: Document[T]): ExactlyOne[String]
   def hasView(data: Document[T]): ZeroToMany[EdmWebResource] = Seq()

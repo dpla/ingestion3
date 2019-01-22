@@ -28,6 +28,11 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
     assert(result === "oai:plains2peaks:Pine_River_2019-01:oai:prlibrary.cvlcollections.org:54")
   }
 
+  it should "use the provider ID for the original ID" in {
+    val xml = header(<identifier>foo</identifier>)
+    assert(mapping.getProviderId(xml) == mapping.originalId(xml).get)
+  }
+
   it should "return the correct data provider" in {
     val result = mapping.dataProvider(
       metadata(

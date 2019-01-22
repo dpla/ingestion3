@@ -32,7 +32,8 @@ object ModelConverter {
     provider = toEdmAgent(row.getStruct(9)),
     edmRights = optionalUri(row, 10),
     sidecar = optionalJValue(row, 11),
-    messages = toMulti(row, 12, toIngestMessage)
+    messages = toMulti(row, 12, toIngestMessage),
+    originalId = optionalString(row, 13)
   )
 
   private[model] def toSourceResource(row: Row): DplaSourceResource = DplaSourceResource(

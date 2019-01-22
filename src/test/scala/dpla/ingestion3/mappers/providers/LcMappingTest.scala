@@ -30,6 +30,9 @@ class LcMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.getProviderId(json) == expected)
   }
 
+  it should "use the provider ID for the original ID" in
+    assert(extractor.getProviderId(json) == extractor.originalId(json).get)
+
   it should "extract the correct URL for isShownAt" in {
     val expected = Seq(stringOnlyWebResource("https://www.loc.gov/item/73691632/"))
     assert(extractor.isShownAt(json) === expected)

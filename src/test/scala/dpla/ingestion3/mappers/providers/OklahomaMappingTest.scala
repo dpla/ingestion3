@@ -19,12 +19,20 @@ class OklahomaMappingTest extends FlatSpec with BeforeAndAfter {
   it should "not use the provider shortname in minting IDs " in
     assert(extractor.useProviderName())
 
+  it should "extract the correct provider identifier" in {
+    val expected = "oai:okhub:OKCES:oai:shareok.org:11244/50280"
+    assert(extractor.getProviderId(xml) == expected)
+  }
+
   it should "throw an Exception if document does not contain a provider identifier" in {
     val xml = <record><metadata></metadata></record>
     assertThrows[Exception] {
       extractor.getProviderId(Document(xml))
     }
   }
+
+  it should "use the provider ID for the original ID" in
+    assert(extractor.getProviderId(xml) == extractor.originalId(xml).get)
 
   it should "extract the correct alternate titles" in {
     val expected = Seq("Alt Title")

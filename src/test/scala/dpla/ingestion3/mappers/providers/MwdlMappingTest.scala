@@ -22,6 +22,9 @@ class MwdlMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct provider identifier " in
     assert(extractor.getProviderId(xml) === "digcoll_slc_27works_598")
 
+  it should "use the provider ID for the original ID" in
+    assert(extractor.getProviderId(xml) == extractor.originalId(xml).get)
+
   it should "throw an Exception if document does not contain a provider identifier" in {
     val xml = <record><metadata></metadata></record>
     assertThrows[Exception] {

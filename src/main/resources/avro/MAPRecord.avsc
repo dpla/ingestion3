@@ -1121,6 +1121,13 @@
           ]
         }
       }
+    },
+    {
+      "name": "originalId",
+      "type": [
+        "null",
+        "string"
+      ]
     }
   ]
 }

@@ -4,12 +4,13 @@ import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList}
 import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
 import dpla.ingestion3.messages.IngestMessageTemplates
-import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany}
+import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
+import scala.util.Try
 import scala.xml._
 
 
@@ -107,6 +108,8 @@ class WiMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
+
+  override def originalId(data: Document[NodeSeq]): ZeroToOne[String] = Try{ Some(getProviderId(data)) }.getOrElse(None)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "dataProvider").map(nameOnlyAgent)

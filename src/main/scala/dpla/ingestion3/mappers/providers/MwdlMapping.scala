@@ -8,6 +8,7 @@ import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
+import scala.util.Try
 import scala.xml._
 
 
@@ -92,6 +93,8 @@ class MwdlMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
+
+  override def originalId(data: Document[NodeSeq]): ZeroToOne[String] = Try{ Some(getProviderId(data)) }.getOrElse(None)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     (data \\ "display" \ "lds03")

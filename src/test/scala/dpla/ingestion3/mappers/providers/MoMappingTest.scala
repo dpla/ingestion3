@@ -29,6 +29,9 @@ class MoMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.getProviderId(json) === expected)
   }
 
+  it should "use the provider ID for the original ID" in
+    assert(extractor.getProviderId(json) == extractor.originalId(json).get)
+
   // dataProvider
   it should "extract the correct dataProvider" in {
     val expected = List(nameOnlyAgent("Missouri State University"))

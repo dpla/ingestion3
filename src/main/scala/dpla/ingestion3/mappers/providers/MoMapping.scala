@@ -11,6 +11,8 @@ import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
+import scala.util.Try
+
 class MoMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] with IngestMessageTemplates {
 
   val formatBlockList: Set[String] = ExtentIdentificationList.termList
@@ -35,6 +37,8 @@ class MoMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \ "rights").map(URI)
+
+  override def originalId(data: Document[JValue]): ZeroToOne[String] = Try{ Some(getProviderId(data)) }.getOrElse(None)
 
   override def hasView(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \ "hasView" \ "@id").map(stringOnlyWebResource)

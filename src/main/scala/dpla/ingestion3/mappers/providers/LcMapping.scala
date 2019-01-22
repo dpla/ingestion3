@@ -10,6 +10,8 @@ import org.json4s.JValue
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
+import scala.util.Try
+
 class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtractor {
 
   val formatBlockList: Set[String] =
@@ -30,6 +32,8 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
   // OreAggregation fields
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] =
     mintDplaItemUri(data)
+
+  override def originalId(data: Document[JValue]): ZeroToOne[String] = Try{ Some(getProviderId(data)) }.getOrElse(None)
 
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))

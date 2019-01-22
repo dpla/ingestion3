@@ -34,7 +34,8 @@ object RowConverter {
         fromEdmAgent(oreAggregation.provider), //9
         oreAggregation.edmRights.map(_.toString).orNull, //10
         compact(render(oreAggregation.sidecar)), //11
-        oreAggregation.messages.map(fromIngestMessage) //12
+        oreAggregation.messages.map(fromIngestMessage), //12
+        oreAggregation.originalId.orNull //13
       ),
       sqlSchema
     )
