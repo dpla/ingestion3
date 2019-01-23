@@ -202,9 +202,16 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                      (implicit collector: MessageCollector[IngestMessage]): URI = {
 
     values match {
-      case Some(dplaUri) => dplaUri
-      case None => collector.add(missingRequiredError(providerId, "dplaUri"))
-        new URI("")
+      case Some(dplaUri) => {
+        if (!dplaUri.validate) {
+          collector.add(mintUriError(providerId, "dplaUri", dplaUri.toString))
+          URI("")
+        } else dplaUri
+      }
+      case None => {
+        collector.add(missingRequiredError(providerId, "dplaUri"))
+        URI("")
+      }
     }
   }
 }
