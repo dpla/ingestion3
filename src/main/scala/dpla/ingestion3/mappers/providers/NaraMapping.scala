@@ -10,7 +10,6 @@ import org.eclipse.rdf4j.model.IRI
 import org.json4s.JsonAST
 import org.json4s.JsonDSL._
 
-import scala.util.{Failure, Success, Try}
 import scala.xml.{Node, NodeSeq}
 
 
@@ -41,8 +40,7 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     Seq(nameOnlyAgent(referenceUnit.getOrElse("National Records and Archives Administration")))
   }
 
-  override def dplaUri(data: Document[NodeSeq]): URI =
-    mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     Seq(uriOnlyWebResource(itemUri(data)))

@@ -81,7 +81,7 @@ class VirginiasMapping extends XmlMapping with XmlExtractor with IngestMessageTe
     extractStrings(data \ "type")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "provenance")

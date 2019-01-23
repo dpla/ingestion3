@@ -104,4 +104,8 @@ class EsdnMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.isShownAt(xml) === expected)
   }
 
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/9a6660ca7d23f478cbc1b3fed534af72"))
+    assert(extractor.dplaUri(xml) === expected)
+  }
 }

@@ -86,5 +86,9 @@ class MtMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq(uriOnlyWebResource(URI("https://scholarworks.umt.edu/goedicke/1008/thumbnail.jpg")))
     assert(extractor.preview(xml) === expected)
   }
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/8b5ae7a8f3561104fdfc6e7dd6a7f0fe"))
+    assert(extractor.dplaUri(xml) === expected)
+  }
 }
 

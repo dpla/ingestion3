@@ -146,4 +146,8 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.`type`(json) === expected)
   }
 
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/9e0a3ebaa06174954095aabba527f15f"))
+    assert(extractor.dplaUri(json) === expected)
+  }
 }

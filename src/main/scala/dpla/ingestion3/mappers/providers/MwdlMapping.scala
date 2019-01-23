@@ -90,7 +90,7 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
     extractStrings(data \\ "facets" \ "rsrctype")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     (data \\ "display" \ "lds03")

@@ -24,8 +24,7 @@ class P2PMapping extends XmlMapping with XmlExtractor with IngestMessageTemplate
     extractString(data \\ "header" \ "identifier").map(_.trim)
 
   // OreAggregation fields
-  override def dplaUri(data: Document[NodeSeq]): ExactlyOne[URI] =
-    mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     for {

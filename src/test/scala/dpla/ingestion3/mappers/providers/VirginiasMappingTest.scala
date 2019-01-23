@@ -122,7 +122,7 @@ class VirginiasMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "create the correct DPLA URI" in {
-    val expected = new URI("http://dp.la/api/items/ad6472a5e0575718616b5fd54c599095")
+    val expected = Some(new URI("http://dp.la/api/items/ad6472a5e0575718616b5fd54c599095"))
     assert(extractor.dplaUri(xml) === expected)
   }
 

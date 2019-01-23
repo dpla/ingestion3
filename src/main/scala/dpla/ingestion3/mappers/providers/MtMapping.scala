@@ -95,7 +95,7 @@ class MtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     extractStrings(data \\ "typeOfResource")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
   // <mods:note> @type=ownership

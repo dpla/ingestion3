@@ -5,7 +5,6 @@ import dpla.ingestion3.model._
 import org.apache.commons.codec.digest.DigestUtils
 import org.json4s.JsonAST.JValue
 
-import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
 trait Mapping[T] {
@@ -13,7 +12,7 @@ trait Mapping[T] {
   implicit def unwrap(document: Document[T]): T = document.get
 
   // OreAggregation
-  def dplaUri(data: Document[T]): ExactlyOne[URI]
+  def dplaUri(data: Document[T]): ZeroToOne[URI]
   def dataProvider(data: Document[T]): ZeroToMany[EdmAgent]
   def originalRecord(data: Document[T]): ExactlyOne[String]
   def hasView(data: Document[T]): ZeroToMany[EdmWebResource] = Seq()
@@ -93,27 +92,15 @@ trait Mapping[T] {
     * # WARNING DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING #
     * ############################################################
     *
-    * @return String
+    * @return Option[String]
     */
-  protected def buildProviderBaseId()(implicit data: Document[T]): String = {
+  protected def buildProviderBaseId()(implicit data: Document[T]): Option[String] = {
 
-    def idErrorMsg(): String = {
-      s"Unable to mint ID given values of:\n" +
-        s"useProviderName: $useProviderName\n" +
-        s"getProviderName: $getProviderName\n" +
-        s"originalId: $originalId\n"
-    }
-
-    Try {
-      val orig = originalId.getOrElse(throw new RuntimeException(idErrorMsg()))
-      if (useProviderName) {
-        s"$getProviderName--$orig"
-      } else {
-        orig
-      }
-    } match {
-      case Success(id) => id
-      case Failure(_) => throw new RuntimeException(idErrorMsg())
+    originalId match {
+      case Some(id) =>
+        if (useProviderName) Some(s"$getProviderName--$id")
+        else Some(id)
+      case None => None
     }
   }
 
@@ -124,16 +111,18 @@ trait Mapping[T] {
     * # WARNING DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING #
     * ############################################################
     *
-    * @return String MD5 hash of the base ID
+    * @return Option[String] MD5 hash of the base ID
     */
-  protected def mintDplaId(implicit data: Document[T]): String = DigestUtils.md5Hex(buildProviderBaseId())
+  protected def mintDplaId(implicit data: Document[T]): Option[String] =
+    buildProviderBaseId.map(DigestUtils.md5Hex)
 
   /**
     * Builds the item URI
     *
-    * @return URI
+    * @return Option[URI]
     */
-  protected def mintDplaItemUri(implicit data: Document[T]): URI = URI(s"$baseDplaItemUri$mintDplaId")
+  protected def mintDplaItemUri(implicit data: Document[T]): Option[URI] =
+    mintDplaId.map(id => URI(s"$baseDplaItemUri$id"))
 }
 
 trait XmlMapping extends Mapping[NodeSeq]

@@ -95,4 +95,9 @@ class CtMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = List(stringOnlyWebResource("https://ctdigitalarchive.org/islandora/object/20002:1323/datastream/TN"))
     assert(extractor.preview(xml) === expected)
   }
+
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/92fc087881322d8223ba36a9b25b66e8"))
+    assert(extractor.dplaUri(xml) === expected)
+  }
 }

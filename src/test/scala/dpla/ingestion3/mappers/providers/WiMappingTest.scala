@@ -20,6 +20,11 @@ class WiMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.originalId(xml) == expected)
   }
 
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/7e54c54e8f3b49009dc91d2568e021b5"))
+    assert(extractor.dplaUri(xml) === expected)
+  }
+
   it should "extract the correct isShownAt" in {
     val expected = Seq(uriOnlyWebResource(URI("https://digitalgallery.bgsu.edu/collections/item/14058")))
     assert(extractor.isShownAt(xml) === expected)

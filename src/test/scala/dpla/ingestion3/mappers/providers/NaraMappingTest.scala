@@ -33,7 +33,7 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "have the correct DPLA ID" in {
     val dplaUri = extractor.dplaUri(xml)
-    assert(dplaUri === URI("http://dp.la/api/items/805598afebf2c093272a5a044938be59"))
+    assert(dplaUri === Some(URI("http://dp.la/api/items/805598afebf2c093272a5a044938be59")))
   }
 
   it should "express the right hub details" in {

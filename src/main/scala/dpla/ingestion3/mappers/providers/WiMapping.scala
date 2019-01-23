@@ -105,7 +105,7 @@ class WiMapping extends XmlMapping with XmlExtractor
     extractStrings(data \ "metadata" \\ "type").filter(isDcmiType)
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "dataProvider").map(nameOnlyAgent)

@@ -179,7 +179,7 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "create the correct DPLA URI" in {
-    val expected = new URI("http://dp.la/api/items/130137a53d59ee27d7dab4e0078e1220")
+    val expected = Some(URI("http://dp.la/api/items/130137a53d59ee27d7dab4e0078e1220"))
     assert(extractor.dplaUri(xml) === expected)
   }
 

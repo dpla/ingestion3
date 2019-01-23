@@ -96,4 +96,9 @@ class LcMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("map", "map")
     assert(extractor.`type`(json) == expected)
   }
+
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/af47f0702702b4697cf28868eb7dcea6"))
+    assert(extractor.dplaUri(json) === expected)
+  }
  }

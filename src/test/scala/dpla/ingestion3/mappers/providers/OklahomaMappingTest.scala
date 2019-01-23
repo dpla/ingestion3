@@ -134,8 +134,8 @@ class OklahomaMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.edmRights(xml) === expected)
   }
 
-
-
-
-
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/b850987a7386bae1a31d703b6bb3e5f7"))
+    assert(extractor.dplaUri(xml) === expected)
+  }
 }

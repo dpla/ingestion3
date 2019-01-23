@@ -37,7 +37,7 @@ class MoMappingTest extends FlatSpec with BeforeAndAfter {
 
   // dplaUri
   it should "create the correct DPLA URI" in {
-    val expected = new URI("http://dp.la/api/items/8c630431c601bd29753c93d3d8eea6cf")
+    val expected = Some(URI("http://dp.la/api/items/8c630431c601bd29753c93d3d8eea6cf"))
     assert(extractor.dplaUri(json) === expected)
   }
 

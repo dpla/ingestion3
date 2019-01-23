@@ -71,5 +71,9 @@ class MwdlMappingTest extends FlatSpec with BeforeAndAfter {
       "https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/").map(stringOnlyWebResource)
     assert(extractor.preview(xml) === expected)
   }
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/5c31abd09b535552592bf97cbed6557a"))
+    assert(extractor.dplaUri(xml) === expected)
+  }
 }
 

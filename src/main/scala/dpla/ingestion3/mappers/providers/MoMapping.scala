@@ -30,7 +30,7 @@ class MoMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data) \ "dataProvider").map(nameOnlyAgent)
 
-  override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \ "rights").map(URI)

@@ -138,7 +138,7 @@ class EsdnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
     extractStrings(data \ "metadata" \ "mods" \ "typeOfResource")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     (data \ "metadata" \ "mods" \ "note")

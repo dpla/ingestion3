@@ -102,7 +102,7 @@ class GettyMapping extends XmlMapping with XmlExtractor {
     extractStrings(data \\ "display" \ "lds26")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     Seq(nameOnlyAgent("Getty Research Institute"))

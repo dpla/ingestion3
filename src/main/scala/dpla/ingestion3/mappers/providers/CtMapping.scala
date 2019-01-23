@@ -139,7 +139,7 @@ class CtMapping extends XmlMapping with XmlExtractor
       extractStrings(data \ "typeOfResource")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
   
   // <note type="ownership">
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =

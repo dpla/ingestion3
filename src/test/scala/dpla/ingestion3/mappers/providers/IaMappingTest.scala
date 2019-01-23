@@ -148,4 +148,9 @@ class IaMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("texts")
     assert(extractor.`type`(json) == expected)
   }
+
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/a43347f17f5d153a56cc74f5ba3fc59b"))
+    assert(extractor.dplaUri(json) === expected)
+  }
  }
