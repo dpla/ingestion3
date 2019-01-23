@@ -23,7 +23,7 @@ class OklahomaMapping extends XmlMapping with XmlExtractor with IngestMessageTem
 
   override def getProviderName(): String = "oklahoma"
 
-  override def getProviderId(implicit data: Document[NodeSeq]): String =
+  override def originalId(implicit data: Document[NodeSeq]): ExactlyOne[String] =
     extractString(data \ "header" \ "identifier")
       .getOrElse(throw new RuntimeException(s"No ID for record $data")
       )
@@ -142,8 +142,6 @@ class OklahomaMapping extends XmlMapping with XmlExtractor with IngestMessageTem
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
-
-  override def originalId(data: Document[NodeSeq]): ExactlyOne[String] = getProviderId(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     (data \ "metadata" \ "mods" \ "note")

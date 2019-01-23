@@ -23,7 +23,7 @@ class CtMapping extends XmlMapping with XmlExtractor
 
   override def getProviderName(): String = "ct"
 
-  override def getProviderId(implicit data: Document[NodeSeq]): String =
+  override def originalId(implicit data: Document[NodeSeq]): ExactlyOne[String] =
   isShownAtStrings(data)
     .headOption
     .getOrElse(throw new RuntimeException(s"No ID for record $data"))
@@ -142,8 +142,6 @@ class CtMapping extends XmlMapping with XmlExtractor
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
-
-  override def originalId(data: Document[NodeSeq]): ExactlyOne[String] = getProviderId(data)
   
   // <note type="ownership">
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =

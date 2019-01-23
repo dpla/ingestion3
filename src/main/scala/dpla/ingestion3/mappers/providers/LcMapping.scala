@@ -23,15 +23,13 @@ class LcMapping() extends JsonMapping with JsonExtractor {
   override def getProviderName: String =
     "loc"
 
-  override def getProviderId(implicit data: Document[JValue]): String =
+  override def originalId(implicit data: Document[JValue]): ExactlyOne[String] =
     extractString(unwrap(data) \ "item" \ "id") // TODO confirm basis field for DPLA ID
       .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
   // OreAggregation fields
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] =
     mintDplaItemUri(data)
-
-  override def originalId(data: Document[JValue]): ExactlyOne[String] = getProviderId(data)
 
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))

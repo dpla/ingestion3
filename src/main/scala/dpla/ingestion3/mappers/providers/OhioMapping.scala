@@ -21,7 +21,7 @@ class OhioMapping extends XmlMapping with XmlExtractor
 
   override def getProviderName(): String = "ohio"
 
-  override def getProviderId(implicit data: Document[NodeSeq]): String =
+  override def originalId(implicit data: Document[NodeSeq]): ExactlyOne[String] =
     extractString(data \ "header" \ "identifier")
       .getOrElse(throw new RuntimeException(s"No ID for record $data"))
 
@@ -112,8 +112,6 @@ class OhioMapping extends XmlMapping with XmlExtractor
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
-
-  override def originalId(data: Document[NodeSeq]): ExactlyOne[String] = getProviderId(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "dataProvider")

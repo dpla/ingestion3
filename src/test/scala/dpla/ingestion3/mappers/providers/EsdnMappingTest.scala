@@ -19,18 +19,15 @@ class EsdnMappingTest extends FlatSpec with BeforeAndAfter {
   it should "not use the provider shortname in minting IDs " in
     assert(extractor.useProviderName())
 
-  it should "extract the correct provider identifier " in
-    assert(extractor.getProviderId(xml) === "oai:repox.ist.utl.pt:bklynsheetmusic_collection:oai:dcmny.org:bklynsheetmusic_55")
+  it should "extract the correct original identifier " in
+    assert(extractor.originalId(xml) === "oai:repox.ist.utl.pt:bklynsheetmusic_collection:oai:dcmny.org:bklynsheetmusic_55")
 
   it should "throw an Exception if document does not contain a provider identifier" in {
     val xml = <record><metadata></metadata></record>
     assertThrows[Exception] {
-      extractor.getProviderId(Document(xml))
+      extractor.originalId(Document(xml))
     }
   }
-
-  it should "use the provider ID for the original ID" in
-    assert(extractor.getProviderId(xml) == extractor.originalId(xml))
 
   it should "extract the correct alternate titles" in {
     val expected = Seq("Alternate Title")

@@ -23,7 +23,7 @@ class MoMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
   // TODO: Should this be the same as provider short name?
   override def getProviderName: String = "mo"
 
-  override def getProviderId(implicit data: Document[JValue]): String =
+  override def originalId(implicit data: Document[JValue]): ExactlyOne[String] =
     extractString(unwrap(data) \ "@id")
       .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 

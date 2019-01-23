@@ -24,13 +24,10 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.getProviderName === "minnesota")
   }
 
-  it should "extract the correct providerId" in {
+  it should "extract the correct original ID" in {
     val expected = "https://archive.mpr.org/stories/2014/08/14/hmong-vendors-learn-the-law-on-legal-drug"
-    assert(extractor.getProviderId(json) === expected)
+    assert(extractor.originalId(json) === expected)
   }
-
-  it should "use the provider ID for the original ID" in
-    assert(extractor.getProviderId(json) == extractor.originalId(json))
 
   // dataProvider
 

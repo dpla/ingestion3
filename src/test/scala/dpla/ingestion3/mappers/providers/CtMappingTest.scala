@@ -18,13 +18,10 @@ class CtMappingTest extends FlatSpec with BeforeAndAfter {
   it should "not use the provider shortname in minting IDs "in
     assert(!extractor.useProviderName())
 
-  it should "extract the correct provider ID" in {
+  it should "extract the correct original ID" in {
     val expected = "http://hdl.handle.net/11134/20002:1323"
-    assert(extractor.getProviderId(xml) == expected)
+    assert(extractor.originalId(xml) == expected)
   }
-
-  it should "use the provider ID for the original ID" in
-    assert(extractor.getProviderId(xml) == extractor.originalId(xml))
 
   it should "extract the correct alternate titles " in {
     val expected_1 = "Law concerning the reunion of Austria with the German Reich of 13 March 1938"

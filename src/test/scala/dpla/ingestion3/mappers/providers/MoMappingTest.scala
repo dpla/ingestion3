@@ -24,13 +24,10 @@ class MoMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.getProviderName === "mo")
   }
 
-  it should "extract the correct providerId" in {
+  it should "extract the correct original ID" in {
     val expected = "missouri--urn:data.mohistory.org:msu_all:oai:digitalcollections.missouristate.edu:Hennicke/94"
-    assert(extractor.getProviderId(json) === expected)
+    assert(extractor.originalId(json) === expected)
   }
-
-  it should "use the provider ID for the original ID" in
-    assert(extractor.getProviderId(json) == extractor.originalId(json))
 
   // dataProvider
   it should "extract the correct dataProvider" in {

@@ -14,7 +14,6 @@ trait Mapping[T] {
 
   // OreAggregation
   def dplaUri(data: Document[T]): ExactlyOne[URI]
-  def originalId(data: Document[T]): ExactlyOne[String]
   def dataProvider(data: Document[T]): ZeroToMany[EdmAgent]
   def originalRecord(data: Document[T]): ExactlyOne[String]
   def hasView(data: Document[T]): ZeroToMany[EdmWebResource] = Seq()
@@ -70,7 +69,7 @@ trait Mapping[T] {
     * @return String Record identifier
     * @throws Exception If ID can not be extracted
     */
-  def getProviderId(implicit data: Document[T]): String
+  def originalId(implicit data: Document[T]): ExactlyOne[String]
 
   /**
     * The provider's shortname abbreviation which is the value used to salt the
@@ -102,14 +101,14 @@ trait Mapping[T] {
       s"Unable to mint ID given values of:\n" +
         s"useProviderName: $useProviderName\n" +
         s"getProviderName: $getProviderName\n" +
-        s"getProviderId: $getProviderId\n"
+        s"getProviderId: $originalId\n"
     }
 
     Try {
       if (useProviderName) {
-        s"$getProviderName--$getProviderId"
+        s"$getProviderName--$originalId"
       } else {
-        getProviderId
+        originalId
       }
     } match {
       case Success(id) => id

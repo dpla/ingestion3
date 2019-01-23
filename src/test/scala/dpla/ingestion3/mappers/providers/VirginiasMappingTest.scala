@@ -19,16 +19,13 @@ class VirginiasMappingTest extends FlatSpec with BeforeAndAfter {
   it should "not use the provider shortname in minting IDs "in
     assert(!extractor.useProviderName())
 
-  it should "extract the correct provider identifier " in
-    assert(extractor.getProviderId(xml) === "uva-lib:1002813")
+  it should "extract the correct original identifier " in
+    assert(extractor.originalId(xml) === "uva-lib:1002813")
 
-  it should "use the provider ID for the original ID" in
-    assert(extractor.getProviderId(xml) == extractor.originalId(xml))
-
-  it should "throw an Exception if document does not contain a provider identifier" in {
+  it should "throw an Exception if document does not contain an original identifier" in {
     val xml = <mdRecord></mdRecord>
     assertThrows[Exception] {
-      extractor.getProviderId(Document(xml))
+      extractor.originalId(Document(xml))
     }
   }
 

@@ -19,11 +19,8 @@ class GettyMappingTest extends FlatSpec with BeforeAndAfter {
   it should "use the provider shortname in minting IDs " in
     assert(extractor.useProviderName())
 
-  it should "extract the correct provider identifier " in
-    assert(extractor.getProviderId(xml) === "GETTY_OCPFL608236")
-
-  it should "use the provider ID for the original ID" in
-    assert(extractor.getProviderId(xml) == extractor.originalId(xml))
+  it should "extract the correct original identifier " in
+    assert(extractor.originalId(xml) === "GETTY_OCPFL608236")
 
   it should "extract the correct collection titles" in {
     val expected = Seq("Foto Arte Minore / Max Hutzel (accession number 86.P.8)")

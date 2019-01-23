@@ -38,13 +38,10 @@ class IaMappingTest extends FlatSpec with BeforeAndAfter {
 
   }
 
-  it should "extract the correct provider id" in {
+  it should "extract the correct original id" in {
     val expected = "artofdyingwell00bell"
-    assert(extractor.getProviderId(json) == expected)
+    assert(extractor.originalId(json) == expected)
   }
-
-  it should "use the provider ID for the original ID" in
-    assert(extractor.getProviderId(json) == extractor.originalId(json))
 
   it should "extract the correct URL for isShownAt" in {
     val expected = Seq(stringOnlyWebResource("http://www.archive.org/details/artofdyingwell00bell"))

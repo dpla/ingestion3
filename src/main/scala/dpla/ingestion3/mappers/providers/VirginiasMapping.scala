@@ -25,7 +25,7 @@ class VirginiasMapping extends XmlMapping with XmlExtractor with IngestMessageTe
   override def getProviderName(): String = "virginias"
 
   // TODO: What field in virginias records should we use for persistent ID?
-  override def getProviderId(implicit data: Document[NodeSeq]): String =
+  override def originalId(implicit data: Document[NodeSeq]): ExactlyOne[String] =
     extractString(data \ "identifier")
       .getOrElse(throw new RuntimeException(s"No ID for record $data"))
   
@@ -83,8 +83,6 @@ class VirginiasMapping extends XmlMapping with XmlExtractor with IngestMessageTe
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
-
-  override def originalId(data: Document[NodeSeq]): ExactlyOne[String] = getProviderId(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "provenance")

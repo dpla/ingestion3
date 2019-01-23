@@ -20,7 +20,7 @@ class PaMapping extends XmlMapping with XmlExtractor
   // getProviderName is not implemented here because useProviderName is false
 
   // TODO Add message collect here
-  override def getProviderId(implicit data: Document[NodeSeq]): String =
+  override def originalId(implicit data: Document[NodeSeq]): ExactlyOne[String] =
     extractString(data \ "header" \ "identifier")
       .getOrElse[String](throw new RuntimeException(s"No ID for record $data"))
 
@@ -76,8 +76,6 @@ class PaMapping extends XmlMapping with XmlExtractor
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
-
-  override def originalId(data: Document[NodeSeq]): ExactlyOne[String] = getProviderId(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     extractStrings(data \ "metadata" \\ "contributor").lastOption match {

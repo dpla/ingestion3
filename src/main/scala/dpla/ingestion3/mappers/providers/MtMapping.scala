@@ -26,7 +26,7 @@ class MtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def getProviderName(): String = "mt"
 
-  override def getProviderId(implicit data: Document[NodeSeq]): String =
+  override def originalId(implicit data: Document[NodeSeq]): ExactlyOne[String] =
     extractString(data \\ "header" \ "identifier").getOrElse(throw new RuntimeException(s"No ID for record $data"))
 
   // SourceResource mapping
@@ -96,8 +96,6 @@ class MtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
-
-  override def originalId(data: Document[NodeSeq]): ExactlyOne[String] = getProviderId(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
   // <mods:note> @type=ownership

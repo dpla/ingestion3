@@ -21,7 +21,7 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
 
   override def getProviderName: String = "minnesota"
 
-  override def getProviderId(implicit data: Document[JValue]): String =
+  override def originalId(implicit data: Document[JValue]): ExactlyOne[String] =
     extractString(unwrap(data) \ "record" \ "isShownAt")
        .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
@@ -30,8 +30,6 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
     extractStrings(unwrap(data) \ "record" \ "dataProvider").map(nameOnlyAgent)
 
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = URI(mintDplaId(data))
-
-  override def originalId(data: Document[JValue]): ExactlyOne[String] = getProviderId(data)
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \ "record" \ "rights").map(URI)

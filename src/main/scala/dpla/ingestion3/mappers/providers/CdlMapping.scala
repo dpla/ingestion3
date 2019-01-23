@@ -10,7 +10,7 @@ import org.json4s.JValue
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
-class CdlMapping() extends JsonMapping with JsonExtractor {
+class CdlMapping extends JsonMapping with JsonExtractor {
 
   // ID minting functions
   override def useProviderName: Boolean = true
@@ -18,14 +18,11 @@ class CdlMapping() extends JsonMapping with JsonExtractor {
   // Hard coded to prevent accidental changes to base ID
   override def getProviderName: String = "cdl"
 
-  override def getProviderId(implicit data: Document[JValue]): String = extractString("id")(data)
-    .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
-
-
   // OreAggregation fields
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = mintDplaItemUri(data)
 
-  override def originalId(data: Document[JValue]): ExactlyOne[String] = getProviderId(data)
+  override def originalId(implicit data: Document[JValue]): ExactlyOne[String] = extractString("id")(data)
+    .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
