@@ -21,9 +21,8 @@ class NaraMapping extends XmlMapping with XmlExtractor {
 
   override def getProviderName(): String = "nara"
 
-  // itemUri will throw an exception if an ID is missing
-  override def originalId(implicit data: Document[NodeSeq]): ExactlyOne[String] =
-    extractString("naId")(data).getOrElse(throw MappingException("Can't find naId"))
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
+    extractString("naId")(data)
 
   def itemUri(implicit data: Document[NodeSeq]): URI =
     extractString("naId")(data).map(naId => URI("http://catalog.archives.gov/id/" + naId))
@@ -282,10 +281,10 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     url = accessFileName.startsWith(badPrefix) match {
       case false => accessFileName
       case true => {
-        Try { originalId(data) } match {
-          case Success(id) => "https://catalog.archives.gov/OpaAPI/media/" +
+        originalId(data) match {
+          case Some(id) => "https://catalog.archives.gov/OpaAPI/media/" +
             id + "/content/" + accessFileName.stripPrefix(badPrefix)
-          case Failure(_) => null
+          case None => null
         }
       }
     }

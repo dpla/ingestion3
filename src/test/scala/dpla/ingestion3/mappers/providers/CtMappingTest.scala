@@ -19,7 +19,7 @@ class CtMappingTest extends FlatSpec with BeforeAndAfter {
     assert(!extractor.useProviderName())
 
   it should "extract the correct original ID" in {
-    val expected = "http://hdl.handle.net/11134/20002:1323"
+    val expected = Some("http://hdl.handle.net/11134/20002:1323")
     assert(extractor.originalId(xml) == expected)
   }
 

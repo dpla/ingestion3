@@ -23,10 +23,8 @@ class OklahomaMapping extends XmlMapping with XmlExtractor with IngestMessageTem
 
   override def getProviderName(): String = "oklahoma"
 
-  override def originalId(implicit data: Document[NodeSeq]): ExactlyOne[String] =
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
-      .getOrElse(throw new RuntimeException(s"No ID for record $data")
-      )
 
   // SourceResource mapping
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =

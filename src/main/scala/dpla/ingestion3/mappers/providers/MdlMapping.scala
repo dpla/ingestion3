@@ -10,7 +10,6 @@ import dpla.ingestion3.utils.Utils
 import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
-import org.json4s.jackson.JsonMethods._
 
 class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
 
@@ -21,9 +20,8 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
 
   override def getProviderName: String = "minnesota"
 
-  override def originalId(implicit data: Document[JValue]): ExactlyOne[String] =
+  override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString(unwrap(data) \ "record" \ "isShownAt")
-       .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
   // OreAggregation
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =

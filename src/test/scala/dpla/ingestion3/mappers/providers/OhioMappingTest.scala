@@ -20,14 +20,7 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
     assert(!extractor.useProviderName())
 
   it should "extract the correct original identifier " in
-    assert(extractor.originalId(xml) === "urn:ohiodplahub.library.ohio.gov:bgsu_12:oai:digitalgallery.bgsu.edu:14058")
-
-  it should "throw an Exception if document does not contain an original identifier" in {
-    val xml = <record><metadata></metadata></record>
-    assertThrows[Exception] {
-      extractor.originalId(Document(xml))
-    }
-  }
+    assert(extractor.originalId(xml) === Some("urn:ohiodplahub.library.ohio.gov:bgsu_12:oai:digitalgallery.bgsu.edu:14058"))
 
   it should "extract the correct alternate titles " in {
     val expected = Seq("Alt title one", "Alt title two")

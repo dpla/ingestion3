@@ -18,14 +18,10 @@ class MtMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "use the provider shortname in minting IDs " in
     assert(extractor.useProviderName())
+
   it should "extract the correct original identifier " in
-    assert(extractor.originalId(xml) === "oai:the.european.library.UMr8:oai:scholarworks.umt.edu:goedicke-1008")
-  it should "throw an Exception if document does not contain an original identifier" in {
-    val xml = <record><metadata></metadata></record>
-    assertThrows[Exception] {
-      extractor.originalId(Document(xml))
-    }
-  }
+    assert(extractor.originalId(xml) === Some("oai:the.european.library.UMr8:oai:scholarworks.umt.edu:goedicke-1008"))
+
   it should "extract the correct collection titles" in {
     val expected = Seq("Collection Title")
       .map(nameOnlyCollection)

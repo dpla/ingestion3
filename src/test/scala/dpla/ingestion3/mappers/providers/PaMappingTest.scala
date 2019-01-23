@@ -9,7 +9,7 @@ class PaMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "extract the correct original ID" in {
     val xml = <record><header><identifier>foo</identifier></header></record>
-    val expected = "foo"
+    val expected = Some("foo")
     assert(extractor.originalId(Document(xml)) == expected)
   }
 }

@@ -8,7 +8,6 @@ import dpla.ingestion3.model.{EdmAgent, _}
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods._
 
 class LcMapping() extends JsonMapping with JsonExtractor {
 
@@ -23,9 +22,8 @@ class LcMapping() extends JsonMapping with JsonExtractor {
   override def getProviderName: String =
     "loc"
 
-  override def originalId(implicit data: Document[JValue]): ExactlyOne[String] =
+  override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString(unwrap(data) \ "item" \ "id") // TODO confirm basis field for DPLA ID
-      .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
   // OreAggregation fields
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] =

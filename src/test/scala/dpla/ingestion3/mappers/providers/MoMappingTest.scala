@@ -25,7 +25,7 @@ class MoMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct original ID" in {
-    val expected = "missouri--urn:data.mohistory.org:msu_all:oai:digitalcollections.missouristate.edu:Hennicke/94"
+    val expected = Some("missouri--urn:data.mohistory.org:msu_all:oai:digitalcollections.missouristate.edu:Hennicke/94")
     assert(extractor.originalId(json) === expected)
   }
 

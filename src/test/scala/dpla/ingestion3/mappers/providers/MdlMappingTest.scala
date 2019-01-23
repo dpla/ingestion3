@@ -25,7 +25,7 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct original ID" in {
-    val expected = "https://archive.mpr.org/stories/2014/08/14/hmong-vendors-learn-the-law-on-legal-drug"
+    val expected = Some("https://archive.mpr.org/stories/2014/08/14/hmong-vendors-learn-the-law-on-legal-drug")
     assert(extractor.originalId(json) === expected)
   }
 

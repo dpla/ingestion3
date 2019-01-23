@@ -39,7 +39,7 @@ class IaMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct original id" in {
-    val expected = "artofdyingwell00bell"
+    val expected = Some("artofdyingwell00bell")
     assert(extractor.originalId(json) == expected)
   }
 

@@ -8,7 +8,6 @@ import dpla.ingestion3.model.{EdmAgent, _}
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods._
 
 class CdlMapping extends JsonMapping with JsonExtractor {
 
@@ -21,8 +20,7 @@ class CdlMapping extends JsonMapping with JsonExtractor {
   // OreAggregation fields
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = mintDplaItemUri(data)
 
-  override def originalId(implicit data: Document[JValue]): ExactlyOne[String] = extractString("id")(data)
-    .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
+  override def originalId(implicit data: Document[JValue]): ZeroToOne[String] = extractString("id")(data)
 
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))

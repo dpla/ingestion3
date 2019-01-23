@@ -20,9 +20,8 @@ class PaMapping extends XmlMapping with XmlExtractor
   // getProviderName is not implemented here because useProviderName is false
 
   // TODO Add message collect here
-  override def originalId(implicit data: Document[NodeSeq]): ExactlyOne[String] =
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
-      .getOrElse[String](throw new RuntimeException(s"No ID for record $data"))
 
   // SourceResource mapping
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =

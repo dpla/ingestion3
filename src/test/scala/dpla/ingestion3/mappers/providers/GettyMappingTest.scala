@@ -20,7 +20,7 @@ class GettyMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.useProviderName())
 
   it should "extract the correct original identifier " in
-    assert(extractor.originalId(xml) === "GETTY_OCPFL608236")
+    assert(extractor.originalId(xml) === Some("GETTY_OCPFL608236"))
 
   it should "extract the correct collection titles" in {
     val expected = Seq("Foto Arte Minore / Max Hutzel (accession number 86.P.8)")

@@ -20,15 +20,8 @@ class OklahomaMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.useProviderName())
 
   it should "extract the correct original identifier" in {
-    val expected = "oai:okhub:OKCES:oai:shareok.org:11244/50280"
+    val expected = Some("oai:okhub:OKCES:oai:shareok.org:11244/50280")
     assert(extractor.originalId(xml) == expected)
-  }
-
-  it should "throw an Exception if document does not contain a original identifier" in {
-    val xml = <record><metadata></metadata></record>
-    assertThrows[Exception] {
-      extractor.originalId(Document(xml))
-    }
   }
 
   it should "extract the correct alternate titles" in {

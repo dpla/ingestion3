@@ -69,7 +69,7 @@ trait Mapping[T] {
     * @return String Record identifier
     * @throws Exception If ID can not be extracted
     */
-  def originalId(implicit data: Document[T]): ExactlyOne[String]
+  def originalId(implicit data: Document[T]): ZeroToOne[String]
 
   /**
     * The provider's shortname abbreviation which is the value used to salt the
@@ -101,14 +101,15 @@ trait Mapping[T] {
       s"Unable to mint ID given values of:\n" +
         s"useProviderName: $useProviderName\n" +
         s"getProviderName: $getProviderName\n" +
-        s"getProviderId: $originalId\n"
+        s"originalId: $originalId\n"
     }
 
     Try {
+      val orig = originalId.getOrElse(throw new RuntimeException(idErrorMsg()))
       if (useProviderName) {
-        s"$getProviderName--$originalId"
+        s"$getProviderName--$orig"
       } else {
-        originalId
+        orig
       }
     } match {
       case Success(id) => id

@@ -4,7 +4,7 @@ import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, XmlMapping, XmlExtractor}
 import dpla.ingestion3.messages.IngestMessageTemplates
-import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany}
+import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
@@ -25,9 +25,8 @@ class VirginiasMapping extends XmlMapping with XmlExtractor with IngestMessageTe
   override def getProviderName(): String = "virginias"
 
   // TODO: What field in virginias records should we use for persistent ID?
-  override def originalId(implicit data: Document[NodeSeq]): ExactlyOne[String] =
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "identifier")
-      .getOrElse(throw new RuntimeException(s"No ID for record $data"))
   
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
     extractStrings(data \ "isPartOf")

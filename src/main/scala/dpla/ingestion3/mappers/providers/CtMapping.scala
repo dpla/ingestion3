@@ -1,9 +1,9 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
-import dpla.ingestion3.mappers.utils.{Document, XmlMapping, XmlExtractor}
+import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
-import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany}
+import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
@@ -23,10 +23,8 @@ class CtMapping extends XmlMapping with XmlExtractor
 
   override def getProviderName(): String = "ct"
 
-  override def originalId(implicit data: Document[NodeSeq]): ExactlyOne[String] =
-  isShownAtStrings(data)
-    .headOption
-    .getOrElse(throw new RuntimeException(s"No ID for record $data"))
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
+    isShownAtStrings(data).headOption
 
   //  mods/titleInfo @type=alternative> children combined as follows (with a single space between):
   //  <nonSort> <title> <subTitle>  <partName> <partNumber>

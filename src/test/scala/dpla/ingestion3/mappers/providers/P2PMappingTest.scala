@@ -25,7 +25,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
         </identifier>
       )
     )
-    assert(result === "oai:plains2peaks:Pine_River_2019-01:oai:prlibrary.cvlcollections.org:54")
+    assert(result === Some("oai:plains2peaks:Pine_River_2019-01:oai:prlibrary.cvlcollections.org:54"))
   }
 
   it should "return the correct data provider" in {

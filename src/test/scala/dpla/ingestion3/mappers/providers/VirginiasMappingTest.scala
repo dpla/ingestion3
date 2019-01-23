@@ -20,14 +20,7 @@ class VirginiasMappingTest extends FlatSpec with BeforeAndAfter {
     assert(!extractor.useProviderName())
 
   it should "extract the correct original identifier " in
-    assert(extractor.originalId(xml) === "uva-lib:1002813")
-
-  it should "throw an Exception if document does not contain an original identifier" in {
-    val xml = <mdRecord></mdRecord>
-    assertThrows[Exception] {
-      extractor.originalId(Document(xml))
-    }
-  }
+    assert(extractor.originalId(xml) === Some("uva-lib:1002813"))
 
   it should "extract the correct collection titles" in {
     val expected =

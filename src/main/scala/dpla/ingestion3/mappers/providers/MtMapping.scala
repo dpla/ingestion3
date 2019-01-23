@@ -4,7 +4,7 @@ import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList}
 import dpla.ingestion3.mappers.utils.{Document, XmlMapping, XmlExtractor}
 import dpla.ingestion3.messages.IngestMessageTemplates
-import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany}
+import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
@@ -26,8 +26,8 @@ class MtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def getProviderName(): String = "mt"
 
-  override def originalId(implicit data: Document[NodeSeq]): ExactlyOne[String] =
-    extractString(data \\ "header" \ "identifier").getOrElse(throw new RuntimeException(s"No ID for record $data"))
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
+    extractString(data \\ "header" \ "identifier")
 
   // SourceResource mapping
   override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =

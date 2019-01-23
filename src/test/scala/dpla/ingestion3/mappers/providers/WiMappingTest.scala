@@ -16,7 +16,7 @@ class WiMappingTest extends FlatSpec with BeforeAndAfter {
   val extractor = new WiMapping
 
   it should "extract the correct original id" in {
-    val expected = "urn:ohiodplahub.library.ohio.gov:bgsu_12:oai:digitalgallery.bgsu.edu:14058"
+    val expected = Some("urn:ohiodplahub.library.ohio.gov:bgsu_12:oai:digitalgallery.bgsu.edu:14058")
     assert(extractor.originalId(xml) == expected)
   }
 

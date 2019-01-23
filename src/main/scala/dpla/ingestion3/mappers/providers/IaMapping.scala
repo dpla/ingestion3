@@ -8,7 +8,6 @@ import dpla.ingestion3.utils.Utils
 import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
-import org.json4s.jackson.JsonMethods._
 
 class IaMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
 
@@ -17,9 +16,8 @@ class IaMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
 
   override def getProviderName: String = "ia"
 
-  override def originalId(implicit data: Document[JValue]): ExactlyOne[String] =
+  override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString(unwrap(data) \ "identifier")
-       .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
   // OreAggregration
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] = {

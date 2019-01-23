@@ -20,10 +20,8 @@ class P2PMapping extends XmlMapping with XmlExtractor with IngestMessageTemplate
   // Hard coded to prevent accidental changes to base ID
   override def getProviderName: String = "p2p"
 
-  override def originalId(implicit data: Document[NodeSeq]): ExactlyOne[String] =
-    extractString(data \\ "header" \ "identifier")
-      .map(_.trim)
-      .getOrElse(throw new RuntimeException(s"No ID for record $data"))
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
+    extractString(data \\ "header" \ "identifier").map(_.trim)
 
   // OreAggregation fields
   override def dplaUri(data: Document[NodeSeq]): ExactlyOne[URI] =

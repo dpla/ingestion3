@@ -24,10 +24,8 @@ class EsdnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
 
   override def getProviderName(): String = "esdn"
 
-  override def originalId(implicit data: Document[NodeSeq]): ExactlyOne[String] =
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
-      .getOrElse(throw new RuntimeException(s"No ID for record $data")
-      )
 
   // SourceResource mapping
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =

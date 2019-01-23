@@ -26,7 +26,7 @@ class LcMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct original id" in {
-    val expected = "http://www.loc.gov/item/73691632/"
+    val expected = Some("http://www.loc.gov/item/73691632/")
     assert(extractor.originalId(json) == expected)
   }
 

@@ -22,9 +22,8 @@ class GettyMapping extends XmlMapping with XmlExtractor {
 
   override def getProviderName(): String = "getty"
 
-  override def originalId(implicit data: Document[NodeSeq]): ExactlyOne[String] =
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \\ "PrimoNMBib" \ "record" \ "control" \ "recordid")
-      .getOrElse(throw new RuntimeException(s"No ID for record $data"))
 
   // SourceResource mapping
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =

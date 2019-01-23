@@ -10,7 +10,7 @@ class CdlMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "extract the correct original id" in {
     val json = org.json4s.jackson.JsonMethods.parse("""{ "id": "foo" }""")
-    val expected = "foo"
+    val expected = Some("foo")
     assert(extractor.originalId(Document(json)) == expected)
   }
 }
