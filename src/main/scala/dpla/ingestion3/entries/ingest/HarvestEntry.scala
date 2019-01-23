@@ -44,6 +44,10 @@ object HarvestEntry extends HarvestExecutor {
       case None => baseConf
     }
 
+    // Ignore SSL handshake issues which Java is unable to ignore
+    // @see https://stackoverflow.com/questions/7615645/ssl-handshake-alert-unrecognized-name-error-since-upgrade-to-java-1-7-0#14884941
+    System.setProperty("jsse.enableSNIExtension", "false")
+
     // Execute harvest.
     execute(sparkConf, shortName, dataOut, providerConf, harvestLogger)
   }
