@@ -2,7 +2,6 @@ package dpla.ingestion3.messages
 
 import dpla.ingestion3.reports.summary.{MappingSummaryData, ReportFormattingUtils}
 import dpla.ingestion3.utils.Utils
-import org.apache.commons.lang.StringUtils
 
 /**
   *
@@ -24,6 +23,7 @@ object MappingSummary {
     val warnRecordsStr = Utils.formatNumber(data.messageSummary.warningRecordCount)
     val errorRecordsStr = Utils.formatNumber(data.messageSummary.errorRecordCount)
     val failedCountStr = Utils.formatNumber(data.operationSummary.recordsFailed)
+    val duplicateOriginalIdsStr = Utils.formatNumber(data.messageSummary.duplicateOriginalIds)
 
     val logFileMsg =
       if(data.operationSummary.logFiles.nonEmpty) data.operationSummary.logFiles.mkString("\n")
@@ -53,6 +53,7 @@ object MappingSummary {
         |Records
         |${ReportFormattingUtils.centerPad("- Errors", errorRecordsStr)}
         |${ReportFormattingUtils.centerPad("- Warnings", warnRecordsStr)}
+        |${ReportFormattingUtils.centerPad("- Duplicate original ID", duplicateOriginalIdsStr)}
         |
         |${if(data.messageSummary.warningCount > 0 || data.messageSummary.errorCount > 0)
             ReportFormattingUtils.center("Message Summary") else ""}

@@ -13,6 +13,7 @@ import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
+import org.apache.spark.sql.functions.count
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
@@ -80,6 +81,14 @@ trait MappingExecutor extends Serializable {
     )(oreAggregationEncoder)
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
+    val duplicateOriginalIds = mappingResults
+      .select("originalId")
+      .where("originalId != ''")
+      .groupBy("originalId")
+      .agg(count("*").alias("count"))
+      .where("count > 1")
+      .count
+
     // Removes records from mappingResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
     // Transformation only
@@ -126,7 +135,8 @@ trait MappingExecutor extends Serializable {
       startTime,
       endTime,
       attemptedCount,
-      validRecordCount)(spark)
+      validRecordCount,
+      duplicateOriginalIds)(spark)
 
     // Format the summary report and write it log file
     val mappingSummary = MappingSummary.getSummary(finalReport)
@@ -160,7 +170,8 @@ trait MappingExecutor extends Serializable {
                        startTime: Long,
                        endTime: Long,
                        attemptedCount: Long,
-                       validRecordCount: Long)(implicit spark: SparkSession): MappingSummaryData = {
+                       validRecordCount: Long,
+                       duplicateOriginalIds: Long)(implicit spark: SparkSession): MappingSummaryData = {
     import spark.implicits._
 
     // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
@@ -219,7 +230,8 @@ trait MappingExecutor extends Serializable {
       recordErrorCount,
       recordWarnCount,
       errorMsgDetails,
-      warnMsgDetails
+      warnMsgDetails,
+      duplicateOriginalIds
     )
 
     MappingSummaryData(shortName, operationSummary, timeSummary, messageSummary)
