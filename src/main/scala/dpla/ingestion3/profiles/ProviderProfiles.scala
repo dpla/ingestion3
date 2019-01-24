@@ -77,6 +77,7 @@ class GettyProfile extends XmlProfile {
 }
 
 /**
+<<<<<<< HEAD
   * Digital Library of Georgia
   */
 class DlgProfile extends JsonProfile {
@@ -84,6 +85,16 @@ class DlgProfile extends JsonProfile {
 
   override def getHarvester = classOf[DlgFileHarvester]
   override def getMapping = new DlgMapping
+}
+
+/**
+  * Harvard Library
+  */
+class HarvardProfile extends XmlProfile {
+  type Mapping = HarvardMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new HarvardMapping
 }
 
 /**
@@ -114,7 +125,6 @@ class InProfile extends XmlProfile {
 
   override def getHarvester = classOf[OaiHarvester]
   override def getMapping = new InMapping
-}
 
 /**
   * Internet Archive
