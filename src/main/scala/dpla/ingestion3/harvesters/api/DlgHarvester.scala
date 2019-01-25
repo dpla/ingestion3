@@ -71,7 +71,9 @@ class DlgHarvester(spark: SparkSession,
             // Loop control
             val nextCursorMark = (json \\ "nextCursorMark").extract[String]
 
-            if (nextCursorMark.isEmpty) {
+            harvestLogger.info(s"cursorMark == $nextCursorMark")
+
+            if (cursorMark.matches(nextCursorMark)) {
               continueHarvest = false
             } else {
               cursorMark = nextCursorMark
