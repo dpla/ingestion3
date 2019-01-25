@@ -3,9 +3,10 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.enrichments.normalizations.filters.ExtentIdentificationList
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
-import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany}
+import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
+import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
@@ -32,8 +33,14 @@ class MoMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
 
   override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = mintDplaItemUri(data)
 
+  override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
+    extractStrings(unwrap(data) \ "rights").map(URI)
+
   override def hasView(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \ "hasView" \ "@id").map(stringOnlyWebResource)
+
+  override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
+    extractString(unwrap(data) \ "intermediateProvider").map(nameOnlyAgent)
 
   override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \ "isShownAt").map(stringOnlyWebResource)
@@ -84,6 +91,9 @@ class MoMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
 
   override def title(data: Document[JValue]): AtLeastOne[String] =
     extractStrings(unwrap(data) \ "sourceResource" \ "title")
+
+  override def `type`(data: Document[JValue]): AtLeastOne[String] =
+    extractStrings(unwrap(data) \ "sourceResource" \ "type")
 
   def agent = EdmAgent(
     name = Some("Missouri Hub"),
