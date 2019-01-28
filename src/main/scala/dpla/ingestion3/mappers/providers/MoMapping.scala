@@ -92,7 +92,7 @@ class MoMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
   override def title(data: Document[JValue]): AtLeastOne[String] =
     extractStrings(unwrap(data) \ "sourceResource" \ "title")
 
-  override def `type`(data: Document[JValue]): AtLeastOne[String] =
+  override def `type`(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "sourceResource" \ "type")
 
   def agent = EdmAgent(
