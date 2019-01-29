@@ -30,9 +30,6 @@ class IaMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
       candidateDataProviders
   }
 
-  // TODO: PLEASE SANITY CHECK DURING CODE REVIEW  - I am changing this from mintDplaId to mintDplaItemUri
-  // It now returns a URI (e.g. http://dp.la/api/items/130137a53d59ee27d7dab4e0078e1220) instead of just
-  // the ID hash (e.g. 130137a53d59ee27d7dab4e0078e1220).  Is this correct?
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
