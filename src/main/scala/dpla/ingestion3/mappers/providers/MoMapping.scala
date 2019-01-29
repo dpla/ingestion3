@@ -35,8 +35,6 @@ class MoMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \ "rights").map(URI)
 
-  override def originalId(data: Document[JValue]): ExactlyOne[String] = getProviderId(data)
-
   override def hasView(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \ "hasView" \ "@id").map(stringOnlyWebResource)
 
