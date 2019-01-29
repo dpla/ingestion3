@@ -9,9 +9,9 @@ import dpla.ingestion3.utils.Utils
 import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
-import org.json4s.jackson.JsonMethods._
 
-class MoMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] with IngestMessageTemplates {
+
+class MoMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
 
   val formatBlockList: Set[String] = ExtentIdentificationList.termList
 
@@ -22,16 +22,15 @@ class MoMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
   // TODO: Should this be the same as provider short name?
   override def getProviderName: String = "mo"
 
-  override def getProviderId(implicit data: Document[JValue]): String =
+  override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString(unwrap(data) \ "@id")
-      .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
   // OreAggregation
 
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data) \ "dataProvider").map(nameOnlyAgent)
 
-  override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \ "rights").map(URI)

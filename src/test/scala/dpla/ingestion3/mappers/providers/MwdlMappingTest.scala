@@ -19,15 +19,9 @@ class MwdlMappingTest extends FlatSpec with BeforeAndAfter {
   it should "use the provider shortname in minting IDs " in
     assert(extractor.useProviderName())
 
-  it should "extract the correct provider identifier " in
-    assert(extractor.getProviderId(xml) === "digcoll_slc_27works_598")
+  it should "extract the correct original identifier " in
+    assert(extractor.originalId(xml) === Some("digcoll_slc_27works_598"))
 
-  it should "throw an Exception if document does not contain a provider identifier" in {
-    val xml = <record><metadata></metadata></record>
-    assertThrows[Exception] {
-      extractor.getProviderId(Document(xml))
-    }
-  }
   it should "extract the correct collection titles" in {
     val expected = Seq("Salt Lake Community College Scholarly and Creative Works")
       .map(nameOnlyCollection)
@@ -76,6 +70,10 @@ class MwdlMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/",
       "https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/").map(stringOnlyWebResource)
     assert(extractor.preview(xml) === expected)
+  }
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/5c31abd09b535552592bf97cbed6557a"))
+    assert(extractor.dplaUri(xml) === expected)
   }
 }
 

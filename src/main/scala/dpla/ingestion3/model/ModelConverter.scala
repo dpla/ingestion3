@@ -32,7 +32,8 @@ object ModelConverter {
     provider = toEdmAgent(row.getStruct(9)),
     edmRights = optionalUri(row, 10),
     sidecar = optionalJValue(row, 11),
-    messages = toMulti(row, 12, toIngestMessage)
+    messages = toMulti(row, 12, toIngestMessage),
+    originalId = potentiallyMissingStringField(row, 13).getOrElse("MISSING")
   )
 
   private[model] def toSourceResource(row: Row): DplaSourceResource = DplaSourceResource(
@@ -165,4 +166,9 @@ object ModelConverter {
       case Success(jv) => jv
       case Failure(_) => JNothing
     }
+
+  // Handle field index that may not be present in the data.
+  private[model] def potentiallyMissingStringField(row: Row, fieldPosition: Integer): Option[String] = {
+    Try { optionalString(row, fieldPosition) }.getOrElse(None)
+  }
 }

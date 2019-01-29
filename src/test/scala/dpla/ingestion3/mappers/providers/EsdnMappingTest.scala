@@ -19,15 +19,8 @@ class EsdnMappingTest extends FlatSpec with BeforeAndAfter {
   it should "not use the provider shortname in minting IDs " in
     assert(extractor.useProviderName())
 
-//  it should "extract the correct provider identifier " in
-//    assert(extractor.getProviderId(xml) === "urn:ohiodplahub.library.ohio.gov:bgsu_12:oai:digitalgallery.bgsu.edu:14058")
-
-  it should "throw an Exception if document does not contain a provider identifier" in {
-    val xml = <record><metadata></metadata></record>
-    assertThrows[Exception] {
-      extractor.getProviderId(Document(xml))
-    }
-  }
+  it should "extract the correct original identifier " in
+    assert(extractor.originalId(xml) === Some("oai:repox.ist.utl.pt:bklynsheetmusic_collection:oai:dcmny.org:bklynsheetmusic_55"))
 
   it should "extract the correct alternate titles" in {
     val expected = Seq("Alternate Title")
@@ -111,4 +104,8 @@ class EsdnMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.isShownAt(xml) === expected)
   }
 
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/9a6660ca7d23f478cbc1b3fed534af72"))
+    assert(extractor.dplaUri(xml) === expected)
+  }
 }

@@ -18,14 +18,10 @@ class DcMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "not use the provider shortname in minting IDs " in
     assert(!extractor.useProviderName())
-  it should "extract the correct provider identifier " in
-    assert(extractor.getProviderId(xml) === "urn:ohiodplahub.library.ohio.gov:bgsu_12:oai:digitalgallery.bgsu.edu:14058")
-  it should "throw an Exception if document does not contain a provider identifier" in {
-    val xml = <record><metadata></metadata></record>
-    assertThrows[Exception] {
-      extractor.getProviderId(Document(xml))
-    }
-  }
+
+  it should "extract the correct original identifier " in
+    assert(extractor.originalId(xml) === Some("urn:ohiodplahub.library.ohio.gov:bgsu_12:oai:digitalgallery.bgsu.edu:14058"))
+
   it should "extract the correct collection titles" in {
     val expected = Seq("College of Musical Arts Programs", "A second collection")
       .map(nameOnlyCollection)
@@ -126,7 +122,7 @@ class DcMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.`type`(xml) === expected)
   }
   it should "create the correct DPLA URI" in {
-    val expected = new URI("http://dp.la/api/items/130137a53d59ee27d7dab4e0078e1220")
+    val expected = Some(URI("http://dp.la/api/items/130137a53d59ee27d7dab4e0078e1220"))
     assert(extractor.dplaUri(xml) === expected)
   }
   // dataProvider

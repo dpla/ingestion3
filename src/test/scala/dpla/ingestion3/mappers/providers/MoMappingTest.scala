@@ -24,9 +24,9 @@ class MoMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.getProviderName === "mo")
   }
 
-  it should "extract the correct providerId" in {
-    val expected = "missouri--urn:data.mohistory.org:msu_all:oai:digitalcollections.missouristate.edu:Hennicke/94"
-    assert(extractor.getProviderId(json) === expected)
+  it should "extract the correct original ID" in {
+    val expected = Some("missouri--urn:data.mohistory.org:msu_all:oai:digitalcollections.missouristate.edu:Hennicke/94")
+    assert(extractor.originalId(json) === expected)
   }
 
   // dataProvider
@@ -37,7 +37,7 @@ class MoMappingTest extends FlatSpec with BeforeAndAfter {
 
   // dplaUri
   it should "create the correct DPLA URI" in {
-    val expected = new URI("http://dp.la/api/items/8c630431c601bd29753c93d3d8eea6cf")
+    val expected = Some(URI("http://dp.la/api/items/8c630431c601bd29753c93d3d8eea6cf"))
     assert(extractor.dplaUri(json) === expected)
   }
 

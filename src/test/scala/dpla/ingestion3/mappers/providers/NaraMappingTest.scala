@@ -24,8 +24,8 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
   it should "pass through the short name to ID minting" in
     assert(extractor.getProviderName() === shortName)
 
-  it should "extract provider ID" in {
-    assert(extractor.getProviderId(xml) === "2132862")
+  it should "extract original ID" in {
+    assert(extractor.originalId(xml) === Some("2132862"))
   }
 
   it should "construct the correct item uri" in
@@ -33,7 +33,7 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "have the correct DPLA ID" in {
     val dplaUri = extractor.dplaUri(xml)
-    assert(dplaUri === URI("http://dp.la/api/items/805598afebf2c093272a5a044938be59"))
+    assert(dplaUri === Some(URI("http://dp.la/api/items/805598afebf2c093272a5a044938be59")))
   }
 
   it should "express the right hub details" in {

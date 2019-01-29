@@ -2,15 +2,14 @@ package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
-import dpla.ingestion3.mappers.utils.{Document, IdMinter, JsonExtractor, Mapping}
+import dpla.ingestion3.mappers.utils.{Document, JsonExtractor, JsonMapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods._
 
-class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtractor {
+class LcMapping() extends JsonMapping with JsonExtractor {
 
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
@@ -23,13 +22,11 @@ class LcMapping() extends Mapping[JValue] with IdMinter[JValue] with JsonExtract
   override def getProviderName: String =
     "loc"
 
-  override def getProviderId(implicit data: Document[JValue]): String =
+  override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString(unwrap(data) \ "item" \ "id") // TODO confirm basis field for DPLA ID
-      .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
   // OreAggregation fields
-  override def dplaUri(data: Document[JValue]): ExactlyOne[URI] =
-    mintDplaItemUri(data)
+  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
