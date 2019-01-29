@@ -13,14 +13,14 @@ import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
-import org.apache.spark.sql.functions.count
+import org.apache.spark.sql.functions.{col, count, udf, collect_list, explode, monotonically_increasing_id}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
 import scala.collection.mutable
 import scala.util.{Failure, Success}
 
-trait MappingExecutor extends Serializable {
+trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
   /**
     * Performs the mapping for the given provider
@@ -75,24 +75,71 @@ trait MappingExecutor extends Serializable {
 
     // All attempted records
     // Transformation only
-    val mappingResults: Dataset[Row] =
+    val mappingResults: DataFrame =
     documents.map(document =>
       dplaMap.map(document, shortName, totalCount, successCount)
     )(oreAggregationEncoder)
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
-    val duplicateOriginalIds = mappingResults
+    // User defined functions
+    val dupOrigIdMsgUdf = udf((originalId: String) => duplicateOriginalId(originalId))
+
+    val mergeMessagesUdf = udf((messages: Seq[Map[String,String]], dupOrigIdMsg: Map[String,String]) =>
+      if (dupOrigIdMsg == null) messages else messages :+ dupOrigIdMsg)
+
+    // Find records with duplicate original IDs
+    val duplicateOriginalIds: DataFrame = mappingResults
       .select("originalId")
       .where("originalId != ''")
       .groupBy("originalId")
       .agg(count("*").alias("count"))
       .where("count > 1")
-      .count
+      .withColumn("dupOrigIdMsg", dupOrigIdMsgUdf(col("originalId")))
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
+
+    // Find records with duplicate original IDs
+//    val duplicateOriginalIds: DataFrame = mappingResults
+//      .select("originalId", "id")
+//      .where("originalId != ''")
+//      .groupBy("originalId")
+//      .agg(collect_list("id").alias("ids"))
+//      .where(size(col("ids")) > 1)
+//      .withColumn("dupOrigIdMsg", dupOrigIdMsgUdf(col("originalId")))
+//      .persist(StorageLevel.MEMORY_AND_DISK_SER)
+
+    val resultsWithId = mappingResults
+      .join(duplicateOriginalIds, Seq("originalId"), "outer") // adds column "dupOrigIdMsg"
+      .withColumn("id", monotonically_increasing_id) // adds unique identifier
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
+
+    val dupOrigIdMessages = resultsWithId
+      .select(col("id"), col("dupOrigIdMsg").as("msg"))
+
+    val originalMessages = resultsWithId
+      .select(col("id"), explode(col("messages")).as("msg"))
+
+    val updatedResults = originalMessages
+      .union(dupOrigIdMessages)
+      .groupBy("id")
+      .agg(collect_list("msg").as("messages"))
+      .join(resultsWithId.drop("messages"), Seq("id"), "outer")
+
+//    duplicateOriginalIds
+//      .select(col("dupOrigIdMsg"), explode(col("ids")).as("dplaId"))
+
+
+    // Add error messages to records with duplicate original IDs
+//    val updatedResults: DataFrame = mappingResults
+//      .join(duplicateOriginalIds, Seq("originalId"), "outer")
+//      .withColumn("allMessages", mergeMessagesUdf(col("messages"), col("dupOrigIdMsg")))
+//      .drop("messages")
+//      .drop("dupOrigIdMsg")
+//      .withColumnRenamed("allMessages", "messages")
 
     // Removes records from mappingResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
     // Transformation only
-    val successResults: Dataset[Row] = mappingResults
+    val successResults: DataFrame = updatedResults
       .filter(oreAggRow => {
         !oreAggRow // not
           .getAs[mutable.WrappedArray[Row]]("messages") // get all messages
@@ -126,17 +173,16 @@ trait MappingExecutor extends Serializable {
     val logsPath = outputHelper.logsPath
 
     // Collect the values needed to generate the report
-    // `mappingResults' are unpersisted during the execution of `buildFinalReport'
     val finalReport =
     buildFinalReport(
-      mappingResults,
+      updatedResults,
       shortName,
       logsPath,
       startTime,
       endTime,
       attemptedCount,
       validRecordCount,
-      duplicateOriginalIds)(spark)
+      duplicateOriginalIds.count)(spark)
 
     // Format the summary report and write it log file
     val mappingSummary = MappingSummary.getSummary(finalReport)
