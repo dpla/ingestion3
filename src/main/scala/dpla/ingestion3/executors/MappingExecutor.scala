@@ -13,7 +13,8 @@ import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
-import org.apache.spark.sql.functions.{col, count, udf, collect_list, explode, monotonically_increasing_id}
+import org.apache.spark.sql.expressions.UserDefinedFunction
+import org.apache.spark.sql.functions.{col, collect_list, count, explode, monotonically_increasing_id, udf}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
@@ -82,10 +83,8 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // User defined functions
-    val dupOrigIdMsgUdf = udf((originalId: String) => duplicateOriginalId(originalId))
-
-    val mergeMessagesUdf = udf((messages: Seq[Map[String,String]], dupOrigIdMsg: Map[String,String]) =>
-      if (dupOrigIdMsg == null) messages else messages :+ dupOrigIdMsg)
+    val dupOrigIdMsgUdf: UserDefinedFunction =
+      udf((originalId: String) => duplicateOriginalId(originalId))
 
     // Find records with duplicate original IDs and create error messages
     val duplicateOriginalIds: DataFrame = mappingResults
@@ -94,9 +93,9 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       .groupBy("originalId")
       .agg(count("*").alias("count"))
       .where("count > 1")
-      .withColumn("dupOrigIdMsg", dupOrigIdMsgUdf(col("originalId")))
+      .withColumn("dupOrigIdMsg", dupOrigIdMsgUdf(col("originalId"))) // add error msg
 
-    // Join mappingResults and duplicateOriginalId messages
+    // Add duplicate originalId messages to mappingResults
     // Add a unique identifier (since originalId and dplaId might be duplicated)
     val resultsWithId: DataFrame = mappingResults
       .join(duplicateOriginalIds, Seq("originalId"), "outer") // adds column "dupOrigIdMsg"
@@ -109,12 +108,13 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     val originalMessages: DataFrame = resultsWithId
       .select(col("id"), explode(col("messages")).as("msg"))
 
-    // This collects all error messages in a single column an joins with full record data
+    // This collects all error messages in a single column and joins with full record data
     val updatedResults: DataFrame = originalMessages
       .union(dupOrigIdMessages)
       .groupBy("id")
       .agg(collect_list("msg").as("messages"))
       .join(resultsWithId.drop("messages"), Seq("id"), "outer")
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Removes records from updatedResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
