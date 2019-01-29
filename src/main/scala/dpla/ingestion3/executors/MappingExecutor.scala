@@ -161,8 +161,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       startTime,
       endTime,
       attemptedCount,
-      validRecordCount,
-      duplicateOriginalIds.count)(spark)
+      validRecordCount)(spark)
 
     // Format the summary report and write it log file
     val mappingSummary = MappingSummary.getSummary(finalReport)
@@ -196,8 +195,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
                        startTime: Long,
                        endTime: Long,
                        attemptedCount: Long,
-                       validRecordCount: Long,
-                       duplicateOriginalIds: Long)(implicit spark: SparkSession): MappingSummaryData = {
+                       validRecordCount: Long)(implicit spark: SparkSession): MappingSummaryData = {
     import spark.implicits._
 
     // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
@@ -256,8 +254,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       recordErrorCount,
       recordWarnCount,
       errorMsgDetails,
-      warnMsgDetails,
-      duplicateOriginalIds
+      warnMsgDetails
     )
 
     MappingSummaryData(shortName, operationSummary, timeSummary, messageSummary)

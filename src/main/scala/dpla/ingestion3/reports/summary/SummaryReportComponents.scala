@@ -19,11 +19,8 @@ case class MessageSummary(
                            errorRecordCount: Long = -1, // 1:1 if exception 1:n if from message
                            warningRecordCount: Long = -1, // 1:n a record can raise many warnings
                            errorMessageDetails: String = "", // error messages
-                           warningMessageDetails: String  = "", // warning messages
-                           duplicateOriginalIds: Long = -1 // number of records with duplicate original IDs
+                           warningMessageDetails: String  = "" // warning messages
                          )
-
-
 
 case class MappingSummaryData(
                                shortName: String = "",
