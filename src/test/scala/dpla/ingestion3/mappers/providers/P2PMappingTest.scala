@@ -187,16 +187,16 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract identifier" in {
-    val result = mapping.extent(
+    val result = mapping.identifier(
       metadata(
         <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
-          <mods:physicalDescription>
-            <mods:extent>1 photographic print on card mount : albumen ; 21 x 10 cm. (8 1/2 x 4 in.)</mods:extent>
-          </mods:physicalDescription>
+          <mods:recordInfo>
+            <mods:recordIdentifier>oai:prlibrary.cvlcollections.org:69</mods:recordIdentifier>
+          </mods:recordInfo>
         </mods:mods>
       )
     ).headOption.getOrElse("")
-    assert(result === "1 photographic print on card mount : albumen ; 21 x 10 cm. (8 1/2 x 4 in.)")
+    assert(result === "oai:prlibrary.cvlcollections.org:69")
   }
 
   it should "extract language" in {
