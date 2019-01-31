@@ -98,7 +98,7 @@ class P2PMapping extends XmlMapping with XmlExtractor with IngestMessageTemplate
     extractStrings(data \ "metadata" \ "mods" \ "physicalDescription" \ "extent")
 
   override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "metadata" \ "recordInfo" \ "recordIdentifier")
+    extractStrings(data \ "metadata" \ "mods" \ "recordInfo" \ "recordIdentifier")
 
   override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     extractStrings(data \ "metadata" \ "mods" \ "language" \ "languageTerm")
