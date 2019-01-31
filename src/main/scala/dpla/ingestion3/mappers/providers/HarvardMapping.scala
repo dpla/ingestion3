@@ -109,7 +109,22 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
     } yield nameOnlyConcept(subjectText)
 
   override def title(data: Document[NodeSeq]): AtLeastOne[String] =
-    extractStrings(data \ "metadata" \ "mods" \ "titleInfo" \ "title").map(_.trim)
+    for {
+      titleInfoNode <- data \ "metadata" \ "mods" \ "titleInfo"
+      if titleInfoNode \@ "type" != "alternative"
+      titleNode <- titleInfoNode \ "title"
+      titleText = titleNode.text.trim
+      if titleText.nonEmpty
+    } yield titleText
+
+  override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
+    for {
+      titleInfoNode <- data \ "metadata" \ "mods" \ "titleInfo"
+      if titleInfoNode \@ "type" == "alternative"
+      titleNode <- titleInfoNode \ "title"
+      titleText = titleNode.text.trim
+      if titleText.nonEmpty
+    } yield titleText
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "typeOfResource")
