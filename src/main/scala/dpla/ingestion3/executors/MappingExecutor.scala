@@ -11,6 +11,7 @@ import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
+import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.apache.spark.sql.expressions.UserDefinedFunction
@@ -82,39 +83,31 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     )(oreAggregationEncoder)
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
-    // User defined functions
-    val dupOrigIdMsgUdf: UserDefinedFunction =
-      udf((originalId: String) => duplicateOriginalId(originalId))
+    // Get a list of originalIds that appear in more than one record
+    val duplicateOriginalIds: Broadcast[Array[String]] =
+      spark.sparkContext.broadcast(
+        mappingResults
+          .map(oreAggRow => oreAggRow.getAs[String]("originalId"))
+          .rdd
+          .countByValue
+          .collect{ case(origId, count) if count > 1 && origId != "" => origId }
+          .toArray
+      )
 
-    // Find records with duplicate original IDs and create error messages
-    val duplicateOriginalIds: DataFrame = mappingResults
-      .select("originalId")
-      .where("originalId != ''")
-      .groupBy("originalId")
-      .agg(count("*").alias("count"))
-      .where("count > 1")
-      .withColumn("dupOrigIdMsg", dupOrigIdMsgUdf(col("originalId"))) // add error msg
+    // Add a message to existing messages if record has duplicate original ID
 
-    // Add duplicate originalId messages to mappingResults
-    // Add a unique identifier (since originalId and dplaId might be duplicated)
-    val resultsWithId: DataFrame = mappingResults
-      .join(duplicateOriginalIds, Seq("originalId"), "outer") // adds column "dupOrigIdMsg"
-      .withColumn("id", monotonically_increasing_id) // adds unique identifier
-      .persist(StorageLevel.MEMORY_AND_DISK_SER)
+    val addDupOrigIdMsg: (String, Seq[IngestMessage]) => Seq[IngestMessage] =
+      (originalId: String, messages: Seq[IngestMessage]) => {
+        if (duplicateOriginalIds.value.contains(originalId))
+          messages :+ duplicateOriginalId(originalId)
+        else messages
+      }
 
-    // Get dataframes with one error message per row
-    val dupOrigIdMessages: DataFrame = resultsWithId
-      .select(col("id"), col("dupOrigIdMsg").as("msg"))
-    val originalMessages: DataFrame = resultsWithId
-      .select(col("id"), explode(col("messages")).as("msg"))
+    val addDupOrigIdMsgUdf: UserDefinedFunction = udf(addDupOrigIdMsg)
 
-    // This collects all error messages in a single column and joins with full record data
-    val updatedResults: DataFrame = originalMessages
-      .union(dupOrigIdMessages)
-      .groupBy("id")
-      .agg(collect_list("msg").as("messages"))
-      .join(resultsWithId.drop("messages"), Seq("id"), "outer")
-      .persist(StorageLevel.MEMORY_AND_DISK_SER)
+    val updatedResults: DataFrame = mappingResults
+      .withColumnRenamed("messages", "oldMessages")
+      .withColumn("messages", addDupOrigIdMsgUdf(col("originalId"), col("oldMessages")))
 
     // Removes records from updatedResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
