@@ -108,7 +108,6 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     val updatedResults: DataFrame = mappingResults
       .withColumnRenamed("messages", "oldMessages")
       .withColumn("messages", addDupOrigIdMsgUdf(col("originalId"), col("oldMessages")))
-      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Removes records from updatedResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
