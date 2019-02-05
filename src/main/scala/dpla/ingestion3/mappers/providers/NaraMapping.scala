@@ -10,20 +10,18 @@ import org.eclipse.rdf4j.model.IRI
 import org.json4s.JsonAST
 import org.json4s.JsonDSL._
 
-import scala.util.{Try, Success, Failure}
 import scala.xml.{Node, NodeSeq}
 
 
-class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] {
+class NaraMapping extends XmlMapping with XmlExtractor {
 
   // ID minting functions
   override def useProviderName(): Boolean = true
 
   override def getProviderName(): String = "nara"
 
-  // itemUri will throw an exception if an ID is missing
-  override def getProviderId(implicit data: Document[NodeSeq]): String =
-    extractString("naId")(data).getOrElse(throw MappingException("Can't find naId"))
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
+    extractString("naId")(data)
 
   def itemUri(implicit data: Document[NodeSeq]): URI =
     extractString("naId")(data).map(naId => URI("http://catalog.archives.gov/id/" + naId))
@@ -42,8 +40,7 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     Seq(nameOnlyAgent(referenceUnit.getOrElse("National Records and Archives Administration")))
   }
 
-  override def dplaUri(data: Document[NodeSeq]): URI =
-    mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     Seq(uriOnlyWebResource(itemUri(data)))
@@ -282,10 +279,10 @@ class NaraMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeS
     url = accessFileName.startsWith(badPrefix) match {
       case false => accessFileName
       case true => {
-        Try { getProviderId(data) } match {
-          case Success(id) => "https://catalog.archives.gov/OpaAPI/media/" +
+        originalId(data) match {
+          case Some(id) => "https://catalog.archives.gov/OpaAPI/media/" +
             id + "/content/" + accessFileName.stripPrefix(badPrefix)
-          case Failure(_) => null
+          case None => null
         }
       }
     }

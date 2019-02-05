@@ -32,6 +32,7 @@ object EnrichedRecordFixture {
         uri = new URI("https://example.org/record/123")
       ),
       sidecar = ("prehashId" -> "oai:somestate:id123") ~ ("dplaId" -> "4b1bd605bd1d75ee23baadb0e1f24457"),
+      originalId = "The original ID",
       sourceResource = DplaSourceResource(
         collection = Seq(DcmiTypeCollection(
           title = Some("The Collection"),
@@ -114,6 +115,7 @@ object EnrichedRecordFixture {
       preview = Some(
         EdmWebResource(uri = new URI("https://example.org/thumbnail/123.jpg"))
       ),
-      edmRights = Some(new URI("https://example.org/rights/public_domain.html"))
+      edmRights = Some(new URI("https://example.org/rights/public_domain.html")),
+      originalId = "The original ID"
     )
 }

@@ -1,9 +1,9 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
-import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
+import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
-import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany}
+import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
@@ -11,7 +11,7 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
-class CtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
+class CtMapping extends XmlMapping with XmlExtractor
   with IngestMessageTemplates {
 
   val formatBlockList: Set[String] =
@@ -23,10 +23,8 @@ class CtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
   override def getProviderName(): String = "ct"
 
-  override def getProviderId(implicit data: Document[NodeSeq]): String =
-  isShownAtStrings(data)
-    .headOption
-    .getOrElse(throw new RuntimeException(s"No ID for record $data"))
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
+    isShownAtStrings(data).headOption
 
   //  mods/titleInfo @type=alternative> children combined as follows (with a single space between):
   //  <nonSort> <title> <subTitle>  <partName> <partNumber>
@@ -141,7 +139,7 @@ class CtMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
       extractStrings(data \ "typeOfResource")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
   
   // <note type="ownership">
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =

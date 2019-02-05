@@ -1,7 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
-import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
+import dpla.ingestion3.mappers.utils.{Document, XmlMapping, XmlExtractor}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{nameOnlyAgent, _}
@@ -12,7 +12,7 @@ import org.json4s.JsonDSL._
 import scala.xml._
 
 
-class OklahomaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq] with IngestMessageTemplates {
+class OklahomaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
 
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
@@ -23,10 +23,8 @@ class OklahomaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[N
 
   override def getProviderName(): String = "oklahoma"
 
-  override def getProviderId(implicit data: Document[NodeSeq]): String =
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
-      .getOrElse(throw new RuntimeException(s"No ID for record $data")
-      )
 
   // SourceResource mapping
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
@@ -141,7 +139,7 @@ class OklahomaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[N
     extractStrings(data \ "metadata" \ "mods" \ "typeOfResource")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     (data \ "metadata" \ "mods" \ "note")

@@ -19,8 +19,8 @@ class GettyMappingTest extends FlatSpec with BeforeAndAfter {
   it should "use the provider shortname in minting IDs " in
     assert(extractor.useProviderName())
 
-  it should "extract the correct provider identifier " in
-    assert(extractor.getProviderId(xml) === "GETTY_OCPFL608236")
+  it should "extract the correct original identifier " in
+    assert(extractor.originalId(xml) === Some("GETTY_OCPFL608236"))
 
   it should "extract the correct collection titles" in {
     val expected = Seq("Foto Arte Minore / Max Hutzel (accession number 86.P.8)")
@@ -76,6 +76,11 @@ class GettyMappingTest extends FlatSpec with BeforeAndAfter {
       "http://rosettaapp.getty.edu:1801/delivery/DeliveryManagerServlet?dps_pid=FL608236")
       .map(stringOnlyWebResource)
     assert(extractor.preview(xml) === expected)
+  }
+
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/d825ec923b90df0ad638cace2f8f9e83"))
+    assert(extractor.dplaUri(xml) === expected)
   }
 }
 

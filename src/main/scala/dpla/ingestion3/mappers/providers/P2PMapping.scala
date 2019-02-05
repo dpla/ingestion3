@@ -1,7 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList}
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
@@ -12,11 +12,7 @@ import org.json4s.JsonDSL._
 
 import scala.xml.NodeSeq
 
-class P2PMapping()
-  extends XmlMapping
-    with XmlExtractor
-    with IdMinter[NodeSeq]
-    with IngestMessageTemplates {
+class P2PMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
 
   // ID minting functions
   override def useProviderName: Boolean = true
@@ -24,14 +20,11 @@ class P2PMapping()
   // Hard coded to prevent accidental changes to base ID
   override def getProviderName: String = "p2p"
 
-  override def getProviderId(implicit data: Document[NodeSeq]): String =
-    extractString(data \\ "header" \ "identifier")
-      .map(_.trim)
-      .getOrElse(throw new RuntimeException(s"No ID for record $data"))
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
+    extractString(data \\ "header" \ "identifier").map(_.trim)
 
   // OreAggregation fields
-  override def dplaUri(data: Document[NodeSeq]): ExactlyOne[URI] =
-    mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     for {
@@ -105,7 +98,7 @@ class P2PMapping()
     extractStrings(data \ "metadata" \ "mods" \ "physicalDescription" \ "extent")
 
   override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "metadata" \ "recordInfo" \ "recordIdentifier")
+    extractStrings(data \ "metadata" \ "mods" \ "recordInfo" \ "recordIdentifier")
 
   override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     extractStrings(data \ "metadata" \ "mods" \ "language" \ "languageTerm")

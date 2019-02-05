@@ -25,9 +25,9 @@ class LcMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.dataProvider(json) === expected)
   }
 
-  it should "extract the correct provider id" in {
-    val expected = "http://www.loc.gov/item/73691632/"
-    assert(extractor.getProviderId(json) == expected)
+  it should "extract the correct original id" in {
+    val expected = Some("http://www.loc.gov/item/73691632/")
+    assert(extractor.originalId(json) == expected)
   }
 
   it should "extract the correct URL for isShownAt" in {
@@ -95,5 +95,10 @@ class LcMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct type" in {
     val expected = Seq("map", "map")
     assert(extractor.`type`(json) == expected)
+  }
+
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/af47f0702702b4697cf28868eb7dcea6"))
+    assert(extractor.dplaUri(json) === expected)
   }
  }

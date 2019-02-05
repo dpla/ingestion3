@@ -17,15 +17,27 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
     assert(mapping.getProviderName === "p2p")
   }
 
-  it should "get the correct provider ID" in {
-    val result = mapping.getProviderId(
+  it should "get the correct original ID" in {
+    val result = mapping.originalId(
       header(
         <identifier>
           oai:plains2peaks:Pine_River_2019-01:oai:prlibrary.cvlcollections.org:54
         </identifier>
       )
     )
-    assert(result === "oai:plains2peaks:Pine_River_2019-01:oai:prlibrary.cvlcollections.org:54")
+    assert(result === Some("oai:plains2peaks:Pine_River_2019-01:oai:prlibrary.cvlcollections.org:54"))
+  }
+
+  it should "create the correct DPLA URI" in {
+    val result = mapping.dplaUri(
+      header(
+        <identifier>
+          oai:plains2peaks:Pine_River_2019-01:oai:prlibrary.cvlcollections.org:54
+        </identifier>
+      )
+    )
+    val expected = Some(URI("http://dp.la/api/items/9314d4b80e857cbc478d9c7d281fd14e"))
+    assert(result === expected)
   }
 
   it should "return the correct data provider" in {
@@ -175,16 +187,16 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract identifier" in {
-    val result = mapping.extent(
+    val result = mapping.identifier(
       metadata(
         <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
-          <mods:physicalDescription>
-            <mods:extent>1 photographic print on card mount : albumen ; 21 x 10 cm. (8 1/2 x 4 in.)</mods:extent>
-          </mods:physicalDescription>
+          <mods:recordInfo>
+            <mods:recordIdentifier>oai:prlibrary.cvlcollections.org:69</mods:recordIdentifier>
+          </mods:recordInfo>
         </mods:mods>
       )
     ).headOption.getOrElse("")
-    assert(result === "1 photographic print on card mount : albumen ; 21 x 10 cm. (8 1/2 x 4 in.)")
+    assert(result === "oai:prlibrary.cvlcollections.org:69")
   }
 
   it should "extract language" in {
@@ -314,7 +326,6 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
     ).headOption.getOrElse(DcmiTypeCollection()).title.getOrElse("")
     assert(result === "HBO Videos")
   }
-
 
 
   def metadata(metadata: NodeSeq) = record(Seq(), metadata)

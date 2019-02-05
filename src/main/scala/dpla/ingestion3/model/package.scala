@@ -66,7 +66,8 @@ package object model {
     sourceResource = DplaSourceResource(
       rights = Seq(""),
       title = Seq("")
-    )
+    ),
+    originalId = ""
   )
 
   lazy val ingestDate: String = {

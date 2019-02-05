@@ -1,7 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
-import dpla.ingestion3.mappers.utils.{Document, IdMinter, Mapping, XmlExtractor}
-import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
+import dpla.ingestion3.mappers.utils.{Document, XmlMapping, XmlExtractor}
+import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, LiteralOrUri, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -11,7 +11,7 @@ import org.json4s.JsonDSL._
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
-class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq]
+class PaMapping extends XmlMapping with XmlExtractor
   with IngestMessageTemplates {
 
   // IdMinter methods
@@ -20,9 +20,8 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
   // getProviderName is not implemented here because useProviderName is false
 
   // TODO Add message collect here
-  override def getProviderId(implicit data: Document[NodeSeq]): String =
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
-      .getOrElse[String](throw new RuntimeException(s"No ID for record $data"))
 
   // SourceResource mapping
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
@@ -75,7 +74,7 @@ class PaMapping extends Mapping[NodeSeq] with XmlExtractor with IdMinter[NodeSeq
 
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): URI = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     extractStrings(data \ "metadata" \\ "contributor").lastOption match {

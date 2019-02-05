@@ -8,18 +8,16 @@ import dpla.ingestion3.utils.Utils
 import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
-import org.json4s.jackson.JsonMethods._
 
-class IaMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] with IngestMessageTemplates {
+class IaMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
 
   // ID minting functions
   override def useProviderName: Boolean = true
 
   override def getProviderName: String = "ia"
 
-  override def getProviderId(implicit data: Document[JValue]): String =
+  override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString(unwrap(data) \ "identifier")
-       .getOrElse(throw new RuntimeException(s"No ID for record: ${compact(data)}"))
 
   // OreAggregration
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] = {
@@ -32,8 +30,7 @@ class IaMapping extends JsonMapping with JsonExtractor with IdMinter[JValue] wit
       candidateDataProviders
   }
 
-
-  override def dplaUri(data: Document[JValue]): ExactlyOne[URI] = URI(mintDplaId(data))
+  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \\ "licenseurl").map(URI)

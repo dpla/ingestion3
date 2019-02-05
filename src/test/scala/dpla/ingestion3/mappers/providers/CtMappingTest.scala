@@ -18,6 +18,11 @@ class CtMappingTest extends FlatSpec with BeforeAndAfter {
   it should "not use the provider shortname in minting IDs "in
     assert(!extractor.useProviderName())
 
+  it should "extract the correct original ID" in {
+    val expected = Some("http://hdl.handle.net/11134/20002:1323")
+    assert(extractor.originalId(xml) == expected)
+  }
+
   it should "extract the correct alternate titles " in {
     val expected_1 = "Law concerning the reunion of Austria with the German Reich of 13 March 1938"
     val expected_2 = "Translation of Document 2307-PS"
@@ -89,5 +94,10 @@ class CtMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct preview" in {
     val expected = List(stringOnlyWebResource("https://ctdigitalarchive.org/islandora/object/20002:1323/datastream/TN"))
     assert(extractor.preview(xml) === expected)
+  }
+
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/92fc087881322d8223ba36a9b25b66e8"))
+    assert(extractor.dplaUri(xml) === expected)
   }
 }

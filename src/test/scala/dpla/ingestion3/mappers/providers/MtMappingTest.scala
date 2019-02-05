@@ -18,14 +18,10 @@ class MtMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "use the provider shortname in minting IDs " in
     assert(extractor.useProviderName())
-  it should "extract the correct provider identifier " in
-    assert(extractor.getProviderId(xml) === "oai:the.european.library.UMr8:oai:scholarworks.umt.edu:goedicke-1008")
-  it should "throw an Exception if document does not contain a provider identifier" in {
-    val xml = <record><metadata></metadata></record>
-    assertThrows[Exception] {
-      extractor.getProviderId(Document(xml))
-    }
-  }
+
+  it should "extract the correct original identifier " in
+    assert(extractor.originalId(xml) === Some("oai:the.european.library.UMr8:oai:scholarworks.umt.edu:goedicke-1008"))
+
   it should "extract the correct collection titles" in {
     val expected = Seq("Collection Title")
       .map(nameOnlyCollection)
@@ -89,6 +85,10 @@ class MtMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct preview" in {
     val expected = Seq(uriOnlyWebResource(URI("https://scholarworks.umt.edu/goedicke/1008/thumbnail.jpg")))
     assert(extractor.preview(xml) === expected)
+  }
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/8b5ae7a8f3561104fdfc6e7dd6a7f0fe"))
+    assert(extractor.dplaUri(xml) === expected)
   }
 }
 

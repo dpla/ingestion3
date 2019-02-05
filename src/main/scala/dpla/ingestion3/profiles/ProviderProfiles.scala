@@ -198,6 +198,16 @@ class VirginiasProfile extends XmlProfile {
 }
 
 /**
+  * Vermont (Green Mountain Digital Archives)
+  */
+class VtProfile extends XmlProfile {
+  type Mapping = VtMapping
+
+  override def getHarvester = classOf[VtFileHarvester]
+  override def getMapping = new VtMapping
+}
+
+/**
   * Recollection Wisconsin
   */
 class WiProfile extends XmlProfile {

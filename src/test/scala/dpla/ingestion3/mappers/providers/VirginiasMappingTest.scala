@@ -19,15 +19,8 @@ class VirginiasMappingTest extends FlatSpec with BeforeAndAfter {
   it should "not use the provider shortname in minting IDs "in
     assert(!extractor.useProviderName())
 
-  it should "extract the correct provider identifier " in
-    assert(extractor.getProviderId(xml) === "uva-lib:1002813")
-
-  it should "throw an Exception if document does not contain a provider identifier" in {
-    val xml = <mdRecord></mdRecord>
-    assertThrows[Exception] {
-      extractor.getProviderId(Document(xml))
-    }
-  }
+  it should "extract the correct original identifier " in
+    assert(extractor.originalId(xml) === Some("uva-lib:1002813"))
 
   it should "extract the correct collection titles" in {
     val expected =
@@ -129,7 +122,7 @@ class VirginiasMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "create the correct DPLA URI" in {
-    val expected = new URI("http://dp.la/api/items/ad6472a5e0575718616b5fd54c599095")
+    val expected = Some(new URI("http://dp.la/api/items/ad6472a5e0575718616b5fd54c599095"))
     assert(extractor.dplaUri(xml) === expected)
   }
 

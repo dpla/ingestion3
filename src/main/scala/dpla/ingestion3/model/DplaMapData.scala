@@ -38,7 +38,8 @@ case class OreAggregation(
                            provider: ExactlyOne[EdmAgent],
                            edmRights: ZeroToOne[URI] = None,
                            sidecar: JValue = JNothing,
-                           messages: ZeroToMany[IngestMessage] = Seq[IngestMessage]()
+                           messages: ZeroToMany[IngestMessage] = Seq[IngestMessage](),
+                           originalId: ExactlyOne[String]
                          )
 
 /**

@@ -38,9 +38,9 @@ class IaMappingTest extends FlatSpec with BeforeAndAfter {
 
   }
 
-  it should "extract the correct provider id" in {
-    val expected = "artofdyingwell00bell"
-    assert(extractor.getProviderId(json) == expected)
+  it should "extract the correct original id" in {
+    val expected = Some("artofdyingwell00bell")
+    assert(extractor.originalId(json) == expected)
   }
 
   it should "extract the correct URL for isShownAt" in {
@@ -147,5 +147,10 @@ class IaMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct type" in {
     val expected = Seq("texts")
     assert(extractor.`type`(json) == expected)
+  }
+
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/a43347f17f5d153a56cc74f5ba3fc59b"))
+    assert(extractor.dplaUri(json) === expected)
   }
  }

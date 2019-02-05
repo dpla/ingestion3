@@ -12,6 +12,7 @@ object MappedRecordsFixture {
     originalRecord = "", //map v4 specifies this as a ref, but that's LDP maybe?
     provider = EdmAgent(),
     isShownAt = EdmWebResource(uri = new URI("http:/example.com/foo")),
+    originalId = "The originial ID",
     sourceResource = DplaSourceResource(
       date = Seq(EdmTimeSpan(
         originalSourceDate = Some("5.7.2012"),
