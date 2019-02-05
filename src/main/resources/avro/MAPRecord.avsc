@@ -1080,11 +1080,10 @@
         "string"
       ]
     },
-  {
-    "name":
-    "messages",
-    "type": {
-      "name": "MessagesIngestMessageArray",
+    {
+      "name": "messages",
+      "type": {
+        "name": "MessagesIngestMessageArray",
         "type": "array",
         "items": {
           "name": "MessagesIngestMessage",
