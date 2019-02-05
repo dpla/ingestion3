@@ -105,28 +105,28 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     val addDupOrigIdMsgUdf: UserDefinedFunction = udf(addDupOrigIdMsg)
 
-    val orderedColumnNames: Array[String] = Array(
-      "dplaUri", // 0
-      "sourceResource", // 1
-      "dataProvider", // 2
-      "originalRecord", // 3
-      "hasView", // 4
-      "intermediateProvider", // 5
-      "isShownAt", // 6
-      "object", // 7
-      "preview", // 8
-      "provider", // 9
-      "edmRights", // 10
-      "sidecar", // 11
-      "messages", // 12
-      "originalId" // 13
-    )
+//    val orderedColumnNames: Array[String] = Array(
+//      "dplaUri", // 0
+//      "sourceResource", // 1
+//      "dataProvider", // 2
+//      "originalRecord", // 3
+//      "hasView", // 4
+//      "intermediateProvider", // 5
+//      "isShownAt", // 6
+//      "object", // 7
+//      "preview", // 8
+//      "provider", // 9
+//      "edmRights", // 10
+//      "sidecar", // 11
+//      "messages", // 12
+//      "originalId" // 13
+//    )
 
     val updatedResults: DataFrame = mappingResults
       .withColumnRenamed("messages", "oldMessages")
       .withColumn("messages", addDupOrigIdMsgUdf(col("originalId"), col("oldMessages")))
       .drop("oldMessages")
-      .select(orderedColumnNames.head, orderedColumnNames.tail: _*) // put columns in correct serialization order
+//      .select(orderedColumnNames.head, orderedColumnNames.tail: _*) // put columns in correct serialization order
 
     // Removes records from updatedResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
