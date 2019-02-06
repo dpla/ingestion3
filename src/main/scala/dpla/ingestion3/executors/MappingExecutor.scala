@@ -74,6 +74,9 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     val dplaMap = new DplaMap()
 
+    // All attempted records
+    // Transformation only
+
     val mappingResults: RDD[OreAggregation] = documents.rdd
       .map(document => dplaMap.map(document, shortName, totalCount, successCount))
 
@@ -87,6 +90,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
           .toArray
       )
 
+    // Update messages to include duplicate originalId
     val updatedResults: RDD[OreAggregation] = mappingResults.map(oreAgg => {
 
       oreAgg.copy(messages =
@@ -98,6 +102,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       )
     })
 
+    // Encode to Row-based structure
     val encodedMappingResults: DataFrame =
       spark.createDataset(
         updatedResults.map(oreAgg => RowConverter.toRow(oreAgg, model.sparkSchema))
@@ -264,7 +269,7 @@ class DplaMap extends Serializable {
     * @param totalCount Accumulator to track the number of records processed
     * @param successCount Accumulator to track the number of records successfully mapped
     * @param failureCount Accumulator to track the number of records that failed to map
-    * @return A Row representing the mapping results (both success and failure)
+    * @return An OreAggregation representing the mapping results (both success and failure)
     */
   def map(document: String,
           shortName: String,
