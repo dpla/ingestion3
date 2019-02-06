@@ -95,16 +95,12 @@ class VtMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.title(xml) === expected)
   }
 
-  it should "extract the correct dataProvider" in {
-    val expected = List(nameOnlyAgent("Middlebury College Special Collections"))
-    assert(extractor.dataProvider(xml) === expected)
-  }
+  // TODO when correct mapping is established
+  it should "extract the correct dataProvider"
 
-  it should "extract the correct isShownAt" in {
-    val expected = List(
-      uriOnlyWebResource(new URI("http://archive.org/details/hhfbc-c7")),
-      uriOnlyWebResource(new URI("RcXII_19_1921"))
-    )
-    assert(extractor.isShownAt(xml) === expected)
-  }
+  // TODO when correct mapping is established
+  it should "extract the correct isShownAt"
+
+  // TODO when correct mapping is established
+  it should "extract the correct edmRights"
 }
