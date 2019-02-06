@@ -12,8 +12,6 @@ import scala.xml._
 
 class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
 
-  // TODO: There doesn't appear to be any thumbnails?
-
   override def useProviderName: Boolean = false
 
   override def getProviderName(): String = "vt"
@@ -28,20 +26,18 @@ class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
     mintDplaItemUri(data)
 
-  // TODO: Not all identifiers are URLs, and some records have multiple identifiers.
-  //  Check to see that identifier is URL?
+  // TODO: There is no clear mapping for isShownAt
+  //   Roughly 85% of records have an identifier that starts with "http"
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "identifier")
+      .filter(_.startsWith("http"))
       .map(stringOnlyWebResource)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
-  // TODO: I don't think source is the correct field to map, but there is no alternative.
-  //  It contains name/address of archives and collection names.
-  //  It is only present in about half the records and some records have more than one.
+  // TODO: There is no clear mapping for dataProvider
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    extractStrings(data \ "source")
-      .map(nameOnlyAgent)
+    Seq().map(nameOnlyAgent)
 
   override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
     extractStrings(data \ "contributor")
@@ -80,6 +76,7 @@ class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     extractStrings(data \ "relation")
       .map(eitherStringOrUri)
 
+  // TODO: there are some records with rights statement URIs and CC text in the "rights" field
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
     extractStrings(data \ "rights")
 
