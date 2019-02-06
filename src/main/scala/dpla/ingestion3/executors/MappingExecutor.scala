@@ -11,16 +11,17 @@ import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
+import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
-import org.apache.spark.sql.functions.count
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
 import scala.collection.mutable
 import scala.util.{Failure, Success}
 
-trait MappingExecutor extends Serializable {
+trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
   /**
     * Performs the mapping for the given provider
@@ -75,24 +76,47 @@ trait MappingExecutor extends Serializable {
 
     // All attempted records
     // Transformation only
-    val mappingResults: Dataset[Row] =
-    documents.map(document =>
-      dplaMap.map(document, shortName, totalCount, successCount)
-    )(oreAggregationEncoder)
-      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
-    val duplicateOriginalIds = mappingResults
-      .select("originalId")
-      .where("originalId != ''")
-      .groupBy("originalId")
-      .agg(count("*").alias("count"))
-      .where("count > 1")
-      .count
+    val mappingResults: RDD[OreAggregation] = documents.rdd
+      .map(document => dplaMap.map(document, shortName, totalCount, successCount))
+
+    // Get a list of originalIds that appear in more than one record
+    val duplicateOriginalIds: Broadcast[Array[String]] =
+      spark.sparkContext.broadcast(
+        mappingResults
+          .map(_.originalId)
+          .countByValue
+          .collect{ case(origId, count) if count > 1 && origId != "" => origId }
+          .toArray
+      )
+
+    // Update messages to include duplicate originalId
+    val updatedResults: RDD[OreAggregation] = mappingResults.map(oreAgg => {
+
+      oreAgg.copy(messages =
+
+        if (duplicateOriginalIds.value.contains(oreAgg.originalId))
+          oreAgg.messages :+ duplicateOriginalId(oreAgg.originalId)
+        else
+          oreAgg.messages
+      )
+    })
+
+    // Encode to Row-based structure
+    val encodedMappingResults: DataFrame =
+      spark.createDataset(
+        updatedResults.map(oreAgg => RowConverter.toRow(oreAgg, model.sparkSchema))
+      )(oreAggregationEncoder)
+        .persist(StorageLevel.MEMORY_AND_DISK_SER)
+
+    // Must evaluate encodedMappingResults before successResults is called.
+    // Otherwise spark will attempt to evaluate the filter transformation before the encoding transformation.
+    encodedMappingResults.count
 
     // Removes records from mappingResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
     // Transformation only
-    val successResults: Dataset[Row] = mappingResults
+    val successResults: DataFrame = encodedMappingResults
       .filter(oreAggRow => {
         !oreAggRow // not
           .getAs[mutable.WrappedArray[Row]]("messages") // get all messages
@@ -103,7 +127,7 @@ trait MappingExecutor extends Serializable {
     // Results must be written before _LOGS.
     // Otherwise, spark interpret the `successResults' `outputPath' as
     // already existing, and will fail to write.
-    successResults.toDF().write.avro(outputPath)
+    successResults.write.avro(outputPath)
 
     // Get counts from accumulators
     val validRecordCount = successCount.count
@@ -129,14 +153,13 @@ trait MappingExecutor extends Serializable {
     // `mappingResults' are unpersisted during the execution of `buildFinalReport'
     val finalReport =
     buildFinalReport(
-      mappingResults,
+      encodedMappingResults,
       shortName,
       logsPath,
       startTime,
       endTime,
       attemptedCount,
-      validRecordCount,
-      duplicateOriginalIds)(spark)
+      validRecordCount)(spark)
 
     // Format the summary report and write it log file
     val mappingSummary = MappingSummary.getSummary(finalReport)
@@ -170,8 +193,7 @@ trait MappingExecutor extends Serializable {
                        startTime: Long,
                        endTime: Long,
                        attemptedCount: Long,
-                       validRecordCount: Long,
-                       duplicateOriginalIds: Long)(implicit spark: SparkSession): MappingSummaryData = {
+                       validRecordCount: Long)(implicit spark: SparkSession): MappingSummaryData = {
     import spark.implicits._
 
     // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
@@ -230,8 +252,7 @@ trait MappingExecutor extends Serializable {
       recordErrorCount,
       recordWarnCount,
       errorMsgDetails,
-      warnMsgDetails,
-      duplicateOriginalIds
+      warnMsgDetails
     )
 
     MappingSummaryData(shortName, operationSummary, timeSummary, messageSummary)
@@ -248,12 +269,13 @@ class DplaMap extends Serializable {
     * @param totalCount Accumulator to track the number of records processed
     * @param successCount Accumulator to track the number of records successfully mapped
     * @param failureCount Accumulator to track the number of records that failed to map
-    * @return A Row representing the mapping results (both success and failure)
+    * @return An OreAggregation representing the mapping results (both success and failure)
     */
   def map(document: String,
           shortName: String,
           totalCount: LongAccumulator,
-          successCount: LongAccumulator): Row = {
+          successCount: LongAccumulator): OreAggregation = {
+
     totalCount.add(1)
 
     val extractorClass = ProviderRegistry.lookupProfile(shortName) match {
@@ -267,6 +289,6 @@ class DplaMap extends Serializable {
 
     if (!hasError) successCount.add(1)
 
-    RowConverter.toRow(oreAggregation, model.sparkSchema)
+    oreAggregation
   }
 }
