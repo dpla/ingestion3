@@ -59,7 +59,7 @@ trait IngestMessageTemplates {
   def duplicateOriginalId(id: String): IngestMessage =
     IngestMessage(
       message = "Duplicate",
-      level = IngestLogLevel.warn,
+      level = IngestLogLevel.error,
       id = id,
       field = "originalId",
       value = "at least one other record shares this originalId"
