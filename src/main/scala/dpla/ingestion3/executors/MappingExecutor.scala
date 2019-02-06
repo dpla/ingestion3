@@ -11,9 +11,12 @@ import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
+import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
-import org.apache.spark.sql.functions.count
+import org.apache.spark.sql.expressions.UserDefinedFunction
+import org.apache.spark.sql.functions.{col, collect_list, count, explode, udf}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
@@ -75,16 +78,27 @@ trait MappingExecutor extends Serializable {
 
     // All attempted records
     // Transformation only
-    val mappingResults: Dataset[Row] =
-    documents.map(document =>
-      dplaMap.map(document, shortName, totalCount, successCount)
-    )(oreAggregationEncoder)
-      .persist(StorageLevel.MEMORY_AND_DISK_SER)
+//    val mappingResults: Dataset[Row] =
+//    documents.map(document =>
+//      dplaMap.map(document, shortName, totalCount, successCount)
+//    )(oreAggregationEncoder)
+//      .persist(StorageLevel.MEMORY_AND_DISK_SER)
+
+    val mappingResults: RDD[OreAggregation] = documents.rdd
+      .map(document => dplaMap.map(document, shortName, totalCount, successCount))
+
+    val encodedMappingResults: DataFrame =
+      spark.createDataset(
+        mappingResults.map(oreAgg => RowConverter.toRow(oreAgg, model.sparkSchema))
+      )(oreAggregationEncoder)
+        .persist(StorageLevel.MEMORY_AND_DISK_SER)
+
+    encodedMappingResults.count
 
     // Removes records from mappingResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
     // Transformation only
-    val successResults: Dataset[Row] = mappingResults
+    val successResults: DataFrame = encodedMappingResults
       .filter(oreAggRow => {
         !oreAggRow // not
           .getAs[mutable.WrappedArray[Row]]("messages") // get all messages
@@ -95,7 +109,7 @@ trait MappingExecutor extends Serializable {
     // Results must be written before _LOGS.
     // Otherwise, spark interpret the `successResults' `outputPath' as
     // already existing, and will fail to write.
-    successResults.toDF().write.avro(outputPath)
+    successResults.write.avro(outputPath)
 
     // Get counts from accumulators
     val validRecordCount = successCount.count
@@ -121,7 +135,7 @@ trait MappingExecutor extends Serializable {
     // `mappingResults' are unpersisted during the execution of `buildFinalReport'
     val finalReport =
     buildFinalReport(
-      mappingResults,
+      encodedMappingResults,
       shortName,
       logsPath,
       startTime,
@@ -242,7 +256,8 @@ class DplaMap extends Serializable {
   def map(document: String,
           shortName: String,
           totalCount: LongAccumulator,
-          successCount: LongAccumulator): Row = {
+          successCount: LongAccumulator): OreAggregation = {
+
     totalCount.add(1)
 
     val extractorClass = ProviderRegistry.lookupProfile(shortName) match {
@@ -256,6 +271,8 @@ class DplaMap extends Serializable {
 
     if (!hasError) successCount.add(1)
 
-    RowConverter.toRow(oreAggregation, model.sparkSchema)
+    oreAggregation
+
+//    RowConverter.toRow(oreAggregation, model.sparkSchema)
   }
 }
