@@ -15,15 +15,13 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
-import org.apache.spark.sql.expressions.UserDefinedFunction
-import org.apache.spark.sql.functions.{col, collect_list, count, explode, udf}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
 import scala.collection.mutable
 import scala.util.{Failure, Success}
 
-trait MappingExecutor extends Serializable {
+trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
   /**
     * Performs the mapping for the given provider
@@ -76,23 +74,38 @@ trait MappingExecutor extends Serializable {
 
     val dplaMap = new DplaMap()
 
-    // All attempted records
-    // Transformation only
-//    val mappingResults: Dataset[Row] =
-//    documents.map(document =>
-//      dplaMap.map(document, shortName, totalCount, successCount)
-//    )(oreAggregationEncoder)
-//      .persist(StorageLevel.MEMORY_AND_DISK_SER)
-
     val mappingResults: RDD[OreAggregation] = documents.rdd
       .map(document => dplaMap.map(document, shortName, totalCount, successCount))
 
+    // Get a list of originalIds that appear in more than one record
+    val duplicateOriginalIds: Broadcast[Array[String]] =
+      spark.sparkContext.broadcast(
+        mappingResults
+          .map(_.originalId)
+          .countByValue
+          .collect{ case(origId, count) if count > 1 && origId != "" => origId }
+          .toArray
+      )
+
+    val updatedResults: RDD[OreAggregation] = mappingResults.map(oreAgg => {
+
+      oreAgg.copy(messages =
+
+        if (duplicateOriginalIds.value.contains(oreAgg.originalId))
+          oreAgg.messages :+ duplicateOriginalId(oreAgg.originalId)
+        else
+          oreAgg.messages
+      )
+    })
+
     val encodedMappingResults: DataFrame =
       spark.createDataset(
-        mappingResults.map(oreAgg => RowConverter.toRow(oreAgg, model.sparkSchema))
+        updatedResults.map(oreAgg => RowConverter.toRow(oreAgg, model.sparkSchema))
       )(oreAggregationEncoder)
         .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
+    // Must evaluate encodedMappingResults before successResults is called.
+    // Otherwise spark will attempt to evaluate the filter transformation before the encoding transformation.
     encodedMappingResults.count
 
     // Removes records from mappingResults that have at least one IngestMessage
@@ -272,7 +285,5 @@ class DplaMap extends Serializable {
     if (!hasError) successCount.add(1)
 
     oreAggregation
-
-//    RowConverter.toRow(oreAggregation, model.sparkSchema)
   }
 }

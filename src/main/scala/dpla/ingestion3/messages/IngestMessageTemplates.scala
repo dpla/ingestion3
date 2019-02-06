@@ -56,6 +56,15 @@ trait IngestMessageTemplates {
       value = "both rights and edmRights are defined"
     )
 
+  def duplicateOriginalId(id: String): IngestMessage =
+    IngestMessage(
+      message = "Duplicate",
+      level = IngestLogLevel.warn,
+      id = id,
+      field = "originalId",
+      value = "at least one other record shares this originalId"
+    )
+
   def enrichedValue(id: String, field: String, origValue: String, enrichValue: String): IngestMessage =
     IngestMessage(
       message = s"Enriched value",
