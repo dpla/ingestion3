@@ -27,7 +27,8 @@ class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     mintDplaItemUri(data)
 
   // TODO: There is no clear mapping for isShownAt
-  //   Roughly 85% of records have an identifier that starts with "http"
+  //   Roughly 85% of records have an identifier that starts with "http".
+  //   Brief spot-testing suggested that at least some of these resolve to web pages with the full item.
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "identifier")
       .filter(_.startsWith("http"))
