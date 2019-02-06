@@ -81,14 +81,6 @@ trait MappingExecutor extends Serializable {
     )(oreAggregationEncoder)
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
-    val duplicateOriginalIds = mappingResults
-      .select("originalId")
-      .where("originalId != ''")
-      .groupBy("originalId")
-      .agg(count("*").alias("count"))
-      .where("count > 1")
-      .count
-
     // Removes records from mappingResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
     // Transformation only
@@ -135,8 +127,7 @@ trait MappingExecutor extends Serializable {
       startTime,
       endTime,
       attemptedCount,
-      validRecordCount,
-      duplicateOriginalIds)(spark)
+      validRecordCount)(spark)
 
     // Format the summary report and write it log file
     val mappingSummary = MappingSummary.getSummary(finalReport)
@@ -170,8 +161,7 @@ trait MappingExecutor extends Serializable {
                        startTime: Long,
                        endTime: Long,
                        attemptedCount: Long,
-                       validRecordCount: Long,
-                       duplicateOriginalIds: Long)(implicit spark: SparkSession): MappingSummaryData = {
+                       validRecordCount: Long)(implicit spark: SparkSession): MappingSummaryData = {
     import spark.implicits._
 
     // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
@@ -230,8 +220,7 @@ trait MappingExecutor extends Serializable {
       recordErrorCount,
       recordWarnCount,
       errorMsgDetails,
-      warnMsgDetails,
-      duplicateOriginalIds
+      warnMsgDetails
     )
 
     MappingSummaryData(shortName, operationSummary, timeSummary, messageSummary)
