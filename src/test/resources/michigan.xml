@@ -1,0 +1,66 @@
+<record xmlns="http://www.openarchives.org/OAI/2.0/">
+    <header>
+        <identifier>
+            oai:michigan:ochr:oai:digital.library.wayne.edu:ochr:oai:demo.ptfs.com:library10_lib/87490
+        </identifier>
+        <datestamp>2019-01-14</datestamp>
+        <setSpec>ochr</setSpec>
+    </header>
+    <metadata>
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/">
+            <mods:titleInfo>
+                <mods:title>Avon Township Offices</mods:title>
+            </mods:titleInfo>
+            <mods:subject>
+                <mods:topic>Government</mods:topic>
+            </mods:subject>
+            <mods:subject>
+                <mods:geographic>407 Pine Street</mods:geographic>
+            </mods:subject>
+            <mods:subject>
+                <mods:geographic>Rochester</mods:geographic>
+            </mods:subject>
+            <mods:abstract>
+                Avon Township Offices, located on the northwest corner of Fourth and Pine Streets. Built in 1880 as a single story structure, the building has been remodeled and expanded several times. Date is approximated. (RRP-166) Ray Russell Postcard Collection
+            </mods:abstract>
+            <mods:originInfo>
+                <mods:dateIssued>01-Jan-1930</mods:dateIssued>
+            </mods:originInfo>
+            <mods:physicalDescription>
+                <mods:form>Postcard</mods:form>
+            </mods:physicalDescription>
+            <mods:location>
+                <mods:url usage="primary">
+                    http://oaklandcountyhistory.org/knowvation/app/consolidatedSearch/#autologin/guest/lb_document_id=87490
+                </mods:url>
+            </mods:location>
+            <mods:location>
+                <mods:url access="preview">
+                    http://oaklandcountyhistory.org/awweb/pdfopener?fp=auto&amp;umb=87490
+                </mods:url>
+            </mods:location>
+            <mods:accessCondition type="use and reproduction">
+                Users can cite and link to these materials without obtaining permission. Users can also use the materials for non-commercial educational and research purposes in accordance with fair use. For other uses or to obtain high resolution images, please contact the copyright holder.
+            </mods:accessCondition>
+            <mods:note>
+                Oakland County Historical Resources hosts digitized materials from Rochester Hills Public Library and many other local cultural heritage organizations in Oakland County, Michigan.
+            </mods:note>
+            <mods:recordInfo>
+                <recordContentSource>Oakland County Historical Resources</recordContentSource>
+                <recordContentSource>Rochester Hills Public Library</recordContentSource>
+            </mods:recordInfo>
+        </mods:mods>
+    </metadata>
+    <about>
+        <oaiProvenance:provenance xmlns:oaiProvenance="http://www.openarchives.org/OAI/2.0/provenance" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/provenance http://www.openarchives.org/OAI/2.0/provenance.xsd">
+            <oaiProvenance:originDescription harvestDate="2019-01-14" altered="true">
+                <oaiProvenance:baseURL>http://combine.michiganservicehub.org/combine/oai</oaiProvenance:baseURL>
+                <oaiProvenance:identifier>
+                    oai:digital.library.wayne.edu:ochr:oai:demo.ptfs.com:library10_lib/87490
+                </oaiProvenance:identifier>
+                <oaiProvenance:datestamp>2019-01-14</oaiProvenance:datestamp>
+                <oaiProvenance:metadataNamespace>http://www.loc.gov/mods/v3</oaiProvenance:metadataNamespace>
+            </oaiProvenance:originDescription>
+        </oaiProvenance:provenance>
+    </about>
+</record>

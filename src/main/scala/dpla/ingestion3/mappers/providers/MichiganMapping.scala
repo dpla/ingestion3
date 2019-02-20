@@ -25,6 +25,7 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
+      .map(_.trim)
 
   // SourceResource mapping
   override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
@@ -169,8 +170,8 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
     // second <mods:recordInfo><mods:recordContentSource> if exists
     val providers = extractStrings(data \\ "recordInfo" \ "recordContentSource")
       .map(nameOnlyAgent)
-    if (providers.length > 1)
-      Some(providers(2))
+    if (providers.length > 2)
+      Some(providers(1))
     else None
   }
 

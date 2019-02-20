@@ -12,12 +12,18 @@ class MichiganMappingTest extends FlatSpec with BeforeAndAfter {
 
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
   val shortName = "mi"
-  val xmlString: String = new FlatFileIO().readFileAsString("/oklahoma.xml")
+  val xmlString: String = new FlatFileIO().readFileAsString("/michigan.xml")
+  val badXmlString: String = new FlatFileIO().readFileAsString("/michigan_bad.xml")
   val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))
   val extractor = new MichiganMapping
 
   it should "use the provider shortname in minting IDs " in
     assert(extractor.useProviderName())
+
+  it should "extract the correct original identifier" in {
+    val expected = Some("oai:michigan:ochr:oai:digital.library.wayne.edu:ochr:oai:demo.ptfs.com:library10_lib/87490")
+    assert(extractor.originalId(xml) == expected)
+  }
 
   it should "extract the correct dates for 2007" in {
     val xml =
