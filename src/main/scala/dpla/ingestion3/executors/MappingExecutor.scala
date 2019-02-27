@@ -16,7 +16,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.apache.spark.storage.StorageLevel
-import org.apache.spark.util.LongAccumulator
 
 import scala.collection.mutable
 import scala.util.{Failure, Success}
@@ -57,8 +56,6 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     val sc = spark.sparkContext
 
-    val successCount: LongAccumulator = sc.longAccumulator("Successful Record Count")
-
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
 
@@ -76,7 +73,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       .select("document")
       .as[String]
       .rdd
-      .map(document => dplaMap.map(document, shortName, successCount))
+      .map(document => dplaMap.map(document, shortName))
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Get a list of originalIds that appear in more than one record
@@ -129,7 +126,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     successResults.write.avro(outputPath)
 
     // Get counts
-    val validRecordCount = successCount.count
+    val validRecordCount = spark.read.avro(outputPath).count // requires read-after-write consistency
     val attemptedCount = totalCount
 
     // Write manifest
@@ -264,25 +261,15 @@ class DplaMap extends Serializable {
     *
     * @param document The harvested record to map
     * @param shortName Provider short name
-    * @param successCount Accumulator to track the number of records successfully mapped
-    * @param failureCount Accumulator to track the number of records that failed to map
+    *
     * @return An OreAggregation representing the mapping results (both success and failure)
     */
-  def map(document: String,
-          shortName: String,
-          successCount: LongAccumulator): OreAggregation = {
+  def map(document: String, shortName: String): OreAggregation = {
 
     val extractorClass = ProviderRegistry.lookupProfile(shortName) match {
       case Success(extClass) => extClass
       case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
     }
-    val oreAggregation: OreAggregation = extractorClass.performMapping(document)
-
-    val hasError: Boolean =
-      oreAggregation.messages.map(m => m.level).contains(IngestLogLevel.error)
-
-    if (!hasError) successCount.add(1)
-
-    oreAggregation
+    extractorClass.performMapping(document)
   }
 }
