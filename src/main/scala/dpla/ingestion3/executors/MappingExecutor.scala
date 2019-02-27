@@ -57,7 +57,6 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     val sc = spark.sparkContext
 
-    val totalCount: LongAccumulator = sc.longAccumulator("Total Record Count")
     val successCount: LongAccumulator = sc.longAccumulator("Successful Record Count")
 
     // Need to keep this here despite what IntelliJ and Codacy say
@@ -66,19 +65,18 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
     val oreAggregationEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
 
+    val dplaMap = new DplaMap()
+
     // Load the harvested record dataframe
     val harvestedRecords: DataFrame = spark.read.avro(dataIn)
 
     // Run the mapping over the Dataframe
-    val documents: Dataset[String] = harvestedRecords.select("document").as[String]
-
-    val dplaMap = new DplaMap()
-
-    // All attempted records
     // Transformation only
-
-    val mappingResults: RDD[OreAggregation] = documents.rdd
-      .map(document => dplaMap.map(document, shortName, totalCount, successCount))
+    val mappingResults: RDD[OreAggregation] = harvestedRecords
+      .select("document")
+      .as[String]
+      .rdd
+      .map(document => dplaMap.map(document, shortName, successCount))
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Get a list of originalIds that appear in more than one record
@@ -112,7 +110,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     // Must evaluate encodedMappingResults before successResults is called.
     // Otherwise spark will attempt to evaluate the filter transformation before the encoding transformation.
-    encodedMappingResults.count
+    val totalCount = encodedMappingResults.count
 
     // Removes records from mappingResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
@@ -130,9 +128,9 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     // already existing, and will fail to write.
     successResults.write.avro(outputPath)
 
-    // Get counts from accumulators
+    // Get counts
     val validRecordCount = successCount.count
-    val attemptedCount = totalCount.count
+    val attemptedCount = totalCount
 
     // Write manifest
     val manifestOpts: Map[String, String] = Map(
@@ -151,7 +149,6 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     val logsPath = outputHelper.logsPath
 
     // Collect the values needed to generate the report
-    // `mappingResults' are unpersisted during the execution of `buildFinalReport'
     val finalReport =
     buildFinalReport(
       encodedMappingResults,
@@ -267,17 +264,13 @@ class DplaMap extends Serializable {
     *
     * @param document The harvested record to map
     * @param shortName Provider short name
-    * @param totalCount Accumulator to track the number of records processed
     * @param successCount Accumulator to track the number of records successfully mapped
     * @param failureCount Accumulator to track the number of records that failed to map
     * @return An OreAggregation representing the mapping results (both success and failure)
     */
   def map(document: String,
           shortName: String,
-          totalCount: LongAccumulator,
           successCount: LongAccumulator): OreAggregation = {
-
-    totalCount.add(1)
 
     val extractorClass = ProviderRegistry.lookupProfile(shortName) match {
       case Success(extClass) => extClass
