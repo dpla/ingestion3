@@ -79,6 +79,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     val mappingResults: RDD[OreAggregation] = documents.rdd
       .map(document => dplaMap.map(document, shortName, totalCount, successCount))
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Get a list of originalIds that appear in more than one record
     val duplicateOriginalIds: Broadcast[Array[String]] =
