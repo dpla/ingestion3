@@ -30,21 +30,21 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
   // SourceResource mapping
   override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
   // <mods:relatedItem type=host><mods:titleInfo><mods:title>
-    (data \\ "relatedItem")
+    (data \\ "mods" \ "relatedItem")
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "host"))
       .flatMap(collection => extractStrings(collection \ "titleInfo" \ "title"))
       .map(nameOnlyCollection)
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
   // when <role><roleTerm> DOES equal "contributor>
-    (data \\ "name")
+    (data \\ "mods" \ "name")
       .filter(node => (node \ "role" \ "roleTerm").text.equalsIgnoreCase("contributor"))
       .flatMap(n => extractStrings(n \ "namePart"))
       .map(nameOnlyAgent)
 
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
   // <mods:name><mods:namePart> when <role><roleTerm> is 'creator' or blank
-    (data \\ "name")
+    (data \\ "mods" \ "name")
       .filter(node => {
         val role = (node \ "role" \ "roleTerm").text
         role.isEmpty || role.equalsIgnoreCase("creator")
@@ -52,22 +52,24 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
       .flatMap(n => extractStrings(n \ "namePart"))
       .map(nameOnlyAgent)
 
+  // TODO: <mods:originInfo><mods:dateCreated> is not in the mapping spreadsheet but is in ingestion 1.
+  //       Should we assume that ingestion 1 is correct?
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
     // <mods:originInfo><mods:dateCreated>
-    val dateCreated = extractStrings(data \\ "originInfo" \\ "dateCreated")
+    val dateCreated = extractStrings(data \\ "mods" \ "originInfo" \ "dateCreated")
       .map(stringOnlyTimeSpan)
 
     // Get dateIssued values
-    val dateIssued = (data \\ "originInfo" \\ "dateIssued")
+    val dateIssued = (data \\ "mods" \ "originInfo" \ "dateIssued")
       .filter(node => node.attributes.get("point").isEmpty)
       .flatMap(node => extractStrings(node))
       .map(stringOnlyTimeSpan)
     // Get dateIssued values with attribute of point=start
-    val dateIssuedEarly = (data \\ "originInfo" \\ "dateIssued")
+    val dateIssuedEarly = (data \\ "mods" \ "originInfo" \ "dateIssued")
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "point", "start"))
       .flatMap(node => extractStrings(node))
     // Get dateIssued values with attribute of point=end
-    val dateIssuedLate = (data \\ "originInfo" \\ "dateIssued")
+    val dateIssuedLate = (data \\ "mods" \ "originInfo" \ "dateIssued")
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "point", "end"))
       .flatMap(node => extractStrings(node))
 
@@ -92,44 +94,46 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
     }
   }
 
+  // TODO: The mapping for <mods:physicalDescription><mods:note> is in mapping spreadsheet but not ingestion 1.
+  //       Follow-up with hub.
   override def description(data: Document[NodeSeq]): Seq[String] = {
     // <mods:note> and <mods:abstract> and <mods:physicalDescription> \ <note>
-    extractStrings(data \\ "physicalDescription" \ "note") ++
-      extractStrings(data \\ "abstract") ++
-      extractStrings(data \ "note")
+    extractStrings(data \\ "mods" \ "physicalDescription" \ "note") ++
+      extractStrings(data \\ "mods" \ "abstract") ++
+      extractStrings(data \\ "mods" \ "note")
   }
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:physicalDescription><mods:extent>
-    extractStrings(data \\ "physicalDescription" \ "extent")
+    extractStrings(data \\ "mods" \ "physicalDescription" \ "extent")
 
   override def format(data: Document[NodeSeq]): Seq[String] =
-  // <mods:genre> AND <mods:physicialDescription><mods:form>
-    extractStrings(data \\ "genre") ++
-      extractStrings(data \\ "physicalDescription" \ "form")
+  // <mods:genre> AND <mods:physicalDescription><mods:form>
+    extractStrings(data \\ "mods" \ "genre") ++
+      extractStrings(data \\ "mods" \ "physicalDescription" \ "form")
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
   // <mods:identifier>
-    extractStrings(data \ "metadata" \ "mods" \ "identifier")
+    extractStrings(data \\ "mods" \ "identifier")
 
   override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
   // <mods:language><mods:languageTerm>
-    extractStrings(data \\ "language" \\ "languageTerm")
+    extractStrings(data \\ "mods" \ "language" \ "languageTerm")
       .map(nameOnlyConcept)
 
   override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
   // <mods:subject><mods:geographic>
-    extractStrings(data \\ "subject" \\ "geographic")
+    extractStrings(data \\ "mods" \ "subject" \ "geographic")
       .map(nameOnlyPlace)
 
   override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
   // <mods:originInfo><mods:publisher>
-    extractStrings(data \\ "originInfo" \\ "publisher")
+    extractStrings(data \\ "mods" \ "originInfo" \ "publisher")
       .map(nameOnlyAgent)
 
-  //  <accessCondition> when the @type="use and reproduction" attribute is not present
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
-    extractStrings(data \ "metadata" \ "mods" \ "accessCondition")
+  // <mods:accessCondition>
+    extractStrings(data \\ "mods" \ "accessCondition")
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
   // <mods:subject> AND
@@ -137,16 +141,16 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
   // <mods:subject><mods:name><mods:namePart> AND
   // <mods:subject><mods:genre> AND
   // <mods:subject><mods:titleInfo><mods:title>
-    (extractStrings(data \\ "subject" \ "topic") ++
-      extractStrings(data \\ "subject" \ "name" \ "namePart") ++
-      extractStrings(data \\ "subject" \ "genre") ++
-      extractStrings(data \\ "subject" \ "titleInfo" \ "title") ++
-      extractStrings(data \\ "subject")
+    (extractStrings(data \\ "mods" \ "subject" \ "topic") ++
+      extractStrings(data \\ "mods" \ "subject" \ "name" \ "namePart") ++
+      extractStrings(data \\ "mods" \ "subject" \ "genre") ++
+      extractStrings(data \\ "mods" \ "subject" \ "titleInfo" \ "title") ++
+      extractStrings(data \\ "mods" \ "subject")
     ).map(nameOnlyConcept)
 
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
   // <mods:subject><mods:temporal>
-    extractStrings(data \\ "subject" \ "temporal")
+    extractStrings(data \\ "mods" \ "subject" \ "temporal")
       .map(stringOnlyTimeSpan)
 
   override def title(data: Document[NodeSeq]): Seq[String] =
@@ -154,30 +158,30 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
     extractStrings(data \\ "mods" \ "titleInfo" \ "title")
 
   override def `type`(data: Document[NodeSeq]): Seq[String] =
-  // <mods:typeofresource>
-    extractStrings(data \ "metadata" \ "mods" \ "typeOfResource")
+  // <mods:typeOfResource>
+    extractStrings(data \\ "mods" \ "typeOfResource")
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
   // first <mods:recordInfo><mods:recordContentSource>
-    extractStrings(data \\ "recordInfo" \ "recordContentSource")
+    extractStrings(data \\ "mods" \ "recordInfo" \ "recordContentSource")
       .map(nameOnlyAgent)
       .take(1)
 
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] = {
     // second <mods:recordInfo><mods:recordContentSource> if exists
-    val providers = extractStrings(data \\ "recordInfo" \ "recordContentSource")
+    val providers = extractStrings(data \\ "mods" \ "recordInfo" \ "recordContentSource")
       .map(nameOnlyAgent)
-    if (providers.length > 2)
+    if (providers.length > 1)
       Some(providers(1))
     else None
   }
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-  // <mods:location><mods:url usage="primary display" access="object in  context">
-    (data \ "metadata" \ "mods" \ "location" \ "url")
+  // <mods:location><mods:url usage="primary">
+    (data \\ "mods" \ "location" \ "url")
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "usage", "primary"))
       .flatMap(extractStrings)
       .map(stringOnlyWebResource)
@@ -186,7 +190,7 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
   // <mods:location><mods:url access="preview">
-    (data \ "metadata" \ "mods" \ "location" \ "url")
+    (data \\ "mods" \ "location" \ "url")
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "access", "preview"))
       .flatMap(extractStrings)
       .map(stringOnlyWebResource)
@@ -202,4 +206,3 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
     uri = Some(URI("http://dp.la/api/contributor/michigan"))
   )
 }
-
