@@ -135,18 +135,25 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
   // <mods:accessCondition>
     extractStrings(data \\ "mods" \ "accessCondition")
 
-  override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
-  // <mods:subject> AND
-  // <mods:subject><mods:topic> AND
-  // <mods:subject><mods:name><mods:namePart> AND
-  // <mods:subject><mods:genre> AND
-  // <mods:subject><mods:titleInfo><mods:title>
+  override def subject(data: Document[NodeSeq]): Seq[SkosConcept] = {
+    // <mods:subject> AND
+    // <mods:subject><mods:topic> AND
+    // <mods:subject><mods:name><mods:namePart> AND
+    // <mods:subject><mods:genre> AND
+    // <mods:subject><mods:titleInfo><mods:title>
+
+    // TODO: Make this a reusable method in XmlExtractor
+    val subjectChildStrings: Seq[String] = (data \\ "mods" \ "subject").flatMap { node =>
+      node.child.collect{ case Text(t) => t }.map(_.trim).filterNot(_.isEmpty)
+    }
+
     (extractStrings(data \\ "mods" \ "subject" \ "topic") ++
       extractStrings(data \\ "mods" \ "subject" \ "name" \ "namePart") ++
       extractStrings(data \\ "mods" \ "subject" \ "genre") ++
       extractStrings(data \\ "mods" \ "subject" \ "titleInfo" \ "title") ++
-      extractStrings(data \\ "mods" \ "subject")
-    ).map(nameOnlyConcept)
+      subjectChildStrings
+      ).map(nameOnlyConcept)
+  }
 
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
   // <mods:subject><mods:temporal>

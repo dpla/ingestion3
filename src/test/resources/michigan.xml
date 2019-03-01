@@ -20,9 +20,10 @@
             <mods:subject>
                 <mods:geographic>Rochester</mods:geographic>
             </mods:subject>
-            <mods:abstract>
-                Avon Township Offices, located on the northwest corner of Fourth and Pine Streets. Built in 1880 as a single story structure, the building has been remodeled and expanded several times. Date is approximated. (RRP-166) Ray Russell Postcard Collection
-            </mods:abstract>
+            <mods:subject>
+                <mods:temporal>1967-2011</mods:temporal>
+            </mods:subject>
+            <mods:abstract>Avon Township Offices, located on the northwest corner of Fourth and Pine Streets.</mods:abstract>
             <mods:originInfo>
                 <mods:dateIssued>01-Jan-1930</mods:dateIssued>
             </mods:originInfo>
@@ -39,16 +40,45 @@
                     http://oaklandcountyhistory.org/awweb/pdfopener?fp=auto&amp;umb=87490
                 </mods:url>
             </mods:location>
-            <mods:accessCondition type="use and reproduction">
-                Users can cite and link to these materials without obtaining permission. Users can also use the materials for non-commercial educational and research purposes in accordance with fair use. For other uses or to obtain high resolution images, please contact the copyright holder.
-            </mods:accessCondition>
-            <mods:note>
-                Oakland County Historical Resources hosts digitized materials from Rochester Hills Public Library and many other local cultural heritage organizations in Oakland County, Michigan.
-            </mods:note>
+            <mods:accessCondition type="use and reproduction">Users can cite and link to these materials without obtaining permission.</mods:accessCondition>
             <mods:recordInfo>
                 <recordContentSource>Oakland County Historical Resources</recordContentSource>
                 <recordContentSource>Rochester Hills Public Library</recordContentSource>
             </mods:recordInfo>
+            <mods:relatedItem type="host">
+                <mods:titleInfo>
+                    <mods:title>Veterans History Project interviews, RHC-27</mods:title>
+                </mods:titleInfo>
+            </mods:relatedItem>
+            <mods:name valueURI="http://id.loc.gov/authorities/names/n86026453" type="corporate" authorityURI="http://id.loc.gov/authorities/names" authority="naf">
+                <mods:namePart>Boston Cooking School (Boston, Mass.)</mods:namePart>
+                <mods:role>
+                    <mods:roleTerm valueURI="http://id.loc.gov/vocabulary/relators/ctb" type="text" authorityURI="http://id.loc.gov/vocabulary/relators" authority="marcrelator">contributor</mods:roleTerm>
+                </mods:role>
+            </mods:name>
+            <mods:name>
+                <mods:namePart>City of Lansing</mods:namePart>
+                <mods:role>
+                    <mods:roleTerm>Creator</mods:roleTerm>
+                </mods:role>
+            </mods:name>
+            <mods:name>
+                <mods:namePart>City Planning Division Ingells, Norris</mods:namePart>
+                <mods:role>
+                    <mods:roleTerm>Creator</mods:roleTerm>
+                </mods:role>
+            </mods:name>
+            <mods:physicalDescription>
+                <mods:extent>1 Postcard (3.5" x 5.5")</mods:extent>
+            </mods:physicalDescription>
+            <mods:identifier type="local">MICH1306517</mods:identifier>
+            <mods:language>
+                <mods:languageTerm type="code">eng</mods:languageTerm>
+            </mods:language>
+            <mods:originInfo>
+                <mods:publisher>Grand Valley State University. University Libraries.</mods:publisher>
+            </mods:originInfo>
+            <mods:typeOfResource>still image</mods:typeOfResource>
         </mods:mods>
     </metadata>
     <about>
