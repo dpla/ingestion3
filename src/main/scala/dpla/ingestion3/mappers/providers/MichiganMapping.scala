@@ -142,16 +142,11 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
     // <mods:subject><mods:genre> AND
     // <mods:subject><mods:titleInfo><mods:title>
 
-    // TODO: Make this a reusable method in XmlExtractor
-    val subjectChildStrings: Seq[String] = (data \\ "mods" \ "subject").flatMap { node =>
-      node.child.collect{ case Text(t) => t }.map(_.trim).filterNot(_.isEmpty)
-    }
-
     (extractStrings(data \\ "mods" \ "subject" \ "topic") ++
       extractStrings(data \\ "mods" \ "subject" \ "name" \ "namePart") ++
       extractStrings(data \\ "mods" \ "subject" \ "genre") ++
       extractStrings(data \\ "mods" \ "subject" \ "titleInfo" \ "title") ++
-      subjectChildStrings
+      extractChildStrings(data \\ "mods" \ "subject")
       ).map(nameOnlyConcept)
   }
 
