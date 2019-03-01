@@ -190,7 +190,7 @@ class MichiganMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.format(Document(xml)) == expected)
   }
 
-  it should "not extract genre from the subject/genre field" in {
+  it should "not extract format from the subject/genre field" in {
     val xml =
       <record>
         <metadata>
@@ -301,6 +301,40 @@ class MichiganMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.subject(Document(xml)) == expected)
   }
 
+  it should "not extract subject from the subject/geographic field" in {
+    val xml =
+      <record>
+        <metadata>
+          <mods>
+            <mods:subject>
+              <mods:geographic>
+                Ann Arbor
+              </mods:geographic>
+            </mods:subject>
+          </mods>
+        </metadata>
+      </record>
+
+    assert(extractor.subject(Document(xml)) == Seq())
+  }
+
+  it should "not extract subject from the subject/temporal field" in {
+    val xml =
+      <record>
+        <metadata>
+          <mods>
+            <mods:subject>
+              <mods:temporal>
+                1984-1985
+              </mods:temporal>
+            </mods:subject>
+          </mods>
+        </metadata>
+      </record>
+
+    assert(extractor.subject(Document(xml)) == Seq())
+  }
+
   it should "extract the correct temporal" in {
     val expected = Seq("1967-2011").map(stringOnlyTimeSpan)
     assert(extractor.temporal(xml) == expected)
@@ -321,6 +355,23 @@ class MichiganMappingTest extends FlatSpec with BeforeAndAfter {
                 <mods:title>Birds</mods:title>
               </mods:titleInfo>
             </mods:subject>
+          </mods>
+        </metadata>
+      </record>
+
+    assert(extractor.title(Document(xml)) == Seq())
+  }
+
+  it should "not extract title from relatedItem/titleInfo/title field" in {
+    val xml =
+      <record>
+        <metadata>
+          <mods>
+            <mods:relatedItem>
+              <mods:titleInfo>
+                <mods:title>Collection title</mods:title>
+              </mods:titleInfo>
+            </mods:relatedItem>
           </mods>
         </metadata>
       </record>
