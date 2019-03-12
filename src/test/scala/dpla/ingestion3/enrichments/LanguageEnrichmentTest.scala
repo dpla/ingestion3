@@ -73,4 +73,13 @@ class LanguageEnrichmentTest extends FlatSpec with BeforeAndAfter {
     )
     assert(languageEnrichment.enrich(originalValue) === Option(expectedValue))
   }
+  //spa,Spanish
+  it should "return an enriched SkosConcept for 'spa')" in {
+    val originalValue = SkosConcept(providedLabel = Option("spa"))
+    val expectedValue = SkosConcept(
+      providedLabel = Option("spa"),
+      concept = Option("Spanish")
+    )
+    assert(languageEnrichment.enrich(originalValue) === Option(expectedValue))
+  }
 }
