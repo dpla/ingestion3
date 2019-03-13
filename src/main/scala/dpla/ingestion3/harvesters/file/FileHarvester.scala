@@ -16,7 +16,6 @@ import scala.util.Try
   *
   * @param shortName Provider short name
   * @param conf Configurations
-  * @param outputDir Output path
   * @param logger Logger
   */
 abstract class FileHarvester(spark: SparkSession,
