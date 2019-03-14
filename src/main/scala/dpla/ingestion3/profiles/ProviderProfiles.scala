@@ -82,7 +82,7 @@ class IaProfile extends JsonProfile {
 class LocProfile extends JsonProfile {
   type Mapping = LcMapping
 
-  override def getHarvester = classOf[LocHarvester]
+  override def getHarvester = classOf[LcCsvFileHarvester]
   override def getMapping = new LcMapping
 }
 
