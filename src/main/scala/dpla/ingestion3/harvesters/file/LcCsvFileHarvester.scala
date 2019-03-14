@@ -6,7 +6,6 @@ import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import org.apache.log4j.Logger
-import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
@@ -21,7 +20,7 @@ import scala.util.{Failure, Success, Try}
 class CsvFileExtractor extends JsonExtractor
 
 /**
-  * Entry for performing a CSV file harvest
+  * Entry for performing the LC CSV file harvest
   */
 class LcCsvFileHarvester(spark: SparkSession,
                          shortName: String,
@@ -37,11 +36,11 @@ class LcCsvFileHarvester(spark: SparkSession,
     * Loads .csv files
     *
     * @param file File to parse
-    * @return Iterator[String] of the CSV contents
+    * @return Iterator[String] of the CSV lines
     */
   def getInputStream(file: File): Option[Iterator[String]] = {
     file.getName match {
-      case csvName if csvName.endsWith("csv") => // FIXME isn't the redundant of the file filter? 
+      case csvName if csvName.endsWith("csv") => // FIXME isn't the redundant of the file filter?
         Some(Source.fromFile(file).getLines())
       case _ => None
     }
@@ -56,14 +55,14 @@ class LcCsvFileHarvester(spark: SparkSession,
     */
   def getJsonResult(json: JValue): Option[ParsedResult] =
     Option(ParsedResult(
-      extractor.extractString(json \\ "id")
+      extractor.extractString(json \\ "id") // Location of the persistent ID for LC records
         .getOrElse(throw new RuntimeException("Missing ID")),
       compact(render(json))
     ))
 
   /**
-    * Parses and extracts ZipInputStream and writes
-    * parsed records out.
+    * Parses a row from a CSV file, extracts
+    * the data and writes it out
     *
     * @param row  Case class representing extracted items from a CSV row
     * @return Count of metadata items found.
@@ -72,10 +71,9 @@ class LcCsvFileHarvester(spark: SparkSession,
                  unixEpoch: Long): Try[Int] = {
     row match {
       case CsvRow(_, None) =>
-        Success(0) // a directory, no results
+        Success(0) // no data associated with row
       case CsvRow(Some(_), Some(data)) => Try {
         Try {
-
           // Clean up leading/trailing characters
           val json: JValue = parse(
             data
@@ -100,8 +98,14 @@ class LcCsvFileHarvester(spark: SparkSession,
     }
   }
 
+  // Leave unimplemented
   override def handleFile(fileResult: FileResult, unixEpoch: Long): Try[Int] = ???
 
+  /**
+    *
+    * @param iterator Iterator[String] read from file
+    * @return Stream[CsvRow] Stream of CsvRows
+    */
   def iter(iterator: Iterator[String]): Stream[CsvRow] = {
       if (iterator.hasNext) {
         iterator.next().split(",", 2) match {
@@ -116,7 +120,7 @@ class LcCsvFileHarvester(spark: SparkSession,
   }
 
   /**
-    * Executes the Missouri harvest
+    * Executes the Library of Congress file harvest
     */
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
@@ -125,8 +129,9 @@ class LcCsvFileHarvester(spark: SparkSession,
 
     inFiles.listFiles(new CsvFileFilter).foreach( inFile => {
       logger.info(s"Reading data from ${inFile.getAbsolutePath}")
+
       val inputStream: Iterator[String] = getInputStream(inFile)
-        .getOrElse(throw new IllegalArgumentException("Couldn't load CSV file."))
+        .getOrElse(throw new IllegalArgumentException(s"Couldn't load CSV file - ${inFile.getAbsolutePath}"))
       val recordCount = (for (row <- iter(inputStream)) yield {
         handleRow(row, unixEpoch) match {
           case Failure(exception) =>
@@ -142,10 +147,7 @@ class LcCsvFileHarvester(spark: SparkSession,
     flush()
 
     // Read harvested data into Spark DataFrame.
-    val df = spark.read.avro(tmpOutStr)
-
-    // Filter out records with "status":"deleted"
-    df.where(!col("document").like("%\"status\":\"deleted\"%"))
+    spark.read.avro(tmpOutStr)
   }
 }
 
