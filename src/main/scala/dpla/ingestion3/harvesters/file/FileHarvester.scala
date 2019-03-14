@@ -70,4 +70,6 @@ abstract class FileHarvester(spark: SparkSession,
     avroWriter.append(genericRecord)
   }
 
+  def flush() = getAvroWriter.flush()
+
 }
