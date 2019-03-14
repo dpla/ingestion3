@@ -20,22 +20,23 @@ class HarvardMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct alternative title from MARC-derived records" in {
     val result = mapping.alternateTitle(metadata(
       <mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                                                             xmlns:mods="http://www.loc.gov/mods/v3"
-                                                             xmlns:sets="http://hul.harvard.edu/ois/xml/ns/sets"
-                                                             xmlns:xlink="http://www.w3.org/1999/xlink"
-                                                             xmlns:marc="http://www.loc.gov/MARC21/slim"
-                                                             xmlns:HarvardDRS="http://hul.harvard.edu/ois/xml/ns/HarvardDRS"
-                                                             xmlns:librarycloud="http://hul.harvard.edu/ois/xml/ns/librarycloud"
-                                                             xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-6.xsd"
-                                                             version="3.6">
-      <mods:titleInfo>
-        <mods:title>Cryptogamic botany</mods:title>
-      </mods:titleInfo>
-      <mods:titleInfo type="alternative">
-        <mods:title>Alaska</mods:title>
-        <mods:partNumber>Volume V</mods:partNumber>
-        <mods:partName>Cryptogamic botany</mods:partName>
-      </mods:titleInfo></mods:mods>
+                 xmlns:mods="http://www.loc.gov/mods/v3"
+                 xmlns:sets="http://hul.harvard.edu/ois/xml/ns/sets"
+                 xmlns:xlink="http://www.w3.org/1999/xlink"
+                 xmlns:marc="http://www.loc.gov/MARC21/slim"
+                 xmlns:HarvardDRS="http://hul.harvard.edu/ois/xml/ns/HarvardDRS"
+                 xmlns:librarycloud="http://hul.harvard.edu/ois/xml/ns/librarycloud"
+                 xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-6.xsd"
+                 version="3.6">
+        <mods:titleInfo>
+          <mods:title>Cryptogamic botany</mods:title>
+        </mods:titleInfo>
+        <mods:titleInfo type="alternative">
+          <mods:title>Alaska</mods:title>
+          <mods:partNumber>Volume V</mods:partNumber>
+          <mods:partName>Cryptogamic botany</mods:partName>
+        </mods:titleInfo>
+      </mods:mods>
     ))
     assert(result === Seq("Alaska Volume V Cryptogamic botany"))
   }
@@ -51,9 +52,9 @@ class HarvardMappingTest extends FlatSpec with BeforeAndAfter {
                  xmlns:librarycloud="http://hul.harvard.edu/ois/xml/ns/librarycloud"
                  xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-6.xsd"
                  version="3.6">
-      <mods:titleInfo>
-        <mods:title>Stele of "Chunhua ge fa tie", (Model-Letter Compendia of the Chunhua reign)-- 8th. volume: 3rd. volume of Wang Xizhi's calligraphy models</mods:title>
-      </mods:titleInfo>
+        <mods:titleInfo>
+          <mods:title>Stele of "Chunhua ge fa tie", (Model-Letter Compendia of the Chunhua reign)-- 8th. volume: 3rd. volume of Wang Xizhi's calligraphy models</mods:title>
+        </mods:titleInfo>
         <mods:titleInfo type="alternative">
           <mods:title>Ge tie</mods:title>
         </mods:titleInfo>
@@ -93,23 +94,24 @@ class HarvardMappingTest extends FlatSpec with BeforeAndAfter {
         <mods:titleInfo type="alternative">
           <mods:title>Chunhua ge fa tie di ba (Wang Xizhi)</mods:title>
         </mods:titleInfo>
-        </mods:mods>
+      </mods:mods>
     ))
 
-    assert(result === Seq(
-      "Ge tie Guan tie",
+    assert(result.sorted === Seq(
+      "Ge tie",
+      "Guan tie",
       "Chunhua ge tie",
       "Chun hua fa tie",
       "Chunhua ge mi ge tie",
       "Chunhua mi ge fa tie",
-      "Su wang fu ben",
-      "Chunhua ge fa tie",
+      "Su wang fu ben Chunhua ge fa tie",
       "Lanzhou Chunhua ge tie",
-      "Ming ta su fu ben Xi'an ben",
+      "Ming ta su fu ben",
+      "Xi'an ben",
       "Guan zhong ben",
       "Guan fa tie",
       "Chunhua ge fa tie di ba (Wang Xizhi)"
-    ))
+    ).sorted)
   }
 
 
@@ -216,10 +218,9 @@ class HarvardMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract a contributor" in {
-    //NOTE: I ginned this one up from a creator example.
     val result = mapping.contributor(
       metadata(
-        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+        <mods:mods>
           <mods:name type="personal">
             <mods:namePart>Garman, Samuel</mods:namePart>
             <mods:namePart type="date">1843-1927</mods:namePart>
@@ -240,12 +241,12 @@ class HarvardMappingTest extends FlatSpec with BeforeAndAfter {
           </mods:name>
         </mods:mods>
       )
-    ).headOption.getOrElse(EdmAgent()).name
+    ).flatMap(_.name)
 
-    assert(result === Some(
+    assert(result === Seq(
       "Agassiz, Alexander, 1835-1910",
       "Albatross (Steamer)",
-      "Harvard University Museum of Comparative Zoology"
+      "Harvard University Museum of Comparative Zoology."
     ))
   }
 
@@ -289,7 +290,11 @@ class HarvardMappingTest extends FlatSpec with BeforeAndAfter {
             <mods:place>
               <mods:placeTerm type="text">Caracas</mods:placeTerm>
             </mods:place>
-            <mods:publisher>Tip. Editorial de &quot;El Avisador Comercial&quot;</mods:publisher>
+            <mods:publisher>Tip. Editorial de
+              &quot;
+              El Avisador Comercial
+              &quot;
+            </mods:publisher>
             <mods:dateIssued>1888</mods:dateIssued>
             <mods:issuance>monographic</mods:issuance>
           </mods:originInfo>
@@ -307,7 +312,6 @@ class HarvardMappingTest extends FlatSpec with BeforeAndAfter {
           <mods:abstract>foo</mods:abstract>
           <mods:note>bar</mods:note>
         </mods:mods>
-
       )
     )
     assert(result === Seq("foo", "bar"))
@@ -459,11 +463,9 @@ class HarvardMappingTest extends FlatSpec with BeforeAndAfter {
         </mods:mods>
       )
     )
-    assert(result === Seq(
-      nameOnlyPlace("South America"),
-      nameOnlyPlace("Central America"),
-      nameOnlyPlace("Mexico")
-    ))
+    assert(result.contains(nameOnlyPlace("South America")))
+    assert(result.contains(nameOnlyPlace("Central America")))
+    assert(result.contains(nameOnlyPlace("Mexico")))
   }
 
   it should "extract relation" in {
@@ -520,17 +522,6 @@ class HarvardMappingTest extends FlatSpec with BeforeAndAfter {
       )
     )
     assert(result.contains(stringOnlyTimeSpan("now")))
-  }
-
-  it should "extract type" in {
-    val result = mapping.`type`( metadata(
-    <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
-      <mods:typeofresource>
-       foo
-      </mods:typeofresource>
-    </mods:mods>))
-
-    assert(result.contains("foo"))
   }
 
   def metadata(metadata: NodeSeq) = record(Seq(), metadata)

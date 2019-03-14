@@ -25,26 +25,15 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
 
   override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
     extractStrings(data \ "metadata" \ "mods" \ "extension" \ "sets" \ "set" \ "setName")
-    .map(nameOnlyCollection)
+      .map(nameOnlyCollection)
 
   //name type="corporate"
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    for {
-      name <- data \ "metadata" \ "mods" \ "name"
-      if (name \ "role" \ "roleTerm").text.trim == "contributor"
-    } yield nameOnlyAgent((name \ "namePart").text.trim)
+    processNames(data).contributors
 
-  //todo: comma space for dates attached to names
-  //todo: multiple nameparts with no type period space
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    for {
-      name <- data \ "metadata" \ "mods" \ "name"
-      if (name \ "role" \ "roleTerm").text.trim == "creator"
-      nameText = (name \ "namePart").text.trim
-      if nameText.nonEmpty
-    } yield nameOnlyAgent(nameText)
+    processNames(data).creators
 
-  //TODO: dateIssued
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
     (
       extractStrings(data \ "metadata" \ "mods" \ "originInfo" \ "dateCreated")
@@ -53,13 +42,14 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
       ).map(stringOnlyTimeSpan)
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "metadata" \ "mods" \ "abstract")
+    extractStrings(data \ "metadata" \ "mods" \ "abstract") ++
+      extractStrings(data \ "metadata" \ "mods" \ "note")
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "physicalDescription" \ "extent")
 
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "metadata" \ "mods" \ "physicalDescription" \ "form")
+    extractStrings(data \ "metadata" \ "mods" \ "genre")
       .map(
         _.applyBlockFilter(
           DigitalSurrogateBlockList.termList ++
@@ -70,12 +60,17 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
       .filter(_.nonEmpty)
 
   override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "metadata" \ "mods" \ "recordInfo" \ "recordIdentifier")
+    extractStrings(data \ "metadata" \ "mods" \ "recordInfo" \ "recordIdentifier") ++
+      extractStrings(data \ "metadata" \ "mods" \ "identifier")
 
-  //TODO fix language (code vs. displayValue)
+
   override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
-    extractStrings(data \ "metadata" \ "mods" \ "language" \ "languageTerm")
-      .map(nameOnlyConcept) //todo code + text
+    for {
+      language <- data \ "metadata" \ "mods" \ "language"
+      terms = language \ "languageTerm"
+      data = terms.map(term => term \@ "type" -> term.text).toMap
+    } yield SkosConcept(providedLabel = data.get("text"), concept = data.get("code"))
+
 
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = (
     extractStrings(data \ "metadata" \ "mods" \ "subject" \ "geographic")
@@ -87,55 +82,90 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
     extractStrings(data \ "metadata" \ "mods" \ "originInfo" \ "publisher")
       .map(nameOnlyAgent)
 
-
-  //TODO concatenate subparts
   override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
     for {
       relatedItem <- data \ "metadata" \ "mods" \ "relatedItem"
       if relatedItem \@ "type" == "series"
-      relation <- relatedItem \ "titleInfo" \ "title"
-    } yield Left(relation.text.trim)
+      relation <- relatedItem \ "titleInfo"
+      title <- processTitleInfo(relation)
+    } yield Left(title)
 
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
     Seq("Held in the collections of Harvard University.")
 
-
-  override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
-    for {
+  override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = {
+    val topicSubjects = for {
       subjectNode <- data \ "metadata" \ "mods" \ "subject"
-      subject <-
-        subjectNode \ "topic" ++
-          subjectNode \ "name" ++
-          subjectNode \ "genre"
+      subject <- subjectNode \ "topic"
       subjectText = subject.text.trim
       if subjectText.nonEmpty
     } yield nameOnlyConcept(subjectText)
 
+    val nameSubjects = for {
+      subjectNode <- data \ "metadata" \ "mods" \ "subject" \ "name"
+      subjectText = processNameParts(subjectNode)
+    } yield nameOnlyConcept(subjectText)
+
+    val titleSubjects = for {
+      subjectNode <- data \ "metadata" \ "mods" \ "subject" \ "titleInfo"
+      subjectText <- processTitleInfo(subjectNode)
+    } yield nameOnlyConcept(subjectText)
+
+    topicSubjects ++ nameSubjects ++ titleSubjects
+  }
 
   //todo
-  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = super.temporal(data)
+  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
+    extractStrings(data \ "metadata" \ "mods" \ "subject" \ "temporal").
+      map(stringOnlyTimeSpan)
 
   override def title(data: Document[NodeSeq]): AtLeastOne[String] =
     for {
       titleInfoNode <- data \ "metadata" \ "mods" \ "titleInfo"
       if titleInfoNode \@ "type" != "alternative"
-      titleNode <- titleInfoNode \ "title"
-      titleText <- processTitleInfo(titleNode)
-      if titleText.nonEmpty
+      titleText <- processTitleInfo(titleInfoNode)
     } yield titleText
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "typeOfResource")
 
-
   // OreAggregation fields
 
-  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    for {
+  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
+    val lookup = Map(
+      "lap" -> "Widener Library. Harvard University",
+      "crimes" -> "Harvard Law School Library. Harvard University",
+      "scarlet" -> "Harvard Law School Library. Harvard University",
+      "medmss" -> "Houghton Library. Harvard University",
+      "eda" -> "Emily Dickinson Archive"
+    )
+
+    val setSpec = (for {
+      setSpec <- data \ "metadata" \ "mods" \ "extension" \ "set" \ "setSpec"
+    } yield setSpec.text.trim).headOption
+
+    val physicalLocation = for {
       node <- data \ "metadata" \ "mods" \ "location" \ "physicalLocation"
       if node \@ "type" == "repository"
     } yield nameOnlyAgent(node.text.trim)
+
+    val hostPhysicalLocation = for {
+      relatedItem <- data \ "metadata" \ "mods" \ "relatedItem"
+      if (relatedItem \@ "type") == "host"
+      node <- relatedItem \ "location" \ "physicalLocation"
+    } yield nameOnlyAgent(node.text.trim)
+
+    val agent = if (setSpec.nonEmpty && lookup.get(setSpec.getOrElse("")).nonEmpty)
+      nameOnlyAgent(lookup.getOrElse(setSpec.getOrElse(""), ""))
+    else if (physicalLocation.size > 0)
+      physicalLocation.headOption.getOrElse(EdmAgent())
+    else if (hostPhysicalLocation.size > 0)
+      hostPhysicalLocation.headOption.getOrElse(EdmAgent())
+    else EdmAgent()
+
+    Seq(agent)
+  }
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
@@ -178,61 +208,79 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
 
   private def name(name: Node): ZeroToOne[String] = name match {
     case elem: Elem =>
-    case _ => None
+      val text = elem.text.trim
+      if (text.isEmpty) None
+      else Some(text)
+    case _ =>
+      None
   }
 
   private def processTitleInfo(titleInfo: Node): ZeroToOne[String] = titleInfo match {
     case elem: Elem =>
       val candidates = for {
-        elementName <- Seq("nonSort", "title", "subTitle", "partName", "partNumber")
-        stringVal <- extractStrings(elementName)(elem).headOption
-      } yield stringVal.trim
+        child <- elem.child
+        if child.isInstanceOf[Elem]
+      } yield child.text.trim
 
-      if (candidates.isEmpty) None else Some(candidates.mkString(" "))
+      if (candidates.isEmpty) None else Some(candidates.mkString(" ").trim)
 
     case _ => None
   }
 
 
+  //Helper method to get a list of creators and contributors
   private def processNames(data: Document[NodeSeq]): Names = {
 
-    val names = extractNames(data).toSet
+    val names = (for (name <- data \ "metadata" \ "mods" \ "name") yield {
+      val nameString: String = processNameParts(name)
+      val roleTerms = (name \ "role" \ "roleTerm").map(_.text.toLowerCase).distinct
+      Name(nameString, roleTerms)
+    }).toSet
+
     val creatorTypes = names.filter(name => name.roleTerm.contains("creator"))
 
-    val categories: Tuple2[_root_.scala.Equals, _root_.scala.collection.Iterable[HarvardMapping.this.Name] with (Function1[HarvardMapping.this.Name with Int, Any])] =
+    val categories: (Seq[Name], Seq[Name]) =
       if (names.isEmpty)
+      //if names is empty, there are no creators or contributors
         (Seq(), Seq())
       else if (creatorTypes.nonEmpty)
-        (creatorTypes, names -- creatorTypes)
-      else if (names.head.roleTerm.isEmpty || names.head.roleTerm.intersect(Seq("sitter", "subject", "donor", "owner")).isEmpty)
-        (names.head, names.tail)
+      //if some of the names have the "creator" roleType, those are the creators
+      //and the rest are the contributors
+        (creatorTypes.toSeq, (names -- creatorTypes).toSeq)
+      else if (
+        names.head.roleTerm.isEmpty ||
+          names.head.roleTerm.intersect(Seq("sitter", "subject", "donor", "owner")).isEmpty
+      )
+      //otherwise, if the first name isn't a contributor role type, it's a creator,
+      //and the rest are contributors
+        (Seq(names.head), names.tail.toSeq)
       else
         (Seq(), names.toSeq)
 
-    Names(categories._1.map(x => nameOnlyAgent(x.name)), categories._2.map(nameOnlyAgent(._name)))
-
+    val creators = categories._1.map(x => nameOnlyAgent(x.name))
+    val contributors = categories._2.map(x => nameOnlyAgent(x.name))
+    Names(creators, contributors)
   }
 
-  private def extractNames(data: Document[NodeSeq]) =
-    for (name <- data \ "metadata" \ "mods" \ "name") yield {
+  private def processNameParts(name: Node) = {
+    val nameParts = for {
+      namePart <- name \ "namePart"
+      typeAttr = (namePart \ "@type").map(_.text).headOption.getOrElse("")
+      part = namePart.text
+    } yield NamePart(part, typeAttr)
 
-      val nameParts = for {
-        namePart <- name \ "namePart"
-        typeAttr = (namePart \ "@type").map(_.text).headOption.getOrElse("")
-        part = namePart.text
-      } yield NamePart(part, typeAttr)
-
-      val nameString = nameParts.foldLeft("")(
-        (a, b) => {a + (if (b.`type` == "date") ". " else " ") + b.part}
-      )
-
-      val roleTerms = (name \ "role" \ "roleTerm").map(_.text.toLowerCase).distinct
-
-      Name(nameString, roleTerms)
+    val nameString = nameParts.tail.foldLeft(nameParts.head.part)(
+      (a, b) => {
+        a + (if (b.`type` == "date") ", " else " ") + b.part
+      }
+    )
+    nameString
   }
 
   case class Name(name: String, roleTerm: Seq[String])
+
   case class NamePart(part: String, `type`: String)
-  case class Names(contributors: Seq[EdmAgent], creators: Seq[EdmAgent])
+
+  case class Names(creators: Seq[EdmAgent], contributors: Seq[EdmAgent])
 
 }
