@@ -145,26 +145,24 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
       setSpec <- data \ "metadata" \ "mods" \ "extension" \ "set" \ "setSpec"
     } yield setSpec.text.trim).headOption
 
-    val physicalLocation = for {
+    val physicalLocationAgent = (for {
       node <- data \ "metadata" \ "mods" \ "location" \ "physicalLocation"
       if node \@ "type" == "repository"
-    } yield nameOnlyAgent(node.text.trim)
+    } yield nameOnlyAgent(node.text.trim)).headOption
 
-    val hostPhysicalLocation = for {
+    val hostPhysicalLocationAgent = (for {
       relatedItem <- data \ "metadata" \ "mods" \ "relatedItem"
       if (relatedItem \@ "type") == "host"
       node <- relatedItem \ "location" \ "physicalLocation"
-    } yield nameOnlyAgent(node.text.trim)
+    } yield nameOnlyAgent(node.text.trim)).headOption
 
-    val agent = if (setSpec.nonEmpty && lookup.get(setSpec.getOrElse("")).nonEmpty)
-      nameOnlyAgent(lookup.getOrElse(setSpec.getOrElse(""), ""))
-    else if (physicalLocation.size > 0)
-      physicalLocation.headOption.getOrElse(EdmAgent())
-    else if (hostPhysicalLocation.size > 0)
-      hostPhysicalLocation.headOption.getOrElse(EdmAgent())
-    else EdmAgent()
+    val setSpecAgent = lookup.get(setSpec.getOrElse("")).map(nameOnlyAgent)
 
-    Seq(agent)
+    setSpecAgent
+      .orElse(physicalLocationAgent)
+      .orElse(hostPhysicalLocationAgent)
+      .orElse(None)
+      .toSeq
   }
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
