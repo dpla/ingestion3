@@ -1,0 +1,96 @@
+<record xmlns="http://www.openarchives.org/OAI/2.0/">
+    <header>
+        <identifier>
+            oai:michigan:ochr:oai:digital.library.wayne.edu:ochr:oai:demo.ptfs.com:library10_lib/87490
+        </identifier>
+        <datestamp>2019-01-14</datestamp>
+        <setSpec>ochr</setSpec>
+    </header>
+    <metadata>
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/">
+            <mods:titleInfo>
+                <mods:title>Avon Township Offices</mods:title>
+            </mods:titleInfo>
+            <mods:subject>
+                <mods:topic>Government</mods:topic>
+            </mods:subject>
+            <mods:subject>
+                <mods:geographic>407 Pine Street</mods:geographic>
+            </mods:subject>
+            <mods:subject>
+                <mods:geographic>Rochester</mods:geographic>
+            </mods:subject>
+            <mods:subject>
+                <mods:temporal>1967-2011</mods:temporal>
+            </mods:subject>
+            <mods:abstract>Avon Township Offices, located on the northwest corner of Fourth and Pine Streets.</mods:abstract>
+            <mods:originInfo>
+                <mods:dateIssued>01-Jan-1930</mods:dateIssued>
+            </mods:originInfo>
+            <mods:physicalDescription>
+                <mods:form>Postcard</mods:form>
+            </mods:physicalDescription>
+            <mods:location>
+                <mods:url usage="primary">
+                    http://oaklandcountyhistory.org/knowvation/app/consolidatedSearch/#autologin/guest/lb_document_id=87490
+                </mods:url>
+            </mods:location>
+            <mods:location>
+                <mods:url access="preview">
+                    http://oaklandcountyhistory.org/awweb/pdfopener?fp=auto&amp;umb=87490
+                </mods:url>
+            </mods:location>
+            <mods:accessCondition type="use and reproduction">Users can cite and link to these materials without obtaining permission.</mods:accessCondition>
+            <mods:recordInfo>
+                <recordContentSource>Oakland County Historical Resources</recordContentSource>
+                <recordContentSource>Rochester Hills Public Library</recordContentSource>
+            </mods:recordInfo>
+            <mods:relatedItem type="host">
+                <mods:titleInfo>
+                    <mods:title>Veterans History Project interviews, RHC-27</mods:title>
+                </mods:titleInfo>
+            </mods:relatedItem>
+            <mods:name valueURI="http://id.loc.gov/authorities/names/n86026453" type="corporate" authorityURI="http://id.loc.gov/authorities/names" authority="naf">
+                <mods:namePart>Boston Cooking School (Boston, Mass.)</mods:namePart>
+                <mods:role>
+                    <mods:roleTerm valueURI="http://id.loc.gov/vocabulary/relators/ctb" type="text" authorityURI="http://id.loc.gov/vocabulary/relators" authority="marcrelator">contributor</mods:roleTerm>
+                </mods:role>
+            </mods:name>
+            <mods:name>
+                <mods:namePart>City of Lansing</mods:namePart>
+                <mods:role>
+                    <mods:roleTerm>Creator</mods:roleTerm>
+                </mods:role>
+            </mods:name>
+            <mods:name>
+                <mods:namePart>City Planning Division Ingells, Norris</mods:namePart>
+                <mods:role>
+                    <mods:roleTerm>Creator</mods:roleTerm>
+                </mods:role>
+            </mods:name>
+            <mods:physicalDescription>
+                <mods:extent>1 Postcard (3.5" x 5.5")</mods:extent>
+            </mods:physicalDescription>
+            <mods:identifier type="local">MICH1306517</mods:identifier>
+            <mods:language>
+                <mods:languageTerm type="code">eng</mods:languageTerm>
+            </mods:language>
+            <mods:originInfo>
+                <mods:publisher>Grand Valley State University. University Libraries.</mods:publisher>
+            </mods:originInfo>
+            <mods:typeOfResource>still image</mods:typeOfResource>
+        </mods:mods>
+    </metadata>
+    <about>
+        <oaiProvenance:provenance xmlns:oaiProvenance="http://www.openarchives.org/OAI/2.0/provenance" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/provenance http://www.openarchives.org/OAI/2.0/provenance.xsd">
+            <oaiProvenance:originDescription harvestDate="2019-01-14" altered="true">
+                <oaiProvenance:baseURL>http://combine.michiganservicehub.org/combine/oai</oaiProvenance:baseURL>
+                <oaiProvenance:identifier>
+                    oai:digital.library.wayne.edu:ochr:oai:demo.ptfs.com:library10_lib/87490
+                </oaiProvenance:identifier>
+                <oaiProvenance:datestamp>2019-01-14</oaiProvenance:datestamp>
+                <oaiProvenance:metadataNamespace>http://www.loc.gov/mods/v3</oaiProvenance:metadataNamespace>
+            </oaiProvenance:originDescription>
+        </oaiProvenance:provenance>
+    </about>
+</record>

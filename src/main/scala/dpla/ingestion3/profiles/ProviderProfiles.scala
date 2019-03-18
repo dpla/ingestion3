@@ -97,6 +97,16 @@ class MdlProfile extends JsonProfile {
 }
 
 /**
+  * Michigan Service Hub
+  */
+class MiProfile extends XmlProfile {
+  type Mapping = MichiganMapping
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[OaiHarvester]
+  override def getMapping = new MichiganMapping
+}
+
+/**
   * Missouri
   */
 class MoProfile extends JsonProfile {

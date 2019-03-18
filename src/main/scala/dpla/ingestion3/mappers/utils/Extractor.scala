@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.utils
 
 import org.json4s.JsonAST._
 
-import scala.xml.{Elem, Node, NodeSeq}
+import scala.xml.{Elem, Node, NodeSeq, Text}
 
 
 /**
@@ -89,6 +89,20 @@ trait XmlExtractor extends Extractor[NodeSeq] {
 
   def getByAttribute(e: NodeSeq, att: String, value: String): NodeSeq = {
     getByAttribute(e.asInstanceOf[Elem], att, value)
+  }
+
+  /**
+    * For each given node, get any immediate children that are text values.
+    * Ignore nested text values.
+    *
+    * E.g. <foo>bar</foo> => "bar"
+    * E.g. <foo><bar>bat</bar></foo> => nothing
+    *
+    * @param xValue NodeSeq
+    * @return Seq[String]
+    */
+  def extractChildStrings(xValue: NodeSeq): Seq[String] = xValue.flatMap { node =>
+    node.child.collect{ case Text(t) => t }.map(_.trim).filterNot(_.isEmpty)
   }
 }
 

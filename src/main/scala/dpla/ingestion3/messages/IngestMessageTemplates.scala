@@ -96,7 +96,7 @@ trait IngestMessageTemplates {
 
   def exception(id: String, exception: Throwable): IngestMessage =
     IngestMessage(
-      message = s"Exception (see error report)",
+      message = s"Exception (see value column)",
       level = IngestLogLevel.error,
       id = id,
       field = "",
