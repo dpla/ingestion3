@@ -1,0 +1,59 @@
+<record xmlns="http://www.openarchives.org/OAI/2.0/">
+    <header>
+        <identifier>
+            oai:michigan:ochr:oai:digital.library.wayne.edu:ochr:oai:demo.ptfs.com:library10_lib/87490
+        </identifier>
+        <datestamp>2019-01-14</datestamp>
+        <setSpec>ochr</setSpec>
+    </header>
+    <metadata>
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/">
+            <mods:titleInfo>
+                <mods:title type="alternative">alt title 1</mods:title>
+            </mods:titleInfo>
+            <mods:relatedItem displayLabel="Project">
+                <mods:titleInfo>
+                    <mods:title>project title</mods:title>
+                </mods:titleInfo>
+            </mods:relatedItem>
+            <mods:relatedItem displayLabel="collection">
+                <mods:titleInfo>
+                    <mods:title>collection title</mods:title>
+                </mods:titleInfo>
+            </mods:relatedItem>
+
+            <mods:name>
+                <mods:namePart>Boston Cooking School (Boston, Mass.)</mods:namePart>
+                <mods:role>
+                    <mods:roleTerm>contributor</mods:roleTerm>
+                </mods:role>
+            </mods:name>
+            <mods:name>
+                <mods:namePart>City of Lansing</mods:namePart>
+                <mods:role>
+                    <mods:roleTerm>Creator</mods:roleTerm>
+                </mods:role>
+            </mods:name>
+            <mods:name>
+                <mods:namePart>City Planning Division Ingells, Norris</mods:namePart>
+                <mods:role>
+                    <mods:roleTerm>Creator</mods:roleTerm>
+                </mods:role>
+            </mods:name>
+
+            <mods:language><mods:languageTerm type="code" authority="iso639-2b">eng</mods:languageTerm></mods:language>
+        </mods:mods>
+    </metadata>
+    <about>
+        <oaiProvenance:provenance xmlns:oaiProvenance="http://www.openarchives.org/OAI/2.0/provenance" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/provenance http://www.openarchives.org/OAI/2.0/provenance.xsd">
+            <oaiProvenance:originDescription harvestDate="2019-01-14" altered="true">
+                <oaiProvenance:baseURL>http://combine.michiganservicehub.org/combine/oai</oaiProvenance:baseURL>
+                <oaiProvenance:identifier>
+                    oai:digital.library.wayne.edu:ochr:oai:demo.ptfs.com:library10_lib/87490
+                </oaiProvenance:identifier>
+                <oaiProvenance:datestamp>2019-01-14</oaiProvenance:datestamp>
+                <oaiProvenance:metadataNamespace>http://www.loc.gov/mods/v3</oaiProvenance:metadataNamespace>
+            </oaiProvenance:originDescription>
+        </oaiProvenance:provenance>
+    </about>
+</record>

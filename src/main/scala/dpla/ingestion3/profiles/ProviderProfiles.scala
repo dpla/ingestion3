@@ -208,6 +208,16 @@ class SdProfile extends JsonProfile {
 }
 
 /**
+  * Tennessee Digital Library
+  */
+class TnProfile extends XmlProfile {
+  type Mapping = TnMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new TnMapping
+}
+
+/**
   * Digital Virginias
   */
 class VirginiasProfile extends XmlProfile {
