@@ -48,21 +48,20 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "physicalDescription" \ "extent")
 
-  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "metadata" \ "mods" \ "genre")
-      .map(
-        _.applyBlockFilter(
-          DigitalSurrogateBlockList.termList ++
-            ExtentIdentificationList.termList
-        )
-      )
-      .flatMap(_.splitAtDelimiter(";"))
-      .filter(_.nonEmpty)
+  override def format(data: Document[NodeSeq]): ZeroToMany[String] = super.format(data)
+//    extractStrings(data \ "metadata" \ "mods" \ "genre")
+//      .map(
+//        _.applyBlockFilter(
+//          DigitalSurrogateBlockList.termList ++
+//            ExtentIdentificationList.termList
+//        )
+//      )
+//      .flatMap(_.splitAtDelimiter(";"))
+//      .filter(_.nonEmpty)
 
   override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "recordInfo" \ "recordIdentifier") ++
       extractStrings(data \ "metadata" \ "mods" \ "identifier")
-
 
   override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     for {
@@ -134,16 +133,22 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     val lookup = Map(
-      "lap" -> "Widener Library. Harvard University",
       "crimes" -> "Harvard Law School Library. Harvard University",
+      "eda" -> "Emily Dickinson Archive",
+      "lap" -> "Widener Library. Harvard University",
+      "maps" -> "Harvard Map Collection, Harvard University",
+      "medmss" -> "Houghton Library, Harvard University",
+      "rubbings" -> "Fine Arts Library, Special Collections, Harvard University",
       "scarlet" -> "Harvard Law School Library. Harvard University",
-      "medmss" -> "Houghton Library. Harvard University",
-      "eda" -> "Emily Dickinson Archive"
+      "scores" -> "Eda Kuhn Loeb Music Library, Harvard University",
+      "ward" -> "General Artemas Ward Museum, Harvard University"
     )
 
     val setSpec = (for {
       setSpec <- data \ "metadata" \ "mods" \ "extension" \ "set" \ "setSpec"
     } yield setSpec.text.trim).headOption
+
+    val setSpecAgent = lookup.get(setSpec.getOrElse("")).map(nameOnlyAgent)
 
     val physicalLocationAgent = (for {
       node <- data \ "metadata" \ "mods" \ "location" \ "physicalLocation"
@@ -156,12 +161,10 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
       node <- relatedItem \ "location" \ "physicalLocation"
     } yield nameOnlyAgent(node.text.trim)).headOption
 
-    val setSpecAgent = lookup.get(setSpec.getOrElse("")).map(nameOnlyAgent)
-
     setSpecAgent
       .orElse(physicalLocationAgent)
       .orElse(hostPhysicalLocationAgent)
-      .orElse(None)
+      .orElse(Some(nameOnlyAgent("MISSING")))
       .toSeq
   }
 
