@@ -47,6 +47,16 @@ class EsdnProfile extends XmlProfile {
 }
 
 /**
+  * Sunshine State Digital Network
+  */
+class FlProfile extends JsonProfile {
+  type Mapping = CdlMapping // FIXME placeholder only
+
+  override def getHarvester = classOf[FlFileHarvester]
+  override def getMapping = new CdlMapping // FIXME placeholder only
+}
+
+/**
   * J. Paul Getty Trust
   */
 class GettyProfile extends XmlProfile {
@@ -60,10 +70,10 @@ class GettyProfile extends XmlProfile {
   * Digital Library of Georgia
   */
 class DlgProfile extends JsonProfile {
-  type Mapping = GettyMapping
+  type Mapping = CdlMapping // FIXME placeholder only
 
   override def getHarvester = classOf[DlgHarvester]
-  override def getMapping = new CdlMapping // FIXME
+  override def getMapping = new CdlMapping // FIXME placeholder only
 }
 
 /**
