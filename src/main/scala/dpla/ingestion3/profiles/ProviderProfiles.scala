@@ -50,10 +50,10 @@ class EsdnProfile extends XmlProfile {
   * Sunshine State Digital Network
   */
 class FlProfile extends JsonProfile {
-  type Mapping = CdlMapping // FIXME placeholder only
+  type Mapping = FlMapping
 
   override def getHarvester = classOf[FlFileHarvester]
-  override def getMapping = new CdlMapping // FIXME placeholder only
+  override def getMapping = new FlMapping
 }
 
 /**
