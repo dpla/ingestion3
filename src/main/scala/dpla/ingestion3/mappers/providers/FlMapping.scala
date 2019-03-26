@@ -119,7 +119,7 @@ class FlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
   def extractDate(date: JValue): ZeroToMany[EdmTimeSpan] = {
     iterify(date).children.map(d =>
       EdmTimeSpan(
-        begin = extractString(d \ "start"),
+        begin = extractString(d \ "begin"),
         end = extractString(d \ "end"),
         originalSourceDate = extractString(d \ "displayDate")
       ))
