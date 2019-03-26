@@ -21,9 +21,10 @@ class TnMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.alternateTitle(xml) == expected)
   }
 
-  it should "extract the correct collection titles" in {
-    val expected = Seq("project title", "collection title")
-      .map(nameOnlyCollection)
+  it should "extract the correct collections " in {
+    val expected = Seq(
+      DcmiTypeCollection(title = Some("project title"), description = Some("project description")),
+      DcmiTypeCollection(title = Some("collection title")))
     assert(extractor.collection(xml) == expected)
   }
 
@@ -34,8 +35,12 @@ class TnMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct language" in {
-    val expected = Seq("eng")
-      .map(nameOnlyConcept)
+    val expected = Seq("eng").map(nameOnlyConcept)
     assert(extractor.language(xml) == expected)
+  }
+
+  it should "extract the correct place" in {
+    val expected = List(DplaPlace(name = Some("geographic 1"), coordinates = Some("lat/long 1")))
+    assert(extractor.place(xml) == expected)
   }
 }

@@ -29,24 +29,29 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   // SourceResource mapping
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
-    // <titleInfo><title type="alternative">
+  // <titleInfo><title type="alternative">
     (data \\ "mods" \\ "titleInfo" \ "title")
       .flatMap(node => getByAttribute(node, "type", "alternative"))
       .flatMap(extractStrings)
 
   override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
-    // <relatedItem displayLabel="Project"><titleInfo><title> AND <relatedItem displayLabel="collection"><titleInfo><title>
-    // TODO implement mapping of abstract to collection description
+  // For either <relatedItem displayLabel="Project"> OR <relatedItem displayLabel="collection">
+  // <titleInfo><title> maps to collection title
+  // <abstract> maps to collection description
     (data \\ "mods" \ "relatedItem")
       .filter(node => {
         val text = (node \ "@displayLabel").text
         text.equalsIgnoreCase("project") || text.equalsIgnoreCase("collection")
       })
-      .flatMap(collection => extractStrings(collection \ "titleInfo" \ "title"))
-      .map(nameOnlyCollection)
+      .flatMap(collection => {
+        extractStrings(collection \ "titleInfo" \ "title").map(Option(_))
+          .zipAll(extractStrings(collection \ "abstract").map(Option(_)), None, None)
+      })
+      .map( { case (title: Option[String], desc: Option[String]) => DcmiTypeCollection(title = title, description = desc)} )
+
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-  // when <role><roleTerm> DOES equal "contributor>
+  // when <role><roleTerm> EQUALSs "contributor>
     (data \\ "mods" \ "name")
       .filter(node => (node \ "role" \ "roleTerm").text.equalsIgnoreCase("contributor"))
       .flatMap(n => extractStrings(n \ "namePart"))
@@ -61,22 +66,20 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
 
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
-    // <originInfo><dateCreated> (use all instances. Some have qualifier indicating EDTF format and keyDate, others are qualified as "approximate")
+  // <originInfo><dateCreated> (use all instances)
     extractStrings(data \\ "mods" \ "originInfo" \ "dateCreated")
       .map(stringOnlyTimeSpan)
 
-
-
   override def description(data: Document[NodeSeq]): Seq[String] =
-    // <mods:abstract>
+  // <mods:abstract>
     extractStrings(data \\ "mods" \ "abstract")
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
-    // <mods:physicalDescription><mods:extent>
+  // <mods:physicalDescription><mods:extent>
     extractStrings(data \\ "mods" \ "physicalDescription" \ "extent")
 
   override def format(data: Document[NodeSeq]): Seq[String] =
-    // <mods:physicalDescription><mods:form>
+  // <mods:physicalDescription><mods:form>
     extractStrings(data \\ "mods" \ "physicalDescription" \ "form")
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
@@ -91,10 +94,20 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .flatMap(extractStrings)
       .map(nameOnlyConcept)
 
-//  override def place(data: Document[NodeSeq]): Seq[DplaPlace] = ???
-//  // "<subject><geographic authority="""" valueURI="""">[text term]</geographic>" map to providedLabel
-//  // "<subject><cartographics><coordinates>[coordinates]</coordinates> map to coordinates
-//  // TODO
+  override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
+  // <subject>
+  //  <geographic>
+  //    [text term] >> map to providedLabel
+  //  <cartographics>
+  //    <coordinates>
+  //      [coordinates] >> map to coordinates
+  (data \\ "mods" \ "subject")
+    .flatMap(place => {
+      extractStrings(place \ "geographic").map(Option(_))
+        .zipAll(extractStrings(place \ "cartographics" \ "coordinates").map(Option(_)), None, None)
+    })
+    .map( { case (name: Option[String], coord: Option[String]) => DplaPlace(name = name, coordinates = coord)} )
+
 
   override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
   // <mods:originInfo><mods:publisher>
@@ -105,7 +118,6 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     // <relatedItem>
     //  <title>
     //    <titlePart>[VALUE]
-    // <relatedItem>
     //  <location>
     //    <url>[VALUE]
     //
@@ -118,6 +130,7 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       })
       .filterNot(node => (node \ "@displayLabel").text.equalsIgnoreCase("project"))
       .flatMap(extractStrings)
+      .map(eitherStringOrUri)
   }
 
   override def replacedBy(data: Document[NodeSeq]): ZeroToMany[String] =

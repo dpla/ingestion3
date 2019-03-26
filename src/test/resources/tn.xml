@@ -15,6 +15,7 @@
                 <mods:titleInfo>
                     <mods:title>project title</mods:title>
                 </mods:titleInfo>
+                <mods:abstract>project description</mods:abstract>
             </mods:relatedItem>
             <mods:relatedItem displayLabel="collection">
                 <mods:titleInfo>
@@ -42,6 +43,13 @@
             </mods:name>
 
             <mods:language><mods:languageTerm type="code" authority="iso639-2b">eng</mods:languageTerm></mods:language>
+
+            <mods:subject>
+                <mods:geographic>geographic 1</mods:geographic>
+                <mods:cartographics>
+                    <mods:coordinates>lat/long 1</mods:coordinates>
+                </mods:cartographics>
+            </mods:subject>
         </mods:mods>
     </metadata>
     <about>
