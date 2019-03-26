@@ -44,9 +44,29 @@ object MessageProcessor{
                 |""".stripMargin)
   }
 
-  def getErrors(ds: Dataset[Row]): Dataset[Row] =
-    ds.select("message", "level", "field", "id", "value")
-      .where(s"level=='${IngestLogLevel.error}'").distinct()
+  def getErrors(ds: Dataset[Row]): Dataset[Row] = {
+    val errors = ds.select("message", "level", "field", "id", "value")
+      .where(s"level=='${IngestLogLevel.error}'")
+
+    // TODO: Question for code review:
+    //  Is there a real need to take distinct error messages, rather than all error messages?
+    //  I do not know of one.
+    //  If there is no use case in which undesired duplicates are created,
+    //  it would be simpler to just return errors as defined above.
+    val regularErrors = errors
+      .where("field!='originalId'")
+      .where("field!='dplaUri'")
+    
+    // Documents with duplicate originalId will have identical error messages,
+    // so do NOT return distinct rows.
+    val originalIdErrors = errors.where("field=='originalId'")
+
+    // Documents with missing originalId will have identical error messages for missing dplaUri,
+    // so do NOT return distinct rows.
+    val dplaUriErrors = errors.where("field=='dplaUri'")
+
+    regularErrors.union(originalIdErrors).union(dplaUriErrors)
+  }
 
   def getWarnings(ds: Dataset[Row]): Dataset[Row] =
     ds.select("message", "level", "field", "id", "value")

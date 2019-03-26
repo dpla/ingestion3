@@ -54,8 +54,6 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       .config("spark.ui.showConsoleProgress", value = false)
       .getOrCreate()
 
-    val sc = spark.sparkContext
-
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
 
@@ -219,7 +217,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
         path
     }
 
-    val recordErrorCount: Long = MessageProcessor.getDistinctIdCount(errors)
+    val recordErrorCount: Long = attemptedCount - validRecordCount
     val recordWarnCount: Long = MessageProcessor.getDistinctIdCount(warnings)
 
     val errorMsgDetails: String =
