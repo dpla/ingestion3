@@ -2,6 +2,7 @@
   "@context": "http://api.dp.la/items/context",
   "aggregatedCHO": "#sourceResource",
   "dataProvider": "Florida State University Libraries",
+  "intermediateProvider": "Intermediate Provider",
   "isShownAt": "http://purl.flvc.org/fsu/fd/FSUHPUA_2014028_193",
   "preview": "http://fsu.digital.flvc.org/islandora/object/fsu:115737/datastream/TN/view",
   "provider": {
@@ -11,6 +12,9 @@
   "sourceResource": {
     "creator": {
       "name": "creator 1"
+    },
+    "contributor": {
+      "name": "contributor 1"
     },
     "date": {
       "begin": "2009-03-31",
@@ -38,7 +42,16 @@
     ],
     "rights": [
       {
-        "text": "Use of this item is provided for non-commercial, personal, educational, and research use only. For information about the copyright and reproduction rights for this item, please contact Heritage Protocol & University Archives, Florida State University Libraries, Tallahassee, Florida."
+        "text": "Use of this item is provided for non-commercial, personal, educational, and research use only. For information about the copyright and reproduction rights for this item, please contact Heritage Protocol & University Archives, Florida State University Libraries, Tallahassee, Florida.",
+        "@id": "http://rightstatement.org/1"
+      }
+    ],
+    "spatial": [
+      {
+        "name": "Florida"
+      },
+      {
+        "name": "Tallahassee"
       }
     ],
     "subject": [
@@ -52,6 +65,6 @@
     "title": [
       "The Ting Tings"
     ],
-    "type": null
+    "type": "image"
   }
 }

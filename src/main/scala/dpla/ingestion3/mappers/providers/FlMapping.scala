@@ -65,6 +65,9 @@ class FlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
     extractStrings(unwrap(data)  \ "sourceResource" \ "creator" \ "name")
       .map(nameOnlyAgent)
 
+  override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
+    extractDate(unwrap(data) \ "sourceResource" \ "date")
+
   override def description(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "sourceResource" \ "description")
 
@@ -101,9 +104,6 @@ class FlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings(unwrap(data)  \ "sourceResource" \ "subject" \ "name")
       .map(nameOnlyConcept)
-
-  override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
-     extractDate(unwrap(data) \ "sourceResource" \ "date")
 
   override def title(data: Document[JValue]): AtLeastOne[String] =
     extractStrings(unwrap(data) \ "sourceResource" \ "title")

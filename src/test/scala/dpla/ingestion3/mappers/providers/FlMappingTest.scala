@@ -35,6 +35,12 @@ class FlMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.dataProvider(json) === expected)
   }
 
+  // intermediateProvider
+  it should "extract the correct intermediateProvider" in {
+    val expected = Some(nameOnlyAgent("Intermediate Provider"))
+    assert(extractor.intermediateProvider(json) === expected)
+  }
+
   // dplaUri
   it should "create the correct DPLA URI" in {
     val expected = Some(URI("http://dp.la/api/items/62205cee7eb6d1293fc51496c3924e9c"))
@@ -53,6 +59,11 @@ class FlMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.preview(json) === expected)
   }
 
+  it should "extract the correct contributor" in {
+    val expected = List("contributor 1").map(nameOnlyAgent)
+    assert(extractor.contributor(json) === expected)
+  }
+
   // creator
   it should "extract the correct creator" in {
     val expected = List("creator 1").map(nameOnlyAgent)
@@ -63,6 +74,12 @@ class FlMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct description" in {
     val expected = List("Supporting Act: HOTTUB")
     assert(extractor.description(json) === expected)
+  }
+
+  // extent
+  it should "extract the correct extent" in {
+    val expected = List("11 x 17 in.")
+    assert(extractor.extent(json) === expected)
   }
 
   // format
@@ -89,10 +106,22 @@ class FlMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.language(json) === expected)
   }
 
+  // place
+  it should "extract the correct place " in {
+    val expected = List("Florida", "Tallahassee").map(nameOnlyPlace)
+    assert(extractor.place(json) === expected)
+  }
+
   // rights
   it should "extract the correct rights" in {
     val expected = List("Use of this item is provided for non-commercial, personal, educational, and research use only. For information about the copyright and reproduction rights for this item, please contact Heritage Protocol & University Archives, Florida State University Libraries, Tallahassee, Florida.")
     assert(extractor.rights(json) === expected)
+  }
+
+  // edmRights
+  it should "extract the correct edmRights" in {
+    val expected = List(URI("http://rightstatement.org/1"))
+    assert(extractor.edmRights(json) === expected)
   }
 
   // subject
@@ -102,7 +131,7 @@ class FlMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.subject(json) === expected)
   }
 
-  // temporal
+  // date
   it should "extract the correct date with display, begin and end" in {
     val expected = List(
       EdmTimeSpan(originalSourceDate = Some("2009-03-31"), begin = Some("2009-03-31"), end = Some("2009-03-31"))
@@ -114,5 +143,11 @@ class FlMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct title" in {
     val expected = List("The Ting Tings")
     assert(extractor.title(json) === expected)
+  }
+
+  // type
+  it should "extract the correct type" in {
+    val expected = List("image")
+    assert(extractor.`type`(json) === expected)
   }
 }
