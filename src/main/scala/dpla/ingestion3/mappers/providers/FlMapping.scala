@@ -16,33 +16,31 @@ class FlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
   val formatBlockList: Set[String] = ExtentIdentificationList.termList
 
   // ID minting functions
-  // TODO: Should this be true or false?
-  override def useProviderName: Boolean = false
+  override def useProviderName: Boolean = true
 
-  // TODO: Should this be the same as provider short name?
-  override def getProviderName: String = "fl"
+  override def getProviderName: String = "florida"
 
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractStrings(unwrap(data) \ "isShownAt").headOption
 
   // OreAggregation
-
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data) \ "dataProvider").map(nameOnlyAgent)
 
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
-    extractStrings(unwrap(data) \ "sourceResource" \ "rights" \ "@id").map(URI)
-
-  override def hasView(data: Document[JValue]): ZeroToMany[EdmWebResource] =
-    extractStrings(unwrap(data) \ "hasView" \ "@id").map(stringOnlyWebResource) // FIXME
+    extractStrings(unwrap(data) \ "sourceResource" \ "rights" \ "@id")
+      .filter(_.nonEmpty) // FIXME filtering non-empty values should be a standard edmRights normalization
+      .map(URI)
 
   override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
-    extractString(unwrap(data) \ "intermediateProvider").map(nameOnlyAgent)
+    extractString(unwrap(data) \ "intermediateProvider")
+      .map(nameOnlyAgent)
 
   override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
-    extractStrings(unwrap(data) \ "isShownAt").map(stringOnlyWebResource)
+    extractStrings(unwrap(data) \ "isShownAt")
+      .map(stringOnlyWebResource)
 
   override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \ "preview").map(stringOnlyWebResource)
@@ -101,7 +99,8 @@ class FlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
     extractStrings(unwrap(data) \ "sourceResource" \ "rights" \ "text")
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings(unwrap(data)  \ "sourceResource" \ "subject" \ "name").map(nameOnlyConcept)
+    extractStrings(unwrap(data)  \ "sourceResource" \ "subject" \ "name")
+      .map(nameOnlyConcept)
 
   override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
      extractDate(unwrap(data) \ "sourceResource" \ "date")
