@@ -70,10 +70,10 @@ class GettyProfile extends XmlProfile {
   * Digital Library of Georgia
   */
 class DlgProfile extends JsonProfile {
-  type Mapping = CdlMapping // FIXME placeholder only
+  type Mapping = DlgMapping // FIXME placeholder only
 
   override def getHarvester = classOf[DlgHarvester]
-  override def getMapping = new CdlMapping // FIXME placeholder only
+  override def getMapping = new DlgMapping // FIXME placeholder only
 }
 
 /**
