@@ -48,6 +48,7 @@ object ProviderRegistry {
     "dc" -> Register(profile = new DcProfile),
     "dlg" -> Register(profile = new DlgProfile),
     "esdn" -> Register(profile = new EsdnProfile),
+    "fl" -> Register(profile = new FlProfile),
     "getty" -> Register(profile = new GettyProfile),
     "ia" -> Register(profile = new IaProfile),
     "lc" -> Register(profile = new LocProfile),
