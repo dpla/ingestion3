@@ -77,7 +77,7 @@ class DlgProfile extends JsonProfile {
 }
 
 /**
-  * Internet Archive
+  * Illinois Digital Heritage Hub
   */
 class IlProfile extends XmlProfile {
   type Mapping = IllinoisMapping
