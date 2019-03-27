@@ -73,7 +73,7 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def description(data: Document[NodeSeq]): Seq[String] =
   // <mods:abstract>
-    extractStrings(data \\ "mods" \ "abstract")
+    extractStrings(data \\ "metadata" \ "mods" \ "abstract")
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:physicalDescription><mods:extent>
@@ -125,36 +125,51 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     // when the type attribute DOES NOT equal "isReferencedBy" or "references" and
     //  the "displayLabel" attribute DOES NOT equal "Project"
     (data \\ "mods" \ "relatedItem")
-      .filterNot(node => {
-        val text = (node \ "@type").text
-        text.equalsIgnoreCase("isReferencedBy") || text.equalsIgnoreCase("references")
-      })
+      .filterNot(node => (node \ "@type").text.equalsIgnoreCase("isReferencedBy"))
+      .filterNot(node => (node \ "@type").text.equalsIgnoreCase("references"))
       .filterNot(node => (node \ "@displayLabel").text.equalsIgnoreCase("project"))
-      .flatMap(extractStrings)
+      .flatMap(node =>
+        extractStrings(node \ "title" \ "titlePart") ++
+        extractStrings(node \ "location" \ "url"))
       .map(eitherStringOrUri)
   }
 
   override def replacedBy(data: Document[NodeSeq]): ZeroToMany[String] =
-    // <relatedItem type="isReferencedBy"><title><titlePart>[VALUE]<relatedItem type="isReferencedBy"><location><url>[VALUE]
+    // <relatedItem type="isReferencedBy">
+    //   <title>
+    //     <titlePart>[VALUE]
+    //   <location>
+    //     <url>[VALUE]
     (data \\ "mods" \ "relatedItem")
-      .flatMap(node => getByAttribute(node, "type", "isReferencedBy"))
-      .flatMap(node => extractStrings(node \ "title" \ "titlePart") ++ extractStrings(node \ "location" \ "url"))
+      .filter(node => (node \ "@type").text.equalsIgnoreCase("isReferencedBy"))
+      .flatMap(node =>
+        extractStrings(node \ "title" \ "titlePart") ++
+          extractStrings(node \ "location" \ "url"))
 
   override def replaces(data: Document[NodeSeq]): ZeroToMany[String] =
-    // <relatedItem type="references"><title><titlePart> [VALUE] <relatedItem type="references"><location><url>[VALUE]
+    // <relatedItem type="references">
+    //   <title>
+    //     <titlePart>[VALUE]
+    //   <location>
+    //     <url>[VALUE]
     (data \\ "mods" \ "relatedItem")
-      .flatMap(node => getByAttribute(node, "type", "references"))
-      .flatMap(node => extractStrings(node \ "title" \ "titlePart") ++ extractStrings(node \ "location" \ "url"))
+      .filter(node => (node \ "@type").text.equalsIgnoreCase("references"))
+      .flatMap(node =>
+        extractStrings(node \ "title" \ "titlePart") ++
+        extractStrings(node \ "location" \ "url"))
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
     // <mods:accessCondition>
-    extractStrings(data \\ "mods" \ "accessCondition")
+    (data \\ "mods" \ "accessCondition")
+      .flatMap(node => getByAttribute(node, "type", "local rights statement")) // TODO should this filter be in place?
+      .flatMap(extractStrings)
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] = {
     // <subject>
     //   <topic>
     //   <name>
-    //   <titleInfo><title>
+    //   <titleInfo>
+    //     <title>
     //   <genre>
     //   <occupation>
 
@@ -173,7 +188,9 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def title(data: Document[NodeSeq]): Seq[String] =
   // <mods:titleInfo><mods:title>
-    extractStrings(data \\ "mods" \ "titleInfo" \ "title")
+    (data \ "metadata" \ "mods" \ "titleInfo" \ "title")
+      .filter(node => node.attributes.isEmpty)
+      .flatMap(extractStrings)
 
   override def `type`(data: Document[NodeSeq]): Seq[String] = {
   // <typeOfResource>; if not present use <physicalDescription><form>
@@ -191,20 +208,22 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
   // <recordInfo><recordContentSource>
-    extractStrings(data \\ "mods" \ "recordInfo" \ "recordContentSource")
+    (data \\ "mods" \ "recordInfo" \ "recordContentSource")
+      .filter(node => node.attributes.isEmpty)
+      .flatMap(extractStrings)
       .map(nameOnlyAgent)
 
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
-    // <accessCondition type="use and reproduction" xlink="[value to be mapped is here]">
+  // <accessCondition type="use and reproduction" xlink="[value to be mapped is here]">
     (data \ "metadata" \ "mods" \ "accessCondition")
-      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "use and reproduction"))
+      .flatMap(node => getByAttribute(node, "type", "use and reproduction"))
       .flatMap(node => node.attribute(node.getNamespace("xlink"), "href"))
       .flatMap(extractStrings(_))
       .map(URI)
 
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
     // <note displayLabel=“Intermediate Provider”>
-    (data \\ "mods" \ "node" \ "recordContentSource")
+    (data \\ "mods" \ "note")
       .flatMap(node => getByAttribute(node, "displayLabel", "Intermediate Provider"))
       .flatMap(extractStrings)
       .map(nameOnlyAgent)
