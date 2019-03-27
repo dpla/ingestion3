@@ -19,11 +19,12 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       FormatTypeValuesBlockList.termList
 
   // ID minting functions
-  override def useProviderName(): Boolean = true
+  override def useProviderName(): Boolean = false
 
   override def getProviderName(): String = "tn"
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
+  // ingestion1 ID minting >> /select-id?prop=id&use_source=no
     extractString(data \ "header" \ "identifier")
       .map(_.trim)
 
@@ -241,6 +242,6 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   // Helper method
   def agent = EdmAgent(
     name = Some("Tennessee Digital Library"),
-    uri = Some(URI("http://dp.la/api/contributor/tn"))
+    uri = Some(URI("http://dp.la/api/contributor/tennessee"))
   )
 }

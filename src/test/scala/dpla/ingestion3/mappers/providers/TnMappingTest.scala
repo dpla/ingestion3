@@ -16,6 +16,11 @@ class TnMappingTest extends FlatSpec with BeforeAndAfter {
   val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))
   val extractor = new TnMapping
 
+  //
+  it should "not use provider prefix when minting IDs" in {
+    assert(extractor.useProviderName() === false)
+  }
+
   it should "extract the correct alternate title" in {
     val expected = Seq("alt title 1")
     assert(extractor.alternateTitle(xml) == expected)
