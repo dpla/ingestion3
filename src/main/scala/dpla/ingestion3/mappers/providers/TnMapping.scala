@@ -209,7 +209,6 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
   // <recordInfo><recordContentSource>
     (data \\ "mods" \ "recordInfo" \ "recordContentSource")
-      .filter(node => node.attributes.isEmpty)
       .flatMap(extractStrings)
       .map(nameOnlyAgent)
 
