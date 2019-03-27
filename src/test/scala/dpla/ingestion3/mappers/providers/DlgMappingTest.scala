@@ -18,13 +18,13 @@ class DlgMappingTest extends FlatSpec with BeforeAndAfter {
 
   // original id
   it should "create the correct original id" in {
-    val expected = ???
+    val expected = Some("aaa_agpapers_1016")
     assert(extractor.originalId(json) === expected)
   }
 
   // `type`
   it should "create the correct original type" in {
-    val expected = Seq("")
+    val expected = Seq("Text")
     assert(extractor.`type`(json) === expected)
   }
 
@@ -32,19 +32,19 @@ class DlgMappingTest extends FlatSpec with BeforeAndAfter {
 
   // contributor
   it should "create the correct contributor" in {
-    val expected = Seq("").map(nameOnlyAgent)
+    val expected = Seq("Finch, N. P. T.").map(nameOnlyAgent)
     assert(extractor.contributor(json) === expected)
   }
 
   // creator
   it should "create the correct creator" in {
-    val expected = Seq("").map(nameOnlyAgent)
+    val expected = Seq("Manufacturers' Review Co.").map(nameOnlyAgent)
     assert(extractor.creator(json) === expected)
   }
 
   // dataProvider
   it should "create the correct dataProvider" in {
-    val expected = Seq("").map(nameOnlyAgent)
+    val expected = Seq("Auburn University. Library").map(nameOnlyAgent)
     assert(extractor.dataProvider(json) === expected)
   }
 
@@ -52,7 +52,7 @@ class DlgMappingTest extends FlatSpec with BeforeAndAfter {
 
   // description
   it should "create the correct description" in {
-    val expected = Seq("")
+    val expected = Seq("description one", "description two")
     assert(extractor.description(json) === expected)
   }
 
@@ -62,19 +62,19 @@ class DlgMappingTest extends FlatSpec with BeforeAndAfter {
 
   // extent
   it should "create the correct extent" in {
-    val expected = Seq("")
+    val expected = Seq("extent one", "extent two")
     assert(extractor.extent(json) === expected)
   }
 
   // format
   it should "create the correct format" in {
-    val expected = Seq("")
+    val expected = Seq() // expect empty b/c of filters
     assert(extractor.format(json) === expected)
   }
 
   // identifier
-  it should "create the correct identifer" in {
-    val expected = Seq("")
+  it should "create the correct identifier" in {
+    val expected = Seq("ManufactReview_v01_i05_1899_Dec_14.pdf")
     assert(extractor.identifier(json) === expected)
   }
 
@@ -88,7 +88,7 @@ class DlgMappingTest extends FlatSpec with BeforeAndAfter {
 
   // publisher
   it should "create the correct publisher" in {
-    val expected = Seq("").map(nameOnlyAgent)
+    val expected = Seq("USAIN State and Local Literature Preservation Project, Special Collections and Archives, Auburn University Libraries, Auburn, Alabama").map(nameOnlyAgent)
     assert(extractor.publisher(json) === expected)
   }
 
@@ -100,7 +100,7 @@ class DlgMappingTest extends FlatSpec with BeforeAndAfter {
 
   // title
   it should "create the correct title" in {
-    val expected = Seq("")
+    val expected = Seq("1899-12-14: Manufacturers' Review, Birmingham, Alabama, Volume 1, Issue 5")
     assert(extractor.title(json) === expected)
   }
 }

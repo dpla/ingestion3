@@ -20,7 +20,8 @@ class DlgMapping extends JsonMapping with JsonExtractor {
   // OreAggregation fields
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
 
-  override def originalId(implicit data: Document[JValue]): ZeroToOne[String] = extractString("id")(data)
+  override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
+    extractString("id")(data)
 
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
@@ -97,7 +98,7 @@ class DlgMapping extends JsonMapping with JsonExtractor {
     extractStrings("dc_relation_display")(data).map(eitherStringOrUri)
 
   override def rightsHolder(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings("dcterms_rights_holder_display")
+    extractStrings("dcterms_rights_holder_display")(data)
       .map(nameOnlyAgent)
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =

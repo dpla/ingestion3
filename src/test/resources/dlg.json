@@ -24,9 +24,10 @@
     "Science & Technology"
   ],
   "dcterms_description_display": [
-    "This is the volume I, issue 5, December 14, 1899 issue of Manufacturers Review: A Semi-Monthly Journal Devoted to the Industrial Development of the Southeast, a newspaper published semi-monthly by Manufacturers' Review Co. in Birmingham, Alabama. The newspaper includes news, information, facts, correspondence, editorials, illustrated ads, and articles of interest related to industry and technology. Topics include business, economics, industry, technology, politics, and statistics. Articles vary greatly in length and may be written by newspaper staff or outside contributors; summarized or copied from other newspapers; or summarized statements from public figures. This item has been aggregated as part of the Association of Southeastern Research Libraries (ASERL)'s \"Deeply Rooted: The Agricultural & Rural History of the American South\" project.",
-    "Initial run of steel--Open the Warrior; Mill building in the cotton states; Wages in Fall River cotton mills; Southern furnaces in a strong position; Prosperity and its parasites; Discount or net cash on hardware; Lake Superior ores; Exports and imports; Export iron and steel; Two famous railroad cases; Steel manufacture at Ensley, Alabama; The Tennessee mills; The cash discount, should it be abolished?; The manufacture of steel castings; Texas iron industries; Profits in lumber manufacture; Southern carpets; Some large logs; Basic steel at the Ensley mill; Review of the Southern markets (Mobile; Lumber quotations; Tupelo gum; Iron in the Birmingham district; Alabama coal; The hardware trade; Naval stores market); Will lumber ever be cheap again?; Semi-monthly survey of Southern industries;"
+    "description one",
+    "description two"
   ],
+  "dcterms_extent_display": ["extent one", "extent two"],
   "dcterms_publisher_display": [
     "USAIN State and Local Literature Preservation Project, Special Collections and Archives, Auburn University Libraries, Auburn, Alabama"
   ],
