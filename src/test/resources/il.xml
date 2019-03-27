@@ -1,0 +1,54 @@
+<OAI-PMH xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+    <responseDate>2019-03-27T18:06:20Z</responseDate>
+    <request identifier="urn:dpla-repox.carli.illinois.edu:carli_uic_pic:oai:collections.carli.illinois.edu:uic_pic/5601" metadataPrefix="qdc" verb="GetRecord">http://dpla-repox.carli.illinois.edu/repox/OAIHandler</request>
+    <GetRecord>
+        <record>
+            <header>
+                <identifier>urn:dpla-repox.carli.illinois.edu:carli_uic_pic:oai:collections.carli.illinois.edu:uic_pic/5601</identifier>
+                <datestamp>2019-01-28</datestamp>
+                <setSpec>carli_uic_pic</setSpec>
+            </header>
+            <metadata>
+                <oai_qdc:qualifieddc xsi:schemaLocation="http://worldcat.org/xmlschemas/qdc-1.0/ http://worldcat.org/xmlschemas/qdc/1.0/qdc-1.0.xsd http://purl.org/net/oclcterms http://worldcat.org/xmlschemas/oclcterms/1.4/oclcterms-1.4.xsd">
+                    <dc:title>Bridges, viaducts, and underpasses: Michigan Ave. Viaduct 9, Image 10</dc:title>
+                    <dc:alternative>Alt title</dc:alternative>
+                    <dc:contributor>Contributor</dc:contributor>
+                    <dc:creator>Copelin Commercial Photographers</dc:creator>
+                    <dc:description>Bridges, viaducts and underpasses included: Michigan Ave. Viaduct 9 (1997)</dc:description>
+                    <dcterms:created>1997</dcterms:created>
+                    <dc:date>1997</dc:date>
+                    <dcterms:spatial>Chicago (Ill.)</dcterms:spatial>
+                    <dc:type>Image</dc:type>
+                    <dc:format>Photographs</dc:format>
+                    <dcterms:medium>photographic prints</dcterms:medium>
+                    <dcterms:extent>8 x 10 in.</dcterms:extent>
+                    <dcterms:language>English</dcterms:language>
+                    <dcterms:isPartOf>Chicago - Photographic Images of Change (University of Illinois at Chicago)</dcterms:isPartOf>
+                    <dcterms:provenance>University of Illinois at Chicago</dcterms:provenance>
+                    <dc:source>James S. Parker Collection</dc:source>
+                    <dc:publisher>University of Illinois Chicago. Library</dc:publisher>
+                    <dc:publisher>University of Illinois at Chicago. Library. Special Collections and University Archives</dc:publisher>
+                    <dcterms:isPartOf>Bridges, Viaducts, and Underpasses</dcterms:isPartOf>
+                    <dc:identifier>Cite as: [Creator], [Title], [Local Identifier], Chicago - Photographic Images of Change, University of Illinois at Chicago. Library. Special Collections Department</dc:identifier>
+                    <dc:rights>free text rights</dc:rights>
+                    <dc:subject>subject</dc:subject>
+                    <dc:temporal>temporal</dc:temporal>
+                    <dc:identifier>JPCC_01_0003_0025_0010</dc:identifier>
+                    <dc:identifier>http://collections.carli.illinois.edu/cdm/ref/collection/uic_pic/id/5601</dc:identifier>
+                    <edm:preview>http://collections.carli.illinois.edu/utils/getthumbnail/collection/uic_pic/id/5601</edm:preview>
+                    <edm:isShownAt>http://collections.carli.illinois.edu/cdm/ref/collection/uic_pic/id/5601</edm:isShownAt>
+                </oai_qdc:qualifieddc>
+            </metadata>
+            <about>
+                <oaiProvenance:provenance xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/provenance http://www.openarchives.org/OAI/2.0/provenance.xsd">
+                    <oaiProvenance:originDescription harvestDate="2019-01-28" altered="true">
+                        <oaiProvenance:baseURL>http://collections.carli.illinois.edu/oai/oai.php</oaiProvenance:baseURL>
+                        <oaiProvenance:identifier>oai:collections.carli.illinois.edu:uic_pic/5601</oaiProvenance:identifier>
+                        <oaiProvenance:datestamp>2019-01-28</oaiProvenance:datestamp>
+                        <oaiProvenance:metadataNamespace>http://purl.org/dc/terms/</oaiProvenance:metadataNamespace>
+                    </oaiProvenance:originDescription>
+                </oaiProvenance:provenance>
+            </about>
+        </record>
+    </GetRecord>
+</OAI-PMH>
