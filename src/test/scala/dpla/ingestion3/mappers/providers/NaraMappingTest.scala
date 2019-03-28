@@ -254,9 +254,6 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
         <referenceUnitProposalArray/>
       </fileUnitPhysicalOccurrence>
     </physicalOccurrenceArray></item>
-
-    println(extractor.dataProvider(Document(xml)))
-
   }
 
   it should "extract dataProvider values" in {
