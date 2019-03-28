@@ -52,6 +52,7 @@ object ProviderRegistry {
     "getty" -> Register(profile = new GettyProfile),
     "il" -> Register(profile = new IlProfile),
     "ia" -> Register(profile = new IaProfile),
+    "in" -> Register(profile = new InProfile),
     "lc" -> Register(profile = new LocProfile),
     "mi" -> Register(profile = new MiProfile),
     "minnesota" -> Register(profile = new MdlProfile),

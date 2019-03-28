@@ -1,0 +1,43 @@
+<record xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.openarchives.org/OAI/2.0/">
+    <header>
+        <identifier>oai:dpla.library.in.gov:PALNI_herbarium4:oai:digital.library.in.gov:PALNI_herbarium4-22274</identifier>
+        <datestamp>2019-03-28</datestamp>
+        <setSpec>PALNI_herbarium4</setSpec>
+    </header>
+    <metadata>
+        <oai_qdc:qualifieddc xsi:schemaLocation="http://worldcat.org/xmlschemas/qdc-1.0/ http://worldcat.org/xmlschemas/qdc/1.0/qdc-1.0.xsd http://purl.org/net/oclcterms http://worldcat.org/xmlschemas/oclcterms/1.4/oclcterms-1.4.xsd" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oai_qdc="http://worldcat.org/xmlschemas/qdc-1.0/">
+            <dc:title>Heuchera villosa</dc:title>
+            <dcterms:alternative>Heuchera villosa Michx.</dcterms:alternative>
+            <dc:description>Tobacco landing</dc:description>
+            <dcterms:created>1881; 1882</dcterms:created>
+            <dc:identifier>http://palni.contentdm.oclc.org/cdm/ref/collection/herbarium4/id/22274</dc:identifier>
+            <dc:source>http://palni.contentdm.oclc.org/utils/getthumbnail/collection/herbarium4/id/22274</dc:source>
+            <dcterms:isPartOf>Butler University Friesner Herbarium Digital Collection</dcterms:isPartOf>
+            <dc:creator>Ray C. Friesner</dc:creator>
+            <dc:creator>Sallie; Ron; Sterling</dc:creator>
+            <dcterms:provenance>Butler University</dcterms:provenance>
+            <dcterms:spatial>           Muncie;          Delaware County;          Indiana;          United States;          North and Central America;    	</dcterms:spatial>
+            <dc:type>Sound ; Text</dc:type>
+            <dc:rights>http://rightsstatements.org/vocab/InC/1.0/</dc:rights>
+            <dcterms:accessRights>Manchester College is providing access to these materials for educational and research purposes.</dcterms:accessRights>
+            <dc:language>English; Czech</dc:language>
+            <dcterms:mediator>IUPUI (Campus). University Library</dcterms:mediator>
+            <dc:publisher>Lewis G. Hall, Jr.; Dexter Press</dc:publisher>
+            <dc:contributor>Name of contributor</dc:contributor>
+            <dcterms:extent>1 photograph : color</dcterms:extent>
+            <dcterms:medium>Compact cassette; Documents; Typed text</dcterms:medium>
+            <dcterms:temporal>           2000s (2000-2009);          Twenty-first century, C. E.;    	</dcterms:temporal>
+            <dc:subject>           Civil War, 1861-1865;          United States History;          Diaries;    	</dc:subject>
+        </oai_qdc:qualifieddc>
+    </metadata>
+    <about>
+        <oaiProvenance:provenance xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/provenance http://www.openarchives.org/OAI/2.0/provenance.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oaiProvenance="http://www.openarchives.org/OAI/2.0/provenance">
+            <oaiProvenance:originDescription altered="true" harvestDate="2019-03-28">
+                <oaiProvenance:baseURL>https://digital.library.in.gov/OAI/Server</oaiProvenance:baseURL>
+                <oaiProvenance:identifier>oai:digital.library.in.gov:PALNI_herbarium4-22274</oaiProvenance:identifier>
+                <oaiProvenance:datestamp>2019-03-28</oaiProvenance:datestamp>
+                <oaiProvenance:metadataNamespace>http://worldcat.org/xmlschemas/qdc-1.0/</oaiProvenance:metadataNamespace>
+            </oaiProvenance:originDescription>
+        </oaiProvenance:provenance>
+    </about>
+</record>
