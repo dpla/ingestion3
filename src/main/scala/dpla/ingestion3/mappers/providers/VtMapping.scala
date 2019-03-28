@@ -16,7 +16,6 @@ class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def getProviderName(): String = "vt"
 
-  // TODO: Confirm with provider that this is correct.  Some records have multiple identifiers.
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractStrings(data \ "identifier").headOption
 
@@ -26,19 +25,24 @@ class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
     mintDplaItemUri(data)
 
-  // TODO: There is no clear mapping for isShownAt
-  //   Roughly 85% of records have an identifier that starts with "http".
-  //   Brief spot-testing suggested that at least some of these resolve to web pages with the full item.
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    extractStrings(data \ "identifier")
-      .filter(_.startsWith("http"))
-      .map(stringOnlyWebResource)
+    extractStrings(data \ "isShownAt").map(stringOnlyWebResource)
+
+  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    extractStrings(data \ "preview").map(stringOnlyWebResource)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
-  // TODO: There is no clear mapping for dataProvider
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    Seq().map(nameOnlyAgent)
+    extractStrings(data \ "dataProvider").map(nameOnlyAgent)
+
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
+    (data \ "rights").flatMap(r => {
+      r.prefix match {
+        case "edm" => Seq(URI(r.text))
+        case _ => None
+      }
+    })
 
   override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
     extractStrings(data \ "contributor")
@@ -77,9 +81,13 @@ class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     extractStrings(data \ "relation")
       .map(eitherStringOrUri)
 
-  // TODO: there are some records with rights statement URIs and CC text in the "rights" field
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
-    extractStrings(data \ "rights")
+    (data \ "rights").flatMap(r => {
+      r.prefix match {
+        case "dc" => Option(r.text)
+        case _ => None
+      }
+    })
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
     extractStrings(data \ "subject")
