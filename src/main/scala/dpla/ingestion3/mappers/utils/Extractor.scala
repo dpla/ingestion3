@@ -74,7 +74,7 @@ trait XmlExtractor extends Extractor[NodeSeq] {
     * @param value String value of attribute
     * @return Boolean
     */
-  def filterAttribute(node: Node, att: String, value: String): Boolean = (node \ ("@" + att)).text.toLowerCase == value
+  def filterAttribute(node: Node, att: String, value: String): Boolean = (node \ ("@" + att)).text.toLowerCase == value.toLowerCase
 
   /**
     * Get Nodes that match the given attribute name and attribute value
