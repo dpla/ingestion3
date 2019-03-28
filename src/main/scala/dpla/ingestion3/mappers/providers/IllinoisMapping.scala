@@ -19,8 +19,6 @@ class IllinoisMapping extends XmlMapping with XmlExtractor with IngestMessageTem
     DigitalSurrogateBlockList.termList ++
       ExtentIdentificationList.termList
 
-  val extentAllowAlist: Set[String] = ExtentIdentificationList.termList
-
   // ID minting functions
   override def useProviderName(): Boolean = true
 
@@ -46,7 +44,7 @@ class IllinoisMapping extends XmlMapping with XmlExtractor with IngestMessageTem
       .map(nameOnlyAgent)
 
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    // contributor
+    // creator
     extractStrings(data \\ "creator")
       .map(nameOnlyAgent)
 
