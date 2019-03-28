@@ -1,6 +1,5 @@
 package dpla.ingestion3.mappers.providers
 
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
@@ -13,10 +12,6 @@ import scala.xml._
 
 
 class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
-
-  val formatBlockList: Set[String] =
-    DigitalSurrogateBlockList.termList ++
-      FormatTypeValuesBlockList.termList
 
   // ID minting functions
   override def useProviderName(): Boolean = false
@@ -259,7 +254,7 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   // Helper method
   def agent = EdmAgent(
-    name = Some("Tennessee Digital Library"),
+    name = Some("Digital Library of Tennessee"),
     uri = Some(URI("http://dp.la/api/contributor/tennessee"))
   )
 }
