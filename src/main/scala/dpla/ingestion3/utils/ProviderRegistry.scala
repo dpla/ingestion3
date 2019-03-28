@@ -50,6 +50,7 @@ object ProviderRegistry {
     "esdn" -> Register(profile = new EsdnProfile),
     "fl" -> Register(profile = new FlProfile),
     "getty" -> Register(profile = new GettyProfile),
+    "il" -> Register(profile = new IlProfile),
     "ia" -> Register(profile = new IaProfile),
     "lc" -> Register(profile = new LocProfile),
     "mi" -> Register(profile = new MiProfile),
@@ -63,6 +64,7 @@ object ProviderRegistry {
     "p2p" -> Register(profile = new P2PProfile), // plains2peaks
     "pa" -> Register(profile = new PaProfile),
     "sd" -> Register(profile = new SdProfile),
+    "tn" -> Register(profile = new TnProfile),
     "virginias" -> Register(profile = new VirginiasProfile),
     "vt" -> Register(profile = new VtProfile),
     "wisconsin" -> Register(profile = new WiProfile)

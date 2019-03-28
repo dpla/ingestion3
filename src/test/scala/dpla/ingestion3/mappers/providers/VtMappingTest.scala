@@ -76,7 +76,7 @@ class VtMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct rights" in {
-    val expected = Seq("For questions or information about the rights for this image, please contact Special Collections & Archives, Middlebury College at specialcollections@middlebury.edu")
+    val expected = Seq("Free text rights statement")
     assert(extractor.rights(xml) == expected)
   }
 
@@ -95,12 +95,23 @@ class VtMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.title(xml) === expected)
   }
 
-  // TODO when correct mapping is established
-  it should "extract the correct dataProvider"
+  it should "extract the correct dataProvider" in {
+    val expected = Seq("Middlebury College").map(nameOnlyAgent)
+    assert(extractor.dataProvider(xml) === expected)
+  }
 
-  // TODO when correct mapping is established
-  it should "extract the correct isShownAt"
+  it should "extract the correct isShownAt" in {
+    val expected = Seq("http://archive.org/details/150SNV").map(stringOnlyWebResource)
+    assert(extractor.isShownAt(xml) === expected)
+  }
 
-  // TODO when correct mapping is established
-  it should "extract the correct edmRights"
+  it should "extract the correct edmRights" in {
+    val expected = Seq("http://rightsstatements.org/vocab/CNE/1.0/").map(URI)
+    assert(extractor.edmRights(xml) === expected)
+  }
+
+  it should "extract the correct preview" in {
+    val expected = Seq("http://archive.org/download/150SNV/__ia_thumb.jpg").map(stringOnlyWebResource)
+    assert(extractor.preview(xml) === expected)
+  }
 }

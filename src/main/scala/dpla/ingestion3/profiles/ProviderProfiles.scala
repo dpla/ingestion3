@@ -77,6 +77,16 @@ class DlgProfile extends JsonProfile {
 }
 
 /**
+  * Illinois Digital Heritage Hub
+  */
+class IlProfile extends XmlProfile {
+  type Mapping = IllinoisMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new IllinoisMapping
+}
+
+/**
   * Internet Archive
   */
 class IaProfile extends JsonProfile {
@@ -205,6 +215,16 @@ class SdProfile extends JsonProfile {
 
   override def getHarvester = classOf[MdlHarvester]
   override def getMapping = new SdMapping
+}
+
+/**
+  * Tennessee Digital Library
+  */
+class TnProfile extends XmlProfile {
+  type Mapping = TnMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new TnMapping
 }
 
 /**
