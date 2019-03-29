@@ -1,6 +1,6 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{File, FileInputStream}
+import java.io.{File, FileInputStream, InputStreamReader}
 import java.util.zip.GZIPInputStream
 
 import com.databricks.spark.avro._
@@ -9,9 +9,8 @@ import dpla.ingestion3.mappers.utils.XmlExtractor
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.tools.tar.TarInputStream
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 import scala.xml.{MinimizeMode, Node, Utility, XML}
 
 
@@ -37,17 +36,17 @@ class SiFileHarvester(spark: SparkSession,
     * Loads .gz files
     *
     * @param file File to parse
-    * @return TarInputstream of the zip contents
+    * @return Option[InputStreamReader] of the zip contents
     *
     *
     * TODO: Because we're only handling zips in this class,
     * and they should already be filtered by the FilenameFilter,
     * I wonder if we even need the match statement here.
     */
-  def getInputStream(file: File): Option[TarInputStream] = {
+  def getInputStream(file: File): Option[InputStreamReader] = {
     file.getName match {
       case zipName if zipName.endsWith("gz") =>
-        Some(new TarInputStream(new GZIPInputStream(new FileInputStream(file))))
+        Some(new InputStreamReader(new GZIPInputStream(new FileInputStream(file))))
       case _ => None
     }
   }
@@ -64,10 +63,16 @@ class SiFileHarvester(spark: SparkSession,
       item <- items
     } yield item match {
       case record: Node =>
-        val id = (record \ "descriptiveNonRepeating" \ "record_ID").text.toString
+        // Extract required record identifier
+        val id = Option((record \ "descriptiveNonRepeating" \ "record_ID").text.toString)
         val outputXML = xmlToString(record)
-        val label = item.label
-        Some(ParsedResult(id, outputXML))
+
+        id match {
+          case (None) =>
+            logger.warn(s"Missing required record_ID for $outputXML")
+            None
+          case (Some(id)) => Some(ParsedResult(id, outputXML))
+        }
       case _ =>
         logger.warn("Got weird result back for item path: " + item.getClass)
         None
@@ -75,15 +80,15 @@ class SiFileHarvester(spark: SparkSession,
   }
 
   /**
-    * Main logic for handling individual entries in the zip.
+    * Main logic for handling individual lines in the zipped file.
     *
-    * @param zipResult  Case class representing extracted item from the zip
+    * @param line String line from file
     * @return Count of metadata items found.
     */
-  def handleFile(zipResult: FileResult,
+  def handleLine(line: String,
                  unixEpoch: Long): Try[Int] =
 
-    zipResult.data match {
+    Option(line) match {
       case None =>
         Success(0) //a directory, no results
 
@@ -92,9 +97,6 @@ class SiFileHarvester(spark: SparkSession,
           val dataString = new String(data).replaceAll("<\\?xml.*\\?>", "")
           val xml = XML.loadString(dataString)
           val items = handleXML(xml)
-          val entryName = zipResult.entryName
-          // log the file name
-          logger.info(entryName)
 
           val counts = for {
             itemOption <- items
@@ -107,30 +109,6 @@ class SiFileHarvester(spark: SparkSession,
         }
     }
 
-
-  /**
-    * Implements a stream of files from the tar.
-    * Can't use @tailrec here because the compiler can't recognize it as tail recursive,
-    * but this won't blow the stack.
-    *
-    * @param tarInputStream
-    * @return Lazy stream of tar records
-    */
-  def iter(tarInputStream: TarInputStream): Stream[FileResult] = {
-    Option(tarInputStream.getNextEntry) match {
-      case None =>
-        Stream.empty
-      case Some(entry) =>
-        val result =
-          if (entry.isDirectory)
-            None
-          else
-          IOUtils
-            Some(IOUtils.toByteArray(tarInputStream, entry.getSize))
-        FileResult(entry.getName, result) #:: iter(tarInputStream)
-    }
-  }
-
   /**
     * Executes the Smithsonian harvest
     */
@@ -139,20 +117,19 @@ class SiFileHarvester(spark: SparkSession,
     val unixEpoch = harvestTime / 1000L
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
-
-
     inFiles.listFiles(new GzFileFilter).foreach( inFile => {
+      logger.info(s"Reading ${inFile.getName}")
       val inputStream = getInputStream(inFile)
-        .getOrElse(throw new IllegalArgumentException("Couldn't load .tar.gz files."))
-      val recordCount = (for (result <- iter(inputStream)) yield {
-        handleFile(result, unixEpoch) match {
-          case Failure(exception) =>
-            logger.error(s"Caught exception on $inFile.", exception)
-            0
-          case Success(count) =>
-            count
-        }
-      }).sum
+        .getOrElse(throw new IllegalArgumentException(s"Couldn't load file, ${inFile.getAbsolutePath}"))
+
+      // create lineIterator to read contents one line at a time
+      val iter = IOUtils.lineIterator(inputStream)
+      while (iter.hasNext) {
+       Option(iter.nextLine) match {
+         case Some(line) => handleLine(line, unixEpoch)
+         case None => 0
+       }
+      }
       IOUtils.closeQuietly(inputStream)
     })
 
@@ -168,4 +145,13 @@ class SiFileHarvester(spark: SparkSession,
     */
   def xmlToString(node: Node): String =
     Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
+
+  /**
+    * Parses and extracts ZipInputStream and writes
+    * parses records out.
+    *
+    * @param fileResult Case class representing extracted items from a compressed file
+    * @return Count of metadata items found.
+    */
+  override def handleFile(fileResult: FileResult, unixEpoch: Long): Try[Int] = ???
 }
