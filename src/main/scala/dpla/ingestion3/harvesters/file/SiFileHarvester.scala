@@ -1,0 +1,171 @@
+package dpla.ingestion3.harvesters.file
+
+import java.io.{File, FileInputStream}
+import java.util.zip.GZIPInputStream
+
+import com.databricks.spark.avro._
+import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.mappers.utils.XmlExtractor
+import org.apache.commons.io.IOUtils
+import org.apache.log4j.Logger
+import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.tools.tar.TarInputStream
+
+import scala.util.{Failure, Success, Try}
+import scala.xml.{MinimizeMode, Node, Utility, XML}
+
+
+/**
+  * Extracts values from parsed Xml
+  */
+class SIFileExtractor extends XmlExtractor
+
+/**
+  * Entry for performing Smithsonian file harvest
+  */
+class SiFileHarvester(spark: SparkSession,
+                      shortName: String,
+                      conf: i3Conf,
+                      logger: Logger)
+  extends FileHarvester(spark, shortName, conf, logger) {
+
+  def mimeType: String = "application_xml"
+
+  protected val extractor = new VaFileExtractor()
+
+  /**
+    * Loads .gz files
+    *
+    * @param file File to parse
+    * @return TarInputstream of the zip contents
+    *
+    *
+    * TODO: Because we're only handling zips in this class,
+    * and they should already be filtered by the FilenameFilter,
+    * I wonder if we even need the match statement here.
+    */
+  def getInputStream(file: File): Option[TarInputStream] = {
+    file.getName match {
+      case zipName if zipName.endsWith("gz") =>
+        Some(new TarInputStream(new GZIPInputStream(new FileInputStream(file))))
+      case _ => None
+    }
+  }
+
+  /**
+    * Takes care of parsing an xml file into a list of Nodes each representing an item
+    *
+    * @param xml Root of the xml document
+    * @return List of Options of id/item pairs.
+    */
+  def handleXML(xml: Node): List[Option[ParsedResult]] = {
+    for {
+      items <- xml \\ "doc" :: Nil
+      item <- items
+    } yield item match {
+      case record: Node =>
+        val id = (record \ "descriptiveNonRepeating" \ "record_ID").text.toString
+        val outputXML = xmlToString(record)
+        val label = item.label
+        Some(ParsedResult(id, outputXML))
+      case _ =>
+        logger.warn("Got weird result back for item path: " + item.getClass)
+        None
+    }
+  }
+
+  /**
+    * Main logic for handling individual entries in the zip.
+    *
+    * @param zipResult  Case class representing extracted item from the zip
+    * @return Count of metadata items found.
+    */
+  def handleFile(zipResult: FileResult,
+                 unixEpoch: Long): Try[Int] =
+
+    zipResult.data match {
+      case None =>
+        Success(0) //a directory, no results
+
+      case Some(data) =>
+        Try {
+          val dataString = new String(data).replaceAll("<\\?xml.*\\?>", "")
+          val xml = XML.loadString(dataString)
+          val items = handleXML(xml)
+          val entryName = zipResult.entryName
+          // log the file name
+          logger.info(entryName)
+
+          val counts = for {
+            itemOption <- items
+            item <- itemOption // filters out the Nones
+          } yield {
+            writeOut(unixEpoch, item)
+            1
+          }
+          counts.sum
+        }
+    }
+
+
+  /**
+    * Implements a stream of files from the tar.
+    * Can't use @tailrec here because the compiler can't recognize it as tail recursive,
+    * but this won't blow the stack.
+    *
+    * @param tarInputStream
+    * @return Lazy stream of tar records
+    */
+  def iter(tarInputStream: TarInputStream): Stream[FileResult] = {
+    Option(tarInputStream.getNextEntry) match {
+      case None =>
+        Stream.empty
+      case Some(entry) =>
+        val result =
+          if (entry.isDirectory)
+            None
+          else
+          IOUtils
+            Some(IOUtils.toByteArray(tarInputStream, entry.getSize))
+        FileResult(entry.getName, result) #:: iter(tarInputStream)
+    }
+  }
+
+  /**
+    * Executes the Smithsonian harvest
+    */
+  override def localHarvest(): DataFrame = {
+    val harvestTime = System.currentTimeMillis()
+    val unixEpoch = harvestTime / 1000L
+    val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
+
+
+
+    inFiles.listFiles(new GzFileFilter).foreach( inFile => {
+      val inputStream = getInputStream(inFile)
+        .getOrElse(throw new IllegalArgumentException("Couldn't load .tar.gz files."))
+      val recordCount = (for (result <- iter(inputStream)) yield {
+        handleFile(result, unixEpoch) match {
+          case Failure(exception) =>
+            logger.error(s"Caught exception on $inFile.", exception)
+            0
+          case Success(count) =>
+            count
+        }
+      }).sum
+      IOUtils.closeQuietly(inputStream)
+    })
+
+    // Read harvested data into Spark DataFrame and return.
+    spark.read.avro(tmpOutStr)
+  }
+
+  /**
+    * Converts a Node to an xml string
+    *
+    * @param node The root of the tree to write to a string
+    * @return a String containing xml
+    */
+  def xmlToString(node: Node): String =
+    Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
+}

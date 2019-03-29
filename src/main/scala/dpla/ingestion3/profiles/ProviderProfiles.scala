@@ -224,7 +224,18 @@ class TnProfile extends XmlProfile {
   type Mapping = TnMapping
 
   override def getHarvester = classOf[OaiHarvester]
+
   override def getMapping = new TnMapping
+}
+
+/**
+  * Smithsonian Institution
+  */
+class SiProfile extends XmlProfile {
+  type Mapping = NaraMapping // FIXME placholder
+
+  override def getHarvester = classOf[SiFileHarvester]
+  override def getMapping = new NaraMapping // FIXME placeholder
 }
 
 /**
