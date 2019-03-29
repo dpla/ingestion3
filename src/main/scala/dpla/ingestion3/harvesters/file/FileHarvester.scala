@@ -16,7 +16,6 @@ import scala.util.Try
   *
   * @param shortName Provider short name
   * @param conf Configurations
-  * @param outputDir Output path
   * @param logger Logger
   */
 abstract class FileHarvester(spark: SparkSession,
@@ -70,5 +69,7 @@ abstract class FileHarvester(spark: SparkSession,
     genericRecord.put("mimetype", mimeType)
     avroWriter.append(genericRecord)
   }
+
+  def flush() = getAvroWriter.flush()
 
 }
