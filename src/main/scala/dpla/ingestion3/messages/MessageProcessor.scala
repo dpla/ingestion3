@@ -46,7 +46,7 @@ object MessageProcessor{
 
   def getErrors(ds: Dataset[Row]): Dataset[Row] =
     ds.select("message", "level", "field", "id", "value")
-      .where(s"level=='${IngestLogLevel.error}'").distinct()
+      .where(s"level=='${IngestLogLevel.error}'")
 
   def getWarnings(ds: Dataset[Row]): Dataset[Row] =
     ds.select("message", "level", "field", "id", "value")

@@ -1,0 +1,86 @@
+<record xmlns="http://www.openarchives.org/OAI/2.0/">
+    <header>
+        <identifier>
+            oai:michigan:wsuoai:oai:digital.library.wayne.edu:wsudor_dpla:oai:digital.library.wayne.edu:wayne:StudentLife36797
+        </identifier>
+        <datestamp>2019-01-11</datestamp>
+        <setSpec>wsuoai</setSpec>
+    </header>
+    <metadata>
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+            <mods:titleInfo>
+                <mods:title>
+                    The 1937 tennis team. Won 15, lost 3. F. Winton, J. Schlesinger, R. Balow (Capt) P. Kondrasky, W. Maul, S. Rotberg.
+                </mods:title>
+            </mods:titleInfo>
+            <mods:subject>
+                <mods:topic xmlns:mets="http://www.loc.gov/METS/" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:xlink="http://www.w3.org/1999/xlink">Sports</mods:topic>
+            </mods:subject>
+            <mods:subject>
+                <mods:topic xmlns:mets="http://www.loc.gov/METS/" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:xlink="http://www.w3.org/1999/xlink">Tennis</mods:topic>
+            </mods:subject>
+            <mods:subject>
+                <mods:topic xmlns:mets="http://www.loc.gov/METS/" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:xlink="http://www.w3.org/1999/xlink">College students</mods:topic>
+            </mods:subject>
+            <mods:subject>
+                <mods:geographic>
+                    <mods:placeTerm xmlns:mets="http://www.loc.gov/METS/" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:xlink="http://www.w3.org/1999/xlink" type="text">Detroit, MI</mods:placeTerm>
+                </mods:geographic>
+            </mods:subject>
+            <mods:originInfo>
+                <mods:dateIssued>1937</mods:dateIssued>
+            </mods:originInfo>
+            <mods:typeOfResource>still image</mods:typeOfResource>
+            <mods:physicalDescription>
+                <mods:form authority="">photographic prints</mods:form>
+            </mods:physicalDescription>
+            <mods:location>
+                <mods:url usage="primary">
+                    http://digital.library.wayne.edu/item/&wayne:StudentLife36797
+                </mods:url>
+            </mods:location>
+            <mods:location>
+                <mods:url access="preview">
+                    http://digital.library.wayne.edu/item/wayne:StudentLife36797/thumbnail
+                </mods:url>
+            </mods:location>
+            <mods:relatedItem type="host">
+                <mods:titleInfo>
+                    <mods:title>Wayne State University Student Life</mods:title>
+                </mods:titleInfo>
+            </mods:relatedItem>
+            <mods:note>
+                To schedule an appointment to view the original image, order high resolution copies, or seek permission to use an image, contact the Walter P. Reuther Library AudioVisual Department at reutherreference@wayne.edu.
+            </mods:note>
+            <mods:note>
+                Walter P. Reuther Library, Archives of Labor and Urban Affairs, Wayne State University
+            </mods:note>
+            <mods:recordInfo>
+                <mods:recordContentSource xmlns:mets="http://www.loc.gov/METS/" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:xlink="http://www.w3.org/1999/xlink">Wayne State University. Libraries</mods:recordContentSource>
+                <mods:recordContentSource xmlns:mets="http://www.loc.gov/METS/" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:xlink="http://www.w3.org/1999/xlink">Walter P. Reuther Library</mods:recordContentSource>
+            </mods:recordInfo>
+            <mods:note>
+                This metadata was created by Wayne State University Library system based on original description by the Walter P. Reuther Library
+            </mods:note>
+            <mods:accessCondition type="use and reproduction">Copyright Wayne State University</mods:accessCondition>
+            <mods:name type="corporate">
+                <mods:namePart>Wayne State University</mods:namePart>
+                <mods:role>
+                    <mods:roleTerm authority="marcrelator">Creator</mods:roleTerm>
+                </mods:role>
+            </mods:name>
+        </mods:mods>
+    </metadata>
+    <about>
+        <oaiProvenance:provenance xmlns:oaiProvenance="http://www.openarchives.org/OAI/2.0/provenance" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/provenance http://www.openarchives.org/OAI/2.0/provenance.xsd">
+            <oaiProvenance:originDescription harvestDate="2019-01-11" altered="true">
+                <oaiProvenance:baseURL>http://combine.michiganservicehub.org/combine/oai</oaiProvenance:baseURL>
+                <oaiProvenance:identifier>
+                    oai:digital.library.wayne.edu:wsudor_dpla:oai:digital.library.wayne.edu:wayne:StudentLife36797
+                </oaiProvenance:identifier>
+                <oaiProvenance:datestamp>2019-01-11</oaiProvenance:datestamp>
+                <oaiProvenance:metadataNamespace>http://www.loc.gov/mods/v3</oaiProvenance:metadataNamespace>
+            </oaiProvenance:originDescription>
+        </oaiProvenance:provenance>
+    </about>
+</record>

@@ -47,6 +47,16 @@ class EsdnProfile extends XmlProfile {
 }
 
 /**
+  * Sunshine State Digital Network
+  */
+class FlProfile extends JsonProfile {
+  type Mapping = FlMapping
+
+  override def getHarvester = classOf[FlFileHarvester]
+  override def getMapping = new FlMapping
+}
+
+/**
   * J. Paul Getty Trust
   */
 class GettyProfile extends XmlProfile {
@@ -60,10 +70,20 @@ class GettyProfile extends XmlProfile {
   * Digital Library of Georgia
   */
 class DlgProfile extends JsonProfile {
-  type Mapping = GettyMapping
+  type Mapping = CdlMapping // FIXME placeholder only
 
   override def getHarvester = classOf[DlgHarvester]
-  override def getMapping = new CdlMapping // FIXME
+  override def getMapping = new CdlMapping // FIXME placeholder only
+}
+
+/**
+  * Illinois Digital Heritage Hub
+  */
+class IlProfile extends XmlProfile {
+  type Mapping = IllinoisMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new IllinoisMapping
 }
 
 /**
@@ -94,6 +114,16 @@ class MdlProfile extends JsonProfile {
 
   override def getHarvester: Class[_ <: Harvester] = classOf[MdlHarvester]
   override def getMapping = new MdlMapping
+}
+
+/**
+  * Michigan Service Hub
+  */
+class MiProfile extends XmlProfile {
+  type Mapping = MichiganMapping
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[OaiHarvester]
+  override def getMapping = new MichiganMapping
 }
 
 /**
@@ -185,6 +215,16 @@ class SdProfile extends JsonProfile {
 
   override def getHarvester = classOf[MdlHarvester]
   override def getMapping = new SdMapping
+}
+
+/**
+  * Tennessee Digital Library
+  */
+class TnProfile extends XmlProfile {
+  type Mapping = TnMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new TnMapping
 }
 
 /**

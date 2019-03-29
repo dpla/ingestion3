@@ -1,5 +1,4 @@
-<oai_dc:dc xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd" xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/">
-    <dc:identifier>http://archive.org/details/hhfbc-c7</dc:identifier>
+<record xmlns:dpla="http://www.europeana.eu/schemas/edm/" xmlns:edm="http://www.europeana.eu/schemas/edm/" xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">    <dc:identifier>http://archive.org/details/hhfbc-c7</dc:identifier>
     <dc:identifier>RcXII_19_1921</dc:identifier>
     <dc:creator>Flanders, Helen Hartness, 1890-1972</dc:creator>
     <dc:contributor>Wilson, Douglas B.;</dc:contributor>
@@ -19,5 +18,10 @@
     <dc:type>Text</dc:type>
     <dc:coverage>Shrewsbury (Vt.)</dc:coverage>
     <dc:relation>Original from the Rodney Homeister Peterson Photographs.</dc:relation>
-    <dc:rights>For questions or information about the rights for this image, please contact Special Collections &amp; Archives, Middlebury College at specialcollections@middlebury.edu</dc:rights>
-</oai_dc:dc>
+    <dc:rights>Free text rights statement</dc:rights>
+    <edm:rights>http://rightsstatements.org/vocab/CNE/1.0/</edm:rights>
+    <edm:provider>Green Mountain Digital Archive (GMDA)</edm:provider>
+    <edm:dataProvider url="https://archive.org/details/middleburycollege">Middlebury College</edm:dataProvider>
+    <edm:isShownAt>http://archive.org/details/150SNV</edm:isShownAt>
+    <edm:preview>http://archive.org/download/150SNV/__ia_thumb.jpg</edm:preview>
+</record>

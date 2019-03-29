@@ -1,0 +1,70 @@
+{
+  "@context": "http://api.dp.la/items/context",
+  "aggregatedCHO": "#sourceResource",
+  "dataProvider": "Florida State University Libraries",
+  "intermediateProvider": "Intermediate Provider",
+  "isShownAt": "http://purl.flvc.org/fsu/fd/FSUHPUA_2014028_193",
+  "preview": "http://fsu.digital.flvc.org/islandora/object/fsu:115737/datastream/TN/view",
+  "provider": {
+    "@id": "UNDETERMINED",
+    "name": "Sunshine State Digital Network"
+  },
+  "sourceResource": {
+    "creator": {
+      "name": "creator 1"
+    },
+    "contributor": {
+      "name": "contributor 1"
+    },
+    "date": {
+      "begin": "2009-03-31",
+      "displayDate": "2009-03-31",
+      "end": "2009-03-31"
+    },
+    "description": [
+      "Supporting Act: HOTTUB"
+    ],
+    "extent": [
+      "11 x 17 in."
+    ],
+    "format": ["format"],
+    "genre": [
+      {
+        "name": "Posters"
+      }
+    ],
+    "identifier": "http://purl.flvc.org/fsu/fd/FSUHPUA_2014028_193",
+    "language": [
+      {
+        "iso_639_3": null,
+        "name": "English"
+      }
+    ],
+    "rights": [
+      {
+        "text": "Use of this item is provided for non-commercial, personal, educational, and research use only. For information about the copyright and reproduction rights for this item, please contact Heritage Protocol & University Archives, Florida State University Libraries, Tallahassee, Florida.",
+        "@id": "http://rightstatement.org/1"
+      }
+    ],
+    "spatial": [
+      {
+        "name": "Florida"
+      },
+      {
+        "name": "Tallahassee"
+      }
+    ],
+    "subject": [
+      {
+        "name": "Florida State University"
+      },
+      {
+        "name": "Club Downunder (Tallahassee, Fla.)"
+      }
+    ],
+    "title": [
+      "The Ting Tings"
+    ],
+    "type": "image"
+  }
+}

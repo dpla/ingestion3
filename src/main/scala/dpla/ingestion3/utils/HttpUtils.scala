@@ -13,12 +13,13 @@ import scala.util.{Failure, Success, Try}
   */
 object HttpUtils {
 
-  protected lazy val timeout = 5 // TODO load from config?
-  protected lazy val retryMax = 5
-  protected lazy val backoffMax = 500
+  protected lazy val timeout = 120 // TODO load from config?
+  protected lazy val retryMax = 10
+  protected lazy val backoffMax = 1000
 
   protected lazy val httpClient: OkHttpClient = new OkHttpClient.Builder()
     .connectTimeout(timeout, TimeUnit.SECONDS)
+    .readTimeout(timeout, TimeUnit.SECONDS)
     .retryOnConnectionFailure(true)
     .followRedirects(true)
     .build()

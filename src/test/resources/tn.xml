@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mods:record xmlns:mods="http://www.openarchives.org/OAI/2.0/">
+    <mods:header>
+        <mods:identifier>oai:michigan:ochr:oai:digital.library.wayne.edu:ochr:oai:demo.ptfs.com:library10_lib/87490</mods:identifier>
+        <mods:datestamp>2019-01-14</mods:datestamp>
+        <mods:setSpec>ochr</mods:setSpec>
+    </mods:header>
+    <mods:metadata>
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/">
+            <mods:abstract>Description</mods:abstract>
+            <mods:titleInfo>
+                <mods:title type="alternative">alt title 1</mods:title>
+            </mods:titleInfo>
+            <mods:titleInfo>
+                <mods:title>Title</mods:title>
+            </mods:titleInfo>
+            <mods:relatedItem displayLabel="Project">
+                <mods:titleInfo>
+                    <mods:title>project title</mods:title>
+                </mods:titleInfo>
+                <mods:abstract>project description</mods:abstract>
+            </mods:relatedItem>
+            <mods:relatedItem displayLabel="collection">
+                <mods:titleInfo>
+                    <mods:title>collection title</mods:title>
+                </mods:titleInfo>
+            </mods:relatedItem>
+            <mods:name>
+                <mods:namePart>Boston Cooking School (Boston, Mass.)</mods:namePart>
+                <mods:role>
+                    <mods:roleTerm>contributor</mods:roleTerm>
+                </mods:role>
+            </mods:name>
+            <mods:name>
+                <mods:namePart>City of Lansing</mods:namePart>
+                <mods:role>
+                    <mods:roleTerm>Creator</mods:roleTerm>
+                </mods:role>
+            </mods:name>
+            <mods:name>
+                <mods:namePart>City Planning Division Ingells, Norris</mods:namePart>
+                <mods:role>
+                    <mods:roleTerm>Creator</mods:roleTerm>
+                </mods:role>
+            </mods:name>
+            <mods:language>
+                <mods:languageTerm type="code" authority="iso639-2b">eng</mods:languageTerm>
+            </mods:language>
+            <mods:subject>
+                <mods:geographic>geographic 1</mods:geographic>
+                <mods:cartographics>
+                    <mods:coordinates>lat/long 1</mods:coordinates>
+                </mods:cartographics>
+            </mods:subject>
+            <mods:titleInfo>
+                <mods:title>County Manufacturing Statistics for Maury County</mods:title>
+            </mods:titleInfo>
+            <mods:identifier>33783</mods:identifier>
+            <mods:originInfo>
+                <mods:dateCreated encoding="edtf" keyDate="yes">1877</mods:dateCreated>
+                <mods:publisher>Publisher</mods:publisher>
+            </mods:originInfo>
+            <mods:physicalDescription>
+                <mods:extent>Extent</mods:extent>
+                <mods:form>Format</mods:form>
+                <mods:note>TEXT</mods:note>
+                <mods:internetMediaType>image/tiff</mods:internetMediaType>
+            </mods:physicalDescription>
+            <mods:note displayLabel="Intermediate Provider">Intermediate Provider</mods:note>
+            <mods:location>
+                <mods:url usage="primary" access="object in context">http://cdm15138.contentdm.oclc.org/cdm/ref/collection/agricult/id/62</mods:url>
+                <mods:url access="preview">http://cdm15138.contentdm.oclc.org/utils/getthumbnail/collection/agricult/id/62</mods:url>
+                <mods:url access="raw object">http://cdm15138.contentdm.oclc.org/utils/getthumbnail/collection/agricult/id/62</mods:url>
+                <mods:physicalLocation>Tennessee State Library and Archives</mods:physicalLocation>
+            </mods:location>
+            <mods:subject authority="lcsh" valueURI="http://id.loc.gov/authorities/subjects/sh85002415">
+                <mods:topic>Agriculture</mods:topic>
+            </mods:subject>
+            <mods:subject>
+                <mods:topic>Killebrew, J. B. (Joseph Buckner), 1831-1906</mods:topic>
+            </mods:subject>
+            <mods:subject>
+                <mods:topic>Maury County (Tenn.)</mods:topic>
+            </mods:subject>
+            <mods:subject>
+                <mods:temporal>Temporal</mods:temporal>
+            </mods:subject>
+            <mods:accessCondition type="local rights statement">Rights statement.</mods:accessCondition>
+            <mods:accessCondition type="use and reproduction" xlink:href="http://rightsstatements.org/vocab/InC-EDU/1.0/">Rights statement.</mods:accessCondition>
+            <mods:subject>
+                <mods:geographic>Maury County (Tenn.)</mods:geographic>
+            </mods:subject>
+            <mods:typeOfResource>text</mods:typeOfResource>
+            <mods:typeOfResource>still image</mods:typeOfResource>
+            <mods:relatedItem>
+                <mods:identifier>RG 40</mods:identifier>
+            </mods:relatedItem>
+            <mods:relatedItem>
+                <mods:identifier>RG 40</mods:identifier>
+            </mods:relatedItem>
+            <mods:relatedItem>
+                <title>
+                    <titlePart>Relation title</titlePart>
+                </title>
+                <location>
+                    <url>Relation url</url>
+                </location>
+            </mods:relatedItem>
+
+            <mods:relatedItem type="isReferencedBy">
+                <title>
+                    <titlePart>isReferencedBy title</titlePart>
+                </title>
+                <location>
+                    <url>isReferencedBy url</url>
+                </location>
+            </mods:relatedItem>
+
+            <mods:relatedItem type="references">
+                <title>
+                    <titlePart>replaces title</titlePart>
+                </title>
+                <location>
+                    <url>replaces url</url>
+                </location>
+            </mods:relatedItem>
+
+
+            <mods:recordInfo>
+                <mods:recordContentSource>Tennessee State Library and Archives</mods:recordContentSource>
+                <mods:recordChangeDate>2019-03-27-04:00</mods:recordChangeDate>
+                <mods:languageOfCataloging>
+                    <mods:languageTerm type="code" authority="iso639-2b">eng</mods:languageTerm>
+                </mods:languageOfCataloging>
+                <mods:recordOrigin>Record has been transformed into MODS 3.5 from a qualified Dublin Core record by the Digital Library of Tennessee, a service hub of the Digital Public Library of America, using a stylesheet available at https://github.com/utkdigitalinitiatives/DLTN. Metadata originally created in a locally modified version of qualified Dublin Core using ContentDM (data dictionary available: https://wiki.lib.utk.edu/display/DPLA.)</mods:recordOrigin>
+            </mods:recordInfo>
+        </mods:mods>
+    </mods:metadata>
+    <mods:about>
+        <oaiProvenance:provenance xmlns:oaiProvenance="http://www.openarchives.org/OAI/2.0/provenance" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/provenance http://www.openarchives.org/OAI/2.0/provenance.xsd">
+            <oaiProvenance:originDescription harvestDate="2019-01-14" altered="true">
+                <oaiProvenance:baseURL>http://combine.michiganservicehub.org/combine/oai</oaiProvenance:baseURL>
+                <oaiProvenance:identifier>oai:digital.library.wayne.edu:ochr:oai:demo.ptfs.com:library10_lib/87490</oaiProvenance:identifier>
+                <oaiProvenance:datestamp>2019-01-14</oaiProvenance:datestamp>
+                <oaiProvenance:metadataNamespace>http://www.loc.gov/mods/v3</oaiProvenance:metadataNamespace>
+            </oaiProvenance:originDescription>
+        </oaiProvenance:provenance>
+    </mods:about>
+</mods:record>
