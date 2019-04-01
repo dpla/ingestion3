@@ -232,10 +232,10 @@ class TnProfile extends XmlProfile {
   * Smithsonian Institution
   */
 class SiProfile extends XmlProfile {
-  type Mapping = NaraMapping // FIXME placholder
+  type Mapping = SiMapping
 
   override def getHarvester = classOf[SiFileHarvester]
-  override def getMapping = new NaraMapping // FIXME placeholder
+  override def getMapping = new SiMapping
 }
 
 /**

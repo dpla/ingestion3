@@ -132,7 +132,7 @@ class SiFileHarvester(spark: SparkSession,
       }
       IOUtils.closeQuietly(inputStream)
     })
-    
+
     // flush the avroWriter
     flush()
 
