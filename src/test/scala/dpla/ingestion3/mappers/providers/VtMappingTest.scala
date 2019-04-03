@@ -46,7 +46,7 @@ class VtMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.description(xml) == Seq("Box 1, Cylinder 7"))
 
   it should "extract the correct format" in {
-    val expected = Seq("Archive BitTorrent", "JPEG Thumb", "Metadata", "Spectrogram")
+    val expected = Seq("Spectrogram")
     assert(extractor.format(xml) === expected)
   }
 
