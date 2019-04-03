@@ -28,7 +28,7 @@ class VtMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct contributors" in {
-    val expected = Seq("Wilson, Douglas B.;").map(nameOnlyAgent)
+    val expected = Seq("Wilson, Douglas B.").map(nameOnlyAgent)
     assert(extractor.contributor(xml) == expected)
   }
 
