@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doc>
+    <descriptiveNonRepeating>
+        <title_sort>DASHIKI WITH HEART SHAPED PATTERNS</title_sort>
+        <title label="Title">Dashiki with heart shaped patterns</title>
+        <title label="Object name">Object name</title>
+        <online_media mediaCount="3">
+            <media idsId="ACM-acmobj-199100760102-r2" thumbnail="http://ids.si.edu/ids/deliveryService?id=ACM-acmobj-199100760102-r2" type="Images">http://ids.si.edu/ids/deliveryService?id=ACM-acmobj-199100760102-r2</media>
+            <media idsId="ACM-acmobj-199100760102-r1-000002" thumbnail="http://ids.si.edu/ids/deliveryService?id=ACM-acmobj-199100760102-r1-000002" type="Images">http://ids.si.edu/ids/deliveryService?id=ACM-acmobj-199100760102-r1-000002</media>
+            <media idsId="ACM-acmobj-199100760102-r3" thumbnail="http://ids.si.edu/ids/deliveryService?id=ACM-acmobj-199100760102-r3" type="Images">http://ids.si.edu/ids/deliveryService?id=ACM-acmobj-199100760102-r3</media>
+        </online_media>
+        <data_source>Anacostia Community Museum</data_source>
+        <record_ID>acm_1991.0076.0102</record_ID>
+        <unit_code>ACM</unit_code>
+    </descriptiveNonRepeating>
+    <freetext>
+        <dataSource label="Data Source">Anacostia Community Museum</dataSource>
+        <creditLine label="Cite As">Ethel Lois Payne Collection, Anacostia Community Museum, Smithsonian Institution, Gift of Avis R. Johnson.</creditLine>
+        <creditLine label="credit line">credit line rights statement</creditLine>
+        <notes>Note</notes>
+        <physicalDescription label="Medium">cloth</physicalDescription>
+        <setName label="See more items in">Anacostia Community Museum Collection</setName>
+        <objectType label="Type">dashiki</objectType>
+        <identifier label="Accession Number">1991.0076.0102</identifier>
+        <date label="text">19th century</date>
+        <publisher label="publisher">publisher</publisher>
+    </freetext>
+    <indexedStructured>
+        <online_media_type>Images</online_media_type>
+        <language>English language</language>
+        <topic>topic</topic>
+    </indexedStructured>
+</doc>
+
