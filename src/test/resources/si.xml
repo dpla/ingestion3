@@ -19,11 +19,14 @@
         <creditLine label="credit line">credit line rights statement</creditLine>
         <notes>Note</notes>
         <physicalDescription label="Medium">cloth</physicalDescription>
+        <physicalDescription label="dimensions">3x5 feet</physicalDescription>
         <setName label="See more items in">Anacostia Community Museum Collection</setName>
         <objectType label="Type">dashiki</objectType>
         <identifier label="Accession Number">1991.0076.0102</identifier>
         <date label="text">19th century</date>
         <publisher label="publisher">publisher</publisher>
+        <name label="contributor">Contributor</name>
+        <name label="Maker">Creator</name>
     </freetext>
     <indexedStructured>
         <online_media_type>Images</online_media_type>

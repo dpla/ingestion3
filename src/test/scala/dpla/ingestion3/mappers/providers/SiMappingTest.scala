@@ -20,9 +20,29 @@ class SiMappingTest extends FlatSpec with BeforeAndAfter {
   it should " use the provider shortname in minting IDs " in
     assert(extractor.useProviderName())
 
+  it should "extract the correct contributor" in {
+    val expected = Seq("Contributor").map(nameOnlyAgent)
+    assert(extractor.contributor(xml) === expected)
+  }
+
+  it should "extract the correct creator" in {
+    val expected = Seq("Creator").map(nameOnlyAgent)
+    assert(extractor.creator(xml) === expected)
+  }
+
   it should "extract the correct description" in {
     val expected = Seq("Note")
     assert(extractor.description(xml) === expected)
+  }
+
+  it should "extract the correct extent" in {
+    val expected = Seq("3x5 feet")
+    assert(extractor.extent(xml) === expected)
+  }
+
+  it should "extract the correct format" in {
+    val expected = Seq("cloth")
+    assert(extractor.format(xml) === expected)
   }
 
   it should "extract the correct identifier" in {
@@ -79,7 +99,7 @@ class SiMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct types" in {
-    val expected = Seq("dashiki", "cloth")
+    val expected = Seq("dashiki", "cloth", "3x5 feet") // these will get cleaned up by type enrichment
     assert(extractor.`type`(xml) === expected)
   }
 }

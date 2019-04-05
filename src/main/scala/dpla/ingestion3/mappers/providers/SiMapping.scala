@@ -1,5 +1,6 @@
 package dpla.ingestion3.mappers.providers
 
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
@@ -51,20 +52,56 @@ class SiMapping extends XmlMapping with XmlExtractor {
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
 
   // SourceResource
-  override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] = ???
+  override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
+    extractStrings(data \ "freetext" \ "setName").map(nameOnlyCollection)
 
-  override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] = ???
+  override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
+    (data \ "freetext" \ "name")
+      .filter(node => filterAttribute(node, "label", "contributor"))
+      .flatMap(extractStrings)
+      .map(nameOnlyAgent)
 
-  override def creator(data: Document[NodeSeq]): Seq[EdmAgent] = ???
+  override def creator(data: Document[NodeSeq]): Seq[EdmAgent] = {
+//    val creatorAttr = Seq("Architect", "Artist", "Artists/Makers", "Attributed to", "Author", "Cabinet Maker",
+//      "Ceramist", "Circle of", "Co-Designer", "Creator", "Decorator", "Designer", "Draftsman", "Editor", "Embroiderer",
+//      "Engraver", "Etcher", "Executor", "Follower of", "Graphic Designer", "Instrumentiste", "Inventor",
+//      "Landscape Architect", "Landscape Designer", "Maker", "Model Maker/maker", "Modeler", "Painter", "Photographer",
+//      "Possible attribution", "Possibly", "Possibly by", "Print Maker", "Printmaker", "Probably", "School of", "Sculptor",
+//      "Studio of", "Workshop of", "Weaver", "Writer", "animator", "architect", "artist", "artist.", "artist?",
+//      "artist attribution", "author", "author.", "author?", "authors?", "caricaturist", "cinematographer", "composer",
+//      "composer, lyricist", "composer; lyrcist", "composer; lyricist", "composer; performer", "composer; recording artist",
+//      "composer?", "creator", "creators", "designer", "developer", "director", "editor", "engraver", "ethnographer", "fabricator",
+//      "filmmaker", "filmmaker, anthropologist", "garden designer", "graphic artist", "illustrator", "inventor",
+//      "landscape Architect", "landscape architect", "landscape architect, photographer", "landscape designer",
+//      "lantern slide maker", "lithographer", "lyicist", "lyicrist", "lyricist", "lyricist; composer", "maker", "maker (possibly)",
+//      "maker or owner", "maker; inventor", "original artist", "performer", "performer; composer; lyricist",
+//      "performer; recording artist", "performers", "performing artist; recipient", "performing artist; user", "photgrapher",
+//      "photograher", "photographer", "photographer and copyright claimant", "photographer and/or colorist", "photographer or collector",
+//      "photographer?", "photographerl", "photographerphotographer", "photographers", "photographers?", "photographer}",
+//      "photographic firm", "photogrpaher", "playwright", "poet", "possible maker", "printer", "printmaker", "producer",
+//      "recordig artist", "recording artist", "recording artist; composer", "recordist", "recordng artist", "sculptor",
+//      "shipbuilder", "shipbuilders", "shipping firm", "weaver", "weaver or owner")
+    (data \ "freetext" \ "name")
+      .filterNot(node => filterAttribute(node, "label", "contributor"))
+      .flatMap(extractStrings)
+      .map(nameOnlyAgent) // done but might need to add this ridiculous set of label={value} filters to the mapping
+  }
 
-  override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] = ???
+  override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] = extractDate(data)
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "freetext" \ "notes") // done
 
-  override def extent(data: Document[NodeSeq]): ZeroToMany[String] = ???
+  override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
+    (data \ "freetext" \ "physicalDescription")
+      .filter(node => filterAttribute(node, "label", "Dimensions"))
+      .flatMap(extractStrings)
 
-  override def format(data: Document[NodeSeq]): ZeroToMany[String] = ???
+  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
+    (data \ "freetext" \ "physicalDescription")
+      .filter(node => {
+        filterAttribute(node, "label", "Physical description") || filterAttribute(node, "label", "Medium")
+      }).flatMap(extractStrings)
 
   override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
     for {
@@ -79,15 +116,14 @@ class SiMapping extends XmlMapping with XmlExtractor {
       .map(_.replaceAll(" language", "")) // remove ' language' from term
       .map(nameOnlyConcept) // done
 
-  override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = ???
+//  override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = ???
+// FIXME To implement
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     (data \ "freetext" \ "publisher")
       .filter(node => filterAttribute(node, "label", "publisher"))
       .flatMap(extractStrings)
       .map(nameOnlyAgent) // done
-
-  override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] = ???
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] = {
     val mediaRights = (data \ "descriptiveNonRepeating" \ "online_media" \ "media")
@@ -117,14 +153,12 @@ class SiMapping extends XmlMapping with XmlExtractor {
           .flatMap(node => getByAttribute(node, "label", topic))
           .flatMap(extractStrings(_))
       })
-    ).map(nameOnlyConcept)
+    ).flatMap(_.splitAtDelimiter("\\"))
+     .flatMap(_.splitAtDelimiter(":"))
+     .map(nameOnlyConcept)
   } // done
 
-  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
-    (data \ "freetext" \ "date")
-      .filter(node => node.attributes.get("label").nonEmpty)
-      .flatMap(extractStrings(_))
-      .map(stringOnlyTimeSpan) // done
+  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = extractDate(data)
 
   override def title(data: Document[NodeSeq]): AtLeastOne[String] =
     (data \ "descriptiveNonRepeating" \ "title")
@@ -135,23 +169,23 @@ class SiMapping extends XmlMapping with XmlExtractor {
       .flatMap(node => extractStrings(node)) // done
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
-  // freetext \ objectType where @label='Type'
-  // freetext \ physicalDescription
-  // indexedStructure \ object_type
-  {
     (data \ "freetext" \ "objectType")
       .flatMap(node => getByAttribute(node, "label", "Type"))
       .flatMap(extractStrings(_)) ++
-    extractStrings(data \ "freetext" \ "physicalDescription") ++
-    extractStrings(data \ "indexedStructure" \ "object_type")
-  }
-
+      extractStrings(data \ "freetext" \ "physicalDescription") ++
+      extractStrings(data \ "indexedStructure" \ "object_type") // done
 
   // Helper methods
   private def agent = EdmAgent(
     name = Some("Smithsonian Institution"),
     uri = Some(URI("http://dp.la/api/contributor/smithsonian"))
   ) // done
+
+  private def extractDate(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
+    (data \ "freetext" \ "date")
+      .filter(node => node.attributes.get("label").nonEmpty)
+      .flatMap(extractStrings(_))
+      .map(stringOnlyTimeSpan) // done
 
   private def extractPreview(data: Document[NodeSeq]): Seq[EdmWebResource] =
     (data \ "descriptiveNonRepeating" \ "online_media" \ "media")
