@@ -116,8 +116,79 @@ class SiMapping extends XmlMapping with XmlExtractor {
       .map(_.replaceAll(" language", "")) // remove ' language' from term
       .map(nameOnlyConcept) // done
 
-//  override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = ???
-// FIXME To implement
+  private def placeExtractor(node: NodeSeq, level: String, `type`: String): String = {
+    getByAttribute(node \ level, "type", `type`)
+      .flatMap(extractStrings(_))
+      .mkString(", ")
+  }
+
+  override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = {
+    // indexedStructured \ geoLocation > get dict values from this prop
+
+    //  <geoLocation><L2 type=[Country | Nation]></geoLocation> MAPS TO DplaPlace.country
+    //  <geoLocation><L3 type=[State | Province]></geoLocation> MAPS TO DplaPlace.state
+    //  <geoLocation><L4 type=[County | Island]></geoLocation>  MAPS TO DplaPlace.county
+    //  <geoLocation><Other></geoLocation>                      MAPS TO DplaPlace.region
+    //  <geoLocation><L5 type=[City | Town]></geoLocation >     MAPS TO DplaPlace.city
+
+    // <geoLocation>
+    //  <points label=[text]>
+    //    <point>
+    //      <latitude type=[decimal OR degrees]>
+    //      <longitude type=[decimal OR degrees]>
+    //    </point>
+    //  </points>
+    // </geoLocation>
+    //
+    // Join lat and long values with a comma                    MAPS TO DplaPlace.coordinates
+
+    // if those do not exist then pull values from freetext \ place
+
+    val geoLoc = (data \ "indexedStructured" \ "geoLocation").map(node => {
+      val country = (getByAttribute(node \ "L2", "type", "Country") ++ getByAttribute(node \ "L2", "type", "Nation"))
+        .flatMap(extractStrings(_))
+        .mkString(", ")
+
+      val state = (getByAttribute(node \ "L3", "type", "State") ++ getByAttribute(node \ "L3", "type", "Province"))
+        .flatMap(extractStrings(_))
+        .mkString(", ")
+
+      val county = (getByAttribute(node \ "L4", "type", "County") ++ getByAttribute(node \ "L4", "type", "Island"))
+        .flatMap(extractStrings(_))
+        .mkString(", ")
+
+      val city = (getByAttribute(node \ "L5", "type", "City") ++ getByAttribute(node \ "L5", "type", "Town"))
+        .flatMap(extractStrings(_))
+        .mkString(", ")
+
+      val region = extractStrings(node \ "Other").mkString(", ")
+
+      val lat = (node \ "points" \ "point" \ "latitude")
+        .filter(node => filterAttribute(node, "type", "decimal") | filterAttribute(node, "type", "degrees"))
+        .flatMap(extractStrings(_))
+      val long = (node \ "points" \ "point" \ "longitude")
+        .filter(node => filterAttribute(node, "type", "decimal") | filterAttribute(node, "type", "degrees"))
+        .flatMap(extractStrings(_))
+      val points = lat.zipAll(long, None, None).mkString(", ")
+
+      DplaPlace(
+        country = Some(country),
+        state = Some(state),
+        county = Some(county),
+        region = Some(region),
+        city = Some(city),
+        coordinates = Some(points)
+      )
+    })
+
+    // return
+    if(geoLoc.isEmpty)
+      (data \ "freetext" \ "place")
+        .flatMap(extractStrings)
+        .map(nameOnlyPlace)
+    else
+      geoLoc
+  }
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     (data \ "freetext" \ "publisher")
@@ -153,7 +224,7 @@ class SiMapping extends XmlMapping with XmlExtractor {
           .flatMap(node => getByAttribute(node, "label", topic))
           .flatMap(extractStrings(_))
       })
-    ).flatMap(_.splitAtDelimiter("\\"))
+    ).flatMap(_.splitAtDelimiter("\\\\"))
      .flatMap(_.splitAtDelimiter(":"))
      .map(nameOnlyConcept)
   } // done
