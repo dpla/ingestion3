@@ -64,6 +64,33 @@ class SiMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.language(xml) === expected)
   }
 
+  it should "extract the correct place when no geoLocation" in {
+    val xml =
+      <doc>
+        <freetext>
+          <place>Place</place>
+        </freetext>
+      </doc>
+    val expected = Seq("Place").map(nameOnlyPlace)
+    assert(extractor.place(Document(xml)) === expected)
+  }
+
+  it should "extract the correct place when geoLocation present" in {
+    val xml =
+      <doc>
+        <indexedStructured>
+          <geoLocation>
+            <L2 type="Country">Country</L2>
+          </geoLocation>
+        </indexedStructured>
+        <freetext>
+          <place>Place</place>
+        </freetext>
+      </doc>
+    val expected = Seq(DplaPlace(country = Some("Country")))
+    assert(extractor.place(Document(xml)) === expected)
+  }
+
   it should "extract the correct preview values" in {
     val expected = Seq(
       "http://ids.si.edu/ids/deliveryService?id=ACM-acmobj-199100760102-r2",
@@ -83,6 +110,20 @@ class SiMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.rights(xml) === expected)
   }
 
+  it should "extract rights from online_media" in {
+    val xml =
+      <doc>
+        <descriptiveNonRepeating>
+          <online_media mediaCount="3">
+            <media idsId="" thumbnail="" type="Images" rights="rights attr">http://ids.si.edu/ids/deliveryService?id=ACM-acmobj-199100760102-r2</media>
+            <media idsId="" thumbnail="" type="Images" rights="rights attr 2">http://ids.si.edu/ids/deliveryService?id=ACM-acmobj-199100760102-r2</media>
+          </online_media>
+        </descriptiveNonRepeating>
+      </doc>
+
+    val expected = Seq("rights attr", "rights attr 2")
+    assert(extractor.rights(Document(xml)) === expected)
+  }
   it should "extract the correct subjects" in {
     val expected = Seq("topic").map(nameOnlyConcept)
     assert(extractor.subject(xml) === expected)

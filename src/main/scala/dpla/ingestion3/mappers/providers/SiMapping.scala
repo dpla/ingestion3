@@ -144,24 +144,35 @@ class SiMapping extends XmlMapping with XmlExtractor {
 
     // if those do not exist then pull values from freetext \ place
 
+    def valueToOption(str: String): Option[String] = str match {
+      case "" => None
+      case _ => Some(str)
+    }
+    
     val geoLoc = (data \ "indexedStructured" \ "geoLocation").map(node => {
-      val country = (getByAttribute(node \ "L2", "type", "Country") ++ getByAttribute(node \ "L2", "type", "Nation"))
+
+      val country = (node \ "L2")
+        .flatMap(n => getByAttribute(n, "type", "Country") ++ getByAttribute(n, "type", "Nation"))
         .flatMap(extractStrings(_))
         .mkString(", ")
 
-      val state = (getByAttribute(node \ "L3", "type", "State") ++ getByAttribute(node \ "L3", "type", "Province"))
+      val state = (node \ "L3")
+        .flatMap(n => getByAttribute(n, "type", "State") ++ getByAttribute(n, "type", "Province"))
         .flatMap(extractStrings(_))
         .mkString(", ")
 
-      val county = (getByAttribute(node \ "L4", "type", "County") ++ getByAttribute(node \ "L4", "type", "Island"))
+      val county = (node \ "L4")
+        .flatMap(n => getByAttribute(n, "type", "County") ++ getByAttribute(n, "type", "Island"))
         .flatMap(extractStrings(_))
         .mkString(", ")
 
-      val city = (getByAttribute(node \ "L5", "type", "City") ++ getByAttribute(node \ "L5", "type", "Town"))
+      val city = (node \ "L5")
+        .flatMap(n => getByAttribute(n, "type", "City") ++ getByAttribute(n, "type", "Town"))
         .flatMap(extractStrings(_))
         .mkString(", ")
 
-      val region = extractStrings(node \ "Other").mkString(", ")
+      val region = extractStrings(node \ "Other")
+        .mkString(", ")
 
       val lat = (node \ "points" \ "point" \ "latitude")
         .filter(node => filterAttribute(node, "type", "decimal") | filterAttribute(node, "type", "degrees"))
@@ -172,12 +183,12 @@ class SiMapping extends XmlMapping with XmlExtractor {
       val points = lat.zipAll(long, None, None).mkString(", ")
 
       DplaPlace(
-        country = Some(country),
-        state = Some(state),
-        county = Some(county),
-        region = Some(region),
-        city = Some(city),
-        coordinates = Some(points)
+        country = valueToOption(country),
+        state = valueToOption(state),
+        county = valueToOption(county),
+        region = valueToOption(region),
+        city = valueToOption(city),
+        coordinates = valueToOption(points)
       )
     })
 
@@ -203,7 +214,7 @@ class SiMapping extends XmlMapping with XmlExtractor {
 
     if (mediaRights.isEmpty)
       (data \ "freetext" \ "creditLine")
-        .filter(node => filterAttribute(node, "label", "credit line"))
+        // .filter(node => filterAttribute(node, "label", "credit line"))
         .flatMap(extractStrings(_)) ++
       (data \ "freetext" \ "objectRights")
         .filter(node => filterAttribute(node, "label", "rights"))
