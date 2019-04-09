@@ -214,7 +214,7 @@ class SiMapping extends XmlMapping with XmlExtractor {
 
     if (mediaRights.isEmpty)
       (data \ "freetext" \ "creditLine")
-        // .filter(node => filterAttribute(node, "label", "credit line"))
+         .filter(node => filterAttribute(node, "label", "credit line"))
         .flatMap(extractStrings(_)) ++
       (data \ "freetext" \ "objectRights")
         .filter(node => filterAttribute(node, "label", "rights"))
