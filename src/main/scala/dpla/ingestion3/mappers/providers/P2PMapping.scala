@@ -121,7 +121,9 @@ class P2PMapping extends XmlMapping with XmlExtractor with IngestMessageTemplate
     } yield nameOnlyConcept(subjectText)
 
   override def title(data: Document[NodeSeq]): AtLeastOne[String] =
-    extractStrings(data \ "metadata" \ "mods" \ "titleInfo" \ "title")
+    (data \ "metadata" \ "mods" \ "titleInfo")
+      .filterNot(node => filterAttribute(node, "type", "alternative"))
+      .flatMap(node => extractStrings(node \ "title"))
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "typeOfResource")

@@ -237,13 +237,16 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
     val result = mapping.title(
       metadata(
         <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:titleInfo type="alternative">
+            <mods:title>Alt Title</mods:title>
+          </mods:titleInfo>
           <mods:titleInfo>
             <mods:title>The English Paitent</mods:title>
           </mods:titleInfo>
         </mods:mods>
       )
-    ).headOption.getOrElse("")
-    assert(result === "The English Paitent")
+    )
+    assert(result === Seq("The English Paitent"))
   }
 
   it should "extract alternate title" in {
@@ -253,10 +256,13 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
           <mods:titleInfo type="alternative">
             <mods:title>Alt Title</mods:title>
           </mods:titleInfo>
+          <mods:titleInfo>
+            <mods:title>The English Paitent</mods:title>
+          </mods:titleInfo>
         </mods:mods>
       )
-    ).headOption.getOrElse("")
-    assert(result === "Alt Title")
+    )
+    assert(result === Seq("Alt Title"))
   }
 
   it should "extract type" in {
