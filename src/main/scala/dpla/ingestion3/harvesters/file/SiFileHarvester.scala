@@ -5,19 +5,12 @@ import java.util.zip.GZIPInputStream
 
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.mappers.utils.XmlExtractor
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.util.{Success, Try}
 import scala.xml.{MinimizeMode, Node, Utility, XML}
-
-
-/**
-  * Extracts values from parsed Xml
-  */
-class SIFileExtractor extends XmlExtractor
 
 /**
   * Entry for performing Smithsonian file harvest
@@ -29,8 +22,6 @@ class SiFileHarvester(spark: SparkSession,
   extends FileHarvester(spark, shortName, conf, logger) {
 
   def mimeType: String = "application_xml"
-
-  protected val extractor = new VaFileExtractor()
 
   /**
     * Loads .gz files
