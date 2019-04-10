@@ -65,6 +65,7 @@ object ProviderRegistry {
     "pa" -> Register(profile = new PaProfile),
     "sd" -> Register(profile = new SdProfile),
     "tn" -> Register(profile = new TnProfile),
+    "si" -> Register(profile = new SiProfile),
     "virginias" -> Register(profile = new VirginiasProfile),
     "vt" -> Register(profile = new VtProfile),
     "wisconsin" -> Register(profile = new WiProfile)
