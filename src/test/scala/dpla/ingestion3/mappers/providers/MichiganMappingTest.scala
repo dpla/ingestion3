@@ -165,23 +165,7 @@ class MichiganMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("Oakland County Historical Resources hosts digitized materials.")
     assert(extractor.description(Document(xml)) == expected)
   }
-
-  it should "extract the correct description from physicalDescription/note field" in {
-    val xml =
-      <record>
-        <metadata>
-          <mods>
-            <mods:physicalDescription>
-              <mods:note>jpeg</mods:note>
-            </mods:physicalDescription>
-          </mods>
-        </metadata>
-      </record>
-
-    val expected = Seq("jpeg")
-    assert(extractor.description(Document(xml)) == expected)
-  }
-
+  
   it should "extract the correct extent" in {
     val expected = Seq("1 Postcard (3.5\" x 5.5\")")
     assert(extractor.extent(xml) == expected)
