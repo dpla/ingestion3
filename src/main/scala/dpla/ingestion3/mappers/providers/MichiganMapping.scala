@@ -93,13 +93,10 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
       case _ => Seq()
     }
   }
-
-  // TODO: The mapping for <mods:physicalDescription><mods:note> is in mapping spreadsheet but not ingestion 1.
-  //       Follow-up with hub.
+  
   override def description(data: Document[NodeSeq]): Seq[String] = {
-    // <mods:note> and <mods:abstract> and <mods:physicalDescription> \ <note>
-    extractStrings(data \\ "mods" \ "physicalDescription" \ "note") ++
-      extractStrings(data \\ "mods" \ "abstract") ++
+    // <mods:note> and <mods:abstract>
+    extractStrings(data \\ "mods" \ "abstract") ++
       extractStrings(data \\ "mods" \ "note")
   }
 
