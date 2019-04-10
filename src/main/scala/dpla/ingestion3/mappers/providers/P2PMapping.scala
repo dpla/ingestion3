@@ -73,6 +73,11 @@ class P2PMapping extends XmlMapping with XmlExtractor with IngestMessageTemplate
   override def sidecar(data: Document[NodeSeq]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
 
+  override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
+    (data \ "metadata" \ "mods" \ "titleInfo")
+      .filter(node => filterAttribute(node, "type", "alternative"))
+      .flatMap(node => extractStrings(node \ "title"))
+
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     for {
       name <- data \ "metadata" \ "mods" \ "name"
@@ -120,6 +125,7 @@ class P2PMapping extends XmlMapping with XmlExtractor with IngestMessageTemplate
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "typeOfResource")
+      .flatMap(_.splitAtDelimiter(";"))
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \ "mods" \ "originInfo" \ "publisher")
