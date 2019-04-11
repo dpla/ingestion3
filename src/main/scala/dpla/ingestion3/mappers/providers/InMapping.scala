@@ -1,6 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
+import dpla.ingestion3.enrichments.normalizations.filters.DigitalSurrogateBlockList
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
@@ -29,12 +30,15 @@ class InMapping extends XmlMapping with XmlExtractor
     extractStrings(data \ "metadata" \ "qualifieddc" \ "provenance")
       .map(nameOnlyAgent)
 
-  // TODO: In ingest1, the following are also mapped to edmRights:
-  //   "accessRights" where the value starts with "http"
-  //   Should we replicate this logic here?
-  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
-    extractStrings(data \ "metadata" \ "qualifieddc" \ "rights")
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
+    val rights = extractStrings(data \ "metadata" \ "qualifieddc" \ "rights")
       .map(URI)
+
+    val accessRights = extractStrings(data \ "metadata" \ "qualifieddc" \ "accessRights")
+      .filter(_.startsWith("http")).map(URI)
+
+    rights ++ accessRights
+  }
 
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
     extractString(data \ "metadata" \ "qualifieddc" \ "mediator")
@@ -72,15 +76,16 @@ class InMapping extends XmlMapping with XmlExtractor
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "extent")
 
-  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "metadata" \ "qualifieddc" \ "medium")
+  override def format(data: Document[NodeSeq]): ZeroToMany[String] = {
+    val medium = extractStrings(data \ "metadata" \ "qualifieddc" \ "medium")
       .flatMap(_.splitAtDelimiter(";"))
 
-  // TODO: This is in the crosswalk but not in ingest1. It is also identical to format mapping.  Keep?
-  override def genre(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
-    extractStrings(data \ "metadata" \ "qualifieddc" \ "medium")
+    val qdcType = extractStrings(data \ "metadata" \ "qualifieddc" \ "type")
       .flatMap(_.splitAtDelimiter(";"))
-      .map(nameOnlyConcept)
+
+    (medium ++ qdcType).map(_.applyBlockFilter(DigitalSurrogateBlockList.termList))
+      .filter(_.nonEmpty)
+  }
 
   override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "identifier")
@@ -108,6 +113,7 @@ class InMapping extends XmlMapping with XmlExtractor
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "accessRights")
+      .filterNot(_.startsWith("http"))
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "subject")
@@ -121,11 +127,7 @@ class InMapping extends XmlMapping with XmlExtractor
 
   override def title(data: Document[NodeSeq]): AtLeastOne[String] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "title")
-
-  // TODO: Watch out for this field during QA.
-  //  Ingest1 has the following enrichments that may indicate the need for some logic here:
-  //  "/enrich-type?default=image" ?
-  //  "/enrich-type?send_rejects_to_format=true"
+  
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "type")
       .flatMap(_.splitAtDelimiter(";"))

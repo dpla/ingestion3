@@ -30,6 +30,20 @@ class InMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.edmRights(xml) == expected)
   }
 
+  it should "map accessRight to edmRights if accessRight begins with 'http'" in {
+    val xml =
+      <record>
+        <metadata>
+          <oai_qdc:qualifieddc>
+            <dcterms:accessRights>http://rightsstatements.org/vocab/InC/1.0/</dcterms:accessRights>
+          </oai_qdc:qualifieddc>
+        </metadata>
+      </record>
+
+    val expected = Seq("http://rightsstatements.org/vocab/InC/1.0/").map(URI)
+    assert(expected === extractor.edmRights(Document(xml)))
+  }
+
   it should "extract the correct intermediateProvider" in {
     val expected = Some("IUPUI (Campus). University Library").map(nameOnlyAgent)
     assert(extractor.intermediateProvider(xml) == expected)
@@ -76,9 +90,18 @@ class InMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.format(xml) == expected)
   }
 
-  it should "extract the correct genre" in {
-    val expected = Seq("Compact cassette", "Documents", "Typed text").map(nameOnlyConcept)
-    assert(extractor.genre(xml) == expected)
+  it should "map type to format if type is not a valid DPLA type" in {
+    val xml =
+      <record>
+        <metadata>
+          <oai_qdc:qualifieddc>
+            <dc:type>photograph</dc:type>
+          </oai_qdc:qualifieddc>
+        </metadata>
+      </record>
+
+    val expected = Seq("photograph")
+    assert(expected === extractor.format(Document(xml)))
   }
 
   it should "extract the correct identifier" in {
@@ -99,6 +122,20 @@ class InMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct rights" in {
     val expected = Seq("Manchester College is providing access to these materials for educational and research purposes.")
     assert(extractor.rights(xml) == expected)
+  }
+
+  it should "filter out rights beginning with 'http'" in {
+    val xml =
+      <record>
+        <metadata>
+          <oai_qdc:qualifieddc>
+            <dcterms:accessRights>http://rightsstatements.org/vocab/InC/1.0/</dcterms:accessRights>
+          </oai_qdc:qualifieddc>
+        </metadata>
+      </record>
+
+    val expected = Seq()
+    assert(expected === extractor.rights(Document(xml)))
   }
 
   it should "extract the correct subject" in {
