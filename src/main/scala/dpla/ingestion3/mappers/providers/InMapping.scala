@@ -32,10 +32,13 @@ class InMapping extends XmlMapping with XmlExtractor
 
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
     val rights = extractStrings(data \ "metadata" \ "qualifieddc" \ "rights")
+      .map(_.stripSuffix(";"))
       .map(URI)
 
     val accessRights = extractStrings(data \ "metadata" \ "qualifieddc" \ "accessRights")
-      .filter(_.startsWith("http")).map(URI)
+      .filter(_.startsWith("http"))
+      .map(_.stripSuffix(";"))
+      .map(URI)
 
     rights ++ accessRights
   }

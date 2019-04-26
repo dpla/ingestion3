@@ -44,6 +44,20 @@ class InMappingTest extends FlatSpec with BeforeAndAfter {
     assert(expected === extractor.edmRights(Document(xml)))
   }
 
+  it should "strip semicolons from the end of edmRights" in {
+    val xml =
+      <record>
+        <metadata>
+          <oai_qdc:qualifieddc>
+            <dcterms:accessRights>http://rightsstatements.org/vocab/InC/1.0;</dcterms:accessRights>
+          </oai_qdc:qualifieddc>
+        </metadata>
+      </record>
+
+    val expected = Seq("http://rightsstatements.org/vocab/InC/1.0").map(URI)
+    assert(expected === extractor.edmRights(Document(xml)))
+  }
+
   it should "extract the correct intermediateProvider" in {
     val expected = Some("IUPUI (Campus). University Library").map(nameOnlyAgent)
     assert(extractor.intermediateProvider(xml) == expected)
