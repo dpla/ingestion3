@@ -123,8 +123,10 @@ class EsdnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
       .flatMap(extractStrings)
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
-    extractStrings(data \\ "subject" \\ "topic")
-      .map(nameOnlyConcept)
+    (extractStrings(data \\ "subject" \\ "topic") ++
+        extractStrings(data \\ "subject" \\ "name") ++
+        extractStrings(data \\ "subject" \ "titleInfo" \ "title")
+      ).map(nameOnlyConcept)
 
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
     extractStrings(data \\ "subject" \\ "temporal").map(stringOnlyTimeSpan)
