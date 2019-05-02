@@ -132,6 +132,25 @@ case class EdmTimeSpan(
 case class URI(value: String) {
   def validate: Boolean = Try { new java.net.URI(value) }.isSuccess
 
+  def isValidEdmRightsUri: Boolean = Try {
+    rightsstatementsUris.contains(value)
+                                          }.isSuccess
+
+  val creativeCommonsUris: Seq[String] = Seq()
+
+  val rightsstatementsUris: Seq[String] = Seq(
+    "http://rightsstatements.org/vocab/InC/1.0/",
+    "http://rightsstatements.org/vocab/InC-OW-EU/1.0/",
+    "http://rightsstatements.org/vocab/InC-EDU/1.0/",
+    "http://rightsstatements.org/vocab/InC-NC/1.0/",
+    "http://rightsstatements.org/vocab/InC-RUU/1.0/",
+    "http://rightsstatements.org/vocab/NoC-CR/1.0/",
+    "http://rightsstatements.org/vocab/NoC-NC/1.0/",
+    "http://rightsstatements.org/vocab/NoC-OKLR/1.0/",
+    "http://rightsstatements.org/vocab/NoC-US/1.0/",
+    "http://rightsstatements.org/vocab/CNE/1.0/",
+    "http://rightsstatements.org/vocab/NKC/1.0/")
+
   /**
     * toString is overridden so that when URI values are extracted
     * the type is dropped. Otherwise calling URI("http://abc.com").toString()
