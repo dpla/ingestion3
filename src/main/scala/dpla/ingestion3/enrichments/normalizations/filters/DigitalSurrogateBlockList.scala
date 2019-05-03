@@ -15,6 +15,7 @@ object DigitalSurrogateBlockList extends FilterList {
   override val files: Seq[String] = Seq(
     // TODO This file list should be stored in a config file and not hard coded
     "/formats/dc.csv",
+    "/formats/in.csv",
     "/formats/ohio.csv",
     "/formats/p2p.csv",
     "/formats/iana-imt-types.csv"
