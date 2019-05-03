@@ -1,0 +1,17 @@
+{
+  "namespace": "dpla.avro.v1",
+  "type": "record",
+  "name": "OriginalRecord",
+  "doc": "",
+  "fields": [
+  {"name": "id", "type": "string"},
+  {"name": "ingestDate", "type": "long", "doc": "UNIX timestamp"},
+  {"name": "provider", "type": "string"},
+  {"name": "document", "type": "string"},
+  {"name": "filename", "type": "string"},
+  {"name": "mimetype",
+    "type": {"name": "MimeType",
+      "type": "enum",
+      "symbols": ["application_json", "application_xml", "text_turtle"]}}
+  ]
+}
