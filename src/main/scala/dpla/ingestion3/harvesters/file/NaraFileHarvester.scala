@@ -153,7 +153,7 @@ class NaraFileHarvester(
     genericRecord.put("ingestDate", unixEpoch)
     genericRecord.put("provider", shortName)
     genericRecord.put("document", item.item)
-    genericRecord.put("filename", file) // Used to order records by modification date
+    genericRecord.put("filename", file) // Used to order records by date updated.
     genericRecord.put("mimetype", mimeType)
 
     avroWriter.append(genericRecord)
@@ -196,6 +196,7 @@ class NaraFileHarvester(
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime  / 1000L
     val inFile = new File(conf.harvest.endpoint.getOrElse("in"))
+    val deletes = new File(inFile, "deletes.xml") // FIXME hardcoded
 
     if (inFile.isDirectory)
       for (file: File <- inFile.listFiles(new GzFileFilter).sorted) {
@@ -218,7 +219,24 @@ class NaraFileHarvester(
       .withColumn("rn", row_number.over(w))
       .where($"rn" === 1).drop("rn")
 
-    dfTop
+
+    // process deletes
+
+    val idsToDelete = if (deletes.exists()) {
+      val del = getIdsToDelete(deletes)
+      logger.info(s"Deleting ${del.size} records")
+      del
+    } else {
+      logger.info("No delete.xml file specified. Removing no records for NARA")
+      Seq()
+    }
+
+    dfTop.where(!col("id").isin(idsToDelete:_*))
+  }
+
+  def getIdsToDelete(file: File): Seq[String] = {
+    val xml = XML.loadFile(file)
+    (xml \\ "naId").map(_.text.toString)
   }
 
   override def cleanUp(): Unit = {
