@@ -210,28 +210,24 @@ class NaraFileHarvester(
     avroWriterNara.flush()
 
     // Read harvested data into Spark DataFrame and return.
-    val df = spark.read.avro(naraTmp)
+    val dfAllRecords = spark.read.avro(naraTmp)
 
     import spark.implicits._
     val w = Window.partitionBy($"id").orderBy($"filename".desc)
 
-    val dfTop = df
+    val df = dfAllRecords
       .withColumn("rn", row_number.over(w))
       .where($"rn" === 1).drop("rn")
 
-
     // process deletes
-
-    val idsToDelete = if (deletes.exists()) {
+    if (deletes.exists()) {
       val del = getIdsToDelete(deletes)
-      logger.info(s"Deleting ${del.size} records")
-      del
+      logger.info(s"Found ${del.size} records to delete in deletes.xml")
+      df.where(!col("id").isin(del:_*))
     } else {
       logger.info("No delete.xml file specified. Removing no records for NARA")
-      Seq()
+      df
     }
-
-    dfTop.where(!col("id").isin(idsToDelete:_*))
   }
 
   def getIdsToDelete(file: File): Seq[String] = {
