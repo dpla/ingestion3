@@ -137,13 +137,13 @@ class MiProfile extends XmlProfile {
 }
 
 /**
-  * Missouri
+  * Missouri Hub
   */
-class MoProfile extends JsonProfile {
-  type Mapping = MoMapping
+class MissouriProfile extends JsonProfile {
+  type Mapping = MissouriMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[MoFileHarvester]
-  override def getMapping = new MoMapping
+  override def getHarvester: Class[_ <: Harvester] = classOf[MissouriFileHarvester]
+  override def getMapping = new MissouriMapping
 }
 
 /**

@@ -11,7 +11,7 @@ import org.json4s.JsonDSL._
 import org.json4s._
 
 
-class MoMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
+class MissouriMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
 
   val formatBlockList: Set[String] = ExtentIdentificationList.termList
 
