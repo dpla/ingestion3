@@ -8,20 +8,20 @@ import org.json4s.JsonAST.JValue
 import org.json4s.jackson.JsonMethods._
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 
-class MoMappingTest extends FlatSpec with BeforeAndAfter {
+class MissouriMappingTest extends FlatSpec with BeforeAndAfter {
 
-  val shortName = "mo"
+  val shortName = "missouri"
   val jsonString: String = new FlatFileIO().readFileAsString("/mo.json")
   val json: Document[JValue] = Document(parse(jsonString))
-  val extractor = new MoMapping
+  val extractor = new MissouriMapping
 
 
   it should "use the provider short name when minting DPLA ids" in {
-    assert(extractor.useProviderName === true)
+    assert(extractor.useProviderName === false)
   }
 
   it should "return the correct provider name" in {
-    assert(extractor.getProviderName === "mo")
+    assert(extractor.getProviderName === "missouri")
   }
 
   it should "extract the correct original ID" in {
@@ -37,7 +37,7 @@ class MoMappingTest extends FlatSpec with BeforeAndAfter {
 
   // dplaUri
   it should "create the correct DPLA URI" in {
-    val expected = Some(URI("http://dp.la/api/items/8c630431c601bd29753c93d3d8eea6cf"))
+    val expected = Some(URI("http://dp.la/api/items/5f29387462a482140e202b2242a94c74"))
     assert(extractor.dplaUri(json) === expected)
   }
 
