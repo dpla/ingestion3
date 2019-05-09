@@ -22,7 +22,7 @@ trait IngestMessageTemplates {
 
   def invalidEdmRightsValue(id: String, field: String, value: String, msg: Option[String] = None): IngestMessage =
     IngestMessage(
-      message = s"Not a valid Creative Commons or rightstatements.org URI ${msg.getOrElse("No URI")}".trim,
+      message = s"Domain does not match creativecommons.org or rightstatements.org ${msg.getOrElse("No URI")}".trim,
       level = IngestLogLevel.warn,
       id = id,
       field = field,

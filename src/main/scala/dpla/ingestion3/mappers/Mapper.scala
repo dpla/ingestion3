@@ -58,9 +58,9 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
     // Check for more than one dataProvider mapped
     if (values.size > 1) { collector.add(moreThanOneValueInfo(providerId, "edmRights", values.mkString(" | "))) }
     values.foreach(value => {
-//      if (!value.validate)
-//        collector.add(mintUriError(providerId, "edmRights", value.toString))
-      if (!value.isValidEdmRightsUri)
+      if (!value.validate)
+        collector.add(mintUriError(providerId, "edmRights", value.toString))
+      else if (!value.isValidEdmRightsUri)
         collector.add(invalidEdmRightsValue(providerId, "edmRights", value.toString))
     })
     values.find(_.isValidEdmRightsUri)
