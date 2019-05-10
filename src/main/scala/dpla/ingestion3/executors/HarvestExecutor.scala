@@ -4,12 +4,12 @@ import java.time.LocalDateTime
 
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.harvesters.pss.PssHarvester
 import dpla.ingestion3.harvesters.resourceSync.RsHarvester
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
-import dpla.ingestion3.dataStorage.OutputHelper
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SparkSession}

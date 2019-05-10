@@ -1,26 +1,60 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{File, FileInputStream}
+import java.io.{BufferedReader, File, FileInputStream}
 import java.util.zip.GZIPInputStream
 
+import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
-import org.apache.commons.io.IOUtils
+import dpla.ingestion3.harvesters.{AvroHelper, Harvester}
+import dpla.ingestion3.utils.{FlatFileIO, Utils}
+import org.apache.avro.Schema
+import org.apache.avro.file.DataFileWriter
+import org.apache.avro.generic.{GenericData, GenericRecord}
+import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.log4j.Logger
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.tools.bzip2.CBZip2InputStream
 import org.apache.tools.tar.TarInputStream
-import com.databricks.spark.avro._
+import org.apache.spark.sql.expressions.Window
 
 import scala.util.{Failure, Success, Try}
-import scala.xml.{MinimizeMode, Node, Utility, XML}
-
+import scala.xml._
 
 class NaraFileHarvester(
                          spark: SparkSession,
                          shortName: String,
                          conf: i3Conf,
                          logger: Logger)
-  extends FileHarvester(spark, shortName, conf, logger) {
+  extends Harvester(spark, shortName, conf, logger) {
+
+  /**
+    * Case class hold the parsed value from a given FileResult
+    */
+  case class ParsedResult(id: String, item: String)
+
+
+  /**
+    * Case class to hold the results of a file
+    *
+    * @param entryName    Path of the entry in the file
+    * @param data         Holds the data for the entry, or None if it's a directory.
+    * @param bufferedData Holds a buffered reader for the entry if it's too
+    *                     large to be held in memory.
+    */
+  case class FileResult(entryName: String,
+                        data: Option[Array[Byte]],
+                        bufferedData: Option[BufferedReader] = None)
+
+
+  lazy val naraSchema: Schema =
+    new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/NaraOriginalRecord.avsc"))
+
+  val avroWriterNara: DataFileWriter[GenericRecord] =
+    AvroHelper.avroWriter(shortName, naraTmp, naraSchema)
+
+  // Temporary output path.
+  lazy val naraTmp: String = new File(FileUtils.getTempDirectory, shortName).getAbsolutePath
 
   def mimeType: String = "application_xml"
 
@@ -77,30 +111,54 @@ class NaraFileHarvester(
     * @return Count of metadata items found.
     */
   def handleFile(tarResult: FileResult,
-                 unixEpoch: Long): Try[Int] =
+                 unixEpoch: Long,
+                 filename: String): Try[Int] =
     tarResult.data match {
       case None =>
         Success(0) //a directory, no results
 
       case Some(data) =>
         Try {
-          val dataString = new String(data).replaceAll("<\\?xml.*\\?>", "")
+          val dataString = new String(data).replaceAll("<\\?xml.*\\?>", "").trim
           val xml = XML.loadString(dataString)
+
           val items = handleXML(xml)
-          val entryName = tarResult.entryName
-          // log the file name
-          logger.info(entryName)
 
           val counts = for {
             itemOption <- items
             item <- itemOption // filters out the Nones
           } yield {
-            writeOut(unixEpoch, item)
+            writeOutNara(unixEpoch, item, filename)
             1
           }
           counts.sum
         }
     }
+
+  def getAvroWriterNara: DataFileWriter[GenericRecord] = avroWriterNara
+
+  /**
+    * Writes item out
+    *
+    * @param unixEpoch Timestamp of the harvest
+    * @param item Harvested record
+    *
+    */
+  def writeOutNara(unixEpoch: Long, item: ParsedResult, file: String): Unit = {
+    val avroWriter = getAvroWriterNara
+    val schema = naraSchema
+
+    val genericRecord = new GenericData.Record(schema)
+    genericRecord.put("id", item.id)
+    genericRecord.put("ingestDate", unixEpoch)
+    genericRecord.put("provider", shortName)
+    genericRecord.put("document", item.item)
+    genericRecord.put("filename", file) // Used to order records by date updated.
+    genericRecord.put("mimetype", mimeType)
+
+    avroWriter.append(genericRecord)
+
+  }
 
   /**
     * Implements a stream of files from the tar.
@@ -108,7 +166,7 @@ class NaraFileHarvester(
     * but this won't blow the stack.
     *
     * @param tarInputStream
-    * @return Lazy stream of tar recordsd
+    * @return Lazy stream of tar records
     */
   def iter(tarInputStream: TarInputStream): Stream[FileResult] =
     Option(tarInputStream.getNextEntry) match {
@@ -116,38 +174,80 @@ class NaraFileHarvester(
         Stream.empty
 
       case Some(entry) =>
+        val filename = Try {
+          entry.getName
+        }.getOrElse("")
+
         val result =
-          if (entry.isDirectory)
+          if (entry.isDirectory || filename.contains("._")) // drop OSX hidden files
             None
-          else
+          else if (filename.endsWith(".xml")) // only read xml files
             Some(IOUtils.toByteArray(tarInputStream, entry.getSize))
+          else
+            None
+
         FileResult(entry.getName, result) #:: iter(tarInputStream)
     }
 
   /**
     * Executes the nara harvest
     */
-  override def localHarvest(): DataFrame = {
+  def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime  / 1000L
     val inFile = new File(conf.harvest.endpoint.getOrElse("in"))
+    val deletes = new File(inFile, "deletes.xml") // FIXME hardcoded
 
     if (inFile.isDirectory)
-      for (file: File <- inFile.listFiles())
+      for (file: File <- inFile.listFiles(new GzFileFilter).sorted) {
+        logger.info(s"Harvesting from ${file.getName}")
         harvestFile(file, unixEpoch)
+      }
     else
       harvestFile(inFile, unixEpoch)
 
+    // flush writes
+    avroWriterNara.flush()
+
     // Read harvested data into Spark DataFrame and return.
-    spark.read.avro(tmpOutStr)
+    val dfAllRecords = spark.read.avro(naraTmp)
+
+    import spark.implicits._
+    val w = Window.partitionBy($"id").orderBy($"filename".desc)
+
+    val df = dfAllRecords
+      .withColumn("rn", row_number.over(w))
+      .where($"rn" === 1).drop("rn")
+
+    // process deletes
+    if (deletes.exists()) {
+      val del = getIdsToDelete(deletes)
+      logger.info(s"Found ${del.size} records to delete in deletes.xml")
+      df.where(!col("id").isin(del:_*))
+    } else {
+      logger.info("No delete.xml file specified. Removing no records for NARA")
+      df
+    }
+  }
+
+  def getIdsToDelete(file: File): Seq[String] = {
+    val xml = XML.loadFile(file)
+    (xml \\ "naId").map(_.text.toString)
+  }
+
+  override def cleanUp(): Unit = {
+    avroWriterNara.flush()
+    avroWriterNara.close()
+    // Delete temporary output directory and files.
+    Utils.deleteRecursively(new File(naraTmp))
   }
 
   private def harvestFile(file: File, unixEpoch: Long): Unit = {
     val inputStream = getInputStream(file)
-      .getOrElse(throw new IllegalArgumentException("Couldn't load tar file."))
+      .getOrElse(throw new IllegalArgumentException(s"Couldn't load tar file: ${file.getAbsolutePath}"))
 
     val recordCount = (for (tarResult <- iter(inputStream)) yield {
-      handleFile(tarResult, unixEpoch) match {
+      handleFile(tarResult, unixEpoch, file.getName) match {
         case Failure(exception) =>
           logger.error(s"Caught exception on ${tarResult.entryName}.", exception)
           0
