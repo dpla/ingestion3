@@ -18,6 +18,7 @@ object DigitalSurrogateBlockList extends FilterList {
     "/formats/in.csv",
     "/formats/ohio.csv",
     "/formats/p2p.csv",
+    "/formats/vt.csv",
     "/formats/iana-imt-types.csv"
   )
 }

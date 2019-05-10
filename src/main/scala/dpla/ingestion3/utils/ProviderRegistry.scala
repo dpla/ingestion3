@@ -56,7 +56,7 @@ object ProviderRegistry {
     "lc" -> Register(profile = new LocProfile),
     "mi" -> Register(profile = new MiProfile),
     "minnesota" -> Register(profile = new MdlProfile),
-    "mo" -> Register(profile = new MoProfile),
+    "missouri" -> Register(profile = new MissouriProfile),
     "mt" -> Register(profile = new MtProfile),
     "mwdl" -> Register(profile = new MwdlProfile),
     "nara" -> Register(profile = new NaraProfile),

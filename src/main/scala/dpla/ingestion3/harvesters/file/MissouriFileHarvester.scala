@@ -19,20 +19,20 @@ import scala.util.{Failure, Success, Try}
 /**
   * Extracts values from parsed JSON
   */
-class MoFileExtractor extends JsonExtractor
+class MissouriFileExtractor extends JsonExtractor
 
 /**
   * Entry for performing a Missouri file harvest
   */
-class MoFileHarvester(spark: SparkSession,
-                      shortName: String,
-                      conf: i3Conf,
-                      logger: Logger)
+class MissouriFileHarvester(spark: SparkSession,
+                            shortName: String,
+                            conf: i3Conf,
+                            logger: Logger)
   extends FileHarvester(spark, shortName, conf, logger) {
 
   def mimeType: String = "application_json"
 
-  protected val extractor = new MoFileExtractor()
+  protected val extractor = new MissouriFileExtractor()
 
   /**
     * Loads .zip files

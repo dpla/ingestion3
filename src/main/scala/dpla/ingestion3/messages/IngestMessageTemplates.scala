@@ -20,6 +20,15 @@ trait IngestMessageTemplates {
       value = value
     )
 
+  def invalidEdmRightsValue(id: String, field: String, value: String, msg: Option[String] = None): IngestMessage =
+    IngestMessage(
+      message = s"Domain does not match creativecommons.org or rightstatements.org ${msg.getOrElse("No URI")}".trim,
+      level = IngestLogLevel.warn,
+      id = id,
+      field = field,
+      value = value
+    )
+
   def missingRecommendedWarning(id: String, field: String): IngestMessage =
     IngestMessage(
       message = s"Missing recommended field",

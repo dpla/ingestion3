@@ -11,16 +11,14 @@ import org.json4s.JsonDSL._
 import org.json4s._
 
 
-class MoMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
+class MissouriMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
 
   val formatBlockList: Set[String] = ExtentIdentificationList.termList
 
   // ID minting functions
-  // TODO: Should this be true or false?
-  override def useProviderName: Boolean = true
+  override def useProviderName: Boolean = false // Missouri provides ids with the provider name already prepended
 
-  // TODO: Should this be the same as provider short name?
-  override def getProviderName: String = "mo"
+  override def getProviderName: String = "missouri"
 
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString(unwrap(data) \ "@id")

@@ -1,5 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
@@ -11,6 +13,11 @@ import org.json4s.JsonDSL._
 import scala.xml._
 
 class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
+
+  val formatBlockList: Set[String] =
+    DigitalSurrogateBlockList.termList ++
+      FormatTypeValuesBlockList.termList ++
+      ExtentIdentificationList.termList
 
   override def useProviderName: Boolean = false
 
@@ -46,10 +53,12 @@ class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
     extractStrings(data \ "contributor")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] =
     extractStrings(data \ "creator")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
@@ -61,12 +70,16 @@ class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def format(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "format")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(_.applyBlockFilter(formatBlockList))
+      .filter(_.nonEmpty)
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "identifier")
 
   override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
     extractStrings(data \ "language")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyConcept)
 
   override def place(data: Document[NodeSeq]): Seq[DplaPlace] =

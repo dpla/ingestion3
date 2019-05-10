@@ -1,0 +1,28 @@
+# DPLA specific IMT/MIME values to remove from the format field
+# These values came from the VT mapping
+Archive BitTorrent
+Metadata
+JPEG Thumb
+Abbyy GZ
+Djvu XML
+Scandata
+Single Page Processed JP2 ZIP
+DjVuTXT
+Ogg Vorbis
+VBR MP3
+Image/tiff : text/Color: 24 bits; 800 ppi, Microtek ScanMaker 9800XL.
+Image Container PDF
+Additional Text PDF
+Animated GIF
+PNG
+N/a
+O
+EPUB
+Born digital
+Quality=8-bit grayscale, 150 ppi
+No
+Yes
+DjVu
+Essentia Low GZ
+Flac
+WAVE
