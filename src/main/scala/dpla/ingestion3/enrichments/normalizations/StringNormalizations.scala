@@ -1,6 +1,6 @@
 package dpla.ingestion3.enrichments.normalizations
 
-import StringNormalizationUtils._
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import dpla.ingestion3.model._
 
@@ -20,6 +20,7 @@ class StringNormalizations {
     record.copy(
       sourceResource = enrichSourceResource(record.sourceResource),
       dataProvider = enrichEdmAgent(record.dataProvider),
+      edmRights = record.edmRights.map(enrichEdmRights(_)),
       hasView = record.hasView.map(enrichEdmWebResource(_)),
       intermediateProvider = record.intermediateProvider.map(enrichEdmAgent(_)),
       isShownAt = enrichEdmWebResource(record.isShownAt),
@@ -71,6 +72,17 @@ class StringNormalizations {
           .cleanupLeadingPunctuation
           .cleanupEndingPunctuation)
     )
+
+  def enrichEdmRights(edmRights: URI): URI = {
+    val uri = new java.net.URI(edmRights.toString) // value already validated as URI in mapping
+    // normalize uri path
+    val path = if (uri.getPath.startsWith("/page/")) {
+      uri.getPath.replaceFirst("page", "vocab") // rightstatements.org cleanup
+    } else
+      uri.getPath
+
+    URI(s"https://${uri.getHost}$path") // normalize to https and drop parameters
+  }
 
   def enrichEdmWebResource(edmWebResource: EdmWebResource): EdmWebResource =
     edmWebResource.copy(

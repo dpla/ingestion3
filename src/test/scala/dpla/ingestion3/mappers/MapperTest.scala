@@ -29,8 +29,8 @@ class MapperTest extends FlatSpec with BeforeAndAfter with IngestMessageTemplate
     assert(validatedDataProvider === dataProviders.head)
   }
 
-  it should "validate edmRights by checking size <= 1 and values are mintable uris" in {
-    val rightsUri = Seq("http://rights.org", "http://rights-2.org", "dub dub dub rights.com")
+  it should "validate edmRights by checking size <= 1 and values are valid edmRights URIs" in {
+    val rightsUri = Seq("http://rightsstatements.org", "http://creativecommons.org", "dub dub dub rights.com")
     val message = mintUriError(id, "edmRights", "dub dub dub rights.com")
     val rights = rightsUri.map(URI)
 

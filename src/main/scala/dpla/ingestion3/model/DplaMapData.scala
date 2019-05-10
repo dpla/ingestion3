@@ -4,7 +4,7 @@ import dpla.ingestion3.messages.IngestMessage
 import dpla.ingestion3.model.DplaMapData._
 import org.json4s.{JNothing, JValue}
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 /**
   * Contains type definitions that express cardinality of fields
@@ -131,6 +131,13 @@ case class EdmTimeSpan(
 
 case class URI(value: String) {
   def validate: Boolean = Try { new java.net.URI(value) }.isSuccess
+
+  def isValidEdmRightsUri: Boolean = Try { new java.net.URI(value).getHost } match {
+    case Success(v) => validEdmHosts.contains(v)
+    case Failure(_) => false
+  }
+
+  val validEdmHosts: Seq[String] = Seq("creativecommons.org", "rightsstatements.org")
 
   /**
     * toString is overridden so that when URI values are extracted
