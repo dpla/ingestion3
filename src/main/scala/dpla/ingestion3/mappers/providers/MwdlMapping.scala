@@ -51,6 +51,9 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \\ "display" \ "lds05")
 
+  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings((data \\ "display" \ "format"))
+
   override def identifier(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \\ "control" \ "recordid")
 

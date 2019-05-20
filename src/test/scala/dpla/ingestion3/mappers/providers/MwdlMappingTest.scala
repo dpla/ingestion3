@@ -39,6 +39,9 @@ class MwdlMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct description" in
     assert(extractor.description(xml) == Seq("Fall 2012 issue of Folio."))
 
+  it should "extract the correct format" in
+    assert(extractor.format(xml) == Seq("application/pdf"))
+
   it should "extract the correct place values" in {
     val expected = Seq("Place").map(nameOnlyPlace)
     assert(extractor.place(xml) === expected)
