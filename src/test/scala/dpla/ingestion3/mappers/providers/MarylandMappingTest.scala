@@ -20,98 +20,89 @@ class MarylandMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.useProviderName)
 
   it should "extract the correct original identifier " in {
-    val expected = Some("???")
+    val expected = Some("oai:collections.digitalmaryland.org:mamo/29817")
     assert(extractor.originalId(xml) === expected)
   }
 
-  it should "extract the correct collection titles" in {
-    val expected = Seq("???")
-      .map(nameOnlyCollection)
-    assert(extractor.collection(xml) === expected)
-  }
-
   it should "extract the correct contributor" in {
-    val expected = Seq("???").map(nameOnlyAgent)
+    val expected = Seq("Hayden, Edwin Parsons, 1811-1850", "Jessop, Charles", "Jessop, William", "Shipley, Nathan")
+      .map(nameOnlyAgent)
     assert(extractor.contributor(xml) == expected)
   }
 
   it should "extract the correct creator" in {
-    val expected = Seq("???").map(nameOnlyAgent)
+    val expected = Seq("O'Dell, Mark").map(nameOnlyAgent)
     assert(extractor.creator(xml) == expected)
   }
 
   it should "extract the correct date" in {
-    val expected = Seq("???").map(stringOnlyTimeSpan)
+    val expected = Seq("2008-10-21").map(stringOnlyTimeSpan)
     assert(extractor.date(xml) === expected)
   }
 
   it should "extract the correct description" in {
-    val expected = Seq("???")
+    val expected = Seq("Photograph of Lieutenant Governor Anthony Brown at the Winning with Asthma Program Kick Off Event on October 21, 2008.")
     assert(extractor.description(xml) == expected)
   }
 
-  it should "extract the correct extent" in {
-    val expected = Seq("???")
-    assert(extractor.extent(xml) == expected)
-  }
-
   it should "extract the correct format" in {
-    val expected = Seq("???")
+    val expected = Seq("Color digital photograph/jpeg ")
     assert(extractor.format(xml) == expected)
   }
 
   it should "extract the correct language" in {
-    val expected = Seq("???").map(nameOnlyConcept)
+    val expected = Seq("English").map(nameOnlyConcept)
     assert(extractor.language(xml) == expected)
   }
 
   it should "extract the correct publisher" in {
-    val expected = Seq("???").map(nameOnlyAgent)
+    val expected = Seq("Alfred A. Knopf, Inc.").map(nameOnlyAgent)
     assert(extractor.publisher(xml) === expected)
   }
 
   it should "extract the correct subjects" in {
-    val expected = Seq("???").map(nameOnlyConcept)
+    val expected = Seq("Brown, Anthony G., 1961-", "Governors--Maryland", "Maryland--Politics and government", "Asthma")
+      .map(nameOnlyConcept)
     assert(extractor.subject(xml) === expected)
   }
 
   it should "extract the correct temporal" in {
-    val expected = Seq("???").map(stringOnlyTimeSpan)
+    val expected = Seq("1970-1979").map(stringOnlyTimeSpan)
     assert(extractor.temporal(xml) === expected)
   }
 
-  it should "extract the correct titles" in {
-    val expected = Seq("???")
+  it should "extract the correct title" in {
+    val expected = Seq("Lieutenant Governor Anthony Brown at the Winning with Asthma Program Kick Off Event")
     assert(extractor.title(xml) === expected)
   }
 
   it should "extract the correct type" in {
-    val expected = Seq("???")
+    val expected = Seq("Image")
     assert(extractor.`type`(xml) === expected)
   }
 
   it should "extract the correct dataProvider" in {
-    val expected = Seq(nameOnlyAgent("???"))
+    val expected = Seq(nameOnlyAgent("Maryland State Archives"))
     assert(extractor.dataProvider(xml) === expected)
   }
 
   it should "extract the correct edmRights" in {
-    val expected = Seq(URI("???"))
+    val expected = Seq(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/ "))
     assert(extractor.edmRights(xml) === expected)
   }
 
   it should "extract the correct isShownAt" in {
-    val expected = Seq(uriOnlyWebResource(URI("???")))
+    val expected = Seq(stringOnlyWebResource("http://collections.digitalmaryland.org/cdm/ref/collection/mamo/id/29817"))
     assert(extractor.isShownAt(xml) === expected)
   }
 
   it should "extract the correct preview" in {
-    val expected = Seq("???").map(stringOnlyWebResource)
+    val expected = Seq(stringOnlyWebResource("http://webconfig.digitalmaryland.org/utils/getthumbnail/collection/mamo/id/29817"))
     assert(extractor.preview(xml) === expected)
   }
 
   it should "create the correct DPLA URI" in {
-    val expected = Some(URI("???"))
+    val expected = Some(URI("http://dp.la/api/items/5db1d7b6c61b021fadcffdca899a4d69"))
     assert(extractor.dplaUri(xml) === expected)
   }
 }

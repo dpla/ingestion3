@@ -1,7 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.mappers.utils.{Document, XmlMapping, XmlExtractor}
+import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -18,48 +18,100 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
 
   override def getProviderName: String = "maryland"
 
-  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] = ???
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
+    extractString(data \ "header" \ "identifier")
 
   // SourceResource mapping
 
-  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] = ???
+  // Not in harvested data
+//  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] = ???
 
-  override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = ???
+  override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+    extractStrings(data \ "metadata" \\ "contributor")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(nameOnlyAgent)
 
-  override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = ???
+  override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+    extractStrings(data \ "metadata" \\ "creator")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(nameOnlyAgent)
 
-  override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = ???
+  override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
+    extractStrings(data \ "metadata" \\ "date")
+      .map(stringOnlyTimeSpan)
 
-  override def description(data: Document[NodeSeq]): ZeroToMany[String] = ???
+  override def description(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings(data \ "metadata" \\ "description")
 
-  override def format(data: Document[NodeSeq]): ZeroToMany[String] = ???
+  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings(data \ "metadata" \\ "format")
 
-  override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = ???
+  override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
+    extractStrings(data \ "metadata" \\ "language")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(nameOnlyConcept)
 
-  override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = ???
+  override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+    extractStrings(data \ "metadata" \\ "publisher")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(nameOnlyAgent)
 
-  override def rights(data: Document[NodeSeq]): AtLeastOne[String] = ??? // NOT IN I1
+  override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
+    extractStrings(data \ "metadata" \\ "subject")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(nameOnlyConcept)
 
-  override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = ???
+  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
+    extractStrings(data \ "metadata" \\ "temporal")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(stringOnlyTimeSpan)
 
-  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = ???
+  override def title(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings(data \ "metadata" \\ "title")
 
-  override def title(data: Document[NodeSeq]): ZeroToMany[String] = ???
-
-  override def `type`(data: Document[NodeSeq]): ZeroToMany[String] = ???
+  override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings(data \ "metadata" \\ "type")
+      .flatMap(_.splitAtDelimiter(";"))
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = ???
+  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+    extractStrings(data \ "metadata" \\ "source")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(nameOnlyAgent)
+      .slice(0, 1) // get first instance
 
-  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = ???
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
+    extractStrings(data \ "metadata" \\ "rights")
+      .map(URI)
 
-  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = ???
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    extractStrings(data \ "metadata" \\ "identifier")
+      .map(stringOnlyWebResource)
+      .slice(1, 2) // get second instance
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
-  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = ???
+  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
+    val url: Option[String] = extractStrings(data \ "metadata" \\ "identifier").lift(1) // get second instance
+
+    val parts: Seq[String] = url.getOrElse("").stripSuffix("/").split("/")
+
+    val collection: Option[String] = parts.reverse.lift(2) // get third to last element
+    val item: Option[String] = parts.lastOption // get last element
+
+    if (collection.isDefined && item.isDefined) {
+      val url: String =
+        "http://webconfig.digitalmaryland.org/utils/getthumbnail/collection/" +
+          collection.get +
+          "/id/" +
+          item.get
+
+      Seq(stringOnlyWebResource(url))
+    }
+    else Seq()
+  }
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
