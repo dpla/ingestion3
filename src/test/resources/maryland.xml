@@ -1,0 +1,22 @@
+<record xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.openarchives.org/OAI/2.0/">
+    <header>
+        <identifier>oai:collections.digitalmaryland.org:mamo/29817</identifier>
+        <datestamp>2017-11-21</datestamp>
+        <setSpec>mamo</setSpec></header>
+    <metadata>
+        <oai_qdc:qualifieddc xsi:schemaLocation="http://worldcat.org/xmlschemas/qdc-1.0/ http://worldcat.org/xmlschemas/qdc/1.0/qdc-1.0.xsd http://purl.org/net/oclcterms http://worldcat.org/xmlschemas/oclcterms/1.4/oclcterms-1.4.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:oai_qdc="http://worldcat.org/xmlschemas/qdc-1.0/">
+            <dc:identifier>mamo036830</dc:identifier>
+            <dc:title>Lieutenant Governor Anthony Brown at the Winning with Asthma Program Kick Off Event</dc:title>
+            <dc:creator>O'Dell, Mark;</dc:creator>
+            <dc:subject>Brown, Anthony G., 1961-; Governors--Maryland; Maryland--Politics and government; Asthma;</dc:subject>
+            <dc:description>Photograph of Lieutenant Governor Anthony Brown at the Winning with Asthma Program Kick Off Event on October 21, 2008.</dc:description>
+            <dc:source>Maryland State Archives;</dc:source>
+            <dc:date>2008-10-21</dc:date>
+            <dc:type>Image;</dc:type>
+            <dc:format>Color digital photograph/jpeg </dc:format>
+            <dc:rights>http://rightsstatements.org/vocab/NoC-OKLR/1.0/ </dc:rights>
+            <dcterms:accessRights>This work is licensed under a Creative Commons Attribution-NoDerivs 3.0 Unported License. When this material is used, in whole or in part, proper citation and credit must be attributed to the Maryland State Archives. For more information go to http://histpics.msa.maryland.gov/pages/Search.aspx </dcterms:accessRights>
+            <dc:identifier>http://collections.digitalmaryland.org/cdm/ref/collection/mamo/id/29817</dc:identifier>
+        </oai_qdc:qualifieddc>
+    </metadata>
+</record>
