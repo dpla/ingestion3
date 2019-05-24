@@ -23,9 +23,6 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
 
   // SourceResource mapping
 
-  // Not in harvested data
-//  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] = ???
-
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "contributor")
       .flatMap(_.splitAtDelimiter(";"))
@@ -36,15 +33,20 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
+  // TODO: VALIDATE
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
     extractStrings(data \ "metadata" \\ "date")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(stringOnlyTimeSpan)
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \\ "description")
+      .map(_.stripDblQuotes)
 
+  // TODO: VALIDATE
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \\ "format")
+      .flatMap(_.splitAtDelimiter(";"))
 
   override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     extractStrings(data \ "metadata" \\ "language")
@@ -53,9 +55,10 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "publisher")
-      .flatMap(_.splitAtDelimiter(";"))
+      .map(_.cleanupEndingPunctuation)
       .map(nameOnlyAgent)
 
+  // TODO: VALIDATE
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     extractStrings(data \ "metadata" \\ "subject")
       .flatMap(_.splitAtDelimiter(";"))
@@ -68,6 +71,7 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
 
   override def title(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \\ "title")
+      .map(_.stripSuffix("."))
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \\ "type")
@@ -86,6 +90,7 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
     extractStrings(data \ "metadata" \\ "rights")
       .map(URI)
 
+  // TODO: VALIDATE
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "metadata" \\ "identifier")
       .map(stringOnlyWebResource)
@@ -93,6 +98,7 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
+  // TODO: VALIDATE
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
     val url: Option[String] = extractStrings(data \ "metadata" \\ "identifier").lift(1) // get second instance
 
