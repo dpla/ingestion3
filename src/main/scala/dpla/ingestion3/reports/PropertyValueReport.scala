@@ -94,7 +94,7 @@ class PropertyValueReport (
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
             localUri = oreAggregation.isShownAt.uri.toString,
-            value = extractValue(Seq(oreAggregation.preview.map(_.uri.toString)))
+            value = extractValue(oreAggregation.preview.map(_.uri.toString).toSeq)
           )
         })
       case "sourceResource.alternateTitle" =>
