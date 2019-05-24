@@ -10,7 +10,6 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
-
 class MarylandMapping extends XmlMapping with XmlExtractor {
 
   // ID minting functions
@@ -33,7 +32,6 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
-  // TODO: VALIDATE
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
     extractStrings(data \ "metadata" \\ "date")
       .flatMap(_.splitAtDelimiter(";"))
@@ -41,12 +39,10 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \\ "description")
-      .map(_.stripDblQuotes)
 
-  // TODO: VALIDATE
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \\ "format")
-      .flatMap(_.splitAtDelimiter(";"))
+      .map(_.stripSuffix(";"))
 
   override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     extractStrings(data \ "metadata" \\ "language")
@@ -55,10 +51,9 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "publisher")
-      .map(_.cleanupEndingPunctuation)
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
-  // TODO: VALIDATE
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     extractStrings(data \ "metadata" \\ "subject")
       .flatMap(_.splitAtDelimiter(";"))
@@ -90,7 +85,6 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
     extractStrings(data \ "metadata" \\ "rights")
       .map(URI)
 
-  // TODO: VALIDATE
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "metadata" \\ "identifier")
       .map(stringOnlyWebResource)
@@ -98,7 +92,6 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
-  // TODO: VALIDATE
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
     val url: Option[String] = extractStrings(data \ "metadata" \\ "identifier").lift(1) // get second instance
 
