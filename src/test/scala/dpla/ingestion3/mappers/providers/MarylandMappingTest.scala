@@ -46,7 +46,7 @@ class MarylandMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct format" in {
-    val expected = Seq("Color digital photograph/jpeg ")
+    val expected = Seq("Color digital photograph/jpeg")
     assert(extractor.format(xml) == expected)
   }
 
