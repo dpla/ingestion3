@@ -14,7 +14,8 @@ import scala.xml._
 
 class MwdlMapping extends XmlMapping with XmlExtractor {
 
-  private val baseIsShownAt = "http://utah-primoprod.hosted.exlibrisgroup.com/primo_library/libweb/action/dlDisplay.do?vid=MWDL&afterPDS=true&docId="
+  private val baseIsShownAt = "https://utah-primoprod.hosted.exlibrisgroup.com/primo-explore/fulldisplay?docid="
+  private val suffixIsShownAt = "&context=L&vid=MWDL"
 
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
@@ -112,7 +113,7 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
   // baseIsShownAt + control\recordid
     (data \\ "control" \ "recordid")
       .flatMap(extractStrings)
-      .map(baseIsShownAt + _)
+      .map(baseIsShownAt + _ + suffixIsShownAt)
       .map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
