@@ -117,6 +117,16 @@ class LocProfile extends JsonProfile {
 }
 
 /**
+  * Digital Maryland
+  */
+class MarylandProfile extends XmlProfile {
+  type Mapping = MarylandMapping
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[MdlHarvester]
+  override def getMapping = new MarylandMapping
+}
+
+/**
   * Minnesota Digital Library
   */
 class MdlProfile extends JsonProfile {

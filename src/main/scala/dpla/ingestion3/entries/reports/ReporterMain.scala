@@ -25,6 +25,7 @@ object ReporterMain {
     "isShownAt",
     "edmRights",
     "intermediateProvider",
+    "preview",
     "sourceResource.collection.title",
     "sourceResource.contributor.name",
     "sourceResource.creator.name",
