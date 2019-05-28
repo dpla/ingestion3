@@ -44,7 +44,35 @@ class BhlMapping extends XmlMapping with XmlExtractor {
       .flatMap(n => extractStrings(n \ "namePart"))
       .map(nameOnlyAgent)
 
-  override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = ???
+  override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
+    // <mods:originInfo> <mods:dateIssued keyDate="yes"> OR
+    // <mods:originInfo> <mods:dateOther type="issueDate" keyDate="yes>
+    // Records should have only one or the other
+
+    val dateIssued: Seq[String] = (data \\ "metadata" \ "mods" \ "originInfo" \ "dateIssued")
+      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "keyDate", "yes"))
+      .flatMap(extractStrings)
+
+    val dateOther: Seq[String] = (data \\ "metadata" \ "mods" \ "originInfo" \ "dateOther")
+      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "keyDate", "yes"))
+      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "type", "issueDate"))
+      .flatMap(extractStrings)
+
+    getDateValues(dateIssued ++ dateOther)
+      .map(stringOnlyTimeSpan)
+  }
+
+  def getDateValues(dates: Seq[String]): Seq[String] = {
+    val sorted = dates.sorted
+
+    sorted.reverse.headOption match { // get last date in sequence
+      case Some(d) =>
+        if (d.contains("/") || d.contains("-")) Seq(d) // date is already range so just use it
+        else if (dates.size > 1) Seq(sorted.head + "-" + d) // create range using first and last date
+        else Seq(d) // use only available date
+      case None => Seq() // no date
+    }
+  }
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:note @type="content">
@@ -54,11 +82,17 @@ class BhlMapping extends XmlMapping with XmlExtractor {
 
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:physicalDescription> <mods:form @authority="marcform">
-    (data \\ "metadata" \"mods" \ "physicalDescription" \ "form")
+    (data \\ "metadata" \ "mods" \ "physicalDescription" \ "form")
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "authority", "marcform"))
       .flatMap(extractStrings)
 
-  override def genre(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = ??? // None in i1 data
+  // TODO: Map this?  None in i3 reports
+  override def genre(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
+  // <mods:genre authority="marcgt">
+    (data \\ "metadata" \ "mods" \ "genre")
+      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "authority", "marcgt"))
+      .flatMap(extractStrings)
+      .map(nameOnlyConcept)
 
   override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \\ "metadata" \ "mods" \ "identifier")
@@ -75,7 +109,9 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     extractStrings(data \\ "metadata" \ "mods" \ "subject" \ "geographic")
       .map(nameOnlyPlace)
 
-  override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = ???
+  override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+    extractStrings(data \\ "metadata" \ "mods" \ "originInfo" \ "publisher")
+      .map(nameOnlyAgent)
 
   override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
     extractStrings(data \\ "metadata" \ "mods" \ "relatedItem" \ "titleInfo" \ "title")
