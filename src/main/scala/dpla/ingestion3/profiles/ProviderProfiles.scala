@@ -7,6 +7,16 @@ import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.mappers.providers._
 
 /**
+  * Biodiversity Heritage Library
+  */
+class BhlProfile extends XmlProfile {
+  type Mapping = CdlMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new BhlMapping
+}
+
+/**
   * California Digital Library
   */
 class CdlProfile extends JsonProfile {

@@ -43,6 +43,7 @@ object ProviderRegistry {
   private val registry = Map(
     // FIXME Register is redundant here and should be removed
 
+    "bhl" -> Register(profile = new BhlProfile),
     "cdl" -> Register(profile = new CdlProfile),
     "ct" -> Register(profile = new CtProfile),
     "dc" -> Register(profile = new DcProfile),
