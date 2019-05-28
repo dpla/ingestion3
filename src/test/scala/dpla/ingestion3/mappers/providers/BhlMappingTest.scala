@@ -78,6 +78,10 @@ class BhlMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.publisher(xml) === expected)
   }
 
+  it should "extract the correct rights" in {
+    ???
+  }
+
   it should "extract the correct relation" in {
     val expected = "???" // LiteralOrUri
     assert(extractor.relation(xml) === expected)

@@ -18,52 +18,117 @@ class BhlMapping extends XmlMapping with XmlExtractor {
 
   override def getProviderName: String = "bhl"
 
-  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] = ???
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
+    extractString(data \\ "header" \ "identifier")
 
   // SourceResource mapping
 
-  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] = ???
+  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
+  // <mods:relatedItem @type="series"><titleInfo><title>
+    (data \\ "metadata" \ "mods" \ "relatedItem")
+      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "type", "series"))
+      .flatMap(n => extractStrings(n \ "titleInfo" \ "title"))
+      .map(nameOnlyCollection)
 
-  override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = ???
+  override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+  // <mods:name><mods:namePart> when <mods:role><mods:roleTerm> equals contributor
+    (data \\ "metadata" \ "mods" \ "name")
+      .map(node => node.filter(n => (n \\ "roleTerm").text.equalsIgnoreCase("contributor")))
+      .flatMap(n => extractStrings(n \ "namePart"))
+      .map(nameOnlyAgent)
 
-  override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = ???
+  override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+  // <mods:name><mods:namePart> when <mods:role><mods:roleTerm> equals creator
+    (data \\ "metadata" \ "mods" \ "name")
+      .map(node => node.filter(n => (n \\ "roleTerm").text.equalsIgnoreCase("creator")))
+      .flatMap(n => extractStrings(n \ "namePart"))
+      .map(nameOnlyAgent)
 
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = ???
 
-  override def description(data: Document[NodeSeq]): ZeroToMany[String] = ???
+  override def description(data: Document[NodeSeq]): ZeroToMany[String] =
+  // <mods:note @type="content">
+    (data \\ "metadata" \ "mods" \ "note")
+      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "type", "content"))
+      .flatMap(extractStrings)
 
-  override def format(data: Document[NodeSeq]): ZeroToMany[String] = ???
+  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
+  // <mods:physicalDescription> <mods:form @authority="marcform">
+    (data \\ "metadata" \"mods" \ "physicalDescription" \ "form")
+      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "authority", "marcform"))
+      .flatMap(extractStrings)
 
   override def genre(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = ??? // None in i1 data
 
-  override def identifier(data: Document[NodeSeq]): ZeroToMany[String] = ???
+  override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings(data \\ "metadata" \ "mods" \ "identifier")
 
-  override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = ???
+  override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
+  // <mods:language><mods:languageTerm @type="text" @authority="iso639-2b">
+    (data \\ "metadata" \ "mods" \ "language" \ "languageTerm")
+      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "type", "text"))
+      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "authority", "iso639-2b"))
+      .flatMap(extractStrings)
+      .map(nameOnlyConcept)
 
-  override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = ???
+  override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
+    extractStrings(data \\ "metadata" \ "mods" \ "subject" \ "geographic")
+      .map(nameOnlyPlace)
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = ???
 
-  override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] = ???
+  override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
+    extractStrings(data \\ "metadata" \ "mods" \ "relatedItem" \ "titleInfo" \ "title")
+      .map(eitherStringOrUri)
 
-  override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = ???
+  override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
+    extractStrings(data \\ "metadata" \ "mods" \ "accessCondition")
 
-  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = ???
+  override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = {
+    // <mods:subject><mods:topic> AND <mods:subject><mods:genre>
+
+    val topic = extractStrings(data \\ "metadata" \ "mods" \ "subject" \ "topic")
+    val genre = extractStrings(data \\ "metadata" \ "mods" \ "subject" \ "genre")
+
+    (topic ++ genre).map(nameOnlyConcept)
+  }
+
+  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
+    extractStrings(data \\ "metadata" \ "mods" \ "subject" \ "temporal")
+      .map(stringOnlyTimeSpan)
 
   override def title(data: Document[NodeSeq]): ZeroToMany[String] = ???
 
-  override def `type`(data: Document[NodeSeq]): ZeroToMany[String] = ???
+  override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings(data \\ "metadata" \ "mods" \ "typeOfResource")
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = ???
+  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+  // <mods:note @type="ownership">
+    (data \\ "metadata" \ "mods" \ "note")
+      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "type", "ownership"))
+      .flatMap(extractStrings)
+      .map(nameOnlyAgent)
 
-  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = ???
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+  // <mods:location> <mods:url @access="raw object" @usage="primary">
+    (data \\ "metadata" \ "mods" \ "location" \ "url")
+      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "access", "raw object"))
+      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "usage", "primary"))
+      .flatMap(extractStrings)
+      .map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
-  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = ???
+  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+  // <mods:location> <mods:url @access="object in context" @usage="primary display">
+    (data \\ "metadata" \ "mods" \ "location" \ "url")
+      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "access", "object in context"))
+      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "usage", "primary display"))
+      .flatMap(extractStrings)
+      .map(stringOnlyWebResource)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
