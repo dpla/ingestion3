@@ -39,6 +39,9 @@ class MwdlMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct description" in
     assert(extractor.description(xml) == Seq("Fall 2012 issue of Folio."))
 
+  it should "extract the correct format" in
+    assert(extractor.format(xml) == Seq("photograph"))
+
   it should "extract the correct place values" in {
     val expected = Seq("Place").map(nameOnlyPlace)
     assert(extractor.place(xml) === expected)
@@ -63,7 +66,7 @@ class MwdlMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.dataProvider(xml) === expected)
   }
   it should "extract the correct isShownAt" in {
-    val expected = Seq(uriOnlyWebResource(URI("http://utah-primoprod.hosted.exlibrisgroup.com/primo_library/libweb/action/dlDisplay.do?vid=MWDL&afterPDS=true&docId=digcoll_slc_27works_598")))
+    val expected = Seq(uriOnlyWebResource(URI("https://utah-primoprod.hosted.exlibrisgroup.com/primo-explore/fulldisplay?docid=digcoll_slc_27works_598&context=L&vid=MWDL")))
     assert(extractor.isShownAt(xml) === expected)
   }
   it should "extract the correct preview" in {

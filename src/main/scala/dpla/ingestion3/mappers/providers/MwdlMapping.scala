@@ -1,7 +1,8 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.mappers.utils.{Document, XmlMapping, XmlExtractor}
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
+import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{nameOnlyAgent, _}
 import dpla.ingestion3.utils.Utils
@@ -13,7 +14,13 @@ import scala.xml._
 
 class MwdlMapping extends XmlMapping with XmlExtractor {
 
-  private val baseIsShownAt = "http://utah-primoprod.hosted.exlibrisgroup.com/primo_library/libweb/action/dlDisplay.do?vid=MWDL&afterPDS=true&docId="
+  private val baseIsShownAt = "https://utah-primoprod.hosted.exlibrisgroup.com/primo-explore/fulldisplay?docid="
+  private val suffixIsShownAt = "&context=L&vid=MWDL"
+
+  val formatBlockList: Set[String] =
+    DigitalSurrogateBlockList.termList ++
+      FormatTypeValuesBlockList.termList
+
   // ID minting functions
   override def useProviderName(): Boolean = true
 
@@ -50,6 +57,11 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \\ "display" \ "lds05")
+
+  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings(data \\ "display" \ "format")
+      .map(_.applyBlockFilter(formatBlockList))
+      .filter(_.nonEmpty)
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \\ "control" \ "recordid")
@@ -101,7 +113,7 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
   // baseIsShownAt + control\recordid
     (data \\ "control" \ "recordid")
       .flatMap(extractStrings)
-      .map(baseIsShownAt + _)
+      .map(baseIsShownAt + _ + suffixIsShownAt)
       .map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
