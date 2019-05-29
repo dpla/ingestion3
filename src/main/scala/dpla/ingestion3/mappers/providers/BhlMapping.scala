@@ -37,17 +37,32 @@ class BhlMapping extends XmlMapping with XmlExtractor {
       .flatMap(n => extractStrings(n \ "namePart"))
       .map(nameOnlyAgent)
 
-  override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-  // <mods:name><mods:namePart> when <mods:role><mods:roleTerm> equals creator
-    (data \\ "metadata" \ "mods" \ "name")
-      .map(node => node.filter(n => (n \\ "roleTerm").text.equalsIgnoreCase("creator")))
-      .flatMap(n => extractStrings(n \ "namePart"))
-      .map(nameOnlyAgent)
+  // TODO: handle more than one creator
+  override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
+
+    val nameNodes: NodeSeq = (data \\ "metadata" \ "mods" \ "name")
+      .flatMap(node => node.filter(n => (n \\ "roleTerm").text.equalsIgnoreCase("creator")))
+
+    val nameStrings: Seq[String] = nameNodes.map(n =>
+      (n \ "namePart")
+        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "affiliation"))
+        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "displayForm"))
+        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "description"))
+        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "role"))
+        .flatMap(extractStrings)
+        .map(_.cleanupEndingPunctuation)
+        .mkString(", ")
+    )
+
+    nameStrings.map(nameOnlyAgent)
+  }
 
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
     // <mods:originInfo><mods:dateIssued keyDate="yes"> OR
     // <mods:originInfo><mods:dateOther type="issueDate" keyDate="yes>
     // Records should have only one or the other
+
+    val foo: NodeSeq = (data \\ "metadata" \ "mods" \ "originInfo" \ "dateIssued")
 
     val dateIssued: Seq[String] = (data \\ "metadata" \ "mods" \ "originInfo" \ "dateIssued")
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "keyDate", "yes"))

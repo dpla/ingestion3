@@ -34,10 +34,10 @@ class BhlMappingTest extends FlatSpec with BeforeAndAfter {
 //    assert(extractor.contributor(xml) == expected)
 //  }
 
-//  it should "extract the correct creator" in {
-//    val expected = Seq("Fleischer, Max,").map(nameOnlyAgent)
-//    assert(extractor.creator(xml) == expected)
-//  }
+  it should "extract the correct creator" in {
+    val expected = Seq("Fleischer, Max, 1861-1930", "Winnie Peaches, 1984-1990").map(nameOnlyAgent)
+    assert(extractor.creator(xml) == expected)
+  }
 
   it should "extract the correct date" in {
     val expected = Seq("1900-1902").map(stringOnlyTimeSpan)

@@ -12,6 +12,15 @@
             <name type="personal">
                 <namePart>Fleischer, Max,</namePart>
                 <namePart type="date">1861-1930</namePart>
+                <namePart type="affiliation">foo</namePart>
+                <role>
+                    <roleTerm type="text">creator</roleTerm>
+                </role>
+            </name>
+            <name type="personal">
+                <namePart>Winnie Peaches </namePart>
+                <namePart type="date">1984-1990</namePart>
+                <namePart type="displayForm">foo</namePart>
                 <role>
                     <roleTerm type="text">creator</roleTerm>
                 </role>
