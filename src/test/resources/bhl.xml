@@ -12,7 +12,14 @@
             <name type="personal">
                 <namePart>Fleischer, Max,</namePart>
                 <namePart type="date">1861-1930</namePart>
-                <role>		<roleTerm type="text">creator</roleTerm>
+                <role>
+                    <roleTerm type="text">creator</roleTerm>
+                </role>
+            </name>
+            <name type="corporate">
+                <namePart>Königliche Botanische Gesellschaft</namePart>
+                <role>
+                    <roleTerm type="text">contributor</roleTerm>
                 </role>
             </name>
             <typeOfResource>text</typeOfResource>
@@ -37,9 +44,10 @@
             </part>
             <physicalDescription>
                 <form authority="marcform">print</form>
-            </physicalDescription><language>
-            <languageTerm type="text" authority="iso639-2b">Dutch</languageTerm>
-        </language>
+            </physicalDescription>
+                <language>
+                    <languageTerm type="text" authority="iso639-2b">Dutch</languageTerm>
+                </language>
             <subject>
                 <geographic>Bogor</geographic>
             </subject>
@@ -48,6 +56,9 @@
             </subject>
             <subject>
                 <topic>Musci</topic>
+            </subject>
+            <subject>
+                <temporal>19th century</temporal>
             </subject>
             <classification authority="lcc">QK548.J39 F71</classification>
             <relatedItem type="series">

@@ -45,8 +45,8 @@ class BhlMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyAgent)
 
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
-    // <mods:originInfo> <mods:dateIssued keyDate="yes"> OR
-    // <mods:originInfo> <mods:dateOther type="issueDate" keyDate="yes>
+    // <mods:originInfo><mods:dateIssued keyDate="yes"> OR
+    // <mods:originInfo><mods:dateOther type="issueDate" keyDate="yes>
     // Records should have only one or the other
 
     val dateIssued: Seq[String] = (data \\ "metadata" \ "mods" \ "originInfo" \ "dateIssued")
@@ -81,7 +81,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
       .flatMap(extractStrings)
 
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
-  // <mods:physicalDescription> <mods:form @authority="marcform">
+  // <mods:physicalDescription><mods:form @authority="marcform">
     (data \\ "metadata" \ "mods" \ "physicalDescription" \ "form")
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "authority", "marcform"))
       .flatMap(extractStrings)
@@ -149,7 +149,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyAgent)
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-  // <mods:location> <mods:url @access="raw object" @usage="primary">
+  // <mods:location><mods:url @access="raw object" @usage="primary">
     (data \\ "metadata" \ "mods" \ "location" \ "url")
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "access", "raw object"))
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "usage", "primary"))
@@ -159,7 +159,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-  // <mods:location> <mods:url @access="object in context" @usage="primary display">
+  // <mods:location><mods:url @access="object in context" @usage="primary display">
     (data \\ "metadata" \ "mods" \ "location" \ "url")
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "access", "object in context"))
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "usage", "primary display"))
