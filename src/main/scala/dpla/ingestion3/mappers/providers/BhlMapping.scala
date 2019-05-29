@@ -30,15 +30,30 @@ class BhlMapping extends XmlMapping with XmlExtractor {
       .flatMap(n => extractStrings(n \ "titleInfo" \ "title"))
       .map(nameOnlyCollection)
 
-  override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-  // <mods:name><mods:namePart> when <mods:role><mods:roleTerm> equals contributor
-    (data \\ "metadata" \ "mods" \ "name")
-      .map(node => node.filter(n => (n \\ "roleTerm").text.equalsIgnoreCase("contributor")))
-      .flatMap(n => extractStrings(n \ "namePart"))
-      .map(nameOnlyAgent)
+  override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
+    // <mods:name><mods:namePart> when <mods:role><mods:roleTerm> equals contributor
+    // concatenate <mods:namePart> when @type does not equal "affiliation", "displayForm", "description", or "role"
 
-  // TODO: handle more than one creator
+    val nameNodes: NodeSeq = (data \\ "metadata" \ "mods" \ "name")
+      .flatMap(node => node.filter(n => (n \\ "roleTerm").text.equalsIgnoreCase("contributor")))
+
+    val nameStrings: Seq[String] = nameNodes.map(n =>
+      (n \ "namePart")
+        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "affiliation"))
+        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "displayForm"))
+        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "description"))
+        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "role"))
+        .flatMap(extractStrings)
+        .map(_.cleanupEndingCommaAndSpace)
+        .mkString(", ")
+    )
+
+    nameStrings.map(nameOnlyAgent)
+  }
+
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
+    // <mods:name><mods:namePart> when <mods:role><mods:roleTerm> equals creator
+    // concatenate <mods:namePart> when @type does not equal "affiliation", "displayForm", "description", or "role"
 
     val nameNodes: NodeSeq = (data \\ "metadata" \ "mods" \ "name")
       .flatMap(node => node.filter(n => (n \\ "roleTerm").text.equalsIgnoreCase("creator")))
