@@ -96,6 +96,24 @@ object StringNormalizationUtils {
     }
 
     /**
+      * Removes trailing spaces and commas
+      *
+      */
+    lazy val cleanupEndingCommaAndSpace: SingleStringEnrichment = {
+      // FIXME rewrite as a regular expression
+      val endIndex = value.lastIndexWhere(_.isLetterOrDigit)
+      if (endIndex == -1)
+      // If there is nothing to cleanup then return the existing string
+        value
+      else {
+        val start = value.substring(0, endIndex + 1)
+        val end = value.substring(endIndex+1)
+        val cleanEnd = end.replaceAll("""[,\s]""","")
+        start.concat(cleanEnd)
+      }
+    }
+
+    /**
       * Removes leading colons, semi-colons, commas, slashes, hyphens and whitespace
       * characters (whitespace, tab, new line and line feed) that precede the first letter
       * or digit
@@ -111,6 +129,8 @@ object StringNormalizationUtils {
           .replaceAll(beginAndEndPunctuationToRemove, "")
           .concat(value.substring(beginIndex))
     }
+
+
 
     /**
       * Accepts a String value and splits it around periods. Strips

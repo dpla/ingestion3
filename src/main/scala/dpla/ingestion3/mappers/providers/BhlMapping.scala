@@ -50,7 +50,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
         .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "description"))
         .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "role"))
         .flatMap(extractStrings)
-        .map(_.cleanupEndingPunctuation)
+        .map(_.cleanupEndingCommaAndSpace)
         .mkString(", ")
     )
 
@@ -61,8 +61,6 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     // <mods:originInfo><mods:dateIssued keyDate="yes"> OR
     // <mods:originInfo><mods:dateOther type="issueDate" keyDate="yes>
     // Records should have only one or the other
-
-    val foo: NodeSeq = (data \\ "metadata" \ "mods" \ "originInfo" \ "dateIssued")
 
     val dateIssued: Seq[String] = (data \\ "metadata" \ "mods" \ "originInfo" \ "dateIssued")
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "keyDate", "yes"))
