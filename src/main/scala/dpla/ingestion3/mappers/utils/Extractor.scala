@@ -91,14 +91,6 @@ trait XmlExtractor extends Extractor[NodeSeq] {
     getByAttribute(e.asInstanceOf[Elem], att, value)
   }
 
-  def excludeByAttribute(e: Elem, att: String, value: String): NodeSeq = {
-    e \\ "_" filterNot { n => filterAttribute(n, att, value) }
-  }
-
-  def excludeByAttribute(e: NodeSeq, att: String, value: String): NodeSeq = {
-    excludeByAttribute(e.asInstanceOf[Elem], att, value)
-  }
-
   /**
     * For each given node, get any immediate children that are text values.
     * Ignore nested text values.

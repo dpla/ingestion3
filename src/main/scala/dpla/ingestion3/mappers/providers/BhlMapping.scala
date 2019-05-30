@@ -34,42 +34,40 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     // <mods:name><mods:namePart> when <mods:role><mods:roleTerm> equals contributor
     // concatenate <mods:namePart> when @type does not equal "affiliation", "displayForm", "description", or "role"
 
-    val nameNodes: NodeSeq = (data \\ "metadata" \ "mods" \ "name")
+    val badTypes = List("affiliation", "displayForm", "description", "role")
+
+    val parentNodes: NodeSeq = (data \\ "metadata" \ "mods" \ "name")
       .flatMap(node => node.filter(n => (n \\ "roleTerm").text.equalsIgnoreCase("contributor")))
 
-    val nameStrings: Seq[String] = nameNodes.map(n =>
+    val names: Seq[String] = parentNodes.map(n =>
       (n \ "namePart")
-        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "affiliation"))
-        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "displayForm"))
-        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "description"))
-        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "role"))
+        .filterNot(n => badTypes.contains(n \@ "type"))
         .flatMap(extractStrings)
         .map(_.cleanupEndingCommaAndSpace)
         .mkString(", ")
     )
 
-    nameStrings.map(nameOnlyAgent)
+    names.map(nameOnlyAgent)
   }
 
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     // <mods:name><mods:namePart> when <mods:role><mods:roleTerm> equals creator
     // concatenate <mods:namePart> when @type does not equal "affiliation", "displayForm", "description", or "role"
 
-    val nameNodes: NodeSeq = (data \\ "metadata" \ "mods" \ "name")
+    val badTypes = List("affiliation", "displayForm", "description", "role")
+
+    val parentNodes: NodeSeq = (data \\ "metadata" \ "mods" \ "name")
       .flatMap(node => node.filter(n => (n \\ "roleTerm").text.equalsIgnoreCase("creator")))
 
-    val nameStrings: Seq[String] = nameNodes.map(n =>
+    val names: Seq[String] = parentNodes.map(n =>
       (n \ "namePart")
-        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "affiliation"))
-        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "displayForm"))
-        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "description"))
-        .flatMap(n => excludeByAttribute(n.asInstanceOf[Elem], "type", "role"))
+        .filterNot(n => badTypes.contains(n \@ "type"))
         .flatMap(extractStrings)
         .map(_.cleanupEndingCommaAndSpace)
         .mkString(", ")
     )
 
-    nameStrings.map(nameOnlyAgent)
+    names.map(nameOnlyAgent)
   }
 
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
