@@ -135,6 +135,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
   // TODO: split at ; ? only affects a few records
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
     extractStrings(data \\ "metadata" \ "mods" \ "subject" \ "geographic")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyPlace)
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
