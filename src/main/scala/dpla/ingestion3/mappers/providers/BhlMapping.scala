@@ -100,12 +100,12 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     }
   }
 
-  // TODO: Strip trailing comma
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:note @type="content">
     (data \\ "metadata" \ "mods" \ "note")
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "type", "content"))
       .flatMap(extractStrings)
+      .map(_.stripSuffix(","))
 
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:physicalDescription><mods:form @authority="marcform">
