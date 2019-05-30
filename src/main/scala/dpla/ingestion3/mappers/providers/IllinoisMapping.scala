@@ -25,7 +25,7 @@ class IllinoisMapping extends XmlMapping with XmlExtractor with IngestMessageTem
   override def getProviderName(): String = "il"
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
-    extractString(data \ "header" \ "identifier")
+    extractString(data \\ "header" \ "identifier")
 
   // SourceResource mapping
   override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =

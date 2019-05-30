@@ -22,7 +22,7 @@ class IllinoisMappingTest extends FlatSpec with BeforeAndAfter {
 
   // original ID
   it should "extract the correct original ID" in {
-    val expected = Some("http://collections.carli.illinois.edu/cdm/ref/collection/uic_pic/id/5601")
+    val expected = Some("urn:dpla-repox.carli.illinois.edu:carli_uic_pic:oai:collections.carli.illinois.edu:uic_pic/5601")
     assert(extractor.originalId(xml) == expected)
   }
 
