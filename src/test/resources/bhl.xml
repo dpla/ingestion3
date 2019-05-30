@@ -31,6 +31,9 @@
             <name type="corporate">
                 <namePart>Königliche Botanische Gesellschaft</namePart>
                 <role>
+                    <roleTerm type="text">issuing body</roleTerm>
+                </role>
+                <role>
                     <roleTerm type="text">contributor</roleTerm>
                 </role>
             </name>

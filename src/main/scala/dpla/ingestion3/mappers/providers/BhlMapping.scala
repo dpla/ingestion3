@@ -31,13 +31,13 @@ class BhlMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyCollection)
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
-    // <mods:name><mods:namePart> when <mods:role><mods:roleTerm> equals contributor
+    // <mods:name><mods:namePart> when any of <mods:name><mods:role><mods:roleTerm> equals contributor
     // concatenate <mods:namePart> when @type does not equal "affiliation", "displayForm", "description", or "role"
 
     val badTypes = List("affiliation", "displayForm", "description", "role")
 
     val parentNodes: NodeSeq = (data \\ "metadata" \ "mods" \ "name")
-      .flatMap(node => node.filter(n => (n \\ "roleTerm").text.equalsIgnoreCase("contributor")))
+      .flatMap(_.filter(n => (n \\ "roleTerm").map(_.text.toLowerCase).contains("contributor")))
 
     val names: Seq[String] = parentNodes.map(n =>
       (n \ "namePart")
@@ -51,13 +51,13 @@ class BhlMapping extends XmlMapping with XmlExtractor {
   }
 
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
-    // <mods:name><mods:namePart> when <mods:role><mods:roleTerm> equals creator
+    // <mods:name><mods:namePart> when any of <mods:name><mods:role><mods:roleTerm> equals creator
     // concatenate <mods:namePart> when @type does not equal "affiliation", "displayForm", "description", or "role"
 
     val badTypes = List("affiliation", "displayForm", "description", "role")
 
     val parentNodes: NodeSeq = (data \\ "metadata" \ "mods" \ "name")
-      .flatMap(node => node.filter(n => (n \\ "roleTerm").text.equalsIgnoreCase("creator")))
+      .flatMap(_.filter(n => (n \\ "roleTerm").map(_.text.toLowerCase).contains("creator")))
 
     val names: Seq[String] = parentNodes.map(n =>
       (n \ "namePart")
@@ -159,7 +159,6 @@ class BhlMapping extends XmlMapping with XmlExtractor {
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
     extractStrings(data \\ "metadata" \ "mods" \ "accessCondition")
 
-  // TODO: split at ; ?
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = {
     // <mods:subject><mods:topic> AND <mods:subject><mods:genre>
 
@@ -184,6 +183,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     (parentNode \ "title")
       .flatMap(extractStrings)
       .map(_.cleanupEndingPunctuation)
+      .map(_.stripSuffix("."))
   }
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
