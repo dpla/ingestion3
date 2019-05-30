@@ -100,6 +100,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     }
   }
 
+  // TODO: Strip trailing comma
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:note @type="content">
     (data \\ "metadata" \ "mods" \ "note")
@@ -131,13 +132,25 @@ class BhlMapping extends XmlMapping with XmlExtractor {
       .flatMap(extractStrings)
       .map(nameOnlyConcept)
 
+  // TODO: split at ; ? only affects a few records
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
     extractStrings(data \\ "metadata" \ "mods" \ "subject" \ "geographic")
       .map(nameOnlyPlace)
 
-  override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    extractStrings(data \\ "metadata" \ "mods" \ "originInfo" \ "publisher")
-      .map(nameOnlyAgent)
+  override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
+    // <mods:originInfo><mods:publisher>
+    // If <mods:originInfo><mods:place><mods:placeName> exists, add it to beginning of publisher name string
+
+    val names: Seq[String] = extractStrings(data \\ "metadata" \ "mods" \ "originInfo" \ "publisher")
+
+    val places: Seq[String] = extractStrings(data \\ "metadata" \ "mods" \ "originInfo" \ "place" \ "placeTerm")
+
+    val publishers: Seq[String] = names.zipWithIndex.map{ case(n, i) => {
+      if (places.lift(i).isDefined) places(i) + " " + n else n
+    }}
+
+    publishers.map(nameOnlyAgent)
+  }
 
   override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
     extractStrings(data \\ "metadata" \ "mods" \ "relatedItem" \ "titleInfo" \ "title")
@@ -146,6 +159,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
     extractStrings(data \\ "metadata" \ "mods" \ "accessCondition")
 
+  // TODO: split at ; ?
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = {
     // <mods:subject><mods:topic> AND <mods:subject><mods:genre>
 
@@ -159,6 +173,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     extractStrings(data \\ "metadata" \ "mods" \ "subject" \ "temporal")
       .map(stringOnlyTimeSpan)
 
+  // TODO: split at ; ?
   override def title(data: Document[NodeSeq]): ZeroToMany[String] = {
     // <mods:titleInfo> <mods:title>
     // when <mods:titleInfo> does not have @type

@@ -75,7 +75,7 @@ class BhlMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct publisher" in {
-    val expected = Seq("E.J. Brill,").map(nameOnlyAgent)
+    val expected = Seq("Leiden : E.J. Brill,").map(nameOnlyAgent)
     assert(extractor.publisher(xml) === expected)
   }
 
