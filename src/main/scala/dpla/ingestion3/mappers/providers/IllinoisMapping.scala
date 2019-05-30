@@ -6,7 +6,7 @@ import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
-import dpla.ingestion3.utils.{HttpUtils, Utils}
+import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
@@ -24,12 +24,10 @@ class IllinoisMapping extends XmlMapping with XmlExtractor with IngestMessageTem
 
   override def getProviderName(): String = "il"
 
-  // FIXME Should use OAI header / identifier for ID not the first URI in dc:identifier
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
-    extractStrings(data \\ "metadata" \\ "identifier").find(s => HttpUtils.validateUrl(s))
+    extractString(data \ "header" \ "identifier")
 
   // SourceResource mapping
-  // FIXME Collection information is stored outside of individual records in the OAI setSpec / title
   override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
     extractStrings(data \\ "metadata" \\ "isPartOf")
       .map(nameOnlyCollection)
