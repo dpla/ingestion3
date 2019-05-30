@@ -161,7 +161,17 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     extractStrings(data \\ "metadata" \ "mods" \ "subject" \ "temporal")
       .map(stringOnlyTimeSpan)
 
-  override def title(data: Document[NodeSeq]): ZeroToMany[String] = ???
+  override def title(data: Document[NodeSeq]): ZeroToMany[String] = {
+    // <mods:titleInfo> <mods:title>
+    // when <mods:titleInfo> does not have @type
+
+    val parentNode = (data \\ "metadata" \ "mods" \ "titleInfo")
+      .filter(n => (n \@ "type").isEmpty)
+
+    (parentNode \ "title")
+      .flatMap(extractStrings)
+      .map(_.cleanupEndingPunctuation)
+  }
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \\ "metadata" \ "mods" \ "typeOfResource")

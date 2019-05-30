@@ -99,10 +99,10 @@ class BhlMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.temporal(xml) === expected)
   }
 
-//  it should "extract the correct titles" in {
-//    val expected = Seq("Die Musci der Flora von Buitenzorg : zugleich Laubmoosflora von Java /")
-//    assert(extractor.title(xml) === expected)
-//  }
+  it should "extract the correct titles" in {
+    val expected = Seq("Die Musci der Flora von Buitenzorg : zugleich Laubmoosflora von Java")
+    assert(extractor.title(xml) === expected)
+  }
 
   it should "extract the correct types" in {
     val expected = Seq("text")
