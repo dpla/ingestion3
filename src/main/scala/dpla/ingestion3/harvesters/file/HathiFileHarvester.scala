@@ -1,0 +1,212 @@
+package dpla.ingestion3.harvesters.file
+
+import java.io.{File, FileInputStream, InputStreamReader}
+import java.util.zip.{GZIPInputStream, ZipInputStream}
+
+import dpla.ingestion3.confs.i3Conf
+import org.apache.commons.io.IOUtils
+import org.apache.log4j.Logger
+import org.apache.spark.sql.{DataFrame, SparkSession}
+import com.databricks.spark.avro._
+import dpla.ingestion3.harvesters.Harvester
+import dpla.ingestion3.mappers.utils.XmlExtractor
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
+import org.apache.tools.tar.TarInputStream
+
+import scala.util.{Failure, Success, Try}
+import scala.xml._
+
+class HathiFileHarvester(spark: SparkSession,
+                      shortName: String,
+                      conf: i3Conf,
+                      logger: Logger)
+  extends FileHarvester(spark, shortName, conf, logger) with XmlExtractor {
+
+  def mimeType: String = "application_xml"
+
+  /**
+    * Loads .tar.gz files
+    *
+    * @param file File to parse
+    * @return Option[InputStreamReader] of the zip contents
+    *
+    *
+    * TODO: Because we're only handling zips in this class,
+    * and they should already be filtered by the FilenameFilter,
+    * I wonder if we even need the match statement here.
+    */
+  def getInputStream(file: File): Option[TarInputStream] = {
+    file.getName match {
+      case zipName if zipName.endsWith("gz") =>
+        Some(new TarInputStream(new FileInputStream(file)))
+      case _ => None
+    }
+  }
+
+  /**
+    * Takes care of parsing an xml file into a list of Nodes each representing an item
+    *
+    * @param xml Root of the xml document
+    * @return List of Options of id/item pairs.
+    */
+  def handleXML(xml: Node): List[Option[ParsedResult]] = {
+    for {
+      items <- xml \\ "record" :: Nil  // TODO THIS IS WRONG
+      item <- items
+    } yield item match {
+      case record: Node =>
+        // Extract required record identifier
+        val id: Option[String] = (record \ "controlfield")
+          .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "tag", "001"))
+          .map(extractString)
+          .headOption.flatten
+
+        val outputXML = xmlToString(record)
+
+        id match {
+          case None =>
+            logger.warn(s"Missing required record_ID for $outputXML")
+            None
+          case Some(id) => Some(ParsedResult(id, outputXML))
+        }
+      case _ =>
+        logger.warn("Got weird result back for item path: " + item.getClass)
+        None
+    }
+  }
+
+  /**
+    * Main logic for handling individual lines in the zipped file.
+    *
+    * @param line String line from file
+    * @return Count of metadata items found.
+    */
+  def handleLine(line: String,
+                 unixEpoch: Long): Try[Int] =
+
+    Option(line) match {
+      case None =>
+        Success(0) //a directory, no results
+
+      case Some(data) =>
+        Try {
+          val dataString = new String(data).replaceAll("<\\?xml.*\\?>", "")
+          val xml = XML.loadString(dataString)
+          val items = handleXML(xml)
+
+          val counts = for {
+            itemOption <- items
+            item <- itemOption // filters out the Nones
+          } yield {
+            writeOut(unixEpoch, item)
+            1
+          }
+          counts.sum
+        }
+    }
+
+  /**
+    * Implements a stream of files from the tar.
+    * Can't use @tailrec here because the compiler can't recognize it as tail recursive,
+    * but this won't blow the stack.
+    *
+    * @param tarInputStream
+    * @return Lazy stream of tar records
+    */
+  def iter(tarInputStream: TarInputStream): Stream[FileResult] =
+    Option(tarInputStream.getNextEntry) match {
+      case None =>
+        Stream.empty
+
+      case Some(entry) =>
+        val filename = Try {
+          entry.getName
+        }.getOrElse("")
+
+        val result =
+          if (entry.isDirectory || filename.contains("._")) // drop OSX hidden files
+            None
+          else if (filename.endsWith(".xml")) // only read xml files
+            Some(IOUtils.toByteArray(tarInputStream, entry.getSize))
+          else
+            None
+
+        FileResult(entry.getName, result) #:: iter(tarInputStream)
+    }
+
+  /**
+    * Executes the harvest
+    */
+  override def localHarvest(): DataFrame = {
+    val harvestTime = System.currentTimeMillis()
+    val unixEpoch = harvestTime / 1000L
+    val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
+
+    inFiles.listFiles(new GzFileFilter).foreach( inFile => {
+      logger.info(s"Reading ${inFile.getName}")
+      val inputStream = getInputStream(inFile)
+        .getOrElse(throw new IllegalArgumentException(s"Couldn't load file, ${inFile.getAbsolutePath}"))
+
+      val recordCount = (for (tarResult <- iter(inputStream)) yield {
+        logger.info("One iteration of tar input stream: " + tarResult.entryName)
+        handleFile(tarResult, unixEpoch) match {
+          case Failure(exception) =>
+            logger.error(s"Caught exception on ${tarResult.entryName}.", exception)
+            0
+          case Success(count) =>
+            logger.info("handleFile success")
+            count
+        }
+      }).sum
+
+      IOUtils.closeQuietly(inputStream)
+    })
+
+    // flush the avroWriter
+    flush()
+
+    // Read harvested data into Spark DataFrame and return.
+    spark.read.avro(tmpOutStr)
+  }
+
+  /**
+    * Converts a Node to an xml string
+    *
+    * @param node The root of the tree to write to a string
+    * @return a String containing xml
+    */
+  def xmlToString(node: Node): String =
+    Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
+
+  /**
+    * Main logic for handling individual entries in the tar.
+    *
+    * @param tarResult  Case class representing extracted item from the tar
+    * @return Count of metadata items found.
+    */
+  def handleFile(tarResult: FileResult,
+                 unixEpoch: Long): Try[Int] =
+    tarResult.data match {
+      case None =>
+        logger.info("handleFile: None")
+        Success(0) //a directory, no results
+
+      case Some(data) =>
+        Try {
+          val dataString = new String(data).replaceAll("<\\?xml.*\\?>", "").trim
+
+          val xml = XML.loadString(dataString)
+
+          val items = handleXML(xml)
+
+          val counts = for {
+            itemOption <- items
+            item <- itemOption // filters out the Nones
+          } yield {
+            writeOut(unixEpoch, item)
+            1
+          }
+          counts.sum
+        }
+    }
+}
