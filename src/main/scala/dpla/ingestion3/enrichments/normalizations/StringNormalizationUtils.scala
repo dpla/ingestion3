@@ -100,7 +100,6 @@ object StringNormalizationUtils {
       *
       */
     lazy val cleanupEndingCommaAndSpace: SingleStringEnrichment = {
-      // FIXME rewrite as a regular expression
       val endIndex = value.lastIndexWhere(_.isLetterOrDigit)
       if (endIndex == -1)
       // If there is nothing to cleanup then return the existing string
