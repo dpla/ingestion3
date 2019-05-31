@@ -130,7 +130,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "authority", "iso639-2b"))
       .flatMap(extractStrings)
       .map(nameOnlyConcept)
-  
+
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
     extractStrings(data \\ "metadata" \ "mods" \ "subject" \ "geographic")
       .flatMap(_.splitAtDelimiter(";"))

@@ -85,7 +85,7 @@ class BhlMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct relation" in {
-    val expected = Seq("Flore de Buitenzorg ;  pt. 5.").map(eitherStringOrUri)
+    val expected = Seq("Flore de Buitenzorg ;  pt. 5").map(eitherStringOrUri)
     assert(extractor.relation(xml) === expected)
   }
 
