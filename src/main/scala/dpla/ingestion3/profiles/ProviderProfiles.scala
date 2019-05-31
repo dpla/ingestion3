@@ -100,10 +100,10 @@ class HarvardProfile extends XmlProfile {
   * HathiTrust
   */
 class HathiProfile extends XmlProfile {
-  type Mapping = IllinoisMapping // TODO: CHANGEME
+  type Mapping = HathiMapping
 
   override def getHarvester = classOf[HathiFileHarvester]
-  override def getMapping = new IllinoisMapping // TODO: CHANGEME
+  override def getMapping = new HathiMapping
 }
 
 /**

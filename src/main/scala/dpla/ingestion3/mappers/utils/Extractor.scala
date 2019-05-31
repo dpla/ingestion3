@@ -92,6 +92,36 @@ trait XmlExtractor extends Extractor[NodeSeq] {
   }
 
   /**
+    * Exclude nodes that do not have an attribute that matches att and any of the given value parameters
+    *
+    * @param node Node XML node to examine
+    * @param att String name of attribute
+    * @param values Seq[String] all values of attributes
+    * @return Boolean
+    */
+  def filterAttributeListOptions(node: Node, att: String, values: Seq[String]): Boolean =
+    values.map(_.toLowerCase).contains((node \ ("@" + att)).text.toLowerCase)
+
+  /**
+    * Get nodes that match any of the given values for a given attribute.
+    *
+    * E.g. getByAttributesListOptions(elem, "color", Seq("red", "blue")) will return all nodes where
+    *   attribute "color=red" or "color=blue"
+    *
+    * @param e Elem to examine
+    * @param att String name of attribute
+    * @param values Seq[String] Values of attribute
+    * @return NodeSeq of matching nodes
+    */
+  def getByAttributeListOptions(e: Elem, att: String, values: Seq[String]): NodeSeq = {
+    e \\ "_" filter { n => filterAttributeListOptions(n, att, values) }
+  }
+
+  def getByAttributeListOptions(e: NodeSeq, att: String, values: Seq[String]): NodeSeq = {
+    getByAttributeListOptions(e.asInstanceOf[Elem], att, values)
+  }
+
+  /**
     * For each given node, get any immediate children that are text values.
     * Ignore nested text values.
     *

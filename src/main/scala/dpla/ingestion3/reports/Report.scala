@@ -100,13 +100,11 @@ trait Report {
           t.map(_.asInstanceOf[EdmTimeSpan].originalSourceDate.getOrElse("__MISSING EdmTimeSpan.originalSourceDate__"))
         case _: SkosConcept =>
           t.map(_.asInstanceOf[SkosConcept].providedLabel.getOrElse("__MISSING SkosConcept.providedLabel__"))
-        case _: LiteralOrUri =>
-          t.map(
-            _ match {
-              case Right(x) => x.asInstanceOf[URI].toString
-              case Left(x) => x.asInstanceOf[String]
-            }
-          )
+        case _: Either[_,_] =>
+          t.map(_.asInstanceOf[LiteralOrUri] match {
+            case Left(string) => string
+            case Right(uri) => uri.toString
+          })
         case _ => t.map(_.toString)
       }
     }
