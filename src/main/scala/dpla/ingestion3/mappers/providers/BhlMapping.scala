@@ -113,7 +113,6 @@ class BhlMapping extends XmlMapping with XmlExtractor {
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "authority", "marcform"))
       .flatMap(extractStrings)
 
-  // TODO: Map this?  None in i3 reports
   override def genre(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
   // <mods:genre authority="marcgt">
     (data \\ "metadata" \ "mods" \ "genre")
@@ -131,8 +130,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "authority", "iso639-2b"))
       .flatMap(extractStrings)
       .map(nameOnlyConcept)
-
-  // TODO: split at ; ? only affects a few records
+  
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
     extractStrings(data \\ "metadata" \ "mods" \ "subject" \ "geographic")
       .flatMap(_.splitAtDelimiter(";"))
@@ -150,11 +148,14 @@ class BhlMapping extends XmlMapping with XmlExtractor {
       if (places.lift(i).isDefined) places(i) + " " + n else n
     }}
 
-    publishers.map(nameOnlyAgent)
+    publishers
+      .map(_.stripSuffix("."))
+      .map(nameOnlyAgent)
   }
 
   override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
     extractStrings(data \\ "metadata" \ "mods" \ "relatedItem" \ "titleInfo" \ "title")
+      .map(_.stripSuffix("."))
       .map(eitherStringOrUri)
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
@@ -173,7 +174,6 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     extractStrings(data \\ "metadata" \ "mods" \ "subject" \ "temporal")
       .map(stringOnlyTimeSpan)
 
-  // TODO: split at ; ?
   override def title(data: Document[NodeSeq]): ZeroToMany[String] = {
     // <mods:titleInfo> <mods:title>
     // when <mods:titleInfo> does not have @type
@@ -183,6 +183,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
 
     (parentNode \ "title")
       .flatMap(extractStrings)
+      .flatMap(_.splitAtDelimiter(";"))
       .map(_.cleanupEndingPunctuation)
       .map(_.stripSuffix("."))
   }
