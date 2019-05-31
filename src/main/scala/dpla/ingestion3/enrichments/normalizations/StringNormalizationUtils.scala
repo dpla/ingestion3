@@ -129,8 +129,6 @@ object StringNormalizationUtils {
           .concat(value.substring(beginIndex))
     }
 
-
-
     /**
       * Accepts a String value and splits it around periods. Strips
       * trailing and leading whitespace from those "sentences" and
