@@ -148,9 +148,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
       if (places.lift(i).isDefined) places(i) + " " + n else n
     }}
 
-    publishers
-      .map(_.stripSuffix("."))
-      .map(nameOnlyAgent)
+    publishers.map(nameOnlyAgent)
   }
 
   override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
