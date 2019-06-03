@@ -1,16 +1,13 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{File, FileInputStream, InputStreamReader}
-import java.util.zip.{GZIPInputStream, ZipInputStream}
+import java.io.{File, FileInputStream}
 
 import dpla.ingestion3.confs.i3Conf
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import com.databricks.spark.avro._
-import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.mappers.utils.XmlExtractor
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import org.apache.tools.tar.TarInputStream
 
 import scala.util.{Failure, Success, Try}
@@ -28,12 +25,8 @@ class HathiFileHarvester(spark: SparkSession,
     * Loads .tar.gz files
     *
     * @param file File to parse
-    * @return Option[InputStreamReader] of the zip contents
+    * @return Option[TarInputStream] of the zip contents
     *
-    *
-    * TODO: Because we're only handling zips in this class,
-    * and they should already be filtered by the FilenameFilter,
-    * I wonder if we even need the match statement here.
     */
   def getInputStream(file: File): Option[TarInputStream] = {
     file.getName match {
@@ -51,7 +44,7 @@ class HathiFileHarvester(spark: SparkSession,
     */
   def handleXML(xml: Node): List[Option[ParsedResult]] = {
     for {
-      items <- xml \\ "record" :: Nil  // TODO THIS IS WRONG
+      items <- xml \\ "record" :: Nil
       item <- items
     } yield item match {
       case record: Node =>
@@ -74,36 +67,6 @@ class HathiFileHarvester(spark: SparkSession,
         None
     }
   }
-
-  /**
-    * Main logic for handling individual lines in the zipped file.
-    *
-    * @param line String line from file
-    * @return Count of metadata items found.
-    */
-  def handleLine(line: String,
-                 unixEpoch: Long): Try[Int] =
-
-    Option(line) match {
-      case None =>
-        Success(0) //a directory, no results
-
-      case Some(data) =>
-        Try {
-          val dataString = new String(data).replaceAll("<\\?xml.*\\?>", "")
-          val xml = XML.loadString(dataString)
-          val items = handleXML(xml)
-
-          val counts = for {
-            itemOption <- items
-            item <- itemOption // filters out the Nones
-          } yield {
-            writeOut(unixEpoch, item)
-            1
-          }
-          counts.sum
-        }
-    }
 
   /**
     * Implements a stream of files from the tar.
@@ -148,13 +111,11 @@ class HathiFileHarvester(spark: SparkSession,
         .getOrElse(throw new IllegalArgumentException(s"Couldn't load file, ${inFile.getAbsolutePath}"))
 
       val recordCount = (for (tarResult <- iter(inputStream)) yield {
-        logger.info("One iteration of tar input stream: " + tarResult.entryName)
         handleFile(tarResult, unixEpoch) match {
           case Failure(exception) =>
             logger.error(s"Caught exception on ${tarResult.entryName}.", exception)
             0
           case Success(count) =>
-            logger.info("handleFile success")
             count
         }
       }).sum
@@ -188,7 +149,6 @@ class HathiFileHarvester(spark: SparkSession,
                  unixEpoch: Long): Try[Int] =
     tarResult.data match {
       case None =>
-        logger.info("handleFile: None")
         Success(0) //a directory, no results
 
       case Some(data) =>
