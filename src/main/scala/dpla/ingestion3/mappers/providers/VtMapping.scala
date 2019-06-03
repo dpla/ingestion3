@@ -116,7 +116,7 @@ class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
 
   def agent = EdmAgent(
-    name = Some("Green Mountain Digital Archive"),
+    name = Some("Vermont Green Mountain Digital Archive"),
     uri = Some(URI("http://dp.la/api/contributor/vt"))
   )
 }
