@@ -91,7 +91,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
   def getDateValues(dates: Seq[String]): Seq[String] = {
     val sorted = dates.sorted
 
-    sorted.reverse.headOption match { // get last date in sequence
+    sorted.lastOption match { // get last date in sequence
       case Some(d) =>
         if (d.contains("/") || d.contains("-")) Seq(d) // date is already range so just use it
         else if (dates.size > 1) Seq(sorted.head + "-" + d) // create range using first and last date
