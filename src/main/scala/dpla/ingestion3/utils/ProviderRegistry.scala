@@ -50,6 +50,7 @@ object ProviderRegistry {
     "esdn" -> Register(profile = new EsdnProfile),
     "florida" -> Register(profile = new FlProfile),
     "getty" -> Register(profile = new GettyProfile),
+    "hathi" -> Register(profile = new HathiProfile),
     "il" -> Register(profile = new IlProfile),
     "ia" -> Register(profile = new IaProfile),
     "in" -> Register(profile = new InProfile),
