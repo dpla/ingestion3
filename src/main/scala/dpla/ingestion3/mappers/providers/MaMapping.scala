@@ -1,0 +1,268 @@
+package dpla.ingestion3.mappers.providers
+
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
+import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
+import dpla.ingestion3.messages.IngestMessageTemplates
+import dpla.ingestion3.model.DplaMapData._
+import dpla.ingestion3.model.{nameOnlyAgent, _}
+import dpla.ingestion3.utils.Utils
+import org.json4s.JValue
+import org.json4s.JsonDSL._
+
+import scala.xml._
+
+
+class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
+
+  val formatBlockList: Set[String] =
+    DigitalSurrogateBlockList.termList ++
+      FormatTypeValuesBlockList.termList
+
+  // ID minting functions
+  override def useProviderName(): Boolean = true
+
+  override def getProviderName(): String = "bpl" // boston public library
+
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
+    extractString(data \ "header" \ "identifier")
+
+  // SourceResource mapping
+  override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
+  // <mods:titleInfo type="alternative"><mods:title>
+  // <mods:titleInfo type="translated">
+  // <mods:titleInfo type="uniform">
+    (data \\ "titleInfo")
+      .map(node => getByAttribute(node.asInstanceOf[Elem], "type", "alternative"))
+      .flatMap(altTitle => extractStrings(altTitle \ "title")) ++
+    (data \\ "titleInfo")
+      .map(node => getByAttribute(node.asInstanceOf[Elem], "type", "translated"))
+      .flatMap(extractStrings) ++
+    (data \\ "titleInfo")
+      .map(node => getByAttribute(node.asInstanceOf[Elem], "type", "uniform"))
+      .flatMap(extractStrings)
+
+  override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
+  // <relatedItem type="host"><titleInfo><title>
+    (data \\ "relatedItem")
+      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "host"))
+      .flatMap(collection => extractStrings(collection \ "titleInfo" \ "title"))
+      .map(nameOnlyCollection)
+
+  override def creator(data: Document[NodeSeq]): Seq[EdmAgent] = {
+  // <name><namePart> + " , " <namePart type=date>
+    val names = (data \\ "name")
+      .flatMap(n => extractStrings(n \ "namePart"))
+
+    val dates = (data \\ "name" \ "namePart")
+      .filter(n => filterAttribute(n, "type", "date"))
+      .flatMap(extractStrings)
+
+    val creators: Seq[String] = names.zipWithIndex.map{ case(n, i) => {
+      if (dates.lift(i).isDefined) dates(i) + ", " + n else n
+    }}
+
+    creators.map(nameOnlyAgent)
+  }
+
+  override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] = {
+  // <mods:originInfo><mods:dateCreated encoding="w3cdtf" keyDate="yes">
+  // <mods:originInfo><mods:dateIssued encoding="w3cdtf" keyDate="yes">
+  // <mods:originInfo><mods:dateOther encoding="w3cdtf" keyDate="yes">
+  // <mods:originInfo><mods:copyrightDate encoding="w3cdtf" keyDate="yes">
+  // for date ranges @keyDate='yes' and @point='start' | @point='end'
+
+    val props = Seq("dateCreated", "dateIssued", "dateOther", "copyrightDate")
+
+    props.flatMap(prop => {
+      val dateCreated = (data \\ "originInfo" \\ prop)
+        .flatMap(node => getByAttribute(node, "keyDate", "yes"))
+        .flatMap(node => getByAttribute(node, "encoding", "w3cdtf"))
+        .flatMap(node => extractStrings(node))
+
+      // Get dateCreated values with a keyDate=yes attribute and point=start attribute
+      val earlyDate = (data \\ "originInfo" \\ prop)
+        .flatMap(node => getByAttribute(node, "keyDate", "yes"))
+        .flatMap(node => getByAttribute(node, "point", "start"))
+        .flatMap(node => extractStrings(node))
+
+      // Get dateCreated values with point=end attribute
+      val lateDate = (data \\ "originInfo" \\ prop)
+        .flatMap(node => getByAttribute(node, "keyDate", "yes"))
+        .flatMap(node => getByAttribute(node, "point", "end"))
+        .flatMap(node => extractStrings(node))
+
+      (dateCreated.nonEmpty, earlyDate.nonEmpty, lateDate.nonEmpty) match {
+        case (true, _, _) => dateCreated.map(stringOnlyTimeSpan)
+        case (false, true, true) => Seq(EdmTimeSpan(
+          originalSourceDate = Some(s"${earlyDate.headOption.getOrElse("")}-${lateDate.headOption.getOrElse("")}"),
+          begin = earlyDate.headOption,
+          end = lateDate.headOption
+        ))
+        case _ => Seq()
+      }
+    })
+  }
+
+  override def description(data: Document[NodeSeq]): Seq[String] =
+  // <mods:abstract>
+  // <mods:note>
+    extractStrings(data \\ "note") ++
+      extractStrings(data \\ "abstract")
+
+  override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
+  // <mods:physicalDescription><mods:extent>
+    extractStrings(data \\ "physicalDescription" \ "extent")
+
+  override def format(data: Document[NodeSeq]): Seq[String] =
+  // <genre>
+    extractStrings(data \\ "genre")
+      .map(_.applyBlockFilter(formatBlockList))
+      .filter(_.nonEmpty)
+
+  override def identifier(data: Document[NodeSeq]): Seq[String] =
+  // <mods:identifier type="local-accession">
+  // <mods:identifier type="local-other">
+  // <mods:identifier type="local-call">
+  // <mods:identifier type="local-barcode">
+  // The value should be the type qualifier value + ": " + the property value, e.g., "Local accession: ####""
+    {
+      val types = Seq("local-accession", "local-other", "local-call", "local-barcode")
+
+      types.map(t => {
+        val label = t.split("-").mkString(" ").capitalize
+        val id = (data \ "metadata" \ "mods" \ "identifier")
+          .flatMap(node => getByAttribute(node, "type", t))
+          .flatMap(extractString(_))
+
+        s"$label: $id"
+      })
+    }
+
+  override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
+  // <mods:language><mods:languageTerm>
+    extractStrings(data \\ "language" \\ "languageTerm")
+      .map(nameOnlyConcept)
+
+  override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
+  // <mods:subject><mods:hierarchicalGeographic> [combine all children into a single property with ', ' between them]
+  // <mods:subject><mods:geographic>;
+  // <mods:subject><mods:cartographics><mods:coordinates>
+    {
+      val places = extractStrings(data \\ "subject" \\ "geographic").map(nameOnlyPlace)
+
+      val hierarchy = (data \\ "subject" \ "hierarchicalGeographic").map(h => {
+        val city = extractString(h \ "city")
+        val country = extractString(h \ "country")
+        val county = extractString(h \ "county")
+        val state = extractString(h \ "state")
+        val name = Option(Seq(city, county, state, country).flatten.map(_.trim).mkString(", "))
+
+        DplaPlace(
+          name = name,
+          city = city,
+          country = country,
+          county = county,
+          state = state
+        )
+      })
+
+      val coordinates =  extractStrings(data \\ "subject" \ "cartographics" \ "coordinates").map(coord => {
+        DplaPlace(coordinates = Some(coord))
+      })
+
+      places ++ hierarchy ++ coordinates
+    }
+
+  private def places(data: Document[NodeSeq]) =  extractStrings(data \\ "subject" \\ "geographic")
+
+  override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
+    extractStrings(data \\ "originInfo" \\ "publisher")
+      .map(nameOnlyAgent)
+
+  //  <accessCondition> when the @type="use and reproduction" attribute is not present
+  override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
+    (data \ "metadata" \ "mods" \ "accessCondition")
+      .flatMap(extractStrings)
+
+  override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
+  // Any <mods:subject> field, except <mods:hierarchicalGeographic>, <mods:geographic>, and <mods:cartographics><mods:coordinates>.
+    ((data \ "metadata" \ "mods" \ "subject" \ "topic") ++
+      (data \ "metadata" \ "mods" \ "subject" \ "temporal") ++
+      (data \ "metadata" \ "mods" \ "subject" \ "titleInfo") ++
+      (data \ "metadata" \ "mods" \ "subject" \ "name") ++
+      (data \ "metadata" \ "mods" \ "subject" \ "genre"))
+      .flatMap(extractStrings)
+      .map(_.trim)
+      .map(nameOnlyConcept)
+
+  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
+    extractStrings(data \\ "subject" \\ "temporal").map(stringOnlyTimeSpan)
+
+  override def title(data: Document[NodeSeq]): Seq[String] =
+  // <titleInfo usage="primary"> children combined as follows (with a single space between):
+  // <nonSort> <title> <subTitle> <partName> <partNumber>
+  {
+    val titleNodes = (data \ "metadata" \ "mods" \ "titleInfo")
+      .flatMap(node => getByAttribute(node, "usage", "primary"))
+
+    val nonSort = extractStrings(titleNodes \ "nonSort").mkString(" ")
+    val title = extractStrings(titleNodes \ "title").mkString(" ")
+    val subTitle = extractStrings(titleNodes \ "subTitle").mkString(" ")
+    val partName = extractStrings(titleNodes \ "partName").mkString(" ")
+    val partNumber = extractStrings(titleNodes \ "partNumber").mkString(" ")
+
+    Seq(s"$nonSort $title $subTitle $partName $partNumber".reduceWhitespace)
+  }
+
+  override def `type`(data: Document[NodeSeq]): Seq[String] =
+  // <mods:typeOfResource>
+    extractStrings(data \ "metadata" \ "mods" \ "typeOfResource")
+
+  // OreAggregation
+  // TODO IIIF <mods:location><mods:url note="iiif-manifest">
+
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+
+  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+  // <mods:location><mods:physicalLocation>
+    (data \ "metadata" \ "mods" \ "location" \ "physicalLocation")
+      .flatMap(extractStrings)
+      .map(nameOnlyAgent)
+
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
+    (data \ "metadata" \ "mods" \ "accessCondition")
+      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "use and reproduction"))
+      .flatMap(node => node.attribute(node.getNamespace("xlink"), "href"))
+      .flatMap(n => extractString(n.head))
+      .map(URI)
+
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+  // <mods:location><mods:url usage="primary" access="object in context">
+    (data \ "metadata" \ "mods" \ "location" \ "url")
+      .flatMap(node => getByAttribute(node, "usage", "primary"))
+      .flatMap(node => getByAttribute(node, "access", "object in context"))
+      .flatMap(extractStrings)
+      .map(stringOnlyWebResource)
+
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+
+  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+  // <mods:location><mods:url access="preview">
+    (data \ "metadata" \ "mods" \ "location" \ "url")
+      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "access", "preview"))
+      .flatMap(extractStrings)
+      .map(stringOnlyWebResource)
+
+  override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
+
+  override def sidecar(data: Document[NodeSeq]): JValue =
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+
+  // Helper method
+  def agent = EdmAgent(
+    name = Some("Digital Commonwealth"),
+    uri = Some(URI("http://dp.la/api/contributor/digital-commonwealth"))
+  )
+}
+

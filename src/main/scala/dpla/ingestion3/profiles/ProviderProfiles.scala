@@ -137,6 +137,17 @@ class LocProfile extends JsonProfile {
 }
 
 /**
+  * Massachusetts - Digital Commonwealth
+  */
+class MaProfile extends XmlProfile {
+  type Mapping = MaMapping
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[OaiHarvester]
+  override def getMapping = new MaMapping
+}
+
+
+/**
   * Digital Maryland
   */
 class MarylandProfile extends XmlProfile {
