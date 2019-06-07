@@ -32,29 +32,29 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   // <mods:titleInfo type="alternative"><mods:title>
   // <mods:titleInfo type="translated">
   // <mods:titleInfo type="uniform">
-    (data \\ "titleInfo")
-      .map(node => getByAttribute(node.asInstanceOf[Elem], "type", "alternative"))
+    (getModsRoot(data) \ "titleInfo")
+      .map(node => getByAttribute(node, "type", "alternative"))
       .flatMap(altTitle => extractStrings(altTitle \ "title")) ++
-    (data \\ "titleInfo")
-      .map(node => getByAttribute(node.asInstanceOf[Elem], "type", "translated"))
+    (getModsRoot(data) \ "titleInfo")
+      .map(node => getByAttribute(node, "type", "translated"))
       .flatMap(extractStrings) ++
-    (data \\ "titleInfo")
-      .map(node => getByAttribute(node.asInstanceOf[Elem], "type", "uniform"))
+    (getModsRoot(data) \ "titleInfo")
+      .map(node => getByAttribute(node, "type", "uniform"))
       .flatMap(extractStrings)
 
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
   // <relatedItem type="host"><titleInfo><title>
-    (data \\ "relatedItem")
+    (getModsRoot(data) \ "relatedItem")
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "host"))
       .flatMap(collection => extractStrings(collection \ "titleInfo" \ "title"))
       .map(nameOnlyCollection)
 
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] = {
   // <name><namePart> + " , " <namePart type=date>
-    val names = (data \\ "name")
+    val names = (getModsRoot(data) \ "name")
       .flatMap(n => extractStrings(n \ "namePart"))
 
-    val dates = (data \\ "name" \ "namePart")
+    val dates = (getModsRoot(data)\ "name" \ "namePart")
       .filter(n => filterAttribute(n, "type", "date"))
       .flatMap(extractStrings)
 
@@ -75,19 +75,19 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     val props = Seq("dateCreated", "dateIssued", "dateOther", "copyrightDate")
 
     props.flatMap(prop => {
-      val dateCreated = (data \\ "originInfo" \\ prop)
+      val dateCreated = (getModsRoot(data) \ "originInfo" \\ prop)
         .flatMap(node => getByAttribute(node, "keyDate", "yes"))
         .flatMap(node => getByAttribute(node, "encoding", "w3cdtf"))
         .flatMap(node => extractStrings(node))
 
       // Get dateCreated values with a keyDate=yes attribute and point=start attribute
-      val earlyDate = (data \\ "originInfo" \\ prop)
+      val earlyDate = (getModsRoot(data) \ "originInfo" \\ prop)
         .flatMap(node => getByAttribute(node, "keyDate", "yes"))
         .flatMap(node => getByAttribute(node, "point", "start"))
         .flatMap(node => extractStrings(node))
 
       // Get dateCreated values with point=end attribute
-      val lateDate = (data \\ "originInfo" \\ prop)
+      val lateDate = (getModsRoot(data) \ "originInfo" \\ prop)
         .flatMap(node => getByAttribute(node, "keyDate", "yes"))
         .flatMap(node => getByAttribute(node, "point", "end"))
         .flatMap(node => extractStrings(node))
@@ -107,16 +107,16 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def description(data: Document[NodeSeq]): Seq[String] =
   // <mods:abstract>
   // <mods:note>
-    extractStrings(data \\ "note") ++
-      extractStrings(data \\ "abstract")
+    extractStrings(getModsRoot(data) \ "note") ++
+      extractStrings(getModsRoot(data) \ "abstract")
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:physicalDescription><mods:extent>
-    extractStrings(data \\ "physicalDescription" \ "extent")
+    extractStrings(getModsRoot(data) \ "physicalDescription" \ "extent")
 
   override def format(data: Document[NodeSeq]): Seq[String] =
   // <genre>
-    extractStrings(data \\ "genre")
+    extractStrings(getModsRoot(data) \ "genre")
       .map(_.applyBlockFilter(formatBlockList))
       .filter(_.nonEmpty)
 
@@ -131,7 +131,7 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
       types.map(t => {
         val label = t.split("-").mkString(" ").capitalize
-        val id = (data \ "metadata" \ "mods" \ "identifier")
+        val id = (getModsRoot(data) \ "identifier")
           .flatMap(node => getByAttribute(node, "type", t))
           .flatMap(extractString(_))
 
@@ -141,7 +141,7 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
   // <mods:language><mods:languageTerm>
-    extractStrings(data \\ "language" \\ "languageTerm")
+    extractStrings(getModsRoot(data) \ "language" \ "languageTerm")
       .map(nameOnlyConcept)
 
   override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
@@ -149,9 +149,9 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   // <mods:subject><mods:geographic>;
   // <mods:subject><mods:cartographics><mods:coordinates>
     {
-      val places = extractStrings(data \\ "subject" \\ "geographic").map(nameOnlyPlace)
+      val places = extractStrings(getModsRoot(data) \ "subject" \\ "geographic").map(nameOnlyPlace)
 
-      val hierarchy = (data \\ "subject" \ "hierarchicalGeographic").map(h => {
+      val hierarchy = (getModsRoot(data) \ "subject" \ "hierarchicalGeographic").map(h => {
         val city = extractString(h \ "city")
         val country = extractString(h \ "country")
         val county = extractString(h \ "county")
@@ -167,43 +167,42 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
         )
       })
 
-      val coordinates =  extractStrings(data \\ "subject" \ "cartographics" \ "coordinates").map(coord => {
-        DplaPlace(coordinates = Some(coord))
-      })
+      val coordinates =  extractStrings(getModsRoot(data) \ "subject" \ "cartographics" \ "coordinates")
+        .map(coord => DplaPlace(coordinates = Some(coord)))
 
       places ++ hierarchy ++ coordinates
     }
 
-  private def places(data: Document[NodeSeq]) =  extractStrings(data \\ "subject" \\ "geographic")
+  private def places(data: Document[NodeSeq]) =  extractStrings(getModsRoot(data) \ "subject" \ "geographic")
 
   override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
-    extractStrings(data \\ "originInfo" \\ "publisher")
+    extractStrings(getModsRoot(data) \ "originInfo" \ "publisher")
       .map(nameOnlyAgent)
 
   //  <accessCondition> when the @type="use and reproduction" attribute is not present
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
-    (data \ "metadata" \ "mods" \ "accessCondition")
+    (getModsRoot(data) \ "accessCondition")
       .flatMap(extractStrings)
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
   // Any <mods:subject> field, except <mods:hierarchicalGeographic>, <mods:geographic>, and <mods:cartographics><mods:coordinates>.
-    ((data \ "metadata" \ "mods" \ "subject" \ "topic") ++
-      (data \ "metadata" \ "mods" \ "subject" \ "temporal") ++
-      (data \ "metadata" \ "mods" \ "subject" \ "titleInfo") ++
-      (data \ "metadata" \ "mods" \ "subject" \ "name") ++
-      (data \ "metadata" \ "mods" \ "subject" \ "genre"))
+    ( (getModsRoot(data) \ "subject" \ "topic") ++
+      (getModsRoot(data) \ "subject" \ "temporal") ++
+      (getModsRoot(data) \ "subject" \ "titleInfo") ++
+      (getModsRoot(data) \ "subject" \ "name") ++
+      (getModsRoot(data) \ "subject" \ "genre"))
       .flatMap(extractStrings)
       .map(_.trim)
       .map(nameOnlyConcept)
 
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
-    extractStrings(data \\ "subject" \\ "temporal").map(stringOnlyTimeSpan)
+    extractStrings(getModsRoot(data) \ "subject" \\ "temporal").map(stringOnlyTimeSpan)
 
   override def title(data: Document[NodeSeq]): Seq[String] =
   // <titleInfo usage="primary"> children combined as follows (with a single space between):
   // <nonSort> <title> <subTitle> <partName> <partNumber>
   {
-    val titleNodes = (data \ "metadata" \ "mods" \ "titleInfo")
+    val titleNodes = (getModsRoot(data) \ "titleInfo")
       .flatMap(node => getByAttribute(node, "usage", "primary"))
 
     val nonSort = extractStrings(titleNodes \ "nonSort").mkString(" ")
@@ -217,7 +216,7 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def `type`(data: Document[NodeSeq]): Seq[String] =
   // <mods:typeOfResource>
-    extractStrings(data \ "metadata" \ "mods" \ "typeOfResource")
+    extractStrings(getModsRoot(data) \ "typeOfResource")
 
   // OreAggregation
   // TODO IIIF <mods:location><mods:url note="iiif-manifest">
@@ -226,12 +225,12 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
   // <mods:location><mods:physicalLocation>
-    (data \ "metadata" \ "mods" \ "location" \ "physicalLocation")
+    (getModsRoot(data) \ "location" \ "physicalLocation")
       .flatMap(extractStrings)
       .map(nameOnlyAgent)
 
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
-    (data \ "metadata" \ "mods" \ "accessCondition")
+    (getModsRoot(data) \ "accessCondition")
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "use and reproduction"))
       .flatMap(node => node.attribute(node.getNamespace("xlink"), "href"))
       .flatMap(n => extractString(n.head))
@@ -239,7 +238,7 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
   // <mods:location><mods:url usage="primary" access="object in context">
-    (data \ "metadata" \ "mods" \ "location" \ "url")
+    (getModsRoot(data) \ "location" \ "url")
       .flatMap(node => getByAttribute(node, "usage", "primary"))
       .flatMap(node => getByAttribute(node, "access", "object in context"))
       .flatMap(extractStrings)
@@ -249,7 +248,7 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
   // <mods:location><mods:url access="preview">
-    (data \ "metadata" \ "mods" \ "location" \ "url")
+    (getModsRoot(data) \ "location" \ "url")
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "access", "preview"))
       .flatMap(extractStrings)
       .map(stringOnlyWebResource)
@@ -264,5 +263,7 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     name = Some("Digital Commonwealth"),
     uri = Some(URI("http://dp.la/api/contributor/digital-commonwealth"))
   )
+
+  private def getModsRoot(data: Document[NodeSeq]) = data \ "metadata" \ "mods"
 }
 
