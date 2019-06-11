@@ -109,6 +109,11 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
       .flatMap(extractStrings)
       .map(nameOnlyAgent)
 
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
+    (data \\ "display" \ "lds13")
+      .flatMap(extractStrings)
+      .map(URI)
+
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
   // baseIsShownAt + control\recordid
     (data \\ "control" \ "recordid")
