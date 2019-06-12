@@ -3,7 +3,7 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model._
-import org.scalatest.{BeforeAndAfter, FlatSpec, FunSuite}
+import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 import scala.xml.NodeSeq
 
@@ -362,7 +362,7 @@ class HarvardMappingTest extends FlatSpec with BeforeAndAfter {
         </mods:mods>
       )
     )
-    assert(results === Seq(SkosConcept(providedLabel = Some("Spanish; Castilian"), concept = Some("spa"))))
+    assert(results === Seq(SkosConcept(providedLabel = Some("Spanish; Castilian"))))
   }
 
   it should "extract subject" in {

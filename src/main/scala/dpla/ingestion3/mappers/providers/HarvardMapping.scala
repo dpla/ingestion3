@@ -1,6 +1,5 @@
 package dpla.ingestion3.mappers.providers
 
-import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList}
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
@@ -9,6 +8,7 @@ import dpla.ingestion3.model.{EdmAgent, _}
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 
 import scala.xml.{Elem, Node, NodeSeq}
 
@@ -34,12 +34,62 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     processNames(data).creators
 
-  override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
-    (
-      extractStrings(data \ "metadata" \ "mods" \ "originInfo" \ "dateCreated")
-        ++
-        extractStrings(data \ "metadata" \ "mods" \ "originInfo" \ "dateIssued")
-      ).map(stringOnlyTimeSpan)
+  override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
+    // date issued
+
+    val dateIssued = (data \ "metadata" \ "mods" \ "originInfo" \ "dateIssued")
+      .flatMap(extractStrings(_))
+      .map(stringOnlyTimeSpan)
+
+    // Get primary display date
+    val keyDates = ((data \ "metadata" \ "mods" \ "originInfo" \ "dataCreated") ++
+      (data \ "metadata" \ "mods" \ "originInfo" \ "dateOther"))
+      .flatMap(node => getByAttribute(node, "keyDate", "yes"))
+      .filterNot(node => filterAttribute(node, "encoding", "marc"))
+      .flatMap(extractStrings(_))
+      .map(stringOnlyTimeSpan)
+
+    // approximate dates
+    val approxDates = ((data \ "metadata" \ "mods" \ "originInfo" \ "dataCreated") ++
+        (data \ "metadata" \ "mods" \ "originInfo" \ "dateIssued"))
+        .flatMap(node => getByAttribute(node, "qualifier", "questionable"))
+        .filterNot(node => filterAttribute(node, "encoding", "marc"))
+        .flatMap(extractStrings(_))
+        .map(str =>
+          if (str.startsWith("ca. ")) {
+            str
+          } else
+            s"ca. $str"
+        )
+      .map(stringOnlyTimeSpan)
+
+    // Constructed date range
+    val beginDate = ((data \ "metadata" \ "mods" \ "originInfo" \ "dataCreated") ++
+      (data \ "metadata" \ "mods" \ "originInfo" \ "dateIssued"))
+      .flatMap(node => getByAttribute(node, "point", "start"))
+      .flatMap(extractStrings(_))
+
+    val endDate = ((data \ "metadata" \ "mods" \ "originInfo" \ "dataCreated") ++
+      (data \ "metadata" \ "mods" \ "originInfo" \ "dateIssued"))
+      .flatMap(node => getByAttribute(node, "point", "end"))
+      .flatMap(extractStrings(_))
+
+
+    val constructedDates = if(beginDate.length == endDate.length) {
+      beginDate.zip(endDate).map {
+        case (begin: String, end: String) =>
+          EdmTimeSpan(
+            originalSourceDate = Some(""), // blank original source date
+            begin = Some(begin),
+            end = Some(end)
+          )
+      }
+    } else {
+      Seq()
+    }
+
+    dateIssued ++ keyDates ++ approxDates ++ constructedDates
+  }
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "abstract") ++
@@ -48,16 +98,17 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "physicalDescription" \ "extent")
 
-  override def format(data: Document[NodeSeq]): ZeroToMany[String] = super.format(data)
-//    extractStrings(data \ "metadata" \ "mods" \ "genre")
-//      .map(
-//        _.applyBlockFilter(
-//          DigitalSurrogateBlockList.termList ++
-//            ExtentIdentificationList.termList
-//        )
-//      )
-//      .flatMap(_.splitAtDelimiter(";"))
-//      .filter(_.nonEmpty)
+  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
+    (extractStrings(data \ "metadata" \ "mods" \ "genre") ++
+      extractStrings(data \ "metadata" \ "mods" \ "termMaterialsTech"))
+      .map(
+        _.applyBlockFilter(
+          DigitalSurrogateBlockList.termList ++
+            ExtentIdentificationList.termList
+        ))
+      .flatMap(_.splitAtDelimiter(";"))
+      .filter(_.nonEmpty)
+
 
   override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "recordInfo" \ "recordIdentifier") ++
@@ -68,8 +119,11 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
       language <- data \ "metadata" \ "mods" \ "language"
       terms = language \ "languageTerm"
       data = terms.map(term => term \@ "type" -> term.text).toMap
-    } yield SkosConcept(providedLabel = data.get("text"), concept = data.get("code"))
-
+    } yield SkosConcept(providedLabel = (data.get("text"), data.get("code")) match {
+      case (Some(text), _) => Some(text)
+      case (None, Some(code)) => Some(code)
+      case (_, _) => None
+    })
 
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = (
     extractStrings(data \ "metadata" \ "mods" \ "subject" \ "geographic")
@@ -133,38 +187,42 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     val lookup = Map(
-      "crimes" -> "Harvard Law School Library. Harvard University",
+      "crimes" -> "Harvard Law School Library, Harvard University",
       "eda" -> "Emily Dickinson Archive",
-      "lap" -> "Widener Library. Harvard University",
+      "lap" -> "Widener Library, Harvard University",
       "maps" -> "Harvard Map Collection, Harvard University",
       "medmss" -> "Houghton Library, Harvard University",
       "rubbings" -> "Fine Arts Library, Special Collections, Harvard University",
-      "scarlet" -> "Harvard Law School Library. Harvard University",
+      "scarlet" -> "Harvard Law School Library, Harvard University",
       "scores" -> "Eda Kuhn Loeb Music Library, Harvard University",
       "ward" -> "General Artemas Ward Museum, Harvard University"
     )
 
     val setSpec = (for {
-      setSpec <- data \ "metadata" \ "mods" \ "extension" \ "set" \ "setSpec"
+      setSpec <- data \ "metadata" \ "mods" \ "extension" \ "sets" \ "set" \ "setSpec"
     } yield setSpec.text.trim).headOption
 
     val setSpecAgent = lookup.get(setSpec.getOrElse("")).map(nameOnlyAgent)
 
+    // <mods:location><physicalLocation displayLabel="Harvard repository">
+
     val physicalLocationAgent = (for {
       node <- data \ "metadata" \ "mods" \ "location" \ "physicalLocation"
-      if node \@ "type" == "repository"
+      if node \@ "displayLabel" == "Harvard repository"
     } yield nameOnlyAgent(node.text.trim)).headOption
 
+    // <mods:relatedItem displayLabel="collection"><location><physicalLocation displayLabel="Harvard repository">
     val hostPhysicalLocationAgent = (for {
-      relatedItem <- data \ "metadata" \ "mods" \ "relatedItem"
-      if (relatedItem \@ "type") == "host"
+      relatedItem <- data \ "metadata" \ "mods" \\ "relatedItem"
+      if (relatedItem \@ "displayLabel") == "collection"
       node <- relatedItem \ "location" \ "physicalLocation"
+      if node \@ "displayLabel" == "Harvard repository"
     } yield nameOnlyAgent(node.text.trim)).headOption
 
     setSpecAgent
       .orElse(physicalLocationAgent)
       .orElse(hostPhysicalLocationAgent)
-      .orElse(Some(nameOnlyAgent("MISSING")))
+      .orElse(Some(nameOnlyAgent("Harvard Library, Harvard University")))
       .toSeq
   }
 
