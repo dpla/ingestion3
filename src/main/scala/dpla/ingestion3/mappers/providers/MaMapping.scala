@@ -30,17 +30,17 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   // SourceResource mapping
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
   // <mods:titleInfo type="alternative"><mods:title>
-  // <mods:titleInfo type="translated">
-  // <mods:titleInfo type="uniform">
+  // <mods:titleInfo type="translated"><mods:title>
+  // <mods:titleInfo type="uniform"><mods:title>
     (getModsRoot(data) \ "titleInfo")
       .map(node => getByAttribute(node, "type", "alternative"))
       .flatMap(altTitle => extractStrings(altTitle \ "title")) ++
     (getModsRoot(data) \ "titleInfo")
       .map(node => getByAttribute(node, "type", "translated"))
-      .flatMap(extractStrings) ++
+      .flatMap(altTitle => extractStrings(altTitle \ "title")) ++
     (getModsRoot(data) \ "titleInfo")
       .map(node => getByAttribute(node, "type", "uniform"))
-      .flatMap(extractStrings)
+      .flatMap(altTitle => extractStrings(altTitle \ "title"))
 
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
   // <relatedItem type="host"><titleInfo><title>
@@ -59,7 +59,7 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .flatMap(extractStrings)
 
     val creators: Seq[String] = names.zipWithIndex.map{ case(n, i) => {
-      if (dates.lift(i).isDefined) dates(i) + ", " + n else n
+      if (dates.lift(i).isDefined) s"$n, ${dates(i)}" else n
     }}
 
     creators.map(nameOnlyAgent)
