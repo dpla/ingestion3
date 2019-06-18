@@ -87,6 +87,16 @@ class DlgProfile extends JsonProfile {
 }
 
 /**
+  * HathiTrust
+  */
+class HathiProfile extends XmlProfile {
+  type Mapping = IllinoisMapping // TODO: CHANGEME
+
+  override def getHarvester = classOf[HathiFileHarvester]
+  override def getMapping = new IllinoisMapping // TODO: CHANGEME
+}
+
+/**
   * Illinois Digital Heritage Hub
   */
 class IlProfile extends XmlProfile {
