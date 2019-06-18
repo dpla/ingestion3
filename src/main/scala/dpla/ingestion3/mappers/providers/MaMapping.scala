@@ -49,20 +49,45 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .flatMap(collection => extractStrings(collection \ "titleInfo" \ "title"))
       .map(nameOnlyCollection)
 
+  // contributor
+  // identify all names with a corresponding role (in @valueUri).
+  // Is there a way to differentiate so that anyone with a “contributor”
+  /**
+  <mods:name>
+    <mods:role>
+      <mods:roleTerm authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" type="text" valueURI="http://id.loc.gov/vocabulary/relators/ctb">Contributor</mods:roleTerm>
+    </mods:role>
+    <mods:namePart>American Photo-Relief Printing Co</mods:namePart>
+  </mods:name>
+  **/
+  override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
+    val names = (getModsRoot(data) \ "name").filter(n => extractStrings(n \ "role" \ "roleTerm").contains("Contributor"))
+
+    nameConstructor(names)
+  }
+
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] = {
   // <name><namePart> + " , " <namePart type=date>
-    val names = (getModsRoot(data) \ "name")
-      .flatMap(n => extractStrings(n \ "namePart"))
+    val names = (getModsRoot(data) \ "name").filterNot(n => extractStrings(n \ "role" \ "roleTerm").contains("Contributor"))
 
-    val dates = (getModsRoot(data)\ "name" \ "namePart")
+    nameConstructor(names)
+  }
+
+  private def nameConstructor(names: NodeSeq): Seq[EdmAgent] = {
+    val nameStrings = names
+      .flatMap(n => n \ "namePart")
+      .filter(n => n.attributes.isEmpty)
+      .flatMap(extractStrings)
+
+    val dates = (names \ "namePart")
       .filter(n => filterAttribute(n, "type", "date"))
       .flatMap(extractStrings)
 
-    val creators: Seq[String] = names.zipWithIndex.map{ case(n, i) => {
+    val constructedNames: Seq[String] = nameStrings.zipWithIndex.map{ case(n, i) => {
       if (dates.lift(i).isDefined) s"$n, ${dates(i)}" else n
     }}
 
-    creators.map(nameOnlyAgent)
+    constructedNames.map(nameOnlyAgent)
   }
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] = {
@@ -74,20 +99,21 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
     val props = Seq("dateCreated", "dateIssued", "dateOther", "copyrightDate")
 
+
     props.flatMap(prop => {
-      val dateCreated = (getModsRoot(data) \ "originInfo" \\ prop)
+      val dateCreated = (getModsRoot(data) \ "originInfo" \ prop)
         .flatMap(node => getByAttribute(node, "keyDate", "yes"))
         .flatMap(node => getByAttribute(node, "encoding", "w3cdtf"))
         .flatMap(node => extractStrings(node))
 
       // Get dateCreated values with a keyDate=yes attribute and point=start attribute
-      val earlyDate = (getModsRoot(data) \ "originInfo" \\ prop)
+      val earlyDate = (getModsRoot(data) \ "originInfo" \ prop)
         .flatMap(node => getByAttribute(node, "keyDate", "yes"))
         .flatMap(node => getByAttribute(node, "point", "start"))
         .flatMap(node => extractStrings(node))
 
       // Get dateCreated values with point=end attribute
-      val lateDate = (getModsRoot(data) \ "originInfo" \\ prop)
+      val lateDate = (getModsRoot(data) \ "originInfo" \ prop)
         .flatMap(node => getByAttribute(node, "keyDate", "yes"))
         .flatMap(node => getByAttribute(node, "point", "end"))
         .flatMap(node => extractStrings(node))

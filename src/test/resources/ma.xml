@@ -1,0 +1,110 @@
+<record>
+    <header>
+        <identifier>oai:digitalcommonwealth.org:commonwealth-oai:0k225b90r</identifier>
+        <datestamp>2019-04-09T05:19:58Z</datestamp>
+        <setSpec>commonwealth-oai:r207tt62z</setSpec>
+    </header>
+    <metadata>
+        <mods:mods version="3.5" xmlns:mods="http://www.loc.gov/mods/v3" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-5.xsd">
+            <mods:recordInfo>
+                <mods:recordContentSource>Springfield College Archives and Special Collections</mods:recordContentSource>
+                <mods:recordOrigin>OAI-PMH request</mods:recordOrigin>
+            </mods:recordInfo>
+            <mods:relatedItem type="host">
+                <mods:titleInfo>
+                    <mods:title>College Archives Digital Collections</mods:title>
+                </mods:titleInfo>
+            </mods:relatedItem>
+            <mods:location>
+                <mods:physicalLocation>Springfield College Archives and Special Collections</mods:physicalLocation>
+            </mods:location>
+            <mods:titleInfo displayLabel="primary_display" usage="primary">
+                <mods:title>Art Linkletter Natatorium at Springfield College</mods:title>
+            </mods:titleInfo>
+            <mods:titleInfo type="alternative">
+                <mods:title>Alternate Title</mods:title>
+            </mods:titleInfo>
+            <mods:subject>
+                <mods:topic>Linkletter Natatorium</mods:topic>
+            </mods:subject>
+            <mods:subject authority="tgn" authorityURI="http://vocab.getty.edu/tgn/" valueURI="http://vocab.getty.edu/tgn/7014531">
+                <mods:hierarchicalGeographic>
+                    <mods:county>Hampden</mods:county>
+                    <mods:country>United States</mods:country>
+                    <mods:state>Massachusetts</mods:state>
+                    <mods:continent>North and Central America</mods:continent>
+                    <mods:city>Springfield</mods:city>
+                </mods:hierarchicalGeographic>
+                <mods:cartographics>
+                    <mods:coordinates>42.1,-72.5833</mods:coordinates>
+                </mods:cartographics>
+            </mods:subject>
+            <mods:subject>
+                <mods:topic>Springfield College</mods:topic>
+            </mods:subject>
+            <mods:subject>
+                <mods:topic>Springfield College--Buildings</mods:topic>
+            </mods:subject>
+            <mods:subject>
+                <mods:topic>Triangles</mods:topic>
+            </mods:subject>
+            <mods:subject>
+                <mods:topic>Springfield (Mass.)</mods:topic>
+            </mods:subject>
+            <mods:subject>
+                <mods:topic>Swimming pools</mods:topic>
+            </mods:subject>
+            <mods:subject>
+                <mods:topic>Autumn</mods:topic>
+            </mods:subject>
+            <mods:originInfo>
+                <mods:publisher>Springfield College</mods:publisher>
+                <mods:dateCreated encoding="w3cdtf" keyDate="yes" point="start">1967</mods:dateCreated>
+                <mods:dateCreated encoding="w3cdtf" point="end">2007</mods:dateCreated>
+            </mods:originInfo>
+            <mods:abstract>Abstract</mods:abstract>
+            <mods:note>Note</mods:note>
+            <mods:typeOfResource>still image</mods:typeOfResource>
+            <mods:identifier type="local-other">rg131-02-07-006</mods:identifier>
+            <mods:identifier type="uri">http://cdm16122.contentdm.oclc.org/cdm/ref/collection/p15370coll2/id/2977</mods:identifier>
+            <mods:accessCondition displayLabel="rights" type="use and reproduction" xlink:href="http://rightsstatements.org/vocab/InC-EDU/1.0/">Text and images are owned, held, or licensed by Springfield College and are available for personal, non-commercial, and educational use, provided that ownership is properly cited. A credit line is required and should read: Courtesy of Springfield College, Babson Library, Archives and Special Collections. Any commercial use without written permission from Springfield College is strictly prohibited. Other individuals or entities other than, and in addition to, Springfield College may also own copyrights and other propriety rights. The publishing, exhibiting, or broadcasting party assumes all responsibility for clearing reproduction rights and for any infringement of United States copyright law.</mods:accessCondition>
+            <mods:accessCondition displayLabel="license" type="use and reproduction">Contact host institution for more information.</mods:accessCondition>
+            <mods:physicalDescription>
+                <mods:internetMediaType>image/jpeg</mods:internetMediaType>
+                <mods:internetMediaType>image/tiff</mods:internetMediaType>
+            </mods:physicalDescription>
+            <mods:physicalDescription>
+                <mods:extent>extent</mods:extent>
+            </mods:physicalDescription>
+            <mods:genre authority="gmgpc" authorityURI="http://id.loc.gov/vocabulary/graphicMaterials" displayLabel="general" valueURI="http://id.loc.gov/vocabulary/graphicMaterials/tgm007721">Photographs</mods:genre>
+            <mods:relatedItem type="series">
+                <mods:titleInfo>
+                    <mods:title>Art Linkletter Natatorium Records</mods:title>
+                </mods:titleInfo>
+            </mods:relatedItem>
+            <mods:subject>
+                <mods:cartographics>
+                    <mods:coordinates>42.10469,-72.55408</mods:coordinates>
+                </mods:cartographics>
+            </mods:subject>
+            <mods:location>
+                <mods:url access="object in context" usage="primary">http://cdm16122.contentdm.oclc.org/cdm/ref/collection/p15370coll2/id/2977</mods:url>
+                <mods:url access="preview">https://ark.digitalcommonwealth.org/ark:/50959/0k225b90r/thumbnail</mods:url></mods:location>
+
+            <name>
+                <namePart type="date">2000</namePart>
+                <namePart>Alfred</namePart>
+            </name>
+            <name>
+                <namePart>John</namePart>
+            </name>
+            // Is there a way to differentiate so that anyone with a “contributor”
+            <mods:name>
+                <mods:role>
+                    <mods:roleTerm authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" type="text" valueURI="http://id.loc.gov/vocabulary/relators/ctb">Contributor</mods:roleTerm>
+                </mods:role>
+                <mods:namePart>American Photo-Relief Printing Co</mods:namePart>
+            </mods:name>
+        </mods:mods>
+    </metadata>
+</record>

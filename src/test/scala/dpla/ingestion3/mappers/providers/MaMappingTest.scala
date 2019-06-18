@@ -1,0 +1,125 @@
+package dpla.ingestion3.mappers.providers
+
+import dpla.ingestion3.mappers.utils.Document
+import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
+import dpla.ingestion3.model._
+import dpla.ingestion3.utils.FlatFileIO
+import org.scalatest.{BeforeAndAfter, FlatSpec}
+
+import scala.xml.{NodeSeq, XML}
+
+class MaMappingTest extends FlatSpec with BeforeAndAfter {
+
+  implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
+  val shortName = "ma"
+  val xmlString: String = new FlatFileIO().readFileAsString("/ma.xml")
+  val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))
+  val extractor = new MaMapping
+
+  it should "not use the provider shortname in minting IDs " in
+    assert(extractor.useProviderName())
+
+  it should "extract the correct original identifier " in
+    assert(extractor.originalId(xml) === Some("oai:digitalcommonwealth.org:commonwealth-oai:0k225b90r"))
+
+  it should "extract the correct alternate titles" in {
+    val expected = Seq("Alternate Title")
+    assert(extractor.alternateTitle(xml) === expected)
+  }
+
+  it should "extract the correct collection titles" in {
+    val expected = Seq("College Archives Digital Collections")
+      .map(nameOnlyCollection)
+    assert(extractor.collection(xml) === expected)
+  }
+
+  it should "extract the correct contributor" in {
+    val expected = Seq("American Photo-Relief Printing Co").map(nameOnlyAgent)
+    assert(extractor.contributor(xml) === expected)
+  }
+
+  it should "extract the correct creators" in {
+    val expected = Seq("Alfred, 2000", "John").map(nameOnlyAgent)
+    assert(extractor.creator(xml) == expected)
+  }
+
+  it should "extract the correct dates when only given a keyDate" in {
+    val xml: Document[NodeSeq] = Document(
+      <record>
+        <metadata>
+          <mods:mods>
+            <originInfo>
+              <dateCreated keyDate="yes" encoding="w3cdtf">2010-11-31</dateCreated>
+            </originInfo>
+          </mods:mods>
+        </metadata>
+      </record>)
+
+    val expected = Seq("2010-11-31").map(stringOnlyTimeSpan)
+    assert(extractor.date(xml) === expected)
+  }
+
+  it should "extract the correct dates when given point=start and point=end" in {
+    val xml: Document[NodeSeq] = Document(
+      <record>
+        <metadata>
+          <mods:mods>
+            <originInfo>
+              <dateCreated keyDate="yes" point="start">2010-11-31</dateCreated>
+              <dateCreated keyDate="yes" point="end">2010-12-31</dateCreated>
+            </originInfo>
+          </mods:mods>
+        </metadata>
+      </record>)
+
+    val expected = Seq(
+      EdmTimeSpan(
+        originalSourceDate = Some("2010-11-31-2010-12-31"),
+        begin = Some("2010-11-31"),
+        end = Some("2010-12-31")
+      ))
+    assert(extractor.date(xml) === expected)
+  }
+
+  it should "extract the correct description" in
+    assert(extractor.description(xml) == Seq("Note", "Abstract"))
+
+  it should "extract the correct extent" in {
+    assert(extractor.extent(xml) == Seq("extent"))
+  }
+
+  it should "extract the correct format" in {
+    val expected = Seq("Photographs")
+    assert(extractor.format(xml) === expected)
+  }
+
+  it should "extract rights value" in {
+    assert(extractor.rights(xml) === Seq("Text and images are owned, held, or licensed by Springfield College and are available for personal, non-commercial, and educational use, provided that ownership is properly cited. A credit line is required and should read: Courtesy of Springfield College, Babson Library, Archives and Special Collections. Any commercial use without written permission from Springfield College is strictly prohibited. Other individuals or entities other than, and in addition to, Springfield College may also own copyrights and other propriety rights. The publishing, exhibiting, or broadcasting party assumes all responsibility for clearing reproduction rights and for any infringement of United States copyright law.", "Contact host institution for more information."))
+  }
+
+  it should "extract the correct edmRights " in {
+    val expected = Seq(URI("http://rightsstatements.org/vocab/InC-EDU/1.0/"))
+    assert(extractor.edmRights(xml) === expected)
+  }
+
+  it should "extract the correct titles" in {
+    val expected = Seq("Art Linkletter Natatorium at Springfield College")
+    assert(extractor.title(xml) === expected)
+  }
+
+  it should "extract the correct isShownAt" in {
+    val expected = Seq(uriOnlyWebResource(URI("http://cdm16122.contentdm.oclc.org/cdm/ref/collection/p15370coll2/id/2977")))
+    assert(extractor.isShownAt(xml) === expected)
+  }
+
+  it should "create the correct DPLA URI" in {
+    val expected = Some(URI("http://dp.la/api/items/a4a613c7e9b833e4b752476869aaeb45"))
+    assert(extractor.dplaUri(xml) === expected)
+  }
+
+  it should "extract the correct subjects " in {
+    val expected = Seq("Linkletter Natatorium", "Springfield College", "Springfield College--Buildings",
+    "Triangles", "Springfield (Mass.)", "Swimming pools", "Autumn").map(nameOnlyConcept)
+    assert(extractor.subject(xml) === expected)
+  }
+}
