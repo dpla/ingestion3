@@ -122,4 +122,41 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
     "Triangles", "Springfield (Mass.)", "Swimming pools", "Autumn").map(nameOnlyConcept)
     assert(extractor.subject(xml) === expected)
   }
+
+  it should "extract the correct places" in {
+    val xml: Document[NodeSeq] = Document(
+      <record>
+        <metadata>
+          <mods:mods>
+            <mods:subject authority="tgn" valueURI="http://vocab.getty.edu/tgn/7013445" authorityURI="http://vocab.getty.edu/tgn/">
+              <mods:hierarchicalGeographic>
+                <mods:county>Suffolk</mods:county>
+                <mods:country>United States</mods:country>
+                <mods:state>Massachusetts</mods:state>
+                <mods:continent>North and Central America</mods:continent>
+                <mods:city>Boston</mods:city>
+              </mods:hierarchicalGeographic>
+              <mods:cartographics>
+                <mods:coordinates>42.35,-71.05</mods:coordinates>
+              </mods:cartographics>
+            </mods:subject>
+            <mods:subject authority="tgn" valueURI="http://vocab.getty.edu/tgn/7013445" authorityURI="http://vocab.getty.edu/tgn/">
+              <geographic>A Place</geographic>
+            </mods:subject>
+          </mods:mods>
+        </metadata>
+      </record>
+    )
+
+    val expected = Seq(DplaPlace(
+      county = Some("Suffolk"),
+      country = Some("United States"),
+      state = Some("Massachusetts"),
+      city = Some("Boston"),
+      coordinates = Some("42.35,-71.05"),
+      name = Some("Boston, Suffolk, Massachusetts, United States")
+    ), nameOnlyPlace("A Place"))
+
+    assert(extractor.place(xml) === expected)
+  }
 }

@@ -175,28 +175,36 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   // <mods:subject><mods:geographic>;
   // <mods:subject><mods:cartographics><mods:coordinates>
     {
-      val places = extractStrings(getModsRoot(data) \ "subject" \\ "geographic").map(nameOnlyPlace)
 
-      val hierarchy = (getModsRoot(data) \ "subject" \ "hierarchicalGeographic").map(h => {
-        val city = extractString(h \ "city")
-        val country = extractString(h \ "country")
-        val county = extractString(h \ "county")
-        val state = extractString(h \ "state")
-        val name = Option(Seq(city, county, state, country).flatten.map(_.trim).mkString(", "))
+      val subjects = getModsRoot(data) \ "subject"
 
-        DplaPlace(
-          name = name,
-          city = city,
-          country = country,
-          county = county,
-          state = state
-        )
+      subjects.flatMap(subject => {
+        val places = extractStrings(subject \ "geographic").map(nameOnlyPlace)
+
+        val hierarchy = (subject \ "hierarchicalGeographic").map(h => {
+          val city = extractString(h \ "city")
+          val country = extractString(h \ "country")
+          val county = extractString(h \ "county")
+          val state = extractString(h \ "state")
+          val name = Option(Seq(city, county, state, country).flatten.map(_.trim).mkString(", "))
+
+          val coordinates =  extractString(subject \ "cartographics" \ "coordinates")
+
+          DplaPlace(
+            name = name,
+            city = city,
+            country = country,
+            county = county,
+            state = state,
+            coordinates = coordinates
+          )
+        })
+
+        if(places.isEmpty)
+          hierarchy
+        else
+          places
       })
-
-      val coordinates =  extractStrings(getModsRoot(data) \ "subject" \ "cartographics" \ "coordinates")
-        .map(coord => DplaPlace(coordinates = Some(coord)))
-
-      places ++ hierarchy ++ coordinates
     }
 
   private def places(data: Document[NodeSeq]) =  extractStrings(getModsRoot(data) \ "subject" \ "geographic")
