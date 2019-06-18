@@ -65,6 +65,10 @@ class MwdlMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq(nameOnlyAgent("Salt Lake Community College Libraries"))
     assert(extractor.dataProvider(xml) === expected)
   }
+  it should "extract the correct edmRights" in {
+    val expected = Seq(URI("http://rightsstatements.org/vocab/CNE/1.0/"))
+    assert(extractor.edmRights(xml) === expected)
+  }
   it should "extract the correct isShownAt" in {
     val expected = Seq(uriOnlyWebResource(URI("https://utah-primoprod.hosted.exlibrisgroup.com/primo-explore/fulldisplay?docid=digcoll_slc_27works_598&context=L&vid=MWDL")))
     assert(extractor.isShownAt(xml) === expected)
