@@ -1,5 +1,6 @@
 package dpla.ingestion3.reports
 
+import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import dpla.ingestion3.model._
 import org.apache.spark.sql._
 
@@ -99,9 +100,15 @@ trait Report {
           t.map(_.asInstanceOf[EdmTimeSpan].originalSourceDate.getOrElse("__MISSING EdmTimeSpan.originalSourceDate__"))
         case _: SkosConcept =>
           t.map(_.asInstanceOf[SkosConcept].providedLabel.getOrElse("__MISSING SkosConcept.providedLabel__"))
+        case _: LiteralOrUri =>
+          t.map(
+            _ match {
+              case Right(x) => x.asInstanceOf[URI].toString
+              case Left(x) => x.asInstanceOf[String]
+            }
+          )
         case _ => t.map(_.toString)
       }
     }
   }
-
 }
