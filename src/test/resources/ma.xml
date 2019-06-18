@@ -24,6 +24,9 @@
             <mods:titleInfo type="alternative">
                 <mods:title>Alternate Title</mods:title>
             </mods:titleInfo>
+            <mods:titleInfo type="translated" lang="eng">
+                <mods:title>Kio circus</mods:title>
+            </mods:titleInfo>
             <mods:subject>
                 <mods:topic>Linkletter Natatorium</mods:topic>
             </mods:subject>

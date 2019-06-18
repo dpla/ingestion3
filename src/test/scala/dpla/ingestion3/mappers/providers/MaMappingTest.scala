@@ -23,7 +23,7 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.originalId(xml) === Some("oai:digitalcommonwealth.org:commonwealth-oai:0k225b90r"))
 
   it should "extract the correct alternate titles" in {
-    val expected = Seq("Alternate Title")
+    val expected = Seq("Alternate Title", "Kio circus")
     assert(extractor.alternateTitle(xml) === expected)
   }
 
