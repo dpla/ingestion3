@@ -27,6 +27,34 @@ class StringNormalizationUtilsTest extends FlatSpec with BeforeAndAfter {
   }
 
   // Tests
+  "cleanupGeocoordinates" should "strip out N and W" in {
+    val originalValue = "35.58343N, 83.50822W"
+    val enrichedValue = originalValue.cleanupGeocoordinates
+    val expectedValue = "35.58343, 83.50822"
+    assert(enrichedValue === expectedValue)
+  }
+
+  it should "not strip out W and N (wrong order)" in {
+    val originalValue = "35.58343W, 83.50822N"
+    val enrichedValue = originalValue.cleanupGeocoordinates
+    val expectedValue = "35.58343W, 83.50822N"
+    assert(enrichedValue === expectedValue)
+  }
+
+  it should "pass through coordinates without cardinal directions" in {
+    val originalValue = "35.58343, 83.50822"
+    val enrichedValue = originalValue.cleanupGeocoordinates
+    val expectedValue = "35.58343, 83.50822"
+    assert(enrichedValue === expectedValue)
+  }
+
+  it should "passthrough craziness" in {
+    val originalValue = "pork chop sandwiches"
+    val enrichedValue = originalValue.cleanupGeocoordinates
+    val expectedValue = "pork chop sandwiches"
+    assert(enrichedValue === expectedValue)
+  }
+
   "convertToSentenceCase" should "capitalize the first character in each sentence" in {
     val originalValue = "this is a sentence about Moomins. this is another about Snorks."
     val enrichedValue = originalValue.convertToSentenceCase
