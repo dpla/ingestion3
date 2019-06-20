@@ -171,3 +171,7 @@ log/*
 *.sublime-project
 
 metastore_db/
+
+# for ingestion3-conf submodule
+conf/
+.gitmodules
