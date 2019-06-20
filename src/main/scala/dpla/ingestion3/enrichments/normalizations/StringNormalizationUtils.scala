@@ -168,6 +168,15 @@ object StringNormalizationUtils {
       */
     lazy val reduceWhitespace: SingleStringEnrichment = value.replaceAll(" +", " ").trim
 
+    lazy val cleanupGeocoordinates: SingleStringEnrichment =
+      value.splitAtDelimiter(",") match {
+        case split: Array[String] if split.length == 2 =>
+          val newNorth = split(0).replaceAll("[nN]$", "")
+          val newWest = split(1).replaceAll("[wW]", "")
+          f"$newNorth, $newWest"
+        case _ =>
+          value
+      }
 
     /**
       * Splits a String value around a given delimiter.
