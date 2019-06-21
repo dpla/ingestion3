@@ -34,10 +34,17 @@ class StringNormalizationUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === expectedValue)
   }
 
-  it should "not strip out W and N (wrong order)" in {
+  it should "erase when W and N in wrong order" in {
     val originalValue = "35.58343W, 83.50822N"
     val enrichedValue = originalValue.cleanupGeocoordinates
-    val expectedValue = "35.58343W, 83.50822N"
+    val expectedValue = ""
+    assert(enrichedValue === expectedValue)
+  }
+
+  it should "strip out N and W when alone" in {
+    val originalValue = "N, W"
+    val enrichedValue = originalValue.cleanupGeocoordinates
+    val expectedValue = ""
     assert(enrichedValue === expectedValue)
   }
 
@@ -48,10 +55,10 @@ class StringNormalizationUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === expectedValue)
   }
 
-  it should "passthrough craziness" in {
+  it should "not passthrough craziness" in {
     val originalValue = "pork chop sandwiches"
     val enrichedValue = originalValue.cleanupGeocoordinates
-    val expectedValue = "pork chop sandwiches"
+    val expectedValue = ""
     assert(enrichedValue === expectedValue)
   }
 
