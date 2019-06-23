@@ -160,6 +160,14 @@ class HarvardMappingTest extends FlatSpec with BeforeAndAfter {
     val results = mapping.isShownAt(
       metadata(
         <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:extension>
+            <sets:sets>
+              <sets:set>
+                <sets:setName>Latin American Pamphlet Digital Collection</sets:setName>
+                <sets:setSpec>latin</sets:setSpec>
+              </sets:set>
+            </sets:sets>
+          </mods:extension>
           <mods:location>
             <mods:url access="raw object" note="Provides access to page images of entire work">
               https://nrs.harvard.edu/urn-3:FHCL:923450

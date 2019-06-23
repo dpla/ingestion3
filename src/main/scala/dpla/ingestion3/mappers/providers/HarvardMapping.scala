@@ -42,7 +42,7 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
       .map(stringOnlyTimeSpan)
 
     // Get primary display date
-    val keyDates = ((data \ "metadata" \ "mods" \ "originInfo" \ "dataCreated") ++
+    val keyDates = ((data \ "metadata" \ "mods" \ "originInfo" \ "dateCreated") ++
       (data \ "metadata" \ "mods" \ "originInfo" \ "dateOther"))
       .flatMap(node => getByAttribute(node, "keyDate", "yes"))
       .filterNot(node => filterAttribute(node, "encoding", "marc"))
@@ -50,7 +50,7 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
       .map(stringOnlyTimeSpan)
 
     // approximate dates
-    val approxDates = ((data \ "metadata" \ "mods" \ "originInfo" \ "dataCreated") ++
+    val approxDates = ((data \ "metadata" \ "mods" \ "originInfo" \ "dateCreated") ++
         (data \ "metadata" \ "mods" \ "originInfo" \ "dateIssued"))
         .flatMap(node => getByAttribute(node, "qualifier", "questionable"))
         .filterNot(node => filterAttribute(node, "encoding", "marc"))
@@ -64,12 +64,12 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
       .map(stringOnlyTimeSpan)
 
     // Constructed date range
-    val beginDate = ((data \ "metadata" \ "mods" \ "originInfo" \ "dataCreated") ++
+    val beginDate = ((data \ "metadata" \ "mods" \ "originInfo" \ "dateCreated") ++
       (data \ "metadata" \ "mods" \ "originInfo" \ "dateIssued"))
       .flatMap(node => getByAttribute(node, "point", "start"))
       .flatMap(extractStrings(_))
 
-    val endDate = ((data \ "metadata" \ "mods" \ "originInfo" \ "dataCreated") ++
+    val endDate = ((data \ "metadata" \ "mods" \ "originInfo" \ "dateCreated") ++
       (data \ "metadata" \ "mods" \ "originInfo" \ "dateIssued"))
       .flatMap(node => getByAttribute(node, "point", "end"))
       .flatMap(extractStrings(_))
@@ -228,16 +228,33 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
+  
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
+    val artMuseumLink = (data \ "metadata" \ "mods" \ "location" \ "url")
+      .flatMap(node => getByAttribute(node, "displayLabel", "Harvard Art Museum"))
+      .flatMap(node => getByAttribute(node, "access", "object in context"))
+      .flatMap(extractString(_))
+      .map(stringOnlyWebResource)
 
-  /*
-    <mods:location>
-    <mods:url access=”object in context” usage="primary display">
-  */
-  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    for {
-      node <- data \ "metadata" \ "mods" \ "location" \ "url"
-      if node \@ "access" == "object in context"
-    } yield uriOnlyWebResource(URI(node.text.trim))
+    val collectionLinks =
+      collection(data)
+        .flatMap(_.title)
+        .flatMap(collectionTitle => {
+          (data \ "metadata" \ "mods" \ "location" \ "url")
+            .flatMap(node => getByAttribute(node, "displayLabel", collectionTitle))
+            .flatMap(node => getByAttribute(node, "access", "object in context"))
+            .flatMap(extractString(_))
+            .map(stringOnlyWebResource)
+      })
+
+    val objectInContext = (data \ "metadata" \ "mods" \ "location" \ "url")
+      .flatMap(node => getByAttribute(node, "displayLabel", "Harvard Digital Collections"))
+      .flatMap(node => getByAttribute(node, "access", "object in context"))
+      .flatMap(extractString(_))
+      .map(stringOnlyWebResource)
+
+    artMuseumLink ++ collectionLinks ++ objectInContext
+  }
 
   //<mods:location><mods:url access="preview">
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
