@@ -61,33 +61,31 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   </mods:name>
   **/
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
-    val names = (getModsRoot(data) \ "name").filter(n => extractStrings(n \ "role" \ "roleTerm").contains("Contributor"))
+    val names = (getModsRoot(data) \ "name")
+      .filter(n => extractStrings(n \ "role" \ "roleTerm").map(_.trim).contains("Contributor"))
 
     nameConstructor(names)
   }
 
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] = {
   // <name><namePart> + " , " <namePart type=date>
-    val names = (getModsRoot(data) \ "name").filterNot(n => extractStrings(n \ "role" \ "roleTerm").contains("Contributor"))
+    val names = (getModsRoot(data) \ "name")
+      .filterNot(n => extractStrings(n \ "role" \ "roleTerm").map(_.trim).contains("Contributor"))
 
     nameConstructor(names)
   }
 
   private def nameConstructor(names: NodeSeq): Seq[EdmAgent] = {
-    val nameStrings = names
-      .flatMap(n => n \ "namePart")
-      .filter(n => n.attributes.isEmpty)
-      .flatMap(extractStrings)
+    names.map(node => {
+        val name = extractString((node \ "namePart").filter(p => p.attributes.isEmpty))
+        val date = extractString((node \ "namePart").filter(p => filterAttribute(p, "type", "date")))
 
-    val dates = (names \ "namePart")
-      .filter(n => filterAttribute(n, "type", "date"))
-      .flatMap(extractStrings)
-
-    val constructedNames: Seq[String] = nameStrings.zipWithIndex.map{ case(n, i) => {
-      if (dates.lift(i).isDefined) s"$n, ${dates(i)}" else n
-    }}
-
-    constructedNames.map(nameOnlyAgent)
+        if(date.isDefined)
+          s"${name.getOrElse("")}, ${date.get}"
+        else
+          name.getOrElse("")
+      })
+      .map(nameOnlyAgent)
   }
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] = {
@@ -179,7 +177,8 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       val subjects = getModsRoot(data) \ "subject"
 
       subjects.flatMap(subject => {
-        val places = extractStrings(subject \ "geographic").map(nameOnlyPlace)
+        val places = extractString(subject \ "geographic")
+        val coordinates =  extractString(subject \ "cartographics" \ "coordinates")
 
         val hierarchy = (subject \ "hierarchicalGeographic").map(h => {
           val city = extractString(h \ "city")
@@ -187,8 +186,6 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
           val county = extractString(h \ "county")
           val state = extractString(h \ "state")
           val name = Option(Seq(city, county, state, country).flatten.map(_.trim).mkString(", "))
-
-          val coordinates =  extractString(subject \ "cartographics" \ "coordinates")
 
           DplaPlace(
             name = name,
@@ -203,7 +200,8 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
         if(places.isEmpty)
           hierarchy
         else
-          places
+          Seq(DplaPlace(name = places,
+            coordinates = coordinates))
       })
     }
 

@@ -1,0 +1,381 @@
+<record
+        xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <header>
+        <identifier>oai:digitalcommonwealth.org:commonwealth:nc581732x</identifier>
+        <datestamp>2019-04-09T07:04:35Z</datestamp>
+        <setSpec>commonwealth:np193j758</setSpec>
+    </header>
+    <metadata>
+        <mods:mods
+                version="3.5" xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-5.xsd" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:mods="http://www.loc.gov/mods/v3">
+            <mods:titleInfo usage="primary" displayLabel="primary_display">
+                <mods:nonSort>L'</mods:nonSort>
+                <mods:title>arbre des batailles ... [etc.]</mods:title>
+            </mods:titleInfo>
+            <mods:titleInfo
+                    type="uniform" authority="naf" authorityURI="http://id.loc.gov/authorities/names" valueURI="http://id.loc.gov/authorities/names/n95026759">
+                <mods:title>Bonet, Honoré, active 1378-1398. Arbre des batailles</mods:title>
+            </mods:titleInfo>
+            <mods:name
+                    type="personal" authority="naf" authorityURI="http://id.loc.gov/authorities/names" valueURI="http://id.loc.gov/authorities/names/n87878545">
+                <mods:role>
+                    <mods:roleTerm
+                            type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/cre">
+                        Creator
+                    </mods:roleTerm>
+                </mods:role>
+                <mods:namePart>Bonet, Honoré</mods:namePart>
+                <mods:namePart type="date">active 1378-1398</mods:namePart>
+            </mods:name>
+            <mods:name type="personal" authority="naf" authorityURI="http://id.loc.gov/authorities/names" valueURI="http://id.loc.gov/authorities/names/n79117143">
+                <mods:role>
+                    <mods:roleTerm type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/ctb">
+                        Contributor
+                    </mods:roleTerm>
+                </mods:role>
+                <mods:namePart>Lydgate, John</mods:namePart>
+                <mods:namePart type="date">1370?-1451?</mods:namePart>
+            </mods:name>
+            <mods:name type="personal" authority="local" authorityURI="">
+                <mods:role>
+                    <mods:roleTerm
+                            type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/scr">
+                        Scribe
+                    </mods:roleTerm>
+                </mods:role>
+                <mods:namePart>Moris, V.C.</mods:namePart>
+            </mods:name>
+            <mods:name
+                    type="personal" authority="naf" authorityURI="http://id.loc.gov/authorities/names" valueURI="http://id.loc.gov/authorities/names/n79007370">
+                <mods:role>
+                    <mods:roleTerm
+                            type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/fmo">
+                        Former owner
+                    </mods:roleTerm>
+                </mods:role>
+                <mods:namePart>Caxton, William</mods:namePart>
+                <mods:namePart type="date">approximately 1422-1491 or 1492</mods:namePart>
+            </mods:name>
+            <mods:name type="personal" authority="local" authorityURI="">
+                <mods:role>
+                    <mods:roleTerm
+                            type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/fmo">
+                        Former owner
+                    </mods:roleTerm>
+                </mods:role>
+                <mods:namePart>Sonnyng, William</mods:namePart>
+            </mods:name>
+            <mods:name type="personal" authority="local" authorityURI="">
+                <mods:role>
+                    <mods:roleTerm
+                            type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/fmo">
+                        Former owner
+                    </mods:roleTerm>
+                </mods:role>
+                <mods:namePart>Sonnyng, John</mods:namePart>
+            </mods:name>
+            <mods:name
+                    type="personal" authority="naf" authorityURI="http://id.loc.gov/authorities/names" valueURI="http://id.loc.gov/authorities/names/no2007058416">
+                <mods:role>
+                    <mods:roleTerm
+                            type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/fmo">
+                        Former owner
+                    </mods:roleTerm>
+                </mods:role>
+                <mods:namePart>Wall, Thomas</mods:namePart>
+                <mods:namePart type="date">1504-1536</mods:namePart>
+            </mods:name>
+            <mods:name
+                    type="personal" authority="naf" authorityURI="http://id.loc.gov/authorities/names" valueURI="http://id.loc.gov/authorities/names/n79106215">
+                <mods:role>
+                    <mods:roleTerm
+                            type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/fmo">
+                        Former owner
+                    </mods:roleTerm>
+                </mods:role>
+                <mods:namePart>Spelman, Henry, Sir</mods:namePart>
+                <mods:namePart type="date">1564?-1641</mods:namePart>
+            </mods:name>
+            <mods:name type="personal" authority="local" authorityURI="">
+                <mods:role>
+                    <mods:roleTerm
+                            type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/fmo">
+                        Former owner
+                    </mods:roleTerm>
+                </mods:role>
+                <mods:namePart>Macro, Cox</mods:namePart>
+                <mods:namePart type="date">-1767</mods:namePart>
+            </mods:name>
+            <mods:name
+                    type="personal" authority="naf" authorityURI="http://id.loc.gov/authorities/names" valueURI="http://id.loc.gov/authorities/names/no2004036230">
+                <mods:role>
+                    <mods:roleTerm
+                            type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/fmo">
+                        Former owner
+                    </mods:roleTerm>
+                </mods:role>
+                <mods:namePart>Patteson, John</mods:namePart>
+                <mods:namePart type="date">1755-1833</mods:namePart>
+            </mods:name>
+            <mods:name
+                    type="personal" authority="naf" authorityURI="http://id.loc.gov/authorities/names" valueURI="http://id.loc.gov/authorities/names/n86113546">
+                <mods:role>
+                    <mods:roleTerm
+                            type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/fmo">
+                        Former owner
+                    </mods:roleTerm>
+                </mods:role>
+                <mods:namePart>Gurney, Hudson</mods:namePart>
+                <mods:namePart type="date">1775-1864</mods:namePart>
+            </mods:name>
+            <mods:name
+                    type="personal" authority="naf" authorityURI="http://id.loc.gov/authorities/names" valueURI="http://id.loc.gov/authorities/names/no2004030768">
+                <mods:role>
+                    <mods:roleTerm
+                            type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/fmo">
+                        Former owner
+                    </mods:roleTerm>
+                </mods:role>
+                <mods:namePart>Gurney, J. H. (John Henry)</mods:namePart>
+                <mods:namePart type="date">1848-1922</mods:namePart>
+            </mods:name>
+            <mods:name
+                    type="personal" authority="naf" authorityURI="http://id.loc.gov/authorities/names" valueURI="http://id.loc.gov/authorities/names/no00065442">
+                <mods:role>
+                    <mods:roleTerm
+                            type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/fmo">
+                        Former owner
+                    </mods:roleTerm>
+                </mods:role>
+                <mods:namePart>Gurney, Q. E. (Quintin Edward)</mods:namePart>
+                <mods:namePart type="date">1883-</mods:namePart>
+            </mods:name>
+            <mods:name type="corporate" authority="local" authorityURI="">
+                <mods:role>
+                    <mods:roleTerm
+                            type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/bnd">
+                        Binder
+                    </mods:roleTerm>
+                </mods:role>
+                <mods:namePart>Abbaye Saint-Pierre de Hasnon (Hasnon, France)</mods:namePart>
+            </mods:name>
+            <mods:name
+                    type="corporate" authority="naf" authorityURI="http://id.loc.gov/authorities/names" valueURI="http://id.loc.gov/authorities/names/n82075696">
+                <mods:role>
+                    <mods:roleTerm
+                            type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/fmo">
+                        Former owner
+                    </mods:roleTerm>
+                </mods:role>
+                <mods:namePart>Maggs Bros.</mods:namePart>
+            </mods:name>
+            <mods:typeOfResource manuscript="yes">still image</mods:typeOfResource>
+            <mods:typeOfResource>text</mods:typeOfResource>
+            <mods:genre
+                    authority="gmgpc" authorityURI="http://id.loc.gov/vocabulary/graphicMaterials" valueURI="http://id.loc.gov/vocabulary/graphicMaterials/tgm012286" displayLabel="general">
+                Manuscripts
+            </mods:genre>
+            <mods:genre authority="rbbin" authorityURI="" displayLabel="specific">
+                Calf bindings (Binding)
+            </mods:genre>
+            <mods:genre authority="rbbin" authorityURI="" displayLabel="specific">
+                Blind tooled bindings (Binding)
+            </mods:genre>
+            <mods:genre authority="rbbin" authorityURI="" displayLabel="specific">
+                Wooden boards (Binding)
+            </mods:genre>
+            <mods:genre authority="rbprov" authorityURI="" displayLabel="specific">
+                Inscriptions (Provenance)
+            </mods:genre>
+            <mods:genre authority="rbprov" authorityURI="" displayLabel="specific">
+                Autographs (Provenance)
+            </mods:genre>
+            <mods:genre
+                    authority="lcsh" authorityURI="http://id.loc.gov/authorities/subjects" valueURI="http://id.loc.gov/authorities/subjects/sh85080735" displayLabel="specific">
+                Manuscripts, Latin (Medieval and modern)
+            </mods:genre>
+            <mods:genre
+                    authority="lcsh" authorityURI="http://id.loc.gov/authorities/subjects" valueURI="http://id.loc.gov/authorities/subjects/sh85080714" displayLabel="specific">
+                Manuscripts, French
+            </mods:genre>
+            <mods:genre
+                    authority="lcsh" authorityURI="http://id.loc.gov/authorities/subjects" valueURI="http://id.loc.gov/authorities/subjects/sh85080709" displayLabel="specific">
+                Manuscripts, English
+            </mods:genre>
+            <mods:originInfo>
+                <mods:place>
+                    <mods:placeTerm type="text">Calais [and England]</mods:placeTerm>
+                </mods:place>
+                <mods:dateCreated
+                        point="start" encoding="w3cdtf" qualifier="questionable" keyDate="yes">
+                    1450
+                </mods:dateCreated>
+                <mods:dateCreated point="end" encoding="w3cdtf" qualifier="questionable">
+                    1471
+                </mods:dateCreated>
+            </mods:originInfo>
+            <mods:tableOfContents>
+                1. ff.1-143: L'arbre des batailles / Honoré Bonet. -- 2. f. 143v: Prophecies in Latin verse (this leaf originally blank, contents written in a different 15th-century hand) -- 3. ff. 144-150: Cy ensuyvent les loys et drois et coustumes de mare. -- 4. ff. 150v-162: Cy ensuyvent les loys et coustumes de la ville et eschevinage de Calais. -- 5. ff. 162v-163: Blank. -- 6. f. 163v: Forma littera obigantur (this page originally blank, contents written in a different 15th-century hand) -- 7. ff. 164-166v: Blank. -- 8. ff. 167-184v: Lyble of Englysh polecie (the &quot;B&quot; Text, 2nd version, after 1441) -- 9. ff. 185-186v: [The Retinue of Edward III at Calais (1346)] -- 10. ff. 187-189: The churl and the bird / John Lydgate. -- 11. f. 189v: Disputation sompniorum per philosophes (ca. 15th-century addition, in Latin) -- 12. f. 190: [Medical recipes for the flux] (ca. 15th-century addition, in English) -- 13. f. 190v: [List of receipts] (ca. 15th-century addition, in English) -- 14. ff. [190+1]-[190+8]: Tipped-in, ca. mid-17th-century transcriptions of letters and journals concerning sea travel and North America, some taken from The Principal Navigations (published by Hakluyt in 1598)
+            </mods:tableOfContents>
+            <mods:language>
+                <mods:languageTerm
+                        type="text" authority="iso639-2b" authorityURI="http://id.loc.gov/vocabulary/iso639-2" valueURI="http://id.loc.gov/vocabulary/iso639-2/fre">
+                    French
+                </mods:languageTerm>
+            </mods:language>
+            <mods:physicalDescription>
+                <mods:digitalOrigin>reformatted digital</mods:digitalOrigin>
+                <mods:extent>206 leaves : paper, ill. ; bound to 292 x 225 mm.</mods:extent>
+                <mods:note>
+                    Collation: Paper (some sheets similar to Briquet 386 and others to Piccard 86054-64), fol. iii + 166 + iii + 23 + iii + i⁸ ; iii 1-6²⁰ 7²²+¹ (f. 143=singleton) 8²⁰ iii 9¹⁶ 10¹⁰-² (innermost bifolium, between 186 and 187, wanting) i⁸ (ca. 17th-century additions) ; signed i-vii in lower left corner of first recto; first half of each quire signed ia, ib, ic.../...viia, viib, viic. Quire 8 signed &quot;i,&quot; quire 9 signed &quot;i,&quot; quire 10 unsigned. Modern arabic pencil foliation, upper/outer corner of each page.
+                </mods:note>
+                <mods:note>
+                    Layout: Part I (ff.1-143): 285 x 210 (197 x 100) mm., single column, approximately 35 lines.
+                </mods:note>
+                <mods:note>
+                    Layout: Part II (ff. 144-163): 285 x 210 (208 x 231) mm., single column, 37 lines.
+                </mods:note>
+                <mods:note>
+                    Layout: Part II (ff. 167-190): 285 x 210 (207 x 122) mm., single column, approximately 35 lines.
+                </mods:note>
+                <mods:note>
+                    Layout: Part III (ca. 17th-century additions): one or two columns, approximately 75 lines.
+                </mods:note>
+                <mods:note>
+                    Script: Parts I and II are written in a Gothic cursive in brown ink with brown rubrics by three scribes: V.C. Moris, ff. 1-143; (unidentified hand I), ff. 144-163; (unidentified hand II) ff. 164-190. Part III: written in a ca. 17th-century cursive hand in brown ink.
+                </mods:note>
+                <mods:note>
+                    Decoration: Spaces left for two- to four-line initials unfilled (guide letters only). The tree of battle illustration in brown ink on f. 5v.
+                </mods:note>
+                <mods:note>
+                    Binding: Bound ca.1471 in blind stamped calf over wooden boards. Spine with raised bands, ruled in blind. Three paper labels are present. The primary label contains a manuscript list of contents in a ca. 19th-century hand (&quot;Arbre de batailles / The libel of English / policy / &amp;c. / MS&quot;). Conservation treatment in 2018 revealed that the underside of the parchment hinge at front contains two lines in a medieval French hand. In 1936, Dr. Robin Flower, Keeper of Manuscripts at the British Museum, attributed this binding to the Abbey of St. Peter of Hasnon. Currently housed in a tan cloth box.
+                </mods:note>
+                <mods:internetMediaType>image/tiff</mods:internetMediaType>
+                <mods:internetMediaType>image/jpeg</mods:internetMediaType>
+                <mods:internetMediaType>image/jp2</mods:internetMediaType>
+            </mods:physicalDescription>
+            <mods:abstract>
+                A composite manuscript comprised of at least eight distinct pieces. Primary among these are Honoré Bonet’s L’arbre des batailles, John Lydgate’s The churl and the bird, and the anonymous 15th-century poem on English sea power, The libel of English policy. Also present are several smaller items. The two principle parts of this codex (ff. 1-163v and ff. 164-190), existed as at least three distinct manuscripts before they were bound together into the present volume in the Burgundian Netherlands/northern France during the third quarter of the 15th century. Based on geographic origin, age, contents, and three inscriptions bearing the name &quot;Will[el]mo Caston,&quot; the ownership of this volume has sometimes been attributed to William Caxton, the first English printer. See the provenance note below. Some contents also cataloged separately.
+            </mods:abstract>
+            <mods:note>Ms. composite codex.</mods:note>
+            <mods:note>
+                Title derived from contents of part I. Date range based on contents and on ownership inscription on f.1.
+            </mods:note>
+            <mods:note>
+                Origin: The contents of parts I (ff. 1-163v) and II (ff. 164-190v) were written in the mid-15th century. Part I was written in Calais by the scribe V.C. Moris (see colophon, f. 143). Part II was written in England, but on both French and Italian paper stocks. Part III consists of 8 tipped-in leaves of mid-17th-century manuscript materials in various hands, all likely produced in England. The retention of the binder's flyleaves between parts I and II suggests that each part may have previously been bound separately.
+            </mods:note>
+            <mods:note>Consult curatorial file for fuller description.</mods:note>
+            <mods:note type="acquisition">
+                Purchased by the BPL from Maggs, of London, in 1939.
+            </mods:note>
+            <mods:note type="ownership">
+                Provenance 1: This volume contains three autographs of one &quot;Willelmo Caston,&quot; conjectured by some to be William Caxton, the first English printer. These inscriptions are present on f. 1 (&quot;Iste liber co[n]stat Will[el]mo Caston&quot;), f. 143, and on the rear pastedown. N.F. Blake suggests that this autograph is more likely attributable to a different man: William Caston, a member of the English Staple at Calais, whose documented presence in the area is roughly contemporaneous to that of Caxton's time in Bruges.
+            </mods:note>
+            <mods:note type="ownership">
+                Provenance 2: In 1471 &quot;Willelmo Caston&quot; gave the volume to William Sonnyng, who appended this information to the inscription on f. 1 (&quot;...quy dedit Will[el]mo Son[n]yng An⁰ m[^i]iiij[^c]lxxj&quot;). William Sonnyng's name also appears on the front and rear pastedowns. The book was then passed to Sonnyng's son and grandson (both named John). The autograph of the elder John Sonnyng, dated &quot;anno 1522 le 23 Juin&quot; is appended to his father's autograph on the rear pastedown. In 1528, the younger John Sonnyng presented the volume to Thomas Wall, Windsor Herald, adding to the inscriptoin on f. 1: &quot;...qui genuit Johannem qui genuit Johannem quem Johannes de ordinies sancti francisci dedit istius liber thome wall alias windesor herald a⁰ 1528.&quot; Later, the volume was likely owned by Henry Spelman (d. 1641), whose collection was purchased by Cox Macro in 1709/10. The Macro collection was purchased by John Patteson. Hudson Gurney purchased the volume from Patteson in 1820 (Christie's, Feb. 1820, lot 68). H. Gurney passed it on to J.H. Gurney (his &quot;VII&quot; label on spine), who passed it on to Q.E. Gurney (d. 1932). The volume was then purchased by Maggs through Sotheby's on March 30, 1936 (lot 146).
+            </mods:note>
+            <mods:note type="language">In Latin, French, and Middle English.</mods:note>
+            <mods:note type="citation/reference">
+                Bond, W.H. Supplement to the Census of medieval and Renaissance manuscripts in the United States and Canada, page 209
+            </mods:note>
+            <mods:note type="citation/reference">
+                Schoenberg database of manuscripts, entry 18005
+            </mods:note>
+            <mods:note type="citation/reference">
+                Schoenberg database of manuscripts, entry 57041
+            </mods:note>
+            <mods:note type="bibliography">
+                Bibliography: For further information on the provenance of this volume vis-a-vis William Caxton, see: McCusker, H. &quot;A Book from Caxton's Library.&quot; More Books 15 (1940): 275-285; Sotheby &amp; Co. Catalogue of a Selected Portion of the Valuable Library and Collection of Manuscripts, the Property of Major Q.E. Gurney, D.L. London: The Firm, 1936 (lot 146, pp. 35-40); Blake, N.F. Caxton and His World. London: Andre Deutsch, 1969. pp. 36-38, 222-223; Crotch, W.J.B. The Prologues and Epilogues of William Caxton. London: Oxford University Press, 1928. pp. xvli-xlviii; Painter, G. William Caxton, a Biography. New York: Putnam, 1977. p. 161.
+            </mods:note>
+            <mods:subject
+                    valueURI="http://id.loc.gov/authorities/subjects/sh2008107781" authority="lcsh" authorityURI="http://id.loc.gov/authorities/subjects">
+                <mods:topic>Military art and science--Early works to 1800</mods:topic>
+            </mods:subject>
+            <mods:subject
+                    valueURI="http://id.loc.gov/authorities/subjects/sh2008113362" authority="lcsh" authorityURI="http://id.loc.gov/authorities/subjects">
+                <mods:topic>War (International law)--Early works to 1800</mods:topic>
+            </mods:subject>
+            <mods:subject
+                    valueURI="http://id.loc.gov/authorities/subjects/sh2009119374" authority="lcsh" authorityURI="http://id.loc.gov/authorities/subjects">
+                <mods:topic>Chivalry--Early works to 1800</mods:topic>
+            </mods:subject>
+            <mods:subject
+                    authority="tgn" valueURI="http://vocab.getty.edu/tgn/7002445" authorityURI="http://vocab.getty.edu/tgn/">
+                <mods:hierarchicalGeographic>
+                    <mods:continent>Europe</mods:continent>
+                    <mods:country>England</mods:country>
+                </mods:hierarchicalGeographic>
+                <mods:cartographics>
+                    <mods:coordinates>53,-2</mods:coordinates>
+                </mods:cartographics>
+            </mods:subject>
+            <mods:subject
+                    authority="tgn" valueURI="http://vocab.getty.edu/tgn/1000070" authorityURI="http://vocab.getty.edu/tgn/">
+                <mods:hierarchicalGeographic>
+                    <mods:continent>Europe</mods:continent>
+                    <mods:country>France</mods:country>
+                </mods:hierarchicalGeographic>
+                <mods:cartographics>
+                    <mods:coordinates>46,2</mods:coordinates>
+                </mods:cartographics>
+            </mods:subject>
+            <mods:accessCondition type="use and reproduction" displayLabel="rights">
+                No known copyright restrictions.
+            </mods:accessCondition>
+            <mods:accessCondition type="use and reproduction" displayLabel="license">
+                No known restrictions on use.
+            </mods:accessCondition>
+            <mods:accessCondition type="restriction on access">
+                Access to physical item by appointment only. Please contact Boston Public Library Rare Books and Manuscripts Department for further information.
+            </mods:accessCondition>
+            <mods:relatedItem type="host">
+                <mods:titleInfo>
+                    <mods:title>
+                        Medieval and Early Renaissance Manuscripts (Collection of Distinction)
+                    </mods:title>
+                </mods:titleInfo>
+            </mods:relatedItem>
+            <mods:location>
+                <mods:physicalLocation>Boston Public Library</mods:physicalLocation>
+                <mods:holdingSimple>
+                    <mods:copyInformation>
+                        <mods:subLocation>Rare Books Department</mods:subLocation>
+                    </mods:copyInformation>
+                </mods:holdingSimple>
+            </mods:location>
+            <mods:identifier type="local-other">
+                MS-f-Med-92_001 -  MS-f-Med-92_420
+            </mods:identifier>
+            <mods:identifier type="local-barcode">39999085232724</mods:identifier>
+            <mods:identifier type="local-call">RARE BKS MS f Med. 92</mods:identifier>
+            <mods:identifier type="local-call" invalid="yes">MS 1519</mods:identifier>
+            <mods:recordInfo>
+                <mods:recordContentSource>Boston Public Library</mods:recordContentSource>
+                <mods:recordOrigin>human prepared</mods:recordOrigin>
+                <mods:languageOfCataloging>
+                    <mods:languageTerm
+                            authority="iso639-2b" authorityURI="http://id.loc.gov/vocabulary/iso639-2" type="text" valueURI="http://id.loc.gov/vocabulary/iso639-2/eng">
+                        English
+                    </mods:languageTerm>
+                </mods:languageOfCataloging>
+                <mods:descriptionStandard authority="marcdescription">
+                    amremm
+                </mods:descriptionStandard>
+            </mods:recordInfo>
+            <mods:location>
+                <mods:url access="preview">
+                    https://ark.digitalcommonwealth.org/ark:/50959/nc581732x/thumbnail
+                </mods:url>
+                <mods:url usage="primary" access="object in context">
+                    https://ark.digitalcommonwealth.org/ark:/50959/nc581732x
+                </mods:url>
+                <mods:url note="iiif-manifest">
+                    https://ark.digitalcommonwealth.org/ark:/50959/nc581732x/manifest
+                </mods:url>
+            </mods:location>
+            <mods:identifier type="uri">
+                https://ark.digitalcommonwealth.org/ark:/50959/nc581732x
+            </mods:identifier>
+        </mods:mods>
+    </metadata>
+</record>

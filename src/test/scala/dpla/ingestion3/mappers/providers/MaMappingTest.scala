@@ -13,7 +13,11 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
   val shortName = "ma"
   val xmlString: String = new FlatFileIO().readFileAsString("/ma.xml")
+  val xmlStringCreator: String = new FlatFileIO().readFileAsString("/ma-creator.xml")
+
   val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))
+  val xmlCreator: Document[NodeSeq] = Document(XML.loadString(xmlStringCreator))
+
   val extractor = new MaMapping
 
   it should "not use the provider shortname in minting IDs " in
@@ -41,6 +45,27 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct creators" in {
     val expected = Seq("Alfred, 2000", "John").map(nameOnlyAgent)
     assert(extractor.creator(xml) == expected)
+  }
+
+  it should "extract the correct creators from xmlCreators" in {
+    val expected = Seq(
+      "Bonet, Honoré, active 1378-1398",
+      "Moris, V.C.",
+      "Caxton, William, approximately 1422-1491 or 1492",
+      "Sonnyng, William",
+      "Sonnyng, John",
+      "Wall, Thomas, 1504-1536",
+      "Spelman, Henry, Sir, 1564?-1641",
+      "Macro, Cox, -1767",
+      "Patteson, John, 1755-1833",
+      "Gurney, Hudson, 1775-1864",
+      "Gurney, J. H. (John Henry), 1848-1922",
+      "Gurney, Q. E. (Quintin Edward), 1883-",
+      "Abbaye Saint-Pierre de Hasnon (Hasnon, France)",
+      "Maggs Bros."
+    ).map(nameOnlyAgent)
+
+    assert(extractor.creator(xmlCreator) == expected)
   }
 
   it should "extract the correct dates when only given a keyDate" in {
@@ -155,6 +180,33 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
       city = Some("Boston"),
       coordinates = Some("42.35,-71.05"),
       name = Some("Boston, Suffolk, Massachusetts, United States")
+    ), nameOnlyPlace("A Place"))
+
+    assert(extractor.place(xml) === expected)
+  }
+
+  it should "extract the correct place for Name/Coord" in {
+    val xml: Document[NodeSeq] = Document(
+      <record>
+        <metadata>
+          <mods:mods>
+            <mods:subject authority="tgn" valueURI="http://vocab.getty.edu/tgn/7013445" authorityURI="http://vocab.getty.edu/tgn/">
+              <geographic>Fenway Park</geographic>
+              <mods:cartographics>
+                <mods:coordinates>42.35,-71.05</mods:coordinates>
+              </mods:cartographics>
+            </mods:subject>
+            <mods:subject authority="tgn" valueURI="http://vocab.getty.edu/tgn/7013445" authorityURI="http://vocab.getty.edu/tgn/">
+              <geographic>A Place</geographic>
+            </mods:subject>
+          </mods:mods>
+        </metadata>
+      </record>
+    )
+
+    val expected = Seq(DplaPlace(
+      coordinates = Some("42.35,-71.05"),
+      name = Some("Fenway Park")
     ), nameOnlyPlace("A Place"))
 
     assert(extractor.place(xml) === expected)
