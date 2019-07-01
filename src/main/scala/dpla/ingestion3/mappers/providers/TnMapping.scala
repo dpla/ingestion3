@@ -26,9 +26,9 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   // SourceResource mapping
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
   // <titleInfo><title type="alternative">
-    (data \\ "mods" \\ "titleInfo" \ "title")
+    (data \\ "mods" \\ "titleInfo")
       .flatMap(node => getByAttribute(node, "type", "alternative"))
-      .flatMap(extractStrings)
+      .flatMap(node => extractStrings(node \ "title"))
 
   override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
   // For either <relatedItem displayLabel="Project"> OR <relatedItem displayLabel="collection">
@@ -182,10 +182,10 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .map(stringOnlyTimeSpan)
 
   override def title(data: Document[NodeSeq]): Seq[String] =
-  // <mods:titleInfo><mods:title>
-    (data \ "metadata" \ "mods" \ "titleInfo" \ "title")
+  // <mods:titleInfo><mods:title> where titleInfo has no attributes
+    (data \ "metadata" \ "mods" \ "titleInfo")
       .filter(node => node.attributes.isEmpty)
-      .flatMap(extractStrings)
+      .flatMap(node => extractStrings(node \ "title"))
 
   override def `type`(data: Document[NodeSeq]): Seq[String] = {
   // <typeOfResource>; if not present use <physicalDescription><form>
