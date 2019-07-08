@@ -8,8 +8,8 @@
     <mods:metadata>
         <mods:mods xmlns:mods="http://www.loc.gov/mods/v3" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/">
             <mods:abstract>Description</mods:abstract>
-            <mods:titleInfo>
-                <mods:title type="alternative">alt title 1</mods:title>
+            <mods:titleInfo type="alternative">
+                <mods:title>alt title 1</mods:title>
             </mods:titleInfo>
             <mods:titleInfo>
                 <mods:title>Title</mods:title>
@@ -52,6 +52,9 @@
                     <mods:coordinates>lat/long 1</mods:coordinates>
                 </mods:cartographics>
             </mods:subject>
+            <mods:titleInfo type="no not map">
+                <mods:title>Bad Title No Map</mods:title>
+            </mods:titleInfo>
             <mods:titleInfo>
                 <mods:title>County Manufacturing Statistics for Maury County</mods:title>
             </mods:titleInfo>
