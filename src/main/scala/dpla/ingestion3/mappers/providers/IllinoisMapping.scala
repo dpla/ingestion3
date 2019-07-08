@@ -25,96 +25,89 @@ class IllinoisMapping extends XmlMapping with XmlExtractor with IngestMessageTem
   override def getProviderName(): String = "il"
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
-    extractString(data \\ "header" \ "identifier")
+    extractString(data \ "header" \ "identifier")
 
   // SourceResource mapping
   override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
-    extractStrings(data \\ "metadata" \\ "isPartOf")
+    extractStrings(data \ "metadata" \\ "isPartOf")
       .map(nameOnlyCollection)
 
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
-    // alternative
-    extractStrings(data \\ "metadata" \\ "alternative")
+    extractStrings(data \ "metadata" \\ "alternative")
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    // contributor
-    extractStrings(data \\ "metadata" \\ "contributor")
+    extractStrings(data \ "metadata" \\ "contributor")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    // creator
-    extractStrings(data \\ "creator")
+    extractStrings(data \ "metadata" \\ "creator")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
   // dc:date. If not present use <dcterms:created>
-    (if (extractStrings(data \\ "metadata" \\ "date").nonEmpty) {
-      extractStrings(data \\ "metadata" \\ "date")
+    (if (extractStrings(data \ "metadata" \\ "date").nonEmpty) {
+      extractStrings(data \ "metadata" \\ "date")
     } else {
-      extractStrings(data \\ "metadata" \\ "created")
+      extractStrings(data \ "metadata" \\ "created")
     }).map(stringOnlyTimeSpan)
 
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
-  // description
-    extractStrings(data \\ "metadata" \\ "description")
+    extractStrings(data \ "metadata" \\ "description")
 
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
   // format ++ medium
-    (extractStrings(data \\ "metadata" \\ "format") ++ extractStrings(data \\ "metadata" \\ "medium"))
+    (extractStrings(data \ "metadata" \\ "format") ++ extractStrings(data \ "metadata" \\ "medium"))
+      .flatMap(_.splitAtDelimiter(";"))
       .map(_.applyBlockFilter(formatBlockList))
       .filter(_.nonEmpty)
 
   override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
-  // language
-    extractStrings(data \\ "metadata" \\ "language")
+    extractStrings(data \ "metadata" \\ "language")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyConcept)
 
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
-  // spatial
-    extractStrings(data \\ "metadata" \\ "spatial")
+    extractStrings(data \ "metadata" \\ "spatial")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyPlace)
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
-  // rights
-    extractStrings(data \\ "metadata" \\ "rights")
+    extractStrings(data \ "metadata" \\ "rights")
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
-  // subject
-    extractStrings(data \\ "metadata" \\ "subject")
+    extractStrings(data \ "metadata" \\ "subject")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyConcept)
 
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
-  // temporal
-    extractStrings(data \\ "metadata" \\ "temporal")
+    extractStrings(data \ "metadata" \\ "temporal")
       .map(stringOnlyTimeSpan)
 
   override def title(data: Document[NodeSeq]): ZeroToMany[String] =
-  // title
-    extractStrings(data \\ "metadata" \\ "title")
+    extractStrings(data \ "metadata" \\ "title")
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
-  // type
-    extractStrings(data \\ "metadata" \\ "type")
+    extractStrings(data \ "metadata" \\ "type")
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-  // provenance
-  extractStrings(data \\ "metadata" \\ "provenance")
+  extractStrings(data \ "metadata" \\ "provenance")
     .map(nameOnlyAgent)
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    // isShownAt
-    extractStrings(data \\ "metadata" \\ "isShownAt")
+    extractStrings(data \ "metadata" \\ "isShownAt")
       .map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
   // preview
-    extractStrings(data \\ "metadata" \\ "preview")
+    extractStrings(data \ "metadata" \\ "preview")
       .map(stringOnlyWebResource)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
