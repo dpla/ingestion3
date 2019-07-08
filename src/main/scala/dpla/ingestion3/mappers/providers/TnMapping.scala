@@ -233,17 +233,21 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     // <location><url access="raw object">
+    ((data \\ "mods" \ "location" \ "url")
+      .flatMap(node => getByAttribute(node, "access", "raw object"))
+      .flatMap(extractStrings) ++
+    // Add IIIF manifests
     (data \\ "mods" \ "location" \ "url")
-      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "access", "raw object"))
+      .flatMap(node => getByAttribute(node, "note", "iiif-manifest"))
       .flatMap(extractStrings)
-      .map(stringOnlyWebResource)
+    ).map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
   // <location><url access="preview">
     (data \\ "mods" \ "location" \ "url")
-      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "access", "preview"))
+      .flatMap(node => getByAttribute(node, "access", "preview"))
       .flatMap(extractStrings)
       .map(stringOnlyWebResource)
 

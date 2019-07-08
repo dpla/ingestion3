@@ -175,7 +175,7 @@ class TnMappingTest extends FlatSpec with BeforeAndAfter {
 
   // object
   it should "extract the correct object" in {
-    val expected = List("http://cdm15138.contentdm.oclc.org/utils/getthumbnail/collection/agricult/id/62")
+    val expected = List("http://cdm15138.contentdm.oclc.org/utils/getthumbnail/collection/agricult/id/62", "http://tn.us/item/1/iiif/")
       .map(stringOnlyWebResource)
     assert(extractor.`object`(xml) === expected)
   }
@@ -184,7 +184,7 @@ class TnMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct preview" in {
     val expected = List("http://cdm15138.contentdm.oclc.org/utils/getthumbnail/collection/agricult/id/62")
       .map(stringOnlyWebResource)
-    assert(extractor.`object`(xml) === expected)
+    assert(extractor.preview(xml) === expected)
   }
 
 }
