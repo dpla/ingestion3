@@ -418,6 +418,23 @@ class HarvardMappingTest extends FlatSpec with BeforeAndAfter {
     assert(result === "text")
   }
 
+  it should "extract type from digitalFormats" in {
+    val result = mapping.`type`(
+      metadata(
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:extension>
+            <librarycloud>
+              <digitalFormats>
+                <digitalFormat>Books and documents</digitalFormat>
+              </digitalFormats>
+            </librarycloud>
+          </mods:extension>
+        </mods:mods>
+      )
+    )
+    assert(result === Seq("Books and documents"))
+  }
+
   it should "extract publisher" in {
     val result = mapping.publisher(
       metadata(

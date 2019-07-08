@@ -181,7 +181,8 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
     } yield titleText
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "metadata" \ "mods" \ "typeOfResource")
+    extractStrings(data \ "metadata" \ "mods" \ "typeOfResource") ++
+      extractStrings(data \ "metadata" \ "mods" \ "extension" \ "librarycloud" \\ "digitalFormat")
 
   // OreAggregation fields
 
