@@ -90,8 +90,12 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
         <metadata>
           <mods:mods>
             <originInfo>
-              <dateCreated keyDate="yes" point="start">2010-11-31</dateCreated>
-              <dateCreated keyDate="yes" point="end">2010-12-31</dateCreated>
+              <mods:dateCreated point="start" encoding="w3cdtf" qualifier="questionable" keyDate="yes">
+                1450
+              </mods:dateCreated>
+              <mods:dateCreated point="end" encoding="w3cdtf" qualifier="questionable">
+                1471
+              </mods:dateCreated>
             </originInfo>
           </mods:mods>
         </metadata>
@@ -99,9 +103,9 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
 
     val expected = Seq(
       EdmTimeSpan(
-        originalSourceDate = Some("2010-11-31-2010-12-31"),
-        begin = Some("2010-11-31"),
-        end = Some("2010-12-31")
+        originalSourceDate = Some("1450-1471"),
+        begin = Some("1450"),
+        end = Some("1471")
       ))
     assert(extractor.date(xml) === expected)
   }

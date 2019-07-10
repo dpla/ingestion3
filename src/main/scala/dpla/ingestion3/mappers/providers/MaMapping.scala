@@ -100,20 +100,24 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
     props.flatMap(prop => {
       val dateCreated = (getModsRoot(data) \ "originInfo" \ prop)
+        .filterNot(node => filterAttribute(node,"point", "start") | filterAttribute(node,"point", "end"))
         .flatMap(node => getByAttribute(node, "keyDate", "yes"))
         .flatMap(node => getByAttribute(node, "encoding", "w3cdtf"))
         .flatMap(node => extractStrings(node))
+        .map(_.trim)
 
       // Get dateCreated values with a keyDate=yes attribute and point=start attribute
       val earlyDate = (getModsRoot(data) \ "originInfo" \ prop)
         .flatMap(node => getByAttribute(node, "keyDate", "yes"))
         .flatMap(node => getByAttribute(node, "point", "start"))
         .flatMap(node => extractStrings(node))
+        .map(_.trim)
 
       // Get dateCreated values with point=end attribute
       val lateDate = (getModsRoot(data) \ "originInfo" \ prop)
         .flatMap(node => getByAttribute(node, "point", "end"))
         .flatMap(node => extractStrings(node))
+        .map(_.trim)
 
       (dateCreated.nonEmpty, earlyDate.nonEmpty, lateDate.nonEmpty) match {
         case (true, _, _) => dateCreated.map(stringOnlyTimeSpan)
