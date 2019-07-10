@@ -62,7 +62,7 @@ class EsdnProfile extends XmlProfile {
 class FlProfile extends JsonProfile {
   type Mapping = FlMapping
 
-  override def getHarvester = classOf[FlFileHarvester]
+  override def getHarvester = classOf[DlgFileHarvester]
   override def getMapping = new FlMapping
 }
 
@@ -82,7 +82,7 @@ class GettyProfile extends XmlProfile {
 class DlgProfile extends JsonProfile {
   type Mapping = DlgMapping
 
-  override def getHarvester = classOf[DlgHarvester]
+  override def getHarvester = classOf[DlgFileHarvester]
   override def getMapping = new DlgMapping
 }
 
