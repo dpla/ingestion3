@@ -112,7 +112,6 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
       // Get dateCreated values with point=end attribute
       val lateDate = (getModsRoot(data) \ "originInfo" \ prop)
-        .flatMap(node => getByAttribute(node, "keyDate", "yes"))
         .flatMap(node => getByAttribute(node, "point", "end"))
         .flatMap(node => extractStrings(node))
 
