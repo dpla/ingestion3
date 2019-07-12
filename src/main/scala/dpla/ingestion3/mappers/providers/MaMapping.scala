@@ -184,15 +184,21 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
         val coordinates =  extractString(subject \ "cartographics" \ "coordinates")
 
         val hierarchy = (subject \ "hierarchicalGeographic").map(h => {
-          val city = extractString(h \ "city")
+          val cityLabel = (extractString(h \ "city"), extractString(h \ "citySection")) match {
+            case (Some(city), Some(citySection)) => Some(s"$city, $citySection")
+            case (Some(city), None) => Some(city)
+            case (None, Some(citySection)) => Some(citySection)
+            case (_, _) => None
+          }
+
           val country = extractString(h \ "country")
           val county = extractString(h \ "county")
           val state = extractString(h \ "state")
-          val name = Option(Seq(city, county, state, country).flatten.map(_.trim).mkString(", "))
+          val name = Option(Seq(cityLabel, county, state, country).flatten.map(_.trim).mkString(", "))
 
           DplaPlace(
             name = name,
-            city = city,
+            city = cityLabel,
             country = country,
             county = county,
             state = state,

@@ -164,6 +164,7 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
                 <mods:state>Massachusetts</mods:state>
                 <mods:continent>North and Central America</mods:continent>
                 <mods:city>Boston</mods:city>
+                <mods:citySection>Back Bay</mods:citySection>
               </mods:hierarchicalGeographic>
               <mods:cartographics>
                 <mods:coordinates>42.35,-71.05</mods:coordinates>
@@ -181,9 +182,9 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
       county = Some("Suffolk"),
       country = Some("United States"),
       state = Some("Massachusetts"),
-      city = Some("Boston"),
+      city = Some("Boston, Back Bay"),
       coordinates = Some("42.35,-71.05"),
-      name = Some("Boston, Suffolk, Massachusetts, United States")
+      name = Some("Boston, Back Bay, Suffolk, Massachusetts, United States")
     ), nameOnlyPlace("A Place"))
 
     assert(extractor.place(xml) === expected)
