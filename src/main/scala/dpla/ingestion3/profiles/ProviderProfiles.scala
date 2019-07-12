@@ -218,6 +218,16 @@ class NaraProfile extends XmlProfile {
 }
 
 /**
+  * North Carolina
+  */
+class NcProfile extends XmlProfile {
+  type Mapping = OhioMapping // FIXME Placeholder
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new OhioMapping // FIXME Placeholder
+}
+
+/**
   * Ohio Hub
   */
 class OhioProfile extends XmlProfile {
