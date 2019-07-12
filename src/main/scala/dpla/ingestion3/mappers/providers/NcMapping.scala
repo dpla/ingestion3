@@ -135,7 +135,7 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   // first <note type="ownership">
     (data \\ "mods" \ "note")
       .filter(node => filterAttribute(node, "type", "ownership"))
-      .flatMap(extractString)
+      .flatMap(extractStrings)
       .map(nameOnlyAgent)
       .take(1)
 
@@ -150,7 +150,7 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     // second <note type=ownership> if it exists
     val providers = (data \\ "mods" \ "note")
       .filter(node => filterAttribute(node, "type", "ownership"))
-      .flatMap(extractString)
+      .flatMap(extractStrings)
       .map(nameOnlyAgent)
 
     if (providers.length > 1)
