@@ -305,6 +305,6 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     uri = Some(URI("http://dp.la/api/contributor/digital-commonwealth"))
   )
 
-  private def getModsRoot(data: Document[NodeSeq]) = data \ "metadata" \ "mods"
+  private lazy val getModsRoot = (data: Document[NodeSeq]) => data \ "metadata" \ "mods"
 }
 
