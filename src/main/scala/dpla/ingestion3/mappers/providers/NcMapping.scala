@@ -28,12 +28,12 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .map(_.trim)
 
   // SourceResource mapping
-  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
-  // FIXME should pull from setSpec
-    (data \\ "mods" \ "relatedItem")
-      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "host"))
-      .flatMap(collection => extractStrings(collection \ "titleInfo" \ "title"))
-      .map(nameOnlyCollection)
+//  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
+//  // FIXME should pull from setSpec
+//    (data \\ "mods" \ "relatedItem")
+//      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "host"))
+//      .flatMap(collection => extractStrings(collection \ "titleInfo" \ "title"))
+//      .map(nameOnlyCollection)
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     // when <role><roleTerm> DOES equal "contributor>
@@ -50,29 +50,31 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .map(nameOnlyAgent)
 
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
-    // Within <originInfo>, the FIRST <dateCreated keyDate="yes"> and LAST <dateCreated keyDate="yes">.
-    // FIXME This mapping is kind of a mess and should be up for renegotiation with DigitalNC folks
-    val dates = (data \\ "mods" \ "originInfo" \ "dateCreated")
+    (data \\ "mods" \ "originInfo" \ "dateCreated")
       .filter(node => filterAttribute(node, "keyDate", "yes"))
       .flatMap(extractStrings)
+      .map(stringOnlyTimeSpan)
 
-    val rangeDate = dates
-      .filter(s => s.contains("-") | s.contains("/"))
-      .lastOption
-
-    val nonRangeDates = dates
-      .filterNot(s => s.contains("-") | s.contains("/"))
-
-    val constructedRangeDate = if(nonRangeDates.size > 1) Some(s"${nonRangeDates.head}-${nonRangeDates.last}") else None
-
-    val date = (rangeDate, constructedRangeDate, dates.headOption) match {
-      case (Some(s), _, _) => s // range exists in original data
-      case (None, Some(s), _) => s // date range was constructed from head and tail values
-      case (None, None, Some(s)) => s // no range constructed, use first date value
-      case (_, _, _) => "" // nothing to map
-    }
-
-    Seq(stringOnlyTimeSpan(date))
+    // FIXME This mapping is kind of a mess and should be up for renegotiation with DigitalNC folks
+    // Within <originInfo>, the FIRST <dateCreated keyDate="yes"> and LAST <dateCreated keyDate="yes">.
+//
+//    val rangeDate = dates
+//      .filter(s => s.contains("-") | s.contains("/"))
+//      .lastOption
+//
+//    val nonRangeDates = dates
+//      .filterNot(s => s.contains("-") | s.contains("/"))
+//
+//    val constructedRangeDate = if(nonRangeDates.size > 1) Some(s"${nonRangeDates.head}-${nonRangeDates.last}") else None
+//
+//    val date = (rangeDate, constructedRangeDate, dates.headOption) match {
+//      case (Some(s), _, _) => s // range exists in original data
+//      case (None, Some(s), _) => s // date range was constructed from head and tail values
+//      case (None, None, Some(s)) => s // no range constructed, use first date value
+//      case (_, _, _) => "" // nothing to map
+//    }
+//
+//    Seq(stringOnlyTimeSpan(date))
   }
   
   override def description(data: Document[NodeSeq]): Seq[String] =
@@ -132,7 +134,7 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-  // first <note type="ownership">
+    // first <note type="ownership">
     (data \\ "mods" \ "note")
       .filter(node => filterAttribute(node, "type", "ownership"))
       .flatMap(extractStrings)

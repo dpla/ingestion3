@@ -221,10 +221,10 @@ class NaraProfile extends XmlProfile {
   * North Carolina
   */
 class NcProfile extends XmlProfile {
-  type Mapping = OhioMapping // FIXME Placeholder
+  type Mapping = NcMapping
 
   override def getHarvester = classOf[OaiHarvester]
-  override def getMapping = new OhioMapping // FIXME Placeholder
+  override def getMapping = new NcMapping
 }
 
 /**
