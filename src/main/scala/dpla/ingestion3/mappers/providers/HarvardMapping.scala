@@ -51,16 +51,16 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
 
     // approximate dates
     val approxDates = ((data \ "metadata" \ "mods" \ "originInfo" \ "dateCreated") ++
-        (data \ "metadata" \ "mods" \ "originInfo" \ "dateIssued"))
-        .flatMap(node => getByAttribute(node, "qualifier", "questionable"))
-        .filterNot(node => filterAttribute(node, "encoding", "marc"))
-        .flatMap(extractStrings(_))
-        .map(str =>
-          if (str.startsWith("ca. ")) {
-            str
-          } else
-            s"ca. $str"
-        )
+      (data \ "metadata" \ "mods" \ "originInfo" \ "dateIssued"))
+      .flatMap(node => getByAttribute(node, "qualifier", "questionable"))
+      .filterNot(node => filterAttribute(node, "encoding", "marc"))
+      .flatMap(extractStrings(_))
+      .map(str =>
+        if (str.startsWith("ca. ")) {
+          str
+        } else
+          s"ca. $str"
+      )
       .map(stringOnlyTimeSpan)
 
     // Constructed date range
@@ -75,7 +75,7 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
       .flatMap(extractStrings(_))
 
 
-    val constructedDates = if(beginDate.length == endDate.length) {
+    val constructedDates = if (beginDate.length == endDate.length) {
       beginDate.zip(endDate).map {
         case (begin: String, end: String) =>
           EdmTimeSpan(
@@ -93,14 +93,21 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "abstract") ++
-      extractStrings(data \ "metadata" \ "mods" \ "note")
+    (data \ "metadata" \ "mods" \ "note")
+      .filterNot(node => filterAttribute(node, "type", "funding"))
+      .filterNot(node => filterAttribute(node, "type", "organization"))
+      .filterNot(node => filterAttribute(node, "type", "reproduction"))
+      .filterNot(node => filterAttribute(node, "type", "system details"))
+      .filterNot(node => filterAttribute(node, "type", "statement of responsibility"))
+      .filterNot(node => filterAttribute(node, "type", "venue"))
+      .flatMap(extractStrings)
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "physicalDescription" \ "extent")
 
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
     (extractStrings(data \ "metadata" \ "mods" \ "genre") ++
-      extractStrings(data \ "metadata" \ "mods" \ "termMaterialsTech"))
+      extractStrings(data \ "metadata" \ "mods" \\ "termMaterialsTech"))
       .map(
         _.applyBlockFilter(
           DigitalSurrogateBlockList.termList ++
