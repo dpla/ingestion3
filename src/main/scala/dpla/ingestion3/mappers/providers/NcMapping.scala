@@ -28,8 +28,9 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .map(_.trim)
 
   // SourceResource mapping
+
+//  FIXME Should pull from setName -- currently not possible
 //  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
-//  // FIXME should pull from setSpec
 //    (data \\ "mods" \ "relatedItem")
 //      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "host"))
 //      .flatMap(collection => extractStrings(collection \ "titleInfo" \ "title"))
@@ -55,8 +56,13 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .flatMap(extractStrings)
       .map(stringOnlyTimeSpan)
 
-    // FIXME This mapping is kind of a mess and should be up for renegotiation with DigitalNC folks
-    // Within <originInfo>, the FIRST <dateCreated keyDate="yes"> and LAST <dateCreated keyDate="yes">.
+//   FIXME This original mapping is kind of a mess [verbatim from ingestion1] and should be up
+//   FIXME for renegotiation with DigitalNC
+//   FIXME Leave commented out for now, pending CQA review by DigitalNC staff of the simpler mapping [see above]
+//   -----
+//   Original mapping
+//   Within <originInfo>, the FIRST <dateCreated keyDate="yes"> and LAST <dateCreated keyDate="yes">.
+//   -----
 //
 //    val rangeDate = dates
 //      .filter(s => s.contains("-") | s.contains("/"))
@@ -120,7 +126,8 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
     // <mods:subject><mods:topic>
-    extractStrings(data \\ "mods" \ "subject" \ "topic").map(nameOnlyConcept)
+    extractStrings(data \\ "mods" \ "subject" \ "topic")
+      .map(nameOnlyConcept)
 
   override def title(data: Document[NodeSeq]): Seq[String] =
   // <mods:titleInfo><mods:title>
@@ -148,17 +155,13 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .flatMap(extractStrings)
       .map(URI)
 
-  override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] = {
+  override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
     // second <note type=ownership> if it exists
-    val providers = (data \\ "mods" \ "note")
+    (data \\ "mods" \ "note")
       .filter(node => filterAttribute(node, "type", "ownership"))
       .flatMap(extractStrings)
       .map(nameOnlyAgent)
-
-    if (providers.length > 1)
-      Some(providers(1))
-    else None
-  }
+      .lift(1)
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
   // <location><url usage="primary display" access="object in context">
