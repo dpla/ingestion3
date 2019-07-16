@@ -407,6 +407,54 @@ class HarvardMappingTest extends FlatSpec with BeforeAndAfter {
     assert(result === "Estudio crítico-histórico acerca del canto épico del señor Félix Soublette, La gloria de\n              Páez, premiado por la Academia Venezolana")
   }
 
+  it should "extract title and collection title" in {
+    val result = mapping.title(
+      metadata(
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:titleInfo>
+            <mods:title>Title</mods:title>
+          </mods:titleInfo>
+          <mods:relatedItem type="host" displayLabel="collection">
+            <mods:location>
+              <mods:physicalLocation valueURI="http://isni.org/isni/0000000121705139" displayLabel="Harvard repository" type="repository">
+                Andover-Harvard Theological Library, Harvard Divinity School, Harvard University</mods:physicalLocation>
+            </mods:location>
+            <mods:identifier>bMS 575</mods:identifier>
+            <mods:titleInfo>
+              <mods:title>Foote, Henry Wilder, 1875-1964. Papers of Professor Henry Wilder Foote and Family, 1714-1959.</mods:title>
+            </mods:titleInfo>
+            <mods:originInfo>
+              <mods:dateCreated point="start">1714</mods:dateCreated>
+              <mods:dateCreated point="end">1959</mods:dateCreated>
+              <mods:dateCreated>1714-1959</mods:dateCreated>
+            </mods:originInfo>
+            <mods:recordInfo>
+              <mods:recordIdentifier>div00575</mods:recordIdentifier>
+            </mods:recordInfo>
+            <mods:relatedItem otherType="HOLLIS record">
+              <mods:location>
+                <mods:url>https://id.lib.harvard.edu/alma/990073094440203941/catalog</mods:url>
+              </mods:location>
+            </mods:relatedItem>
+            <mods:relatedItem otherType="Finding Aid">
+              <mods:location>
+                <mods:url>https://id.lib.harvard.edu/ead/div00575/catalog</mods:url>
+              </mods:location>
+            </mods:relatedItem>
+            <mods:extension>
+              <librarycloud:HarvardRepositories>
+                <librarycloud:HarvardRepository>
+                  Andover-Harv. Theol
+                </librarycloud:HarvardRepository>
+              </librarycloud:HarvardRepositories>
+            </mods:extension>
+          </mods:relatedItem>
+        </mods:mods>
+      )
+    )
+    assert(result === Seq("Title", "Foote, Henry Wilder, 1875-1964. Papers of Professor Henry Wilder Foote and Family, 1714-1959."))
+  }
+
   it should "extract type" in {
     val result = mapping.`type`(
       metadata(
