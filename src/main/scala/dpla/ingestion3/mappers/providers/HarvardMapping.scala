@@ -180,13 +180,20 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
     extractStrings(data \ "metadata" \ "mods" \ "subject" \ "temporal").
       map(stringOnlyTimeSpan)
 
-  override def title(data: Document[NodeSeq]): AtLeastOne[String] =
-    for {
+  override def title(data: Document[NodeSeq]): AtLeastOne[String] = {
+    val title = for {
       titleInfoNode <- data \ "metadata" \ "mods" \ "titleInfo"
       if titleInfoNode \@ "type" != "alternative"
       titleText <- processTitleInfo(titleInfoNode)
     } yield titleText
 
+    val collectionTitle = (data \ "metadata" \\ "relatedItem")
+      .filter(node => filterAttribute(node, "displayLabel", "collection"))
+      .flatMap(node => extractStrings(node \ "titleInfo" \ "title"))
+
+    title ++ collectionTitle
+  }
+  
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "typeOfResource") ++
       extractStrings(data \ "metadata" \ "mods" \ "extension" \ "librarycloud" \\ "digitalFormat")
@@ -239,7 +246,7 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
   
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
     val artMuseumLink = (data \ "metadata" \ "mods" \ "location" \ "url")
-      .flatMap(node => getByAttribute(node, "displayLabel", "Harvard Art Museum"))
+      .flatMap(node => getByAttribute(node, "displayLabel", "Harvard Art Museums"))
       .flatMap(node => getByAttribute(node, "access", "object in context"))
       .flatMap(extractString(_))
       .map(stringOnlyWebResource)
