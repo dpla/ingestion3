@@ -234,7 +234,7 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     // <location><url access="raw object">
     (data \\ "mods" \ "location" \ "url")
-      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "access", "raw object"))
+      .flatMap(node => getByAttribute(node, "access", "raw object"))
       .flatMap(extractStrings)
       .map(stringOnlyWebResource)
 
@@ -243,18 +243,24 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
   // <location><url access="preview">
     (data \\ "mods" \ "location" \ "url")
-      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "access", "preview"))
+      .flatMap(node => getByAttribute(node, "access", "preview"))
       .flatMap(extractStrings)
       .map(stringOnlyWebResource)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data)) ~ ("iiif" -> iiif(data))
 
-  // Helper method
+  // Helper methods
   def agent = EdmAgent(
     name = Some("Digital Library of Tennessee"),
     uri = Some(URI("http://dp.la/api/contributor/tennessee"))
   )
+
+  private def iiif(data: Document[NodeSeq]): ZeroToMany[String] =
+    (data \\ "mods" \ "location" \ "url")
+      .flatMap(node => getByAttribute(node, "note", "iiif-manifest"))
+      .flatMap(extractStrings)
+
 }

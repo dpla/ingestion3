@@ -74,6 +74,7 @@
                 <mods:url usage="primary" access="object in context">http://cdm15138.contentdm.oclc.org/cdm/ref/collection/agricult/id/62</mods:url>
                 <mods:url access="preview">http://cdm15138.contentdm.oclc.org/utils/getthumbnail/collection/agricult/id/62</mods:url>
                 <mods:url access="raw object">http://cdm15138.contentdm.oclc.org/utils/getthumbnail/collection/agricult/id/62</mods:url>
+                <mods:url note="iiif-manifest">http://tn.us/item/1/iiif/</mods:url>
                 <mods:physicalLocation>Tennessee State Library and Archives</mods:physicalLocation>
             </mods:location>
             <mods:subject authority="lcsh" valueURI="http://id.loc.gov/authorities/subjects/sh85002415">
