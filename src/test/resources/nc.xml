@@ -1,0 +1,63 @@
+<record>
+    <header>
+        <identifier>urn:brevard.lib.unc.educampbell_p15834coll2:oai:cdm15834.contentdm.oclc.org:p15834coll2/9</identifier>
+        <datestamp>2019-01-04</datestamp>
+        <setSpec>campbell_p15834coll2</setSpec>
+    </header>
+    <metadata>
+        <mods version="3.4" xmlns="http://www.loc.gov/mods/v3" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-4.xsd">
+            <titleInfo>
+                <title>Hicks, Denelle - 1996 Sullivan Student Award Recipient</title>
+            </titleInfo>
+            <subject>
+                <geographic>Buies Creek (N.C.)</geographic>
+            </subject>
+            <originInfo>
+                <dateCreated keyDate="yes">1996-05-13</dateCreated>
+                <publisher>Campbell University</publisher>
+            </originInfo>
+            <relatedItem>
+                <titleInfo>
+                    <title>Honorary Awards Citations</title>
+                </titleInfo>
+            </relatedItem>
+            <note type="content">Citation for Denelle Hicks, student recipient of the Algernon Sydney Sullivan Award.</note>
+            <physicalDescription>
+                <form>Form</form>
+            </physicalDescription>
+            <identifier>http://cdm15834.contentdm.oclc.org/cdm/ref/collection/p15834coll2/id/9</identifier>
+            <language><languageTerm>eng</languageTerm>
+            </language>
+            <accessCondition type="use and reproduction">http://rightsstatements.org/vocab/InC-EDU/1.0/</accessCondition>
+            <accessCondition type="local rights statements">Copyright Campbell University. The materials in this collection are made available for use in research, teaching and private study. Images and text may not be used for any commercial purposes without prior permission from Campbell University.</accessCondition>
+            <subject><topic>Algernon Sydney Sullivan Student Award</topic>
+            </subject>
+            <genre>Text</genre>
+            <relatedItem displayLabel="collection" type="host">
+                <titleInfo>
+                    <title>Honorary Awards Citations</title>
+                </titleInfo>
+            </relatedItem>
+            <note type="ownership">Campbell University</note>
+            <note type="ownership">Intermediate Provider</note>
+            <location>
+                <url access="object in context" usage="primary display">http://cdm15834.contentdm.oclc.org/cdm/ref/collection/p15834coll2/id/9</url>
+            </location>
+            <location>
+                <url access="preview">http://cdm15834.contentdm.oclc.org/utils/getthumbnail/collection/p15834coll2/id/9</url>
+            </location>
+            <name>
+                <role>
+                    <roleTerm>contributor</roleTerm>
+                </role>
+                <namePart>Contributor</namePart>
+            </name>
+            <name>
+                <role>
+                    <roleTerm>creator</roleTerm>
+                </role>
+                <namePart>Creator</namePart>
+            </name>
+        </mods>
+    </metadata>
+</record>
