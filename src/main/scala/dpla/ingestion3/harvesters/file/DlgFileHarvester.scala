@@ -5,6 +5,7 @@ import java.util.zip.ZipInputStream
 
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.mappers.utils.JsonExtractor
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.functions._
@@ -14,6 +15,10 @@ import org.json4s.{JValue, _}
 
 import scala.util.{Failure, Success, Try}
 
+/**
+  * Extracts values from parsed JSON
+  */
+class DlgFileExtractor extends JsonExtractor
 
 /**
   * Entry for performing a Georgia file harvest
@@ -25,6 +30,8 @@ class DlgFileHarvester(spark: SparkSession,
   extends FileHarvester(spark, shortName, conf, logger) {
 
   def mimeType: String = "application_json"
+
+  protected val extractor = new DlgFileExtractor()
 
   /**
     * Loads .zip files
