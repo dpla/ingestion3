@@ -16,7 +16,7 @@ import scala.util.{Failure, Success, Try}
 
 
 /**
-  * Entry for performing a Florida file harvest
+  * Entry for performing a Georgia file harvest
   */
 class DlgFileHarvester(spark: SparkSession,
                        shortName: String,
@@ -25,8 +25,6 @@ class DlgFileHarvester(spark: SparkSession,
   extends FileHarvester(spark, shortName, conf, logger) {
 
   def mimeType: String = "application_json"
-
-  protected val extractor = new FlFileExtractor()
 
   /**
     * Loads .zip files
@@ -123,7 +121,7 @@ class DlgFileHarvester(spark: SparkSession,
     }
 
   /**
-    * Executes the Florida harvest
+    * Executes the Georgia harvest
     */
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
