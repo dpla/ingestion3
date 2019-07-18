@@ -77,7 +77,6 @@ class GettyProfile extends XmlProfile {
 }
 
 /**
-<<<<<<< HEAD
   * Digital Library of Georgia
   */
 class DlgProfile extends JsonProfile {
