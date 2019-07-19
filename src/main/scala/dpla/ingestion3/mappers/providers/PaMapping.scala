@@ -80,9 +80,15 @@ class PaMapping extends XmlMapping with XmlExtractor
     extractStrings(data \ "metadata" \ "rightsHolder")
       .map(nameOnlyAgent)
 
-  // fixme
+  // Label    DPLA Field    PA Field
+  // Rights	  dc:rights     dcterms:rights
   override def rights(data: Document[NodeSeq]): Seq[String] =
-    extractStrings(data \ "metadata" \\ "rights").filter(r => !Utils.isUrl(r))
+    (data \ "metadata" \ "rights").flatMap(r => {
+      r.prefix match {
+        case "dcterms" => Option(r.text)
+        case _ => None
+      }
+    })
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
     extractStrings(data \ "metadata" \ "subject")
@@ -105,9 +111,13 @@ class PaMapping extends XmlMapping with XmlExtractor
     extractStrings(data \ "metadata" \ "dataProvider")
       .map(nameOnlyAgent)
 
-  // fixme
+  //  Label             DPLA Field    PA Field
+  //  Rights Statement	edm:rights		edm:rights
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
-    extractStrings(data \ "metadata" \\ "rights").find(r => Utils.isUrl(r)).map(URI).toSeq
+    (data \ "metadata" \ "rights").flatMap(r => r.prefix match {
+      case "edm" => Some(URI(r.text))
+      case _ => None
+    })
 
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
     extractStrings(data \ "metadata" \ "intermediateProvider")
