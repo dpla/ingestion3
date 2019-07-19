@@ -16,6 +16,7 @@ object MappingSummary {
     */
   def getSummary(data: MappingSummaryData): String = {
     // prettify all the digits!
+    val duplicateHarvestStr = Utils.formatNumber(data.operationSummary.duplicateHarvestRecords)
     val attemptedStr = Utils.formatNumber(data.operationSummary.recordsAttempted)
     val mappedStr = Utils.formatNumber(data.operationSummary.recordsSuccessful)
     val warnStr = Utils.formatNumber(data.messageSummary.warningCount)
@@ -38,6 +39,8 @@ object MappingSummary {
         |${ReportFormattingUtils.centerPad("Start date", data.timeSummary.startTime)}
         |${ReportFormattingUtils.centerPad("Runtime", data.timeSummary.runTime)}
         |
+        |${ReportFormattingUtils.centerPad("Duplicate records in harvest", duplicateHarvestStr)}
+
         |${ReportFormattingUtils.centerPad("Attempted", attemptedStr)}
         |${ReportFormattingUtils.centerPad("Successful", mappedStr)}
         |${ReportFormattingUtils.centerPad("Failed", failedCountStr)}

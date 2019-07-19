@@ -148,7 +148,7 @@ object ReporterMain {
     })
 
     // Property distinct value
-    reportFields.map(field => {
+    reportFields.foreach(field => {
       val rptOut = s"$reportsPath/propertyDistinctValue/$field"
       logger.info(s"Executing propertyDistinctValue for $field")
       executeReport(spark, mappedData, rptOut, "propertyDistinctValue",
@@ -156,7 +156,7 @@ object ReporterMain {
     })
 
     // Property value
-    reportFields.map(field => {
+    reportFields.foreach(field => {
       val rptOut = s"$reportsPath/propertyValue/$field"
       logger.info(s"Executing propertyValue for $field")
       executeReport(spark, mappedData, rptOut, "propertyValue",

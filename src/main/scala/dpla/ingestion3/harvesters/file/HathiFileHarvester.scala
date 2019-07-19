@@ -14,9 +14,9 @@ import scala.util.{Failure, Success, Try}
 import scala.xml._
 
 class HathiFileHarvester(spark: SparkSession,
-                      shortName: String,
-                      conf: i3Conf,
-                      logger: Logger)
+                         shortName: String,
+                         conf: i3Conf,
+                         logger: Logger)
   extends FileHarvester(spark, shortName, conf, logger) with XmlExtractor {
 
   def mimeType: String = "application_xml"
@@ -106,7 +106,7 @@ class HathiFileHarvester(spark: SparkSession,
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
     inFiles.listFiles(new GzFileFilter).foreach( inFile => {
-      logger.info(s"Reading ${inFile.getName}")
+
       val inputStream = getInputStream(inFile)
         .getOrElse(throw new IllegalArgumentException(s"Couldn't load file, ${inFile.getAbsolutePath}"))
 

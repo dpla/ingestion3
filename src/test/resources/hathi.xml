@@ -1,0 +1,138 @@
+<record xmlns="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <leader>00737nam a22002051  4500</leader>
+    <controlfield tag="001">009420214</controlfield>
+    <controlfield tag="003">MiAaHDL</controlfield>
+    <controlfield tag="005">20100825000000.0</controlfield>
+    <controlfield tag="006">m        d        </controlfield>
+    <controlfield tag="007">cr bn ---auaua</controlfield>
+    <controlfield tag="008">830406s1893    xx            000 0 eng d</controlfield>
+    <datafield ind2=" " ind1=" " tag="035">
+        <subfield code="a">sdr-pst.a164965</subfield>
+    </datafield>
+    <datafield ind2=" " ind1=" " tag="035">
+        <subfield code="a">(OCoLC)316829673</subfield>
+    </datafield>
+    <datafield ind2=" " ind1=" " tag="035">
+        <subfield code="a">LIAS256769</subfield>
+    </datafield>
+    <datafield ind2=" " ind1=" " tag="337">
+        <subfield code="a">unmediated</subfield>
+        <subfield code="b">n</subfield>
+        <subfield code="2">rdamedia</subfield>
+    </datafield>
+    <datafield ind2=" " ind1=" " tag="338">
+        <subfield code="a">volume</subfield>
+        <subfield code="b">nc</subfield>
+        <subfield code="2">rdacarrier</subfield>
+    </datafield>
+
+    <datafield ind2=" " ind1=" " tag="040">
+        <subfield code="a">PSt</subfield>
+        <subfield code="c">PSt</subfield>
+        <subfield code="d">WaOLN</subfield>
+    </datafield>
+    <datafield ind2=" " ind1="1" tag="041">
+        <subfield code="a">ger</subfield>
+    </datafield>
+    <datafield ind2=" " ind1="1" tag="100">
+        <subfield code="a">Ellis, Job Bicknell,</subfield>
+        <subfield code="d">1829-1905.</subfield>
+    </datafield>
+    <datafield ind2="0" ind1="0" tag="245">
+        <subfield code="a">New species of North American fungi from various localities /</subfield>
+        <subfield code="c">by J. B. Ellis and and B. M. Everhart.</subfield>
+    </datafield>
+    <datafield ind2=" " ind1=" " tag="260">
+        <subfield code="a">n.p. :</subfield>
+        <subfield code="b">n. pub.,</subfield>
+        <subfield code="c">[1893].</subfield>
+    </datafield>
+    <datafield ind2=" " ind1=" " tag="300">
+        <subfield code="a">1, 128-172 p.</subfield>
+    </datafield>
+    <datafield ind2=" " ind1=" " tag="500">
+        <subfield code="a">From the Proceedings of The academy of natural science of Philadelphia, 1893.</subfield>
+    </datafield>
+    <datafield ind2=" " ind1=" " tag="500">
+        <subfield code="a">A second description.</subfield>
+    </datafield>
+    <datafield ind2=" " ind1=" " tag="538">
+        <subfield code="a">Mode of access: Internet.</subfield>
+    </datafield>
+    <datafield ind2="7" ind1=" " tag="648">
+        <subfield code="a">1603 - 1714</subfield>
+        <subfield code="2">fast</subfield>
+    </datafield>
+    <datafield ind2="0" ind1=" " tag="650">
+        <subfield code="a">Fungi</subfield>
+        <subfield code="z">North America.</subfield>
+    </datafield>
+    <datafield ind2="7" ind1=" " tag="650">
+        <subfield code="a">Antiquities.</subfield>
+        <subfield code="2">fast</subfield>
+        <subfield code="0">(OCoLC)fst00810745</subfield>
+    </datafield>
+    <datafield ind2="7" ind1=" " tag="651">
+        <subfield code="a">United States.</subfield>
+        <subfield code="2">fast</subfield>
+        <subfield code="0">(OCoLC)fst01204155</subfield>
+    </datafield>
+    <datafield ind2="0" ind1=" " tag="651">
+        <subfield code="a">United States</subfield>
+        <subfield code="x">History</subfield>
+        <subfield code="v">Periodicals.</subfield>
+    </datafield>
+    <datafield ind2="0" ind1=" " tag="651">
+        <subfield code="a">United States</subfield>
+        <subfield code="x">Antiquities</subfield>
+        <subfield code="v">Periodicals.</subfield>
+    </datafield>
+    <datafield ind2="0" ind1=" " tag="651">
+        <subfield code="y">Stuarts, 1603-1714.</subfield>
+    </datafield>
+    <datafield ind2="7" ind1=" " tag="655">
+        <subfield code="a">Periodicals.</subfield>
+        <subfield code="2">fast</subfield>
+        <subfield code="0">(OCoLC)fst01411641</subfield>
+    </datafield>
+    <datafield ind2="7" ind1=" " tag="655">
+        <subfield code="a">History.</subfield>
+        <subfield code="2">fast</subfield>
+        <subfield code="0">(OCoLC)fst01411628</subfield>
+    </datafield>
+    <datafield ind2=" " ind1=" " tag="658">
+        <subfield code="a">History Serials.</subfield>
+    </datafield>
+    <datafield ind2=" " ind1="1" tag="700">
+        <subfield code="a">Everhart, Benjamin Matlock,</subfield>
+        <subfield code="d">1818-1904.</subfield>
+    </datafield>
+    <datafield ind2=" " ind1="2" tag="710">
+        <subfield code="a">Academy of Natural Sciences of Philadelphia.</subfield>
+    </datafield>
+    <datafield ind2=" " ind1="2" tag="710">
+        <subfield code="a">Bad publisher</subfield>
+        <subfield code="e">aut</subfield>
+    </datafield>
+    <datafield ind2="8" ind1="0" tag="776">
+        <subfield code="i">Online version:</subfield>
+        <subfield code="a">Howard, Clifford, 1868-1942.</subfield>
+        <subfield code="t">What happened at Olenberg.</subfield>
+        <subfield code="d">Chicago : The Reilly &amp; Britton Co., 1911</subfield>
+        <subfield code="w">(OCoLC)656701318</subfield>
+    </datafield>
+    <datafield ind2=" " ind1=" " tag="970">
+        <subfield code="a">MN</subfield>
+    </datafield>
+    <datafield ind2=" " ind1=" " tag="974">
+        <subfield code="b">PST</subfield>
+        <subfield code="c">PST</subfield>
+        <subfield code="d">20181105</subfield>
+        <subfield code="s">google</subfield>
+        <subfield code="u">pst.000061785779</subfield>
+        <subfield code="y">1893</subfield>
+        <subfield code="r">pdus</subfield>
+        <subfield code="q">bib</subfield>
+        <subfield code="t">non-US bib date1 between 1879 and 1924</subfield>
+    </datafield>
+</record>

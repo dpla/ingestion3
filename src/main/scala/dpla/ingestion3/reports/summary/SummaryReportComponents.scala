@@ -10,7 +10,8 @@ case class OperationSummary(
                              recordsAttempted: Long = -1,
                              recordsSuccessful: Long = -1,
                              recordsFailed: Long = -1,
-                             logFiles: Seq[String] = Seq()
+                             logFiles: Seq[String] = Seq(),
+                             duplicateHarvestRecords: Long = -1
                            )
 
 case class MessageSummary(

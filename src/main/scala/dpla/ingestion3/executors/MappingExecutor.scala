@@ -65,9 +65,15 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     // Load the harvested record dataframe
     val harvestedRecords: DataFrame = spark.read.avro(dataIn)
 
+    // Get distinct harvest records
+    val distinctHarvest: DataFrame = harvestedRecords.distinct
+
+    // For reporting purposes, caluclate number of duplicate harvest records
+    val duplicateHarvest: Long = harvestedRecords.count - distinctHarvest.count
+
     // Run the mapping over the Dataframe
     // Transformation only
-    val mappingResults: RDD[OreAggregation] = harvestedRecords
+    val mappingResults: RDD[OreAggregation] = distinctHarvest
       .select("document")
       .as[String]
       .rdd
@@ -79,7 +85,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       spark.sparkContext.broadcast(
         mappingResults
           .map(_.originalId)
-          .countByValue
+          .countByValue  // action, forces evaluation
           .collect{ case(origId, count) if count > 1 && origId != "" => origId }
           .toArray
       )
@@ -90,7 +96,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       oreAgg.copy(messages =
 
         if (duplicateOriginalIds.value.contains(oreAgg.originalId))
-          oreAgg.messages :+ duplicateOriginalId(oreAgg.originalId)
+          duplicateOriginalId(oreAgg.originalId) +: oreAgg.messages // prepend is faster that append on seq
         else
           oreAgg.messages
       )
@@ -152,7 +158,8 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       startTime,
       endTime,
       attemptedCount,
-      validRecordCount)(spark)
+      validRecordCount,
+      duplicateHarvest)(spark)
 
     // Format the summary report and write it log file
     val mappingSummary = MappingSummary.getSummary(finalReport)
@@ -186,7 +193,8 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
                        startTime: Long,
                        endTime: Long,
                        attemptedCount: Long,
-                       validRecordCount: Long)(implicit spark: SparkSession): MappingSummaryData = {
+                       validRecordCount: Long,
+                       duplicateHarvestRecords: Long)(implicit spark: SparkSession): MappingSummaryData = {
     import spark.implicits._
 
     // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
@@ -236,7 +244,8 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       attemptedCount,
       validRecordCount,
       recordErrorCount,
-      logFileSeq
+      logFileSeq,
+      duplicateHarvestRecords
     )
     // messages summary
     val messageSummary = MessageSummary(
