@@ -175,7 +175,6 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
     topicSubjects ++ nameSubjects ++ titleSubjects
   }
 
-  //todo
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
     extractStrings(data \ "metadata" \ "mods" \ "subject" \ "temporal").
       map(stringOnlyTimeSpan)
@@ -320,7 +319,7 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
 
 
   //Helper method to get a list of creators and contributors
-  private def processNames(data: Document[NodeSeq]): Names = {
+  private val processNames: Document[NodeSeq] => Names = (data: Document[NodeSeq]) => {
 
     val names = (for (name <- data \ "metadata" \ "mods" \ "name") yield {
       val nameString: String = processNameParts(name)
