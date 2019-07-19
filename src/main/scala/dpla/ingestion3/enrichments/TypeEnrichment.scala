@@ -25,6 +25,7 @@ class TypeEnrichment extends VocabEnrichment[String] {
     "audiofile" -> dcmiType.Sound,
     "black and white postcard" -> dcmiType.Image,
     "book" -> dcmiType.Text,
+    "books and documents" -> dcmiType.Text,
     "bookchapter" -> dcmiType.Text,
     "caricatures" -> dcmiType.Image,
     "cartographic material" -> dcmiType.Image,

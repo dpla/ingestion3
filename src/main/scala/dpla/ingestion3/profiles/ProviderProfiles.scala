@@ -87,6 +87,16 @@ class DlgProfile extends JsonProfile {
 }
 
 /**
+  * Harvard Library
+  */
+class HarvardProfile extends XmlProfile {
+  type Mapping = HarvardMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new HarvardMapping
+}
+
+/**
   * HathiTrust
   */
 class HathiProfile extends XmlProfile {
@@ -113,8 +123,9 @@ class InProfile extends XmlProfile {
   type Mapping = InMapping
 
   override def getHarvester = classOf[OaiHarvester]
+
   override def getMapping = new InMapping
-}
+  }
 
 /**
   * Internet Archive
