@@ -5,17 +5,14 @@ import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, DataFrame, SparkSession}
 
-trait Lemmatizer {
-
-  // Abstract val, must be defined in class
-  val sparkSession: SparkSession
+class Lemmas(spark: SparkSession) {
 
   // Flatten array of arrays
-  val flattenArrays: UserDefinedFunction =
+  private val flattenArrays: UserDefinedFunction =
     udf((arrays: collection.mutable.WrappedArray[collection.mutable.WrappedArray[String]]) => arrays.flatten)
 
   // Join strings in an array with ": "
-  val joinArray: UserDefinedFunction =
+  private val joinArray: UserDefinedFunction =
     udf((words: collection.mutable.WrappedArray[String]) => words.mkString(": "))
 
   /**
@@ -28,10 +25,10 @@ trait Lemmatizer {
     * @return DataFrame the input df with additional column of lemmas
     *         Value of lemmas column may be null
     */
-  def lemmas(df: DataFrame,
-             idCol: String,
-             inputCols: Seq[String],
-             outputCol: String): DataFrame = {
+  def transform(df: DataFrame,
+                idCol: String,
+                inputCols: Seq[String],
+                outputCol: String): DataFrame = {
 
     val columns: Seq[Column] = inputCols.map(x => col(x))
 
@@ -48,8 +45,8 @@ trait Lemmatizer {
       .select("id", "lem")
       .groupBy("id")
       .agg(collect_list(col("lem")).as("lemmas"))
-      .select(col("id").as(idCol), flattenArrays(col("lemmas")).as(outputCol))
+      .select(col("id"), flattenArrays(col("lemmas")).as(outputCol))
 
-    df.join(right=lemmas, usingColumns=Seq(idCol), joinType="left")
+    df.join(lemmas, col(idCol) === col("id"), "left")
   }
 }
