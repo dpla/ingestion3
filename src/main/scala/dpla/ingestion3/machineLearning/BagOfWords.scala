@@ -32,7 +32,7 @@ class BagOfWords(stopWordsSources: Seq[String], spark: SparkSession) {
 
   private lazy val broadcastStopWords: Broadcast[Seq[String]] = spark.sparkContext.broadcast(stopWords)
 
-  private val cleanUpLemmas: UserDefinedFunction = udf(
+  private val createBagOfWords: UserDefinedFunction = udf(
     (words: collection.mutable.WrappedArray[String]) => {
       words
         .map(_.toLowerCase)
@@ -50,5 +50,5 @@ class BagOfWords(stopWordsSources: Seq[String], spark: SparkSession) {
     * @return Dataframe the original dataframe with an additional column containing bag-of-words tokens
     */
   def transform(df: DataFrame, inputCol: String, outputCol: String): DataFrame =
-    df.withColumn(outputCol, cleanUpLemmas(col(inputCol)))
+    df.withColumn(outputCol, createBagOfWords(col(inputCol)))
 }

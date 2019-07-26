@@ -19,6 +19,14 @@ class TopicDistributions(cvModelSource: String,
   private lazy val ldaModel: LocalLDAModel = LocalLDAModel.load(spark.sparkContext, ldaModelSource)
   private lazy val localLdaModel: LocalLDAModel = ldaModel.asInstanceOf[LocalLDAModel] // TODO: Necessary?
 
+  /**
+    *
+    * @param df DataFrame
+    * @param idCol String name of column containing identifier
+    * @param inputCol String name of column containing bag-of-words tokens
+    * @param outputCol String name of output column that will contain topic distributions
+    * @return DataFrame the original Dataframe with additional column containing topic distributions
+    */
   def transform(df: DataFrame,
                 idCol: String,
                 inputCol: String,

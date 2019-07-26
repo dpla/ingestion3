@@ -19,10 +19,10 @@ class Lemmas(spark: SparkSession) {
     * Lemmatize the text for specified columns of a DataFrame
     *
     * @param df DataFrame
-    * @param idCol String name of column to be used as unique identifier
+    * @param idCol String name of column containing identifier
     * @param inputCols Seq[String] names of columns to be lemmatized
-    * @param outputCol String name of output column (lemmas)
-    * @return DataFrame the input df with additional column of lemmas
+    * @param outputCol String name of output column that will contain lemmas
+    * @return DataFrame the input df with additional column containing lemmas
     *         Value of lemmas column may be null
     */
   def transform(df: DataFrame,
