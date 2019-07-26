@@ -1,12 +1,14 @@
-package dpla.lda
+package dpla.ingestion3.machineLearning
 
 import com.databricks.spark.corenlp.functions._
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, DataFrame, SparkSession}
 
+trait Lemmatizer {
 
-class Lemmatizer(spark: SparkSession) {
+  // Abstract val, must be defined in class
+  val sparkSession: SparkSession
 
   // Flatten array of arrays
   val flattenArrays: UserDefinedFunction =
@@ -23,7 +25,6 @@ class Lemmatizer(spark: SparkSession) {
     * @param idCol String name of column to be used as unique identifier
     * @param inputCols Seq[String] names of columns to be lemmatized
     * @param outputCol String name of output column (lemmas)
-    * @param spark SparkSession
     * @return DataFrame the input df with additional column of lemmas
     *         Value of lemmas column may be null
     */
