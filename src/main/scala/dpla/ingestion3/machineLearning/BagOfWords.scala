@@ -6,14 +6,9 @@ import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-class BagOfWords(stopWordsSources: Seq[String], spark: SparkSession) {
+class BagOfWords(stopWordsSource: String, spark: SparkSession) {
 
   import spark.sqlContext.implicits._
-
-//  private val stopWordsSources: Seq[String] = Seq(
-//    "/stopwords/core-nlp-stopwords.txt",
-//    "/dpla-stopwords.txt"
-//  )
 
   // These stopwords are altered during lemmatization.
   // They are not always altered in the records when the lemmatizer recognizes them as parts of proper nouns.
@@ -21,9 +16,8 @@ class BagOfWords(stopWordsSources: Seq[String], spark: SparkSession) {
   private val forceStopWords: Seq[String] = Seq("archives", "collections", "libraries")
 
   // Lemmatized stop words
-  private lazy val stopWords: Seq[String] = stopWordsSources
-    .map(fileName => spark.sparkContext.textFile(fileName)) // read in files
-    .reduce{ (x,y) => x ++ y } // combine into single RDD
+  private lazy val stopWords: Seq[String] = spark.sparkContext
+    .textFile(stopWordsSource) // read in files
     .toDF
     .select(explode(lemma(col("value")))) // lemmatize
     .map(_.getString(0))
