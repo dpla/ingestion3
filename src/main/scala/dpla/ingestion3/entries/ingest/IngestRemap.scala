@@ -27,11 +27,11 @@ object IngestRemap extends MappingExecutor
     // Read in command line args.
     val cmdArgs = new CmdArgs(args)
 
-    val baseDataOut = cmdArgs.getOutput()
-    val confFile = cmdArgs.getConfigFile()
-    val shortName = cmdArgs.getProviderName()
-    val input = cmdArgs.getInput()
-    val sparkMaster: Option[String] = cmdArgs.getSparkMaster()
+    val baseDataOut = cmdArgs.getOutput
+    val confFile = cmdArgs.getConfigFile
+    val shortName = cmdArgs.getProviderName
+    val input = cmdArgs.getInput
+    val sparkMaster: Option[String] = cmdArgs.getSparkMaster
 
     // Get logger
     val logger = Utils.createLogger("ingest", shortName)

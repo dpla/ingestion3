@@ -34,11 +34,11 @@ object ReportsEntry {
     // Read in command line args.
     val cmdArgs = new CmdArgs(args)
 
-    val dataIn = cmdArgs.getInput()
-    val dataOut = cmdArgs.getOutput()
-    val shortName = cmdArgs.getProviderName()
-    val confFile = cmdArgs.getConfigFile()
-    val sparkMaster: Option[String] = cmdArgs.getSparkMaster()
+    val dataIn = cmdArgs.getInput
+    val dataOut = cmdArgs.getOutput
+    val shortName = cmdArgs.getProviderName
+    val confFile = cmdArgs.getConfigFile
+    val sparkMaster: Option[String] = cmdArgs.getSparkMaster
 
     // Load configuration from file
     val i3Conf: i3Conf = new Ingestion3Conf(confFile).load()

@@ -22,10 +22,10 @@ object HarvestEntry extends HarvestExecutor {
     // Read in command line args.
     val cmdArgs = new CmdArgs(args)
 
-    val dataOut = cmdArgs.getOutput()
-    val confFile = cmdArgs.getConfigFile()
-    val shortName = cmdArgs.getProviderName()
-    val sparkMaster = cmdArgs.getSparkMaster()
+    val dataOut = cmdArgs.getOutput
+    val confFile = cmdArgs.getConfigFile
+    val shortName = cmdArgs.getProviderName
+    val sparkMaster: Option[String] = cmdArgs.getSparkMaster
 
     // Get mapping logger.
     val harvestLogger = Utils.createLogger("harvest", shortName)

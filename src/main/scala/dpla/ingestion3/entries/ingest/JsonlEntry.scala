@@ -33,10 +33,10 @@ object JsonlEntry extends JsonlExecutor {
     // Read in command line args.
     val cmdArgs = new CmdArgs(args)
 
-    val dataIn = cmdArgs.getInput()
-    val dataOut = cmdArgs.getOutput()
-    val shortName = cmdArgs.getProviderName()
-    val sparkMaster: Option[String] = cmdArgs.getSparkMaster()
+    val dataIn = cmdArgs.getInput
+    val dataOut = cmdArgs.getOutput
+    val shortName = cmdArgs.getProviderName
+    val sparkMaster: Option[String] = cmdArgs.getSparkMaster
 
     val baseConf =
       new SparkConf()
