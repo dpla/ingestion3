@@ -6,7 +6,7 @@ import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-class BagOfWords(stopWordsSource: String, spark: SparkSession) {
+class BagOfWordsTokenizer(stopWordsSource: String, spark: SparkSession) {
 
   import spark.sqlContext.implicits._
 
@@ -26,7 +26,7 @@ class BagOfWords(stopWordsSource: String, spark: SparkSession) {
 
   private lazy val broadcastStopWords: Broadcast[Seq[String]] = spark.sparkContext.broadcast(stopWords)
 
-  private val createBagOfWords: UserDefinedFunction = udf(
+  private val bagOfWords: UserDefinedFunction = udf(
     (words: collection.mutable.WrappedArray[String]) => {
       words
         .map(_.toLowerCase)
@@ -44,5 +44,5 @@ class BagOfWords(stopWordsSource: String, spark: SparkSession) {
     * @return Dataframe the original dataframe with an additional column containing bag-of-words tokens
     */
   def transform(df: DataFrame, inputCol: String, outputCol: String): DataFrame =
-    df.withColumn(outputCol, createBagOfWords(col(inputCol)))
+    df.withColumn(outputCol, bagOfWords(col(inputCol)))
 }

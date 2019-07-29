@@ -9,9 +9,9 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.spark.sql.functions._
 
 
-class TopicDistributions(cvModelSource: String,
-                         ldaModelSource: String,
-                         spark: SparkSession) {
+class TopicDistributor(cvModelSource: String,
+                       ldaModelSource: String,
+                       spark: SparkSession) {
 
   import spark.sqlContext.implicits._
 

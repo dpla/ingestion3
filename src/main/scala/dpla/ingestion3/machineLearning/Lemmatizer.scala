@@ -5,7 +5,7 @@ import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, DataFrame, SparkSession}
 
-class Lemmas(spark: SparkSession) {
+class Lemmatizer(spark: SparkSession) {
 
   // Flatten array of arrays
   private val flattenArrays: UserDefinedFunction =
