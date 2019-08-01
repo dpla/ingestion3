@@ -33,6 +33,7 @@ class TopicDistributor(cvModelSource: String,
                 outputCol: String): DataFrame = {
 
     val wordVectors = cvModel
+      .setInputCol(inputCol)
       .transform(df)
       .select(idCol, "termFreq")
       .rdd

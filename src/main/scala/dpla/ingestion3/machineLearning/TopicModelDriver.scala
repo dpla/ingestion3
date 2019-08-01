@@ -13,21 +13,30 @@ class TopicModelDriver(stopWordsSource: String,
   val topicDistributor= new TopicDistributor(cvModelSource, ldaModelSource, spark)
 
   val dataFields: Seq[String] = Seq(
-    "doc.sourceResource.title",
-    "doc.sourceResource.subject.name",
-    "doc.sourceResource.description"
+    "SourceResource.title",
+    "SourceResource.subject.providedLabel",
+    "SourceResource.description"
   )
+
+  val idField: String = "dplaUri"
+
+  // For parquet dumps:
+  // idField = "doc.id"
+  // dataFields =
+  //    "doc.sourceResource.title",
+  //    "doc.sourceResource.subject.name",
+  //    "doc.sourceResource.description"
 
   def execute(enriched: DataFrame): DataFrame = {
     val lemmas: DataFrame =
-      lemmatizer.transform(df=enriched, idCol="doc.id", inputCols=dataFields, outputCol="lemmas")
+      lemmatizer.transform(df=enriched, idCol=idField, inputCols=dataFields, outputCol="lemmas")
 
     val bagOfWords: DataFrame =
       bagOfWordsTokenizer.transform(df=lemmas, inputCol="lemmas", outputCol="bagOfWords")
 
     val topicDistributions: DataFrame =
-      topicDistributor.transform(df=bagOfWords, idCol="doc.id", inputCol="bagOfWords", outputCol="topicDist")
+      topicDistributor.transform(df=bagOfWords, idCol=idField, inputCol="bagOfWords", outputCol="topicDist")
 
-    topicDistributions.select("doc.id", "lemmas", "bagOfWords", "topicDist")
+    topicDistributions.select(idField, "lemmas", "bagOfWords", "topicDist")
   }
 }

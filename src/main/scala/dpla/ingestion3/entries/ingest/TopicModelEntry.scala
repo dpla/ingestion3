@@ -20,6 +20,30 @@ import org.apache.spark.SparkConf
   *
   * Usage
   * -----
+  * To invoke via spark-submit:
+  *
+  * /**
+  * * Sample invocation
+  * *
+  * * To get the stanford jar on the cluster, do:
+  * *   wget http://repo1.maven.org/maven2/edu/stanford/nlp/stanford-corenlp/3.9.1/stanford-corenlp-3.9.1-models.jar
+  * *
+  * * spark/bin/spark-submit
+  * *   --master [SPARK_MASTER]
+  * *   --driver-memory [DRIVER_MEMORY]
+  * *   --executor-memory [EXECUTOR_MEMORY]
+  * *   --packages org.apache.hadoop:hadoop-aws:2.7.6,com.amazonaws:aws-java-sdk:1.7.4,databricks/spark-corenlp:0.3.1-s_2.11
+  * *   --jars stanford-corenlp-3.9.1-models.jar
+  * *   --conf spark.driver.extraClassPath=stanford-corenlp-3.9.1-models.jar
+  * *   --conf spark.executor.extraClassPath=stanford-corenlp-3.9.1-models.jar
+  * *   --class dpla.lda.Lemmas
+  * *   [PATH_TO_JAR]
+  * *   [INPUT]
+  * *   [OUTPUT_DIRECTORY]
+  **/
+  *
+  *
+  *
   * To invoke via sbt:
   * sbt "run-main dpla.ingestion3.JsonlEntry
   *       --input=/input/path/to/enriched/
@@ -54,7 +78,7 @@ object TopicModelEntry extends TopicModelExecutor {
       case None => baseConf
     }
 
-    val logger = Utils.createLogger("jsonl")
+    val logger = Utils.createLogger("machine_learning")
 
     executeTopicModel(sparkConf, dataIn, dataOut, shortName, stopWords, cvModel, ldaModel, logger)
   }
