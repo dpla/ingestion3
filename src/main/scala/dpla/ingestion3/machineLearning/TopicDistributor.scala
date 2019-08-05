@@ -15,8 +15,7 @@ class TopicDistributor(cvModelSource: String,
                        spark: SparkSession) {
 
   private lazy val cvModel: CountVectorizerModel = CountVectorizerModel.read.load(cvModelSource)
-  private lazy val ldaModel: LocalLDAModel = LocalLDAModel.load(spark.sparkContext, ldaModelSource)
-  private lazy val localLdaModel: LocalLDAModel = ldaModel.asInstanceOf[LocalLDAModel] // TODO: Necessary?
+  private lazy val localLdaModel: LocalLDAModel = LocalLDAModel.load(spark.sparkContext, ldaModelSource)
 
   /**
     *

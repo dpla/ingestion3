@@ -3,7 +3,7 @@ package dpla.ingestion3.machineLearning
 import com.databricks.spark.corenlp.functions._
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.{Column, DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 class Lemmatizer(spark: SparkSession) {
 
@@ -19,27 +19,20 @@ class Lemmatizer(spark: SparkSession) {
     * Lemmatize the text for specified columns of a DataFrame
     *
     * @param df DataFrame
-    * @param inputCols Seq[String] names of columns to be lemmatized
+    * @param inputCol String name of column to be lemmatized
     * @param outputCol String name of output column that will contain lemmas
     * @return DataFrame the input df with additional column containing lemmas
     *         Value of lemmas column may be null
     */
   def transform(df: DataFrame,
-                inputCols: Seq[String],
+                inputCol: String,
                 outputCol: String): DataFrame = {
-
-    val columns: Seq[Column] = inputCols.map(x => col(x))
 
     val transformableDF = df.withColumn("localId", monotonically_increasing_id())
 
-    val text: DataFrame = transformableDF.select(
-      col("localId"),
-      concat_ws(". ", columns:_*).as("text")
-    )
-
-    val lemmas = text
+    val lemmas = transformableDF
       .distinct // remove duplicates
-      .withColumn("sentences", explode(ssplit(col("text"))))
+      .withColumn("sentences", explode(ssplit(col(inputCol))))
       .filter(length(col("sentences")) > 0) // lemma method will throw exception if given empty string
       .withColumn("lem", lemma(col("sentences")))
       .select("localId", "lem")

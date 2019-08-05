@@ -6,9 +6,11 @@ import com.databricks.spark.avro._
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.machineLearning.{BagOfWordsTokenizer, Lemmatizer, TopicDistributor}
 import dpla.ingestion3.messages._
+import dpla.ingestion3.utils.Utils
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
+import org.apache.spark.sql.functions.{col, concat_ws}
 
 import scala.util.{Failure, Success}
 
@@ -32,20 +34,23 @@ trait TopicModelExecutor extends Serializable with IngestMessageTemplates {
                         ldaModelSource: String,
                         logger: Logger): String = {
 
-    // Fields to use for topic modeling
+    // ID field of enriched records
+    val idField: String = "dplaUri"
+
+    // Fields of enriched records to use for topic modeling
     val dataFields: Seq[String] = Seq(
       "SourceResource.title",
       "SourceResource.subject.providedLabel",
       "SourceResource.description"
     )
 
-    val idField: String = "dplaUri"
+    val dataCols = dataFields.map(x => col(x))
 
     // This start time is used for documentation and output file naming.
     val startDateTime = LocalDateTime.now
 
     // This start time is used to measure the duration of mapping.
-    val startTime = System.currentTimeMillis()
+    val startTime = System.currentTimeMillis
 
     // Output helper
     val outputHelper: OutputHelper =
@@ -66,11 +71,15 @@ trait TopicModelExecutor extends Serializable with IngestMessageTemplates {
     val bagOfWordsTokenizer = new BagOfWordsTokenizer(stopWordsSource, spark)
     val topicDistributor= new TopicDistributor(cvModelSource, ldaModelSource, spark)
 
-    // Read in enriched data
-    val enriched = spark.read.avro(dataIn)
+    // Read in enriched data an select relevant columns
+    val enriched: DataFrame = spark.read.avro(dataIn)
+      .select(
+        col(idField),
+        concat_ws(". ", dataCols:_*).as("text")
+      )
 
     val lemmas: DataFrame =
-      lemmatizer.transform(df=enriched, inputCols=dataFields, outputCol="lemmas")
+      lemmatizer.transform(df=enriched, inputCol="text", outputCol="lemmas")
 
     val bagOfWords: DataFrame =
       bagOfWordsTokenizer.transform(df=lemmas, inputCol="lemmas", outputCol="bagOfWords")
@@ -82,18 +91,18 @@ trait TopicModelExecutor extends Serializable with IngestMessageTemplates {
     topicDistributions
       .select(idField, "lemmas", "bagOfWords", "topicDist")
       .write
-      .parquet(outputPath + "/topicDistributions")
+      .parquet(outputPath)
 
-    val endTime: Double = System.currentTimeMillis()
+    val endTime: Double = System.currentTimeMillis
     val runTime: Double = endTime-startTime
 
     // Write manifest
     val manifestOpts: Map[String, String] = Map(
-      "Activity" -> "Machine Learning",
+      "Activity" -> "Topic Model",
       "Provider" -> shortName,
       "Record count" -> enriched.count.toString,
       "Input" -> dataIn,
-      "Runtime" -> runTime.toString
+      "Runtime" -> Utils.formatRuntime(runTime.toLong)
     )
     outputHelper.writeManifest(manifestOpts) match {
       case Success(s) => logger.info(s"Manifest written to $s.")
