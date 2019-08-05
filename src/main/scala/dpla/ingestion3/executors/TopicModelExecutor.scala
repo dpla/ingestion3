@@ -59,9 +59,7 @@ trait TopicModelExecutor extends Serializable with IngestMessageTemplates {
       .config("spark.ui.showConsoleProgress", value = false)
       .getOrCreate()
 
-    spark.sparkContext.setLogLevel("WARN")
-
-    logger.info("Starting machine learning.")
+    spark.sparkContext.setLogLevel("WARN") // Lemmatizer is very verbose
 
     // Initialize ML class instances
     val lemmatizer = new Lemmatizer(spark)
@@ -71,10 +69,8 @@ trait TopicModelExecutor extends Serializable with IngestMessageTemplates {
     // Read in enriched data
     val enriched = spark.read.avro(dataIn)
 
-    logger.info("Lemmatizing.")
-
     val lemmas: DataFrame =
-      lemmatizer.transform(df=enriched, idCol=idField, inputCols=dataFields, outputCol="lemmas")
+      lemmatizer.transform(df=enriched, inputCols=dataFields, outputCol="lemmas")
 
     val bagOfWords: DataFrame =
       bagOfWordsTokenizer.transform(df=lemmas, inputCol="lemmas", outputCol="bagOfWords")
@@ -82,13 +78,11 @@ trait TopicModelExecutor extends Serializable with IngestMessageTemplates {
     val topicDistributions: DataFrame =
       topicDistributor.transform(df=bagOfWords, inputCol="bagOfWords", outputCol="topicDist")
 
+    // Write out topic distributions
     topicDistributions
       .select(idField, "lemmas", "bagOfWords", "topicDist")
       .write
       .parquet(outputPath + "/topicDistributions")
-
-    // Write out topic distributions
-    topicDistributions.write.parquet(outputPath + "/topicDistributions")
 
     val endTime: Double = System.currentTimeMillis()
     val runTime: Double = endTime-startTime
@@ -105,9 +99,6 @@ trait TopicModelExecutor extends Serializable with IngestMessageTemplates {
       case Success(s) => logger.info(s"Manifest written to $s.")
       case Failure(f) => logger.warn(s"Manifest failed to write: $f")
     }
-
-    logger.info("Machine learning complete.")
-    logger.info("Runtime: " + runTime.toString)
 
     spark.stop()
 

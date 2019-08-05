@@ -14,9 +14,9 @@ class TopicDistributor(cvModelSource: String,
                        ldaModelSource: String,
                        spark: SparkSession) {
 
-//  private lazy val cvModel: CountVectorizerModel = CountVectorizerModel.read.load(cvModelSource)
-//  private lazy val ldaModel: LocalLDAModel = LocalLDAModel.load(spark.sparkContext, ldaModelSource)
-//  private lazy val localLdaModel: LocalLDAModel = ldaModel.asInstanceOf[LocalLDAModel] // TODO: Necessary?
+  private lazy val cvModel: CountVectorizerModel = CountVectorizerModel.read.load(cvModelSource)
+  private lazy val ldaModel: LocalLDAModel = LocalLDAModel.load(spark.sparkContext, ldaModelSource)
+  private lazy val localLdaModel: LocalLDAModel = ldaModel.asInstanceOf[LocalLDAModel] // TODO: Necessary?
 
   /**
     *
@@ -28,10 +28,6 @@ class TopicDistributor(cvModelSource: String,
   def transform(df: DataFrame,
                 inputCol: String,
                 outputCol: String): DataFrame = {
-
-    val cvModel: CountVectorizerModel = CountVectorizerModel.read.load(cvModelSource)
-    val ldaModel: LocalLDAModel = LocalLDAModel.load(spark.sparkContext, ldaModelSource)
-    val localLdaModel: LocalLDAModel = ldaModel.asInstanceOf[LocalLDAModel] // TODO: Necessary?
 
     // localLDAModel requires a numeric ID
     val transformableDF: DataFrame = df.withColumn("numericId", monotonically_increasing_id)

@@ -19,23 +19,16 @@ class Lemmatizer(spark: SparkSession) {
     * Lemmatize the text for specified columns of a DataFrame
     *
     * @param df DataFrame
-    * @param idCol String name of column containing identifier
     * @param inputCols Seq[String] names of columns to be lemmatized
     * @param outputCol String name of output column that will contain lemmas
     * @return DataFrame the input df with additional column containing lemmas
     *         Value of lemmas column may be null
     */
   def transform(df: DataFrame,
-                idCol: String,
                 inputCols: Seq[String],
                 outputCol: String): DataFrame = {
 
     val columns: Seq[Column] = inputCols.map(x => col(x))
-
-//    val text: DataFrame = df.select(
-//      col(idCol).as("id"),
-//      concat_ws(". ", columns:_*).as("text")
-//    )
 
     val transformableDF = df.withColumn("localId", monotonically_increasing_id())
 
