@@ -4,11 +4,12 @@ import java.time.LocalDateTime
 
 import com.databricks.spark.avro._
 import dpla.ingestion3.dataStorage.OutputHelper
-import dpla.ingestion3.machineLearning.TopicModelDriver
+import dpla.ingestion3.machineLearning.{BagOfWordsTokenizer, Lemmatizer, TopicDistributor}
 import dpla.ingestion3.messages._
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
+
 import scala.util.{Failure, Success}
 
 trait TopicModelExecutor extends Serializable with IngestMessageTemplates {
@@ -31,47 +32,79 @@ trait TopicModelExecutor extends Serializable with IngestMessageTemplates {
                         ldaModelSource: String,
                         logger: Logger): String = {
 
+    // Fields to use for topic modeling
+    val dataFields: Seq[String] = Seq(
+      "SourceResource.title",
+      "SourceResource.subject.providedLabel",
+      "SourceResource.description"
+    )
+
+    val idField: String = "dplaUri"
+
     // This start time is used for documentation and output file naming.
     val startDateTime = LocalDateTime.now
 
     // This start time is used to measure the duration of mapping.
     val startTime = System.currentTimeMillis()
 
-    logger.info("Starting machine learning.")
-
+    // Output helper
     val outputHelper: OutputHelper =
       new OutputHelper(dataOut, shortName, "topic_model", startDateTime)
 
     val outputPath = outputHelper.activityPath
 
+    // Initialize spark
     implicit val spark: SparkSession = SparkSession.builder()
       .config(sparkConf)
       .config("spark.ui.showConsoleProgress", value = false)
       .getOrCreate()
 
-    val enrichedRecords = spark.read.avro(dataIn)
+    spark.sparkContext.setLogLevel("WARN")
 
-    val topicModelDriver = new TopicModelDriver(stopWordsSource, cvModelSource, ldaModelSource, spark)
+    logger.info("Starting machine learning.")
 
-    val topicDistributions: DataFrame = topicModelDriver.execute(enrichedRecords)
+    // Initialize ML class instances
+    val lemmatizer = new Lemmatizer(spark)
+    val bagOfWordsTokenizer = new BagOfWordsTokenizer(stopWordsSource, spark)
+    val topicDistributor= new TopicDistributor(cvModelSource, ldaModelSource, spark)
 
-    // Write out learned intelligence
-    topicDistributions.write.parquet(outputPath + "/topicDistributions") // TODO add path to output helper
+    // Read in enriched data
+    val enriched = spark.read.avro(dataIn)
+
+    logger.info("Lemmatizing.")
+
+    val lemmas: DataFrame =
+      lemmatizer.transform(df=enriched, idCol=idField, inputCols=dataFields, outputCol="lemmas")
+
+    val bagOfWords: DataFrame =
+      bagOfWordsTokenizer.transform(df=lemmas, inputCol="lemmas", outputCol="bagOfWords")
+
+    val topicDistributions: DataFrame =
+      topicDistributor.transform(df=bagOfWords, inputCol="bagOfWords", outputCol="topicDist")
+
+    topicDistributions
+      .select(idField, "lemmas", "bagOfWords", "topicDist")
+      .write
+      .parquet(outputPath + "/topicDistributions")
+
+    // Write out topic distributions
+    topicDistributions.write.parquet(outputPath + "/topicDistributions")
+
+    val endTime: Double = System.currentTimeMillis()
+    val runTime: Double = endTime-startTime
 
     // Write manifest
     val manifestOpts: Map[String, String] = Map(
       "Activity" -> "Machine Learning",
       "Provider" -> shortName,
-      "Record count" -> enrichedRecords.count.toString,
-      "Input" -> dataIn
+      "Record count" -> enriched.count.toString,
+      "Input" -> dataIn,
+      "Runtime" -> runTime.toString
     )
     outputHelper.writeManifest(manifestOpts) match {
       case Success(s) => logger.info(s"Manifest written to $s.")
       case Failure(f) => logger.warn(s"Manifest failed to write: $f")
     }
-
-    val endTime: Double = System.currentTimeMillis()
-    val runTime: Double = endTime-startTime
 
     logger.info("Machine learning complete.")
     logger.info("Runtime: " + runTime.toString)

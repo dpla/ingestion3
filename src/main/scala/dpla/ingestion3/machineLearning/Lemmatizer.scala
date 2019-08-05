@@ -32,8 +32,15 @@ class Lemmatizer(spark: SparkSession) {
 
     val columns: Seq[Column] = inputCols.map(x => col(x))
 
-    val text: DataFrame = df.select(
-      col(idCol).as("id"),
+//    val text: DataFrame = df.select(
+//      col(idCol).as("id"),
+//      concat_ws(". ", columns:_*).as("text")
+//    )
+
+    val transformableDF = df.withColumn("localId", monotonically_increasing_id())
+
+    val text: DataFrame = transformableDF.select(
+      col("localId"),
       concat_ws(". ", columns:_*).as("text")
     )
 
@@ -42,11 +49,13 @@ class Lemmatizer(spark: SparkSession) {
       .withColumn("sentences", explode(ssplit(col("text"))))
       .filter(length(col("sentences")) > 0) // lemma method will throw exception if given empty string
       .withColumn("lem", lemma(col("sentences")))
-      .select("id", "lem")
-      .groupBy("id")
+      .select("localId", "lem")
+      .groupBy("localId")
       .agg(collect_list(col("lem")).as("lemmas"))
-      .select(col("id"), flattenArrays(col("lemmas")).as(outputCol))
+      .select(col("localId"), flattenArrays(col("lemmas")).as(outputCol))
 
-    df.join(lemmas, col(idCol) === col("id"), "left")
+    transformableDF
+      .join(lemmas, Seq("localId"), "left")
+      .drop("localId")
   }
 }

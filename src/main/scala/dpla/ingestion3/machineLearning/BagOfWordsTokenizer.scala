@@ -6,7 +6,7 @@ import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-class BagOfWordsTokenizer(stopWordsSource: String, spark: SparkSession) {
+class BagOfWordsTokenizer(stopWordsSource: String, spark: SparkSession) extends Serializable {
 
   import spark.sqlContext.implicits._
 
@@ -16,7 +16,7 @@ class BagOfWordsTokenizer(stopWordsSource: String, spark: SparkSession) {
   private val forceStopWords: Seq[String] = Seq("archives", "collections", "libraries")
 
   // Lemmatized stop words
-  private lazy val stopWords: Seq[String] = spark.sparkContext
+  private val stopWords: Seq[String] = spark.sparkContext
     .textFile(stopWordsSource) // read in files
     .toDF
     .select(explode(lemma(col("value")))) // lemmatize
@@ -24,7 +24,7 @@ class BagOfWordsTokenizer(stopWordsSource: String, spark: SparkSession) {
     .collect
     .distinct ++: forceStopWords
 
-  private lazy val broadcastStopWords: Broadcast[Seq[String]] = spark.sparkContext.broadcast(stopWords)
+  private val broadcastStopWords: Broadcast[Seq[String]] = spark.sparkContext.broadcast(stopWords)
 
   private val bagOfWords: UserDefinedFunction = udf(
     (words: collection.mutable.WrappedArray[String]) => {
