@@ -39,7 +39,6 @@ class MwdlHarvester(spark: SparkSession,
       .addParameter("query_exc", "facet_local1,exact,Utah Valley University Student Theses Collection")
       .addParameter("query_exc", "facet_local1,exact,Harvard Peabody Site Reports")
       .addParameter("query_exc", "facet_local1,exact, Westminster College Institutional Repository")
-      .addParameter("query_exc", "facet_local2,exact, University of Utah - Spencer S. Eccles Health Sciences Library")
       .build()
       .toURL
 }
