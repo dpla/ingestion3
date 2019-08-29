@@ -22,30 +22,30 @@ import org.apache.spark.SparkConf
   * -----
   * To invoke via spark-submit:
   *
-  * /**
-  * * Sample invocation
-  * *
-  * * To get the stanford jar on the cluster, do:
-  * *   wget http://repo1.maven.org/maven2/edu/stanford/nlp/stanford-corenlp/3.9.1/stanford-corenlp-3.9.1-models.jar
-  * *
-  * * spark/bin/spark-submit
-  * *   --master [SPARK_MASTER]
-  * *   --driver-memory [DRIVER_MEMORY]
-  * *   --executor-memory [EXECUTOR_MEMORY]
-  * *   --packages org.apache.hadoop:hadoop-aws:2.7.6,com.amazonaws:aws-java-sdk:1.7.4,databricks/spark-corenlp:0.3.1-s_2.11
-  * *   --jars stanford-corenlp-3.9.1-models.jar
-  * *   --conf spark.driver.extraClassPath=stanford-corenlp-3.9.1-models.jar
-  * *   --conf spark.executor.extraClassPath=stanford-corenlp-3.9.1-models.jar
-  * *   --class dpla.lda.Lemmas
-  * *   [PATH_TO_JAR]
-  * *   [INPUT]
-  * *   [OUTPUT_DIRECTORY]
-  **/
+  * To get the stanford jar on the cluster, do:
+  *   wget http://repo1.maven.org/maven2/edu/stanford/nlp/stanford-corenlp/3.9.1/stanford-corenlp-3.9.1-models.jar
   *
-  *
+  * spark/bin/spark-submit
+  *   --master [SPARK_MASTER]
+  *   --driver-memory [DRIVER_MEMORY]
+  *   --executor-memory [EXECUTOR_MEMORY]
+  *   --packages org.apache.hadoop:hadoop-aws:2.7.6,com.amazonaws:aws-java-sdk:1.7.4, \
+  *     databricks/spark-corenlp:0.3.1-s_2.11,org.rogach:scallop_2.11:3.0.3, \
+  *     com.databricks:spark-avro_2.11:4.0.0
+  *   --jars stanford-corenlp-3.9.1-models.jar
+  *   --conf spark.driver.extraClassPath=stanford-corenlp-3.9.1-models.jar
+  *   --conf spark.executor.extraClassPath=stanford-corenlp-3.9.1-models.jar
+  *   --class dpla.ingestion3.entries.ingest.TopicModelEntry
+  *   [PATH_TO_JAR]
+  *   --input [INPUT]
+  *   --output [OUTPUT_DIRECTORY]
+  *   --name [PROVIDER_SHORTNAME]
+  *   --stopWords [PATH_TO_STOPWORDS]
+  *   --cvModel [PATH_TO_CV_MODEL]
+  *   --ldaModel [PATH_TO_LDA_MODEL]
   *
   * To invoke via sbt:
-  * sbt "run-main dpla.ingestion3.JsonlEntry
+  * sbt "run-main dpla.ingestion3.entries.ingest.TopicModelEntry
   *       --input=/input/path/to/enriched/
   *       --output=/output/path/to/topic/model/
   *       --name=shortName"
