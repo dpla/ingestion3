@@ -29,6 +29,7 @@ import org.apache.spark.SparkConf
   *   --master [SPARK_MASTER]
   *   --driver-memory [DRIVER_MEMORY]
   *   --executor-memory [EXECUTOR_MEMORY]
+  *   --class dpla.ingestion3.entries.ingest.TopicModelEntry
   *   --packages org.apache.hadoop:hadoop-aws:2.7.6,com.amazonaws:aws-java-sdk:1.7.4, \
   *     databricks/spark-corenlp:0.3.1-s_2.11,org.rogach:scallop_2.11:3.0.3, \
   *     com.databricks:spark-avro_2.11:4.0.0
