@@ -43,5 +43,6 @@ class Lemmatizer(spark: SparkSession) {
     transformableDF
       .join(lemmas, Seq("localId"), "left")
       .drop("localId")
+      .withColumn("lemmas", coalesce(col("lemmas"), array())) // replace null values with empty array
   }
 }
