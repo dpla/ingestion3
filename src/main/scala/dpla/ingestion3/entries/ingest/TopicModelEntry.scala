@@ -36,7 +36,6 @@ import org.apache.spark.SparkConf
   *   --jars stanford-corenlp-3.9.1-models.jar
   *   --conf spark.driver.extraClassPath=stanford-corenlp-3.9.1-models.jar
   *   --conf spark.executor.extraClassPath=stanford-corenlp-3.9.1-models.jar
-  *   --class dpla.ingestion3.entries.ingest.TopicModelEntry
   *   [PATH_TO_JAR]
   *   --input [INPUT]
   *   --output [OUTPUT_DIRECTORY]
