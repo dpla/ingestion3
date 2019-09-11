@@ -1,8 +1,8 @@
 package dpla.ingestion3.entries.ingest
 
-import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
+import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, MachineLearningConf}
 import dpla.ingestion3.dataStorage.InputHelper
-import dpla.ingestion3.executors.{EnrichExecutor, JsonlExecutor, MappingExecutor}
+import dpla.ingestion3.executors.{EnrichExecutor, JsonlExecutor, MappingExecutor, TopicModelExecutor}
 import dpla.ingestion3.entries.reports.ReporterMain._
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
@@ -17,10 +17,15 @@ import org.apache.spark.SparkConf
   *   4)  --name    Provider short name
   *   5)  --sparkMaster optional parameter that overrides a --master param submitted
   *                     via spark-submit (e.g. local[*])
+  *   6) --stopWords    optional path to a txt file containing stopwords, default is set in application.conf
+  *   7) --cvModel      optional path to a spark CountVectorizerModel, default is set in application.conf
+  *   8) --ldaModel     optional path to a spark LDAModel (Latent Dirichlet Allocation),
+  * *                   default is set in application.conf
   */
 object IngestRemap extends MappingExecutor
   with JsonlExecutor
-  with EnrichExecutor {
+  with EnrichExecutor
+  with TopicModelExecutor {
 
   def main(args: Array[String]): Unit = {
 
@@ -32,6 +37,9 @@ object IngestRemap extends MappingExecutor
     val shortName = cmdArgs.getProviderName
     val input = cmdArgs.getInput
     val sparkMaster: Option[String] = cmdArgs.getSparkMaster
+    val stopWords: String = cmdArgs.getStopWords.getOrElse(MachineLearningConf.stopWordsPath)
+    val cvModel: String = cmdArgs.getCvModel.getOrElse(MachineLearningConf.cvModelPath)
+    val ldaModel: String = cmdArgs.getLdaModel.getOrElse(MachineLearningConf.ldaModelPath)
 
     // Get logger
     val logger = Utils.createLogger("ingest", shortName)
@@ -66,7 +74,7 @@ object IngestRemap extends MappingExecutor
     // TODO These processes should return some flag or metric to help determine whether to proceed
     // Mapping
     val mapDataOut: String =
-    executeMapping(sparkConf, harvestData, baseDataOut, shortName, logger)
+      executeMapping(sparkConf, harvestData, baseDataOut, shortName, logger)
 
     // Enrichment
     val enrichDataOut: String =
@@ -77,5 +85,8 @@ object IngestRemap extends MappingExecutor
 
     // Reports
     executeAllReports(sparkConf, enrichDataOut, baseDataOut, shortName, logger)
+
+    // LDA vectors
+    executeTopicModel(sparkConf, enrichDataOut, baseDataOut, shortName, stopWords, cvModel, ldaModel, logger)
   }
 }

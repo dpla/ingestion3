@@ -9,14 +9,15 @@ import org.apache.spark.SparkConf
   * Driver for reading DplaMapData records (enriched) and generating topic model distributions.
   *
   * Expects seven parameters:
-  * 1) a path to the enriched data
-  * 2) a path to output the topic model data
-  * 3) provider short name (e.g. 'mdl', 'cdl', 'harvard')
-  * 4) a path to a txt file containing stopwords - optional, default is set in application.conf
-  * 5) a path to a spark CountVectorizerModel - optional, default is set in application.conf
-  * 6) a path to a spark LDAModel (Latent Dirichlet Allocation) - optional, default is set in application.conf
-  * 7) spark master optional parameter that overrides a --master param submitted
-  *    via spark-submit
+  * 1) --input        path to the enriched data
+  * 2) --output       path to output the topic model data
+  * 3) --name         provider short name (e.g. 'mdl', 'cdl', 'harvard')
+  * 4) --sparkMaster  [OPTIONAL] spark master optional parameter that overrides a --master param submitted
+  *                   via spark-submit
+  * 5) --stopWords    [OPTIONAL] path to a txt file containing stopwords, default is set in application.conf
+  * 6) --cvModel      [OPTIONAL] path to a spark CountVectorizerModel, default is set in application.conf
+  * 7) --ldaModel     [OPTIONAL] path to a spark LDAModel (Latent Dirichlet Allocation),
+  *                   default is set in application.conf
   *
   * Usage
   * -----
