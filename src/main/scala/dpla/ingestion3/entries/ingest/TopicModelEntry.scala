@@ -1,6 +1,6 @@
 package dpla.ingestion3.entries.ingest
 
-import dpla.ingestion3.confs.CmdArgs
+import dpla.ingestion3.confs.{CmdArgs, MachineLearningConf}
 import dpla.ingestion3.executors.TopicModelExecutor
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
@@ -12,10 +12,10 @@ import org.apache.spark.SparkConf
   * 1) a path to the enriched data
   * 2) a path to output the topic model data
   * 3) provider short name (e.g. 'mdl', 'cdl', 'harvard')
-  * 4) a path to a txt file containing stopwords
-  * 5) a path to a spark CountVectorizerModel
-  * 6) a path to a spark LDAModel (Latent Dirichlet Allocation)
-  * 7) spark master (optional parameter that overrides a --master param submitted
+  * 4) a path to a txt file containing stopwords - optional, default is set in application.conf
+  * 5) a path to a spark CountVectorizerModel - optional, default is set in application.conf
+  * 6) a path to a spark LDAModel (Latent Dirichlet Allocation) - optional, default is set in application.conf
+  * 7) spark master optional parameter that overrides a --master param submitted
   *    via spark-submit
   *
   * Usage
@@ -64,9 +64,9 @@ object TopicModelEntry extends TopicModelExecutor {
     val dataIn: String = cmdArgs.getInput
     val dataOut: String = cmdArgs.getOutput
     val shortName: String = cmdArgs.getProviderName
-    val stopWords: String = cmdArgs.getStopWords
-    val cvModel: String = cmdArgs.getCvModel
-    val ldaModel: String = cmdArgs.getLdaModel
+    val stopWords: String = cmdArgs.getStopWords.getOrElse(MachineLearningConf.stopWordsPath)
+    val cvModel: String = cmdArgs.getCvModel.getOrElse(MachineLearningConf.cvModelPath)
+    val ldaModel: String = cmdArgs.getLdaModel.getOrElse(MachineLearningConf.ldaModelPath)
     val sparkMaster: Option[String] = cmdArgs.getSparkMaster
 
     val baseConf =

@@ -161,17 +161,11 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
 
   def getSparkMaster: Option[String] = sparkMaster.toOption
 
-  def getStopWords: String = stopWords.toOption
-    .map(_.toString)
-    .getOrElse(throw new RuntimeException("No stopWords file specified."))
+  def getStopWords:  Option[String] = stopWords.toOption
 
-  def getCvModel: String = cvModel.toOption
-    .map(_.toString)
-    .getOrElse(throw new RuntimeException("No cvModel specified."))
+  def getCvModel: Option[String] = cvModel.toOption
 
-  def getLdaModel: String = ldaModel.toOption
-    .map(_.toString)
-    .getOrElse(throw new RuntimeException("No ldaModel specified."))
+  def getLdaModel: Option[String] = ldaModel.toOption
 
   verify()
 }
