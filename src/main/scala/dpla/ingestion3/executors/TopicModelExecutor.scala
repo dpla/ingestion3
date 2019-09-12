@@ -40,7 +40,7 @@ trait TopicModelExecutor extends Serializable with IngestMessageTemplates {
                         logger: Logger): String = {
 
     // The inputFileType should be avro or jsonl
-    val inputFileType: String = dataIn.split("\\.").last
+    val inputFileType: String = dataIn.split("\\.").last.stripSuffix("/")
 
     // This start time is used for documentation and output file naming.
     val startDateTime = LocalDateTime.now
@@ -71,7 +71,7 @@ trait TopicModelExecutor extends Serializable with IngestMessageTemplates {
     val rawText: DataFrame = inputFileType match {
       case "avro" => getAvroRawText(dataIn, spark)
       case "jsonl" => getJsonlRawText(dataIn, spark)
-      case _ => throw new IllegalArgumentException("Input file type " + inputFileType + "not recognized.")
+      case _ => throw new IllegalArgumentException("Input file type " + inputFileType + " not recognized.")
     }
 
     val lemmas: DataFrame =
