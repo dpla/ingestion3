@@ -33,7 +33,7 @@ import org.apache.spark.SparkConf
   *   --class dpla.ingestion3.entries.ingest.TopicModelEntry
   *   --packages org.apache.hadoop:hadoop-aws:2.7.6,com.amazonaws:aws-java-sdk:1.7.4, \
   *     databricks/spark-corenlp:0.3.1-s_2.11,org.rogach:scallop_2.11:3.0.3, \
-  *     com.databricks:spark-avro_2.11:4.0.0
+  *     com.databricks:spark-avro_2.11:4.0.0,com.typesafe:config:1.3.1
   *   --jars stanford-corenlp-3.9.1-models.jar
   *   --conf spark.driver.extraClassPath=stanford-corenlp-3.9.1-models.jar
   *   --conf spark.executor.extraClassPath=stanford-corenlp-3.9.1-models.jar
