@@ -172,10 +172,14 @@ object StringNormalizationUtils {
       value.splitAtDelimiter(",") match {
         case split: Array[String] if split.length == 2 =>
           val newNorth = split(0).replaceAll("[nN]$", "")
-          val newWest = split(1).replaceAll("[wW]", "")
-          f"$newNorth, $newWest"
+          val newWest = split(1).replaceAll("[wW]$", "")
+          val newCoordinates = f"$newNorth, $newWest"
+          if (newCoordinates.matches("^(\\-?\\d+(\\.\\d+)?),\\s*(\\-?\\d+(\\.\\d+)?)$"))
+            newCoordinates
+          else
+            ""
         case _ =>
-          value
+          ""
       }
 
     /**
