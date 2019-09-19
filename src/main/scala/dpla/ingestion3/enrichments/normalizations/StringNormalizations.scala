@@ -127,7 +127,7 @@ class StringNormalizations {
       state = dplaPlace.state.map(_.stripHTML.reduceWhitespace),
       country = dplaPlace.country.map(_.stripHTML.reduceWhitespace),
       region = dplaPlace.region.map(_.stripHTML.reduceWhitespace),
-      coordinates = dplaPlace.coordinates.map(_.stripHTML.reduceWhitespace)
+      coordinates = dplaPlace.coordinates.map(_.stripHTML.reduceWhitespace.cleanupGeocoordinates)
     )
 
   def enrichDcmiTypeCollection(collection: DcmiTypeCollection): DcmiTypeCollection =
