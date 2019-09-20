@@ -123,9 +123,8 @@ class InProfile extends XmlProfile {
   type Mapping = InMapping
 
   override def getHarvester = classOf[OaiHarvester]
-
   override def getMapping = new InMapping
-  }
+}
 
 /**
   * Internet Archive
