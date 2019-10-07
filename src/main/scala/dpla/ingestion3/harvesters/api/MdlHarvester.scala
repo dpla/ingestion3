@@ -22,9 +22,12 @@ class MdlHarvester(spark: SparkSession,
 
   def mimeType: String = "application_json"
 
+  protected val defaultRows = "50"
+  protected val defaultQuery = "*:*"
+
   override protected val queryParams: Map[String, String] = Map(
-    "query" -> conf.harvest.query.getOrElse("*:*"),
-    "rows" -> conf.harvest.rows.getOrElse("10")
+    "query" -> conf.harvest.query.getOrElse(defaultQuery),
+    "rows" -> conf.harvest.rows.getOrElse(defaultRows)
   )
 
   override def localHarvest: DataFrame = {
@@ -32,9 +35,9 @@ class MdlHarvester(spark: SparkSession,
 
     // Mutable vars for controlling harvest loop
     var continueHarvest = true
-    var start = 0
+    var requestUrl = getFirstUrl(queryParams)
 
-    while (continueHarvest) getSinglePage(start.toString) match {
+    while (continueHarvest) getSinglePage(requestUrl) match {
       case error: ApiError with ApiResponse =>
         harvestLogger.error("Error returned by request %s\n%s\n%s".format(
           error.errorSource.url.getOrElse("Undefined url"),
@@ -47,20 +50,23 @@ class MdlHarvester(spark: SparkSession,
           case Some(docs) =>
             val json = parse(docs)
 
-            harvestLogger.info(s"Requesting $start of ${(json \\ "numFound").extract[String]}")
+//         "links":{
+//           "first":"https://lib-metl-prd-01.oit.umn.edu/api/v2/records?page%5Bnumber%5D=1&page%5Bsize%5D=50",
+//           "next":"https://lib-metl-prd-01.oit.umn.edu/api/v2/records?page%5Bnumber%5D=2&page%5Bsize%5D=50",
+//           "last":"https://lib-metl-prd-01.oit.umn.edu/api/v2/records?page%5Bnumber%5D=29635&page%5Bsize%5D=50"}
+//          }
 
-            val mdlRecords = (json \\ "docs").children.map(doc => {
-              ApiRecord((doc \\ "record_id").toString, compact(render(doc)))
+            requestUrl = (json \ "links" \ "next").extract[String]
+            harvestLogger.info(s"Next page to request $requestUrl")
+
+            val mdlRecords = (json \ "data").children.map(doc => { // documents field has changed with v2 of API
+              ApiRecord((doc \ "id").toString, compact(render(doc))) // ID field has changed with v2 of API
             })
 
             saveOutRecords(mdlRecords)
 
-            // Number of records returned < number of records requested
-            val rows = queryParams.getOrElse("rows", "10").toInt
-            mdlRecords.size < rows match {
-              case true => continueHarvest = false
-              case false => start += rows
-            }
+            continueHarvest = requestUrl.nonEmpty
+
           case None =>
             harvestLogger.error(s"The body of the response is empty. Stopping run.\nApiSource >> ${src.toString}")
             continueHarvest = false
@@ -79,11 +85,12 @@ class MdlHarvester(spark: SparkSession,
     * Get a single-page, un-parsed response from the API feed, or an error if
     * one occurs.
     *
-    * @param start Uses start as an offset to paginate.
+    * @param urlString URL to fetch
     * @return ApiSource or ApiError
     */
-  private def getSinglePage(start: String): ApiResponse = {
-    val url = buildUrl(queryParams.updated("start", start))
+  private def getSinglePage(urlString: String): ApiResponse = {
+    // val url = buildUrl(queryParams)
+    val url = new URL(urlString)
     HttpUtils.makeGetRequest(url) match {
       case Failure(e) =>
         ApiError(e.toString, ApiSource(queryParams, Some(url.toString)))
@@ -95,18 +102,40 @@ class MdlHarvester(spark: SparkSession,
   }
 
   /**
-    * Builds MDL query URL from parameters
+    *
+    * First MDL URL from parameters
+    *
+    * Base URL https://lib-metl-prd-01.oit.umn.edu/api/v2/records
     *
     * @param queryParams URL parameters
     * @return URI
     */
-  def buildUrl(queryParams: Map[String, String]): URL = new URIBuilder()
-    .setScheme("http")
-    .setHost("hub-client.lib.umn.edu")
-    .setPath("/api/v1/records")
-    .setParameter("q", queryParams.getOrElse("query", "*:*"))
-    .setParameter("start", queryParams.getOrElse("start", "0"))
-    .setParameter("rows", queryParams.getOrElse("rows", "10"))
-    .build()
-    .toURL
+  def getFirstUrl(queryParams: Map[String, String]): String = {
+    val url = new URIBuilder()
+      .setScheme("https")
+      .setHost("lib-metl-prd-01.oit.umn.edu")
+      .setPath("/api/v2/records")
+      .setParameter("page[size]", queryParams.getOrElse("rows", defaultRows))
+
+
+    /**
+      * This is a real mangling of shit
+      */
+    val params = queryParams
+      .getOrElse("query", defaultQuery)
+      .split(", ")
+      .map( query => {
+        val query_tuple = query.split("=")
+        new Parameters(query_tuple(0), query_tuple(1))
+      })
+    // Add query parameters to URL
+    params.foreach(p => url.addParameter(p.getName, p.getValue))
+
+    url.build().toURL.toString
+  }
+}
+
+class Parameters(name: String, value: String) {
+  def getName: String = name
+  def getValue: String = value
 }
