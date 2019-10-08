@@ -153,6 +153,8 @@ class DlgFileHarvester(spark: SparkSession,
     // Read harvested data into Spark DataFrame.
     val df = spark.read.avro(tmpOutStr)
 
+    flush()
+
     // Filter out records with "status":"deleted"
     df.where(!col("document").like("%\"status\":\"deleted\"%"))
   }
