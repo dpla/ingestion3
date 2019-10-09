@@ -62,7 +62,10 @@ class GpoMapping extends XmlMapping with XmlExtractor {
       .flatMap(extractStrings)
       .map(_.stripSuffix(":"))
 
-  override def format(data: Document[NodeSeq]): ZeroToMany[String] = ???
+  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
+    // <datafield> tag = 337, 338, or 340   <subfield> code = a
+    marcFields(data, Seq("337", "338", "340"), Seq("a"))
+      .flatMap(extractStrings)
 
   override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
     // <datafield> tag = 001, 020, or 022
@@ -70,7 +73,11 @@ class GpoMapping extends XmlMapping with XmlExtractor {
     (marcFields(data, Seq("001", "020", "022")) ++ marcFields(data, Seq("035", "050", "074", "082", "086"), Seq("a")))
       .flatMap(extractStrings)
 
-  override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = ???
+  override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
+    // <datafield> tag = 041 or 546
+    marcFields(data, Seq("041", "546"))
+      .flatMap(extractStrings)
+      .map(nameOnlyConcept)
 
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = ???
 
@@ -82,13 +89,45 @@ class GpoMapping extends XmlMapping with XmlExtractor {
 
   override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] = ???
 
-  override def rights(data: Document[NodeSeq]): AtLeastOne[String] = ???
+  override def rights(data: Document[NodeSeq]): AtLeastOne[String] = {
+    // <datafield> tag = 506
+    val datafieldRights = marcFields(data, Seq("506"))
+      .flatMap(extractStrings)
 
-  override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = ???
+    if (datafieldRights.isEmpty) Seq(default_rights_statement) else datafieldRights
+    // TODO do not map records with invalid rights statement
+  }
 
-  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = ???
+  private val default_rights_statement: String =
+    "Pursuant to Title 17 Section 105 of the United States " +
+      "Code, this file is not subject to copyright protection " +
+      "and is in the public domain. For more information " +
+      "please see http://www.gpo.gov/help/index.html#" +
+      "public_domain_copyright_notice.htm"
 
-  override def title(data: Document[NodeSeq]): ZeroToMany[String] = ???
+  override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
+    // <datafield> tag = 600, 610, 611, 630, 650, or 651
+    marcFields(data, Seq("600", "610", "611", "630", "650", "651"))
+      .flatMap(extractStrings)
+      .map(nameOnlyConcept)
+
+  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
+    // <datafield> tag = 600, 610, 650, or 651  <subfield> code = y
+    // <datafield> tag = 611                    <subfield> code = d
+    (marcFields(data, Seq("600", "610", "650", "651"), Seq("y")) ++ marcFields(data, Seq("611"), Seq("d")))
+      .flatMap(extractStrings)
+      .map(stringOnlyTimeSpan)
+
+  override def title(data: Document[NodeSeq]): ZeroToMany[String] = {
+    // <datafield> tag = 245  <subfield> code != (c or h)
+    val titleString = marcFields(data, Seq("245"))
+      .flatMap(nseq => nseq.filterNot(n => filterAttribute(n, "code", "c")))
+      .flatMap(nseq => nseq.filterNot(n => filterAttribute(n, "code", "h")))
+      .flatMap(extractStrings)
+      .mkString(": ")
+
+    Seq(titleString)
+  }
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] = ???
 
