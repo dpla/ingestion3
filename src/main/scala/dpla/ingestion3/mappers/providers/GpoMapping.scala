@@ -1,18 +1,14 @@
 package dpla.ingestion3.mappers.providers
 
-import java.net.URL
-
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.mappers.utils.{Document, JsonExtractor, XmlExtractor, XmlMapping}
+import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
-import dpla.ingestion3.utils.{HttpUtils, Utils}
-import org.json4s.jackson.JsonMethods._
+import dpla.ingestion3.utils.{Utils}
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
-import scala.annotation.tailrec
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 import scala.xml._
 
 
