@@ -34,7 +34,7 @@ class HathiMapping extends XmlMapping with XmlExtractor {
   // SourceResource mapping
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-   // <datafield> tag = 700, 710, 711, or 720
+    // <datafield> tag = 700, 710, 711, or 720
     marcFields(data, Seq("700", "710", "711", "720"))
       .filterNot(filterSubfields(_, Seq("e")) // exclude subfields with @code=e and...
       .flatMap(extractStrings)

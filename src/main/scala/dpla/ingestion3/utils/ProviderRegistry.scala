@@ -51,6 +51,7 @@ object ProviderRegistry {
     "esdn" -> Register(profile = new EsdnProfile),
     "florida" -> Register(profile = new FlProfile),
     "getty" -> Register(profile = new GettyProfile),
+    "gpo" -> Register(profile = new GpoProfile),
     "harvard" -> Register(profile = new HarvardProfile),
     "hathi" -> Register(profile = new HathiProfile),
     "ia" -> Register(profile = new IaProfile),
