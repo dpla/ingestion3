@@ -89,7 +89,6 @@ class MdlHarvester(spark: SparkSession,
     * @return ApiSource or ApiError
     */
   private def getSinglePage(urlString: String): ApiResponse = {
-    // val url = buildUrl(queryParams)
     val url = new URL(urlString)
     HttpUtils.makeGetRequest(url) match {
       case Failure(e) =>
@@ -119,23 +118,24 @@ class MdlHarvester(spark: SparkSession,
 
 
     /**
-      * This is a real mangling of shit
+      * This is a real mangling.
+      * The configuration file does not really support querying multiple fields so
+      * we need to split them apart (.split(, )) and build a set of key/value pairs
+      * to use when adding parameters to the URIBuilder object
       */
     val params = queryParams
       .getOrElse("query", defaultQuery)
       .split(", ")
       .map( query => {
         val query_tuple = query.split("=")
-        new Parameters(query_tuple(0), query_tuple(1))
+        Parameters(query_tuple(0), query_tuple(1))
       })
+
     // Add query parameters to URL
-    params.foreach(p => url.addParameter(p.getName, p.getValue))
+    params.foreach(p => url.addParameter(p.name, p.value))
 
     url.build().toURL.toString
   }
 }
 
-class Parameters(name: String, value: String) {
-  def getName: String = name
-  def getValue: String = value
-}
+case class Parameters(name: String, value: String)
