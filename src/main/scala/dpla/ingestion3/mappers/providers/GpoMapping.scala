@@ -59,7 +59,7 @@ class GpoMapping extends XmlMapping with XmlExtractor {
 
     val theDate =
       if (date362.nonEmpty) date362
-      else if (leaderAt(data, 7).getOrElse('z') == 'm')
+      else if (leaderAt(data, 7).contains('m'))
         if (date260.nonEmpty) date260
         else date264
       else Seq()
@@ -67,10 +67,54 @@ class GpoMapping extends XmlMapping with XmlExtractor {
     theDate
       .flatMap(extractStrings)
       .map(stringOnlyTimeSpan)
-
   }
 
-  override def description(data: Document[NodeSeq]): ZeroToMany[String] = ???
+  override def description(data: Document[NodeSeq]): ZeroToMany[String] = {
+    // <datafield> tag = 255, 310, 500 to 537, 539 to 582, or 584 to 599
+    // <datafield> tag = 583    <subfield> code  = z
+    val descTags = (Seq(255) ++ (500 to 537) ++ (539 to 582) ++ (584 to 599)).map(_.toString)
+
+    val desc310 = marcFields(data, Seq("310"))
+    val desc583 = marcFields(data, Seq("583"), Seq("z"))
+    val desc5xx = marcFields(data, descTags)
+
+    // Use 310 and/or 583 if they exist.  If not, use 5xx.
+    val baseDesc =
+      (if ((desc310 ++ desc583).nonEmpty) desc310 ++ desc583 else desc5xx)
+      .flatMap(extractStrings)
+
+    val leader7: Option[Char] = leaderAt(data, 7)
+    val controlKey: String = controlfield(data,Seq("008_18")).flatMap(extractStrings).headOption.getOrElse("")
+    val freq: Option[String] = descFrequency.get(controlKey)
+
+    val theDesc =
+      if (desc310.isEmpty && leader7.contains('s') && freq.isDefined)
+        baseDesc :+ freq.head
+      else baseDesc
+
+    theDesc.distinct
+  }
+
+  private val descFrequency = Map(
+    "a" -> "Annual",
+    "b" -> "Bimonthly",
+    "c" -> "Semiweekly",
+    "d" -> "Daily",
+    "e" -> "Biweekly",
+    "f" -> "Semiannual",
+    "g" -> "Biennial",
+    "h" -> "Triennial",
+    "i" -> "Three times a week",
+    "j" -> "Three times a month",
+    "k" -> "Continuously updated",
+    "m" -> "Monthly",
+    "q" -> "Quarterly",
+    "s" -> "Semimonthly",
+    "t" -> "Three times a year",
+    "u" -> "Unknown",
+    "w" -> "Weekly",
+    "z" -> "Other"
+  )
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     // <datafield> tag = 300  <subfield> code = a
