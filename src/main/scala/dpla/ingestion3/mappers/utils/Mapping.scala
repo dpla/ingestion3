@@ -50,6 +50,20 @@ trait Mapping[T] {
   def title(data: Document[T]): AtLeastOne[String] = Seq()
   def `type`(data: Document[T]): ZeroToMany[String] = Seq()
 
+
+  /**
+    Define the defaults for required field validations
+  */
+  val enforceDataProvider: Boolean  = true
+  val enforceDplaUri: Boolean       = true
+  val enforceEdmRights: Boolean     = false // Do not currently enforce the edmRights validation. WARN only
+  val enforceIsShownAt: Boolean     = true
+  val enforceObject: Boolean        = false // Do not enforce. Warn only if more than one object URL provided in source
+  val enforceOriginalId: Boolean    = true
+  val enforcePreview: Boolean       = false // Do not enforce. Warn only if more than one preview URL provided in source
+  val enforceRights: Boolean        = true
+  val enforceTitle: Boolean         = true
+
   // Base item uri
   private val baseDplaItemUri = "http://dp.la/api/items/"
 
