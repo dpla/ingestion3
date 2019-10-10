@@ -129,24 +129,58 @@ class GpoMapping extends XmlMapping with XmlExtractor {
     marcFields(data, Seq("337", "338", "340"), Seq("a"))
       .flatMap(extractStrings)
 
-  override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
-    // <datafield> tag = 001, 020, or 022
-    // <datafield> tag = 035, 050, 074, 082, or 086  <subfield> code = a
-    (marcFields(data, Seq("001", "020", "022")) ++ marcFields(data, Seq("035", "050", "074", "082", "086"), Seq("a")))
+  override def identifier(data: Document[NodeSeq]): ZeroToMany[String] = {
+    // <datafield> tag = 001
+    // <datafield> tag = 050                    <subfield> code = a   (LC call number)
+    // <datafield> tag = 020                                          (ISBN)
+    // <datafield> tag = 022                    <subfield> code = a   (ISSN)
+    // <datafield> tag = 035, 074, 082, or 086  <subfield> code = a
+
+    val lcIds = marcFields(data, Seq("050"), Seq("a"))
+      .map(extractStrings)
+      .map(_.mkString(" "))
+      .map("LC call number: " + _)
+
+    val isbnIds = marcFields(data, Seq("020"))
+      .map(extractStrings)
+      .map(_.mkString(" "))
+      .map("ISBN: " + _)
+
+    val issnIds = marcFields(data, Seq("022"))
+      .map(extractStrings)
+      .map(_.mkString(" "))
+      .map("ISSN: " + _)
+
+    val genericIds = (marcFields(data, Seq("001")) ++ marcFields(data, Seq("035", "074", "082", "086"), Seq("a")))
+      .flatMap(extractStrings)
+      .map(_.mkString(" "))
+
+    lcIds ++ isbnIds ++ issnIds ++ genericIds
+  }
+
+  override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = {
+    // <datafield> tag = 041 #text split at every third character
+    // <datafield> tag = 546
+
+    val lang546 = marcFields(data, Seq("546"))
       .flatMap(extractStrings)
 
-  override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
-    // <datafield> tag = 041 or 546
-    marcFields(data, Seq("041", "546"))
+    val lang041 = marcFields(data, Seq("041"))
       .flatMap(extractStrings)
+      .flatMap(_.grouped(3).toList)
+
+    (lang546 ++ lang041)
       .map(nameOnlyConcept)
+  }
 
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
     // <datafield> tag = 650  <subfield> code = z
     // <datafield> tag = 651  <subfield> code = a
     (marcFields(data, Seq("650"), Seq("z")) ++ marcFields(data, Seq("651"), Seq("a")))
       .flatMap(extractStrings)
+      .map(_.stripSuffix("."))
       .map(nameOnlyPlace)
+      .distinct
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     // <datafield> tag = 260 or 264   <subfield> code = a or b
