@@ -2,34 +2,37 @@ package dpla.ingestion3.messages
 
 trait IngestMessageTemplates {
 
-  def moreThanOneValueInfo(id: String, field: String, value: String, msg: Option[String] = None): IngestMessage =
+  def moreThanOneValueMsg(id: String, field: String, value: String,
+                          msg: Option[String] = None, enforce: Boolean): IngestMessage =
     IngestMessage(
-      message = s"More than one value provided to single value field".trim,
-      level = IngestLogLevel.info,
+      message = s"More than one value mapped, one expected".trim,
+      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
       id = id,
       field = field,
       value = value
     )
 
-  def mintUriError(id: String, field: String, value: String, msg: Option[String] = None): IngestMessage =
+  def mintUriMsg(id: String, field: String, value: String,
+                 msg: Option[String] = None, enforce: Boolean): IngestMessage =
     IngestMessage(
       message = s"Unable to mint URI ${msg.getOrElse("No URI")}".trim,
-      level = IngestLogLevel.warn,
+      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
       id = id,
       field = field,
       value = value
     )
 
-  def invalidEdmRightsValue(id: String, field: String, value: String, msg: Option[String] = None): IngestMessage =
+  def invalidEdmRightsMsg(id: String, field: String, value: String,
+                          msg: Option[String] = None, enforce: Boolean): IngestMessage =
     IngestMessage(
       message = s"Domain does not match creativecommons.org or rightstatements.org ${msg.getOrElse("No URI")}".trim,
-      level = IngestLogLevel.warn,
+      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
       id = id,
       field = field,
       value = value
     )
 
-  def missingRecommendedWarning(id: String, field: String): IngestMessage =
+  def missingRecommendedFieldMsg(id: String, field: String): IngestMessage =
     IngestMessage(
       message = s"Missing recommended field",
       level = IngestLogLevel.warn,
@@ -38,22 +41,20 @@ trait IngestMessageTemplates {
       value = "MISSING"
     )
 
-  def missingRequiredError(id: String, field: String): IngestMessage =
+  def missingRequiredFieldMsg(id: String, field: String, enforce: Boolean): IngestMessage =
     IngestMessage(
       message = s"Missing required field",
-      level = IngestLogLevel.error,
+      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
       id = id,
       field = field,
       value = "MISSING"
     )
 
-  def missingRights(id: String): IngestMessage =
-    IngestMessage(
-      message = s"Missing required field",
-      level = IngestLogLevel.error,
-      id = id,
-      field = "rights or edmRights",
-      value = ""
+  def missingRights(id: String, enforce: Boolean): IngestMessage =
+    missingRequiredFieldMsg(
+      id,
+      "rights or edmRights",
+      enforce
     )
 
   def duplicateRights(id: String): IngestMessage =
