@@ -1,7 +1,7 @@
 package dpla.ingestion3.mappers.utils
 
 import scala.util.{Success, Try}
-import scala.xml.NodeSeq
+import scala.xml.{Node, NodeSeq}
 
 trait MarcXmlMapping extends XmlMapping with XmlExtractor {
   /**
@@ -85,5 +85,47 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
     Try {
       leader(data).charAt(index)
     }.toOption
+  }
+
+  /**
+    * Extract a subject string from a Node
+    *
+    * @param node Node containing subject data
+    * @return     String
+    */
+  def extractMarcSubject(node: Node): String = {
+    val tag: String = node \@ "tag" // get tag for this datafield
+
+    (node \ "subfield")
+      .filter(n => ('a' to 'z').toList.map(_.toString).contains(n \@ "code")) // reject subfields with numeric codes
+      .flatMap(subfield => {  // iterate through subfields
+
+      val code: String = subfield \@ "code"
+
+      // choose appropriate delimiter based on tag and/or code values
+      val delimiter =
+        if (tag == "658")
+          code match {
+            case "b" => ":"
+            case "c" => ", "
+            case "d" => "--"
+            case _ => ". "
+          }
+        else if (tag == "653") "--"
+        else if ((690 to 699).map(_.toString).contains(tag)) "--"
+        else if (Seq("654", "655").contains(tag) && code == "b") "--"
+        else if (Seq("v", "x", "y", "z").contains(code)) "--"
+        else if (code == "d") ", "
+        else ". "
+
+      // strip trailing punctuation
+      val text: String =
+        if (delimiter == ".") subfield.text.stripSuffix(",").stripSuffix(".")
+        else subfield.text.stripSuffix(",")
+
+      // return delimiter and text - note that the delimiter goes before the text
+      Seq(delimiter, text)
+
+    }).drop(1).mkString("").stripSuffix(".") // drop leading delimiter and join substrings
   }
 }

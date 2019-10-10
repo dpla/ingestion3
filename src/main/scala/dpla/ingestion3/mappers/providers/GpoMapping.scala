@@ -213,9 +213,10 @@ class GpoMapping extends MarcXmlMapping {
       "public_domain_copyright_notice.htm"
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
-    // <datafield> tag = 600, 610, 611, 630, 650, or 651
+    // <datafield> tag = 600, 610, 611, 630, 650, or 651  <subfield> code is a letter (not a number)
     marcFields(data, Seq("600", "610", "611", "630", "650", "651"))
-      .flatMap(extractStrings)
+      .flatten
+      .map(extractMarcSubject)
       .map(nameOnlyConcept)
 
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
