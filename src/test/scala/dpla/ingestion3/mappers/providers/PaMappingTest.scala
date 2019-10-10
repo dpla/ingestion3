@@ -1,22 +1,47 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.Document
-import dpla.ingestion3.model.URI
+import dpla.ingestion3.model._
 import org.scalatest.{BeforeAndAfter, FlatSpec}
+
+import scala.xml.NodeSeq
+
 
 class PaMappingTest extends FlatSpec with BeforeAndAfter {
 
   val extractor = new PaMapping
 
+  val xml: Document[NodeSeq] = Document(<record>
+  <header>
+    <identifier>oai:YOUR_OAI_PREFIX:dpla_test:oai:libcollab.temple.edu:dplapa:BALDWIN_kthbs_arch_699</identifier>
+    <datestamp>2019-08-29T16:57:36Z</datestamp>
+    <setSpec>dpla_test</setSpec>
+  </header>
+  <metadata>
+    <oai_dc:dc>
+      <dcterms:title>Chuck-Wagon Picnic - 1955</dcterms:title>
+      <dcterms:date>1955</dcterms:date>
+      <dcterms:subject>Students</dcterms:subject>
+      <dcterms:type>Image</dcterms:type>
+      <dcterms:rights>This digital object is protected under U.S. and international copyright laws and is copyright by The Baldwin School. It may not be used for any purpose without express written consent by The Baldwin School. Contact the Anne Frank Library for more information.</dcterms:rights>
+      <dcterms:identifier>dplapa:BALDWIN_kthbs_arch_699</dcterms:identifier>
+      <edm:isShownAt>http://digitalcollections.powerlibrary.org/cdm/ref/collection/kthbs-arch/id/699</edm:isShownAt>
+      <edm:preview>http://digitalcollections.powerlibrary.org/utils/getthumbnail/collection/kthbs-arch/id/699</edm:preview>
+      <dcterms:isPartOf>The Baldwin School - Photos and Documents</dcterms:isPartOf>
+      <edm:dataProvider>Baldwin School Archives</edm:dataProvider>
+      <dpla:intermediateProvider>POWER Library as sponsor and HSLC as maintainer</dpla:intermediateProvider>
+      <edm:provider>PA Digital</edm:provider>
+    </oai_dc:dc>
+  </metadata>
+</record>)
+
   it should "extract the correct original ID" in {
-    val xml = <record><header><identifier>foo</identifier></header></record>
-    val expected = Some("foo")
-    assert(extractor.originalId(Document(xml)) == expected)
+    val expected = Some("oai:YOUR_OAI_PREFIX:dpla_test:oai:libcollab.temple.edu:dplapa:BALDWIN_kthbs_arch_699")
+    assert(extractor.originalId(xml) == expected)
   }
 
-  it should "create the correct DPLA URI" in {
-    val xml = <record><header><identifier>foo</identifier></header></record>
-    val expected = Some(URI("http://dp.la/api/items/acbd18db4cc2f85cedef654fccc4a4d8"))
-    assert(extractor.dplaUri(Document(xml)) === expected)
+  it should "extract the correct dataProvider" in {
+    val expected = Seq("Baldwin School Archives").map(nameOnlyAgent)
+    assert(extractor.dataProvider(xml) === expected)
   }
 }
