@@ -28,31 +28,47 @@ class GpoMapping extends XmlMapping with XmlExtractor {
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     // <datafield> tag = 700, 710, or 711
     marcFields(data, Seq("700", "710", "711"))
-      .filterNot(filterSubfields(_, Seq("e")) // exclude if subfield with @code=e exists and...
+      .filter(filterSubfields(_, Seq("e")) // include if subfield with @code=e exists and...
         .flatMap(extractStrings)
-        .exists(_ == "author") // ...#text = "author"
+        .exists(_ != "author") // ...#text != "author"
       )
-      .map(extractStrings)
-      .map(_.mkString(" "))
+      .flatMap(extractStrings)
       .map(nameOnlyAgent)
 
-  override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+  override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     // <datafield> tag = 100, 110, or 111
-    marcFields(data, Seq("100", "110", "111"))
+    val creator1xx = marcFields(data, Seq("100", "110", "111"))
+
+    val creator7xx = marcFields(data, Seq("700", "710", "711"))
       .filter(filterSubfields(_, Seq("e")) // include if subfield with @code=e exists and...
         .flatMap(extractStrings)
         .exists(_ == "author") // ...#text = "author"
       )
-      .map(extractStrings)
-      .map(_.mkString(" "))
-      .map(nameOnlyAgent)
 
-  override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
+    (creator1xx ++ creator7xx)
+      .flatMap(extractStrings)
+      .map(nameOnlyAgent)
+  }
+
+  override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
+    // <datafield> tag = 362
     // <datafield> tag = 260 or 264   <subfield> code = c
-    // <datafield> tag = 262
-    (marcFields(data, Seq("260", "264"), Seq("c")) ++ marcFields(data, Seq("262")))
+    val date362 = marcFields(data, Seq("362"))
+    val date260 = marcFields(data, Seq("260"), Seq("c"))
+    val date264 = marcFields(data, Seq("264"), Seq("c"))
+
+    val theDate =
+      if (date362.nonEmpty) date362
+      else if (leaderAt(data, 7).getOrElse('z') == 'm')
+        if (date260.nonEmpty) date260
+        else date264
+      else Seq()
+
+    theDate
       .flatMap(extractStrings)
       .map(stringOnlyTimeSpan)
+
+  }
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] = ???
 
@@ -79,7 +95,12 @@ class GpoMapping extends XmlMapping with XmlExtractor {
       .flatMap(extractStrings)
       .map(nameOnlyConcept)
 
-  override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = ???
+  override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
+    // <datafield> tag = 650  <subfield> code = z
+    // <datafield> tag = 651  <subfield> code = a
+    (marcFields(data, Seq("650"), Seq("z")) ++ marcFields(data, Seq("651"), Seq("a")))
+      .flatMap(extractStrings)
+      .map(nameOnlyPlace)
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     // <datafield> tag = 260 or 264   <subfield> code = a or b
@@ -87,14 +108,21 @@ class GpoMapping extends XmlMapping with XmlExtractor {
       .flatMap(extractStrings)
       .map(nameOnlyAgent)
 
-  override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] = ???
+  override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] = {
+    // <datafield> tag = 490, 730, 740, 830, or 760 to 786
+    val relationTags = (Seq(490, 730, 740, 830) ++ (760 to 786)).map(_.toString)
+
+    marcFields(data, relationTags)
+      .flatMap(extractStrings)
+      .map(eitherStringOrUri)
+  }
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] = {
     // <datafield> tag = 506
-    val datafieldRights = marcFields(data, Seq("506"))
+    val rights506 = marcFields(data, Seq("506"))
       .flatMap(extractStrings)
 
-    if (datafieldRights.isEmpty) Seq(default_rights_statement) else datafieldRights
+    if (rights506.isEmpty) Seq(default_rights_statement) else rights506
     // TODO do not map records with invalid rights statement
   }
 
@@ -124,12 +152,16 @@ class GpoMapping extends XmlMapping with XmlExtractor {
       .flatMap(nseq => nseq.filterNot(n => filterAttribute(n, "code", "c")))
       .flatMap(nseq => nseq.filterNot(n => filterAttribute(n, "code", "h")))
       .flatMap(extractStrings)
-      .mkString(": ")
+      .mkString(" ")
 
     Seq(titleString)
   }
 
-  override def `type`(data: Document[NodeSeq]): ZeroToMany[String] = ???
+  override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
+    // <datafield> tag = 337  <subfield> code = a
+    // <datafield> tag = 655
+    (marcFields(data, Seq("337"), Seq("a")) ++ marcFields(data, Seq("655")))
+      .flatMap(extractStrings)
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
@@ -152,6 +184,8 @@ class GpoMapping extends XmlMapping with XmlExtractor {
     name = Some("United States Government Publishing Office (GPO)"),
     uri = Some(URI("http://dp.la/api/contributor/gpo"))
   )
+
+  // TODO MOVE TO MARC UTIL
 
   /**
     * Get <dataset><subfield> nodes by tag and code
