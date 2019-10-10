@@ -98,7 +98,8 @@ class DlgMapping extends JsonMapping with JsonExtractor {
     extractStrings("dc_relation_display")(data).map(eitherStringOrUri)
 
   override def rights(data: Document[JValue]): AtLeastOne[String] =
-    extractStrings("dlg_local_right")(data)
+    extractStrings("dlg_local_right")(data) ++
+      extractStrings("dlg_local_right_display")(data)
 
   override def rightsHolder(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings("dcterms_rights_holder_display")(data)
