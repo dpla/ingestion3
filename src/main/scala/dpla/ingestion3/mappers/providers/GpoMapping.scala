@@ -83,6 +83,8 @@ class GpoMapping extends XmlMapping with XmlExtractor {
       (if ((desc310 ++ desc583).nonEmpty) desc310 ++ desc583 else desc5xx)
       .flatMap(extractStrings)
 
+    // Add description frequency if desc310 does not exist, <leader> at index 7 = 's',
+    // and a description frequency key is present in <controlfield> 008_18
     val leader7: Option[Char] = leaderAt(data, 7)
     val controlKey: String = controlfield(data,Seq("008_18")).flatMap(extractStrings).headOption.getOrElse("")
     val freq: Option[String] = descFrequency.get(controlKey)
