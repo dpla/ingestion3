@@ -1,14 +1,16 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{File, FileInputStream, InputStreamReader}
+import java.io.{File, FileFilter, FileInputStream, InputStreamReader}
 import java.util.zip.GZIPInputStream
 
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.utils.Utils
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
+import scala.io.Source
 import scala.util.{Success, Try}
 import scala.xml.{MinimizeMode, Node, Utility, XML}
 
@@ -101,6 +103,29 @@ class SiFileHarvester(spark: SparkSession,
     }
 
   /**
+    * Get the expected record counts for each provided file from a text file provided along side metadata. Contents of
+    * file are expected to match this format:
+    *
+    *   AAADCD_DPLA.xml records = 15,234
+    *   ACAH_DPLA.xml records = 0
+    *   ACM_DPLA.xml records = 1,500
+    *   CHNDM_DPLA.xml records = 156,226
+    *
+    * @param inFiles File           Input directory with metadata and summary file
+    * @return Map[String, String]   Map of filename to record count (formatted as string in file)
+    */
+  def getExpectedFileCounts(inFiles: File): Map[String, String] = {
+    var loadCounts = Map[String, String]()
+    inFiles.listFiles(new TxtFileFilter).foreach(file => {
+      Source.fromFile(file).getLines().foreach(line => {
+        val lineVals = line.split(" records = ")
+        loadCounts += (lineVals(0).replace(".xml", ".gz") -> lineVals(1)) // rename .xml to .gz to match filename processed by harvester
+      })
+    })
+    loadCounts
+  }
+
+  /**
     * Executes the Smithsonian harvest
     */
   override def localHarvest(): DataFrame = {
@@ -108,20 +133,40 @@ class SiFileHarvester(spark: SparkSession,
     val unixEpoch = harvestTime / 1000L
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
+    // Smithsonian now provides expected harvest counts in a .txt file alongside the compressed metadata, get those
+    // file names and counts for comparison to harvested data. Should help narrow down any issues with harvest mismatch
+    // counts
+    val expectedFileCounts = getExpectedFileCounts(inFiles)
+
     inFiles.listFiles(new GzFileFilter).foreach( inFile => {
-      logger.info(s"Reading ${inFile.getName}")
       val inputStream = getInputStream(inFile)
         .getOrElse(throw new IllegalArgumentException(s"Couldn't load file, ${inFile.getAbsolutePath}"))
 
       // create lineIterator to read contents one line at a time
       val iter = IOUtils.lineIterator(inputStream)
+
+      var lineCount: Int = 0
+
       while (iter.hasNext) {
        Option(iter.nextLine) match {
-         case Some(line) => handleLine(line, unixEpoch)
-         case None => 0
-       }
+          case Some(line) => lineCount += handleLine(line, unixEpoch).get
+          case None => 0
+        }
       }
       IOUtils.closeQuietly(inputStream)
+
+      // Format the harvested and expected counts for logging
+      val fromFileFloat  = lineCount.toFloat
+      val fromFilePretty = Utils.formatNumber(fromFileFloat.toLong)
+      val expectedPretty = expectedFileCounts.getOrElse(inFile.getName, "0")
+      val expectedFloat  = expectedPretty.replaceAll(",","").trim.toFloat // remove commas from string and make float
+      val percentage     = (fromFileFloat / expectedFloat) * 100.0f match {
+        case x if x.isNaN => 0.0f // account for division by 0...
+        case x if !x.isNaN => x
+      }
+
+      // Log a summary of the file
+      logger.info(s"Harvested $percentage% ($fromFilePretty / $expectedPretty) of records from ${inFile.getName}")
     })
 
     // flush the avroWriter
@@ -148,4 +193,8 @@ class SiFileHarvester(spark: SparkSession,
     * @return Count of metadata items found.
     */
   override def handleFile(fileResult: FileResult, unixEpoch: Long): Try[Int] = ???
+}
+
+class TxtFileFilter extends FileFilter {
+  override def accept(pathname: File): Boolean = pathname.getName.endsWith("txt")
 }
