@@ -87,6 +87,34 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
     }.toOption
   }
 
+  val leaderFormats: Map[Char, String] = Map(
+    'a' -> "Language material",
+    'c' -> "Notated music",
+    'd' -> "Manuscript",
+    'e' -> "Cartographic material",
+    'f' -> "Manuscript cartographic material",
+    'g' -> "Projected medium",
+    'i' -> "Nonmusical sound recording"
+  )
+
+  val controlFormats: Map[Char, String] = Map(
+    'a' -> "Map",
+    'c' -> "Electronic resource",
+    'd' -> "Globe",
+    'f' -> "Tactile material",
+    'g' -> "Projected graphic",
+    'h' -> "Microform",
+    'k' -> "Nonprojected graphic",
+    'm' -> "Motion picture",
+    'o' -> "Kit",
+    'q' -> "Notated music",
+    'r' -> "Remote-sensing image",
+    's' -> "Sound recording",
+    't' -> "Text",
+    'v' -> "Videorecording",
+    'z' -> "Unspecified"
+  )
+
   /**
     * Extract a subject string from a Node
     *

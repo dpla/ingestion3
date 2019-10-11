@@ -4,10 +4,11 @@ import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.mappers.utils.{Document, MarcXmlMapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
-import dpla.ingestion3.utils.{Utils}
+import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
+import scala.util.Try
 import scala.xml._
 
 
@@ -31,7 +32,8 @@ class GpoMapping extends MarcXmlMapping {
         .flatMap(extractStrings)
         .exists(_ != "author") // ...#text != "author"
       )
-      .flatMap(extractStrings)
+      .map(extractStrings)
+      .map(_.mkString(" "))
       .map(nameOnlyAgent)
 
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
@@ -45,7 +47,8 @@ class GpoMapping extends MarcXmlMapping {
       )
 
     (creator1xx ++ creator7xx)
-      .flatMap(extractStrings)
+      .map(extractStrings)
+      .map(_.mkString(" "))
       .map(nameOnlyAgent)
   }
 
@@ -120,13 +123,28 @@ class GpoMapping extends MarcXmlMapping {
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     // <datafield> tag = 300  <subfield> code = a
     marcFields(data, Seq("300"), Seq("a"))
-      .flatMap(extractStrings)
+      .map(extractStrings)
+      .map(_.mkString(" "))
       .map(_.stripSuffix(":"))
 
-  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
+  override def format(data: Document[NodeSeq]): ZeroToMany[String] = {
+    // <leader> #text character at index 6
+    // map character to String value in leaderFormats
+    val lFormats: Seq[String] = leaderAt(data, 6)
+      .flatMap(key => Try{ leaderFormats(key) }.toOption)
+      .toSeq
+
+    // <controlfield> code = 007 #text character at index 0
+    // map character to String value in controlFormats
+    val cFormats: Seq[String] = controlAt(data, "007", 0)
+      .flatMap(key => Try{ controlFormats(key) }.toOption)
+
     // <datafield> tag = 337, 338, or 340   <subfield> code = a
-    marcFields(data, Seq("337", "338", "340"), Seq("a"))
+    val dFormats = marcFields(data, Seq("337", "338", "340"), Seq("a"))
       .flatMap(extractStrings)
+
+    (lFormats ++ cFormats ++ dFormats).distinct
+  }
 
   override def identifier(data: Document[NodeSeq]): ZeroToMany[String] = {
     // <datafield> tag = 001
@@ -184,7 +202,8 @@ class GpoMapping extends MarcXmlMapping {
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     // <datafield> tag = 260 or 264   <subfield> code = a or b
     marcFields(data, Seq("260", "264"), Seq("a, b"))
-      .flatMap(extractStrings)
+      .map(extractStrings)
+      .map(_.mkString(" "))
       .map(nameOnlyAgent)
 
   override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] = {
@@ -192,7 +211,9 @@ class GpoMapping extends MarcXmlMapping {
     val relationTags = (Seq(490, 730, 740, 830) ++ (760 to 786)).map(_.toString)
 
     marcFields(data, relationTags)
-      .flatMap(extractStrings)
+      .map(extractStrings)
+      .map(_.map(_.stripSuffix("."))) // remove trailing "."
+      .map(_.mkString(". ") + ".") // join with "." and add "." at end
       .map(eitherStringOrUri)
   }
 
@@ -226,16 +247,13 @@ class GpoMapping extends MarcXmlMapping {
       .flatMap(extractStrings)
       .map(stringOnlyTimeSpan)
 
-  override def title(data: Document[NodeSeq]): ZeroToMany[String] = {
+  override def title(data: Document[NodeSeq]): ZeroToMany[String] =
     // <datafield> tag = 245  <subfield> code != (c or h)
-    val titleString = marcFields(data, Seq("245"))
+    marcFields(data, Seq("245"))
       .flatMap(nseq => nseq.filterNot(n => filterAttribute(n, "code", "c")))
       .flatMap(nseq => nseq.filterNot(n => filterAttribute(n, "code", "h")))
-      .flatMap(extractStrings)
-      .mkString(" ")
-
-    Seq(titleString)
-  }
+      .map(extractStrings)
+      .map(_.mkString(" "))
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
     // <datafield> tag = 337  <subfield> code = a
