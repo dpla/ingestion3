@@ -18,7 +18,8 @@ class GpoMapping extends MarcXmlMapping {
 
   override def getProviderName: String = "gpo"
 
-  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] = ???
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
+    extractString(data \ "header" \ "identifier")
 
   // SourceResource mapping
 
