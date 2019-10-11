@@ -255,11 +255,21 @@ class GpoMapping extends MarcXmlMapping {
       .map(extractStrings)
       .map(_.mkString(" "))
 
-  override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
-    // <datafield> tag = 337  <subfield> code = a
+  override def `type`(data: Document[NodeSeq]): ZeroToMany[String] = {
+    // <leader>                     #text characters at index 6 and 7
+    // <controlfield> tag = 007_01  #text at index 1
+    // <controlfield> tag = 008_21  #text at index 21
+    // <datafield> tag = 337        <subfield> code = a
     // <datafield> tag = 655
-    (marcFields(data, Seq("337"), Seq("a")) ++ marcFields(data, Seq("655")))
-      .flatMap(extractStrings)
+    // Only map <datafield> if <leader> and <controlfield> have no type value
+    val lType = extractMarcLeaderType(data)
+
+    if (lType.isDefined)
+      lType.toSeq
+    else
+      (marcFields(data, Seq("337"), Seq("a")) ++ marcFields(data, Seq("655")))
+        .flatMap(extractStrings)
+  }
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)

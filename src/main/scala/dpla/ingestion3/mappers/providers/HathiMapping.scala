@@ -11,7 +11,6 @@ import org.json4s.jackson.JsonMethods._
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
-import scala.annotation.tailrec
 import scala.util.{Success, Try}
 import scala.xml._
 
@@ -236,32 +235,7 @@ class HathiMapping extends MarcXmlMapping {
     // <controlfield> tag = 008_21  #text at index 21
     // <datafield>    tag = 970     <subfield> code = a
     // Only map <datafield> if <leader> and <controlfield> have no type value
-
-    // Create a mappingKey by concatenating characters from <leader> and <controlfield>
-    val mappingKey: String =
-      leaderAt(data, 6).map(_.toString).getOrElse("") +
-      leaderAt(data, 7).map(_.toString).getOrElse("") +
-      controlAt(data, "007_01", 1).map(_.toString).headOption.getOrElse("") +
-      controlAt(data, "008_21", 21).map(_.toString).headOption.getOrElse("")
-
-    @tailrec
-    def matchLeaderType(keys: List[String]): Option[String] = {
-
-      keys.headOption match {
-        case Some(key) => {
-          val regex = key.r // make regex from a key in leaderTypes
-
-          mappingKey match {
-            case regex() => leaderTypes(key)._2 // return value if mappingKey matches regex
-            case _ => matchLeaderType(keys.drop(1)) // else try next leaderTypes key
-          }
-        }
-        case None => None // no more leaderTypes keys to iterate through
-      }
-    }
-
-    // Match mappingKey to leaderTypes
-    val lType = matchLeaderType(leaderTypes.keys.toList)
+    val lType = extractMarcLeaderType(data)
 
     if (lType.isDefined)
       lType.toSeq
@@ -352,28 +326,6 @@ class HathiMapping extends MarcXmlMapping {
   // <datafield> tags for subjects
   private val subjectTags: Seq[String] =
     (Seq(600, 630, 650, 651) ++ (610 to 619) ++ (653 to 658) ++ (690 to 699)).map(_.toString)
-
-  // type and genre mappings, derived from <leader> and <controlfield>
-  private val leaderTypes: Map[String, (Option[String], Option[String])] = Map(
-    "am" -> (Some("Book"), Some("Text")),
-    "asn" -> (Some("Newspapers"), Some("Text")),
-    "as" -> (Some("Serial"), Some("Text")),
-    "aa" -> (Some("Book"), Some("Text")),
-    "a(?![mcs])" -> (Some("Serial"), Some("Text")),
-    "[cd].*" -> (Some("Musical Score"), Some("Text")),
-    "t.*" -> (Some("Manuscript"), Some("Text")),
-    "[ef].*" -> (Some("Maps"), Some("Image")),
-    "g.[st]" -> (Some("Photograph/Pictorial Works"), Some("Image")),
-    "g.[cdfo]" -> (Some("Film/Video"), Some("Moving Image")),
-    "g.*" -> (None, Some("Image")),
-    "k.*" -> (Some("Photograph/Pictorial Works"), Some("Image")),
-    "i.*" -> (Some("Nonmusic"), Some("Sound")),
-    "j.*" -> (Some("Music"), Some("Sound")),
-    "r.*" -> (None, Some("Physical object")),
-    "p[cs].*" -> (None, Some("Collection")),
-    "m.*" -> (None, Some("Interactive Resource")),
-    "o.*" -> (None, Some("Collection"))
-  )
 
   // type and genre mappings, derived from <datafield>
   private val typeMapping: Map[String, (Option[String], Option[String])] = Map(

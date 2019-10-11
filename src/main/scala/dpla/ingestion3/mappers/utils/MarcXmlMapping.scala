@@ -1,5 +1,6 @@
 package dpla.ingestion3.mappers.utils
 
+import scala.annotation.tailrec
 import scala.util.{Success, Try}
 import scala.xml.{Node, NodeSeq}
 
@@ -87,6 +88,28 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
     }.toOption
   }
 
+  // type and genre mappings, derived from <leader> and <controlfield>
+  private val leaderTypes: Map[String, (Option[String], Option[String])] = Map(
+    "am" -> (Some("Book"), Some("Text")),
+    "asn" -> (Some("Newspapers"), Some("Text")),
+    "as" -> (Some("Serial"), Some("Text")),
+    "aa" -> (Some("Book"), Some("Text")),
+    "a(?![mcs])" -> (Some("Serial"), Some("Text")),
+    "[cd].*" -> (Some("Musical Score"), Some("Text")),
+    "t.*" -> (Some("Manuscript"), Some("Text")),
+    "[ef].*" -> (Some("Maps"), Some("Image")),
+    "g.[st]" -> (Some("Photograph/Pictorial Works"), Some("Image")),
+    "g.[cdfo]" -> (Some("Film/Video"), Some("Moving Image")),
+    "g.*" -> (None, Some("Image")),
+    "k.*" -> (Some("Photograph/Pictorial Works"), Some("Image")),
+    "i.*" -> (Some("Nonmusic"), Some("Sound")),
+    "j.*" -> (Some("Music"), Some("Sound")),
+    "r.*" -> (None, Some("Physical object")),
+    "p[cs].*" -> (None, Some("Collection")),
+    "m.*" -> (None, Some("Interactive Resource")),
+    "o.*" -> (None, Some("Collection"))
+  )
+
   val leaderFormats: Map[Char, String] = Map(
     'a' -> "Language material",
     'c' -> "Notated music",
@@ -155,5 +178,33 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
       Seq(delimiter, text)
 
     }).drop(1).mkString("").stripSuffix(".") // drop leading delimiter and join substrings
+  }
+
+  def extractMarcLeaderType(data: Document[NodeSeq]): Option[String] = {
+    // Create a mappingKey by concatenating characters from <leader> and <controlfield>
+    val mappingKey: String =
+      leaderAt(data, 6).map(_.toString).getOrElse("") +
+        leaderAt(data, 7).map(_.toString).getOrElse("") +
+        controlAt(data, "007_01", 1).map(_.toString).headOption.getOrElse("") +
+        controlAt(data, "008_21", 21).map(_.toString).headOption.getOrElse("")
+
+    @tailrec
+    def matchLeaderType(keys: List[String]): Option[String] = {
+
+      keys.headOption match {
+        case Some(key) => {
+          val regex = key.r // make regex from a key in leaderTypes
+
+          mappingKey match {
+            case regex() => leaderTypes(key)._2 // return value if mappingKey matches regex
+            case _ => matchLeaderType(keys.drop(1)) // else try next leaderTypes key
+          }
+        }
+        case None => None // no more leaderTypes keys to iterate through
+      }
+    }
+
+    // Match mappingKey to leaderTypes
+    matchLeaderType(leaderTypes.keys.toList)
   }
 }
