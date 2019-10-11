@@ -18,7 +18,7 @@ class SiMappingTest extends FlatSpec with BeforeAndAfter {
   val extractor = new SiMapping
 
   it should " use the provider shortname in minting IDs " in
-    assert(extractor.useProviderName())
+    assert(extractor.useProviderName)
 
   it should "extract the correct contributor" in {
     val expected = Seq("Contributor").map(nameOnlyAgent)
@@ -88,6 +88,27 @@ class SiMappingTest extends FlatSpec with BeforeAndAfter {
         </freetext>
       </doc>
     val expected = Seq(DplaPlace(country = Some("Country")))
+    assert(extractor.place(Document(xml)) === expected)
+  }
+
+  it should "extract the correct coordinates when geoLocation present" in {
+    val xml =
+      <doc>
+        <indexedStructured>
+          <geoLocation>
+            <points>
+              <point>
+                <latitude type="decimal">100.1</latitude>
+                <longitude type="decimal">24.2</longitude>
+              </point>
+            </points>
+          </geoLocation>
+        </indexedStructured>
+        <freetext>
+          <place>Place</place>
+        </freetext>
+      </doc>
+    val expected = Seq(DplaPlace(coordinates = Some("100.1,24.2")))
     assert(extractor.place(Document(xml)) === expected)
   }
 
