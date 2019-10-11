@@ -83,17 +83,26 @@ class GpoMapping extends MarcXmlMapping {
     // Use 310 and/or 583 if they exist.  If not, use 5xx.
     val baseDesc =
       (if ((desc310 ++ desc583).nonEmpty) desc310 ++ desc583 else desc5xx)
-      .flatMap(extractStrings)
+        .flatMap(extractStrings)
 
     // Add description frequency if desc310 does not exist, <leader> at index 7 = 's',
     // and a description frequency key is present in <controlfield> 008_18
     val leader7: Option[Char] = leaderAt(data, 7)
-    val controlKey: String = controlfield(data,Seq("008_18")).flatMap(extractStrings).headOption.getOrElse("")
-    val freq: Option[String] = descFrequency.get(controlKey)
+    val controlKey: Option[String] = controlfield(data,Seq("008_18"))
+      .flatMap(extractStrings)
+      .headOption
+
+    val freq: Option[String] = controlKey match {
+      case Some(k) => descFrequency.get(k)
+      case None => None
+    }
 
     val theDesc =
       if (desc310.isEmpty && leader7.contains('s') && freq.isDefined)
-        baseDesc :+ freq.head
+        freq match {
+          case Some(f) => baseDesc :+ f
+          case None => baseDesc
+        }
       else baseDesc
 
     theDesc.distinct
@@ -246,6 +255,7 @@ class GpoMapping extends MarcXmlMapping {
     (marcFields(data, Seq("600", "610", "650", "651"), Seq("y")) ++ marcFields(data, Seq("611"), Seq("d")))
       .flatMap(extractStrings)
       .map(stringOnlyTimeSpan)
+      .distinct
 
   override def title(data: Document[NodeSeq]): ZeroToMany[String] =
     // <datafield> tag = 245  <subfield> code != (c or h)
@@ -274,9 +284,21 @@ class GpoMapping extends MarcXmlMapping {
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = ???
+  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = Seq(agent)
 
-  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = ???
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
+    val uriStart: String = "http://catalog.gpo.gov/F/?func=direct&doc_number="
+    val uriEnd: String = "&format=999"
+
+    val cIsShownAt: Option[String] = controlfield(data, Seq("001"))
+      .flatMap(extractStrings)
+      .headOption
+
+    cIsShownAt match {
+      case Some(c) => Seq(uriStart + c + uriEnd).map(stringOnlyWebResource)
+      case None => Seq()
+    }
+  }
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
