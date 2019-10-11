@@ -305,7 +305,10 @@ class GpoMapping extends MarcXmlMapping {
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
-  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = ???
+  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    // every record gets the same preview thumbnail
+    Seq("http://fdlp.gov/images/gpo-tn.jpg")
+      .map(stringOnlyWebResource)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
