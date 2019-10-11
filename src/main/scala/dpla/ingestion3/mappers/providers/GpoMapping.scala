@@ -1,6 +1,5 @@
 package dpla.ingestion3.mappers.providers
 
-import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.mappers.utils.{Document, MarcXmlMapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
@@ -13,8 +12,6 @@ import scala.xml._
 
 
 class GpoMapping extends MarcXmlMapping {
-
-  val isShownAtPrefix: String = ???
 
   // ID minting functions
   override def useProviderName: Boolean = true
@@ -231,8 +228,14 @@ class GpoMapping extends MarcXmlMapping {
     val rights506 = marcFields(data, Seq("506"))
       .flatMap(extractStrings)
 
-    if (rights506.isEmpty) Seq(default_rights_statement) else rights506
-    // TODO do not map records with invalid rights statement
+    val theRights = if (rights506.isEmpty) Seq(default_rights_statement) else rights506
+
+    // Do not map records that have incompatible rights statements.
+    theRights.foreach(r =>
+      if (excludedRights.contains(r)) throw new Exception("Incompatible rights statement")
+    )
+
+    theRights
   }
 
   private val default_rights_statement: String =
@@ -287,15 +290,15 @@ class GpoMapping extends MarcXmlMapping {
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = Seq(agent)
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
-    val uriStart: String = "http://catalog.gpo.gov/F/?func=direct&doc_number="
-    val uriEnd: String = "&format=999"
+    val uriPrefix: String = "http://catalog.gpo.gov/F/?func=direct&doc_number="
+    val uriSuffix: String = "&format=999"
 
     val cIsShownAt: Option[String] = controlfield(data, Seq("001"))
       .flatMap(extractStrings)
       .headOption
 
     cIsShownAt match {
-      case Some(c) => Seq(uriStart + c + uriEnd).map(stringOnlyWebResource)
+      case Some(c) => Seq(uriPrefix + c + uriSuffix).map(stringOnlyWebResource)
       case None => Seq()
     }
   }
@@ -313,5 +316,69 @@ class GpoMapping extends MarcXmlMapping {
   def agent = EdmAgent(
     name = Some("United States Government Publishing Office (GPO)"),
     uri = Some(URI("http://dp.la/api/contributor/gpo"))
+  )
+
+  val excludedRights = Array(
+    "Access may require a library card.",
+
+    "Access restricted to U.S. military service members and Dept. " +
+    "of Defense employees; the only issues available are those " +
+    "from Monday of the prior week through Friday of current week.",
+
+    "Access to data provided for a fee except for requests " +
+    "generated from Internet domains of .gov, .edu, .k12, .us, " +
+    "and .mil.",
+
+    "Access to issues published prior to 2001 restricted to " +
+    "Picatinny Arsenal users.",
+
+    "Access to some volumes or items may be restricted",
+
+    "Document removed from the GPO Permanent Access Archive at " +
+    "agency request",
+
+    "FAA employees only.",
+
+    "First nine issues (Apr.-Dec. 2002) were law enforcement " +
+    "restricted publications and are not available to the general " +
+    "public.",
+
+    "Free to users at U.S. Federal depository libraries; other " +
+    "users are required to pay a fee.",
+
+    "Full text available to subscribers only.",
+
+    "Login and password required to access web page where " +
+    "electronic files may be downloaded.",
+
+    "Login and password required to access web page where " +
+    "electronic formats may be downloaded.",
+
+    "Not available for external use as of Monday, Oct. 20, 2003.",
+
+    "Personal registration and/or payment required to access some " +
+    "features.",
+
+    "Restricted access for security reasons",
+
+    "Restricted to Federal depository libraries and other users " +
+    "with valid user accounts.",
+
+    "Restricted to federal depository libraries with valid user " +
+    "IDs and passwords.",
+
+    "Restricted to institutions with a site license to the USA " +
+    "trade online database. Free to users at federal depository " +
+    "libraries.",
+
+    "Some components of this directory may not be publicly " +
+    "accessible.",
+
+    "Some v. are for official use only, i.e. distribution of Oct. " +
+    "1998 v. 2 is restricted.",
+
+    "Special issue for Oct./Dec. 2007 for official use only.",
+
+    "Subscription required for access."
   )
 }
