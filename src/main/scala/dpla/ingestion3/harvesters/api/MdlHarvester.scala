@@ -33,47 +33,40 @@ class MdlHarvester(spark: SparkSession,
   override def localHarvest: DataFrame = {
     implicit val formats = DefaultFormats
 
-    // Mutable vars for controlling harvest loop
-    var continueHarvest = true
-    var requestUrl = getFirstUrl(queryParams)
+    // Mutable var for controlling harvest loop
+    var requestUrl: Option[String] = Some(getFirstUrl(queryParams))
 
-    while (continueHarvest) getSinglePage(requestUrl) match {
+    while (requestUrl.isDefined) getSinglePage(requestUrl.get) match {
       case error: ApiError with ApiResponse =>
         harvestLogger.error("Error returned by request %s\n%s\n%s".format(
           error.errorSource.url.getOrElse("Undefined url"),
           error.errorSource.queryParams,
           error.message
         ))
-        continueHarvest = false
+        requestUrl = None // stop the harvest
       case src: ApiSource with ApiResponse =>
         src.text match {
           case Some(docs) =>
             val json = parse(docs)
 
-//         "links":{
-//           "first":"https://lib-metl-prd-01.oit.umn.edu/api/v2/records?page%5Bnumber%5D=1&page%5Bsize%5D=50",
-//           "next":"https://lib-metl-prd-01.oit.umn.edu/api/v2/records?page%5Bnumber%5D=2&page%5Bsize%5D=50",
-//           "last":"https://lib-metl-prd-01.oit.umn.edu/api/v2/records?page%5Bnumber%5D=29635&page%5Bsize%5D=50"}
-//          }
+            // Get next page to request. If there is no next page to request the 'next' property will not exist
+            requestUrl = (json \ "links" \ "next").extractOpt[String]
+            harvestLogger.info(s"Next page to request -- ${requestUrl.getOrElse("No next URL")}")
 
-            requestUrl = (json \ "links" \ "next").extract[String]
-            harvestLogger.info(s"Next page to request $requestUrl")
-
+            // Extract records from response
             val mdlRecords = (json \ "data").children.map(doc => { // documents field has changed with v2 of API
               ApiRecord((doc \ "id").toString, compact(render(doc))) // ID field has changed with v2 of API
             })
 
             saveOutRecords(mdlRecords)
 
-            continueHarvest = requestUrl.nonEmpty
-
           case None =>
             harvestLogger.error(s"The body of the response is empty. Stopping run.\nApiSource >> ${src.toString}")
-            continueHarvest = false
+            requestUrl = None // stop the harvest
         }
       case _ =>
         harvestLogger.error("Harvest returned None")
-        continueHarvest = false
+        requestUrl = None // stop the harvest
     }
 
     // Read harvested data into Spark DataFrame and return.
