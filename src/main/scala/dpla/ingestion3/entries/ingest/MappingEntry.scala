@@ -32,11 +32,11 @@ object MappingEntry extends MappingExecutor {
     // Read in command line args.
     val cmdArgs = new CmdArgs(args)
 
-    val dataIn = cmdArgs.getInput()
-    val dataOut = cmdArgs.getOutput()
-    val confFile = cmdArgs.getConfigFile()
-    val shortName = cmdArgs.getProviderName()
-    val sparkMaster: Option[String] = cmdArgs.getSparkMaster()
+    val dataIn = cmdArgs.getInput
+    val dataOut = cmdArgs.getOutput
+    val confFile = cmdArgs.getConfigFile
+    val shortName = cmdArgs.getProviderName
+    val sparkMaster: Option[String] = cmdArgs.getSparkMaster
 
     // Get mapping logger.
     val logger = Utils.createLogger("mapping", shortName)

@@ -58,6 +58,7 @@ class OutputHelper(root: String,
     case "enrichment" => "MAP4_0.EnrichRecord.avro"
     case "jsonl" => "MAP3_1.IndexRecord.jsonl"
     case "reports" => "reports"
+    case "topic_model" => "topic_model.parquet"
     case _ =>
       throw new IllegalArgumentException(s"Activity '$activity' not recognized")
   }

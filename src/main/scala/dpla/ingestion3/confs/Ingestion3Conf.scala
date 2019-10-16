@@ -64,7 +64,7 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None) 
 /**
   * Command line arguments
   *
-  * @param arguments
+  * @param arguments Command line arguments
   */
 class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
   val input: ScallopOption[String] = opt[String](
@@ -102,12 +102,33 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     noshort = true
   )
 
+  val stopWords: ScallopOption[String] = opt[String](
+    "stopWords",
+    required = false,
+    noshort = true,
+    validate = _.nonEmpty
+  )
+
+  val cvModel: ScallopOption[String] = opt[String](
+    "cvModel",
+    required = false,
+    noshort = true,
+    validate = _.nonEmpty
+  )
+
+  val ldaModel: ScallopOption[String] = opt[String](
+    "ldaModel",
+    required = false,
+    noshort = true,
+    validate = _.nonEmpty
+  )
+
   /**
     * Gets the configuration file property from command line arguments
     *
     * @return Configuration file location
     */
-  def getConfigFile() = configFile.toOption
+  def getConfigFile: String = configFile.toOption
     .map(_.toString)
     .getOrElse(throw new RuntimeException("No configuration file specified."))
 
@@ -116,7 +137,7 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     *
     * @return Input location
     */
-  def getInput() = input.toOption
+  def getInput: String = input.toOption
     .map(_.toString)
     .getOrElse(throw new RuntimeException("No input specified."))
 
@@ -125,7 +146,7 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     *
     * @return Output location
     */
-  def getOutput() = output.toOption
+  def getOutput: String = output.toOption
     .map(_.toString)
     .getOrElse(throw new RuntimeException("No output specified."))
 
@@ -134,11 +155,17 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     *
     * @return Provider short name
     */
-  def getProviderName() = providerName.toOption
+  def getProviderName: String = providerName.toOption
     .map(_.toString)
     .getOrElse(throw new RuntimeException("No provider name specified."))
 
-  def getSparkMaster(): Option[String] = sparkMaster.toOption
+  def getSparkMaster: Option[String] = sparkMaster.toOption
+
+  def getStopWords:  Option[String] = stopWords.toOption
+
+  def getCvModel: Option[String] = cvModel.toOption
+
+  def getLdaModel: Option[String] = ldaModel.toOption
 
   verify()
 }

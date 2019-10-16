@@ -20,6 +20,7 @@ lazy val root = (project in file("."))
         */
       "org.apache.spark" %% "spark-core" % "2.3.1" exclude("org.scalatest", "scalatest_2.11"),
       "org.apache.spark" %% "spark-sql" % "2.3.1" exclude("org.scalatest", "scalatest_2.11"),
+      "org.apache.spark" %% "spark-mllib" % "2.3.1" exclude("org.scalatest", "scalatest_2.11"),
       "org.apache.ant" % "ant" % "1.10.1",
       "com.databricks" %% "spark-avro" % "4.0.0",
       "org.json4s" %% "json4s-core" % "3.2.11" % "provided",
@@ -49,6 +50,12 @@ lazy val root = (project in file("."))
       "com.amazonaws" % "aws-java-sdk" % "1.7.4",
       "org.apache.hadoop" % "hadoop-aws" % "2.7.6",
       "com.squareup.okhttp3" % "okhttp" % "3.8.0",
-      "com.opencsv" % "opencsv" % "3.7"
+      "com.opencsv" % "opencsv" % "3.7",
+      "databricks" % "spark-corenlp" % "0.3.1-s_2.11",
+      "edu.stanford.nlp" % "stanford-corenlp" % "3.9.1" classifier "models",
+      // specify hadoop-mapreduce-client-core version to avoid Stopwatch/guava dependency conflicts
+      "org.apache.hadoop" % "hadoop-mapreduce-client-core" % "2.8.1"
     )
   )
+
+resolvers += "SparkPackages" at "https://dl.bintray.com/spark-packages/maven/"

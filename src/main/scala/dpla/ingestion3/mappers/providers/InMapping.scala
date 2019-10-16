@@ -18,9 +18,8 @@ class InMapping extends XmlMapping with XmlExtractor
 
   override def useProviderName: Boolean = true
 
-  override def getProviderName: String = "il"
+  override def getProviderName: String = "in"
 
-  // TODO: Confirm with hub that this is the correct mapping
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
 
@@ -57,8 +56,6 @@ class InMapping extends XmlMapping with XmlExtractor
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "alternative")
 
-  // TODO: Check with hub that this mapping is still valid.
-  //  This is in ingest1 mapping, but no harvested records have contributor.
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "contributor")
       .map(nameOnlyAgent)
@@ -139,7 +136,7 @@ class InMapping extends XmlMapping with XmlExtractor
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
 
   def agent = EdmAgent(
-    name = Some("Illinois Digital Heritage Hub"),
-    uri = Some(URI("http://dp.la/api/contributor/illinois"))
+    name = Some("Indiana Memory"),
+    uri = Some(URI("http://dp.la/api/contributor/indiana"))
   )
 }

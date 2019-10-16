@@ -13,10 +13,12 @@ import scala.xml.NodeSeq
 
 class SiMapping extends XmlMapping with XmlExtractor {
 
-  // ID minting functions
-  override def useProviderName(): Boolean = true
+  override val enforceRights: Boolean = false // allow records without rights
 
-  override def getProviderName(): String = "si" // FIXME confirm prefix
+  // ID minting functions
+  override def useProviderName: Boolean = true
+
+  override def getProviderName: String = "si"
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "descriptiveNonRepeating" \ "record_ID")
@@ -29,7 +31,7 @@ class SiMapping extends XmlMapping with XmlExtractor {
   // OreAggregation
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "descriptiveNonRepeating" \ "data_source")
-      .map(nameOnlyAgent) // FIXME Take only first one?
+      .map(nameOnlyAgent)
 
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
@@ -84,7 +86,7 @@ class SiMapping extends XmlMapping with XmlExtractor {
     (data \ "freetext" \ "name")
       .filterNot(node => filterAttribute(node, "label", "contributor"))
       .flatMap(extractStrings)
-      .map(nameOnlyAgent) // done but might need to add this ridiculous set of label={value} filters to the mapping
+      .map(nameOnlyAgent) // done but might need to add this extensive set of label={value} filters to the mapping
   }
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] = extractDate(data)
@@ -113,7 +115,7 @@ class SiMapping extends XmlMapping with XmlExtractor {
 
   override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     extractStrings(data \\ "indexedStructured" \ "language")
-      .map(_.replaceAll(" language", "")) // remove ' language' from term
+      .map(_.replaceAll(" language", "")) // removes ' language' from term
       .map(nameOnlyConcept) // done
 
   private def placeExtractor(node: NodeSeq, level: String, `type`: String): String = {
@@ -123,7 +125,7 @@ class SiMapping extends XmlMapping with XmlExtractor {
   }
 
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = {
-    // indexedStructured \ geoLocation > get dict values from this prop
+    // Get values from <indexedStructured> \ <geoLocation>
 
     //  <geoLocation><L2 type=[Country | Nation]></geoLocation> MAPS TO DplaPlace.country
     //  <geoLocation><L3 type=[State | Province]></geoLocation> MAPS TO DplaPlace.state
@@ -149,7 +151,7 @@ class SiMapping extends XmlMapping with XmlExtractor {
       case _ => Some(str)
     }
     
-    val geoLoc = (data \ "indexedStructured" \ "geoLocation").map(node => {
+    val preciseGeoLocation = (data \ "indexedStructured" \ "geoLocation").map(node => {
 
       val country = (node \ "L2")
         .flatMap(n => getByAttribute(n, "type", "Country") ++ getByAttribute(n, "type", "Nation"))
@@ -180,7 +182,7 @@ class SiMapping extends XmlMapping with XmlExtractor {
       val long = (node \ "points" \ "point" \ "longitude")
         .filter(node => filterAttribute(node, "type", "decimal") | filterAttribute(node, "type", "degrees"))
         .flatMap(extractStrings(_))
-      val points = lat.zipAll(long, None, None).mkString(", ")
+      val point = lat.zipAll(long, None, None).map(p => s"${p._1},${p._2}").mkString
 
       DplaPlace(
         country = valueToOption(country),
@@ -188,17 +190,17 @@ class SiMapping extends XmlMapping with XmlExtractor {
         county = valueToOption(county),
         region = valueToOption(region),
         city = valueToOption(city),
-        coordinates = valueToOption(points)
+        coordinates = valueToOption(point)
       )
     })
 
-    // return
-    if(geoLoc.isEmpty)
+    // return structured DPLA Place if non-empty, otherwise use freetext spatial information
+    if(preciseGeoLocation.nonEmpty)
+      preciseGeoLocation
+    else
       (data \ "freetext" \ "place")
         .flatMap(extractStrings)
         .map(nameOnlyPlace)
-    else
-      geoLoc
   }
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
@@ -240,7 +242,8 @@ class SiMapping extends XmlMapping with XmlExtractor {
      .map(nameOnlyConcept)
   } // done
 
-  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = extractDate(data)
+  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
+    extractDate(data)
 
   override def title(data: Document[NodeSeq]): AtLeastOne[String] =
     (data \ "descriptiveNonRepeating" \ "title")
@@ -263,6 +266,7 @@ class SiMapping extends XmlMapping with XmlExtractor {
     uri = Some(URI("http://dp.la/api/contributor/smithsonian"))
   ) // done
 
+  // Helper methods
   private def extractDate(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
     (data \ "freetext" \ "date")
       .filter(node => node.attributes.get("label").nonEmpty)
