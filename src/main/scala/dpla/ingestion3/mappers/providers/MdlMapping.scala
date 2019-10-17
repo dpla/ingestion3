@@ -21,28 +21,28 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
   override def getProviderName: String = "minnesota"
 
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
-    extractString(unwrap(data) \ "record" \ "isShownAt")
+    extractString(unwrap(data) \ "attributes" \ "metadata" \ "isShownAt")
 
   // OreAggregation
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data) \ "record" \ "dataProvider").map(nameOnlyAgent)
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "dataProvider").map(nameOnlyAgent)
 
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
-    extractStrings(unwrap(data) \ "record" \ "rights").map(URI)
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "rights").map(URI)
 
   override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
-    extractString(unwrap(data) \ "record" \ "intermediateProvider").map(nameOnlyAgent)
+    extractString(unwrap(data) \ "attributes" \ "metadata" \ "intermediateProvider").map(nameOnlyAgent)
 
   override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
-    extractStrings(unwrap(data) \ "record" \ "isShownAt").map(stringOnlyWebResource)
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "isShownAt").map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
     Utils.formatJson(data)
 
   override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
-    extractStrings(unwrap(data) \ "record" \ "object").map(stringOnlyWebResource)
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "object").map(stringOnlyWebResource)
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = agent
 
@@ -51,34 +51,34 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
 
   // SourceResource
   override def collection(data: Document[JValue]): ZeroToMany[DcmiTypeCollection] =
-    extractCollection(unwrap(data) \ "record" \ "sourceResource" \ "collection")
+    extractCollection(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "collection")
 
   override def contributor(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data) \ "record" \ "sourceResource" \ "contributor").map(nameOnlyAgent)
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "contributor").map(nameOnlyAgent)
 
   override def creator(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data)  \ "record" \ "sourceResource" \ "creator").map(nameOnlyAgent)
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "creator").map(nameOnlyAgent)
 
   override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
-    extractDate(unwrap(data) \ "record" \ "sourceResource" \ "date")
+    extractDate(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "date")
 
   override def description(data: Document[JValue]): ZeroToMany[String] =
-    extractStrings(unwrap(data) \ "record" \ "sourceResource" \ "description")
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "description")
 
   override def extent(data: Document[JValue]): ZeroToMany[String] =
-    extractStrings(unwrap(data) \ "record" \ "sourceResource" \ "extent")
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "extent")
 
   override def format(data: Document[JValue]): ZeroToMany[String] =
-    extractStrings(unwrap(data) \ "record" \ "sourceResource" \ "format")
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "format")
       .map(_.applyBlockFilter(formatBlockList))
       .filter(_.nonEmpty)
 
   override def genre(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings(unwrap(data) \ "record" \ "sourceResource" \ "type").map(nameOnlyConcept)
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "type").map(nameOnlyConcept)
 
   override def language(data: Document[JValue]): ZeroToMany[SkosConcept] = {
-    val codes = extractStrings(unwrap(data) \ "record" \ "sourceResource" \ "language" \ "iso639_3")
-    val names = extractStrings(unwrap(data) \ "record" \ "sourceResource" \ "language" \ "name")
+    val codes = extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "language" \ "iso639_3")
+    val names = extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "language" \ "name")
 
     (codes.nonEmpty, names.nonEmpty) match {
       case (true, _) => codes.map(nameOnlyConcept) // if iso639_3 is given use that value
@@ -88,22 +88,22 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
   }
 
   override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
-    place(unwrap(data) \ "record" \ "sourceResource" \ "spatial")
+    place(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "spatial")
 
   override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data)  \ "record" \ "sourceResource" \ "publisher").map(nameOnlyAgent)
+    extractStrings(unwrap(data)  \ "attributes" \ "metadata" \ "sourceResource" \ "publisher").map(nameOnlyAgent)
 
   override def rights(data: Document[JValue]): AtLeastOne[String] =
-    extractStrings(unwrap(data)  \ "record" \ "sourceResource" \ "rights")
+    extractStrings(unwrap(data)  \ "attributes" \ "metadata" \ "sourceResource" \ "rights")
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings(unwrap(data)  \ "record" \ "sourceResource" \ "subject" \ "name").map(nameOnlyConcept)
+    extractStrings(unwrap(data)  \ "attributes" \ "metadata" \ "sourceResource" \ "subject" \ "name").map(nameOnlyConcept)
 
   override def title(data: Document[JValue]): AtLeastOne[String] =
-    extractStrings(unwrap(data)  \ "record" \ "sourceResource" \ "title")
+    extractStrings(unwrap(data)  \ "attributes" \ "metadata" \ "sourceResource" \ "title")
 
   override def `type`(data: Document[JValue]): ZeroToMany[String] =
-    extractStrings(unwrap(data)  \ "record" \ "sourceResource" \ "type")
+    extractStrings(unwrap(data)  \ "attributes" \ "metadata" \ "sourceResource" \ "type")
 
   // Helper functions
   def extractCollection(collection: JValue): ZeroToMany[DcmiTypeCollection] = {
