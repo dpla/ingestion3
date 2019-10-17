@@ -29,7 +29,7 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   // SourceResource mapping
 
-//  FIXME Should pull from setName -- currently not possible
+//  FIXME Should pull from setName -- currently not possible, collection name should be stored at the item level
 //  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
 //    (data \\ "mods" \ "relatedItem")
 //      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "host"))
