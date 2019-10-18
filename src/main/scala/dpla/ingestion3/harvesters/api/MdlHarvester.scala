@@ -3,14 +3,14 @@ package dpla.ingestion3.harvesters.api
 
 import java.net.URL
 
+import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.utils.HttpUtils
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
-import org.json4s.jackson.JsonMethods._
-import com.databricks.spark.avro._
+import org.json4s.jackson.JsonMethods.{compact, parse, render}
 
 import scala.util.{Failure, Success}
 
@@ -30,43 +30,55 @@ class MdlHarvester(spark: SparkSession,
     "rows" -> conf.harvest.rows.getOrElse(defaultRows)
   )
 
-  override def localHarvest: DataFrame = {
-    implicit val formats = DefaultFormats
+  override def localHarvest(): DataFrame = {
+    implicit val formats: DefaultFormats.type = DefaultFormats
 
     // Mutable var for controlling harvest loop
     var requestUrl: Option[String] = Some(getFirstUrl(queryParams))
 
-    while (requestUrl.isDefined) getSinglePage(requestUrl.get) match {
-      case error: ApiError with ApiResponse =>
-        harvestLogger.error("Error returned by request %s\n%s\n%s".format(
-          error.errorSource.url.getOrElse("Undefined url"),
-          error.errorSource.queryParams,
-          error.message
-        ))
-        requestUrl = None // stop the harvest
-      case src: ApiSource with ApiResponse =>
-        src.text match {
-          case Some(docs) =>
-            val json = parse(docs)
+    while (requestUrl.isDefined) requestUrl match {
+      // do nothing, there is no url to request
+      case None => None
 
-            // Get next page to request. If there is no next page to request the 'next' property will not exist
-            requestUrl = (json \ "links" \ "next").extractOpt[String]
-            harvestLogger.info(s"Next page to request -- ${requestUrl.getOrElse("No next URL")}")
+      // next url to request is defined
+      case Some(url) => getSinglePage(url) match {
 
-            // Extract records from response
-            val mdlRecords = (json \ "data").children.map(doc => { // documents field has changed with v2 of API
-              ApiRecord((doc \ "id").toString, compact(render(doc))) // ID field has changed with v2 of API
-            })
+        // Case 1 - handle valid response from api
+        case src: ApiSource with ApiResponse =>
+          src.text match {
+            case Some(docs) =>
+              val json = parse(docs)
+              // Get next page to request. If there is no next page to request the 'next' property will not exist
+              requestUrl = (json \ "links" \ "next").extractOpt[String]
 
-            saveOutRecords(mdlRecords)
+              harvestLogger.info(s"Next page to request -- ${requestUrl.getOrElse("No next URL")}")
 
-          case None =>
-            harvestLogger.error(s"The body of the response is empty. Stopping run.\nApiSource >> ${src.toString}")
-            requestUrl = None // stop the harvest
-        }
-      case _ =>
-        harvestLogger.error("Harvest returned None")
-        requestUrl = None // stop the harvest
+              // Extract records from response
+              val mdlRecords = (json \ "data").children.map(doc => { // documents field has changed with v2 of API
+                ApiRecord((doc \ "id").toString, compact(render(doc))) // ID field has changed with v2 of API
+              })
+
+              saveOutRecords(mdlRecords)
+            // valid response (e.g. http 200) from api but empty body
+            case None =>
+              harvestLogger.error(s"The body of the response is empty. Stopping run.\nApiSource >> ${src.toString}")
+              requestUrl = None // stop the harvest
+          }
+
+        // Case 2 - error returned by requesting page
+        case error: ApiError with ApiResponse =>
+          harvestLogger.error("Error returned by request %s\n%s\n%s".format(
+            error.errorSource.url.getOrElse("Undefined url"),
+            error.errorSource.queryParams,
+            error.message
+          ))
+          requestUrl = None // stop the harvest
+
+        // Case 3 - unknown
+        case _ =>
+          harvestLogger.error("Harvest returned None")
+          requestUrl = None // stop the harvest
+      }
     }
 
     // Read harvested data into Spark DataFrame and return.
