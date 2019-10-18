@@ -28,14 +28,6 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .map(_.trim)
 
   // SourceResource mapping
-
-//  FIXME Should pull from setName -- currently not possible
-//  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
-//    (data \\ "mods" \ "relatedItem")
-//      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "host"))
-//      .flatMap(collection => extractStrings(collection \ "titleInfo" \ "title"))
-//      .map(nameOnlyCollection)
-
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     // when <role><roleTerm> DOES equal "contributor>
     (data \\ "mods" \ "name")
@@ -55,32 +47,6 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .filter(node => filterAttribute(node, "keyDate", "yes"))
       .flatMap(extractStrings)
       .map(stringOnlyTimeSpan)
-
-//   FIXME This original mapping is kind of a mess [verbatim from ingestion1] and should be up
-//   FIXME for renegotiation with DigitalNC
-//   FIXME Leave commented out for now, pending CQA review by DigitalNC staff of the simpler mapping [see above]
-//   -----
-//   Original mapping
-//   Within <originInfo>, the FIRST <dateCreated keyDate="yes"> and LAST <dateCreated keyDate="yes">.
-//   -----
-//
-//    val rangeDate = dates
-//      .filter(s => s.contains("-") | s.contains("/"))
-//      .lastOption
-//
-//    val nonRangeDates = dates
-//      .filterNot(s => s.contains("-") | s.contains("/"))
-//
-//    val constructedRangeDate = if(nonRangeDates.size > 1) Some(s"${nonRangeDates.head}-${nonRangeDates.last}") else None
-//
-//    val date = (rangeDate, constructedRangeDate, dates.headOption) match {
-//      case (Some(s), _, _) => s // range exists in original data
-//      case (None, Some(s), _) => s // date range was constructed from head and tail values
-//      case (None, None, Some(s)) => s // no range constructed, use first date value
-//      case (_, _, _) => "" // nothing to map
-//    }
-//
-//    Seq(stringOnlyTimeSpan(date))
   }
   
   override def description(data: Document[NodeSeq]): Seq[String] =
