@@ -58,6 +58,7 @@ trait TopicModelExecutor extends Serializable with IngestMessageTemplates {
     implicit val spark: SparkSession = SparkSession.builder()
       .config(sparkConf)
       .config("spark.ui.showConsoleProgress", value = false)
+      .config("spark.sql.broadcastTimeout", "600")
       .getOrCreate()
 
     spark.sparkContext.setLogLevel("WARN") // Lemmatizer is very verbose
