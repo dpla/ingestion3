@@ -5,10 +5,6 @@ import dpla.ingestion3.harvesters.api._
 import dpla.ingestion3.harvesters.file._
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.mappers.providers._
-import dpla.ingestion3.mappers.utils
-import dpla.ingestion3.model.OreAggregation
-
-import scala.xml.NodeSeq
 
 /**
   * Biodiversity Heritage Library
@@ -286,10 +282,10 @@ class PaProfile extends XmlProfile {
   * South Carolina Digital Library
   */
 class ScProfile extends XmlProfile {
-  type Mapping = PaMapping // FIXME Placeholder
+  type Mapping = ScMapping
 
   override def getHarvester = classOf[OaiHarvester]
-  override def getMapping = new PaMapping // FIXME Placeholder
+  override def getMapping = new ScMapping
 }
 
 /**
