@@ -70,6 +70,7 @@ object ProviderRegistry {
     "ohio" -> Register(profile = new OhioProfile),
     "p2p" -> Register(profile = new P2PProfile), // plains2peaks
     "pa" -> Register(profile = new PaProfile),
+    "sc" -> Register(profile = new ScProfile),
     "sd" -> Register(profile = new SdProfile),
     "tn" -> Register(profile = new TnProfile),
     "si" -> Register(profile = new SiProfile),

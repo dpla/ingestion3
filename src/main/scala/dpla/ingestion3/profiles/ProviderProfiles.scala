@@ -279,6 +279,16 @@ class PaProfile extends XmlProfile {
 }
 
 /**
+  * South Carolina Digital Library
+  */
+class ScProfile extends XmlProfile {
+  type Mapping = ScMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new ScMapping
+}
+
+/**
   * South Dakota
   */
 class SdProfile extends JsonProfile {

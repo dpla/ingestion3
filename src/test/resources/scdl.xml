@@ -1,0 +1,32 @@
+<record xmlns:dc="http://www.w3.org/1999/xhtml">
+    <header>
+        <identifier>oai:scmemory-search.org/oai-tigerprints-clemson-edu-spec_agrarian-1006</identifier>
+        <datestamp>2016-03-29T16:04:56Z</datestamp>
+    </header>
+    <metadata>
+        <qdc:qualifieddc xsi:schemaLocation="http://purl.org/dc/terms/
+        http://dublincore.org/schemas/xmls/qdc/2006/01/06/dcterms.xsd
+        http://purl.org/dc/elements/1.1/
+        http://dublincore.org/schemas/xmls/qdc/2006/01/06/dc.xsd">
+            <dc:title>The Agrarian Vol. 3 No. 1</dc:title>
+            <dc:contributor>Name of contributor</dc:contributor>
+            <dc:creator>University, Clemson</dc:creator>
+            <dc:date>1940-12-01T08:00:00Z</dc:date>
+            <dc:description>http://tigerprints.clemson.edu/spec_agrarian/1006/thumbnail.jpg</dc:description>
+            <dc:extent>Extent</dc:extent>
+            <dc:identifier>http://tigerprints.clemson.edu/spec_agrarian/7</dc:identifier>
+            <dc:language>English</dc:language>
+            <dc:source>Clemson University</dc:source>
+            <dc:rights>Copyright of Clemson University. Use of materials from this collection beyond the exceptions provided for in the Fair Use and Educational Use clauses of the U.S. Copyright Law may violate federal law. Permission to publish or reproduce is required.</dc:rights>
+            <dc:subject>Agriculture</dc:subject>
+            <temporal>Temporal</temporal>
+            <dc:type>Book</dc:type>
+            <dc:type>Text</dc:type>
+            <dc:publisher>Clemson University Libraries</dc:publisher>
+            <dcterms:medium>Periodicals</dcterms:medium>
+            <dcterms:spatial>Pickens County (S.C.)</dcterms:spatial>
+            <dcterms:hasFormat>http://tigerprints.clemson.edu/spec_agrarian/1006/thumbnail.jpg</dcterms:hasFormat>
+            <dcterms:isPartOf>The Agrarian</dcterms:isPartOf>
+        </qdc:qualifieddc>
+    </metadata>
+</record>
