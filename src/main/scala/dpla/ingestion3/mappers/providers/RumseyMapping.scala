@@ -18,7 +18,7 @@ class RumseyMapping extends XmlMapping with XmlExtractor
   // IdMinter methods
   override def useProviderName: Boolean = true
 
-  // FYI - David Rumsey IDs will change, ingestion1 used dc:identifier
+  // FYI - David Rumsey IDs will/have changed in i3. Ingestion1 used first absolute URI in dc:identifier property
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier").map(_.trim)
 
@@ -108,9 +108,8 @@ class RumseyMapping extends XmlMapping with XmlExtractor
   override def title(data: Document[NodeSeq]): Seq[String] =
     extractStrings(metadataRoot(data) \ "title")
 
-  override def `type`(data: Document[NodeSeq]): Seq[String] =
-    extractStrings(metadataRoot(data) \ "type")
-      .flatMap(_.splitAtDelimiter(";"))
+  //  hardcoded to `image`
+  override def `type`(data: Document[NodeSeq]): Seq[String] = Seq("image")
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
