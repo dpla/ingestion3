@@ -23,14 +23,11 @@ class ScMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def getProviderName(): String = "scdl"
 
-  // TODO ID minting will change SCDL IDs
+  // FYI This ID minting will change all SCDL IDs [again]
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
-    extractString(data \ "header" \ "identifier")
-      .map(_.trim)
+    extractString(data \ "header" \ "identifier").map(_.trim)
 
   // SourceResource mapping
-
-  // done
   override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
     (metadata(data) \ "isPartOf")
       .flatMap(extractStrings)
@@ -38,102 +35,68 @@ class ScMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-  // contributor
-  // done, sbw
     extractStrings(metadata(data) \ "contributor")
       .map(nameOnlyAgent)
 
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-  // creator
-  // done, sbw
     extractStrings(metadata(data) \ "creator")
       .map(nameOnlyAgent)
 
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
-  // <date>
-  // done, sbw
     extractStrings(metadata(data) \ "date")
       .map(stringOnlyTimeSpan)
   
   override def description(data: Document[NodeSeq]): Seq[String] =
-  // <description>
-  // done, sbw
     extractStrings(metadata(data) \ "description")
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
-  // <extent>
-  // done, sbw
     extractStrings(metadata(data) \ "extent")
 
   override def format(data: Document[NodeSeq]): Seq[String] =
-  // <medium>
-  // done, sbw
     extractStrings(metadata(data) \ "medium")
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
-  // <identifier>
-  // done, sbw
     extractStrings(metadata(data) \ "identifier")
 
   override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
-  // language
-  // done, sbw
     extractStrings(metadata(data) \ "language")
       .map(nameOnlyConcept)
 
   override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
-  // <spatial>
-  // done, sbw
     extractStrings(metadata(data) \ "spatial")
       .map(nameOnlyPlace)
 
   override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
-  // source
-  // done, sbw
     extractStrings(metadata(data) \ "source")
       .map(eitherStringOrUri)
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
-  // rights and accessRights
-  // done, sbw
     extractStrings(metadata(data) \ "rights") ++
       extractStrings(metadata(data) \ "accessRights")
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
-    // subject
-    // done, sbw
      extractStrings(metadata(data) \ "subject")
       .map(nameOnlyConcept)
 
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
-  // <temporal>
-  // done, sbw
     extractStrings(metadata(data) \ "temporal")
       .map(stringOnlyTimeSpan)
 
   override def title(data: Document[NodeSeq]): Seq[String] =
-  // <title>
-  // done, sbw
     extractStrings(metadata(data) \ "title")
 
   override def `type`(data: Document[NodeSeq]): Seq[String] =
-  // <type>
-  // done, sbw
     extractStrings(metadata(data) \ "type")
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-  // first publisher
-  // done, sbw
     extractStrings(metadata(data) \ "publisher")
       .map(nameOnlyAgent)
       .take(1)
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-  // URLs in dc:identifier property
-  // done, sbw
     extractStrings(metadata(data) \ "identifier")
       .filter(Utils.isUrl)
       .map(stringOnlyWebResource)
@@ -141,8 +104,6 @@ class ScMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-  // hasFormat
-  // done, sbw
     extractStrings(metadata(data) \ "hasFormat")
       .map(stringOnlyWebResource)
 
