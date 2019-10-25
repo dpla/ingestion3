@@ -103,6 +103,20 @@ class NcMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.publisher(xml) == expected)
   }
 
+  it should "extract the correct rights when accessCondition has not attributes" in {
+    val xml =
+      <record>
+        <metadata>
+          <mods>
+            <mods:accessCondition>rights statement.</mods:accessCondition>
+          </mods>
+        </metadata>
+      </record>
+
+    val expected = Seq("rights statement.")
+    assert(extractor.rights(Document(xml)) == expected)
+  }
+
   it should "extract the correct rights" in {
     val expected = Seq("Copyright Campbell University. The materials in this collection are made available for use in research, teaching and private study. Images and text may not be used for any commercial purposes without prior permission from Campbell University.")
     assert(extractor.rights(xml) == expected)
