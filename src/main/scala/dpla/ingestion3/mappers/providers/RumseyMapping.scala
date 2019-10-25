@@ -120,7 +120,7 @@ class RumseyMapping extends XmlMapping with XmlExtractor
 
   // done, sbw hard-coded
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
-    Seq(URI("https://creativecommons.org/licenses/by-nc-sa/3.0/"))
+    Seq(URI("http://creativecommons.org/licenses/by-nc-sa/3.0/"))
 
   // take the first URL from dc:identifier
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
