@@ -85,9 +85,9 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .map(eitherStringOrUri)
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
-  // <accessCondition type="local rights statements">
+  // all values except <accessCondition type="use and reproduction">
     (data \\ "mods" \ "accessCondition")
-      .filter(node => filterAttribute(node, "type", "local rights statements"))
+      .filterNot(node => filterAttribute(node, "type", "use and reproduction"))
       .flatMap(extractStrings)
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
