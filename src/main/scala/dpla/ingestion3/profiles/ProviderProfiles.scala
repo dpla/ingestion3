@@ -279,6 +279,16 @@ class PaProfile extends XmlProfile {
 }
 
 /**
+  * David Rumsey Map Collection
+  */
+class RumseyProfile extends XmlProfile {
+  type Mapping = RumseyMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new RumseyMapping
+}
+
+/**
   * South Carolina Digital Library
   */
 class ScProfile extends XmlProfile {

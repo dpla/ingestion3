@@ -81,7 +81,7 @@ class StringNormalizations {
     } else
       uri.getPath
 
-    URI(s"https://${uri.getHost}$path") // normalize to https and drop parameters
+    URI(s"http://${uri.getHost}$path") // normalize to http and drop parameters
   }
 
   def enrichEdmWebResource(edmWebResource: EdmWebResource): EdmWebResource =
