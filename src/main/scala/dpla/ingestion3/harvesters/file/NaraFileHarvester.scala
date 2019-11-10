@@ -11,12 +11,13 @@ import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.commons.io.{FileUtils, IOUtils}
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.log4j.Logger
+import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.tools.bzip2.CBZip2InputStream
 import org.apache.tools.tar.TarInputStream
-import org.apache.spark.sql.expressions.Window
 
 import scala.util.{Failure, Success, Try}
 import scala.xml._
@@ -195,8 +196,13 @@ class NaraFileHarvester(
   def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime  / 1000L
+
+    logger.info(s"Writing harvest tmp output to $naraTmp")
+
+    // FIXME This assumes files on local file system and not on S3. Files should be able to read off of S3.
     val inFile = new File(conf.harvest.endpoint.getOrElse("in"))
-    val deletes = new File(inFile, "deletes.xml") // FIXME hardcoded
+    // FIXME Deletes are tracked in files alongside harvest data, this should be done in a more sustainable way
+    val deletes = new File(inFile, "/deletes/")
 
     if (inFile.isDirectory)
       for (file: File <- inFile.listFiles(new GzFileFilter).sorted) {
@@ -207,35 +213,65 @@ class NaraFileHarvester(
       harvestFile(inFile, unixEpoch)
 
     // flush writes
-    avroWriterNara.flush()
+   avroWriterNara.flush()
 
-    // Read harvested data into Spark DataFrame and return.
-    val dfAllRecords = spark.read.avro(naraTmp)
+    // Distribute file across HDFS for further processing
+    val fs = FileSystem.get(spark.sparkContext.hadoopConfiguration)
+
+    // Get the absolute path of the avro file written to naraTmp directory. copyFromLocalFile() cannot copy
+    // a directory
+    val naraTempFile = new File(naraTmp)
+      .listFiles(new AvroFileFilter)
+      .headOption
+      .getOrElse(throw new RuntimeException(s"Unable to load avro file in $naraTmp directory. Unable to continue"))
+      .getAbsolutePath
+
+    val localSrcPath = new Path(naraTempFile)
+    val hdfsDestPath = new Path(naraTempFile)
+
+    // Copy local avro file on master to HDFS so it can be read by nodes
+    fs.copyFromLocalFile(localSrcPath, hdfsDestPath)
+
+    val dfAllRecords = spark.read.avro(hdfsDestPath.toString)
 
     import spark.implicits._
     val w = Window.partitionBy($"id").orderBy($"filename".desc)
 
     val df = dfAllRecords
-      .withColumn("rn", row_number.over(w))
-      .where($"rn" === 1).drop("rn")
+      .withColumn("rn", row_number.over(w)).where($"rn" === 1)
+      .drop("rn")
 
     // process deletes
     if (deletes.exists()) {
       val del = getIdsToDelete(deletes)
-      logger.info(s"Found ${del.size} records to delete in deletes.xml")
+      logger.info(s"Found ${del.size} records to delete in ${deletes.getAbsolutePath}")
       df.where(!col("id").isin(del:_*))
     } else {
-      logger.info("No delete.xml file specified. Removing no records for NARA")
+      logger.info("No deletes files specified. Removing no records from NARA data export")
       df
     }
   }
 
+  /**
+    * Collect IDs from file(s) to be deleted from NARA harvest. This does not currently support adding records back
+    * which had previously been deleted.
+    *
+    * @param file File      Path to file or folder the defines which NARA IDs should be deleted
+    * @return Seq[String]   IDs to delete
+    */
   def getIdsToDelete(file: File): Seq[String] = {
-    val xml = XML.loadFile(file)
-    (xml \\ "naId").map(_.text.toString)
+    if (file.isDirectory) file.listFiles(new XmlFileFilter).sorted.flatMap(file => {
+      logger.info(s"Reading deletes from ${file.getName}")
+      val xml = XML.loadFile(file)
+      (xml \\ "naId").map(_.text.toString)
+    }).distinct else {
+      val xml = XML.loadFile(file)
+      (xml \\ "naId").map(_.text.toString)
+    }
   }
 
   override def cleanUp(): Unit = {
+    logger.info(s"Cleaning up $naraTmp directory and files")
     avroWriterNara.flush()
     avroWriterNara.close()
     // Delete temporary output directory and files.
@@ -255,6 +291,8 @@ class NaraFileHarvester(
           count
       }
     }).sum
+
+    logger.info(s"Harvested $recordCount records from ${file.getName}")
 
     IOUtils.closeQuietly(inputStream)
   }
