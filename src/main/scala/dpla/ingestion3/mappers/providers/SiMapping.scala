@@ -18,14 +18,21 @@ class SiMapping extends XmlMapping with XmlExtractor {
   // ID minting functions
   override def useProviderName: Boolean = true
 
-  override def getProviderName: String = "si"
+  override def getProviderName: String = "smithsonian"
 
-  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
-    extractString(data \ "descriptiveNonRepeating" \ "record_ID")
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] = {
+    // Hard code URL query for item as basis for DPLA identifier to maintain SI ids between ingestion1 and ingestion3
+    // The URL is unnecessary and DPLA should ideally only rely upon the record_ID value. This does not exactly match
+    // the itemUri value because it uses %3A instead of `=` in one place (again for consistency between ingestion1 and
+    // ingestion3.
+    Some(s"http://collections.si.edu/search/results.htm?" +
+      s"q=record_ID%%3A${getRecordId(data).getOrElse(throw MappingException("Missing required property `record_ID`"))}" +
+      s"&repo=DPLA")
+  }
 
   def itemUri(implicit data: Document[NodeSeq]): URI =
     URI(s"http://collections.si.edu/search/results.htm?" +
-      s"q=record_ID=${originalId(data).getOrElse(throw MappingException("Missing required property `recordId`"))}" +
+      s"q=record_ID=${getRecordId(data).getOrElse(throw MappingException("Missing required property `recordId`"))}" +
       s"&repo=DPLA")
 
   // OreAggregation
@@ -278,6 +285,10 @@ class SiMapping extends XmlMapping with XmlExtractor {
       .flatMap(node => node.attribute("thumbnail"))
       .flatMap(node => extractStrings(node))
       .map(stringOnlyWebResource)
+
+
+  private def getRecordId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
+    extractString(data \ "descriptiveNonRepeating" \ "record_ID")
 }
 
 
