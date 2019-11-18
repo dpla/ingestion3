@@ -17,7 +17,7 @@ class SiMappingTest extends FlatSpec with BeforeAndAfter {
   val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))
   val extractor = new SiMapping
 
-  it should " use the provider shortname in minting IDs " in
+  it should "use the provider shortname in minting IDs " in
     assert(extractor.useProviderName)
 
   it should "extract the correct contributor" in {
@@ -51,7 +51,7 @@ class SiMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct original identifier " in
-    assert(extractor.originalId(xml) === Some("acm_1991.0076.0102"))
+    assert(extractor.originalId(xml) === Some("http://collections.si.edu/search/results.htm?q=record_ID%%3Aacm_1991.0076.0102&repo=DPLA"))
 
   it should "extract the correct isShownAt value" in {
     val expected = Seq("http://collections.si.edu/search/results.htm?q=record_ID=acm_1991.0076.0102&repo=DPLA")
