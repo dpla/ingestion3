@@ -72,31 +72,35 @@ class FlFileHarvester(spark: SparkSession,
   def handleFile(zipResult: FileResult,
                  unixEpoch: Long): Try[Int] = {
 
+    var itemCount: Int = 0
+
     zipResult.bufferedData match {
       case None =>
         Success(0) // a directory, no results
       case Some(data) => Try {
-        //  FL gives an array of JSON records, on a single line
-        val line: String = data.readLine
-        var itemCount: Int = 0
 
-        Try {
-          val json: JArray = parse(line).asInstanceOf[JArray]
+        //  FL now provides JSONL (one record per line)
+        var line: String = data.readLine
 
-          for (record <- json.arr) {
-            val count = Try {
-              getJsonResult(record) match {
-                case Some(item) =>
-                  writeOut(unixEpoch, item)
-                  1
-                case _ => 0
-              }
-            } match {
-              case Success(num) => num
+        while (line != null) {
+          val count = Try {
+
+            // Clean up leading/trailing characters
+            val json: JValue = parse(line.stripPrefix("[").stripPrefix(","))
+
+            getJsonResult(json) match {
+              case Some(item) =>
+                writeOut(unixEpoch, item)
+                1
               case _ => 0
             }
-            itemCount += count
+          } match {
+            case Success(num) => num
+            case _ => 0
           }
+
+          itemCount += count
+          line = data.readLine
         }
         itemCount
       }
