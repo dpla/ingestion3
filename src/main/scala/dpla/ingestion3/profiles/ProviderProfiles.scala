@@ -325,7 +325,6 @@ class TnProfile extends XmlProfile {
   type Mapping = TnMapping
 
   override def getHarvester = classOf[OaiHarvester]
-
   override def getMapping = new TnMapping
 }
 
@@ -336,7 +335,6 @@ class TxProfile extends XmlProfile {
   type Mapping = TnMapping
 
   override def getHarvester = classOf[OaiHarvester]
-
   override def getMapping = new TxMapping
 }
 
