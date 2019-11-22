@@ -1,28 +1,48 @@
 package dpla.ingestion3.mappers.providers
 
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
-import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
-import dpla.ingestion3.model.{EdmAgent, EdmTimeSpan, EdmWebResource, URI}
+import dpla.ingestion3.model.DplaMapData._
+import dpla.ingestion3.model.{EdmAgent, EdmTimeSpan, EdmWebResource, URI, _}
 import dpla.ingestion3.utils.Utils
 import org.json4s.JsonAST
 import org.json4s.JsonDSL._
-import dpla.ingestion3.model._
 
+import scala.collection.mutable.ArrayBuffer
 import scala.xml.NodeSeq
 
 class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
+  val formatBlockList: Set[String] =
+    DigitalSurrogateBlockList.termList ++
+      FormatTypeValuesBlockList.termList
 
   override def getProviderName: String = "texas"
 
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = ???
+  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
+    val dataProviders = extractStrings(data \ "header" \ "setSpec")
+      .map(setSpec => TxMapping.dataproviderTermLabel.getOrElse(setSpec.split(":").last, ""))
+      .filter(_.nonEmpty)
+
+    Seq(nameOnlyAgent(dataProviders.last))
+  }
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    (metadata(data) \ "identifier")
+      .filter(node => filterAttribute(node, "qualifier", "itemURL"))
+      .flatMap(extractStrings)
+      .map(stringOnlyWebResource)
 
-  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = ???
+  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    (metadata(data) \ "identifier")
+      .filter(node => filterAttribute(node, "qualifier", "thumbnailURL"))
+      .flatMap(extractStrings)
+      .map(stringOnlyWebResource)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] =
     EdmAgent(
@@ -39,8 +59,13 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     extractString(data \ "header" \ "identifier")
       .map(_.trim)
 
-
   // dpla.sourceResource
+  override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+    extractName(metadata(data), "contributor")
+
+  override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+    extractName(metadata(data), "creator")
+
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
     val creationDates = (data \ "metadata" \ "date")
       .filter(node => filterAttribute(node, "qualifier", "creation"))
@@ -58,21 +83,114 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     (creationDates ++ otherDates).headOption.toSeq
   }
 
+  override def description(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings(metadata(data) \ "description")
+
+  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings(metadata(data) \ "resourceType")
+      .map(_.splitAtDelimiter("_").head)
+      .map(_.applyBlockFilter(formatBlockList))
+      .filter(_.nonEmpty)
+
+  override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings(metadata(data) \ "identifier")
+
+  override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
+    extractStrings(metadata(data) \ "language")
+      .map(nameOnlyConcept)
+
+  override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = {
+    val qualifiers = Seq("placeName", "placePoint", "placeBox")
+
+    (metadata(data) \ "coverage")
+      .filter(node => filterAttributeListOptions(node, "qualifier", qualifiers))
+      .flatMap(extractStrings)
+      .map(nameOnlyPlace)
+  }
+
+  override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
+    // Only create a publisher value when <publisher> containers both <location> and <name> sub-properties
+    //    <untl:publisher>
+    //      <untl:location>Philadelphia</untl:location>
+    //      <untl:name>Charles Desilver</untl:name>
+    //    </untl:publisher>
+
+    //    For the above example, the expected mapped publisher value is: 'Philadelphia: Charles Desilver'
+
+    val locations = extractStrings(metadata(data) \ "publisher" \ "location")
+    val names = extractStrings(metadata(data) \ "publisher" \ "name")
+
+    locations.zipAll(names, None, None).flatMap {
+      case (location: String, name: String) => Some(s"$location: $name")
+      case (_, _) => None
+    }.map(nameOnlyAgent)
+  }
+
+  override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
+    extractStrings(data \ "metadata" \ "relation").map(eitherStringOrUri)
+
+  override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
+    extractStrings(metadata(data) \ "rights")
+      .map(text => TxMapping.rightsTermLabel.getOrElse(text, text))
+
+  override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
+    extractStrings(metadata(data) \ "subject")
+      .map(nameOnlyConcept)
+
   override def title(data: Document[NodeSeq]): AtLeastOne[String] =
-    extractStrings(data \ "metadata" \ "title")
+    extractStrings(metadata(data) \ "title")
+
+  override def `type`(data: Document[NodeSeq]): AtLeastOne[String] = {
+    // This greatly simplifies the ingestion1 mapping and pushes the filtering logic from ingestion1 to the ingestion3
+    // type enrichment
+    extractStrings(metadata(data) \ "format")
+  }
+
+  /**
+    * Helper method to extract value directly associated with property or <name> sub-property
+    *
+    * @param data
+    * @param property
+    * @return
+    */
+  def extractName(data: NodeSeq, property: String): ZeroToMany[EdmAgent] = {
+    (data \ property)
+      .flatMap(node => {
+        val name = extractStrings(node \ "name")
+        val propertyValue = node.child match {
+          case _: ArrayBuffer[String] => Seq(node.text)
+          case _ => Seq()
+        }
+
+        // If propertyValue is empty then return the value of the <name> sub-property
+        if(propertyValue.isEmpty)
+          name
+        else
+          propertyValue
+      })
+      .map(nameOnlyAgent)
+  }
+
+  /**
+    * Helper method to get to metadata root
+    *
+    * @param data
+    * @return
+    */
+  def metadata(data: NodeSeq): NodeSeq = data \ "metadata" \ "metadata"
 }
 
 
 object TxMapping {
   val rightsTermLabel: Map[String, String] = Map[String, String](
-    "by" -> "Attribution.",
-    "by-nc"-> "Attribution Noncommercial.",
-    "by-nc-nd"-> "Attribution Non-commercial No Derivatives.",
-    "by-nc-sa"-> "Attribution Noncommercial Share Alike.",
-    "by-nd"-> "Attribution No Derivatives.",
-    "by-sa"-> "Attribution Share Alike.",
-    "copyright"-> "Copyright.",
-    "pd"-> "Public Domain."
+    "by" -> "License: Attribution.",
+    "by-nc"-> "License: Attribution Noncommercial.",
+    "by-nc-nd"-> "License: Attribution Non-commercial No Derivatives.",
+    "by-nc-sa"-> "License: Attribution Noncommercial Share Alike.",
+    "by-nd"-> "License: Attribution No Derivatives.",
+    "by-sa"-> "License: Attribution Share Alike.",
+    "copyright"-> "License: Copyright.",
+    "pd"-> "License: Public Domain."
   )
 
   val dataproviderTermLabel = Map[String, String](
