@@ -1124,6 +1124,14 @@
     {
       "name": "originalId",
       "type": "string"
+    },
+    {
+        "name": "tags",
+        "type": {
+            "name": "tagsArray",
+            "type": "array",
+            "items": "string"
+        }
     }
   ]
 }

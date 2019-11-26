@@ -84,7 +84,8 @@ object EnrichedRecordFixture {
         ),
         title = Seq("The Title"),
         `type` = Seq("image", "text")
-      )
+      ),
+      tags = Seq()
     )
 
   val minimalEnrichedRecord =

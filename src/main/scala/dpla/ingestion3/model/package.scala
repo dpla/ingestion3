@@ -196,7 +196,8 @@ package object model {
           ("title" -> record.sourceResource.title) ~
           ("type" -> record.sourceResource.`type`)
         ) ~
-        ("@type" -> "ore:Aggregation")
+        ("@type" -> "ore:Aggregation") ~
+        ("tags" -> record.tags.map {_.toString})
       )
 
 
