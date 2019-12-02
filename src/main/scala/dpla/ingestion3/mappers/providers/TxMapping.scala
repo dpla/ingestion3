@@ -27,7 +27,10 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .map(setSpec => TxMapping.dataproviderTermLabel.getOrElse(setSpec.split(":").last, ""))
       .filter(_.nonEmpty)
 
-    Seq(nameOnlyAgent(dataProviders.last))
+    dataProviders.lastOption match {
+      case Some(dataProvider) => Seq(nameOnlyAgent(dataProvider))
+      case None => Seq()
+    }
   }
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
