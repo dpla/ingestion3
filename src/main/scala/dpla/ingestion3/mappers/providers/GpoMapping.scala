@@ -36,6 +36,7 @@ class GpoMapping extends MarcXmlMapping {
 
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     // <datafield> tag = 100, 110, or 111
+    // <datafield> tag = 700, 710, or 711
     val creator1xx = marcFields(data, Seq("100", "110", "111"))
 
     val creator7xx = marcFields(data, Seq("700", "710", "711"))
@@ -176,7 +177,7 @@ class GpoMapping extends MarcXmlMapping {
       .map("ISSN: " + _)
 
     val genericIds = (marcFields(data, Seq("001")) ++ marcFields(data, Seq("035", "074", "082", "086"), Seq("a")))
-      .flatMap(extractStrings)
+      .map(extractStrings)
       .map(_.mkString(" "))
 
     lcIds ++ isbnIds ++ issnIds ++ genericIds
