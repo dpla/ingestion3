@@ -30,7 +30,7 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
 //  it should "extract the correct contributor" in {
-//    val expected = Seq("Everhart, Benjamin Matlock, 1818-1904.", "Academy of Natural Sciences of Philadelphia.")
+//    val expected = Seq("")
 //      .map(nameOnlyAgent)
 //    assert(extractor.contributor(xml) == expected)
 //  }
@@ -79,7 +79,7 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
 //  it should "extract the correct language" in {
-//    val expected = Seq("ger", "eng").map(nameOnlyConcept)
+//    val expected = Seq("").map(nameOnlyConcept)
 //    assert(extractor.language(xml) == expected)
 //  }
 
@@ -95,12 +95,12 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
 
 //  it should "extract the correct relation" in {
 //    val expected =
-//      Seq("Online version:. Howard, Clifford, 1868-1942. What happened at Olenberg. Chicago : The Reilly & Britton Co., 1911. (OCoLC)656701318").map(eitherStringOrUri)
+//      Seq("").map(eitherStringOrUri)
 //    assert(extractor.relation(xml) === expected)
 //  }
 
 //  it should "extract the correct rights" in {
-//    val expected = Seq("This is a rights statement")
+//    val expected = Seq("")
 //    assert(extractor.rights(xml) === expected)
 //  }
 
@@ -124,6 +124,18 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
 //  it should "throw exception for invalid rights statement" in {
+//    val xml =
+//      <record>
+//        <metadata>
+//          <marc:record>
+//            <marc:datafield tag="506">
+//              <marc:subfield>Subscription required for access.</marc:subfield>
+//            </marc:datafield>
+//          </marc:record>
+//        </metadata>
+//      </record>
+//
+//    //assert extractor.rights(Document(xml)) will throw exception
 //
 //  }
 
@@ -139,7 +151,7 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
 //  it should "extract the correct temporal" in {
-//    val expected = Seq("1603 - 1714", "fast", "Stuarts, 1603-1714").map(stringOnlyTimeSpan)
+//    val expected = Seq("").map(stringOnlyTimeSpan)
 //    assert(extractor.temporal(xml) === expected)
 //  }
 
