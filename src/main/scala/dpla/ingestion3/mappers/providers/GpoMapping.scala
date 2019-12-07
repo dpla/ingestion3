@@ -209,7 +209,7 @@ class GpoMapping extends MarcXmlMapping {
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     // <datafield> tag = 260 or 264   <subfield> code = a or b
-    marcFields(data, Seq("260", "264"), Seq("a, b"))
+    marcFields(data, Seq("260", "264"), Seq("a", "b"))
       .map(extractStrings)
       .map(_.mkString(" "))
       .map(nameOnlyAgent)
@@ -246,6 +246,70 @@ class GpoMapping extends MarcXmlMapping {
       "and is in the public domain. For more information " +
       "please see http://www.gpo.gov/help/index.html#" +
       "public_domain_copyright_notice.htm"
+
+  private val excludedRights = Array(
+    "Access may require a library card.",
+
+    "Access restricted to U.S. military service members and Dept. " +
+      "of Defense employees; the only issues available are those " +
+      "from Monday of the prior week through Friday of current week.",
+
+    "Access to data provided for a fee except for requests " +
+      "generated from Internet domains of .gov, .edu, .k12, .us, " +
+      "and .mil.",
+
+    "Access to issues published prior to 2001 restricted to " +
+      "Picatinny Arsenal users.",
+
+    "Access to some volumes or items may be restricted",
+
+    "Document removed from the GPO Permanent Access Archive at " +
+      "agency request",
+
+    "FAA employees only.",
+
+    "First nine issues (Apr.-Dec. 2002) were law enforcement " +
+      "restricted publications and are not available to the general " +
+      "public.",
+
+    "Free to users at U.S. Federal depository libraries; other " +
+      "users are required to pay a fee.",
+
+    "Full text available to subscribers only.",
+
+    "Login and password required to access web page where " +
+      "electronic files may be downloaded.",
+
+    "Login and password required to access web page where " +
+      "electronic formats may be downloaded.",
+
+    "Not available for external use as of Monday, Oct. 20, 2003.",
+
+    "Personal registration and/or payment required to access some " +
+      "features.",
+
+    "Restricted access for security reasons",
+
+    "Restricted to Federal depository libraries and other users " +
+      "with valid user accounts.",
+
+    "Restricted to federal depository libraries with valid user " +
+      "IDs and passwords.",
+
+    "Restricted to institutions with a site license to the USA " +
+      "trade online database. Free to users at federal depository " +
+      "libraries.",
+
+    "Some components of this directory may not be publicly " +
+      "accessible.",
+
+    "Some v. are for official use only, i.e. distribution of Oct. " +
+      "1998 v. 2 is restricted.",
+
+    "Special issue for Oct./Dec. 2007 for official use only.",
+
+    "Subscription required for access."
+  )
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     // <datafield> tag = 600, 610, 611, 630, 650, or 651  <subfield> code is a letter (not a number)
@@ -321,69 +385,5 @@ class GpoMapping extends MarcXmlMapping {
   def agent = EdmAgent(
     name = Some("United States Government Publishing Office (GPO)"),
     uri = Some(URI("http://dp.la/api/contributor/gpo"))
-  )
-
-  val excludedRights = Array(
-    "Access may require a library card.",
-
-    "Access restricted to U.S. military service members and Dept. " +
-    "of Defense employees; the only issues available are those " +
-    "from Monday of the prior week through Friday of current week.",
-
-    "Access to data provided for a fee except for requests " +
-    "generated from Internet domains of .gov, .edu, .k12, .us, " +
-    "and .mil.",
-
-    "Access to issues published prior to 2001 restricted to " +
-    "Picatinny Arsenal users.",
-
-    "Access to some volumes or items may be restricted",
-
-    "Document removed from the GPO Permanent Access Archive at " +
-    "agency request",
-
-    "FAA employees only.",
-
-    "First nine issues (Apr.-Dec. 2002) were law enforcement " +
-    "restricted publications and are not available to the general " +
-    "public.",
-
-    "Free to users at U.S. Federal depository libraries; other " +
-    "users are required to pay a fee.",
-
-    "Full text available to subscribers only.",
-
-    "Login and password required to access web page where " +
-    "electronic files may be downloaded.",
-
-    "Login and password required to access web page where " +
-    "electronic formats may be downloaded.",
-
-    "Not available for external use as of Monday, Oct. 20, 2003.",
-
-    "Personal registration and/or payment required to access some " +
-    "features.",
-
-    "Restricted access for security reasons",
-
-    "Restricted to Federal depository libraries and other users " +
-    "with valid user accounts.",
-
-    "Restricted to federal depository libraries with valid user " +
-    "IDs and passwords.",
-
-    "Restricted to institutions with a site license to the USA " +
-    "trade online database. Free to users at federal depository " +
-    "libraries.",
-
-    "Some components of this directory may not be publicly " +
-    "accessible.",
-
-    "Some v. are for official use only, i.e. distribution of Oct. " +
-    "1998 v. 2 is restricted.",
-
-    "Special issue for Oct./Dec. 2007 for official use only.",
-
-    "Subscription required for access."
   )
 }

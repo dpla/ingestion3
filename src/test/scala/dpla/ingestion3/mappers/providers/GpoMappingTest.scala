@@ -77,4 +77,79 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
       "TD 4.210:75-8")
     assert(extractor.identifier(xml) == expected)
   }
+
+//  it should "extract the correct language" in {
+//    val expected = Seq("ger", "eng").map(nameOnlyConcept)
+//    assert(extractor.language(xml) == expected)
+//  }
+
+  it should "extract the correct place" in {
+    val expected = Seq("United States").map(nameOnlyPlace)
+    assert(extractor.place(xml) === expected)
+  }
+
+  it should "extract the correct publisher" in {
+    val expected = Seq("Washington, D.C. : U.S. Dept. of Transportation, Federal Aviation Administration, Office of Aviation Medicine,").map(nameOnlyAgent)
+    assert(extractor.publisher(xml) === expected)
+  }
+
+//  it should "extract the correct relation" in {
+//    val expected =
+//      Seq("Online version:. Howard, Clifford, 1868-1942. What happened at Olenberg. Chicago : The Reilly & Britton Co., 1911. (OCoLC)656701318").map(eitherStringOrUri)
+//    assert(extractor.relation(xml) === expected)
+//  }
+
+//  it should "extract the correct rights" in {
+//    val expected = Seq("This is a rights statement")
+//    assert(extractor.rights(xml) === expected)
+//  }
+
+  it should "provide default rights statement" in {
+    val xml =
+      <record>
+        <metadata>
+          <marc:record>
+          </marc:record>
+        </metadata>
+      </record>
+
+    val default = "Pursuant to Title 17 Section 105 of the United States " +
+      "Code, this file is not subject to copyright protection " +
+      "and is in the public domain. For more information " +
+      "please see http://www.gpo.gov/help/index.html#" +
+      "public_domain_copyright_notice.htm"
+
+    val expected = Seq(default)
+    assert(extractor.rights(Document(xml)) === expected)
+  }
+
+//  it should "throw exception for invalid rights statement" in {
+//
+//  }
+
+  it should "extract the correct subject" in {
+    val expected = Seq(
+      "Radar operators",
+      "United States",
+      "Radar air traffic control systems",
+      "Aviation medicine",
+      "Research"
+    ).map(nameOnlyConcept)
+    assert(extractor.subject(xml) === expected)
+  }
+
+//  it should "extract the correct temporal" in {
+//    val expected = Seq("1603 - 1714", "fast", "Stuarts, 1603-1714").map(stringOnlyTimeSpan)
+//    assert(extractor.temporal(xml) === expected)
+//  }
+
+  it should "extract the correct titles" in {
+    val expected = Seq("Physiological, subjective, and performance correlates of reported boredom and monotony while performing a simulated radar control task /")
+    assert(extractor.title(xml) === expected)
+  }
+
+  it should "extract the correct types from leader" in {
+    val expected = Seq("Text")
+    assert(extractor.`type`(xml) === expected)
+  }
 }
