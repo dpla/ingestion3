@@ -26,7 +26,7 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
     * @return       NodeSeq <dataset> nodes
     */
   def datafield(data: Document[NodeSeq], tags: Seq[String]): NodeSeq =
-    (data \ "datafield").flatMap(n => getByAttributeListOptions(n, "tag", tags))
+    (data \\ "datafield").flatMap(n => getByAttributeListOptions(n, "tag", tags))
 
   /**
     * Filter <subfield> nodes by code
@@ -46,7 +46,7 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
     * @return       NodeSeq <controlfield> nodes
     */
   def controlfield(data: Document[NodeSeq], tags: Seq[String]): NodeSeq =
-    (data \ "controlfield").flatMap(n => getByAttributeListOptions(n, "tag", tags))
+    (data \\ "controlfield").flatMap(n => getByAttributeListOptions(n, "tag", tags))
 
   /**
     * Get the character at a specified index of a <controlfield> node
@@ -73,7 +73,7 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
     * @return       String text value of <leader> (empty String if leader not found)
     */
   def leader(data: Document[NodeSeq]): String =
-    extractStrings(data \ "leader").headOption.getOrElse("")
+    extractStrings(data \\ "leader").headOption.getOrElse("")
 
   /**
     * Get the character at a specified index of the <leader> text
@@ -147,7 +147,7 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
   def extractMarcSubject(node: Node): String = {
     val tag: String = node \@ "tag" // get tag for this datafield
 
-    (node \ "subfield")
+    (node \\ "subfield")
       .filter(n => ('a' to 'z').toList.map(_.toString).contains(n \@ "code")) // reject subfields with numeric codes
       .flatMap(subfield => {  // iterate through subfields
 
