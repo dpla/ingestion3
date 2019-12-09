@@ -28,6 +28,7 @@ class GpoMapping extends MarcXmlMapping {
     marcFields(data, Seq("700", "710", "711"))
       .filter(filterSubfields(_, Seq("e")) // include if subfield with @code=e exists and...
         .flatMap(extractStrings)
+        .map(_.stripSuffix("."))
         .exists(_ != "author") // ...#text != "author"
       )
       .map(extractStrings)
@@ -42,6 +43,7 @@ class GpoMapping extends MarcXmlMapping {
     val creator7xx = marcFields(data, Seq("700", "710", "711"))
       .filter(filterSubfields(_, Seq("e")) // include if subfield with @code=e exists and...
         .flatMap(extractStrings)
+        .map(_.stripSuffix("."))
         .exists(_ == "author") // ...#text = "author"
       )
 

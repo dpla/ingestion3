@@ -29,11 +29,27 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.dplaUri(xml) === expected)
   }
 
-//  it should "extract the correct contributor" in {
-//    val expected = Seq("")
-//      .map(nameOnlyAgent)
-//    assert(extractor.contributor(xml) == expected)
-//  }
+  it should "extract the correct contributor" in {
+    val xml =
+      <record>
+        <metadata>
+          <marc:record>
+            <marc:datafield ind2=" " ind1="1" tag="700">
+              <marc:subfield code="a">Rezey, Maribeth L.,</marc:subfield>
+              <marc:subfield code="e">author.</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1="1" tag="710">
+              <marc:subfield code="a">United States.</marc:subfield>
+              <marc:subfield code="b">Bureau of Justice Statistics,</marc:subfield>
+              <marc:subfield code="e">issuing body.</marc:subfield>
+            </marc:datafield>
+          </marc:record>
+        </metadata>
+      </record>
+    val expected = Seq("United States. Bureau of Justice Statistics, issuing body.")
+      .map(nameOnlyAgent)
+    assert(extractor.contributor(Document(xml)) == expected)
+  }
 
   it should "extract the correct creator" in {
     val expected = Seq("Thackray, Richard I.").map(nameOnlyAgent)
@@ -78,10 +94,36 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.identifier(xml) == expected)
   }
 
-//  it should "extract the correct language" in {
-//    val expected = Seq("").map(nameOnlyConcept)
-//    assert(extractor.language(xml) == expected)
-//  }
+  it should "extract the correct language (free text)" in {
+    val xml =
+      <record>
+        <metadata>
+          <marc:record>
+            <marc:datafield ind2=" " ind1=" " tag="546">
+              <marc:subfield code="a">Text in Spanish.</marc:subfield>
+            </marc:datafield>
+          </marc:record>
+        </metadata>
+      </record>
+    val expected = Seq("Text in Spanish.").map(nameOnlyConcept)
+    assert(extractor.language(Document(xml)) == expected)
+  }
+
+  it should "extract the correct language (code)" in {
+    val xml =
+      <record>
+        <metadata>
+          <marc:record>
+            <marc:datafield ind2=" " ind1="0" tag="041">
+              <marc:subfield code="a">eng</marc:subfield>
+              <marc:subfield code="a">spa</marc:subfield>
+            </marc:datafield>
+          </marc:record>
+        </metadata>
+      </record>
+    val expected = Seq("eng", "spa").map(nameOnlyConcept)
+    assert(extractor.language(Document(xml)) == expected)
+  }
 
   it should "extract the correct place" in {
     val expected = Seq("United States").map(nameOnlyPlace)
@@ -93,16 +135,37 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.publisher(xml) === expected)
   }
 
-//  it should "extract the correct relation" in {
-//    val expected =
-//      Seq("").map(eitherStringOrUri)
-//    assert(extractor.relation(xml) === expected)
-//  }
+  it should "extract the correct relation" in {
+    val xml =
+      <record>
+        <metadata>
+          <marc:record>
+            <marc:datafield ind2=" " ind1="1" tag="490">
+              <marc:subfield code="a">DHHS (NIOSH) publication ;</marc:subfield>
+              <marc:subfield code="v">no. 90-100</marc:subfield>
+            </marc:datafield>
+          </marc:record>
+        </metadata>
+      </record>
+    val expected =
+      Seq("DHHS (NIOSH) publication ;. no. 90-100.").map(eitherStringOrUri)
+    assert(extractor.relation(Document(xml)) === expected)
+  }
 
-//  it should "extract the correct rights" in {
-//    val expected = Seq("")
-//    assert(extractor.rights(xml) === expected)
-//  }
+  it should "extract the correct rights" in {
+    val xml =
+      <record>
+        <metadata>
+          <marc:record>
+            <marc:datafield ind2=" " ind1=" " tag="506">
+              <marc:subfield code="a">For official use only, v. 3.</marc:subfield>
+            </marc:datafield>
+          </marc:record>
+        </metadata>
+      </record>
+    val expected = Seq("For official use only, v. 3.")
+    assert(extractor.rights(Document(xml)) === expected)
+  }
 
   it should "provide default rights statement" in {
     val xml =
@@ -123,21 +186,20 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.rights(Document(xml)) === expected)
   }
 
-//  it should "throw exception for invalid rights statement" in {
-//    val xml =
-//      <record>
-//        <metadata>
-//          <marc:record>
-//            <marc:datafield tag="506">
-//              <marc:subfield>Subscription required for access.</marc:subfield>
-//            </marc:datafield>
-//          </marc:record>
-//        </metadata>
-//      </record>
-//
-//    //assert extractor.rights(Document(xml)) will throw exception
-//
-//  }
+  it should "throw exception for invalid rights statement" in {
+    val xml =
+      <record>
+        <metadata>
+          <marc:record>
+            <marc:datafield tag="506">
+              <marc:subfield>Subscription required for access.</marc:subfield>
+            </marc:datafield>
+          </marc:record>
+        </metadata>
+      </record>
+
+    assertThrows[Exception] { extractor.rights(Document(xml)) }
+  }
 
   it should "extract the correct subject" in {
     val expected = Seq(
@@ -150,10 +212,23 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.subject(xml) === expected)
   }
 
-//  it should "extract the correct temporal" in {
-//    val expected = Seq("").map(stringOnlyTimeSpan)
-//    assert(extractor.temporal(xml) === expected)
-//  }
+  it should "extract the correct temporal" in {
+    val xml =
+      <record>
+        <metadata>
+          <marc:record>
+            <marc:datafield ind2="0" ind1="2" tag="611">
+              <marc:subfield code="a">Olympic Winter Games</marc:subfield>
+              <marc:subfield code="n">(19th :</marc:subfield>
+              <marc:subfield code="d">2002 :</marc:subfield>
+              <marc:subfield code="c">Salt Lake City, Utah)</marc:subfield>
+            </marc:datafield>
+          </marc:record>
+        </metadata>
+      </record>
+    val expected = Seq("2002 :").map(stringOnlyTimeSpan)
+    assert(extractor.temporal(Document(xml)) === expected)
+  }
 
   it should "extract the correct titles" in {
     val expected = Seq("Physiological, subjective, and performance correlates of reported boredom and monotony while performing a simulated radar control task /")
