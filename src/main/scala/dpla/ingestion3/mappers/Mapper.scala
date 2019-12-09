@@ -281,7 +281,14 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
     val validatedOriginalId = validateOriginalId(mapping.originalId(document), providerId, mapping.enforceOriginalId)
     val validatedDplaUri = validateDplaUri(mapping.dplaUri(document), providerId, mapping.enforceDplaUri)
 
-    validateRights(mapping.rights(document), mapping.edmRights(document), providerId, mapping.enforceRights)
+    // MappingException may be thrown from the `rights` method in provider mapping
+    // See GPO mapping
+    // Error will be logged when entire record mapping is attempted, below
+    val mappedRights: Seq[String] = Try { mapping.rights(document) } match {
+      case Success(r) => r
+      case Failure(_) => Seq()
+    }
+    validateRights(mappedRights, mapping.edmRights(document), providerId, mapping.enforceRights)
 
     // Recommended field validation
     val validatedCreator = validateRecommendedProperty(mapping.creator(document), "creator", providerId)
