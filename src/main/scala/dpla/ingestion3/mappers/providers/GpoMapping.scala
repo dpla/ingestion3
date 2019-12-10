@@ -1,5 +1,6 @@
 package dpla.ingestion3.mappers.providers
 
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.mappers.utils.{Document, MarcXmlMapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
@@ -70,6 +71,7 @@ class GpoMapping extends MarcXmlMapping {
 
     val dDate = dDateNodes
       .flatMap(extractStrings)
+      .map(_.stripUnmatchedClosingBrackets)
       .map(_.stripSuffix("."))
       .map(stringOnlyTimeSpan)
 
