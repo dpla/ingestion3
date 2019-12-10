@@ -56,20 +56,25 @@ class GpoMapping extends MarcXmlMapping {
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
     // <datafield> tag = 362
     // <datafield> tag = 260 or 264   <subfield> code = c
+    // <controlfield> tag = 008
     val date362 = marcFields(data, Seq("362"))
     val date260 = marcFields(data, Seq("260"), Seq("c"))
     val date264 = marcFields(data, Seq("264"), Seq("c"))
 
-    val theDate =
+    val dDateNodes =
       if (date362.nonEmpty) date362
       else if (leaderAt(data, 7).contains('m'))
         if (date260.nonEmpty) date260
         else date264
       else Seq()
 
-    theDate
+    val dDate = dDateNodes
       .flatMap(extractStrings)
+      .map(_.stripSuffix("."))
       .map(stringOnlyTimeSpan)
+
+    if (dDate.nonEmpty) dDate // use datafield date if present
+    else extractMarcControlDate(data) // else use controlfield date
   }
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] = {

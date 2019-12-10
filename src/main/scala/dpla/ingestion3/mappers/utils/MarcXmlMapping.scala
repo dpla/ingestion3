@@ -1,5 +1,8 @@
 package dpla.ingestion3.mappers.utils
 
+import dpla.ingestion3.model.DplaMapData.ZeroToMany
+import dpla.ingestion3.model.{EdmTimeSpan, stringOnlyTimeSpan}
+
 import scala.annotation.tailrec
 import scala.util.{Success, Try}
 import scala.xml.{Node, NodeSeq}
@@ -206,5 +209,36 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
 
     // Match mappingKey to leaderTypes
     matchLeaderType(leaderTypes.keys.toList)
+  }
+
+  /**
+    * Extract date from MARC controlfield.
+    * The tag of the controlfield is 008.
+    *
+    * @param data The metadata record
+    * @return
+    */
+  def extractMarcControlDate(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
+    val control: String = controlfield(data, Seq("008")).flatMap(extractStrings).headOption.getOrElse("")
+
+    // character at index 6 indicates type of date
+    val dateType = control.slice(6,7)
+
+    val cDate: Seq[String] = dateType match {
+      case "s" | "r" | "t" | "c" =>
+        // year
+        Seq(control.slice(7, 11))
+      case "m" | "q" | "d" =>
+        // year-year
+        val begin = control.slice(7, 11) + "-"
+        val end = control.slice(11, 15)
+        if (end == "9999") Seq(begin) else Seq(begin + end)
+      case "e" =>
+        // year-month-day
+        Seq(control.slice(7, 11) + "-" + control.slice(11, 13) + "-" + control.slice(13, 15))
+      case _ => Seq()
+    }
+
+    cDate.map(stringOnlyTimeSpan)
   }
 }

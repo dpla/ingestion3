@@ -57,8 +57,22 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct date" in {
-    val expected = Seq("1975.").map(stringOnlyTimeSpan)
+    val expected = Seq("1975").map(stringOnlyTimeSpan)
     assert(extractor.date(xml) === expected)
+  }
+
+  it should "extract the correct controlfield date" in {
+    val xml =
+      <record>
+        <metadata>
+          <marc:record>
+            <marc:controlfield tag="008">120815c20129999mdu x w o    f0    2eng c</marc:controlfield>
+          </marc:record>
+        </metadata>
+      </record>
+
+    val expected = Seq("2012").map(stringOnlyTimeSpan)
+    assert(extractor.date(Document(xml)) == expected)
   }
 
   it should "extract the correct description" in {

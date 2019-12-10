@@ -62,30 +62,7 @@ class HathiMapping extends MarcXmlMapping {
       .map(stringOnlyTimeSpan)
 
     if (dDate.nonEmpty) dDate // use datafield date if present
-    else {                    // if not, use controlfield date
-
-      val control: String = controlfield(data, Seq("008")).flatMap(extractStrings).headOption.getOrElse("")
-
-      // character at index 6 indicates type of date
-      val dateType = control.slice(6,7)
-
-      val cDate: Seq[String] = dateType match {
-        case "s" | "r" | "t" | "c" =>
-          // year
-          Seq(control.slice(7, 11))
-        case "m" | "q" | "d" =>
-          // year-year
-          val begin = control.slice(7, 11) + "-"
-          val end = control.slice(11, 15)
-          if (end == "9999") Seq(begin) else Seq(begin + end)
-        case "e" =>
-          // year-month-day
-          Seq(control.slice(7, 11) + "-" + control.slice(11, 13) + "-" + control.slice(13, 15))
-        case _ => Seq()
-      }
-
-      cDate.map(stringOnlyTimeSpan)
-    }
+    else extractMarcControlDate(data) // else use controlfield date
   }
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
