@@ -15,14 +15,14 @@ class BlacklistOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiMe
   extends OaiRelation {
   override def buildScan(): RDD[Row] = {
     val sparkContext = sqlContext.sparkContext
-    val setPages = sparkContext.parallelize(oaiMethods.listAllSetPages().toSeq)
-    val sets = setPages.flatMap(oaiMethods.parsePageIntoSets)
-    val blacklist = sparkContext.broadcast(oaiConfiguration.blacklist.getOrElse(Array()).toSet)
-    val blacklistedSets = sets.filter {
-      case Right(OaiSet(set, _)) => !blacklist.value.contains(set)
+    val blacklist = oaiConfiguration.blacklist.getOrElse(Array()).toSet
+    val originalSets = oaiMethods.listAllSetPages().flatMap(oaiMethods.parsePageIntoSets)
+    val nonBlacklistedSets = originalSets.filter {
+      case Right(OaiSet(set, _)) => blacklist.contains(set)
       case _ => true
     }
-    val pages = blacklistedSets.flatMap(oaiMethods.listAllRecordPagesForSet)
+    val sets = sparkContext.parallelize(nonBlacklistedSets.toSeq)
+    val pages = sets.flatMap(oaiMethods.listAllRecordPagesForSet)
     val records = pages.flatMap(oaiMethods.parsePageIntoRecords(_, oaiConfiguration.removeDeleted))
     records.map(OaiRelation.convertToOutputRow)
   }
