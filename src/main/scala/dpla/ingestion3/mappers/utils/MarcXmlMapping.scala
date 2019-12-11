@@ -174,7 +174,7 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
 
       // strip trailing punctuation
       val text: String =
-        if (delimiter == ".") subfield.text.stripSuffix(",").stripSuffix(".")
+        if (delimiter == ". ") subfield.text.stripSuffix(",").stripSuffix(".")
         else subfield.text.stripSuffix(",")
 
       // return delimiter and text - note that the delimiter goes before the text

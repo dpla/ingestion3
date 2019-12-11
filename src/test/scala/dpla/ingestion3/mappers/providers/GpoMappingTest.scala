@@ -224,6 +224,28 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.subject(xml) === expected)
   }
 
+  it should "strip trailing period in subjects when delimiter is period" in {
+    val xml =
+      <record>
+        <metadata>
+          <marc:record>
+            <marc:datafield ind2="0" ind1="1" tag="610">
+              <marc:subfield code="a">United States.</marc:subfield>
+              <marc:subfield code="b">National Aeronautics and Space Administration</marc:subfield>
+              <marc:subfield code="x">Management</marc:subfield>
+              <marc:subfield code="v">Bibliography</marc:subfield>
+              <marc:subfield code="v">Periodicals.</marc:subfield>
+            </marc:datafield>
+          </marc:record>
+        </metadata>
+      </record>
+
+    val expected = Seq("United States. National Aeronautics and Space Administration--Management--Bibliography--Periodicals")
+      .map(nameOnlyConcept)
+    
+    assert(extractor.subject(Document(xml)) == expected)
+  }
+
   it should "extract the correct temporal" in {
     val xml =
       <record>
