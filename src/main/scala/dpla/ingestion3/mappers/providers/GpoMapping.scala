@@ -88,10 +88,8 @@ class GpoMapping extends MarcXmlMapping {
     val desc583 = marcFields(data, Seq("583"), Seq("z"))
     val desc5xx = marcFields(data, descTags)
 
-    // Use 310 and/or 583 if they exist.  If not, use 5xx.
-    val baseDesc =
-      (if ((desc310 ++ desc583).nonEmpty) desc310 ++ desc583 else desc5xx)
-        .flatMap(extractStrings)
+    val baseDesc = (desc310 ++ desc583 ++ desc5xx)
+      .flatMap(extractStrings)
 
     // Add description frequency if desc310 does not exist, <leader> at index 7 = 's',
     // and a description frequency key is present in <controlfield> 008_18
@@ -106,7 +104,7 @@ class GpoMapping extends MarcXmlMapping {
     }
 
     val theDesc =
-      if (desc310.isEmpty && leader7.contains('s') && freq.isDefined)
+      if ((desc310 ++ desc583).isEmpty && leader7.contains('s') && freq.isDefined)
         freq match {
           case Some(f) => baseDesc :+ f
           case None => baseDesc
