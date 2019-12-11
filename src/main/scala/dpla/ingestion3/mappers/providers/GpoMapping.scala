@@ -72,6 +72,7 @@ class GpoMapping extends MarcXmlMapping {
     val dDate = dDateNodes
       .flatMap(extractStrings)
       .map(_.stripUnmatchedClosingBrackets)
+      .map(_.stripUnmatchedOpeningBrackets)
       .map(_.stripSuffix("."))
       .map(stringOnlyTimeSpan)
 
