@@ -344,6 +344,7 @@ class GpoMapping extends MarcXmlMapping {
       .flatMap(nseq => nseq.filterNot(n => filterAttribute(n, "code", "h")))
       .flatMap(extractStrings)
       .mkString(" ")
+      .stripSuffix(".")
 
     Seq(joinedTitle)
   }
