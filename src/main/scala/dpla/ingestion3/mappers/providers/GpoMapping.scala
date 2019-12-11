@@ -337,13 +337,16 @@ class GpoMapping extends MarcXmlMapping {
       .map(stringOnlyTimeSpan)
       .distinct
 
-  override def title(data: Document[NodeSeq]): ZeroToMany[String] =
+  override def title(data: Document[NodeSeq]): ZeroToMany[String] = {
     // <datafield> tag = 245  <subfield> code != (c or h)
-    marcFields(data, Seq("245"))
+    val joinedTitle = marcFields(data, Seq("245"))
       .flatMap(nseq => nseq.filterNot(n => filterAttribute(n, "code", "c")))
       .flatMap(nseq => nseq.filterNot(n => filterAttribute(n, "code", "h")))
-      .map(extractStrings)
-      .map(_.mkString(" "))
+      .flatMap(extractStrings)
+      .mkString(" ")
+
+    Seq(joinedTitle)
+  }
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] = {
     // <leader>                     #text characters at index 6 and 7

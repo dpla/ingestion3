@@ -247,6 +247,25 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.title(xml) === expected)
   }
 
+  it should "join title strings" in {
+    val xml =
+      <record>
+        <metadata>
+          <marc:record>
+            <marc:datafield ind2="0" ind1="1" tag="245">
+              <marc:subfield code="a">Radical responses to radical regimes</marc:subfield>
+              <marc:subfield code="h">[microform] :</marc:subfield>
+              <marc:subfield code="b">evaluating preemptive counter-proliferation /</marc:subfield>
+              <marc:subfield code="c">Barry R. Schneider.</marc:subfield>
+            </marc:datafield>
+          </marc:record>
+        </metadata>
+      </record>
+
+    val expected = Seq("Radical responses to radical regimes evaluating preemptive counter-proliferation /")
+    assert(extractor.title(Document(xml)) == expected)
+  }
+
   it should "extract the correct types from leader" in {
     val expected = Seq("Text")
     assert(extractor.`type`(xml) === expected)
