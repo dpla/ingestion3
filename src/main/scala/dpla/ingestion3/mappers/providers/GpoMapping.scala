@@ -334,6 +334,7 @@ class GpoMapping extends MarcXmlMapping {
     // <datafield> tag = 611                    <subfield> code = d
     (marcFields(data, Seq("600", "610", "650", "651"), Seq("y")) ++ marcFields(data, Seq("611"), Seq("d")))
       .flatMap(extractStrings)
+      .map(_.stripSuffix("."))
       .map(stringOnlyTimeSpan)
       .distinct
 
