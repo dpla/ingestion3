@@ -143,6 +143,7 @@ class GpoMapping extends MarcXmlMapping {
       .map(extractStrings)
       .map(_.mkString(" "))
       .map(_.stripSuffix(":"))
+      .map(_.stripSuffix(";"))
 
   override def format(data: Document[NodeSeq]): ZeroToMany[String] = {
     // <leader> #text character at index 6
@@ -198,6 +199,8 @@ class GpoMapping extends MarcXmlMapping {
 
     val lang546 = marcFields(data, Seq("546"))
       .flatMap(extractStrings)
+      .map(_.stripPrefix("Text in "))
+      .map(_.stripSuffix("."))
 
     val lang041 = marcFields(data, Seq("041"))
       .flatMap(extractStrings)

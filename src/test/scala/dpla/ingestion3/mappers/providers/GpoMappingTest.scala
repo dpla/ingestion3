@@ -108,7 +108,7 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.identifier(xml) == expected)
   }
 
-  it should "extract the correct language (free text)" in {
+  it should "extract the correct language (text)" in {
     val xml =
       <record>
         <metadata>
@@ -119,7 +119,7 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
           </marc:record>
         </metadata>
       </record>
-    val expected = Seq("Text in Spanish.").map(nameOnlyConcept)
+    val expected = Seq("Spanish").map(nameOnlyConcept)
     assert(extractor.language(Document(xml)) == expected)
   }
 
