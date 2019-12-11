@@ -325,8 +325,7 @@ class GpoMapping extends MarcXmlMapping {
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     // <datafield> tag = 600, 610, 611, 630, 650, or 651  <subfield> code is a letter (not a number)
-    marcFields(data, Seq("600", "610", "611", "630", "650", "651"))
-      .flatten
+    datafield(data, Seq("600", "610", "611", "630", "650", "651"))
       .map(extractMarcSubject)
       .map(nameOnlyConcept)
 

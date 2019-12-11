@@ -217,11 +217,9 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "extract the correct subject" in {
     val expected = Seq(
-      "Radar operators",
-      "United States",
+      "Radar operators--United States",
       "Radar air traffic control systems",
-      "Aviation medicine",
-      "Research"
+      "Aviation medicine--Research"
     ).map(nameOnlyConcept)
     assert(extractor.subject(xml) === expected)
   }
