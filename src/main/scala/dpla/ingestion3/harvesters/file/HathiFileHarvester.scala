@@ -1,6 +1,7 @@
 package dpla.ingestion3.harvesters.file
 
 import java.io.{File, FileInputStream}
+import java.util.zip.GZIPInputStream
 
 import dpla.ingestion3.confs.i3Conf
 import org.apache.commons.io.IOUtils
@@ -31,7 +32,10 @@ class HathiFileHarvester(spark: SparkSession,
   def getInputStream(file: File): Option[TarInputStream] = {
     file.getName match {
       case zipName if zipName.endsWith("gz") =>
+        Some(new TarInputStream(new GZIPInputStream(new FileInputStream(file))))
+      case zipName if zipName.endsWith("tar") =>
         Some(new TarInputStream(new FileInputStream(file)))
+
       case _ => None
     }
   }
