@@ -90,5 +90,9 @@ class MtMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Some(URI("http://dp.la/api/items/8b5ae7a8f3561104fdfc6e7dd6a7f0fe"))
     assert(extractor.dplaUri(xml) === expected)
   }
+  it should "extract the correct tags " in {
+    val expected = Seq(URI("MT"))
+    assert(extractor.tags(xml) == expected)
+  }
 }
 

@@ -135,6 +135,9 @@ class MtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def sidecar(data: Document[NodeSeq]): JValue =
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
 
+  override def tags(data: Document[NodeSeq]): ZeroToMany[URI] =
+    extractStrings(data \\ "contribState").map(URI)
+
   // Helper method
   def agent = EdmAgent(
     name = Some("Big Sky Country Digital Network"),

@@ -33,7 +33,8 @@ object ModelConverter {
     edmRights = optionalUri(row, 10),
     sidecar = optionalJValue(row, 11),
     messages = toMulti(row, 12, toIngestMessage),
-    originalId = potentiallyMissingStringField(row, 13).getOrElse("MISSING")
+    originalId = potentiallyMissingStringField(row, 13).getOrElse("MISSING"),
+    tags = potentiallyMissingArrayOfUrisField(row, 14)
   )
 
   private[model] def toSourceResource(row: Row): DplaSourceResource = DplaSourceResource(
@@ -162,13 +163,21 @@ object ModelConverter {
     stringSeq(row, fieldPosition).map(new URI(_))
 
   private[model] def optionalJValue(row: Row, fieldPosition: Integer): JValue =
-    Try { parse(row.getString(fieldPosition)) } match {
+    Try {
+      parse(row.getString(fieldPosition))
+    } match {
       case Success(jv) => jv
       case Failure(_) => JNothing
     }
 
   // Handle field index that may not be present in the data.
-  private[model] def potentiallyMissingStringField(row: Row, fieldPosition: Integer): Option[String] = {
-    Try { optionalString(row, fieldPosition) }.getOrElse(None)
-  }
+  private[model] def potentiallyMissingStringField(row: Row, fieldPosition: Integer): Option[String] =
+    Try {
+      optionalString(row, fieldPosition)
+    }.getOrElse(None)
+
+  private[model] def potentiallyMissingArrayOfUrisField(row: Row, fieldPosition: Integer): Seq[URI] =
+    Try {
+      uriSeq(row, fieldPosition)
+    }.getOrElse(Seq())
 }

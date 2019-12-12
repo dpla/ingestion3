@@ -25,6 +25,7 @@ trait Mapping[T] {
   def provider(data: Document[T]): ExactlyOne[EdmAgent]
   def edmRights(data: Document[T]): ZeroToMany[URI] = Seq()
   def sidecar(data: Document[T]): JValue
+  def tags(data: Document[T]): ZeroToMany[URI] = Seq()
 
   // SourceResource
   def alternateTitle(data: Document[T]): ZeroToMany[String] = Seq()

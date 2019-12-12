@@ -307,6 +307,7 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
         preview = validatedPreview, // thumbnail
         provider = mapping.provider(document),
         sidecar = mapping.sidecar(document),
+        tags = mapping.tags(document),
         sourceResource = DplaSourceResource(
           alternateTitle = mapping.alternateTitle(document),
           collection = mapping.collection(document),
@@ -386,6 +387,7 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
         preview = validatedPreview, // thumbnail
         provider = mapping.provider(document),
         sidecar = mapping.sidecar(document),
+        tags = mapping.tags(document),
         sourceResource = DplaSourceResource(
           alternateTitle = mapping.alternateTitle(document),
           collection = mapping.collection(document),
