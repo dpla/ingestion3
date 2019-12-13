@@ -1,6 +1,6 @@
 package dpla.ingestion3.mappers.providers
 
-import dpla.ingestion3.mappers.utils.Document
+import dpla.ingestion3.mappers.utils.{Document, MappingException}
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.FlatFileIO
@@ -212,7 +212,7 @@ class GpoMappingTest extends FlatSpec with BeforeAndAfter {
         </metadata>
       </record>
 
-    assertThrows[Exception] { extractor.rights(Document(xml)) }
+    assertThrows[MappingException] { extractor.rights(Document(xml)) }
   }
 
   it should "extract the correct subject" in {
