@@ -283,12 +283,11 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
 
     // MappingException may be thrown from the `rights` method in provider mapping
     // See GPO mapping
-    // Error will be logged when entire record mapping is attempted, below
-    val mappedRights: Seq[String] = Try { mapping.rights(document) } match {
-      case Success(r) => r
-      case Failure(_) => Seq()
+    try {
+      validateRights(mapping.rights(document), mapping.edmRights(document), providerId, mapping.enforceRights)
+    } catch {
+      case _:MappingException => // do nothing, error will be logged when entire record mapping is attempted, below
     }
-    validateRights(mappedRights, mapping.edmRights(document), providerId, mapping.enforceRights)
 
     // Recommended field validation
     val validatedCreator = validateRecommendedProperty(mapping.creator(document), "creator", providerId)
