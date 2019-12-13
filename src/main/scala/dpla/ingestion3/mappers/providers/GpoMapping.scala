@@ -1,7 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.mappers.utils.{Document, MarcXmlMapping}
+import dpla.ingestion3.mappers.utils.{Document, MappingException, MarcXmlMapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -245,7 +245,7 @@ class GpoMapping extends MarcXmlMapping {
 
     // Do not map records that have incompatible rights statements.
     theRights.foreach(r =>
-      if (excludedRights.contains(r)) throw new Exception("Incompatible rights statement")
+      if (excludedRights.contains(r)) throw MappingException("Incompatible rights statement")
     )
 
     theRights
