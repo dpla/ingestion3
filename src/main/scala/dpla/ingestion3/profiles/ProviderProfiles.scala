@@ -77,6 +77,16 @@ class GettyProfile extends XmlProfile {
 }
 
 /**
+  * United States Government Publishing Office (GPO)
+  */
+class GpoProfile extends XmlProfile {
+  type Mapping = GpoMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new GpoMapping
+}
+
+/**
   * Digital Library of Georgia
   */
 class DlgProfile extends JsonProfile {

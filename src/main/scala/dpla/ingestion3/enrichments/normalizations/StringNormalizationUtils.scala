@@ -201,6 +201,22 @@ object StringNormalizationUtils {
     }
 
     /**
+      * If string does not contain an opening bracket, strip all closing brackets.
+      */
+    lazy val stripUnmatchedClosingBrackets: SingleStringEnrichment = {
+      if (value.contains("[")) value
+      else value.replace("]", "")
+    }
+
+    /**
+      * If string does not contain an closing bracket, strip all opening brackets.
+      */
+    lazy val stripUnmatchedOpeningBrackets: SingleStringEnrichment = {
+      if (value.contains("]")) value
+      else value.replace("[", "")
+    }
+
+    /**
       * Strip all double quotes from the given string
       */
     lazy val stripDblQuotes: SingleStringEnrichment = value.replaceAll("\"", "")

@@ -3,7 +3,7 @@ package dpla.ingestion3.mappers.providers
 import java.net.URL
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.mappers.utils.{Document, JsonExtractor, XmlExtractor, XmlMapping}
+import dpla.ingestion3.mappers.utils.{Document, JsonExtractor, MarcXmlMapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.{HttpUtils, Utils}
@@ -11,12 +11,11 @@ import org.json4s.jackson.JsonMethods._
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
-import scala.annotation.tailrec
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 import scala.xml._
 
 
-class HathiMapping extends XmlMapping with XmlExtractor {
+class HathiMapping extends MarcXmlMapping {
 
   val isShownAtPrefix: String = "http://catalog.hathitrust.org/Record/"
 
@@ -34,7 +33,7 @@ class HathiMapping extends XmlMapping with XmlExtractor {
   // SourceResource mapping
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-   // <datafield> tag = 700, 710, 711, or 720
+    // <datafield> tag = 700, 710, 711, or 720
     marcFields(data, Seq("700", "710", "711", "720"))
       .filterNot(filterSubfields(_, Seq("e")) // exclude subfields with @code=e and...
       .flatMap(extractStrings)
@@ -63,30 +62,7 @@ class HathiMapping extends XmlMapping with XmlExtractor {
       .map(stringOnlyTimeSpan)
 
     if (dDate.nonEmpty) dDate // use datafield date if present
-    else {                    // if not, use controlfield date
-
-      val control: String = controlfield(data, Seq("008")).flatMap(extractStrings).headOption.getOrElse("")
-
-      // character at index 6 indicates type of date
-      val dateType = control.slice(6,7)
-
-      val cDate: Seq[String] = dateType match {
-        case "s" | "r" | "t" | "c" =>
-          // year
-          Seq(control.slice(7, 11))
-        case "m" | "q" | "d" =>
-          // year-year
-          val begin = control.slice(7, 11) + "-"
-          val end = control.slice(11, 15)
-          if (end == "9999") Seq(begin) else Seq(begin + end)
-        case "e" =>
-          // year-month-day
-          Seq(control.slice(7, 11) + "-" + control.slice(11, 13) + "-" + control.slice(13, 15))
-        case _ => Seq()
-      }
-
-      cDate.map(stringOnlyTimeSpan)
-    }
+    else extractMarcControlDate(data) // else use controlfield date
   }
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
@@ -203,41 +179,9 @@ class HathiMapping extends XmlMapping with XmlExtractor {
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     // <datafield> tag = any from subjectTags <subfield> where code is a letter (not a number)
 
-    datafield(data, subjectTags).map(d => {  // iterate through datafields
-      val tag: String = d \@ "tag" // get tag for this datafield
-
-      (d \ "subfield")
-        .filter(n => ('a' to 'z').toList.map(_.toString).contains(n \@ "code")) // reject subfields with numeric codes
-        .flatMap(subfield => {  // iterate through subfields
-
-        val code: String = subfield \@ "code"
-
-        // choose appropriate delimiter based on tag and/or code values
-        val delimiter =
-          if (tag == "658")
-            code match {
-              case "b" => ":"
-              case "c" => ", "
-              case "d" => "--"
-              case _ => ". "
-            }
-          else if (tag == "653") "--"
-          else if ((690 to 699).map(_.toString).contains(tag)) "--"
-          else if (Seq("654", "655").contains(tag) && code == "b") "--"
-          else if (Seq("v", "x", "y", "z").contains(code)) "--"
-          else if (code == "d") ", "
-          else ". "
-
-        val text: String =
-          if (delimiter == ".") subfield.text.stripSuffix(",").stripSuffix(".")
-          else subfield.text.stripSuffix(",")
-
-        // return delimiter and text - note that the delimiter goes before the text
-        Seq(delimiter, text)
-
-      }).drop(1).mkString("").stripSuffix(".") // drop leading delimiter and join substrings
-
-    }).map(nameOnlyConcept)
+    datafield(data, subjectTags)
+      .map(extractMarcSubject)
+      .map(nameOnlyConcept)
 
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
     // <datafield> tag = 648
@@ -268,32 +212,7 @@ class HathiMapping extends XmlMapping with XmlExtractor {
     // <controlfield> tag = 008_21  #text at index 21
     // <datafield>    tag = 970     <subfield> code = a
     // Only map <datafield> if <leader> and <controlfield> have no type value
-
-    // Create a mappingKey by concatenating characters from <leader> and <controlfield>
-    val mappingKey: String =
-      leaderAt(data, 6).map(_.toString).getOrElse("") +
-      leaderAt(data, 7).map(_.toString).getOrElse("") +
-      controlAt(data, "007_01", 1).map(_.toString).headOption.getOrElse("") +
-      controlAt(data, "008_21", 21).map(_.toString).headOption.getOrElse("")
-
-    @tailrec
-    def matchLeaderType(keys: List[String]): Option[String] = {
-
-      keys.headOption match {
-        case Some(key) => {
-          val regex = key.r // make regex from a key in leaderTypes
-
-          mappingKey match {
-            case regex() => leaderTypes(key)._2 // return value if mappingKey matches regex
-            case _ => matchLeaderType(keys.drop(1)) // else try next leaderTypes key
-          }
-        }
-        case None => None // no more leaderTypes keys to iterate through
-      }
-    }
-
-    // Match mappingKey to leaderTypes
-    val lType = matchLeaderType(leaderTypes.keys.toList)
+    val lType = extractMarcLeaderType(data)
 
     if (lType.isDefined)
       lType.toSeq
@@ -377,146 +296,13 @@ class HathiMapping extends XmlMapping with XmlExtractor {
     uri = Some(URI("http://dp.la/api/contributor/hathi"))
   )
 
-  /**
-    * Get <dataset><subfield> nodes by tag and code
-    *
-    * @param data   Document
-    * @param tags   Seq[String] tags for <dataset>
-    * @param codes  Seq[String] codes for <subfield> (if empty or undefined, all <subfield> nodes will be returned)
-    * @return       Seq[NodeSeq] <subfield> nodes
-    */
-  private def marcFields(data: Document[NodeSeq], tags: Seq[String], codes: Seq[String] = Seq()): Seq[NodeSeq] = {
-    val sub: Seq[NodeSeq] = datafield(data, tags).map(n => n \ "subfield")
-    if (codes.nonEmpty) sub.map(n => filterSubfields(n, codes)) else sub
-  }
-
-  /**
-    * Get <dataset> nodes by tag
-    *
-    * @param data   Document
-    * @param tags   Seq[String] tags for <dataset>
-    * @return       NodeSeq <dataset> nodes
-    */
-  private def datafield(data: Document[NodeSeq], tags: Seq[String]): NodeSeq =
-    (data \ "datafield").flatMap(n => getByAttributeListOptions(n, "tag", tags))
-
-  /**
-    * Filter <subfield> nodes by code
-    *
-    * @param subfields  NodeSeq <subfield> nodes
-    * @param codes      Seq[String] codes for <subfield>
-    * @return           NodeSeq <subfield> nodes
-    */
-  private def filterSubfields(subfields: NodeSeq, codes: Seq[String]): NodeSeq =
-    subfields.flatMap(n => getByAttributeListOptions(n, "code", codes))
-
-  /**
-    * Get <controlfield> nodes by code
-    *
-    * @param data   Document
-    * @param tags   Seq[String] codes for <controlfield>
-    * @return       NodeSeq <controlfield> nodes
-    */
-  private def controlfield(data: Document[NodeSeq], tags: Seq[String]): NodeSeq =
-    (data \ "controlfield").flatMap(n => getByAttributeListOptions(n, "tag", tags))
-
-  /**
-    * Get the character at a specified index of a <controlfield> node
-    *
-    * @param data   Document
-    * @param tag    String tag for <controlfield> node
-    * @param index  Int index of the desired character
-    * @return       Option[Char] character if found
-    */
-  private def controlAt(data: Document[NodeSeq], tag: String, index: Int): Seq[Char] =
-    Try {
-      controlfield(data, Seq(tag))
-        .flatMap(extractStrings)
-        .map(_.charAt(index))
-    } match {
-      case Success(c) => c
-      case _ => Seq()
-    }
-
-  /**
-    * Get <leader> node
-    *
-    * @param data   Document
-    * @return       String text value of <leader> (empty String if leader not found)
-    */
-  private def leader(data: Document[NodeSeq]): String =
-    extractStrings(data \ "leader").headOption.getOrElse("")
-
-  /**
-    * Get the character at a specified index of the <leader> text
-    *
-    * @param data   Document
-    * @param index  Int index of the desired character
-    * @return       Option[Char] character if found
-    */
-  private def leaderAt(data: Document[NodeSeq], index: Int): Option[Char] = {
-    Try {
-      leader(data).charAt(index)
-    }.toOption
-  }
-
   // <datafield> tags for description
-  private val descriptionTags: Seq[String] =
+  val descriptionTags: Seq[String] =
     (500 to 599).filterNot(_ == 538).map(_.toString)
 
   // <datafield> tags for subjects
   private val subjectTags: Seq[String] =
     (Seq(600, 630, 650, 651) ++ (610 to 619) ++ (653 to 658) ++ (690 to 699)).map(_.toString)
-
-  private val leaderFormats: Map[Char, String] = Map(
-    'a' -> "Language material",
-    'c' -> "Notated music",
-    'd' -> "Manuscript",
-    'e' -> "Cartographic material",
-    'f' -> "Manuscript cartographic material",
-    'g' -> "Projected medium",
-    'i' -> "Nonmusical sound recording"
-  )
-
-  private val controlFormats: Map[Char, String] = Map(
-    'a' -> "Map",
-    'c' -> "Electronic resource",
-    'd' -> "Globe",
-    'f' -> "Tactile material",
-    'g' -> "Projected graphic",
-    'h' -> "Microform",
-    'k' -> "Nonprojected graphic",
-    'm' -> "Motion picture",
-    'o' -> "Kit",
-    'q' -> "Notated music",
-    'r' -> "Remote-sensing image",
-    's' -> "Sound recording",
-    't' -> "Text",
-    'v' -> "Videorecording",
-    'z' -> "Unspecified"
-  )
-
-  // type and genre mappings, derived from <leader> and <controlfield>
-  private val leaderTypes: Map[String, (Option[String], Option[String])] = Map(
-    "am" -> (Some("Book"), Some("Text")),
-    "asn" -> (Some("Newspapers"), Some("Text")),
-    "as" -> (Some("Serial"), Some("Text")),
-    "aa" -> (Some("Book"), Some("Text")),
-    "a(?![mcs])" -> (Some("Serial"), Some("Text")),
-    "[cd].*" -> (Some("Musical Score"), Some("Text")),
-    "t.*" -> (Some("Manuscript"), Some("Text")),
-    "[ef].*" -> (Some("Maps"), Some("Image")),
-    "g.[st]" -> (Some("Photograph/Pictorial Works"), Some("Image")),
-    "g.[cdfo]" -> (Some("Film/Video"), Some("Moving Image")),
-    "g.*" -> (None, Some("Image")),
-    "k.*" -> (Some("Photograph/Pictorial Works"), Some("Image")),
-    "i.*" -> (Some("Nonmusic"), Some("Sound")),
-    "j.*" -> (Some("Music"), Some("Sound")),
-    "r.*" -> (None, Some("Physical object")),
-    "p[cs].*" -> (None, Some("Collection")),
-    "m.*" -> (None, Some("Interactive Resource")),
-    "o.*" -> (None, Some("Collection"))
-  )
 
   // type and genre mappings, derived from <datafield>
   private val typeMapping: Map[String, (Option[String], Option[String])] = Map(
