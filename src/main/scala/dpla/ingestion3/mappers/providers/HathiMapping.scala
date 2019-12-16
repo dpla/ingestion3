@@ -19,6 +19,8 @@ class HathiMapping extends MarcXmlMapping {
 
   val isShownAtPrefix: String = "http://catalog.hathitrust.org/Record/"
 
+  override val enforceDataProvider = false;
+
   // ID minting functions
   override def useProviderName: Boolean = true
 
