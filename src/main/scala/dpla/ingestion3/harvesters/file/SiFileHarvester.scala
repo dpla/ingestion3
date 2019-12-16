@@ -119,7 +119,8 @@ class SiFileHarvester(spark: SparkSession,
     inFiles.listFiles(new TxtFileFilter).foreach(file => {
       Source.fromFile(file).getLines().foreach(line => {
         val lineVals = line.split(" records = ")
-        loadCounts += (lineVals(0).replace(".xml", ".gz") -> lineVals(1)) // rename .xml to .gz to match filename processed by harvester
+        // rename .xml to .xml.gz to match filename processed by harvester
+        loadCounts += (lineVals(0).replace(".xml", ".xml.gz") -> lineVals(1))
       })
     })
     loadCounts
