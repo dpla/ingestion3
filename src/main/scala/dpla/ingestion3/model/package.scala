@@ -57,7 +57,7 @@ package object model {
 
   def emptyEdmWebResource: EdmWebResource = stringOnlyWebResource("")
 
-  def emptyJValue: JValue = "" -> ""
+  def emptyJValue: JValue = JNothing
 
   def emptyOreAggregation = OreAggregation(
     dplaUri = URI(""),
