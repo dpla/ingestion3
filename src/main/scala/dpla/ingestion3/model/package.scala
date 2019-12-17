@@ -57,6 +57,8 @@ package object model {
 
   def emptyEdmWebResource: EdmWebResource = stringOnlyWebResource("")
 
+  def emptyJValue: JValue = "" -> ""
+
   def emptyOreAggregation = OreAggregation(
     dplaUri = URI(""),
     dataProvider = nameOnlyAgent(""),
@@ -69,6 +71,10 @@ package object model {
     ),
     originalId = ""
   )
+
+  def emptyString = ""
+
+  def emptySeq = Seq()
 
   lazy val ingestDate: String = {
     val now = Calendar.getInstance().getTime
