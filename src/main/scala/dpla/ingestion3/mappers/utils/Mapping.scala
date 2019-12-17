@@ -12,19 +12,19 @@ trait Mapping[T] {
   implicit def unwrap(document: Document[T]): T = document.get
 
   // OreAggregation
-  def dplaUri(data: Document[T]): ZeroToOne[URI]
-  def dataProvider(data: Document[T]): ZeroToMany[EdmAgent]
-  def originalRecord(data: Document[T]): ExactlyOne[String]
+  def dplaUri(data: Document[T]): ZeroToOne[URI] = None
+  def dataProvider(data: Document[T]): ZeroToMany[EdmAgent] = Seq()
+  def originalRecord(data: Document[T]): ExactlyOne[String] = ""
   def hasView(data: Document[T]): ZeroToMany[EdmWebResource] = Seq()
   def intermediateProvider(data: Document[T]): ZeroToOne[EdmAgent] = None
 
-  def isShownAt(data: Document[T]): ZeroToMany[EdmWebResource]
+  def isShownAt(data: Document[T]): ZeroToMany[EdmWebResource] = Seq()
   def `object`(data: Document[T]): ZeroToMany[EdmWebResource] = Seq() // full size image
   def preview(data: Document[T]): ZeroToMany[EdmWebResource] = Seq() // thumbnail
 
-  def provider(data: Document[T]): ExactlyOne[EdmAgent]
+  def provider(data: Document[T]): ExactlyOne[EdmAgent] = emptyEdmAgent
   def edmRights(data: Document[T]): ZeroToMany[URI] = Seq()
-  def sidecar(data: Document[T]): JValue
+  def sidecar(data: Document[T]): JValue = JValue()
   def tags(data: Document[T]): ZeroToMany[URI] = Seq()
 
   // SourceResource
@@ -64,6 +64,19 @@ trait Mapping[T] {
   val enforcePreview: Boolean       = false // Do not enforce. Warn only if more than one preview URL provided in source
   val enforceRights: Boolean        = true
   val enforceTitle: Boolean         = true
+
+  /**
+    Define the defaults validating for optional fields
+  */
+  val enforceCreator: Boolean       = true
+  val enforceDate: Boolean          = true
+  val enforceDescription: Boolean   = true
+  val enforceFormat: Boolean        = true
+  val enforceLanguage: Boolean      = true
+  val enforcePlace: Boolean         = true
+  val enforcePublisher: Boolean     = true
+  val enforceSubject: Boolean       = true
+  val enforceType: Boolean          = true
 
   // Base item uri
   private val baseDplaItemUri = "http://dp.la/api/items/"
