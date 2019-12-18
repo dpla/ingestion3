@@ -12,44 +12,44 @@ trait Mapping[T] {
   implicit def unwrap(document: Document[T]): T = document.get
 
   // OreAggregation
-  def dplaUri(data: Document[T]): ZeroToOne[URI]
-  def dataProvider(data: Document[T]): ZeroToMany[EdmAgent]
-  def originalRecord(data: Document[T]): ExactlyOne[String]
-  def hasView(data: Document[T]): ZeroToMany[EdmWebResource] = Seq()
+  def dplaUri(data: Document[T]): ZeroToOne[URI] = None
+  def dataProvider(data: Document[T]): ZeroToMany[EdmAgent] = emptySeq
+  def originalRecord(data: Document[T]): ExactlyOne[String] = emptyString
+  def hasView(data: Document[T]): ZeroToMany[EdmWebResource] = emptySeq
   def intermediateProvider(data: Document[T]): ZeroToOne[EdmAgent] = None
 
-  def isShownAt(data: Document[T]): ZeroToMany[EdmWebResource]
-  def `object`(data: Document[T]): ZeroToMany[EdmWebResource] = Seq() // full size image
-  def preview(data: Document[T]): ZeroToMany[EdmWebResource] = Seq() // thumbnail
+  def isShownAt(data: Document[T]): ZeroToMany[EdmWebResource] = emptySeq
+  def `object`(data: Document[T]): ZeroToMany[EdmWebResource] = emptySeq // full size image
+  def preview(data: Document[T]): ZeroToMany[EdmWebResource] = emptySeq // thumbnail
 
-  def provider(data: Document[T]): ExactlyOne[EdmAgent]
-  def edmRights(data: Document[T]): ZeroToMany[URI] = Seq()
-  def sidecar(data: Document[T]): JValue
-  def tags(data: Document[T]): ZeroToMany[URI] = Seq()
+  def provider(data: Document[T]): ExactlyOne[EdmAgent] = emptyEdmAgent
+  def edmRights(data: Document[T]): ZeroToMany[URI] = emptySeq
+  def sidecar(data: Document[T]): JValue = emptyJValue
+  def tags(data: Document[T]): ZeroToMany[URI] = emptySeq
 
   // SourceResource
-  def alternateTitle(data: Document[T]): ZeroToMany[String] = Seq()
-  def collection(data: Document[T]): ZeroToMany[DcmiTypeCollection] = Seq()
-  def contributor(data: Document[T]): ZeroToMany[EdmAgent] = Seq()
-  def creator(data: Document[T]): ZeroToMany[EdmAgent] = Seq()
-  def date(data: Document[T]): ZeroToMany[EdmTimeSpan] = Seq()
-  def description(data: Document[T]): ZeroToMany[String] = Seq()
-  def extent(data: Document[T]): ZeroToMany[String] = Seq()
-  def format(data: Document[T]): ZeroToMany[String] = Seq()
-  def genre(data: Document[T]): ZeroToMany[SkosConcept] = Seq()
-  def identifier(data: Document[T]): ZeroToMany[String] = Seq()
-  def language(data: Document[T]): ZeroToMany[SkosConcept] = Seq()
-  def place(data: Document[T]): ZeroToMany[DplaPlace] = Seq()
-  def publisher(data: Document[T]): ZeroToMany[EdmAgent] = Seq()
-  def relation(data: Document[T]): ZeroToMany[LiteralOrUri] = Seq()
-  def replacedBy(data: Document[T]): ZeroToMany[String] = Seq()
-  def replaces(data: Document[T]): ZeroToMany[String] = Seq()
-  def rights(data: Document[T]): AtLeastOne[String] = Seq()
-  def rightsHolder(data: Document[T]): ZeroToMany[EdmAgent] = Seq()
-  def subject(data: Document[T]): ZeroToMany[SkosConcept] = Seq()
-  def temporal(data: Document[T]): ZeroToMany[EdmTimeSpan] = Seq()
-  def title(data: Document[T]): AtLeastOne[String] = Seq()
-  def `type`(data: Document[T]): ZeroToMany[String] = Seq()
+  def alternateTitle(data: Document[T]): ZeroToMany[String] = emptySeq
+  def collection(data: Document[T]): ZeroToMany[DcmiTypeCollection] = emptySeq
+  def contributor(data: Document[T]): ZeroToMany[EdmAgent] = emptySeq
+  def creator(data: Document[T]): ZeroToMany[EdmAgent] = emptySeq
+  def date(data: Document[T]): ZeroToMany[EdmTimeSpan] = emptySeq
+  def description(data: Document[T]): ZeroToMany[String] = emptySeq
+  def extent(data: Document[T]): ZeroToMany[String] = emptySeq
+  def format(data: Document[T]): ZeroToMany[String] = emptySeq
+  def genre(data: Document[T]): ZeroToMany[SkosConcept] = emptySeq
+  def identifier(data: Document[T]): ZeroToMany[String] = emptySeq
+  def language(data: Document[T]): ZeroToMany[SkosConcept] = emptySeq
+  def place(data: Document[T]): ZeroToMany[DplaPlace] = emptySeq
+  def publisher(data: Document[T]): ZeroToMany[EdmAgent] = emptySeq
+  def relation(data: Document[T]): ZeroToMany[LiteralOrUri] = emptySeq
+  def replacedBy(data: Document[T]): ZeroToMany[String] = emptySeq
+  def replaces(data: Document[T]): ZeroToMany[String] = emptySeq
+  def rights(data: Document[T]): AtLeastOne[String] = emptySeq
+  def rightsHolder(data: Document[T]): ZeroToMany[EdmAgent] = emptySeq
+  def subject(data: Document[T]): ZeroToMany[SkosConcept] = emptySeq
+  def temporal(data: Document[T]): ZeroToMany[EdmTimeSpan] = emptySeq
+  def title(data: Document[T]): AtLeastOne[String] = emptySeq
+  def `type`(data: Document[T]): ZeroToMany[String] = emptySeq
 
 
   /**
@@ -64,6 +64,19 @@ trait Mapping[T] {
   val enforcePreview: Boolean       = false // Do not enforce. Warn only if more than one preview URL provided in source
   val enforceRights: Boolean        = true
   val enforceTitle: Boolean         = true
+
+  /**
+    Define the defaults validating for optional fields
+  */
+  val enforceCreator: Boolean       = true
+  val enforceDate: Boolean          = true
+  val enforceDescription: Boolean   = true
+  val enforceFormat: Boolean        = true
+  val enforceLanguage: Boolean      = true
+  val enforcePlace: Boolean         = true
+  val enforcePublisher: Boolean     = true
+  val enforceSubject: Boolean       = true
+  val enforceType: Boolean          = true
 
   // Base item uri
   private val baseDplaItemUri = "http://dp.la/api/items/"

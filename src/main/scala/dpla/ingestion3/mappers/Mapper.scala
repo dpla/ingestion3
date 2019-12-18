@@ -154,12 +154,14 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
     *
     * @param values Seq[T]                Values
     * @param field String                 Name of field being validated
+    * @param enforce Boolean              True   Enforce this validation and logs a warning for records missing this field
+    *                                     False  Does not perform any kind of checking for this field
     * @param providerId String            Local provider identifier
     * @param collector MessageCollector   Ingest message collector
     */
-  def validateRecommendedProperty[T](values: ZeroToMany[T], field: String, providerId: String)
+  def validateRecommendedProperty[T](values: ZeroToMany[T], field: String, providerId: String, enforce: Boolean)
                                 (implicit collector: MessageCollector[IngestMessage]): ZeroToMany[T] = {
-    if (values.isEmpty) {
+    if (values.isEmpty & enforce) {
       collector.add(missingRecommendedFieldMsg(providerId, field))
     }
     values
@@ -290,15 +292,15 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
     }
 
     // Recommended field validation
-    val validatedCreator = validateRecommendedProperty(mapping.creator(document), "creator", providerId)
-    val validatedDate = validateRecommendedProperty(mapping.date(document), "date", providerId)
-    val validatedDescription = validateRecommendedProperty(mapping.description(document), "description", providerId)
-    val validatedFormat = validateRecommendedProperty(mapping.format(document), "format", providerId)
-    val validatedLanguage = validateRecommendedProperty(mapping.language(document), "language", providerId)
-    val validatedPlace = validateRecommendedProperty(mapping.place(document), "place", providerId)
-    val validatedPublisher = validateRecommendedProperty(mapping.publisher(document), "publisher", providerId)
-    val validatedSubject = validateRecommendedProperty(mapping.subject(document), "subject", providerId)
-    val validatedType = validateRecommendedProperty(mapping.`type`(document), "type", providerId)
+    val validatedCreator = validateRecommendedProperty(mapping.creator(document), "creator", providerId, mapping.enforceCreator)
+    val validatedDate = validateRecommendedProperty(mapping.date(document), "date", providerId, mapping.enforceDate)
+    val validatedDescription = validateRecommendedProperty(mapping.description(document), "description", providerId, mapping.enforceDescription)
+    val validatedFormat = validateRecommendedProperty(mapping.format(document), "format", providerId, mapping.enforceFormat)
+    val validatedLanguage = validateRecommendedProperty(mapping.language(document), "language", providerId, mapping.enforceLanguage)
+    val validatedPlace = validateRecommendedProperty(mapping.place(document), "place", providerId, mapping.enforcePlace)
+    val validatedPublisher = validateRecommendedProperty(mapping.publisher(document), "publisher", providerId, mapping.enforcePublisher)
+    val validatedSubject = validateRecommendedProperty(mapping.subject(document), "subject", providerId, mapping.enforceSubject)
+    val validatedType = validateRecommendedProperty(mapping.`type`(document), "type", providerId, mapping.enforceType)
 
     Try {
       OreAggregation(
@@ -370,15 +372,15 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
     validateRights(mapping.rights(document), mapping.edmRights(document), providerId, mapping.enforceRights)
 
     // Recommended field validation
-    val validatedCreator = validateRecommendedProperty(mapping.creator(document), "creator", providerId)
-    val validatedDate = validateRecommendedProperty(mapping.date(document), "date", providerId)
-    val validatedDescription = validateRecommendedProperty(mapping.description(document), "description", providerId)
-    val validatedFormat = validateRecommendedProperty(mapping.format(document), "format", providerId)
-    val validatedLanguage = validateRecommendedProperty(mapping.language(document), "language", providerId)
-    val validatedPlace = validateRecommendedProperty(mapping.place(document), "place", providerId)
-    val validatedPublisher = validateRecommendedProperty(mapping.publisher(document), "publisher", providerId)
-    val validatedSubject = validateRecommendedProperty(mapping.subject(document), "subject", providerId)
-    val validatedType = validateRecommendedProperty(mapping.`type`(document), "type", providerId)
+    val validatedCreator = validateRecommendedProperty(mapping.creator(document), "creator", providerId, mapping.enforceCreator)
+    val validatedDate = validateRecommendedProperty(mapping.date(document), "date", providerId, mapping.enforceDate)
+    val validatedDescription = validateRecommendedProperty(mapping.description(document), "description", providerId, mapping.enforceDescription)
+    val validatedFormat = validateRecommendedProperty(mapping.format(document), "format", providerId, mapping.enforceFormat)
+    val validatedLanguage = validateRecommendedProperty(mapping.language(document), "language", providerId, mapping.enforceLanguage)
+    val validatedPlace = validateRecommendedProperty(mapping.place(document), "place", providerId, mapping.enforcePlace)
+    val validatedPublisher = validateRecommendedProperty(mapping.publisher(document), "publisher", providerId, mapping.enforcePublisher)
+    val validatedSubject = validateRecommendedProperty(mapping.subject(document), "subject", providerId, mapping.enforceSubject)
+    val validatedType = validateRecommendedProperty(mapping.`type`(document), "type", providerId, mapping.enforceType)
 
     Try {
       OreAggregation(
