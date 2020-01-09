@@ -83,6 +83,9 @@ class OutputHelper(root: String,
   private lazy val manifestRelativePath: String =
     s"$activityRelativePath/_MANIFEST"
 
+  private lazy val setSummaryRelativePath: String =
+    s"$activityRelativePath/_OAI_SET_SUMMARY"
+
   private lazy val summaryRelativePath: String =
     s"$activityRelativePath/_SUMMARY"
 
@@ -92,6 +95,8 @@ class OutputHelper(root: String,
   lazy val activityPath = s"$rootPath$activityRelativePath"
 
   lazy val manifestPath = s"$rootPath$manifestRelativePath"
+
+  lazy val setSummaryPath = s"$rootPath$setSummaryRelativePath"
 
   lazy val summaryPath = s"$rootPath$summaryRelativePath"
 
@@ -119,6 +124,23 @@ class OutputHelper(root: String,
     }
   }
 
+  /**
+    * Write a group by set and record count of OAI sets
+    *
+    * @param summary      String of group by set and record count
+    * @return             Try[String]: Path of the output file
+    */
+  def writeSetSummary(summary: String): Try[String] = {
+    s3Address match {
+      case Some(a) => {
+        val bucket = a.bucket
+        val key = Array(a.prefix, Some(setSummaryRelativePath)).flatten
+          .mkString("/")
+        writeS3File(bucket, key, summary)
+      }
+      case None => writeLocalFile(setSummaryPath, summary)
+    }
+  }
   /**
     * Write a summary file in the given outputPath directory.
     *
