@@ -11,7 +11,7 @@ import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.commons.io.{FileUtils, IOUtils}
-import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.fs.Path
 import org.apache.log4j.Logger
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
@@ -215,9 +215,6 @@ class NaraFileHarvester(
     // flush writes
    avroWriterNara.flush()
 
-    // Distribute file across HDFS for further processing
-    val fs = FileSystem.get(spark.sparkContext.hadoopConfiguration)
-
     // Get the absolute path of the avro file written to naraTmp directory. copyFromLocalFile() cannot copy
     // a directory
     val naraTempFile = new File(naraTmp)
@@ -227,12 +224,7 @@ class NaraFileHarvester(
       .getAbsolutePath
 
     val localSrcPath = new Path(naraTempFile)
-    val hdfsDestPath = new Path(naraTempFile)
-
-    // Copy local avro file on master to HDFS so it can be read by nodes
-    fs.copyFromLocalFile(localSrcPath, hdfsDestPath)
-
-    val dfAllRecords = spark.read.avro(hdfsDestPath.toString)
+    val dfAllRecords = spark.read.avro(localSrcPath.toString)
 
     import spark.implicits._
     val w = Window.partitionBy($"id").orderBy($"filename".desc)
@@ -244,8 +236,8 @@ class NaraFileHarvester(
     // process deletes
     if (deletes.exists()) {
       val del = getIdsToDelete(deletes)
-      logger.info(s"Found ${del.size} records to delete in ${deletes.getAbsolutePath}")
-      df.where(!col("id").isin(del:_*))
+      logger.info(s"${del.count()} records to delete in ${deletes.getAbsolutePath}")
+      df.where(!col("id").isin(del))
     } else {
       logger.info("No deletes files specified. Removing no records from NARA data export")
       df
@@ -257,17 +249,19 @@ class NaraFileHarvester(
     * which had previously been deleted.
     *
     * @param file File      Path to file or folder the defines which NARA IDs should be deleted
-    * @return Seq[String]   IDs to delete
+    * @return DataFrame     IDs to delete
     */
-  def getIdsToDelete(file: File): Seq[String] = {
-    if (file.isDirectory) file.listFiles(new XmlFileFilter).sorted.flatMap(file => {
-      logger.info(s"Reading deletes from ${file.getName}")
+  def getIdsToDelete(file: File): DataFrame = {
+    import spark.implicits._
+
+    val files = if (file.isDirectory) file.listFiles(new XmlFileFilter).sorted else Array(file)
+
+    files.flatMap(file => {
       val xml = XML.loadFile(file)
       (xml \\ "naId").map(_.text.toString)
-    }).distinct else {
-      val xml = XML.loadFile(file)
-      (xml \\ "naId").map(_.text.toString)
-    }
+    }).distinct
+      .toSeq
+      .toDF()
   }
 
   override def cleanUp(): Unit = {
