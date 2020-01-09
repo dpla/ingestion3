@@ -50,7 +50,7 @@ class OaiHarvester(spark: SparkSession,
 
     // return DataFrame
     harvestedData
-      .select("record.id", "record.document")
+      .select("record.id", "record.document", "record.setIds")
       .where("document is not null")
       .withColumn("ingestDate", lit(unixEpoch))
       .withColumn("provider", lit(shortName))

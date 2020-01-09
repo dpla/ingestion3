@@ -65,12 +65,37 @@ trait HarvestExecutor {
       // Calls the local implementation
       val harvestData: DataFrame = harvester.harvest
 
+      // if there are setIds in the returned dataframe then generate a count summary by setId
+      val setSummary: Option[String] = if (harvestData.columns.contains("setIds")) {
+         val summary = harvestData.groupBy("setIds")
+          .count()
+          .sort("setIds")
+          .collect()
+          .map( row => row.getSeq[String](0).mkString(" ") -> row.getLong(1))
+          .map { case ( set: String, count: Long ) => s"$set, $count" }.mkString("\n")
+
+        // drop setIds column from dataframe
+        harvestData.drop("setIds")
+
+        Some(summary)
+      } else {
+        None
+      }
+
       // Write harvested data to output file.
       harvestData
         .write
         .format("com.databricks.spark.avro")
         .option("avroSchema", harvestData.schema.toString)
         .avro(outputPath)
+
+      setSummary match {
+        case Some(s) => outputHelper.writeSetSummary(s) match {
+          case Success (s) => logger.info (s"OAI set summary written to $s.")
+          case Failure (f) => print (f.toString)
+        }
+        case None =>
+      }
 
       // Reads the saved avro file back
       spark.read.avro(outputPath)
@@ -86,6 +111,7 @@ trait HarvestExecutor {
           "Provider" -> shortName,
           "Record count" -> recordCount.toString
         )
+
         outputHelper.writeManifest(manifestOpts) match {
           case Success(s) => logger.info(s"Manifest written to $s.")
           case Failure(f) => logger.warn(s"Manifest failed to write.", f)
