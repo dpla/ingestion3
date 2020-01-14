@@ -1,6 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.TagUtils._
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
@@ -150,6 +151,9 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def sidecar(data: Document[NodeSeq]): JValue =
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+
+  override def tags(data: Document[NodeSeq]): ZeroToMany[URI] =
+    description(data).flatMap(_.applyPanAmTags)
 
   // Helper method
   def agent = EdmAgent(
