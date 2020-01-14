@@ -73,7 +73,7 @@ class FlMappingTest extends FlatSpec with BeforeAndAfter {
   // description
   it should "extract the correct description" in {
     val expected = List("Supporting Act: HOTTUB",
-    "This item was digitized as part of the \"Cleared to Land\" project, supported by a grant from the National Historical Publications & Records Commission (NHPRC).")
+    "This item was digitized as part of the “Cleared to Land” project, supported by a grant from the National Historical Publications & Records Commission (NHPRC).")
     assert(extractor.description(json) === expected)
   }
 

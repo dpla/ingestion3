@@ -1,7 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.filters.ExtentIdentificationList
-import dpla.ingestion3.enrichments.TagUtils._
+import dpla.ingestion3.enrichments.TaggingUtils._
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
