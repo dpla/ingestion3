@@ -151,6 +151,8 @@ class FlFileHarvester(spark: SparkSession,
       IOUtils.closeQuietly(inputStream)
     })
 
+    getAvroWriter.flush()
+
     // Read harvested data into Spark DataFrame.
     val df = spark.read.avro(tmpOutStr)
 
