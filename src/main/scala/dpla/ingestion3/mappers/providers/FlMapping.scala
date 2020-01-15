@@ -1,6 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.filters.ExtentIdentificationList
+import dpla.ingestion3.enrichments.TaggingUtils._
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
@@ -52,6 +53,9 @@ class FlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
 
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
+
+  override def tags(data: Document[JValue]): ZeroToMany[URI] =
+    description(data).flatMap(_.applyPanAmTags)
 
   // SourceResource
   override def alternateTitle(data: Document[JValue]): ZeroToMany[String] =
