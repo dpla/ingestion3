@@ -46,7 +46,11 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None) 
         // Properties for API harvests
         apiKey = getProp(providerConf, "harvest.apiKey"),
         rows = getProp(providerConf, "harvest.rows"),
-        query = getProp(providerConf, "harvest.query")
+        query = getProp(providerConf, "harvest.query"),
+        // Properties for FileDelta harvests
+        update = getProp(providerConf, "harvest.delta.update"),
+        previous = getProp(providerConf, "harvest.delta.previous"),
+        deletes = getProp(providerConf, "harvest.delta.deletes")
       ),
       i3Spark(
         // FIXME these should be removed
@@ -186,7 +190,12 @@ case class Harvest (
                      // API
                      rows: Option[String] = None,
                      query: Option[String] = None,
-                     apiKey: Option[String] = None
+                     apiKey: Option[String] = None,
+                     // File delta
+                     // Process NARA ingest using a incremental update of records
+                     update: Option[String] = None, // Path to delta update records
+                     previous: Option[String] = None, // Path to previously harvested records
+                     deletes: Option[String] = None // Path to deletes
                    )
 
 case class i3Conf(
