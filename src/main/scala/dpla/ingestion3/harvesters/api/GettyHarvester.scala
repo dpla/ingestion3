@@ -27,7 +27,7 @@ class GettyHarvester(spark: SparkSession,
   override def buildUrl(params: Map[String, String]): URL =
     new URIBuilder()
       .setScheme("http")
-      .setHost("primo.getty.edu/")
+      .setHost("primo.getty.edu")
       .setPath("/PrimoWebServices/xservice/search/brief")
       .setParameter("indx", params.getOrElse("indx", "1")) // record offset
       .setParameter("bulkSize", params.getOrElse("rows", "500")) // records per page
