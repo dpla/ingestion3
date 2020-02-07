@@ -27,6 +27,7 @@
             <dcterms:isPartOf>Bridges, Viaducts, and Underpasses</dcterms:isPartOf>
             <dc:identifier>Cite as: [Creator], [Title], [Local Identifier], Chicago - Photographic Images of Change, University of Illinois at Chicago. Library. Special Collections Department</dc:identifier>
             <dc:rights>free text rights</dc:rights>
+            <edm:rights>http://rs.org</edm:rights>
             <dc:subject>subject</dc:subject>
             <dc:temporal>temporal</dc:temporal>
             <dc:identifier>JPCC_01_0003_0025_0010</dc:identifier>
