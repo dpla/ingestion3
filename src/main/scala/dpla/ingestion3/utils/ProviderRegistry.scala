@@ -67,6 +67,7 @@ object ProviderRegistry {
     "mwdl" -> Register(profile = new MwdlProfile),
     "nara" -> Register(profile = new NaraProfile),
     "nc" -> Register(profile = new NcProfile),
+    "nh" -> Register(profile = new NhProfile),
     "oklahoma" -> Register(profile = new OklahomaProfile),
     "ohio" -> Register(profile = new OhioProfile),
     "p2p" -> Register(profile = new P2PProfile), // plains2peaks

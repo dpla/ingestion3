@@ -1,0 +1,47 @@
+<record>
+    <header>
+        <identifier>
+            oai:nhdiglibi.org:dpla:oai:cdm15828.contentdm.oclc.org:p15828coll1/1852
+        </identifier>
+        <datestamp>2020-02-07T22:39:19Z</datestamp>
+        <setSpec>dpla</setSpec>
+    </header>
+    <metadata>
+        <oai_qdc:qualifieddc>
+            <dcterms:title>Little girl group posing</dcterms:title>
+            <edm:hasType>http://vocab.getty.edu/aat/300041273</edm:hasType>
+            <edm:hasType>prints (visual works)</edm:hasType>
+            <dcterms:description>Summer Dance Intensive Plymouth State College 1996</dcterms:description>
+            <dcterms:subject>students</dcterms:subject>
+            <dcterms:subject>dance</dcterms:subject>
+            <dcterms:spatial>http://sws.geonames.org/5091310/</dcterms:spatial>
+            <dc:coverage>Plymouth, New Hampshire, United States</dc:coverage>
+            <dcterms:coverage>43.75702, -71.68813</dcterms:coverage>
+            <dcterms:extent>8 x 10 inches</dcterms:extent>
+            <dcterms:type>http://purl.org/dc/dcmitype/Image</dcterms:type>
+            <dcterms:type>image</dcterms:type>
+            <dcterms:identifier>DN201900009</dcterms:identifier>
+            <edm:dataProvider>Plymouth State University</edm:dataProvider>
+            <edm:rights>http://rightsstatements.org/vocab/InC-EDU/1.0/</edm:rights>
+            <dcterms:description>Dance at Plymouth State University</dcterms:description>
+            <edm:dataProvider>Plymouth State University</edm:dataProvider>
+            <dcterms:identifier>
+                http://cdm15828.contentdm.oclc.org/cdm/ref/collection/p15828coll1/id/1852
+            </dcterms:identifier>
+            <edm:isShownAt>
+                http://cdm15828.contentdm.oclc.org/cdm/ref/collection/p15828coll1/id/1852
+            </edm:isShownAt>
+            <edm:preview>
+                http://cdm15828.contentdm.oclc.org/utils/getthumbnail/collection/p15828coll1/id/1852
+            </edm:preview>
+            <dcterms:isReferencedBy>
+                http://cdm15828.contentdm.oclc.org/digital/iiif/p15828coll1/1852/info.json
+            </dcterms:isReferencedBy>
+            <svcs:has_Service>
+                http://digitalcollections.plymouth.edu/digital/custom/mirador
+            </svcs:has_Service>
+            <dcterms:isPartOf>Plymouth State Historical Collection</dcterms:isPartOf>
+            <edm:provider>New Hampshire Digital Library</edm:provider>
+        </oai_qdc:qualifieddc>
+    </metadata>
+</record>

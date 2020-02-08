@@ -248,6 +248,16 @@ class NcProfile extends XmlProfile {
 }
 
 /**
+  * New Hampshire
+  */
+class NhProfile extends XmlProfile {
+  type Mapping = NcMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new NhMapping
+}
+
+/**
   * Ohio Hub
   */
 class OhioProfile extends XmlProfile {
