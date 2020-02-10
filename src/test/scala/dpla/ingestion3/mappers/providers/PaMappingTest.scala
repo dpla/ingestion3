@@ -23,6 +23,7 @@ class PaMappingTest extends FlatSpec with BeforeAndAfter {
       <dcterms:date>1955</dcterms:date>
       <dcterms:subject>Students</dcterms:subject>
       <dcterms:type>Image</dcterms:type>
+      <dcterms:language>English</dcterms:language>
       <dcterms:rights>This digital object is protected under U.S. and international copyright laws and is copyright by The Baldwin School. It may not be used for any purpose without express written consent by The Baldwin School. Contact the Anne Frank Library for more information.</dcterms:rights>
       <dcterms:identifier>dplapa:BALDWIN_kthbs_arch_699</dcterms:identifier>
       <edm:isShownAt>http://digitalcollections.powerlibrary.org/cdm/ref/collection/kthbs-arch/id/699</edm:isShownAt>
@@ -43,5 +44,10 @@ class PaMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct dataProvider" in {
     val expected = Seq("Baldwin School Archives").map(nameOnlyAgent)
     assert(extractor.dataProvider(xml) === expected)
+  }
+
+  it should "extract the correct language" in {
+    val expected = Seq("English").map(nameOnlyConcept)
+    assert(extractor.language(xml) === expected)
   }
 }
