@@ -55,7 +55,7 @@ class PaMapping extends XmlMapping with XmlExtractor
     extractStrings(metadataRoot(data) \ "identifier")
 
   override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
-    extractStrings(data \ "metadata" \ "language")
+    extractStrings(metadataRoot(data) \ "language")
       .map(nameOnlyConcept)
 
   override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
