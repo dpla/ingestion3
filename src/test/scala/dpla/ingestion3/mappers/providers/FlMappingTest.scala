@@ -153,8 +153,8 @@ class FlMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   // tags
-  it should "apply the correct panam tag when given a valid value in description" in {
-    val expected = Seq(URI("http://dp.la/tags/panam"))
+  it should "apply the correct aviation tag when given a valid value in description" in {
+    val expected = Seq(URI("aviation"))
     assert(extractor.tags(json) === expected)
   }
 }

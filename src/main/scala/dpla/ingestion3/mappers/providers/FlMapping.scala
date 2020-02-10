@@ -55,7 +55,7 @@ class FlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
 
   override def tags(data: Document[JValue]): ZeroToMany[URI] =
-    description(data).flatMap(_.applyPanAmTags)
+    description(data).flatMap(_.applyAviationTags)
 
   // SourceResource
   override def alternateTitle(data: Document[JValue]): ZeroToMany[String] =

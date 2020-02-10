@@ -9,9 +9,9 @@ object TaggingUtils {
     /**
       * Applies at standard tag for records to be included in the PanAm portal
       */
-    lazy val applyPanAmTags: Option[URI] = {
+    lazy val applyAviationTags: Option[URI] = {
       // tag value to apply
-      val panAmTag = URI("http://dp.la/tags/panam")
+      val panAmTag = URI("aviation")
 
       // Values for which the PanAm tag will be applied
       // Note: In case of a string that looks like it should match but doesn't,
