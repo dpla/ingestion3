@@ -11,11 +11,9 @@ object TaggingUtils {
       */
     lazy val applyAviationTags: Option[URI] = {
       // tag value to apply
-      val panAmTag = URI("aviation")
+      val aviationTag = URI("aviation")
 
-      // Values for which the PanAm tag will be applied
-      // Note: In case of a string that looks like it should match but doesn't,
-      //       those are left/right double quotes and not \".
+      // Values for which the aviation tag will be applied
       val taggingValues = Seq(
         "This item was digitized as part of the \"Cleared to Land\" project, supported by a grant from the National Historical Publications & Records Commission (NHPRC).",
 
@@ -23,7 +21,7 @@ object TaggingUtils {
       )
 
       if (taggingValues.contains(value)) {
-        Some(panAmTag)
+        Some(aviationTag)
       } else {
         None
       }
