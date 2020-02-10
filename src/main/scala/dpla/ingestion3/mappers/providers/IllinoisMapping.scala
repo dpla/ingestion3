@@ -75,7 +75,12 @@ class IllinoisMapping extends XmlMapping with XmlExtractor with IngestMessageTem
       .map(nameOnlyPlace)
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
-    extractStrings(data \ "metadata" \\ "rights")
+    (data \ "metadata" \\ "rights").flatMap(r => {
+      r.prefix match {
+        case "dc" => Option(r.text)
+        case _ => None
+      }
+    })
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     extractStrings(data \ "metadata" \\ "subject")
@@ -98,6 +103,14 @@ class IllinoisMapping extends XmlMapping with XmlExtractor with IngestMessageTem
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
   extractStrings(data \ "metadata" \\ "provenance")
     .map(nameOnlyAgent)
+
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
+    (data \ "metadata" \\ "rights").flatMap(r => {
+      r.prefix match {
+        case "edm" => Option(URI(r.text))
+        case _ => None
+      }
+    })
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "metadata" \\ "isShownAt")

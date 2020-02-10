@@ -80,6 +80,12 @@ class IllinoisMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.rights(xml) === expected)
   }
 
+  // edmRights
+  it should "extract the correct edmRights" in {
+    val expected = Seq(URI("http://rs.org"))
+    assert(extractor.edmRights(xml) === expected)
+  }
+
   // subject
   it should "extract the correct subject " in {
     val expected = Seq("subject").map(nameOnlyConcept)
