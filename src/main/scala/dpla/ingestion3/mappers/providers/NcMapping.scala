@@ -153,7 +153,7 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
 
   override def tags(data: Document[NodeSeq]): ZeroToMany[URI] =
-    description(data).flatMap(_.applyPanAmTags)
+    description(data).flatMap(_.applyAviationTags)
 
   // Helper method
   def agent = EdmAgent(

@@ -236,4 +236,19 @@ class NcMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("Duke University Libraries").map(nameOnlyAgent)
     assert(extractor.dataProvider(xml) == expected)
   }
+
+  it should "apply the correct `aviation` tag when the correct value exists in description" in {
+
+    val xml: Document[NodeSeq] = Document(
+      <record xmlns="http://www.openarchives.org/OAI/2.0/">
+        <metadata>
+          <mods>
+            <note type="content">This item was digitized as part of the "Cleared to Land" project, supported by a grant from the National Historical Publications &amp; Records Commission (NHPRC).</note>
+          </mods>
+        </metadata>
+      </record>
+    )
+    val expected = Seq(URI("aviation"))
+    assert(extractor.tags(xml) === expected)
+  }
 }
