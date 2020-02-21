@@ -38,7 +38,7 @@ class NhMapping extends XmlMapping with XmlExtractor
       .map(nameOnlyAgent)
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
-    extractStrings(metadataRoot(data) \ "date") // FIXME, was created
+    extractStrings(metadataRoot(data) \ "date")
       .map(stringOnlyTimeSpan)
 
   override def description(data: Document[NodeSeq]): Seq[String] =
@@ -48,7 +48,7 @@ class NhMapping extends XmlMapping with XmlExtractor
     extractStrings(metadataRoot(data) \ "extent")
 
   override def format(data: Document[NodeSeq]): Seq[String] =
-    extractStrings(metadataRoot(data) \ "format") // FIXME. was medium
+    extractStrings(metadataRoot(data) \ "format")
       .filterNot(isDcmiType)
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
@@ -83,7 +83,6 @@ class NhMapping extends XmlMapping with XmlExtractor
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
-  // FIXME, mapping suggests provenance or last dc:contributor but data review suggests dataProvider
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(metadataRoot(data) \ "dataProvider")
       .map(nameOnlyAgent)
@@ -91,7 +90,6 @@ class NhMapping extends XmlMapping with XmlExtractor
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
     extractStrings(metadataRoot(data) \ "rights").map(URI)
 
-  // FIXME, mapping says to use last identifier but why when there is an isShownAt prop?
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(metadataRoot(data) \ "isShownAt").map(stringOnlyWebResource)
 
