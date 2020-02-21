@@ -81,6 +81,7 @@ class MeMapping extends XmlMapping with XmlExtractor
 
   override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(metadataRoot(data) \ "hasFormat")
+      .map(_.trim)
       .map(stringOnlyWebResource)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = EdmAgent(
@@ -91,5 +92,5 @@ class MeMapping extends XmlMapping with XmlExtractor
   override def sidecar(data: Document[NodeSeq]): JValue =
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data) )
 
-  def metadataRoot(data: Document[NodeSeq]): NodeSeq = data \ "metadata" \ "oai_qdc"
+  def metadataRoot(data: Document[NodeSeq]): NodeSeq = data \ "metadata" \ "qualifieddc"
 }
