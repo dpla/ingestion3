@@ -114,7 +114,7 @@ class TxMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct dataProvider" in {
-    val expected = Seq("UNT Libraries Rare Book and Texana Collections").map(nameOnlyAgent)
+    val expected = Seq("UNT Libraries").map(nameOnlyAgent)
     assert(extractor.dataProvider(xml) === expected)
   }
 }
