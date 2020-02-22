@@ -75,6 +75,7 @@ object ProviderRegistry {
     "rumsey" -> Register(profile = new RumseyProfile),
     "sd" -> Register(profile = new SdProfile),
     "tn" -> Register(profile = new TnProfile),
+    "tx" -> Register(profile = new TxProfile),
     "si" -> Register(profile = new SiProfile),
     "virginias" -> Register(profile = new VirginiasProfile),
     "vt" -> Register(profile = new VtProfile),

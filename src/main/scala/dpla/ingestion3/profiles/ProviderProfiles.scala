@@ -325,8 +325,17 @@ class TnProfile extends XmlProfile {
   type Mapping = TnMapping
 
   override def getHarvester = classOf[OaiHarvester]
-
   override def getMapping = new TnMapping
+}
+
+/**
+  * The Portal to Texas History
+  */
+class TxProfile extends XmlProfile {
+  type Mapping = TnMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new TxMapping
 }
 
 /**

@@ -1,0 +1,66 @@
+<record>
+    <header>
+        <identifier>info:ark/67531/metapth2355</identifier>
+        <datestamp>2014-06-27T12:53:11Z</datestamp>
+        <setSpec>partner:UNT</setSpec>
+        <setSpec>collection:AD</setSpec>
+        <setSpec>collection:UNTRB</setSpec>
+        <setSpec>access_rights:public</setSpec>
+    </header>
+    <metadata>
+        <untl:metadata xmlns:untl="http://digital2.library.unt.edu/untl/">
+            <untl:title qualifier="officialtitle">Texas and the Massachusetts Resolutions</untl:title>
+            <untl:contributor>
+                <untl:info>Contributor, 1807-1886</untl:info>
+                <untl:name>Contributor</untl:name>
+                <untl:type>per</untl:type>
+            </untl:contributor>
+            <untl:creator qualifier="aut">
+                <untl:info>Adams, Charles Francis, 1807-1886</untl:info>
+                <untl:name>Adams, Charles Francis</untl:name>
+                <untl:type>per</untl:type>
+            </untl:creator>
+            <untl:publisher>
+                <untl:location>Boston, Massachusetts</untl:location>
+                <untl:name>Eastburn's Press</untl:name>
+            </untl:publisher>
+            <untl:date qualifier="creation">1844-01-01</untl:date>
+            <untl:date qualifier="digitized">2005-08-31</untl:date>
+            <untl:language>eng</untl:language>
+            <untl:description qualifier="content">Pamphlet containing an essay against the annexation of Texas, compiled from a series of newspaper columns.</untl:description>
+            <untl:description qualifier="physical">54 p.</untl:description>
+            <untl:subject qualifier="LCSH">Texas -- Annexation to the United States.</untl:subject>
+            <untl:subject qualifier="LCSH">United States -- Politics and government -- 1841-1845.</untl:subject>
+            <untl:subject qualifier="UNTL-BS">Military and War - Wars - Texas Revolution</untl:subject>
+            <untl:coverage qualifier="timePeriod">annex</untl:coverage>
+            <untl:coverage qualifier="placeName">United States</untl:coverage>
+            <untl:coverage qualifier="placeName">United States - Texas</untl:coverage>
+            <untl:coverage qualifier="date">1844~</untl:coverage>
+            <untl:source qualifier="newspaper">Boston Courier, 1844</untl:source>
+            <untl:collection>AD</untl:collection>
+            <untl:collection>UNTRB</untl:collection>
+            <untl:institution>UNT</untl:institution>
+            <untl:rights qualifier="license">by</untl:rights>
+            <untl:rights qualifier="statement">The contents of The Portal to Texas History (digital content including images, text, and sound and video recordings) are made publicly available by the collection-holding partners for use in research, teaching, and private study. For the full terms of use, see https://texashistory.unt.edu/terms-of-use/</untl:rights>
+            <untl:resourceType>text_book</untl:resourceType>
+            <untl:format>text</untl:format>
+            <untl:identifier qualifier="itemURL">https://texashistory.unt.edu/ark:/67531/metapth2355/</untl:identifier>
+            <untl:identifier qualifier="OCLC">3488136</untl:identifier>
+            <untl:identifier qualifier="LOCAL-CONT-NO">atpm0001-atpm0054g</untl:identifier>
+            <untl:identifier qualifier="CALL-NO">976.4 Ad17</untl:identifier>
+            <untl:identifier qualifier="thumbnailURL">https://texashistory.unt.edu/ark:/67531/metapth2355/small/</untl:identifier>
+            <untl:identifier qualifier="ARK">ark:/67531/metapth2355</untl:identifier>
+            <untl:meta qualifier="objectMasterSize">10392189</untl:meta>
+            <untl:meta qualifier="ark">ark:/67531/metapth2355</untl:meta>
+            <untl:meta qualifier="meta-id">meta-pth-2355</untl:meta>
+            <untl:meta qualifier="meta-id">meta-pcc-1084940414knordstr@nt104619_unt_edu</untl:meta>
+            <untl:meta qualifier="metadataCreator">admin</untl:meta>
+            <untl:meta qualifier="metadataCreationDate">2004-05-19, 11:23:43</untl:meta>
+            <untl:meta qualifier="metadataModifier">htarver</untl:meta>
+            <untl:meta qualifier="metadataModificationDate">2014-06-27, 12:53:11</untl:meta>
+            <untl:meta qualifier="system">PTH</untl:meta>
+            <untl:meta qualifier="TKLPath">/data/UNT/Annexation/Pamphlets</untl:meta>
+            <untl:meta qualifier="hidden">False</untl:meta>
+        </untl:metadata>
+    </metadata>
+</record>
