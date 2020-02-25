@@ -29,14 +29,15 @@ object RowConverter {
         oreAggregation.hasView.map(fromEdmWebResource), //4
         oreAggregation.intermediateProvider.map(fromEdmAgent).orNull, //5
         fromEdmWebResource(oreAggregation.isShownAt), //6
-        oreAggregation.`object`.map(fromEdmWebResource).orNull, //7
+        oreAggregation.`object`.map(fromEdmWebResource), //7
         oreAggregation.preview.map(fromEdmWebResource).orNull, //8
         fromEdmAgent(oreAggregation.provider), //9
         oreAggregation.edmRights.map(_.toString).orNull, //10
         compact(render(oreAggregation.sidecar)), //11
         oreAggregation.messages.map(fromIngestMessage), //12
         oreAggregation.originalId, //13
-        oreAggregation.tags.map(_.toString) //14
+        oreAggregation.tags.map(_.toString), //14
+        oreAggregation.iiifManifest.map(_.toString).orNull //15
       ),
       sqlSchema
     )

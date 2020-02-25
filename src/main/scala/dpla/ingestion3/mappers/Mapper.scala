@@ -119,11 +119,11 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
     * @return Option[EdmWebResource]      object EdmWebResource
     */
   def validateObject(values: ZeroToMany[EdmWebResource], providerId: String, enforce: Boolean)
-                       (implicit collector: MessageCollector[IngestMessage]): ZeroToOne[EdmWebResource] = {
+                       (implicit collector: MessageCollector[IngestMessage]): ZeroToMany[EdmWebResource] = {
     if (values.size > 1) {
       collector.add(moreThanOneValueMsg(providerId, "object", values.toString(), msg = None, enforce))
     }
-    values.headOption
+    values
   }
 
   /**
@@ -316,6 +316,7 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
         provider = mapping.provider(document),
         sidecar = mapping.sidecar(document),
         tags = mapping.tags(document),
+        iiifManifest = mapping.iiifManifest(document),
         sourceResource = DplaSourceResource(
           alternateTitle = mapping.alternateTitle(document),
           collection = mapping.collection(document),
@@ -396,6 +397,7 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
         provider = mapping.provider(document),
         sidecar = mapping.sidecar(document),
         tags = mapping.tags(document),
+        iiifManifest = mapping.iiifManifest(document),
         sourceResource = DplaSourceResource(
           alternateTitle = mapping.alternateTitle(document),
           collection = mapping.collection(document),

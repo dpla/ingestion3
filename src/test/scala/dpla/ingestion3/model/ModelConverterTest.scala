@@ -255,20 +255,22 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
   it should "convert an OreAggregation" in {
     val testResult1 = ModelConverter.toModel(
       Row(
-        urlString1,
-        testSourceResource,
-        testEdmAgent,
-        "an original record",
-        Seq(testEdmWebResource, testEdmWebResource),
-        testEdmAgent,
-        testEdmWebResource,
-        testEdmWebResource,
-        testEdmWebResource,
-        testEdmAgent,
-        urlString1,
-        """"{"field": "value"}""",
-        Seq(testIngestMessage),
-        "an original ID"
+        urlString1, // dplaUri
+        testSourceResource, // sourceResource
+        testEdmAgent, // dataProvider
+        "an original record", // originalRecord
+        Seq(testEdmWebResource, testEdmWebResource), // hasView
+        testEdmAgent, // intermediateProvider
+        testEdmWebResource, // isShownAt
+        Seq(testEdmWebResource), // object
+        testEdmWebResource, // preview
+        testEdmAgent, // provider
+        urlString1, // edmRights
+        """"{"field": "value"}""", // sidecar
+        Seq(testIngestMessage), // messages
+        "an original ID" // originalId
+        // todo add tags
+        // todo add iiifManifest
       )
     )
 
@@ -280,11 +282,14 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
     assert(testResult1.originalRecord === "an original record" )
     assert(testResult1.hasView === Seq(edmWebResource, edmWebResource))
     assert(testResult1.intermediateProvider === Some(edmAgent))
-    assert(testResult1.`object` === Some(edmWebResource))
+    assert(testResult1.`object` === Seq(edmWebResource))
     assert(testResult1.preview === Some(edmWebResource))
     assert(testResult1.provider === edmAgent)
     assert(testResult1.edmRights === Some(URI(urlString1)))
     assert(testResult1.originalId === "an original ID")
+
+    // todo asset tags
+    // todo assert iiifManifest
   }
 
   it should "convert an EdmWebResource" in {

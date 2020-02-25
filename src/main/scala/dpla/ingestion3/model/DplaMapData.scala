@@ -33,14 +33,15 @@ case class OreAggregation(
                            hasView: ZeroToMany[EdmWebResource] = Seq(),
                            intermediateProvider: ZeroToOne[EdmAgent] = None,
                            isShownAt: ExactlyOne[EdmWebResource],
-                           `object`: ZeroToOne[EdmWebResource] = None, // full size image
-                           preview: ZeroToOne[EdmWebResource] = None, // thumbnail
+                           `object`: ZeroToMany[EdmWebResource] = Seq(), // full size image(s), does not export to JSON-L
+                           preview: ZeroToOne[EdmWebResource] = None, // thumbnail, maps to `object` prop in JSON-L export
                            provider: ExactlyOne[EdmAgent],
                            edmRights: ZeroToOne[URI] = None,
                            sidecar: JValue = JNothing,
                            messages: ZeroToMany[IngestMessage] = Seq[IngestMessage](),
                            originalId: ExactlyOne[String],
-                           tags: ZeroToMany[URI] = Seq[URI]()
+                           tags: ZeroToMany[URI] = Seq[URI](),
+                           iiifManifest: ZeroToOne[URI] = None // iiif manifest uri
                          )
 
 /**
@@ -80,9 +81,10 @@ case class DplaSourceResource(
 case class EdmWebResource(
                            uri: ExactlyOne[URI],
                            fileFormat: ZeroToMany[String] = Seq(),
-                           dcRights: ZeroToMany[String] = Seq(),
-                           edmRights: ZeroToOne[String] = None, //todo should be a URI?
-                           isReferencedBy: ZeroToOne[URI] = None
+                           dcRights: ZeroToMany[String] = Seq(), // todo should be removed?
+                           edmRights: ZeroToOne[String] = None, //todo should be a URI? or should be removed?
+                           isReferencedBy: ZeroToOne[URI] = None  // should be iiif manifest according to MAP spec
+                                                                  // but in practice see oreAgg.iiifManifest
                          )
 
 

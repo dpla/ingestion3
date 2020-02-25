@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.rdf
 
 
 import dpla.ingestion3.model._
-import org.eclipse.rdf4j.model.{IRI, Model, Resource}
+import org.eclipse.rdf4j.model.{Model, Resource}
 
 /**
   * This class handles mapping DplaMapData to the RDF4J Model domain
@@ -50,8 +50,8 @@ class DplaRdfMapper(doc: OreAggregation) extends RdfBuilderUtils {
     map(edm.hasView, oreAggregation.hasView)
 
     //big image
-    if (oreAggregation.`object`.isDefined)
-      map(edm.`object`, edmWebResource(oreAggregation.`object`.get))
+    if (oreAggregation.`object`.nonEmpty)
+      map(edm.`object`, oreAggregation.`object`.map(edmWebResource))
 
     //thumbnail
     if (oreAggregation.preview.isDefined)

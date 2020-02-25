@@ -220,7 +220,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
       hasView = Seq(edmWebResource, edmWebResource),
       intermediateProvider = Some(edmAgent),
       isShownAt = edmWebResource,
-      `object` = Some(edmWebResource),
+      `object` = Seq(edmWebResource),
       preview = Some(edmWebResource),
       provider = edmAgent,
       edmRights = Some(uri1),
@@ -234,7 +234,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
     assert(row(4) === oreAggregation.hasView.map(RowConverter.fromEdmWebResource))
     assert(row(5) === oreAggregation.intermediateProvider.map(RowConverter.fromEdmAgent).orNull)
     assert(row(6) === RowConverter.fromEdmWebResource(oreAggregation.isShownAt))
-    assert(row(7) === oreAggregation.`object`.map(RowConverter.fromEdmWebResource).orNull)
+    assert(row(7) === oreAggregation.`object`.map(RowConverter.fromEdmWebResource))
     assert(row(8) === oreAggregation.preview.map(RowConverter.fromEdmWebResource).orNull)
     assert(row(9) === RowConverter.fromEdmAgent(oreAggregation.provider))
     assert(row(10) === oreAggregation.edmRights.map(_.toString).orNull)

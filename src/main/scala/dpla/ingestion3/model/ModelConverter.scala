@@ -27,14 +27,15 @@ object ModelConverter {
     hasView = toRows(row, 4).map(toEdmWebResource),
     intermediateProvider = Option(row.getStruct(5)).map(toEdmAgent),
     isShownAt = toEdmWebResource(row.getStruct(6)),
-    `object` = toOptionEdmWebResource(row.getStruct(7)),
+    `object` = toMulti(row, 7, toEdmWebResource),
     preview = toOptionEdmWebResource(row.getStruct(8)),
     provider = toEdmAgent(row.getStruct(9)),
     edmRights = optionalUri(row, 10),
     sidecar = optionalJValue(row, 11),
     messages = toMulti(row, 12, toIngestMessage),
     originalId = potentiallyMissingStringField(row, 13).getOrElse("MISSING"),
-    tags = potentiallyMissingArrayOfUrisField(row, 14)
+    tags = potentiallyMissingArrayOfUrisField(row, 14),
+    iiifManifest = optionalUri(row, 15)
   )
 
   private[model] def toSourceResource(row: Row): DplaSourceResource = DplaSourceResource(

@@ -19,8 +19,9 @@ trait Mapping[T] {
   def intermediateProvider(data: Document[T]): ZeroToOne[EdmAgent] = None
 
   def isShownAt(data: Document[T]): ZeroToMany[EdmWebResource] = emptySeq
-  def `object`(data: Document[T]): ZeroToMany[EdmWebResource] = emptySeq // full size image
+  def `object`(data: Document[T]): ZeroToMany[EdmWebResource] = emptySeq // full size image(s)
   def preview(data: Document[T]): ZeroToMany[EdmWebResource] = emptySeq // thumbnail
+  def iiifManifest(data: Document[T]): ZeroToOne[URI] = None // IIIF Manifest for presentation API
 
   def provider(data: Document[T]): ExactlyOne[EdmAgent] = emptyEdmAgent
   def edmRights(data: Document[T]): ZeroToMany[URI] = emptySeq

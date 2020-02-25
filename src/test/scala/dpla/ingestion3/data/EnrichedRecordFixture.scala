@@ -1,7 +1,6 @@
 package dpla.ingestion3.data
 
 import dpla.ingestion3.model._
-import org.json4s.jackson.JsonMethods.parse
 import org.json4s.JsonDSL._
 
 object EnrichedRecordFixture {
@@ -21,7 +20,7 @@ object EnrichedRecordFixture {
       intermediateProvider = Some(
         EdmAgent(name = Some("The Intermediate Provider"))
       ),
-      `object` = Some(
+      `object` = Seq(
         EdmWebResource(uri = new URI("https://example.org/record/123.html"))
       ),
       preview = Some(
@@ -110,7 +109,7 @@ object EnrichedRecordFixture {
       intermediateProvider = Some(
         EdmAgent(name = Some("The Intermediate Provider"))
       ),
-      `object` = Some(
+      `object` = Seq(
         EdmWebResource(uri = new URI("https://example.org/record/123.html"))
       ),
       preview = Some(
