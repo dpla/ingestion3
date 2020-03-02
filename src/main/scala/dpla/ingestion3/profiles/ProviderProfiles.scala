@@ -359,6 +359,16 @@ class TxProfile extends XmlProfile {
 }
 
 /**
+  * Texas Digital Library (aka Texas 2)
+  */
+class TxdlProfile extends XmlProfile {
+  type Mapping = TnMapping
+
+  override def getHarvester = classOf[OaiHarvester]
+  override def getMapping = new TxMapping // FIXME placeholder
+}
+
+/**
   * Smithsonian Institution
   */
 class SiProfile extends XmlProfile {
