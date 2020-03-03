@@ -930,9 +930,10 @@
 
     {
       "name": "object",
-      "type": [
-        "null",
-        {
+      "type": {
+        "name": "ObjectEdmWebResourceArray",
+        "type": "array",
+        "items": {
           "name": "ObjectEdmWebResource",
           "type": "record",
           "fields": [
@@ -965,7 +966,7 @@
             }
           ]
         }
-      ]
+      }
     },
     {
       "name": "preview",
@@ -1132,6 +1133,13 @@
             "type": "array",
             "items": "string"
         }
+    },
+    {
+      "name": "iiifManifest",
+      "type": [
+        "null",
+        "string"
+      ]
     }
   ]
 }
