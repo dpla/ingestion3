@@ -86,6 +86,7 @@ class StringNormalizations {
 
   def enrichEdmWebResource(edmWebResource: EdmWebResource): EdmWebResource =
     edmWebResource.copy(
+      uri = URI(edmWebResource.uri.value.reduceWhitespace),
       fileFormat = edmWebResource.fileFormat.map(_.stripHTML.reduceWhitespace),
       dcRights = edmWebResource.dcRights.map(_.stripHTML.reduceWhitespace),
       edmRights = edmWebResource.edmRights.map(_.stripHTML.reduceWhitespace)
