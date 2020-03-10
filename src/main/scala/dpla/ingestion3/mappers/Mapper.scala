@@ -260,6 +260,29 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
       }
     }
   }
+
+  /**
+    * Performs validation check of data mapped to iiifManifest
+    * If the value is not a IIIF manifest URL, a message is logged
+    * If more than one values was provided, message is logged and all but the first value are dropped
+    *
+    * @param values Seq[URI]              IIIF Manfiest URL(s)
+    * @param providerId String            Local provider identifier
+    * @param enforce Boolean              True   Enforce this validation and fails records that do not pass with
+    *                                            an error message
+    *                                     False  Enforces validation but logs warnings which will not fail a record.
+    * @param collector MessageCollector   Ingest message collector
+    * @return                             Returns mapped URI or an empty URI if none mapped
+    */
+  def validateIIIFManifestUrl(values: Seq[URI], providerId: String, enforce: Boolean)
+                     (implicit collector: MessageCollector[IngestMessage]): Option[URI] = {
+    if (values.size > 1) {
+      collector.add(moreThanOneValueMsg(providerId, "iiifManifest", values.toString(), msg = None, enforce))
+    }
+    values.headOption
+
+    // TODO Validate manifest URL format
+  }
 }
 
 class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
@@ -301,6 +324,7 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
     val validatedPublisher = validateRecommendedProperty(mapping.publisher(document), "publisher", providerId, mapping.enforcePublisher)
     val validatedSubject = validateRecommendedProperty(mapping.subject(document), "subject", providerId, mapping.enforceSubject)
     val validatedType = validateRecommendedProperty(mapping.`type`(document), "type", providerId, mapping.enforceType)
+    val validatedIIIFManifest = validateIIIFManifestUrl(mapping.iiifManifest(document), providerId, mapping.enforceIIIF)
 
     Try {
       OreAggregation(
@@ -316,6 +340,8 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
         provider = mapping.provider(document),
         sidecar = mapping.sidecar(document),
         tags = mapping.tags(document),
+        iiifManifest = validatedIIIFManifest,
+        hotdog = mapping.hotdog(document),
         sourceResource = DplaSourceResource(
           alternateTitle = mapping.alternateTitle(document),
           collection = mapping.collection(document),
@@ -369,7 +395,13 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
     val validatedOriginalId = validateOriginalId(mapping.originalId(document), providerId, mapping.enforceOriginalId)
     val validatedDplaUri = validateDplaUri(mapping.dplaUri(document), providerId, mapping.enforceDplaUri)
 
-    validateRights(mapping.rights(document), mapping.edmRights(document), providerId, mapping.enforceRights)
+    // MappingException may be thrown from the `rights` method in provider mapping
+    // See GPO mapping
+    try {
+      validateRights(mapping.rights(document), mapping.edmRights(document), providerId, mapping.enforceRights)
+    } catch {
+      case _: MappingException => // do nothing, error will be logged when entire record mapping is attempted, below
+    }
 
     // Recommended field validation
     val validatedCreator = validateRecommendedProperty(mapping.creator(document), "creator", providerId, mapping.enforceCreator)
@@ -381,6 +413,7 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
     val validatedPublisher = validateRecommendedProperty(mapping.publisher(document), "publisher", providerId, mapping.enforcePublisher)
     val validatedSubject = validateRecommendedProperty(mapping.subject(document), "subject", providerId, mapping.enforceSubject)
     val validatedType = validateRecommendedProperty(mapping.`type`(document), "type", providerId, mapping.enforceType)
+    val validatedIIIFManifest = validateIIIFManifestUrl(mapping.iiifManifest(document), providerId, mapping.enforceIIIF)
 
     Try {
       OreAggregation(
@@ -396,6 +429,8 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
         provider = mapping.provider(document),
         sidecar = mapping.sidecar(document),
         tags = mapping.tags(document),
+        iiifManifest = validatedIIIFManifest,
+        hotdog = mapping.hotdog(document),
         sourceResource = DplaSourceResource(
           alternateTitle = mapping.alternateTitle(document),
           collection = mapping.collection(document),

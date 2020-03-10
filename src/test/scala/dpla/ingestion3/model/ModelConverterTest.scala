@@ -19,6 +19,7 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
   val urlString2 = "http://google.com"
   val urlString3 = "http://yahoo.com"
   val urlisRefBy = "http://isRefd.by/"
+  val urlTags = "http://dp.la/tag/1"
 
   val testEdmAgent = Row(
     urlString1,
@@ -268,7 +269,10 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
         urlString1,
         """"{"field": "value"}""",
         Seq(testIngestMessage),
-        "an original ID"
+        "an original ID",
+        urlTags, // tags
+        urlString1, // iiif
+        Seq(testEdmWebResource) // hotdog
       )
     )
 
