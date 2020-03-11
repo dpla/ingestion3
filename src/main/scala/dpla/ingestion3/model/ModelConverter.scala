@@ -36,7 +36,7 @@ object ModelConverter {
     originalId = potentiallyMissingStringField(row, 13).getOrElse("MISSING"),
     tags = potentiallyMissingArrayOfUrisField(row, 14), // FIXME with potentiallyMissing[T]
     iiifManifest = optionalUri(row, 15),
-    hotdog = potentiallyMissing(row, 16, toEdmWebResource)
+    mediaMaster = potentiallyMissing(row, 16, toEdmWebResource)
   )
 
   private[model] def toSourceResource(row: Row): DplaSourceResource = DplaSourceResource(

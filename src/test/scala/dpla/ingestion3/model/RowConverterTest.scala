@@ -227,7 +227,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
       originalId = "original ID",
       tags = Seq(uri1), // tags
       iiifManifest = Some(uri1), // iiif
-      hotdog = Seq(edmWebResource) // hotdog
+      mediaMaster = Seq(edmWebResource) // mediaMaster
     )
     val row = RowConverter.toRow(oreAggregation, sparkSchema)
     assert(row(0) === oreAggregation.dplaUri.toString)
@@ -244,7 +244,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
     assert(row(13) === oreAggregation.originalId)
     assert(row(14) === oreAggregation.tags.map(_.toString)) // 14, tags
     assert(row(15) === oreAggregation.iiifManifest.map(_.toString).orNull) // 15, iiifManifest
-    assert(row(16) === oreAggregation.hotdog.map(RowConverter.fromEdmWebResource)) // 16, hotdog
+    assert(row(16) === oreAggregation.mediaMaster.map(RowConverter.fromEdmWebResource)) // 16, mediaMaster
   }
 
   it should "convert a SourceResource" in {

@@ -272,7 +272,7 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
         "an original ID",
         urlTags, // tags
         urlString1, // iiif
-        Seq(testEdmWebResource) // hotdog
+        Seq(testEdmWebResource) // mediaMaster
       )
     )
 

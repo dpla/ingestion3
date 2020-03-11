@@ -42,7 +42,7 @@ case class OreAggregation(
                            originalId: ExactlyOne[String],
                            tags: ZeroToMany[URI] = Seq[URI](),
                            iiifManifest: ZeroToOne[URI] = None, // URL for IIIF presentation manifest
-                           hotdog: ZeroToMany[EdmWebResource] = Seq() // master media representation of artifact
+                           mediaMaster: ZeroToMany[EdmWebResource] = Seq() // master media representation of artifact
 
                          )
 

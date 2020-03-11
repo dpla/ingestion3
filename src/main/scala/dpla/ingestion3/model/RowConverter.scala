@@ -38,7 +38,7 @@ object RowConverter {
         oreAggregation.originalId, //13
         oreAggregation.tags.map(_.toString), //14
         oreAggregation.iiifManifest.map(_.toString).orNull, //15
-        oreAggregation.hotdog.map(fromEdmWebResource) //16
+        oreAggregation.mediaMaster.map(fromEdmWebResource) //16
       ),
       sqlSchema
     )
