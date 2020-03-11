@@ -34,7 +34,9 @@ object ModelConverter {
     sidecar = optionalJValue(row, 11),
     messages = toMulti(row, 12, toIngestMessage),
     originalId = potentiallyMissingStringField(row, 13).getOrElse("MISSING"),
-    tags = potentiallyMissingArrayOfUrisField(row, 14)
+    tags = potentiallyMissingArrayOfUrisField(row, 14), // FIXME with potentiallyMissing[T]
+    iiifManifest = optionalUri(row, 15),
+    mediaMaster = potentiallyMissing(row, 16, toEdmWebResource)
   )
 
   private[model] def toSourceResource(row: Row): DplaSourceResource = DplaSourceResource(
@@ -160,7 +162,7 @@ object ModelConverter {
     row.getSeq[String](fieldPosition)
 
   private[model] def uriSeq(row: Row, fieldPosition: Integer): Seq[URI] =
-    stringSeq(row, fieldPosition).map(new URI(_))
+    stringSeq(row, fieldPosition).map(URI)
 
   private[model] def optionalJValue(row: Row, fieldPosition: Integer): JValue =
     Try {
@@ -179,5 +181,10 @@ object ModelConverter {
   private[model] def potentiallyMissingArrayOfUrisField(row: Row, fieldPosition: Integer): Seq[URI] =
     Try {
       uriSeq(row, fieldPosition)
+    }.getOrElse(Seq())
+
+  private[model] def potentiallyMissing[T](row: Row, fieldPosition: Integer, f: (Row) => T): Seq[T] =
+    Try {
+      toMulti(row, fieldPosition, f)
     }.getOrElse(Seq())
 }

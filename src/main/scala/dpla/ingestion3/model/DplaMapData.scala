@@ -40,7 +40,10 @@ case class OreAggregation(
                            sidecar: JValue = JNothing,
                            messages: ZeroToMany[IngestMessage] = Seq[IngestMessage](),
                            originalId: ExactlyOne[String],
-                           tags: ZeroToMany[URI] = Seq[URI]()
+                           tags: ZeroToMany[URI] = Seq[URI](),
+                           iiifManifest: ZeroToOne[URI] = None, // URL for IIIF presentation manifest
+                           mediaMaster: ZeroToMany[EdmWebResource] = Seq() // master media representation of artifact
+
                          )
 
 /**

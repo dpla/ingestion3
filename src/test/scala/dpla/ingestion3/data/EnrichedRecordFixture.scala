@@ -1,7 +1,6 @@
 package dpla.ingestion3.data
 
 import dpla.ingestion3.model._
-import org.json4s.jackson.JsonMethods.parse
 import org.json4s.JsonDSL._
 
 object EnrichedRecordFixture {
@@ -33,6 +32,8 @@ object EnrichedRecordFixture {
       ),
       sidecar = ("prehashId" -> "oai:somestate:id123") ~ ("dplaId" -> "4b1bd605bd1d75ee23baadb0e1f24457"),
       originalId = "The original ID",
+      iiifManifest = Some(URI("http://iiif.example/1/")),
+      mediaMaster = Seq(stringOnlyWebResource("http://example.fullframe.com/1/")),
       sourceResource = DplaSourceResource(
         collection = Seq(DcmiTypeCollection(
           title = Some("The Collection"),

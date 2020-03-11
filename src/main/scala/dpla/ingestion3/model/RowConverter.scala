@@ -36,7 +36,9 @@ object RowConverter {
         compact(render(oreAggregation.sidecar)), //11
         oreAggregation.messages.map(fromIngestMessage), //12
         oreAggregation.originalId, //13
-        oreAggregation.tags.map(_.toString) //14
+        oreAggregation.tags.map(_.toString), //14
+        oreAggregation.iiifManifest.map(_.toString).orNull, //15
+        oreAggregation.mediaMaster.map(fromEdmWebResource) //16
       ),
       sqlSchema
     )
