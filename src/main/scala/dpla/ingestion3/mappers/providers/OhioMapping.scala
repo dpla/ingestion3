@@ -118,8 +118,11 @@ class OhioMapping extends XmlMapping with XmlExtractor
 
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
     (data \ "metadata" \\ "rights").map(r => r.prefix match {
-      case "edm" => URI(r.text)
+      case "edm" => r.text
+      case _ => ""
     })
+      .filter(_.nonEmpty)
+      .map(URI)
   }
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
