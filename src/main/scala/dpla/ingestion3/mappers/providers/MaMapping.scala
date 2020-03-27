@@ -260,7 +260,12 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     extractStrings(getModsRoot(data) \ "typeOfResource")
 
   // OreAggregation
-  // TODO IIIF <mods:location><mods:url note="iiif-manifest">
+  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] =
+  // <mods:location><mods:url note="iiif-manifest">
+    (getModsRoot(data) \ "location" \ "url")
+      .filter(node => filterAttribute(node, "note", "iiif-manifest"))
+      .flatMap(extractStrings)
+      .map(URI)
 
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
