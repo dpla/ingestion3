@@ -92,8 +92,9 @@
             </mods:subject>
             <mods:location>
                 <mods:url access="object in context" usage="primary">http://cdm16122.contentdm.oclc.org/cdm/ref/collection/p15370coll2/id/2977</mods:url>
-                <mods:url access="preview">https://ark.digitalcommonwealth.org/ark:/50959/0k225b90r/thumbnail</mods:url></mods:location>
-
+                <mods:url access="preview">https://ark.digitalcommonwealth.org/ark:/50959/0k225b90r/thumbnail</mods:url>
+                <mods:url note="iiif-manifest">https://ark.digitalcommonwealth.org/ark:/50959/v405tb16x/manifest</mods:url>
+            </mods:location>
             <name>
                 <namePart type="date">2000</namePart>
                 <namePart>Alfred</namePart>

@@ -216,4 +216,9 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
 
     assert(extractor.place(xml) === expected)
   }
+
+  it should "extract the correct IIIF manifest" in {
+    val expected = Seq(URI("https://ark.digitalcommonwealth.org/ark:/50959/v405tb16x/manifest"))
+    assert(extractor.iiifManifest(xml) === expected)
+  }
 }
