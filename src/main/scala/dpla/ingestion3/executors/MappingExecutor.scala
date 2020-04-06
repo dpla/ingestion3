@@ -68,12 +68,12 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     // Get distinct harvest records
     val distinctHarvest: DataFrame = harvestedRecords.distinct
 
-    // For reporting purposes, caluclate number of duplicate harvest records
+    // For reporting purposes, calculate number of duplicate harvest records
     val duplicateHarvest: Long = harvestedRecords.count - distinctHarvest.count
 
     // Run the mapping over the Dataframe
     // Transformation only
-    val mappingResults: RDD[OreAggregation] = distinctHarvest
+    val mappingResults: RDD[OreAggregation] = harvestedRecords
       .select("document")
       .as[String]
       .rdd
