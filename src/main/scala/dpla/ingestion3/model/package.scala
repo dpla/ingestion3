@@ -119,10 +119,12 @@ package object model {
         ("@id" -> record.dplaUri.toString) ~
         ("aggregatedCHO" -> "#sourceResource") ~
         ("dataProvider" -> record.dataProvider.name) ~
+        ("iiifManifest" -> record.iiifManifest.map{o => o.toString}) ~ // IIIF Manifest URI
         ("ingestDate" -> ingestDate) ~
         ("ingestType" -> "item") ~
         ("intermediateProvider" -> record.intermediateProvider.map(p => p.name)) ~
         ("isShownAt" -> record.isShownAt.uri.toString) ~
+        ("mediaMaster" -> record.mediaMaster.map{o => o.uri.toString}) ~ // full size media
         ("object" -> record.`preview`.map{o => o.uri.toString}) ~ // in dpla map 3, object is the thumbnail
         ("rights" -> record.edmRights.map(r => r.toString)) ~
         ("originalRecord" ->
