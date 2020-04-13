@@ -145,10 +145,9 @@ object ModelConverter {
       .getOrElse(throw new RuntimeException(s"Couldn't parse URI in row $row, field position $fieldPosition"))
 
   private[model] def optionalUri(row: Row, fieldPosition: Integer): Option[URI] = {
-    if (row.length > fieldPosition)
+    Try {
       Option(row.getString(fieldPosition)).map(URI)
-    else
-      None
+    }.getOrElse(None)
   }
 
   private[model] def requiredString(row: Row, fieldPosition: Integer): String =
