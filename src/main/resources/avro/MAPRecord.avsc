@@ -1132,6 +1132,21 @@
             "type": "array",
             "items": "string"
         }
+    },
+    {
+      "name": "iiifManifest",
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    {
+      "name": "mediaMaster",
+      "type": {
+        "name": "mediaMasterArray",
+        "type": "array",
+        "items": "string"
+      }
     }
   ]
 }
