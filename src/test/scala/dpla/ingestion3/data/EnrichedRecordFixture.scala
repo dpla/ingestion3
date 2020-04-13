@@ -32,8 +32,6 @@ object EnrichedRecordFixture {
       ),
       sidecar = ("prehashId" -> "oai:somestate:id123") ~ ("dplaId" -> "4b1bd605bd1d75ee23baadb0e1f24457"),
       originalId = "The original ID",
-      iiifManifest = Some(URI("http://iiif.example/1/")),
-      mediaMaster = Seq(stringOnlyWebResource("http://example.fullframe.com/1/")),
       sourceResource = DplaSourceResource(
         collection = Seq(DcmiTypeCollection(
           title = Some("The Collection"),
@@ -86,7 +84,9 @@ object EnrichedRecordFixture {
         title = Seq("The Title"),
         `type` = Seq("image", "text")
       ),
-      tags = Seq()
+      tags = Seq(URI("tag")),
+      iiifManifest = Some(URI("https://ark.iiif/item/manifest")),
+      mediaMaster = Seq(EdmWebResource(uri = URI("https://example.org/record/123.html")))
     )
 
   val minimalEnrichedRecord =
