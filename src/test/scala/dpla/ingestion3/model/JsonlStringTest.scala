@@ -41,6 +41,16 @@ class JsonlStringTest extends FlatSpec {
     )
   }
 
+  it should "render a iiifManfiest " in {
+    val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord)
+    val jvalue = parse(s)
+    val iiifManifest = jvalue \ "_source" \ "iiifManifest"
+    assert(iiifManifest.isInstanceOf[JString])
+    assert(
+      compact(render(iiifManifest)) == "\"https://ark.iiif/item/manifest\""
+    )
+  }
+
   it should "not have empty arrays for fields that have no data" in {
     // Those fields that are optional are 0-n, so they will be arrays.
     val s: String = jsonlRecord(EnrichedRecordFixture.minimalEnrichedRecord)
