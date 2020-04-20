@@ -45,6 +45,9 @@ class NaraMapping extends XmlMapping with XmlExtractor {
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     Seq(uriOnlyWebResource(itemUri(data)))
 
+  override def mediaMaster(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    extractPreview(data)
+
   override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractPreview(data)
 

@@ -6,6 +6,7 @@ import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.harvesters.Harvester
+import dpla.ingestion3.harvesters.file.NaraDeltaHarvester
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.harvesters.pss.PssHarvester
 import dpla.ingestion3.harvesters.resourceSync.RsHarvester
@@ -131,6 +132,8 @@ trait HarvestExecutor {
         new PssHarvester(spark, shortName, conf, logger)
       case "rs" =>
         new RsHarvester(spark, shortName, conf, logger)
+      case "nara.file.delta" =>
+        new NaraDeltaHarvester(spark, shortName, conf, logger)
       case "api" | "file" =>
         val harvesterClass = ProviderRegistry.lookupHarvesterClass(shortName) match {
           case Success(harvClass) => harvClass
@@ -141,7 +144,6 @@ trait HarvestExecutor {
         harvesterClass
           .getConstructor(classOf[SparkSession], classOf[String], classOf[i3Conf], classOf[Logger])
           .newInstance(spark, shortName, conf, logger)
-
       case _ =>
         val msg = s"Harvest type not recognized."
         logger.fatal(msg)

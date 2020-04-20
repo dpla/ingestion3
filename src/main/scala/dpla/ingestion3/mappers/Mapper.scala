@@ -341,7 +341,7 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
         sidecar = mapping.sidecar(document),
         tags = mapping.tags(document),
         iiifManifest = validatedIIIFManifest,
-        mediaMaster = mapping.hotdog(document),
+        mediaMaster = mapping.mediaMaster(document),
         sourceResource = DplaSourceResource(
           alternateTitle = mapping.alternateTitle(document),
           collection = mapping.collection(document),
@@ -430,7 +430,7 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
         sidecar = mapping.sidecar(document),
         tags = mapping.tags(document),
         iiifManifest = validatedIIIFManifest,
-        mediaMaster = mapping.hotdog(document),
+        mediaMaster = mapping.mediaMaster(document),
         sourceResource = DplaSourceResource(
           alternateTitle = mapping.alternateTitle(document),
           collection = mapping.collection(document),

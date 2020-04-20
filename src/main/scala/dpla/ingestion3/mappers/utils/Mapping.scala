@@ -21,7 +21,7 @@ trait Mapping[T] {
   def isShownAt(data: Document[T]): ZeroToMany[EdmWebResource] = emptySeq
   def `object`(data: Document[T]): ZeroToMany[EdmWebResource] = emptySeq // full size image
   def preview(data: Document[T]): ZeroToMany[EdmWebResource] = emptySeq // thumbnail
-  def hotdog(data: Document[T]): ZeroToMany[EdmWebResource] = emptySeq // master media, ignore `object`
+  def mediaMaster(data: Document[T]): ZeroToMany[EdmWebResource] = emptySeq // master media, ignore `object`
   def iiifManifest(data: Document[T]): ZeroToMany[URI] = emptySeq // URL for IIIF presentation manifest
 
   def provider(data: Document[T]): ExactlyOne[EdmAgent] = emptyEdmAgent
