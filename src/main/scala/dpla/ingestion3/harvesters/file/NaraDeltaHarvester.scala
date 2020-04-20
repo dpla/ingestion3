@@ -5,6 +5,7 @@ import java.util.zip.GZIPInputStream
 
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.dataStorage.InputHelper
 import dpla.ingestion3.harvesters.{AvroHelper, Harvester}
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
@@ -13,7 +14,6 @@ import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.hadoop.fs.Path
 import org.apache.log4j.Logger
-import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.tools.bzip2.CBZip2InputStream
@@ -22,7 +22,7 @@ import org.apache.tools.tar.TarInputStream
 import scala.util.{Failure, Success, Try}
 import scala.xml._
 
-class NaraFileHarvester(
+class NaraDeltaHarvester(
                          spark: SparkSession,
                          shortName: String,
                          conf: i3Conf,
@@ -48,6 +48,7 @@ class NaraFileHarvester(
                         bufferedData: Option[BufferedReader] = None)
 
 
+  // FIXME revert to originalSchema
   lazy val naraSchema: Schema =
     new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/NaraOriginalRecord.avsc"))
 
@@ -199,24 +200,36 @@ class NaraFileHarvester(
 
     logger.info(s"Writing harvest tmp output to $naraTmp")
 
-    // FIXME This assumes files on local file system and not on S3. Files should be able to read off of S3.
-    val inFile = new File(conf.harvest.endpoint.getOrElse("in"))
-    // FIXME Deletes are tracked in files alongside harvest data, this should be done in a more sustainable way
-    val deletes = new File(inFile, "/deletes/")
+    // The incremental update file
+    val deltaIn = new File(conf.harvest.update.getOrElse("in"))
+    // Get the most recent harvest data defined by the `in` parameter in the i3 configuration file
+    val previous = conf.harvest.previous.getOrElse("previous")
 
-    if (inFile.isDirectory)
-      for (file: File <- inFile.listFiles(new GzFileFilter).sorted) {
-        logger.info(s"Harvesting from ${file.getName}")
+    val previousHarvestIn: String = InputHelper.isActivityPath(previous) match {
+      case true => previous
+      case false => InputHelper.mostRecent(previous)
+        .getOrElse(throw new RuntimeException(s"Unable to load previous harvest data from $previous"))
+    }
+
+    // Deletes
+    val deletes = new File(conf.harvest.deletes.getOrElse("deletes"))
+
+    logger.info(s"Using previous harvest data from $previousHarvestIn")
+    logger.info(s"Using deletes data from ${deletes.getAbsolutePath}")
+
+    if (deltaIn.isDirectory)
+      for (file: File <- deltaIn.listFiles(new GzFileFilter).sorted) {
+        logger.info(s"Harvesting NARA delta changes from ${file.getName}")
         harvestFile(file, unixEpoch)
       }
     else
-      harvestFile(inFile, unixEpoch)
+      harvestFile(deltaIn, unixEpoch)
 
     // flush writes
    avroWriterNara.flush()
 
-    // Get the absolute path of the avro file written to naraTmp directory. copyFromLocalFile() cannot copy
-    // a directory
+    // Get the absolute path of the avro file written to naraTmp directory
+    // TODO I think this is no longer required because it won't ever use HDFS...
     val naraTempFile = new File(naraTmp)
       .listFiles(new AvroFileFilter)
       .headOption
@@ -224,20 +237,25 @@ class NaraFileHarvester(
       .getAbsolutePath
 
     val localSrcPath = new Path(naraTempFile)
-    val dfAllRecords = spark.read.avro(localSrcPath.toString)
+    val dfDeltaRecords = spark.read.avro(localSrcPath.toString)
 
-    import spark.implicits._
-    val w = Window.partitionBy($"id").orderBy($"filename".desc)
+    // Read most recent harvest data file
+    val dfLastNaraHarvest: DataFrame = spark.read.avro(previousHarvestIn)
 
-    val df = dfAllRecords
-      .withColumn("rn", row_number.over(w)).where($"rn" === 1)
-      .drop("rn")
+    logger.info(s"Read ${dfLastNaraHarvest.count()} records from previous harvest")
+
+    // Create temp views of DataFrames for update DF
+    dfDeltaRecords.createOrReplaceTempView("delta")
+    dfLastNaraHarvest.createOrReplaceTempView("lastHarvest")
+
+    val updateDF = spark.sql("select lastHarvest.* from lastHarvest join delta on lastHarvest.id = delta.id")
+    val df = dfLastNaraHarvest.except(updateDF).union(dfDeltaRecords).toDF()
 
     // process deletes
     if (deletes.exists()) {
-      val del = getIdsToDelete(deletes)
-      logger.info(s"${del.count()} records to delete in ${deletes.getAbsolutePath}")
-      df.where(!col("id").isin(del))
+      val deleteDf = getIdsToDelete(deletes)
+      logger.info(s"${deleteDf.size} records to delete in ${deletes.getAbsolutePath}")
+      df.where(!col("id").isin(deleteDf:_*))
     } else {
       logger.info("No deletes files specified. Removing no records from NARA data export")
       df
@@ -249,19 +267,18 @@ class NaraFileHarvester(
     * which had previously been deleted.
     *
     * @param file File      Path to file or folder the defines which NARA IDs should be deleted
-    * @return DataFrame     IDs to delete
+    * @return Seq[String]   IDs to delete
     */
-  def getIdsToDelete(file: File): DataFrame = {
+  def getIdsToDelete(file: File): Seq[String] = {
     import spark.implicits._
 
     val files = if (file.isDirectory) file.listFiles(new XmlFileFilter).sorted else Array(file)
 
     files.flatMap(file => {
       val xml = XML.loadFile(file)
-      (xml \\ "naId").map(_.text.toString)
+      (xml \\ "naId").map(_.text)
     }).distinct
       .toSeq
-      .toDF()
   }
 
   override def cleanUp(): Unit = {

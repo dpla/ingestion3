@@ -196,6 +196,32 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.preview(Document(xml)) === Seq())
   }
 
+
+  it should "map multiple mediaMaster URLs that begin with https://opaexport-conv.s3.amazonaws.com/" in {
+    val xml = <item>
+      <naId>51046777</naId>
+      <digitalObjectArray>
+        <digitalObject>
+          <accessFilename>https://opaexport-conv.s3.amazonaws.com/TB149/Civil_War_Service_Index/M545-CW_ServRecdIndexUnion_MI/M545_0042/images/2514.jpg</accessFilename>
+          <objectType>
+            <termName>Image (JPG)</termName>
+          </objectType>
+        </digitalObject>
+        <digitalObject>
+          <accessFilename>https://opaexport-conv.s3.amazonaws.com/TB149/Civil_War_Service_Index/M545-CW_ServRecdIndexUnion_MI/M545_0042/images/2516.jpg</accessFilename>
+          <objectType>
+            <termName>Image (JPG)</termName>
+          </objectType>
+        </digitalObject>
+      </digitalObjectArray>
+    </item>
+
+    val correctUrls = Seq("https://catalog.archives.gov/OpaAPI/media/51046777/content/TB149/Civil_War_Service_Index/M545-CW_ServRecdIndexUnion_MI/M545_0042/images/2514.jpg",
+      "https://catalog.archives.gov/OpaAPI/media/51046777/content/TB149/Civil_War_Service_Index/M545-CW_ServRecdIndexUnion_MI/M545_0042/images/2516.jpg")
+    assert(extractor.preview(Document(xml)) === correctUrls.map(stringOnlyWebResource))
+  }
+
+
   it should "extract dataProvider from records with fileUnitPhysicalOccurrence" in {
     val xml = <item><physicalOccurrenceArray>
       <fileUnitPhysicalOccurrence>
