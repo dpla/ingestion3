@@ -117,4 +117,34 @@ class TxMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("UNT Libraries").map(nameOnlyAgent)
     assert(extractor.dataProvider(xml) === expected)
   }
+
+  it should "extract the correct RS.org value to edmRights" in {
+    // <untl:rights qualifier="statement">http://rightsstatements.org/vocab/NoC-US/1.0/</untl:rights>
+    val xml =
+      <record>
+        <metadata>
+          <untl:metadata xmlns:untl="http://digital2.library.unt.edu/untl/">
+            <untl:rights qualifier="statement">http://rightsstatements.org/vocab/NoC-US/1.0/</untl:rights>
+          </untl:metadata>
+        </metadata>
+      </record>
+
+    val expected = Seq(URI("http://rightsstatements.org/vocab/NoC-US/1.0/"))
+    assert(extractor.edmRights(Document(xml)) === expected)
+  }
+
+  it should "extract the correct CC.org value to edmRights" in {
+    // <untl:rights qualifier="license">https://creativecommons.org/licenses/by/4.0/</untl:rights>
+    val xml =
+      <record>
+        <metadata>
+          <untl:metadata xmlns:untl="http://digital2.library.unt.edu/untl/">
+            <untl:rights qualifier="license">https://creativecommons.org/licenses/by/4.0/</untl:rights>
+          </untl:metadata>
+        </metadata>
+      </record>
+
+    val expected = Seq(URI("https://creativecommons.org/licenses/by/4.0/"))
+    assert(extractor.edmRights(Document(xml)) === expected)
+  }
 }

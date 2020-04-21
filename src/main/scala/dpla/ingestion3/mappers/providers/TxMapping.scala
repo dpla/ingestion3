@@ -20,6 +20,10 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     DigitalSurrogateBlockList.termList ++
       FormatTypeValuesBlockList.termList
 
+  // TODO uncomment after merging feature/duplicate-id-validation-toggle
+  // Do not fail records that appear in more than one set
+  // override val enforceDuplicateIds: Boolean = false
+
   override def getProviderName: String = "texas"
 
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
@@ -35,6 +39,21 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       case None => Seq()
     }
   }
+
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
+    // <untl:rights qualifier="statement">http://rightsstatements.org/vocab/NoC-US/1.0/</untl:rights>
+    // <untl:rights qualifier="license">https://creativecommons.org/licenses/by/4.0/</untl:rights>
+    (metadata(data) \ "rights")
+      .filter(node => filterAttributeListOptions(node, "qualifier", Seq("statement", "license")))
+      .flatMap(extractStrings)
+      .map(URI)
+
+  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] =
+  // <untl:identifier qualifier="iiif-manifest">https://texashistory.unt.edu/ark:/67531/metapth2719/manifest/
+    (metadata(data) \ "identifier")
+      .filter(node => filterAttribute(node, "qualifier", "iiif-manifest"))
+      .flatMap(extractStrings)
+      .map(URI)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
@@ -73,13 +92,13 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     extractName(metadata(data), "creator")
 
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
-    val creationDates = (data \ "metadata" \ "date")
+    val creationDates = (metadata(data) \ "date")
       .filter(node => filterAttribute(node, "qualifier", "creation"))
       .flatMap(extractStrings)
       .map(stringOnlyTimeSpan)
       .headOption
 
-    val otherDates = (data \ "metadata" \ "date")
+    val otherDates = (metadata(data) \ "date")
       .filterNot(node => filterAttribute(node, "qualifier", "digitized") | filterAttribute(node, "qualifier", "embargoUntil"))
       .flatMap(extractStrings)
       .map(stringOnlyTimeSpan)
