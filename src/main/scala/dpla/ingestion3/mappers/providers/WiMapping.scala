@@ -83,10 +83,10 @@ class WiMapping extends XmlMapping with XmlExtractor
 
   override def rights(data: Document[NodeSeq]): Seq[String] =
     ((data \ "metadata" \\ "rights") ++
-      (data \ "metadata" \\ "accessRights")).map(rights => {
+      (data \ "metadata" \\ "accessRights")).flatMap(rights => {
         rights.prefix match {
-          case "dc" => rights.text
-          case _ => ""
+          case "dc" => Some(rights.text.trim)
+          case _ => None
         }
       })
 
