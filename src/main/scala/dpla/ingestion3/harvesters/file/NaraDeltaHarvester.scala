@@ -47,10 +47,8 @@ class NaraDeltaHarvester(
                         data: Option[Array[Byte]],
                         bufferedData: Option[BufferedReader] = None)
 
-
-  // FIXME revert to originalSchema
-  lazy val naraSchema: Schema =
-    new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/NaraOriginalRecord.avsc"))
+    lazy val naraSchema: Schema =
+    new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc"))
 
   val avroWriterNara: DataFileWriter[GenericRecord] =
     AvroHelper.avroWriter(shortName, naraTmp, naraSchema)
@@ -155,7 +153,6 @@ class NaraDeltaHarvester(
     genericRecord.put("ingestDate", unixEpoch)
     genericRecord.put("provider", shortName)
     genericRecord.put("document", item.item)
-    genericRecord.put("filename", file) // Used to order records by date updated.
     genericRecord.put("mimetype", mimeType)
 
     avroWriter.append(genericRecord)
@@ -229,7 +226,6 @@ class NaraDeltaHarvester(
    avroWriterNara.flush()
 
     // Get the absolute path of the avro file written to naraTmp directory
-    // TODO I think this is no longer required because it won't ever use HDFS...
     val naraTempFile = new File(naraTmp)
       .listFiles(new AvroFileFilter)
       .headOption
@@ -243,6 +239,10 @@ class NaraDeltaHarvester(
     val dfLastNaraHarvest: DataFrame = spark.read.avro(previousHarvestIn)
 
     logger.info(s"Read ${dfLastNaraHarvest.count()} records from previous harvest")
+
+    // This harvester no longer requires a custom schema and ordering
+    // by filename to determine the most recent version of a record. That determination is
+    // handled by the 'union' of the previous full harvester and delta harvest
 
     // Create temp views of DataFrames for update DF
     dfDeltaRecords.createOrReplaceTempView("delta")
