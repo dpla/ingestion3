@@ -15,6 +15,8 @@ import scala.xml._
 
 class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
 
+  override val enforceDuplicateIds: Boolean = false
+
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
       FormatTypeValuesBlockList.termList

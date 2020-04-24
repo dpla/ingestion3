@@ -90,13 +90,14 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
           .toArray
       )
 
+
     // Update messages to include duplicate originalId
+    val enforceDuplidateIds = dplaMap.getExtractorClass(shortName).getMapping.enforceDuplicateIds
+
     val updatedResults: RDD[OreAggregation] = mappingResults.map(oreAgg => {
-
       oreAgg.copy(messages =
-
         if (duplicateOriginalIds.value.contains(oreAgg.originalId))
-          duplicateOriginalId(oreAgg.originalId) +: oreAgg.messages // prepend is faster that append on seq
+          duplicateOriginalId(oreAgg.originalId, enforceDuplidateIds) +: oreAgg.messages // prepend is faster that append on seq
         else
           oreAgg.messages
       )
@@ -273,10 +274,12 @@ class DplaMap extends Serializable {
     */
   def map(document: String, shortName: String): OreAggregation = {
 
-    val extractorClass = ProviderRegistry.lookupProfile(shortName) match {
-      case Success(extClass) => extClass
-      case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
-    }
+    val extractorClass = getExtractorClass(shortName)
     extractorClass.performMapping(document)
+  }
+
+  def getExtractorClass(shortName: String) = ProviderRegistry.lookupProfile(shortName) match {
+    case Success(extClass) => extClass
+    case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
   }
 }
