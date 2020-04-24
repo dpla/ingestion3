@@ -29,4 +29,9 @@ class WiMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq(uriOnlyWebResource(URI("https://digitalgallery.bgsu.edu/collections/item/14058")))
     assert(extractor.isShownAt(xml) === expected)
   }
+
+  it should "extract Seq() and not Seq('')_if only Rights exists" in {
+    val expected = Seq()
+    assert(extractor.rights(xml) === expected)
+  }
 }
