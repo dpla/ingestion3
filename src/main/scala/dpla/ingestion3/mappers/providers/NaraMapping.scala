@@ -15,6 +15,8 @@ import scala.xml.{Node, NodeSeq}
 
 class NaraMapping extends XmlMapping with XmlExtractor {
 
+  override val enforceDuplicateIds: Boolean = false
+
   // ID minting functions
   override def useProviderName(): Boolean = true
 

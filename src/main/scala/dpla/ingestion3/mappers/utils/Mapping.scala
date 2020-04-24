@@ -54,6 +54,8 @@ trait Mapping[T] {
   def `type`(data: Document[T]): ZeroToMany[String] = emptySeq
 
 
+  val enforceDuplicateIds: Boolean   = true
+
   /**
     Define the defaults for required field validations
   */

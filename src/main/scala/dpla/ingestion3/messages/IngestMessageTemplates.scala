@@ -66,10 +66,10 @@ trait IngestMessageTemplates {
       value = "both rights and edmRights are defined"
     )
 
-  def duplicateOriginalId(id: String): IngestMessage =
+  def duplicateOriginalId(id: String, enforce: Boolean): IngestMessage =
     IngestMessage(
       message = "Duplicate",
-      level = IngestLogLevel.error,
+      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
       id = id,
       field = "originalId",
       value = "at least one other record shares this originalId"
