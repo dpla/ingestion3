@@ -182,10 +182,11 @@ trait EnrichExecutor extends Serializable {
 
     // `generateFieldReport' is a shuffle operation and an action
     val enrichOpSummary = EnrichmentOpsSummary(
-      typeMessagesCount,
-      dateMessagesCount,
-      langMessagesCount,
-      placeMessagesCount,
+      typeImproved = typeMessagesCount,
+      dateImproved = dateMessagesCount,
+      langImproved = langMessagesCount,
+      placeImprove = placeMessagesCount,
+      dataProviderImprove = dataProviderMessagesCount,
       langSummary = PrepareEnrichmentReport.generateFieldReport(messages, "language"),
       typeSummary = PrepareEnrichmentReport.generateFieldReport(messages, "type"),
       placeSummary = PrepareEnrichmentReport.generateFieldReport(messages, "place"),

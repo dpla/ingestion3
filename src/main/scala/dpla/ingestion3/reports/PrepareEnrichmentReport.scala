@@ -62,6 +62,12 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
           "dataProvider.exactMatch.URI",
           enriched.dataProvider.name.getOrElse(""),
           enriched.dataProvider.exactMatch.map(_.toString).mkString(" | ")))
+      } else {
+        msgs.add(originalValue(
+          dplaId,
+          "dataProvider.exactMatch.URI",
+          enriched.dataProvider.name.getOrElse("")
+        ))
       }
   }
 
@@ -120,7 +126,7 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
           "language",
           l.providedLabel.getOrElse(""),
           l.concept.getOrElse("")))
-      }else
+      } else
         msgs.add(originalValue(
           (enriched.sidecar \\ "dplaId").values.toString,
           "language",

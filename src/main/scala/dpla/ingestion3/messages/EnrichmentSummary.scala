@@ -17,6 +17,7 @@ object EnrichmentSummary {
     val dateImproved = Utils.formatNumber(data.enrichmentOpSummary.dateImproved)
     val langImproved = Utils.formatNumber(data.enrichmentOpSummary.langImproved)
     val placeImproved = Utils.formatNumber(data.enrichmentOpSummary.placeImprove)
+    val dataProviderImproved = Utils.formatNumber(data.enrichmentOpSummary.dataProviderImprove)
 
     val lineBreak = "-"*80
 
@@ -39,7 +40,8 @@ object EnrichmentSummary {
        |${data.enrichmentOpSummary.langSummary}
        |${ReportFormattingUtils.centerPad("Date", dateImproved)}
        |${data.enrichmentOpSummary.dateSummary}
-       |
+       |${ReportFormattingUtils.centerPad("Data Provider", dataProviderImproved)}
+       |${data.enrichmentOpSummary.dataProviderSummary}
        |
        |${ReportFormattingUtils.center("Log Files")}
        |${data.operationSummary.logFiles.mkString("\n")}
