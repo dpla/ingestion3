@@ -8,7 +8,7 @@ import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import dpla.ingestion3.utils.FlatFileIO
 import org.apache.avro.Schema
 import org.apache.spark.sql.types.StructType
-import org.json4s.DefaultFormats
+import org.json4s.{DefaultFormats, Formats}
 import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
@@ -208,26 +208,100 @@ package object model {
         ("tags" -> record.tags.map {_.toString})
       )
 
+    compact(render(jobj)(formats))
+  }
 
-    // Taken from
-    // https://stackoverflow.com/questions/40128816/remove-json-field-when-empty-value-in-serialize-with-json4s
-    implicit val formats = DefaultFormats.withEmptyValueStrategy(new EmptyValueStrategy {
-      def noneValReplacement = None
+  def wikiRecord(record: OreAggregation): String = {
+    // We require the that DPLA ID and prehash ID (the providers 'permanent' identifier) be passed forward via the
+    // metadata sidecar. Currently, there is no place to store these values in either the DPLA MAPv3.1 or MAPv4.0 models
+    val dplaId = record.sidecar \ "dplaId" match {
+      case JString(js) => js
+      case _ => throw new RuntimeException("DPLA ID is not in metadata sidecar")
+    }
+    val _id = record.sidecar \ "prehashId" match {
+      case JString(js) => js
+      case _ => throw new RuntimeException("Prehash ID is not in metadata sidecar")
+    }
 
-      def replaceEmpty(value: JValue): JValue = value match {
-        case JString("") => JNothing
-        case JArray(items) =>
-          if(items.isEmpty) JNothing
-          else JArray(items.map(replaceEmpty))
-        case JObject(fields) => JObject(fields map {
-          case JField(name, v) => JField(name, value = replaceEmpty(v))
-        })
-        case oth => oth
-      }
-    })
+    /**
+        {
+          datasource: "bpl_enriched_20200401_0999232",
+          timestamp: "",
+          markup: ""
+          assetsToDownload: [
+            "iiifManifest"
+              or
+            "mediaMaster_1",
+            "mediaMaster_2",
+            "mediaMaster_3"..
+          ]
+        }
+      */
+
+//    '''
+//    == {{int:filedesc}} ==
+//      {{Artwork
+//        | Other fields 1 = {{InFi|Creator|''' + creator + '''}}
+//        | title = ''' + title + '''
+//        | description = ''' + description + '''
+//        | date = ''' + date + '''
+//        | permission = {{PD-US}}
+//        | source =
+//          {{DPLA| ''' + institution + ''' |hub=''' + hub + '''|url=''' + source + '''|dpla_id=''' + dpla_id + '''|local_id=''' + identifiers + '''}}
+//        |Institution = {{Institution|wikidata=''' + institution + '}}' + rights + '''
+//      }}'''
+
+    val jobj: JObject =
+      ("datasource" -> "datasource_tbd") ~
+      ("timestamp" -> "timestamp_tbd") ~
+      ("markup" ->
+        s"""| == {{int:filedesc}} ==
+             | {{Artwork
+             | | Other fields 1 = {{ InFi | Creator |${record.sourceResource.creator.map{c => c.name}.mkString("; ")} }}
+             | | title = ${record.sourceResource.title.mkString("; ")}
+             | | description = ${record.sourceResource.description.mkString("; ")}
+             | | date = ${record.sourceResource.date.map{d => d.prefLabel}.mkString("; ")}
+             | | permission = {{PD-US}}
+             | | source = {{
+             |       DPLA| ${record.dataProvider.name.getOrElse("")}|
+             |       hub=${record.provider.name.getOrElse("")}|
+             |       url=s${record.isShownAt.uri.toString}|
+             |       dpla_id = $dplaId|
+             |       local_id= ${record.sourceResource.identifier.mkString("; ")}
+             |     }}
+             |    |Institution = {{Institution|wikidata=${record.dataProvider.name}}}
+             |    other fields = {{InFi|Standardized rights statement|{{rights statement|${record.edmRights.map(r => r.toString)}}}}""".stripMargin) ~
+      ("assetsToDownload" -> "assets_tbd")
 
     compact(render(jobj)(formats))
   }
+
+  /**
+    *
+    * @param record
+    * @return
+    */
+  def getDplaId(record: OreAggregation): String = record.sidecar \ "dplaId" match {
+    case JString(js) => js
+    case _ => throw new RuntimeException("DPLA ID is not in metadata sidecar")
+  }
+
+  // Taken from
+  // https://stackoverflow.com/questions/40128816/remove-json-field-when-empty-value-in-serialize-with-json4s
+  implicit val formats: Formats = DefaultFormats.withEmptyValueStrategy(new EmptyValueStrategy {
+    def noneValReplacement = None
+
+    def replaceEmpty(value: JValue): JValue = value match {
+      case JString("") => JNothing
+      case JArray(items) =>
+        if(items.isEmpty) JNothing
+        else JArray(items.map(replaceEmpty))
+      case JObject(fields) => JObject(fields map {
+        case JField(name, v) => JField(name, value = replaceEmpty(v))
+      })
+      case oth => oth
+    }
+  })
 
   val avroSchema: Schema = new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
   val sparkSchema: StructType = SchemaConverters.toSqlType(avroSchema).dataType.asInstanceOf[StructType]
