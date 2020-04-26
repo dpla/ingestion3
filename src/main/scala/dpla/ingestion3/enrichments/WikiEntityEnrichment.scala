@@ -4,13 +4,13 @@ import dpla.ingestion3.model.{EdmAgent, URI}
 import dpla.ingestion3.utils.FileLoader
 
 /**
-  * Language mapping examples
+  * Wikimedia entity enrichments
   */
 class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] {
 
   // Files to source vocabulary from
   private val fileList = Seq(
-    // "/wiki/hubs.csv",
+    "/wiki/hubs.json",
     "/wiki/institutions.json"
   )
 
@@ -19,7 +19,7 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] {
     (term: EdmAgent) => normalizationFunc(term)
   )
 
-  // combine two SkosConcepts
+  // combine two EdmAgents
   private val merger = new VocabMerge[EdmAgent](
     (original: EdmAgent, enriched: EdmAgent) => mergeFunc(original, enriched)
   )
@@ -27,24 +27,24 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] {
   /**
     * Normalize providedLabel value for retrieval
     *
-    * @param term SkosConcept
+    * @param term EdmAgent
     * @return String
     */
   private def normalizationFunc(term: EdmAgent): String =
     term.name.getOrElse("").toLowerCase.trim
 
   /**
-    * Merge provided and enriched values to preserve providedLabel
+    * Merge provided and enriched values to preserve original 'name' value
     *
     * @param original Original value
-    * @param enriched Enriched form of `prov`
-    * @return Enriched SkosConcept with original value's providedLabel
+    * @param enriched Enriched form of 'original' value
+    * @return Enriched EdmAgent with original value's 'name'
     */
   private def mergeFunc(original: EdmAgent, enriched: EdmAgent) =
     enriched.copy(name = original.name)
 
   /**
-    * Read CSV files and load vocabulary into mappers
+    * Read JSON files and load vocabulary
     *
     * @return
     */
@@ -56,9 +56,10 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] {
   loadVocab
 
   /**
+    * Add EdmAgent to lookup dataset
     *
-    * @param entityName
-    * @param entityWikiId
+    * @param entityName Key from JSON file
+    * @param entityWikiId Value from JSON file
     */
   //noinspection TypeAnnotation
   private def addEntity(entityName: String, entityWikiId: String): Unit = {
@@ -74,10 +75,10 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] {
   override def files: Seq[String] = fileList
 
   /**
-    * Get enriched form of the given language by mapping
-    * language abbreviation to a full term
+    * Get enriched form of the given entity by mapping
+    * entity name to entity name (case-insensitive)
     * Example:
-    *   'Eng' -> 'English'
+    *   'university of pennsylvania' -> 'University of Pennsylvania'
     *
     * @param originalValue Original value
     * @return T Enriched value
@@ -86,7 +87,7 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] {
     lookup.lookup(originalValue)
 
   /**
-    * Performs both full-term validation and abbreviation mapping
+    * Performs full-term validation and mapping
     * @param value Original value to be enriched
     * @return SkosConcept Enriched version of original value or original value if
     *         enrichment was not possible
