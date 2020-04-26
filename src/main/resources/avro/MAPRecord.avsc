@@ -1145,7 +1145,39 @@
       "type": {
         "name": "mediaMasterArray",
         "type": "array",
-        "items": "string"
+        "items": {
+          "name": "MediaMasterEdmWebResource",
+          "type": "record",
+          "fields": [
+            {
+              "name": "uri",
+              "type": "string"
+            },
+            {
+              "name": "fileFormat",
+              "type": {
+              "name": "fileFormatsArray",
+              "type": "array",
+              "items": "string"
+            }
+            },
+            {
+              "name": "dcRights",
+              "type": {
+              "name": "dcRightsArray",
+              "type": "array",
+              "items": "string"
+            }
+            },
+            {
+              "name": "edmRights",
+              "type": [
+              "null",
+              "string"
+              ]
+            }
+          ]
+        }
       }
     }
   ]
