@@ -38,11 +38,31 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     prepareType(original, enriched)
     preparePlace(enriched)
     prepareDate(original, enriched)
+    prepareDataProvider(enriched)
 
     // messages are correctly collected
 
     // Put collected messages into copy of enriched
     enriched.copy(messages = msgs.getAll())
+  }
+
+  /**
+    *
+    * @param enriched
+    * @param msgs
+    */
+  def prepareDataProvider(enriched: OreAggregation)
+                         (implicit msgs: MessageCollector[IngestMessage]) = {
+
+    val dplaId = (enriched.sidecar \\ "dplaId").values.toString
+
+      if(enriched.dataProvider.exactMatch.nonEmpty){
+        msgs.add(enrichedValue(
+          dplaId,
+          "dataProvider.exactMatch.URI",
+          enriched.dataProvider.name.getOrElse(""),
+          enriched.dataProvider.exactMatch.map(_.toString).mkString(" | ")))
+      }
   }
 
   /**

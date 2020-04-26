@@ -11,7 +11,7 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] {
   // Files to source vocabulary from
   private val fileList = Seq(
     // "/wiki/hubs.csv",
-    "/wiki/institutions.csv"
+    "/wiki/institutions.json"
   )
 
   // performs term lookup
@@ -30,10 +30,8 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] {
     * @param term SkosConcept
     * @return String
     */
-  private def normalizationFunc(term: EdmAgent): String = term
-      .name.getOrElse("")
-      .toLowerCase()
-      .trim
+  private def normalizationFunc(term: EdmAgent): String =
+    term.name.getOrElse("").toLowerCase.trim
 
   /**
     * Merge provided and enriched values to preserve providedLabel
@@ -52,7 +50,7 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] {
     */
   //noinspection TypeAnnotation,UnitMethodIsParameterless
   private def loadVocab =
-    getVocabFromCsvFiles(files).foreach(term => addEntity(term(0), term(1)))
+    getVocabFromJsonFiles(files).foreach { case (key: String, value: String) => addEntity(key, value) }
 
   // Load the vocab
   loadVocab
