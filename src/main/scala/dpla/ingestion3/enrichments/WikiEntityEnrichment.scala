@@ -8,6 +8,8 @@ import dpla.ingestion3.utils.FileLoader
   */
 class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] {
 
+  protected val wikiUriBase = "https://wikidata.org/wiki/"
+
   // Files to source vocabulary from
   private val fileList = Seq(
     "/wiki/hubs.json",
@@ -67,7 +69,7 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] {
     lookup.add(
       EdmAgent(
         name = Some(entityName),
-        exactMatch = Seq(URI(entityWikiId))
+        exactMatch = Seq(URI(s"$wikiUriBase$entityWikiId"))
     ))
   }
 

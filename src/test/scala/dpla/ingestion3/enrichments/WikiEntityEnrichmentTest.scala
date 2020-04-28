@@ -12,7 +12,7 @@ class WikiEntityEnrichmentTest extends FlatSpec with BeforeAndAfter {
     val originalValue = nameOnlyAgent("University of Pennsylvania")
     val expectedValue = EdmAgent(
       name = Some("University of Pennsylvania"),
-      exactMatch = Seq(URI("Q49117"))
+      exactMatch = Seq(URI("https://wikidata.org/wiki/Q49117"))
     )
     assert(wikiEnrichment.enrichEntity(originalValue) === expectedValue)
   }
@@ -21,7 +21,7 @@ class WikiEntityEnrichmentTest extends FlatSpec with BeforeAndAfter {
     val originalValue = nameOnlyAgent("university of Pennsylvania")
     val expectedValue = EdmAgent(
       name = Some("university of Pennsylvania"),
-      exactMatch = Seq(URI("Q49117"))
+      exactMatch = Seq(URI("https://wikidata.org/wiki/Q49117"))
     )
     assert(wikiEnrichment.enrichEntity(originalValue) === expectedValue)
   }
