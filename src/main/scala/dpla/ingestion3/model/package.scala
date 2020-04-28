@@ -238,42 +238,35 @@ package object model {
         }
       */
 
-//    '''
-//    == {{int:filedesc}} ==
-//      {{Artwork
-//        | Other fields 1 = {{InFi|Creator|''' + creator + '''}}
-//        | title = ''' + title + '''
-//        | description = ''' + description + '''
-//        | date = ''' + date + '''
-//        | permission = {{PD-US}}
-//        | source =
-//          {{DPLA| ''' + institution + ''' |hub=''' + hub + '''|url=''' + source + '''|dpla_id=''' + dpla_id + '''|local_id=''' + identifiers + '''}}
-//        |Institution = {{Institution|wikidata=''' + institution + '}}' + rights + '''
-//      }}'''
-
+    val wikiMarkup = getWikiMarkup(record)
     val jobj: JObject =
       ("datasource" -> "datasource_tbd") ~
       ("timestamp" -> "timestamp_tbd") ~
-      ("markup" ->
-        s"""| == {{int:filedesc}} ==
-             | {{Artwork
-             | | Other fields 1 = {{ InFi | Creator |${record.sourceResource.creator.map{c => c.name}.mkString("; ")} }}
-             | | title = ${record.sourceResource.title.mkString("; ")}
-             | | description = ${record.sourceResource.description.mkString("; ")}
-             | | date = ${record.sourceResource.date.map{d => d.prefLabel}.mkString("; ")}
-             | | permission = {{PD-US}}
-             | | source = {{
-             |       DPLA| ${record.dataProvider.name.getOrElse("")}|
-             |       hub=${record.provider.name.getOrElse("")}|
-             |       url=s${record.isShownAt.uri.toString}|
-             |       dpla_id = $dplaId|
-             |       local_id= ${record.sourceResource.identifier.mkString("; ")}
-             |     }}
-             |    |Institution = {{Institution|wikidata=${record.dataProvider.name}}}
-             |    other fields = {{InFi|Standardized rights statement|{{rights statement|${record.edmRights.map(r => r.toString)}}}}""".stripMargin) ~
+      ("markup" -> wikiMarkup) ~
       ("assetsToDownload" -> "assets_tbd")
 
     compact(render(jobj)(formats))
+  }
+
+  def getWikiMarkup(record: OreAggregation): String = {
+    val dataProviderWikiUri = record.dataProvider.exactMatch.map(_.toString).head // FIXME, use filter to get Wiki URI
+    s"""| == {{int:filedesc}} ==
+        | {{ Artwork
+        |   | Other fields 1 = {{ InFi | Creator | ${record.sourceResource.creator.flatMap { _.name }.mkString("; ")} }}
+        |   | title = ${record.sourceResource.title.mkString("; ")}
+        |   | description = ${record.sourceResource.description.mkString("; ")}
+        |   | date = ${record.sourceResource.date.flatMap { _.prefLabel }.mkString("; ")}
+        |   | permission = {{PD-US}}
+        |   | source = {{
+        |       DPLA | $dataProviderWikiUri |
+        |       hub = ${record.provider.name.getOrElse()} |
+        |       url = s${record.isShownAt.uri.toString} |
+        |       dpla_id = ${getDplaId(record)} |
+        |       local_id = ${record.sourceResource.identifier.mkString("; ")}
+        |   }}
+        |   | Institution = {{ Institution | wikidata = $dataProviderWikiUri }}
+        |   Other fields = {{ InFi | Standardized rights statement | {{ rights statement | ${record.edmRights.getOrElse("")} }} }}
+        | }}""".stripMargin
   }
 
   /**

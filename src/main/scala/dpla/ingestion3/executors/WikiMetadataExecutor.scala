@@ -5,7 +5,6 @@ import java.time.LocalDateTime
 import com.databricks.spark.avro._
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.model.{ModelConverter, getDplaId, wikiRecord}
-import dpla.ingestion3.utils.FileLoader
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -14,7 +13,7 @@ import scala.util.{Failure, Success}
 
 case class WikiMetadata(dplaId: String, wikiMarkup: String)
 
-trait WikiMetadataExecutor extends Serializable with FileLoader {
+trait WikiMetadataExecutor extends Serializable {
 
   /**
     * Generate Wiki metadata JSON files from AVRO file
@@ -50,8 +49,7 @@ trait WikiMetadataExecutor extends Serializable with FileLoader {
 
     val enrichedRows: DataFrame = spark.read.avro(dataIn)
 
-    // Read in Wikidata entity mapping resource files
-    val institutions =
+    // TODO filter out non-eligible enrichedRows
 
     enrichedRows.foreach(
       row => {
