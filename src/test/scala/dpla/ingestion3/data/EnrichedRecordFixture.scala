@@ -9,7 +9,7 @@ object EnrichedRecordFixture {
     OreAggregation(
       dataProvider = EdmAgent(
         name = Some("Big Sky Digital Network"),
-        exactMatch = Seq(URI("Q83878447"))
+        exactMatch = Seq(URI("https://wikidata.org/wiki/Q83878447"))
       ),
       dplaUri = URI("https://dp.la/item/123"),
       originalRecord = "The Original Record",

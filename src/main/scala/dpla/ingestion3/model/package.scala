@@ -212,17 +212,6 @@ package object model {
   }
 
   def wikiRecord(record: OreAggregation): String = {
-    // We require the that DPLA ID and prehash ID (the providers 'permanent' identifier) be passed forward via the
-    // metadata sidecar. Currently, there is no place to store these values in either the DPLA MAPv3.1 or MAPv4.0 models
-    val dplaId = record.sidecar \ "dplaId" match {
-      case JString(js) => js
-      case _ => throw new RuntimeException("DPLA ID is not in metadata sidecar")
-    }
-    val _id = record.sidecar \ "prehashId" match {
-      case JString(js) => js
-      case _ => throw new RuntimeException("Prehash ID is not in metadata sidecar")
-    }
-
     /**
         {
           datasource: "bpl_enriched_20200401_0999232",
@@ -238,19 +227,38 @@ package object model {
         }
       */
 
-    val wikiMarkup = getWikiMarkup(record)
+    val wikiMarkup = buildWikiMarkup(record)
+    val wikiAssets = buildWikiAssets(record)
     val jobj: JObject =
       ("datasource" -> "datasource_tbd") ~
       ("timestamp" -> "timestamp_tbd") ~
       ("markup" -> wikiMarkup) ~
-      ("assetsToDownload" -> "assets_tbd")
+      ("assetsToDownload" -> wikiAssets)
 
     compact(render(jobj)(formats))
   }
 
-  def getWikiMarkup(record: OreAggregation): String = {
-    val dataProviderWikiUri = record.dataProvider.exactMatch.map(_.toString).head // FIXME, use filter to get Wiki URI
-    s"""| == {{int:filedesc}} ==
+  /**
+    *
+    * @param record
+    */
+  def buildWikiAssets(record: OreAggregation): Seq[String] = {
+    val mediaMasters = record.mediaMaster.map(_.uri.toString)
+    val iiif = record.iiifManifest.getOrElse(URI("")).toString
+
+    (Seq(iiif) ++ mediaMasters).filter(_.nonEmpty)
+  }
+
+  /**
+    *
+    * @param record
+    * @return
+    */
+  def buildWikiMarkup(record: OreAggregation): String = {
+    val dataProviderWikiUri = getDataProviderWikiId(record)
+    val dplaId = getDplaId(record)
+
+    s"""|== {{int:filedesc}} ==
         | {{ Artwork
         |   | Other fields 1 = {{ InFi | Creator | ${record.sourceResource.creator.flatMap { _.name }.mkString("; ")} }}
         |   | title = ${record.sourceResource.title.mkString("; ")}
@@ -260,8 +268,8 @@ package object model {
         |   | source = {{
         |       DPLA | $dataProviderWikiUri |
         |       hub = ${record.provider.name.getOrElse()} |
-        |       url = s${record.isShownAt.uri.toString} |
-        |       dpla_id = ${getDplaId(record)} |
+        |       url = ${record.isShownAt.uri.toString} |
+        |       dpla_id = $dplaId |
         |       local_id = ${record.sourceResource.identifier.mkString("; ")}
         |   }}
         |   | Institution = {{ Institution | wikidata = $dataProviderWikiUri }}
@@ -278,6 +286,24 @@ package object model {
     case JString(js) => js
     case _ => throw new RuntimeException("DPLA ID is not in metadata sidecar")
   }
+
+  /**
+    *
+    * @param record
+    * @return
+    */
+  def getDataProviderWikiId(record: OreAggregation): String =
+    record
+      .dataProvider
+      .exactMatch
+      .map(_.toString)
+      .find(_.startsWith("https://wikidata.org/wiki/")) match {
+        case Some(uri) => uri.replace("https://wikidata.org/wiki/", "")
+        case None =>
+          throw new RuntimeException(s"dataProvider ${record.dataProvider.name.getOrElse("__MISSING__")} " +
+            s"in ${getDplaId(record)} does not have wiki identifier ")
+    }
+
 
   // Taken from
   // https://stackoverflow.com/questions/40128816/remove-json-field-when-empty-value-in-serialize-with-json4s

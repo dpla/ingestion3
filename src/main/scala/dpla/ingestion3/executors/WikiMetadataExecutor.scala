@@ -7,7 +7,8 @@ import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.model.{ModelConverter, getDplaId, wikiRecord}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+import org.apache.spark.storage.StorageLevel
 
 import scala.util.{Failure, Success}
 
@@ -49,24 +50,39 @@ trait WikiMetadataExecutor extends Serializable {
 
     val enrichedRows: DataFrame = spark.read.avro(dataIn)
 
-    // TODO filter out non-eligible enrichedRows
+    enrichedRows.filter(row =>
+      ModelConverter.toModel(row).dataProvider.exactMatch.nonEmpty
+    )
+//    val indexRecords: Dataset[String] = enrichedRows.map(
+//      row => {
+//        val record = ModelConverter.toModel(row)
+//        jsonlRecord(record)
+//      }
+//    ).persist(StorageLevel.MEMORY_AND_DISK_SER)
 
-    enrichedRows.foreach(
+    // TODO filter out non-eligible enrichedRows
+    val wikiRows: Dataset[String] = enrichedRows.map(
       row => {
         val record = ModelConverter.toModel(row)
         val dplaId = getDplaId(record)
         val wikiMarkup = wikiRecord(record)
         val path = getWikiPath(dplaId)
-        println(
-          s"""
-            | Output path: $path
-             Output file: ${}
-             Wikimarkup: ${wikiMarkup}
-          """.stripMargin)
 
+        val string =
+          s"""
+            |
+            | Output path: $path
+            | Output file: TBD
+            | Wikimarkup: ${wikiMarkup}
+            |
+          """.stripMargin
+
+        string
         // TODO write files out
       }
-    )
+    ).persist(StorageLevel.MEMORY_AND_DISK_SER)
+
+    wikiRows.take(100).foreach(println)
 
     // val wikiCount = wikiRecords.count
 
