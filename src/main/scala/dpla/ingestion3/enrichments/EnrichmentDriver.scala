@@ -21,9 +21,10 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
   }
 
   val dateEnrichment = new DateBuilder()
-  val spatialEnrichment = new SpatialEnrichment(Geocoder)
+  // val spatialEnrichment = new SpatialEnrichment(Geocoder)
   val languageEnrichment = new LanguageEnrichment
   val typeEnrichment= new TypeEnrichment
+  val wikiEntityEnrichment = new WikiEntityEnrichment
 
   /**
     * Applies a set of common enrichments that need to be run for all providers
@@ -42,6 +43,9 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
       .standardStringEnrichments
 
     enriched.copy(
+      dataProvider = wikiEntityEnrichment
+        .enrich(enriched.dataProvider)
+        .getOrElse(enriched.dataProvider),
       sourceResource = enriched.sourceResource.copy(
         date = enriched.sourceResource.date.map(date => dateEnrichment.generateBeginEnd(date.originalSourceDate)).distinct,
         language = enriched.sourceResource.language.map(languageEnrichment.enrichLanguage).distinct,
