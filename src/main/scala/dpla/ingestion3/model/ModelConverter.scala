@@ -110,7 +110,7 @@ object ModelConverter {
   )
 
   private[model] def toLiteralOrUri(row: Row): LiteralOrUri =
-    if (row.getBoolean(1)) Right(new URI(row.getString(0)))
+    if (row.getBoolean(1)) Right(URI(row.getString(0)))
     else Left(row.getString(0))
 
   private[model] def toEdmAgent(row: Row): EdmAgent = EdmAgent(

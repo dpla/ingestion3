@@ -4,17 +4,20 @@ import java.time.LocalDateTime
 
 import com.databricks.spark.avro._
 import dpla.ingestion3.dataStorage.OutputHelper
-import dpla.ingestion3.model.{ModelConverter, getDplaId, wikiRecord}
+import dpla.ingestion3.model
+import dpla.ingestion3.model._
+import dpla.ingestion3.wiki.WikiMapper
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.storage.StorageLevel
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 case class WikiMetadata(dplaId: String, wikiMarkup: String)
 
-trait WikiMetadataExecutor extends Serializable {
+trait WikiMetadataExecutor extends Serializable with WikiMapper {
 
   /**
     * Generate Wiki metadata JSON files from AVRO file
@@ -48,25 +51,47 @@ trait WikiMetadataExecutor extends Serializable {
     import spark.implicits._
     val sc = spark.sparkContext
 
+    // Need to keep this here despite what IntelliJ and Codacy say
+    import spark.implicits._
+    val dplaMapDataRowEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
+    val tupleRowBooleanEncoder: ExpressionEncoder[(Row, Boolean)] =
+      ExpressionEncoder.tuple(RowEncoder(model.sparkSchema), ExpressionEncoder())
+
     val enrichedRows: DataFrame = spark.read.avro(dataIn)
 
-    enrichedRows.filter(row =>
-      ModelConverter.toModel(row).dataProvider.exactMatch.nonEmpty
-    )
-//    val indexRecords: Dataset[String] = enrichedRows.map(
-//      row => {
-//        val record = ModelConverter.toModel(row)
-//        jsonlRecord(record)
-//      }
-//    ).persist(StorageLevel.MEMORY_AND_DISK_SER)
+    println("enriched count " + enrichedRows.count())
 
-    // TODO filter out non-eligible enrichedRows
-    val wikiRows: Dataset[String] = enrichedRows.map(
+    // Create the enrichment outside map function so it is not recreated for each record.
+    // If the Twofishes host is not reachable it will die hard
+    // Transformation
+    val enrichResults: Dataset[(Row, Boolean)] = enrichedRows.map(row => {
+      Try{ ModelConverter.toModel(row) } match {
+        case Success(dplaMapData) => (RowConverter.toRow(dplaMapData, model.sparkSchema), isWikiEligible(dplaMapData))
+        case Failure(err) =>
+          println(err.toString)
+          (null, false)
+      }
+    })(tupleRowBooleanEncoder)
+
+    println(s"enrichedResults count = ${enrichResults.count()}")
+
+    val wikiRecords = enrichResults
+      .filter(tuple => tuple._2)
+      .map(tuple => tuple._1)(dplaMapDataRowEncoder)
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
+
+    println(s"wiki records count ${wikiRecords.count()}")
+//
+//        .map(tuple => ModelConverter.toModel(tuple._1))(dplaMapDataRowEncoder)
+//      .persist(StorageLevel.MEMORY_AND_DISK)
+
+    val wikiRows: Dataset[String] = wikiRecords.map(
       row => {
         val record = ModelConverter.toModel(row)
         val dplaId = getDplaId(record)
         val wikiMarkup = wikiRecord(record)
         val path = getWikiPath(dplaId)
+
 
         val string =
           s"""
@@ -83,24 +108,6 @@ trait WikiMetadataExecutor extends Serializable {
     ).persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     wikiRows.take(100).foreach(println)
-
-    // val wikiCount = wikiRecords.count
-
-    // This should always write out as #text() because if we use #json() then the
-    // data will be written out inside a JSON object (e.g. {'value': <doc>}) which is
-    // invalid for our use
-
-    // FIXME do not write out as text files need to
-    // indexRecords.write.text(outputPath)
-    // wikiRecords.toDF()
-
-    // println(wikiRecords.count())
-
-    //    wikiRecords.toDF.map(
-//      wikiRecord => {
-
-//      }
-//    )
 
     // Create and write manifest.
 

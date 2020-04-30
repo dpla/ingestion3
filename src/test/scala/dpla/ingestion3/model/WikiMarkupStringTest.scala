@@ -31,7 +31,7 @@ class WikiMarkupStringTest extends FlatSpec {
                         |       local_id = us-history-13243; j-doe-archives-2343
                         |   }}
                         |   | Institution = {{ Institution | wikidata = Q83878447 }}
-                        |   Other fields = {{ InFi | Standardized rights statement | {{ rights statement | https://example.org/rights/public_domain.html }} }}
+                        |   Other fields = {{ InFi | Standardized rights statement | {{ rights statement | http://rightsstatements.org/vocab/NoC-US }} }}
                         | }}""".stripMargin
     assert(expectedMarkup === markup)
   }
