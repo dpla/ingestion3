@@ -215,6 +215,12 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .flatMap(extractStrings(_))
       .map(URI)
 
+  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] =
+    (data \\ "mods" \ "location" \ "url")
+      .flatMap(node => getByAttribute(node, "note", "iiif-manifest"))
+      .flatMap(extractStrings)
+      .map(URI)
+
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
     // <note displayLabel=“Intermediate Provider”>
     (data \\ "mods" \ "note")
@@ -250,17 +256,11 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data)) ~ ("iiif" -> iiif(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
 
   // Helper methods
   def agent = EdmAgent(
     name = Some("Digital Library of Tennessee"),
     uri = Some(URI("http://dp.la/api/contributor/tennessee"))
   )
-
-  private def iiif(data: Document[NodeSeq]): ZeroToMany[String] =
-    (data \\ "mods" \ "location" \ "url")
-      .flatMap(node => getByAttribute(node, "note", "iiif-manifest"))
-      .flatMap(extractStrings)
-
 }

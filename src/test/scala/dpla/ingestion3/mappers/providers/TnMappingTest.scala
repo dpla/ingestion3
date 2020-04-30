@@ -187,4 +187,10 @@ class TnMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.preview(xml) === expected)
   }
 
+  // iiif
+  it should "extract the correct iiif Manifest" in {
+    val expected = Seq(URI("http://tn.us/item/1/iiif/"))
+    assert(extractor.iiifManifest(xml) === expected)
+  }
+
 }
