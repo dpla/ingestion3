@@ -35,6 +35,10 @@ class IaMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \\ "licenseurl").map(URI)
 
+  override def iiifManifest(data: Document[JValue]): ZeroToMany[URI] =
+    extractStrings(unwrap(data) \\ "identifier")
+      .map(identifier => URI(s"https://iiif.archivelab.org/iiif/$identifier/manifest.json"))
+
   override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
     extractStrings(unwrap(data) \\ "collection").flatMap {
       // transforms institution shortnames into properly formatted names
