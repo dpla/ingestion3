@@ -108,9 +108,8 @@ class GettyMapping extends XmlMapping with XmlExtractor {
     Seq(nameOnlyAgent("Getty Research Institute"))
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
-    val baseIsShownAt =
-      "http://primo.getty.edu/primo_library/libweb/action/dlDisplay.do?vid=GRI-OCP&afterPDS=true&institution=01GRI&docId="
-
+    val baseIsShownAt = "https://primo.getty.edu/primo-explore/fulldisplay?vid=GRI-OCP&context=L&tab=all_gri&lang=en_US&docid="
+    
     extractString(data \\"control" \ "sourceid") match {
       case Some("GETTY_ROSETTA") =>
         extractStrings(data \\ "display" \ "lds29")

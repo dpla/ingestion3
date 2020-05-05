@@ -67,7 +67,7 @@ class GettyMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.dataProvider(xml) === expected)
   }
   it should "extract the correct isShownAt" in {
-    val expected = Seq(uriOnlyWebResource(URI("http://primo.getty.edu/primo_library/libweb/action/dlDisplay.do?vid=GRI-OCP&afterPDS=true&institution=01GRI&docId=GETTY_OCPFL608236")))
+    val expected = Seq(uriOnlyWebResource(URI("https://primo.getty.edu/primo-explore/fulldisplay?vid=GRI-OCP&context=L&tab=all_gri&lang=en_US&docid=GETTY_OCPFL608236")))
     assert(extractor.isShownAt(xml) === expected)
   }
   it should "extract the correct preview" in {
