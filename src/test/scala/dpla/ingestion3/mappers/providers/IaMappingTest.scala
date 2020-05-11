@@ -153,4 +153,9 @@ class IaMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Some(URI("http://dp.la/api/items/a43347f17f5d153a56cc74f5ba3fc59b"))
     assert(extractor.dplaUri(json) === expected)
   }
+
+  it should "extract the correct url for iiif manifest" in {
+    val expected = Seq(URI("https://iiif.archivelab.org/iiif/artofdyingwell00bell/manifest.json"))
+    assert(extractor.iiifManifest(json) === expected)
+  }
  }
