@@ -64,7 +64,10 @@ abstract class PrimoHarvester(spark: SparkSession,
             val xml = XML.loadString(docs)
             // FIXME add 'sear' namespace to selection
             val primoRecords = (xml \\ "SEGMENTS" \"JAGROOT" \ "RESULT" \ "DOCSET" \ "DOC")
-              .map(doc => ApiRecord((doc \\ "PrimoNMBib" \ "record" \ "control" \ "recordid").toString, Utils.formatXml(doc)))
+              .map(doc => {
+                val id = (doc \\ "PrimoNMBib" \ "record" \ "control" \ "recordid").text
+                ApiRecord(id, Utils.formatXml(doc))
+              })
               .toList
 
             // @see ApiHarvester

@@ -14,6 +14,8 @@ import scala.xml._
 
 class MwdlMapping extends XmlMapping with XmlExtractor {
 
+  override val enforceDuplicateIds: Boolean = false
+
   private val baseIsShownAt = "https://utah-primoprod.hosted.exlibrisgroup.com/primo-explore/fulldisplay?docid="
   private val suffixIsShownAt = "&context=L&vid=MWDL"
 
