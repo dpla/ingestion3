@@ -6,7 +6,7 @@ import com.databricks.spark.avro._
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.model
 import dpla.ingestion3.model._
-import dpla.ingestion3.wiki.WikiMapper
+import dpla.ingestion3.wiki.{WikiCriteria, WikiMapper}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
@@ -48,7 +48,6 @@ trait WikiMetadataExecutor extends Serializable with WikiMapper {
       .config(sparkConf)
       .getOrCreate()
 
-    import spark.implicits._
     val sc = spark.sparkContext
 
     // Need to keep this here despite what IntelliJ and Codacy say
@@ -61,29 +60,55 @@ trait WikiMetadataExecutor extends Serializable with WikiMapper {
 
     println("enriched count " + enrichedRows.count())
 
-    // Create the enrichment outside map function so it is not recreated for each record.
-    // If the Twofishes host is not reachable it will die hard
-    // Transformation
     val enrichResults: Dataset[(Row, Boolean)] = enrichedRows.map(row => {
       Try{ ModelConverter.toModel(row) } match {
-        case Success(dplaMapData) => (RowConverter.toRow(dplaMapData, model.sparkSchema), isWikiEligible(dplaMapData))
-        case Failure(err) =>
-          println(err.toString)
-          (null, false)
+        case Success(dplaMapData) =>
+
+          /**
+            * FIXUP
+            *
+            *  - Change from print to message logger
+            *
+            */
+          val criteria: WikiCriteria = isWikiEligible(dplaMapData)
+          (criteria.dataProvider, criteria.asset, criteria.rights) match {
+            // All required properties exist
+            case (true, true, true) => (RowConverter.toRow(dplaMapData, model.sparkSchema), true)
+            // Missing valid standardized rights
+            case (true, true, false) =>
+              println(s"${dplaMapData.dplaUri.toString} is missing valid rights. Value is ${dplaMapData.edmRights.getOrElse("_MISSING_")}")
+              (null, false)
+            // Missing assets
+            case (true, false, true) =>
+              println(s"${dplaMapData.dplaUri.toString} is missing assets.")
+              (null, false)
+            // Missing dataProvider URI
+            case (false, true, true) =>
+              println(s"${dplaMapData.dplaUri.toString} is missing dataProvider URI. Value is ${dplaMapData.dataProvider.name.getOrElse("_MISSSING_")}")
+              (null, false)
+            // Multiple missing required properties
+            case (_, _, _) =>
+              println(s"${dplaMapData.dplaUri.toString} is missing multiple requirements. " +
+                s"\n- dataProvider missing URI. Value is ${dplaMapData.dataProvider.name.getOrElse("_MISSSING_")}" +
+                s"\n- edmRights is ${dplaMapData.edmRights.getOrElse("_MISSING_")}" +
+                s"\n- iiif is ${dplaMapData.iiifManifest.getOrElse("_MISSING_")}" +
+                s"\n- mediaMaster is ${dplaMapData.mediaMaster.map(_.uri.toString).mkString("; ").orElse("_MISSING_")}")
+              (null, false)
+          }
+        case Failure(err) => (null, false)
       }
     })(tupleRowBooleanEncoder)
 
     println(s"enrichedResults count = ${enrichResults.count()}")
 
+    // Filter out only the wiki eligible records
     val wikiRecords = enrichResults
       .filter(tuple => tuple._2)
       .map(tuple => tuple._1)(dplaMapDataRowEncoder)
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
+    // Fixup to logger
     println(s"wiki records count ${wikiRecords.count()}")
-//
-//        .map(tuple => ModelConverter.toModel(tuple._1))(dplaMapDataRowEncoder)
-//      .persist(StorageLevel.MEMORY_AND_DISK)
 
     val wikiRows: Dataset[String] = wikiRecords.map(
       row => {
@@ -91,6 +116,12 @@ trait WikiMetadataExecutor extends Serializable with WikiMapper {
         val dplaId = getDplaId(record)
         val wikiMarkup = wikiRecord(record)
         val path = getWikiPath(dplaId)
+        // val assets = getWikiAssets(record)
+
+
+        import org.json4s.jackson.JsonMethods._
+        val wikiJson = pretty(render(parse(wikiMarkup))(formats))
+
 
 
         val string =
@@ -98,7 +129,7 @@ trait WikiMetadataExecutor extends Serializable with WikiMapper {
             |
             | Output path: $path
             | Output file: TBD
-            | Wikimarkup: ${wikiMarkup}
+            | Wikimarkup: ${wikiJson}
             |
           """.stripMargin
 
