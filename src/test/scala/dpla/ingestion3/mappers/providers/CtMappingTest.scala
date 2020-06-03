@@ -100,4 +100,9 @@ class CtMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Some(URI("http://dp.la/api/items/92fc087881322d8223ba36a9b25b66e8"))
     assert(extractor.dplaUri(xml) === expected)
   }
+
+  it should "extract the correct edmRights value" in {
+    val expected = Seq(URI("rs.org"))
+    assert(extractor.edmRights(xml) === expected)
+  }
 }
