@@ -147,6 +147,14 @@ class CtMapping extends XmlMapping with XmlExtractor
       .flatMap(extractStrings)
       .map(nameOnlyAgent)
 
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
+  // href in accessCondition prop where @type='use and reproduction'
+    (data \ "accessCondition")
+      .flatMap(node => getByAttribute(node, "type", "use and reproduction"))
+      .flatMap(node => node.attribute(node.getNamespace("xlink"), "href"))
+      .flatMap(n => extractString(n.head))
+      .map(URI)
+
   // <identifier type=”hdl>
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     isShownAtStrings(data)
