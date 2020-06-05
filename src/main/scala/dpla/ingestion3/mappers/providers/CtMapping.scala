@@ -154,7 +154,6 @@ class CtMapping extends XmlMapping with XmlExtractor
       .flatMap(n => extractString(n.head))
       .map(URI)
 
-
   // <identifier type=”hdl>
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     isShownAtStrings(data)
