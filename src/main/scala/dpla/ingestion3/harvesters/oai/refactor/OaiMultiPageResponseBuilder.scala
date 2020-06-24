@@ -133,7 +133,12 @@ class OaiMultiPageResponseBuilder(endpoint: String,
     case Right(oaiPage) =>
       val pattern = """<resumptionToken.*>(.*)</resumptionToken>""".r
       pattern.findFirstMatchIn(oaiPage.page) match {
-        case Some(m) => Some(m.group(1))
+        case Some(m) =>
+          val rt = m.group(1)
+          if (rt.isEmpty)
+            None
+          else
+            Some(rt.trim)
         case _ => None
       }
   }
