@@ -92,10 +92,11 @@ class VaFileHarvester(spark: SparkSession,
         Stream.empty
       case Some(entry) =>
         val result =
-          if (entry.isDirectory)
+          if (entry.isDirectory || !entry.getName.endsWith(".xml"))
             None
-          else
+          else {
             Some(IOUtils.toByteArray(zipInputStream, entry.getSize))
+          }
         FileResult(entry.getName, result) #:: iter(zipInputStream)
     }
 
