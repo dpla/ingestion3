@@ -94,7 +94,7 @@ class NaraDeltaHarvester(
       if (item \ "digitalObjectArray" \ "digitalObject").nonEmpty
     } yield item match {
       case record: Node =>
-        val id = (record \ "digitalObjectArray" \ "digitalObject" \ "objectIdentifier").text.toString
+        val id = (record \ "naId").text
         val outputXML = xmlToString(record)
         val label = item.label
         Some(ParsedResult(id, outputXML))
@@ -198,9 +198,12 @@ class NaraDeltaHarvester(
     logger.info(s"Writing harvest tmp output to $naraTmp")
 
     // The incremental update file
-    val deltaIn = new File(conf.harvest.update.getOrElse("in"))
+    val deltaIn = conf.harvest.update.getOrElse("in")
     // Get the most recent harvest data defined by the `in` parameter in the i3 configuration file
     val previous = conf.harvest.previous.getOrElse("previous")
+
+    println(s"Update $deltaIn")
+    println(s"Previous $previous")
 
     val previousHarvestIn: String = InputHelper.isActivityPath(previous) match {
       case true => previous
@@ -208,37 +211,45 @@ class NaraDeltaHarvester(
         .getOrElse(throw new RuntimeException(s"Unable to load previous harvest data from $previous"))
     }
 
+    val deltaHarvestIn: String = InputHelper.isActivityPath(deltaIn) match {
+      case true => deltaIn
+      case false => InputHelper.mostRecent(deltaIn)
+        .getOrElse(throw new RuntimeException(s"Unable to load previous harvest data from $deltaIn"))
+    }
+
     // Deletes
     val deletes = new File(conf.harvest.deletes.getOrElse("deletes"))
 
     logger.info(s"Using previous harvest data from $previousHarvestIn")
+    logger.info(s"Adding delta harvest data from $deltaHarvestIn")
     logger.info(s"Using deletes data from ${deletes.getAbsolutePath}")
 
-    if (deltaIn.isDirectory)
-      for (file: File <- deltaIn.listFiles(new GzFileFilter).sorted) {
-        logger.info(s"Harvesting NARA delta changes from ${file.getName}")
-        harvestFile(file, unixEpoch)
-      }
-    else
-      harvestFile(deltaIn, unixEpoch)
+//    if (deltaIn.isDirectory)
+//      for (file: File <- deltaIn.listFiles(new GzFileFilter).sorted) {
+//        logger.info(s"Harvesting NARA delta changes from ${file.getName}")
+//        harvestFile(file, unixEpoch)
+//      }
+//    else
+//      harvestFile(deltaIn, unixEpoch)
 
     // flush writes
-   avroWriterNara.flush()
+//   avroWriterNara.flush()
 
     // Get the absolute path of the avro file written to naraTmp directory
-    val naraTempFile = new File(naraTmp)
-      .listFiles(new AvroFileFilter)
-      .headOption
-      .getOrElse(throw new RuntimeException(s"Unable to load avro file in $naraTmp directory. Unable to continue"))
-      .getAbsolutePath
+//    val naraTempFile = new File(naraTmp)
+//      .listFiles(new AvroFileFilter)
+//      .headOption
+//      .getOrElse(throw new RuntimeException(s"Unable to load avro file in $naraTmp directory. Unable to continue"))
+//      .getAbsolutePath
 
-    val localSrcPath = new Path(naraTempFile)
-    val dfDeltaRecords = spark.read.avro(localSrcPath.toString)
+    // val localSrcPath = new Path(naraTempFile)
+    val dfDeltaRecords = spark.read.avro(deltaHarvestIn)
 
     // Read most recent harvest data file
-    val dfLastNaraHarvest: DataFrame = spark.read.avro(previousHarvestIn)
+     val dfLastNaraHarvest: DataFrame = spark.read.avro(previousHarvestIn)
 
     logger.info(s"Read ${dfLastNaraHarvest.count()} records from previous harvest")
+    logger.info(s"Read ${dfDeltaRecords.count()} records from delta harvest")
 
     // This harvester no longer requires a custom schema and ordering
     // by filename to determine the most recent version of a record. That determination is
@@ -250,6 +261,9 @@ class NaraDeltaHarvester(
 
     val updateDF = spark.sql("select lastHarvest.* from lastHarvest join delta on lastHarvest.id = delta.id")
     val df = dfLastNaraHarvest.except(updateDF).union(dfDeltaRecords).toDF()
+
+    logger.info(s"Merged record count ${df.count()} from previous and delta harvest")
+//    val df = dfDeltaRecords
 
     // process deletes
     if (deletes.exists()) {
