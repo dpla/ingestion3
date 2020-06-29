@@ -44,6 +44,68 @@ class NaraMapping extends XmlMapping with XmlExtractor {
 
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
+  /**
+    *
+    * <useRestriction> \ <status> \ <termName>Unrestricted</termName>
+    *
+    * LCDRG Use Restriction Status |	LCDRG Specific Use Restriction | Rights Statement URL
+    * ------------------------------------------------------------------------------------------------------------------------
+    * Restricted - Fully    | Copyright                 | http://rightsstatements.org/vocab/InC/1.0/
+    * Restricted - Fully    | Donor Restrictions	      | http://rightsstatements.org/vocab/InC/1.0/
+    * Restricted - Fully    | Public Law 101-246	      | https://rightsstatements.org/page/InC/1.0/
+    * Restricted - Fully    | Service Mark	            | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
+    * Restricted - Fully    | Trademark	                |  http://rightsstatements.org/vocab/NoC-OKLR/1.0/
+    * Restricted - Fully    | Other                     | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
+    * Restricted - Partly   | Copyright	                | http://rightsstatements.org/vocab/InC/1.0/
+    * Restricted - Partly   | Donor Restrictions	      | https://rightsstatements.org/page/InC/1.0/
+    * Restricted - Partly   | Public Law 101-246	      | https://rightsstatements.org/page/InC/1.0/
+    * Restricted - Partly   | Service Mark	            | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
+    * Restricted - Partly   | Trademark	                | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
+    * Restricted - Partly   | Other	                    | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
+    * Restricted - Possibly | Copyright	                | http://rightsstatements.org/vocab/CNE/1.0/
+    * Restricted - Possibly | Donor Restrictions        | http://rightsstatements.org/vocab/CNE/1.0/
+    * Restricted - Possibly | Public Law 101-246	      | https://rightsstatements.org/page/NKC/1.0/
+    * Restricted - Possibly | Service Mark	            | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
+    * Restricted - Possibly | Trademark	                |	http://rightsstatements.org/vocab/NoC-OKLR/1.0/
+    * Restricted - Possibly | Other	                    | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
+    * Undetermined          | N/A                       | http://rightsstatements.org/vocab/UND/1.0/
+    * Unrestricted          | N/A                       | https://rightsstatements.org/page/NoC-US/1.0/
+    *
+    * @param data
+    * @return
+    */
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
+    val edmRights = for {
+      useRestriction <- data \ "useRestriction"
+      lcdrgSpecificUseRestriction = Option((useRestriction \ "specificUseRestrictionArray" \ "specificUseRestriction" \ "termName").text)
+      lcdrgUseRestrictionStatus = Option((useRestriction \ "status" \ "termName").text)
+    } yield (lcdrgUseRestrictionStatus, lcdrgSpecificUseRestriction) match {
+        case (Some("Restricted - Fully"), Some("Copyright")) => Some(URI("https://rightsstatements.org/page/InC/1.0/"))
+        case (Some("Restricted - Fully"), Some("Donor Restrictions")) => Some(URI("https://rightsstatements.org/page/InC/1.0/"))
+        case (Some("Restricted - Fully"), Some("Public Law 101-246")) => Some(URI("https://rightsstatements.org/page/InC/1.0/"))
+        case (Some("Restricted - Fully"), Some("Service Mark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
+        case (Some("Restricted - Fully"), Some("Trademark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
+        case (Some("Restricted - Fully"), Some("Other")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
+        case (Some("Restricted - Partly"), Some("Copyright")) => Some(URI("https://rightsstatements.org/page/InC/1.0/"))
+        case (Some("Restricted - Partly"), Some("Donor Restrictions")) => Some(URI("https://rightsstatements.org/page/InC/1.0/"))
+        case (Some("Restricted - Partly"), Some("Public Law 101-246")) => Some(URI("https://rightsstatements.org/page/InC/1.0/"))
+        case (Some("Restricted - Partly"), Some("Service Mark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
+        case (Some("Restricted - Partly"), Some("Trademark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
+        case (Some("Restricted - Partly"), Some("Other")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
+        case (Some("Restricted - Possibly"), Some("Copyright")) => Some(URI("http://rightsstatements.org/vocab/CNE/1.0/"))
+        case (Some("Restricted - Possibly"), Some("Donor Restrictions")) => Some(URI("http://rightsstatements.org/vocab/CNE/1.0/"))
+        case (Some("Restricted - Possibly"), Some("Public Law 101-246")) => Some(URI("https://rightsstatements.org/page/NKC/1.0/"))
+        case (Some("Restricted - Possibly"), Some("Service Mark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
+        case (Some("Restricted - Possibly"), Some("Trademark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
+        case (Some("Restricted - Possibly"), Some("Other")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
+        case (Some("Undetermined"), Some("N/A")) => Some(URI("http://rightsstatements.org/vocab/UND/1.0/"))
+        case (Some("Unrestricted"), Some("N/A")) => Some(URI("https://rightsstatements.org/page/NoC-US/1.0/"))
+        case (_, _) => None
+      }
+
+    edmRights.flatten
+  }
+
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     Seq(uriOnlyWebResource(itemUri(data)))
 
