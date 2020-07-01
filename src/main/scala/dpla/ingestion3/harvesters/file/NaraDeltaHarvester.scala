@@ -94,7 +94,7 @@ class NaraDeltaHarvester(
       if (item \ "digitalObjectArray" \ "digitalObject").nonEmpty
     } yield item match {
       case record: Node =>
-        val id = (record \ "digitalObjectArray" \ "digitalObject" \ "objectIdentifier").text.toString
+        val id = (record \ "naId").text
         val outputXML = xmlToString(record)
         val label = item.label
         Some(ParsedResult(id, outputXML))
@@ -195,35 +195,20 @@ class NaraDeltaHarvester(
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime  / 1000L
 
-    logger.info(s"Writing harvest tmp output to $naraTmp")
+    // Path to the incremental update file [*.tar.gz without deletes]
+    val deltaIn = conf.harvest.update.getOrElse("in")
+    val deltaHarvestInFile = new File(deltaIn)
 
-    // The incremental update file
-    val deltaIn = new File(conf.harvest.update.getOrElse("in"))
-    // Get the most recent harvest data defined by the `in` parameter in the i3 configuration file
-    val previous = conf.harvest.previous.getOrElse("previous")
-
-    val previousHarvestIn: String = InputHelper.isActivityPath(previous) match {
-      case true => previous
-      case false => InputHelper.mostRecent(previous)
-        .getOrElse(throw new RuntimeException(s"Unable to load previous harvest data from $previous"))
-    }
-
-    // Deletes
-    val deletes = new File(conf.harvest.deletes.getOrElse("deletes"))
-
-    logger.info(s"Using previous harvest data from $previousHarvestIn")
-    logger.info(s"Using deletes data from ${deletes.getAbsolutePath}")
-
-    if (deltaIn.isDirectory)
-      for (file: File <- deltaIn.listFiles(new GzFileFilter).sorted) {
+    if (deltaHarvestInFile.isDirectory)
+      for (file: File <- deltaHarvestInFile.listFiles(new GzFileFilter).sorted) {
         logger.info(s"Harvesting NARA delta changes from ${file.getName}")
         harvestFile(file, unixEpoch)
       }
     else
-      harvestFile(deltaIn, unixEpoch)
+      harvestFile(deltaHarvestInFile, unixEpoch)
 
     // flush writes
-   avroWriterNara.flush()
+    avroWriterNara.flush()
 
     // Get the absolute path of the avro file written to naraTmp directory
     val naraTempFile = new File(naraTmp)
@@ -235,51 +220,9 @@ class NaraDeltaHarvester(
     val localSrcPath = new Path(naraTempFile)
     val dfDeltaRecords = spark.read.avro(localSrcPath.toString)
 
-    // Read most recent harvest data file
-    val dfLastNaraHarvest: DataFrame = spark.read.avro(previousHarvestIn)
-
-    logger.info(s"Read ${dfLastNaraHarvest.count()} records from previous harvest")
-
-    // This harvester no longer requires a custom schema and ordering
-    // by filename to determine the most recent version of a record. That determination is
-    // handled by the 'union' of the previous full harvester and delta harvest
-
-    // Create temp views of DataFrames for update DF
-    dfDeltaRecords.createOrReplaceTempView("delta")
-    dfLastNaraHarvest.createOrReplaceTempView("lastHarvest")
-
-    val updateDF = spark.sql("select lastHarvest.* from lastHarvest join delta on lastHarvest.id = delta.id")
-    val df = dfLastNaraHarvest.except(updateDF).union(dfDeltaRecords).toDF()
-
-    // process deletes
-    if (deletes.exists()) {
-      val deleteDf = getIdsToDelete(deletes)
-      logger.info(s"${deleteDf.size} records to delete in ${deletes.getAbsolutePath}")
-      df.where(!col("id").isin(deleteDf:_*))
-    } else {
-      logger.info("No deletes files specified. Removing no records from NARA data export")
-      df
-    }
+    dfDeltaRecords
   }
 
-  /**
-    * Collect IDs from file(s) to be deleted from NARA harvest. This does not currently support adding records back
-    * which had previously been deleted.
-    *
-    * @param file File      Path to file or folder the defines which NARA IDs should be deleted
-    * @return Seq[String]   IDs to delete
-    */
-  def getIdsToDelete(file: File): Seq[String] = {
-    import spark.implicits._
-
-    val files = if (file.isDirectory) file.listFiles(new XmlFileFilter).sorted else Array(file)
-
-    files.flatMap(file => {
-      val xml = XML.loadFile(file)
-      (xml \\ "naId").map(_.text)
-    }).distinct
-      .toSeq
-  }
 
   override def cleanUp(): Unit = {
     logger.info(s"Cleaning up $naraTmp directory and files")
