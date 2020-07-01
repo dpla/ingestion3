@@ -68,8 +68,8 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     * Restricted - Possibly | Service Mark	            | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Restricted - Possibly | Trademark	                |	http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Restricted - Possibly | Other	                    | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
-    * Undetermined          | N/A                       | http://rightsstatements.org/vocab/UND/1.0/
-    * Unrestricted          | N/A                       | https://rightsstatements.org/page/NoC-US/1.0/
+    * Undetermined          |                           | http://rightsstatements.org/vocab/UND/1.0/
+    * Unrestricted          |                           | https://rightsstatements.org/page/NoC-US/1.0/
     *
     * @param data
     * @return
@@ -98,8 +98,8 @@ class NaraMapping extends XmlMapping with XmlExtractor {
         case (Some("Restricted - Possibly"), Some("Service Mark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
         case (Some("Restricted - Possibly"), Some("Trademark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
         case (Some("Restricted - Possibly"), Some("Other")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
-        case (Some("Undetermined"), Some("N/A")) => Some(URI("http://rightsstatements.org/vocab/UND/1.0/"))
-        case (Some("Unrestricted"), Some("N/A")) => Some(URI("https://rightsstatements.org/page/NoC-US/1.0/"))
+        case (Some("Undetermined"), _) => Some(URI("http://rightsstatements.org/vocab/UND/1.0/"))
+        case (Some("Unrestricted"), _) => Some(URI("https://rightsstatements.org/page/NoC-US/1.0/"))
         case (_, _) => None
       }
 
