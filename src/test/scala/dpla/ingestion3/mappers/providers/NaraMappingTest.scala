@@ -352,4 +352,72 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
     assert(Seq(nameOnlyAgent("National Records and Archives Administration")) === dataProvider)
   }
+
+  it should "extract correct edmRights for Restricted - Fully, Copyright" in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Fully</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Copyright</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+
+    val edmRights = extractor.edmRights(Document(xml))
+
+    assert(Seq(URI("http://rightsstatements.org/vocab/InC/1.0/")) === edmRights)
+  }
+
+  it should "extract correct edmRights for Undetermined, N/A" in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Undetermined</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>N/A</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+
+    val edmRights = extractor.edmRights(Document(xml))
+
+    assert(Seq(URI("http://rightsstatements.org/vocab/UND/1.0/")) === edmRights)
+  }
+
+  it should "work magick for uncertain rites" in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Fully</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Copyright</termName>
+                    </specificUseRestriction>
+                    <specificUseRestriction>
+                      <termName>Other</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+
+    val edmRights = extractor.edmRights(Document(xml))
+
+    assert(Seq(URI("http://rightsstatements.org/vocab/InC/1.0/")) === edmRights)
+  }
+
+  it should "extract correct edmRights when given `Unrestricted` use restriction" in {
+    val edmRights = extractor.edmRights(xml)
+    assert(edmRights === Seq(URI("http://rightsstatements.org/vocab/NoC-US/1.0/")))
+  }
 }

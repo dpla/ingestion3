@@ -74,7 +74,15 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
       else if (!value.isValidEdmRightsUri)
         collector.add(invalidEdmRightsMsg(providerId, "edmRights", value.toString, msg = None, enforce))
     })
-    values.find(_.isValidEdmRightsUri)
+
+    val edmRights = values.find(_.isValidEdmRightsUri)
+
+    edmRights match {
+      case Some(_) => edmRights
+      case None =>
+        collector.add(missingRequiredFieldMsg(providerId, "edmRights", enforce))
+        None
+    }
   }
 
   /**
