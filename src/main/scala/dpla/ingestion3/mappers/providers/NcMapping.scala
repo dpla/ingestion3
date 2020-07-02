@@ -28,6 +28,13 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     extractString(data \ "header" \ "identifier")
       .map(_.trim)
 
+  override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
+    (data \\ "relatedItem")
+      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "displayLabel", "collection"))
+      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "type", "host"))
+      .flatMap(collection => extractStrings(collection \ "titleInfo" \ "title"))
+      .map(nameOnlyCollection)
+
   // SourceResource mapping
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     // when <role><roleTerm> DOES equal "contributor>
