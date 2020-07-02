@@ -25,10 +25,10 @@ class NcMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.originalId(xml) == expected)
   }
 
-//  it should "extract the correct collection title" in {
-//    val expected = Seq("Veterans History Project interviews, RHC-27").map(nameOnlyCollection)
-//    assert(extractor.collection(xml) == expected)
-//  }
+  it should "extract the correct collection title" in {
+    val expected = Seq("Honorary Awards Citations").map(nameOnlyCollection)
+    assert(extractor.collection(xml) == expected)
+  }
 
   it should "extract correct contributor" in {
     val expected = Seq("Contributor").map(nameOnlyAgent)
