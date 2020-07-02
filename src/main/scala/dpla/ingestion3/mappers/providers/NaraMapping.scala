@@ -135,11 +135,8 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     // If any other combination of values exists the behavior is uncertain. Ex. if a record contains both CNE and InC values
     // both values will be mapped and the first value will be selected from the behavior in `validateEdmRights()` but a
     // warning for multiple edmRights values will also be recorded in the logs.
-    if (edmRights.size > 1) {
-      val filtered = edmRights.intersect(mostRestrictive).flatten
-      print(filtered)
-      filtered
-    }
+    if (edmRights.size > 1) 
+      edmRights.intersect(mostRestrictive).flatten
     else
       edmRights.flatten
   }
