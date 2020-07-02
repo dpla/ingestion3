@@ -78,14 +78,15 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     */
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
     // There can be only one useRestriction
-    val useRestriction = extractString(data \ "useRestriction" \ "status" \ "termName")
+    val useRestriction = extractString(data \\ "useRestriction" \ "status" \ "termName")
     // There can be multiple specificUseRestrictions
     val specificRestrictions = for {
-      sra <- data \ "useRestriction" \ "specificUseRestrictionArray" \ "specificUseRestriction"
+      sra <- data \\ "useRestriction" \ "specificUseRestrictionArray" \ "specificUseRestriction"
       sr <- extractString(sra \ "termName")
     } yield Option(sr)
 
-    val edmRights = specificRestrictions.map(sr => (useRestriction, sr)) // merge ur and sr into set
+    val edmRights = List(useRestriction)
+      .zipAll(specificRestrictions, None, None) // merge useRestriction and specificRestriction into set,
       .map{ case (ur: Option[String], sr: Option[String]) => (ur, sr) match {
         case (Some("Restricted - Fully"), Some("Copyright")) => Some(URI("http://rightsstatements.org/vocab/InC/1.0/"))
         case (Some("Restricted - Fully"), Some("Donor Restrictions")) => Some(URI("http://rightsstatements.org/vocab/InC/1.0/"))
@@ -135,7 +136,7 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     // If any other combination of values exists the behavior is uncertain. Ex. if a record contains both CNE and InC values
     // both values will be mapped and the first value will be selected from the behavior in `validateEdmRights()` but a
     // warning for multiple edmRights values will also be recorded in the logs.
-    if (edmRights.size > 1) 
+    if (edmRights.size > 1)
       edmRights.intersect(mostRestrictive).flatten
     else
       edmRights.flatten

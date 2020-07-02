@@ -415,4 +415,9 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
     assert(Seq(URI("http://rightsstatements.org/vocab/InC/1.0/")) === edmRights)
   }
+
+  it should "extract correct edmRights when given `Unrestricted` use restriction" in {
+    val edmRights = extractor.edmRights(xml)
+    assert(edmRights === Seq(URI("http://rightsstatements.org/vocab/NoC-US/1.0/")))
+  }
 }
