@@ -159,11 +159,13 @@ class SiFileHarvester(spark: SparkSession,
       // Format the harvested and expected counts for logging
       val fromFileFloat  = lineCount.toFloat
       val fromFilePretty = Utils.formatNumber(fromFileFloat.toLong)
-      val expectedPretty = expectedFileCounts.getOrElse(inFile.getName, "0")
+      val getFilenameKey = (filename: String) => filename.substring(0, inFile.getName.indexOf("."))
+      val expectedPretty = expectedFileCounts.getOrElse(getFilenameKey(inFile.getName), "0")
       val expectedFloat  = expectedPretty.replaceAll(",","").trim.toFloat // remove commas from string and make float
       val percentage     = (fromFileFloat / expectedFloat) * 100.0f match {
-        case x if x.isNaN => 0.0f // account for division by 0...
-        case x if !x.isNaN => x
+        case x if x.isNaN => 0.0f // account for NaN
+        case x if x.isInfinity => fromFileFloat // account for infinity
+        case x if !x.isNaN => x.intValue()
       }
 
       // Log a summary of the file
