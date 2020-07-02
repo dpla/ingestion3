@@ -370,7 +370,7 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
     val edmRights = extractor.edmRights(Document(xml))
 
-    assert(Seq(URI("https://rightsstatements.org/page/InC/1.0/")) === edmRights)
+    assert(Seq(URI("http://rightsstatements.org/vocab/InC/1.0/")) === edmRights)
   }
 
   it should "extract correct edmRights for Undetermined, N/A" in {
@@ -391,5 +391,28 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
     val edmRights = extractor.edmRights(Document(xml))
 
     assert(Seq(URI("http://rightsstatements.org/vocab/UND/1.0/")) === edmRights)
+  }
+
+  it should "work magick for uncertain rites" in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Fully</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Copyright</termName>
+                    </specificUseRestriction>
+                    <specificUseRestriction>
+                      <termName>Other</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+
+    val edmRights = extractor.edmRights(Document(xml))
+
+    assert(Seq(URI("http://rightsstatements.org/vocab/InC/1.0/")) === edmRights)
   }
 }

@@ -15,7 +15,9 @@ import scala.xml.{Node, NodeSeq}
 
 class NaraMapping extends XmlMapping with XmlExtractor {
 
-  override val enforceDuplicateIds: Boolean = false
+  // Why is this here?
+  override val enforceDuplicateIds: Boolean = true
+  override val enforceEdmRights: Boolean = true // edmRights is now a required property for NARA
 
   // ID minting functions
   override def useProviderName(): Boolean = true
@@ -52,58 +54,94 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     * ------------------------------------------------------------------------------------------------------------------------
     * Restricted - Fully    | Copyright                 | http://rightsstatements.org/vocab/InC/1.0/
     * Restricted - Fully    | Donor Restrictions	      | http://rightsstatements.org/vocab/InC/1.0/
-    * Restricted - Fully    | Public Law 101-246	      | https://rightsstatements.org/page/InC/1.0/
+    * Restricted - Fully    | Public Law 101-246	      | https://rightsstatements.org/vocab/InC/1.0/
     * Restricted - Fully    | Service Mark	            | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
-    * Restricted - Fully    | Trademark	                |  http://rightsstatements.org/vocab/NoC-OKLR/1.0/
+    * Restricted - Fully    | Trademark	                | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Restricted - Fully    | Other                     | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Restricted - Partly   | Copyright	                | http://rightsstatements.org/vocab/InC/1.0/
-    * Restricted - Partly   | Donor Restrictions	      | https://rightsstatements.org/page/InC/1.0/
-    * Restricted - Partly   | Public Law 101-246	      | https://rightsstatements.org/page/InC/1.0/
+    * Restricted - Partly   | Donor Restrictions	      | http://rightsstatements.org/vocab/InC/1.0/
+    * Restricted - Partly   | Public Law 101-246	      | http://rightsstatements.org/vocab/InC/1.0/
     * Restricted - Partly   | Service Mark	            | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Restricted - Partly   | Trademark	                | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Restricted - Partly   | Other	                    | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Restricted - Possibly | Copyright	                | http://rightsstatements.org/vocab/CNE/1.0/
     * Restricted - Possibly | Donor Restrictions        | http://rightsstatements.org/vocab/CNE/1.0/
-    * Restricted - Possibly | Public Law 101-246	      | https://rightsstatements.org/page/NKC/1.0/
+    * Restricted - Possibly | Public Law 101-246	      | http://rightsstatements.org/vocab/NKC/1.0/
     * Restricted - Possibly | Service Mark	            | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Restricted - Possibly | Trademark	                |	http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Restricted - Possibly | Other	                    | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Undetermined          |                           | http://rightsstatements.org/vocab/UND/1.0/
-    * Unrestricted          |                           | https://rightsstatements.org/page/NoC-US/1.0/
+    * Unrestricted          |                           | http://rightsstatements.org/vocab/NoC-US/1.0/
     *
     * @param data
     * @return
     */
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
-    val edmRights = for {
-      useRestriction <- data \ "useRestriction"
-      lcdrgSpecificUseRestriction = Option((useRestriction \ "specificUseRestrictionArray" \ "specificUseRestriction" \ "termName").text)
-      lcdrgUseRestrictionStatus = Option((useRestriction \ "status" \ "termName").text)
-    } yield (lcdrgUseRestrictionStatus, lcdrgSpecificUseRestriction) match {
-        case (Some("Restricted - Fully"), Some("Copyright")) => Some(URI("https://rightsstatements.org/page/InC/1.0/"))
-        case (Some("Restricted - Fully"), Some("Donor Restrictions")) => Some(URI("https://rightsstatements.org/page/InC/1.0/"))
-        case (Some("Restricted - Fully"), Some("Public Law 101-246")) => Some(URI("https://rightsstatements.org/page/InC/1.0/"))
+    // There can be only one useRestriction
+    val useRestriction = extractString(data \ "useRestriction" \ "status" \ "termName")
+    // There can be multiple specificUseRestrictions
+    val specificRestrictions = for {
+      sra <- data \ "useRestriction" \ "specificUseRestrictionArray" \ "specificUseRestriction"
+      sr <- extractString(sra \ "termName")
+    } yield Option(sr)
+
+    val edmRights = specificRestrictions.map(sr => (useRestriction, sr)) // merge ur and sr into set
+      .map{ case (ur: Option[String], sr: Option[String]) => (ur, sr) match {
+        case (Some("Restricted - Fully"), Some("Copyright")) => Some(URI("http://rightsstatements.org/vocab/InC/1.0/"))
+        case (Some("Restricted - Fully"), Some("Donor Restrictions")) => Some(URI("http://rightsstatements.org/vocab/InC/1.0/"))
+        case (Some("Restricted - Fully"), Some("Public Law 101-246")) => Some(URI("http://rightsstatements.org/vocab/InC/1.0/"))
         case (Some("Restricted - Fully"), Some("Service Mark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
         case (Some("Restricted - Fully"), Some("Trademark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
         case (Some("Restricted - Fully"), Some("Other")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
-        case (Some("Restricted - Partly"), Some("Copyright")) => Some(URI("https://rightsstatements.org/page/InC/1.0/"))
-        case (Some("Restricted - Partly"), Some("Donor Restrictions")) => Some(URI("https://rightsstatements.org/page/InC/1.0/"))
-        case (Some("Restricted - Partly"), Some("Public Law 101-246")) => Some(URI("https://rightsstatements.org/page/InC/1.0/"))
+        case (Some("Restricted - Partly"), Some("Copyright")) => Some(URI("http://rightsstatements.org/vocab/InC/1.0/"))
+        case (Some("Restricted - Partly"), Some("Donor Restrictions")) => Some(URI("http://rightsstatements.org/vocab/InC/1.0/"))
+        case (Some("Restricted - Partly"), Some("Public Law 101-246")) => Some(URI("http://rightsstatements.org/vocab/InC/1.0/"))
         case (Some("Restricted - Partly"), Some("Service Mark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
         case (Some("Restricted - Partly"), Some("Trademark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
         case (Some("Restricted - Partly"), Some("Other")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
         case (Some("Restricted - Possibly"), Some("Copyright")) => Some(URI("http://rightsstatements.org/vocab/CNE/1.0/"))
         case (Some("Restricted - Possibly"), Some("Donor Restrictions")) => Some(URI("http://rightsstatements.org/vocab/CNE/1.0/"))
-        case (Some("Restricted - Possibly"), Some("Public Law 101-246")) => Some(URI("https://rightsstatements.org/page/NKC/1.0/"))
+        case (Some("Restricted - Possibly"), Some("Public Law 101-246")) => Some(URI("http://rightsstatements.org/vocab/NKC/1.0/"))
         case (Some("Restricted - Possibly"), Some("Service Mark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
         case (Some("Restricted - Possibly"), Some("Trademark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
         case (Some("Restricted - Possibly"), Some("Other")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
         case (Some("Undetermined"), _) => Some(URI("http://rightsstatements.org/vocab/UND/1.0/"))
-        case (Some("Unrestricted"), _) => Some(URI("https://rightsstatements.org/page/NoC-US/1.0/"))
+        case (Some("Unrestricted"), _) => Some(URI("http://rightsstatements.org/vocab/NoC-US/1.0/"))
         case (_, _) => None
-      }
+      }}
 
-    edmRights.flatten
+    // The most restrictive statements
+    val mostRestrictive = Seq(
+      Option(URI("http://rightsstatements.org/vocab/InC/1.0/")), // in copyright
+      Option(URI("http://rightsstatements.org/vocab/CNE/1.0/")) // copyright not evaluated
+    )
+
+    // If more than one rights statement is mapped then select either of the most restrictive statements
+    // This conforms to the expectation that there will ever be specific combinations of Use + Specific Restrictions
+    //
+    // Example:
+    // A "Restricted - Fully" Use Restriction could produce both `InC` AND `NoC-OKLR` and therefore `InC`
+    // should be selected rather than returning both values and dropping one at random (see Mapper.validateEdmRights())
+    //
+    // Restricted - Fully
+    //    InC and NoC-OKLR = InC
+    //
+    // Restricted - Partly
+    //    InC and NoC-OKLR = InC
+    //
+    // Restricted - Possibly
+    //    CNE and NKC and NoC-OKLR = CNE
+    //
+    // If any other combination of values exists the behavior is uncertain. Ex. if a record contains both CNE and InC values
+    // both values will be mapped and the first value will be selected from the behavior in `validateEdmRights()` but a
+    // warning for multiple edmRights values will also be recorded in the logs.
+    if (edmRights.size > 1) {
+      val filtered = edmRights.intersect(mostRestrictive).flatten
+      print(filtered)
+      filtered
+    }
+    else
+      edmRights.flatten
   }
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
