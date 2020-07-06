@@ -55,6 +55,20 @@ class P2PMapping extends XmlMapping with XmlExtractor with IngestMessageTemplate
       if node \@ "usage" == "primary display"
     } yield uriOnlyWebResource(URI(node.text.trim))
 
+  // <mods:url note=”iiif-manifest”>
+  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] =
+    for {
+      node <- data \ "metadata" \ "mods" \ "location" \ "url"
+      if node \@ "note" == "iiif-manifest"
+    } yield URI(node.text.trim)
+
+  // <mods:url access="raw object">
+  override def mediaMaster(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    for {
+      node <- data \ "metadata" \ "mods" \ "location" \ "url"
+      if node \@ "access" == "raw object"
+    } yield uriOnlyWebResource(URI(node.text.trim))
+
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
 

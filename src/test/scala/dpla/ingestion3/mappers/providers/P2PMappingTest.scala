@@ -356,6 +356,37 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
     assert(result === "HBO Videos")
   }
 
+  it should "extract media master" in {
+    val result = mapping.mediaMaster(
+      metadata(
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:location>
+            <mods:url access="raw object">http://full.frame/1</mods:url>
+          </mods:location>
+        </mods:mods>
+      )
+    )
+    val expected = Seq("http://full.frame/1").map(stringOnlyWebResource)
+
+    assert(result === expected)
+  }
+
+  it should "extract iiif manifest" in {
+    val result = mapping.iiifManifest(
+      metadata(
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:location>
+            <mods:url note="iiif-manifest">http://iiif-manifest//1</mods:url>
+          </mods:location>
+        </mods:mods>
+      )
+    )
+    val expected = Seq("http://iiif-manifest//1").map(URI)
+
+    assert(result === expected)
+  }
+  "note" == "iiif-manifest"
+
 
   def metadata(metadata: NodeSeq) = record(Seq(), metadata)
 
