@@ -385,8 +385,6 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
 
     assert(result === expected)
   }
-  "note" == "iiif-manifest"
-
 
   def metadata(metadata: NodeSeq) = record(Seq(), metadata)
 
