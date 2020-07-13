@@ -25,6 +25,7 @@ class FlatFileIO extends FileIO {
     * @return String representation of the file path
     */
   def writeFile(record: String, outputFile: String): String = {
+    new File(outputFile).getParentFile.mkdirs()
     val outFile = new File(outputFile).toPath
     Files.write(outFile, record.getBytes("utf8"), CREATE, TRUNCATE_EXISTING).toString
   }
