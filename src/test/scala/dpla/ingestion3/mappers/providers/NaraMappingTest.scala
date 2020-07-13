@@ -350,7 +350,7 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
     val dataProvider = extractor.dataProvider(Document(xml))
 
-    assert(Seq(nameOnlyAgent("National Records and Archives Administration")) === dataProvider)
+    assert(Seq(nameOnlyAgent("National Archives and Records Administration")) === dataProvider)
   }
 
   it should "extract correct edmRights for Restricted - Fully, Copyright" in {

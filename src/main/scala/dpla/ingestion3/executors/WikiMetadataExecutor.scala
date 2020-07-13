@@ -1,5 +1,6 @@
 package dpla.ingestion3.executors
 
+import java.io.File
 import java.time.LocalDateTime
 
 import com.databricks.spark.avro._
@@ -135,7 +136,10 @@ trait WikiMetadataExecutor extends Serializable with WikiMapper {
     * @param metadata Content to write to file
     * @return
     */
-  def writeOut(path: String, metadata: String) = new FlatFileIO().writeFile(metadata, s"$path/metadata.json")
+  def writeOut(path: String, metadata: String) = {
+    new File(path).mkdirs()
+    new FlatFileIO().writeFile(metadata, s"$path/metadata.json")
+  }
 
 }
 

@@ -62,13 +62,4 @@ class WikiMapperTest extends FlatSpec with Matchers {
 
     assert(wiki.isAssetEligible(iiif, mediaMasters) === false)
   }
-
-  "isWikiEligible" should "return true if record has valid dataProvider URI, assets and rights" in {
-    val record = EnrichedRecordFixture.wikimediaEntrichedRecord
-    assert(wiki.isWikiEligible(record) === true)
-  }
-  it should "return false if record has is missing a valid dataProvider URI, assets or rights" in {
-    val record = EnrichedRecordFixture.minimalEnrichedRecord
-    assert(wiki.isWikiEligible(record) === false)
-  }
 }
