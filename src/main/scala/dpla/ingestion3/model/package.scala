@@ -211,6 +211,11 @@ package object model {
     compact(render(jobj)(formats))
   }
 
+  /**
+    *
+    * @param record
+    * @return
+    */
   def wikiRecord(record: OreAggregation): String = {
     /**
         {

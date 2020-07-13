@@ -6,12 +6,12 @@ import com.databricks.spark.avro._
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.model
 import dpla.ingestion3.model._
+import dpla.ingestion3.utils.FlatFileIO
 import dpla.ingestion3.wiki.{WikiCriteria, WikiMapper}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
-import org.apache.spark.storage.StorageLevel
 
 import scala.util.{Failure, Success, Try}
 
@@ -42,6 +42,8 @@ trait WikiMetadataExecutor extends Serializable with WikiMapper {
     val outputPath: String = outputHelper.activityPath
 
     logger.info("Starting Wiki export")
+    logger.info(s"dataIn  > $dataIn")
+    logger.info(s"dataOut > $outputPath")
 
     val spark = SparkSession
       .builder()
@@ -58,94 +60,48 @@ trait WikiMetadataExecutor extends Serializable with WikiMapper {
 
     val enrichedRows: DataFrame = spark.read.avro(dataIn)
 
-    println("enriched count " + enrichedRows.count())
-
     val enrichResults: Dataset[(Row, Boolean)] = enrichedRows.map(row => {
       Try{ ModelConverter.toModel(row) } match {
         case Success(dplaMapData) =>
-
-          /**
-            * FIXUP
-            *
-            *  - Change from print to message logger
-            *
-            */
           val criteria: WikiCriteria = isWikiEligible(dplaMapData)
-          (criteria.dataProvider, criteria.asset, criteria.rights) match {
+
+          (criteria.dataProvider, criteria.asset, criteria.rights, criteria.id) match {
             // All required properties exist
-            case (true, true, true) => (RowConverter.toRow(dplaMapData, model.sparkSchema), true)
-            // Missing valid standardized rights
-            case (true, true, false) =>
-              println(s"${dplaMapData.dplaUri.toString} is missing valid rights. Value is ${dplaMapData.edmRights.getOrElse("_MISSING_")}")
-              (null, false)
-            // Missing assets
-            case (true, false, true) =>
-              println(s"${dplaMapData.dplaUri.toString} is missing assets.")
-              (null, false)
-            // Missing dataProvider URI
-            case (false, true, true) =>
-              println(s"${dplaMapData.dplaUri.toString} is missing dataProvider URI. Value is ${dplaMapData.dataProvider.name.getOrElse("_MISSSING_")}")
-              (null, false)
-            // Multiple missing required properties
-            case (_, _, _) =>
-              println(s"${dplaMapData.dplaUri.toString} is missing multiple requirements. " +
-                s"\n- dataProvider missing URI. Value is ${dplaMapData.dataProvider.name.getOrElse("_MISSSING_")}" +
-                s"\n- edmRights is ${dplaMapData.edmRights.getOrElse("_MISSING_")}" +
-                s"\n- iiif is ${dplaMapData.iiifManifest.getOrElse("_MISSING_")}" +
-                s"\n- mediaMaster is ${dplaMapData.mediaMaster.map(_.uri.toString).mkString("; ").orElse("_MISSING_")}")
-              (null, false)
+            case (true, true, true, true) => (RowConverter.toRow(dplaMapData, model.sparkSchema), true)
+            // All other cases
+            case (_, _, _, _) => (RowConverter.toRow(dplaMapData, model.sparkSchema), false)
           }
-        case Failure(err) => (null, false)
+        case Failure(_) => (null, false)
       }
     })(tupleRowBooleanEncoder)
-
-    println(s"enrichedResults count = ${enrichResults.count()}")
 
     // Filter out only the wiki eligible records
     val wikiRecords = enrichResults
       .filter(tuple => tuple._2)
       .map(tuple => tuple._1)(dplaMapDataRowEncoder)
-      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
-    // Fixup to logger
-    println(s"wiki records count ${wikiRecords.count()}")
+    wikiRecords.foreach(row => {
+      val record = ModelConverter.toModel(row)
+      val dplaId = getDplaId(record)
+      val wikiMarkup = wikiRecord(record)
+      val itemPath = getWikiPath(dplaId)
 
-    val wikiRows: Dataset[String] = wikiRecords.map(
-      row => {
-        val record = ModelConverter.toModel(row)
-        val dplaId = getDplaId(record)
-        val wikiMarkup = wikiRecord(record)
-        val path = getWikiPath(dplaId)
-        // val assets = getWikiAssets(record)
+      import org.json4s.jackson.JsonMethods._
+      val wikiJson = pretty(render(parse(wikiMarkup))(formats))
 
+      val wikiMetadata =
+        s"""
+           | "markup": $wikiJson
+        """.stripMargin
 
-        import org.json4s.jackson.JsonMethods._
-        val wikiJson = pretty(render(parse(wikiMarkup))(formats))
-
-
-
-        val string =
-          s"""
-            |
-            | Output path: $path
-            | Output file: TBD
-            | Wikimarkup: ${wikiJson}
-            |
-          """.stripMargin
-
-        string
-        // TODO write files out
-      }
-    ).persist(StorageLevel.MEMORY_AND_DISK_SER)
-
-    wikiRows.take(100).foreach(println)
-
+      writeOut(s"$outputPath/$itemPath", wikiMetadata)
+    })
     // Create and write manifest.
 
     val manifestOpts: Map[String, String] = Map(
       "Activity" -> "Wiki",
       "Provider" -> shortName,
-      "Record count" -> "TBD",
+      "Record count" -> s"${wikiRecords.count}",
       "Input" -> dataIn
     )
 
@@ -163,14 +119,23 @@ trait WikiMetadataExecutor extends Serializable with WikiMapper {
   }
 
   /**
+    * Construct path from DPLA id
     *
-    * @param str
+    * @param id DPLA id
     * @return
     */
-  def getWikiPath(str: String) = {
-    s"{${str(0)}/${str(1)}/${str(2)}/${str(3)}/$str/}"
+  def getWikiPath(id: String): String = {
+    s"${id(0)}/${id(1)}/${id(2)}/${id(3)}/$id/"
   }
 
+  /**
+    * Write metadata string out to file
+    *
+    * @param path Directory to write output to
+    * @param metadata Content to write to file
+    * @return
+    */
+  def writeOut(path: String, metadata: String) = new FlatFileIO().writeFile(metadata, s"$path/metadata.json")
 
 }
 
