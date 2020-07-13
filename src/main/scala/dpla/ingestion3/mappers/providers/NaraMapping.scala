@@ -41,7 +41,7 @@ class NaraMapping extends XmlMapping with XmlExtractor {
       referenceUnit = (physicalOccurrenceArray \\ "referenceUnit" \ "termName").map(_.text).headOption
     } yield referenceUnit).headOption.flatten
 
-    Seq(nameOnlyAgent(referenceUnit.getOrElse("National Records and Archives Administration")))
+    Seq(nameOnlyAgent(referenceUnit.getOrElse("National Archives and Records Administration")))
   }
 
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
@@ -145,8 +145,19 @@ class NaraMapping extends XmlMapping with XmlExtractor {
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     Seq(uriOnlyWebResource(itemUri(data)))
 
-  override def mediaMaster(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    extractPreview(data)
+  override def mediaMaster(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = for {
+    digitalObject <- data \ "digitalObjectArray" \ "digitalObject"
+    accessFileName = (digitalObject \ "accessFilename").text.trim
+    badPrefix = "https://opaexport-conv.s3.amazonaws.com/"
+    url = if (accessFileName.startsWith(badPrefix)) {
+      originalId(data) match {
+        case Some(id) => s"https://catalog.archives.gov/OpaAPI/media/$id/content/${accessFileName.stripPrefix(badPrefix)}"
+        case None => null
+      }
+    } else {
+      accessFileName
+    }
+  } yield stringOnlyWebResource(url)
 
   override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractPreview(data)
