@@ -92,7 +92,9 @@ trait WikiMetadataExecutor extends Serializable with WikiMapper {
 
       val wikiMetadata =
         s"""
-           | "markup": $wikiJson
+           | {
+           |   "markup": $wikiJson
+           | }
         """.stripMargin
 
       writeOut(s"$outputPath/$itemPath", wikiMetadata)

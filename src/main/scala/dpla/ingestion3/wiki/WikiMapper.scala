@@ -67,9 +67,9 @@ trait WikiMapper {
     *         False otherwise
     */
   def isAssetEligible(iiif: Option[URI], mediaMasters: Seq[EdmWebResource]): Boolean =
-    (iiif, mediaMasters.isEmpty) match {
-      case(None, true) => false // Neither IIIF manifest nor media masters exist
-      case(_, _) => true // either IIIF manifest or media exist
+    (iiif, mediaMasters.size.equals(1) && mediaMasters.head.uri.value.toLowerCase.contains(".jp")) match {
+      case(None, false) => false // Neither IIIF manifest nor media masters exist
+      case(_, _) => true // either IIIF manifest or exactly one media exist
     }
 
   /**
