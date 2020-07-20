@@ -352,12 +352,14 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
     Names(creators, contributors)
   }
 
-  private def processNameParts(name: Node) = {
+  private def processNameParts(name: Node): String = {
     val nameParts = for {
       namePart <- name \ "namePart"
       typeAttr = (namePart \ "@type").map(_.text).headOption.getOrElse("")
       part = namePart.text
     } yield NamePart(part, typeAttr)
+
+    if(nameParts.isEmpty) return ""
 
     val nameString = nameParts.tail.foldLeft(nameParts.head.part)(
       (a, b) => {
