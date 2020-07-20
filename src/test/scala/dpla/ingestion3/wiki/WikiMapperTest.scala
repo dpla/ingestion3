@@ -1,15 +1,14 @@
 package dpla.ingestion3.wiki
 
-import dpla.ingestion3.data.EnrichedRecordFixture
-import dpla.ingestion3.model.{URI, _}
+import dpla.ingestion3.model._
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
   * Tests for the ingestion3 FileIO utility
   */
-class WikiMapperTest extends FlatSpec with Matchers {
+class MapperTest extends WikiMapper
 
-  class MapperTest extends WikiMapper
+class WikiMapperTest extends FlatSpec with Matchers {
 
   val wiki = new MapperTest
 
@@ -40,7 +39,7 @@ class WikiMapperTest extends FlatSpec with Matchers {
 
   "isAssetEligible" should "return true if both IIIF manifest and media master given" in {
     val iiif = Some(URI("http://iiif.manifest"))
-    val mediaMasters = Seq("http://media.master").map(stringOnlyWebResource)
+    val mediaMasters = Seq(stringOnlyWebResource("http://media.master.com/image.jpg")) // .map(stringOnlyWebResource)
 
     assert(wiki.isAssetEligible(iiif, mediaMasters) === true)
   }
@@ -52,7 +51,7 @@ class WikiMapperTest extends FlatSpec with Matchers {
   }
   it should "return true if only media master exists " in {
     val iiif = None // Some(URI("http://iiif.manifest"))
-    val mediaMasters = Seq("http://media.master").map(stringOnlyWebResource)
+    val mediaMasters = Seq("http://media.master/image.jpg").map(stringOnlyWebResource)
 
     assert(wiki.isAssetEligible(iiif, mediaMasters) === true)
   }
