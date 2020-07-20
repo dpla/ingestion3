@@ -4,7 +4,7 @@ import dpla.ingestion3.model._
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
-  * Tests for the ingestion3 FileIO utility
+  * Tests for validating wikimedia eligibility  
   */
 class MapperTest extends WikiMapper
 
