@@ -8,7 +8,7 @@ import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import dpla.ingestion3.utils.FlatFileIO
 import org.apache.avro.Schema
 import org.apache.spark.sql.types.StructType
-import org.json4s.DefaultFormats
+import org.json4s.{DefaultFormats, Formats}
 import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
@@ -208,26 +208,124 @@ package object model {
         ("tags" -> record.tags.map {_.toString})
       )
 
+    compact(render(jobj)(formats))
+  }
 
-    // Taken from
-    // https://stackoverflow.com/questions/40128816/remove-json-field-when-empty-value-in-serialize-with-json4s
-    implicit val formats = DefaultFormats.withEmptyValueStrategy(new EmptyValueStrategy {
-      def noneValReplacement = None
+  /**
+    *
+    * @param record
+    * @return
+    */
+  def wikiRecord(record: OreAggregation): String = {
+    /**
+        {
+          datasource: "bpl_enriched_20200401_0999232",
+          timestamp: "",
+          markup: ""
+          assetsToDownload: [
+            "iiifManifest"
+              or
+            "mediaMaster_1",
+            "mediaMaster_2",
+            "mediaMaster_3"..
+          ]
+        }
+      */
 
-      def replaceEmpty(value: JValue): JValue = value match {
-        case JString("") => JNothing
-        case JArray(items) =>
-          if(items.isEmpty) JNothing
-          else JArray(items.map(replaceEmpty))
-        case JObject(fields) => JObject(fields map {
-          case JField(name, v) => JField(name, value = replaceEmpty(v))
-        })
-        case oth => oth
-      }
-    })
+    val wikiMarkup = buildWikiMarkup(record)
+    val wikiAssets = buildWikiAssets(record)
+    val jobj: JObject =
+      ("datasource" -> "datasource_tbd") ~
+      ("timestamp" -> "timestamp_tbd") ~
+      ("markup" -> wikiMarkup) ~
+      ("assetsToDownload" -> wikiAssets)
 
     compact(render(jobj)(formats))
   }
+
+  /**
+    *
+    * @param record
+    */
+  def buildWikiAssets(record: OreAggregation): Seq[String] = {
+    val mediaMasters = record.mediaMaster.map(_.uri.toString)
+    val iiif = record.iiifManifest.getOrElse(URI("")).toString
+
+    (Seq(iiif) ++ mediaMasters).filter(_.nonEmpty)
+  }
+
+  /**
+    *
+    * @param record
+    * @return
+    */
+  def buildWikiMarkup(record: OreAggregation): String = {
+    val dataProviderWikiUri = getDataProviderWikiId(record)
+    val dplaId = getDplaId(record)
+
+    s"""|== {{int:filedesc}} ==
+        | {{ Artwork
+        |   | Other fields 1 = {{ InFi | Creator | ${record.sourceResource.creator.flatMap { _.name }.mkString("; ")} }}
+        |   | title = ${record.sourceResource.title.mkString("; ")}
+        |   | description = ${record.sourceResource.description.mkString("; ")}
+        |   | date = ${record.sourceResource.date.flatMap { _.prefLabel }.mkString("; ")}
+        |   | permission = {{PD-US}}
+        |   | source = {{
+        |       DPLA | $dataProviderWikiUri |
+        |       hub = ${record.provider.name.getOrElse()} |
+        |       url = ${record.isShownAt.uri.toString} |
+        |       dpla_id = $dplaId |
+        |       local_id = ${record.sourceResource.identifier.mkString("; ")}
+        |   }}
+        |   | Institution = {{ Institution | wikidata = $dataProviderWikiUri }}
+        |   Other fields = {{ InFi | Standardized rights statement | {{ rights statement | ${record.edmRights.getOrElse("")} }} }}
+        | }}""".stripMargin
+  }
+
+  /**
+    *
+    * @param record
+    * @return
+    */
+  def getDplaId(record: OreAggregation): String = record.sidecar \ "dplaId" match {
+    case JString(js) => js
+    case _ => throw new RuntimeException("DPLA ID is not in metadata sidecar")
+  }
+
+  /**
+    *
+    * @param record
+    * @return
+    */
+  def getDataProviderWikiId(record: OreAggregation): String =
+    record
+      .dataProvider
+      .exactMatch
+      .map(_.toString)
+      .find(_.startsWith("https://wikidata.org/wiki/")) match {
+        case Some(uri) => uri.replace("https://wikidata.org/wiki/", "")
+        case None =>
+          throw new RuntimeException(s"dataProvider ${record.dataProvider.name.getOrElse("__MISSING__")} " +
+            s"in ${getDplaId(record)} does not have wiki identifier ")
+    }
+
+
+  // Taken from
+  // https://stackoverflow.com/questions/40128816/remove-json-field-when-empty-value-in-serialize-with-json4s
+  implicit val formats: Formats = DefaultFormats.withEmptyValueStrategy(new EmptyValueStrategy {
+    def noneValReplacement = None
+
+    def replaceEmpty(value: JValue): JValue = value match {
+      case JString("") => JNothing
+      case JArray(items) =>
+        if(items.isEmpty) JNothing
+        else JArray(items.map(replaceEmpty))
+      case JObject(fields) => JObject(fields map {
+        case JField(name, v) => JField(name, value = replaceEmpty(v))
+      })
+      case oth => oth
+    }
+  })
 
   val avroSchema: Schema = new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
   val sparkSchema: StructType = SchemaConverters.toSqlType(avroSchema).dataType.asInstanceOf[StructType]

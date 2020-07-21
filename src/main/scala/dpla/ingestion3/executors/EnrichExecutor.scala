@@ -97,7 +97,7 @@ trait EnrichExecutor extends Serializable {
       }
     })(tupleRowStringEncoder)
 
-    // Transforamtion
+    // Transformation
     val successResults: Dataset[Row] = enrichResults
       .filter(tuple => Option(tuple._1).isDefined)
       .map(tuple => tuple._1)(dplaMapDataRowEncoder)

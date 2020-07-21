@@ -5,10 +5,57 @@ import org.json4s.JsonDSL._
 
 object EnrichedRecordFixture {
 
+  val wikimediaEntrichedRecord =
+    OreAggregation(
+      dataProvider = EdmAgent(
+        name = Some("Big Sky Digital Network"),
+        exactMatch = Seq(URI("https://wikidata.org/wiki/Q83878447"))
+      ),
+      dplaUri = URI("https://dp.la/item/123"),
+      originalRecord = "The Original Record",
+      provider = EdmAgent(
+        uri = Some(URI("http://dp.la/api/contributor/thedataprovider")),
+        name = Some("The Provider")
+      ),
+      intermediateProvider = Some(
+        EdmAgent(name = Some("The Intermediate Provider"))
+      ),
+      `object` = Some(
+        EdmWebResource(uri = URI("https://example.org/record/123.html"))
+      ),
+      preview = Some(
+        EdmWebResource(uri = URI("https://example.org/thumbnail/123.jpg"))
+      ),
+      edmRights = Some(URI("http://rightsstatements.org/vocab/NoC-US")),
+      isShownAt = EdmWebResource(
+        uri = URI("https://example.org/record/123")
+      ),
+      sidecar = ("prehashId" -> "oai:somestate:id123") ~ ("dplaId" -> "4b1bd605bd1d75ee23baadb0e1f24457"),
+      originalId = "The original ID",
+      sourceResource = DplaSourceResource(
+        creator = Seq(EdmAgent(
+          name = Some("J Doe")
+        )),
+        date = Seq(EdmTimeSpan(
+          originalSourceDate = Some("5.7.2012"),
+          prefLabel = Some("2012-05-07"),
+          begin = Some("2012-05-07"),
+          end = Some("2012-05-07")
+        )),
+        description = Seq("The description"),
+        identifier = Seq("us-history-13243", "j-doe-archives-2343"),
+        title = Seq("The Title"),
+        `type` = Seq("image", "text")
+      ),
+      iiifManifest = Some(URI("https://ark.iiif/item/manifest")),
+      mediaMaster = Seq(EdmWebResource(uri = URI("https://example.org/record/123.html")))
+    )
+
   val enrichedRecord =
     OreAggregation(
       dataProvider = EdmAgent(
-        name = Some("The Data Provider")
+        name = Some("The Data Provider"),
+        exactMatch = Seq(URI("Q83878447"))
       ),
       dplaUri = new URI("https://dp.la/item/123"),
       originalRecord = "The Original Record",
