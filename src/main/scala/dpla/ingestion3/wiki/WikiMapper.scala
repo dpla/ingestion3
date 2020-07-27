@@ -23,7 +23,7 @@ trait WikiMapper {
     "http://creativecommons.org/licenses/by/",
     "http://creativecommons.org/licenses/by-sa/")
 
-  protected lazy val blockedIds: Seq[String] = getBlockedIds
+  protected lazy val blockedIds: Set[String] = getBlockedIds
 
   // Files to source blocked ids from
   private val blockedIdsFileList = Seq(
@@ -98,8 +98,8 @@ trait WikiMapper {
   /**
     * Get the list of blocked IDs from file
     */
-  def getBlockedIds: Seq[String] = {
+  def getBlockedIds: Set[String] = {
     val io = new FlatFileIO()
-    blockedIdsFileList.flatMap(file => io.readFileAsSeq(file))
+    blockedIdsFileList.flatMap(file => io.readFileAsSeq(file)).toSet
   }
 }
