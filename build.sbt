@@ -1,3 +1,5 @@
+import sbt.Keys.resolvers
+
 assemblyMergeStrategy in assembly := {
   case "META-INF/MANIFEST.MF" => MergeStrategy.discard
   case x => MergeStrategy.first
