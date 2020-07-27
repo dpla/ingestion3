@@ -54,7 +54,7 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     * ------------------------------------------------------------------------------------------------------------------------
     * Restricted - Fully    | Copyright                 | http://rightsstatements.org/vocab/InC/1.0/
     * Restricted - Fully    | Donor Restrictions	      | http://rightsstatements.org/vocab/InC/1.0/
-    * Restricted - Fully    | Public Law 101-246	      | https://rightsstatements.org/vocab/InC/1.0/
+    * Restricted - Fully    | Public Law 101-246	      | http://rightsstatements.org/vocab/InC/1.0/
     * Restricted - Fully    | Service Mark	            | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Restricted - Fully    | Trademark	                | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Restricted - Fully    | Other                     | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
@@ -64,13 +64,14 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     * Restricted - Partly   | Service Mark	            | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Restricted - Partly   | Trademark	                | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Restricted - Partly   | Other	                    | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
-    * Restricted - Possibly | Copyright	                | http://rightsstatements.org/vocab/CNE/1.0/
-    * Restricted - Possibly | Donor Restrictions        | http://rightsstatements.org/vocab/CNE/1.0/
+    * Restricted - Possibly | Copyright	                | http://rightsstatements.org/vocab/UND/1.0/
+    * Restricted - Possibly | Donor Restrictions        | http://rightsstatements.org/vocab/UND/1.0/
     * Restricted - Possibly | Public Law 101-246	      | http://rightsstatements.org/vocab/NKC/1.0/
     * Restricted - Possibly | Service Mark	            | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Restricted - Possibly | Trademark	                |	http://rightsstatements.org/vocab/NoC-OKLR/1.0/
     * Restricted - Possibly | Other	                    | http://rightsstatements.org/vocab/NoC-OKLR/1.0/
-    * Undetermined          |                           | http://rightsstatements.org/vocab/UND/1.0/
+    * Restricted - Possibly |                           | http://rightsstatements.org/vocab/UND/1.0/
+    * Undetermined          |                           | http://rightsstatements.org/vocab/CNE/1.0/
     * Unrestricted          |                           | http://rightsstatements.org/vocab/NoC-US/1.0/
     *
     * @param data
@@ -85,36 +86,40 @@ class NaraMapping extends XmlMapping with XmlExtractor {
       sr <- extractString(sra \ "termName")
     } yield Option(sr)
 
+    // Standard formulation for rightsstatments.org URI
+    val rightsUri = (value: String) => URI(s"http://rightsstatements.org/vocab/$value/1.0/")
+
     val edmRights = List(useRestriction)
       .zipAll(specificRestrictions, None, None) // merge useRestriction and specificRestriction into set,
       .map{ case (ur: Option[String], sr: Option[String]) => (ur, sr) match {
-        case (Some("Restricted - Fully"), Some("Copyright")) => Some(URI("http://rightsstatements.org/vocab/InC/1.0/"))
-        case (Some("Restricted - Fully"), Some("Donor Restrictions")) => Some(URI("http://rightsstatements.org/vocab/InC/1.0/"))
-        case (Some("Restricted - Fully"), Some("Public Law 101-246")) => Some(URI("http://rightsstatements.org/vocab/InC/1.0/"))
-        case (Some("Restricted - Fully"), Some("Service Mark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
-        case (Some("Restricted - Fully"), Some("Trademark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
-        case (Some("Restricted - Fully"), Some("Other")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
-        case (Some("Restricted - Partly"), Some("Copyright")) => Some(URI("http://rightsstatements.org/vocab/InC/1.0/"))
-        case (Some("Restricted - Partly"), Some("Donor Restrictions")) => Some(URI("http://rightsstatements.org/vocab/InC/1.0/"))
-        case (Some("Restricted - Partly"), Some("Public Law 101-246")) => Some(URI("http://rightsstatements.org/vocab/InC/1.0/"))
-        case (Some("Restricted - Partly"), Some("Service Mark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
-        case (Some("Restricted - Partly"), Some("Trademark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
-        case (Some("Restricted - Partly"), Some("Other")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
-        case (Some("Restricted - Possibly"), Some("Copyright")) => Some(URI("http://rightsstatements.org/vocab/CNE/1.0/"))
-        case (Some("Restricted - Possibly"), Some("Donor Restrictions")) => Some(URI("http://rightsstatements.org/vocab/CNE/1.0/"))
-        case (Some("Restricted - Possibly"), Some("Public Law 101-246")) => Some(URI("http://rightsstatements.org/vocab/NKC/1.0/"))
-        case (Some("Restricted - Possibly"), Some("Service Mark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
-        case (Some("Restricted - Possibly"), Some("Trademark")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
-        case (Some("Restricted - Possibly"), Some("Other")) => Some(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/"))
-        case (Some("Undetermined"), _) => Some(URI("http://rightsstatements.org/vocab/UND/1.0/"))
-        case (Some("Unrestricted"), _) => Some(URI("http://rightsstatements.org/vocab/NoC-US/1.0/"))
+        case (Some("Restricted - Fully"), Some("Copyright")) => Some(rightsUri("InC"))
+        case (Some("Restricted - Fully"), Some("Donor Restrictions")) => Some(rightsUri("InC"))
+        case (Some("Restricted - Fully"), Some("Public Law 101-246")) => Some(rightsUri("InC"))
+        case (Some("Restricted - Fully"), Some("Service Mark")) => Some(rightsUri("NoC-OKLR"))
+        case (Some("Restricted - Fully"), Some("Trademark")) => Some(rightsUri("NoC-OKLR"))
+        case (Some("Restricted - Fully"), Some("Other")) => Some(rightsUri("NoC-OKLR"))
+        case (Some("Restricted - Partly"), Some("Copyright")) => Some(rightsUri("InC"))
+        case (Some("Restricted - Partly"), Some("Donor Restrictions")) => Some(rightsUri("InC"))
+        case (Some("Restricted - Partly"), Some("Public Law 101-246")) => Some(rightsUri("InC"))
+        case (Some("Restricted - Partly"), Some("Service Mark")) => Some(rightsUri("NoC-OKLR"))
+        case (Some("Restricted - Partly"), Some("Trademark")) => Some(rightsUri("NoC-OKLR"))
+        case (Some("Restricted - Partly"), Some("Other")) => Some(rightsUri("NoC-OKLR"))
+        case (Some("Restricted - Possibly"), Some("Copyright")) => Some(rightsUri("UND"))
+        case (Some("Restricted - Possibly"), Some("Donor Restrictions")) => Some(rightsUri("UND"))
+        case (Some("Restricted - Possibly"), Some("Public Law 101-246")) => Some(rightsUri("NKC"))
+        case (Some("Restricted - Possibly"), Some("Service Mark")) => Some(rightsUri("NoC-OKLR"))
+        case (Some("Restricted - Possibly"), Some("Trademark")) => Some(rightsUri("NoC-OKLR"))
+        case (Some("Restricted - Possibly"), Some("Other")) => Some(rightsUri("NoC-OKLR"))
+        case (Some("Restricted - Possibly"), _) => Some(rightsUri("UND"))
+        case (Some("Undetermined"), _) => Some(rightsUri("CNE"))
+        case (Some("Unrestricted"), _) => Some(rightsUri("NoC-US"))
         case (_, _) => None
       }}
 
     // The most restrictive statements
     val mostRestrictive = Seq(
-      Option(URI("http://rightsstatements.org/vocab/InC/1.0/")), // in copyright
-      Option(URI("http://rightsstatements.org/vocab/CNE/1.0/")) // copyright not evaluated
+      Option(rightsUri("InC")), // in copyright
+      Option(rightsUri("CNE"))  // copyright not evaluated
     )
 
     // If more than one rights statement is mapped then select either of the most restrictive statements
