@@ -813,4 +813,12 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
     val edmRights = extractor.edmRights(Document(xml))
     assert(edmRights.isEmpty)
   }
+
+  it should "extract no rights value when given an empty block " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction />
+              </item>
+    val rights = extractor.rights(Document(xml))
+    assert(rights.isEmpty)
+  }
 }

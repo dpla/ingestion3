@@ -462,12 +462,12 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     (parents ++ mediaTypes).distinct
   }
 
-  private def extractRights(data: NodeSeq): Seq[String] = for {
+  private def extractRights(data: NodeSeq): Seq[String] = (for {
     useRestriction <- data \ "useRestriction"
     value1 = (useRestriction \ "note").text
     value2 = (useRestriction \ "specificUseRestrictionArray" \ "specificUseRestriction" \ "termName").text
     value3 = (useRestriction \ "status" \ "termName").text
-  } yield Seq(value2, value1, value3).filter(_.nonEmpty).mkString(" ; ")
+  } yield Seq(value2, value1, value3).filter(_.nonEmpty).mkString(" ; ")).filter(_.nonEmpty)
 
 
   private def extractTypes(data: NodeSeq): Seq[String] = for {
