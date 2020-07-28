@@ -791,4 +791,26 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
     val edmRights = extractor.edmRights(xml)
     assert(edmRights === Seq(URI("http://rightsstatements.org/vocab/NoC-US/1.0/")))
   }
+
+  it should "extract no edmRights for `Restricted - Possibly` with competing specific use restrictions that would " +
+    "produce NoC-OKLR and NKC rightstatements " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Possibly</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Public Law 101-246</termName>
+                    </specificUseRestriction>
+                    <specificUseRestriction>
+                      <termName>Service Mark</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(edmRights.isEmpty)
+  }
 }

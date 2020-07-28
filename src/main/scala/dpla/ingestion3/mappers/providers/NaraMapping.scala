@@ -118,8 +118,8 @@ class NaraMapping extends XmlMapping with XmlExtractor {
 
     // The most restrictive statements
     val mostRestrictive = Seq(
-      Option(rightsUri("InC")), // in copyright
-      Option(rightsUri("CNE"))  // copyright not evaluated
+      Some(rightsUri("InC")), // in copyright
+      Some(rightsUri("UND"))  // copyright undetermined
     )
 
     // If more than one rights statement is mapped then select either of the most restrictive statements
@@ -136,9 +136,12 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     //    InC and NoC-OKLR = InC
     //
     // Restricted - Possibly
-    //    CNE and NKC and NoC-OKLR = CNE
+    //    UND and NKC and NoC-OKLR = UND
     //
-    // If any other combination of values exists the behavior is uncertain. Ex. if a record contains both CNE and InC values
+    // Restricted - Possibly
+    //    NKC and NoC-OKLR = No rights value will be mapped
+    //
+    // If any other combination of values exists the behavior is uncertain. Ex. if a record contains both UND and InC values
     // both values will be mapped and the first value will be selected from the behavior in `validateEdmRights()` but a
     // warning for multiple edmRights values will also be recorded in the logs.
     if (edmRights.size > 1)
