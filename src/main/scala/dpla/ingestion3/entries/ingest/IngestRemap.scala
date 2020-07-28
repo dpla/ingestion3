@@ -2,7 +2,7 @@ package dpla.ingestion3.entries.ingest
 
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, MachineLearningConf}
 import dpla.ingestion3.dataStorage.InputHelper
-import dpla.ingestion3.executors.{EnrichExecutor, JsonlExecutor, MappingExecutor, TopicModelExecutor}
+import dpla.ingestion3.executors.{EnrichExecutor, JsonlExecutor, MappingExecutor, TopicModelExecutor, WikimediaMetadataExecutor}
 import dpla.ingestion3.entries.reports.ReporterMain._
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
@@ -52,7 +52,8 @@ import org.apache.spark.SparkConf
 object IngestRemap extends MappingExecutor
   with JsonlExecutor
   with EnrichExecutor
-  with TopicModelExecutor {
+  with TopicModelExecutor
+  with WikimediaMetadataExecutor {
 
   def main(args: Array[String]): Unit = {
 
@@ -115,5 +116,8 @@ object IngestRemap extends MappingExecutor
 
     // LDA vectors
     executeTopicModel(sparkConf, enrichDataOut, baseDataOut, shortName, stopWords, cvModel, ldaModel, logger)
+
+    // Wikimedia
+    executeWikimediaMetadata(sparkConf, enrichDataOut, baseDataOut, shortName, logger)
   }
 }

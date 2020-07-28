@@ -237,7 +237,7 @@ package object model {
     val jobj: JObject =
       ("datasource" -> "datasource_tbd") ~
       ("timestamp" -> "timestamp_tbd") ~
-      ("markup" -> wikiMarkup) ~
+      ("wikiMarkup" -> wikiMarkup) ~
       ("assetsToDownload" -> wikiAssets)
 
     compact(render(jobj)(formats))

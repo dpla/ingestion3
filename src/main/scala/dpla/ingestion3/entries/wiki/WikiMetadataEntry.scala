@@ -1,11 +1,11 @@
 package dpla.ingestion3.entries.wiki
 
 import dpla.ingestion3.confs.CmdArgs
-import dpla.ingestion3.executors.WikiMetadataExecutor
+import dpla.ingestion3.executors.WikimediaMetadataExecutor
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
 
-object WikiMetadataEntry extends WikiMetadataExecutor {
+object WikiMetadataEntry extends WikimediaMetadataExecutor {
   /**
     * Driver for reading DplaMapData records (mapped or enriched) and generating
     * Wikidata markup as a part of a JSON record.
@@ -50,7 +50,7 @@ object WikiMetadataEntry extends WikiMetadataExecutor {
 
       val logger = Utils.createLogger("wiki")
 
-      executeWikiMetadata(sparkConf, dataIn, dataOut, shortName, logger)
+      executeWikimediaMetadata(sparkConf, dataIn, dataOut, shortName, logger)
     }
 }
 
