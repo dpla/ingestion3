@@ -390,7 +390,7 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
     val edmRights = extractor.edmRights(Document(xml))
 
-    assert(Seq(URI("http://rightsstatements.org/vocab/UND/1.0/")) === edmRights)
+    assert(Seq(URI("http://rightsstatements.org/vocab/CNE/1.0/")) === edmRights)
   }
 
   it should "work magick for uncertain rites" in {
@@ -416,8 +416,409 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
     assert(Seq(URI("http://rightsstatements.org/vocab/InC/1.0/")) === edmRights)
   }
 
+  it should "extract InC for Restricted - Fully && Copyright " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Fully</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Copyright</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+
+    val edmRights = extractor.edmRights(Document(xml))
+
+    assert(Seq(URI("http://rightsstatements.org/vocab/InC/1.0/")) === edmRights)
+  }
+
+  it should "extract InC for Restricted - Fully && Donor Restrictions " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Fully</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Donor Restrictions</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+
+    val edmRights = extractor.edmRights(Document(xml))
+
+    assert(Seq(URI("http://rightsstatements.org/vocab/InC/1.0/")) === edmRights)
+  }
+
+  it should "extract InC for Restricted - Fully && Public Law 101-246 " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Fully</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Public Law 101-246</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+
+    val edmRights = extractor.edmRights(Document(xml))
+
+    assert(Seq(URI("http://rightsstatements.org/vocab/InC/1.0/")) === edmRights)
+  }
+
+  it should "extract NoC-OKLR for Restricted - Fully && Service Mark " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Fully</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Service Mark</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/")) === edmRights)
+  }
+
+  it should "extract NoC-OKLR for Restricted - Fully && Trademark " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Fully</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Trademark</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/")) === edmRights)
+  }
+
+  it should "extract NoC-OKLR for Restricted - Fully && Other " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Fully</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Other</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/")) === edmRights)
+  }
+
+  it should "extract InC for Restricted - Partly && Copyright " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Partly</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Copyright</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/InC/1.0/")) === edmRights)
+  }
+
+  it should "extract NoC-OKLR for Restricted - Partly && Donor Restrictions " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Partly</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Donor Restrictions</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/InC/1.0/")) === edmRights)
+  }
+
+  it should "extract InC for Restricted - Partly && Public Law 101-246 " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Partly</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Public Law 101-246</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/InC/1.0/")) === edmRights)
+  }
+
+  it should "extract NoC-OKLR for Restricted - Partly && Service Mark " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Fully</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Service Mark</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/")) === edmRights)
+  }
+
+  it should "extract NoC-OKLR for Restricted - Partly && Trademark " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Partly</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Trademark</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/")) === edmRights)
+  }
+
+  // *****
+
+  it should "extract NoC-OKLR for Restricted - Partly && Other " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Partly</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Other</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/")) === edmRights)
+  }
+
+  it should "extract UND for Restricted - Possibly && Copyright " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Possibly</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Copyright</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/UND/1.0/")) === edmRights)
+  }
+
+  it should "extract UND for Restricted - Possibly && Donor Restrictions " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Possibly</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Donor Restrictions</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/UND/1.0/")) === edmRights)
+  }
+
+  it should "extract NKC for Restricted - Possibly && Public Law 101-246 " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Possibly</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Public Law 101-246</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/NKC/1.0/")) === edmRights)
+  }
+
+  it should "extract NoC-OKLR for Restricted - Possibly && Service Mark " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Possibly</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Service Mark</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/")) === edmRights)
+  }
+
+  it should "extract NoC-OKLR for Restricted - Possibly && Trademark " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Possibly</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Trademark</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/")) === edmRights)
+  }
+
+  it should "extract NoC-OKLR for `Restricted - Possibly` && `Other` " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Possibly</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Other</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/")) === edmRights)
+  }
+
+  it should "extract UND for `Restricted - Possibly` when no specific use restriction is defined  " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Possibly</termName>
+                    </status>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/UND/1.0/")) === edmRights)
+  }
+
+  it should "extract CNE for `Undetermined` when no specific use restriction is defined  " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Undetermined</termName>
+                    </status>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/CNE/1.0/")) === edmRights)
+  }
+
+  it should "extract NoC-US for `Unrestricted` when no specific use restriction is defined  " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Undetermined</termName>
+                    </status>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(Seq(URI("http://rightsstatements.org/vocab/CNE/1.0/")) === edmRights)
+  }
+
   it should "extract correct edmRights when given `Unrestricted` use restriction" in {
     val edmRights = extractor.edmRights(xml)
     assert(edmRights === Seq(URI("http://rightsstatements.org/vocab/NoC-US/1.0/")))
+  }
+
+  it should "extract no edmRights for `Restricted - Possibly` with competing specific use restrictions that would " +
+    "produce NoC-OKLR and NKC rightstatements " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction>
+                    <status>
+                        <naId>10675400</naId>
+                        <termName>Restricted - Possibly</termName>
+                    </status>
+                  <specificUseRestrictionArray>
+                    <specificUseRestriction>
+                      <termName>Public Law 101-246</termName>
+                    </specificUseRestriction>
+                    <specificUseRestriction>
+                      <termName>Service Mark</termName>
+                    </specificUseRestriction>
+                  </specificUseRestrictionArray>
+                </useRestriction>
+              </item>
+    val edmRights = extractor.edmRights(Document(xml))
+    assert(edmRights.isEmpty)
+  }
+
+  it should "extract no rights value when given an empty block " in {
+    val xml = <item xmlns="http://description.das.nara.gov/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <useRestriction />
+              </item>
+    val rights = extractor.rights(Document(xml))
+    assert(rights.isEmpty)
   }
 }
