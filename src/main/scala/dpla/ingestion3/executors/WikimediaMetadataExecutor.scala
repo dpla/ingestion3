@@ -83,6 +83,15 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
         val dplaId = getDplaId(record)
         val wiki = wikiRecord(record)
 
+        /**
+          * FIXME
+          * New parquet schema should look like this
+          * - dplaId
+          * - iiifManifest
+          * - mediaMaster: Seq[String]
+          * - wikiMarkup
+          * -
+          */
         (dplaId, wiki)
       })
 
