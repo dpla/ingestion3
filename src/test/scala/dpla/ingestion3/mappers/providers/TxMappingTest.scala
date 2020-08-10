@@ -108,6 +108,20 @@ class TxMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.title(xml) === expected)
   }
 
+  it should "extract the correct alt title" in {
+    val expected = Seq("Alt title")
+    val xml =
+      <record>
+        <metadata>
+          <untl:metadata xmlns:untl="http://digital2.library.unt.edu/untl/">
+            <untl:title>Alt title</untl:title>
+          </untl:metadata>
+        </metadata>
+      </record>
+
+    assert(extractor.title(Document(xml)) === expected)
+  }
+
   it should "extract the correct types" in {
     val expected = Seq("text") // these will get cleaned up by type enrichment
     assert(extractor.`type`(xml) === expected)

@@ -162,8 +162,25 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     extractStrings(metadata(data) \ "subject")
       .map(nameOnlyConcept)
 
-  override def title(data: Document[NodeSeq]): AtLeastOne[String] =
-    extractStrings(metadata(data) \ "title")
+  override def title(data: Document[NodeSeq]): AtLeastOne[String] = {
+    val titles =  metadata(data) \ "title"
+
+    val officialTitle = titles
+      .filter(node => filterAttribute(node, "qualifier", "officialtitle"))
+      .flatMap(extractStrings)
+      .headOption
+
+    val altTitle = titles
+      .flatMap(extractStrings)
+      .headOption
+
+    (officialTitle, altTitle) match {
+      case (Some(ot), _) => Seq(ot)
+      case (None, Some(at)) => Seq(at)
+      case (_, _) => Seq()
+    }
+  }
+
 
   override def `type`(data: Document[NodeSeq]): AtLeastOne[String] = {
     // This greatly simplifies the ingestion1 mapping and pushes the filtering logic from ingestion1 to the ingestion3
