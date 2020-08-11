@@ -6,14 +6,6 @@ import org.json4s.jackson.JsonMethods._
 import org.scalatest.FlatSpec
 
 class WikiMarkupStringTest extends FlatSpec {
-
-  "wikiRecord" should "generate valid JSON" in {
-    val s: String = wikiRecord(EnrichedRecordFixture.wikimediaEntrichedRecord)
-    val jvalue = parse(s)
-    // println(s)
-    assert(jvalue.isInstanceOf[JValue])
-  }
-
   "buildWikiMarkup" should "print valid wiki markup" in {
     val markup: String = buildWikiMarkup(EnrichedRecordFixture.wikimediaEntrichedRecord)
     val expectedMarkup = """== {{int:filedesc}} ==
@@ -35,32 +27,4 @@ class WikiMarkupStringTest extends FlatSpec {
                         | }}""".stripMargin
     assert(expectedMarkup === markup)
   }
-
-  "buildWikiAssets" should "build correct URI when given a IIIF manifest" in {
-    val record = EnrichedRecordFixture.minimalEnrichedRecord.copy(
-      iiifManifest = Some(URI("https://ark.iiif/item/manifest"))
-    )
-
-    val expected = Seq("https://ark.iiif/item/manifest")
-    assert(buildWikiAssets(record) === expected)
-  }
-
-  it should "build correct URI when given a single mediaMaster value" in {
-    val expected = Seq("media_master_1")
-    val record = EnrichedRecordFixture.minimalEnrichedRecord.copy(
-      mediaMaster = expected.map(stringOnlyWebResource)
-    )
-
-    assert(buildWikiAssets(record) === expected)
-  }
-
-  it should "build correct URI when given multiple mediaMaster values" in {
-    val expected = Seq("media_master_1", "media_master_2", "media_master_3")
-    val record = EnrichedRecordFixture.minimalEnrichedRecord.copy(
-      mediaMaster = expected.map(stringOnlyWebResource)
-    )
-
-    assert(buildWikiAssets(record) === expected)
-  }
-
 }

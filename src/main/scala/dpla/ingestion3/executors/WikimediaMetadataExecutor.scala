@@ -56,7 +56,7 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
     val tupleRowBooleanEncoder: ExpressionEncoder[(Row, Boolean)] =
       ExpressionEncoder.tuple(RowEncoder(model.sparkSchema), ExpressionEncoder())
 
-    val enrichedRows: DataFrame = spark.read.avro(dataIn)
+    val enrichedRows: DataFrame = spark.read.avro(dataIn).sample(.01)
 
     val enrichResults: Dataset[(Row, Boolean)] = enrichedRows.map(row => {
       Try{ ModelConverter.toModel(row) } match {
@@ -66,33 +66,29 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
           (criteria.dataProvider, criteria.asset, criteria.rights, criteria.id) match {
             // All required properties exist
             case (true, true, true, true) => (RowConverter.toRow(dplaMapData, model.sparkSchema), true)
-            // Not eligible
             case (_, _, _, _) => (RowConverter.toRow(dplaMapData, model.sparkSchema), false)
           }
         case Failure(_) => (null, false)
       }
     })(tupleRowBooleanEncoder)
 
-    // Filter out only the wiki eligible records
     // TODO There should be a better way to combine these two blocks
     import spark.implicits._
-    val wikiRecords: Dataset[(String, String)] = enrichResults
+    // Parquet schema
+    // - dplaId
+    // - wikiMarkup
+    // - iiifManifest
+    // - mediaMaster: Seq[String]
+    val wikiRecords: Dataset[(String, String, String, Seq[String])] = enrichResults
+      // Filter out only the wiki eligible records
       .filter(tuple => tuple._2)
       .map(tuple => {
         val record = ModelConverter.toModel(tuple._1)
         val dplaId = getDplaId(record)
-        val wiki = wikiRecord(record)
-
-        /**
-          * FIXME
-          * New parquet schema should look like this
-          * - dplaId
-          * - iiifManifest
-          * - mediaMaster: Seq[String]
-          * - wikiMarkup
-          * -
-          */
-        (dplaId, wiki)
+        val wikiMetadata = buildWikiMarkup(record)
+        val iiif = record.iiifManifest.getOrElse("").toString
+        val mediaMaster = record.mediaMaster.map(_.uri.toString)
+        (dplaId, wikiMetadata, iiif, mediaMaster)
       })
 
     wikiRecords

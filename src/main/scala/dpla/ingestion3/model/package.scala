@@ -216,49 +216,6 @@ package object model {
     * @param record
     * @return
     */
-  def wikiRecord(record: OreAggregation): String = {
-    /**
-        {
-          datasource: "bpl_enriched_20200401_0999232",
-          timestamp: "",
-          markup: ""
-          assetsToDownload: [
-            "iiifManifest"
-              or
-            "mediaMaster_1",
-            "mediaMaster_2",
-            "mediaMaster_3"..
-          ]
-        }
-      */
-
-    val wikiMarkup = buildWikiMarkup(record)
-    val wikiAssets = buildWikiAssets(record)
-    val jobj: JObject =
-      ("datasource" -> "datasource_tbd") ~
-      ("timestamp" -> "timestamp_tbd") ~
-      ("wikiMarkup" -> wikiMarkup) ~
-      ("assetsToDownload" -> wikiAssets)
-
-    compact(render(jobj)(formats))
-  }
-
-  /**
-    *
-    * @param record
-    */
-  def buildWikiAssets(record: OreAggregation): Seq[String] = {
-    val mediaMasters = record.mediaMaster.map(_.uri.toString)
-    val iiif = record.iiifManifest.getOrElse(URI("")).toString
-
-    (Seq(iiif) ++ mediaMasters).filter(_.nonEmpty)
-  }
-
-  /**
-    *
-    * @param record
-    * @return
-    */
   def buildWikiMarkup(record: OreAggregation): String = {
     val dataProviderWikiUri = getDataProviderWikiId(record)
     val dplaId = getDplaId(record)
@@ -281,6 +238,14 @@ package object model {
         |   Other fields = {{ InFi | Standardized rights statement | {{ rights statement | ${record.edmRights.getOrElse("")} }} }}
         | }}""".stripMargin
   }
+
+  /**
+    * Escape reserved Wiki markup characters
+    *
+    * @param value
+    * @return
+    */
+  def escapeWikiChars(value: String) = ???
 
   /**
     *
