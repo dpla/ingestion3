@@ -27,4 +27,11 @@ class WikiMarkupStringTest extends FlatSpec {
                         | }}""".stripMargin
     assert(expectedMarkup === markup)
   }
+
+  "escapeWikiChars" should "escape '{{'" in {
+    val value = "Title with {{ and }}"
+    val expectedValue = "Title with <nowiki>{{</nowiki> and <nowiki>}}</nowiki>"
+
+    assert(escapeWikiChars(value) === expectedValue)
+  }
 }

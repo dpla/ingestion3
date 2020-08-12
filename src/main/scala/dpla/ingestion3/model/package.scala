@@ -31,6 +31,16 @@ package object model {
       "text"
     )
 
+  val reservedWikiChars: List[String] = List(
+    "|",
+    "=",
+    "[[",
+    "]]",
+    "{{",
+    "}}",
+    "''"
+  )
+
   def nameOnlyAgent(string: String): EdmAgent = EdmAgent(name = Some(string))
 
   def nameOnlyPlace(string: String): DplaPlace = DplaPlace(name = Some(string))
@@ -222,30 +232,40 @@ package object model {
 
     s"""|== {{int:filedesc}} ==
         | {{ Artwork
-        |   | Other fields 1 = {{ InFi | Creator | ${record.sourceResource.creator.flatMap { _.name }.mkString("; ")} }}
-        |   | title = ${record.sourceResource.title.mkString("; ")}
-        |   | description = ${record.sourceResource.description.mkString("; ")}
-        |   | date = ${record.sourceResource.date.flatMap { _.prefLabel }.mkString("; ")}
+        |   | Other fields 1 = {{ InFi | Creator | ${record.sourceResource.creator.flatMap { _.name }.map(escapeWikiChars).mkString("; ")} }}
+        |   | title = ${record.sourceResource.title.map(escapeWikiChars).mkString("; ")}
+        |   | description = ${record.sourceResource.description.map(escapeWikiChars).mkString("; ")}
+        |   | date = ${record.sourceResource.date.flatMap { _.prefLabel }.map(escapeWikiChars).mkString("; ")}
         |   | permission = {{PD-US}}
         |   | source = {{
-        |       DPLA | $dataProviderWikiUri |
-        |       hub = ${record.provider.name.getOrElse()} |
-        |       url = ${record.isShownAt.uri.toString} |
+        |       DPLA | ${escapeWikiChars(dataProviderWikiUri)} |
+        |       hub = ${escapeWikiChars(record.provider.name.getOrElse("")) } |
+        |       url = ${escapeWikiChars(record.isShownAt.uri.toString)} |
         |       dpla_id = $dplaId |
-        |       local_id = ${record.sourceResource.identifier.mkString("; ")}
+        |       local_id = ${record.sourceResource.identifier.map(escapeWikiChars).mkString("; ")}
         |   }}
         |   | Institution = {{ Institution | wikidata = $dataProviderWikiUri }}
-        |   Other fields = {{ InFi | Standardized rights statement | {{ rights statement | ${record.edmRights.getOrElse("")} }} }}
+        |   Other fields = {{ InFi | Standardized rights statement | {{ rights statement | ${escapeWikiChars(record.edmRights.getOrElse("").toString) } }} }}
         | }}""".stripMargin
   }
 
   /**
     * Escape reserved Wiki markup characters
     *
-    * @param value
+    * @param string
     * @return
     */
-  def escapeWikiChars(value: String) = ???
+  def escapeWikiChars(string: String): String = {
+    @annotation.tailrec
+    def escapeWikiCharsAcc(list: List[String], value: String): String = list match {
+      case Nil => value
+      case h :: t => escapeWikiCharsAcc(t, value.replaceAllLiterally(h, escapeHelper(h)))
+    }
+
+    escapeWikiCharsAcc(reservedWikiChars, string)
+  }
+
+  def escapeHelper(chars: String) = s"<nowiki>$chars</nowiki>"
 
   /**
     *
