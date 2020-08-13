@@ -27,8 +27,15 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                         (implicit collector: MessageCollector[IngestMessage]): ZeroToMany[URI] = {
     values.map(value => {
       val normalized = value.normalize
+
+      // if the value was successfully normalized
       if(value.toString != normalized && normalized.nonEmpty)
         collector.add(normalizedEdmRightsMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+
+      // if the normalization failed and produced an empty string
+      if(normalized.isEmpty)
+        collector.add(invalidEdmRightsMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+
       URI(normalized)
     })
   }
@@ -94,7 +101,7 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
     edmRights match {
       case Some(_) => edmRights
       case None =>
-        collector.add(missingRequiredFieldMsg(providerId, "edmRights", enforce))
+        // collector.add(missingRequiredFieldMsg(providerId, "edmRights", enforce))
         None
     }
   }
