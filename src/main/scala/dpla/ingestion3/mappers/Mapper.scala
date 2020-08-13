@@ -16,6 +16,13 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
 
   def map(document: Document[T], mapping: Mapping[T]): OreAggregation
 
+  /**
+    *
+    * @param values
+    * @param providerId
+    * @param collector
+    * @return
+    */
   def normalizeEdmRights(values: ZeroToMany[URI], providerId: String)
                         (implicit collector: MessageCollector[IngestMessage]): ZeroToMany[URI] = {
     values.map(value => {
