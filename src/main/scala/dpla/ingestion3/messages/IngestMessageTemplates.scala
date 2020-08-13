@@ -32,6 +32,16 @@ trait IngestMessageTemplates {
       value = value
     )
 
+  def normalizedEdmRightsMsg(id: String, field: String, value: String,
+                          msg: Option[String] = None, enforce: Boolean): IngestMessage =
+    IngestMessage(
+      message = s"Normalized edmRights value".trim,
+      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
+      id = id,
+      field = field,
+      value = value
+    )
+
   def missingRecommendedFieldMsg(id: String, field: String): IngestMessage =
     IngestMessage(
       message = s"Missing recommended field",

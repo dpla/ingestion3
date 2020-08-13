@@ -16,6 +16,15 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
 
   def map(document: Document[T], mapping: Mapping[T]): OreAggregation
 
+  def normalizeEdmRights(values: ZeroToMany[URI], providerId: String)
+                        (implicit collector: MessageCollector[IngestMessage]): ZeroToMany[URI] = {
+    values.map(value => {
+      val normalized = value.normalize
+      if(value.toString != normalized && normalized.nonEmpty)
+        collector.add(normalizedEdmRightsMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+      URI(normalized)
+    })
+  }
   /**
     * Performs validation checks against dataProvider
     * If more than one value was provided, log messages and return only the first value
@@ -306,7 +315,7 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
     val validatedDataProvider = validateDataProvider(mapping.dataProvider(document), providerId, mapping.enforceDataProvider)
     // steps for mapping edmRights
     // 1. Normalize all mapped edmRights values
-    val normalizedEdmRights = mapping.edmRights(document).map(_.normalize).map(URI)
+    val normalizedEdmRights = normalizeEdmRights(mapping.edmRights(document), providerId)
     // 2. Validate normalized string is one of 5xx acceptable URIs, log warning if not
     val validatedEdmRights = validateEdmRights(normalizedEdmRights, providerId, mapping.enforceEdmRights)
 
@@ -403,7 +412,7 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
     val normalizedEdmRights = mapping.edmRights(document).map(_.normalize).map(URI)
     // 2. Validate normalized string is one of 5xx acceptable URIs, log warning if not
     val validatedEdmRights = validateEdmRights(normalizedEdmRights, providerId, mapping.enforceEdmRights)
-    
+
     val validatedIsShownAt = validateIsShownAt(mapping.isShownAt(document), providerId, mapping.enforceIsShownAt)
     val validatedObject = validateObject(mapping.`object`(document), providerId, mapping.enforceObject)
     val validatedPreview = validatePreview(mapping.preview(document), providerId, mapping.enforcePreview)

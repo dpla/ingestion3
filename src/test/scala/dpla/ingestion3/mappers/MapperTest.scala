@@ -31,23 +31,35 @@ class MapperTest extends FlatSpec with BeforeAndAfter with IngestMessageTemplate
     assert(validatedDataProvider === dataProviders.head)
   }
 
-  it should "validate edmRights by checking size <= 1 and values are valid edmRights URIs" in {
-    val rightsUri = Seq("http://rightsstatements.org/vocab/CNE/1.0/", "http://creativecommons.org/licenses/by-nc-nd/1.0/", "dub dub dub rights.com")
-    val message = mintUriMsg(id, "edmRights", "dub dub dub rights.com", msg = None, enforce)
-    val rights = rightsUri.map(URI)
+  it should "map the first valid rights URI" in {
+    val rightsUris = Seq(
+      "http://rightsstatements.org/vocab/CNE/1.0/",
+      "http://creativecommons.org/licenses/by-nc-nd/1.0/",
+      "dub dub dub rights.com"
+    ).map(URI)
 
-    val validatedEdmRights = mapTest.validateEdmRights(rights, id, enforce)
+    val validatedEdmRights = mapTest.validateEdmRights(rightsUris, id, enforce)
 
-    assert(msgCollector.getAll().contains(message))
-    assert(validatedEdmRights === rights.headOption)
+    assert(validatedEdmRights === rightsUris.headOption)
   }
+
+  it should "log a message when it normalized a edmRights value" in {
+    val rightsString = "https://rightsstatements.org/vocab/CNE/1.0/"
+    val rightsUris = Seq(rightsString).map(URI)
+    val message = normalizedEdmRightsMsg(id, "edmRights", rightsString, msg = None, enforce = false)
+
+    mapTest.normalizeEdmRights(rightsUris, id)
+    
+    assert(msgCollector.getAll().contains(message))
+  }
+
 
   it should "log an error when both emdRights and rights are empty" in {
     val rights = Seq()
-    val edmRight = Seq()
+    val edmRights = None
     val message = missingRights(id, enforce)
 
-    mapTest.validateRights(edmRight, rights, id, enforce)
+    mapTest.validateRights(rights, edmRights, id, enforce)
     assert(msgCollector.getAll().contains(message))
   }
 }
