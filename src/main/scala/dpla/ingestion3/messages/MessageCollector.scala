@@ -9,4 +9,6 @@ class MessageCollector[IngestMessage] {
   def add(msg: IngestMessage) = messages += msg
 
   def getAll() = messages
+
+  def deleteAll() = messages.remove(0, messages.size)
 }

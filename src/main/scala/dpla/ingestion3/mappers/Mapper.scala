@@ -17,6 +17,34 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
   def map(document: Document[T], mapping: Mapping[T]): OreAggregation
 
   /**
+    *
+    * @param values
+    * @param providerId
+    * @param collector
+    * @return
+    */
+  def normalizeEdmRights(values: ZeroToMany[URI], providerId: String)
+                        (implicit collector: MessageCollector[IngestMessage]): ZeroToMany[URI] = {
+    values.map(value => {
+      val normalized = value.normalize
+
+      // if the value was successfully normalized
+      // TODO There is an edge case not addressed here.
+      //      If the value is not a valid rs.org value (e.g. https://nypl.org/rights/statement?lang=en)
+      //      then it will still be 'normalized' to `http://nypl.org/rights/statement/` and a normalizedEdmRightsMsg
+      //      will be logged. It will also log an invalidEdmRightsMsg at the validation step. This could be confusing
+      //      since the numbers won't line up exactly.
+      if(value.toString != normalized && normalized.nonEmpty)
+        collector.add(normalizedEdmRightsMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+
+      // if the normalization failed and produced an empty string
+      if(normalized.isEmpty)
+        collector.add(invalidEdmRightsMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+
+      URI(normalized)
+    })
+  }
+  /**
     * Performs validation checks against dataProvider
     * If more than one value was provided, log messages and return only the first value
     * If no value was provided, log a message and return an empty EdmAgent
@@ -69,9 +97,7 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
     }
 
     values.foreach(value => {
-      if (!value.validate)
-        collector.add(mintUriMsg(providerId, "edmRights", value.toString, msg = None, enforce))
-      else if (!value.isValidEdmRightsUri)
+      if (!value.isValidEdmRightsUri)
         collector.add(invalidEdmRightsMsg(providerId, "edmRights", value.toString, msg = None, enforce))
     })
 
@@ -80,7 +106,7 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
     edmRights match {
       case Some(_) => edmRights
       case None =>
-        collector.add(missingRequiredFieldMsg(providerId, "edmRights", enforce))
+        // collector.add(missingRequiredFieldMsg(providerId, "edmRights", enforce))
         None
     }
   }
@@ -180,14 +206,14 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
     * and logs a message indicating duplication of rights information
     *
     * @param rights Seq[String]           Values returned from dc:rights mapping
-    * @param edmRights Seq[URI]           Values returned from edmRights mapping
+    * @param edmRights Option[URI]        Value returned from validateEdmRights
     * @param providerId String            The provider's local identifier
     * @param enforce Boolean              True   Enforce this validation and fails records that do not pass with
     *                                            an error message
     *                                     False  Enforces validation but logs warnings which will not fail a record.
     * @param collector Message collector  Ingest message collector
     */
-  def validateRights(rights: ZeroToMany[String], edmRights: ZeroToMany[URI], providerId: String,
+  def validateRights(rights: ZeroToMany[String], edmRights: ZeroToOne[URI], providerId: String,
                      enforce: Boolean) (implicit collector: MessageCollector[IngestMessage]): Unit = {
     (rights.isEmpty, edmRights.isEmpty) match {
       // If both dc:rights and edmRights are not provided in the original record and the validation should be enforced
@@ -306,7 +332,12 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
 
     // Field validation
     val validatedDataProvider = validateDataProvider(mapping.dataProvider(document), providerId, mapping.enforceDataProvider)
-    val validatedEdmRights = validateEdmRights(mapping.edmRights(document), providerId, mapping.enforceEdmRights)
+    // steps for mapping edmRights
+    // 1. Normalize all mapped edmRights values
+    val normalizedEdmRights = normalizeEdmRights(mapping.edmRights(document), providerId)
+    // 2. Validate normalized string is one of 5xx acceptable URIs, log warning if not
+    val validatedEdmRights = validateEdmRights(normalizedEdmRights, providerId, mapping.enforceEdmRights)
+
     val validatedIsShownAt = validateIsShownAt(mapping.isShownAt(document), providerId, mapping.enforceIsShownAt)
     val validatedObject = validateObject(mapping.`object`(document), providerId, mapping.enforceObject)
     val validatedPreview = validatePreview(mapping.preview(document), providerId, mapping.enforcePreview)
@@ -317,7 +348,7 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
     // MappingException may be thrown from the `rights` method in provider mapping
     // See GPO mapping
     try {
-      validateRights(mapping.rights(document), mapping.edmRights(document), providerId, mapping.enforceRights)
+      validateRights(mapping.rights(document), validatedEdmRights, providerId, mapping.enforceRights)
     } catch {
       case _:MappingException => // do nothing, error will be logged when entire record mapping is attempted, below
     }
@@ -395,7 +426,12 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
 
     // Field validation
     val validatedDataProvider = validateDataProvider(mapping.dataProvider(document), providerId, mapping.enforceDataProvider)
-    val validatedEdmRights = validateEdmRights(mapping.edmRights(document), providerId, mapping.enforceEdmRights)
+    // Steps for mapping edmRights
+    // 1. Normalize all mapped edmRights values
+    val normalizedEdmRights = mapping.edmRights(document).map(_.normalize).map(URI)
+    // 2. Validate normalized string is one of 5xx acceptable URIs, log warning if not
+    val validatedEdmRights = validateEdmRights(normalizedEdmRights, providerId, mapping.enforceEdmRights)
+
     val validatedIsShownAt = validateIsShownAt(mapping.isShownAt(document), providerId, mapping.enforceIsShownAt)
     val validatedObject = validateObject(mapping.`object`(document), providerId, mapping.enforceObject)
     val validatedPreview = validatePreview(mapping.preview(document), providerId, mapping.enforcePreview)
@@ -406,7 +442,7 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
     // MappingException may be thrown from the `rights` method in provider mapping
     // See GPO mapping
     try {
-      validateRights(mapping.rights(document), mapping.edmRights(document), providerId, mapping.enforceRights)
+      validateRights(mapping.rights(document), validatedEdmRights, providerId, mapping.enforceRights)
     } catch {
       case _: MappingException => // do nothing, error will be logged when entire record mapping is attempted, below
     }

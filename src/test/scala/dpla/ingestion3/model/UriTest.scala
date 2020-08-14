@@ -1,0 +1,42 @@
+package dpla.ingestion3.model
+
+import org.scalatest.{BeforeAndAfter, FlatSpec}
+
+
+class UriTest extends FlatSpec with BeforeAndAfter {
+
+  "normalize URI" should "replace `/page/` with `/vocab/`" in {
+    val uri = URI("http://rightsstatements.org/page/CNE/1.0/")
+    assert(uri.normalize === "http://rightsstatements.org/vocab/CNE/1.0/")
+  }
+
+  it should "replace https:// with http://" in {
+    val uri = URI("https://rightsstatements.org/vocab/CNE/1.0/")
+    assert(uri.normalize === "http://rightsstatements.org/vocab/CNE/1.0/")
+  }
+
+  it should "remove double forward slashes" in {
+    val uri = URI("http://rightsstatements.org/vocab/CNE/1.0//")
+    assert(uri.normalize === "http://rightsstatements.org/vocab/CNE/1.0/")
+  }
+
+  it should "add a single forward slash at the end" in {
+    val uri = URI("http://rightsstatements.org/vocab/CNE/1.0")
+    assert(uri.normalize === "http://rightsstatements.org/vocab/CNE/1.0/")
+  }
+
+  it should "return empty string if not given a URI" in {
+    val uri = URI("c:\\media\\image.jpg")
+    assert(uri.normalize === "")
+  }
+
+  "isValidEdmRightsUri" should "return `true` when URI is in list of approved URIs" in {
+    val uri = URI("http://rightsstatements.org/vocab/CNE/1.0/")
+    assert(uri.isValidEdmRightsUri === true)
+  }
+
+  it should "return `false` when URI is in list of approved URIs" in {
+    val uri = URI("http://rightsstatements.org/vocab/cne/1.0/") // case sensitive, should not match
+    assert(uri.isValidEdmRightsUri === false)
+  }
+}
