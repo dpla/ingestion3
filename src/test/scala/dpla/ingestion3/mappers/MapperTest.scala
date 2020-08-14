@@ -45,18 +45,18 @@ class MapperTest extends FlatSpec with BeforeAndAfter with IngestMessageTemplate
     assert(validatedEdmRights === rightsUris.headOption)
   }
 
-  it should "log a warning when an invalid rs.org value is provided" in {
+  it should "log a warning when an invalid rs.org value is provided and enforce is FALSE" in {
     msgCollector.deleteAll()
     val rightsString = "http://rightsstatements.org/"
     val rightsUris = Seq(rightsString).map(URI)
 
-    mapTest.validateEdmRights(rightsUris, id, enforce)
+    mapTest.validateEdmRights(rightsUris, id, enforce = false)
     val msg = invalidEdmRightsMsg(id, "edmRights", rightsString, msg = None, enforce = false)
 
     assert(msgCollector.getAll().contains(msg))
   }
 
-  it should "log a message when it normalized a edmRights value" in {
+  it should "log a message when it normalized a edmRights value and enforce = FALSE" in {
     msgCollector.deleteAll()
     val rightsString = "https://rightsstatements.org/vocab/CNE/1.0/"
     val rightsUris = Seq(rightsString).map(URI)
@@ -79,7 +79,7 @@ class MapperTest extends FlatSpec with BeforeAndAfter with IngestMessageTemplate
   }
 
   it should "log a missingRights ERROR when dcRights is empty, edmRights is invalid and " +
-    "enforce missing rights = true" in {
+    "enforce missing rights = TRUE for validateRights and enforce for validateEdmRights = FALSE" in {
     msgCollector.deleteAll()
     val missingRightsErrorMsg = missingRights(id, enforce = true)
     val invalidErrorMsg = missingRights(id, enforce = true)
@@ -98,7 +98,7 @@ class MapperTest extends FlatSpec with BeforeAndAfter with IngestMessageTemplate
   }
 
   it should "not log a missingRights ERROR when dcRights is present, edmRights is invalid and " +
-    "enforce missing rights = true" in {
+    "enforce missing rights = TRUE for validateRights and enforce for validateEdmRights = FALSE" in {
     msgCollector.deleteAll()
     val missingRightsErrorMsg = missingRights(id, enforce = true)
     val invalidErrorMsg = missingRights(id, enforce = true)
