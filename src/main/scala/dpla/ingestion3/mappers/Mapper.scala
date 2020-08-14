@@ -29,6 +29,11 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
       val normalized = value.normalize
 
       // if the value was successfully normalized
+      // TODO There is an edge case not addressed here.
+      //      If the value is not a valid rs.org value (e.g. https://nypl.org/rights/statement?lang=en)
+      //      then it will still be 'normalized' to `http://nypl.org/rights/statement/` and a normalizedEdmRightsMsg
+      //      will be logged. It will also log an invalidEdmRightsMsg at the validation step. This could be confusing
+      //      since the numbers won't line up exactly.
       if(value.toString != normalized && normalized.nonEmpty)
         collector.add(normalizedEdmRightsMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
 

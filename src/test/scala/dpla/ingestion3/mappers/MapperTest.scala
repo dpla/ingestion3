@@ -43,6 +43,16 @@ class MapperTest extends FlatSpec with BeforeAndAfter with IngestMessageTemplate
     assert(validatedEdmRights === rightsUris.headOption)
   }
 
+  it should "log a warning when an invalid rs.org value is provided" in {
+    val rightsString = "http://rightsstatements.org/"
+    val rightsUris = Seq(rightsString).map(URI)
+
+    mapTest.validateEdmRights(rightsUris, id, enforce)
+    val msg = invalidEdmRightsMsg(id, "edmRights", rightsString, msg = None, enforce = false)
+
+    assert(msgCollector.getAll().contains(msg))
+  }
+
   it should "log a message when it normalized a edmRights value" in {
     val rightsString = "https://rightsstatements.org/vocab/CNE/1.0/"
     val rightsUris = Seq(rightsString).map(URI)
@@ -54,12 +64,30 @@ class MapperTest extends FlatSpec with BeforeAndAfter with IngestMessageTemplate
   }
 
 
-  it should "log an error when both emdRights and rights are empty" in {
+  it should "log an ERROR when both emdRights and rights are empty and enforce = TRUE" in {
     val rights = Seq()
     val edmRights = None
-    val message = missingRights(id, enforce)
+    val message = missingRights(id, enforce = true)
 
-    mapTest.validateRights(rights, edmRights, id, enforce)
+    mapTest.validateRights(rights, edmRights, id, enforce = true)
     assert(msgCollector.getAll().contains(message))
+  }
+
+  it should "log a missingRights ERROR when dcRights is empty, edmRights is invalid and " +
+    "enforce missing rights = true" in {
+    val missingRightsErrorMsg = missingRights(id, enforce = true)
+    val invalidErrorMsg = missingRights(id, enforce = true)
+    val dcRights = Seq()
+    val rightsString = "https://rightsstatements.org/"
+    val rightsUris = Seq(rightsString).map(URI)
+
+    // normalize and validate edmRights value
+    val normalizedRights = mapTest.normalizeEdmRights(rightsUris, id)
+    val edmRights = mapTest.validateEdmRights(normalizedRights, id, enforce = false)
+
+    mapTest.validateRights(dcRights, edmRights, id, enforce = true)
+
+    assert(msgCollector.getAll().contains(missingRightsErrorMsg))
+    assert(edmRights === None)
   }
 }
