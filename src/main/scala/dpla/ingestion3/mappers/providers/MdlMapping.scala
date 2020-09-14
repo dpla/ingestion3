@@ -31,6 +31,7 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "rights").map(URI)
+      .filter(_.validate)
 
   override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
     extractString(unwrap(data) \ "attributes" \ "metadata" \ "intermediateProvider").map(nameOnlyAgent)
@@ -94,7 +95,8 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
     extractStrings(unwrap(data)  \ "attributes" \ "metadata" \ "sourceResource" \ "publisher").map(nameOnlyAgent)
 
   override def rights(data: Document[JValue]): AtLeastOne[String] =
-    extractStrings(unwrap(data)  \ "attributes" \ "metadata" \ "sourceResource" \ "rights")
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "rights")
+      .filterNot(t => t.contains("rightsstatements.org") | t.contains("creativecommons.org") )
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings(unwrap(data)  \ "attributes" \ "metadata" \ "sourceResource" \ "subject" \ "name").map(nameOnlyConcept)

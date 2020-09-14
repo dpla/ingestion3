@@ -33,9 +33,10 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
 
   // dplaUri
   it should "extract correct edmRights" in {
-    val expected = Seq(URI("www.fake.rights.url.org/public-domain"))
+    val expected = Seq(URI("http://rightsstatements.org/public-domain"))
     assert(extractor.edmRights(json) === expected)
   }
+
   // intermediateProvider
   it should "extract the correct intermediateProvider" in {
     val expected = Some(nameOnlyAgent("one intermediate provider"))
@@ -125,7 +126,24 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
   }
   // rights
   it should "extract the correct rights" in {
+    val jsonString = """
+      {
+        "attributes": {
+          "metadata": {
+            "rights": "free text rights statement"
+          }
+        }
+      }
+    """"
+    val json: Document[JValue] = Document(parse(jsonString))
+
     val expected = List("free text rights statement")
+    assert(extractor.rights(json) === expected)
+  }
+
+  // rights
+  it should "not map rs.org value to dc rights" in {
+    val expected = List()
     assert(extractor.rights(json) === expected)
   }
 
