@@ -11,6 +11,8 @@ import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
 
+import scala.util.{Failure, Success, Try}
+
 class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
 
   val formatBlockList: Set[String] = ExtentIdentificationList.termList
@@ -30,8 +32,13 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
-    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "rights").map(URI)
-      .filter(_.validate)
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "rights")
+      .filter(r =>
+        Try { new java.net.URI(r).getHost } match {
+          case Success(host: String) => host.equalsIgnoreCase("rightsstatements.org") || host.equalsIgnoreCase("creativecommons.org")
+          case _ => false
+      })
+      .map(URI)
 
   override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
     extractString(unwrap(data) \ "attributes" \ "metadata" \ "intermediateProvider").map(nameOnlyAgent)
@@ -96,7 +103,11 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
 
   override def rights(data: Document[JValue]): AtLeastOne[String] =
     extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "rights")
-      .filterNot(t => t.contains("rightsstatements.org") | t.contains("creativecommons.org") )
+      .filterNot(r =>
+        Try { new java.net.URI(r).getHost } match {
+          case Success(host: String) => host.equalsIgnoreCase("rightsstatements.org") || host.equalsIgnoreCase("creativecommons.org")
+          case _ => false
+        })
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings(unwrap(data)  \ "attributes" \ "metadata" \ "sourceResource" \ "subject" \ "name").map(nameOnlyConcept)

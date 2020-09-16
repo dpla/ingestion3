@@ -141,6 +141,89 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.rights(json) === expected)
   }
 
+  it should "not map non-rs or non-cc host domains to edmRights" in {
+    val jsonString = """
+      {
+        "attributes": {
+          "metadata": {
+            "rights": "http://mhs.org/copyright"
+          }
+        }
+      }
+    """".stripMargin
+    val json: Document[JValue] = Document(parse(jsonString))
+
+
+    val expected = Seq()
+    assert(extractor.edmRights(json) === expected)
+  }
+
+  it should "not map non-URIs to edmRights" in {
+    val jsonString = """
+      {
+        "attributes": {
+          "metadata": {
+            "rights": "free text! free text! free text!"
+          }
+        }
+      }
+    """".stripMargin
+    val json: Document[JValue] = Document(parse(jsonString))
+
+    val expected = Seq()
+    assert(extractor.edmRights(json) === expected)
+  }
+
+  it should "work when rights is empty string" in {
+    val jsonString = """
+      {
+        "attributes": {
+          "metadata": {
+            "rights": ""
+          }
+        }
+      }
+    """".stripMargin
+    val json: Document[JValue] = Document(parse(jsonString))
+
+    val expected = Seq()
+    assert(extractor.edmRights(json) === expected)
+  }
+
+  it should "work when rights not provided" in {
+    val jsonString = """
+      {
+        "attributes": {
+          "metadata": {
+          }
+        }
+      }
+    """".stripMargin
+    val json: Document[JValue] = Document(parse(jsonString))
+
+    val expected = Seq()
+    assert(extractor.edmRights(json) === expected)
+  }
+
+  // rights
+  it should "map to dcRights but not edmRights when rights value contains both text and uri" in {
+    val jsonString = """
+      {
+        "attributes": {
+          "metadata": {
+            "rights": "text of cc statement; http://creativecommons.org/"
+          }
+        }
+      }
+    """".stripMargin
+    val json: Document[JValue] = Document(parse(jsonString))
+
+    val expectedEmpty = List()
+    val expectedRights = List("text of cc statement; http://creativecommons.org/")
+    assert(extractor.edmRights(json) === expectedEmpty)
+    assert(extractor.rights(json) === expectedRights)
+  }
+
   // rights
   it should "not map rs.org value to dc rights" in {
     val expected = List()
