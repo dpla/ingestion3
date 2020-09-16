@@ -152,7 +152,7 @@ case class URI(value: String) {
       case Success(uri) =>
         val path = uri.getPath.replaceFirst("/page/", "/vocab/")
         new java.net.URI(s"http://${uri.getHost}$path/").normalize.toString // normalize to http and drop parameters
-      case Failure(_) => ""
+      case Failure(_) => value
     }
   }
 
