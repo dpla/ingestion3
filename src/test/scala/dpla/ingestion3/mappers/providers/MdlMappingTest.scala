@@ -33,9 +33,10 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
 
   // dplaUri
   it should "extract correct edmRights" in {
-    val expected = Seq(URI("www.fake.rights.url.org/public-domain"))
+    val expected = Seq(URI("http://rightsstatements.org/public-domain"))
     assert(extractor.edmRights(json) === expected)
   }
+
   // intermediateProvider
   it should "extract the correct intermediateProvider" in {
     val expected = Some(nameOnlyAgent("one intermediate provider"))
@@ -125,7 +126,107 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
   }
   // rights
   it should "extract the correct rights" in {
+    val jsonString = """
+      {
+        "attributes": {
+          "metadata": {
+            "rights": "free text rights statement"
+          }
+        }
+      }
+    """"
+    val json: Document[JValue] = Document(parse(jsonString))
+
     val expected = List("free text rights statement")
+    assert(extractor.rights(json) === expected)
+  }
+
+  it should "not map non-rs or non-cc host domains to edmRights" in {
+    val jsonString = """
+      {
+        "attributes": {
+          "metadata": {
+            "rights": "http://mhs.org/copyright"
+          }
+        }
+      }
+    """".stripMargin
+    val json: Document[JValue] = Document(parse(jsonString))
+
+
+    val expected = Seq()
+    assert(extractor.edmRights(json) === expected)
+  }
+
+  it should "not map non-URIs to edmRights" in {
+    val jsonString = """
+      {
+        "attributes": {
+          "metadata": {
+            "rights": "free text! free text! free text!"
+          }
+        }
+      }
+    """".stripMargin
+    val json: Document[JValue] = Document(parse(jsonString))
+
+    val expected = Seq()
+    assert(extractor.edmRights(json) === expected)
+  }
+
+  it should "work when rights is empty string" in {
+    val jsonString = """
+      {
+        "attributes": {
+          "metadata": {
+            "rights": ""
+          }
+        }
+      }
+    """".stripMargin
+    val json: Document[JValue] = Document(parse(jsonString))
+
+    val expected = Seq()
+    assert(extractor.edmRights(json) === expected)
+  }
+
+  it should "work when rights not provided" in {
+    val jsonString = """
+      {
+        "attributes": {
+          "metadata": {
+          }
+        }
+      }
+    """".stripMargin
+    val json: Document[JValue] = Document(parse(jsonString))
+
+    val expected = Seq()
+    assert(extractor.edmRights(json) === expected)
+  }
+
+  // rights
+  it should "map to dcRights but not edmRights when rights value contains both text and uri" in {
+    val jsonString = """
+      {
+        "attributes": {
+          "metadata": {
+            "rights": "text of cc statement; http://creativecommons.org/"
+          }
+        }
+      }
+    """".stripMargin
+    val json: Document[JValue] = Document(parse(jsonString))
+
+    val expectedEmpty = List()
+    val expectedRights = List("text of cc statement; http://creativecommons.org/")
+    assert(extractor.edmRights(json) === expectedEmpty)
+    assert(extractor.rights(json) === expectedRights)
+  }
+
+  // rights
+  it should "not map rs.org value to dc rights" in {
+    val expected = List()
     assert(extractor.rights(json) === expected)
   }
 

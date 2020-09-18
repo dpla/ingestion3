@@ -16,7 +16,7 @@
   },
   "attributes": {
     "metadata": {
-      "rights": "www.fake.rights.url.org/public-domain",
+      "rights": "http://rightsstatements.org/public-domain",
       "intermediateProvider": "one intermediate provider",
       "object": "http://image.prview.org/thumb.jpg",
       "title": "Hmong vendors learn the law on legal drug sales",
@@ -123,9 +123,6 @@
         ],
         "description": "description",
         "type": "image",
-        "rights": [
-          "free text rights statement"
-        ],
         "publisher": [
           "pub1"
         ],

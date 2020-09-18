@@ -25,9 +25,9 @@ class UriTest extends FlatSpec with BeforeAndAfter {
     assert(uri.normalize === "http://rightsstatements.org/vocab/CNE/1.0/")
   }
 
-  it should "return empty string if not given a URI" in {
+  it should "return the original value if not given a URI" in {
     val uri = URI("c:\\media\\image.jpg")
-    assert(uri.normalize === "")
+    assert(uri.normalize === "c:\\media\\image.jpg")
   }
 
   "isValidEdmRightsUri" should "return `true` when URI is in list of approved URIs" in {
