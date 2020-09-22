@@ -148,7 +148,7 @@ case class URI(value: String) {
     * @return
     */
   def normalize: String = {
-    Try { new java.net.URI(value) } match {
+    Try { new java.net.URI(value.trim) } match {
       case Success(uri) =>
         val path = uri.getPath.replaceFirst("/page/", "/vocab/")
         new java.net.URI(s"http://${uri.getHost}$path/").normalize.toString // normalize to http and drop parameters
