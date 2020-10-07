@@ -1,5 +1,6 @@
 package dpla.ingestion3.model
 
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.messages.IngestMessage
 import dpla.ingestion3.model.DplaMapData._
 import org.json4s.{JNothing, JValue}
@@ -140,18 +141,20 @@ case class URI(value: String) {
 
   /**
     *
-    * Attempt to map string to URI
-    * Replace /page/ with /vocab/, (should apply to rightstatements.org values only)
-    * Strip `?` and all following
+    * Attempt to create URI from original value
+    * Replace /page/ with /vocab/, (applies to rightstatements.org values only)
+    * Strip `?` from URL and all text following
+    * Strip trailing punctuation from URL path [-;:,\/\\t\\r\\n\s]
     * Remove `www://`
     * Normalize to HTTP
-    * @return
+    * @return Normalized version of the URI if successful
+    *         Original value if URI could not be created
     */
   def normalize: String = {
     Try { new java.net.URI(value.trim) } match {
       case Success(uri) =>
         val path = uri.getPath.replaceFirst("/page/", "/vocab/")
-        new java.net.URI(s"http://${uri.getHost}$path/").normalize.toString // normalize to http and drop parameters
+        new java.net.URI(s"http://${uri.getHost}${path.cleanupEndingPunctuation}/").normalize.toString
       case Failure(_) => value
     }
   }
