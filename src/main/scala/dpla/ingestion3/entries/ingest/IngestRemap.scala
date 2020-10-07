@@ -109,10 +109,11 @@ object IngestRemap extends MappingExecutor
       executeEnrichment(sparkConf, mapDataOut, baseDataOut, shortName, logger, conf)
 
     // Json-l
-    executeJsonl(sparkConf, enrichDataOut, baseDataOut, shortName, logger)
+     executeJsonl(sparkConf, enrichDataOut, baseDataOut, shortName, logger)
 
     // Reports
-    executeAllReports(sparkConf, enrichDataOut, baseDataOut, shortName, logger)
+    // Reports commented out by S. Williams for efficiency and because they aren't being used on a regular basis
+    // executeAllReports(sparkConf, mapDataOut, baseDataOut, shortName, logger)
 
     // LDA vectors
     executeTopicModel(sparkConf, enrichDataOut, baseDataOut, shortName, stopWords, cvModel, ldaModel, logger)
