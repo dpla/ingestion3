@@ -221,4 +221,21 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq(URI("https://ark.digitalcommonwealth.org/ark:/50959/v405tb16x/manifest"))
     assert(extractor.iiifManifest(xml) === expected)
   }
+
+  it should "extract the correct rs.org value from xref" in {
+    val xml: Document[NodeSeq] = Document(
+      <record>
+        <metadata>
+          <mods:mods>
+            <mods:accessCondition displayLabel='rightsstatements.org' xlink:href='http://rightsstatements.org/vocab/NoC-US/1.0/' type='use and reproduction'>
+              No Copyright - United States
+            </mods:accessCondition>
+          </mods:mods>
+        </metadata>
+      </record>
+    )
+
+    val expected = Seq(URI("http://rightsstatements.org/vocab/NoC-US/1.0/"))
+    assert(extractor.edmRights(xml) === expected)
+  }
 }
