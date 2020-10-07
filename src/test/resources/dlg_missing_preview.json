@@ -1,0 +1,67 @@
+{
+  "id": "aaa_agpapers_1016",
+  "collection_titles_sms": [
+    "Auburn University - Agriculture and Rural Life Newspapers Collection"
+  ],
+  "dcterms_provenance_display": [
+    "Auburn University. Library"
+  ],
+  "dcterms_title_display": [
+    "1899-12-14: Manufacturers' Review, Birmingham, Alabama, Volume 1, Issue 5"
+  ],
+  "dcterms_creator_display": [
+    "Manufacturers' Review Co."
+  ],
+  "dcterms_contributor_display": [
+    "Finch, N. P. T."
+  ],
+  "dcterms_subject_display": [
+    "Technology--Southern States--Periodicals",
+    "Industries--Southern States",
+    "Southern States--Economic conditions--Periodicals",
+    "American newspapers--Southern States;",
+    "Business & Industry",
+    "Science & Technology"
+  ],
+  "dcterms_description_display": [
+    "description one",
+    "description two"
+  ],
+  "dcterms_extent_display": ["extent one", "extent two"],
+  "dcterms_publisher_display": [
+    "USAIN State and Local Literature Preservation Project, Special Collections and Archives, Auburn University Libraries, Auburn, Alabama"
+  ],
+  "edm_is_shown_at_display": [
+    "http://content.lib.auburn.edu/cdm/ref/collection/agpapers/id/1016"
+  ],
+  "dcterms_identifier_display": [
+    "ManufactReview_v01_i05_1899_Dec_14.pdf"
+  ],
+  "dc_date_display": [
+    "1899-12-14"
+  ],
+  "dcterms_spatial_display": [
+    "United States, Alabama, Jefferson County, Birmingham, 33.5206608, -86.80249"
+  ],
+  "dc_format_display": [
+    "application/pdf"
+  ],
+  "dc_right_display": [
+    "http://rightsstatements.org/vocab/CNE/1.0/"
+  ],
+  "dcterms_rights_holder_display": [
+    "This image is the property of the Auburn University Libraries and is intended for non-commercial use. Users of the image are asked to acknowledge the Auburn University Libraries."
+  ],
+  "dc_relation_display": [
+    "Deeply Rooted",
+    "USAIN State and Local Literature Preservation Project"
+  ],
+  "dcterms_type_display": [
+    "Text"
+  ],
+  "dcterms_language_display": [
+    "eng"
+  ],
+  "created_at_dts": "2017-05-25T21:19:27Z",
+  "updated_at_dts": "2017-06-07T15:17:06Z"
+}

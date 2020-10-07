@@ -36,9 +36,16 @@ class DlgMapping extends JsonMapping with JsonExtractor {
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(data)
 
-  override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
-    extractStrings("edm_is_shown_by_display")(data)
-      .map(stringOnlyWebResource)
+  override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
+    val isShownBy = extractStrings("edm_is_shown_by_display")(data)
+    val preview =
+      if(isShownBy.nonEmpty)
+        isShownBy
+      else
+        originalId(data).map(id => s"https://dlg.galileo.usg.edu/do-th:$id").toSeq
+
+    preview.map(stringOnlyWebResource)
+  }
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
     name = Some("Digital Library of Georgia"),
