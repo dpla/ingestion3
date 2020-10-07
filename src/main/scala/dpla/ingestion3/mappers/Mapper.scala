@@ -195,9 +195,9 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
     */
   def validateRecommendedProperty[T](values: ZeroToMany[T], field: String, providerId: String, enforce: Boolean)
                                 (implicit collector: MessageCollector[IngestMessage]): ZeroToMany[T] = {
-    if (values.isEmpty & enforce) {
-      collector.add(missingRecommendedFieldMsg(providerId, field))
-    }
+//    if (values.isEmpty & enforce) {
+//      collector.add(missingRecommendedFieldMsg(providerId, field))
+//    }
     values
   }
 
