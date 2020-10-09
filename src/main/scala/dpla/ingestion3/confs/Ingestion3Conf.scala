@@ -127,6 +127,13 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     validate = _.nonEmpty
   )
 
+  val deleteIds: ScallopOption[String] = opt[String](
+    "deleteIds",
+    required = false,
+    noshort = true,
+    validate = _.nonEmpty
+  )
+
   /**
     * Gets the configuration file property from command line arguments
     *
@@ -170,6 +177,8 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
   def getCvModel: Option[String] = cvModel.toOption
 
   def getLdaModel: Option[String] = ldaModel.toOption
+
+  def getDeleteIds: Option[String] = deleteIds.toOption
 
   verify()
 }
