@@ -15,7 +15,7 @@ class CtMappingTest extends FlatSpec with BeforeAndAfter {
   val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))
   val extractor = new CtMapping
 
-  it should "not use the provider shortname in minting IDs "in
+  it should "not use the provider shortname in minting IDs " in
     assert(!extractor.useProviderName())
 
   it should "extract the correct original ID" in {
@@ -103,6 +103,18 @@ class CtMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "extract the correct edmRights value" in {
     val expected = Seq(URI("rs.org"))
+    assert(extractor.edmRights(xml) === expected)
+  }
+
+  it should "not extract xlink:href to edmRights when displayLabel attribute present" in {
+    val xml: Document[NodeSeq] = Document(
+      <mods>
+        <accessCondition type="use and reproduction" displayLabel="public" xlink:href="uconn.edu/rights">
+          This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License, CC BY-NC
+          .</accessCondition>
+      </mods>
+    )
+    val expected = Seq()
     assert(extractor.edmRights(xml) === expected)
   }
 }

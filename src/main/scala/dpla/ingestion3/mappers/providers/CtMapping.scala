@@ -150,6 +150,7 @@ class CtMapping extends XmlMapping with XmlExtractor
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
   // href in accessCondition prop where @type='use and reproduction'
     (data \ "accessCondition")
+      .filterNot(node => node.attribute("displayLabel").isDefined)
       .flatMap(node => getByAttribute(node, "type", "use and reproduction"))
       .flatMap(node => node.attribute(node.getNamespace("xlink"), "href"))
       .flatMap(n => extractString(n.head))
