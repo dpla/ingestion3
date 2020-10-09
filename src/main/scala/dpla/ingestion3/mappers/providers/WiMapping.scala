@@ -85,7 +85,8 @@ class WiMapping extends XmlMapping with XmlExtractor
     ((data \ "metadata" \\ "rights") ++
       (data \ "metadata" \\ "accessRights")).flatMap(rights => {
         rights.prefix match {
-          case "dc" => Some(rights.text.trim)
+          case "dc" => Some(rights.text.trim) // dc:rights
+          case "dct" => Some(rights.text.trim) // dct:accessRights
           case _ => None
         }
       })
