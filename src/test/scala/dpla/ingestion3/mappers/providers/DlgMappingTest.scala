@@ -118,6 +118,14 @@ class DlgMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.preview(json) === expected)
   }
 
+  it should "create the correct preview when `edm_is_shown_by_display` is missing" in {
+    val jsonString: String = new FlatFileIO().readFileAsString("/dlg_missing_preview.json")
+    val json: Document[JValue] = Document(parse(jsonString))
+
+    val expected = Seq("https://dlg.galileo.usg.edu/do-th:aaa_agpapers_1016").map(stringOnlyWebResource)
+    assert(extractor.preview(json) === expected)
+  }
+
   // publisher
   it should "create the correct publisher" in {
     val expected = Seq("USAIN State and Local Literature Preservation Project, Special Collections and Archives, Auburn University Libraries, Auburn, Alabama").map(nameOnlyAgent)
