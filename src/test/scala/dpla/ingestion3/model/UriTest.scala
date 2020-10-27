@@ -30,10 +30,10 @@ class UriTest extends FlatSpec with BeforeAndAfter {
 //    assert(uri.normalize === "c:\\media\\image.jpg")
 //  }
 
-  it should "strip a trailing ; from a URI" in {
-    val uri = URI("http://rightsstatements.org/vocab/CNE/1.0;")
-    assert(uri.normalize === "http://rightsstatements.org/vocab/CNE/1.0/")
-  }
+//  it should "strip a trailing ; from a URI" in {
+//    val uri = URI("http://rightsstatements.org/vocab/CNE/1.0;")
+//    assert(uri.normalize === "http://rightsstatements.org/vocab/CNE/1.0/")
+//  }
 
   "isValidEdmRightsUri" should "return `true` when URI is in list of approved URIs" in {
     val uri = URI("http://rightsstatements.org/vocab/CNE/1.0/")
