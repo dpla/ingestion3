@@ -70,7 +70,7 @@ class MapperTest extends FlatSpec with BeforeAndAfter with IngestMessageTemplate
     msgCollector.deleteAll()
     val rightsString = "https://rightsstatements.org/vocab/CNE/1.0/"
     val rightsUris = Seq(rightsString).map(URI)
-    val message = normalizedEdmRightsMsg(id, "edmRights", rightsString, msg = None, enforce = false)
+    val message = normalizedEdmRightsHttpsMsg(id, "edmRights", rightsString, msg = None, enforce = false)
 
     mapTest.normalizeEdmRights(rightsUris, id)
     

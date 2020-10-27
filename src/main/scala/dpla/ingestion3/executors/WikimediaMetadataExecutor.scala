@@ -79,7 +79,8 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
     // - wikiMarkup
     // - iiifManifest
     // - mediaMaster: Seq[String]
-    val wikiRecords: Dataset[(String, String, String, Seq[String])] = enrichResults
+    // - title [first value only]
+    val wikiRecords: Dataset[(String, String, String, Seq[String], String)] = enrichResults
       // Filter out only the wiki eligible records
       .filter(tuple => tuple._2)
       .map(tuple => {
@@ -88,7 +89,8 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
         val wikiMetadata = buildWikiMarkup(record)
         val iiif = record.iiifManifest.getOrElse("").toString
         val mediaMaster = record.mediaMaster.map(_.uri.toString)
-        (dplaId, wikiMetadata, iiif, mediaMaster)
+        val title = record.sourceResource.title
+        (dplaId, wikiMetadata, iiif, mediaMaster, title.head)
       })
 
     wikiRecords

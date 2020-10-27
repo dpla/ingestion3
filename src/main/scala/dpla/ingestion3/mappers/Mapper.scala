@@ -8,6 +8,8 @@ import dpla.ingestion3.utils.Utils._
 import org.json4s.DefaultFormats
 import org.json4s.JsonAST._
 
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
+
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
 
@@ -16,30 +18,64 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
 
   def map(document: Document[T], mapping: Mapping[T]): OreAggregation
 
+
+
   /**
+    * Normalizes edmRights URIs and logs specific messages for each transformation (logged as warnings)
+    *   1. HTTPS > HTTP
+    *   2. Drop `www`
+    *   3. Change `/page/` to `/vocab/`
+    *   4. Drop query parameters (ex. ?lang=en)
+    *   5. Add missing `/` to end of URI
+    *   6. Remove trailing punctuation (ex. http://rightsstaments.org/vocab/Inc/;)
+    *   7. Leading and trailing whitespace also remove but no messages are logged for this transformation
     *
-    * @param values
-    * @param providerId
-    * @param collector
-    * @return
+    * If original value is not a valid java.net.URI the original value is returned
+    *
+    * @param values Seq[URI]              edmRights URIs to be normalized
+    * @param providerId String            Provider supplied record identifier
+    * @param collector MessageCollector   Ingest message collector
+    * @return Seq[URI]                    URIs
     */
   def normalizeEdmRights(values: ZeroToMany[URI], providerId: String)
                         (implicit collector: MessageCollector[IngestMessage]): ZeroToMany[URI] = {
-    values.map(value => {
-      val normalized = value.normalize
+    values.map (value => {
+      val normalized = Try { new java.net.URI(value.toString.trim) } match {
+        case Success(uri) =>
+          // does scheme (http/https) require normalization
+          if (uri.toString.startsWith("https")) {
+            collector.add(normalizedEdmRightsHttpsMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+          }
+          // `www` to be removed?
+          if (uri.toString.contains("www")) {
+            collector.add(normalizedEdmRightsWWWMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+          }
+          // change /page/ to /vocab/
+          val path = if (uri.getPath.contains("/page/")) {
+            collector.add(normalizedEdmRightsRsPageMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+            uri.getPath.replaceFirst("/page/", "/vocab/")
+          } else {
+            uri.getPath
+          }
+          // Strip `?` and all following
+          if (uri.getQuery != null) {
+            collector.add(normalizedEdmRightsRsPageMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+          }
 
-      // if the value was successfully normalized
-      // TODO There is an edge case not addressed here.
-      //      If the value is not a valid rs.org value (e.g. https://nypl.org/rights/statement?lang=en)
-      //      then it will still be 'normalized' to `http://nypl.org/rights/statement/` and a normalizedEdmRightsMsg
-      //      will be logged. It will also log an invalidEdmRightsMsg at the validation step. This could be confusing
-      //      since the numbers won't line up exactly.
-      if(value.toString != normalized && normalized.nonEmpty)
-        collector.add(normalizedEdmRightsMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+          // trailing `/` on path
+          if(!uri.getPath.endsWith("/")) {
+            collector.add(normalizedEdmRightsTrailingSlashMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+          }
 
-      // if the normalization failed and produced an empty string
-      if(normalized.isEmpty)
-        collector.add(invalidEdmRightsMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+          // trailing punctuation
+          if(!uri.getPath.equalsIgnoreCase(uri.getPath.cleanupEndingPunctuation)) {
+            collector.add(normalizedEdmRightsTrailingPunctuationMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+          }
+
+          val uriString = s"http://${uri.getHost}${path.cleanupEndingPunctuation}/" // force http, drop parameters and trailing punctuation
+          new java.net.URI(uriString).normalize.toString // normalize() drops duplicates //
+        case Failure(_) => value.toString
+      }
 
       URI(normalized)
     })
@@ -101,14 +137,18 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
         collector.add(invalidEdmRightsMsg(providerId, "edmRights", value.toString, msg = None, enforce))
     })
 
-    val edmRights = values.find(_.isValidEdmRightsUri)
+    val validEdmRights = values.filter(_.isValidEdmRightsUri)
 
-    edmRights match {
-      case Some(_) => edmRights
-      case None =>
-        // collector.add(missingRequiredFieldMsg(providerId, "edmRights", enforce))
-        None
+    if(validEdmRights.size > 1) {
+      // multiple valid edmRights URIs provided in a single record, this should be a mapping failure
+      collector.add(multipleEdmRightsMsg( providerId,
+                                          "edmRights",
+                                          validEdmRights.map(_.toString).mkString(" | "),
+                                          msg = None, enforce = true)
+      )
     }
+
+    values.find(_.isValidEdmRightsUri)
   }
 
   /**
@@ -335,7 +375,7 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
     // steps for mapping edmRights
     // 1. Normalize all mapped edmRights values
     val normalizedEdmRights = normalizeEdmRights(mapping.edmRights(document), providerId)
-    // 2. Validate normalized string is one of 5xx acceptable URIs, log warning if not
+    // 2. Validate normalized string is one of 5xx acceptable URIs, log message if not
     val validatedEdmRights = validateEdmRights(normalizedEdmRights, providerId, mapping.enforceEdmRights)
 
     val validatedIsShownAt = validateIsShownAt(mapping.isShownAt(document), providerId, mapping.enforceIsShownAt)
@@ -428,7 +468,7 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
     val validatedDataProvider = validateDataProvider(mapping.dataProvider(document), providerId, mapping.enforceDataProvider)
     // Steps for mapping edmRights
     // 1. Normalize all mapped edmRights values
-    val normalizedEdmRights = mapping.edmRights(document).map(_.normalize).map(URI)
+    val normalizedEdmRights = normalizeEdmRights(mapping.edmRights(document), providerId)
     // 2. Validate normalized string is one of 5xx acceptable URIs, log warning if not
     val validatedEdmRights = validateEdmRights(normalizedEdmRights, providerId, mapping.enforceEdmRights)
 

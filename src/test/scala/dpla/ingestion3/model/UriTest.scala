@@ -5,30 +5,30 @@ import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 class UriTest extends FlatSpec with BeforeAndAfter {
 
-  "normalize URI" should "replace `/page/` with `/vocab/`" in {
-    val uri = URI("http://rightsstatements.org/page/CNE/1.0/")
-    assert(uri.normalize === "http://rightsstatements.org/vocab/CNE/1.0/")
-  }
-
-  it should "replace https:// with http://" in {
-    val uri = URI("https://rightsstatements.org/vocab/CNE/1.0/")
-    assert(uri.normalize === "http://rightsstatements.org/vocab/CNE/1.0/")
-  }
-
-  it should "remove double forward slashes" in {
-    val uri = URI("http://rightsstatements.org/vocab/CNE/1.0//")
-    assert(uri.normalize === "http://rightsstatements.org/vocab/CNE/1.0/")
-  }
-
-  it should "add a single forward slash at the end" in {
-    val uri = URI("http://rightsstatements.org/vocab/CNE/1.0")
-    assert(uri.normalize === "http://rightsstatements.org/vocab/CNE/1.0/")
-  }
-
-  it should "return the original value if not given a URI" in {
-    val uri = URI("c:\\media\\image.jpg")
-    assert(uri.normalize === "c:\\media\\image.jpg")
-  }
+//  "normalize URI" should "replace `/page/` with `/vocab/`" in {
+//    val uri = URI("http://rightsstatements.org/page/CNE/1.0/")
+//    assert(uri.normalize === "http://rightsstatements.org/vocab/CNE/1.0/")
+//  }
+//
+//  it should "replace https:// with http://" in {
+//    val uri = URI("https://rightsstatements.org/vocab/CNE/1.0/")
+//    assert(uri.normalize === "http://rightsstatements.org/vocab/CNE/1.0/")
+//  }
+//
+//  it should "remove double forward slashes" in {
+//    val uri = URI("http://rightsstatements.org/vocab/CNE/1.0//")
+//    assert(uri.normalize === "http://rightsstatements.org/vocab/CNE/1.0/")
+//  }
+//
+//  it should "add a single forward slash at the end" in {
+//    val uri = URI("http://rightsstatements.org/vocab/CNE/1.0")
+//    assert(uri.normalize === "http://rightsstatements.org/vocab/CNE/1.0/")
+//  }
+//
+//  it should "return the original value if not given a URI" in {
+//    val uri = URI("c:\\media\\image.jpg")
+//    assert(uri.normalize === "c:\\media\\image.jpg")
+//  }
 
   it should "strip a trailing ; from a URI" in {
     val uri = URI("http://rightsstatements.org/vocab/CNE/1.0;")
