@@ -25,7 +25,87 @@ trait IngestMessageTemplates {
   def invalidEdmRightsMsg(id: String, field: String, value: String,
                           msg: Option[String] = None, enforce: Boolean): IngestMessage =
     IngestMessage(
-      message = s"Invalid value".trim,
+      message = s"Not a URI".trim,
+      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
+      id = id,
+      field = field,
+      value = value
+    )
+
+  def multipleEdmRightsMsg(id: String, field: String, value: String,
+                          msg: Option[String] = None, enforce: Boolean): IngestMessage =
+    IngestMessage(
+      message = s"Multiple valid edmRights URIs".trim,
+      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
+      id = id,
+      field = field,
+      value = value
+    )
+
+  def normalizedEdmRightsHttpsMsg(id: String, field: String, value: String,
+                                  msg: Option[String] = None, enforce: Boolean): IngestMessage =
+    IngestMessage(
+      message = s"Normalized https://".trim,
+      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
+      id = id,
+      field = field,
+      value = value
+    )
+
+  def normalizedEdmRightsWWWMsg(id: String, field: String, value: String,
+                                  msg: Option[String] = None, enforce: Boolean): IngestMessage =
+    IngestMessage(
+      message = s"Normalized www".trim,
+      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
+      id = id,
+      field = field,
+      value = value
+    )
+
+  def normalizedEdmRightsRsPageMsg(id: String, field: String, value: String,
+                                   msg: Option[String] = None, enforce: Boolean): IngestMessage =
+    IngestMessage(
+      message = s"Normalized /page/ to /vocab/".trim,
+      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
+      id = id,
+      field = field,
+      value = value
+    )
+
+  def normalizedEdmRightsWhitespaceMsg(id: String, field: String, value: String,
+                                   msg: Option[String] = None, enforce: Boolean): IngestMessage =
+    IngestMessage(
+      message = s"Normalized whitespace".trim,
+      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
+      id = id,
+      field = field,
+      value = value
+    )
+
+  def normalizedEdmRightsTrailingSlashMsg(id: String, field: String, value: String,
+                                       msg: Option[String] = None, enforce: Boolean): IngestMessage =
+    IngestMessage(
+      message = s"Normalized add trailing `/`".trim,
+      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
+      id = id,
+      field = field,
+      value = value
+    )
+
+  def normalizedEdmRightsTrailingPunctuationMsg(id: String, field: String, value: String,
+                                                msg: Option[String] = None, enforce: Boolean): IngestMessage =
+    IngestMessage(
+      message = s"Normalized remove trailing punctuation".trim,
+      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
+      id = id,
+      field = field,
+      value = value
+    )
+
+  def normalizedEdmRightsQueryMsg(id: String, field: String, value: String,
+                                   msg: Option[String] = None, enforce: Boolean): IngestMessage =
+    IngestMessage(
+      message = s"Normalized dropped query".trim,
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
       id = id,
       field = field,

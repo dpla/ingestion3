@@ -1,11 +1,12 @@
 package dpla.ingestion3.model
 
-import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.messages.IngestMessage
 import dpla.ingestion3.model.DplaMapData._
 import org.json4s.{JNothing, JValue}
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
+
+
 
 /**
   * Contains type definitions that express cardinality of fields
@@ -140,26 +141,7 @@ case class URI(value: String) {
   def isValidEdmRightsUri: Boolean = validEdmRightsValues.contains(value)
 
   /**
-    *
-    * Attempt to create URI from original value
-    * Replace /page/ with /vocab/, (applies to rightstatements.org values only)
-    * Strip `?` from URL and all text following
-    * Strip trailing punctuation from URL path [-;:,\/\\t\\r\\n\s]
-    * Remove `www://`
-    * Normalize to HTTP
-    * @return Normalized version of the URI if successful
-    *         Original value if URI could not be created
-    */
-  def normalize: String = {
-    Try { new java.net.URI(value.trim) } match {
-      case Success(uri) =>
-        val path = uri.getPath.replaceFirst("/page/", "/vocab/")
-        new java.net.URI(s"http://${uri.getHost}${path.cleanupEndingPunctuation}/").normalize.toString
-      case Failure(_) => value
-    }
-  }
 
-  /**
     * toString is overridden so that when URI values are extracted
     * the type is dropped. Otherwise calling URI("http://abc.com").toString()
     * will return URI("http://abc.com") when it should return "http://abc.com"
