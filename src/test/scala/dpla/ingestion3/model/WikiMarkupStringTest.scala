@@ -15,15 +15,15 @@ class WikiMarkupStringTest extends FlatSpec {
                         |   | description = The description
                         |   | date = 2012-05-07
                         |   | permission = {{PD-US}}
-                        |   | source = {{
-                        |       DPLA | Q83878447 |
-                        |       hub = The Provider |
-                        |       url = https://example.org/record/123 |
-                        |       dpla_id = 4b1bd605bd1d75ee23baadb0e1f24457 |
-                        |       local_id = us-history-13243; j-doe-archives-2343
+                        |   | source = {{ DPLA
+                        |       | Q83878447
+                        |       | hub = The Provider
+                        |       | url = https://example.org/record/123
+                        |       | dpla_id = 4b1bd605bd1d75ee23baadb0e1f24457
+                        |       | local_id = us-history-13243; j-doe-archives-2343
                         |   }}
                         |   | Institution = {{ Institution | wikidata = Q83878447 }}
-                        |   Other fields = {{ InFi | Standardized rights statement | {{ rights statement | http://rightsstatements.org/vocab/NoC-US }} }}
+                        |   | Other fields = {{ InFi | Standardized rights statement | {{ rights statement | http://rightsstatements.org/vocab/NoC-US }} }}
                         | }}""".stripMargin
     assert(expectedMarkup === markup)
   }
