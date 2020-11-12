@@ -237,15 +237,15 @@ package object model {
         |   | description = ${record.sourceResource.description.map(escapeWikiChars).mkString("; ")}
         |   | date = ${record.sourceResource.date.flatMap { _.prefLabel }.map(escapeWikiChars).mkString("; ")}
         |   | permission = {{PD-US}}
-        |   | source = {{
-        |       DPLA | ${escapeWikiChars(dataProviderWikiUri)} |
-        |       hub = ${escapeWikiChars(record.provider.name.getOrElse("")) } |
-        |       url = ${escapeWikiChars(record.isShownAt.uri.toString)} |
-        |       dpla_id = $dplaId |
-        |       local_id = ${record.sourceResource.identifier.map(escapeWikiChars).mkString("; ")}
+        |   | source = {{ DPLA
+        |       | ${escapeWikiChars(dataProviderWikiUri)}
+        |       | hub = ${escapeWikiChars(record.provider.name.getOrElse(""))}
+        |       | url = ${escapeWikiChars(record.isShownAt.uri.toString)}
+        |       | dpla_id = $dplaId
+        |       | local_id = ${record.sourceResource.identifier.map(escapeWikiChars).mkString("; ")}
         |   }}
         |   | Institution = {{ Institution | wikidata = $dataProviderWikiUri }}
-        |   Other fields = {{ InFi | Standardized rights statement | {{ rights statement | ${escapeWikiChars(record.edmRights.getOrElse("").toString) } }} }}
+        |   | Other fields = {{ InFi | Standardized rights statement | {{ rights statement | ${escapeWikiChars(record.edmRights.getOrElse("").toString) } }} }}
         | }}""".stripMargin
   }
 
