@@ -70,6 +70,7 @@ object ProviderRegistry {
     "nc" -> Register(profile = new NcProfile),
     "oklahoma" -> Register(profile = new OklahomaProfile),
     "ohio" -> Register(profile = new OhioProfile),
+    "orbis-cascade" -> Register(profile = new OrbisCascadeProfile),
     "p2p" -> Register(profile = new P2PProfile), // plains2peaks
     "pa" -> Register(profile = new PaProfile),
     "sc" -> Register(profile = new ScProfile),
