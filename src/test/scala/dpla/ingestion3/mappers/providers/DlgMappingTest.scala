@@ -118,6 +118,12 @@ class DlgMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.preview(json) === expected)
   }
 
+  // mediaMaster
+  it should "create the correct media master" in {
+    val expected = Seq("edm_is_shown_by_display").map(stringOnlyWebResource)
+    assert(extractor.mediaMaster(json) === expected)
+  }
+
   it should "create the correct preview when `edm_is_shown_by_display` is missing" in {
     val jsonString: String = new FlatFileIO().readFileAsString("/dlg_missing_preview.json")
     val json: Document[JValue] = Document(parse(jsonString))
