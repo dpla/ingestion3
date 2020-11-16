@@ -362,10 +362,10 @@ class TxProfile extends XmlProfile {
   * Texas Digital Library (aka Texas 2)
   */
 class TxdlProfile extends XmlProfile {
-  type Mapping = TnMapping
+  type Mapping = TxdlMapping
 
   override def getHarvester = classOf[OaiFileHarvester]
-  override def getMapping = new TxdlMapping 
+  override def getMapping = new TxdlMapping
 }
 
 /**
