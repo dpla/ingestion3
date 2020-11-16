@@ -364,8 +364,8 @@ class TxProfile extends XmlProfile {
 class TxdlProfile extends XmlProfile {
   type Mapping = TnMapping
 
-  override def getHarvester = classOf[VaFileHarvester]
-  override def getMapping = new TxdlMapping // FIXME placeholder
+  override def getHarvester = classOf[OaiFileHarvester]
+  override def getMapping = new TxdlMapping 
 }
 
 /**
