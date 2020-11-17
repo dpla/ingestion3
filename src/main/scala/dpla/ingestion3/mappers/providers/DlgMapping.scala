@@ -34,6 +34,10 @@ class DlgMapping extends JsonMapping with JsonExtractor {
     extractStrings("dc_right_display")(data)
     .map(URI)
 
+  override def mediaMaster(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
+    extractStrings("edm_is_shown_by_display")(data).map(stringOnlyWebResource)
+  }
+
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(data)
 
   override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
