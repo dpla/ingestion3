@@ -1,5 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
+import java.net.URL
+
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
@@ -9,6 +11,8 @@ import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
+
+import scala.util.{Failure, Success, Try}
 import scala.xml._
 
 class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
@@ -74,26 +78,15 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
     extractStrings(metadataRoot(data) \ "language")
       .map(nameOnlyConcept)
 
-//  override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
-//    extractStrings(data \ "metadata" \\ "spatial")
-//      .flatMap(_.split(";"))
-//      .map(nameOnlyPlace)
+  // done
+  override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
+    extractStrings(metadataRoot(data) \ "publisher")
+      .map(nameOnlyAgent)
 
-//  override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
-//    extractStrings(data \ "metadata" \\ "publisher")
-//      .map(nameOnlyAgent)
-
-//  override def relation(data: Document[NodeSeq]): Seq[LiteralOrUri] =
-//    extractStrings(data \ "metadata" \\ "relation")
-//      .map(eitherStringOrUri)
-
-//  override def rights(data: Document[NodeSeq]): Seq[String] =
-//    (data \ "metadata" \\ "rights").map(r => {
-//      r.prefix match {
-//        case "dc" => r.text
-//        case _ => ""
-//      }
-//    }).filter(_.nonEmpty)
+  // done
+  override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
+    extractStrings(metadataRoot(data) \ "coverage")
+      .map(nameOnlyPlace)
 
   // done
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
@@ -111,18 +104,31 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
+  // TODO FIXME
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    extractStrings(metadataRoot(data) \ "dataProvider")
+    extractStrings(metadataRoot(data) \ "source")
       .map(nameOnlyAgent)
+    // publisher(data) // Seq("TBD").map(nameOnlyAgent)
 
   // done
-  // fixme multiple rights fields per record
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
-    extractStrings(metadataRoot(data) \"rights").map(URI)
+    rightsHelper(data)
+      .filter(URI(_).validate)
+      .map(URI)
+
+  override def rights(data: Document[NodeSeq]): Seq[String] =
+    rightsHelper(data)
+      .filterNot(URI(_).validate)
 
   // fixme expected isShownAt is mapped to dc:identifier
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    extractStrings(data \ "metadata" \\ "isShownAt")
+    extractStrings(metadataRoot(data) \ "identifier")
+      .filter(t => {
+        Try { new URL(t) } match {
+          case Success(_) => true
+          case Failure(_) => false
+        }
+      })
       .map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
@@ -139,7 +145,7 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
 
   // Helper method
   def agent = EdmAgent(
-    name = Some("Ohio Digital Network"),
+    name = Some("Oribis Cascade"), // FIXME
     uri = Some(URI("http://dp.la/api/contributor/ohio"))
   )
 
@@ -157,4 +163,6 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
       .filter(_.nonEmpty)
 
   def metadataRoot(data: Document[NodeSeq]): NodeSeq = data \ "metadata" \ "dc"
+
+  def rightsHelper(data: Document[NodeSeq]): Seq[String] = extractStrings(metadataRoot(data) \"rights")
 }
