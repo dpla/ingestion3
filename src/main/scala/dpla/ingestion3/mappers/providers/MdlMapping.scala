@@ -17,6 +17,8 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
 
   val formatBlockList: Set[String] = ExtentIdentificationList.termList
 
+  override val enforceDuplicateIds: Boolean = false
+
   // ID minting functions
   override def useProviderName: Boolean = true
 
