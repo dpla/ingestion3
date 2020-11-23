@@ -36,7 +36,7 @@ class OrbisCascadeMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.description(xml) == Seq("A description"))
 
   it should "extract the correct identifier" in {
-    val expected = Seq("MG101_b5_f1_001", "http://digital.lib.uidaho.edu/cdm/ref/collection/psychiana/id/0")
+    val expected = Seq("MG101_b5_f1_001")
     assert(extractor.identifier(xml) === expected)
   }
 
@@ -89,25 +89,8 @@ class OrbisCascadeMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.`type`(xml) === expected)
   }
 
-  // Needs to be implemented
-//  it should "extract the correct dataProvider" in {
-//    val expected = List(nameOnlyAgent("Bowling Green State University Libraries"))
-//    assert(extractor.dataProvider(xml) === expected)
-//  }
-
   it should "extract the correct edmRights" in {
     val expected = Seq(URI("http://rightsstatements.org/vocab/InC-EDU/1.0/"))
     assert(extractor.edmRights(xml) === expected)
   }
-
-  // TODO needs to be implemented
-//  it should "extract the correct isShownAt" in {
-//    val expected = List(uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/collections/item/14058")))
-//    assert(extractor.isShownAt(xml) === expected)
-//  }
-//
-//  it should "extract the correct preview" in {
-//    val expected = List(uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/files/thumbnails/26e197915e9107914faa33ac166ead5a.jpg")))
-//    assert(extractor.preview(xml) === expected)
-//  }
 }

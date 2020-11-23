@@ -35,12 +35,6 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
     extractString(data \ "header" \ "identifier")
 
   // SourceResource mapping
-
-  // TODO FIX
-//    override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
-//      extractStrings(metadataRoot(data) \ "relation")
-//        .map(nameOnlyCollection)
-
     override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
       extractStrings(metadataRoot(data) \ "contributor")
         .map(nameOnlyAgent)
@@ -59,19 +53,15 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
   override def description(data: Document[NodeSeq]): Seq[String] =
     extractStrings(metadataRoot(data) \ "description")
 
-//  override def format(data: Document[NodeSeq]): Seq[String] =
-//    extractStrings(data \ "metadata" \\ "format")
-//      .flatMap(_.splitAtDelimiter(";"))
-//      .map(_.applyBlockFilter(
-//        DigitalSurrogateBlockList.termList ++
-//          FormatTypeValuesBlockList.termList ++
-//          ExtentIdentificationList.termList))
-//      .filter(_.nonEmpty)
-
   // done
-  // todo fix issue with isShownAt property
   override def identifier(data: Document[NodeSeq]): Seq[String] =
     extractStrings(metadataRoot(data) \ "identifier")
+      .filterNot(t => {
+        Try { new URL(t) } match {
+          case Success(_) => true
+          case Failure(_) => false
+        }
+      })
 
   // done
   override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
@@ -104,11 +94,10 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
-  // TODO FIXME
+  // TODO FIXME - TBD could be source or could be publisher
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(metadataRoot(data) \ "source")
       .map(nameOnlyAgent)
-    // publisher(data) // Seq("TBD").map(nameOnlyAgent)
 
   // done
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
@@ -120,7 +109,6 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
     rightsHelper(data)
       .filterNot(URI(_).validate)
 
-  // fixme expected isShownAt is mapped to dc:identifier
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(metadataRoot(data) \ "identifier")
       .filter(t => {
@@ -133,10 +121,7 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
-  // fixme nothing looks like a thumbnail
-  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    extractStrings(data \ "metadata" \\ "preview")
-      .map(stringOnlyWebResource)
+  // TODO thumbnail mapping -- but there are no thumbnail values in metadata
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
@@ -145,22 +130,9 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
 
   // Helper method
   def agent = EdmAgent(
-    name = Some("Oribis Cascade"), // FIXME
-    uri = Some(URI("http://dp.la/api/contributor/ohio"))
+    name = Some("Orbis Cascade Alliance"),
+    uri = Some(URI("http://dp.la/api/contributor/orbiscascade"))
   )
-
-  /**
-    * Extracts values from format field and returns values that appear to be
-    * extent statements
-    *
-    * @param data
-    * @return
-    */
-  def extentFromFormat(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \ "metadata" \\ "format")
-      .flatMap(_.splitAtDelimiter(";"))
-      .map(_.extractExtents)
-      .filter(_.nonEmpty)
 
   def metadataRoot(data: Document[NodeSeq]): NodeSeq = data \ "metadata" \ "dc"
 
