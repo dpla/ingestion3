@@ -1,0 +1,36 @@
+
+<record>
+    <header>
+        <identifier>oai:digital.lib.uidaho.edu:psychiana/0</identifier>
+        <datestamp>2018-02-23</datestamp>
+        <setSpec>psychiana</setSpec>
+    </header>
+    <metadata>
+        <oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                   xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd
+http://www.openarchives.org/OAI/2.0/oai_dc/ ">
+            <dc:title>We Read an Amazing Story, Chapter 4 with Editors Corrections 2</dc:title>
+            <dc:description>A description</dc:description>
+            <dc:creator>Robinson, Frank B.</dc:creator>
+            <dc:date>1946</dc:date>
+            <dc:subject>God-Power; Psychiana Criticism; Psychiana Origins; God on Earth</dc:subject>
+            <dc:relation>Psychiana Digital Collection</dc:relation>
+            <dc:publisher>University of Idaho Library Digital Initiatives, http://www.lib.uidaho.edu/digital/</dc:publisher>
+            <dc:source>MG 101, Frank Bruce Robinson. Papers, 1929-1951, University of Idaho Library Special Collections
+                and Archives, http://archiveswest.orbiscascade.org/ark:/80444/xv97133/op=fstyle.aspx?t=k&amp;q=psychiana</dc:source>
+            <dc:identifier>MG101_b5_f1_001</dc:identifier>
+            <dc:rights>Educational use includes non-commercial use of text and images in materials for teaching and
+                research purposes. Digital reproduction permissions granted University of Idaho Library Special
+                Collections and Archives Department. For other uses beyond free use, please contact University of Idaho
+                Library Special Collections and Archives Department at libspec@uidaho.edu.</dc:rights>
+            <dc:rights>http://rightsstatements.org/vocab/InC-EDU/1.0/</dc:rights>
+            <dc:type>Text</dc:type>
+            <dc:format>application/pdf</dc:format>
+            <dc:language>eng</dc:language>
+            <dc:relation>http://archiveswest.orbiscascade.org/ark:/80444/xv97133/op=fstyle.aspx?t=k&amp;q=psychiana</dc:relation>
+            <dc:identifier>http://digital.lib.uidaho.edu/cdm/ref/collection/psychiana/id/0</dc:identifier>
+        </oai_dc:dc>
+    </metadata>
+</record>
+
