@@ -1,8 +1,9 @@
 package dpla.ingestion3.mappers.providers
 
+import dpla.ingestion3.enrichments.normalizations.FilterList
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList}
-import dpla.ingestion3.mappers.utils.{Document, XmlMapping, XmlExtractor}
+import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
@@ -12,6 +13,15 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
+object BscdnImageExperimentList extends FilterList {
+  lazy val termList: Set[String] = getTermsFromFiles
+    .map(_.split(",").last)
+
+  // Defines where to get digital surrogate and format block terms
+  override val files: Seq[String] = Seq(
+    "/bscdn/images.txt"
+  )
+}
 
 class MtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
 
@@ -19,7 +29,9 @@ class MtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     DigitalSurrogateBlockList.termList ++
       ExtentIdentificationList.termList
 
-  val extentAllowAlist = ExtentIdentificationList.termList
+  val extentAllowAlist: Set[String] = ExtentIdentificationList.termList
+
+  val thumbnailList: Set[String] = BscdnImageExperimentList.termList
 
   // ID minting functions
   override def useProviderName(): Boolean = true
@@ -124,11 +136,8 @@ class MtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-  // <mods:location><mods:url> @access=preview
-  (data \\ "location" \ "url")
-    .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "access", "preview"))
-    .flatMap(extractStrings)
-    .map(stringOnlyWebResource)
+    // <mods:location><mods:url> @access=preview
+    previewHelper(data).map(stringOnlyWebResource)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
@@ -136,11 +145,28 @@ class MtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
 
   override def tags(data: Document[NodeSeq]): ZeroToMany[URI] =
-    extractStrings(data \\ "contribState").map(URI)
+    (extractStrings(data \\ "contribState") ++
+      experimentTag(data))
+      .map(URI)
 
   // Helper method
   def agent = EdmAgent(
     name = Some("Big Sky Country Digital Network"),
     uri = Some(URI("http://dp.la/api/contributor/mt"))
   )
+
+  def previewHelper(data: Document[NodeSeq]): ZeroToMany[String] = {
+    (data \\ "location" \ "url")
+      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "access", "preview"))
+      .flatMap(extractStrings)
+  }
+
+  def experimentTag(data: Document[NodeSeq]): Seq[String] = {
+    val urls = previewHelper(data)
+    // lookup image preview url and apply tag if in list of images
+    thumbnailList.find(n => urls.head.equalsIgnoreCase(n)) match {
+      case Some(t) => Seq("bscdn-experiment")
+      case None => Seq() // do nothing
+    }
+  }
 }
