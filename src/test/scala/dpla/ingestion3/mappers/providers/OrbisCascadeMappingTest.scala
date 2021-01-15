@@ -20,12 +20,14 @@ class OrbisCascadeMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.useProviderName())
 
   it should "extract the correct original identifier " in
-    assert(extractor.originalId(xml) === Some("oai:digital.lib.uidaho.edu:psychiana/0"))
+    assert(extractor.originalId(xml) === Some("http://harvester.orbiscascade.org/record/e466e93cf4849fd8aa36f1daa1417c15"))
 
-  it should "extract the correct creators" in {
-    val expected = Seq("Robinson, Frank B.").map(nameOnlyAgent)
-    assert(extractor.creator(xml) == expected)
+  it should "extract the correct contributor" in {
+    val expected = Seq("University of Washington Libraries, Special Collections").map(nameOnlyAgent)
+    assert(extractor.contributor(xml) == expected)
   }
+
+  // tbd creator
 
   it should "extract the correct dates" in {
     val expected = Seq("1946").map(stringOnlyTimeSpan)
@@ -33,12 +35,18 @@ class OrbisCascadeMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct description" in
-    assert(extractor.description(xml) == Seq("A description"))
+    assert(extractor.description(xml) == Seq("PH Coll 41.96c Scanned from an original photographic print at 110 dpi in JPEG format at compression rate 3 and resized to 768x600 ppi. 2015"))
 
   it should "extract the correct identifier" in {
     val expected = Seq("MG101_b5_f1_001")
     assert(extractor.identifier(xml) === expected)
   }
+
+  it should "extract the correct place" in {
+    val expected = Seq("Canada--Yukon Territory").map(nameOnlyPlace)
+    assert(extractor.place(xml) === expected)
+  }
+
 
   it should "extract the correct language" in {
     val expected = Seq("eng").map(nameOnlyConcept)
@@ -51,46 +59,27 @@ class OrbisCascadeMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract edmRights value if it is a URI'" in {
-    val rightsXml: Document[NodeSeq] = Document(<record xmlns:dc="http://purl.org/dc/elements/1.1/">
-      <metadata>
-        <oai_dc:dc>
-          <dc:rights>https://rightsstatements.org/vocab/Inc/1.0/</dc:rights>
-        </oai_dc:dc>
-      </metadata>
-    </record>)
-    val expected = Seq(URI("https://rightsstatements.org/vocab/Inc/1.0/"))
-    assert(extractor.edmRights(rightsXml) === expected)
+    val expected = Seq(URI("http://rightsstatements.org/vocab/CNE/1.0/"))
+    assert(extractor.edmRights(xml) === expected)
   }
 
   it should "extract rights value it is text'" in {
-    val rightsXml: Document[NodeSeq] = Document(<record xmlns:dc="http://purl.org/dc/elements/1.1/">
-      <metadata>
-        <oai_dc:dc>
-          <dc:rights>rights statement</dc:rights>
-        </oai_dc:dc>
-      </metadata>
-    </record>)
-    val expected = Seq("rights statement")
-    assert(extractor.rights(rightsXml) === expected)
+    val expected = Seq("For information on permissions for use and reproductions please visit UW Libraries Special Collections Use Permissions page:   http://www.lib.washington.edu/specialcollections/services/permission-for-use")
+    assert(extractor.rights(xml) === expected)
   }
 
   it should "extract the correct subjects" in {
-    val expected = Seq("God-Power; Psychiana Criticism; Psychiana Origins; God on Earth").map(nameOnlyConcept)
+    val expected = Seq("Mountains--Yukon").map(nameOnlyConcept)
     assert(extractor.subject(xml) === expected)
   }
 
   it should "extract the correct titles" in {
-    val expected = Seq("We Read an Amazing Story, Chapter 4 with Editors Corrections 2")
+    val expected = Seq("View of opposite shore from water with mountain in distance, Yukon Territory, circa 1903-1906")
     assert(extractor.title(xml) === expected)
   }
 
   it should "extract the correct types" in {
-    val expected = Seq("Text")
+    val expected = Seq("Photograph")
     assert(extractor.`type`(xml) === expected)
-  }
-
-  it should "extract the correct edmRights" in {
-    val expected = Seq(URI("http://rightsstatements.org/vocab/InC-EDU/1.0/"))
-    assert(extractor.edmRights(xml) === expected)
   }
 }
