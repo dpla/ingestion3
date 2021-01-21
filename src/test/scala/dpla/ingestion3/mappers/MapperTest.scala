@@ -90,7 +90,7 @@ class MapperTest extends FlatSpec with BeforeAndAfter with IngestMessageTemplate
 
   it should "not normailze an invalid uri" in {
     msgCollector.deleteAll()
-    val rightsString = "http://rightsstatements.org/vocab /UND/1.0/"
+    val rightsString = "http://rightsstatements.org/vocab%20/UND/1.0/"
     val rightsUris = Seq(rightsString).map(URI)
     val normalizedRights = mapTest.normalizeEdmRights(rightsUris, id)
     println(normalizedRights)

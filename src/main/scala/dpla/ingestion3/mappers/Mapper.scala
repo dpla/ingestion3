@@ -1,14 +1,13 @@
 package dpla.ingestion3.mappers
 
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.mappers.utils._
-import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
+import dpla.ingestion3.messages.{IngestLogLevel, IngestMessage, IngestMessageTemplates, MessageCollector}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils._
 import org.json4s.DefaultFormats
 import org.json4s.JsonAST._
-
-import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
@@ -71,7 +70,23 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           }
 
           val uriString = s"http://${uri.getHost}${path.cleanupEndingPunctuation}/" // force http, drop parameters and trailing punctuation
-          new java.net.URI(uriString).normalize.toString // normalize() drops duplicates //
+
+          // normalize() drops duplicates //
+          Try { new java.net.URI(uriString).normalize.toString} match {
+            case Success(s) => s
+            case Failure(f) =>
+              // log warning message about failed normalization
+              collector.add(
+                IngestMessage(
+                  message = s"Error normalizing URI".trim,
+                  level = IngestLogLevel.warn,
+                  id = providerId,
+                  field = "edmRights",
+                  value = s"$f -- original value == ${value.toString} -- normalized to == $uriString"
+                ))
+              // return original value
+              value.toString
+          }
         }
         case Failure(_) => value.toString
       }
