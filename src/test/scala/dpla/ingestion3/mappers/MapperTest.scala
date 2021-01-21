@@ -88,6 +88,16 @@ class MapperTest extends FlatSpec with BeforeAndAfter with IngestMessageTemplate
     assert(msgCollector.getAll().contains(message))
   }
 
+  it should "not normailze an invalid uri" in {
+    msgCollector.deleteAll()
+    val rightsString = "http://rightsstatements.org/vocab /UND/1.0/"
+    val rightsUris = Seq(rightsString).map(URI)
+    val normalizedRights = mapTest.normalizeEdmRights(rightsUris, id)
+    println(normalizedRights)
+    println(rightsUris)
+    assert(normalizedRights === rightsUris)
+  }
+
   it should "log a missingRights ERROR when dcRights is empty, edmRights is invalid and " +
     "enforce missing rights = TRUE for validateRights and enforce for validateEdmRights = FALSE" in {
     msgCollector.deleteAll()

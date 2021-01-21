@@ -41,7 +41,7 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                         (implicit collector: MessageCollector[IngestMessage]): ZeroToMany[URI] = {
     values.map (value => {
       val normalized = Try { new java.net.URI(value.toString.trim) } match {
-        case Success(uri) =>
+        case Success(uri) => {
           // does scheme (http/https) require normalization
           if (uri.toString.startsWith("https")) {
             collector.add(normalizedEdmRightsHttpsMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
@@ -61,19 +61,18 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           if (uri.getQuery != null) {
             collector.add(normalizedEdmRightsRsPageMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
           }
-
           // trailing `/` on path
-          if(!uri.getPath.endsWith("/")) {
+          if (!uri.getPath.endsWith("/")) {
             collector.add(normalizedEdmRightsTrailingSlashMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
           }
-
           // trailing punctuation
-          if(!uri.getPath.equalsIgnoreCase(uri.getPath.cleanupEndingPunctuation)) {
+          if (!uri.getPath.equalsIgnoreCase(uri.getPath.cleanupEndingPunctuation)) {
             collector.add(normalizedEdmRightsTrailingPunctuationMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
           }
 
           val uriString = s"http://${uri.getHost}${path.cleanupEndingPunctuation}/" // force http, drop parameters and trailing punctuation
           new java.net.URI(uriString).normalize.toString // normalize() drops duplicates //
+        }
         case Failure(_) => value.toString
       }
 
