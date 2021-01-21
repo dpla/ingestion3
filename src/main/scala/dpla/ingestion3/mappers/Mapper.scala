@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.mappers.utils._
-import dpla.ingestion3.messages.{IngestLogLevel, IngestMessage, IngestMessageTemplates, MessageCollector}
+import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils._
@@ -73,17 +73,10 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
 
           // normalize() drops duplicates //
           Try { new java.net.URI(uriString).normalize.toString} match {
-            case Success(s) => s
+            case Success(normalizedUri) => normalizedUri
             case Failure(f) =>
               // log warning message about failed normalization
-              collector.add(
-                IngestMessage(
-                  message = s"Error normalizing URI".trim,
-                  level = IngestLogLevel.warn,
-                  id = providerId,
-                  field = "edmRights",
-                  value = s"$f -- original value == ${value.toString} -- normalized to == $uriString"
-                ))
+              collector.add(invalidEdmRightsMsg(providerId, "edmRights", s"${value.toString}: $f" , msg = None, enforce = false))
               // return original value
               value.toString
           }
