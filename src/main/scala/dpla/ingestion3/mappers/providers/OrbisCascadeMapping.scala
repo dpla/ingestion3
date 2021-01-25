@@ -19,7 +19,8 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
 
   override def getProviderName(): String = "orbis-cascade"
 
-  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] ={
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] = {
+//    getByAttribute(data)
     Option(data
       .head
       .attributes

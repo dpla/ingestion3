@@ -1,8 +1,7 @@
 <ore:Aggregation rdf:about="http://harvester.orbiscascade.org/record/e466e93cf4849fd8aa36f1daa1417c15"
                  xmlns:dcterms="http://www.w3.org/1999/xhtml"
                  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns"
-                 xmlns:doap="http://usefulinc.com/ns/doap" xmlns:edm="http://rs.org/"
->
+                 xmlns:doap="http://usefulinc.com/ns/doap" xmlns:edm="http://rs.org/">
     <prov:wasDerivedFrom>
         <dcmitype:Collection rdf:about="http://cdm16786.contentdm.oclc.org//oai/oai.php?verb=ListRecords&amp;set=alaskawcanada&amp;metadataPrefix=oai_dc">
             <dcterms:title>Alaska, Western Canada and United States</dcterms:title>
