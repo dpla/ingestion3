@@ -1,5 +1,6 @@
 package dpla.ingestion3.mappers
 
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany, ZeroToOne}
@@ -7,8 +8,6 @@ import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils._
 import org.json4s.DefaultFormats
 import org.json4s.JsonAST._
-
-import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 
 import scala.util.{Failure, Success, Try}
 import scala.xml.NodeSeq
@@ -41,7 +40,7 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                         (implicit collector: MessageCollector[IngestMessage]): ZeroToMany[URI] = {
     values.map (value => {
       val normalized = Try { new java.net.URI(value.toString.trim) } match {
-        case Success(uri) =>
+        case Success(uri) => {
           // does scheme (http/https) require normalization
           if (uri.toString.startsWith("https")) {
             collector.add(normalizedEdmRightsHttpsMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
@@ -61,19 +60,27 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           if (uri.getQuery != null) {
             collector.add(normalizedEdmRightsRsPageMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
           }
-
           // trailing `/` on path
-          if(!uri.getPath.endsWith("/")) {
+          if (!uri.getPath.endsWith("/")) {
             collector.add(normalizedEdmRightsTrailingSlashMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
           }
-
           // trailing punctuation
-          if(!uri.getPath.equalsIgnoreCase(uri.getPath.cleanupEndingPunctuation)) {
+          if (!uri.getPath.equalsIgnoreCase(uri.getPath.cleanupEndingPunctuation)) {
             collector.add(normalizedEdmRightsTrailingPunctuationMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
           }
 
           val uriString = s"http://${uri.getHost}${path.cleanupEndingPunctuation}/" // force http, drop parameters and trailing punctuation
-          new java.net.URI(uriString).normalize.toString // normalize() drops duplicates //
+
+          // normalize() drops duplicates //
+          Try { new java.net.URI(uriString).normalize.toString} match {
+            case Success(normalizedUri) => normalizedUri
+            case Failure(f) =>
+              // log warning message about failed normalization
+              collector.add(invalidEdmRightsMsg(providerId, "edmRights", s"${value.toString}: $f" , msg = None, enforce = false))
+              // return original value
+              value.toString
+          }
+        }
         case Failure(_) => value.toString
       }
 
