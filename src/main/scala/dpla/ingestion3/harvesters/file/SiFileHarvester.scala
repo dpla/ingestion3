@@ -11,7 +11,7 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.io.Source
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 import scala.xml.{MinimizeMode, Node, Utility, XML}
 
 /**
@@ -118,9 +118,15 @@ class SiFileHarvester(spark: SparkSession,
     var loadCounts = Map[String, String]()
     inFiles.listFiles(new TxtFileFilter).foreach(file => {
       Source.fromFile(file).getLines().foreach(line => {
-        val lineVals = line.split(" records = ")
-        // rename .xml to .xml.gz to match filename processed by harvester
-        loadCounts += (lineVals(0).replace(".xml", ".xml.gz") -> lineVals(1))
+        Try {
+          val lineVals = line.split(" records = ")
+          // rename .xml to .xml.gz to match filename processed by harvester
+          lineVals(0).replace(".xml", ".xml.gz") -> lineVals(1)
+        } match {
+          case Success(row) => loadCounts += row
+          case Failure(_) => loadCounts
+        }
+
       })
     })
     loadCounts
