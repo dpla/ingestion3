@@ -4,12 +4,34 @@ sudo curl -o /etc/apt/trusted.gpg.d/sbt.asc -sL "https://keyserver.ubuntu.com/pk
 sudo apt-get -y update
 sudo apt-get -y upgrade
 sudo apt-get -y install git sbt openjdk-8-jdk
+sudo apt-get -y install awscli
 
 sudo curl -O -sL "https://mirrors.sonic.net/apache/spark/spark-2.4.7/spark-2.4.7-bin-hadoop2.7.tgz"
 tar -xf spark-2.4.7-bin-hadoop2.7.tgz
 sudo mv spark-2.4.7-bin-hadoop2.7 /usr/local/spark
 echo 'export PATH="$PATH:/usr/local/spark/bin"; export SPARK_HOME="/usr/local/spark"' | tee -a "/etc/bash.bashrc" > /dev/null
 
+sudo echo 'i3-harvest ()
+{
+  SBT_OPTS=-Xmx15g sbt "run-main dpla.ingestion3.entries.ingest.HarvestEntry
+    --output /home/ubuntu/data/
+    --conf /home/ubuntu/ingestion3/conf/i3.conf
+    --name $1
+    --sparkMaster local[*]"
+}
+
+i3-remap ()
+{
+  SBT_OPTS=-Xmx12g sbt "runMain dpla.ingestion3.entries.ingest.IngestRemap
+    --output /home/ubuntu/data/
+    --conf /home/ubuntu/ingestion3/conf/i3.conf
+    --name $1
+    --input /home/ubuntu/data/$1/harvest/
+    --sparkMaster local[*]"
+}' | tee -a "/home/ubuntu/.bashrc" > /dev/null
+
+cd ~/
+sudo git clone https://github.com/dpla/ingestion3.git
 
 SCRIPT
 
@@ -37,7 +59,7 @@ Vagrant.configure("2") do |config|
     aws.subnet_id = "subnet-e8c8f3c0"
     aws.ssh_host_attribute = :private_ip_address
     aws.keypair_name = "general"
-    aws.instance_type = "m5.xlarge"
+    aws.instance_type = "m5.2xlarge"
     override.ssh.username = "ubuntu"
     override.vm.synced_folder ".", "/vagrant", disabled: true 
     override.ssh.private_key_path = "~/.ssh/general.pem"
