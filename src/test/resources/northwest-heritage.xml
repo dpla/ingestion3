@@ -16,6 +16,7 @@
     <mods:note type="ownership">Densho</mods:note>
     <mods:physicalDescription>
         <mods:form>image/jpeg</mods:form>
+        <mods:extent>3.5 x 7 in.</mods:extent>
     </mods:physicalDescription>
     <mods:recordInfo>
         <mods:recordIdentifier>ddr-densho-101-1</mods:recordIdentifier>
@@ -36,10 +37,17 @@
             <mods:roleTerm>creator</mods:roleTerm>
         </mods:role>
     </mods:name>
+    <mods:name>
+        <mods:namePart>Thiry, Paul, 1904-1993</mods:namePart>
+        <mods:role>
+            <mods:roleTerm>contributor</mods:roleTerm>
+        </mods:role>
+    </mods:name>
     <mods:language>
         <mods:languageTerm>eng</mods:languageTerm>
     </mods:language>
     <mods:originInfo>
+        <mods:publisher>Watkins, Carleton E., 1829-1916</mods:publisher>
         <mods:dateCreated>1891?</mods:dateCreated>
     </mods:originInfo>
     <mods:relatedItem type="host">

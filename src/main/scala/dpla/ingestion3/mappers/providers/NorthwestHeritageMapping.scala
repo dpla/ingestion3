@@ -1,5 +1,6 @@
 package dpla.ingestion3.mappers.providers
 
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
@@ -10,7 +11,6 @@ import org.json4s.JValue
 import org.json4s.JsonDSL._
 
 import scala.xml._
-
 
 class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
 
@@ -35,12 +35,12 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
       .flatMap(collection => extractStrings(collection \ "titleInfo" \ "title"))
       .map(nameOnlyCollection)
 
-//  override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-//  // when <role><roleTerm> DOES equal "contributor>
-//    (data \\ "mods" \ "name")
-//      .filter(node => (node \ "role" \ "roleTerm").text.equalsIgnoreCase("contributor"))
-//      .flatMap(n => extractStrings(n \ "namePart"))
-//      .map(nameOnlyAgent)
+  override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+  // when <role><roleTerm> DOES equal "contributor>
+    (data \ "name")
+      .filter(node => (node \ "role" \ "roleTerm").text.equalsIgnoreCase("contributor"))
+      .flatMap(n => extractStrings(n \ "namePart"))
+      .map(nameOnlyAgent)
 
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
   // <mods:name><mods:namePart> when <role><roleTerm> is 'creator'
@@ -59,19 +59,21 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
     extractStrings(data \\ "mods" \ "abstract")
   }
 
-//  override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
-//  // <mods:physicalDescription><mods:extent>
-//    extractStrings(data \\ "mods" \ "physicalDescription" \ "extent")
-//
-//  override def format(data: Document[NodeSeq]): Seq[String] =
-//  // <mods:genre> AND <mods:physicalDescription><mods:form>
-//    extractStrings(data \\ "mods" \ "genre") ++
-//      extractStrings(data \\ "mods" \ "physicalDescription" \ "form")
-//
-//  override def identifier(data: Document[NodeSeq]): Seq[String] =
-//  // <mods:identifier>
-//    extractStrings(data \\ "mods" \ "identifier")
-//
+  override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
+  // <mods:physicalDescription><mods:extent>
+    extractStrings(data \\ "mods" \ "physicalDescription" \ "extent")
+
+  override def format(data: Document[NodeSeq]): Seq[String] =
+  // <mods:genre> AND <mods:physicalDescription><mods:form>
+    (extractStrings(data \\ "mods" \ "genre") ++
+      extractStrings(data \\ "mods" \ "physicalDescription" \ "form"))
+      .map(_.applyBlockFilter(formatBlockList))
+      .filter(_.nonEmpty)
+
+  override def identifier(data: Document[NodeSeq]): Seq[String] =
+  // <mods:recordInfo> \ "recordIdentifier"
+    extractStrings(data \\ "recordInfo" \ "recordIdentifier")
+
   override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
   // <mods:language><mods:languageTerm>
     extractStrings(data \ "language" \ "languageTerm")
@@ -81,11 +83,11 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
   // <mods:subject><mods:geographic>
     extractStrings(data \ "subject" \ "geographic")
       .map(nameOnlyPlace)
-//
-//  override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
-//  // <mods:originInfo><mods:publisher>
-//    extractStrings(data \\ "mods" \ "originInfo" \ "publisher")
-//      .map(nameOnlyAgent)
+
+  override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
+  // <mods:originInfo><mods:publisher>
+    extractStrings(data \\ "mods" \ "originInfo" \ "publisher")
+      .map(nameOnlyAgent)
 //
 //  override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
 //  // <mods:accessCondition>

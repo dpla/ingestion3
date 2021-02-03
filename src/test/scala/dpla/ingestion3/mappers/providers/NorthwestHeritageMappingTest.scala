@@ -87,5 +87,30 @@ class NorthwestHeritageMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("Seattle Historical Photograph Collection").map(nameOnlyCollection)
     assert(extractor.collection(xml) === expected)
   }
+
+  it should "extract the correct contributor" in {
+    val expected = Seq("Thiry, Paul, 1904-1993").map(nameOnlyAgent)
+    assert(extractor.contributor(xml) === expected)
+  }
+
+  it should "extract the correct identifier" in {
+    val expected = Seq("ddr-densho-101-1")
+    assert(extractor.identifier(xml) === expected)
+  }
+
+  it should "extract the correct formats" in {
+    val expected = Seq("photographs")
+    assert(extractor.format(xml) === expected)
+  }
+
+  it should "extract the correct extent" in {
+    val expected = Seq("3.5 x 7 in.")
+    assert(extractor.extent(xml) === expected)
+  }
+
+  it should "extract the correct publisher" in {
+    val expected = Seq("Watkins, Carleton E., 1829-1916").map(nameOnlyAgent)
+    assert(extractor.publisher(xml) === expected)
+  }
 }
 
