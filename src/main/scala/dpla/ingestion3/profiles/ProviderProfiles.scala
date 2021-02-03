@@ -261,10 +261,10 @@ class NcProfile extends XmlProfile {
   * Northwest Digital Heritage
   */
 class NorthwestHeritageProfile extends XmlProfile {
-  type Mapping = NcMapping
+  type Mapping = NorthwestHeritageMapping
 
   override def getHarvester = classOf[NorthwestHeritageFileHarvester]
-  override def getMapping = new NcMapping // FIXME MODS mapping
+  override def getMapping = new NorthwestHeritageMapping
 }
 
 /**
