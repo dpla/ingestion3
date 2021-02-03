@@ -15,12 +15,12 @@ import scala.xml._
 
 
 /**
-  * Extracts values from parsed Xml
+  * Extracts values from parsed XML
   */
 class NorthwestHeritageFileExtractor extends XmlExtractor
 
 /**
-  * Entry for harvesting XML serialized from an OAI endpoint
+  * Entry for harvesting MODS XML from the Northwest Heritage Hub
   */
 class NorthwestHeritageFileHarvester(spark: SparkSession,
                       shortName: String,
@@ -92,7 +92,7 @@ class NorthwestHeritageFileHarvester(spark: SparkSession,
     } yield item match {
       case record: Node =>
         // Extract required record identifier
-        val id: Option[String] = extractor.extractString(record \ "identifier") // mods \ "identifier"
+        val id: Option[String] = extractor.extractString(record \ "identifier")
 
         val outputXML = xmlToString(record)
 
@@ -131,7 +131,7 @@ class NorthwestHeritageFileHarvester(spark: SparkSession,
     }
 
   /**
-    * Executes the Digital Virginias harvest
+    * Executes the Northwest Heritage harvest
     */
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()

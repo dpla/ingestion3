@@ -88,20 +88,11 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
   // <mods:originInfo><mods:publisher>
     extractStrings(data \\ "mods" \ "originInfo" \ "publisher")
       .map(nameOnlyAgent)
-//
-//  override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
-//  // <mods:accessCondition>
-//    extractStrings(data \\ "mods" \ "accessCondition")
-//
+
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
     // <mods:subject><mods:topic>
     extractStrings(data \ "subject" \ "topic").map(nameOnlyConcept)
 
-//  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
-//  // <mods:subject><mods:temporal>
-//    extractStrings(data \\ "mods" \ "subject" \ "temporal")
-//      .map(stringOnlyTimeSpan)
-//
   override def title(data: Document[NodeSeq]): Seq[String] =
   // <mods:titleInfo><mods:title>
     extractStrings(data \ "titleInfo" \ "title")
@@ -126,15 +117,6 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
       .flatMap(node => getByAttribute(node, "type", "use and reproduction"))
       .flatMap(extractStrings)
       .map(URI)
-
-//  override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] = {
-//    // second <mods:recordInfo><mods:recordContentSource> if exists
-//    val providers = extractStrings(data \\ "mods" \ "recordInfo" \ "recordContentSource")
-//      .map(nameOnlyAgent)
-//    if (providers.length > 1)
-//      Some(providers(1))
-//    else None
-//  }
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
   // <mods:location><mods:url usage="primary">
