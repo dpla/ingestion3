@@ -258,6 +258,16 @@ class NcProfile extends XmlProfile {
 }
 
 /**
+  * Northwest Digital Heritage
+  */
+class NorthwestHeritageProfile extends XmlProfile {
+  type Mapping = NorthwestHeritageMapping
+
+  override def getHarvester = classOf[NorthwestHeritageFileHarvester]
+  override def getMapping = new NorthwestHeritageMapping
+}
+
+/**
   * Ohio Hub
   */
 class OhioProfile extends XmlProfile {

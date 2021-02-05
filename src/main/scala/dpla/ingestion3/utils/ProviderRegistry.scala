@@ -68,6 +68,7 @@ object ProviderRegistry {
     "mwdl" -> Register(profile = new MwdlProfile),
     "nara" -> Register(profile = new NaraProfile),
     "nc" -> Register(profile = new NcProfile),
+    "northwest-heritage" -> Register(profile = new NorthwestHeritageProfile),
     "oklahoma" -> Register(profile = new OklahomaProfile),
     "ohio" -> Register(profile = new OhioProfile),
     "orbis-cascade" -> Register(profile = new OrbisCascadeProfile),
