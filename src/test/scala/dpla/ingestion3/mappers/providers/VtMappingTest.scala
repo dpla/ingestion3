@@ -114,4 +114,9 @@ class VtMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("http://archive.org/download/150SNV/__ia_thumb.jpg").map(stringOnlyWebResource)
     assert(extractor.preview(xml) === expected)
   }
+
+  it should "extract the correct iiif manifest" in {
+    val expected = Seq("https://iiif.archivelab.org/iiif/1808.rockwoodc.18390316/manifest.json").map(URI)
+    assert(extractor.iiifManifest(xml) === expected)
+  }
 }
