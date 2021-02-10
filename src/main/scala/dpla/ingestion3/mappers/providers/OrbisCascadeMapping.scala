@@ -1,7 +1,5 @@
 package dpla.ingestion3.mappers.providers
 
-import java.net.URL
-
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany, ZeroToOne}
@@ -10,7 +8,6 @@ import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
-import scala.util.{Failure, Success, Try}
 import scala.xml._
 
 class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
@@ -20,54 +17,49 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
   override def getProviderName(): String = "orbis-cascade"
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] = {
-//    getByAttribute(data)
-    Option(data
-      .head
-      .attributes
-      .headOption
+    val xml: Elem  = data.get.asInstanceOf[Elem]
+    xml.attribute(xml.getNamespace("rdf"), "about")
       .getOrElse(throw new Exception("Missing required record ID"))
-      .value
-      .text)
+      .flatMap(extractStrings(_))
+      .headOption
   }
-
-
+  
   // SourceResource mapping
     override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
       extractStrings(data \\ "SourceResource" \ "contributor")
         .map(nameOnlyAgent)
 
-
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] =
-    extractStrings(metadataRoot(data) \ "creator")
+    extractStrings(data \\ "SourceResource" \ "contributor")
       .map(nameOnlyAgent)
 
+  // TODO: Verify no label
+  override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
+    val dateEarly = extractStrings(data \\ "SourceResource" \ "date" \ "TimeSpan" \ "begin")
+    val dateLate = extractStrings(data \\ "SourceResource" \ "date" \ "TimeSpan" \ "end")
 
-  override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
-    extractStrings(metadataRoot(data) \ "date")
-      .map(stringOnlyTimeSpan)
+    if(dateEarly.length == dateLate.length) {
+      dateEarly.zip(dateLate).map {
+        case (begin: String, end: String) =>
+          EdmTimeSpan(
+            originalSourceDate = Some(s"$begin-$end"),
+            begin = Some(begin),
+            end = Some(end)
+          )
+      }
+    } else {
+      Seq(emptyEdmTimeSpan)
+    }
+  }
 
   // done
   override def description(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \\ "SourceResource" \ "description")
 
-//  override def identifier(data: Document[NodeSeq]): Seq[String] =
-//    extractStrings(metadataRoot(data) \ "identifier")
-//      .filterNot(t => {
-//        Try { new URL(t) } match {
-//          case Success(_) => true
-//          case Failure(_) => false
-//        }
-//      })
-
   // done
-//  override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
-//    extractStrings(metadataRoot(data) \ "language")
-//      .map(nameOnlyConcept)
-
-  // done
-//  override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
-//    extractStrings(metadataRoot(data) \ "publisher")
-//      .map(nameOnlyAgent)
+  override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
+    extractStrings(data \\ "SourceResource" \ "language")
+      .map(nameOnlyConcept)
 
   // done
   override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
@@ -90,39 +82,38 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
-  // TODO FIXME - TBD could be source or could be publisher
+  // FIXME: Need to dereference the URI
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    extractStrings(metadataRoot(data) \ "source")
-      .map(nameOnlyAgent)
+//    extractStrings(metadataRoot(data) \ "source")
+//      .map(nameOnlyAgent)
+    Seq("").map(nameOnlyAgent)
 
   // done
-  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
-    (data \ "rights").map(r => {
-      r.prefix match {
-        case "edm" => r // FIXME this is bonkers
-          .attributes
-          .headOption
-          .getOrElse(throw new Exception("Missing required record ID"))
-          .value
-          .text
-        case _ => ""
-      }
-    }).filter(_.nonEmpty)
-      .filter(URI(_).validate)
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
+    val xml: Elem = (data \ "rights").head.asInstanceOf[Elem] //.asInstanceOf[Elem]
+    val rights = xml.attribute(xml.getNamespace("rdf"), "resource").getOrElse(Seq())
+
+    rights
+      .flatMap(extractStrings)
       .map(URI)
+  }
 
   override def rights(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \\ "SourceResource" \ "rights")
 
-  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    extractStrings(metadataRoot(data) \ "identifier")
-      .filter(t => {
-        Try { new URL(t) } match {
-          case Success(_) => true
-          case Failure(_) => false
-        }
-      })
-      .map(stringOnlyWebResource)
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
+    val isShownAt = (data \ "isShownAt").headOption match {
+      case Some(node) =>
+        val elem = node.asInstanceOf[Elem]
+        elem
+          .attribute(elem.getNamespace("rdf"), "resource")
+          .getOrElse(Seq())
+          .flatMap(extractStrings(_))
+      case None => Seq()
+    }
+
+    isShownAt.map(stringOnlyWebResource)
+  }
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
@@ -138,8 +129,4 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
     name = Some("Orbis Cascade Alliance"),
     uri = Some(URI("http://dp.la/api/contributor/orbiscascade"))
   )
-
-  def metadataRoot(data: Document[NodeSeq]): NodeSeq = data \ "metadata" \ "dc"
-
-  def rightsHelper(data: Document[NodeSeq]): Seq[String] = extractStrings(metadataRoot(data) \"rights")
 }
