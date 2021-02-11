@@ -20,6 +20,7 @@
             <dc:rights rdf:resource="http://rightsstatements.org/vocab/CNE/1.0/"/>
             <dcterms:spatial>Canada--Yukon Territory</dcterms:spatial>
             <dcterms:title>View of opposite shore from water with mountain in distance, Yukon Territory, circa 1903-1906</dcterms:title>
+            <dcterms:language>eng</dcterms:language>
             <dcterms:date>
                 <edm:TimeSpan>
                     <edm:begin rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear"

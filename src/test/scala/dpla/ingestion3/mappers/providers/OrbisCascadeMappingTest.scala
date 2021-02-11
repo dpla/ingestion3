@@ -30,17 +30,17 @@ class OrbisCascadeMappingTest extends FlatSpec with BeforeAndAfter {
   // tbd creator
 
   it should "extract the correct dates" in {
-    val expected = Seq("1946").map(stringOnlyTimeSpan)
+    val expected = Seq(
+      EdmTimeSpan(
+        originalSourceDate=Some("1903-1906"),
+        begin = Some("1903"),
+        end = Some("1906")
+      ))
     assert(extractor.date(xml) === expected)
   }
 
   it should "extract the correct description" in
     assert(extractor.description(xml) == Seq("PH Coll 41.96c Scanned from an original photographic print at 110 dpi in JPEG format at compression rate 3 and resized to 768x600 ppi. 2015"))
-
-  it should "extract the correct identifier" in {
-    val expected = Seq("MG101_b5_f1_001")
-    assert(extractor.identifier(xml) === expected)
-  }
 
   it should "extract the correct place" in {
     val expected = Seq("Canada--Yukon Territory").map(nameOnlyPlace)
@@ -51,11 +51,6 @@ class OrbisCascadeMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct language" in {
     val expected = Seq("eng").map(nameOnlyConcept)
     assert(extractor.language(xml) === expected)
-  }
-
-  it should "extract the correct publisher" in {
-    val expected = Seq("University of Idaho Library Digital Initiatives, http://www.lib.uidaho.edu/digital/").map(nameOnlyAgent)
-    assert(extractor.publisher(xml) === expected)
   }
 
   it should "extract edmRights value if it is a URI'" in {

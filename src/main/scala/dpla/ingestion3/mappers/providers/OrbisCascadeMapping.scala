@@ -23,7 +23,7 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
       .flatMap(extractStrings(_))
       .headOption
   }
-  
+
   // SourceResource mapping
     override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
       extractStrings(data \\ "SourceResource" \ "contributor")
@@ -117,7 +117,19 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
-  // TODO thumbnail mapping -- but there are no thumbnail values in metadata
+  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
+    val preview = (data \ "preview" \ "WebResource").headOption match {
+      case Some(node) =>
+        val elem = node.asInstanceOf[Elem]
+        elem
+          .attribute(elem.getNamespace("rdf"), "about")
+          .getOrElse(Seq())
+          .flatMap(extractStrings(_))
+      case None => Seq()
+    }
+
+    preview.map(stringOnlyWebResource)
+  }
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
