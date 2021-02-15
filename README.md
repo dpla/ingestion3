@@ -163,6 +163,8 @@ After every mapping job we generate three sources of feedback:
 
 **Summary**
 
+This file provides a high level overview of the mapping process and summarizes the messages logged. Importantly, it breaks down results in terms of records and messages because a single record may have multiple fatal errors (missing both rights and dataProvider for example) or multiple warnings (a single edmRights values is normalized in multiple ways, https:// to http:// and page to vocab). 
+
 ```text 
                                 Mapping Summary
 
@@ -192,7 +194,7 @@ Warnings
 - Normalized remove trailing punctuation, edmRights.......................79,594
 - Duplicate, rights and edmRights.........................................76,747
 - Normalized https://, edmRights...........................................7,220
-- Not a URI, edmRights.....................................................2,904
+- Not a valid edmRights URI, edmRights.....................................2,904
 - Normalized /page/ to /vocab/, edmRights....................................660
 - Normalized add trailing `/`, edmRights......................................57
 - Total..................................................................167,182
@@ -205,23 +207,31 @@ Errors
 ```
 
 **Error logs**
+
+- **message** - Describes the error recorded, most frequently this will be *Missing required field* 
+- **level** - *error* by default
+- **field** - The afflicted field in DPLA MAP model  
+- **id** - The local persistent identifier which includes the DPLA prefix `hub--{local_id}`
+- **value** - Value of the field if available but `MISSING` when the error is *Missing required field*
+
 ```csv 
 message,level,field,id,value
 Missing required field,error,isShownAt,orbis-cascade--http://harvester.orbiscascade.org/record/8a98044e8c695b3ae99dc15e9ed75026,MISSING
 Missing required field,error,isShownAt,orbis-cascade--http://harvester.orbiscascade.org/record/07b9a70513bb7240d8586ca5f51fa3cb,MISSING
-Missing required field,error,isShownAt,orbis-cascade--http://harvester.orbiscascade.org/record/a92a939faf99dd71d4f4f339b8a987a5,MISSING
-Missing required field,error,isShownAt,orbis-cascade--http://harvester.orbiscascade.org/record/b8e8efafcb1eeb5c0425a2f879948c7a,MISSING
-Missing required field,error,isShownAt,orbis-cascade--http://harvester.orbiscascade.org/record/115185ea415aef8d82b5cbef5ce35086,MISSING
 ```
 
 **Warning logs** 
+
+- **message** - Describes the warning recorded 
+- **level** - *warn* by default
+- **field** - The afflicted field in DPLA MAP model  
+- **id** - The local persistent identifier which includes the DPLA prefix `{hub}--{local_id}`
+- **value** - Value of the field if available but `MISSING` if no value in field 
+
 ```csv 
 message,level,field,id,value
-Duplicate,warn,rights and edmRights,orbis-cascade--http://harvester.orbiscascade.org/record/28f1833ed9f599b7846e7b6099d13e18,both rights and edmRights are defined
+Not a valid edmRights URI,warn,edmRights,orbis-cascade--http://harvester.orbiscascade.org/record/3d07e14cc52609689e1fca1cc17273b2,http://creativecommons.org/share-your-work/public-domain/pdm/
 Normalized remove trailing punctuation,warn,edmRights,orbis-cascade--http://harvester.orbiscascade.org/record/cf959976c177c9468e302e52dffcee1e,http://rightsstatements.org/vocab/InC/1.0/
-Normalized remove trailing punctuation,warn,edmRights,orbis-cascade--http://harvester.orbiscascade.org/record/32a1aae6096264e883aab49dac1377cf,http://rightsstatements.org/vocab/NoC-US/1.0/
-Normalized remove trailing punctuation,warn,edmRights,orbis-cascade--http://harvester.orbiscascade.org/record/120f95db82531f6b3207180fd8a6dac6,http://rightsstatements.org/vocab/InC/1.0/
-Normalized remove trailing punctuation,warn,edmRights,orbis-cascade--http://harvester.orbiscascade.org/record/d03f8b6c2086b30adf3bb06da21a725d,http://rightsstatements.org/vocab/NKC/1.0/
 ```
 # Enrichment and Normalization
  
