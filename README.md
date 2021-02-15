@@ -13,9 +13,9 @@ This project is an ETL system for cultural heritage metadata. The system has thr
 # 
 
 # Mapping and Validation 
-Each data provider has their own mapping document which defines how values are moved from the harvested records into DPLA records. While some mapping may look similar because the data providers use the same metadata schema, we do not reuse mappings between providers. Provider mappings are defined [here](https://github.com/dpla/ingestion3/tree/develop/src/main/scala/dpla/ingestion3/mappers/providers). 
+Each data provider has their own mapping document which defines how values are moved from the harvested records into DPLA records. While some mapping may look similar because the data providers use the same metadata schema, we do not reuse mappings between providers. All provider mappings are defined [here](https://github.com/dpla/ingestion3/tree/develop/src/main/scala/dpla/ingestion3/mappers/providers). 
 
-##### XML mapping example 
+#### XML mapping example 
 
 If we take this PA Digital original XML record
 ```xml
@@ -40,7 +40,7 @@ and look at the `data()` mapping from the PA Digital hub ([code](https://github.
       .map(stringOnlyTimeSpan)
 ```
 
-##### JSON mapping example
+#### JSON mapping example
 Simliarlly, looking at this Digital Library of Georgia original JSON record
 ```json 
 {
@@ -53,7 +53,7 @@ Simliarlly, looking at this Digital Library of Georgia original JSON record
   ],
   "dc_date_display": [
     "1899-12-14"
-  ]
+  ],
   "created_at_dts": "2017-05-25T21:19:27Z",
   "updated_at_dts": "2017-06-07T15:17:06Z"
 }
@@ -66,6 +66,33 @@ the `date()` mapping ([code](https://github.com/dpla/ingestion3/blob/develop/src
 ```
 
 While the original records look very different, the code used to map the values looks quite similar. This makes the code more readable and allows us to write homogeneous mappings regardless of the format or schema of the underlying original records.  
+
+#### Filtering 
+There are provider specific rules and exceptions written into some mappings and it is outside the scope of this document to enumerate and explain all of them but one example of filtering non-preferred values is provided below. 
+
+For records coming from the Ohio Digital Network we have a filter in place for the `format` field ([code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/mappers/providers/OhioMapping.scala#L58-L65)). 
+
+```scala 
+  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
+    // Extract text values from format property
+    extractStrings(data \ "metadata" \\ "format")
+       // if text value contains `;` split around it 
+      .flatMap(_.splitAtDelimiter(";"))
+      // filter out any text values contained in the following 
+      // term block lists
+      //   - DigitalSurrogateBlockList (e.g. application/pdf, application/pdf)
+      //   - FormatTypeValuesBlockList (e.g. Image, Still image, Sound, Audio)
+      //   - ExtentIdentificationList (e.g. 1 x 2, 1 X 2, 1x2 but not 1 xerox)
+      .map(_.applyBlockFilter(
+         DigitalSurrogateBlockList.termList ++
+         FormatTypeValuesBlockList.termList ++
+        ExtentIdentificationList.termList))
+      .filter(_.nonEmpty)
+```
+This level of filtering is based on careful review of existing metadata and with an eye towards strict compliance with existing metadata guidelines.
+
+
+
 
 
 
