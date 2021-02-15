@@ -2,20 +2,20 @@
 
 This project is an ETL system for cultural heritage metadata. The system has three primary components:
 
-* [Harvest]()
+* [Harvest](#harvest)
 * [Mapping and validation](#mapping-and-validation) 
-* [Enrichment and normalization]()
-* [JSONL]()
-* [Wikimedia]()
+* [Enrichment and normalization](#enrichment-and-normalization)
+* [JSONL](#jsonl)
+* [Wikimedia](#wikimedia)
 
 
 
-# 
+# Harvest
 
 # Mapping and Validation 
 Each data provider has their own mapping document which defines how values are moved from the harvested records into DPLA records. While some mapping may look similar because the data providers use the same metadata schema, we do not reuse mappings between providers. All provider mappings are defined [here](https://github.com/dpla/ingestion3/tree/develop/src/main/scala/dpla/ingestion3/mappers/providers). 
 
-#### XML mapping example 
+### XML mapping example 
 
 If we take this PA Digital original XML record
 ```xml
@@ -40,7 +40,7 @@ and look at the mapping for the `date()` field from the PA Digital hub ([code](h
       .map(stringOnlyTimeSpan)
 ```
 
-#### JSON mapping example
+### JSON mapping example
 Similarly, looking at this Digital Library of Georgia original JSON record
 ```json 
 {
@@ -67,7 +67,7 @@ the `date()` mapping ([code](https://github.com/dpla/ingestion3/blob/develop/src
 
 While the original records look very different, the code used to map the values looks quite similar. This makes the code more readable and allows us to write fairly homogeneous mappings regardless of the format or schema of the underlying original records.  
 
-#### Filtering 
+### Filtering 
 There are provider specific rules and exceptions written into some mappings and it is outside the scope of this document to enumerate and explain all of them but one example of filtering non-preferred values is provided below. 
 
 For records coming from the Ohio Digital Network we have a filter in place for the `format` field ([code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/mappers/providers/OhioMapping.scala#L58-L65)). This level of filtering is not common and is based on careful review of existing metadata with an eye towards strict compliance with existing metadata guidelines. 
@@ -91,17 +91,17 @@ For records coming from the Ohio Digital Network we have a filter in place for t
 ```
 
 
-#### Validations
+### Validations
 After attempting to map all fields from an original record we inspect the results and perform validations on specific fields. These validations fall into two two groups, errors and warnings. Errors will cause a record to fail mapping and warnings are informational only, the record will pass and appear online. 
 
-  Errors are generally recorded only for *missing required* fields which include
+  Errors are generally recorded only for **missing required fields** which include
   * dataProvider
   * isShownAt
   * edmRights/rights
   * title
   * originalId (basis for DPLA identifier)
 
-##### edmRights normalization and validation 
+#### edmRights normalization and validation 
 This is a special case because it inverts how we approach this process. Typically, normalization follows validation but in this we normalize edmRights value first and then validate the normalized value. This process has also been documented in a white paper [here](about:blank). 
 
 How are `edmRights` URIs normalized? 
@@ -115,7 +115,6 @@ How are `edmRights` URIs normalized?
 
 Messages for all of these operations are logged as warnings in our mapping summary reports. 
 
-Example
 ```text
                                 Message Summary
 Warnings
@@ -156,7 +155,81 @@ A record the record has an invalid edmRights URI but also contains a `dc:rights`
 ```
 A record only contains an invalid `edmRights` URI and it did not pass our validation check then the record will fail mapping because it will not have any rights information associated with the record.
 
+### Summary and logs
+After every mapping job we generate three sources of feedback: 
+- a `_SUMMARY` file
+- a CSV detailing the errors
+- a CSV detailing the warnings.  
+
+**Summary**
+
+```text 
+                                Mapping Summary
+
+Provider...........................................................ORBIS-CASCADE
+Start date...................................................02/10/2021 10:56:14
+Runtime.............................................................00:03:45.285
+
+Duplicate records in harvest...................................................0
+
+Attempted.................................................................79,651
+Successful................................................................38,608
+Failed....................................................................41,043
+
+
+                              Errors and Warnings
+
+Messages
+- Errors..................................................................41,043
+- Warnings...............................................................167,182
+
+Records
+- Errors..................................................................41,043
+- Warnings................................................................79,651
+
+                                Message Summary
+Warnings
+- Normalized remove trailing punctuation, edmRights.......................79,594
+- Duplicate, rights and edmRights.........................................76,747
+- Normalized https://, edmRights...........................................7,220
+- Not a URI, edmRights.....................................................2,904
+- Normalized /page/ to /vocab/, edmRights....................................660
+- Normalized add trailing `/`, edmRights......................................57
+- Total..................................................................167,182
+Errors
+- Missing required field, isShownAt.......................................41,043
+- Total...................................................................41,043
+
+~/orbis-cascade/mapping/20210210_085614-orbis-cascade-MAP4_0.MAPRecord.avro/_LOGS/errors
+~/orbis-cascade/mapping/20210210_085614-orbis-cascade-MAP4_0.MAPRecord.avro/_LOGS/warnings
+```
+
+**Error logs**
+```csv 
+message,level,field,id,value
+Missing required field,error,isShownAt,orbis-cascade--http://harvester.orbiscascade.org/record/8a98044e8c695b3ae99dc15e9ed75026,MISSING
+Missing required field,error,isShownAt,orbis-cascade--http://harvester.orbiscascade.org/record/07b9a70513bb7240d8586ca5f51fa3cb,MISSING
+Missing required field,error,isShownAt,orbis-cascade--http://harvester.orbiscascade.org/record/a92a939faf99dd71d4f4f339b8a987a5,MISSING
+Missing required field,error,isShownAt,orbis-cascade--http://harvester.orbiscascade.org/record/b8e8efafcb1eeb5c0425a2f879948c7a,MISSING
+Missing required field,error,isShownAt,orbis-cascade--http://harvester.orbiscascade.org/record/115185ea415aef8d82b5cbef5ce35086,MISSING
+```
+
+**Warning logs** 
+```csv 
+message,level,field,id,value
+Duplicate,warn,rights and edmRights,orbis-cascade--http://harvester.orbiscascade.org/record/28f1833ed9f599b7846e7b6099d13e18,both rights and edmRights are defined
+Normalized remove trailing punctuation,warn,edmRights,orbis-cascade--http://harvester.orbiscascade.org/record/cf959976c177c9468e302e52dffcee1e,http://rightsstatements.org/vocab/InC/1.0/
+Normalized remove trailing punctuation,warn,edmRights,orbis-cascade--http://harvester.orbiscascade.org/record/32a1aae6096264e883aab49dac1377cf,http://rightsstatements.org/vocab/NoC-US/1.0/
+Normalized remove trailing punctuation,warn,edmRights,orbis-cascade--http://harvester.orbiscascade.org/record/120f95db82531f6b3207180fd8a6dac6,http://rightsstatements.org/vocab/InC/1.0/
+Normalized remove trailing punctuation,warn,edmRights,orbis-cascade--http://harvester.orbiscascade.org/record/d03f8b6c2086b30adf3bb06da21a725d,http://rightsstatements.org/vocab/NKC/1.0/
+```
+# Enrichment and Normalization
  
+ 
+# JSONL
+ 
+ 
+# Wikimedia
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/6a9dfda51ad04ce3acfb7fcb441af846)](https://www.codacy.com/app/mdellabitta/ingestion3?utm_source=github.com&utm_medium=referral&utm_content=dpla/ingestion3&utm_campaign=badger)
 [![Build Status](https://travis-ci.org/dpla/ingestion3.svg?branch=master)](https://travis-ci.org/dpla/ingestion3)
