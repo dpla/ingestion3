@@ -234,6 +234,57 @@ Not a valid edmRights URI,warn,edmRights,orbis-cascade--http://harvester.orbisca
 Normalized remove trailing punctuation,warn,edmRights,orbis-cascade--http://harvester.orbiscascade.org/record/cf959976c177c9468e302e52dffcee1e,http://rightsstatements.org/vocab/InC/1.0/
 ```
 # Enrichment and Normalization
+
+All successfully mapped records are run through a series of text normalizations and enrichments. The text normalizations are comprehensive and at least some are run over every field. The enrichments are limited to a specific set of fields. 
+
+### Text normalizations 
+
+For a comprehensive view of the normalizations that are run please see [this code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/enrichments/normalizations/StringNormalizations.scala) but these normalizations are run over almost every field in every class.
+- `deduplication` - Only unique values are propagated to the index
+- `stripHTML` - Removes any HTML markup in the text
+- `reduceWhitespace` - Reduce multiple whitespace values to a single and removes leading and trailing white space 
+
+#### Class and field specific normalizations 
+These normalizations are run over all instances of the specified class 
+
+##### sourceResource
+*format*
+- `capitalizeFirstChar` - Find and capitalize the first character in a given string
+
+*title*
+- `stripBrackets` - Removes matching leading and trailing brackets (square, round and curly braces) 
+- `cleanupLeadingPunctuation` - Removes leading colons, semi-colons, commas, slashes, hyphens and whitespace characters (whitespace, tab, new line and line feed) that precede the first letter or digit
+- `cleanupEndingPunctuation` - Removes trailing colons, semi-colons, commas, slashes, hyphens and whitespace characters (whitespace, tab, new line and line feed) that follow the last letter or digit
+
+##### edmAgent (creator, contributor, publisher, dataProvider)
+
+*name*
+- `stripBrackets` - Removes matching leading and trailing brackets (square, round and curly braces) 
+- `stripEndingPeriod` - Removes singular period from the end of a string. Ignores and removes trailing whitespace
+- `cleanupLeadingPunctuation` - Removes leading colons, semi-colons, commas, slashes, hyphens and whitespace characters (whitespace, tab, new line and line feed) that precede the first letter or digit
+- `cleanupEndingPunctuation` - Removes trailing colons, semi-colons, commas, slashes, hyphens and whitespace characters (whitespace, tab, new line and line feed) that follow the last letter or digit
+
+##### skosConcept (language, subject)
+
+*concept*, *providedLabel* 
+- `stripBrackets` - Removes matching leading and trailing brackets (square, round and curly braces) 
+- `stripEndingPeriod` - Removes singular period from the end of a string. Ignores and removes trailing whitespace
+- `cleanupLeadingPunctuation` - Removes leading colons, semi-colons, commas, slashes, hyphens and whitespace characters (whitespace, tab, new line and line feed) that precede the first letter or digit
+- `cleanupEndingPunctuation` - Removes trailing colons, semi-colons, commas, slashes, hyphens and whitespace characters (whitespace, tab, new line and line feed) that follow the last letter or digit
+- `capitalizeFirstChar` - Find and capitalize the first character in a given string
+
+
+##### edmTimeSpan
+
+*prefLabel*, *begin*, *end*
+- `stripDblQuotes` - Strip all double quotes from the given string
+
+### Enrichments 
+
+- dataProvider
+- date
+- language
+- type
  
  
 # JSONL
