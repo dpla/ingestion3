@@ -32,7 +32,7 @@ If we take this PA Digital original XML record
   </metadata>
 </record>
 ```
-and look at the `data()` mapping from the PA Digital hub ([code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/mappers/providers/PaMapping.scala#L40-L42)).  It extracts the text from the `date` property in the XML document, `data`. The text value is then used to create `EdmTimeSpan` objects using the [stringOnlyTimeSpan()](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/model/package.scala#L48) method.  
+and look at the mapping for the `date()` field from the PA Digital hub ([code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/mappers/providers/PaMapping.scala#L40-L42)).  It extracts the text from the `date` property in the original XML document, `data`. The text value is then used to create `EdmTimeSpan` objects using the [stringOnlyTimeSpan()](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/model/package.scala#L48) method.  
 
 ```scala 
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
@@ -41,7 +41,7 @@ and look at the `data()` mapping from the PA Digital hub ([code](https://github.
 ```
 
 #### JSON mapping example
-Simliarlly, looking at this Digital Library of Georgia original JSON record
+Similarly, looking at this Digital Library of Georgia original JSON record
 ```json 
 {
   "id": "aaa_agpapers_1016",
@@ -58,29 +58,29 @@ Simliarlly, looking at this Digital Library of Georgia original JSON record
   "updated_at_dts": "2017-06-07T15:17:06Z"
 }
 ``` 
-the `date()` mapping ([code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/mappers/providers/DlgMapping.scala#L76-L78)) takes the text values extracted from  the `dc_date_display` field in the JSON document, `data`.  The text value is then used to create `EdmTimeSpan` objects using the [stringOnlyTimeSpan()](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/model/package.scala#L48) method.  
+the `date()` mapping ([code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/mappers/providers/DlgMapping.scala#L76-L78)) takes the text values extracted from  the `dc_date_display` field in the original JSON document, `data`.  The text value is then used to create `EdmTimeSpan` objects using the [stringOnlyTimeSpan()](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/model/package.scala#L48) method.  
 ```scala 
   override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
     extractStrings("dc_date_display")(data)
       .map(stringOnlyTimeSpan)
 ```
 
-While the original records look very different, the code used to map the values looks quite similar. This makes the code more readable and allows us to write homogeneous mappings regardless of the format or schema of the underlying original records.  
+While the original records look very different, the code used to map the values looks quite similar. This makes the code more readable and allows us to write fairly homogeneous mappings regardless of the format or schema of the underlying original records.  
 
 #### Filtering 
 There are provider specific rules and exceptions written into some mappings and it is outside the scope of this document to enumerate and explain all of them but one example of filtering non-preferred values is provided below. 
 
-For records coming from the Ohio Digital Network we have a filter in place for the `format` field ([code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/mappers/providers/OhioMapping.scala#L58-L65)). 
+For records coming from the Ohio Digital Network we have a filter in place for the `format` field ([code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/mappers/providers/OhioMapping.scala#L58-L65)). This level of filtering is not common and is based on careful review of existing metadata with an eye towards strict compliance with existing metadata guidelines. 
 
 ```scala 
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
     // Extract text values from format property
     extractStrings(data \ "metadata" \\ "format")
-       // if text value contains `;` split around it 
+      // if text value contains `;` split it into multiple values 
       .flatMap(_.splitAtDelimiter(";"))
       // filter out any text values contained in the following 
       // term block lists
-      //   - DigitalSurrogateBlockList (e.g. application/pdf, application/pdf)
+      //   - DigitalSurrogateBlockList (e.g. application/pdf, application/xml)
       //   - FormatTypeValuesBlockList (e.g. Image, Still image, Sound, Audio)
       //   - ExtentIdentificationList (e.g. 1 x 2, 1 X 2, 1x2 but not 1 xerox)
       .map(_.applyBlockFilter(
@@ -89,13 +89,74 @@ For records coming from the Ohio Digital Network we have a filter in place for t
         ExtentIdentificationList.termList))
       .filter(_.nonEmpty)
 ```
-This level of filtering is based on careful review of existing metadata and with an eye towards strict compliance with existing metadata guidelines.
 
 
+#### Validations
+After attempting to map all fields from an original record we inspect the results and perform validations on specific fields. These validations fall into two two groups, errors and warnings. Errors will cause a record to fail mapping and warnings are informational only, the record will pass and appear online. 
+
+  Errors are generally recorded only for *missing required* fields which include
+  * dataProvider
+  * isShownAt
+  * edmRights/rights
+  * title
+  * originalId (basis for DPLA identifier)
+
+##### edmRights normalization and validation 
+This is a special case because it inverts how we approach this process. Typically, normalization follows validation but in this we normalize edmRights value first and then validate the normalized value. This process has also been documented in a white paper [here](about:blank). 
+
+How are `edmRights` URIs normalized? 
+1. Change `https://` to `http://`
+2. Drop `www`
+3. Change `/page/` to `/vocab/` (applies to rightsstatements.org values)
+4. Drop query parameters (ex. `?lang=en`)
+5. Add missing `/` to end of URI
+6. Remove trailing punctuation (ex. http://rightsstaments.org/vocab/Inc/;)
+7. Remove all leading and trailing whitespace
+
+Messages for all of these operations are logged as warnings in our mapping summary reports. 
+
+Example
+```text
+                                Message Summary
+Warnings
+- Normalized remove trailing punctuation, edmRights.......................79,594
+- Normalized https://, edmRights...........................................7,220
+- Normalized /page/ to /vocab/, edmRights....................................660
+- Normalized add trailing `/`, edmRights......................................57
+- Total..................................................................167,182
+```
+
+After we have normalized `edmRights` we validate those values against a list of ~600 accepted rightsstatements.org and creativecommons.org URIs ([full list here](https://github.com/dpla/ingestion3/blob/6a4e1e38152da480e5b33070df2996fedd3ea51f/src/main/scala/dpla/ingestion3/model/DplaMapData.scala#L153-L745)). If the value we created during normalization does not exactly match one of the 600 accepted values then we do not map the value. 
 
 
+**Scenario A** 
+```xml 
+<metadata> 
+    <oai_qdc:qualifieddc
+            xmlns:oai_qdc="http://worldcat.org/xmlschemas/qdc-1.0/"
+            xmlns:dcterms="http://purl.org/dc/terms/"
+            xmlns:edm="http://www.europeana.eu/schemas/edm/">
+        <edm:rights>http://specialcollections.edu/rights/copyright/1.0</edm:rights>
+        <dc:rights>All rights reserved</dc:rights>
+    </oai_qdc:qualifieddc>
+</metadata>
+```
+A record the record has an invalid edmRights URI but also contains a `dc:rights` value. It will pass mapping because *either* `edmRights` or `dc:rights` is required but the edmRights value will not appear in the record. 
 
+**Scenario B**
+```xml 
+<metadata> 
+    <oai_qdc:qualifieddc
+            xmlns:oai_qdc="http://worldcat.org/xmlschemas/qdc-1.0/"
+            xmlns:dcterms="http://purl.org/dc/terms/"
+            xmlns:edm="http://www.europeana.eu/schemas/edm/">
+        <edm:rights>http://specialcollections.edu/rights/copyright/1.0</edm:rights>
+    </oai_qdc:qualifieddc>
+</metadata>
+```
+A record only contains an invalid `edmRights` URI and it did not pass our validation check then the record will fail mapping because it will not have any rights information associated with the record.
 
+ 
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/6a9dfda51ad04ce3acfb7fcb441af846)](https://www.codacy.com/app/mdellabitta/ingestion3?utm_source=github.com&utm_medium=referral&utm_content=dpla/ingestion3&utm_campaign=badger)
 [![Build Status](https://travis-ci.org/dpla/ingestion3.svg?branch=master)](https://travis-ci.org/dpla/ingestion3)
