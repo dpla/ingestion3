@@ -12,6 +12,11 @@ This project is an ETL system for cultural heritage metadata. The system has thr
 
 # Harvest
 
+We harvest data from multiple sources but generally they fall into three catagories: api, file, and oai. 
+
+<img src="https://i.imgur.com/WZWuYnr.png" height="300"/>
+
+
 # Mapping and Validation 
 Each data provider has their own mapping document which defines how values are moved from the harvested records into DPLA records. While some mapping may look similar because the data providers use the same metadata schema, we do not reuse mappings between providers. All provider mappings are defined [here](https://github.com/dpla/ingestion3/tree/develop/src/main/scala/dpla/ingestion3/mappers/providers). 
 
