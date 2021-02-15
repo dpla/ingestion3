@@ -23,9 +23,6 @@ class XmlExtractorUtilsTest extends FlatSpec with XmlExtractor {
     val attr = xml \ "@{http://www.w3.org/1999/02/22-rdf-syntax-ns}about"
     println(xml)
     println("attr " + attr)
-
-    // assert(getAttributeValue("about")(xml) === "http://harvester.orbiscascade.org/record/e466e93cf4849fd8aa36f1daa1417c15")
   }
-
 }
 

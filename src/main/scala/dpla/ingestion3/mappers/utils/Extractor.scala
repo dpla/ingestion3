@@ -121,10 +121,6 @@ trait XmlExtractor extends Extractor[NodeSeq] {
     getByAttributeListOptions(e.asInstanceOf[Elem], att, values)
   }
 
-  def getAttributeValue(e: NodeSeq,  att: String): Option[String] = {
-    None
-  }
-
   /**
     * For each given node, get any immediate children that are text values.
     * Ignore nested text values.
