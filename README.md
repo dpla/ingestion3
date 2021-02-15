@@ -281,10 +281,14 @@ These normalizations are run over all instances of the specified class
 
 ### Enrichments 
 
-- dataProvider
-- date
-- language
-- type
+- **dataProvider** - Generates a Wikidata URI 
+
+- **date** - Generates begin and end dates from a date label
+
+- **language** -Generates language label from iso-639 codes
+
+- **type** - Generates a DCMI type value from this mapping ([code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/enrichments/TypeEnrichment.scala#L17-L147))
+
  
  
 # JSONL
