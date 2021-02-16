@@ -391,17 +391,19 @@ Data Provider.............................................................99,479
 
 ### Reports
 
-Beyond this summary report we also log for record how we did or did not transform each field in a CSV.
+Beyond this summary report we drill down and for every record log how we did or did not transform each field that we attempt to enrich. 
 
-For example here are the first few lines of the `type` enrichment report. It shows that we did not enrich the first record because its type value, `text`, was already a valid DCMIType term. The other records were enriched from `still image` to `image`. 
+For example, if we examine the first few lines of `./_LOGS/type/` enrichment CSV report. It shows that we did not enrich the first record because its type value, `text`, was already a valid DCMIType term. The other records were enriched from `still image` to `image`. 
 
 ```csv 
 level,message,field,value,enrichedValue,id
 info,Original value,type,text,Not enriched,3cfe5197e0140ad4329742fb12e49190
 info,Enriched value,type,still image,image,4485f5246b5ede59dae4486425f5149e
 info,Enriched value,type,still image,image,c5c4dd8d0d90ea7df8e686e717de4f38
-info,Enriched value,type,still image,image,5aa64d77d6544a1f1a8bec0e6c7683a3
 ```
+
+The reports are generated every time mapped data is enriched.
+
 
 # JSONL
  
