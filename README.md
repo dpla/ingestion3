@@ -296,13 +296,37 @@ These normalizations are run over all instances of the specified class
 Enrichments modify existing data and improve its quality to enhance its functionality 
 
 ### dataProvider
-Generates a Wikidata URI. Required for Wikimedia project
+One requirement of the Wikimedia project is that data provider values must be mapped to a Wikidata URI. DPLA maintains a lookup table of data provider names and Wiki URIs (see [institutions.json](https://github.com/dpla/ingestion3/blob/develop/src/main/resources/wiki/institutions.json) and [hubs.json](https://github.com/dpla/ingestion3/blob/develop/src/main/resources/wiki/hubs.json)). The enrichment adds the Wiki URI to the `edmAgent.exactMatch` property. Without a Wikidata URI, a record cannot be uploaded to Wikimedia. 
+
+This enrichment is still under development and subject to change.
 
 ### date
-Generates begin and end dates from a date label. Original value
+Generates begin and end dates from a provided data label that matches either pattern:
+- YYYY
+- YYYY-YYYY 
 
 ### language
-Generates language label from iso-639 codes
+Resolves ISO-639-1/3 codes to their full term. This will return an enriched SkosConcept class where the value mapped from the original record is stored in the `providedLabel` field and the complete term is stored in the `concept` field. 
+
+```scala 
+  // Lanuage Enrichment Test for 'Modern Greek', the language value mapped from the original records was `gre`
+  
+  // ISO-639 abbreviation, ISO-639 label
+  // gre,"Greek, Modern (1453-)"
+  it should "return an enriched SkosConcept for 'gre')" in {
+    val originalValue = SkosConcept(providedLabel = Option("gre"))
+    val expectedValue = SkosConcept(
+      providedLabel = Option("gre"),
+      concept = Option("Greek, Modern (1453-)")
+    )
+    assert(languageEnrichment.enrich(originalValue) === Option(expectedValue))
+  }
+```
+
+For additional examples of how this enrichment functions see [LanguageEnrichmentTests](https://github.com/dpla/ingestion3/blob/d9305d5733ba3553522b5d1c287cec2cfa061bfd/src/test/scala/dpla/ingestion3/enrichments/LanguageEnrichmentTest.scala) 
+
+When exporting the JSON-L, SkosConcepts are evaluated and if a `concept` is defined then that value is used otherwise, `providedLabel` (see [language definition in JSON-L export](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/model/package.scala#L170-L183)).
+ 
 
 ### type
 Generates a DCMI type value from this mapping ([code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/enrichments/TypeEnrichment.scala#L17-L147))
