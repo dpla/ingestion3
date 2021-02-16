@@ -1,6 +1,6 @@
 # DPLA Ingestion 3
 
-This project is an ETL system for cultural heritage metadata. The system has three primary components:
+This project is an ETL system for cultural heritage metadata. The system has five primary components, harvesting original records, mapping original records into DPLA MAP records, enriching DPLA MAP records, exporting DPLA MAP records as JSON-L to be indexed, and exporting eligible DPLA MAP records in Wikimedia markup. 
 
 * [Harvest](#harvest)
 * [Mapping and validation](#mapping-and-validation) 
@@ -17,7 +17,7 @@ This project is an ETL system for cultural heritage metadata. The system has thr
         * [date](#date)
         * [language](#language)
         * [type](#type)
-* [JSONL](#jsonl)
+* [JSON-L](#jsonl)
 * [Wikimedia](#wikimedia)
 
 
@@ -350,8 +350,12 @@ For additional examples of how this enrichment functions see [TypeEnrichmentTest
 
 # JSONL
  
+ TBD
  
 # Wikimedia
+
+TBD
+
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/6a9dfda51ad04ce3acfb7fcb441af846)](https://www.codacy.com/app/mdellabitta/ingestion3?utm_source=github.com&utm_medium=referral&utm_content=dpla/ingestion3&utm_campaign=badger)
 [![Build Status](https://travis-ci.org/dpla/ingestion3.svg?branch=master)](https://travis-ci.org/dpla/ingestion3)
