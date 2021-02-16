@@ -17,6 +17,7 @@ This project is an ETL system for cultural heritage metadata. The system has fiv
         * [date](#date)
         * [language](#language)
         * [type](#type)
+    * [Summary and reports](#summary-and-reports)
 * [JSON-L](#jsonl)
 * [Wikimedia](#wikimedia)
 
@@ -347,6 +348,60 @@ Resolves uncontrolled type terms mapped from original records to appropriate DCM
 ```
 
 For additional examples of how this enrichment functions see [TypeEnrichmentTest](https://github.com/dpla/ingestion3/blob/d9305d5733ba3553522b5d1c287cec2cfa061bfd/src/test/scala/dpla/ingestion3/enrichments/TypeEnrichmentTest.scala)
+
+## Summary and reports
+
+Enrichment results are also summarized and the transformations logged to CSV files. These summary and report documents only describe *enrichment* operations and do not include any transformations done through text normalizations.  
+
+### Summary
+
+This is an example overview of operations performed against records from the Big Sky Digital Network. In this case that overall we were able to improve almost every single record with only 557 which were not changed in any way. 
+
+The report breaks down per-enrichment how many records were improved.
+
+```text
+                               Enrichment Summary
+
+Provider......................................................................MT
+Start date...................................................02/15/2021 23:28:56
+Runtime.............................................................00:02:51.742
+
+Attempted.................................................................99,479
+Improved..................................................................98,922
+Unimproved...................................................................557
+
+                               Field Improvements
+Type......................................................................96,701
+- Enriched value..........................................................72,010
+- Original value..........................................................24,691
+Language.......................................................................0
+
+Date......................................................................88,761
+- Enriched value..........................................................46,460
+- Original value..........................................................42,301
+Data Provider.............................................................99,479
+- Original value..........................................................73,664
+- Enriched value..........................................................25,815
+
+                                   Log Files
+~/mt/enrichment/20210215_212856-mt-MAP4_0.EnrichRecord.avro/_LOGS/type
+~/mt/enrichment/20210215_212856-mt-MAP4_0.EnrichRecord.avro/_LOGS/date
+~/mt/enrichment/20210215_212856-mt-MAP4_0.EnrichRecord.avro/_LOGS/dataProvider
+```
+
+### Reports
+
+Beyond this summary report we also log for record how we did or did not transform each field in a CSV.
+
+For example here are the first few lines of the `type` enrichment report. It shows that we did not enrich the first record because its type value, `text`, was already a valid DCMIType term. The other records were enriched from `still image` to `image`. 
+
+```csv 
+level,message,field,value,enrichedValue,id
+info,Original value,type,text,Not enriched,3cfe5197e0140ad4329742fb12e49190
+info,Enriched value,type,still image,image,4485f5246b5ede59dae4486425f5149e
+info,Enriched value,type,still image,image,c5c4dd8d0d90ea7df8e686e717de4f38
+info,Enriched value,type,still image,image,5aa64d77d6544a1f1a8bec0e6c7683a3
+```
 
 # JSONL
  
