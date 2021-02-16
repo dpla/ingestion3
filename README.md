@@ -4,7 +4,15 @@ This project is an ETL system for cultural heritage metadata. The system has thr
 
 * [Harvest](#harvest)
 * [Mapping and validation](#mapping-and-validation) 
+    * [XML mapping example](#xml-mapping-example)
+    * [JSON mapping example](#json-mapping-example)
+    * [Filtering](#filtering)
+    * [Validations](#validations)
+        * [edmRights](#edmrights-normalization-and-validation)  
+    * [Summary and logs](#summary-and-logs)
 * [Enrichment and normalization](#enrichment-and-normalization)
+    * [Text normalizations](#text-normalizations)
+    * [Enrichments](#enrichments)
 * [JSONL](#jsonl)
 * [Wikimedia](#wikimedia)
 
@@ -12,7 +20,7 @@ This project is an ETL system for cultural heritage metadata. The system has thr
 
 # Harvest
 
-We harvest data from multiple sources but generally they fall into three catagories: api, file, and oai. 
+We harvest data from multiple sources but generally they fall into three categories: api, file, and oai. 
 
 <img src="https://i.imgur.com/WZWuYnr.png" height="300"/>
 
@@ -240,19 +248,19 @@ Normalized remove trailing punctuation,warn,edmRights,orbis-cascade--http://harv
 ```
 # Enrichment and Normalization
 
-All successfully mapped records are run through a series of text normalizations and enrichments. The text normalizations are comprehensive and at least some are run over every field. The enrichments are limited to a specific set of fields. 
+All successfully mapped records are run through a series of text normalizations and enrichments. Almost every field is normalized in some fashion and some field are subject to a more robust set of normalizations. The enrichments are limited to a specific set of fields. 
 
-### Text normalizations 
+## Text normalizations 
 
 For a comprehensive view of the normalizations that are run please see [this code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/enrichments/normalizations/StringNormalizations.scala) but these normalizations are run over almost every field in every class.
 - `deduplication` - Only unique values are propagated to the index
 - `stripHTML` - Removes any HTML markup in the text
 - `reduceWhitespace` - Reduce multiple whitespace values to a single and removes leading and trailing white space 
 
-#### Class and field specific normalizations 
+### Class and field specific normalizations 
 These normalizations are run over all instances of the specified class 
 
-##### sourceResource
+#### sourceResource
 *format*
 - `capitalizeFirstChar` - Find and capitalize the first character in a given string
 
@@ -261,7 +269,7 @@ These normalizations are run over all instances of the specified class
 - `cleanupLeadingPunctuation` - Removes leading colons, semi-colons, commas, slashes, hyphens and whitespace characters (whitespace, tab, new line and line feed) that precede the first letter or digit
 - `cleanupEndingPunctuation` - Removes trailing colons, semi-colons, commas, slashes, hyphens and whitespace characters (whitespace, tab, new line and line feed) that follow the last letter or digit
 
-##### edmAgent (creator, contributor, publisher, dataProvider)
+#### edmAgent (creator, contributor, publisher, dataProvider)
 
 *name*
 - `stripBrackets` - Removes matching leading and trailing brackets (square, round and curly braces) 
@@ -269,7 +277,7 @@ These normalizations are run over all instances of the specified class
 - `cleanupLeadingPunctuation` - Removes leading colons, semi-colons, commas, slashes, hyphens and whitespace characters (whitespace, tab, new line and line feed) that precede the first letter or digit
 - `cleanupEndingPunctuation` - Removes trailing colons, semi-colons, commas, slashes, hyphens and whitespace characters (whitespace, tab, new line and line feed) that follow the last letter or digit
 
-##### skosConcept (language, subject)
+#### skosConcept (language, subject)
 
 *concept*, *providedLabel* 
 - `stripBrackets` - Removes matching leading and trailing brackets (square, round and curly braces) 
@@ -279,20 +287,25 @@ These normalizations are run over all instances of the specified class
 - `capitalizeFirstChar` - Find and capitalize the first character in a given string
 
 
-##### edmTimeSpan
+#### edmTimeSpan
 
 *prefLabel*, *begin*, *end*
 - `stripDblQuotes` - Strip all double quotes from the given string
 
-### Enrichments 
+## Enrichments 
+Enrichments modify existing data and improve its quality to enhance its functionality 
 
-- **dataProvider** - Generates a Wikidata URI 
+### dataProvider
+Generates a Wikidata URI. Required for Wikimedia project
 
-- **date** - Generates begin and end dates from a date label
+### date
+Generates begin and end dates from a date label. Original value
 
-- **language** -Generates language label from iso-639 codes
+### language
+Generates language label from iso-639 codes
 
-- **type** - Generates a DCMI type value from this mapping ([code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/enrichments/TypeEnrichment.scala#L17-L147))
+### type
+Generates a DCMI type value from this mapping ([code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/enrichments/TypeEnrichment.scala#L17-L147))
 
  
  
