@@ -13,6 +13,10 @@ This project is an ETL system for cultural heritage metadata. The system has thr
 * [Enrichment and normalization](#enrichment-and-normalization)
     * [Text normalizations](#text-normalizations)
     * [Enrichments](#enrichments)
+        * [dataProvider](#dataprovider)
+        * [date](#date)
+        * [language](#language)
+        * [type](#type)
 * [JSONL](#jsonl)
 * [Wikimedia](#wikimedia)
 
@@ -329,10 +333,21 @@ When exporting the JSON-L, SkosConcepts are evaluated and if a `concept` is defi
  
 
 ### type
-Generates a DCMI type value from this mapping ([code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/enrichments/TypeEnrichment.scala#L17-L147))
+Resolves uncontrolled type terms mapped from original records to appropriate DCMIType values (case insensitive). The mapping of uncontrolled to controlled terms is defined ([here](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/enrichments/TypeEnrichment.scala#L17-L147)). If the original term cannot be mapped to a valid DCMIType value then it is dropped and the record is indexed without a `type` value.
 
- 
- 
+ ```scala 
+   // Type Enrichment Test for 'book', the type value mapped from the original records was `book` 
+   // and the enrichment should return `text`. 
+   
+   it should "return an enriched string for 'book'" in {
+     val originalValue = "book"
+     val expectedValue = Some("text")
+     assert(typeEnrichment.enrich(originalValue) === expectedValue)
+   }
+```
+
+For additional examples of how this enrichment functions see [TypeEnrichmentTest](https://github.com/dpla/ingestion3/blob/d9305d5733ba3553522b5d1c287cec2cfa061bfd/src/test/scala/dpla/ingestion3/enrichments/TypeEnrichmentTest.scala)
+
 # JSONL
  
  
