@@ -20,12 +20,12 @@ class StringNormalizations {
     record.copy(
       sourceResource = enrichSourceResource(record.sourceResource),
       dataProvider = enrichEdmAgent(record.dataProvider),
-      edmRights = record.edmRights.map(enrichEdmRights(_)),
-      hasView = record.hasView.map(enrichEdmWebResource(_)),
-      intermediateProvider = record.intermediateProvider.map(enrichEdmAgent(_)),
+      edmRights = record.edmRights.map(enrichEdmRights),
+      hasView = record.hasView.map(enrichEdmWebResource),
+      intermediateProvider = record.intermediateProvider.map(enrichEdmAgent),
       isShownAt = enrichEdmWebResource(record.isShownAt),
-      `object` = record.`object`.map(enrichEdmWebResource(_)),
-      preview = record.preview.map(enrichEdmWebResource(_)),
+      `object` = record.`object`.map(enrichEdmWebResource),
+      preview = record.preview.map(enrichEdmWebResource),
       provider = enrichEdmAgent(record.provider)
     )
   }
@@ -33,27 +33,27 @@ class StringNormalizations {
   def enrichSourceResource(sourceResource: DplaSourceResource): DplaSourceResource =
     sourceResource.copy(
       alternateTitle = sourceResource.alternateTitle.map(_.stripHTML.reduceWhitespace),
-      collection = sourceResource.collection.map(enrichDcmiTypeCollection(_)),
-      contributor = sourceResource.contributor.map(enrichEdmAgent(_)),
-      creator = sourceResource.creator.map(enrichEdmAgent(_)),
-      date = sourceResource.date.map(enrichEdmTimeSpan(_)),
+      collection = sourceResource.collection.map(enrichDcmiTypeCollection),
+      contributor = sourceResource.contributor.map(enrichEdmAgent),
+      creator = sourceResource.creator.map(enrichEdmAgent),
+      date = sourceResource.date.map(enrichEdmTimeSpan),
       description = sourceResource.description.map(_.stripHTML.reduceWhitespace),
       extent = sourceResource.extent.map(_.stripHTML.reduceWhitespace),
       format = sourceResource.format.map(_.stripHTML
         .reduceWhitespace
         .capitalizeFirstChar),
-      genre = sourceResource.genre.map(enrichSkosConcept(_)),
+      genre = sourceResource.genre.map(enrichSkosConcept),
       identifier = sourceResource.identifier.map(_.stripHTML.reduceWhitespace),
-      language = sourceResource.language.map(enrichSkosConcept(_)),
-      place = sourceResource.place.map(enrichDplaPlace(_)),
-      publisher = sourceResource.publisher.map(enrichEdmAgent(_)),
-      relation = sourceResource.relation.map(enrichRelation(_)),
+      language = sourceResource.language.map(enrichSkosConcept),
+      place = sourceResource.place.map(enrichDplaPlace),
+      publisher = sourceResource.publisher.map(enrichEdmAgent),
+      relation = sourceResource.relation.map(enrichRelation),
       replacedBy = sourceResource.replacedBy.map(_.stripHTML.reduceWhitespace),
       replaces = sourceResource.replaces.map(_.stripHTML.reduceWhitespace),
       rights = sourceResource.rights.map(_.stripHTML.reduceWhitespace),
-      rightsHolder = sourceResource.rightsHolder.map(enrichEdmAgent(_)),
-      subject = sourceResource.subject.map(enrichSkosConcept(_)),
-      temporal = sourceResource.temporal.map(enrichEdmTimeSpan(_)),
+      rightsHolder = sourceResource.rightsHolder.map(enrichEdmAgent),
+      subject = sourceResource.subject.map(enrichSkosConcept),
+      temporal = sourceResource.temporal.map(enrichEdmTimeSpan),
       title = sourceResource.title.map(_.stripHTML
         .reduceWhitespace
         .stripBrackets
