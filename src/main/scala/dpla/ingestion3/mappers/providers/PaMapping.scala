@@ -80,8 +80,6 @@ class PaMapping extends XmlMapping with XmlExtractor
     extractStrings(metadataRoot(data) \ "rightsHolder")
       .map(nameOnlyAgent)
 
-  // Label    DPLA Field    PA Field
-  // Rights	  dc:rights     dcterms:rights
   override def rights(data: Document[NodeSeq]): Seq[String] =
     (metadataRoot(data) \ "rights").flatMap(r => {
       r.prefix match {
@@ -111,13 +109,15 @@ class PaMapping extends XmlMapping with XmlExtractor
     extractStrings(metadataRoot(data) \ "dataProvider")
       .map(nameOnlyAgent)
 
-  //  Label             DPLA Field    PA Field
-  //  Rights Statement	edm:rights		edm:rights
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
     (metadataRoot(data) \ "rights").flatMap(r => r.prefix match {
       case "edm" => Some(URI(r.text))
       case _ => None
     })
+
+  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] =
+    extractStrings(metadataRoot(data) \ "isReferencedBy")
+      .map(URI)
 
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
     extractStrings(metadataRoot(data) \ "intermediateProvider")
@@ -140,23 +140,6 @@ class PaMapping extends XmlMapping with XmlExtractor
 
   override def sidecar(data: Document[NodeSeq]): JValue =
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data) )
-
-/**
-    *  Get the last occurrence of the identifier property, there
-    *  must be at least three dc:identifier properties for there
-    *  to be a thumbnail
-    *
-    * @param data
-    * @return
-    */
-
-  def thumbnail(implicit data: Document[NodeSeq]): ZeroToOne[EdmWebResource] = {
-    val ids = extractStrings(metadataRoot(data) \ "identifier")
-    if (ids.size > 2)
-      Option(uriOnlyWebResource(URI(ids.last)))
-    else
-      None
-  }
 
   def metadataRoot(data: Document[NodeSeq]): NodeSeq = data \ "metadata" \ "dc"
 }
