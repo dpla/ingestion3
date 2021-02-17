@@ -25,7 +25,7 @@ trait IngestMessageTemplates {
   def invalidEdmRightsMsg(id: String, field: String, value: String,
                           msg: Option[String] = None, enforce: Boolean): IngestMessage =
     IngestMessage(
-      message = s"Not a URI".trim,
+      message = s"Not a valid edmRights URI".trim,
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
       id = id,
       field = field,
