@@ -32,10 +32,15 @@ class PaMappingTest extends FlatSpec with BeforeAndAfter {
       <edm:dataProvider>Baldwin School Archives</edm:dataProvider>
       <dpla:intermediateProvider>POWER Library as sponsor and HSLC as maintainer</dpla:intermediateProvider>
       <edm:provider>PA Digital</edm:provider>
+      <dcterms:isReferencedBy>http://digital.library.temple.edu/iiif/info/p15037coll3/71549/manifest.json</dcterms:isReferencedBy>
     </oai_dc:dc>
   </metadata>
 </record>)
 
+  it should "extract the correct IIIF manifest" in {
+    val expected = Seq(URI("http://digital.library.temple.edu/iiif/info/p15037coll3/71549/manifest.json"))
+    assert(extractor.iiifManifest(xml) === expected)
+  }
   it should "extract the correct original ID" in {
     val expected = Some("oai:YOUR_OAI_PREFIX:dpla_test:oai:libcollab.temple.edu:dplapa:BALDWIN_kthbs_arch_699")
     assert(extractor.originalId(xml) == expected)
