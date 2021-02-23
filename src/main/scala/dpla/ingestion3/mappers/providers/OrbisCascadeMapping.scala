@@ -33,7 +33,6 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
     extractStrings(data \\ "SourceResource" \ "contributor")
       .map(nameOnlyAgent)
 
-  // TODO: Verify no label
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
     val dateEarly = extractStrings(data \\ "SourceResource" \ "date" \ "TimeSpan" \ "begin")
     val dateLate = extractStrings(data \\ "SourceResource" \ "date" \ "TimeSpan" \ "end")
@@ -82,15 +81,19 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
-  // FIXME: Need to dereference the URI
-  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-//    extractStrings(metadataRoot(data) \ "source")
-//      .map(nameOnlyAgent)
-    Seq("").map(nameOnlyAgent)
+  // FIXME: Needs to perform URI to label lookup pending values delivered by OC staff
+  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
+  // <edm:dataProvider rdf:resource="http://harvester.orbiscascade.org/agency/wauar"/>
+    val xml: Elem = (data \ "dataProvider").headOption.getOrElse(Node).asInstanceOf[Elem]
+    val dataProvider = xml.attribute(xml.getNamespace("rdf"), "resource").getOrElse(Seq())
 
-  // done
+    dataProvider
+      .flatMap(extractStrings)
+      .map(nameOnlyAgent)
+  }
+  
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
-    val xml: Elem = (data \ "rights").head.asInstanceOf[Elem] //.asInstanceOf[Elem]
+    val xml: Elem = (data \ "rights").headOption.getOrElse(Node).asInstanceOf[Elem]
     val rights = xml.attribute(xml.getNamespace("rdf"), "resource").getOrElse(Seq())
 
     rights
@@ -113,6 +116,9 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
     }
 
     isShownAt.map(stringOnlyWebResource)
+
+    // FIXME Remove
+    Seq("placeholder.com").map(stringOnlyWebResource)
   }
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
