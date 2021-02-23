@@ -75,7 +75,7 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiM
   private[refactor] def eitherToArray(either: Either[OaiError, OaiPage]): Seq[String] =
     either match {
       case Right(OaiPage(string)) =>
-        Seq("page", string.replaceAll("\n", " "), "")
+        Seq("page", string.replaceAll("(\r\n)|\r|\n", " "), "")
       case Left(OaiError(message, None)) =>
         Seq("error", message, "")
       case Left(OaiError(message, Some(url))) =>
