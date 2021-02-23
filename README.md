@@ -120,7 +120,7 @@ After attempting to map all fields from an original record we inspect the result
   * originalId (basis for DPLA identifier)
 
 #### edmRights normalization and validation 
-This is a special case because it inverts how we approach this process. Typically, normalization follows validation but in this we normalize edmRights value first and then validate the normalized value. This process has also been documented in a white paper [here](about:blank). 
+This is a special case because it inverts how we approach this process. Typically, normalization follows validation but in this we normalize edmRights value first and then validate the normalized value. This process has also been documented the [DRAFT DPLA Rights Statement Validation Whitepaper](https://docs.google.com/document/d/1PyJM_Zo9q34HvctoB9Cx0xoUd7PcNX3uzD_19txzYY0/edit?usp=sharing). 
 
 How are `edmRights` URIs normalized? 
 1. Change `https://` to `http://`
