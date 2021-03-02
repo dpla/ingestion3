@@ -81,14 +81,35 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
-  // FIXME: Needs to perform URI to label lookup pending values delivered by OC staff
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
-  // <edm:dataProvider rdf:resource="http://harvester.orbiscascade.org/agency/wauar"/>
+    // <edm:dataProvider rdf:resource="http://harvester.orbiscascade.org/agency/wauar"/>
+    val lookup = Map[String, String](
+      "http://archiveswest.orbiscascade.org/contact#idu"->"University of Idaho Library, Special Collections and Archives",
+      "http://harvester.orbiscascade.org/agency/wauar"->"University of Washington Libraries, Special Collections",
+      "http://harvester.orbiscascade.org/agency/ormcl"->"Linfield College",
+      "http://archiveswest.orbiscascade.org/contact#orkt"->"Oregon Institute of Technology Libraries, Shaw Historical Library",
+      "http://archiveswest.orbiscascade.org/contact#orpl"->"Lewis & Clark College, Special Collections and Archives",
+      "http://archiveswest.orbiscascade.org/contact#waps"->"Washington State University Libraries, Manuscripts, Archives, and Special Collections",
+      "http://archiveswest.orbiscascade.org/contact#watu"->"University of Puget Sound, Archives & Special Collections",
+      "http://archiveswest.orbiscascade.org/contact#orngf"->"George Fox University Archives",
+      "http://archiveswest.orbiscascade.org/contact#wachene"->"Eastern Washington University",
+      "http://archiveswest.orbiscascade.org/contact#orsaw"->"Western Washington University, Western Libraries Heritage Resources",
+      "http://harvester.orbiscascade.org/agency/orpr"->"Reed College",
+      "http://archiveswest.orbiscascade.org/contact#ormonw"->"Western Oregon University Archives",
+      "http://archiveswest.orbiscascade.org/contact#orcs"->"Oregon State University Libraries, Special Collections and Archives Research Center",
+      "http://archiveswest.orbiscascade.org/contact#waspc"->"Seattle Pacific University",
+      "http://harvester.orbiscascade.org/agency/orashs"->"Southern Oregon University, Hannon Library",
+      "http://harvester.orbiscascade.org/agency/orpu"->"University of Portland",
+      "http://archiveswest.orbiscascade.org/contact#oru"->"University of Oregon Libraries, Special Collections and University Archives"
+    )
+
+
     val xml: Elem = (data \ "dataProvider").headOption.getOrElse(Node).asInstanceOf[Elem]
     val dataProvider = xml.attribute(xml.getNamespace("rdf"), "resource").getOrElse(Seq())
 
     dataProvider
       .flatMap(extractStrings)
+      .flatMap(uri => lookup.get(uri))
       .map(nameOnlyAgent)
   }
   

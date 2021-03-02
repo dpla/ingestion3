@@ -77,4 +77,9 @@ class OrbisCascadeMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("Photograph")
     assert(extractor.`type`(xml) === expected)
   }
+
+  it should "extract the correct dataProvider" in {
+    val expected = Seq("University of Washington Libraries, Special Collections").map(nameOnlyAgent)
+    assert(extractor.dataProvider(xml) === expected)
+  }
 }
