@@ -41,38 +41,42 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
     values.map (value => {
       val normalized = Try { new java.net.URI(value.toString.trim) } match {
         case Success(uri) => {
-          // does scheme (http/https) require normalization
-          if (uri.toString.startsWith("https")) {
-            collector.add(normalizedEdmRightsHttpsMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
-          }
-          // `www` to be removed?
-          if (uri.toString.contains("www")) {
-            collector.add(normalizedEdmRightsWWWMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
-          }
-          // change /page/ to /vocab/
-          val path = if (uri.getPath.contains("/page/")) {
-            collector.add(normalizedEdmRightsRsPageMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
-            uri.getPath.replaceFirst("/page/", "/vocab/")
-          } else {
-            uri.getPath
-          }
-          // Strip `?` and all following
-          if (uri.getQuery != null) {
-            collector.add(normalizedEdmRightsRsPageMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
-          }
-          // trailing `/` on path
-          if (!uri.getPath.endsWith("/")) {
-            collector.add(normalizedEdmRightsTrailingSlashMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
-          }
-          // trailing punctuation
-          if (!uri.getPath.equalsIgnoreCase(uri.getPath.cleanupEndingPunctuation)) {
-            collector.add(normalizedEdmRightsTrailingPunctuationMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
-          }
+          Try {
 
-          val uriString = s"http://${uri.getHost}${path.cleanupEndingPunctuation}/" // force http, drop parameters and trailing punctuation
+            // does scheme (http/https) require normalization
+            if (uri.toString.startsWith("https")) {
+              collector.add(normalizedEdmRightsHttpsMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+            }
+            // `www` to be removed?
+            if (uri.toString.contains("www")) {
+              collector.add(normalizedEdmRightsWWWMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+            }
+            // change /page/ to /vocab/
+            val path = if (uri.getPath.contains("/page/")) {
+              collector.add(normalizedEdmRightsRsPageMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+              uri.getPath.replaceFirst("/page/", "/vocab/")
+            } else {
+              uri.getPath
+            }
+            // Strip `?` and all following
+            if (uri.getQuery != null) {
+              collector.add(normalizedEdmRightsRsPageMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+            }
+            // trailing `/` on path
+            if (!uri.getPath.endsWith("/")) {
+              collector.add(normalizedEdmRightsTrailingSlashMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+            }
+            // trailing punctuation
+            if (!uri.getPath.equalsIgnoreCase(uri.getPath.cleanupEndingPunctuation)) {
+              collector.add(normalizedEdmRightsTrailingPunctuationMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
+            }
 
-          // normalize() drops duplicates //
-          Try { new java.net.URI(uriString).normalize.toString} match {
+            val uriString = s"http://${uri.getHost}${path.cleanupEndingPunctuation}/" // force http, drop parameters and trailing punctuation
+
+            // normalize() drops duplicates //
+           new java.net.URI(uriString).normalize.toString
+
+          } match {
             case Success(normalizedUri) => normalizedUri
             case Failure(f) =>
               // log warning message about failed normalization
