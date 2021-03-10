@@ -1,19 +1,26 @@
 package dpla.ingestion3.enrichments
 
-import dpla.ingestion3.model.{EdmAgent, URI}
+import dpla.ingestion3.mappers.utils.JsonExtractor
+import dpla.ingestion3.model.{EdmAgent, URI, nameOnlyAgent}
 import dpla.ingestion3.utils.FileLoader
+import org.json4s.jackson.JsonMethods.parse
+
+import scala.io.Source
 
 /**
   * Wikimedia entity enrichments
   */
-class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] {
+class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] with JsonExtractor  {
 
   protected val wikiUriBase = "https://wikidata.org/wiki/"
 
   // Files to source vocabulary from
   private val fileList = Seq(
-    "/wiki/hubs.json",
-    "/wiki/institutions.json"
+//    "/wiki/hubs.json",
+//    "/wiki/institutions.json"
+      "/wiki/institutions_v2.json"
+//    "/wiki/v3.json"
+
   )
 
   // performs term lookup
@@ -43,7 +50,8 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] {
     * @return Enriched EdmAgent with original value's 'name'
     */
   private def mergeFunc(original: EdmAgent, enriched: EdmAgent) =
-    enriched.copy(name = original.name)
+    original.copy(exactMatch = enriched.exactMatch)
+    // enriched.copy(name = original.name)
 
   /**
     * Read JSON files and load vocabulary
@@ -52,8 +60,28 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] {
     */
   //noinspection TypeAnnotation,UnitMethodIsParameterless
   private def loadVocab =
-    getVocabFromJsonFiles(files).foreach { case (key: String, value: String) => addEntity(key, value) }
+    getInstitutionVocab(files).foreach { case (key: String, value: String) => addEntity(key, value) }
 
+  private def getInstitutionVocab(files: Seq[String]): Seq[(String, String)] = {
+    files.flatMap(file => {
+      val fileContentString = Source.fromInputStream(getClass.getResourceAsStream(file)).getLines().mkString
+
+      val json = parse(fileContentString)
+
+      val dataProviderKeys = extractKeys(json)
+        .map(dataProvider => s"$dataProvider" -> extractString(json \ dataProvider \ "Wikidata").get)
+
+      val institutionKeys = extractKeys(json) // get dataProvider keys
+        .flatMap(dataProvider => {
+          extractKeys(json \ dataProvider \ "institutions") // get institutions keys
+            .map(institution => {
+            s"$dataProvider$institution" -> extractString(json \ dataProvider \ "institutions" \ institution \ "Wikidata").get
+          })
+        })
+
+      dataProviderKeys ++ institutionKeys
+    })
+  }
   // Load the vocab
   loadVocab
 
@@ -91,11 +119,18 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] {
   /**
     * Performs full-term validation and mapping
     * @param value Original value to be enriched
-    * @return SkosConcept Enriched version of original value or original value if
+    * @param qualifierValue
+    *
+    * @return EdmAgent Enriched version of original value or original value if
     *         enrichment was not possible
     */
-  def enrichEntity(value: EdmAgent): EdmAgent = {
-    enrich(value) match {
+  def enrichEntity(value: EdmAgent, qualifierValue: Option[EdmAgent] = None): EdmAgent = {
+    val entity = qualifierValue match {
+      case Some(qv) => nameOnlyAgent(s"${qv.name.getOrElse("")}${value.name.getOrElse("")}")
+      case _ => value
+    }
+
+    enrich(entity) match {
       case Some(e) => merger.merge(value, e)
       case _ => value
     }

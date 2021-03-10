@@ -22,24 +22,27 @@ class WikiMapperTest extends FlatSpec with Matchers {
     assert(wiki.isRightsWikiEligible(rightsUri) === false)
   }
 
-  "isDataProviderEligible" should " return true if there is a wiki URI" in {
-    val uris = Seq(URI("https://wikidata.org/wiki/Q324534"))
-    assert(wiki.isDataProviderWikiEligible(uris) === true)
+  "institutionalEligibility" should " return true if the partner is Wiki eligible and dataProvider is not" in {
+    val partnerUri = Some(URI("https://wikidata.org/wiki/Q518155")) // nara
+    val dataProviderUri = Some(URI("https://wikidata.org/wiki/Q59661289")) // obama library
+    assert(wiki.institutionalEligibility(partnerUri, dataProviderUri) === true)
   }
 
-  it should " return true if there is a wiki URI and a non-wiki URI" in {
-    val uris = Seq(URI("https://viaf.org/id/2342123"), URI("https://wikidata.org/wiki/Q324534"))
-    assert(wiki.isDataProviderWikiEligible(uris) === true)
+  it should " return `true` if a partner is not eligible but a dataProvider is " in {
+    val partnerUri = Some(URI("https://wikidata.org/wiki/Q5275908")) // DLG
+    val dataProviderUri = Some(URI("https://wikidata.org/wiki/Q30267984")) // Augusta-Richmond County Public Library
+    assert(wiki.institutionalEligibility(partnerUri, dataProviderUri) === true)
   }
 
-  it should " return false if there is no wiki uri" in {
-    val uris = Seq(URI("https://viaf.org/id/2342123"))
-    assert(wiki.isDataProviderWikiEligible(uris) === false)
+  it should " return `false` if neither partner nor dataProvider is eligible" in {
+    val partnerUri = Some(URI("https://wikidata.org/wiki/Q5275908")) // DLG
+    val dataProviderUri = Some(URI("https://wikidata.org/wiki/Q4815975")) // Atlanta-Fulton Public Library System
+    assert(wiki.institutionalEligibility(partnerUri, dataProviderUri) === false)
   }
 
   "isAssetEligible" should "return true if both IIIF manifest and media master given" in {
     val iiif = Some(URI("http://iiif.manifest"))
-    val mediaMasters = Seq(stringOnlyWebResource("http://media.master.com/image.jpg")) // .map(stringOnlyWebResource)
+    val mediaMasters = Seq(stringOnlyWebResource("http://media.master.com/image.jpg"))
 
     assert(wiki.isAssetEligible(iiif, mediaMasters) === true)
   }

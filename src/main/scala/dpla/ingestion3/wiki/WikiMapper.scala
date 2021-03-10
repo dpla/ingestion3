@@ -1,12 +1,21 @@
 package dpla.ingestion3.wiki
 
-import dpla.ingestion3.model.DplaMapData.ExactlyOne
+import dpla.ingestion3.mappers.utils.JsonExtractor
+import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToOne}
 import dpla.ingestion3.model.{EdmWebResource, OreAggregation, URI}
 import dpla.ingestion3.utils.FlatFileIO
+import org.json4s.jackson.JsonMethods.parse
+
+import scala.io.Source
 
 case class WikiCriteria(dataProvider: Boolean, asset: Boolean, rights: Boolean, id: Boolean)
 
-trait WikiMapper {
+case class Eligibility(partnerWiki: String,
+                       partnerEligible: Boolean,
+                       dataProviderWiki: String,
+                       dataProviderEligible: Boolean)
+
+trait WikiMapper extends JsonExtractor {
 
   /**
     * Standardized rightsstatment and creative commons URIs eligible for Wikimedia upload
@@ -30,6 +39,42 @@ trait WikiMapper {
     "/wiki/ignore-nara.txt"
   )
 
+  // Files to source from
+  private val wikiFileList = Seq(
+    "/wiki/institutions_v2.json"
+  )
+
+  private val baseWikiUri = "https://wikidata.org/wiki/"
+
+  lazy val wikiEntityEligibility: Seq[Eligibility] = getWikiEntityEligibility
+
+  /**
+    * Parse institutional JSON file and create a partner + dataProvider pairing to determine Wikimedia eligibility
+    * @return
+    */
+  private def getWikiEntityEligibility: Seq[Eligibility] = {
+    wikiFileList.flatMap(file => {
+      val fileContentString = Source.fromInputStream(getClass.getResourceAsStream(file)).getLines().mkString
+      val json = parse(fileContentString)
+
+      extractKeys(json).flatMap(partner => {
+        val partnerWikiId = extractString(json \ partner \ "Wikidata").get
+        val partnerEligible = extractString(json \ partner \ "upload").get.toBoolean
+        extractKeys(json \ partner \ "institutions")
+          .map(dataProvider => {
+            val dataProviderWikiId = extractString(json \ partner \ "institutions" \ dataProvider \ "Wikidata").get
+            val dataProviderEligible = extractString(json \ partner \ "institutions" \ dataProvider \ "upload").get.toBoolean
+            Eligibility(
+              partnerWiki = s"$baseWikiUri$partnerWikiId",
+              partnerEligible = partnerEligible,
+              dataProviderWiki = s"$baseWikiUri$dataProviderWikiId",
+              dataProviderEligible = dataProviderEligible
+            )
+        })
+      })
+    })
+  }
+
   /**
     * Evaluate whether the standardized rights value is in the list of approved for Wikimedia
     *
@@ -48,15 +93,27 @@ trait WikiMapper {
   /**
     * Evaluate whether the data provider have an wikidata entity uri associated with it
     *
-    * @param uris URIs to evaluate
+    * @param partnerUri Option[URI]
+    * @param dataProviderUri Option[URI]
     * @return True if at least one URI is a wikidata URI
     *         False otherwise
     */
-  def isDataProviderWikiEligible(uris: Seq[URI]): Boolean =
-    uris.find(uri => uri.toString.startsWith("https://wikidata.org/wiki/")) match {
-      case Some(_) => true
-      case None => false
+    def institutionalEligibility(partnerUri: ZeroToOne[URI], dataProviderUri: ZeroToOne[URI]): Boolean = {
+      (partnerUri, dataProviderUri) match {
+        case (Some(partnerWikiUri), Some(dataProviderWikiUri)) => wikiEntityEligibility.find(eligible => {
+          eligible.partnerWiki == partnerWikiUri.toString && eligible.dataProviderWiki == dataProviderWikiUri.toString
+        }) match {
+          // 1. True for "upload" field at the partner/hub-level signifies all eligible records from
+          //    the hub can be uploaded. (disregard "upload" value at institution-level)
+          // 2. False at hub-level means only upload the institutions which are marked true on the institution level
+          case Some(e) => e.partnerEligible | e.dataProviderEligible
+          case None => false
+        }
+        case (_, _) => false
+      }
     }
+
+    def isWikiUri(uri: URI): Boolean = uri.toString.startsWith(baseWikiUri)
 
   /**
     * Evaluate whether the combination of mediaMaster and iiifManifest values make the record eligible for Wikimedia.
@@ -87,7 +144,11 @@ trait WikiMapper {
     * @return WikiCriteria
     */
   def isWikiEligible(record: OreAggregation): WikiCriteria = {
-    val dataProvider = isDataProviderWikiEligible(record.dataProvider.exactMatch)
+    val dataProvider = institutionalEligibility(
+      record.provider.exactMatch.find(isWikiUri),
+      record.dataProvider.exactMatch.find(isWikiUri)
+    )
+
     val rights = isRightsWikiEligible(record.edmRights)
     val asset = isAssetEligible(record.iiifManifest, record.mediaMaster)
     val id = isIdEligible(record.originalId)

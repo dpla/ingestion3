@@ -43,9 +43,8 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
       .standardStringEnrichments
 
     enriched.copy(
-      dataProvider = wikiEntityEnrichment
-        .enrich(enriched.dataProvider)
-        .getOrElse(enriched.dataProvider),
+      provider = wikiEntityEnrichment.enrichEntity(enriched.provider),
+      dataProvider = wikiEntityEnrichment.enrichEntity(enriched.dataProvider, Option(enriched.provider)),
       sourceResource = enriched.sourceResource.copy(
         date = enriched.sourceResource.date.map(date => dateEnrichment.generateBeginEnd(date.originalSourceDate)).distinct,
         language = enriched.sourceResource.language.map(languageEnrichment.enrichLanguage).distinct,
