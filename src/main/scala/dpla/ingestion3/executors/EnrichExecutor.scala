@@ -136,6 +136,7 @@ trait EnrichExecutor extends Serializable {
     val langMessages = messages.filter("field='language'")
     val placeMessages = messages.filter("field='place'")
     val dataProviderMessages = messages.filter("field='dataProvider.exactMatch.URI'")
+    val providerMessages = messages.filter("field='provider.exactMatch.URI'")
 
     // Compute the counts of different message types.
     // Actions
@@ -144,13 +145,15 @@ trait EnrichExecutor extends Serializable {
     val langMessagesCount: Long = langMessages.count
     val placeMessagesCount: Long = placeMessages.count
     val dataProviderMessagesCount: Long = dataProviderMessages.count
+    val providerMessagesCount: Long = providerMessages.count
 
     val logEnrichedFields: List[(String, Dataset[Row])] = List(
       "type" -> (typeMessages, typeMessagesCount),
       "date" -> (dateMessages, dateMessagesCount),
       "language" -> (langMessages, langMessagesCount),
       "place" -> (placeMessages, placeMessagesCount),
-      "dataProvider" -> (dataProviderMessages, dataProviderMessagesCount)
+      "dataProvider" -> (dataProviderMessages, dataProviderMessagesCount),
+      "provider" -> (providerMessages, providerMessagesCount)
 
     ).filter { case (_, (_, count: Long)) => count > 0 } // drop empty
       .map{ case (key: String, (data: Dataset[_], _: Long)) => key -> data} // drop count
@@ -187,11 +190,13 @@ trait EnrichExecutor extends Serializable {
       langImproved = langMessagesCount,
       placeImprove = placeMessagesCount,
       dataProviderImprove = dataProviderMessagesCount,
+      providerImprove = providerMessagesCount,
       langSummary = PrepareEnrichmentReport.generateFieldReport(messages, "language"),
       typeSummary = PrepareEnrichmentReport.generateFieldReport(messages, "type"),
       placeSummary = PrepareEnrichmentReport.generateFieldReport(messages, "place"),
       dateSummary = PrepareEnrichmentReport.generateFieldReport(messages, "date" ),
-      dataProviderSummary = PrepareEnrichmentReport.generateFieldReport(messages, "dataProvider.exactMatch.URI" )
+      dataProviderSummary = PrepareEnrichmentReport.generateFieldReport(messages, "dataProvider.exactMatch.URI" ),
+      providerSummary = PrepareEnrichmentReport.generateFieldReport(messages, "provider.exactMatch.URI" )
     )
 
     // Calculate data points for enrichment summary
