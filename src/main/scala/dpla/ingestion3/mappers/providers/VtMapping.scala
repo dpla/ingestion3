@@ -32,6 +32,10 @@ class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
     mintDplaItemUri(data)
 
+  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] =
+    extractStrings(data \ "isReferencedBy")
+      .map(URI)
+
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "isShownAt").map(stringOnlyWebResource)
 
