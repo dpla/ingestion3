@@ -33,10 +33,17 @@ class PaMappingTest extends FlatSpec with BeforeAndAfter {
       <dpla:intermediateProvider>POWER Library as sponsor and HSLC as maintainer</dpla:intermediateProvider>
       <edm:provider>PA Digital</edm:provider>
       <dcterms:isReferencedBy>http://digital.library.temple.edu/iiif/info/p15037coll3/71549/manifest.json</dcterms:isReferencedBy>
+      <padig:mediaMaster>http://media.master/1</padig:mediaMaster>
+      <padig:mediaMaster>http://media.master/2</padig:mediaMaster>
+      <padig:mediaMaster>http://media.master/3</padig:mediaMaster>
     </oai_dc:dc>
   </metadata>
 </record>)
 
+  it should "extract the correct mediaMasters" in {
+    val expected = Seq("http://media.master/1", "http://media.master/2", "http://media.master/3").map(stringOnlyWebResource)
+    assert(extractor.mediaMaster(xml) === expected)
+  }
   it should "extract the correct IIIF manifest" in {
     val expected = Seq(URI("http://digital.library.temple.edu/iiif/info/p15037coll3/71549/manifest.json"))
     assert(extractor.iiifManifest(xml) === expected)
