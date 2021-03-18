@@ -127,6 +127,10 @@ class PaMapping extends XmlMapping with XmlExtractor
     extractStrings(metadataRoot(data) \ "isShownAt")
       .map(stringOnlyWebResource)
 
+  override def mediaMaster(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    extractStrings(metadataRoot(data) \ "mediaMaster")
+      .map(stringOnlyWebResource)
+
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
