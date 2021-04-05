@@ -2302,11 +2302,11 @@
 				"Wikidata": "Q114071"
 			},
 			"Phillips Academy Andover": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q1432645"
 			},
 			"Phillips Academy": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q1432645"
 			},
 			"Pine Manor College": {
@@ -6116,7 +6116,7 @@
 				"Wikidata": "Q3378846"
 			},
 			"Philadelphia Museum of Art": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q510324"
 			},
 			"Pittsburgh History and Landmarks Foundation": {
