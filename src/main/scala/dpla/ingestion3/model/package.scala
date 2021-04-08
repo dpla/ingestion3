@@ -8,11 +8,11 @@ import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import dpla.ingestion3.utils.FlatFileIO
 import org.apache.avro.Schema
 import org.apache.spark.sql.types.StructType
-import org.json4s.{DefaultFormats, Formats}
 import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.prefs.EmptyValueStrategy
+import org.json4s.{DefaultFormats, Formats}
 
 package object model {
 
@@ -236,7 +236,7 @@ package object model {
         |   | title = ${record.sourceResource.title.map(escapeWikiChars).mkString("; ")}
         |   | description = ${record.sourceResource.description.map(escapeWikiChars).mkString("; ")}
         |   | date = ${record.sourceResource.date.flatMap { _.prefLabel }.map(escapeWikiChars).mkString("; ")}
-        |   | permission = {{PD-US}}
+        |   | permission = {{${getWikiPermissionTemplate(record.edmRights)}}}
         |   | source = {{ DPLA
         |       | ${escapeWikiChars(dataProviderWikiUri)}
         |       | hub = ${escapeWikiChars(record.provider.name.getOrElse(""))}
@@ -245,8 +245,41 @@ package object model {
         |       | local_id = ${record.sourceResource.identifier.map(escapeWikiChars).mkString("; ")}
         |   }}
         |   | Institution = {{ Institution | wikidata = $dataProviderWikiUri }}
-        |   | Other fields = {{ InFi | Standardized rights statement | {{ rights statement | ${escapeWikiChars(record.edmRights.getOrElse("").toString) } }} }}
+        |   | Other fields = ${getWikiOtherFieldsRights(record.edmRights)}
         | }}""".stripMargin
+  }
+
+  def getWikiOtherFieldsRights(edmRights: Option[URI]): String =
+    edmRights match {
+      case Some(uri) =>
+        if(uri.toString.startsWith("http://rightsstatements.org"))
+          s"{{ InFi | Standardized rights statement | {{ rights statement | ${escapeWikiChars(uri.toString)} }} }}"
+        else
+          ""
+      case None => ""
+    }
+
+
+  def getWikiPermissionTemplate(edmRights: Option[URI]): String = {
+    edmRights match {
+      case Some(uri) => uri.toString match {
+        case t if t.startsWith("http://rightsstatements.org/vocab/NoC-US/") => "PD-US"
+        case t if t.startsWith("http://creativecommons.org/publicdomain/mark/") => "PD-US"
+        case t if t.startsWith("http://creativecommons.org/publicdomain/zero/") => "cc-zero"
+        case t if t.startsWith("http://creativecommons.org/licenses/by/") => licenseToMarkupCode(t)
+        case t if t.startsWith("http://creativecommons.org/licenses/by-sa/") => licenseToMarkupCode(t)
+        case _ => ""
+      }
+      case _ => ""
+    }
+  }
+
+  def licenseToMarkupCode(str: String): String = {
+    val regex = raw"(^http://creativecommons.org/licenses/)(.*)".r
+    str match {
+      case regex(_, port) => s"Cc-${port.replaceAll("/", "-").dropRight(1)}"
+      case _ => ""
+    }
   }
 
   /**
