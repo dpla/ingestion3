@@ -48,4 +48,9 @@
     </edm:object>
     <prov:generatedAtTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-06-29T06:17:17.375-07:00</prov:generatedAtTime>
     <edm:isShownAt rdf:resource="http://cdm16786.contentdm.oclc.org/utils/getstream/collection/alaskawcanada/id/7049"/>
+    <edm:isShownAt>
+        <edm:WebResource rdf:about="http://cdm16786.contentdm.oclc.org/utils/getstream/collection/sayre/id/11790">
+            <edm:rights rdf:resource="http://rightsstatements.org/vocab/CNE/1.0/"/>
+        </edm:WebResource>
+    </edm:isShownAt>
 </ore:Aggregation>

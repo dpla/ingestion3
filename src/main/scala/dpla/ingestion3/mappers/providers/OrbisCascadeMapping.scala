@@ -136,10 +136,17 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
       case None => Seq()
     }
 
-    isShownAt.map(stringOnlyWebResource)
+    val isShownAtWebResource = (data \ "isShownAt" \ "WebResource").headOption match {
+      case Some(node) =>
+        val elem = node.asInstanceOf[Elem]
+        elem
+          .attribute(elem.getNamespace("rdf"), "about")
+          .getOrElse(Seq())
+          .flatMap(extractStrings(_))
+      case None => Seq()
+    }
 
-    // FIXME Remove
-    Seq("placeholder.com").map(stringOnlyWebResource)
+    (isShownAt ++ isShownAtWebResource).map(stringOnlyWebResource)
   }
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
