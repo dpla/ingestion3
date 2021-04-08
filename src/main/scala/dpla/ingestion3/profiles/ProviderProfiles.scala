@@ -283,7 +283,7 @@ class OhioProfile extends XmlProfile {
 class OrbisCascadeProfile extends XmlProfile {
   type Mapping = OrbisCascadeMapping
 
-  override def getHarvester = classOf[OaiFileHarvester]
+  override def getHarvester = classOf[OrbisCascadeFileHarvester]
   override def getMapping = new OrbisCascadeMapping
 }
 

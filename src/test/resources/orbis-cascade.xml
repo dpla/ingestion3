@@ -1,36 +1,56 @@
-
-<record>
-    <header>
-        <identifier>oai:digital.lib.uidaho.edu:psychiana/0</identifier>
-        <datestamp>2018-02-23</datestamp>
-        <setSpec>psychiana</setSpec>
-    </header>
-    <metadata>
-        <oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
-                   xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                   xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd
-http://www.openarchives.org/OAI/2.0/oai_dc/ ">
-            <dc:title>We Read an Amazing Story, Chapter 4 with Editors Corrections 2</dc:title>
-            <dc:description>A description</dc:description>
-            <dc:creator>Robinson, Frank B.</dc:creator>
-            <dc:date>1946</dc:date>
-            <dc:subject>God-Power; Psychiana Criticism; Psychiana Origins; God on Earth</dc:subject>
-            <dc:relation>Psychiana Digital Collection</dc:relation>
-            <dc:publisher>University of Idaho Library Digital Initiatives, http://www.lib.uidaho.edu/digital/</dc:publisher>
-            <dc:source>MG 101, Frank Bruce Robinson. Papers, 1929-1951, University of Idaho Library Special Collections
-                and Archives, http://archiveswest.orbiscascade.org/ark:/80444/xv97133/op=fstyle.aspx?t=k&amp;q=psychiana</dc:source>
-            <dc:identifier>MG101_b5_f1_001</dc:identifier>
-            <dc:rights>Educational use includes non-commercial use of text and images in materials for teaching and
-                research purposes. Digital reproduction permissions granted University of Idaho Library Special
-                Collections and Archives Department. For other uses beyond free use, please contact University of Idaho
-                Library Special Collections and Archives Department at libspec@uidaho.edu.</dc:rights>
-            <dc:rights>http://rightsstatements.org/vocab/InC-EDU/1.0/</dc:rights>
-            <dc:type>Text</dc:type>
-            <dc:format>application/pdf</dc:format>
-            <dc:language>eng</dc:language>
-            <dc:relation>http://archiveswest.orbiscascade.org/ark:/80444/xv97133/op=fstyle.aspx?t=k&amp;q=psychiana</dc:relation>
-            <dc:identifier>http://digital.lib.uidaho.edu/cdm/ref/collection/psychiana/id/0</dc:identifier>
-        </oai_dc:dc>
-    </metadata>
-</record>
-
+<ore:Aggregation rdf:about="http://harvester.orbiscascade.org/record/e466e93cf4849fd8aa36f1daa1417c15"
+                 xmlns:dcterms="http://www.w3.org/1999/xhtml"
+                 xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns"
+                 xmlns:doap="http://usefulinc.com/ns/doap" xmlns:edm="http://rs.org/">
+    <prov:wasDerivedFrom>
+        <dcmitype:Collection rdf:about="http://cdm16786.contentdm.oclc.org//oai/oai.php?verb=ListRecords&amp;set=alaskawcanada&amp;metadataPrefix=oai_dc">
+            <dcterms:title>Alaska, Western Canada and United States</dcterms:title>
+            <dcterms:publisher rdf:resource="http://harvester.orbiscascade.org/agency/wauar"/>
+        </dcmitype:Collection>
+    </prov:wasDerivedFrom>
+    <edm:dataProvider rdf:resource="http://harvester.orbiscascade.org/agency/wauar"/>
+    <edm:aggregatedCHO>
+        <dpla:SourceResource rdf:about="http://cdm16786.contentdm.oclc.org/cdm/ref/collection/alaskawcanada/id/7049">
+            <edm:hasType>Photograph</edm:hasType>
+            <dcterms:subject>Mountains--Yukon</dcterms:subject>
+            <dcterms:isPartOf rdf:resource="http://cdm16786.contentdm.oclc.org//oai/oai.php?verb=ListRecords&amp;set=alaskawcanada&amp;metadataPrefix=oai_dc"/>
+            <dcterms:type rdf:resource="http://purl.org/dc/dcmitype/Image"/>
+            <dcterms:description>PH Coll 41.96c Scanned from an original photographic print at 110 dpi in JPEG format at compression rate 3 and resized to 768x600 ppi. 2015</dcterms:description>
+            <dc:rights>For information on permissions for use and reproductions please visit UW Libraries Special Collections Use Permissions page:   http://www.lib.washington.edu/specialcollections/services/permission-for-use</dc:rights>
+            <dc:rights rdf:resource="http://rightsstatements.org/vocab/CNE/1.0/"/>
+            <dcterms:spatial>Canada--Yukon Territory</dcterms:spatial>
+            <dcterms:title>View of opposite shore from water with mountain in distance, Yukon Territory, circa 1903-1906</dcterms:title>
+            <dcterms:language>eng</dcterms:language>
+            <dcterms:date>
+                <edm:TimeSpan>
+                    <edm:begin rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear"
+                    >1903</edm:begin>
+                    <edm:end rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear"
+                    >1906</edm:end>
+                </edm:TimeSpan>
+            </dcterms:date>
+            <dcterms:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+            <dcterms:contributor>University of Washington Libraries, Special Collections</dcterms:contributor>
+        </dpla:SourceResource>
+    </edm:aggregatedCHO>
+    <edm:rights rdf:resource="http://rightsstatements.org/vocab/CNE/1.0/"/>
+    <edm:preview>
+        <edm:WebResource rdf:about="http://cdm16786.contentdm.oclc.org/utils/getthumbnail/collection/alaskawcanada/id/7049">
+            <edm:rights rdf:resource="http://rightsstatements.org/vocab/CNE/1.0/"/>
+            <dcterms:format>image/jpeg</dcterms:format>
+        </edm:WebResource>
+    </edm:preview>
+    <doap:audience>dpla</doap:audience>
+    <edm:object>
+        <edm:WebResource rdf:about="http://cdm16786.contentdm.oclc.org/utils/getstream/collection/alaskawcanada/id/7049">
+            <edm:rights rdf:resource="http://rightsstatements.org/vocab/CNE/1.0/"/>
+        </edm:WebResource>
+    </edm:object>
+    <prov:generatedAtTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-06-29T06:17:17.375-07:00</prov:generatedAtTime>
+    <edm:isShownAt rdf:resource="http://cdm16786.contentdm.oclc.org/utils/getstream/collection/alaskawcanada/id/7049"/>
+    <edm:isShownAt>
+        <edm:WebResource rdf:about="http://cdm16786.contentdm.oclc.org/utils/getstream/collection/sayre/id/11790">
+            <edm:rights rdf:resource="http://rightsstatements.org/vocab/CNE/1.0/"/>
+        </edm:WebResource>
+    </edm:isShownAt>
+</ore:Aggregation>
