@@ -26,7 +26,7 @@ object EnrichedRecordFixture {
       preview = Some(
         EdmWebResource(uri = URI("https://example.org/thumbnail/123.jpg"))
       ),
-      edmRights = Some(URI("http://rightsstatements.org/vocab/NoC-US")),
+      edmRights = Some(URI("http://rightsstatements.org/vocab/NoC-US/")),
       isShownAt = EdmWebResource(
         uri = URI("https://example.org/record/123")
       ),
