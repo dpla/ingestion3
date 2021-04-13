@@ -2788,11 +2788,11 @@
 				"Wikidata": "Q5729648"
 			},
 			"Houston County Public Library System": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q30634671"
 			},
 			"Houston County Public Library": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q30634671"
 			},
 			"Howard University": {
@@ -2892,7 +2892,7 @@
 				"Wikidata": "Q29095213"
 			},
 			"Northeast Georgia Regional Library System": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q30633418"
 			},
 			"Oconee Regional Library System": {
@@ -2948,7 +2948,7 @@
 				"Wikidata": "Q1020699"
 			},
 			"Screven-Jenkins Regional Library System": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q30633958"
 			},
 			"Seattle Civil Rights and Labor History Project": {
@@ -2964,7 +2964,7 @@
 				"Wikidata": "Q69485551"
 			},
 			"Southwest Georgia Regional Library": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q30625967"
 			},
 			"Special Collections and Archives": {
@@ -7350,7 +7350,7 @@
 				"Wikidata": "Q2085417"
 			},
 			"Philadelphia Museum of Art": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q510324"
 			},
 			"Phillips Academy": {
@@ -7910,7 +7910,7 @@
 				"Wikidata": "Q28230858"
 			},
 			"Cleveland Public Library": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q69487402"
 			},
 			"Columbus Metropolitan Library": {
@@ -7926,7 +7926,7 @@
 				"Wikidata": "Q4493503"
 			},
 			"Kent State University": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q1473615"
 			},
 			"Kenyon College": {
