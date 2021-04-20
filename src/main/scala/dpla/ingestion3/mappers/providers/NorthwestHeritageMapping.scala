@@ -141,7 +141,7 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
 
   // Helper method
   def agent = EdmAgent(
-    name = Some("Northwest Heritage Digital Library"),
-    uri = Some(URI("http://dp.la/api/contributor/northwest-heritage"))
+    name = Some("Northwest Digital Heritage"),
+    uri = Some(URI("http://dp.la/api/contributor/northwest-digital-heritage"))
   )
 }
