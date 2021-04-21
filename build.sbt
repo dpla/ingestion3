@@ -12,7 +12,7 @@ assembly / assemblyMergeStrategy := {
 }
 
 libraryDependencies ++= Seq(
-  // "org.scalatest" %% "scalatest" % "3.0.1" % "it,test",
+   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
 
   /**
     * The following dependencies enable S3 file writes:
