@@ -4,13 +4,15 @@ organization := "dpla"
 version := "0.0.1"
 scalaVersion := "2.11.8"
 
+parallelExecution in Test := false
+
 assembly / assemblyMergeStrategy := {
   case "META-INF/MANIFEST.MF" => MergeStrategy.discard
   case x => MergeStrategy.first
 }
 
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "3.0.1" % "it,test",
+  // "org.scalatest" %% "scalatest" % "3.0.1" % "it,test",
 
   /**
     * The following dependencies enable S3 file writes:
