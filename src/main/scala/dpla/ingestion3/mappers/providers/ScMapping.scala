@@ -33,7 +33,6 @@ class ScMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .flatMap(extractStrings)
       .map(nameOnlyCollection)
 
-
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(metadata(data) \ "contributor")
       .map(nameOnlyAgent)
