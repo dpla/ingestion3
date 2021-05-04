@@ -248,6 +248,16 @@ class NaraProfile extends XmlProfile {
 }
 
 /**
+  * NJ/DE Digital Collective
+  */
+class NJDEProfile extends XmlProfile {
+  type Mapping = NJDEMapping
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[OaiHarvester]
+  override def getMapping = new NJDEMapping
+}
+
+/**
   * North Carolina
   */
 class NcProfile extends XmlProfile {
