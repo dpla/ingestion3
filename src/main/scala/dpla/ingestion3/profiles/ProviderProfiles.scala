@@ -283,7 +283,7 @@ class NorthwestHeritageProfile extends XmlProfile {
 class OhioProfile extends XmlProfile {
   type Mapping = OhioMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester = classOf[OaiFileHarvester]
   override def getMapping = new OhioMapping
 }
 
