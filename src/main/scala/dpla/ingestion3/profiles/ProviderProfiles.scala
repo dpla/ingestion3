@@ -248,6 +248,16 @@ class NaraProfile extends XmlProfile {
 }
 
 /**
+  * NJ/DE Digital Collective
+  */
+class NJDEProfile extends XmlProfile {
+  type Mapping = NJDEMapping
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[OaiHarvester]
+  override def getMapping = new NJDEMapping
+}
+
+/**
   * North Carolina
   */
 class NcProfile extends XmlProfile {
@@ -273,7 +283,7 @@ class NorthwestHeritageProfile extends XmlProfile {
 class OhioProfile extends XmlProfile {
   type Mapping = OhioMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester = classOf[OaiFileHarvester]
   override def getMapping = new OhioMapping
 }
 

@@ -153,6 +153,8 @@ class OaiFileHarvester(spark: SparkSession,
       IOUtils.closeQuietly(inputStream)
     })
 
+    flush()
+
     // Read harvested data into Spark DataFrame and return.
     spark.read.avro(tmpOutStr)
   }

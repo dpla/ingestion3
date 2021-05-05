@@ -60,4 +60,4 @@ libraryDependencies ++= Seq(
   "org.apache.hadoop" % "hadoop-mapreduce-client-core" % "2.8.1"
 )
 
- resolvers += "SparkPackages" at "https://dl.bintray.com/spark-packages/maven/"
+ resolvers += "SparkPackages" at "https://repos.spark-packages.org/"
