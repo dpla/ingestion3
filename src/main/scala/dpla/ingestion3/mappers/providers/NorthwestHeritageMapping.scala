@@ -18,6 +18,8 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
     DigitalSurrogateBlockList.termList ++
       FormatTypeValuesBlockList.termList
 
+  val latLongRegex = "^[-+]?([1-8]?\\d(\\.\\d+)?|90(\\.0+)?),\\s*[-+]?(180(\\.0+)?|((1[0-7]\\d)|([1-9]?\\d))(\\.\\d+)?)$"
+
   // ID minting functions
   override def useProviderName(): Boolean = true
 
@@ -81,7 +83,9 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
 
   override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
   // <mods:subject><mods:geographic>
+  // drop lat long coordinates from place mapping
     extractStrings(data \ "subject" \ "geographic")
+      .filterNot(str => str.matches(latLongRegex))
       .map(nameOnlyPlace)
 
   override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
@@ -111,6 +115,15 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
       .flatMap(node => getByAttribute(node, "type", "ownership"))
       .flatMap(extractStrings)
       .map(nameOnlyAgent)
+
+  override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
+  // note @type='admin'
+  // TODO CONFIRM MAPPING
+    (data \ "note")
+      .flatMap(node => getByAttribute(node, "type", "admin"))
+      .flatMap(extractStrings)
+      .map(nameOnlyAgent)
+      .headOption
 
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
     (data \ "accessCondition")
