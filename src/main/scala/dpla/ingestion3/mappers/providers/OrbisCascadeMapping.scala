@@ -84,8 +84,14 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     // <edm:dataProvider rdf:resource="http://harvester.orbiscascade.org/agency/wauar"/>
     val lookup = Map[String, String](
+      // For posterity.
+      // Although wauar (University of Washington) data was submitted to DPLA through Orbis-Cascade that data was for
+      // testing purposes only and it was not intended to replace the UW content submitted previously as a content hub
+      // and they have requested to not be ingested via Orbis-Cascade. This may change at a future point when UW needs
+      // to have content updated in DPLA but it is not this day.
+      // "http://harvester.orbiscascade.org/agency/wauar"->"University of Washington Libraries, Special Collections",
+      
       "http://archiveswest.orbiscascade.org/contact#idu"->"University of Idaho Library, Special Collections and Archives",
-      "http://harvester.orbiscascade.org/agency/wauar"->"University of Washington Libraries, Special Collections",
       "http://harvester.orbiscascade.org/agency/ormcl"->"Linfield College",
       "http://archiveswest.orbiscascade.org/contact#orkt"->"Oregon Institute of Technology Libraries, Shaw Historical Library",
       "http://archiveswest.orbiscascade.org/contact#orpl"->"Lewis & Clark College, Special Collections and Archives",

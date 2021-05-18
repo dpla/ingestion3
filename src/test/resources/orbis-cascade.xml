@@ -8,7 +8,7 @@
             <dcterms:publisher rdf:resource="http://harvester.orbiscascade.org/agency/wauar"/>
         </dcmitype:Collection>
     </prov:wasDerivedFrom>
-    <edm:dataProvider rdf:resource="http://harvester.orbiscascade.org/agency/wauar"/>
+    <edm:dataProvider rdf:resource="http://archiveswest.orbiscascade.org/contact#idu"/>
     <edm:aggregatedCHO>
         <dpla:SourceResource rdf:about="http://cdm16786.contentdm.oclc.org/cdm/ref/collection/alaskawcanada/id/7049">
             <edm:hasType>Photograph</edm:hasType>
