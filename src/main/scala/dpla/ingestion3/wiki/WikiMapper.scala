@@ -1,5 +1,7 @@
 package dpla.ingestion3.wiki
 
+import java.util.regex.Pattern
+
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToOne}
 import dpla.ingestion3.model.{EdmWebResource, OreAggregation, URI}
@@ -7,6 +9,7 @@ import dpla.ingestion3.utils.FlatFileIO
 import org.json4s.jackson.JsonMethods.parse
 
 import scala.io.Source
+import scala.util.{Failure, Success, Try}
 
 case class WikiCriteria(dataProvider: Boolean, asset: Boolean, rights: Boolean, id: Boolean)
 
@@ -47,6 +50,40 @@ trait WikiMapper extends JsonExtractor {
   private val baseWikiUri = "https://wikidata.org/wiki/"
 
   lazy val wikiEntityEligibility: Seq[Eligibility] = getWikiEntityEligibility
+
+  /**
+    *
+    * @param isShownAt
+    * @return
+    */
+  def buildIIIFFromUrl(isShownAt: EdmWebResource): Option[URI] = {
+//    We want to go from
+//    http://www.ohiomemory.org/cdm/ref/collection/p16007coll33/id/126923
+//    to
+//    http://www.ohiomemory.org/iiif/info/p16007coll33/126923/manifest.json
+//
+//    ^(.*)/collection/(.*?)/id/(.*?)$  -> \1iiif/info/\2/\3/manifest.json
+//    The first match group should catch only through the TLD, not the /cdm/ref/ or
+//    whatever is that in between part of the URL before /collection/ (which should be discarded).
+
+    // TODO Do contentDM instances all have /cdm/ in their path?
+    val contentDMre = "(.*)(.*\\/cdm\\/.*collection\\/)(.*)(\\/id\\/)(.*$)"
+    val uri = isShownAt.uri.toString
+
+    val pattern = Pattern.compile(contentDMre)
+    val matcher = pattern.matcher(uri)
+    matcher.matches()
+
+    Try {
+        val domain: String = matcher.group(1)
+        val collection: String = matcher.group(3)
+        val id: String = matcher.group(5)
+        Some(URI(s"$domain/iiif/info/$collection/$id/manifest.json"))
+      } match {
+        case Success(s: Option[URI]) => s
+        case Failure(_) => None
+      }
+  }
 
   /**
     * Parse institutional JSON file and create a partner + dataProvider pairing to determine Wikimedia eligibility
