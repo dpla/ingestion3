@@ -2178,7 +2178,7 @@
 				"Wikidata": "Q14692165"
 			},
 			"Massachusetts Archives": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q6784182"
 			},
 			"Massachusetts College of Art and Design": {
@@ -2186,7 +2186,11 @@
 				"Wikidata": "Q4381563"
 			},
 			"Massachusetts Department of Conservation and Recreation": {
-				"upload": false,
+				"upload": true,
+				"Wikidata": "Q2543589"
+			},
+			"Massachusetts Department of Conservation and Recreation, Office of Watershed Management, Wachusett Watershed Office, West Boylston": {
+				"upload": true,
 				"Wikidata": "Q2543589"
 			},
 			"Massachusetts Historical Society": {
@@ -2226,7 +2230,7 @@
 				"Wikidata": "Q54816501"
 			},
 			"National Archives at Boston": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q29982657"
 			},
 			"Needham Free Public Library": {
