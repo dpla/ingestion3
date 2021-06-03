@@ -21,6 +21,7 @@ libraryDependencies ++= Seq(
     *   aws-java-sdk 1.7.4
     *   hadoop-aws 2.7.6
     */
+  "com.github.tototoshi" %% "scala-csv" % "1.3.8",
   "org.apache.spark" %% "spark-core" % "2.3.1" exclude("org.scalatest", "scalatest_2.11"),
   "org.apache.spark" %% "spark-sql" % "2.3.1" exclude("org.scalatest", "scalatest_2.11"),
   "org.apache.spark" %% "spark-mllib" % "2.3.1" exclude("org.scalatest", "scalatest_2.11"),

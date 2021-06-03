@@ -156,6 +156,17 @@ class LocProfile extends JsonProfile {
   override def getMapping = new LcMapping
 }
 
+
+/**
+  * Kenning
+  */
+class KenningProfile extends JsonProfile {
+  type Mapping = KenningMapping
+
+  override def getHarvester = classOf[KenningHarvester]
+  override def getMapping = new LcMapping
+}
+
 /**
   * Maine
   */
