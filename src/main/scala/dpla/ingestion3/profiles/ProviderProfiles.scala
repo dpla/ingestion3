@@ -164,7 +164,7 @@ class KenningProfile extends JsonProfile {
   type Mapping = KenningMapping
 
   override def getHarvester = classOf[KenningHarvester]
-  override def getMapping = new LcMapping
+  override def getMapping = new KenningMapping()
 }
 
 /**

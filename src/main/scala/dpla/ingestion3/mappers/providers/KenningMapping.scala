@@ -100,7 +100,7 @@ class KenningMapping extends JsonMapping with JsonExtractor {
 
   override def `type`(data: Document[JValue]): ZeroToMany[String] = Seq("Image")
 
-  override def edmRights(data: Document[JValue]): ZeroToMany[URI] = Seq(URI("https://creativecommons.org/licenses/by-nc-sa/3.0/us/"))
+  override def edmRights(data: Document[JValue]): ZeroToMany[URI] = Seq(URI("http://creativecommons.org/licenses/by-nc-sa/3.0/us/"))
 
 
 }
