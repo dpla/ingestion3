@@ -90,6 +90,9 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
       // and they have requested to not be ingested via Orbis-Cascade. This may change at a future point when UW needs
       // to have content updated in DPLA but it is not this day.
       // "http://harvester.orbiscascade.org/agency/wauar"->"University of Washington Libraries, Special Collections",
+
+      // Canonical list of mappings
+      // https://docs.google.com/spreadsheets/d/17YZEQRtxdgttRCW6NsCWQ2d9qI9L4IrqzXcPEr6mg18/edit#gid=0
       
       "http://archiveswest.orbiscascade.org/contact#idu"->"University of Idaho Library, Special Collections and Archives",
       "http://harvester.orbiscascade.org/agency/ormcl"->"Linfield College",
@@ -99,7 +102,7 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
       "http://archiveswest.orbiscascade.org/contact#watu"->"University of Puget Sound, Archives & Special Collections",
       "http://archiveswest.orbiscascade.org/contact#orngf"->"George Fox University Archives",
       "http://archiveswest.orbiscascade.org/contact#wachene"->"Eastern Washington University",
-      "http://archiveswest.orbiscascade.org/contact#orsaw"->"Western Washington University, Western Libraries Heritage Resources",
+      "http://archiveswest.orbiscascade.org/contact#orsaw"->"Willamette University Archives and Special Collections",
       "http://harvester.orbiscascade.org/agency/orpr"->"Reed College",
       "http://archiveswest.orbiscascade.org/contact#ormonw"->"Western Oregon University Archives",
       "http://archiveswest.orbiscascade.org/contact#orcs"->"Oregon State University Libraries, Special Collections and Archives Research Center",
@@ -132,17 +135,7 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
     extractStrings(data \\ "SourceResource" \ "rights")
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
-    val isShownAt = (data \ "isShownAt").headOption match {
-      case Some(node) =>
-        val elem = node.asInstanceOf[Elem]
-        elem
-          .attribute(elem.getNamespace("rdf"), "resource")
-          .getOrElse(Seq())
-          .flatMap(extractStrings(_))
-      case None => Seq()
-    }
-
-    val isShownAtWebResource = (data \ "isShownAt" \ "WebResource").headOption match {
+    val srAbout = (data \\ "SourceResource").headOption match {
       case Some(node) =>
         val elem = node.asInstanceOf[Elem]
         elem
@@ -151,8 +144,8 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
           .flatMap(extractStrings(_))
       case None => Seq()
     }
-
-    (isShownAt ++ isShownAtWebResource).map(stringOnlyWebResource)
+    
+    srAbout.map(stringOnlyWebResource)
   }
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
