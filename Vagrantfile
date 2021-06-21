@@ -6,9 +6,9 @@ sudo apt-get -y upgrade
 sudo apt-get -y install git sbt openjdk-8-jdk
 sudo apt-get -y install awscli
 
-sudo curl -O -sL "https://mirrors.sonic.net/apache/spark/spark-2.4.7/spark-2.4.7-bin-hadoop2.7.tgz"
-tar -xf spark-2.4.7-bin-hadoop2.7.tgz
-sudo mv spark-2.4.7-bin-hadoop2.7 /usr/local/spark
+sudo curl -O -sL "https://mirrors.sonic.net/apache/spark/spark-2.4.8/spark-2.4.8-bin-hadoop2.7.tgz"
+tar -xf spark-2.4.8-bin-hadoop2.7.tgz
+sudo mv spark-2.4.8-bin-hadoop2.7.tgz /usr/local/spark
 echo 'export PATH="$PATH:/usr/local/spark/bin"; export SPARK_HOME="/usr/local/spark"' | tee -a "/etc/bash.bashrc" > /dev/null
 
 sudo echo 'i3-harvest ()
