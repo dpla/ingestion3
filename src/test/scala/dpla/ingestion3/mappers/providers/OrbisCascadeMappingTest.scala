@@ -85,8 +85,9 @@ class OrbisCascadeMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "extract isShownAt from both possible locations" in {
     val expected = Seq(
-      "http://cdm16786.contentdm.oclc.org/utils/getstream/collection/alaskawcanada/id/7049",
-      "http://cdm16786.contentdm.oclc.org/utils/getstream/collection/sayre/id/11790"
+      "http://cdm16786.contentdm.oclc.org/cdm/ref/collection/alaskawcanada/id/7049"
+//      ,"http://cdm16786.contentdm.oclc.org/utils/getstream/collection/alaskawcanada/id/7049",
+//      "http://cdm16786.contentdm.oclc.org/utils/getstream/collection/sayre/id/11790"
     ).map(stringOnlyWebResource)
     assert(extractor.isShownAt(xml) === expected)
   }
