@@ -20,6 +20,10 @@ This project is an ETL system for cultural heritage metadata. The system has fiv
     * [Summary and reports](#summary-and-reports)
 * [JSON-L](#jsonl)
 * [Wikimedia](#wikimedia)
+    * [Eligibility](#eligibility)
+    * [Metadata](#metadata)
+    * [Media](#media)
+        * [ContentDM and IIIF Manifests](#contentdm-and-iiif-manifests)
 
 
 
@@ -411,7 +415,13 @@ The reports are generated every time mapped data is enriched.
  
 # Wikimedia
 
-Records which meet eligibility requirements can have their fullframe media assets and some associated metadta uploaded to Wikimedia. 
+Records which meet eligibility requirements can have their fullframe media assets and some associated metadata uploaded to Wikimedia. 
+
+* [Eligibility](#eligibility)
+* [Metadata](#metadata)
+* [Media](#media)
+** [ContentDM and IIIF Manifests](#contentdm-and-iiif-manifests)
+
 
 ## Eligibility 
 
@@ -466,7 +476,7 @@ This is the Wiki markdown block ([code](https://github.com/dpla/ingestion3/blob/
 An [example](https://commons.wikimedia.org/wiki/File:%22Babe%22,_Walbridge_Park_elephant,_Toledo,_Ohio_-_DPLA_-_6777c0761ba2881404729e3cc9593207_(page_1).jpg) of that markdown on Commons and the same item in [DPLA](https://dp.la/item/6777c0761ba2881404729e3cc9593207). 
 
 ## Media
-Unlike the normal media fields we aggregate (thumbnail/object/preview) which are limited to a single asset, these uploads will include all media assets provided in either the `mediaMaster` or `iiifManifest` mappings. Media assets will be uploaded with a file name the follows the this convention.
+Unlike the normal media fields we aggregate (thumbnail/object/preview) which are limited to a single asset, these uploads will include all media assets provided in either the `mediaMaster` or `iiifManifest` mappings. Media assets will be uploaded with a file name and Wikimedia page name the follows the this convention.
 
 ```python
         # take only the first 181 characters of record title
@@ -486,6 +496,11 @@ Unlike the normal media fields we aggregate (thumbnail/object/preview) which are
         else:
             return f"{escaped_title} - DPLA - {dpla_identifier} (page {page}){suffix}"
 ```
+
+Key points to note:
+* The record title is limited to the first 181 characters
+* There is character substitution for `[]/{}`
+* If there are multiple assets associated with a metadata record we add a `page (n)` to the title.
 
 ### ContentDM and IIIF Manifests 
 
