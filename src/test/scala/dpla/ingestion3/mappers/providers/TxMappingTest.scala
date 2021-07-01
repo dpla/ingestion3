@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
-import dpla.ingestion3.model._
+import dpla.ingestion3.model.{SkosConcept, _}
 import dpla.ingestion3.utils.FlatFileIO
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 
@@ -97,10 +97,17 @@ class TxMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct subjects" in {
-    val expected = Seq("Texas -- Annexation to the United States.",
-      "United States -- Politics and government -- 1841-1845.",
-      "Military and War - Wars - Texas Revolution").map(nameOnlyConcept)
-    assert(extractor.subject(xml) === expected)
+//    val expected = Seq("Texas -- Annexation to the United States.",
+//      "United States -- Politics and government -- 1841-1845.",
+//      "Military and War - Wars - Texas Revolution").map(nameOnlyConcept)
+
+    val expected2 = Seq(
+      SkosConcept(concept = Some("Texas -- Annexation to the United States."), scheme = Some(URI("LCSH"))),
+      SkosConcept(concept = Some("United States -- Politics and government -- 1841-1845."), scheme = Some(URI("LCSH"))),
+      SkosConcept(concept = Some("Military and War - Wars - Texas Revolution"), scheme = Some(URI("UNTL-BS")))
+    )
+
+    assert(extractor.subject(xml) === expected2)
   }
 
   it should "extract the correct titles" in {
