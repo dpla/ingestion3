@@ -465,6 +465,31 @@ This is the Wiki markdown block ([code](https://github.com/dpla/ingestion3/blob/
 ```
 An [example](https://commons.wikimedia.org/wiki/File:%22Babe%22,_Walbridge_Park_elephant,_Toledo,_Ohio_-_DPLA_-_6777c0761ba2881404729e3cc9593207_(page_1).jpg) of that markdown on Commons and the same item in [DPLA](https://dp.la/item/6777c0761ba2881404729e3cc9593207). 
 
+## Media
+Unlike the normal media fields we aggregate (thumbnail/object/preview) which are limited to a single asset, these uploads will include all media assets provided in either the `mediaMaster` or `iiifManifest` mappings. Media assets will be uploaded with a file name the follows the this convention.
+
+```python
+        # take only the first 181 characters of record title
+        # replace [ with (
+        # replace ] with )
+        # replace / with -
+        escaped_title = title[0:181] \
+            .replace('[', '(') \
+            .replace(']', ')') \
+            .replace('/', '-') \
+            .replace('{', '(') \
+            .replace('}', ')')
+
+        # Add pagination to page title if needed
+        if page is None:
+            return f"{escaped_title} - DPLA - {dpla_identifier}{suffix}"
+        else:
+            return f"{escaped_title} - DPLA - {dpla_identifier} (page {page}){suffix}"
+```
+
+### ContentDM and IIIF Manifests 
+
+![Millhouse the magician](https://media.giphy.com/media/ieREaX3VTHsqc/giphy.gif)
 
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/6a9dfda51ad04ce3acfb7fcb441af846)](https://www.codacy.com/app/mdellabitta/ingestion3?utm_source=github.com&utm_medium=referral&utm_content=dpla/ingestion3&utm_campaign=badger)
