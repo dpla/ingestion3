@@ -411,7 +411,60 @@ The reports are generated every time mapped data is enriched.
  
 # Wikimedia
 
-TBD
+Records which meet eligibility requirements can have their fullframe media assets and some associated metadta uploaded to Wikimedia. 
+
+## Eligibility 
+
+Records must meet three minimum requirements to be eligible for upload
+1. **Standardized rights** - The record must have an `edmRights` URI and it must be one of these values 
+```text
+http://rightsstatements.org/vocab/NoC-US/
+http://creativecommons.org/publicdomain/mark/
+http://creativecommons.org/publicdomain/zero/
+http://creativecommons.org/licenses/by/
+http://creativecommons.org/licenses/by-sa/
+```
+
+2. **Media assets** - The record must have either a `iiifManifest` or a `mediaMaster` URL. This value is distinct from the `object` mapping which is a single value and expected to a low resolution thumbnail (150px). The URLs for `mediaMaster` should point to the highest resolution possible and can be more than one URL.
+3. **Data Provider URI** - The `dataProvider` name must be reconciled to a WikiData URI. This is an enrichment that DPLA performs on these values (see [dataProvider enrichments](#dataprovider))
+  
+
+## Metadata 
+For each image file that is uploaded a corresponding block of metadata is also attached. 
+
+* Creator (multiple values joined by a `;`)
+* Title (multiple values joined by a `;`)
+* Description (multiple values joined by a `;`)
+* Date (multiple values joined by a `;`)
+* edmRights
+* Data Provider Wikidata URI
+* Provider 
+* isShownAt
+* DPLA ID
+* Local IDs (multiple values joined by a `;`)
+
+This is the Wiki markdown block ([code](https://github.com/dpla/ingestion3/blob/62f809499846a5cca1ebfd10ca23662d433c5df1/src/main/scala/dpla/ingestion3/model/package.scala#L224-L250))
+```text
+{{int:filedesc}} ==
+| {{ Artwork
+|   | Other fields 1 = {{ InFi | Creator | ${record.sourceResource.creator.flatMap { _.name }.map(escapeWikiChars).mkString("; ")} }}
+|   | title = ${record.sourceResource.title.map(escapeWikiChars).mkString("; ")}
+|   | description = ${record.sourceResource.description.map(escapeWikiChars).mkString("; ")}
+|   | date = ${record.sourceResource.date.flatMap { _.prefLabel }.map(escapeWikiChars).mkString("; ")}
+|   | permission = {{${getWikiPermissionTemplate(record.edmRights)}}}
+|   | source = {{ DPLA
+|       | ${escapeWikiChars(dataProviderWikiUri)}
+|       | hub = ${escapeWikiChars(record.provider.name.getOrElse(""))}
+|       | url = ${escapeWikiChars(record.isShownAt.uri.toString)}
+|       | dpla_id = $dplaId
+|       | local_id = ${record.sourceResource.identifier.map(escapeWikiChars).mkString("; ")}
+|   }}
+|   | Institution = {{ Institution | wikidata = $dataProviderWikiUri }}
+|   | Other fields = ${getWikiOtherFieldsRights(record.edmRights)}
+| }}
+```
+An [example](https://commons.wikimedia.org/wiki/File:%22Babe%22,_Walbridge_Park_elephant,_Toledo,_Ohio_-_DPLA_-_6777c0761ba2881404729e3cc9593207_(page_1).jpg) of that markdown on Commons and the same item in [DPLA](https://dp.la/item/6777c0761ba2881404729e3cc9593207). 
+
 
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/6a9dfda51ad04ce3acfb7fcb441af846)](https://www.codacy.com/app/mdellabitta/ingestion3?utm_source=github.com&utm_medium=referral&utm_content=dpla/ingestion3&utm_campaign=badger)
