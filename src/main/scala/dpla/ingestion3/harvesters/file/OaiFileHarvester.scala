@@ -91,6 +91,9 @@ class OaiFileHarvester(spark: SparkSession,
       item <- items
     } yield item match {
       case record: Node =>
+        if((record \ "header").head.attribute("status").getOrElse(<foo></foo>).text.equalsIgnoreCase("deleted")) {
+          None
+        }
         // Extract required record identifier
         val id: Option[String] = extractor.extractString(record \ "header" \ "identifier")
 
