@@ -165,6 +165,10 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
         case Some(nodes) => extractString(nodes.head).map(URI)
         case None => None
       }
+
+      // LCSH == http://id.loc.gov/authorities#conceptscheme
+      // UNTL-BS == https://digital2.library.unt.edu/subjects/
+      // KWD
       SkosConcept(concept = term, scheme = ns)
     })
 
