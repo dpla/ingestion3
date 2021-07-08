@@ -1,7 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.Document
-import dpla.ingestion3.model.URI
+import dpla.ingestion3.model.{URI, _}
 import org.json4s._
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 
@@ -18,5 +18,17 @@ class CdlMappingTest extends FlatSpec with BeforeAndAfter {
     val json = org.json4s.jackson.JsonMethods.parse("""{ "id": "foo" }""")
     val expected = Some("foo")
     assert(extractor.originalId(Document(json)) == expected)
+  }
+
+  it should "extract the correct intermediate provider" in {
+    val json = org.json4s.jackson.JsonMethods.parse("""{ "repository_name": [ "foo", "University of Southern California Digital Library" ] }""")
+    val expected = Some(nameOnlyAgent("University of Southern California Digital Library"))
+    assert(extractor.intermediateProvider(Document(json)) == expected)
+  }
+
+  it should "extract no intermediate provider" in {
+    val json = org.json4s.jackson.JsonMethods.parse("""{ "repository_name": [ "foo" ] }""")
+    val expected = None
+    assert(extractor.intermediateProvider(Document(json)) == expected)
   }
 }

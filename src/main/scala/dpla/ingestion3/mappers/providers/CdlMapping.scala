@@ -6,6 +6,7 @@ import dpla.ingestion3.mappers.utils.{Document, JsonExtractor, JsonMapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
 import dpla.ingestion3.utils.Utils
+import org.json4s
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
@@ -112,6 +113,14 @@ class CdlMapping extends JsonMapping with JsonExtractor {
     extractStrings("title_ss")(data).map(_.stripBrackets)
 
   override def `type`(data: Document[JValue]): ZeroToMany[String] = extractStrings("type")(data)
+
+  override def intermediateProvider(data: Document[json4s.JValue]): ZeroToOne[EdmAgent] = {
+    val repositories = extractStrings("repository_name")(data)
+    if(repositories.tail.nonEmpty)
+      repositories.take(2).lastOption.map(nameOnlyAgent)
+    else
+      None
+  }
 
   // Helper methods
   def getDataProvider(json: JValue): String = {
