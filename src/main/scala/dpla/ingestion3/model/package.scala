@@ -203,7 +203,8 @@ package object model {
           // ("specType" -> "FIXME") ~
           // stateLocatedIn is omitted.
           ("subject" -> record.sourceResource.subject.map{s =>
-            "name" -> s.providedLabel
+            ("name" -> s.providedLabel) ~
+            ("scheme" -> s.scheme.map(_.toString))
           }) ~
           ("temporal" ->
             record.sourceResource.temporal.map{ t =>
