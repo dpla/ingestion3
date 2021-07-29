@@ -1,5 +1,5 @@
 $script = <<-'SCRIPT'
-echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
+echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
 sudo curl -o /etc/apt/trusted.gpg.d/sbt.asc -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823"
 sudo apt-get -y update
 sudo apt-get -y upgrade
@@ -13,7 +13,7 @@ echo 'export PATH="$PATH:/usr/local/spark/bin"; export SPARK_HOME="/usr/local/sp
 
 sudo echo 'i3-harvest ()
 {
-  SBT_OPTS=-Xmx15g sbt "run-main dpla.ingestion3.entries.ingest.HarvestEntry
+  SBT_OPTS=-Xmx15g sbt "runMain dpla.ingestion3.entries.ingest.HarvestEntry
     --output /home/ubuntu/data/
     --conf /home/ubuntu/ingestion3/conf/i3.conf
     --name $1
