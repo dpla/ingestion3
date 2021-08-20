@@ -16,7 +16,7 @@ class GettyHarvester(spark: SparkSession,
                      shortName: String,
                      conf: i3Conf,
                      harvestLogger: Logger)
-  extends PrimoHarvester(spark, shortName, conf, harvestLogger) {
+  extends PrimoApiHarvester(spark, shortName, conf, harvestLogger) {
 
   /**
     * Constructs the URL for Getty Primo API requests
@@ -26,14 +26,19 @@ class GettyHarvester(spark: SparkSession,
     */
   override def buildUrl(params: Map[String, String]): URL =
     new URIBuilder()
-      .setScheme("http")
-      .setHost("primo.getty.edu")
-      .setPath("/PrimoWebServices/xservice/search/brief")
-      .setParameter("indx", params.getOrElse("indx", "1")) // record offset
-      .setParameter("bulkSize", params.getOrElse("rows", "500")) // records per page
-      .setParameter("institution", "01GRI")
+      .setScheme("https")
+      .setHost("api-na.hosted.exlibrisgroup.com")
+      .setPath("/primo/v1/search")
+      .setParameter("offset", params.getOrElse("offset", "0")) // record offset
+      .setParameter("limit", params.getOrElse("rows", "500")) // records per page
+      .setParameter("inst", "01GRI")
+      .setParameter("vid", "GRI")
+      .setParameter("tab", "all_gri")
+      .setParameter("scope", "COMBINED")
+      .setParameter("lang", "eng")
       .setParameter("loc", "local,scope:(GETTY_OCP,GETTY_ROSETTA)")
-      .setParameter("query", params.getOrElse("query", throw new RuntimeException("No query parameter provided")))
+      .setParameter("q", params.getOrElse("query", throw new RuntimeException("No query parameter provided")))
+      .setParameter("apikey", params.getOrElse("apiKey", throw new RuntimeException("No api key provided")))
       .build()
       .toURL
 }
