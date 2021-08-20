@@ -414,7 +414,6 @@ The reports are generated every time mapped data is enriched.
  TBD
  
 # Wikimedia
-
 Records which meet eligibility requirements can have their full-frame media assets and some associated metadata uploaded to Wikimedia. ingestion3 is only partly responsible for this process (chiefly the evaluation of eligibility and Wiki markdown/metadata creation) but the actual work of uploading images to Wikimedia is handled by the [ingest-wikimedia](https://github.com/dpla/ingest-wikimedia) project.
 
 * [Eligibility](#eligibility)
@@ -422,6 +421,7 @@ Records which meet eligibility requirements can have their full-frame media asse
 * [Media](#media)
     * [ContentDM and IIIF Manifests](#contentdm-and-iiif-manifests)
 
+Records which meet eligibility requirements can have their fullframe media assets and some associated metadta uploaded to Wikimedia. 
 
 ## Eligibility 
 
@@ -505,6 +505,7 @@ Key points to note:
 ### ContentDM and IIIF Manifests 
 
 ![Millhouse the magician](https://media.giphy.com/media/ieREaX3VTHsqc/giphy.gif)
+=======
 
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/6a9dfda51ad04ce3acfb7fcb441af846)](https://www.codacy.com/app/mdellabitta/ingestion3?utm_source=github.com&utm_medium=referral&utm_content=dpla/ingestion3&utm_campaign=badger)

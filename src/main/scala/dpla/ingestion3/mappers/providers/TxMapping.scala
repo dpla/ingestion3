@@ -159,8 +159,23 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .map(text => TxMapping.rightsTermLabel.getOrElse(text, text))
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
-    extractStrings(metadata(data) \ "subject")
-      .map(nameOnlyConcept)
+    (metadata(data) \ "subject").map(node => {
+      val term = extractString(node)
+      val scheme = node.attribute("qualifier") match {
+        case Some(nodes) => extractString(nodes.head)
+        case None => None
+      }
+
+      // LCSH == http://id.loc.gov/authorities#conceptscheme
+      // UNTL-BS == https://digital2.library.unt.edu/subjects/
+      // KWD == ???
+      val schemeUri = scheme match {
+        case Some("LCSH") => Some(URI("http://id.loc.gov/authorities#conceptscheme"))
+        case _ => None
+      }
+
+      SkosConcept(concept = term, scheme = schemeUri)
+    })
 
   override def title(data: Document[NodeSeq]): AtLeastOne[String] = {
     val titles =  metadata(data) \ "title"
