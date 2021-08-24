@@ -278,6 +278,16 @@ class NorthwestHeritageProfile extends XmlProfile {
 }
 
 /**
+  * New York Public Library
+  */
+class NYPLProfile extends XmlProfile {
+  type Mapping = NorthwestHeritageMapping // FIXME
+
+  override def getHarvester = classOf[NYPLFileHarvester]
+  override def getMapping = new NorthwestHeritageMapping // FIXME
+}
+
+/**
   * Ohio Hub
   */
 class OhioProfile extends XmlProfile {
