@@ -151,6 +151,8 @@ class MissouriFileHarvester(spark: SparkSession,
       IOUtils.closeQuietly(inputStream)
     })
 
+    flush()
+
     // Read harvested data into Spark DataFrame.
     val df = spark.read.avro(tmpOutStr)
 
