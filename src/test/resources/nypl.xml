@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mods xmlns="http://www.loc.gov/mods/v3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="3.4" xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-4.xsd">
+    <titleInfo usage="primary" supplied="no">
+        <title>Jedediah Buxton  [National Calculator, 1705-1780]</title>
+    </titleInfo>
+    <titleInfo>
+        <title>Alternate Title</title>
+    </titleInfo>
+    <typeOfResource>still image</typeOfResource>
+    <genre authority="lctgm" valueURI="http://id.loc.gov/vocabulary/graphicMaterials/tgm002169">Clippings</genre>
+    <genre authority="lctgm" valueURI="http://id.loc.gov/vocabulary/graphicMaterials/tgm008085">Portraits</genre>
+    <subject>
+        <topic>Public figures</topic>
+    </subject>
+    <subject>
+        <titleInfo>
+            <title>Subject title</title>
+        </titleInfo>
+    </subject>
+    <subject>
+        <name>
+            <namePart>Subject name</namePart>
+        </name>
+    </subject>
+    <subject>
+        <temporal>temporal subject</temporal>
+    </subject>
+    <name type="personal" authority="naf" valueURI="" usage="primary">
+        <namePart>Kay, John (1742-1826)</namePart>
+        <role>
+            <roleTerm valueURI="http://id.loc.gov/vocabulary/relators/egr" authority="marcrelator" type="code">egr</roleTerm>
+            <roleTerm valueURI="http://id.loc.gov/vocabulary/relators/egr" authority="marcrelator" type="text">Engraver</roleTerm>
+        </role>
+    </name>
+    <name type="personal" authority="naf" valueURI="" usage="primary">
+        <namePart>Contributor</namePart>
+        <role>
+            <roleTerm valueURI="http://id.loc.gov/vocabulary/relators/egr" authority="marcrelator" type="code">egr</roleTerm>
+            <roleTerm valueURI="http://id.loc.gov/vocabulary/relators/egr" authority="marcrelator" type="text">Owner</roleTerm>
+        </role>
+    </name>
+    <identifier type="local_hades_collection" displayLabel="Hades Collection Guide ID (legacy)">242</identifier>
+    <identifier type="local_other" displayLabel="Other local Identifier">Portrait File</identifier>
+    <identifier type="local_hades" displayLabel="Hades struc ID (legacy)">461864</identifier>
+    <identifier type="urn" displayLabel="Hades struc ID (legacy)">URN id</identifier>
+    <location>
+        <physicalLocation authority="marcorg" type="repository">nn</physicalLocation>
+        <physicalLocation type="division">The Miriam and Ira D. Wallach Division of Art, Prints and Photographs: Print Collection</physicalLocation>
+        <physicalLocation type="division_short_name">Wallach Division: Print Collection</physicalLocation>
+        <physicalLocation type="code">PRN</physicalLocation>
+    </location>
+    <location>
+        <physicalLocation type="division">The Miriam and Ira D. Wallach Division of Art, Prints and Photographs: Print Collection</physicalLocation>
+        <physicalLocation type="division_short_name">Wallach Division: Print Collection</physicalLocation>
+        <physicalLocation type="code">PRN</physicalLocation>
+    </location>
+    <physicalDescription>
+        <form authority="lctgm" valueURI="http://id.loc.gov/vocabulary/graphicMaterials/tgm011787">Woodburytypes</form>
+    </physicalDescription>
+    <note type="statement of responsibility">I. Corner sculp. (Literary Magazine).</note>
+    <note type="content">A valid note</note>
+    <abstract>hello world.</abstract>
+    <identifier type="uuid">4d0e0bc0-c540-012f-1857-58d385a7bc34</identifier>
+    <relatedItem type="host">
+        <titleInfo>
+            <title>Jedediah Buxton.</title>
+        </titleInfo>
+        <identifier type="uuid">4c694120-c540-012f-a49c-58d385a7bc34</identifier>
+        <identifier type="local_hades">461863</identifier>
+        <relatedItem type="host">
+            <titleInfo>
+                <title>B</title>
+            </titleInfo>
+            <identifier type="uuid">64674f20-c533-012f-0a24-58d385a7bc34</identifier>
+            <identifier type="local_hades">591654</identifier>
+            <relatedItem type="host">
+                <titleInfo>
+                    <title>Print Collection portrait file</title>
+                </titleInfo>
+                <identifier type="uuid">16ad5350-c52e-012f-aecf-58d385a7bc34</identifier>
+                <identifier type="local_hades">287739 local_hades_collection</identifier>
+            </relatedItem>
+        </relatedItem>
+    </relatedItem>
+</mods>
