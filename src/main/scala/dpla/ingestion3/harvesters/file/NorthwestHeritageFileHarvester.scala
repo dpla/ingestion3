@@ -153,6 +153,9 @@ class NorthwestHeritageFileHarvester(spark: SparkSession,
       IOUtils.closeQuietly(inputStream)
     })
 
+    // flush the avroWriter
+    flush()
+
     // Read harvested data into Spark DataFrame and return.
     spark.read.avro(tmpOutStr)
   }
