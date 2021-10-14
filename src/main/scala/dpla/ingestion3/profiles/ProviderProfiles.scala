@@ -213,7 +213,7 @@ class MiProfile extends XmlProfile {
 class MississippiProfile extends JsonProfile {
   type Mapping = MissouriMapping // FIXME
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[MsHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[MississippiHarvester]
   override def getMapping = new MissouriMapping // FIXME
 }
 

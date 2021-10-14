@@ -9,13 +9,13 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
 
 /**
-  * Class for harvesting records from the Getty Primo endpoint
+  * Class for harvesting records from the Mississippi Primo VE endpoint
   *
   */
-class MsHarvester(spark: SparkSession,
-                  shortName: String,
-                  conf: i3Conf,
-                  harvestLogger: Logger)
+class MississippiHarvester(spark: SparkSession,
+                           shortName: String,
+                           conf: i3Conf,
+                           harvestLogger: Logger)
   extends PrimoVEHarvester(spark, shortName, conf, harvestLogger) {
 
   /**
@@ -25,13 +25,6 @@ class MsHarvester(spark: SparkSession,
     * @return URL
     */
 
-//  https://api-na.hosted.exlibrisgroup.com/primo/v1/search
-//  ?vid=01USM_INST:MDL
-//  &tab=MDL
-//  &scope=MDL
-//  &q=any,contains,**
-//  &apikey=
-//  &indx=0
   override def buildUrl(params: Map[String, String]): URL =
     new URIBuilder()
       .setScheme("https")
