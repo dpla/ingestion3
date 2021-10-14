@@ -5,34 +5,38 @@ import java.net.URL
 
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.utils.{HttpUtils, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
+import org.json4s.jackson.JsonMethods.{compact, parse, render}
 
 import scala.util.{Failure, Success}
-import scala.xml.XML
 
 /**
-  * Class for harvesting records from Primo Classic Web Services endpoints
+  * Class for harvesting records from Primo VE endpoints
+  *
+  * https://developers.exlibrisgroup.com/primo/apis/
   *
   * The buildUrl(queryParams: Map[String, String] method is not
   * defined here but should instead be defined in a specific
   * provider's implementation of this abstract class.
   *
   */
-abstract class PrimoHarvester(spark: SparkSession,
-                              shortName: String,
-                              conf: i3Conf,
-                              logger: Logger)
-  extends ApiHarvester(spark, shortName, conf, logger) {
+abstract class PrimoVEHarvester(spark: SparkSession,
+                                shortName: String,
+                                conf: i3Conf,
+                                logger: Logger)
+  extends ApiHarvester(spark, shortName, conf, logger) with JsonExtractor {
 
-  def mimeType: String = "application_xml"
+  def mimeType: String = "application_json"
 
   override protected val queryParams: Map[String, String] = Map(
     "query" -> conf.harvest.query,
     "rows" -> conf.harvest.rows,
-    "indx" -> Some("1")
+    "indx" -> Some("1"),
+    "api_key" -> conf.harvest.apiKey
   ).collect{ case (key, Some(value)) => key -> value } // remove None values
 
   /**
@@ -61,14 +65,13 @@ abstract class PrimoHarvester(spark: SparkSession,
       case src: ApiSource with ApiResponse =>
         src.text match {
           case Some(docs) =>
-            val xml = XML.loadString(docs)
-            // FIXME add 'sear' namespace to selection
-            val primoRecords = (xml \\ "SEGMENTS" \"JAGROOT" \ "RESULT" \ "DOCSET" \ "DOC")
+            val json = parse(docs)
+            val primoRecords = (json \ "docs")
+              .children
               .map(doc => {
-                val id = (doc \\ "PrimoNMBib" \ "record" \ "control" \ "recordid").text
-                ApiRecord(id, Utils.formatXml(doc))
+                val id = (doc \\ "record" \ "control" \ "recordid").toString // FIXME validate that each record has ID
+                ApiRecord(id, compact(render(doc)))
               })
-              .toList
 
             // @see ApiHarvester
             saveOutRecords(primoRecords)
@@ -77,7 +80,7 @@ abstract class PrimoHarvester(spark: SparkSession,
             val nextIndx = (primoRecords.size + indx.toInt).toString
             // Only extract total records once
             totalRecords = if (totalRecords.isEmpty)
-              (xml \\ "SEGMENTS" \ "JAGROOT" \ "RESULT" \ "DOCSET" \ "@TOTALHITS").text
+              extractString(json \ "info" \ "total").get
             else totalRecords
 
             // Fetched 8,300 of 991,692 from http://mwdl.com/PrimoWebServices/xservice/search/brief?indx=8201?...
