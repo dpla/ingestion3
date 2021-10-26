@@ -24,7 +24,7 @@ class MississippiMapping
   // ID minting functions
   override def useProviderName: Boolean = true
 
-  override def getProviderName: String = "mississippi"
+  override def getProviderName: Option[String] = Some("mississippi")
 
   // TODO confirm this is the most stable identifier for these records
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
@@ -108,7 +108,7 @@ class MississippiMapping
   override def `type`(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "type")
 
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Mississippi Digital Library"), // TODO Confirm hub name
     uri = Some(URI("http://dp.la/api/contributor/mississippi-digital-library"))
   )
