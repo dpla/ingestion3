@@ -33,7 +33,7 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
 
   // SourceResource mapping
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
-    extractStrings(data \\ "search" \ "lsr13")
+    extractStrings(data \\ "facets" \ "lfc01")
       .map(nameOnlyCollection)
 
   override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
