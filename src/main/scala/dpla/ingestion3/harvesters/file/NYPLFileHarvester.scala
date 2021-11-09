@@ -8,13 +8,11 @@ import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
-import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
 
 import scala.util.{Failure, Success, Try}
-import scala.xml.XML
 
 
 /**
@@ -36,7 +34,7 @@ class NYPLFileHarvester(spark: SparkSession,
   //  "uuid": "f30c5ae0-f14a-0134-cd0c-6111f36df79b",
   //  "desc_xml": "<?xml version=\"1.0\" .... </xml>"
   // }
-  def mimeType: String = "application_xml"
+  def mimeType: String = "application_json"
 
   protected val extractor = new FlFileExtractor()
 
@@ -68,13 +66,12 @@ class NYPLFileHarvester(spark: SparkSession,
     // }
 
     val id = extractor.extractString(json \ "uuid").getOrElse(throw new RuntimeException("Missing ID"))
-    val desc_xml = extractor.extractString(json \ "desc_xml").getOrElse(throw new RuntimeException("Missing Record"))
 
-    // validate XML
-    Try { XML.loadString(desc_xml) } match {
-      case Success(s) => Option(ParsedResult(id, desc_xml))
-      case Failure(_) => None
-    }
+    Option(ParsedResult(
+      extractor.extractString(json \ "uuid")
+        .getOrElse(throw new RuntimeException("Missing ID")),
+      compact(render(json))
+    ))
   }
 
   /**
@@ -163,12 +160,10 @@ class NYPLFileHarvester(spark: SparkSession,
       IOUtils.closeQuietly(inputStream)
     })
 
+    // flush buffer
     getAvroWriter.flush()
 
     // Read harvested data into Spark DataFrame.
-    val df = spark.read.avro(tmpOutStr)
-
-    // Filter out records with "status":"deleted"
-    df.where(!col("document").like("%\"status\":\"deleted\"%"))
+    spark.read.avro(tmpOutStr)
   }
 }
