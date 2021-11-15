@@ -11,19 +11,29 @@ import org.json4s
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
+import scala.util.{Failure, Success, Try}
 import scala.xml.{Elem, NodeSeq, XML}
 
 class NyplJsonExtractor extends JsonExtractor
 class NyplXmlExtractor extends XmlExtractor
 
-class NyplMapping(doc: Document[JValue]) extends JsonMapping with IngestMessageTemplates {
+class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestMessageTemplates {
 
   // extractors
   lazy val json: NyplJsonExtractor = new NyplJsonExtractor
   lazy val xml: NyplXmlExtractor = new NyplXmlExtractor
 
   // mods xml from json
-  lazy val modsXml: Elem = XML.loadString(json.extractString(modsRoot(doc)).getOrElse(""))
+  lazy val modsXml: Elem = Try {
+    val xmlString = json.extractString(modsRoot(doc))
+      .getOrElse(throw new Exception(s"No MODS XML for ${originalId(doc)}")).trim
+    XML.loadString(xmlString)
+  } match {
+    case Success(mods) => mods
+    case Failure(f) =>
+      println(s"Unable to load MODS XML for ${originalId(doc)}\n${f.getMessage}")
+      throw new Exception(s"Unable to load MODS XML for ${originalId(doc)}\n${f.getMessage}")
+  }
 
   private def modsRoot(data: JValue): JValue = data \ "solr_doc_hash" \ "mods_st"
   private def solrRoot(data: JValue): JValue = data \ "solr_doc_hash"
@@ -98,7 +108,6 @@ class NyplMapping(doc: Document[JValue]) extends JsonMapping with IngestMessageT
 
   override def identifier(data: Document[json4s.JValue]): ZeroToMany[String] = {
     val types = Seq("local_imageid", "isbn", "isrc", "isan", "ismn", "iswc", "issn", "uri", "urn")
-
     (modsXml \ "identifier")
       .filter(node => xml.filterAttributeListOptions(node, "type", types) || xml.filterAttributeListOptions(node, "displayLabel", types))
       .flatMap(xml.extractStrings)
@@ -149,24 +158,26 @@ class NyplMapping(doc: Document[JValue]) extends JsonMapping with IngestMessageT
   override def temporal(data: Document[json4s.JValue]): ZeroToMany[EdmTimeSpan] =
     xml.extractStrings(modsXml \ "subject" \ "temporal").map(stringOnlyTimeSpan)
 
-  override def creator(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] = agentHelper(modsXml, creatorRoles)
+  override def creator(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] =
+    agentHelper(modsXml, creatorRoles)
 
-  override def contributor(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] = agentHelper(modsXml, contributorRoles)
+  override def contributor(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] =
+    agentHelper(modsXml, contributorRoles)
 
-  override def collection(data: Document[json4s.JValue]): ZeroToMany[DcmiTypeCollection] = ???
-  // This mapping seems overly complicated
+  override def collection(data: Document[json4s.JValue]): ZeroToMany[DcmiTypeCollection] =
+    json.extractStrings("rootCollection_s")(solrRoot(data)).map(nameOnlyCollection)
 
-  override def date(data: Document[json4s.JValue]): ZeroToMany[EdmTimeSpan] = ???
-  // this is complicated
+  override def date(data: Document[json4s.JValue]): ZeroToMany[EdmTimeSpan] =
+    json.extractStrings("keyDate_st")(solrRoot(data)).map(stringOnlyTimeSpan) // TODO confirm
 
-  override def publisher(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] = ???
-  // this is complicated
+  override def publisher(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] = Seq(emptyEdmAgent)
+  // TODO this is complicated
 
-  override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] = ???
-  // rights information appears to exist outside the metadata record an inside the JSON block
+  override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
+    json.extractStrings("useStatementURI_rtxt")(solrRoot(data)).map(URI)
 
-  override def rights(data: Document[json4s.JValue]): AtLeastOne[String] = ???
-  // same problem as edmRights
+  override def rights(data: Document[json4s.JValue]): AtLeastOne[String] =
+    json.extractStrings("useStatementText_rtxt")(solrRoot(data))
 
   override def place(data: Document[json4s.JValue]): ZeroToMany[DplaPlace] =
     xml.extractStrings(modsXml \ "subject" \ "geographic").map(nameOnlyPlace)
@@ -180,6 +191,9 @@ class NyplMapping(doc: Document[JValue]) extends JsonMapping with IngestMessageT
   override def originalRecord(data: Document[json4s.JValue]): ExactlyOne[String] = Utils.formatJson(data)
 
   override def provider(data: Document[json4s.JValue]): ExactlyOne[EdmAgent] = agent
+
+  override def preview(data: Document[json4s.JValue]): ZeroToMany[EdmWebResource] =
+    json.extractStrings("thumbnail_url")(data).map(stringOnlyWebResource)
 
   override def dataProvider(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] = {
     (modsXml \ "location" \ "physicalLocation")

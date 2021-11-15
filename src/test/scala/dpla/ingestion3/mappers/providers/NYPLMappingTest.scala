@@ -75,4 +75,24 @@ class NYPLMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("The Miriam and Ira D. Wallach Division of Art, Prints and Photographs: Print Collection. The New York Public Library").map(nameOnlyAgent)
     assert(extractor.dataProvider(json) === expected)
   }
+
+  it should "extrac the correct preview" in {
+    val expected = Seq("https://images.nypl.org/index.php?t=t&id=G91F088_006F").map(stringOnlyWebResource)
+    assert(extractor.preview(json) === expected)
+  }
+
+  it should "extract the correct edmRights " in {
+    val expected = Seq("http://rightsstatements.org/vocab/NoC-US/1.0/").map(URI)
+    assert(extractor.edmRights(json) === expected)
+  }
+
+  it should "extract the correct dc rights " in {
+    val expected = Seq("The New York Public Library believes that this item is in the public domain under the laws of the United States, but did not make a determination as to its copyright status under the copyright laws of other countries. This item may not be in the public domain under the laws of other countries. Though not required, if you want to credit us as the source, please use the following statement, \"From The New York Public Library,\" and provide a link back to the item on our Digital Collections site. Doing so helps us track how our collection is used and helps justify freely releasing even more content in the future.")
+    assert(extractor.rights(json) === expected)
+  }
+
+  it should "extract the correct collection name" in {
+    val expected = Seq("Robert N. Dennis collection of stereoscopic views").map(nameOnlyCollection)
+    assert(extractor.collection(json) === expected)
+  }
 }

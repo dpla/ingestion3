@@ -12,7 +12,7 @@ import dpla.ingestion3.mappers.providers._
 class BhlProfile extends XmlProfile {
   type Mapping = CdlMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new BhlMapping
 }
 
@@ -22,7 +22,7 @@ class BhlProfile extends XmlProfile {
 class CdlProfile extends JsonProfile {
   type Mapping = CdlMapping
 
-  override def getHarvester = classOf[CdlHarvester]
+  override def getHarvester: Class[CdlHarvester] = classOf[CdlHarvester]
   override def getMapping = new CdlMapping
 }
 
@@ -32,7 +32,7 @@ class CdlProfile extends JsonProfile {
 class CtProfile extends XmlProfile {
   type Mapping = CtMapping
 
-  override def getHarvester = classOf[VaFileHarvester] // CT reuses the VA zipped XML file harvester
+  override def getHarvester: Class[VaFileHarvester] = classOf[VaFileHarvester] // CT reuses the VA zipped XML file harvester
   override def getMapping = new CtMapping
 }
 
@@ -42,7 +42,7 @@ class CtProfile extends XmlProfile {
 class DcProfile extends XmlProfile {
   type Mapping = DcMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new DcMapping
 }
 
@@ -52,7 +52,7 @@ class DcProfile extends XmlProfile {
 class EsdnProfile extends XmlProfile {
   type Mapping = EsdnMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new EsdnMapping
 }
 
@@ -62,7 +62,7 @@ class EsdnProfile extends XmlProfile {
 class FlProfile extends JsonProfile {
   type Mapping = FlMapping
 
-  override def getHarvester = classOf[FlFileHarvester]
+  override def getHarvester: Class[FlFileHarvester] = classOf[FlFileHarvester]
   override def getMapping = new FlMapping
 }
 
@@ -72,7 +72,7 @@ class FlProfile extends JsonProfile {
 class GettyProfile extends XmlProfile {
   type Mapping = GettyMapping
 
-  override def getHarvester = classOf[GettyHarvester]
+  override def getHarvester: Class[GettyHarvester] = classOf[GettyHarvester]
   override def getMapping = new GettyMapping
 }
 
@@ -82,7 +82,7 @@ class GettyProfile extends XmlProfile {
 class GpoProfile extends XmlProfile {
   type Mapping = GpoMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new GpoMapping
 }
 
@@ -92,7 +92,7 @@ class GpoProfile extends XmlProfile {
 class DlgProfile extends JsonProfile {
   type Mapping = DlgMapping
 
-  override def getHarvester = classOf[DlgFileHarvester]
+  override def getHarvester: Class[DlgFileHarvester] = classOf[DlgFileHarvester]
   override def getMapping = new DlgMapping
 }
 
@@ -102,7 +102,7 @@ class DlgProfile extends JsonProfile {
 class HarvardProfile extends XmlProfile {
   type Mapping = HarvardMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new HarvardMapping
 }
 
@@ -112,7 +112,7 @@ class HarvardProfile extends XmlProfile {
 class HathiProfile extends XmlProfile {
   type Mapping = HathiMapping
 
-  override def getHarvester = classOf[HathiFileHarvester]
+  override def getHarvester: Class[HathiFileHarvester] = classOf[HathiFileHarvester]
   override def getMapping = new HathiMapping
 }
 
@@ -122,7 +122,7 @@ class HathiProfile extends XmlProfile {
 class IlProfile extends XmlProfile {
   type Mapping = IllinoisMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new IllinoisMapping
 }
 
@@ -132,7 +132,7 @@ class IlProfile extends XmlProfile {
 class InProfile extends XmlProfile {
   type Mapping = InMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new InMapping
 }
 
@@ -142,7 +142,7 @@ class InProfile extends XmlProfile {
 class IaProfile extends JsonProfile {
   type Mapping = IaMapping
 
-  override def getHarvester = classOf[IaHarvester]
+  override def getHarvester: Class[IaHarvester] = classOf[IaHarvester]
   override def getMapping = new IaMapping
 }
 
@@ -152,7 +152,7 @@ class IaProfile extends JsonProfile {
 class LocProfile extends JsonProfile {
   type Mapping = LcMapping
 
-  override def getHarvester = classOf[LcCsvFileHarvester]
+  override def getHarvester: Class[LcCsvFileHarvester] = classOf[LcCsvFileHarvester]
   override def getMapping = new LcMapping
 }
 
@@ -273,7 +273,7 @@ class NJDEProfile extends XmlProfile {
 class NcProfile extends XmlProfile {
   type Mapping = NcMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new NcMapping
 }
 
@@ -283,18 +283,18 @@ class NcProfile extends XmlProfile {
 class NorthwestHeritageProfile extends XmlProfile {
   type Mapping = NorthwestHeritageMapping
 
-  override def getHarvester = classOf[NorthwestHeritageFileHarvester]
+  override def getHarvester: Class[NorthwestHeritageFileHarvester] = classOf[NorthwestHeritageFileHarvester]
   override def getMapping = new NorthwestHeritageMapping
 }
 
 /**
   * New York Public Library
   */
-class NYPLProfile extends XmlProfile {
-  type Mapping = NorthwestHeritageMapping // FIXME
+class NYPLProfile extends NyplIngestionProfile {
+  type Mapping = NyplMapping
 
-  override def getHarvester = classOf[NYPLFileHarvester]
-  override def getMapping = new NorthwestHeritageMapping // FIXME
+  override def getHarvester: Class[NYPLFileHarvester] = classOf[NYPLFileHarvester]
+  override def getMapping = new NyplMapping
 }
 
 /**
@@ -303,7 +303,7 @@ class NYPLProfile extends XmlProfile {
 class OhioProfile extends XmlProfile {
   type Mapping = OhioMapping
 
-  override def getHarvester = classOf[OaiFileHarvester]
+  override def getHarvester: Class[OaiFileHarvester] = classOf[OaiFileHarvester]
   override def getMapping = new OhioMapping
 }
 
@@ -313,7 +313,7 @@ class OhioProfile extends XmlProfile {
 class OrbisCascadeProfile extends XmlProfile {
   type Mapping = OrbisCascadeMapping
 
-  override def getHarvester = classOf[OrbisCascadeFileHarvester]
+  override def getHarvester: Class[OrbisCascadeFileHarvester] = classOf[OrbisCascadeFileHarvester]
   override def getMapping = new OrbisCascadeMapping
 }
 
@@ -323,7 +323,7 @@ class OrbisCascadeProfile extends XmlProfile {
 class OklahomaProfile extends XmlProfile {
   type Mapping = OklahomaMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new OklahomaMapping
 }
 
@@ -334,7 +334,7 @@ class OklahomaProfile extends XmlProfile {
 class P2PProfile extends XmlProfile {
   type Mapping = P2PMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new P2PMapping
 }
 
@@ -344,7 +344,7 @@ class P2PProfile extends XmlProfile {
 class PaProfile extends XmlProfile {
   type Mapping = PaMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new PaMapping
 }
 
@@ -354,7 +354,7 @@ class PaProfile extends XmlProfile {
 class RumseyProfile extends XmlProfile {
   type Mapping = RumseyMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new RumseyMapping
 }
 
@@ -364,7 +364,7 @@ class RumseyProfile extends XmlProfile {
 class ScProfile extends XmlProfile {
   type Mapping = ScMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new ScMapping
 }
 
@@ -374,7 +374,7 @@ class ScProfile extends XmlProfile {
 class SdProfile extends JsonProfile {
   type Mapping = SdMapping
 
-  override def getHarvester = classOf[MdlHarvester]
+  override def getHarvester: Class[MdlHarvester] = classOf[MdlHarvester]
   override def getMapping = new SdMapping
 }
 
@@ -384,7 +384,7 @@ class SdProfile extends JsonProfile {
 class TnProfile extends XmlProfile {
   type Mapping = TnMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new TnMapping
 }
 
@@ -394,7 +394,7 @@ class TnProfile extends XmlProfile {
 class TxProfile extends XmlProfile {
   type Mapping = TnMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new TxMapping
 }
 
@@ -404,7 +404,7 @@ class TxProfile extends XmlProfile {
 class TxdlProfile extends XmlProfile {
   type Mapping = TxdlMapping
 
-  override def getHarvester = classOf[OaiFileHarvester]
+  override def getHarvester: Class[OaiFileHarvester] = classOf[OaiFileHarvester]
   override def getMapping = new TxdlMapping
 }
 
@@ -414,7 +414,7 @@ class TxdlProfile extends XmlProfile {
 class SiProfile extends XmlProfile {
   type Mapping = SiMapping
 
-  override def getHarvester = classOf[SiFileHarvester]
+  override def getHarvester: Class[SiFileHarvester] = classOf[SiFileHarvester]
   override def getMapping = new SiMapping
 }
 
@@ -424,7 +424,7 @@ class SiProfile extends XmlProfile {
 class VirginiasProfile extends XmlProfile {
   type Mapping = VirginiasMapping
 
-  override def getHarvester = classOf[VaFileHarvester]
+  override def getHarvester: Class[VaFileHarvester] = classOf[VaFileHarvester]
   override def getMapping = new VirginiasMapping
 }
 
@@ -434,7 +434,7 @@ class VirginiasProfile extends XmlProfile {
 class VtProfile extends XmlProfile {
   type Mapping = VtMapping
 
-  override def getHarvester = classOf[VtFileHarvester]
+  override def getHarvester: Class[VtFileHarvester] = classOf[VtFileHarvester]
   override def getMapping = new VtMapping
 }
 
@@ -444,6 +444,6 @@ class VtProfile extends XmlProfile {
 class WiProfile extends XmlProfile {
   type Mapping = WiMapping
 
-  override def getHarvester = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new WiMapping
 }
