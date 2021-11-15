@@ -30,9 +30,7 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
     XML.loadString(xmlString)
   } match {
     case Success(mods) => mods
-    case Failure(f) =>
-      println(s"Unable to load MODS XML for ${originalId(doc)}\n${f.getMessage}")
-      throw new Exception(s"Unable to load MODS XML for ${originalId(doc)}\n${f.getMessage}")
+    case Failure(f) => throw new Exception(s"Unable to load MODS XML for ${originalId(doc)}\n${f.getMessage}")
   }
 
   private def modsRoot(data: JValue): JValue = data \ "solr_doc_hash" \ "mods_st"
@@ -197,7 +195,7 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
 
   override def dataProvider(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] = {
     (modsXml \ "location" \ "physicalLocation")
-      .filterNot(node => xml.filterAttribute(node, "authority", "marcorg")) // FIXME, this filter isn't working as expected
+      .filterNot(node => xml.filterAttribute(node, "authority", "marcorg"))
       .map(node => xml.getByAttribute(node, "type", "division"))
       .flatMap(xml.extractStrings)
       .map(_.stripSuffix(".").trim)
