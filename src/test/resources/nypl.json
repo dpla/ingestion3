@@ -1,0 +1,277 @@
+{
+  "id":3357499,
+  "type":"Item",
+  "uuid":"93cd9a10-c552-012f-20e8-58d385a7bc34",
+  "thumbnail_url":"https://images.nypl.org/index.php?t=t&id=G91F088_006F",
+  "capture_image_ids":[
+    "G91F088_006F",
+    "G91F088_006B"
+  ],
+  "created":"2012-08-10 15:50:36 -0400",
+  "solr_doc_hash":{
+    "uuid":"93cd9a10-c552-012f-20e8-58d385a7bc34",
+    "firstInSequence":"919d50d0-c552-012f-5b00-58d385a7bc34",
+    "immediateParent_s":[
+      "91418f60-c552-012f-c3fb-58d385a7bc34"
+    ],
+    "isPartOfSequence":true,
+    "orderInSequence":6,
+    "parentUUID":[
+      "91418f60-c552-012f-c3fb-58d385a7bc34",
+      "00391ed0-c551-012f-c4f8-58d385a7bc34",
+      "536296d0-c52e-012f-406b-58d385a7bc34",
+      "5302e210-c52e-012f-4579-58d385a7bc34",
+      "5261fd50-c52e-012f-85ec-58d385a7bc34"
+    ],
+    "parentUUIDSort_s":[
+      "91418f60-c552-012f-c3fb-58d385a7bc34_14"
+    ],
+    "totalInSequence":76,
+    "numSubCollections_s":[
+      "0"
+    ],
+    "numItems_s":[
+      "0"
+    ],
+    "relatedInfo_title_s":[
+      "Catskill Mountain scenery.",
+      "New York",
+      "States",
+      "United States",
+      "Robert N. Dennis collection of stereoscopic views"
+    ],
+    "relatedInfo_title_uuid_s":[
+      "91418f60-c552-012f-c3fb-58d385a7bc34",
+      "00391ed0-c551-012f-c4f8-58d385a7bc34",
+      "536296d0-c52e-012f-406b-58d385a7bc34",
+      "5302e210-c52e-012f-4579-58d385a7bc34",
+      "5261fd50-c52e-012f-85ec-58d385a7bc34"
+    ],
+    "rootCollectionUUID_s":[
+      "5261fd50-c52e-012f-85ec-58d385a7bc34"
+    ],
+    "rootCollection_rootCollectionUUID_s":[
+      "Robert N. Dennis collection of stereoscopic views||5261fd50-c52e-012f-85ec-58d385a7bc34"
+    ],
+    "rootCollection_s":[
+      "Robert N. Dennis collection of stereoscopic views"
+    ],
+    "title_uuid_s":[
+      "Catskill Mountain scenery.||91418f60-c552-012f-c3fb-58d385a7bc34",
+      "New York||00391ed0-c551-012f-c4f8-58d385a7bc34",
+      "States||536296d0-c52e-012f-406b-58d385a7bc34",
+      "United States||5302e210-c52e-012f-4579-58d385a7bc34",
+      "Robert N. Dennis collection of stereoscopic views||5261fd50-c52e-012f-85ec-58d385a7bc34"
+    ],
+    "sortString":"0000000001|0000000001|0000000001|0000000032|0000000014|0000000006",
+    "sortString_sort":"0000000001|0000000001|0000000001|0000000032|0000000014|0000000006",
+    "dateIndexed_s":[
+      "2021-07-15T07:46:57Z"
+    ],
+    "type_s":"http://uri.nypl.org/vocabulary/repository_terms#Item",
+    "rights_st":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<nyplRights>\n  <useStatement>\n    <use>Can be displayed on NYPL premises</use>\n  </useStatement>\n  <useStatement>\n    <use>Can be used on NYPL website</use>\n  </useStatement>\n  <useStatement>\n    <use>Can be used inside free NYPL exhibition catalogs and in free NYPL brochures</use>\n  </useStatement>\n  <useStatement>\n    <use>Can be used in advertising for NYPL exhibitions, on catalog covers, in press kits, or fundraising activities</use>\n  </useStatement>\n  <useStatement>\n    <use>Can be sold through 3rd party print partner (e.g., New York Times)</use>\n  </useStatement>\n  <useStatement>\n    <use>Can be licensed to 3rd party websites</use>\n  </useStatement>\n  <useStatement>\n    <use>Can be used in products created by NYPL for commercial gain (e.g., Library Shop, CDs, DVDs, etc.)</use>\n  </useStatement>\n  <rightsNotes>Due to the breadth of time this collection covers, different rules apply to different photos. Photos published before 1923 are public domain and have no known rights restrictions. Photos created or published after 1/1/1923 (but before 1/1/1964) that lack a copyright notice are in the public domain and have no known rights restrictions. Photos created or published after 1/1/1923 (but before 1/1/1964) that have a copyright notice can only be used on NYPL's websites or inside exhibition catalogs and NYPL brochures, unless specific clearance has been granted by the Rights Clearance Analyst. Restrictions for post-1923 photos will be set at the item level. </rightsNotes>\n  <useStatement>\n    <use type=\"copyright_status\">PDCDPP</use>\n    <useStatementText>The New York Public Library believes that this item is in the public domain under the laws of the United States, but did not make a determination as to its copyright status under the copyright laws of other countries. This item may not be in the public domain under the laws of other countries. Though not required, if you want to credit us as the source, please use the following statement, \"From The New York Public Library,\" and provide a link back to the item on our Digital Collections site. Doing so helps us track how our collection is used and helps justify freely releasing even more content in the future.</useStatementText>\n    <useStatementURI>http://rightsstatements.org/vocab/NoC-US/1.0/</useStatementURI>\n  </useStatement>\n</nyplRights>\n",
+    "mainTitle_s":[
+      "Cauterskill Falls."
+    ],
+    "mainTitle_st":"Cauterskill Falls.",
+    "mainTitle_lit_idx":[
+      "Cauterskill Falls.",
+      "Cauterskill Falls."
+    ],
+    "mainTitle_sort":"Cauterskill Falls.",
+    "title_mtxt":[
+      "Cauterskill Falls.",
+      "Catskill Mountain scenery.",
+      "New York",
+      "States",
+      "United States",
+      "Robert N. Dennis collection of stereoscopic views"
+    ],
+    "title_lit_idx":[
+      "Cauterskill Falls.",
+      "Catskill Mountain scenery.",
+      "New York",
+      "States",
+      "United States",
+      "Robert N. Dennis collection of stereoscopic views",
+      "Cauterskill Falls.",
+      "Catskill Mountain scenery.",
+      "New York",
+      "States",
+      "United States",
+      "Robert N. Dennis collection of stereoscopic views",
+      "Cauterskill Falls.",
+      "Catskill Mountain scenery.",
+      "New York",
+      "States",
+      "United States",
+      "Robert N. Dennis collection of stereoscopic views"
+    ],
+    "title_sort":[
+      "Cauterskill Falls.",
+      "Catskill Mountain scenery.",
+      "New York",
+      "States",
+      "United States",
+      "Robert N. Dennis collection of stereoscopic views",
+      "Cauterskill Falls.",
+      "Catskill Mountain scenery.",
+      "New York",
+      "States",
+      "United States",
+      "Robert N. Dennis collection of stereoscopic views",
+      "Cauterskill Falls.",
+      "Catskill Mountain scenery.",
+      "New York",
+      "States",
+      "United States",
+      "Robert N. Dennis collection of stereoscopic views"
+    ],
+    "title_mtxt_s":[
+      "Cauterskill Falls.",
+      "Catskill Mountain scenery.",
+      "New York",
+      "States",
+      "United States",
+      "Robert N. Dennis collection of stereoscopic views"
+    ],
+    "note_mtxt":[
+      "Catskill Mountain scenery, including mountains, glen and waterfall views, views of hotels, bridges, tourists, the \"Rip Van Winkle House\" and Sleepy Hollow.  Some views duplicated.",
+      "Robert Dennis Collection of Stereoscopic Views.",
+      "Title from label.  Includes several series with same title."
+    ],
+    "note_mtxt_s":[
+      "Catskill Mountain scenery, including mountains, glen and waterfall views, views of hotels, bridges, tourists, the \"Rip Van Winkle House\" and Sleepy Hollow.  Some views duplicated.",
+      "Robert Dennis Collection of Stereoscopic Views.",
+      "Title from label.  Includes several series with same title."
+    ],
+    "typeOfResource_mtxt":[
+      "still image"
+    ],
+    "typeOfResource_mtxt_s":[
+      "still image"
+    ],
+    "genre_mtxt":[
+      "Stereographs",
+      "Photographs"
+    ],
+    "genre_mtxt_s":[
+      "Stereographs",
+      "Photographs"
+    ],
+    "shelfLocator_mtxt":[
+      "MFY Dennis Coll 91-F88"
+    ],
+    "shelfLocator_mtxt_s":[
+      "MFY Dennis Coll 91-F88"
+    ],
+    "namePart_mtxt":[
+      "Loeffler, J. (John Jacob), 1834-1901"
+    ],
+    "namePart_mtxt_s":[
+      "Loeffler, J. (John Jacob), 1834-1901"
+    ],
+    "roleTermCode_s":[
+      "pht"
+    ],
+    "roleTermText_s":[
+      "Photographer"
+    ],
+    "roleTerm_mtxt":[
+      "pht",
+      "Photographer"
+    ],
+    "roleTerm_mtxt_s":[
+      "pht",
+      "Photographer"
+    ],
+    "photographer_name_s":[
+      "Loeffler, J. (John Jacob), 1834-1901"
+    ],
+    "geographic_mtxt":[
+      "New York (State)",
+      "Catskill Mountains (N.Y.)"
+    ],
+    "geographic_mtxt_s":[
+      "New York (State)",
+      "Catskill Mountains (N.Y.)"
+    ],
+    "form_mtxt":[
+      "Albumen prints"
+    ],
+    "form_mtxt_s":[
+      "Albumen prints"
+    ],
+    "keyDate_st":"1850",
+    "yearBegin_dt":"1850-01-01",
+    "datecreated_mtxt":[
+      "1850",
+      "1930"
+    ],
+    "datecreated_mtxt_s":[
+      "1850",
+      "1930"
+    ],
+    "yearEnd_dt":"1930-01-01",
+    "physicalLocation_mtxt":[
+      "nn",
+      "The Miriam and Ira D. Wallach Division of Art, Prints and Photographs: Photography Collection",
+      "Wallach Division: Photography Collection",
+      "MFY Dennis Coll 91-F88"
+    ],
+    "physicalLocation_mtxt_s":[
+      "nn",
+      "The Miriam and Ira D. Wallach Division of Art, Prints and Photographs: Photography Collection",
+      "Wallach Division: Photography Collection",
+      "MFY Dennis Coll 91-F88"
+    ],
+    "deriv_s":[
+      "w",
+      "r",
+      "t",
+      "b",
+      "f"
+    ],
+    "rightsNotes_rtxt":[
+      "Due to the breadth of time this collection covers, different rules apply to different photos. Photos published before 1923 are public domain and have no known rights restrictions. Photos created or published after 1/1/1923 (but before 1/1/1964) that lack a copyright notice are in the public domain and have no known rights restrictions. Photos created or published after 1/1/1923 (but before 1/1/1964) that have a copyright notice can only be used on NYPL's websites or inside exhibition catalogs and NYPL brochures, unless specific clearance has been granted by the Rights Clearance Analyst. Restrictions for post-1923 photos will be set at the item level. "
+    ],
+    "rightsNotes_rtxt_s":[
+      "Due to the breadth of time this collection covers, different rules apply to different photos. Photos published before 1923 are public domain and have no known rights restrictions. Photos created or published after 1/1/1923 (but before 1/1/1964) that lack a copyright notice are in the public domain and have no known rights restrictions. Photos created or published after 1/1/1923 (but before 1/1/1964) that have a copyright notice can only be used on NYPL's websites or inside exhibition catalogs and NYPL brochures, unless specific clearance has been granted by the Rights Clearance Analyst. Restrictions for post-1923 photos will be set at the item level. "
+    ],
+    "use_rtxt":[
+      "Can be displayed on NYPL premises",
+      "Can be used on NYPL website",
+      "Can be used inside free NYPL exhibition catalogs and in free NYPL brochures",
+      "Can be used in advertising for NYPL exhibitions, on catalog covers, in press kits, or fundraising activities",
+      "Can be sold through 3rd party print partner (e.g., New York Times)",
+      "Can be licensed to 3rd party websites",
+      "Can be used in products created by NYPL for commercial gain (e.g., Library Shop, CDs, DVDs, etc.)",
+      "PDCDPP"
+    ],
+    "use_rtxt_s":[
+      "Can be displayed on NYPL premises",
+      "Can be used on NYPL website",
+      "Can be used inside free NYPL exhibition catalogs and in free NYPL brochures",
+      "Can be used in advertising for NYPL exhibitions, on catalog covers, in press kits, or fundraising activities",
+      "Can be sold through 3rd party print partner (e.g., New York Times)",
+      "Can be licensed to 3rd party websites",
+      "Can be used in products created by NYPL for commercial gain (e.g., Library Shop, CDs, DVDs, etc.)",
+      "PDCDPP"
+    ],
+    "useStatementText_rtxt":[
+      "The New York Public Library believes that this item is in the public domain under the laws of the United States, but did not make a determination as to its copyright status under the copyright laws of other countries. This item may not be in the public domain under the laws of other countries. Though not required, if you want to credit us as the source, please use the following statement, \"From The New York Public Library,\" and provide a link back to the item on our Digital Collections site. Doing so helps us track how our collection is used and helps justify freely releasing even more content in the future."
+    ],
+    "useStatementText_rtxt_s":[
+      "The New York Public Library believes that this item is in the public domain under the laws of the United States, but did not make a determination as to its copyright status under the copyright laws of other countries. This item may not be in the public domain under the laws of other countries. Though not required, if you want to credit us as the source, please use the following statement, \"From The New York Public Library,\" and provide a link back to the item on our Digital Collections site. Doing so helps us track how our collection is used and helps justify freely releasing even more content in the future."
+    ],
+    "useStatementURI_rtxt":[
+      "http://rightsstatements.org/vocab/NoC-US/1.0/"
+    ],
+    "useStatementURI_rtxt_s":[
+      "http://rightsstatements.org/vocab/NoC-US/1.0/"
+    ],
+    "mods_st": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n    <mods xmlns=\"http://www.loc.gov/mods/v3\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" version=\"3.4\" xsi:schemaLocation=\"http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-4.xsd\">\n    <titleInfo usage=\"primary\" supplied=\"no\">\n    <title>Jedediah Buxton  [National Calculator, 1705-1780]</title>\n</titleInfo>\n<titleInfo>\n<title>Alternate Title</title>\n</titleInfo>\n<typeOfResource>still image</typeOfResource>\n<genre authority=\"lctgm\" valueURI=\"http://id.loc.gov/vocabulary/graphicMaterials/tgm002169\">Clippings</genre>\n<genre authority=\"lctgm\" valueURI=\"http://id.loc.gov/vocabulary/graphicMaterials/tgm008085\">Portraits</genre>\n<subject>\n<topic>Public figures</topic>\n</subject>\n<subject>\n<titleInfo>\n<title>Subject title</title>\n</titleInfo>\n</subject>\n<subject>\n<name>\n<namePart>Subject name</namePart>\n</name>\n</subject>\n<subject>\n<temporal>temporal subject</temporal>\n</subject>\n<name type=\"personal\" authority=\"naf\" valueURI=\"\" usage=\"primary\">\n<namePart>Kay, John (1742-1826)</namePart>\n<role>\n<roleTerm valueURI=\"http://id.loc.gov/vocabulary/relators/egr\" authority=\"marcrelator\" type=\"code\">egr</roleTerm>\n<roleTerm valueURI=\"http://id.loc.gov/vocabulary/relators/egr\" authority=\"marcrelator\" type=\"text\">Engraver</roleTerm>\n</role>\n</name>\n<name type=\"personal\" authority=\"naf\" valueURI=\"\" usage=\"primary\">\n<namePart>Contributor</namePart>\n<role>\n<roleTerm valueURI=\"http://id.loc.gov/vocabulary/relators/egr\" authority=\"marcrelator\" type=\"code\">egr</roleTerm>\n<roleTerm valueURI=\"http://id.loc.gov/vocabulary/relators/egr\" authority=\"marcrelator\" type=\"text\">Owner</roleTerm>\n</role>\n</name>\n<identifier type=\"local_hades_collection\" displayLabel=\"Hades Collection Guide ID (legacy)\">242</identifier>\n<identifier type=\"local_other\" displayLabel=\"Other local Identifier\">Portrait File</identifier>\n<identifier type=\"local_hades\" displayLabel=\"Hades struc ID (legacy)\">461864</identifier>\n<identifier type=\"urn\" displayLabel=\"Hades struc ID (legacy)\">URN id</identifier>\n<location>\n<physicalLocation authority=\"marcorg\" type=\"repository\">nn</physicalLocation>\n<physicalLocation type=\"division\">The Miriam and Ira D. Wallach Division of Art, Prints and Photographs: Print Collection</physicalLocation>\n<physicalLocation type=\"division_short_name\">Wallach Division: Print Collection</physicalLocation>\n<physicalLocation type=\"code\">PRN</physicalLocation>\n</location>\n<location>\n<physicalLocation type=\"division\">The Miriam and Ira D. Wallach Division of Art, Prints and Photographs: Print Collection</physicalLocation>\n<physicalLocation type=\"division_short_name\">Wallach Division: Print Collection</physicalLocation>\n<physicalLocation type=\"code\">PRN</physicalLocation>\n</location>\n<physicalDescription>\n<form authority=\"lctgm\" valueURI=\"http://id.loc.gov/vocabulary/graphicMaterials/tgm011787\">Woodburytypes</form>\n</physicalDescription>\n<note type=\"statement of responsibility\">I. Corner sculp. (Literary Magazine).</note>\n<note type=\"content\">A valid note</note>\n<abstract>hello world.</abstract>\n<identifier type=\"uuid\">4d0e0bc0-c540-012f-1857-58d385a7bc34</identifier>\n<relatedItem type=\"host\">\n<titleInfo>\n<title>Jedediah Buxton.</title>\n</titleInfo>\n<identifier type=\"uuid\">4c694120-c540-012f-a49c-58d385a7bc34</identifier>\n<identifier type=\"local_hades\">461863</identifier>\n<relatedItem type=\"host\">\n<titleInfo>\n<title>B</title>\n</titleInfo>\n<identifier type=\"uuid\">64674f20-c533-012f-0a24-58d385a7bc34</identifier>\n<identifier type=\"local_hades\">591654</identifier>\n<relatedItem type=\"host\">\n<titleInfo>\n<title>Print Collection portrait file</title>\n</titleInfo>\n<identifier type=\"uuid\">16ad5350-c52e-012f-aecf-58d385a7bc34</identifier>\n<identifier type=\"local_hades\">287739 local_hades_collection</identifier>\n</relatedItem>\n</relatedItem>\n</relatedItem>\n</mods>",
+    "_version_":1711395691249532928
+  },
+  "desc_xml":"<"
+}
