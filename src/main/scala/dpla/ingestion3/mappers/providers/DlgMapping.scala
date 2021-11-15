@@ -6,6 +6,7 @@ import dpla.ingestion3.mappers.utils.{Document, JsonExtractor, JsonMapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
 import dpla.ingestion3.utils.Utils
+import org.json4s
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
@@ -34,21 +35,21 @@ class DlgMapping extends JsonMapping with JsonExtractor {
     extractStrings("dc_right_display")(data)
     .map(URI)
 
-  override def mediaMaster(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
-    extractStrings("edm_is_shown_by_display")(data).map(stringOnlyWebResource)
-  }
+//  override def mediaMaster(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
+//    extractStrings("edm_is_shown_by_display")(data).map(stringOnlyWebResource)
+//  }
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(data)
 
-  override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
-    val isShownBy = extractStrings("edm_is_shown_by_display")(data)
-    val preview =
-      if(isShownBy.nonEmpty)
-        isShownBy
-      else
-        originalId(data).map(id => s"https://dlg.galileo.usg.edu/do-th:$id").toSeq
+  override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
+    originalId(data)
+      .map(id => s"https://dlg.galileo.usg.edu/do-th:$id")
+      .map(stringOnlyWebResource)
+      .toSeq
 
-    preview.map(stringOnlyWebResource)
+  override def iiifManifest(data: Document[json4s.JValue]): ZeroToMany[URI] = {
+    extractStrings("iiif_manifest_url_ss")(data)
+      .map(URI)
   }
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
