@@ -238,4 +238,55 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq(URI("http://rightsstatements.org/vocab/NoC-US/1.0/"))
     assert(extractor.edmRights(xml) === expected)
   }
+
+  it should "extract the correct identifiers" in {
+    val xml: Document[NodeSeq] = Document(
+      <record>
+        <metadata>
+          <mods:mods>
+            <mods:identifier type="local-accession">rg131-02-07-006</mods:identifier>
+          </mods:mods>
+        </metadata>
+      </record>
+    )
+
+    val expected = Seq("Local accession: rg131-02-07-006")
+    assert(extractor.identifier(xml) === expected)
+
+  }
+
+  it should "extract the correct multiple identifiers" in {
+    val xml: Document[NodeSeq] = Document(
+      <record>
+        <metadata>
+          <mods:mods>
+            <mods:identifier type="local-accession">rg131-02-07-006</mods:identifier>
+            <mods:identifier type="local-accession">rg131-02-07-007</mods:identifier>
+          </mods:mods>
+        </metadata>
+      </record>
+    )
+
+    val expected = Seq("Local accession: rg131-02-07-006, rg131-02-07-007")
+    assert(extractor.identifier(xml) === expected)
+
+  }
+
+  it should "extract the correct multiple identifiers multiple types" in {
+    val xml: Document[NodeSeq] = Document(
+      <record>
+        <metadata>
+          <mods:mods>
+            <mods:identifier type="local-accession">rg131-02-07-006</mods:identifier>
+            <mods:identifier type="local-accession">rg131-02-07-007</mods:identifier>
+            <mods:identifier type="local-other">andg-43=343</mods:identifier>
+          </mods:mods>
+        </metadata>
+      </record>
+    )
+
+    val expected = Seq("Local accession: rg131-02-07-006, rg131-02-07-007", "Local other: andg-43=343")
+    assert(extractor.identifier(xml) === expected)
+
+  }
 }

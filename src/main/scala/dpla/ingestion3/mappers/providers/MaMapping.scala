@@ -158,13 +158,17 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     {
       val types = Seq("local-accession", "local-other", "local-call", "local-barcode")
 
-      types.map(t => {
+      types.flatMap(t => {
         val label = t.split("-").mkString(" ").capitalize
-        val id = (getModsRoot(data) \ "identifier")
+        val ids = (getModsRoot(data) \ "identifier")
           .flatMap(node => getByAttribute(node, "type", t))
           .flatMap(extractString(_))
 
-        s"$label: $id"
+        if (ids.nonEmpty) {
+          Some(s"$label: ${ids.mkString(", ")}")
+        } else {
+          None
+        }
       })
     }
 
