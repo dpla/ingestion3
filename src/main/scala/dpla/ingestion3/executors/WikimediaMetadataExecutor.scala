@@ -61,7 +61,7 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
     val enrichResults: Dataset[(Row, Boolean)] = enrichedRows.map(row => {
       Try{ ModelConverter.toModel(row) } match {
         case Success(dplaMapData) =>
-          // If there is neither a IIIF manifest or media master mapped from the orignal record then try to construct
+          // If there is neither a IIIF manifest or media master mapped from the original record then try to construct
           // a IIIF manifest from the isShownAt value. This should only work for ContentDM URLs.
           val dplaMapRecord =
             if(dplaMapData.iiifManifest.isEmpty && dplaMapData.mediaMaster.isEmpty)
@@ -69,6 +69,7 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
             else
               dplaMapData
 
+          // evaluate the record for Wikimedia eligibility
           val criteria: WikiCriteria = isWikiEligible(dplaMapRecord)
 
           (criteria.dataProvider, criteria.asset, criteria.rights, criteria.id) match {
