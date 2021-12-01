@@ -64,4 +64,17 @@ class WikiMapperTest extends FlatSpec with Matchers {
 
     assert(wiki.isAssetEligible(iiif, mediaMasters) === false)
   }
+
+  "buildIIIFFromUrl" should "build a IIIF manfiest from ContentDM URL" in {
+    val isShownAt = stringOnlyWebResource("http://www.ohiomemory.org/cdm/ref/collection/p16007coll33/id/126923")
+    val expected = Some(URI("http://www.ohiomemory.org/iiif/info/p16007coll33/126923/manifest.json"))
+    assert(wiki.buildIIIFFromUrl(isShownAt) === expected)
+  }
+
+  it should "not build a IIIF manfiest from a non-ContentDM URL" in {
+    val isShownAt = stringOnlyWebResource("https://digitalgallery.bgsu.edu/collections/item/8911")
+    val expected = None
+    assert(wiki.buildIIIFFromUrl(isShownAt) === expected)
+  }
+
 }
