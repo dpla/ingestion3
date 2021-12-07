@@ -125,6 +125,10 @@ class OhioMapping extends XmlMapping with XmlExtractor
       .map(URI)
   }
 
+  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] =
+    extractStrings(data \ "metadata" \\ "isReferencedBy")
+      .map(URI)
+
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "metadata" \\ "isShownAt")
       .map(stringOnlyWebResource)
