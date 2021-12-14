@@ -96,6 +96,11 @@ class TxdlMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.rights(xml) === expected)
   }
 
+  it should "extract the correct edmrights " in {
+    val expected = Seq(URI("http://rightsatement.org"))
+    assert(extractor.edmRights(xml) === expected)
+  }
+
   it should "extract the correct subjects" in {
     val expected = Seq("Rice University",
       "College students",
