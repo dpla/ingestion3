@@ -16,7 +16,7 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
   val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))
   val extractor = new OhioMapping
 
-  it should "not use the provider shortname in minting IDs "in
+  it should "not use the provider shortname in minting IDs " in
     assert(!extractor.useProviderName())
 
   it should "extract the correct original identifier " in
@@ -174,7 +174,7 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct types" in {
-    val expected = Seq("Image","Text")
+    val expected = Seq("Image", "Text")
     assert(extractor.`type`(xml) === expected)
   }
 
@@ -212,5 +212,33 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
 
     val expected = Seq("1 x 2 x 3")
     assert(extractor.extentFromFormat(Document(xml)) === expected)
+  }
+
+  it should "extract a IIIF manfiest" in {
+    val xml: NodeSeq =
+      <record>
+        <metadata>
+          <oai_qdc:qualifieddc>
+            <dcterms:isReferencedBy>http://cplorg.contentdm.oclc.org/iiif/info/p128201coll0/1857/manifest.json</dcterms:isReferencedBy>
+        </oai_qdc:qualifieddc>
+      </metadata>
+    </record>
+
+    val expected = Seq(URI("http://cplorg.contentdm.oclc.org/iiif/info/p128201coll0/1857/manifest.json"))
+    assert(extractor.iiifManifest(Document(xml)) === expected)
+  }
+
+  it should "not extract a IIIF manfiest" in {
+    val xml: NodeSeq =
+      <record>
+        <metadata>
+          <oai_qdc:qualifieddc>
+            <dcterms:isReferencedBy/>
+        </oai_qdc:qualifieddc>
+      </metadata>
+    </record>
+
+    val expected = Seq()
+    assert(extractor.iiifManifest(Document(xml)) === expected)
   }
 }
