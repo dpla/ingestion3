@@ -66,7 +66,21 @@ class TxdlMapping extends XmlMapping with XmlExtractor
       .map(nameOnlyAgent)
 
   override def rights(data: Document[NodeSeq]): Seq[String] =
-    extractStrings(metadataRoot(data) \ "rights")
+    (metadataRoot(data) \\ "rights").map(r => {
+      r.prefix match {
+        case "dc" => r.text
+        case _ => ""
+      }
+    }).filter(_.nonEmpty)
+
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
+    (metadataRoot(data) \\ "rights").map(r => r.prefix match {
+      case "edm" => r.text
+      case _ => ""
+    })
+      .filter(_.nonEmpty)
+      .map(URI)
+  }
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
     extractStrings(metadataRoot(data) \ "subject")
