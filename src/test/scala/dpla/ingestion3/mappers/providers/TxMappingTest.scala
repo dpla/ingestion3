@@ -102,9 +102,9 @@ class TxMappingTest extends FlatSpec with BeforeAndAfter {
 //      "Military and War - Wars - Texas Revolution").map(nameOnlyConcept)
 
     val expected2 = Seq(
-      SkosConcept(concept = Some("Texas -- Annexation to the United States."), scheme = Some(URI("http://id.loc.gov/authorities#conceptscheme"))),
-      SkosConcept(concept = Some("United States -- Politics and government -- 1841-1845."), scheme = Some(URI("http://id.loc.gov/authorities#conceptscheme"))),
-      SkosConcept(concept = Some("Military and War - Wars - Texas Revolution"), scheme = None)
+      SkosConcept(providedLabel = Some("Texas -- Annexation to the United States."), scheme = Some(URI("http://id.loc.gov/authorities#conceptscheme"))),
+      SkosConcept(providedLabel = Some("United States -- Politics and government -- 1841-1845."), scheme = Some(URI("http://id.loc.gov/authorities#conceptscheme"))),
+      SkosConcept(providedLabel = Some("Military and War - Wars - Texas Revolution"), scheme = None)
     )
 
     assert(extractor.subject(xml) === expected2)

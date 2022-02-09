@@ -174,7 +174,7 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
         case _ => None
       }
 
-      SkosConcept(concept = term, scheme = schemeUri)
+      SkosConcept(providedLabel = term, scheme = schemeUri)
     })
 
   override def title(data: Document[NodeSeq]): AtLeastOne[String] = {
