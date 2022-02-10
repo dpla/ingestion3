@@ -19,7 +19,7 @@ class FlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
   // ID minting functions
   override def useProviderName: Boolean = true
 
-  override def getProviderName: String = "florida"
+  override def getProviderName: Option[String] = Some("florida")
 
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractStrings(unwrap(data) \ "isShownAt").headOption
@@ -62,11 +62,11 @@ class FlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
     extractStrings(unwrap(data) \ "sourceResource" \ "alternative")
 
   override def contributor(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data)  \ "sourceResource" \ "contributor" \ "name")
+    extractStrings(unwrap(data) \ "sourceResource" \ "contributor" \ "name")
       .map(nameOnlyAgent)
 
   override def creator(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data)  \ "sourceResource" \ "creator" \ "name")
+    extractStrings(unwrap(data) \ "sourceResource" \ "creator" \ "name")
       .map(nameOnlyAgent)
 
   override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
@@ -106,7 +106,7 @@ class FlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
     extractStrings(unwrap(data) \ "sourceResource" \ "rights" \ "text")
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings(unwrap(data)  \ "sourceResource" \ "subject" \ "name")
+    extractStrings(unwrap(data) \ "sourceResource" \ "subject" \ "name")
       .map(nameOnlyConcept)
 
   override def title(data: Document[JValue]): AtLeastOne[String] =

@@ -14,10 +14,10 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
   // ID minting functions
   override def useProviderName(): Boolean = true
 
-  override def getProviderName(): String = "orbis-cascade"
+  override def getProviderName(): Option[String] = Some("orbis-cascade")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] = {
-    val xml: Elem  = data.get.asInstanceOf[Elem]
+    val xml: Elem = data.get.asInstanceOf[Elem]
     xml.attribute(xml.getNamespace("rdf"), "about")
       .getOrElse(throw new Exception("Missing required record ID"))
       .flatMap(extractStrings(_))
@@ -25,9 +25,9 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
   }
 
   // SourceResource mapping
-    override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
-      extractStrings(data \\ "SourceResource" \ "contributor")
-        .map(nameOnlyAgent)
+  override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
+    extractStrings(data \\ "SourceResource" \ "contributor")
+      .map(nameOnlyAgent)
 
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] =
     extractStrings(data \\ "SourceResource" \ "contributor")
@@ -37,7 +37,7 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
     val dateEarly = extractStrings(data \\ "SourceResource" \ "date" \ "TimeSpan" \ "begin")
     val dateLate = extractStrings(data \\ "SourceResource" \ "date" \ "TimeSpan" \ "end")
 
-    if(dateEarly.length == dateLate.length) {
+    if (dateEarly.length == dateLate.length) {
       dateEarly.zip(dateLate).map {
         case (begin: String, end: String) =>
           EdmTimeSpan(
@@ -93,23 +93,23 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
 
       // Canonical list of mappings
       // https://docs.google.com/spreadsheets/d/17YZEQRtxdgttRCW6NsCWQ2d9qI9L4IrqzXcPEr6mg18/edit#gid=0
-      
-      "http://archiveswest.orbiscascade.org/contact#idu"->"University of Idaho Library, Special Collections and Archives",
-      "http://harvester.orbiscascade.org/agency/ormcl"->"Linfield College",
-      "http://archiveswest.orbiscascade.org/contact#orkt"->"Oregon Institute of Technology Libraries, Shaw Historical Library",
-      "http://archiveswest.orbiscascade.org/contact#orpl"->"Lewis & Clark College, Special Collections and Archives",
-      "http://archiveswest.orbiscascade.org/contact#waps"->"Washington State University Libraries, Manuscripts, Archives, and Special Collections",
-      "http://archiveswest.orbiscascade.org/contact#watu"->"University of Puget Sound, Archives & Special Collections",
-      "http://archiveswest.orbiscascade.org/contact#orngf"->"George Fox University Archives",
-      "http://archiveswest.orbiscascade.org/contact#wachene"->"Eastern Washington University",
-      "http://archiveswest.orbiscascade.org/contact#orsaw"->"Willamette University Archives and Special Collections",
-      "http://harvester.orbiscascade.org/agency/orpr"->"Reed College",
-      "http://archiveswest.orbiscascade.org/contact#ormonw"->"Western Oregon University Archives",
-      "http://archiveswest.orbiscascade.org/contact#orcs"->"Oregon State University Libraries, Special Collections and Archives Research Center",
-      "http://archiveswest.orbiscascade.org/contact#waspc"->"Seattle Pacific University",
-      "http://harvester.orbiscascade.org/agency/orashs"->"Southern Oregon University, Hannon Library",
-      "http://harvester.orbiscascade.org/agency/orpu"->"University of Portland",
-      "http://archiveswest.orbiscascade.org/contact#oru"->"University of Oregon Libraries, Special Collections and University Archives"
+
+      "http://archiveswest.orbiscascade.org/contact#idu" -> "University of Idaho Library, Special Collections and Archives",
+      "http://harvester.orbiscascade.org/agency/ormcl" -> "Linfield College",
+      "http://archiveswest.orbiscascade.org/contact#orkt" -> "Oregon Institute of Technology Libraries, Shaw Historical Library",
+      "http://archiveswest.orbiscascade.org/contact#orpl" -> "Lewis & Clark College, Special Collections and Archives",
+      "http://archiveswest.orbiscascade.org/contact#waps" -> "Washington State University Libraries, Manuscripts, Archives, and Special Collections",
+      "http://archiveswest.orbiscascade.org/contact#watu" -> "University of Puget Sound, Archives & Special Collections",
+      "http://archiveswest.orbiscascade.org/contact#orngf" -> "George Fox University Archives",
+      "http://archiveswest.orbiscascade.org/contact#wachene" -> "Eastern Washington University",
+      "http://archiveswest.orbiscascade.org/contact#orsaw" -> "Willamette University Archives and Special Collections",
+      "http://harvester.orbiscascade.org/agency/orpr" -> "Reed College",
+      "http://archiveswest.orbiscascade.org/contact#ormonw" -> "Western Oregon University Archives",
+      "http://archiveswest.orbiscascade.org/contact#orcs" -> "Oregon State University Libraries, Special Collections and Archives Research Center",
+      "http://archiveswest.orbiscascade.org/contact#waspc" -> "Seattle Pacific University",
+      "http://harvester.orbiscascade.org/agency/orashs" -> "Southern Oregon University, Hannon Library",
+      "http://harvester.orbiscascade.org/agency/orpu" -> "University of Portland",
+      "http://archiveswest.orbiscascade.org/contact#oru" -> "University of Oregon Libraries, Special Collections and University Archives"
     )
 
 
@@ -121,7 +121,7 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
       .flatMap(uri => lookup.get(uri))
       .map(nameOnlyAgent)
   }
-  
+
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
     val xml: Elem = (data \ "rights").headOption.getOrElse(Node).asInstanceOf[Elem]
     val rights = xml.attribute(xml.getNamespace("rdf"), "resource").getOrElse(Seq())
@@ -144,7 +144,7 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
           .flatMap(extractStrings(_))
       case None => Seq()
     }
-    
+
     srAbout.map(stringOnlyWebResource)
   }
 

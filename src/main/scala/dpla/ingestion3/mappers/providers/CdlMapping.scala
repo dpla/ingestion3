@@ -16,7 +16,7 @@ class CdlMapping extends JsonMapping with JsonExtractor {
   override def useProviderName: Boolean = true
 
   // Hard coded to prevent accidental changes to base ID
-  override def getProviderName: String = "cdl"
+  override def getProviderName: Option[String] = Some("cdl")
 
   // OreAggregation fields
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)

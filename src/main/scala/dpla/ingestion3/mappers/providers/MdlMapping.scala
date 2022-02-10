@@ -11,7 +11,7 @@ import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
 
@@ -22,7 +22,7 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
   // ID minting functions
   override def useProviderName: Boolean = true
 
-  override def getProviderName: String = "minnesota"
+  override def getProviderName: Option[String] = Some("minnesota")
 
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString(unwrap(data) \ "attributes" \ "metadata" \ "isShownAt")
@@ -36,10 +36,12 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "rights")
       .filter(r =>
-        Try { new java.net.URI(r).getHost } match {
+        Try {
+          new java.net.URI(r).getHost
+        } match {
           case Success(host: String) => host.equalsIgnoreCase("rightsstatements.org") || host.equalsIgnoreCase("creativecommons.org")
           case _ => false
-      })
+        })
       .map(URI)
 
   override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
@@ -101,24 +103,26 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
     place(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "spatial")
 
   override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data)  \ "attributes" \ "metadata" \ "sourceResource" \ "publisher").map(nameOnlyAgent)
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "publisher").map(nameOnlyAgent)
 
   override def rights(data: Document[JValue]): AtLeastOne[String] =
     extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "rights")
       .filterNot(r =>
-        Try { new java.net.URI(r).getHost } match {
+        Try {
+          new java.net.URI(r).getHost
+        } match {
           case Success(host: String) => host.equalsIgnoreCase("rightsstatements.org") || host.equalsIgnoreCase("creativecommons.org")
           case _ => false
         })
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings(unwrap(data)  \ "attributes" \ "metadata" \ "sourceResource" \ "subject" \ "name").map(nameOnlyConcept)
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "subject" \ "name").map(nameOnlyConcept)
 
   override def title(data: Document[JValue]): AtLeastOne[String] =
-    extractStrings(unwrap(data)  \ "attributes" \ "metadata" \ "sourceResource" \ "title")
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "title")
 
   override def `type`(data: Document[JValue]): ZeroToMany[String] =
-    extractStrings(unwrap(data)  \ "attributes" \ "metadata" \ "sourceResource" \ "type")
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "type")
 
   // Helper functions
   def extractCollection(collection: JValue): ZeroToMany[DcmiTypeCollection] = {
@@ -126,7 +130,8 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
       DcmiTypeCollection(
         title = extractString(c \\ "title"),
         description = extractString(c \\ "description")
-      )})
+      )
+    })
   }
 
   def extractDate(date: JValue): ZeroToMany[EdmTimeSpan] = {

@@ -15,6 +15,7 @@ import scala.util.{Failure, Success, Try}
 import scala.xml.{Elem, NodeSeq, XML}
 
 class NyplJsonExtractor extends JsonExtractor
+
 class NyplXmlExtractor extends XmlExtractor
 
 class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestMessageTemplates {
@@ -34,6 +35,7 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
   }
 
   private def modsRoot(data: JValue): JValue = data \ "solr_doc_hash" \ "mods_st"
+
   private def solrRoot(data: JValue): JValue = data \ "solr_doc_hash"
 
   /**
@@ -43,6 +45,8 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
     * @return Boolean
     */
   override def useProviderName: Boolean = true
+
+  override def getProviderName: Option[String] = Some("nypl")
 
   /**
     * Extract the record's "persistent" identifier. Implementations should raise
@@ -59,45 +63,45 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
 
   val latLongRegex = "^[-+]?([1-8]?\\d(\\.\\d+)?|90(\\.0+)?),\\s*[-+]?(180(\\.0+)?|((1[0-7]\\d)|([1-9]?\\d))(\\.\\d+)?)$"
 
-  val creatorRoles = Seq("architect", "art copyist", "artist", "attributed name", "author","binder","binding designer",
-    "book jacket designer","bookplate designer","calligrapher","cartographer","choreographer","composer","correspondent",
-    "costume designer","cover designer","creator","dedicator","designer","director","dissertant","dubious author",
-    "engraver","etcher","facsimilist","film director","forger","illustrator","interviewee","interviewer","inventor",
-    "landscape architect","librettist","lighting designer","lithographer","lyricist","papermaker","performer",
-    "photographer","sculptor","set designer","singer","sound designer","wood engraver","woodcutter")
+  val creatorRoles = Seq("architect", "art copyist", "artist", "attributed name", "author", "binder", "binding designer",
+    "book jacket designer", "bookplate designer", "calligrapher", "cartographer", "choreographer", "composer", "correspondent",
+    "costume designer", "cover designer", "creator", "dedicator", "designer", "director", "dissertant", "dubious author",
+    "engraver", "etcher", "facsimilist", "film director", "forger", "illustrator", "interviewee", "interviewer", "inventor",
+    "landscape architect", "librettist", "lighting designer", "lithographer", "lyricist", "papermaker", "performer",
+    "photographer", "sculptor", "set designer", "singer", "sound designer", "wood engraver", "woodcutter")
 
-  val contributorRoles = Seq("actor", "adapter","addressee","analyst","animator","annotator","applicant","arranger",
-    "art director","artistic director", "assignee","associated name","auctioneer","author in quotations or text extracts",
-    "author of afterword, colophon, etc.", "author of dialog","author of introduction, etc.","bibliographic antecedent",
-    "blurbwriter","book designer", "book producer", "bookseller","censor","cinematographer","client","collector",
-    "collotyper","colorist","commentator","commentator for written text","compiler","complainant","complainant-appellant",
-    "complainant-appellee","compositor","conceptor","conductor", "conservator","consultant","consultant to a project",
-    "contestant","contestant-appellant","contestant-appellee","contestee", "contestee-appellant","contestee-appellee",
-    "contractor","contributor","copyright claimant","copyright holder","corrector",
-    "curator","curator of an exhibition","dancer","data contributor","data manager","dedicatee","defendant","defendant-appellant",
-    "defendant-appellee","degree granting institution","degree grantor","delineator","depositor","distributor","donor",
-    "draftsman","editor","editor of compilation","editor of moving image work","electrician","electrotyper","engineer","expert",
-    "field director","film distributor","film editor","film producer","first party","former owner","funder",
-    "geographic information specialist","honoree","host","illuminator","inscriber","instrumentalist","issuing body","judge","laboratory",
-    "laboratory director","lead","lender","libelant","libelant-appellant","libelant-appellee","libelee","libelee-appellant",
-    "libelee-appellee","licensee","licensor","manufacturer","marbler","markup editor","metadata contact","metal-engraver",
-    "moderator","monitor","music copyist","musical director","musician","narrator","opponent","organizer","originator",
-    "other","owner","panelist","patent applicant","patent holder","patron","permitting agency","plaintiff","plaintiff-appellant",
-    "plaintiff-appellee","platemaker","presenter","printer","printer of plates","printmaker","process contact","producer",
-    "production company","production manager","production personnel","programmer","project director","proofreader",
-    "publisher","publishing director","puppeteer","radio producer","recording engineer","redaktor","fenderer","feporter",
-    "research team head","research team member","researcher","respondent","respondent-appellant","respondent-appellee",
-    "responsible party","restager","reviewer","rubricator","scenarist","scientific advisor","screenwriter","scribe",
-    "second party","secretary","signer","speaker","sponsor","stage director","stage manager","standards body","stereotyper",
-    "storyteller","supporting host","surveyor","teacher","technical director","television director","television producer",
-    "thesis advisor","transcriber","translator","type designer","typographer","videographer","voice actor","witness",
+  val contributorRoles = Seq("actor", "adapter", "addressee", "analyst", "animator", "annotator", "applicant", "arranger",
+    "art director", "artistic director", "assignee", "associated name", "auctioneer", "author in quotations or text extracts",
+    "author of afterword, colophon, etc.", "author of dialog", "author of introduction, etc.", "bibliographic antecedent",
+    "blurbwriter", "book designer", "book producer", "bookseller", "censor", "cinematographer", "client", "collector",
+    "collotyper", "colorist", "commentator", "commentator for written text", "compiler", "complainant", "complainant-appellant",
+    "complainant-appellee", "compositor", "conceptor", "conductor", "conservator", "consultant", "consultant to a project",
+    "contestant", "contestant-appellant", "contestant-appellee", "contestee", "contestee-appellant", "contestee-appellee",
+    "contractor", "contributor", "copyright claimant", "copyright holder", "corrector",
+    "curator", "curator of an exhibition", "dancer", "data contributor", "data manager", "dedicatee", "defendant", "defendant-appellant",
+    "defendant-appellee", "degree granting institution", "degree grantor", "delineator", "depositor", "distributor", "donor",
+    "draftsman", "editor", "editor of compilation", "editor of moving image work", "electrician", "electrotyper", "engineer", "expert",
+    "field director", "film distributor", "film editor", "film producer", "first party", "former owner", "funder",
+    "geographic information specialist", "honoree", "host", "illuminator", "inscriber", "instrumentalist", "issuing body", "judge", "laboratory",
+    "laboratory director", "lead", "lender", "libelant", "libelant-appellant", "libelant-appellee", "libelee", "libelee-appellant",
+    "libelee-appellee", "licensee", "licensor", "manufacturer", "marbler", "markup editor", "metadata contact", "metal-engraver",
+    "moderator", "monitor", "music copyist", "musical director", "musician", "narrator", "opponent", "organizer", "originator",
+    "other", "owner", "panelist", "patent applicant", "patent holder", "patron", "permitting agency", "plaintiff", "plaintiff-appellant",
+    "plaintiff-appellee", "platemaker", "presenter", "printer", "printer of plates", "printmaker", "process contact", "producer",
+    "production company", "production manager", "production personnel", "programmer", "project director", "proofreader",
+    "publisher", "publishing director", "puppeteer", "radio producer", "recording engineer", "redaktor", "fenderer", "feporter",
+    "research team head", "research team member", "researcher", "respondent", "respondent-appellant", "respondent-appellee",
+    "responsible party", "restager", "reviewer", "rubricator", "scenarist", "scientific advisor", "screenwriter", "scribe",
+    "second party", "secretary", "signer", "speaker", "sponsor", "stage director", "stage manager", "standards body", "stereotyper",
+    "storyteller", "supporting host", "surveyor", "teacher", "technical director", "television director", "television producer",
+    "thesis advisor", "transcriber", "translator", "type designer", "typographer", "videographer", "voice actor", "witness",
     "writer of accompanying material")
 
   override def title(data: Document[json4s.JValue]): AtLeastOne[String] =
   // titleInfo \ "title" @usage='primary'
     (modsXml \ "titleInfo")
       .flatMap(node => xml.getByAttribute(node, "usage", "primary"))
-      .flatMap(node => xml.extractStrings (node \ "title"))
+      .flatMap(node => xml.extractStrings(node \ "title"))
 
   override def alternateTitle(data: Document[json4s.JValue]): ZeroToMany[String] =
   // all other title values
@@ -169,6 +173,7 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
     json.extractStrings("keyDate_st")(solrRoot(data)).map(stringOnlyTimeSpan) // TODO confirm
 
   override def publisher(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] = Seq(emptyEdmAgent)
+
   // TODO this is complicated
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
@@ -209,7 +214,7 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
 
   // Helper method
   def agent = EdmAgent(
-    name = Some("New York Public Library"),
+    name = Some("The New York Public Library"),
     uri = Some(URI("http://dp.la/api/contributor/nypl"))
   )
 

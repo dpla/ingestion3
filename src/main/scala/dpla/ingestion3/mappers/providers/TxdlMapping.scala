@@ -16,7 +16,7 @@ class TxdlMapping extends XmlMapping with XmlExtractor
   // IdMinter methods
   override def useProviderName: Boolean = true
 
-  override def getProviderName: String = "txdl"
+  override def getProviderName: Option[String] = Some("txdl")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier").map(_.trim)

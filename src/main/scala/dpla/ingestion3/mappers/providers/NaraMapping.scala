@@ -20,9 +20,9 @@ class NaraMapping extends XmlMapping with XmlExtractor {
   override val enforceEdmRights: Boolean = true // edmRights is now a required property for NARA
 
   // ID minting functions
-  override def useProviderName(): Boolean = true
+  override def useProviderName: Boolean = true
 
-  override def getProviderName(): String = "nara"
+  override def getProviderName: Option[String] = Some("nara")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString("naId")(data)
@@ -91,35 +91,36 @@ class NaraMapping extends XmlMapping with XmlExtractor {
 
     val edmRights = List(useRestriction)
       .zipAll(specificRestrictions, None, None) // merge useRestriction and specificRestriction into set,
-      .map{ case (ur: Option[String], sr: Option[String]) => (ur, sr) match {
-        case (Some("Restricted - Fully"), Some("Copyright")) => Some(rightsUri("InC"))
-        case (Some("Restricted - Fully"), Some("Donor Restrictions")) => Some(rightsUri("InC"))
-        case (Some("Restricted - Fully"), Some("Public Law 101-246")) => Some(rightsUri("InC"))
-        case (Some("Restricted - Fully"), Some("Service Mark")) => Some(rightsUri("NoC-OKLR"))
-        case (Some("Restricted - Fully"), Some("Trademark")) => Some(rightsUri("NoC-OKLR"))
-        case (Some("Restricted - Fully"), Some("Other")) => Some(rightsUri("NoC-OKLR"))
-        case (Some("Restricted - Partly"), Some("Copyright")) => Some(rightsUri("InC"))
-        case (Some("Restricted - Partly"), Some("Donor Restrictions")) => Some(rightsUri("InC"))
-        case (Some("Restricted - Partly"), Some("Public Law 101-246")) => Some(rightsUri("InC"))
-        case (Some("Restricted - Partly"), Some("Service Mark")) => Some(rightsUri("NoC-OKLR"))
-        case (Some("Restricted - Partly"), Some("Trademark")) => Some(rightsUri("NoC-OKLR"))
-        case (Some("Restricted - Partly"), Some("Other")) => Some(rightsUri("NoC-OKLR"))
-        case (Some("Restricted - Possibly"), Some("Copyright")) => Some(rightsUri("UND"))
-        case (Some("Restricted - Possibly"), Some("Donor Restrictions")) => Some(rightsUri("UND"))
-        case (Some("Restricted - Possibly"), Some("Public Law 101-246")) => Some(rightsUri("NKC"))
-        case (Some("Restricted - Possibly"), Some("Service Mark")) => Some(rightsUri("NoC-OKLR"))
-        case (Some("Restricted - Possibly"), Some("Trademark")) => Some(rightsUri("NoC-OKLR"))
-        case (Some("Restricted - Possibly"), Some("Other")) => Some(rightsUri("NoC-OKLR"))
-        case (Some("Restricted - Possibly"), _) => Some(rightsUri("UND"))
-        case (Some("Undetermined"), _) => Some(rightsUri("CNE"))
-        case (Some("Unrestricted"), _) => Some(rightsUri("NoC-US"))
-        case (_, _) => None
-      }}
+      .map { case (ur: Option[String], sr: Option[String]) => (ur, sr) match {
+      case (Some("Restricted - Fully"), Some("Copyright")) => Some(rightsUri("InC"))
+      case (Some("Restricted - Fully"), Some("Donor Restrictions")) => Some(rightsUri("InC"))
+      case (Some("Restricted - Fully"), Some("Public Law 101-246")) => Some(rightsUri("InC"))
+      case (Some("Restricted - Fully"), Some("Service Mark")) => Some(rightsUri("NoC-OKLR"))
+      case (Some("Restricted - Fully"), Some("Trademark")) => Some(rightsUri("NoC-OKLR"))
+      case (Some("Restricted - Fully"), Some("Other")) => Some(rightsUri("NoC-OKLR"))
+      case (Some("Restricted - Partly"), Some("Copyright")) => Some(rightsUri("InC"))
+      case (Some("Restricted - Partly"), Some("Donor Restrictions")) => Some(rightsUri("InC"))
+      case (Some("Restricted - Partly"), Some("Public Law 101-246")) => Some(rightsUri("InC"))
+      case (Some("Restricted - Partly"), Some("Service Mark")) => Some(rightsUri("NoC-OKLR"))
+      case (Some("Restricted - Partly"), Some("Trademark")) => Some(rightsUri("NoC-OKLR"))
+      case (Some("Restricted - Partly"), Some("Other")) => Some(rightsUri("NoC-OKLR"))
+      case (Some("Restricted - Possibly"), Some("Copyright")) => Some(rightsUri("UND"))
+      case (Some("Restricted - Possibly"), Some("Donor Restrictions")) => Some(rightsUri("UND"))
+      case (Some("Restricted - Possibly"), Some("Public Law 101-246")) => Some(rightsUri("NKC"))
+      case (Some("Restricted - Possibly"), Some("Service Mark")) => Some(rightsUri("NoC-OKLR"))
+      case (Some("Restricted - Possibly"), Some("Trademark")) => Some(rightsUri("NoC-OKLR"))
+      case (Some("Restricted - Possibly"), Some("Other")) => Some(rightsUri("NoC-OKLR"))
+      case (Some("Restricted - Possibly"), _) => Some(rightsUri("UND"))
+      case (Some("Undetermined"), _) => Some(rightsUri("CNE"))
+      case (Some("Unrestricted"), _) => Some(rightsUri("NoC-US"))
+      case (_, _) => None
+    }
+    }
 
     // The most restrictive statements
     val mostRestrictive = Seq(
       Some(rightsUri("InC")), // in copyright
-      Some(rightsUri("UND"))  // copyright undetermined
+      Some(rightsUri("UND")) // copyright undetermined
     )
 
     // If more than one rights statement is mapped then select either of the most restrictive statements
@@ -230,7 +231,6 @@ class NaraMapping extends XmlMapping with XmlExtractor {
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
     extractTypes(data)
-
 
 
   // Helper methods
@@ -349,6 +349,7 @@ class NaraMapping extends XmlMapping with XmlExtractor {
 
   /**
     * removes the time portion of an ISO-8601 datetime
+    *
     * @param string
     * @return string without the time, if there was one
     */
@@ -471,11 +472,11 @@ class NaraMapping extends XmlMapping with XmlExtractor {
 
 
   private def extractTypes(data: NodeSeq): Seq[String] = for {
-      stringType <- extractStrings(data \\ "generalRecordsTypeArray" \ "generalRecordsType" \ "termName")
-      mappedType <- NaraTypeVocabEnforcer.mapNaraType(stringType)
-    } yield {
-      mappedType
-    }
+    stringType <- extractStrings(data \\ "generalRecordsTypeArray" \ "generalRecordsType" \ "termName")
+    mappedType <- NaraTypeVocabEnforcer.mapNaraType(stringType)
+  } yield {
+    mappedType
+  }
 }
 
 object NaraTypeVocabEnforcer {

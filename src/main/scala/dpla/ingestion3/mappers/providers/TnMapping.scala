@@ -16,7 +16,7 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   // ID minting functions
   override def useProviderName(): Boolean = false
 
-  override def getProviderName(): String = "tn"
+  override def getProviderName(): Option[String] = Some("tn")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
   // ingestion1 ID minting >> /select-id?prop=id&use_source=no
@@ -43,7 +43,7 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
         extractStrings(collection \ "titleInfo" \ "title").map(Option(_))
           .zipAll(extractStrings(collection \ "abstract").map(Option(_)), None, None)
       })
-      .map( { case (title: Option[String], desc: Option[String]) => DcmiTypeCollection(title = title, description = desc)} )
+      .map({ case (title: Option[String], desc: Option[String]) => DcmiTypeCollection(title = title, description = desc) })
 
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
@@ -97,12 +97,12 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   //  <cartographics>
   //    <coordinates>
   //      [coordinates] >> map to coordinates
-  (data \\ "mods" \ "subject")
-    .flatMap(place => {
-      extractStrings(place \ "geographic").map(Option(_))
-        .zipAll(extractStrings(place \ "cartographics" \ "coordinates").map(Option(_)), None, None)
-    })
-    .map( { case (name: Option[String], coord: Option[String]) => DplaPlace(name = name, coordinates = coord)} )
+    (data \\ "mods" \ "subject")
+      .flatMap(place => {
+        extractStrings(place \ "geographic").map(Option(_))
+          .zipAll(extractStrings(place \ "cartographics" \ "coordinates").map(Option(_)), None, None)
+      })
+      .map({ case (name: Option[String], coord: Option[String]) => DplaPlace(name = name, coordinates = coord) })
 
 
   override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
@@ -125,16 +125,16 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .filterNot(node => (node \ "@displayLabel").text.equalsIgnoreCase("project"))
       .flatMap(node =>
         extractStrings(node \ "title" \ "titlePart") ++
-        extractStrings(node \ "location" \ "url"))
+          extractStrings(node \ "location" \ "url"))
       .map(eitherStringOrUri)
   }
 
   override def replacedBy(data: Document[NodeSeq]): ZeroToMany[String] =
-    // <relatedItem type="isReferencedBy">
-    //   <title>
-    //     <titlePart>[VALUE]
-    //   <location>
-    //     <url>[VALUE]
+  // <relatedItem type="isReferencedBy">
+  //   <title>
+  //     <titlePart>[VALUE]
+  //   <location>
+  //     <url>[VALUE]
     (data \\ "mods" \ "relatedItem")
       .filter(node => (node \ "@type").text.equalsIgnoreCase("isReferencedBy"))
       .flatMap(node =>
@@ -142,19 +142,19 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
           extractStrings(node \ "location" \ "url"))
 
   override def replaces(data: Document[NodeSeq]): ZeroToMany[String] =
-    // <relatedItem type="references">
-    //   <title>
-    //     <titlePart>[VALUE]
-    //   <location>
-    //     <url>[VALUE]
+  // <relatedItem type="references">
+  //   <title>
+  //     <titlePart>[VALUE]
+  //   <location>
+  //     <url>[VALUE]
     (data \\ "mods" \ "relatedItem")
       .filter(node => (node \ "@type").text.equalsIgnoreCase("references"))
       .flatMap(node =>
         extractStrings(node \ "title" \ "titlePart") ++
-        extractStrings(node \ "location" \ "url"))
+          extractStrings(node \ "location" \ "url"))
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
-    // <mods:accessCondition>
+  // <mods:accessCondition>
     (data \\ "mods" \ "accessCondition")
       .flatMap(node => getByAttribute(node, "type", "local rights statement")) // TODO should this filter be in place?
       .flatMap(extractStrings)
@@ -188,7 +188,7 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .flatMap(node => extractStrings(node \ "title"))
 
   override def `type`(data: Document[NodeSeq]): Seq[String] = {
-  // <typeOfResource>; if not present use <physicalDescription><form>
+    // <typeOfResource>; if not present use <physicalDescription><form>
     val types = extractStrings(data \\ "mods" \ "typeOfResource")
     val form = extractStrings(data \\ "mods" \ "physicalDescription" \ "form")
 
@@ -222,7 +222,7 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .map(URI)
 
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
-    // <note displayLabel=“Intermediate Provider”>
+  // <note displayLabel=“Intermediate Provider”>
     (data \\ "mods" \ "note")
       .flatMap(node => getByAttribute(node, "displayLabel", "Intermediate Provider"))
       .flatMap(extractStrings)
@@ -238,7 +238,7 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .map(stringOnlyWebResource)
 
   override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    // <location><url access="raw object">
+  // <location><url access="raw object">
     (data \\ "mods" \ "location" \ "url")
       .flatMap(node => getByAttribute(node, "access", "raw object"))
       .flatMap(extractStrings)

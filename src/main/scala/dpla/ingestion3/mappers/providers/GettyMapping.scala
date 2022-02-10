@@ -20,14 +20,14 @@ class GettyMapping extends XmlMapping with XmlExtractor {
   // ID minting functions
   override def useProviderName(): Boolean = true
 
-  override def getProviderName(): String = "getty"
+  override def getProviderName(): Option[String] = Some("getty")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \\ "PrimoNMBib" \ "record" \ "control" \ "recordid")
 
   // SourceResource mapping
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
-    // display/lds43 AND display/lds34
+  // display/lds43 AND display/lds34
     (extractStrings(data \\ "display" \ "lds43") ++
       extractStrings(data \\ "display" \ "lds34"))
       .map(nameOnlyCollection)
@@ -44,8 +44,8 @@ class GettyMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyAgent)
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
-    // display/creationdate
-      extractStrings(data \\ "display" \ "creationdate")
+  // display/creationdate
+    extractStrings(data \\ "display" \ "creationdate")
       .map(stringOnlyTimeSpan)
 
   override def description(data: Document[NodeSeq]): Seq[String] =
@@ -79,7 +79,7 @@ class GettyMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyAgent)
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
-    // display/lds27 AND display/rights
+  // display/lds27 AND display/rights
     ((data \\ "display" \ "rights") ++
       (data \\ "display" \ "lds27"))
       .flatMap(extractStrings)
@@ -92,13 +92,13 @@ class GettyMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyConcept)
 
   override def title(data: Document[NodeSeq]): Seq[String] =
-    // display/title AND display/lds03
+  // display/title AND display/lds03
     (extractStrings(data \\ "display" \ "title") ++
       extractStrings(data \\ "display" \ "lds03"))
       .flatMap(_.splitAtDelimiter(";"))
 
   override def `type`(data: Document[NodeSeq]): Seq[String] =
-    // display/lds26
+  // display/lds26
     extractStrings(data \\ "display" \ "lds26")
 
   // OreAggregation
@@ -109,8 +109,8 @@ class GettyMapping extends XmlMapping with XmlExtractor {
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
     val baseIsShownAt = "https://primo.getty.edu/primo-explore/fulldisplay?vid=GRI-OCP&context=L&tab=all_gri&lang=en_US&docid="
-    
-    extractString(data \\"control" \ "sourceid") match {
+
+    extractString(data \\ "control" \ "sourceid") match {
       case Some("GETTY_ROSETTA") =>
         extractStrings(data \\ "display" \ "lds29")
           .map(stringOnlyWebResource)
@@ -125,7 +125,7 @@ class GettyMapping extends XmlMapping with XmlExtractor {
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    // sear/thumbnail
+  // sear/thumbnail
     extractStrings(data \\ "LINKS" \ "thumbnail")
       .map(stringOnlyWebResource)
 

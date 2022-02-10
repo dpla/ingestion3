@@ -19,8 +19,7 @@ class LcMapping() extends JsonMapping with JsonExtractor {
   override def useProviderName: Boolean = false
 
   // Hard coded to prevent accidental changes to base ID
-  override def getProviderName: String =
-    "loc"
+  override def getProviderName: Option[String] = Some("loc")
 
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString(unwrap(data) \ "item" \ "id") // TODO confirm basis field for DPLA ID
@@ -54,7 +53,7 @@ class LcMapping() extends JsonMapping with JsonExtractor {
   )
 
   override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
-    // item['url']
+  // item['url']
     extractStrings(unwrap(data) \ "item" \ "url").map(stringOnlyWebResource)
 
   // SourceResource
@@ -72,7 +71,7 @@ class LcMapping() extends JsonMapping with JsonExtractor {
   }
 
   override def collection(data: Document[JValue]): ZeroToMany[DcmiTypeCollection] =
-    // [partof['title'] for partof in item['partof']
+  // [partof['title'] for partof in item['partof']
     extractStrings(unwrap(data) \\ "partof" \ "title")
       .map(nameOnlyCollection)
 
@@ -93,27 +92,27 @@ class LcMapping() extends JsonMapping with JsonExtractor {
   }
 
   override def description(data: Document[JValue]): ZeroToMany[String] =
-    // item['description'] AND item['created_published']
+  // item['description'] AND item['created_published']
     extractStrings(unwrap(data) \ "item" \ "description") ++
-      extractStrings(unwrap(data) \ "item" \ "created_published" )
+      extractStrings(unwrap(data) \ "item" \ "created_published")
 
   override def extent(data: Document[JValue]): ZeroToMany[String] =
-    // item['medium']
+  // item['medium']
     extractStrings(unwrap(data) \ "item" \ "medium")
 
   override def format(data: Document[JValue]): ZeroToMany[String] = {
     // (item['type'] AND item['genre']) OR type in item['format']],
     val format =
       extractStrings(unwrap(data) \ "item" \ "type") ++
-      extractStrings(unwrap(data) \ "item" \ "genre") ++
-      extractStrings(unwrap(data) \ "item" \ "format" \ "type")
+        extractStrings(unwrap(data) \ "item" \ "genre") ++
+        extractStrings(unwrap(data) \ "item" \ "format" \ "type")
 
     format.map(_.applyBlockFilter(formatBlockList))
       .filter(_.nonEmpty)
   }
 
   override def identifier(data: Document[JValue]): ZeroToMany[String] =
-    // item['id']
+  // item['id']
     extractStrings(unwrap(data) \ "item" \ "id")
 
   override def language(data: Document[JValue]): ZeroToMany[SkosConcept] = {
@@ -122,29 +121,29 @@ class LcMapping() extends JsonMapping with JsonExtractor {
   }
 
   override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
-    // item['location']].keys
-    // loc.gov/item: item['coordinates']   << lat // TODO How should this integrate?
+  // item['location']].keys
+  // loc.gov/item: item['coordinates']   << lat // TODO How should this integrate?
     extractKeys(unwrap(data) \ "item" \ "location")
       .map(_.capitalizeFirstChar) // capitalize first char since we are using json keys
       .map(nameOnlyPlace)
 
   override def rights(data: Document[JValue]): AtLeastOne[String] =
-    // "For rights relating to this resource, visit " + same mapping for isShownAt
-  isShownAt(data).flatMap(edmWr => Seq(s"For rights relating to this resource, visit ${edmWr.uri.value}"))
+  // "For rights relating to this resource, visit " + same mapping for isShownAt
+    isShownAt(data).flatMap(edmWr => Seq(s"For rights relating to this resource, visit ${edmWr.uri.value}"))
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    // item['subject_headings']
+  // item['subject_headings']
     extractStrings(unwrap(data) \ "item" \ "subject_headings").map(nameOnlyConcept)
 
   override def title(data: Document[JValue]): AtLeastOne[String] =
-    // item['title']
+  // item['title']
     extractStrings(unwrap(data) \ "item" \ "title")
 
   override def `type`(data: Document[JValue]): ZeroToMany[String] = {
     // item['type'] OR item['original_format']].keys
     extractStrings(unwrap(data) \ "item" \ "type") ++
-    extractKeys(unwrap(data) \ "item" \ "original_format") ++
-    format(data)
+      extractKeys(unwrap(data) \ "item" \ "original_format") ++
+      format(data)
   }
 }
 

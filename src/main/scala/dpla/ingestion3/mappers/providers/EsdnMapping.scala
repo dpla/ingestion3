@@ -22,7 +22,7 @@ class EsdnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
   // ID minting functions
   override def useProviderName(): Boolean = true
 
-  override def getProviderName(): String = "esdn"
+  override def getProviderName(): Option[String] = Some("esdn")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
@@ -124,8 +124,8 @@ class EsdnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
     (extractStrings(data \\ "subject" \\ "topic") ++
-        extractStrings(data \\ "subject" \\ "name") ++
-        extractStrings(data \\ "subject" \ "titleInfo" \ "title")
+      extractStrings(data \\ "subject" \\ "name") ++
+      extractStrings(data \\ "subject" \ "titleInfo" \ "title")
       ).map(nameOnlyConcept)
 
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =

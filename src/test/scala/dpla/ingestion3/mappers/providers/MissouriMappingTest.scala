@@ -10,18 +10,17 @@ import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 class MissouriMappingTest extends FlatSpec with BeforeAndAfter {
 
-  val shortName = "missouri"
+  val shortName = Some("missouri")
   val jsonString: String = new FlatFileIO().readFileAsString("/mo.json")
   val json: Document[JValue] = Document(parse(jsonString))
   val extractor = new MissouriMapping
-
 
   it should "use the provider short name when minting DPLA ids" in {
     assert(extractor.useProviderName === false)
   }
 
   it should "return the correct provider name" in {
-    assert(extractor.getProviderName === "missouri")
+    assert(extractor.getProviderName === shortName)
   }
 
   it should "extract the correct original ID" in {

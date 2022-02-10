@@ -93,14 +93,14 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "abstract") ++
-    (data \ "metadata" \ "mods" \ "note")
-      .filterNot(node => filterAttribute(node, "type", "funding"))
-      .filterNot(node => filterAttribute(node, "type", "organization"))
-      .filterNot(node => filterAttribute(node, "type", "reproduction"))
-      .filterNot(node => filterAttribute(node, "type", "system details"))
-      .filterNot(node => filterAttribute(node, "type", "statement of responsibility"))
-      .filterNot(node => filterAttribute(node, "type", "venue"))
-      .flatMap(extractStrings)
+      (data \ "metadata" \ "mods" \ "note")
+        .filterNot(node => filterAttribute(node, "type", "funding"))
+        .filterNot(node => filterAttribute(node, "type", "organization"))
+        .filterNot(node => filterAttribute(node, "type", "reproduction"))
+        .filterNot(node => filterAttribute(node, "type", "system details"))
+        .filterNot(node => filterAttribute(node, "type", "statement of responsibility"))
+        .filterNot(node => filterAttribute(node, "type", "venue"))
+        .flatMap(extractStrings)
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "physicalDescription" \ "extent")
@@ -192,7 +192,7 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
 
     title ++ collectionTitle
   }
-  
+
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "mods" \ "typeOfResource") ++
       extractStrings(data \ "metadata" \ "mods" \ "extension" \ "librarycloud" \\ "digitalFormat")
@@ -242,7 +242,7 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
-  
+
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
     val artMuseumLink = (data \ "metadata" \ "mods" \ "location" \ "url")
       .flatMap(node => getByAttribute(node, "displayLabel", "Harvard Art Museums"))
@@ -259,7 +259,7 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
             .flatMap(node => getByAttribute(node, "access", "object in context"))
             .flatMap(extractString(_))
             .map(stringOnlyWebResource)
-      })
+        })
 
     val objectInContext = (data \ "metadata" \ "mods" \ "location" \ "url")
       .flatMap(node => getByAttribute(node, "displayLabel", "Harvard Digital Collections"))
@@ -286,7 +286,7 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
 
   override def useProviderName: Boolean = false
 
-  override def getProviderName: String = "harvard"
+  override def getProviderName: Option[String] = Some("harvard")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \\ "header" \ "identifier").map(_.trim)
@@ -359,7 +359,7 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
       part = namePart.text
     } yield NamePart(part, typeAttr)
 
-    if(nameParts.isEmpty) return ""
+    if (nameParts.isEmpty) return ""
 
     val nameString = nameParts.tail.foldLeft(nameParts.head.part)(
       (a, b) => {

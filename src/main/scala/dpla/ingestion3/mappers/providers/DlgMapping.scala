@@ -16,7 +16,7 @@ class DlgMapping extends JsonMapping with JsonExtractor {
   override def useProviderName: Boolean = true
 
   // Hard coded to prevent accidental changes to base ID
-  override def getProviderName: String = "dlg"
+  override def getProviderName: Option[String] = Some("dlg")
 
   // OreAggregation fields
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
@@ -33,11 +33,11 @@ class DlgMapping extends JsonMapping with JsonExtractor {
 
   override def edmRights(data: Document[JValue]): ZeroToMany[URI] =
     extractStrings("dc_right_display")(data)
-    .map(URI)
+      .map(URI)
 
-//  override def mediaMaster(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
-//    extractStrings("edm_is_shown_by_display")(data).map(stringOnlyWebResource)
-//  }
+  //  override def mediaMaster(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
+  //    extractStrings("edm_is_shown_by_display")(data).map(stringOnlyWebResource)
+  //  }
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(data)
 
@@ -88,8 +88,8 @@ class DlgMapping extends JsonMapping with JsonExtractor {
     extractStrings("dc_format_display")(data)
       .map(_.applyBlockFilter(
         DigitalSurrogateBlockList.termList ++
-        FormatTypeValuesBlockList.termList ++
-        ExtentIdentificationList.termList))
+          FormatTypeValuesBlockList.termList ++
+          ExtentIdentificationList.termList))
       .filter(_.nonEmpty)
 
   override def identifier(data: Document[JValue]): ZeroToMany[String] =

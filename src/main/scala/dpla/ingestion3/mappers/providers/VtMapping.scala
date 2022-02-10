@@ -21,7 +21,7 @@ class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def useProviderName: Boolean = false
 
-  override def getProviderName(): String = "vt"
+  override def getProviderName: Option[String] = Some("vt")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractStrings(data \ "identifier").headOption

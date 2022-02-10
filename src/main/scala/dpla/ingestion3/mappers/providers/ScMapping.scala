@@ -21,7 +21,7 @@ class ScMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   // ID minting functions
   override def useProviderName(): Boolean = true
 
-  override def getProviderName(): String = "scdl"
+  override def getProviderName(): Option[String] = Some("scdl")
 
   // FYI This ID minting will change all SCDL IDs [again]
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
@@ -44,7 +44,7 @@ class ScMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
     extractStrings(metadata(data) \ "date")
       .map(stringOnlyTimeSpan)
-  
+
   override def description(data: Document[NodeSeq]): Seq[String] =
     extractStrings(metadata(data) \ "description")
 
@@ -74,7 +74,7 @@ class ScMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       extractStrings(metadata(data) \ "accessRights")
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
-     extractStrings(metadata(data) \ "subject")
+    extractStrings(metadata(data) \ "subject")
       .map(nameOnlyConcept)
 
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =

@@ -26,7 +26,7 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
   // ID minting functions
   override def useProviderName(): Boolean = true
 
-  override def getProviderName(): String = "mwdl"
+  override def getProviderName(): Option[String] = Some("mwdl")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \\ "PrimoNMBib" \ "record" \ "control" \ "recordid")
@@ -47,15 +47,15 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyAgent)
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
-    // search/creationdate AND PrimoNMBib/record/display/creationdate
-      extractStrings(data \\ "display" \ "creationdate")
-        .flatMap(_.splitAtDelimiter(";"))
-        .map(stringOnlyTimeSpan)
+  // search/creationdate AND PrimoNMBib/record/display/creationdate
+    extractStrings(data \\ "display" \ "creationdate")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(stringOnlyTimeSpan)
 
   override def description(data: Document[NodeSeq]): Seq[String] =
   // search/description (contains dc:description, dcterms:abstract, and dcterms:tableOfContents)
     extractStrings(data \\ "search" \ "description")
-    .map(_.limitCharacters(1000))
+      .map(_.limitCharacters(1000))
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \\ "display" \ "lds05")

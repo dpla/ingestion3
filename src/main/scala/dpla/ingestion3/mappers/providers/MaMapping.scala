@@ -24,7 +24,7 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   // ID minting functions
   override def useProviderName(): Boolean = true
 
-  override def getProviderName(): String = "bpl" // boston public library
+  override def getProviderName(): Option[String] = Some("bpl") // boston public library
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
@@ -37,12 +37,12 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     (getModsRoot(data) \ "titleInfo")
       .map(node => getByAttribute(node, "type", "alternative"))
       .flatMap(altTitle => extractStrings(altTitle \ "title")) ++
-    (getModsRoot(data) \ "titleInfo")
-      .map(node => getByAttribute(node, "type", "translated"))
-      .flatMap(altTitle => extractStrings(altTitle \ "title")) ++
-    (getModsRoot(data) \ "titleInfo")
-      .map(node => getByAttribute(node, "type", "uniform"))
-      .flatMap(altTitle => extractStrings(altTitle \ "title"))
+      (getModsRoot(data) \ "titleInfo")
+        .map(node => getByAttribute(node, "type", "translated"))
+        .flatMap(altTitle => extractStrings(altTitle \ "title")) ++
+      (getModsRoot(data) \ "titleInfo")
+        .map(node => getByAttribute(node, "type", "uniform"))
+        .flatMap(altTitle => extractStrings(altTitle \ "title"))
 
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
   // <relatedItem type="host"><titleInfo><title>
@@ -55,13 +55,13 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   // identify all names with a corresponding role (in @valueUri).
   // Is there a way to differentiate so that anyone with a “contributor”
   /**
-  <mods:name>
-    <mods:role>
-      <mods:roleTerm authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" type="text" valueURI="http://id.loc.gov/vocabulary/relators/ctb">Contributor</mods:roleTerm>
-    </mods:role>
-    <mods:namePart>American Photo-Relief Printing Co</mods:namePart>
-  </mods:name>
-  **/
+    * <mods:name>
+    * <mods:role>
+    * <mods:roleTerm authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" type="text" valueURI="http://id.loc.gov/vocabulary/relators/ctb">Contributor</mods:roleTerm>
+    * </mods:role>
+    * <mods:namePart>American Photo-Relief Printing Co</mods:namePart>
+    * </mods:name>
+    **/
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     val names = (getModsRoot(data) \ "name")
       .filter(n => extractStrings(n \ "role" \ "roleTerm").map(_.trim).contains("Contributor"))
@@ -70,7 +70,7 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   }
 
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] = {
-  // <name><namePart> + " , " <namePart type=date>
+    // <name><namePart> + " , " <namePart type=date>
     val names = (getModsRoot(data) \ "name")
       .filterNot(n => extractStrings(n \ "role" \ "roleTerm").map(_.trim).contains("Contributor"))
 
@@ -79,30 +79,30 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   private def nameConstructor(names: NodeSeq): Seq[EdmAgent] = {
     names.map(node => {
-        val name = extractString((node \ "namePart").filter(p => p.attributes.isEmpty))
-        val date = extractString((node \ "namePart").filter(p => filterAttribute(p, "type", "date")))
+      val name = extractString((node \ "namePart").filter(p => p.attributes.isEmpty))
+      val date = extractString((node \ "namePart").filter(p => filterAttribute(p, "type", "date")))
 
-        if(date.isDefined)
-          s"${name.getOrElse("")}, ${date.get}"
-        else
-          name.getOrElse("")
-      })
+      if (date.isDefined)
+        s"${name.getOrElse("")}, ${date.get}"
+      else
+        name.getOrElse("")
+    })
       .map(nameOnlyAgent)
   }
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] = {
-  // <mods:originInfo><mods:dateCreated encoding="w3cdtf" keyDate="yes">
-  // <mods:originInfo><mods:dateIssued encoding="w3cdtf" keyDate="yes">
-  // <mods:originInfo><mods:dateOther encoding="w3cdtf" keyDate="yes">
-  // <mods:originInfo><mods:copyrightDate encoding="w3cdtf" keyDate="yes">
-  // for date ranges @keyDate='yes' and @point='start' | @point='end'
+    // <mods:originInfo><mods:dateCreated encoding="w3cdtf" keyDate="yes">
+    // <mods:originInfo><mods:dateIssued encoding="w3cdtf" keyDate="yes">
+    // <mods:originInfo><mods:dateOther encoding="w3cdtf" keyDate="yes">
+    // <mods:originInfo><mods:copyrightDate encoding="w3cdtf" keyDate="yes">
+    // for date ranges @keyDate='yes' and @point='start' | @point='end'
 
     val props = Seq("dateCreated", "dateIssued", "dateOther", "copyrightDate")
 
 
     props.flatMap(prop => {
       val dateCreated = (getModsRoot(data) \ "originInfo" \ prop)
-        .filterNot(node => filterAttribute(node,"point", "start") | filterAttribute(node,"point", "end"))
+        .filterNot(node => filterAttribute(node, "point", "start") | filterAttribute(node, "point", "end"))
         .flatMap(node => getByAttribute(node, "keyDate", "yes"))
         .flatMap(node => getByAttribute(node, "encoding", "w3cdtf"))
         .flatMap(node => extractStrings(node))
@@ -155,22 +155,22 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   // <mods:identifier type="local-call">
   // <mods:identifier type="local-barcode">
   // The value should be the type qualifier value + ": " + the property value, e.g., "Local accession: ####""
-    {
-      val types = Seq("local-accession", "local-other", "local-call", "local-barcode")
+  {
+    val types = Seq("local-accession", "local-other", "local-call", "local-barcode")
 
-      types.flatMap(t => {
-        val label = t.split("-").mkString(" ").capitalize
-        val ids = (getModsRoot(data) \ "identifier")
-          .flatMap(node => getByAttribute(node, "type", t))
-          .flatMap(extractString(_))
+    types.flatMap(t => {
+      val label = t.split("-").mkString(" ").capitalize
+      val ids = (getModsRoot(data) \ "identifier")
+        .flatMap(node => getByAttribute(node, "type", t))
+        .flatMap(extractString(_))
 
-        if (ids.nonEmpty) {
-          Some(s"$label: ${ids.mkString(", ")}")
-        } else {
-          None
-        }
-      })
-    }
+      if (ids.nonEmpty) {
+        Some(s"$label: ${ids.mkString(", ")}")
+      } else {
+        None
+      }
+    })
+  }
 
   override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
   // <mods:language><mods:languageTerm>
@@ -181,46 +181,46 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   // <mods:subject><mods:hierarchicalGeographic> [combine all children into a single property with ', ' between them]
   // <mods:subject><mods:geographic>;
   // <mods:subject><mods:cartographics><mods:coordinates>
-    {
+  {
 
-      val subjects = getModsRoot(data) \ "subject"
+    val subjects = getModsRoot(data) \ "subject"
 
-      subjects.flatMap(subject => {
-        val places = extractString(subject \ "geographic")
-        val coordinates =  extractString(subject \ "cartographics" \ "coordinates")
+    subjects.flatMap(subject => {
+      val places = extractString(subject \ "geographic")
+      val coordinates = extractString(subject \ "cartographics" \ "coordinates")
 
-        val hierarchy = (subject \ "hierarchicalGeographic").map(h => {
-          val cityLabel = (extractString(h \ "city"), extractString(h \ "citySection")) match {
-            case (Some(city), Some(citySection)) => Some(s"$city, $citySection")
-            case (Some(city), None) => Some(city)
-            case (None, Some(citySection)) => Some(citySection)
-            case (_, _) => None
-          }
+      val hierarchy = (subject \ "hierarchicalGeographic").map(h => {
+        val cityLabel = (extractString(h \ "city"), extractString(h \ "citySection")) match {
+          case (Some(city), Some(citySection)) => Some(s"$city, $citySection")
+          case (Some(city), None) => Some(city)
+          case (None, Some(citySection)) => Some(citySection)
+          case (_, _) => None
+        }
 
-          val country = extractString(h \ "country")
-          val county = extractString(h \ "county")
-          val state = extractString(h \ "state")
-          val name = Option(Seq(cityLabel, county, state, country).flatten.map(_.trim).mkString(", "))
+        val country = extractString(h \ "country")
+        val county = extractString(h \ "county")
+        val state = extractString(h \ "state")
+        val name = Option(Seq(cityLabel, county, state, country).flatten.map(_.trim).mkString(", "))
 
-          DplaPlace(
-            name = name,
-            city = cityLabel,
-            country = country,
-            county = county,
-            state = state,
-            coordinates = coordinates
-          )
-        })
-
-        if(places.isEmpty)
-          hierarchy
-        else
-          Seq(DplaPlace(name = places,
-            coordinates = coordinates))
+        DplaPlace(
+          name = name,
+          city = cityLabel,
+          country = country,
+          county = county,
+          state = state,
+          coordinates = coordinates
+        )
       })
-    }
 
-  private def places(data: Document[NodeSeq]) =  extractStrings(getModsRoot(data) \ "subject" \ "geographic")
+      if (places.isEmpty)
+        hierarchy
+      else
+        Seq(DplaPlace(name = places,
+          coordinates = coordinates))
+    })
+  }
+
+  private def places(data: Document[NodeSeq]) = extractStrings(getModsRoot(data) \ "subject" \ "geographic")
 
   override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
     extractStrings(getModsRoot(data) \ "originInfo" \ "publisher")
@@ -233,7 +233,7 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
   // Any <mods:subject> field, except <mods:hierarchicalGeographic>, <mods:geographic>, and <mods:cartographics><mods:coordinates>.
-    ( (getModsRoot(data) \ "subject" \ "topic") ++
+    ((getModsRoot(data) \ "subject" \ "topic") ++
       (getModsRoot(data) \ "subject" \ "temporal") ++
       (getModsRoot(data) \ "subject" \ "titleInfo") ++
       (getModsRoot(data) \ "subject" \ "name") ++

@@ -21,7 +21,7 @@ class NJDEMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
   // ID minting functions
   override def useProviderName(): Boolean = true
 
-  override def getProviderName(): String = "njde"
+  override def getProviderName(): Option[String] = Some("njde")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier").map(_.trim)
@@ -43,7 +43,7 @@ class NJDEMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
     extractStrings(metadata(data) \\ "date")
       .map(stringOnlyTimeSpan)
-  
+
   override def description(data: Document[NodeSeq]): Seq[String] =
     extractStrings(metadata(data) \\ "description")
 
@@ -65,7 +65,7 @@ class NJDEMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
       .map(nameOnlyPlace)
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
-     extractStrings(metadata(data) \\ "subject")
+    extractStrings(metadata(data) \\ "subject")
       .map(nameOnlyConcept)
 
   override def title(data: Document[NodeSeq]): Seq[String] =

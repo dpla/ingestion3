@@ -22,7 +22,7 @@ class IllinoisMapping extends XmlMapping with XmlExtractor with IngestMessageTem
   // ID minting functions
   override def useProviderName(): Boolean = true
 
-  override def getProviderName(): String = "il"
+  override def getProviderName(): Option[String] = Some("il")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
@@ -101,8 +101,8 @@ class IllinoisMapping extends XmlMapping with XmlExtractor with IngestMessageTem
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-  extractStrings(data \ "metadata" \\ "provenance")
-    .map(nameOnlyAgent)
+    extractStrings(data \ "metadata" \\ "provenance")
+      .map(nameOnlyAgent)
 
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
     (data \ "metadata" \\ "rights").flatMap(r => {

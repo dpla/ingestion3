@@ -24,7 +24,7 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   // Do not fail records that appear in more than one set
   // override val enforceDuplicateIds: Boolean = false
 
-  override def getProviderName: String = "texas"
+  override def getProviderName: Option[String] = Some("texas")
 
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 

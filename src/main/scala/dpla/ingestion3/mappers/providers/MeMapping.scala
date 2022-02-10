@@ -16,7 +16,7 @@ class MeMapping extends XmlMapping with XmlExtractor
   // IdMinter methods
   override def useProviderName: Boolean = true
 
-  override def getProviderName: String = "maine"
+  override def getProviderName: Option[String] = Some("maine")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier").map(_.trim)
@@ -90,7 +90,7 @@ class MeMapping extends XmlMapping with XmlExtractor
   )
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data) )
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
 
   def metadataRoot(data: Document[NodeSeq]): NodeSeq = data \ "metadata" \ "qualifieddc"
 }

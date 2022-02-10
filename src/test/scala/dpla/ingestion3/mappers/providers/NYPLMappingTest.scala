@@ -11,7 +11,7 @@ import org.scalatest.{BeforeAndAfter, FlatSpec}
 class NYPLMappingTest extends FlatSpec with BeforeAndAfter {
 
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
-  val shortName = "nypl"
+  val shortName = Some("nypl")
   val jsonString: String = new FlatFileIO().readFileAsString("/nypl.json")
   val json: Document[JValue] = Document(parse(jsonString))
   val extractor = new NyplMapping(json)
@@ -19,6 +19,18 @@ class NYPLMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct original ID " in {
     val expected = Some("93cd9a10-c552-012f-20e8-58d385a7bc34")
     assert(extractor.originalId(json) === expected)
+  }
+
+  it should "mint the correct DPLA URI" in {
+    assert(extractor.dplaUri(json) === Some(URI("http://dp.la/api/items/9412682033a0b7a5926b584e7756019c")))
+  }
+
+  it should "use provider prefix" in {
+    assert(extractor.useProviderName === true)
+  }
+
+  it should "use the correct provider prefix" in {
+    assert(extractor.getProviderName === shortName)
   }
 
   it should "extract the correct title " in {

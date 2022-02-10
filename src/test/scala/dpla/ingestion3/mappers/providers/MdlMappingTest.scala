@@ -10,18 +10,16 @@ import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 class MdlMappingTest extends FlatSpec with BeforeAndAfter {
 
-  val shortName = "mdl"
   val jsonString: String = new FlatFileIO().readFileAsString("/mdl.json")
   val json: Document[JValue] = Document(parse(jsonString))
   val extractor = new MdlMapping
-
 
   it should "use the provider short name when minting DPLA ids" in {
     assert(extractor.useProviderName === true)
   }
 
   it should "return the correct provider name" in {
-    assert(extractor.getProviderName === "minnesota")
+    assert(extractor.getProviderName === Some("minnesota"))
   }
 
   it should "extract the correct original ID" in {
@@ -126,7 +124,8 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
   }
   // rights
   it should "extract the correct rights" in {
-    val jsonString = """
+    val jsonString =
+      """
       {
         "attributes": {
           "metadata": {
@@ -142,7 +141,8 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "not map non-rs or non-cc host domains to edmRights" in {
-    val jsonString = """
+    val jsonString =
+      """
       {
         "attributes": {
           "metadata": {
@@ -159,7 +159,8 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "not map non-URIs to edmRights" in {
-    val jsonString = """
+    val jsonString =
+      """
       {
         "attributes": {
           "metadata": {
@@ -175,7 +176,8 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "work when rights is empty string" in {
-    val jsonString = """
+    val jsonString =
+      """
       {
         "attributes": {
           "metadata": {
@@ -191,7 +193,8 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "work when rights not provided" in {
-    val jsonString = """
+    val jsonString =
+      """
       {
         "attributes": {
           "metadata": {
@@ -207,7 +210,8 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
 
   // rights
   it should "map to dcRights but not edmRights when rights value contains both text and uri" in {
-    val jsonString = """
+    val jsonString =
+      """
       {
         "attributes": {
           "metadata": {

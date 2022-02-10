@@ -10,7 +10,7 @@ import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 class FlMappingTest extends FlatSpec with BeforeAndAfter {
 
-  val shortName = "florida"
+  val shortName = Some("florida")
   val jsonString: String = new FlatFileIO().readFileAsString("/fl.json")
   val json: Document[JValue] = Document(parse(jsonString))
   val extractor = new FlMapping
@@ -21,7 +21,7 @@ class FlMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "return the correct provider name" in {
-    assert(extractor.getProviderName === "florida")
+    assert(extractor.getProviderName === shortName)
   }
 
   it should "extract the correct original ID" in {

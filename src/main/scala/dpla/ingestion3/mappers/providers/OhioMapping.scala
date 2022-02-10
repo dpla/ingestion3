@@ -19,7 +19,7 @@ class OhioMapping extends XmlMapping with XmlExtractor
   // ID minting functions
   override def useProviderName(): Boolean = false
 
-  override def getProviderName(): String = "ohio"
+  override def getProviderName(): Option[String] = Some("ohio")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
@@ -59,9 +59,9 @@ class OhioMapping extends XmlMapping with XmlExtractor
     extractStrings(data \ "metadata" \\ "format")
       .flatMap(_.splitAtDelimiter(";"))
       .map(_.applyBlockFilter(
-         DigitalSurrogateBlockList.termList ++
-         FormatTypeValuesBlockList.termList ++
-        ExtentIdentificationList.termList))
+        DigitalSurrogateBlockList.termList ++
+          FormatTypeValuesBlockList.termList ++
+          ExtentIdentificationList.termList))
       .filter(_.nonEmpty)
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
@@ -153,12 +153,13 @@ class OhioMapping extends XmlMapping with XmlExtractor
   /**
     * Extracts values from format field and returns values that appear to be
     * extent statements
+    *
     * @param data
     * @return
     */
   def extentFromFormat(data: Document[NodeSeq]): ZeroToMany[String] =
-     extractStrings(data \ "metadata" \\ "format")
-       .flatMap(_.splitAtDelimiter(";"))
-       .map(_.extractExtents)
-       .filter(_.nonEmpty)
+    extractStrings(data \ "metadata" \\ "format")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(_.extractExtents)
+      .filter(_.nonEmpty)
 }
