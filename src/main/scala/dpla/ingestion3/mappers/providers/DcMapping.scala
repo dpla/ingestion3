@@ -22,7 +22,7 @@ class DcMapping extends XmlMapping with XmlExtractor {
   // ID minting functions
   override def useProviderName(): Boolean = false // TODO confirm prefix
 
-  override def getProviderName(): String = "dc" // TODO confirm prefix
+  override def getProviderName(): Option[String] = Some("dc") // TODO confirm prefix
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
@@ -88,7 +88,7 @@ class DcMapping extends XmlMapping with XmlExtractor {
   override def `type`(data: Document[NodeSeq]): Seq[String] =
     (extractStrings(data \ "metadata" \\ "type") ++
       extractStrings(data \ "metadata" \\ "format"))
-    .flatMap(_.splitAtDelimiter(";"))
+      .flatMap(_.splitAtDelimiter(";"))
 
 
   // OreAggregation
@@ -106,7 +106,7 @@ class DcMapping extends XmlMapping with XmlExtractor {
   }
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-      extractStrings(data \ "metadata" \\ "isShownAt").map(stringOnlyWebResource)
+    extractStrings(data \ "metadata" \\ "isShownAt").map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 

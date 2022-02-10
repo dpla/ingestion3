@@ -23,7 +23,7 @@ class WiMapping extends XmlMapping with XmlExtractor
   // ID minting functions
   override def useProviderName: Boolean = true
 
-  override def getProviderName: String = "wisconsin"
+  override def getProviderName: Option[String] = Some("wisconsin")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
@@ -84,12 +84,12 @@ class WiMapping extends XmlMapping with XmlExtractor
   override def rights(data: Document[NodeSeq]): Seq[String] =
     ((data \ "metadata" \\ "rights") ++
       (data \ "metadata" \\ "accessRights")).flatMap(rights => {
-        rights.prefix match {
-          case "dc" => Some(rights.text.trim) // dc:rights
-          case "dct" => Some(rights.text.trim) // dct:accessRights
-          case _ => None
-        }
-      })
+      rights.prefix match {
+        case "dc" => Some(rights.text.trim) // dc:rights
+        case "dct" => Some(rights.text.trim) // dct:accessRights
+        case _ => None
+      }
+    })
 
   override def rightsHolder(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "rightsHolder").map(nameOnlyAgent)

@@ -21,13 +21,11 @@ class VirginiasMapping extends XmlMapping with XmlExtractor with IngestMessageTe
   // ID minting functions
   override def useProviderName(): Boolean = false
 
-  // TODO: Provider name ok?
-  override def getProviderName(): String = "virginias"
+  override def getProviderName(): Option[String] = Some("virginias")
 
-  // TODO: What field in virginias records should we use for persistent ID?
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "identifier")
-  
+
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
     extractStrings(data \ "isPartOf")
       .map(nameOnlyCollection)

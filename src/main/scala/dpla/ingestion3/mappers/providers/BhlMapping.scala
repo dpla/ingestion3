@@ -16,7 +16,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
   // ID minting functions
   override def useProviderName: Boolean = true
 
-  override def getProviderName: String = "bhl"
+  override def getProviderName: Option[String] = Some("bhl")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \\ "header" \ "identifier")

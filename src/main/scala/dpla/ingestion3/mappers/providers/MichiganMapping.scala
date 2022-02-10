@@ -21,7 +21,7 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
   // ID minting functions
   override def useProviderName(): Boolean = true
 
-  override def getProviderName(): String = "mi"
+  override def getProviderName(): Option[String] = Some("mi")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
@@ -48,7 +48,7 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
       .filter(node => {
         val role = (node \ "role" \ "roleTerm").text
         role.isEmpty || role.equalsIgnoreCase("creator")
-      } )
+      })
       .flatMap(n => extractStrings(n \ "namePart"))
       .map(nameOnlyAgent)
 
@@ -73,15 +73,15 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
       .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "point", "end"))
       .flatMap(node => extractStrings(node))
 
-    val constructedDateIssued = if(dateIssuedEarly.length == dateIssuedLate.length) {
-        dateIssuedEarly.zip(dateIssuedLate).map {
-          case (begin: String, end: String) =>
-            EdmTimeSpan(
-              originalSourceDate = Some(s"$begin-$end"),
-              begin = Some(begin),
-              end = Some(end)
-            )
-        }
+    val constructedDateIssued = if (dateIssuedEarly.length == dateIssuedLate.length) {
+      dateIssuedEarly.zip(dateIssuedLate).map {
+        case (begin: String, end: String) =>
+          EdmTimeSpan(
+            originalSourceDate = Some(s"$begin-$end"),
+            begin = Some(begin),
+            end = Some(end)
+          )
+      }
     } else {
       Seq()
     }
@@ -93,7 +93,7 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
       case _ => Seq()
     }
   }
-  
+
   override def description(data: Document[NodeSeq]): Seq[String] = {
     // <mods:note> and <mods:abstract>
     extractStrings(data \\ "mods" \ "abstract") ++

@@ -24,7 +24,7 @@ class HathiMapping extends MarcXmlMapping {
   // ID minting functions
   override def useProviderName: Boolean = true
 
-  override def getProviderName: String = "hathitrust"
+  override def getProviderName: Option[String] = Some("hathitrust")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     // <controlfield> tag = 001

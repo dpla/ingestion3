@@ -17,7 +17,7 @@ class GpoMapping extends MarcXmlMapping {
   // ID minting functions
   override def useProviderName: Boolean = true
 
-  override def getProviderName: String = "gpo"
+  override def getProviderName: Option[String] = Some("gpo")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
@@ -25,7 +25,7 @@ class GpoMapping extends MarcXmlMapping {
   // SourceResource mapping
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    // <datafield> tag = 700, 710, or 711
+  // <datafield> tag = 700, 710, or 711
     marcFields(data, Seq("700", "710", "711"))
       .filter(filterSubfields(_, Seq("e")) // include if subfield with @code=e exists and...
         .flatMap(extractStrings)
@@ -95,7 +95,7 @@ class GpoMapping extends MarcXmlMapping {
     // Add description frequency if desc310 does not exist, <leader> at index 7 = 's',
     // and a description frequency key is present in <controlfield> 008_18
     val leader7: Option[Char] = leaderAt(data, 7)
-    val controlKey: Option[String] = controlfield(data,Seq("008_18"))
+    val controlKey: Option[String] = controlfield(data, Seq("008_18"))
       .flatMap(extractStrings)
       .headOption
 
@@ -137,7 +137,7 @@ class GpoMapping extends MarcXmlMapping {
   )
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
-    // <datafield> tag = 300  <subfield> code = a
+  // <datafield> tag = 300  <subfield> code = a
     marcFields(data, Seq("300"), Seq("a"))
       .map(extractStrings)
       .map(_.mkString(" "))
@@ -148,13 +148,17 @@ class GpoMapping extends MarcXmlMapping {
     // <leader> #text character at index 6
     // map character to String value in leaderFormats
     val lFormats: Seq[String] = leaderAt(data, 6)
-      .flatMap(key => Try{ leaderFormats(key) }.toOption)
+      .flatMap(key => Try {
+        leaderFormats(key)
+      }.toOption)
       .toSeq
 
     // <controlfield> code = 007 #text character at index 0
     // map character to String value in controlFormats
     val cFormats: Seq[String] = controlAt(data, "007", 0)
-      .flatMap(key => Try{ controlFormats(key) }.toOption)
+      .flatMap(key => Try {
+        controlFormats(key)
+      }.toOption)
 
     // <datafield> tag = 337, 338, or 340   <subfield> code = a
     val dFormats = marcFields(data, Seq("337", "338", "340"), Seq("a"))
@@ -210,8 +214,8 @@ class GpoMapping extends MarcXmlMapping {
   }
 
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
-    // <datafield> tag = 650  <subfield> code = z
-    // <datafield> tag = 651  <subfield> code = a
+  // <datafield> tag = 650  <subfield> code = z
+  // <datafield> tag = 651  <subfield> code = a
     (marcFields(data, Seq("650"), Seq("z")) ++ marcFields(data, Seq("651"), Seq("a")))
       .flatMap(extractStrings)
       .map(_.stripSuffix("."))
@@ -219,7 +223,7 @@ class GpoMapping extends MarcXmlMapping {
       .distinct
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    // <datafield> tag = 260 or 264   <subfield> code = a or b
+  // <datafield> tag = 260 or 264   <subfield> code = a or b
     marcFields(data, Seq("260", "264"), Seq("a", "b"))
       .map(extractStrings)
       .map(_.mkString(" "))
@@ -323,14 +327,14 @@ class GpoMapping extends MarcXmlMapping {
   )
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
-    // <datafield> tag = 600, 610, 611, 630, 650, or 651  <subfield> code is a letter (not a number)
+  // <datafield> tag = 600, 610, 611, 630, 650, or 651  <subfield> code is a letter (not a number)
     datafield(data, Seq("600", "610", "611", "630", "650", "651"))
       .map(extractMarcSubject)
       .map(nameOnlyConcept)
 
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
-    // <datafield> tag = 600, 610, 650, or 651  <subfield> code = y
-    // <datafield> tag = 611                    <subfield> code = d
+  // <datafield> tag = 600, 610, 650, or 651  <subfield> code = y
+  // <datafield> tag = 611                    <subfield> code = d
     (marcFields(data, Seq("600", "610", "650", "651"), Seq("y")) ++ marcFields(data, Seq("611"), Seq("d")))
       .flatMap(extractStrings)
       .map(_.stripSuffix("."))

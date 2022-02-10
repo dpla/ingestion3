@@ -21,7 +21,7 @@ class OklahomaMapping extends XmlMapping with XmlExtractor with IngestMessageTem
   // ID minting functions
   override def useProviderName(): Boolean = true
 
-  override def getProviderName(): String = "oklahoma"
+  override def getProviderName(): Option[String] = Some("oklahoma")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
@@ -132,7 +132,7 @@ class OklahomaMapping extends XmlMapping with XmlExtractor with IngestMessageTem
     (data \\ "mods" \ "titleInfo")
       .filterNot({ n => filterAttribute(n, "type", "alternative") })
       .flatMap(titleInfo => extractStrings(titleInfo \ "title")) ++ // FIXME see above
-    alternateTitle(data)
+      alternateTitle(data)
 
   override def `type`(data: Document[NodeSeq]): Seq[String] =
   // <mods:typeofresource>

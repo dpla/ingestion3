@@ -12,17 +12,17 @@ import scala.xml.{NodeSeq, XML}
 class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
-  val shortName = "nara"
+  val shortName = Some("nara")
   val xmlString: String = new FlatFileIO().readFileAsString("/nara.xml")
   val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))
   val itemUri = new URI("http://catalog.archives.gov/id/2132862")
   val extractor = new NaraMapping
 
   it should "use the provider shortname in minting IDs" in
-    assert(extractor.useProviderName())
+    assert(extractor.useProviderName)
 
   it should "pass through the short name to ID minting" in
-    assert(extractor.getProviderName() === shortName)
+    assert(extractor.getProviderName === shortName)
 
   it should "extract original ID" in {
     assert(extractor.originalId(xml) === Some("2132862"))

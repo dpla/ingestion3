@@ -14,7 +14,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
   val mapping = new P2PMapping
 
   "A P2PMapping" should "have the correct provider name" in {
-    assert(mapping.getProviderName === "p2p")
+    assert(mapping.getProviderName === Some("p2p"))
   }
 
   it should "get the correct original ID" in {

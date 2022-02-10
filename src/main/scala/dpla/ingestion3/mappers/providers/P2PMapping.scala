@@ -18,7 +18,7 @@ class P2PMapping extends XmlMapping with XmlExtractor with IngestMessageTemplate
   override def useProviderName: Boolean = true
 
   // Hard coded to prevent accidental changes to base ID
-  override def getProviderName: String = "p2p"
+  override def getProviderName: Option[String] = Some("p2p")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \\ "header" \ "identifier").map(_.trim)

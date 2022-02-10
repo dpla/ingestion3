@@ -23,7 +23,7 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
   // ID minting functions
   override def useProviderName(): Boolean = true
 
-  override def getProviderName(): String = "nwdh"
+  override def getProviderName(): Option[String] = Some("nwdh")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "identifier")
@@ -52,7 +52,7 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
       .map(nameOnlyAgent)
 
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
-    // <mods:originInfo><mods:dateCreated>
+  // <mods:originInfo><mods:dateCreated>
     extractStrings(data \ "originInfo" \ "dateCreated")
       .map(stringOnlyTimeSpan)
 
@@ -94,7 +94,7 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
       .map(nameOnlyAgent)
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
-    // <mods:subject><mods:topic>
+  // <mods:subject><mods:topic>
     extractStrings(data \ "subject" \ "topic").map(nameOnlyConcept)
 
   override def title(data: Document[NodeSeq]): Seq[String] =

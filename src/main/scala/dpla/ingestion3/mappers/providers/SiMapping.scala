@@ -18,7 +18,7 @@ class SiMapping extends XmlMapping with XmlExtractor {
   // ID minting functions
   override def useProviderName: Boolean = true
 
-  override def getProviderName: String = "smithsonian"
+  override def getProviderName: Option[String] = Some("smithsonian")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] = {
     // Hard code URL query for item as basis for DPLA identifier to maintain SI ids between ingestion1 and ingestion3
@@ -71,25 +71,25 @@ class SiMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyAgent)
 
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] = {
-//    val creatorAttr = Seq("Architect", "Artist", "Artists/Makers", "Attributed to", "Author", "Cabinet Maker",
-//      "Ceramist", "Circle of", "Co-Designer", "Creator", "Decorator", "Designer", "Draftsman", "Editor", "Embroiderer",
-//      "Engraver", "Etcher", "Executor", "Follower of", "Graphic Designer", "Instrumentiste", "Inventor",
-//      "Landscape Architect", "Landscape Designer", "Maker", "Model Maker/maker", "Modeler", "Painter", "Photographer",
-//      "Possible attribution", "Possibly", "Possibly by", "Print Maker", "Printmaker", "Probably", "School of", "Sculptor",
-//      "Studio of", "Workshop of", "Weaver", "Writer", "animator", "architect", "artist", "artist.", "artist?",
-//      "artist attribution", "author", "author.", "author?", "authors?", "caricaturist", "cinematographer", "composer",
-//      "composer, lyricist", "composer; lyrcist", "composer; lyricist", "composer; performer", "composer; recording artist",
-//      "composer?", "creator", "creators", "designer", "developer", "director", "editor", "engraver", "ethnographer", "fabricator",
-//      "filmmaker", "filmmaker, anthropologist", "garden designer", "graphic artist", "illustrator", "inventor",
-//      "landscape Architect", "landscape architect", "landscape architect, photographer", "landscape designer",
-//      "lantern slide maker", "lithographer", "lyicist", "lyicrist", "lyricist", "lyricist; composer", "maker", "maker (possibly)",
-//      "maker or owner", "maker; inventor", "original artist", "performer", "performer; composer; lyricist",
-//      "performer; recording artist", "performers", "performing artist; recipient", "performing artist; user", "photgrapher",
-//      "photograher", "photographer", "photographer and copyright claimant", "photographer and/or colorist", "photographer or collector",
-//      "photographer?", "photographerl", "photographerphotographer", "photographers", "photographers?", "photographer}",
-//      "photographic firm", "photogrpaher", "playwright", "poet", "possible maker", "printer", "printmaker", "producer",
-//      "recordig artist", "recording artist", "recording artist; composer", "recordist", "recordng artist", "sculptor",
-//      "shipbuilder", "shipbuilders", "shipping firm", "weaver", "weaver or owner")
+    //    val creatorAttr = Seq("Architect", "Artist", "Artists/Makers", "Attributed to", "Author", "Cabinet Maker",
+    //      "Ceramist", "Circle of", "Co-Designer", "Creator", "Decorator", "Designer", "Draftsman", "Editor", "Embroiderer",
+    //      "Engraver", "Etcher", "Executor", "Follower of", "Graphic Designer", "Instrumentiste", "Inventor",
+    //      "Landscape Architect", "Landscape Designer", "Maker", "Model Maker/maker", "Modeler", "Painter", "Photographer",
+    //      "Possible attribution", "Possibly", "Possibly by", "Print Maker", "Printmaker", "Probably", "School of", "Sculptor",
+    //      "Studio of", "Workshop of", "Weaver", "Writer", "animator", "architect", "artist", "artist.", "artist?",
+    //      "artist attribution", "author", "author.", "author?", "authors?", "caricaturist", "cinematographer", "composer",
+    //      "composer, lyricist", "composer; lyrcist", "composer; lyricist", "composer; performer", "composer; recording artist",
+    //      "composer?", "creator", "creators", "designer", "developer", "director", "editor", "engraver", "ethnographer", "fabricator",
+    //      "filmmaker", "filmmaker, anthropologist", "garden designer", "graphic artist", "illustrator", "inventor",
+    //      "landscape Architect", "landscape architect", "landscape architect, photographer", "landscape designer",
+    //      "lantern slide maker", "lithographer", "lyicist", "lyicrist", "lyricist", "lyricist; composer", "maker", "maker (possibly)",
+    //      "maker or owner", "maker; inventor", "original artist", "performer", "performer; composer; lyricist",
+    //      "performer; recording artist", "performers", "performing artist; recipient", "performing artist; user", "photgrapher",
+    //      "photograher", "photographer", "photographer and copyright claimant", "photographer and/or colorist", "photographer or collector",
+    //      "photographer?", "photographerl", "photographerphotographer", "photographers", "photographers?", "photographer}",
+    //      "photographic firm", "photogrpaher", "playwright", "poet", "possible maker", "printer", "printmaker", "producer",
+    //      "recordig artist", "recording artist", "recording artist; composer", "recordist", "recordng artist", "sculptor",
+    //      "shipbuilder", "shipbuilders", "shipping firm", "weaver", "weaver or owner")
     (data \ "freetext" \ "name")
       .filterNot(node => filterAttribute(node, "label", "contributor"))
       .flatMap(extractStrings)
@@ -157,7 +157,7 @@ class SiMapping extends XmlMapping with XmlExtractor {
       case "" => None
       case _ => Some(str)
     }
-    
+
     val preciseGeoLocation = (data \ "indexedStructured" \ "geoLocation").map(node => {
 
       val country = (node \ "L2")
@@ -202,7 +202,7 @@ class SiMapping extends XmlMapping with XmlExtractor {
     })
 
     // return structured DPLA Place if non-empty, otherwise use freetext spatial information
-    if(preciseGeoLocation.nonEmpty)
+    if (preciseGeoLocation.nonEmpty)
       preciseGeoLocation
     else
       (data \ "freetext" \ "place")
@@ -223,11 +223,11 @@ class SiMapping extends XmlMapping with XmlExtractor {
 
     if (mediaRights.isEmpty)
       (data \ "freetext" \ "creditLine")
-         .filter(node => filterAttribute(node, "label", "credit line"))
+        .filter(node => filterAttribute(node, "label", "credit line"))
         .flatMap(extractStrings(_)) ++
-      (data \ "freetext" \ "objectRights")
-        .filter(node => filterAttribute(node, "label", "rights"))
-        .flatMap(extractStrings(_))
+        (data \ "freetext" \ "objectRights")
+          .filter(node => filterAttribute(node, "label", "rights"))
+          .flatMap(extractStrings(_))
     else
       mediaRights
   } // done
@@ -244,9 +244,9 @@ class SiMapping extends XmlMapping with XmlExtractor {
           .flatMap(node => getByAttribute(node, "label", topic))
           .flatMap(extractStrings(_))
       })
-    ).flatMap(_.splitAtDelimiter("\\\\"))
-     .flatMap(_.splitAtDelimiter(":"))
-     .map(nameOnlyConcept)
+      ).flatMap(_.splitAtDelimiter("\\\\"))
+      .flatMap(_.splitAtDelimiter(":"))
+      .map(nameOnlyConcept)
   } // done
 
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
@@ -256,8 +256,8 @@ class SiMapping extends XmlMapping with XmlExtractor {
     (data \ "descriptiveNonRepeating" \ "title")
       .filter(node =>
         filterAttribute(node, "label", "title") ||
-        filterAttribute(node, "label", "object name") ||
-        filterAttribute(node, "label", "title (spanish)"))
+          filterAttribute(node, "label", "object name") ||
+          filterAttribute(node, "label", "title (spanish)"))
       .flatMap(node => extractStrings(node)) // done
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =

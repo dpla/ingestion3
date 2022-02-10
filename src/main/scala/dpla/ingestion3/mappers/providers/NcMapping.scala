@@ -22,7 +22,7 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   // ID minting functions
   override def useProviderName(): Boolean = true
 
-  override def getProviderName(): String = "digitalnc"
+  override def getProviderName(): Option[String] = Some("digitalnc")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
@@ -37,14 +37,14 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   // SourceResource mapping
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    // when <role><roleTerm> DOES equal "contributor>
+  // when <role><roleTerm> DOES equal "contributor>
     (data \\ "mods" \ "name")
       .filter(node => (node \ "role" \ "roleTerm").text.equalsIgnoreCase("contributor"))
       .flatMap(n => extractStrings(n \ "namePart"))
       .map(nameOnlyAgent)
 
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    // <mods:name><mods:namePart> when <role><roleTerm> is 'creator'
+  // <mods:name><mods:namePart> when <role><roleTerm> is 'creator'
     (data \\ "mods" \ "name")
       .filter(node => (node \ "role" \ "roleTerm").text.equalsIgnoreCase("creator"))
       .flatMap(n => extractStrings(n \ "namePart"))
@@ -56,7 +56,7 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .flatMap(extractStrings)
       .map(stringOnlyTimeSpan)
   }
-  
+
   override def description(data: Document[NodeSeq]): Seq[String] =
   // <mods:note type='content'>
     (data \\ "mods" \ "note")
@@ -99,7 +99,7 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .flatMap(extractStrings)
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
-    // <mods:subject><mods:topic>
+  // <mods:subject><mods:topic>
     extractStrings(data \\ "mods" \ "subject" \ "topic")
       .map(nameOnlyConcept)
 
@@ -115,7 +115,7 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    // first <note type="ownership">
+  // first <note type="ownership">
     (data \\ "mods" \ "note")
       .filter(node => filterAttribute(node, "type", "ownership"))
       .flatMap(extractStrings)
@@ -130,7 +130,7 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .map(URI)
 
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
-    // second <note type=ownership> if it exists
+  // second <note type=ownership> if it exists
     (data \\ "mods" \ "note")
       .filter(node => filterAttribute(node, "type", "ownership"))
       .flatMap(extractStrings)

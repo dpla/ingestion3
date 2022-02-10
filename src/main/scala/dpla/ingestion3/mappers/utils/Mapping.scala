@@ -111,7 +111,7 @@ trait Mapping[T] {
     * @see buildProviderBaseId
     * @return String Provider shortname
     */
-  def getProviderName: String = ""
+  def getProviderName: Option[String] = None
 
   /**
     * Builds the ID to be hashed by either concatenating the provider's
@@ -129,11 +129,11 @@ trait Mapping[T] {
     */
   protected def buildProviderBaseId()(implicit data: Document[T]): Option[String] = {
 
-    originalId match {
-      case Some(id) =>
-        if (useProviderName) Some(s"$getProviderName--$id")
-        else Some(id)
-      case None => None
+    (originalId, useProviderName, getProviderName) match {
+      case (Some(id), true, Some(providerName)) => Some(s"$providerName--$id")
+      case (Some(id), false, _) => Some(id)
+      case (_, true, None) => None
+      case (_, _, _) => None
     }
   }
 

@@ -18,7 +18,7 @@ class InMapping extends XmlMapping with XmlExtractor
 
   override def useProviderName: Boolean = true
 
-  override def getProviderName: String = "in"
+  override def getProviderName: Option[String] = Some("in")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
@@ -127,7 +127,7 @@ class InMapping extends XmlMapping with XmlExtractor
 
   override def title(data: Document[NodeSeq]): AtLeastOne[String] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "title")
-  
+
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "type")
       .flatMap(_.splitAtDelimiter(";"))

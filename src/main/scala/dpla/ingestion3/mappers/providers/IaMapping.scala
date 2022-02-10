@@ -14,7 +14,7 @@ class IaMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
   // ID minting functions
   override def useProviderName: Boolean = true
 
-  override def getProviderName: String = "ia"
+  override def getProviderName: Option[String] = Some("ia")
 
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString(unwrap(data) \ "identifier")
@@ -66,19 +66,19 @@ class IaMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
 
   // SourceResource
   override def creator(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data)  \\ "creator").map(nameOnlyAgent)
+    extractStrings(unwrap(data) \\ "creator").map(nameOnlyAgent)
 
   override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
-    extractStrings(unwrap(data)  \\ "date").map(stringOnlyTimeSpan)
+    extractStrings(unwrap(data) \\ "date").map(stringOnlyTimeSpan)
 
   override def description(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \\ "description")
 
   override def language(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings(unwrap(data) \\ "language" ).map(nameOnlyConcept)
+    extractStrings(unwrap(data) \\ "language").map(nameOnlyConcept)
 
   override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data)  \\ "publisher").map(nameOnlyAgent)
+    extractStrings(unwrap(data) \\ "publisher").map(nameOnlyAgent)
 
   override def rights(data: Document[JValue]): AtLeastOne[String] = {
     val defaultRights = Seq("Access to the Internet Archive’s Collections is granted for scholarship " +
@@ -88,16 +88,16 @@ class IaMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
     val rights = extractStrings(unwrap(data) \\ "rights") ++
       extractStrings(unwrap(data) \\ "possible-copyright-status")
 
-    if(rights.nonEmpty) rights else defaultRights
+    if (rights.nonEmpty) rights else defaultRights
   }
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings(unwrap(data)  \\ "subject").map(nameOnlyConcept)
+    extractStrings(unwrap(data) \\ "subject").map(nameOnlyConcept)
 
   override def title(data: Document[JValue]): AtLeastOne[String] = {
-    val titles = extractStrings(unwrap(data)  \\ "title")
-    val vols = extractStrings(unwrap(data)  \\ "volume")
-    val issues = extractStrings(unwrap(data)  \\ "issue")
+    val titles = extractStrings(unwrap(data) \\ "title")
+    val vols = extractStrings(unwrap(data) \\ "volume")
+    val issues = extractStrings(unwrap(data) \\ "issue")
 
     val max = List(titles.size, vols.size, issues.size).max
 
@@ -120,7 +120,7 @@ class IaMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
   }
 
   override def `type`(data: Document[JValue]): ZeroToMany[String] =
-    extractStrings(unwrap(data)  \\ "mediatype")
+    extractStrings(unwrap(data) \\ "mediatype")
 
   def agent = EdmAgent(
     name = Some("Internet Archive"),

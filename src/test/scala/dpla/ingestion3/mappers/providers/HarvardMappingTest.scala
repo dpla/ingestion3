@@ -14,7 +14,7 @@ class HarvardMappingTest extends FlatSpec with BeforeAndAfter {
   val mapping = new HarvardMapping
 
   "A Harvard mapping" should "have the correct provider name" in {
-    assert(mapping.getProviderName === "harvard")
+    assert(mapping.getProviderName === Some("harvard"))
   }
 
   it should "extract the correct alternative title from MARC-derived records" in {

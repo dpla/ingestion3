@@ -18,7 +18,7 @@ class MissouriMapping extends JsonMapping with JsonExtractor with IngestMessageT
   // ID minting functions
   override def useProviderName: Boolean = false // Missouri provides ids with the provider name already prepended
 
-  override def getProviderName: String = "missouri"
+  override def getProviderName: Option[String] = Some("missouri")
 
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString(unwrap(data) \ "@id")
@@ -56,7 +56,7 @@ class MissouriMapping extends JsonMapping with JsonExtractor with IngestMessageT
   // SourceResource
 
   override def creator(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data)  \ "sourceResource" \ "creator").map(nameOnlyAgent)
+    extractStrings(unwrap(data) \ "sourceResource" \ "creator").map(nameOnlyAgent)
 
   override def description(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "sourceResource" \ "description")
@@ -81,10 +81,10 @@ class MissouriMapping extends JsonMapping with JsonExtractor with IngestMessageT
     extractStrings(unwrap(data) \ "sourceResource" \ "rights")
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings(unwrap(data)  \ "sourceResource" \ "subject" \ "name").map(nameOnlyConcept)
+    extractStrings(unwrap(data) \ "sourceResource" \ "subject" \ "name").map(nameOnlyConcept)
 
   override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
-     extractDate(unwrap(data) \ "sourceResource" \ "temporal")
+    extractDate(unwrap(data) \ "sourceResource" \ "temporal")
 
   override def title(data: Document[JValue]): AtLeastOne[String] =
     extractStrings(unwrap(data) \ "sourceResource" \ "title")

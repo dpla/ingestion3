@@ -19,9 +19,9 @@ class CtMapping extends XmlMapping with XmlExtractor
       FormatTypeValuesBlockList.termList
 
   // ID minting functions
-  override def useProviderName(): Boolean = false
+  override def useProviderName: Boolean = false
 
-  override def getProviderName(): String = "ct"
+  override def getProviderName: Option[String] = Some("ct")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     isShownAtStrings(data).headOption
@@ -59,7 +59,7 @@ class CtMapping extends XmlMapping with XmlExtractor
       .map(n => s"${n \@ "start"}-${n \@ "end"}")
       .map(stringOnlyTimeSpan)
 
-    if(dateIssued.nonEmpty)
+    if (dateIssued.nonEmpty)
       dateIssued
     else
       startEndDates
@@ -113,7 +113,7 @@ class CtMapping extends XmlMapping with XmlExtractor
     (extractStrings(data \ "subject" \ "topic") ++
       extractStrings(data \ "subject" \ "name") ++
       extractStrings(data \ "subject" \ "titleInfo"))
-        .map(nameOnlyConcept)
+      .map(nameOnlyConcept)
 
   // metadata/mods/subject/temporal
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
@@ -140,7 +140,7 @@ class CtMapping extends XmlMapping with XmlExtractor
 
   // OreAggregation
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
-  
+
   // <note type="ownership">
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     (data \ "note").map(n => getByAttribute(n, "type", "ownership"))
@@ -185,12 +185,12 @@ class CtMapping extends XmlMapping with XmlExtractor
 
   // Help functions
   def constructTitles(nodeSeq: NodeSeq): ZeroToMany[String] = {
-    nodeSeq.map (node => {
-      val nonSort = extractString( node \ "nonSort")
-      val title = extractString( node \ "title")
-      val subTitle = extractString( node \ "subTitle")
-      val partName = extractString( node \ "partName")
-      val partNumber = extractString( node \ "partNumber")
+    nodeSeq.map(node => {
+      val nonSort = extractString(node \ "nonSort")
+      val title = extractString(node \ "title")
+      val subTitle = extractString(node \ "subTitle")
+      val partName = extractString(node \ "partName")
+      val partNumber = extractString(node \ "partNumber")
       List(nonSort, title, subTitle, partName, partNumber).flatten.mkString(" ")
     })
   }
