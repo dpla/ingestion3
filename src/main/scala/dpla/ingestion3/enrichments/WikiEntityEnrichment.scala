@@ -12,7 +12,7 @@ import scala.io.Source
   */
 class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] with JsonExtractor  {
 
-  protected val wikiUriBase = "https://wikidata.org/wiki/"
+  protected val wikiUriBase = "http://www.wikidata.org/entity/"
 
   // Files to source vocabulary from
   private val fileList = Seq(

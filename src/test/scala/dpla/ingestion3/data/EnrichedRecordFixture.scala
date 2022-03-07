@@ -55,6 +55,7 @@ object EnrichedRecordFixture {
     OreAggregation(
       dataProvider = EdmAgent(
         name = Some("The Data Provider"),
+        uri = Some(URI("http://dp.la/api/contributor/the-data-provider")),
         exactMatch = Seq(URI("Q83878447"))
       ),
       dplaUri = new URI("https://dp.la/item/123"),
@@ -145,7 +146,8 @@ object EnrichedRecordFixture {
         `type` = Seq("image", "text")
       ),
       dataProvider = EdmAgent(
-        name = Some("The Data Provider")
+        name = Some("The Data Provider"),
+        uri = Some(URI("http://dp.la/api/contributor/the-data-provider"))
       ),
       dplaUri = new URI("https://dp.la/item/123"),
       isShownAt = EdmWebResource(uri = new URI("https://example.org/record/123")),
