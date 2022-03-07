@@ -74,8 +74,8 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
 
           (criteria.dataProvider, criteria.asset, criteria.rights, criteria.id) match {
             // All required properties exist
-            case (true, true, true, true) => (RowConverter.toRow(dplaMapData, model.sparkSchema), true)
-            case (_, _, _, _) => (RowConverter.toRow(dplaMapData, model.sparkSchema), false)
+            case (true, true, true, true) => (RowConverter.toRow(dplaMapRecord, model.sparkSchema), true)
+            case (_, _, _, _) => (RowConverter.toRow(dplaMapRecord, model.sparkSchema), false)
           }
         case Failure(_) => (null, false)
       }
