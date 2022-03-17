@@ -42,4 +42,21 @@ class StringNormalizationsTest extends FlatSpec with BeforeAndAfter {
 
     assert(enrichedRecord === expectedRecord)
   }
+
+  it should " remove trailing whitespace from edmAgent.name" in {
+    val agent = Seq("Indiana Harbor Belt Railroad Company ").map(nameOnlyAgent)
+    val expectedAgent = Seq("Indiana Harbor Belt Railroad Company").map(nameOnlyAgent)
+
+    val mappedRecord = MappedRecordsFixture.mappedRecord.copy(
+      sourceResource = DplaSourceResource(creator = agent)
+    )
+
+    val expectedRecord= MappedRecordsFixture.mappedRecord.copy(
+      sourceResource = DplaSourceResource(creator = expectedAgent)
+    )
+
+    val enrichedRecord = stringEnrichments.enrich(mappedRecord)
+
+    assert(enrichedRecord === expectedRecord)
+  }
 }
