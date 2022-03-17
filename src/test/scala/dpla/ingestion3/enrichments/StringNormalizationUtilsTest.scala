@@ -240,6 +240,13 @@ class StringNormalizationUtilsTest extends FlatSpec with BeforeAndAfter {
     assert(enrichedValue === "foo bar choo")
   }
 
+  it should "reduce leading and trailing non printable horizontal and vertical whitespace characters" in {
+    val originalValue = "\u2028foo choo\u00a0\u2028 "
+    val enrichedValue = originalValue.reduceWhitespace
+    assert(enrichedValue === "foo choo")
+  }
+
+
 
 
   "capitalizeFirstChar" should "not capitalize the b in '3 blind mice'" in {

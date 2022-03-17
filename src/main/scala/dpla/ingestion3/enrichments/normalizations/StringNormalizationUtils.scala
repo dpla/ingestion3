@@ -238,7 +238,7 @@ object StringNormalizationUtils {
       */
     lazy val stripEndingPeriod: SingleStringEnrichment = {
       if (value.matches(""".*?[^\.]\.[\n\r\s]*$"""))
-        value.replaceAll("""\.[\n\r\s]*$""", "")
+        value.replaceAll("""\.[\n\r\s\h\v]*$""", "")
       else
         value
     }
