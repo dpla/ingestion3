@@ -164,8 +164,12 @@ object StringNormalizationUtils {
     /**
       * Reduce multiple whitespace values to a single and removes
       * leading and trailing white space
+      *
+      * https://docs.oracle.com/javase/8/docs/api/java/util/regex/Pattern.html
+      *   \h 	A horizontal whitespace character: [ \t\xA0\u1680\u180e\u2000-\u200a\u202f\u205f\u3000]
+      *   \v 	A vertical whitespace character: [\n\x0B\f\r\x85\u2028\u2029]
       */
-    lazy val reduceWhitespace: SingleStringEnrichment = value.replaceAll(" +", " ").trim
+    lazy val reduceWhitespace: SingleStringEnrichment = value.replaceAll("[\\h\\v]+", " ").trim
 
     lazy val cleanupGeocoordinates: SingleStringEnrichment =
       value.splitAtDelimiter(",") match {
@@ -234,7 +238,7 @@ object StringNormalizationUtils {
       */
     lazy val stripEndingPeriod: SingleStringEnrichment = {
       if (value.matches(""".*?[^\.]\.[\n\r\s]*$"""))
-        value.replaceAll("""\.[\n\r\s]*$""", "")
+        value.replaceAll("""\.[\n\r\s\h\v]*$""", "")
       else
         value
     }

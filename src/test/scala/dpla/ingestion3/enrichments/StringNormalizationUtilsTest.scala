@@ -156,6 +156,15 @@ class StringNormalizationUtilsTest extends FlatSpec with BeforeAndAfter {
     val expectedValue = ".. It's OK.."
     assert(enrichedValue === expectedValue)
   }
+
+  it should "remove whitespace and \n " in {
+    val originalValue = "\n    President George W. Bush and Mrs. Laura Bush Stand with President Nicolas Sarkozy of France on the North Portico of the White House After His Arrival for Dinner \n  "
+    val enrichedValue = originalValue.cleanupEndingPunctuation
+    val expectedValue = "\n    President George W. Bush and Mrs. Laura Bush Stand with President Nicolas Sarkozy of France on the North Portico of the White House After His Arrival for Dinner"
+    assert(enrichedValue === expectedValue)
+  }
+
+
   it should "not remove .) from Synagogues -- Washington (D.C.)" in {
     val originalValue = "Synagogues -- Washington (D.C.)"
     val enrichedValue = originalValue.cleanupEndingPunctuation
@@ -218,6 +227,27 @@ class StringNormalizationUtilsTest extends FlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.reduceWhitespace
     assert(enrichedValue === "foo bar choo")
   }
+
+  it should "reduce non printable characters" in {
+    val originalValue = "   foo bar\u00a0 choo "
+    val enrichedValue = originalValue.reduceWhitespace
+    assert(enrichedValue === "foo bar choo")
+  }
+
+  it should "reduce non printable vertical whitespace characters" in {
+    val originalValue = " \u2028foo \u2028  bar\u00a0\u2028 choo "
+    val enrichedValue = originalValue.reduceWhitespace
+    assert(enrichedValue === "foo bar choo")
+  }
+
+  it should "reduce leading and trailing non printable horizontal and vertical whitespace characters" in {
+    val originalValue = "\u2028foo choo\u00a0\u2028 "
+    val enrichedValue = originalValue.reduceWhitespace
+    assert(enrichedValue === "foo choo")
+  }
+
+
+
 
   "capitalizeFirstChar" should "not capitalize the b in '3 blind mice'" in {
     val originalValue = "3 blind mice"
@@ -374,4 +404,5 @@ class StringNormalizationUtilsTest extends FlatSpec with BeforeAndAfter {
     val originalValue = """ "Hello John" """
     assert(originalValue.stripDblQuotes == " Hello John ")
   }
+
 }
