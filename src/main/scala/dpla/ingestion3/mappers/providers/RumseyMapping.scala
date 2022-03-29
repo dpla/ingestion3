@@ -18,6 +18,8 @@ class RumseyMapping extends XmlMapping with XmlExtractor
   // IdMinter methods
   override def useProviderName: Boolean = true
 
+  override def getProviderName: Option[String] = Some("david_rumsey")
+
   // FYI - David Rumsey IDs will/have changed in i3. Ingestion1 used first absolute URI in dc:identifier property
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier").map(_.trim)
