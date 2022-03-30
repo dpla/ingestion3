@@ -146,7 +146,7 @@ package object model {
                                                         // TODO We need to prettify this so the OR is readable in CQA
         ("provider" ->
           ("@id" -> record.provider.uri.getOrElse(throw new RuntimeException("Invalid Provider URI")).toString) ~
-          ("name" -> record.provider.name)) ~
+          ("name" -> record.provider.name) ~
           ("exactMatch" -> record.provider.exactMatch.map(_.toString))) ~
         ("sourceResource" ->
           ("@id" ->

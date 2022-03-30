@@ -49,7 +49,7 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
   }
 
   def enrichDataProvider(record: OreAggregation): EdmAgent = {
-    val enrichedWithWikiEntity = wikiEntityEnrichment.enrichEntity(record.dataProvider, Option(record.provider))
+    val enrichedWithWikiEntity: EdmAgent = wikiEntityEnrichment.enrichEntity(record.dataProvider, Option(record.provider))
     val uri = createDataProviderUri(record.dataProvider.name)
     enrichedWithWikiEntity.copy(uri = uri)
   }
@@ -74,6 +74,7 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
       provider = wikiEntityEnrichment.enrichEntity(enriched.provider),
 
       dataProvider = enrichDataProvider(enriched),
+
       sourceResource = enriched.sourceResource.copy(
         date = enriched.sourceResource.date.map(date => dateEnrichment.generateBeginEnd(date.originalSourceDate)).distinct,
         language = enriched.sourceResource.language.map(languageEnrichment.enrichLanguage).distinct,
