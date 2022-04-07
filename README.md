@@ -90,9 +90,22 @@ the `date()` mapping ([code](https://github.com/dpla/ingestion3/blob/develop/src
 While the original records look very different, the code used to map the values looks quite similar. This makes the code more readable and allows us to write fairly homogeneous mappings regardless of the format or schema of the underlying original records.  
 
 ### Filtering
-There are provider specific rules and exceptions written into some mappings and it is outside the scope of this document to enumerate and explain all of them but one example of filtering non-preferred values is provided below.
+There are provider specific rules and exceptions written into some mappings and it is outside the scope of this document to enumerate and explain all of them but one example of filtering perferred and non-preferred values is provided below.
 
-For records coming from the Ohio Digital Network we have a filter in place for the `format` field ([code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/mappers/providers/OhioMapping.scala#L58-L65)). This level of filtering is not common and is based on careful review of existing metadata with an eye towards strict compliance with existing metadata guidelines.
+There are three primary fields where we have opted to develop some filtering rules
+* extent
+* format
+* type
+
+The four big filtering functions are:
+* [`extent` identification](https://github.com/dpla/ingestion3/blob/dcfe8d9a226c43eb3fe5180744d781995399072d/src/main/scala/dpla/ingestion3/enrichments/normalizations/filters/ExtentIdentificationList.scala). This uses pattern matching to identify values which look like dimensions of an object and would then map them to the exent field (e.x. a provider's format field contins both "format" values and "exent" values)
+* [exclude `type` from `format`](https://github.com/dpla/ingestion3/blob/dcfe8d9a226c43eb3fe5180744d781995399072d/src/main/scala/dpla/ingestion3/enrichments/normalizations/filters/FormatTypeValuesBlockList.scala). A list of terms which belong in the type field rather than the format field. 
+* [exclude digital surrogate from `format`](https://github.com/dpla/ingestion3/blob/dcfe8d9a226c43eb3fe5180744d781995399072d/src/main/scala/dpla/ingestion3/enrichments/normalizations/filters/DigitalSurrogateBlockList.scala). A list of generic and provider specific terms describing the  digital surrogates (. These values typically appear in the `format` field and should be removed. 
+* [allow `type`](https://github.com/dpla/ingestion3/blob/dcfe8d9a226c43eb3fe5180744d781995399072d/src/main/scala/dpla/ingestion3/enrichments/normalizations/filters/TypeAllowList.scala). A list of terms which are allowed in the `type` field because they can be mapped to the allowed list of DCMIType values during the [type enrichment](#type)
+
+Below is a specific example using DigitalSurrogateBlockList, FormatTypeValueBlockList, ExtentIdentificationList against the format field. 
+
+For some provider we have a filter in place for the `format` field ([code](https://github.com/dpla/ingestion3/blob/develop/src/main/scala/dpla/ingestion3/mappers/providers/OhioMapping.scala#L58-L65)). This level of filtering is not common and is based on careful review of existing metadata with an eye towards strict compliance with existing metadata guidelines.
 
 ```scala
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
@@ -111,7 +124,6 @@ For records coming from the Ohio Digital Network we have a filter in place for t
         ExtentIdentificationList.termList))
       .filter(_.nonEmpty)
 ```
-
 
 ### Validations
 After attempting to map all fields from an original record we inspect the results and perform validations on specific fields. These validations fall into two two groups, errors and warnings. Errors will cause a record to fail mapping and warnings are informational only, the record will pass and appear online.
