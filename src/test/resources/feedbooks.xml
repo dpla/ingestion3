@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<entry xmlns="http://www.w3.org/2005/Atom" xmlns:app="http://www.w3.org/2007/app" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:odl="http://opds-spec.org/odl" xmlns:opds="http://opds-spec.org/2010/catalog" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:schema="http://schema.org/" xmlns:thr="http://purl.org/syndication/thread/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <title>Maria: or, The Wrongs of Woman</title>
+    <id>https://www.feedbooks.com/book/7256</id>
+    <author>
+        <name>Mary Wollstonecraft</name>
+        <uri>https://www.feedbooks.com/author/1315</uri>
+        <schema:birthDate>1759</schema:birthDate>
+        <schema:deathDate>1797</schema:deathDate>
+    </author>
+    <published>2017-05-22T16:46:07Z</published>
+    <updated>2020-11-02T17:30:10Z</updated>
+    <dcterms:language>en</dcterms:language>
+    <dcterms:issued>1798</dcterms:issued>
+    <dcterms:publisher>Feedbooks</dcterms:publisher>
+    <category term="FBFIC000000" label="Fiction" scheme="http://www.feedbooks.com/categories" />
+    <category term="FBFIC019000" label="Literary" scheme="http://www.feedbooks.com/categories" />
+    <summary>Wollstonecraft's philosophical and gothic novel revolves around the story of a woman imprisoned in an insane asylum by her husband. It focuses on the societal rather than the individual "wrongs of woman" and criticizes what Wollstonecraft viewed as the patriarchal institution of marriage in eighteenth-century Britain and the legal system that protected it. [Source: Wikipedia]</summary>
+    <dcterms:extent>44,535 words</dcterms:extent>
+    <dcterms:source>http://www.gutenberg.org/files/134/134-h/134-h.htm</dcterms:source>
+    <link href="https://www.feedbooks.com/book/7256" rel="alternate" title="View on Feedbooks" type="text/html" />
+    <link href="https://www.feedbooks.com/book/7256.epub" rel="http://opds-spec.org/acquisition" type="application/epub+zip" />
+    <link href="https://covers.feedbooks.net/book/7256.jpg?size=large&amp;t=1549045914" rel="http://opds-spec.org/image" type="image/jpeg" />
+    <link href="https://covers.feedbooks.net/book/7256.jpg?size=large&amp;t=1549045914" rel="http://opds-spec.org/image/thumbnail" type="image/jpeg" />
+    <link href="http://www.feedbooks.com/book/7256.atom" rel="alternate" title="Full entry" type="application/atom+xml;type=entry;profile=opds-catalog" />
+</entry>

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record>
+    <header>
+        <identifier>oai:catalog.gpo.gov:GPO01-000003356</identifier>
+        <datestamp>2020-06-17T23:32:33Z</datestamp>
+        <setSpec>PURL_ALL</setSpec>
+    </header>
+    <metadata>
+        <marc:record xmlns:marc="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">
+            <marc:leader>cam  2200421Ia 4500</marc:leader>
+            <marc:controlfield tag="001">000003356</marc:controlfield>
+            <marc:controlfield tag="005">20070515142212.0</marc:controlfield>
+            <marc:controlfield tag="008">760625s1975    dcua     b   f000 0 eng d</marc:controlfield>
+            <marc:datafield ind2=" " ind1="9" tag="035">
+                <marc:subfield code="a">gp^76003356</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="035">
+                <marc:subfield code="a">(OCoLC)2281659</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="040">
+                <marc:subfield code="a">GPO</marc:subfield>
+                <marc:subfield code="c">GPO</marc:subfield>
+                <marc:subfield code="d">OCLCQ</marc:subfield>
+                <marc:subfield code="d">GPO</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="043">
+                <marc:subfield code="a">n-us---</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2="4" ind1=" " tag="050">
+                <marc:subfield code="a">RC1075</marc:subfield>
+                <marc:subfield code="b">.U68 no.75-8</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="074">
+                <marc:subfield code="a">0431-E-04</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="074">
+                <marc:subfield code="a">0431-E-04 (online)</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1="0" tag="086">
+                <marc:subfield code="a">TD 4.210:75-8</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1="1" tag="100">
+                <marc:subfield code="a">Thackray, Richard I.</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2="0" ind1="1" tag="245">
+                <marc:subfield code="a">Physiological, subjective, and performance correlates of reported boredom and monotony while performing a simulated radar control task /</marc:subfield>
+                <marc:subfield code="c">Richard I. Thackray, J. Powell Bailey, R. Mark Touchstone.</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="260">
+                <marc:subfield code="a">Washington, D.C. :</marc:subfield>
+                <marc:subfield code="b">U.S. Dept. of Transportation, Federal Aviation Administration, Office of Aviation Medicine,</marc:subfield>
+                <marc:subfield code="c">1975.</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="300">
+                <marc:subfield code="a">9 p. :</marc:subfield>
+                <marc:subfield code="b">ill. ;</marc:subfield>
+                <marc:subfield code="c">26 cm.</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="500">
+                <marc:subfield code="a">Cover title.</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="500">
+                <marc:subfield code="a">"FAA-AM-75-8."</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="500">
+                <marc:subfield code="a">Prepared by Civil Aeromedical Institute, Oklahoma City, under task AM-C-75-PSY-48.</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="590">
+                <marc:subfield code="a">[pbk. $3.00, mf $0.95, 7 cds]</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="530">
+                <marc:subfield code="a">Also available via Internet from the FAA web site. Address as of 5/15/07: http://www.faa.gov/library/reports/medical/oamtechreports/1970s/media/AM75-08.pdf; current access is available via PURL.</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="504">
+                <marc:subfield code="a">Includes bibliographical references (p. 9).</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2="0" ind1=" " tag="650">
+                <marc:subfield code="a">Radar operators</marc:subfield>
+                <marc:subfield code="z">United States.</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2="0" ind1=" " tag="650">
+                <marc:subfield code="a">Radar air traffic control systems.</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2="0" ind1=" " tag="650">
+                <marc:subfield code="a">Aviation medicine</marc:subfield>
+                <marc:subfield code="x">Research.</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1="1" tag="700">
+                <marc:subfield code="a">Bailey, J. Powell.</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1="1" tag="700">
+                <marc:subfield code="a">Touchstone, R. Mark.</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1="1" tag="710">
+                <marc:subfield code="a">United States.</marc:subfield>
+                <marc:subfield code="b">Office of Aviation Medicine.</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1="2" tag="710">
+                <marc:subfield code="a">Civil Aeromedical Institute.</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2="1" ind1="4" tag="856">
+                <marc:subfield code="u">https://purl.fdlp.gov/GPO/LPS81536</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="856">
+                <marc:subfield code="3">(paper, online)</marc:subfield>
+                <marc:subfield code="u">https://catalog.gpo.gov/fdlpdir/locate.jsp?ItemNumber=0431-E-04&amp;SYS=000003356</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="994">
+                <marc:subfield code="a">C0</marc:subfield>
+                <marc:subfield code="b">GPO</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="049">
+                <marc:subfield code="a">GPOO</marc:subfield>
+            </marc:datafield>
+            <marc:datafield ind2=" " ind1=" " tag="955">
+                <marc:subfield code="a">bcb37 20070515</marc:subfield>
+            </marc:datafield>
+        </marc:record>
+    </metadata>
+</record>
