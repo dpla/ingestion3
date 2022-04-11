@@ -3,8 +3,8 @@ package dpla.eleanor.entries.harvest
 import java.io.File
 import java.time.Instant
 
-import dpla.eleanor.Schemata
 import dpla.eleanor.Schemata.MetadataType
+import dpla.eleanor.Schemata.SourceUri.StandardEbooks
 import dpla.eleanor.harvesters.providers.StandardEbooksHarvester
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
@@ -26,7 +26,7 @@ object StandardEbooksHarvestEntry {
     }
 
     println(s"Writing harvest output to $outPath")
-    localFiles.foreach(file => println(s"local file > ${file}"))
+    localFiles.foreach(file => println(s"local file > $file"))
 
     val conf = new SparkConf()
       .setAppName("Eleanor!")
@@ -43,13 +43,13 @@ object StandardEbooksHarvestEntry {
 
 //    println(s"Timestamp: ${timestamp}")
 
-    val harvester = new StandardEbooksHarvester(timestamp, Schemata.SourceUri.StandardEbooks, MetadataType.Opds1)
+    val harvester = new StandardEbooksHarvester(timestamp, StandardEbooks, "standardebooks", MetadataType.Opds1)
 
     val harvest = harvester.execute(
       spark = spark,
       feedUrl = None, // Some("https://standardebooks.org/opds/all"),
       xmlFiles = localFiles,
-      out = outPath
+      rootOutput = outPath
     )
 
     println(s"harvested ${harvest.count}")

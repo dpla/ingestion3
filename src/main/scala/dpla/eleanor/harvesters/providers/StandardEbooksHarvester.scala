@@ -11,8 +11,11 @@ import scala.xml.Node
 /**
   *
   */
-class StandardEbooksHarvester(timestamp: Timestamp, source: SourceUri, metadataType: MetadataType)
-  extends Opds1Harvester(timestamp, source, metadataType) {
+class StandardEbooksHarvester(timestamp: Timestamp,
+                              source: SourceUri,
+                              sourceName: String,
+                              metadataType: MetadataType)
+  extends Opds1Harvester(timestamp, source, sourceName, metadataType) {
 
   /**
     * Override getPayload because StandardEbooks gives relative URL path in link properties

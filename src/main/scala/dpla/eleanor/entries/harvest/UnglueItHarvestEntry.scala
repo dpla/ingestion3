@@ -3,8 +3,8 @@ package dpla.eleanor.entries.harvest
 import java.io.File
 import java.time.Instant
 
-import dpla.eleanor.Schemata
 import dpla.eleanor.Schemata.MetadataType
+import dpla.eleanor.Schemata.SourceUri.UnglueIt
 import dpla.eleanor.harvesters.opds1.Opds1Harvester
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
@@ -37,13 +37,13 @@ object UnglueItHarvestEntry {
       .getOrCreate()
 
     val timestamp = new java.sql.Timestamp(Instant.now.getEpochSecond)
-    val harvester = new Opds1Harvester(timestamp, Schemata.SourceUri.UnglueIt, MetadataType.Opds1)
+    val harvester = new Opds1Harvester(timestamp, UnglueIt, "unglueit", MetadataType.Opds1)
 
     val harvest = harvester.execute(
       spark = spark,
       feedUrl = None, // Do not harvest from feed, harvest from existing local files
       xmlFiles = localFiles,
-      out = outPath
+      rootOutput = outPath
     )
 
     println(s"harvested ${harvest.count}")

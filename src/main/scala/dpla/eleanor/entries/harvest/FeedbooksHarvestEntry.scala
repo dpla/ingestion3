@@ -23,8 +23,6 @@ object FeedbooksHarvestEntry {
       case _ => Array[String]()
     }
 
-    println(s"Writing harvest output to $outPath")
-
     val conf = new SparkConf()
       .setAppName("Eleanor!")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
@@ -38,13 +36,13 @@ object FeedbooksHarvestEntry {
 
     val timestamp = new java.sql.Timestamp(Instant.now.getEpochSecond)
 
-    val harvester = new Opds1Harvester(timestamp, Schemata.SourceUri.Feedbooks, MetadataType.Opds1)
+    val harvester = new Opds1Harvester(timestamp, Schemata.SourceUri.Feedbooks, "feedbooks", MetadataType.Opds1)
 
     val harvest = harvester.execute(
       spark = spark,
       feedUrl = None, // Do not harvest from feed, harvest from existing local files
       xmlFiles = localFiles,
-      out = outPath
+      rootOutput = outPath
     )
 
     println(s"harvested ${harvest.count}")

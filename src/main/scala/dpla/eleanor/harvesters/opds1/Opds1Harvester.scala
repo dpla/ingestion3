@@ -5,23 +5,27 @@ import java.sql.Timestamp
 import dpla.eleanor.HarvestStatics
 import dpla.eleanor.Schemata.{HarvestData, MetadataType, SourceUri}
 import dpla.eleanor.harvesters.ContentHarvester
+import dpla.ingestion3.dataStorage.OutputHelper
 import org.apache.spark.sql.{Dataset, SaveMode, SparkSession}
 
 import scala.util.{Failure, Success}
 
-class Opds1Harvester(timestamp: Timestamp, source: SourceUri, metadataType: MetadataType)
+class Opds1Harvester(timestamp: Timestamp,
+                     source: SourceUri,
+                     sourceName: String,
+                     metadataType: MetadataType)
   extends Opds1FeedHarvester with Opds1FileHarvester with ContentHarvester with Serializable {
   /**
     *
     * @param spark            Spark session
     * @param feedUrl          Feed URL to harvest
-    * @param out              Could he local or s3
+    * @param rootOutput       Could be local or s3
     * @return
     */
   def execute(spark: SparkSession,
               feedUrl: Option[String],
               xmlFiles: Seq[String] = Seq(),
-              out: String): Dataset[HarvestData] = {
+              rootOutput: String): Dataset[HarvestData] = {
 
     import spark.implicits._
 
@@ -51,12 +55,14 @@ class Opds1Harvester(timestamp: Timestamp, source: SourceUri, metadataType: Meta
     println(s"Harvested ${ds.count()} from ${files.foreach(_.toString + "\n")} files")
 
     // Run over HarvestData Dataset and download content/payloads
-    val contentDs = harvestContent(ds, spark)
+    val contentDs = ds // harvestContent(ds, spark)
 
-    // Write out complete HarvestData Dataset
-    val dataOut = out + "data.parquet/" // fixme hardcoded output
-    println(s"Writing to $dataOut")
-    contentDs.write.mode(SaveMode.Append).parquet(dataOut)
+    val outputHelper: OutputHelper =
+      new OutputHelper(rootOutput, sourceName, "ebook-harvest", timestamp.toLocalDateTime)
+
+    val outputPath = outputHelper.activityPath
+    println(s"Writing to $outputPath")
+    contentDs.write.mode(SaveMode.Append).parquet(outputPath)
 
     contentDs
   }
