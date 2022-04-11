@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<entry xmlns="http://www.w3.org/2005/Atom" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:opds="http://opds-spec.org/" xmlns:schema="http://schema.org/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <title>Römische Elegien</title>
+    <id>https://unglue.it/api/id/work/198516/</id>
+    <updated>2018-10-20T16:36:12</updated>
+    <link type="application/epub+zip" schema:version="0.2" rel="http://opds-spec.org/acquisition/open-access" href="https://unglue.it/download_ebook/199338/?feed=opds" dcterms:rights="PD-US" />
+    <link type="application/epub+zip" schema:version="0.1" rel="http://opds-spec.org/acquisition/open-access" href="https://unglue.it/download_ebook/20891/?feed=opds" dcterms:rights="PD-US" />
+    <link type="image/jpeg" rel="http://opds-spec.org/image/thumbnail" href="https://unglueit-files.s3.amazonaws.com/cache/d3/50/d3508840c7e8ec0d85848326e26003ba.jpg" />
+    <link type="image/jpeg" rel="http://opds-spec.org/image" href="https://unglueit-files.s3.amazonaws.com/cache/ad/eb/adeb310a414b31885e52abcaaadbeae7.jpg" />
+    <dcterms:issued>2004</dcterms:issued>
+    <author>
+        <name>Johann Wolfgang von Goethe</name>
+    </author>
+    <dcterms:language>de</dcterms:language>
+    <content type="html" >Summary of books</content>
+    <category term="German poetry -- 18th century" />
+    <link type="application/atom+xml; profile=opds-catalog ;kind=acquisition; charset=utf-8" title="German poetry -- 18th century" rel="related" href="https://unglue.it/api/opds/kw.German%20poetry%20--%2018th%20century/?order_by=popular&amp;page=0" />
+    <category term="GITenberg" />
+    <link type="application/atom+xml; profile=opds-catalog ;kind=acquisition; charset=utf-8" title="GITenberg" rel="related" href="https://unglue.it/api/opds/kw.GITenberg/?order_by=popular&amp;page=0" />
+    <category term="PT" />
+    <link type="application/atom+xml; profile=opds-catalog ;kind=acquisition; charset=utf-8" title="PT" rel="related" href="https://unglue.it/api/opds/kw.PT/?order_by=popular&amp;page=0" />
+    <schema:Rating schema:ratingValue="1" />
+</entry>

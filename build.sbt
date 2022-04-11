@@ -6,6 +6,8 @@ scalaVersion := "2.11.8"
 
 parallelExecution in Test := false
 
+val HADOOP_VERSION = "2.10.1"
+
 assembly / assemblyMergeStrategy := {
   case "META-INF/MANIFEST.MF" => MergeStrategy.discard
   case x => MergeStrategy.first
@@ -25,6 +27,7 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % "2.3.1" exclude("org.scalatest", "scalatest_2.11"),
   "org.apache.spark" %% "spark-mllib" % "2.3.1" exclude("org.scalatest", "scalatest_2.11"),
   "org.apache.ant" % "ant" % "1.10.1",
+  "org.apache.hadoop" % "hadoop-aws" % HADOOP_VERSION,
   "com.databricks" %% "spark-avro" % "4.0.0",
   "org.json4s" %% "json4s-core" % "3.2.11" % "provided",
   "org.json4s" %% "json4s-jackson" % "3.2.11" % "provided",
@@ -32,8 +35,7 @@ libraryDependencies ++= Seq(
   "org.eclipse.rdf4j" % "rdf4j-model" % "2.2",
   "org.eclipse.rdf4j" % "rdf4j-rio-api" % "2.2",
   "org.eclipse.rdf4j" % "rdf4j-rio-turtle" % "2.2",
-  // For Elasticsearch, see https://www.elastic.co/guide/en/elasticsearch/hadoop/current/install.html
-  "org.elasticsearch" % "elasticsearch-spark-20_2.11" % "5.3.2", // Spark 2.0+, Scala 2.11+
+
   // CdlHarvester depends
   "org.apache.httpcomponents" % "httpclient" % "4.5.2",
   "org.apache.httpcomponents" % "fluent-hc" % "4.5.2",
@@ -51,13 +53,16 @@ libraryDependencies ++= Seq(
   "com.holdenkarau" %% "spark-testing-base" % "2.1.0_0.8.0" % "test",
   "com.typesafe" % "config" % "1.3.1",
   "com.amazonaws" % "aws-java-sdk" % "1.7.4",
-  "org.apache.hadoop" % "hadoop-aws" % "2.7.6",
   "com.squareup.okhttp3" % "okhttp" % "3.8.0",
   "com.opencsv" % "opencsv" % "3.7",
   "databricks" % "spark-corenlp" % "0.3.1-s_2.11",
   "edu.stanford.nlp" % "stanford-corenlp" % "3.9.1" classifier "models",
   // specify hadoop-mapreduce-client-core version to avoid Stopwatch/guava dependency conflicts
-  "org.apache.hadoop" % "hadoop-mapreduce-client-core" % "2.8.1"
+  "org.apache.hadoop" % "hadoop-mapreduce-client-core" % "2.8.1",
+
+  // For Elasticsearch, see https://www.elastic.co/guide/en/elasticsearch/hadoop/current/install.html
+  // "org.elasticsearch" % "elasticsearch-spark-20_2.11" % "5.3.2", // Spark 2.0+, Scala 2.11+ | ingestion3
+  "org.elasticsearch" %% "elasticsearch-spark-20" % "7.3.2" // eleanor
 )
 
  resolvers += "SparkPackages" at "https://repos.spark-packages.org/"
