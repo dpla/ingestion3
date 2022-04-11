@@ -5,9 +5,11 @@ import java.time.Instant
 
 import dpla.eleanor.Schemata.MetadataType
 import dpla.eleanor.Schemata.SourceUri.StandardEbooks
+import dpla.eleanor.harvesters.ContentHarvester
 import dpla.eleanor.harvesters.providers.StandardEbooksHarvester
+import dpla.ingestion3.dataStorage.OutputHelper
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{SaveMode, SparkSession}
 
 object StandardEbooksHarvestEntry {
   def main(args: Array[String]): Unit = {
@@ -39,20 +41,29 @@ object StandardEbooksHarvestEntry {
       .config(conf)
       .getOrCreate()
 
-    val timestamp = java.sql.Timestamp.from(Instant.now)
+    // Sets the activity output path with timestamp
+    val timestamp = new java.sql.Timestamp(Instant.now.getEpochSecond)
+    val outputHelper: OutputHelper =
+      new OutputHelper(outPath, "standardebooks", "ebook-harvest", timestamp.toLocalDateTime)
 
-//    println(s"Timestamp: ${timestamp}")
+    val harvestActivityPath = outputHelper.activityPath
 
-    val harvester = new StandardEbooksHarvester(timestamp, StandardEbooks, "standardebooks", MetadataType.Opds1)
-
-    val harvest = harvester.execute(
+    val metadataHarvester = new StandardEbooksHarvester(timestamp, StandardEbooks, MetadataType.Opds1)
+    val metadataDs = metadataHarvester.execute(
       spark = spark,
-      feedUrl = None, // Some("https://standardebooks.org/opds/all"),
-      xmlFiles = localFiles,
-      rootOutput = outPath
+      feedUrl = None, // Do not harvest from feed, harvest from existing local files
+      xmlFiles = localFiles
     )
 
-    println(s"harvested ${harvest.count}")
+    println(s"Harvested ${metadataDs.count()}")
+    println(s"Writing to $harvestActivityPath")
+    metadataDs.write.mode(SaveMode.Overwrite).parquet(harvestActivityPath) // write to activity path
+
+    // TODO add logical check to determine if content should be harvested
+    val contentHarvester = new ContentHarvester()
+    val contentDs = contentHarvester.harvestContent(metadataDs, spark)
+    println(s"Writing content dataset to $harvestActivityPath")
+    contentDs.write.mode(SaveMode.Overwrite).parquet(harvestActivityPath) // write to activity path
 
     spark.stop()
   }

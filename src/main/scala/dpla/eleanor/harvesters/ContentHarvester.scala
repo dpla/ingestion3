@@ -10,10 +10,11 @@ import org.apache.spark.sql.{Dataset, SparkSession}
 
 import scala.util.{Failure, Success, Try}
 
+
 /**
   * Responsible for harvesting content (e.g. files)
   */
-trait ContentHarvester extends Retry {
+class ContentHarvester extends Retry with Serializable {
   /**
     *
     * Downloads all files specified in the harvest payloads
