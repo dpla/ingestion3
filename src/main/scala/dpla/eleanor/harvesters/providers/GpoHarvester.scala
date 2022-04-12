@@ -8,7 +8,7 @@ import dpla.eleanor.Schemata.{HarvestData, MetadataType, Payload, SourceUri}
 import dpla.eleanor.harvesters.ContentHarvester
 import dpla.eleanor.{HarvestStatics, Schemata}
 import org.apache.commons.io.IOUtils
-import org.apache.spark.sql.{SaveMode, SparkSession}
+import org.apache.spark.sql.SparkSession
 
 import scala.xml._
 
@@ -17,12 +17,10 @@ class GpoHarvester(timestamp: Timestamp, source: SourceUri, metadataType: Metada
   /**
     *
     * @param spark            Spark session
-    * @param out              Could he local or s3
     * @return
     */
   def execute(spark: SparkSession,
-              files: Seq[String] = Seq(),
-              out: String) = {
+              files: Seq[String] = Seq()) = {
 
     import spark.implicits._
 
@@ -32,15 +30,9 @@ class GpoHarvester(timestamp: Timestamp, source: SourceUri, metadataType: Metada
       metadataType = metadataType
     )
 
-    val dataOut = out + "test_data.parquet/" // fixme hardcoded output
     // Harvest file into HarvestData
-    files.foreach(xmlFile =>{
-      val rows = harvestFile(xmlFile, harvestStatics)
-      val ds = spark.createDataset(rows)
-      println(s"Harvested file $xmlFile")
-      println(s"Writing to $dataOut")
-      ds.write.mode(SaveMode.Append).parquet(dataOut)
-    })
+    val rows = files.flatMap(xmlFile => harvestFile(xmlFile, harvestStatics))
+    spark.createDataset(rows)
   }
 
   def harvestFile(file: String, statics: HarvestStatics): Seq[HarvestData] = {

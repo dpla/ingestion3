@@ -5,9 +5,11 @@ import java.time.Instant
 
 import dpla.eleanor.Schemata
 import dpla.eleanor.Schemata.MetadataType
+import dpla.eleanor.harvesters.ContentHarvester
 import dpla.eleanor.harvesters.providers.GpoHarvester
+import dpla.ingestion3.dataStorage.OutputHelper
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{SaveMode, SparkSession}
 
 
 class XmlFileFilter extends FileFilter {
@@ -18,7 +20,7 @@ object GpoHarvestEntry {
   def main(args: Array[String]): Unit = {
 
     // Primary repo for ebooks is s3://dpla-ebooks/
-    val outPath: String = args.headOption
+    val rootOutput: String = args.headOption
       .getOrElse(System.getProperty("java.io.tmpdir"))
 
     val localFiles = args.length match {
@@ -28,7 +30,11 @@ object GpoHarvestEntry {
       case _ => Array[String]()
     }
 
-    println(s"Writing harvest output to $outPath")
+    // Setup output
+    val timestamp = new java.sql.Timestamp(Instant.now.getEpochSecond)
+    val outputHelper: OutputHelper =
+      new OutputHelper(rootOutput, "gpo", "ebook-harvest", timestamp.toLocalDateTime)
+    val harvestActivityPath = outputHelper.activityPath
 
     val conf = new SparkConf()
       .setAppName("Eleanor!")
@@ -41,15 +47,19 @@ object GpoHarvestEntry {
       .config(conf)
       .getOrCreate()
 
-    val timestamp = new java.sql.Timestamp(Instant.now.getEpochSecond)
+    // Harvest metadata
+    val metadataHarvester = new GpoHarvester(timestamp, Schemata.SourceUri.Gpo, MetadataType.Rdf)
+    val metadataDs = metadataHarvester.execute(spark, localFiles)
 
-    val harvester = new GpoHarvester(timestamp, Schemata.SourceUri.Gpo, MetadataType.Rdf)
+    println(s"Harvested metadata records: ${metadataDs.count()}")
+    println(s"Writing to $harvestActivityPath")
+    metadataDs.write.mode(SaveMode.Overwrite).parquet(harvestActivityPath) // write to activity path
 
-    harvester.execute(
-      spark = spark,
-      files = localFiles,
-      out = outPath
-    )
+    // TODO add logical check to determine if content should be harvested
+    val contentHarvester = new ContentHarvester()
+    val contentDs = contentHarvester.harvestContent(metadataDs, spark)
+    println(s"Writing content dataset to $harvestActivityPath")
+    contentDs.write.mode(SaveMode.Overwrite).parquet(harvestActivityPath) // write to activity path
 
     spark.stop()
   }
