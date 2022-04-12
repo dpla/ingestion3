@@ -70,6 +70,7 @@ object GutenbergHarvestEntry {
     val metadataHarvester = new GutenbergHarvester(timestamp, Schemata.SourceUri.Gutenberg, MetadataType.Rdf)
     val metadataDs = metadataHarvester.execute(spark = spark, files = localFiles)
     metadataDs.write.mode(SaveMode.Overwrite).parquet(harvestActivityPath)
+    println(s"Wrote ${metadataDs.count()} records to ${harvestActivityPath}")
 
     if(performContentHarvest) {
       println("Harvesting content")
