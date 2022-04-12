@@ -338,7 +338,7 @@ class P2PMappingTest extends FlatSpec with BeforeAndAfter {
         </mods:mods>
       )
     ).headOption.getOrElse(Left(""))
-    assert(result === Left("Game of Thrones"))
+    assert(result === LiteralOrUri("Game of Thrones", isUri = false))
   }
 
   it should "extract collection" in {

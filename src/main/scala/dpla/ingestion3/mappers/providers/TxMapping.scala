@@ -215,7 +215,7 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .flatMap(node => {
         val name = extractStrings(node \ "name")
         val propertyValue = node.child match {
-          case _: ArrayBuffer[String] => Seq(node.text)
+          case _: ArrayBuffer[_] => Seq(node.text)
           case _ => Seq()
         }
 

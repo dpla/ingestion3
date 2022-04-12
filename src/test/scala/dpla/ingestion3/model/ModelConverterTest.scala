@@ -171,12 +171,12 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
 
   it should "handle LiteralOrUri" in {
     val literalOrUri1 = ModelConverter.toLiteralOrUri(literal)
-    assert(literalOrUri1.isLeft)
-    assert(literalOrUri1.left.getOrElse("") === "I'm very literal")
+    assert(!literalOrUri1.isUri)
+    assert(literalOrUri1.value === "I'm very literal")
 
     val literalOrUri2 = ModelConverter.toLiteralOrUri(uri)
-    assert(literalOrUri2.isRight)
-    assert(literalOrUri2.right.getOrElse(new URI("http://example.com")) === new URI(urlString1))
+    assert(literalOrUri2.isUri)
+    assert(literalOrUri2.asUri === Some(URI(urlString1)))
   }
 
   it should "handle optional EdmWebResources" in {

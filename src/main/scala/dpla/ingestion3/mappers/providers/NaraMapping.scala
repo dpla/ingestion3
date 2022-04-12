@@ -218,7 +218,7 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     extractPublisher(data).map(nameOnlyAgent)
 
   override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
-    extractRelation(data).map(Left(_))
+    extractRelation(data).map(LiteralOrUri(_, isUri = false))
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
     extractRights(data)

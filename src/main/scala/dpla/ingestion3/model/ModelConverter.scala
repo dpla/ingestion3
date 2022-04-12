@@ -1,7 +1,6 @@
 package dpla.ingestion3.model
 
 import dpla.ingestion3.messages.IngestMessage
-import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import org.apache.spark.sql.Row
 import org.json4s.JsonAST.{JNothing, JValue}
 import org.json4s.jackson.JsonMethods.parse
@@ -31,7 +30,7 @@ object ModelConverter {
     preview = toOptionEdmWebResource(row.getStruct(8)),
     provider = toEdmAgent(row.getStruct(9)),
     edmRights = optionalUri(row, 10),
-    sidecar = optionalJValue(row, 11),
+    sidecar = row.getString(11),
     messages = toMulti(row, 12, toIngestMessage),
     originalId = potentiallyMissingStringField(row, 13).getOrElse("MISSING"),
     tags = potentiallyMissingArrayOfUrisField(row, 14), // FIXME with potentiallyMissing[T]
@@ -110,8 +109,8 @@ object ModelConverter {
   )
 
   private[model] def toLiteralOrUri(row: Row): LiteralOrUri =
-    if (row.getBoolean(1)) Right(URI(row.getString(0)))
-    else Left(row.getString(0))
+    if (row.getBoolean(1)) LiteralOrUri(row.getString(0), isUri = true)
+    else LiteralOrUri(row.getString(0), isUri = false)
 
   private[model] def toEdmAgent(row: Row): EdmAgent = EdmAgent(
     uri = optionalUri(row, 0),

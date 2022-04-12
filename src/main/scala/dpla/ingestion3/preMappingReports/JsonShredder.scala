@@ -1,4 +1,4 @@
-package dpla.ingestion3.premappingreports
+package dpla.ingestion3.preMappingReports
 
 import scala.annotation.tailrec
 import org.json4s.JValue

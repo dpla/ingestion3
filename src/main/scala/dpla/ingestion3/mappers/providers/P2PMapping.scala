@@ -167,7 +167,7 @@ class P2PMapping extends XmlMapping with XmlExtractor with IngestMessageTemplate
       relatedItem <- data \ "metadata" \ "mods" \ "relatedItem"
       if relatedItem \@ "type" == "series"
       relation <- relatedItem \ "titleInfo" \ "title"
-    } yield Left(relation.text.trim)
+    } yield LiteralOrUri(relation.text.trim, isUri = false)
 
   override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
     for {

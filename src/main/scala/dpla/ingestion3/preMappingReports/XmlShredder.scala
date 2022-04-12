@@ -1,7 +1,7 @@
-package dpla.ingestion3.premappingreports
+package dpla.ingestion3.preMappingReports
 
 import scala.annotation.tailrec
-import scala.util.{Try, Failure, Success}
+import scala.util.{Failure, Success, Try}
 import scala.xml._
 
 /**

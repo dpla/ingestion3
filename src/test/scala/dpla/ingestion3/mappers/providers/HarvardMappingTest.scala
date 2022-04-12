@@ -559,8 +559,8 @@ class HarvardMappingTest extends FlatSpec with BeforeAndAfter {
         </mods:mods>
       )
     )
-    assert(result.contains(Left("Latin American pamphlet digital project at Harvard University")))
-    assert(result.contains(Left("Latin American pamphlet digital project at Harvard University. 4245 Preservation microfilm collection")))
+    assert(result.contains(LiteralOrUri("Latin American pamphlet digital project at Harvard University", isUri = false)))
+    assert(result.contains(LiteralOrUri("Latin American pamphlet digital project at Harvard University. 4245 Preservation microfilm collection", isUri = false)))
   }
 
   //todo

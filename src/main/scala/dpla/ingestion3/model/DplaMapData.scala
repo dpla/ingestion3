@@ -17,7 +17,11 @@ object DplaMapData {
   type AtLeastOne[T] = Seq[T]
   type ZeroToOne[T] = Option[T]
   type ExactlyOne[T] = T
-  type LiteralOrUri = Either[String, URI]
+}
+
+case class LiteralOrUri(value: String, isUri: Boolean) {
+  def asUri: Option[URI] =
+    if (isUri) Some(URI(value)) else None
 }
 
 //Core Classes
@@ -39,7 +43,7 @@ case class OreAggregation(
                            preview: ZeroToOne[EdmWebResource] = None, // thumbnail
                            provider: ExactlyOne[EdmAgent],
                            edmRights: ZeroToOne[URI] = None,
-                           sidecar: JValue = JNothing,
+                           sidecar: String = "",
                            messages: ZeroToMany[IngestMessage] = Seq[IngestMessage](),
                            originalId: ExactlyOne[String],
                            tags: ZeroToMany[URI] = Seq[URI](),

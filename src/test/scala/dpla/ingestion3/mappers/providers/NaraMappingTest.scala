@@ -101,7 +101,7 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "extract relations" in {
     val relations = extractor.relation(xml)
-    assert(relations === Seq(Left("Records of the Forest Service ; Historic Photographs")))
+    assert(relations === Seq(LiteralOrUri("Records of the Forest Service ; Historic Photographs", isUri = false)))
   }
 
   it should "extract rights" in {
