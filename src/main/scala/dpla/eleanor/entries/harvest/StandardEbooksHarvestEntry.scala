@@ -11,24 +11,33 @@ import dpla.ingestion3.dataStorage.OutputHelper
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{SaveMode, SparkSession}
 
+/**
+  *
+  *
+  * Example Invocations:
+  *
+  * Write to local storage, do not harvest content (e.g. files), harvest metadata from local files
+  *   sbt "runMain dpla.eleanor.entries.harvest.StandardEbooksHarvestEntry ./eleanor-dataset/ false ./eleanor/raw-data/standardebooks/"
+  *
+  * Write to S3, harvest content (e.g. files) and harvest metadata from metadata feed
+  *   sbt "runMain dpla.eleanor.entries.harvest.StandardEbooksHarvestEntry s3://dpla-ebooks-master-dataset/ true"
+  *
+  * Arguments:
+  *
+  *   0) rootOutput                 Root output path, local or S3. Defaults to local system /tmp/
+  *   1) performContentHarvest      Boolean, whether to execute content harvest along with metadata harvest. Defaults to
+  *                                 to True
+  *   2) localFiles                 Path to local metadata files to harvest
+  */
 object StandardEbooksHarvestEntry {
   def main(args: Array[String]): Unit = {
 
     // Primary repo for ebooks is s3://dpla-ebooks/
-    val outPath: String = args.headOption
-      .getOrElse(System.getProperty("java.io.tmpdir"))
-
-    val localFiles = args.length match {
-      case (2) =>
-        println(s"Using local files for source ${args(1)}")
-        new File(args(1))
-        .listFiles()
-        .map(_.getAbsoluteFile.toString)
-      case _ => Array[String]()
-    }
-
-    println(s"Writing harvest output to $outPath")
-    localFiles.foreach(file => println(s"local file > $file"))
+    val rootOutput: String = if (args.isDefinedAt(0)) args(0) else System.getProperty("java.io.tmpdir")
+    val performContentHarvest: Boolean = if(args.isDefinedAt(1)) args(1).toBoolean else true
+    val localFiles: Array[String] = if (args.isDefinedAt(2)) {
+      new File(args(2)).listFiles.map(_.getAbsoluteFile.toString)
+    } else Array[String]()
 
     val conf = new SparkConf()
       .setAppName("Eleanor!")
@@ -44,7 +53,7 @@ object StandardEbooksHarvestEntry {
     // Sets the activity output path with timestamp
     val timestamp = new java.sql.Timestamp(Instant.now.getEpochSecond)
     val outputHelper: OutputHelper =
-      new OutputHelper(outPath, "standardebooks", "ebook-harvest", timestamp.toLocalDateTime)
+      new OutputHelper(rootOutput, "standardebooks", "ebook-harvest", timestamp.toLocalDateTime)
 
     val harvestActivityPath = outputHelper.activityPath
 
@@ -59,11 +68,13 @@ object StandardEbooksHarvestEntry {
     println(s"Writing to $harvestActivityPath")
     metadataDs.write.mode(SaveMode.Overwrite).parquet(harvestActivityPath) // write to activity path
 
-    // TODO add logical check to determine if content should be harvested
-    val contentHarvester = new ContentHarvester()
-    val contentDs = contentHarvester.harvestContent(metadataDs, spark)
-    println(s"Writing content dataset to $harvestActivityPath")
-    contentDs.write.mode(SaveMode.Overwrite).parquet(harvestActivityPath) // write to activity path
+    if(performContentHarvest) {
+      println("Harvesting content")
+      val contentHarvester = new ContentHarvester()
+      val contentDs = contentHarvester.harvestContent(metadataDs, spark)
+      println(s"Writing content dataset to $harvestActivityPath")
+      contentDs.write.mode(SaveMode.Overwrite).parquet(harvestActivityPath) // write to activity path
+    }
 
     spark.stop()
   }
