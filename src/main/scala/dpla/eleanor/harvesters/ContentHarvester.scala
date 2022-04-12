@@ -10,10 +10,19 @@ import org.apache.spark.sql.{Dataset, SparkSession}
 
 import scala.util.{Failure, Success, Try}
 
+
 /**
   * Responsible for harvesting content (e.g. files)
   */
-trait ContentHarvester extends Retry {
+class ContentHarvester extends Retry with Serializable {
+
+  lazy val httpClient: OkHttpClient = new OkHttpClient.Builder()
+    .connectTimeout(20, TimeUnit.SECONDS)
+    .readTimeout(20, TimeUnit.SECONDS)
+    .retryOnConnectionFailure(true)
+    .followRedirects(true)
+    .build()
+
   /**
     *
     * Downloads all files specified in the harvest payloads
@@ -34,14 +43,6 @@ trait ContentHarvester extends Retry {
   }
 
   def download(target: Payload): Payload = {
-
-    lazy val httpClient: OkHttpClient = new OkHttpClient.Builder()
-      .connectTimeout(20, TimeUnit.SECONDS)
-      .readTimeout(20, TimeUnit.SECONDS)
-      .retryOnConnectionFailure(true)
-      .followRedirects(true)
-      .build()
-
     val targetUrl = Try { new URL(target.url) } match {
       case Success(url) => url
       case Failure(f) =>
@@ -62,9 +63,9 @@ trait ContentHarvester extends Retry {
 
     retry(5) {
         val request = new Request.Builder().url(targetUrl).build()
+        println(s"Requesting...${targetUrl}")
         val response = httpClient.newCall(request).execute()
         if (response.isSuccessful) {
-
           // handle unspecified content-type header
           val mimeType = Try { response.header("content-type") } match {
             case Success(s) => s
@@ -88,7 +89,9 @@ trait ContentHarvester extends Retry {
         }
       } match {
         // return original (incomplete) payload
-        case Failure(e) => target
+        case Failure(e) =>
+          println(s"Failed to download $targetUrl")
+          target
         // return complete payload
         case Success(_) => payload
       }

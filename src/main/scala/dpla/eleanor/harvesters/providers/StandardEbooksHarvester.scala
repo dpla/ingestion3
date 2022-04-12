@@ -11,7 +11,9 @@ import scala.xml.Node
 /**
   *
   */
-class StandardEbooksHarvester(timestamp: Timestamp, source: SourceUri, metadataType: MetadataType)
+class StandardEbooksHarvester(timestamp: Timestamp,
+                              source: SourceUri,
+                              metadataType: MetadataType)
   extends Opds1Harvester(timestamp, source, metadataType) {
 
   /**

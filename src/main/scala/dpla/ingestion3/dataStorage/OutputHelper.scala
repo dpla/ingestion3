@@ -60,6 +60,7 @@ class OutputHelper(root: String,
     case "reports" => "reports"
     case "topic_model" => "topic_model.parquet"
     case "wiki" => "wiki.parquet"
+    case "ebook-harvest" => "OriginalRecord.parquet"
     case _ =>
       throw new IllegalArgumentException(s"Activity '$activity' not recognized")
   }

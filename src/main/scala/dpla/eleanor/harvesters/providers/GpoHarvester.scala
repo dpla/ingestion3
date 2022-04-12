@@ -5,53 +5,39 @@ import java.sql.Timestamp
 import java.util.zip.ZipInputStream
 
 import dpla.eleanor.Schemata.{HarvestData, MetadataType, Payload, SourceUri}
-import dpla.eleanor.harvesters.ContentHarvester
 import dpla.eleanor.{HarvestStatics, Schemata}
 import org.apache.commons.io.IOUtils
-import org.apache.spark.sql.{SaveMode, SparkSession}
+import org.apache.spark.sql.{Dataset, SparkSession}
 
 import scala.xml._
 
-class GpoHarvester(timestamp: Timestamp, source: SourceUri, metadataType: MetadataType)
-  extends ContentHarvester with Serializable {
+class GpoHarvester(timestamp: Timestamp, source: SourceUri, metadataType: MetadataType) extends Serializable {
+
+  private lazy val harvestStatics: HarvestStatics = HarvestStatics(
+    sourceUri = source.uri,
+    timestamp = timestamp,
+    metadataType = metadataType
+  )
+
   /**
     *
     * @param spark            Spark session
-    * @param out              Could he local or s3
+    * @param files            Files to harvest
     * @return
     */
-  def execute(spark: SparkSession,
-              files: Seq[String] = Seq(),
-              out: String) = {
-
+  def execute(spark: SparkSession, files: Seq[String] = Seq()): Dataset[HarvestData] = {
     import spark.implicits._
 
-    val harvestStatics: HarvestStatics = HarvestStatics(
-      sourceUri = source.uri,
-      timestamp = timestamp,
-      metadataType = metadataType
-    )
-
-    val dataOut = out + "test_data.parquet/" // fixme hardcoded output
     // Harvest file into HarvestData
-    files.foreach(xmlFile =>{
-      val rows = harvestFile(xmlFile, harvestStatics)
-      val ds = spark.createDataset(rows)
-      println(s"Harvested file $xmlFile")
-      println(s"Writing to $dataOut")
-      ds.write.mode(SaveMode.Append).parquet(dataOut)
-    })
+    val rows = files.flatMap(xmlFile => harvestFile(xmlFile, harvestStatics))
+    spark.createDataset(rows)
   }
 
   def harvestFile(file: String, statics: HarvestStatics): Seq[HarvestData] = {
-    println(s"Harvesting ..$file")
     val inputStream = new InputStreamReader(new FileInputStream(new File(file)))
-
     // create lineIterator to read contents one line at a time
     val iter = IOUtils.lineIterator(inputStream)
-
     var rows: Seq[HarvestData] = Seq[HarvestData]()
-
     while (iter.hasNext) {
       Option(iter.nextLine) match {
         case Some(line) => handleLine(line, statics) match {
@@ -85,12 +71,8 @@ class GpoHarvester(timestamp: Timestamp, source: SourceUri, metadataType: Metada
 //    <marc:subfield code="u">http://nces.ed.gov/nationsreportcard/pdf/main2005/2005463.pdf</marc:subfield>
 //   </marc:datafield>
 
-  def getPayloads(record: Node): Seq[Schemata.Payload] = {
-    marcFields(record, Seq("856"), Seq("u")).map(url => {
-      println(url.text)
-      Payload(url = url.text)
-    })
-  }
+  def getPayloads(record: Node): Seq[Schemata.Payload] =
+    marcFields(record, Seq("856"), Seq("u")).map(url => Payload(url = url.text))
 
   def getInputStream(file: File): Option[ZipInputStream] = {
     file.getName match {
