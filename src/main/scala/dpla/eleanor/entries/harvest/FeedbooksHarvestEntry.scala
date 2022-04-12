@@ -40,7 +40,6 @@ object FeedbooksHarvestEntry {
     val timestamp = new java.sql.Timestamp(Instant.now.getEpochSecond)
     val outputHelper: OutputHelper =
       new OutputHelper(outPath, "feedbooks", "ebook-harvest", timestamp.toLocalDateTime)
-
     val harvestActivityPath = outputHelper.activityPath
 
     val metadataHarvester = new Opds1Harvester(timestamp, Schemata.SourceUri.Feedbooks, MetadataType.Opds1)

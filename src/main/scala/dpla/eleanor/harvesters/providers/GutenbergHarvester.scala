@@ -12,21 +12,20 @@ import org.apache.spark.sql.{Dataset, SparkSession}
 import scala.xml._
 
 class GutenbergHarvester(timestamp: Timestamp, source: SourceUri, metadataType: MetadataType) extends Serializable {
+
+  private lazy val harvestStatics: HarvestStatics = HarvestStatics(
+    sourceUri = source.uri,
+    timestamp = timestamp,
+    metadataType = metadataType
+  )
+
   /**
     *
     * @param spark            Spark session
     * @return
     */
-  def execute(spark: SparkSession,
-              files: Seq[String] = Seq()): Dataset[HarvestData] = {
-
+  def execute(spark: SparkSession, files: Seq[String] = Seq()): Dataset[HarvestData] = {
     import spark.implicits._
-
-    val harvestStatics: HarvestStatics = HarvestStatics(
-      sourceUri = source.uri,
-      timestamp = timestamp,
-      metadataType = metadataType
-    )
 
     // Harvest file into HarvestData
     val rows: Seq[HarvestData] = files.flatMap(xmlFile => harvestFile(xmlFile, harvestStatics))
