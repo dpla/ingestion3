@@ -5,24 +5,20 @@ import java.sql.Timestamp
 import java.util.zip.ZipInputStream
 
 import dpla.eleanor.Schemata.{HarvestData, MetadataType, Payload, SourceUri}
-import dpla.eleanor.harvesters.ContentHarvester
 import dpla.eleanor.{HarvestStatics, Schemata}
 import org.apache.commons.io.IOUtils
-import org.apache.spark.sql.{Dataset, SaveMode, SparkSession}
+import org.apache.spark.sql.{Dataset, SparkSession}
 
 import scala.xml._
 
-class GutenbergHarvester(timestamp: Timestamp, source: SourceUri, metadataType: MetadataType)
-  extends ContentHarvester with Serializable {
+class GutenbergHarvester(timestamp: Timestamp, source: SourceUri, metadataType: MetadataType) extends Serializable {
   /**
     *
     * @param spark            Spark session
-    * @param out              Could he local or s3
     * @return
     */
   def execute(spark: SparkSession,
-              files: Seq[String] = Seq(),
-              out: String): Dataset[HarvestData] = {
+              files: Seq[String] = Seq()): Dataset[HarvestData] = {
 
     import spark.implicits._
 
@@ -34,19 +30,7 @@ class GutenbergHarvester(timestamp: Timestamp, source: SourceUri, metadataType: 
 
     // Harvest file into HarvestData
     val rows: Seq[HarvestData] = files.flatMap(xmlFile => harvestFile(xmlFile, harvestStatics))
-    val ds = spark.createDataset(rows)
-
-    println("Harvested file")
-
-    // Run over HarvestData Dataset and download content/payloads
-    val contentDs = harvestContent(ds, spark)
-
-    // Write out complete HarvestData Dataset
-    val dataOut = out + "data.parquet/" // fixme hardcoded output
-    println(s"Writing to $dataOut")
-    contentDs.write.mode(SaveMode.Append).parquet(dataOut)
-
-    contentDs
+    spark.createDataset(rows)
   }
 
   def harvestFile(file: String, statics: HarvestStatics): Seq[HarvestData] = {
@@ -92,7 +76,7 @@ class GutenbergHarvester(timestamp: Timestamp, source: SourceUri, metadataType: 
 
   def getPayloads(record: Node): Seq[Schemata.Payload] = {
     val links = for (link <- record \ "hasFormat")
-      yield Link(link \ "file" \@ "about", "TBD rel", "TBD title", (link \\ "value").text )
+      yield Link(link \ "file" \@ "about", "TBD rel", "TBD title", (link \\ "value").text ) // TODO fix me
     links.collect {
       // collects *all* top level <link> properties, can be more restrictive if required
       case Link(url, _, _, _) => Payload(url = s"$url")
