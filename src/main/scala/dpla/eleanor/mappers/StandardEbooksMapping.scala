@@ -1,69 +1,92 @@
 package dpla.eleanor.mappers
 
-import java.io.ByteArrayInputStream
+import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
+import dpla.ingestion3.messages.IngestMessageTemplates
+import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany, ZeroToOne}
+import dpla.ingestion3.model.{EdmAgent, EdmWebResource, SkosConcept, URI, isDcmiType, nameOnlyAgent, nameOnlyConcept, stringOnlyWebResource}
+import dpla.ingestion3.utils.Utils
+import org.json4s.JValue
 
-import dpla.eleanor.Schemata.{HarvestData, MappedData}
+import scala.xml.NodeSeq
+import org.json4s.JsonDSL._
 
-import scala.util.{Failure, Success, Try}
-import scala.xml.{Elem, XML}
+class StandardEbooksMapping extends XmlMapping with XmlExtractor
+  with IngestMessageTemplates {
 
-object StandardEbooksMapping extends IdMinter {
+  override def useProviderName: Boolean = true
 
-  lazy val providerName = "Standard Ebooks"
+  override def getProviderName: Option[String] = Some("standardebooks")
 
-  def id(xml: Elem): String = Option((xml \ "id").text.trim).getOrElse(throw new RuntimeException("Missing required ID"))
+  override def originalId(xml: Document[NodeSeq]): ZeroToOne[String] =
+    extractString(xml \ "id").map(_.trim)
 
-  def author(xml: Elem): Seq[String] = (xml \ "author" \ "name").map(_.text)
-
-  def genre(xml: Elem): Seq[String] = (xml \ "category").map(node => node \@ "term")
-
-  def language(xml: Elem): Seq[String] = (xml \ "language").map(_.text)
-
-  def summary(xml: Elem): Seq[String] = (xml \ "summary").map(_.text)
-
-  def title(xml: Elem): Seq[String] = (xml \ "title").map(_.text)
-
-  def uri(xml: Elem): Seq[String] = (xml \ "id").map(_.text)
-
-  def map(standardEbooks: HarvestData): Option[MappedData] = {
-    val xml = Try {
-      XML.load(new ByteArrayInputStream(standardEbooks.metadata))
-    } match {
-      case Success(x) => x
-      case Failure(_) =>
-        println(s"Unable to load record metadata for ${standardEbooks.id}")
-        return None
-    }
-
-    // If missing URI throw error
-    val uri = StandardEbooksMapping.uri(xml)
-      .headOption
-    match {
-      case Some(t) => t
-      case None =>
-        println(s"Missing required sourceUri for ${standardEbooks.id}")
-        return None
-    }
-
-    Some(
-      MappedData(
-        // id
-        id = mintDplaId(id(xml), providerName),
-
-        sourceUri = standardEbooks.sourceUri,
-        timestamp = standardEbooks.timestamp,
-        itemUri = uri,
-        providerName = providerName,
-        originalRecord = standardEbooks.metadata,
-        payloads = standardEbooks.payloads,
-
-        // record metadata
-        title = title(xml),
-        author = author(xml),
-        language = language(xml),
-        summary = summary(xml),
-        genre = genre(xml)
+  override def creator(xml: Document[NodeSeq]): Seq[EdmAgent] =
+    (xml \ "author").map(author => {
+      EdmAgent(
+        name = extractString(author \ "name"),
+        providedLabel = extractString(author \ "name"),
+        exactMatch = (
+          extractStrings(author \ "uri") ++
+            extractStrings(author \ "sameAs")
+          ).map(URI)
       )
+    })
+
+  override def subject(xml: Document[NodeSeq]): Seq[SkosConcept] =
+    (xml \ "category").map(category => SkosConcept(
+      concept = Option(category \@ "term"),
+      providedLabel = Option(category \@ "term"),
+      scheme = Option(category \@ "scheme")
+    ))
+
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
+
+  override def language(xml: Document[NodeSeq]): Seq[SkosConcept] =
+    extractStrings(xml \ "language")
+      .map(nameOnlyConcept)
+
+  override def description(xml: Document[NodeSeq]): Seq[String] =
+    extractStrings(xml \ "summary")
+
+  override def title(xml: Document[NodeSeq]): Seq[String] =
+    extractStrings(xml \ "title")
+
+  override def edmRights(xml: Document[NodeSeq]): ZeroToMany[URI] =
+    Seq(URI("http://rightsstatements.org/vocab/NoC-US/1.0/"))
+
+  override def rights(xml: Document[NodeSeq]): Seq[String] =
+    extractStrings(xml \ "rights")
+
+  override def provider(xml: Document[NodeSeq]): ExactlyOne[EdmAgent] =
+    EdmAgent(
+      name = Some("Standard Ebooks"),
+      uri = Some(URI("http://dp.la/api/contributor/standardebooks"))
     )
-  }
+
+  override def publisher(xml: Document[NodeSeq]): Seq[EdmAgent] =
+    Seq(provider(xml))
+
+  override def `type`(data: Document[NodeSeq]): Seq[String] =
+    Seq("text")
+
+  override def format(data: Document[NodeSeq]): Seq[String] =
+    Seq("Book")
+
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    extractStrings(data \ "id").map(stringOnlyWebResource)
+
+  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    (data \ "link")
+      .filter(elem => (elem \@ "rel") == "http://opds-spec.org/image/thumbnail")
+      .flatMap(elem => Option(elem \@ "href"))
+      .map(href => "http://standardebooks.org" + href)
+      .map(stringOnlyWebResource)
+
+
+  override def sidecar(data: Document[NodeSeq]): JValue =
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 }
