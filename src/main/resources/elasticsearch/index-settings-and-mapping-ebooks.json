@@ -1,0 +1,97 @@
+{
+  "settings" : {
+    "index": {}
+  },
+  "mappings" : {
+    "dynamic" : "false",
+    "properties" : {
+      "id" : {
+        "type" : "keyword"
+      },
+      "sourceUri" : {
+        "type" : "keyword"
+      },
+      "itemUri" : {
+        "type" : "keyword"
+      },
+      "providerName" : {
+        "type" : "text",
+        "fields" : {
+          "not_analyzed" : {
+            "type" : "keyword"
+          }
+        }
+      },
+      "payloadUri" : {
+        "type" : "keyword"
+      },
+      "title" : {
+        "type" : "text",
+        "fields" : {
+          "not_analyzed" : {
+            "type" : "keyword"
+          }
+        }
+      },
+      "author" : {
+        "type" : "text",
+        "fields" : {
+          "not_analyzed" : {
+            "type" : "keyword"
+          }
+        }
+      },
+      "subtitle" : {
+        "type" : "text",
+        "fields" : {
+          "not_analyzed" : {
+            "type" : "keyword"
+          }
+        }
+      },
+      "language" : {
+        "type" : "text",
+        "fields" : {
+          "not_analyzed" : {
+            "type" : "keyword"
+          }
+        }
+      },
+      "medium" : {
+        "type" : "text",
+        "fields" : {
+          "not_analyzed" : {
+            "type" : "keyword"
+          }
+        }
+      },
+      "publisher" : {
+        "type" : "text",
+        "fields" : {
+          "not_analyzed" : {
+            "type" : "keyword"
+          }
+        }
+      },
+      "publicationDate" : {
+        "type" : "text",
+        "fields" : {
+          "not_analyzed" : {
+            "type" : "keyword"
+          }
+        }
+      },
+      "summary" : {
+        "type" : "text"
+      },
+      "genre" : {
+        "type" : "text",
+        "fields" : {
+          "not_analyzed" : {
+            "type" : "keyword"
+          }
+        }
+      }
+    }
+  }
+}

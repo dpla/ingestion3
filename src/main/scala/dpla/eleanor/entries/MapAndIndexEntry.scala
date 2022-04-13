@@ -6,21 +6,48 @@ import java.util.{Calendar, Date}
 import dpla.eleanor.Schemata.HarvestData
 import dpla.eleanor.Schemata.Implicits.harvestDataEncoder
 import dpla.eleanor.{Index, Mapper}
+import dpla.ingestion3.utils.MasterDataset
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{Dataset, SparkSession}
+
+/**
+  *
+  *
+  * Example Invocations:
+  *
+  * Map from S3 bucket and write to ElasticSearch
+  *   "runMain dpla.eleanor.entries.MapAndIndexEntry s3://dpla-ebooks/ now all es.internal.dp.la 9200 eleanor 3"
+  *
+  * Map only GPO from local dataset and write to local ElasticSearch
+  *   "runMain dpla.eleanor.entries.MapAndIndexEntry ~/local-dataset/ now gpo localhost 9200 eleanor 3"
+  *
+  * Arguments:
+  *
+  *   0) ebookDatasetPath   Root input path, local or S3
+  *   1) maxTimestamp       Maximum timestamp of the harvest activities to read from, default is "now"
+  *   2) providers          Provider shortname, e.g. "gpo", can be comma-separated list, default is "all"
+  *   3) esClusterHost      ES host e.g. "localhost" or "search.internal.dp.la"
+  *   4) esPort             ES port e.g. "9200"
+  *   5) indexName          Base name of ES index that will be created e.g. "eleanor", current timestamp will be
+  *                         appended to it
+  *   6) shards             Optional: Number of shards for ES index
+  */
+
 
 object MapAndIndexEntry {
 
   def main(args: Array[String]): Unit = {
 
-    // harvest data
-    val harvestDataPath: String = args(0)
+    // ebook-master-dataset path (local or s3)
+    val ebookDatasetPath: String = args(0)
+    val maxTimestamp: String = if (args.isDefinedAt(1)) args(1) else "now"
+    val providers: Set[String] = if (args.isDefinedAt(2)) args(2).split(",").toSet else Set("all")
 
     // indexing parameters
-    val esHost: String = args(1)
-    val esPort: String = args(2)
-    val esIndexNameBase: String = args(3)
-    val shards: Int = if (args.isDefinedAt(4)) args(4).toInt else 5
+    val esHost: String = args(3)
+    val esPort: String = args(4)
+    val esIndexNameBase: String = args(5)
+    val shards: Int = if (args.isDefinedAt(6)) args(6).toInt else 6
 
     // Create indexing timestamp
     val now = Calendar.getInstance().getTime
@@ -29,7 +56,7 @@ object MapAndIndexEntry {
 
     println(
       f"""
-         |Using harvest data $harvestDataPath
+         |Using most recent harvest data in $ebookDatasetPath
          |Creating index $esHost:$esPort/$esIndexName
          |Creating $shards shards
       """.stripMargin)
@@ -45,11 +72,14 @@ object MapAndIndexEntry {
 
     import spark.implicits._
 
+    // Roll up most recent ebook-harvest data for each provider
+    val mostRecentHarvestPaths = MasterDataset.getMostRecentActivities(ebookDatasetPath, providers, maxTimestamp, "ebook-harvest")
+
     val harvest: Dataset[HarvestData] = spark.read
-      .parquet(harvestDataPath)
+      .parquet(mostRecentHarvestPaths:_*)
       .as[HarvestData]
 
-    println(s"Read in ${harvest.count()} harvested records from $harvestDataPath")
+    println(s"Read in ${harvest.count()} harvested records from: \n${mostRecentHarvestPaths.mkString("\n")}")
 
     val mapped = Mapper.execute(harvest)
 

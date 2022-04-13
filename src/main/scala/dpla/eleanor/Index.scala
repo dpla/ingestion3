@@ -40,7 +40,7 @@ object Index {
                   indexName: String,
                   shards: Int): Unit = {
 
-    val settingFilePath: String = "/elasticsearch/index-settings-and-mapping.json"
+    val settingFilePath: String = "/elasticsearch/index-settings-and-mapping-ebooks.json"
 
     val stream: InputStream = getClass.getResourceAsStream(settingFilePath)
     val bufferedSource: BufferedSource = Source.fromInputStream(stream)
@@ -84,11 +84,14 @@ object Index {
     mappedData.map { mapped =>
       implicit val formats: DefaultFormats.type = DefaultFormats
 
-      val payloadUris = mapped.payloads.map { payload =>
+      // FIXME highly inefficient
+      val payloadUris = mapped.payloads.map(payload => {
         // Write to s3
-        println(s"Writing files to S3")
-        S3Writer.writePayloadToS3(payload, mapped.id)
-      }
+        if (payload.data != null) {
+          S3Writer.writePayloadToS3(payload, mapped.id)
+        } else
+          ""
+      }).filter(_.nonEmpty)
 
       IndexData(
         id = mapped.id,
