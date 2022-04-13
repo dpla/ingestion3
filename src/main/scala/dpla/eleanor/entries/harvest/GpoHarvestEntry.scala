@@ -2,6 +2,7 @@ package dpla.eleanor.entries.harvest
 
 import java.io.{File, FileFilter}
 import java.time.Instant
+import java.time.LocalDateTime
 
 import dpla.eleanor.Schemata
 import dpla.eleanor.Schemata.MetadataType
@@ -51,9 +52,10 @@ object GpoHarvestEntry {
     } else Array[String]()
 
     // Setup output
-    val timestamp = new java.sql.Timestamp(Instant.now.getEpochSecond)
+    val startDateTime = LocalDateTime.now
+
     val outputHelper: OutputHelper =
-      new OutputHelper(rootOutput, "gpo", "ebook-harvest", timestamp.toLocalDateTime)
+      new OutputHelper(rootOutput, "gpo", "ebook-harvest", startDateTime)
     val harvestActivityPath = outputHelper.activityPath
 
     val conf = new SparkConf()
@@ -68,6 +70,7 @@ object GpoHarvestEntry {
       .getOrCreate()
 
     // Harvest metadata
+    val timestamp = new java.sql.Timestamp(Instant.now.getEpochSecond)
     val metadataHarvester = new GpoHarvester(timestamp, Schemata.SourceUri.Gpo, MetadataType.Rdf)
     val metadataDs = metadataHarvester.execute(spark, localFiles)
 
