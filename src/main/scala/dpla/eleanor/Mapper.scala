@@ -26,7 +26,7 @@ object Mapper {
       case Feedbooks.uri => FeedbooksMapping.map(input)
       case UnglueIt.uri => UnglueItMapping.map(input)
       case Gutenberg.uri => GutenbergMapping.map(input)
-      case Gpo.uri => GpoMapping.map(input)
+      //case Gpo.uri => GpoMapping.map(input)
       case _ => None
     }
 }
