@@ -3,10 +3,10 @@ package dpla.eleanor.entries
 import java.text.SimpleDateFormat
 import java.util.{Calendar, Date}
 
+import dpla.eleanor.Mapper
 import dpla.eleanor.Schemata.HarvestData
 import dpla.eleanor.Schemata.Implicits.harvestDataEncoder
-import dpla.eleanor.{Index, Mapper}
-import dpla.ingestion3.utils.MasterDataset
+import dpla.ingestion3.utils.{MasterDataset, Utils}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{Dataset, SparkSession}
 
@@ -75,19 +75,23 @@ object MapAndIndexEntry {
     // Roll up most recent ebook-harvest data for each provider
     val mostRecentHarvestPaths = MasterDataset.getMostRecentActivities(ebookDatasetPath, providers, maxTimestamp, "ebook-harvest")
 
+    println(s"Reading harvested records from: \n\n${mostRecentHarvestPaths.mkString("\n")}")
+
     val harvest: Dataset[HarvestData] = spark.read
       .parquet(mostRecentHarvestPaths:_*)
       .as[HarvestData]
 
-    println(s"Read in ${harvest.count()} harvested records from: \n${mostRecentHarvestPaths.mkString("\n")}")
+    println(s"Read in ${Utils.formatNumber(harvest.count())} harvested records from: \n\n${mostRecentHarvestPaths.mkString("\n")}")
 
-    val mapped = Mapper.execute(harvest)
+    val mapped = Mapper.execute(spark, harvest)
 
     println(s"Mapped ${mapped.count()} records")
 
-    Index.execute(spark, mapped, esHost, esPort, esIndexName, shards)
+    // FIXME
+    // Do not index data yet (schema change to OreAggregation)
+    // Index.execute(spark, mapped, esHost, esPort, esIndexName, shards)
 
-    println("Indexed mapped records")
+//    println("Indexed mapped records")
 
     spark.stop()
 
