@@ -86,7 +86,11 @@ object ProviderRegistry {
     "smithsonian" -> Register(profile = new SiProfile),
     "virginias" -> Register(profile = new VirginiasProfile),
     "vt" -> Register(profile = new VtProfile),
-    "wisconsin" -> Register(profile = new WiProfile)
+    "wisconsin" -> Register(profile = new WiProfile),
+
+
+    // ebooks
+    "http://gpo.gov" -> Register(profile = new GpoProfile)
   )
 
   private def noProfileException(short: String) = {
