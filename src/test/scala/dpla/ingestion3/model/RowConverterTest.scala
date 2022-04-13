@@ -49,8 +49,8 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
   )
   val emtpySkosConcept = SkosConcept()
 
-  val stringLiteralOrUri = Left("String")
-  val uriLiteralOrUri = Right(uri1)
+  val stringLiteralOrUri = LiteralOrUri("String", isUri = false)
+  val uriLiteralOrUri = LiteralOrUri(uri1.toString, isUri = true)
 
   val edmAgent = EdmAgent(
     uri = Some(uri1),
@@ -262,7 +262,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
       language = Seq(skosConcept, skosConcept, skosConcept),
       place = Seq(dplaPlace, dplaPlace, dplaPlace),
       publisher = Seq(edmAgent, edmAgent, edmAgent),
-      relation = Seq(Right(uri1), Left("foobar"), Right(uri2), Left("snozzbuzz")),
+      relation = Seq(LiteralOrUri(uri1.toString, isUri = true), LiteralOrUri("foobar", isUri = false), LiteralOrUri(uri2.toString, isUri = true), LiteralOrUri("snozzbuzz", isUri = false)),
       replacedBy = Seq("someone's", "taken", "my", "place"),
       replaces = Seq("we're", "the", "replacmements"),
       rights = Seq("some", "rights"),

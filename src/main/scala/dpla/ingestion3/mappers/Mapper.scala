@@ -428,7 +428,7 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
         originalRecord = formatXml(document.get),
         preview = validatedPreview, // thumbnail
         provider = mapping.provider(document),
-        sidecar = mapping.sidecar(document),
+        sidecar = toJsonString(mapping.sidecar(document)),
         tags = mapping.tags(document),
         iiifManifest = validatedIIIFManifest,
         mediaMaster = mapping.mediaMaster(document),
@@ -522,7 +522,7 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
         originalRecord = formatJson(document.get),
         preview = validatedPreview, // thumbnail
         provider = mapping.provider(document),
-        sidecar = mapping.sidecar(document),
+        sidecar = toJsonString(mapping.sidecar(document)),
         tags = mapping.tags(document),
         iiifManifest = validatedIIIFManifest,
         mediaMaster = mapping.mediaMaster(document),

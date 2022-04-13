@@ -148,7 +148,7 @@ class HarvardMapping extends XmlMapping with XmlExtractor with IngestMessageTemp
       if relatedItem \@ "type" == "series"
       relation <- relatedItem \ "titleInfo"
       title <- processTitleInfo(relation)
-    } yield Left(title)
+    } yield LiteralOrUri(title, isUri = false)
 
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =

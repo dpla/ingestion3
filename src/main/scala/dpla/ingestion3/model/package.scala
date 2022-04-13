@@ -2,14 +2,14 @@ package dpla.ingestion3
 
 import java.text.SimpleDateFormat
 import java.util.{Calendar, TimeZone}
-
 import com.databricks.spark.avro.SchemaConverters
-import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import dpla.ingestion3.utils.FlatFileIO
 import org.apache.avro.Schema
 import org.apache.spark.sql.types.StructType
+import org.json4s
 import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods
 import org.json4s.jackson.JsonMethods._
 import org.json4s.prefs.EmptyValueStrategy
 import org.json4s.{DefaultFormats, Formats}
@@ -57,9 +57,9 @@ package object model {
 
   def isDcmiType(string: String): Boolean = DcmiTypes.contains(string.toLowerCase.replaceAll(" ", ""))
 
-  def eitherStringOrUri(string: String): LiteralOrUri = new Left(string)
+  def eitherStringOrUri(string: String): LiteralOrUri = LiteralOrUri(string, isUri = false)
 
-  def eitherStringOrUri(uri: URI): LiteralOrUri = new Right(uri)
+  def eitherStringOrUri(uri: URI): LiteralOrUri = LiteralOrUri(uri.value, isUri = true)
 
   def emptyEdmAgent = EdmAgent()
 
@@ -110,11 +110,11 @@ package object model {
   def jsonlRecord(record: OreAggregation): String = {
     // We require the that DPLA ID and prehash ID (the providers 'permanent' identifier) be passed forward via the
     // metadata sidecar. Currently, there is no place to store these values in either the DPLA MAPv3.1 or MAPv4.0 models
-    val dplaId = record.sidecar \ "dplaId" match {
+    val dplaId = fromJsonString(record.sidecar) \ "dplaId" match {
       case JString(js) => js
       case _ => throw new RuntimeException("DPLA ID is not in metadata sidecar")
     }
-    val _id = record.sidecar \ "prehashId" match {
+    val _id = fromJsonString(record.sidecar) \ "prehashId" match {
       case JString(js) => js
       case _ => throw new RuntimeException("Prehash ID is not in metadata sidecar")
     }
@@ -183,9 +183,7 @@ package object model {
             }) ~
           ("publisher" -> record.sourceResource.publisher.map{p => p.name}) ~
           ("relation" ->
-            record.sourceResource.relation.map { r =>
-              r.merge.toString
-            })  ~
+            record.sourceResource.relation.map { _.value })  ~
           ("rights" -> record.sourceResource.rights) ~
           ("spatial" ->
             record.sourceResource.place.map { place =>
@@ -306,7 +304,7 @@ package object model {
     * @param record
     * @return
     */
-  def getDplaId(record: OreAggregation): String = record.sidecar \ "dplaId" match {
+  def getDplaId(record: OreAggregation): String = fromJsonString(record.sidecar) \ "dplaId" match {
     case JString(js) => js
     case _ => throw new RuntimeException("DPLA ID is not in metadata sidecar")
   }
@@ -348,5 +346,8 @@ package object model {
 
   val avroSchema: Schema = new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
   val sparkSchema: StructType = SchemaConverters.toSqlType(avroSchema).dataType.asInstanceOf[StructType]
+
+  def toJsonString(json: JValue): String = JsonMethods.compact(JsonMethods.render(json))
+  def fromJsonString(jsonString: String): json4s.JValue = JsonMethods.parse(jsonString)
 
 }

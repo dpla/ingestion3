@@ -1,7 +1,6 @@
 package dpla.ingestion3.model
 
 import dpla.ingestion3.messages.IngestMessage
-import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.types.StructType
@@ -33,7 +32,7 @@ object RowConverter {
         oreAggregation.preview.map(fromEdmWebResource).orNull, //8
         fromEdmAgent(oreAggregation.provider), //9
         oreAggregation.edmRights.map(_.toString).orNull, //10
-        compact(render(oreAggregation.sidecar)), //11
+        oreAggregation.sidecar, //11
         oreAggregation.messages.map(fromIngestMessage), //12
         oreAggregation.originalId, //13
         oreAggregation.tags.map(_.toString), //14
@@ -97,8 +96,8 @@ object RowConverter {
   )
 
   private[model] def fromLiteralOrUri(literalOrUri: LiteralOrUri): Row = Row(
-    literalOrUri.merge.toString, //both types turn into strings with toString
-    literalOrUri.isRight //right is URI, isRight is true when it's a uri
+    literalOrUri.value, //both types turn into strings with toString
+    literalOrUri.isUri //right is URI, isRight is true when it's a uri
   )
 
   private[model] def fromDplaPlace(dplaPlace: DplaPlace): Row = Row(

@@ -1,4 +1,4 @@
-package dpla.ingestion3.premappingreports
+package dpla.ingestion3.preMappingReports
 
 import org.json4s._
 

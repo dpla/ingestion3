@@ -1,7 +1,6 @@
 package dpla.ingestion3.enrichments.normalizations
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.model.DplaMapData.LiteralOrUri
 import dpla.ingestion3.model._
 
 /**
@@ -138,8 +137,8 @@ class StringNormalizations {
     )
 
   def enrichRelation(relation: LiteralOrUri): LiteralOrUri = {
-    if (relation.isInstanceOf[String])
-      relation.toString.stripHTML.reduceWhitespace.asInstanceOf[LiteralOrUri]
+    if (!relation.isUri)
+      LiteralOrUri(relation.value.stripHTML.reduceWhitespace, isUri = false)
     else
       relation
   }

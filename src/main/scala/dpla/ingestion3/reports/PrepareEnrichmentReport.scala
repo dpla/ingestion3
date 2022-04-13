@@ -1,11 +1,12 @@
 package dpla.ingestion3.reports
 
 import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
-import dpla.ingestion3.model.{DplaPlace, EdmTimeSpan, OreAggregation}
+import dpla.ingestion3.model.{DplaPlace, EdmTimeSpan, OreAggregation, fromJsonString}
 import dpla.ingestion3.reports.summary.ReportFormattingUtils
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Dataset, Row}
+import org.json4s.jackson.JsonMethods
 
 object PrepareEnrichmentReport extends IngestMessageTemplates {
 
@@ -54,7 +55,7 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
   def prepareProvider(enriched: OreAggregation)
                          (implicit msgs: MessageCollector[IngestMessage]) = {
 
-    val dplaId = (enriched.sidecar \\ "dplaId").values.toString
+    val dplaId = (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString
 
     if(enriched.provider.exactMatch.nonEmpty){
       msgs.add(enrichedValue(
@@ -79,7 +80,7 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
   def prepareDataProvider(enriched: OreAggregation)
                          (implicit msgs: MessageCollector[IngestMessage]) = {
 
-    val dplaId = (enriched.sidecar \\ "dplaId").values.toString
+    val dplaId = (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString
 
       if(enriched.dataProvider.exactMatch.nonEmpty){
         msgs.add(enrichedValue(
@@ -109,7 +110,7 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
 
     val enrichDateValues = enriched.sourceResource.date
     val originalDateValues = original.sourceResource.date
-    val id = (enriched.sidecar \\ "dplaId").values.toString
+    val id = (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString
 
     val dateTuples = enrichDateValues zip originalDateValues
 
@@ -147,13 +148,13 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     enriched.sourceResource.language.map( l => {
       if(l.concept.getOrElse("") != l.providedLabel.getOrElse("")){
         msgs.add(enrichedValue(
-          (enriched.sidecar \\ "dplaId").values.toString,
+          (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString,
           "language",
           l.providedLabel.getOrElse(""),
           l.concept.getOrElse("")))
       } else
         msgs.add(originalValue(
-          (enriched.sidecar \\ "dplaId").values.toString,
+          (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString,
           "language",
           l.providedLabel.getOrElse(""))
         )
@@ -171,7 +172,7 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
 
     enriched.sourceResource.place.map( p => {
       if(p.city.isDefined | p.coordinates.isDefined | p.country.isDefined | p.region.isDefined | p.state.isDefined) {
-        msgs.add( enrichedValue((enriched.sidecar \\ "dplaId").values.toString, "place", p.name.getOrElse(""), printPlace(p)))
+        msgs.add( enrichedValue((fromJsonString(enriched.sidecar) \\ "dplaId").values.toString, "place", p.name.getOrElse(""), printPlace(p)))
       }
     })
   }
@@ -203,9 +204,9 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
 
     typeTuples.map( { case (e: String, o: String) => {
       if(e != o)
-        msgs.add(enrichedValue( (enriched.sidecar \\ "dplaId").values.toString, "type", o, e))
+        msgs.add(enrichedValue( (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString, "type", o, e))
       else
-        msgs.add(originalValue( (enriched.sidecar \\ "dplaId").values.toString, "type", o))
+        msgs.add(originalValue( (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString, "type", o))
     }})
   }
 }

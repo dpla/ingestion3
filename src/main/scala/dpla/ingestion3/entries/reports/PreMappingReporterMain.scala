@@ -1,6 +1,6 @@
 package dpla.ingestion3.entries.reports
 
-import dpla.ingestion3.premappingreports._
+import dpla.ingestion3.preMappingReports.PreMappingReporter
 import org.apache.log4j.{LogManager, Logger}
 
 import scala.util.Failure

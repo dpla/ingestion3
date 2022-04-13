@@ -30,7 +30,7 @@ object EnrichedRecordFixture {
       isShownAt = EdmWebResource(
         uri = URI("https://example.org/record/123")
       ),
-      sidecar = ("prehashId" -> "oai:somestate:id123") ~ ("dplaId" -> "4b1bd605bd1d75ee23baadb0e1f24457"),
+      sidecar = toJsonString(("prehashId" -> "oai:somestate:id123") ~ ("dplaId" -> "4b1bd605bd1d75ee23baadb0e1f24457")),
       originalId = "The original ID",
       sourceResource = DplaSourceResource(
         creator = Seq(EdmAgent(
@@ -57,27 +57,27 @@ object EnrichedRecordFixture {
         name = Some("The Data Provider"),
         exactMatch = Seq(URI("Q83878447"))
       ),
-      dplaUri = new URI("https://dp.la/item/123"),
+      dplaUri = URI("https://dp.la/item/123"),
       originalRecord = "The Original Record",
       provider = EdmAgent(
-        uri = Some(new URI("http://dp.la/api/contributor/thedataprovider")),
+        uri = Some(URI("http://dp.la/api/contributor/thedataprovider")),
         name = Some("The Provider")
       ),
-      hasView = Seq(EdmWebResource(uri = new URI("https://example.org/"))),
+      hasView = Seq(EdmWebResource(uri = URI("https://example.org/"))),
       intermediateProvider = Some(
         EdmAgent(name = Some("The Intermediate Provider"))
       ),
       `object` = Some(
-        EdmWebResource(uri = new URI("https://example.org/record/123.html"))
+        EdmWebResource(uri = URI("https://example.org/record/123.html"))
       ),
       preview = Some(
-        EdmWebResource(uri = new URI("https://example.org/thumbnail/123.jpg"))
+        EdmWebResource(uri = URI("https://example.org/thumbnail/123.jpg"))
       ),
-      edmRights = Some(new URI("https://example.org/rights/public_domain.html")),
+      edmRights = Some(URI("https://example.org/rights/public_domain.html")),
       isShownAt = EdmWebResource(
         uri = new URI("https://example.org/record/123")
       ),
-      sidecar = ("prehashId" -> "oai:somestate:id123") ~ ("dplaId" -> "4b1bd605bd1d75ee23baadb0e1f24457"),
+      sidecar = toJsonString(("prehashId" -> "oai:somestate:id123") ~ ("dplaId" -> "4b1bd605bd1d75ee23baadb0e1f24457")),
       originalId = "The original ID",
       sourceResource = DplaSourceResource(
         collection = Seq(DcmiTypeCollection(
@@ -138,7 +138,7 @@ object EnrichedRecordFixture {
 
   val minimalEnrichedRecord =
     OreAggregation(
-      sidecar = ("prehashId" -> "oai:somestate:id123") ~ ("dplaId" -> "123"),
+      sidecar = toJsonString(("prehashId" -> "oai:somestate:id123") ~ ("dplaId" -> "123")),
       sourceResource = DplaSourceResource(
         rights = Seq("Public Domain"),
         title = Seq("The Title"),
@@ -147,24 +147,24 @@ object EnrichedRecordFixture {
       dataProvider = EdmAgent(
         name = Some("The Data Provider")
       ),
-      dplaUri = new URI("https://dp.la/item/123"),
-      isShownAt = EdmWebResource(uri = new URI("https://example.org/record/123")),
+      dplaUri = URI("https://dp.la/item/123"),
+      isShownAt = EdmWebResource(uri = URI("https://example.org/record/123")),
       originalRecord = "The Original Record",
       provider = EdmAgent(
         name = Some("The Provider"),
-        uri = Some(new URI("http://dp.la/api/contributor/thedataprovider"))
+        uri = Some(URI("http://dp.la/api/contributor/thedataprovider"))
       ),
-      hasView = Seq(EdmWebResource(uri = new URI("https://example.org/"))),
+      hasView = Seq(EdmWebResource(uri = URI("https://example.org/"))),
       intermediateProvider = Some(
         EdmAgent(name = Some("The Intermediate Provider"))
       ),
       `object` = Some(
-        EdmWebResource(uri = new URI("https://example.org/record/123.html"))
+        EdmWebResource(uri = URI("https://example.org/record/123.html"))
       ),
       preview = Some(
-        EdmWebResource(uri = new URI("https://example.org/thumbnail/123.jpg"))
+        EdmWebResource(uri = URI("https://example.org/thumbnail/123.jpg"))
       ),
-      edmRights = Some(new URI("https://example.org/rights/public_domain.html")),
+      edmRights = Some(URI("https://example.org/rights/public_domain.html")),
       originalId = "The original ID"
     )
 }
