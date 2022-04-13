@@ -84,11 +84,14 @@ object Index {
     mappedData.map { mapped =>
       implicit val formats: DefaultFormats.type = DefaultFormats
 
-      val payloadUris = mapped.payloads.map { payload =>
+      // FIXME highly inefficient
+      val payloadUris = mapped.payloads.map(payload => {
         // Write to s3
-        println(s"Writing files to S3")
-        S3Writer.writePayloadToS3(payload, mapped.id)
-      }
+        if (payload.data != null) {
+          S3Writer.writePayloadToS3(payload, mapped.id)
+        } else
+          ""
+      }).filter(_.nonEmpty)
 
       IndexData(
         id = mapped.id,
