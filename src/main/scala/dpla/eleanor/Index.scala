@@ -40,7 +40,7 @@ object Index {
                   indexName: String,
                   shards: Int): Unit = {
 
-    val settingFilePath: String = "/elasticsearch/index-settings-and-mapping.json"
+    val settingFilePath: String = "/elasticsearch/index-settings-and-mapping-ebooks.json"
 
     val stream: InputStream = getClass.getResourceAsStream(settingFilePath)
     val bufferedSource: BufferedSource = Source.fromInputStream(stream)
