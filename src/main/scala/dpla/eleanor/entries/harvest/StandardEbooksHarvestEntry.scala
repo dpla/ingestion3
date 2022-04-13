@@ -1,7 +1,7 @@
 package dpla.eleanor.entries.harvest
 
 import java.io.File
-import java.time.Instant
+import java.time.{Instant, LocalDateTime}
 
 import dpla.eleanor.Schemata.MetadataType
 import dpla.eleanor.Schemata.SourceUri.StandardEbooks
@@ -51,12 +51,13 @@ object StandardEbooksHarvestEntry {
       .getOrCreate()
 
     // Sets the activity output path with timestamp
-    val timestamp = new java.sql.Timestamp(Instant.now.getEpochSecond)
-    val outputHelper: OutputHelper =
-      new OutputHelper(rootOutput, "standardebooks", "ebook-harvest", timestamp.toLocalDateTime)
+    val startDateTime = LocalDateTime.now
 
+    val outputHelper: OutputHelper =
+      new OutputHelper(rootOutput, "standardebooks", "ebook-harvest", startDateTime)
     val harvestActivityPath = outputHelper.activityPath
 
+    val timestamp = new java.sql.Timestamp(Instant.now.getEpochSecond)
     val metadataHarvester = new StandardEbooksHarvester(timestamp, StandardEbooks, MetadataType.Opds1)
     val metadataDs = metadataHarvester.execute(
       spark = spark,

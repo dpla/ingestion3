@@ -1,7 +1,7 @@
 package dpla.eleanor.entries.harvest
 
 import java.io.{File, FileFilter}
-import java.time.Instant
+import java.time.{Instant, LocalDateTime}
 
 import dpla.eleanor.Schemata
 import dpla.eleanor.Schemata.MetadataType
@@ -60,17 +60,18 @@ object GutenbergHarvestEntry {
       .getOrCreate()
 
     // Sets the activity output path with timestamp
-    val timestamp = new java.sql.Timestamp(Instant.now.getEpochSecond)
+    val startDateTime = LocalDateTime.now
     val outputHelper: OutputHelper =
-      new OutputHelper(rootOutput, "gutenberg", "ebook-harvest", timestamp.toLocalDateTime)
+      new OutputHelper(rootOutput, "gutenberg", "ebook-harvest", startDateTime)
     val harvestActivityPath = outputHelper.activityPath
 
     // Harvest metadata
     println(s"Harvesting metadata to $harvestActivityPath")
+    val timestamp = new java.sql.Timestamp(Instant.now.getEpochSecond)
     val metadataHarvester = new GutenbergHarvester(timestamp, Schemata.SourceUri.Gutenberg, MetadataType.Rdf)
     val metadataDs = metadataHarvester.execute(spark = spark, files = localFiles)
     metadataDs.write.mode(SaveMode.Overwrite).parquet(harvestActivityPath)
-    println(s"Wrote ${metadataDs.count()} records to ${harvestActivityPath}")
+    println(s"Wrote ${metadataDs.count()} records to $harvestActivityPath")
 
     if(performContentHarvest) {
       println("Harvesting content")
