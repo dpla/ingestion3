@@ -3,10 +3,12 @@ package dpla.ingestion3.executors
 import java.time.LocalDateTime
 
 import com.databricks.spark.avro._
+import dpla.eleanor.profiles.Profile
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
 import dpla.ingestion3.model.{OreAggregation, RowConverter}
+import dpla.ingestion3.profiles.IngestionProfile
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
 import org.apache.log4j.Logger
@@ -16,9 +18,12 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.apache.spark.storage.StorageLevel
+import org.json4s.JValue
+import org.json4s.JsonAST.JValue
 
 import scala.collection.mutable
 import scala.util.{Failure, Success}
+import scala.xml.NodeSeq
 
 trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
@@ -278,8 +283,17 @@ class DplaMap extends Serializable {
     extractorClass.performMapping(document)
   }
 
-  def getExtractorClass(shortName: String) = ProviderRegistry.lookupProfile(shortName) match {
+  def getExtractorClass(shortName: String): IngestionProfile[_ >: NodeSeq with JValue] = ProviderRegistry.lookupProfile(shortName) match {
     case Success(extClass) => extClass
     case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
+  }
+}
+
+/**
+  *
+  */
+class EbookMap extends Serializable {
+  def map(document: String, extractorClass: Profile[_ >: NodeSeq with JValue]): OreAggregation = {
+    extractorClass.performMapping(document)
   }
 }
