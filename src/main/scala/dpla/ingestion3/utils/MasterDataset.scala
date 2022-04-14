@@ -28,7 +28,7 @@ object MasterDataset {
 
     val providersWhitelist =
       if (providers == Set("all")) providerList
-      else providers.map(p => if (p.endsWith("/")) p else s"$p/")
+      else providers
 
     val filteredProviderList = providerList.intersect(providersWhitelist)
 
