@@ -20,7 +20,7 @@ trait CHProfile[T] extends Profile[T] {
   def getMapping: Mapping[T]
 
 
-  override def performMapping(data: String): OreAggregation = {
+  override def mapOreAggregation(data: String): OreAggregation = {
     val parser = getParser
     val mapping = getMapping
     val mapper = getMapper
@@ -47,7 +47,7 @@ trait NyplCHProfile extends CHProfile[JValue] {
   override def getMapper = new JsonMapper
   override def getParser = new JsonParser
 
-  override def performMapping(data: String): OreAggregation = {
+  override def mapOreAggregation(data: String): OreAggregation = {
     val json = Document(parse(data))
     val parser = getParser
     val mapping = new NyplMapping(json)

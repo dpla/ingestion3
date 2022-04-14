@@ -13,7 +13,7 @@ import scala.xml.NodeSeq
 
 // Generic profile for Ebook and CH
 trait Profile[T] {
-  def performMapping(data: String): OreAggregation
+  def mapOreAggregation(data: String): OreAggregation
 }
 
 trait EbookProfile[T] extends Profile[T] {
@@ -26,10 +26,10 @@ trait EbookProfile[T] extends Profile[T] {
 
   def getPayloadMapper: PayloadMapper[T, Mapping[T]]
 
-  override def performMapping(data: String): OreAggregation = {
-    val parser = getParser
-    val mapping = getMapping
-    val mapper = getMapper
+  override def mapOreAggregation(data: String): OreAggregation = {
+    val parser = getParser // XML or JSON parser
+    val mapping = getMapping // XML or JSON mapping
+    val mapper = getMapper // OreAggregation mapper
 
     val document = parser.parse(data)
     val oreAggregation = mapper.map(document, mapping)
@@ -37,10 +37,11 @@ trait EbookProfile[T] extends Profile[T] {
     oreAggregation
   }
 
-  def performPayloadMapping(data: String): ZeroToMany[Payload] = {
-    val parser = getParser
-    val mapping = getMapping
-    val payloadMapper = getPayloadMapper
+  // Not overriden
+  def mapPayload(data: String): ZeroToMany[Payload] = {
+    val parser = getParser // XML or JSON parser
+    val mapping = getMapping // XML or JSON mapping
+    val payloadMapper = getPayloadMapper   // Payload mapper
 
     val document = parser.parse(data)
     val payloads = payloadMapper.map(document, mapping)
@@ -52,6 +53,8 @@ trait EbookProfile[T] extends Profile[T] {
 trait JsonProfile extends EbookProfile[JValue] {
   override def getMapper = new JsonMapper
   override def getParser = new JsonParser
+
+  // No Json ebook providers yet
 }
 
 trait XmlProfile extends EbookProfile[NodeSeq] {

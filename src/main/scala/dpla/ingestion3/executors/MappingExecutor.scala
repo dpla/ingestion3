@@ -290,7 +290,7 @@ class DplaMap extends Serializable {
     * @return An OreAggregation representing the mapping results (both success and failure)
     */
   def map(document: String, extractorClass: CHProfile[_ >: NodeSeq with JValue]): OreAggregation = {
-    extractorClass.performMapping(document)
+    extractorClass.mapOreAggregation(document)
   }
 }
 
@@ -300,8 +300,8 @@ class DplaMap extends Serializable {
   */
 class EbookMap extends Serializable {
   def map(document: String, extractorClass: EbookProfile[_ >: NodeSeq with JValue]): Ebook = {
-    val oreAggregation = extractorClass.performMapping(document) // maps the OreAggregation piece of an ebook
-    val payloads = extractorClass.performPayloadMapping(document) // maps the Payload piece of an ebook
+    val oreAggregation = extractorClass.mapOreAggregation(document) // maps the OreAggregation piece of an ebook
+    val payloads = extractorClass.mapPayload(document) // maps the Payload piece of an ebook
     Ebook(oreAggregation, payloads)
   }
 }

@@ -78,7 +78,7 @@ object Mapper {
       .where(col("rn") === 1).drop("rn") // get most recent versions of each record ID and drop all others
       .select("metadata", "sourceUri")
       .map(harvestRecord => {
-        val metadata = harvestRecord.get(0).asInstanceOf[Array[Byte]].map(_.toChar).mkString // convert Array[Byte] to String
+        val metadata = new String(harvestRecord.get(0).asInstanceOf[Array[Byte]], "utf-8") // convert Array[Byte] to String
         val shortName =  harvestRecord.getString(1) // Source.uri as providerProfile short name
         // lookup extractor at runtime because multiple providers could be mapped at once
         dplaEbookMap.map(metadata, getExtractorClass(shortName))
