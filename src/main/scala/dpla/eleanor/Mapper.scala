@@ -22,7 +22,7 @@ object Mapper {
 
   def map(input: HarvestData): Option[MappedData] =
     input.sourceUri match {
-      case StandardEbooks.uri => StandardEbooksMapping.map(input)
+      //case StandardEbooks.uri => StandardEbooksMapping.map(input)
       case Feedbooks.uri => FeedbooksMapping.map(input)
       case UnglueIt.uri => UnglueItMapping.map(input)
       case Gutenberg.uri => GutenbergMapping.map(input)

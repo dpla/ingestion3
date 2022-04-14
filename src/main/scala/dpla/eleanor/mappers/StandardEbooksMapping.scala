@@ -3,7 +3,7 @@ package dpla.eleanor.mappers
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany, ZeroToOne}
-import dpla.ingestion3.model.{EdmAgent, EdmWebResource, SkosConcept, URI, isDcmiType, nameOnlyAgent, nameOnlyConcept, stringOnlyWebResource}
+import dpla.ingestion3.model.{EdmAgent, EdmWebResource, SkosConcept, URI, nameOnlyConcept, stringOnlyWebResource}
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 
@@ -15,10 +15,10 @@ class StandardEbooksMapping extends XmlMapping with XmlExtractor
 
   override def useProviderName: Boolean = true
 
-  override def getProviderName: Option[String] = Some("standardebooks")
+  override def getProviderName: Option[String] = Some("standard-ebooks")
 
-  override def originalId(xml: Document[NodeSeq]): ZeroToOne[String] =
-    extractString(xml \ "id").map(_.trim)
+  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
+    extractString(data \ "id").map(_.trim)
 
   override def creator(xml: Document[NodeSeq]): Seq[EdmAgent] =
     (xml \ "author").map(author => {
@@ -36,7 +36,7 @@ class StandardEbooksMapping extends XmlMapping with XmlExtractor
     (xml \ "category").map(category => SkosConcept(
       concept = Option(category \@ "term"),
       providedLabel = Option(category \@ "term"),
-      scheme = Option(category \@ "scheme")
+      scheme = Option(category \@ "scheme").map(URI)
     ))
 
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
@@ -71,7 +71,7 @@ class StandardEbooksMapping extends XmlMapping with XmlExtractor
     Seq("text")
 
   override def format(data: Document[NodeSeq]): Seq[String] =
-    Seq("Book")
+    Seq("Ebook")
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "id").map(stringOnlyWebResource)
