@@ -10,7 +10,7 @@ import dpla.ingestion3.model
 import dpla.ingestion3.model.{OreAggregation, RowConverter}
 import dpla.ingestion3.profiles.CHProfile
 import dpla.ingestion3.reports.summary._
-import dpla.ingestion3.utils.{ProviderRegistry, Utils}
+import dpla.ingestion3.utils.{CHProviderRegistry, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.broadcast.Broadcast
@@ -28,11 +28,12 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
   /**
     * Lookup the profile and mapping class
+    * TODO this could be better (accepts registry as param etc.)
    */
   def getExtractorClass(shortName: String): CHProfile[_ >: NodeSeq with JValue] =
-    ProviderRegistry.lookupProfile(shortName) match {
+    CHProviderRegistry.lookupProfile(shortName) match {
       case Success(extClass) => extClass
-      case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
+      case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from CHProviderRegistry")
     }
 
   /**

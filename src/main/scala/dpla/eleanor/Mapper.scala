@@ -24,8 +24,6 @@ object Mapper {
       .withColumn("rn", row_number.over(window))
       .where(col("rn") === 1).drop("rn") // get most recent versions of each record ID and drop all others
       .select("metadata", "sourceUri")
-      // @see ProviderRegistry where I've double registered GPO under 'gpo' and 'http://gpo.gov' pointing to the same
-      // ProviderProfile
       .map(harvestRecord => {
         val metadata = harvestRecord.get(0).asInstanceOf[Array[Byte]].map(_.toChar).mkString // convert Array[Byte] to String
         val shortName =  harvestRecord.getString(1) // Source.uri as providerProfile short name
@@ -35,10 +33,15 @@ object Mapper {
     mappedData
   }
 
+  /**
+    * Look up provider profile in Ebooks Provider Registry
+    * @param shortName
+    * @return
+    */
   def getExtractorClass(shortName: String): EbookProfile[_ >: NodeSeq with JValue] =
     EbookProviderRegistry.lookupProfile(shortName) match {
       case Success(extClass) => extClass
-      case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
+      case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from CHProviderRegistry")
     }
 }
 
