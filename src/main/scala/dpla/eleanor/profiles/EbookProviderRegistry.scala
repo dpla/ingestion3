@@ -3,7 +3,7 @@ package dpla.eleanor.profiles
 import scala.util.Try
 
 /**
-  * Main entry point for accessing a provider's associated classes based on its
+  * Main entry point for accessing an Ebook provider's associated classes based on its
   * short name.
   *
   */
@@ -39,13 +39,11 @@ object EbookProviderRegistry {
   case class Register[EbookProfile] (profile: EbookProfile)
 
   private val registry = Map(
-    // FIXME Register is redundant here and should be removed
-    // ebooks
     "http://gpo.gov" -> Register(profile = new GpoProfile)
   )
 
   private def noProfileException(short: String) = {
-    val msg = s"No ebook profile for '$short' found in EbookProviderRegistry."
+    val msg = s"No ebook profile for '$short' found in Ebook provider registry."
     throw new RuntimeException(msg)
   }
 }

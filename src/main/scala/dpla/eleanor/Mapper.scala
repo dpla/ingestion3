@@ -1,6 +1,6 @@
 package dpla.eleanor
 
-import dpla.eleanor.Schemata.HarvestData
+import dpla.eleanor.Schemata.{Ebook, HarvestData}
 import dpla.eleanor.profiles.{EbookProfile, EbookProviderRegistry}
 import dpla.ingestion3.executors.EbookMap
 import dpla.ingestion3.model.OreAggregation
@@ -14,13 +14,13 @@ import scala.xml.NodeSeq
 
 object Mapper {
 
-  def execute(spark: SparkSession, harvest: Dataset[HarvestData]): Dataset[OreAggregation] = {
+  def execute(spark: SparkSession, harvest: Dataset[HarvestData]): Dataset[Ebook] = {
     val window: WindowSpec = Window.partitionBy("id").orderBy(col("timestamp").desc)
     val dplaMap = new EbookMap()
 
     import spark.implicits._
 
-    val mappedData = harvest
+    harvest
       .withColumn("rn", row_number.over(window))
       .where(col("rn") === 1).drop("rn") // get most recent versions of each record ID and drop all others
       .select("metadata", "sourceUri")
@@ -29,8 +29,6 @@ object Mapper {
         val shortName =  harvestRecord.getString(1) // Source.uri as providerProfile short name
         dplaMap.map(metadata, getExtractorClass(shortName))
       })
-
-    mappedData
   }
 
   /**

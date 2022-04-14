@@ -3,7 +3,8 @@ package dpla.ingestion3.executors
 import java.time.LocalDateTime
 
 import com.databricks.spark.avro._
-import dpla.eleanor.profiles.Profile
+import dpla.eleanor.Schemata.Ebook
+import dpla.eleanor.profiles.{EbookProfile, Profile}
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
@@ -284,11 +285,11 @@ class DplaMap extends Serializable {
     * Perform the mapping for a single record
     *
     * @param document The harvested record to map
-    * @param extractorClass Mapping/extraction class defined in Profile
+    * @param extractorClass Mapping/extraction class defined in CHProfile
     *
     * @return An OreAggregation representing the mapping results (both success and failure)
     */
-  def map(document: String, extractorClass: Profile[_ >: NodeSeq with JValue]): OreAggregation = {
+  def map(document: String, extractorClass: CHProfile[_ >: NodeSeq with JValue]): OreAggregation = {
     extractorClass.performMapping(document)
   }
 }
@@ -298,7 +299,9 @@ class DplaMap extends Serializable {
   *
   */
 class EbookMap extends Serializable {
-  def map(document: String, extractorClass: Profile[_ >: NodeSeq with JValue]): OreAggregation = {
-    extractorClass.performMapping(document)
+  def map(document: String, extractorClass: EbookProfile[_ >: NodeSeq with JValue]): Ebook = {
+    val oreAggregation = extractorClass.performMapping(document)
+    val payloads = extractorClass.performPayloadMapping(document)
+    Ebook(oreAggregation, payloads)
   }
 }
