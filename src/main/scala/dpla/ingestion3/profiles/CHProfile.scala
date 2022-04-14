@@ -1,5 +1,6 @@
 package dpla.ingestion3.profiles
 
+import dpla.eleanor.profiles.Profile
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.mappers.providers.NyplMapping
 import dpla.ingestion3.mappers.utils._
@@ -10,7 +11,7 @@ import org.json4s.jackson.JsonMethods.parse
 
 import scala.xml.NodeSeq
 
-trait IngestionProfile[T] {
+trait CHProfile[T] extends Profile[T] {
 
   // TODO This should not be an instance of a Class
   def getHarvester: Class[_ <: Harvester]
@@ -19,7 +20,7 @@ trait IngestionProfile[T] {
   def getMapping: Mapping[T]
 
 
-  def performMapping(data: String): OreAggregation = {
+  override def performMapping(data: String): OreAggregation = {
     val parser = getParser
     val mapping = getMapping
     val mapper = getMapper
@@ -29,12 +30,12 @@ trait IngestionProfile[T] {
   }
 }
 
-trait JsonProfile extends IngestionProfile[JValue] {
+trait JsonProfile extends CHProfile[JValue] {
   override def getMapper = new JsonMapper
   override def getParser = new JsonParser
 }
 
-trait XmlProfile extends IngestionProfile[NodeSeq] {
+trait XmlProfile extends CHProfile[NodeSeq] {
   override def getParser = new XmlParser
   override def getMapper = new XmlMapper
 }
@@ -42,7 +43,7 @@ trait XmlProfile extends IngestionProfile[NodeSeq] {
 /**
   * This is weird
   */
-trait NyplIngestionProfile extends IngestionProfile[JValue] {
+trait NyplCHProfile extends CHProfile[JValue] {
   override def getMapper = new JsonMapper
   override def getParser = new JsonParser
 

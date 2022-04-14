@@ -8,7 +8,7 @@ import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
 import dpla.ingestion3.model.{OreAggregation, RowConverter}
-import dpla.ingestion3.profiles.IngestionProfile
+import dpla.ingestion3.profiles.CHProfile
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{ProviderRegistry, Utils}
 import org.apache.log4j.Logger
@@ -18,7 +18,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.apache.spark.storage.StorageLevel
-import org.json4s.JValue
 import org.json4s.JsonAST.JValue
 
 import scala.collection.mutable
@@ -26,6 +25,15 @@ import scala.util.{Failure, Success}
 import scala.xml.NodeSeq
 
 trait MappingExecutor extends Serializable with IngestMessageTemplates {
+
+  /**
+    * Lookup the profile and mapping class
+   */
+  def getExtractorClass(shortName: String): CHProfile[_ >: NodeSeq with JValue] =
+    ProviderRegistry.lookupProfile(shortName) match {
+      case Success(extClass) => extClass
+      case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
+    }
 
   /**
     * Performs the mapping for the given provider
@@ -78,11 +86,13 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     // Run the mapping over the Dataframe
     // Transformation only
+    val extractorClass = getExtractorClass(shortName) // lookup from registry
+
     val mappingResults: RDD[OreAggregation] = harvestedRecords
       .select("document")
       .as[String]
       .rdd
-      .map(document => dplaMap.map(document, shortName))
+      .map(document => dplaMap.map(document, extractorClass))
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Get a list of originalIds that appear in more than one record
@@ -97,7 +107,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
 
     // Update messages to include duplicate originalId
-    val enforceDuplidateIds = dplaMap.getExtractorClass(shortName).getMapping.enforceDuplicateIds
+    val enforceDuplidateIds = getExtractorClass(shortName).getMapping.enforceDuplicateIds
 
     val updatedResults: RDD[OreAggregation] = mappingResults.map(oreAgg => {
       oreAgg.copy(messages =
@@ -273,22 +283,16 @@ class DplaMap extends Serializable {
     * Perform the mapping for a single record
     *
     * @param document The harvested record to map
-    * @param shortName Provider short name
+    * @param extractorClass Mapping/extraction class defined in Profile
     *
     * @return An OreAggregation representing the mapping results (both success and failure)
     */
-  def map(document: String, shortName: String): OreAggregation = {
-
-    val extractorClass = getExtractorClass(shortName)
+  def map(document: String, extractorClass: Profile[_ >: NodeSeq with JValue]): OreAggregation = {
     extractorClass.performMapping(document)
-  }
-
-  def getExtractorClass(shortName: String): IngestionProfile[_ >: NodeSeq with JValue] = ProviderRegistry.lookupProfile(shortName) match {
-    case Success(extClass) => extClass
-    case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
   }
 }
 
+// TODO Merge DplaMap and EbookMap --- duplicative for now
 /**
   *
   */
