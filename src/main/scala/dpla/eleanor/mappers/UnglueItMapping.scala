@@ -37,10 +37,10 @@ object UnglueItMapping extends IdMinter {
     }
 
     // If missing URI log error and return None
-    val uri = StandardEbooksMapping.uri(xml)
+    val uri = (xml \ "id")
       .headOption
     match {
-      case Some(t) => t
+      case Some(t) => t.text
       case None =>
         println(s"Missing required sourceUri for ${unglueit.id}")
         return None
