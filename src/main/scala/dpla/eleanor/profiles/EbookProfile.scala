@@ -1,10 +1,10 @@
 package dpla.eleanor.profiles
 
 import dpla.eleanor.Schemata.Payload
+import dpla.eleanor.{PayloadMapper, XmlPayloadMapper}
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.mappers.{JsonMapper, Mapper, XmlMapper}
-import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
 import dpla.ingestion3.model.DplaMapData.ZeroToMany
 import dpla.ingestion3.model.OreAggregation
 import org.json4s.JValue
@@ -61,15 +61,4 @@ trait XmlProfile extends EbookProfile[NodeSeq] {
   override def getPayloadMapper = new XmlPayloadMapper
 }
 
-trait PayloadMapper[T, +E] extends IngestMessageTemplates {
-  def map(document: Document[T], mapping: Mapping[T]): ZeroToMany[Payload]
-}
 
-class XmlPayloadMapper extends PayloadMapper[NodeSeq, XmlMapping] {
-  override def map(document: Document[NodeSeq], mapping: Mapping[NodeSeq]): ZeroToMany[Payload] = {
-
-    implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
-
-    mapping.payloads(document)
-  }
-}

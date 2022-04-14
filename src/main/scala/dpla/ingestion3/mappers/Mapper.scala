@@ -1,5 +1,6 @@
 package dpla.ingestion3.mappers
 
+import dpla.eleanor.Schemata.Payload
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
@@ -563,3 +564,4 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
     }
   }
 }
+

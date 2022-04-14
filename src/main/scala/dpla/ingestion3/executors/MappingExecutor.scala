@@ -300,8 +300,8 @@ class DplaMap extends Serializable {
   */
 class EbookMap extends Serializable {
   def map(document: String, extractorClass: EbookProfile[_ >: NodeSeq with JValue]): Ebook = {
-    val oreAggregation = extractorClass.performMapping(document)
-    val payloads = extractorClass.performPayloadMapping(document)
+    val oreAggregation = extractorClass.performMapping(document) // maps the OreAggregation piece of an ebook
+    val payloads = extractorClass.performPayloadMapping(document) // maps the Payload piece of an ebook
     Ebook(oreAggregation, payloads)
   }
 }
