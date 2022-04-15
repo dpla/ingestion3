@@ -1,5 +1,6 @@
 package dpla.ingestion3.mappers.utils
 
+import dpla.eleanor.Schemata.Payload
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
 import org.apache.commons.codec.digest.DigestUtils
@@ -52,6 +53,9 @@ trait Mapping[T] {
   def temporal(data: Document[T]): ZeroToMany[EdmTimeSpan] = emptySeq
   def title(data: Document[T]): AtLeastOne[String] = emptySeq
   def `type`(data: Document[T]): ZeroToMany[String] = emptySeq
+
+  // Ebook Payloads
+  def payloads(data: Document[T]): ZeroToMany[Payload] = emptySeq
 
 
   val enforceDuplicateIds: Boolean   = true
