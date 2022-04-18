@@ -10,7 +10,7 @@ import dpla.ingestion3.mappers.providers._
   * Biodiversity Heritage Library
   */
 class BhlProfile extends XmlProfile {
-  type Mapping = CdlMapping
+  type Mapping = BhlMapping
 
   override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new BhlMapping
@@ -290,7 +290,7 @@ class NorthwestHeritageProfile extends XmlProfile {
 /**
   * New York Public Library
   */
-class NYPLProfile extends NyplIngestionProfile {
+class NYPLProfile extends NyplCHProfile {
   type Mapping = NyplMapping
 
   override def getHarvester: Class[NYPLFileHarvester] = classOf[NYPLFileHarvester]

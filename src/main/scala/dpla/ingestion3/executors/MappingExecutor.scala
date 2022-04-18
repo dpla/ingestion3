@@ -3,12 +3,15 @@ package dpla.ingestion3.executors
 import java.time.LocalDateTime
 
 import com.databricks.spark.avro._
+import dpla.eleanor.Schemata.Ebook
+import dpla.eleanor.profiles.{EbookProfile, Profile}
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
 import dpla.ingestion3.model.{OreAggregation, RowConverter}
+import dpla.ingestion3.profiles.CHProfile
 import dpla.ingestion3.reports.summary._
-import dpla.ingestion3.utils.{ProviderRegistry, Utils}
+import dpla.ingestion3.utils.{CHProviderRegistry, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.broadcast.Broadcast
@@ -16,11 +19,23 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.apache.spark.storage.StorageLevel
+import org.json4s.JsonAST.JValue
 
 import scala.collection.mutable
 import scala.util.{Failure, Success}
+import scala.xml.NodeSeq
 
 trait MappingExecutor extends Serializable with IngestMessageTemplates {
+
+  /**
+    * Lookup the profile and mapping class
+    * TODO this could be better (accepts registry as param etc.)
+   */
+  def getExtractorClass(shortName: String): CHProfile[_ >: NodeSeq with JValue] =
+    CHProviderRegistry.lookupProfile(shortName) match {
+      case Success(extClass) => extClass
+      case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from CHProviderRegistry")
+    }
 
   /**
     * Performs the mapping for the given provider
@@ -73,11 +88,13 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     // Run the mapping over the Dataframe
     // Transformation only
+    val extractorClass = getExtractorClass(shortName) // lookup from registry
+
     val mappingResults: RDD[OreAggregation] = harvestedRecords
       .select("document")
       .as[String]
       .rdd
-      .map(document => dplaMap.map(document, shortName))
+      .map(document => dplaMap.map(document, extractorClass))
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Get a list of originalIds that appear in more than one record
@@ -92,7 +109,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
 
     // Update messages to include duplicate originalId
-    val enforceDuplidateIds = dplaMap.getExtractorClass(shortName).getMapping.enforceDuplicateIds
+    val enforceDuplidateIds = getExtractorClass(shortName).getMapping.enforceDuplicateIds
 
     val updatedResults: RDD[OreAggregation] = mappingResults.map(oreAgg => {
       oreAgg.copy(messages =
@@ -268,18 +285,23 @@ class DplaMap extends Serializable {
     * Perform the mapping for a single record
     *
     * @param document The harvested record to map
-    * @param shortName Provider short name
+    * @param extractorClass Mapping/extraction class defined in CHProfile
     *
     * @return An OreAggregation representing the mapping results (both success and failure)
     */
-  def map(document: String, shortName: String): OreAggregation = {
-
-    val extractorClass = getExtractorClass(shortName)
-    extractorClass.performMapping(document)
+  def map(document: String, extractorClass: CHProfile[_ >: NodeSeq with JValue]): OreAggregation = {
+    extractorClass.mapOreAggregation(document)
   }
+}
 
-  def getExtractorClass(shortName: String) = ProviderRegistry.lookupProfile(shortName) match {
-    case Success(extClass) => extClass
-    case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from ProviderRegistry")
+// TODO Merge DplaMap and EbookMap --- duplicative for now
+/**
+  *
+  */
+class EbookMap extends Serializable {
+  def map(document: String, extractorClass: EbookProfile[_ >: NodeSeq with JValue]): Ebook = {
+    val oreAggregation = extractorClass.mapOreAggregation(document) // maps the OreAggregation piece of an ebook
+    val payloads = extractorClass.mapPayload(document) // maps the Payload piece of an ebook
+    Ebook(oreAggregation, payloads)
   }
 }

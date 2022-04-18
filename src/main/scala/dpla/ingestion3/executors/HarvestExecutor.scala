@@ -10,7 +10,7 @@ import dpla.ingestion3.harvesters.file.NaraDeltaHarvester
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.harvesters.pss.PssHarvester
 import dpla.ingestion3.harvesters.resourceSync.RsHarvester
-import dpla.ingestion3.utils.{ProviderRegistry, Utils}
+import dpla.ingestion3.utils.{CHProviderRegistry, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -23,7 +23,7 @@ trait HarvestExecutor {
     * Run the appropriate type of harvest.
     *
     * @param shortName Provider short name (e.g. cdl, mdl, nara, loc).
-    * @see ProviderRegistry.register() for the authoritative
+    * @see CHProviderRegistry.register() for the authoritative
     *      list of provider short names.
     * @param conf      Configurations read from application configuration file
     * @param logger    Logger object
@@ -135,7 +135,7 @@ trait HarvestExecutor {
       case "nara.file.delta" =>
         new NaraDeltaHarvester(spark, shortName, conf, logger)
       case "api" | "file" =>
-        val harvesterClass = ProviderRegistry.lookupHarvesterClass(shortName) match {
+        val harvesterClass = CHProviderRegistry.lookupHarvesterClass(shortName) match {
           case Success(harvClass) => harvClass
           case Failure(e) =>
             logger.fatal(e.getMessage)

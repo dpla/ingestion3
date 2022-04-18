@@ -9,7 +9,7 @@ import scala.util.Try
   * short name.
   *
   */
-object ProviderRegistry {
+object CHProviderRegistry {
   /**
     *
     * @param short Provider shortname
@@ -90,7 +90,7 @@ object ProviderRegistry {
   )
 
   private def noProfileException(short: String) = {
-    val msg = s"No ingestion profile for '$short' found in ProviderRegistry."
+    val msg = s"No ingestion profile for '$short' found in Cultural Heritage Provider Registry."
     throw new RuntimeException(msg)
   }
 }

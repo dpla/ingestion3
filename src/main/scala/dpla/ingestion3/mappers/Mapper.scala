@@ -563,3 +563,4 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
     }
   }
 }
+

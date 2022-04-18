@@ -3,6 +3,7 @@ import org.apache.spark.sql.{Encoder, Encoders}
 import java.sql.Timestamp
 
 import dpla.eleanor.Schemata.MetadataType
+import dpla.ingestion3.model.OreAggregation
 
 object Schemata {
 
@@ -109,6 +110,14 @@ object Schemata {
                         summary: Seq[String] = Seq(),
                         genre: Seq[String] = Seq()
                       )
+
+
+  // Replaces MappedData
+  case class Ebook(
+                    oreAggregation: OreAggregation,
+                    payload: Seq[Payload]
+                  )
+
 }
 
 case class HarvestStatics(
@@ -116,3 +125,6 @@ case class HarvestStatics(
                            timestamp: Timestamp,
                            metadataType: MetadataType
                          )
+
+
+

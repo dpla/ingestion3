@@ -115,8 +115,9 @@ object IngestRemap extends MappingExecutor
     // Reports commented out by S. Williams for efficiency and because they aren't being used on a regular basis
     // executeAllReports(sparkConf, mapDataOut, baseDataOut, shortName, logger)
 
+    // Topic models are no longer needed 
     // LDA vectors
-    executeTopicModel(sparkConf, enrichDataOut, baseDataOut, shortName, stopWords, cvModel, ldaModel, logger)
+    // executeTopicModel(sparkConf, enrichDataOut, baseDataOut, shortName, stopWords, cvModel, ldaModel, logger)
 
     // Wikimedia
     executeWikimediaMetadata(sparkConf, enrichDataOut, baseDataOut, shortName, logger)
