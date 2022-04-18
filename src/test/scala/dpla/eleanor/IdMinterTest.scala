@@ -15,11 +15,6 @@ class IdMinterTest extends FlatSpec with IdMinter {
     assert(shortenName(GutenbergMapping.providerName) === expected)
   }
 
-  it should "shorten Standard Ebooks provider name" in {
-    val expected = "standard-ebooks"
-    assert(shortenName(StandardEbooksMapping.providerName) === expected)
-  }
-
   it should "shorten Unglueit provider name" in {
     val expected = "unglue.it"
     assert(shortenName(UnglueItMapping.providerName) === expected)
@@ -31,11 +26,7 @@ class IdMinterTest extends FlatSpec with IdMinter {
     assert(mintDplaId(id, FeedbooksMapping.providerName) === "eb0d9586e780358ce4dfea242229ef2f")
   }
 
-  it should "mint the correct ID for Standard Ebooks" in {
-    val id = "https://standardebooks.org/ebooks/rolf-boldrewood/robbery-under-arms"
-    val expected = "fa10a7a586b209a62bfdf9999b52c2ce"
-    assert(mintDplaId(id, StandardEbooksMapping.providerName) === expected)
-  }
+
 
   it should "mint the correct ID for Project Gutenberg" in {
     // prehashid == project-gutenberg--ebooks/1

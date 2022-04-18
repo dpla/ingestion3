@@ -37,8 +37,8 @@ object FeedbooksMapping extends IdMinter {
     }
 
     // If missing URI log error and return None
-    val uri = StandardEbooksMapping.uri(xml).headOption match {
-      case Some(t) => t
+    val uri = (xml \ "id").headOption match {
+      case Some(t) => t.text
       case None =>
         println(s"Missing required sourceUri for ${feedbooks.id}")
         return None
