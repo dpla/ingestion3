@@ -12,7 +12,7 @@ import org.json4s.JValue
 import scala.xml.NodeSeq
 
 // Generic profile for Ebook and CH
-trait Profile[T] {
+trait Profile[T] extends Serializable {
   def mapOreAggregation(data: String): OreAggregation
 }
 
