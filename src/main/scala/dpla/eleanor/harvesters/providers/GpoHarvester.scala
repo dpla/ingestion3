@@ -55,16 +55,26 @@ class GpoHarvester(timestamp: Timestamp, source: SourceUri, metadataType: Metada
   def handleLine(data: String, statics: HarvestStatics): Option[HarvestData] = {
     val dataString = data.replaceAll("<\\?xml.*\\?>", "")
     val xml = XML.loadString(dataString)
-    val id = getId(xml)
 
-    Option(HarvestData(
-      sourceUri = statics.sourceUri,
-      timestamp = statics.timestamp,
-      id = id,
-      metadataType = statics.metadataType,
-      metadata = data.getBytes,
-      payloads = getPayloads(xml)
-    ))
+    // Get OAI record status, skip deleted records
+    val status = (xml \\ "header" \ "@status")
+      .headOption
+      .getOrElse(<foo>foo</foo>).text
+
+    if(status.equalsIgnoreCase("deleted"))
+      None
+    else {
+      val id = getId(xml)
+
+      Option(HarvestData(
+        sourceUri = statics.sourceUri,
+        timestamp = statics.timestamp,
+        id = id,
+        metadataType = statics.metadataType,
+        metadata = data.getBytes,
+        payloads = getPayloads(xml)
+      ))
+    }
   }
 
 //   <marc:datafield ind2="0" ind1="4" tag="856">
