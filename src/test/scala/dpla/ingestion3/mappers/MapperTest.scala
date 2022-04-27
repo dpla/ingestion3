@@ -55,6 +55,16 @@ class MapperTest extends FlatSpec with BeforeAndAfter with IngestMessageTemplate
     assert(validatedEdmRights === normalizedRightsUri)
   }
 
+  it should "normalized a rights URI by removing /rdf from path" in {
+
+    val rightsUris = Seq("http://creativecommons.org/licenses/by/4.0/rdf").map(URI)
+    val normalizedRightsUri = Seq(URI("http://creativecommons.org/licenses/by/4.0/"))
+
+    val validatedEdmRights = mapTest.normalizeEdmRights(rightsUris, id)
+
+    assert(validatedEdmRights === normalizedRightsUri)
+  }
+
   it should "log a warning when an invalid rs.org value is provided and enforce is FALSE" in {
     msgCollector.deleteAll()
     val rightsString = "http://rightsstatements.org/"
