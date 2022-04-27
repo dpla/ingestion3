@@ -52,12 +52,16 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
               collector.add(normalizedEdmRightsWWWMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
             }
             // change /page/ to /vocab/
-            val path = if (uri.getPath.contains("/page/")) {
+            // remove /rdf
+            val path = if (uri.getPath.contains("/page/") | uri.getPath.contains("/rdf")) {
               collector.add(normalizedEdmRightsRsPageMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
-              uri.getPath.replaceFirst("/page/", "/vocab/")
-            } else {
+              uri.getPath.replaceFirst("/page/", "/vocab/").replace("/rdf","")
+            }
+            else {
               uri.getPath
             }
+
+
             // Strip `?` and all following
             if (uri.getQuery != null) {
               collector.add(normalizedEdmRightsRsPageMsg(providerId, "edmRights", value.toString, msg = None, enforce = false))
