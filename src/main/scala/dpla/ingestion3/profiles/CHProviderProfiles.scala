@@ -144,6 +144,14 @@ class InProfile extends XmlProfile {
 }
 
 /**
+ * Jewish Heritage Network
+ */
+class JhnProfile extends XmlProfile {
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
+  override def getMapping = new InMapping // FIXME Placeholder
+}
+
+/**
   * Internet Archive
   */
 class IaProfile extends JsonProfile {
