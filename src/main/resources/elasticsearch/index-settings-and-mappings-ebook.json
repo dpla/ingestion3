@@ -74,11 +74,21 @@
           "enabled" : false
         },
         "dataProvider" : {
-          "type" : "text",
-          "copy_to": "admin.contributingInstitution",
-          "fields" : {
-            "not_analyzed" : {
+          "properties" : {
+            "@id" : {
               "type" : "keyword"
+            },
+            "name" : {
+              "type" : "text",
+              "copy_to": "admin.contributingInstitution",
+              "fields" : {
+                "not_analyzed" : {
+                  "type" : "keyword"
+                }
+              }
+            },
+            "exactMatch": {
+              "type": "keyword"
             }
           }
         },
@@ -170,6 +180,9 @@
                   "type" : "keyword"
                 }
               }
+            },
+            "exactMatch": {
+              "type": "keyword"
             }
           }
         },
@@ -402,6 +415,15 @@
                       "type": "keyword"
                     }
                   }
+                }
+              }
+            },
+            "subtitle" : {
+              "type" : "text",
+              "analyzer": "nicer_search",
+              "fields": {
+                "not_analyzed": {
+                  "type": "keyword"
                 }
               }
             },
