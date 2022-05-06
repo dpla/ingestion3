@@ -2,8 +2,7 @@ package dpla.eleanor.entries
 
 import java.text.SimpleDateFormat
 import java.util.{Calendar, Date}
-
-import dpla.eleanor.Mapper
+import dpla.eleanor.{Index, Mapper}
 import dpla.eleanor.Schemata.HarvestData
 import dpla.eleanor.Schemata.Implicits.harvestDataEncoder
 import dpla.ingestion3.utils.{MasterDataset, Utils}
@@ -87,11 +86,9 @@ object MapAndIndexEntry {
 
     println(s"Mapped ${mapped.count()} records")
 
-    // FIXME
-    // Do not index data yet (schema change to OreAggregation)
-    // Index.execute(spark, mapped, esHost, esPort, esIndexName, shards)
+    Index.execute(spark, mapped, esHost, esPort, esIndexName, shards)
 
-//    println("Indexed mapped records")
+    println("Indexed mapped records")
 
     spark.stop()
 

@@ -1,9 +1,10 @@
 package dpla.eleanor
 import org.apache.spark.sql.{Encoder, Encoders}
-import java.sql.Timestamp
 
+import java.sql.Timestamp
 import dpla.eleanor.Schemata.MetadataType
-import dpla.ingestion3.model.OreAggregation
+import dpla.ingestion3.model.DplaMapData.ExactlyOne
+import dpla.ingestion3.model.{DplaSourceResource, EdmAgent, OreAggregation}
 
 object Schemata {
 
@@ -65,6 +66,8 @@ object Schemata {
                     payloads: Seq[Payload]
                     )
 
+
+  // FIXME remove, deprecated by MAP
   case class MappedData(
                    // dpla ebook id
                    id: String,
@@ -88,29 +91,6 @@ object Schemata {
                    summary: Seq[String] = Seq(),
                    genre: Seq[String] = Seq()
                    )
-
-
-  case class IndexData(
-                        // dpla ebook id
-                        id: String,
-
-                        sourceUri: String,
-                        itemUri: String,
-                        providerName: String,
-
-                        payloadUri: Seq[String],
-
-                        title: Seq[String] = Seq(),
-                        author: Seq[String] = Seq(),
-                        subtitle: Seq[String] = Seq(),
-                        language: Seq[String] = Seq(),
-                        medium: Seq[String] = Seq(),
-                        publisher: Seq[String] = Seq(),
-                        publicationDate: Seq[String] = Seq(),
-                        summary: Seq[String] = Seq(),
-                        genre: Seq[String] = Seq()
-                      )
-
 
   // Replaces MappedData
   case class Ebook(
