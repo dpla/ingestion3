@@ -128,7 +128,10 @@ package object model {
         ("@context" -> "http://dp.la/api/items/context") ~
         ("@id" -> record.dplaUri.toString) ~
         ("aggregatedCHO" -> "#sourceResource") ~
-        ("dataProvider" -> record.dataProvider.name) ~
+        ("dataProvider" ->
+          ("@id" -> record.dataProvider.uri.getOrElse(throw new RuntimeException("Invalid dataProvider URI")).toString) ~
+          ("name" -> record.dataProvider.name) ~
+          ("exactMatch" -> record.dataProvider.exactMatch.map(_.toString))) ~
         ("iiifManifest" -> record.iiifManifest.map(i => i.toString)) ~ // IIIF Manifest URI
         ("ingestDate" -> ingestDate) ~
         ("ingestType" -> "item") ~
@@ -142,11 +145,9 @@ package object model {
                                                         // expects JSON and all ORs in ingest1 were converted to JSON
                                                         // TODO We need to prettify this so the OR is readable in CQA
         ("provider" ->
-          ("@id" -> record.provider.uri
-                      .getOrElse(
-                        throw new RuntimeException("Invalid Provider URI")
-                      ).toString) ~
-          ("name" -> record.provider.name)) ~
+          ("@id" -> record.provider.uri.getOrElse(throw new RuntimeException("Invalid Provider URI")).toString) ~
+          ("name" -> record.provider.name) ~
+          ("exactMatch" -> record.provider.exactMatch.map(_.toString))) ~
         ("sourceResource" ->
           ("@id" ->
             (record.dplaUri.toString + "#SourceResource")) ~
