@@ -148,7 +148,7 @@ class InProfile extends XmlProfile {
  */
 class JhnProfile extends XmlProfile {
   override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
-  override def getMapping = new InMapping // FIXME Placeholder
+  override def getMapping = new JhnMapping
 }
 
 /**
