@@ -53,6 +53,18 @@ trait XmlExtractor extends Extractor[NodeSeq] {
   }
 
   /**
+   *
+   * @param xValue
+   * @return
+   */
+  def extractString(xValue: Node): Option[String] = {
+    xValue match {
+      case v if v.text.nonEmpty => Some(v.text)
+      case _ => None
+    }
+  }
+
+  /**
     * TODO swing back and deeper dive into NodeSeq vs JValue/JObject
     *
     * @param xValue
@@ -133,6 +145,17 @@ trait XmlExtractor extends Extractor[NodeSeq] {
     */
   def extractChildStrings(xValue: NodeSeq): Seq[String] = xValue.flatMap { node =>
     node.child.collect{ case Text(t) => t }.map(_.trim).filterNot(_.isEmpty)
+  }
+
+  /**
+   *
+   * @param node
+   * @param attribute
+   * @return
+   */
+  def getAttributeValue(node: Node, attribute: String): String = {
+    // <edm:rights rdf:resource="http://rightsstatements.org/vocab/InC/1.0/"/>
+    node.attributes.head.asAttrMap(attribute)
   }
 }
 
