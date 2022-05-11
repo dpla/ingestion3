@@ -2,7 +2,8 @@ package dpla.ingestion3.mappers.utils
 
 import org.json4s.JsonAST._
 
-import scala.xml.{Elem, Node, NodeSeq, Text}
+import scala.util.{Try, Success, Failure}
+import scala.xml.{Elem, MetaData, Node, NodeSeq, Text}
 
 
 /**
@@ -153,9 +154,16 @@ trait XmlExtractor extends Extractor[NodeSeq] {
    * @param attribute
    * @return
    */
-  def getAttributeValue(node: Node, attribute: String): String = {
-    // <edm:rights rdf:resource="http://rightsstatements.org/vocab/InC/1.0/"/>
-    node.attributes.head.asAttrMap(attribute)
+  def getAttributeValue(node: Node, attribute: String): Option[String] = {
+    node.attributes.headOption match {
+      case Some(metadata: MetaData) => Try {
+          metadata.asAttrMap(attribute)
+        } match {
+        case Success(s) => Some(s)
+        case Failure(_) => None
+      }
+      case _ => None
+    }
   }
 }
 
