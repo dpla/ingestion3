@@ -1,0 +1,66 @@
+<record xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+    <header>
+        <identifier>blavatnik_postcards:10131</identifier>
+        <datestamp>2022-03-28T19:59:27Z</datestamp>
+        <setSpec>Blavatnik_postcards</setSpec>
+    </header>
+    <metadata>
+        <rdf:RDF>
+            <edm:Agent rdf:about="https://api.blavatnikarchive.org/api/services/app/blavatnik_postcards:10131#agent_1">
+                <skos:prefLabel>Boim, Solomon</skos:prefLabel>
+                <skos:note>Artist</skos:note>
+            </edm:Agent>
+            <edm:Agent rdf:about="https://api.blavatnikarchive.org/api/services/app/blavatnik_postcards:10131#agent_2">
+                <skos:prefLabel>Averbukh, Zalman</skos:prefLabel>
+                <skos:note>Editor</skos:note>
+            </edm:Agent>
+            <skos:Concept rdf:about="https://api.blavatnikarchive.org/api/services/app/blavatnik_postcards:10131#subject_1">
+                <skos:prefLabel>New Year</skos:prefLabel>
+                <skos:altLabel>Holidays, festivals, celebrations >> New Year</skos:altLabel>
+                <skos:note>New Year, 1941 - 1942</skos:note>
+            </skos:Concept>
+            <skos:Concept rdf:about="https://api.blavatnikarchive.org/api/services/app/blavatnik_postcards:10131#subject_2">
+                <skos:prefLabel>Siege of Leningrad, 1941-1944</skos:prefLabel>
+                <skos:altLabel>
+                    World War II, battles and campaigns >> Siege of Leningrad, 1941-1944
+                </skos:altLabel>
+                <skos:note>Siege of Leningrad, 1941-1944, 1941 - 1942</skos:note>
+            </skos:Concept>
+            <edm:Place>
+                <prefLabel>prefLabel</prefLabel>
+                <lat>123.456N</lat>
+                <long>123.456W</long>
+            </edm:Place>
+            <edm:ProvidedCHO rdf:about="https://api.blavatnikarchive.org/api/services/app/blavatnik_postcards:10131">
+                <dc:contributor rdf:resource="https://api.blavatnikarchive.org/api/services/app/blavatnik_postcards:10131#agent_1"/>
+                <dc:contributor rdf:resource="https://api.blavatnikarchive.org/api/services/app/blavatnik_postcards:10131#agent_2"/>
+                <dc:date>1941 to 1942</dc:date>
+                <dc:description xml:lang="en" edm:wasGeneratedBy="SoftwareAgent" edm:confidenceLevel="1.0">description</dc:description>
+                <dc:format>Ephemera</dc:format>
+                <dc:identifier>identifier</dc:identifier>
+                <dc:language>English</dc:language>
+                <dc:format xml:lang="de" edm:wasGeneratedBy="SoftwareAgent" edm:confidenceLevel="0.86">Ephemera</dc:format>
+                <dc:subject rdf:resource="https://api.blavatnikarchive.org/api/services/app/blavatnik_postcards:10131#subject_1"/>
+                <dc:subject rdf:resource="https://api.blavatnikarchive.org/api/services/app/blavatnik_postcards:10131#subject_2"/>
+                <dc:title>
+                    "Grandfather Frost is bringing / New Year's presents for the enemy," 1941
+                </dc:title>
+                <dc:title xml:lang="en" edm:wasGeneratedBy="SoftwareAgent" edm:confidenceLevel="1.0">
+                    "Grandfather Frost is bringing / New Year's presents for the enemy," 1941
+                </dc:title>
+                <dc:type>Postcard</dc:type>
+                <dc:type xml:lang="pt" edm:wasGeneratedBy="SoftwareAgent" edm:confidenceLevel="1.0">Postcard</dc:type>
+                <dcterms:isPartOf xml:lang="en">Jewish History Tours</dcterms:isPartOf>
+                <edm:type>IMAGE</edm:type>
+            </edm:ProvidedCHO>
+            <ore:Aggregation rdf:about="https://api.blavatnikarchive.org/api/services/app/blavatnik_postcards:10131#agg">
+                <edm:aggregatedCHO rdf:resource="https://api.blavatnikarchive.org/api/services/app/blavatnik_postcards:10131"/>
+                <edm:dataProvider>The Blavatnik Archive</edm:dataProvider>
+                <edm:isShownAt rdf:resource="http://n2t.net/ark:/86084/b4p490"/>
+                <edm:isShownBy rdf:resource="https://cms-data.j-story.org/assets/4eebcfef-67c1-4708-b317-264dc695a27e"/>
+                <edm:provider>Judaica Europeana/Jewish Heritage Network</edm:provider>
+                <edm:rights rdf:resource="http://rightsstatements.org/vocab/InC/1.0/"/>
+            </ore:Aggregation>
+        </rdf:RDF>
+    </metadata>
+</record>
