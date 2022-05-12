@@ -97,11 +97,13 @@ class JhnMapping extends XmlMapping with XmlExtractor
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = {
     val placeConcepts = (metadataRoot(data) \ "Place").map(node => {
       val prefLabel = extractString(node \ "prefLabel")
-      val lat = extractString(node \ "lat")
-      val long = extractString(node \ "long")
+      val coordinates = (extractString(node \ "lat"), extractString(node \ "long")) match {
+        case (Some(lat: String), Some(long: String)) => Some(s"$lat,$long")
+        case _ => None
+      }
       DplaPlace(
         name = prefLabel,
-        coordinates = Some(s"$lat,$long")
+        coordinates = coordinates
       )
     })
 
@@ -122,12 +124,11 @@ class JhnMapping extends XmlMapping with XmlExtractor
     val concepts = (metadataRoot(data) \ "Concept").map(node => {
       val prefLabel = extractString(node \ "prefLabel")
       val note = extractString(node \ "note")
-      val altLabel = extractString(node \ "altLabel")
+      val altLabel = extractString(node \ "altLabel") // FIXME no good place to map this
       val uri = getAttributeValue(node, "rdf:about").toSeq.map(URI)
 
       SkosConcept(
-        concept = prefLabel,
-        providedLabel = altLabel,
+        providedLabel = prefLabel,
         note = note,
         exactMatch = uri
       )

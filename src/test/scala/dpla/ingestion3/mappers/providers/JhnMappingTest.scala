@@ -28,11 +28,6 @@ class JhnMappingTest extends FlatSpec with BeforeAndAfter {
       assert(extractor.edmRights(xml) == expected)
     }
 
-  //  it should "extract the correct intermediateProvider" in {
-  //    val expected = Some("IUPUI (Campus). University Library").map(nameOnlyAgent)
-  //    assert(extractor.intermediateProvider(xml) == expected)
-  //  }
-
     it should "extract the correct isShownAt" in {
       val expected = Seq("http://n2t.net/ark:/86084/b4p490")
         .map(stringOnlyWebResource)
@@ -63,80 +58,59 @@ class JhnMappingTest extends FlatSpec with BeforeAndAfter {
       val expected = Seq("description")
       assert(extractor.description(xml) == expected)
     }
-  //
-  //  it should "extract the correct extent" in {
-  //    val expected = Seq("1 photograph : color")
-  //    assert(extractor.extent(xml) == expected)
-  //  }
-  //
+
     it should "extract the correct format" in {
       val expected = Seq("Ephemera", "Ephemera")
       assert(extractor.format(xml) == expected)
     }
-  //
-  //  it should "extract the correct identifier" in {
-  //    val expected = Seq("http://palni.contentdm.oclc.org/cdm/ref/collection/herbarium4/id/22274")
-  //    assert(extractor.identifier(xml) == expected)
-  //  }
-  //
-  //  it should "extract the correct language" in {
-  //    val expected = Seq("English", "Czech").map(nameOnlyConcept)
-  //    assert(extractor.language(xml) == expected)
-  //  }
-  //
-  //  it should "extract the correct place" in {
-  //    val expected = Seq("Muncie", "Delaware County", "Indiana", "United States", "North and Central America").map(nameOnlyPlace)
-  //    assert(extractor.place(xml) == expected)
-  //  }
-  //
-  //  it should "extract the correct rights" in {
-  //    val expected = Seq("Manchester College is providing access to these materials for educational and research purposes.")
-  //    assert(extractor.rights(xml) == expected)
-  //  }
-  //
-  //  it should "filter out rights beginning with 'http'" in {
-  //    val xml =
-  //      <record>
-  //        <metadata>
-  //          <oai_qdc:qualifieddc>
-  //            <dcterms:accessRights>http://rightsstatements.org/vocab/InC/1.0/</dcterms:accessRights>
-  //          </oai_qdc:qualifieddc>
-  //        </metadata>
-  //      </record>
-  //
-  //    val expected = Seq()
-  //    assert(expected === extractor.rights(Document(xml)))
-  //  }
-  //
-  //  it should "extract the correct subject" in {
-  //    val expected = Seq("Civil War, 1861-1865", "United States History", "Diaries").map(nameOnlyConcept)
-  //    assert(extractor.subject(xml) == expected)
-  //  }
-  //
-  //  it should "extract the correct temporal" in {
-  //    val expected = Seq("2000s (2000-2009)", "Twenty-first century, C. E.").map(stringOnlyTimeSpan)
-  //    assert(extractor.temporal(xml) == expected)
-  //  }
-  //
-  //  it should "extract the correct title" in {
-  //    val expected = Seq("Heuchera villosa")
-  //    assert(extractor.title(xml) == expected)
-  //  }
-  //
-  //  it should "extract the correct type" in {
-  //    val expected = Seq("Sound", "Text")
-  //    assert(extractor.`type`(xml) == expected)
-  //  }
-  //
-  //  it should "extract the correct publisher" in {
-  //    val expected = Seq("Lewis G. Hall, Jr.", "Dexter Press").map(nameOnlyAgent)
-  //    assert(extractor.publisher(xml) == expected)
-  //  }
-  //
-  //  it should "extract the correct preview" in {
-  //    val expected = Seq("http://palni.contentdm.oclc.org/utils/getthumbnail/collection/herbarium4/id/22274")
-  //      .map(stringOnlyWebResource)
-  //    assert(extractor.preview(xml) == expected)
-  //  }
-//
+
+    it should "extract the correct identifier" in {
+      val expected = Seq("identifier")
+      assert(extractor.identifier(xml) == expected)
+    }
+
+    it should "extract the correct language" in {
+      val expected = Seq("English").map(nameOnlyConcept)
+      assert(extractor.language(xml) == expected)
+    }
+
+    it should "extract the correct place" in {
+      val expected = Seq(
+        DplaPlace(
+          name = Some("prefLabel"),
+          coordinates = Some("123.456N,123.456W")
+        )
+      )
+      assert(extractor.place(xml) == expected)
+    }
+
+          <skos:Concept rdf:about="https://api.blavatnikarchive.org/api/services/app/blavatnik_postcards:10131#subject_1">
+                <skos:prefLabel>New Year</skos:prefLabel>
+                <skos:altLabel>Holidays, festivals, celebrations >> New Year</skos:altLabel>
+                <skos:note>New Year, 1941 - 1942</skos:note>
+            </skos:Concept>
+            <skos:Concept rdf:about="https://api.blavatnikarchive.org/api/services/app/blavatnik_postcards:10131#subject_2">
+                <skos:prefLabel>Siege of Leningrad, 1941-1944</skos:prefLabel>
+                <skos:altLabel>
+                    World War II, battles and campaigns >> Siege of Leningrad, 1941-1944
+                </skos:altLabel>
+                <skos:note>Siege of Leningrad, 1941-1944, 1941 - 1942</skos:note>
+            </skos:Concept>
+
+    it should "extract the correct subject from skos:Concept" in {
+      val expected = Seq(
+        SkosConcept(
+          providedLabel = Some("New Year"),
+          note = Some("New Year, 1941 - 1942"),
+          exactMatch = Seq(URI("https://api.blavatnikarchive.org/api/services/app/blavatnik_postcards:10131#subject_1"))
+        ),
+        SkosConcept(
+          providedLabel = Some("Siege of Leningrad, 1941-1944"),
+          note = Some("Siege of Leningrad, 1941-1944, 1941 - 1942"),
+          exactMatch = Seq(URI("https://api.blavatnikarchive.org/api/services/app/blavatnik_postcards:10131#subject_2"))
+        )
+      )
+      assert(extractor.subject(xml) == expected)
+    }
+
 }
