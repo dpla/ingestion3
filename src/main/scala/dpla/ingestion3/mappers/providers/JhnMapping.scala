@@ -1,7 +1,6 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.DigitalSurrogateBlockList
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
@@ -34,10 +33,6 @@ class JhnMapping extends XmlMapping with XmlExtractor
       .flatMap(node => getAttributeValue(node, s"rdf:resource"))
       .map(URI)
 
-  //  override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
-  //    extractString(data \ "metadata" \ "qualifieddc" \ "mediator")
-  //      .map(nameOnlyAgent)
-
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     (metadataRoot(data) \ "Aggregation" \ "isShownAt")
       .flatMap(node => getAttributeValue(node, "rdf:resource"))
@@ -46,6 +41,9 @@ class JhnMapping extends XmlMapping with XmlExtractor
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
   // SourceResource
+  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] = 
+    extractStrings(metadataRoot(data) \ "ProvidedCHO" \ "isPartOf").map(nameOnlyCollection)
+
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     val agents = (metadataRoot(data) \ "Agent").map(agent => {
       // TODO rdaGr2:dateOfBirth and rdaGr2:dateOfDeath...?
@@ -154,7 +152,7 @@ class JhnMapping extends XmlMapping with XmlExtractor
   override def sidecar(data: Document[NodeSeq]): JValue =
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
 
-  def agent = EdmAgent(
+  private def agent = EdmAgent(
     name = Some("Jewish Heritage Network"),
     uri = Some(URI("http://dp.la/api/contributor/jhn"))
   )
