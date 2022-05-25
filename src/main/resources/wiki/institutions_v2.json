@@ -7954,7 +7954,7 @@
 				"Wikidata": "Q1797768"
 			},
 			"MidPointe Library System": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q69487667"
 			},
 			"Ohio History Connection": {
@@ -7962,7 +7962,7 @@
 				"Wikidata": "Q3349886"
 			},
 			"Ohio University Libraries": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q58243476"
 			},
 			"Pontifical College Josephinum": {
