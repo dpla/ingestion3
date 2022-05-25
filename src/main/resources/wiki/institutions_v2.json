@@ -5251,7 +5251,7 @@
 			},
 			"Denver Public Library": {
 				"upload": true,
-				"Wikidata": "Q69470198"
+				"Wikidata": "Q5259775"
 			},
 			"Eagle Valley Library District": {
 				"upload": false,
@@ -6160,7 +6160,7 @@
 				"Wikidata": "Q7300541"
 			},
 			"Science History Institute": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q5090408"
 			},
 			"Scranton Public Library": {
@@ -7954,7 +7954,7 @@
 				"Wikidata": "Q1797768"
 			},
 			"MidPointe Library System": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q69487667"
 			},
 			"Ohio History Connection": {
@@ -7962,7 +7962,7 @@
 				"Wikidata": "Q3349886"
 			},
 			"Ohio University Libraries": {
-				"upload": false,
+				"upload": true,
 				"Wikidata": "Q58243476"
 			},
 			"Pontifical College Josephinum": {
