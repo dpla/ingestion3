@@ -26,6 +26,23 @@ trait Extractor[T] {
   */
 trait XmlExtractor extends Extractor[NodeSeq] {
 
+  // list of common xml namespaces
+  protected val dc = "http://purl.org/dc/elements/1.1/"
+  protected val dcterms = "http://purl.org/dc/terms/"
+  protected val edm = "http://www.europeana.eu/schemas/edm/"
+  protected val foaf = "http://xmlns.com/foaf/0.1/"
+  protected val mods = "http://www.loc.gov/mods/v3"
+  protected val oclcdc = "http://worldcat.org/xmlschemas/oclcdc-1.0/"
+  protected val oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+  protected val oai_pmh="http://www.openarchives.org/OAI/2.0/"
+  protected val owl = "http://www.w3.org/2002/07/owl#"
+  protected val qdc="http://worldcat.org/xmlschemas/qdc-1.0/"
+  protected val rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  protected val rdfa = "http://www.w3.org/ns/rdfa#"
+  protected val skos = "http://www.w3.org/2004/02/skos/core#"
+  protected val xsf = "http://www.w3.org/2001/XMLSchema#"
+  protected val xsi = "http://www.w3.org/2001/XMLSchema-instance"
+
   /**
     *
     * @param fieldName
