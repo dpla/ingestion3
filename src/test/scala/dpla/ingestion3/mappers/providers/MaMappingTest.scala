@@ -91,7 +91,7 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
          </metadata>
       </record>)
 
-    val expected = Seq("Massachusetts Metropolitan Water and Sewerage Board", "Tryon, Oliver, 1883-1922")
+    val expected = Seq("Massachusetts. Metropolitan Water and Sewerage Board", "Tryon, Oliver, 1883-1922")
       .map(nameOnlyAgent)
 
     assert(extractor.creator(xmlNameParts) === expected)
