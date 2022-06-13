@@ -84,7 +84,7 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     names.map(node => {
       val name = extractStrings((node \ "namePart").filter(p => p.attributes.isEmpty)).mkString(". ")
       val date = extractString((node \ "namePart").filter(p => filterAttribute(p, "type", "date")))
-      // val uri = extractStrings() FIXME 
+      // val uri = extractStrings() FIXME when jhn is merged in with attribute namespace mapping functionality
 
       (name.isEmpty, date) match {
         case(false, Some(d)) => s"$name, $d"
