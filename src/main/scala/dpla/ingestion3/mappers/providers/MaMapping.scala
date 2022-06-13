@@ -163,6 +163,7 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       val ids = (getModsRoot(data) \ "identifier")
         .flatMap(node => getByAttribute(node, "type", t))
         .flatMap(extractString(_))
+        .map(_.trim)
 
       if (ids.nonEmpty) {
         Some(s"$label: ${ids.mkString(", ")}")

@@ -254,6 +254,28 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.identifier(xml) === expected)
 
   }
+  it should "extract identifiers" in {
+    val xml: Document[NodeSeq] = Document(
+      <record>
+        <metadata>
+          <mods:mods>
+            <mods:identifier type="local-accession">
+              Z2016-20 Sarah (Sallie) Moore Field Collection
+            </mods:identifier>
+            <mods:identifier type="local-other">
+              19030509
+            </mods:identifier>
+          </mods:mods>
+        </metadata>
+      </record>
+    )
+
+    val expected = Seq("Local accession: Z2016-20 Sarah (Sallie) Moore Field Collection",
+    "Local other: 19030509")
+    assert(extractor.identifier(xml) === expected)
+
+  }
+
 
   it should "extract the correct multiple identifiers" in {
     val xml: Document[NodeSeq] = Document(
