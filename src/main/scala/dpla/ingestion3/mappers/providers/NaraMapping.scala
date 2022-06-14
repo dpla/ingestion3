@@ -252,14 +252,14 @@ class NaraMapping extends XmlMapping with XmlExtractor {
       ps <- data \\ "parentSeries" \ "title"
     } yield ps.text
 
-    val parentFileSeries = for {
-      pfs <- data \\ "parentFileSeries" \ "title"
+    val parentFileUnit = for {
+      pfu <- data \\ "parentFileUnit" \ "title"
     } yield pfs.text
 
     if (parentRecordGroupIds.nonEmpty)
-      parentRecordGroupIds ++ parentSeries ++ parentFileSeries
+      parentRecordGroupIds ++ parentSeries ++ parentFileUnit
     else
-      parentCollectionIds ++ parentSeries ++ parentFileSeries
+      parentCollectionIds ++ parentSeries ++ parentFileUnit
   }
 
   private def extractContributor(data: NodeSeq): Seq[String] = {
