@@ -44,7 +44,7 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "extract collections" in {
     val collections = extractor.collection(xml)
-    assert(collections === Seq("Records of the Forest Service").map(nameOnlyCollection))
+    assert(collections === Seq("Records of the Forest Service", "Historic Photographs").map(nameOnlyCollection))
   }
 
   it should "extract contributors" in {
