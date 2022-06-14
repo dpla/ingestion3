@@ -10,6 +10,7 @@ import dpla.ingestion3.utils.Utils
 import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
+import org.json4s.jackson.JsonMethods.parse
 
 import scala.util.{Success, Try}
 
@@ -46,8 +47,10 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
       .map(URI)
 
   override def iiifManifest(data: Document[JValue]): ZeroToMany[URI] = {
-    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "jsonData" \ "response" \ "document" \\ "iiif_manifest_url_ssi")
-      .map(path => URI(s"$iiifManifestBase$path"))
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "jsonData" \ "response" \ "document" \ "iiif_manifest_ss")
+      .map(parse(_))
+      .flatMap(json => extractString(json \ "@id"))
+      .map(URI)
   }
 
   override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
