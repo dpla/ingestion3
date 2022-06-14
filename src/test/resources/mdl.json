@@ -148,6 +148,96 @@
             ]
           }
         ]
+      },
+      "jsonData": {
+        "response": {
+          "document": {
+            "id": "p16022coll518:690",
+            "dat_ssi": "1970?",
+            "dat_ssim": [
+              "1970"
+            ],
+            "dat_tesi": "1970?",
+            "date_ssi": "7/15/2021 11:26",
+            "find_ssi": "736.jp2",
+            "type_ssi": "Still Image",
+            "city_ssim": [
+              "Franklin"
+            ],
+            "state_ssi": "Minnesota",
+            "timestamp": "2022-02-26T06:02:54.828Z",
+            "title_ssi": "Woman laying in a chair in the Rognlie library, Franklin, Minnesota",
+            "type_tesi": "Still Image",
+            "digspa_ssi": "57046844",
+            "digspb_ssi": "24",
+            "digspc_ssi": "1200",
+            "digspd_ssi": "none",
+            "digspe_ssi": "image/tiff",
+            "digspf_ssi": "4373",
+            "digspg_ssi": "4346",
+            "digsph_ssi": "Epson 11000XL scanner",
+            "digspi_ssi": "Adobe Photoshop CS",
+            "digspj_ssi": "Windows XP",
+            "digspk_ssi": "51327610f945ee56e8745ae183ae576d",
+            "geonam_ssi": "https://sws.geonames.org/5027331/",
+            "public_ssi": "2090",
+            "title_tesi": "Woman laying in a chair in the Rognlie library, Franklin, Minnesota",
+            "topic_ssim": [
+              "Immigration and Ethnicity"
+            ],
+            "country_ssi": "United States",
+            "county_ssim": [
+              "Renville"
+            ],
+            "format_tesi": "image/jp2",
+            "oai_set_ssi": "p16022coll518||Norwegian-American Historical Association||The Norwegian-American Historical Association (NAHA), a national center for the collection and preservation of historical material relating to Norwegian-American life, manages North America’s largest archival collection of Norwegian-American materials. Every state and province is represented, with particular strength in the Midwest, where the highest percentage of Norwegians settled. NAHA contributed to Minnesota Reflection images from the Norse-American Centennial papers and Carl O. Pedersen papers that document the 100 year anniversary of Norwegian Immigration to the United States.  \n",
+            "project_ssi": "Minnesota Reflections 2020-2021;",
+            "setspec_ssi": "p16022coll518",
+            "cdmhasocr_is": 0,
+            "keyword_ssim": [
+              "Interior Decoration",
+              "Immigration and Ethnicity",
+              "Interior Architecture",
+              "People"
+            ],
+            "keyword_tesi": "Interior Decoration; Immigration and Ethnicity; Interior Architecture; People",
+            "subject_ssim": [
+              "People"
+            ],
+            "dmcreated_ssi": "2021-11-05",
+            "publisher_ssi": "University of Minnesota",
+            "cdmprintpdf_is": 0,
+            "description_ts": "An unidentified woman with her feet in the air at the library on the Rognlie farm.",
+            "dimensions_ssi": "9 x 9",
+            "dmmodified_ssi": "2021-11-05",
+            "identifier_ssi": "umn416019",
+            "rights_uri_ssi": "http://rightsstatements.org/vocab/UND/1.0/",
+            "cdmfilesize_ssi": "1853054",
+            "record_type_ssi": "primary",
+            "iiif_manifest_ss": "{\"@context\":\"http://iiif.io/api/presentation/2/context.json\",\"@type\":\"sc:Manifest\",\"@id\":\"https://cdm16022.contentdm.oclc.org/iiif/p16022coll518:690/manifest.json\",\"label\":\"Woman laying in a chair in the Rognlie library, Franklin, Minnesota \",\"metadata\":[{\"label\":\"City or Township\",\"value\":\"Franklin\"},{\"label\":\"Contact Information\",\"value\":\"Norwegian-American Historical Association, 1510 St. Olaf Avenue, Northfield, Minnesota 55057 www.naha.stolaf.edu \"},{\"label\":\"Contributing Organization\",\"value\":\"Norwegian-American Historical Association \"},{\"label\":\"Country\",\"value\":\"United States\"},{\"label\":\"County\",\"value\":\"Renville\"},{\"label\":\"Date Created\",\"value\":\"1970?\"},{\"label\":\"Description\",\"value\":\"An unidentified woman with her feet in the air at the library on the Rognlie farm.\"},{\"label\":\"Dimensions\",\"value\":\"9 x 9\"},{\"label\":\"Fiscal Sponsor\",\"value\":\"Funding provided to the Minnesota Digital Library through the Minnesota Arts and Cultural Heritage Fund, a component of the Minnesota Clean Water, Land and Legacy constitutional amendment, ratified by Minnesota voters in 2008.\"},{\"label\":\"Minnesota Reflections Topic\",\"value\":\"Immigration and Ethnicity\"},{\"label\":\"GeoNames URI\",\"value\":\"https://sws.geonames.org/5027331/\"},{\"label\":\"Local Identifier\",\"value\":\"naha_rognlie_00083\"},{\"label\":\"Collection Name\",\"value\":\"Rev. Parelius H. Rognlie papers\"},{\"label\":\"Physical Format\",\"value\":\"Black-and-white photographs\"},{\"label\":\"Expected Public Domain Entry Year\",\"value\":\"2090\"},{\"label\":\"MDL Identifier\",\"value\":\"umn416019\"},{\"label\":\"Rights Status\",\"value\":\"Copyright Undetermined\"},{\"label\":\"Rights Statement\",\"value\":\"The copyright and related rights status of this Item has been reviewed by the organization that has made the Item available, but the organization was unable to make a conclusive determination as to the copyright status of the Item. Please refer to the organization that has made the Item available for more information. You are free to use this Item in any way that is permitted by the copyright and related rights legislation that applies to your use.\"},{\"label\":\"Use Determination URI\",\"value\":\"http://rightsstatements.org/vocab/UND/1.0/\"},{\"label\":\"Library of Congress Subject Headings\",\"value\":\"Interior architecture; Interior decoration;\"},{\"label\":\"State or Province\",\"value\":\"Minnesota\"},{\"label\":\"Keywords\",\"value\":\"People\"},{\"label\":\"Title\",\"value\":\"Woman laying in a chair in the Rognlie library, Franklin, Minnesota \"},{\"label\":\"Type\",\"value\":\"Still Image\"},{\"label\":\"Repository\",\"value\":\"Minnesota Digital Library\"},{\"label\":\"Source\",\"value\":\"<span>From: <a href=\\\"https://cdm16022.contentdm.oclc.org/digital/collection/p16022coll518/id/690\\\">Woman laying in a chair in the Rognlie library, Franklin, Minnesota </a></span>\"}],\"attribution\":[\"\",\"http://rightsstatements.org/vocab/UND/1.0/\"],\"seeAlso\":{\"@id\":\"https://cdm16022.contentdm.oclc.org/oai/oai.php?verb=GetRecord&identifier=oai:cdm16022.contentdm.oclc.org:p16022coll518/690&metadataPrefix=oai_qdc\",\"format\":\"application/xml\",\"profile\":\"http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd\"},\"within\":\"https://cdm16022.contentdm.oclc.org/iiif/p16022coll518/manifest.json\",\"sequences\":[{\"@id\":\"https://cdm16022.contentdm.oclc.org/iiif/p16022coll518:690/sequence/s0\",\"@type\":\"sc:Sequence\",\"label\":\"Woman laying in a chair in the Rognlie library, Franklin, Minnesota \",\"canvases\":[{\"@id\":\"https://cdm16022.contentdm.oclc.org/iiif/p16022coll518:690/canvas/c0\",\"@type\":\"sc:Canvas\",\"label\":\"Woman laying in a chair in the Rognlie library, Franklin, Minnesota \",\"images\":[{\"@id\":\"https://cdm16022.contentdm.oclc.org/iiif/p16022coll518:690/annotation/a0\",\"@type\":\"oa:Annotation\",\"motivation\":\"sc:painting\",\"resource\":{\"@id\":\"https://cdm16022.contentdm.oclc.org/iiif/2/p16022coll518:690/full/full/0/default.jpg\",\"@type\":\"dctypes:Image\",\"service\":{\"@context\":\"http://iiif.io/api/image/2/context.json\",\"@id\":\"https://cdm16022.contentdm.oclc.org/iiif/2/p16022coll518:690\",\"width\":4373,\"height\":4346,\"tiles\":[{\"width\":4373,\"scaleFactors\":[1,2,4,8,16]}],\"profile\":\"http://iiif.io/api/image/2/level1.json\",\"protocol\":\"http://iiif.io/api/image\"},\"format\":\"image/jpeg\",\"width\":4373,\"height\":4346},\"on\":\"https://cdm16022.contentdm.oclc.org/iiif/p16022coll518:690/canvas/c0\"}],\"width\":4373,\"height\":4346}]}],\"structures\":[{\"@id\":\"https://cdm16022.contentdm.oclc.org/iiif/p16022coll518:690/range/r0\",\"@type\":\"sc:Range\",\"label\":\"Woman laying in a chair in the Rognlie library, Franklin, Minnesota \",\"ranges\":[],\"canvases\":[\"https://cdm16022.contentdm.oclc.org/iiif/p16022coll518:690/canvas/c0\"]}],\"service\":{\"@context\":\"http://iiif.io/api/search/1/context.json\",\"@id\":\"/iiif/p16022coll518:690/search\",\"profile\":\"http://iiif.io/api/search/1/search\",\"service\":{\"@id\":\"/iiif/p16022coll518:690/autocomplete\",\"profile\":\"http://iiif.io/api/search/1/autocomplete\"}}}",
+            "cdmisnewspaper_is": 0,
+            "rights_status_ssi": "Copyright Undetermined",
+            "fiscal_sponsor_ssi": "Funding provided to the Minnesota Digital Library through the Minnesota Arts and Cultural Heritage Fund, a component of the Minnesota Clean Water, Land and Legacy constitutional amendment, ratified by Minnesota voters in 2008.",
+            "collection_name_ssi": "Norwegian-American Historical Association",
+            "formal_subject_ssim": [
+              "Interior Architecture",
+              "Interior Decoration"
+            ],
+            "physical_format_ssi": "Black-and-white photographs",
+            "local_identifier_ssi": "naha_rognlie_00083",
+            "physical_format_tesi": "Black-and-white photographs",
+            "restriction_code_ssi": "1",
+            "rights_statement_ssi": "The copyright and related rights status of this Item has been reviewed by the organization that has made the Item available, but the organization was unable to make a conclusive determination as to the copyright status of the Item. Please refer to the organization that has made the Item available for more information. You are free to use this Item in any way that is permitted by the copyright and related rights legislation that applies to your use.",
+            "borealis_fragment_ssi": "/image/0",
+            "iiif_manifest_url_ssi": "/iiif/p16022coll518:690/manifest.json",
+            "contact_information_ssi": "Norwegian-American Historical Association, 1510 St. Olaf Avenue, Northfield, Minnesota 55057 www.naha.stolaf.edu",
+            "cdmfilesizeformatted_ssi": "1.77 MB",
+            "parent_collection_name_ssi": "Rev. Parelius H. Rognlie papers",
+            "collection_description_tesi": "The Norwegian-American Historical Association (NAHA), a national center for the collection and preservation of historical material relating to Norwegian-American life, manages North America’s largest archival collection of Norwegian-American materials. Every state and province is represented, with particular strength in the Midwest, where the highest percentage of Norwegians settled. NAHA contributed to Minnesota Reflection images from the Norse-American Centennial papers and Carl O. Pedersen papers that document the 100 year anniversary of Norwegian Immigration to the United States.  \n",
+            "contributing_organization_ssi": "Norwegian American Historical Association",
+            "contributing_organization_tesi": "Norwegian-American Historical Association"
+          }
+        }
       }
     }
   }

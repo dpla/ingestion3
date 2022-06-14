@@ -15,7 +15,8 @@ import scala.util.{Success, Try}
 
 class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
 
-  val formatBlockList: Set[String] = ExtentIdentificationList.termList
+  protected lazy val iiifManifestBase = "https://cdm16022.contentdm.oclc.org"
+  protected lazy val formatBlockList: Set[String] = ExtentIdentificationList.termList
 
   override val enforceDuplicateIds: Boolean = false
 
@@ -43,6 +44,11 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
           case _ => false
         })
       .map(URI)
+
+  override def iiifManifest(data: Document[JValue]): ZeroToMany[URI] = {
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "jsonData" \ "response" \ "document" \\ "iiif_manifest_url_ssi")
+      .map(path => URI(s"$iiifManifestBase$path"))
+  }
 
   override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
     extractString(unwrap(data) \ "attributes" \ "metadata" \ "intermediateProvider").map(nameOnlyAgent)
