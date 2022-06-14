@@ -52,9 +52,48 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
     assert(contributors === Seq("Department of the Navy. Fourteenth Naval District. Naval Air Station, Pearl Harbor (Hawaii). ca. 1940-9/1947").map(nameOnlyAgent))
   }
 
-  it should "extract creators" in {
+  it should "extract the most recent creator" in {
+    val expected = Seq("Department of Agriculture. Forest Service. Region 9 (Eastern Region). 1965-")
+      .map(nameOnlyAgent)
     val creators = extractor.creator(xml)
-    assert(creators === Seq("Department of Agriculture. Forest Service. Region 9 (Eastern Region). 1965-").map(nameOnlyAgent))
+    assert(creators === expected)
+  }
+
+  it should "extract both 'most recent' creators" in {
+    val creatorsXml = <item xmlns="http://description.das.nara.gov/">
+       <parentFileUnit>
+          <naId>299716</naId>
+          <title>Official Military Personnel File of Gregory Boyington</title>
+          <parentSeries>
+             <creatingOrganizationArray xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                <creatingOrganization>
+                   <creator>
+                      <naId>10467995</naId>
+                      <termName>Department of Defense. Department of the Navy. U.S. Marine Corps. Personnel Management Division. ca. 1947-</termName>
+                   </creator>
+                   <creatorType>
+                      <naId>10031465</naId>
+                      <termName>Most Recent</termName>
+                   </creatorType>
+                </creatingOrganization>
+                <creatingOrganization>
+                   <creator>
+                      <naId>10476968</naId>
+                      <termName>Department of the Navy. U.S. Marine Corps. 1834-9/18/1947</termName>
+                   </creator>
+                   <creatorType>
+                      <naId>10031466</naId>
+                      <termName>Most Recent</termName>
+                   </creatorType>
+                </creatingOrganization>
+             </creatingOrganizationArray>
+          </parentSeries>
+       </parentFileUnit>
+    </item>
+    val expected = Seq("Department of Defense. Department of the Navy. U.S. Marine Corps. Personnel Management Division. ca. 1947-", "Department of the Navy. U.S. Marine Corps. 1834-9/18/1947")
+      .map(nameOnlyAgent)
+    val creators = extractor.creator(Document(creatorsXml))
+    assert(creators === expected)
   }
 
   //todo better coverage of date possibilities?
