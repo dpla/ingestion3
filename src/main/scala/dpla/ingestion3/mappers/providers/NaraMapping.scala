@@ -254,7 +254,7 @@ class NaraMapping extends XmlMapping with XmlExtractor {
 
     val parentFileUnit = for {
       pfu <- data \\ "parentFileUnit" \ "title"
-    } yield pfs.text
+    } yield pfu.text
 
     if (parentRecordGroupIds.nonEmpty)
       parentRecordGroupIds ++ parentSeries ++ parentFileUnit
