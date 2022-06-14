@@ -15,10 +15,7 @@ import org.json4s.jackson.JsonMethods.parse
 import scala.util.{Success, Try}
 
 class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
-
-  protected lazy val iiifManifestBase = "https://cdm16022.contentdm.oclc.org"
   protected lazy val formatBlockList: Set[String] = ExtentIdentificationList.termList
-
   override val enforceDuplicateIds: Boolean = false
 
   // ID minting functions
