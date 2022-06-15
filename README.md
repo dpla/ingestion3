@@ -21,9 +21,13 @@ This project is an ETL system for cultural heritage metadata. The system has fiv
 * [JSON-L](#jsonl)
 * [Wikimedia](#wikimedia)
     * [Eligibility](#eligibility)
-    * [Metadata](#metadata)
+      * [Institutional](#institutional)
+      * [Standardized rights](#standardized-rights)
+      * [Media assets](#media-assets)
+      * [Data provider URI](#data-provider-uri)
+    * [Wikimedia metadata](#wikimedia-metadata)
     * [Media](#media)
-        * [ContentDM and IIIF Manifests](#contentdm-and-iiif-manifests)
+        * [CONTENTdm and IIIF Manifests](#contentdm-and-iiif-manifests)
 
 
 
@@ -430,12 +434,12 @@ Records which meet eligibility requirements can have their full-frame media asse
 
 * [Eligibility](#eligibility)
   * [Institutional](#institutional)
-  * [Standardized Rights](#standardized-rights)
+  * [Standardized rights](#standardized-rights)
   * [Media assets](#media-assets)
-  * [Data Provider URI](#data-provider-uri)
+  * [Data provider URI](#data-provider-uri)
 * [Wikimedia metadata](#wikimedia-metadata)
 * [Media](#media)
-    * [ContentDM and IIIF Manifests](#contentdm-and-iiif-manifests)
+    * [CONTENTdm and IIIF Manifests](#contentdm-and-iiif-manifests)
 
 Records which meet eligibility requirements can have their fullframe media assets and some associated metadta uploaded to Wikimedia.
 
@@ -473,7 +477,7 @@ A hub can have defined `"upload": false` and specific `dataProviders` (defined a
 
 In addition to how institutional eligibility is defined in `institutions_v2.json` records must meet three minimum metadata requirements to be eligible for upload.
 
-### Standardized Rights
+### Standardized rights
 The record must have an `edmRights` URI and it must be one of these values. All ports and versions of these values are valid.
 ```text
 http://rightsstatements.org/vocab/NoC-US/
@@ -486,11 +490,11 @@ http://creativecommons.org/licenses/by-sa/
 ### Media assets
 The record must have either a `iiifManifest` or a `mediaMaster` URL. This value is distinct from the `object` mapping which is a single value and expected to a low resolution thumbnail (150px). The URLs for `mediaMaster` should point to the highest resolution possible and can be more than one URL.
 
-### Data Provider URI
+### Data provider URI
 The `dataProvider` name must be reconciled to a WikiData URI. This is an enrichment that DPLA performs on these values (see [dataProvider enrichments](#dataprovider))
 
 
-## Wikimedia Metadata
+## Wikimedia metadata
 For each image file that is uploaded a corresponding block of metadata is also attached.
 
 * Creator (multiple values joined by a `;`)
@@ -553,16 +557,16 @@ Key points to note:
 * There is character substitution for `[]/{}`
 * If there are multiple assets associated with a metadata record we add a `page (n)` to the title.
 
-### ContentDM and IIIF Manifests
+### CONTENTdm and IIIF Manifests
 
 ![Millhouse the magician](https://media.giphy.com/media/ieREaX3VTHsqc/giphy.gif)
 
-When validating whether a record meets the minimum requirements, and neither a IIIF manifest nor media master value is provided, we will attempt to programmatically generate a IIIF manifest url if the isShownAt value looks like a ContentDM URL.
+When validating whether a record meets the minimum requirements, and neither a IIIF manifest nor media master value is provided, we will attempt to programmatically generate a IIIF manifest url if the isShownAt value looks like a CONTENTdm URL.
 
 ```Java
 // If there is neither a IIIF manifest or media master mapped from the original  
 // record then try to construct a IIIF manifest from the isShownAt value.
-// This should only work for ContentDM URLs.
+// This should only work for CONTENTdm URLs.
 val dplaMapRecord =
   if(dplaMapData.iiifManifest.isEmpty && dplaMapData.mediaMaster.isEmpty)
     dplaMapData.copy(iiifManifest = buildIIIFFromUrl(dplaMapData.isShownAt))
