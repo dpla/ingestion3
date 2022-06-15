@@ -317,7 +317,7 @@ These normalizations are run over all instances of the specified class
 Enrichments modify existing data and improve its quality to enhance its functionality
 
 ### dataProvider
-One requirement of the Wikimedia project is that data provider values must be mapped to a Wikidata URI. DPLA maintains a lookup table of data provider names and Wikidata IDs (see [institutions_v2.json](https://github.com/dpla/ingestion3/blob/develop/src/main/resources/wiki/institutions_v2.json). The enrichment adds the Wiki URI to the `edmAgent.exactMatch` property. Without a Wikidata URI, a record cannot be uploaded to Wikimedia.
+One requirement of the Wikimedia project is that data provider values must be mapped to a Wikidata URI. DPLA maintains a lookup table of data provider names and Wikidata IDs (see [institutions_v2.json](https://github.com/dpla/ingestion3/blob/develop/src/main/resources/wiki/institutions_v2.json). The enrichment adds the Wikidata URI to the `edmAgent.exactMatch` property. Without a Wikidata URI, a record cannot be uploaded to Wikimedia.
 
 This enrichment is still under development and subject to change.
 
@@ -436,7 +436,7 @@ Records which meet eligibility requirements can have their full-frame media asse
 Records which meet eligibility requirements can have their fullframe media assets and some associated metadta uploaded to Wikimedia.
 
 ## Eligibility
-Overall eligibility is controlled in the [instituions_v2.json]([https://github.com/dpla/ingest-wikimedia](https://github.com/dpla/ingestion3/blob/develop/src/main/resources/wiki/institutions_v2.json) by the `upload` property which is defined both at the hub and dataProvider levels. A hub can have defined `upload: false` and specific `dataProviders` within that hub can have `upload: true` and only those `dataProviders` will have records evaluated for eligiably in the Wikimedia project. Convesely a `hub` can have `upload: true` and all `dataProviders` will have their records evaluated for eligiblity. 
+Overall eligibility is controlled in the [institutions_v2.json]([https://github.com/dpla/ingest-wikimedia](https://github.com/dpla/ingestion3/blob/develop/src/main/resources/wiki/institutions_v2.json) by the `upload` property which is defined both at the hub and dataProvider levels. A hub can have defined `upload: false` and specific `dataProviders` within that hub can have `upload: true` and only those `dataProviders` will have records evaluated for eligiably in the Wikimedia project. Convesely a `hub` can have `upload: true` and all `dataProviders` will have their records evaluated for eligiblity. 
 
 See [institutionalEligibility method)(https://github.com/dpla/ingestion3/blob/dd78226baa1254c4d81c3903386e844b16eb8402/src/main/scala/dpla/ingestion3/wiki/WikiMapper.scala#L131-L151).
 
