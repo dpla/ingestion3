@@ -436,7 +436,7 @@ Records which meet eligibility requirements can have their full-frame media asse
 Records which meet eligibility requirements can have their fullframe media assets and some associated metadta uploaded to Wikimedia.
 
 ## Eligibility
-Overall eligibility is controlled in the [institutions_v2.json]([https://github.com/dpla/ingest-wikimedia](https://github.com/dpla/ingestion3/blob/develop/src/main/resources/wiki/institutions_v2.json) by the `upload` property which is defined both at the hub and dataProvider levels. 
+Overall eligibility is controlled in the [institutions_v2.json](https://github.com/dpla/ingestion3/blob/develop/src/main/resources/wiki/institutions_v2.json) by the `upload` property which is defined both at the hub and dataProvider levels. 
 
 A `hub` can have `"upload": true` and all `dataProviders` will have their records evaluated for eligibility.
 
