@@ -436,11 +436,36 @@ Records which meet eligibility requirements can have their full-frame media asse
 Records which meet eligibility requirements can have their fullframe media assets and some associated metadta uploaded to Wikimedia.
 
 ## Eligibility
-Overall eligibility is controlled in the [institutions_v2.json]([https://github.com/dpla/ingest-wikimedia](https://github.com/dpla/ingestion3/blob/develop/src/main/resources/wiki/institutions_v2.json) by the `upload` property which is defined both at the hub and dataProvider levels. A hub can have defined `upload: false` and specific `dataProviders` within that hub can have `upload: true` and only those `dataProviders` will have records evaluated for eligiably in the Wikimedia project. Convesely a `hub` can have `upload: true` and all `dataProviders` will have their records evaluated for eligiblity. 
+Overall eligibility is controlled in the [institutions_v2.json]([https://github.com/dpla/ingest-wikimedia](https://github.com/dpla/ingestion3/blob/develop/src/main/resources/wiki/institutions_v2.json) by the `upload` property which is defined both at the hub and dataProvider levels. 
 
-See [institutionalEligibility method)(https://github.com/dpla/ingestion3/blob/dd78226baa1254c4d81c3903386e844b16eb8402/src/main/scala/dpla/ingestion3/wiki/WikiMapper.scala#L131-L151).
+A `hub` can have `"upload": true` and all `dataProviders` will have their records evaluated for eligibility.
 
-Records must meet three minimum requirements to be eligible for upload
+```json
+"National Archives and Records Administration": {
+  "Wikidata": "Q518155",
+  "upload": true,
+  "institutions": {
+      ...
+    },
+}
+```
+
+A hub can have defined `"upload": false` and specific `dataProviders` (defined as `institutions` in the `instituions_v2.json` file) within that hub can have `"upload": true` and only those `dataProviders` will have records evaluated for eligibly in the Wikimedia project. 
+
+```json
+"Ohio Digital Network": {
+  "Wikidata": "Q83878495",
+  "upload": false,
+  "institutions": {
+    "Cleveland Public Library": {
+        "Wikidata": "Q69487402",
+        "upload": true
+    },
+    ...
+}
+```
+
+In addition to how institutional eligibility is defined in `institutions_v2.json` records must meet three minimum metadata requirements to be eligible for upload.
 1. **Standardized rights** - The record must have an `edmRights` URI and it must be one of these values. All ports and versions of these values are valid.
 ```text
 http://rightsstatements.org/vocab/NoC-US/
@@ -454,7 +479,7 @@ http://creativecommons.org/licenses/by-sa/
 3. **Data Provider URI** - The `dataProvider` name must be reconciled to a WikiData URI. This is an enrichment that DPLA performs on these values (see [dataProvider enrichments](#dataprovider))
 
 
-## Metadata
+## Wikimedia Metadata
 For each image file that is uploaded a corresponding block of metadata is also attached.
 
 * Creator (multiple values joined by a `;`)
