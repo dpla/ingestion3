@@ -429,13 +429,19 @@ The reports are generated every time mapped data is enriched.
 Records which meet eligibility requirements can have their full-frame media assets and some associated metadata uploaded to Wikimedia. ingestion3 is only partly responsible for this process (chiefly the evaluation of eligibility and Wiki markdown/metadata creation) but the actual work of uploading images to Wikimedia is handled by the [ingest-wikimedia](https://github.com/dpla/ingest-wikimedia) project.
 
 * [Eligibility](#eligibility)
-* [Metadata](#metadata)
+  * [Institutional](#institutional)
+  * [Standardized Rights](#standardized-rights)
+  * [Media assets](#media-assets)
+  * [Data Provider URI](#data-provider-uri)
+* [Wikimedia metadata](#wikimedia-metadata)
 * [Media](#media)
     * [ContentDM and IIIF Manifests](#contentdm-and-iiif-manifests)
 
 Records which meet eligibility requirements can have their fullframe media assets and some associated metadta uploaded to Wikimedia.
 
 ## Eligibility
+
+### Institutional 
 Overall eligibility is controlled in the [institutions_v2.json](https://github.com/dpla/ingestion3/blob/develop/src/main/resources/wiki/institutions_v2.json) by the `upload` property which is defined both at the hub and dataProvider levels. 
 
 A `hub` can have `"upload": true` and all `dataProviders` will have their records evaluated for eligibility.
@@ -466,7 +472,9 @@ A hub can have defined `"upload": false` and specific `dataProviders` (defined a
 ```
 
 In addition to how institutional eligibility is defined in `institutions_v2.json` records must meet three minimum metadata requirements to be eligible for upload.
-1. **Standardized rights** - The record must have an `edmRights` URI and it must be one of these values. All ports and versions of these values are valid.
+
+### Standardized Rights
+The record must have an `edmRights` URI and it must be one of these values. All ports and versions of these values are valid.
 ```text
 http://rightsstatements.org/vocab/NoC-US/
 http://creativecommons.org/publicdomain/mark/
@@ -475,8 +483,11 @@ http://creativecommons.org/licenses/by/
 http://creativecommons.org/licenses/by-sa/
 ```
 
-2. **Media assets** - The record must have either a `iiifManifest` or a `mediaMaster` URL. This value is distinct from the `object` mapping which is a single value and expected to a low resolution thumbnail (150px). The URLs for `mediaMaster` should point to the highest resolution possible and can be more than one URL.
-3. **Data Provider URI** - The `dataProvider` name must be reconciled to a WikiData URI. This is an enrichment that DPLA performs on these values (see [dataProvider enrichments](#dataprovider))
+### Media assets
+The record must have either a `iiifManifest` or a `mediaMaster` URL. This value is distinct from the `object` mapping which is a single value and expected to a low resolution thumbnail (150px). The URLs for `mediaMaster` should point to the highest resolution possible and can be more than one URL.
+
+### Data Provider URI
+The `dataProvider` name must be reconciled to a WikiData URI. This is an enrichment that DPLA performs on these values (see [dataProvider enrichments](#dataprovider))
 
 
 ## Wikimedia Metadata
