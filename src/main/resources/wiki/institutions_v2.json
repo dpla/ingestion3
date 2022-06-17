@@ -9834,7 +9834,7 @@
             },
             "Benjamin Harrison Presidential Site": {
                 "Wikidata": "Q4888783",
-                "upload": false
+                "upload": true
             },
             "Bennett, Emily": {
                 "Wikidata": "Q16892258",
@@ -9994,11 +9994,11 @@
             },
             "Conner Prairie": {
                 "Wikidata": "Q5161775",
-                "upload": false
+                "upload": true
             },
             "Conner Prairie Interactive History Park": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q5161775",
+                "upload": true
             },
             "Copyright Hancock County Public Library. Copyright permissions granted for educational use by Hancock County Public Library": {
                 "Wikidata": "Q5975426",
@@ -10249,8 +10249,8 @@
                 "upload": false
             },
             "Hett Art Gallery and Museum at Camp Chesterfield": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q5027063",
+                "upload": true
             },
             "Hill, Chris": {
                 "Wikidata": "",
@@ -10637,7 +10637,7 @@
                 "upload": false
             },
             "Library of Congress.‏ ‎Prints and Photographs Division": {
-                "Wikidata": "",
+                "Wikidata": "Q66812256",
                 "upload": false
             },
             "Lincoln Financial Foundation Collection, Allen County Public Library, Fort Wayne, Indiana": {
