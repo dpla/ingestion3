@@ -9742,7 +9742,7 @@
             },
             "All Souls Unitarian Church": {
                 "Wikidata": "Q112118182",
-                "upload": true
+                "upload": false
             },
             "Allen County Public Library": {
                 "Wikidata": "Q69475181",
@@ -10429,20 +10429,20 @@
                 "upload": false
             },
             "Indiana State Libary": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q30289637",
+                "upload": true
             },
             "Indiana State Library": {
                 "Wikidata": "Q30289637",
                 "upload": true
             },
             "Indiana State Library Rare Books and Manuscripts Division": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q30289637",
+                "upload": true
             },
             "Indiana State Llibrary": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q30289637",
+                "upload": true
             },
             "Indiana University Health": {
                 "Wikidata": "",
@@ -10754,7 +10754,7 @@
             },
             "National Archives and Records Administration": {
                 "Wikidata": "Q518155",
-                "upload": false
+                "upload": true
             },
             "National Slovenian Home": {
                 "Wikidata": "",
@@ -10773,8 +10773,8 @@
                 "upload": false
             },
             "Newspaper section, Indiana State Library": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q30289637",
+                "upload": true
             },
             "Nichols, Lula": {
                 "Wikidata": "",
