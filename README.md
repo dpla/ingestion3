@@ -21,9 +21,13 @@ This project is an ETL system for cultural heritage metadata. The system has fiv
 * [JSON-L](#jsonl)
 * [Wikimedia](#wikimedia)
     * [Eligibility](#eligibility)
-    * [Metadata](#metadata)
+      * [Institutional](#institutional)
+      * [Standardized rights](#standardized-rights)
+      * [Media assets](#media-assets)
+      * [Data provider URI](#data-provider-uri)
+    * [Wikimedia metadata](#wikimedia-metadata)
     * [Media](#media)
-        * [ContentDM and IIIF Manifests](#contentdm-and-iiif-manifests)
+        * [CONTENTdm and IIIF Manifests](#contentdm-and-iiif-manifests)
 
 
 
@@ -317,7 +321,7 @@ These normalizations are run over all instances of the specified class
 Enrichments modify existing data and improve its quality to enhance its functionality
 
 ### dataProvider
-One requirement of the Wikimedia project is that data provider values must be mapped to a Wikidata URI. DPLA maintains a lookup table of data provider names and Wiki URIs (see [institutions.json](https://github.com/dpla/ingestion3/blob/develop/src/main/resources/wiki/institutions.json) and [hubs.json](https://github.com/dpla/ingestion3/blob/develop/src/main/resources/wiki/hubs.json)). The enrichment adds the Wiki URI to the `edmAgent.exactMatch` property. Without a Wikidata URI, a record cannot be uploaded to Wikimedia.
+One requirement of the Wikimedia project is that data provider values must be mapped to a Wikidata URI. DPLA maintains a lookup table of data provider names and Wikidata IDs (see [institutions_v2.json](https://github.com/dpla/ingestion3/blob/develop/src/main/resources/wiki/institutions_v2.json). The enrichment adds the Wikidata URI to the `edmAgent.exactMatch` property. Without a Wikidata URI, a record cannot be uploaded to Wikimedia.
 
 This enrichment is still under development and subject to change.
 
@@ -429,16 +433,52 @@ The reports are generated every time mapped data is enriched.
 Records which meet eligibility requirements can have their full-frame media assets and some associated metadata uploaded to Wikimedia. ingestion3 is only partly responsible for this process (chiefly the evaluation of eligibility and Wiki markdown/metadata creation) but the actual work of uploading images to Wikimedia is handled by the [ingest-wikimedia](https://github.com/dpla/ingest-wikimedia) project.
 
 * [Eligibility](#eligibility)
-* [Metadata](#metadata)
+  * [Institutional](#institutional)
+  * [Standardized rights](#standardized-rights)
+  * [Media assets](#media-assets)
+  * [Data provider URI](#data-provider-uri)
+* [Wikimedia metadata](#wikimedia-metadata)
 * [Media](#media)
-    * [ContentDM and IIIF Manifests](#contentdm-and-iiif-manifests)
+    * [CONTENTdm and IIIF Manifests](#contentdm-and-iiif-manifests)
 
 Records which meet eligibility requirements can have their fullframe media assets and some associated metadta uploaded to Wikimedia.
 
 ## Eligibility
 
-Records must meet three minimum requirements to be eligible for upload
-1. **Standardized rights** - The record must have an `edmRights` URI and it must be one of these values. All ports and versions of these values are valid.
+### Institutional 
+Overall eligibility is controlled in the [institutions_v2.json](https://github.com/dpla/ingestion3/blob/develop/src/main/resources/wiki/institutions_v2.json) by the `upload` property which is defined both at the hub and dataProvider levels. 
+
+A `hub` can have `"upload": true` and all `dataProviders` will have their records evaluated for eligibility.
+
+```json
+"National Archives and Records Administration": {
+  "Wikidata": "Q518155",
+  "upload": true,
+  "institutions": {
+      ...
+    },
+}
+```
+
+A hub can have defined `"upload": false` and specific `dataProviders` (defined as `institutions` in the `instituions_v2.json` file) within that hub can have `"upload": true` and only those `dataProviders` will have records evaluated for eligibly in the Wikimedia project. 
+
+```json
+"Ohio Digital Network": {
+  "Wikidata": "Q83878495",
+  "upload": false,
+  "institutions": {
+    "Cleveland Public Library": {
+        "Wikidata": "Q69487402",
+        "upload": true
+    },
+    ...
+}
+```
+
+In addition to how institutional eligibility is defined in `institutions_v2.json` records must meet three minimum metadata requirements to be eligible for upload.
+
+### Standardized rights
+The record must have an `edmRights` URI and it must be one of these values. All ports and versions of these values are valid.
 ```text
 http://rightsstatements.org/vocab/NoC-US/
 http://creativecommons.org/publicdomain/mark/
@@ -447,11 +487,14 @@ http://creativecommons.org/licenses/by/
 http://creativecommons.org/licenses/by-sa/
 ```
 
-2. **Media assets** - The record must have either a `iiifManifest` or a `mediaMaster` URL. This value is distinct from the `object` mapping which is a single value and expected to a low resolution thumbnail (150px). The URLs for `mediaMaster` should point to the highest resolution possible and can be more than one URL.
-3. **Data Provider URI** - The `dataProvider` name must be reconciled to a WikiData URI. This is an enrichment that DPLA performs on these values (see [dataProvider enrichments](#dataprovider))
+### Media assets
+The record must have either a `iiifManifest` or a `mediaMaster` URL. This value is distinct from the `object` mapping which is a single value and expected to a low resolution thumbnail (150px). The URLs for `mediaMaster` should point to the highest resolution possible and can be more than one URL.
+
+### Data provider URI
+The `dataProvider` name must be reconciled to a WikiData URI. This is an enrichment that DPLA performs on these values (see [dataProvider enrichments](#dataprovider))
 
 
-## Metadata
+## Wikimedia metadata
 For each image file that is uploaded a corresponding block of metadata is also attached.
 
 * Creator (multiple values joined by a `;`)
@@ -514,16 +557,16 @@ Key points to note:
 * There is character substitution for `[]/{}`
 * If there are multiple assets associated with a metadata record we add a `page (n)` to the title.
 
-### ContentDM and IIIF Manifests
+### CONTENTdm and IIIF Manifests
 
 ![Millhouse the magician](https://media.giphy.com/media/ieREaX3VTHsqc/giphy.gif)
 
-When validating whether a record meets the minimum requirements, and neither a IIIF manifest nor media master value is provided, we will attempt to programmatically generate a IIIF manifest url if the isShownAt value looks like a ContentDM URL.
+When validating whether a record meets the minimum requirements, and neither a IIIF manifest nor media master value is provided, we will attempt to programmatically generate a IIIF manifest url if the isShownAt value looks like a CONTENTdm URL.
 
 ```Java
 // If there is neither a IIIF manifest or media master mapped from the original  
 // record then try to construct a IIIF manifest from the isShownAt value.
-// This should only work for ContentDM URLs.
+// This should only work for CONTENTdm URLs.
 val dplaMapRecord =
   if(dplaMapData.iiifManifest.isEmpty && dplaMapData.mediaMaster.isEmpty)
     dplaMapData.copy(iiifManifest = buildIIIFFromUrl(dplaMapData.isShownAt))
