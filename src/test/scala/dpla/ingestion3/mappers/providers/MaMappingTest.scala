@@ -68,6 +68,35 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.creator(xmlCreator) == expected)
   }
 
+  it should "extract the correct creators when multiple nameParts exist for a single name" in {
+    val xmlNameParts: Document[NodeSeq] = Document(
+      <record xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+         <metadata>
+            <mods:mods xmlns:mods="http://www.loc.gov/mods/v3" xmlns:xlink="http://www.w3.org/1999/xlink" version="3.5" xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-5.xsd">
+               <mods:name type="corporate" authority="naf" valueURI="http://id.loc.gov/authorities/names/nr2001006723" authorityURI="http://id.loc.gov/authorities/names">
+                  <mods:role>
+                     <mods:roleTerm type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/spn">Sponsor</mods:roleTerm>
+                  </mods:role>
+                  <mods:namePart>Massachusetts</mods:namePart>
+                  <mods:namePart>Metropolitan Water and Sewerage Board</mods:namePart>
+               </mods:name>
+               <mods:name type="personal" authority="local">
+                  <mods:role>
+                     <mods:roleTerm type="text" authority="marcrelator" authorityURI="http://id.loc.gov/vocabulary/relators" valueURI="http://id.loc.gov/vocabulary/relators/pht">Photographer</mods:roleTerm>
+                  </mods:role>
+                  <mods:namePart>Tryon, Oliver</mods:namePart>
+                  <mods:namePart type="date">1883-1922</mods:namePart>
+               </mods:name>
+            </mods:mods>
+         </metadata>
+      </record>)
+
+    val expected = Seq("Massachusetts. Metropolitan Water and Sewerage Board", "Tryon, Oliver, 1883-1922")
+      .map(nameOnlyAgent)
+
+    assert(extractor.creator(xmlNameParts) === expected)
+  }
+
   it should "extract the correct dates when only given a keyDate" in {
     val xml: Document[NodeSeq] = Document(
       <record>
@@ -254,6 +283,28 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.identifier(xml) === expected)
 
   }
+  it should "extract identifiers" in {
+    val xml: Document[NodeSeq] = Document(
+      <record>
+        <metadata>
+          <mods:mods>
+            <mods:identifier type="local-accession">
+              Z2016-20 Sarah (Sallie) Moore Field Collection
+            </mods:identifier>
+            <mods:identifier type="local-other">
+              19030509
+            </mods:identifier>
+          </mods:mods>
+        </metadata>
+      </record>
+    )
+
+    val expected = Seq("Local accession: Z2016-20 Sarah (Sallie) Moore Field Collection",
+    "Local other: 19030509")
+    assert(extractor.identifier(xml) === expected)
+
+  }
+
 
   it should "extract the correct multiple identifiers" in {
     val xml: Document[NodeSeq] = Document(
