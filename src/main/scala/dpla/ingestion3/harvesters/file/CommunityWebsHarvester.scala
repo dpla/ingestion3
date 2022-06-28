@@ -56,7 +56,7 @@ class CommunityWebsHarvester(
     */
   def getJsonResult(json: JValue): Option[ParsedResult] =
     Option(ParsedResult(
-      extractor.extractString(json)
+      extractor.extractString(json \ "id")
         .getOrElse(throw new RuntimeException("Missing ID")),
       compact(render(json))
     ))

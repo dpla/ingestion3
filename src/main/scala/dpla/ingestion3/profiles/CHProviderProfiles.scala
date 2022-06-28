@@ -47,10 +47,10 @@ class CtProfile extends XmlProfile {
  * Community Webs
  */
 class CommunityWebsProfile extends JsonProfile {
-  type Mapping = FlMapping // FIXME
+  type Mapping = CommunityWebsMapping
 
   override def getHarvester: Class[CommunityWebsHarvester] = classOf[CommunityWebsHarvester]
-  override def getMapping = new FlMapping // FIXME
+  override def getMapping = new CommunityWebsMapping
 }
 
 /**
