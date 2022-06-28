@@ -83,6 +83,7 @@ class CommunityWebsMapping extends JsonMapping with JsonExtractor with IngestMes
 
   override def language(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings(unwrap(data) \ "language")
+      .flatMap(_.split(";"))
       .map(nameOnlyConcept)
 
   override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
