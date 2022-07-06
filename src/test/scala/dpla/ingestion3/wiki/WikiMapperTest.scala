@@ -12,6 +12,22 @@ class WikiMapperTest extends FlatSpec with Matchers {
 
   val wiki = new MapperTest
 
+  val oreAggregation: OreAggregation = emptyOreAggregation.copy(
+    provider = EdmAgent(
+      uri = Some(URI("http://dp.la/api/contributor/indiana")),
+      name = Some("Indiana Memory"),
+      exactMatch = List(URI("http://www.wikidata.org/entity/Q83878471"))
+    ),
+    dataProvider = EdmAgent(
+        uri = Some(URI("http://dp.la/api/contributor/benjamin-harrison-presidential-site")),
+        name = Some("Benjamin Harrison Presidential Site"),
+        exactMatch = List(URI("http://www.wikidata.org/entity/Q4888783"))
+      ),
+    edmRights = Some(URI("http://rightsstatements.org/vocab/NoC-US/1.0/")),
+    isShownAt = stringOnlyWebResource("http://indianamemory.contentdm.oclc.org/cdm/ref/collection/BHPS/id/6341"),
+    iiifManifest = Some(URI("https://indianamemory.contentdm.oclc.org/cdm/collection/p16066coll13/id/71"))
+  )
+
   "isRightsWikiEligible" should " return true if edmRights is valid URI" in {
     val rightsUri = Some(URI("http://rightsstatements.org/vocab/NoC-US/1.0/"))
     assert(wiki.isRightsWikiEligible(rightsUri) === true)
@@ -23,20 +39,20 @@ class WikiMapperTest extends FlatSpec with Matchers {
   }
 
   "institutionalEligibility" should " return true if the partner is Wiki eligible and dataProvider is not" in {
-    val partnerUri = Some(URI("https://wikidata.org/wiki/Q518155")) // nara
-    val dataProviderUri = Some(URI("https://wikidata.org/wiki/Q59661289")) // obama library
+    val partnerUri = Some(URI(s"${wiki.baseWikiUri}Q518155")) // nara
+    val dataProviderUri = Some(URI(s"${wiki.baseWikiUri}Q59661289")) // obama library
     assert(wiki.institutionalEligibility(partnerUri, dataProviderUri) === true)
   }
 
   it should " return `true` if a partner is not eligible but a dataProvider is " in {
-    val partnerUri = Some(URI("https://wikidata.org/wiki/Q5275908")) // DLG
-    val dataProviderUri = Some(URI("https://wikidata.org/wiki/Q30267984")) // Augusta-Richmond County Public Library
+    val partnerUri = Some(URI(s"${wiki.baseWikiUri}Q5275908")) // DLG
+    val dataProviderUri = Some(URI(s"${wiki.baseWikiUri}Q30267984")) // Augusta-Richmond County Public Library
     assert(wiki.institutionalEligibility(partnerUri, dataProviderUri) === true)
   }
 
   it should " return `false` if neither partner nor dataProvider is eligible" in {
-    val partnerUri = Some(URI("https://wikidata.org/wiki/Q5275908")) // DLG
-    val dataProviderUri = Some(URI("https://wikidata.org/wiki/Q4815975")) // Atlanta-Fulton Public Library System
+    val partnerUri = Some(URI(s"${wiki.baseWikiUri}Q5275908")) // DLG
+    val dataProviderUri = Some(URI(s"${wiki.baseWikiUri}Q4815975")) // Atlanta-Fulton Public Library System
     assert(wiki.institutionalEligibility(partnerUri, dataProviderUri) === false)
   }
 
@@ -77,4 +93,12 @@ class WikiMapperTest extends FlatSpec with Matchers {
     assert(wiki.buildIIIFFromUrl(isShownAt) === expected)
   }
 
+  it should "validate this record" in {
+    assert(wiki.isWikiEligible(oreAggregation) === WikiCriteria(
+      dataProvider = true,
+      asset = true,
+      rights = true,
+      id = true)
+    )
+  }
 }

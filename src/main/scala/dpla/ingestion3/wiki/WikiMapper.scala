@@ -18,7 +18,11 @@ case class Eligibility(partnerWiki: String,
                        dataProviderWiki: String,
                        dataProviderEligible: Boolean)
 
-trait WikiMapper extends JsonExtractor {
+trait WikiUri {
+  val baseWikiUri = "http://www.wikidata.org/entity/"
+}
+
+trait WikiMapper extends JsonExtractor with WikiUri {
 
   /**
     * Standardized rightsstatment and creative commons URIs eligible for Wikimedia upload
@@ -46,8 +50,6 @@ trait WikiMapper extends JsonExtractor {
   private val wikiFileList = Seq(
     "/wiki/institutions_v2.json"
   )
-
-  private val baseWikiUri = "https://wikidata.org/wiki/"
 
   lazy val wikiEntityEligibility: Seq[Eligibility] = getWikiEntityEligibility
 
@@ -137,9 +139,11 @@ trait WikiMapper extends JsonExtractor {
     */
     def institutionalEligibility(partnerUri: ZeroToOne[URI], dataProviderUri: ZeroToOne[URI]): Boolean = {
       (partnerUri, dataProviderUri) match {
-        case (Some(partnerWikiUri), Some(dataProviderWikiUri)) => wikiEntityEligibility.find(eligible => {
-          eligible.partnerWiki == partnerWikiUri.toString && eligible.dataProviderWiki == dataProviderWikiUri.toString
-        }) match {
+        case (Some(partnerWikiUri), Some(dataProviderWikiUri)) =>
+          wikiEntityEligibility.find(eligible =>
+            // Compare list of defined eligibility in institutions file
+            eligible.partnerWiki == partnerWikiUri.toString && eligible.dataProviderWiki == dataProviderWikiUri.toString
+        ) match {
           // 1. True for "upload" field at the partner/hub-level signifies all eligible records from
           //    the hub can be uploaded. (disregard "upload" value at institution-level)
           // 2. False at hub-level means only upload the institutions which are marked true on the institution level
@@ -167,7 +171,7 @@ trait WikiMapper extends JsonExtractor {
     }
 
   /**
-    * Evaluate whether the DPLA ID belongs to the set of IDS which should be excluded from being uploaded to Wikimeida
+    * Evaluate whether the DPLA ID belongs to the set of IDS which should be excluded from being uploaded to Wikimedia
     * @param id DPLA ID
     * @return True if id is *not* in block list
     *         False if id is in block list
