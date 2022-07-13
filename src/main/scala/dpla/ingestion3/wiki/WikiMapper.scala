@@ -18,11 +18,11 @@ case class Eligibility(partnerWiki: String,
                        dataProviderWiki: String,
                        dataProviderEligible: Boolean)
 
-trait WikiUri {
+object WikiUri {
   val baseWikiUri = "http://www.wikidata.org/entity/"
 }
 
-trait WikiMapper extends JsonExtractor with WikiUri {
+trait WikiMapper extends JsonExtractor {
 
   /**
     * Standardized rightsstatment and creative commons URIs eligible for Wikimedia upload
@@ -104,9 +104,9 @@ trait WikiMapper extends JsonExtractor with WikiUri {
             val dataProviderWikiId = extractString(json \ partner \ "institutions" \ dataProvider \ "Wikidata").get
             val dataProviderEligible = extractString(json \ partner \ "institutions" \ dataProvider \ "upload").get.toBoolean
             Eligibility(
-              partnerWiki = s"$baseWikiUri$partnerWikiId",
+              partnerWiki = s"${WikiUri.baseWikiUri}$partnerWikiId",
               partnerEligible = partnerEligible,
-              dataProviderWiki = s"$baseWikiUri$dataProviderWikiId",
+              dataProviderWiki = s"${WikiUri.baseWikiUri}$dataProviderWikiId",
               dataProviderEligible = dataProviderEligible
             )
         })
@@ -154,7 +154,7 @@ trait WikiMapper extends JsonExtractor with WikiUri {
       }
     }
 
-    def isWikiUri(uri: URI): Boolean = uri.toString.startsWith(baseWikiUri)
+    def isWikiUri(uri: URI): Boolean = uri.toString.startsWith(WikiUri.baseWikiUri)
 
   /**
     * Evaluate whether the combination of mediaMaster and iiifManifest values make the record eligible for Wikimedia.
