@@ -29,6 +29,20 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
     extractString(data \ "identifier")
       .map(_.trim)
 
+  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] =
+    // <mods:location><mods:url note="iiifManifest">
+    (data \ "location" \ "url")
+      .flatMap(node => getByAttribute(node, "note", "iiifManifest"))
+      .flatMap(extractStrings)
+      .map(URI)
+
+  override def mediaMaster(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    // <mods:location><mods:url note="iiifManifest">
+    (data \ "location" \ "url")
+      .flatMap(node => getByAttribute(node, "note", "mediaMaster"))
+      .flatMap(extractStrings)
+      .map(stringOnlyWebResource)
+
   // SourceResource mapping
   override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
   // <mods:relatedItem type=host><mods:titleInfo><mods:title>

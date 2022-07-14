@@ -26,6 +26,12 @@
         <mods:url usage="primary" access="object in context">http://ddr.densho.org/ddr-densho-101-1/</mods:url>
     </mods:location>
     <mods:location>
+        <mods:url note="iiifManifest">http://iiif.manifest/</mods:url>
+    </mods:location>
+    <mods:location>
+        <mods:url note="mediaMaster">http://media.master/</mods:url>
+    </mods:location>
+    <mods:location>
         <mods:url access="preview">https://ddr.densho.org/media/ddr-densho-101/ddr-densho-101-1-mezzanine-96054e814c-a.jpg</mods:url>
     </mods:location>
     <mods:location>
