@@ -65,27 +65,32 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     val names = (getModsRoot(data) \ "name")
       .filter(n => extractStrings(n \ "role" \ "roleTerm").map(_.trim).contains("Contributor"))
+      .flatMap(node => nameConstructor(node))
 
-    nameConstructor(names)
+    names
+    // nameConstructor(names)
   }
 
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] = {
     // <name><namePart> + " , " <namePart type=date>
     val names = (getModsRoot(data) \ "name")
       .filterNot(n => extractStrings(n \ "role" \ "roleTerm").map(_.trim).contains("Contributor"))
-
-    nameConstructor(names)
+      .flatMap(node => nameConstructor(node))
+    names
+    // nameConstructor(names)
   }
 
   private def nameConstructor(names: NodeSeq): Seq[EdmAgent] = {
     names.map(node => {
-      val name = extractString((node \ "namePart").filter(p => p.attributes.isEmpty))
+      val name = extractStrings((node \ "namePart").filter(p => p.attributes.isEmpty)).mkString(". ")
       val date = extractString((node \ "namePart").filter(p => filterAttribute(p, "type", "date")))
+      // val uri = extractStrings() FIXME when jhn is merged in with attribute namespace mapping functionality
 
-      if (date.isDefined)
-        s"${name.getOrElse("")}, ${date.get}"
-      else
-        name.getOrElse("")
+      (name.isEmpty, date) match {
+        case(false, Some(d)) => s"$name, $d"
+        case(false, None) => s"$name"
+        case(_, _) => ""
+      }
     })
       .map(nameOnlyAgent)
   }
@@ -163,6 +168,7 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       val ids = (getModsRoot(data) \ "identifier")
         .flatMap(node => getByAttribute(node, "type", t))
         .flatMap(extractString(_))
+        .map(_.trim)
 
       if (ids.nonEmpty) {
         Some(s"$label: ${ids.mkString(", ")}")

@@ -255,4 +255,9 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Some(URI("http://dp.la/api/items/9e0a3ebaa06174954095aabba527f15f"))
     assert(extractor.dplaUri(json) === expected)
   }
+
+  it should "extract the correct IIIF URI" in {
+    val expected = Seq(URI("https://cdm16022.contentdm.oclc.org/iiif/p16022coll518:690/manifest.json"))
+    assert(extractor.iiifManifest(json) === expected)
+  }
 }

@@ -3,6 +3,7 @@ package dpla.ingestion3.enrichments
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.{EdmAgent, URI, nameOnlyAgent}
 import dpla.ingestion3.utils.FileLoader
+import dpla.ingestion3.wiki.WikiUri
 import org.json4s.jackson.JsonMethods.parse
 
 import scala.io.Source
@@ -10,17 +11,11 @@ import scala.io.Source
 /**
   * Wikimedia entity enrichments
   */
-class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] with JsonExtractor  {
-
-  protected val wikiUriBase = "http://www.wikidata.org/entity/"
+class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] with JsonExtractor with WikiUri {
 
   // Files to source vocabulary from
   private val fileList = Seq(
-//    "/wiki/hubs.json",
-//    "/wiki/institutions.json"
       "/wiki/institutions_v2.json"
-//    "/wiki/v3.json"
-
   )
 
   // performs term lookup
@@ -97,7 +92,7 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] wit
     lookup.add(
       EdmAgent(
         name = Some(entityName),
-        exactMatch = Seq(URI(s"$wikiUriBase$entityWikiId"))
+        exactMatch = Seq(URI(s"${baseWikiUri}$entityWikiId"))
     ))
   }
 

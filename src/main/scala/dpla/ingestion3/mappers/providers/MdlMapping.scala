@@ -10,13 +10,12 @@ import dpla.ingestion3.utils.Utils
 import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
+import org.json4s.jackson.JsonMethods.parse
 
 import scala.util.{Success, Try}
 
 class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
-
-  val formatBlockList: Set[String] = ExtentIdentificationList.termList
-
+  protected lazy val formatBlockList: Set[String] = ExtentIdentificationList.termList
   override val enforceDuplicateIds: Boolean = false
 
   // ID minting functions
@@ -43,6 +42,13 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
           case _ => false
         })
       .map(URI)
+
+  override def iiifManifest(data: Document[JValue]): ZeroToMany[URI] = {
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "jsonData" \ "response" \ "document" \ "iiif_manifest_ss")
+      .map(parse(_))
+      .flatMap(json => extractString(json \ "@id"))
+      .map(URI)
+  }
 
   override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
     extractString(unwrap(data) \ "attributes" \ "metadata" \ "intermediateProvider").map(nameOnlyAgent)

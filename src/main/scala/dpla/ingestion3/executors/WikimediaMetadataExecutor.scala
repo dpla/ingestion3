@@ -64,9 +64,9 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
           // If there is neither a IIIF manifest or media master mapped from the original record then try to construct
           // a IIIF manifest from the isShownAt value. This should only work for ContentDM URLs.
           val dplaMapRecord =
-            if(dplaMapData.iiifManifest.isEmpty && dplaMapData.mediaMaster.isEmpty)
+            if(dplaMapData.iiifManifest.isEmpty && dplaMapData.mediaMaster.isEmpty) {
               dplaMapData.copy(iiifManifest = buildIIIFFromUrl(dplaMapData.isShownAt))
-            else
+            } else
               dplaMapData
 
           // evaluate the record for Wikimedia eligibility
