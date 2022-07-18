@@ -112,5 +112,15 @@ class NorthwestHeritageMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("Watkins, Carleton E., 1829-1916").map(nameOnlyAgent)
     assert(extractor.publisher(xml) === expected)
   }
+
+  it should "extract the correct iiifManifest" in {
+    val expected = Seq("http://iiif.manifest/").map(URI)
+    assert(extractor.iiifManifest(xml) === expected)
+  }
+
+  it should "extract the correct media master" in {
+    val expected = Seq("http://media.master/").map(stringOnlyWebResource)
+    assert(extractor.mediaMaster(xml) === expected)
+  }
 }
 
