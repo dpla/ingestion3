@@ -98,7 +98,6 @@ abstract class JsonRetconMapper extends JsonMapping with JsonExtractor {
     }
   }
 
-  //todo will not work for artstor
   override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
     maybeArray(
       data.get \ "_source" \ "sourceResource" \ "date",
@@ -156,4 +155,40 @@ abstract class JsonRetconMapper extends JsonMapping with JsonExtractor {
   override def `type`(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(data.get \ "_source" \ "sourceResource" \ "type")
 
+}
+
+class ArtstorRetconMapper extends JsonRetconMapper {
+  override def useProviderName: Boolean = true
+  override def getProviderName: Option[String] = Some("artstor")
+  override def originalId(data: Document[JValue]): ZeroToOne[String] =
+    extractString("_id")(data).map(_.substring("artstor--".length))
+}
+
+class KentuckyRetconMapper extends JsonRetconMapper {
+  override def useProviderName: Boolean = true
+  override def getProviderName: Option[String] = Some("kentucky")
+  override def originalId(data: Document[JValue]): ZeroToOne[String] =
+    extractString("_id")(data).map(_.substring("kentucky--".length))
+}
+
+class LcRetconMapper extends JsonRetconMapper {
+  override def useProviderName: Boolean = false
+  override def getProviderName: Option[String] = Some("lc")
+  override def originalId(data: Document[JValue]): ZeroToOne[String] =
+    extractString("_id")(data)
+
+}
+
+class MaineRetconMapper extends JsonRetconMapper {
+  override def useProviderName: Boolean = true
+  override def getProviderName: Option[String] = Some("maine")
+  override def originalId(data: Document[JValue]): ZeroToOne[String] =
+    extractString("_id")(data).map(_.substring("maine--".length))
+}
+
+class WashingtonRetconMapper extends JsonRetconMapper {
+  override def useProviderName: Boolean = false
+  override def getProviderName: Option[String] = Some("washington")
+  override def originalId(data: Document[JValue]): ZeroToOne[String] =
+    extractString("_id")(data)
 }
