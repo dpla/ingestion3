@@ -59,7 +59,7 @@ Vagrant.configure("2") do |config|
     aws.subnet_id = "subnet-e8c8f3c0"
     aws.ssh_host_attribute = :private_ip_address
     aws.keypair_name = "general"
-    aws.instance_type = "m5.2xlarge"
+    aws.instance_type = "m6g.2xlarge"
     override.ssh.username = "ubuntu"
     override.vm.synced_folder ".", "/vagrant", disabled: true 
     override.ssh.private_key_path = "~/.ssh/general.pem"
