@@ -63,6 +63,9 @@ Vagrant.configure("2") do |config|
     override.ssh.username = "ubuntu"
     override.vm.synced_folder ".", "/vagrant", disabled: true 
     override.ssh.private_key_path = "~/.ssh/general.pem"
+    aws.tags = {
+        'Name' => 'ingest'
+    }
   end
   config.vm.provision "shell", inline: $script
 end
