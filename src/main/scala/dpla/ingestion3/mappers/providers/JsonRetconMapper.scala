@@ -106,10 +106,7 @@ abstract class JsonRetconMapper extends JsonMapping with JsonExtractor {
     )
 
   override def description(data: Document[JValue]): ZeroToMany[String] =
-    maybeArray(
-      data.get \ "_source" \ "sourceResource" \ "description",
-      x => Option(x.toString)
-    )
+    extractStrings(data.get \ "_source" \ "sourceResource" \ "description")
 
   override def extent(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(data.get \ "_source" \ "sourceResource" \ "extent")
