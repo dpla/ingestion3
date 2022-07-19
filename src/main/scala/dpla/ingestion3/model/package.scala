@@ -4,6 +4,7 @@ import java.text.SimpleDateFormat
 import java.util.{Calendar, TimeZone}
 import com.databricks.spark.avro.SchemaConverters
 import dpla.ingestion3.utils.FlatFileIO
+import dpla.ingestion3.wiki.WikiUri
 import org.apache.avro.Schema
 import org.apache.spark.sql.types.StructType
 import org.json4s
@@ -320,8 +321,8 @@ package object model {
       .dataProvider
       .exactMatch
       .map(_.toString)
-      .find(_.startsWith("https://wikidata.org/wiki/")) match {
-        case Some(uri) => uri.replace("https://wikidata.org/wiki/", "")
+      .find(_.startsWith(WikiUri.baseWikiUri)) match {
+        case Some(uri) => uri.replace(WikiUri.baseWikiUri, "")
         case None =>
           throw new RuntimeException(s"dataProvider ${record.dataProvider.name.getOrElse("__MISSING__")} " +
             s"in ${getDplaId(record)} does not have wiki identifier ")
