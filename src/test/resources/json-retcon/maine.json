@@ -1,0 +1,100 @@
+{
+  "_index": "dpla-20150410-144958",
+  "_type": "item",
+  "_id": "maine--oai:the.european.library.msl_statedocs:oai:digitalmaine.com:spo_docs-1067",
+  "_score": 0,
+  "_source": {
+    "@context": "http://dp.la/api/items/context",
+    "isShownAt": [
+      "http://digitalmaine.com/spo_docs/67"
+    ],
+    "dataProvider": "Maine State Library",
+    "@type": "ore:Aggregation",
+    "rights": [
+      "http://rightsstatements.org/vocab/NoC-US/1.0/"
+    ],
+    "provider": {
+      "@id": "http://dp.la/api/contributor/maine",
+      "name": "Digital Maine"
+    },
+    "ingestionSequence": 3,
+    "id": "4a2b983d11c024989573f3d9b53f5877",
+    "ingestDate": "2017-07-28T14:05:35.662813Z",
+    "_rev": "2-d63a50cd0998824ae68928a9f0b5bd67",
+    "aggregatedCHO": "#sourceResource",
+    "_id": "maine--oai:the.european.library.msl_statedocs:oai:digitalmaine.com:spo_docs-1067",
+    "sourceResource": {
+      "title": [
+        "Report on the Costs and Benefits of State and Local Options to Stimulate an Increase in the Recycling of Plastics. 2009"
+      ],
+      "language": [
+        {
+          "iso639_3": "eng",
+          "name": "English"
+        }
+      ],
+      "@id": "http://dp.la/api/items/4a2b983d11c024989573f3d9b53f5877#sourceResource",
+      "date": {
+        "displayDate": "2009-01-01",
+        "end": "2009-01-01",
+        "begin": "2009-01-01"
+      },
+      "type": "text",
+      "subject": [
+        {
+          "name": "State Planning Office"
+        },
+        {
+          "name": "Recycling"
+        },
+        {
+          "name": "Plastics"
+        },
+        {
+          "name": "Maine"
+        }
+      ],
+      "creator": [
+        "Maine State Planning Office"
+      ]
+    },
+    "admin": {
+      "sourceResource": {
+        "title": "Report on the Costs and Benefits of State and Local Options to Stimulate an Increase in the Recycling of Plastics. 2009"
+      }
+    },
+    "ingestType": "item",
+    "@id": "http://dp.la/api/items/4a2b983d11c024989573f3d9b53f5877",
+    "originalRecord": {
+      "handle": "http://digitalmaine.com/spo_docs/67",
+      "setSpec": "msl_statedocs",
+      "status": [],
+      "subject": [
+        "State Planning Office",
+        "recycling",
+        "plastics",
+        "Maine"
+      ],
+      "rights": "http://rightsstatements.org/vocab/NoC-US/1.0/",
+      "provider": {
+        "@id": "http://dp.la/api/contributor/maine",
+        "name": "Digital Maine"
+      },
+      "label": "Report on the Costs and Benefits of State and Local Options to Stimulate an Increase in the Recycling of Plastics. 2009",
+      "collection": {
+        "id": "bfcb89bb223896ab1549ac496606cf83",
+        "description": "",
+        "title": "Maine State Documents",
+        "@id": "http://dp.la/api/collections/bfcb89bb223896ab1549ac496606cf83"
+      },
+      "type": "Text",
+      "creator": "Maine State Planning Office",
+      "id": "oai:the.european.library.msl_statedocs:oai:digitalmaine.com:spo_docs-1067",
+      "title": "Report on the Costs and Benefits of State and Local Options to Stimulate an Increase in the Recycling of Plastics. 2009",
+      "created": "2009-01-01",
+      "contributor": "Maine State Library",
+      "datestamp": "2017-06-20",
+      "language": "English"
+    }
+  }
+}
