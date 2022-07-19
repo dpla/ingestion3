@@ -1,11 +1,8 @@
 package dpla.ingestion3.mappers.providers
 
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, JsonExtractor, JsonMapping}
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
-import dpla.ingestion3.model.{DcmiTypeCollection, DcmiTypes, DplaPlace, EdmAgent, EdmTimeSpan, EdmWebResource, LiteralOrUri, SkosConcept, URI, eitherStringOrUri, emptyEdmAgent, emptyJValue, emptySeq, emptyString, nameOnlyAgent, nameOnlyCollection, nameOnlyConcept, nameOnlyPlace, stringOnlyTimeSpan, uriOnlyWebResource}
-import dpla.ingestion3.utils.Utils
-import org.json4s
+import dpla.ingestion3.model.{DcmiTypeCollection, DplaPlace, EdmAgent, EdmTimeSpan, EdmWebResource, LiteralOrUri, SkosConcept, URI, eitherStringOrUri, nameOnlyAgent, nameOnlyConcept, nameOnlyPlace, uriOnlyWebResource}
 import org.json4s.JValue
 import org.json4s.JsonAST.{JArray, JObject, JString, JValue}
 
@@ -33,7 +30,6 @@ abstract class JsonRetconMapper extends JsonMapping with JsonExtractor {
       .map(URI)
       .map(uriOnlyWebResource)
 
-
   //todo: object vs preview
   override def `object`(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(data.get \ "_source" \ "object")
@@ -49,7 +45,6 @@ abstract class JsonRetconMapper extends JsonMapping with JsonExtractor {
   override def edmRights(data: Document[JValue]): ZeroToMany[URI] =
     extractStrings(data.get \ "_source" \ "rights")
       .map(URI)
-
 
   // this function deals with the fact that ingestion1 was a pile
   // that let you emit anything
@@ -85,25 +80,29 @@ abstract class JsonRetconMapper extends JsonMapping with JsonExtractor {
     extractStrings(data.get \ "_source" \ "sourceResource" \ "creator")
       .map(nameOnlyAgent)
 
+  private def extractEdmTimeSpan(fields: List[(String, JValue)]): Option[EdmTimeSpan] = {
+    {
+      val begin = fields.find(_._1 == "begin").map(_._2.toString)
+      val end = fields.find(_._1 == "end").map(_._2.toString)
+      val displayDate = fields.find(_._1 == "displayDate").map(_._2.toString)
+
+      if (begin.nonEmpty && end.nonEmpty && displayDate.nonEmpty) None
+      else Some(
+        EdmTimeSpan(
+          originalSourceDate = displayDate,
+          prefLabel = displayDate,
+          begin = begin,
+          end = end
+        )
+      )
+    }
+  }
+
   //todo will not work for artstor
   override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
     maybeArray(
       data.get \ "_source" \ "sourceResource" \ "date",
-      fields => {
-        val begin = fields.find(_._1 == "begin").map(_._2.toString)
-        val end = fields.find(_._1 == "end").map(_._2.toString)
-        val displayDate = fields.find(_._1 == "displayDate").map(_._2.toString)
-
-        if (begin.nonEmpty && end.nonEmpty && displayDate.nonEmpty) None
-        else Some(
-          EdmTimeSpan(
-            originalSourceDate = displayDate,
-            prefLabel = displayDate,
-            begin = begin,
-            end = end
-          )
-        )
-      }
+      extractEdmTimeSpan
     )
 
   override def description(data: Document[JValue]): ZeroToMany[String] =
@@ -126,18 +125,38 @@ abstract class JsonRetconMapper extends JsonMapping with JsonExtractor {
   override def identifier(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(data.get \ "_source" \ "sourceResource" \ "identifier")
 
+  override def language(data: Document[JValue]): ZeroToMany[SkosConcept] =
+    extractStrings(data.get \ "_source" \ "sourceResource" \ "language" \ "name")
+      .map(nameOnlyConcept)
 
-  override def language(data: Document[JValue]): ZeroToMany[SkosConcept] = ???
-  override def place(data: Document[JValue]): ZeroToMany[DplaPlace] = ???
-  override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] = ???
-  override def relation(data: Document[JValue]): ZeroToMany[LiteralOrUri] = ???
-  override def replacedBy(data: Document[JValue]): ZeroToMany[String] = ???
-  override def replaces(data: Document[JValue]): ZeroToMany[String] = ???
-  override def rights(data: Document[JValue]): AtLeastOne[String] = ???
-  override def rightsHolder(data: Document[JValue]): ZeroToMany[EdmAgent] = ???
-  override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] = ???
-  override def temporal(data: Document[JValue]): ZeroToMany[EdmTimeSpan] = ???
-  override def title(data: Document[JValue]): AtLeastOne[String] = ???
-  override def `type`(data: Document[JValue]): ZeroToMany[String] = ???
+  override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
+    extractStrings(data.get \ "_source" \ "sourceResource" \ "spatial" \ "name")
+      .map(nameOnlyPlace)
+
+  override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
+    extractStrings(data.get \ "_source" \ "sourceResource" \ "publisher")
+      .map(nameOnlyAgent)
+
+  override def relation(data: Document[JValue]): ZeroToMany[LiteralOrUri] =
+    extractStrings(data.get \ "_source" \ "sourceResource" \ "relation")
+      .map(eitherStringOrUri)
+
+  override def rights(data: Document[JValue]): AtLeastOne[String] =
+    extractStrings(data.get \ "_source" \ "sourceResource" \ "rights")
+
+  override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
+    extractStrings(data.get \ "_source" \ "sourceResource" \ "subject" \ "name")
+      .map(nameOnlyConcept)
+
+  override def temporal(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
+    maybeArray(
+      data.get \ "_source" \ "sourceResource" \ "temporal",
+      extractEdmTimeSpan
+  )
+  override def title(data: Document[JValue]): AtLeastOne[String] =
+    extractStrings(data.get \ "_source" \ "sourceResource" \ "title")
+
+  override def `type`(data: Document[JValue]): ZeroToMany[String] =
+    extractStrings(data.get \ "_source" \ "sourceResource" \ "type")
 
 }
