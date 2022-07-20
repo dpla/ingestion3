@@ -8,7 +8,7 @@ import org.json4s.JsonAST.{JArray, JObject, JString}
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods.{compact, render}
 
-abstract class JsonRetconMapper extends JsonMapping with JsonExtractor {
+abstract class JsonRetconMapping extends JsonMapping with JsonExtractor {
 
   // OreAggregation
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = {
@@ -177,7 +177,7 @@ abstract class JsonRetconMapper extends JsonMapping with JsonExtractor {
 
 }
 
-class ArtstorRetconMapper extends JsonRetconMapper {
+class ArtstorRetconMapping extends JsonRetconMapping {
   override def useProviderName: Boolean = true
   override def getProviderName: Option[String] = Some("artstor")
   override def originalId(data: Document[JValue]): ZeroToOne[String] =
@@ -188,7 +188,7 @@ class ArtstorRetconMapper extends JsonRetconMapper {
   )
 }
 
-class KentuckyRetconMapper extends JsonRetconMapper {
+class KentuckyRetconMapping extends JsonRetconMapping {
   override def useProviderName: Boolean = true
   override def getProviderName: Option[String] = Some("kentucky")
   override def originalId(data: Document[JValue]): ZeroToOne[String] =
@@ -199,7 +199,7 @@ class KentuckyRetconMapper extends JsonRetconMapper {
   )
 }
 
-class LcRetconMapper extends JsonRetconMapper {
+class LcRetconMapping extends JsonRetconMapping {
   override def useProviderName: Boolean = false
   override def getProviderName: Option[String] = Some("lc")
   override def originalId(data: Document[JValue]): ZeroToOne[String] =
@@ -210,7 +210,7 @@ class LcRetconMapper extends JsonRetconMapper {
   )
 }
 
-class MaineRetconMapper extends JsonRetconMapper {
+class MaineRetconMapping extends JsonRetconMapping {
   override def useProviderName: Boolean = true
   override def getProviderName: Option[String] = Some("maine")
   override def originalId(data: Document[JValue]): ZeroToOne[String] =
@@ -221,7 +221,7 @@ class MaineRetconMapper extends JsonRetconMapper {
   )
 }
 
-class WashingtonRetconMapper extends JsonRetconMapper {
+class WashingtonRetconMapper extends JsonRetconMapping {
   override def useProviderName: Boolean = false
   override def getProviderName: Option[String] = Some("washington")
   override def originalId(data: Document[JValue]): ZeroToOne[String] =
