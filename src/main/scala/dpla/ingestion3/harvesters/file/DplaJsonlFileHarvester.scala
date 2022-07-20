@@ -21,7 +21,7 @@ import scala.util.{Failure, Success, Try}
 class DplaJsonlFileExtractor extends JsonExtractor
 
 /**
-  * Entry for performing a Florida file harvest
+  * Entry for performing a DPLA JSONL file harvest
   */
 class DplaJsonlFileHarvester(
                               spark: SparkSession,
@@ -35,7 +35,7 @@ class DplaJsonlFileHarvester(
   protected val extractor = new DplaJsonlFileExtractor()
 
   /**
-    * Loads .jsonl files
+    * Loads .zip files containing DPLA JSONL
     *
     * @param file File to parse
     * @return FileInputStream of the file contents
@@ -130,7 +130,7 @@ class DplaJsonlFileHarvester(
 
 
   /**
-    * Executes the Florida harvest
+    * Executes the DPLA JSON file harvest
     */
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
