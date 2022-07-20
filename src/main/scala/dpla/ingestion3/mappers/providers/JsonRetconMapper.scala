@@ -12,7 +12,7 @@ abstract class JsonRetconMapper extends JsonMapping with JsonExtractor {
 
   // OreAggregation
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = {
-    data.get \ "_source" \ "@id" match {
+    data.get \ "_source" \ "_id" match {
       case JString(value) => Some(URI(f"http://dp.la/api/items/$value"))
       case _ => None
     }
@@ -83,7 +83,7 @@ abstract class JsonRetconMapper extends JsonMapping with JsonExtractor {
       val end = fields.find(_._1 == "end").map(_._2.toString)
       val displayDate = fields.find(_._1 == "displayDate").map(_._2.toString)
 
-      if (begin.nonEmpty && end.nonEmpty && displayDate.nonEmpty) None
+      if (begin.isEmpty && end.isEmpty && displayDate.isEmpty) None
       else Some(
         EdmTimeSpan(
           originalSourceDate = displayDate,
@@ -123,8 +123,31 @@ abstract class JsonRetconMapper extends JsonMapping with JsonExtractor {
       .map(nameOnlyConcept)
 
   override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
-    extractStrings(data.get \ "_source" \ "sourceResource" \ "spatial" \ "name")
-      .map(nameOnlyPlace)
+    maybeArray(
+      data.get \ "_source" \ "sourceResource" \ "spatial",
+      (fields) => {
+        val name = fields.find(_._1 == "name").map(_._2.toString)
+        val city = fields.find(_._1 == "city").map(_._2.toString)
+        val county = fields.find(_._1 == "county").map(_._2.toString)
+        val state = fields.find(_._1 == "state").map(_._2.toString)
+        val country = fields.find(_._1 == "country").map(_._2.toString)
+        val region = fields.find(_._1 == "region").map(_._2.toString)
+        val coordinates = fields.find(_._1 == "coordinates").map(_._2.toString)
+
+        if (Seq(name, city, county, state, country, region, coordinates).flatten.isEmpty) None
+        else Some(
+          DplaPlace(
+            name = name,
+            city = city,
+            county = county,
+            state = state,
+            country = country,
+            region = region,
+            coordinates = coordinates
+          )
+        )
+      }
+    )
 
   override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(data.get \ "_source" \ "sourceResource" \ "publisher")
