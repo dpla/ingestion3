@@ -6,6 +6,7 @@ import dpla.ingestion3.model.{DcmiTypeCollection, DplaPlace, EdmAgent, EdmTimeSp
 import org.json4s.JValue
 import org.json4s.JsonAST.{JArray, JObject, JString}
 import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods.{compact, render}
 
 abstract class JsonRetconMapper extends JsonMapping with JsonExtractor {
 
@@ -25,11 +26,8 @@ abstract class JsonRetconMapper extends JsonMapping with JsonExtractor {
     extractStrings(data.get \ "_source" \ "dataProvider")
       .map(nameOnlyAgent)
 
-  //TODO Fix
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
-    extractStrings(data.get \ "_source" \ "originalRecord")
-      .headOption
-      .getOrElse("")
+    compact(render(data.get \ "_source" \ "originalRecord"))
 
   override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(data.get \ "_source" \ "isShownAt")
