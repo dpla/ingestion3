@@ -161,7 +161,10 @@ class ArtstorRetconMapper extends JsonRetconMapper {
   override def getProviderName: Option[String] = Some("artstor")
   override def originalId(data: Document[JValue]): ZeroToOne[String] =
     extractString("_id")(data).map(_.substring("artstor--".length))
-  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = ???
+  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
+    name = Some("Artstor"),
+    uri = Some(URI("http://dp.la/api/contributor/artstor"))
+  )
 }
 
 class KentuckyRetconMapper extends JsonRetconMapper {
@@ -169,7 +172,10 @@ class KentuckyRetconMapper extends JsonRetconMapper {
   override def getProviderName: Option[String] = Some("kentucky")
   override def originalId(data: Document[JValue]): ZeroToOne[String] =
     extractString("_id")(data).map(_.substring("kentucky--".length))
-  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = ???
+  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
+    name = Some("Kentucky Digital Library"),
+    uri = Some(URI("http://dp.la/api/contributor/kdl"))
+  )
 }
 
 class LcRetconMapper extends JsonRetconMapper {
@@ -177,7 +183,10 @@ class LcRetconMapper extends JsonRetconMapper {
   override def getProviderName: Option[String] = Some("lc")
   override def originalId(data: Document[JValue]): ZeroToOne[String] =
     extractString("_id")(data)
-  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = ???
+  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
+    name = Some("Library of Congress"),
+    uri = Some(URI("http://dp.la/api/contributor/lc"))
+  )
 }
 
 class MaineRetconMapper extends JsonRetconMapper {
@@ -185,7 +194,10 @@ class MaineRetconMapper extends JsonRetconMapper {
   override def getProviderName: Option[String] = Some("maine")
   override def originalId(data: Document[JValue]): ZeroToOne[String] =
     extractString("_id")(data).map(_.substring("maine--".length))
-  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = ???
+  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
+    name = Some("Digital Maine"),
+    uri = Some(URI("http://dp.la/api/contributor/maine"))
+  )
 }
 
 class WashingtonRetconMapper extends JsonRetconMapper {
@@ -193,5 +205,8 @@ class WashingtonRetconMapper extends JsonRetconMapper {
   override def getProviderName: Option[String] = Some("washington")
   override def originalId(data: Document[JValue]): ZeroToOne[String] =
     extractString("_id")(data)
-  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = ???
+  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
+    name = Some("University of Washington"),
+    uri = Some(URI("http://dp.la/api/contributor/washington"))
+  )
 }
