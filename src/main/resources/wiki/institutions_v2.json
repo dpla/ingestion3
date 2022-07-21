@@ -17350,7 +17350,7 @@
             },
             "Battle Days Museum": {
                 "Wikidata": "",
-                "upload": false
+                "upload": true
             },
             "Benton County Museum and Historical Society": {
                 "Wikidata": "",
@@ -17369,8 +17369,8 @@
                 "upload": false
             },
             "City of Colfax, Washington": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q1509984",
+                "upload": true
             },
             "City of Ellensburg": {
                 "Wikidata": "",
@@ -17390,11 +17390,11 @@
             },
             "Colfax Fire Department": {
                 "Wikidata": "",
-                "upload": false
+                "upload": true
             },
             "Colfax High School": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q14713616",
+                "upload": true
             },
             "Colville National Forest (Wash.)": {
                 "Wikidata": "",
@@ -17474,7 +17474,7 @@
             },
             "Guy Albion Historical Society & Museum": {
                 "Wikidata": "",
-                "upload": false
+                "upload": true
             },
             "Heart Mountain Wyoming Foundation": {
                 "Wikidata": "",
@@ -17486,7 +17486,7 @@
             },
             "Hooper Store, The McGregor Company": {
                 "Wikidata": "",
-                "upload": false
+                "upload": true
             },
             "Hoover Institution": {
                 "Wikidata": "",
@@ -17534,7 +17534,7 @@
             },
             "Manuscripts, Archives and Special Collections, WSU Libraries": {
                 "Wikidata": "",
-                "upload": false
+                "upload": true
             },
             "Manzanar National Historic Site": {
                 "Wikidata": "",
@@ -17542,7 +17542,7 @@
             },
             "McCoy Valley Museum, Oakesdale Historical Society": {
                 "Wikidata": "",
-                "upload": false
+                "upload": true
             },
             "Medical Lake Historical Society": {
                 "Wikidata": "",
@@ -17581,8 +17581,8 @@
                 "upload": false
             },
             "National Archives and Records Administration": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q518155",
+                "upload": true
             },
             "National Japanese American Historical Society": {
                 "Wikidata": "",
@@ -17618,7 +17618,7 @@
             },
             "Palouse Empire Fair": {
                 "Wikidata": "",
-                "upload": false
+                "upload": true
             },
             "Pend Oreille County Library District": {
                 "Wikidata": "",
@@ -17626,7 +17626,7 @@
             },
             "Pine City Historical Society": {
                 "Wikidata": "",
-                "upload": false
+                "upload": true
             },
             "Port Angeles Public Library": {
                 "Wikidata": "",
@@ -17646,11 +17646,11 @@
             },
             "Rosalia Visitors Resource and Interpretive Center": {
                 "Wikidata": "",
-                "upload": false
+                "upload": true
             },
             "Roy Chatters Newspaper and Printing Museum": {
                 "Wikidata": "",
-                "upload": false
+                "upload": true
             },
             "San Juan Historical Museum": {
                 "Wikidata": "",
@@ -17677,8 +17677,8 @@
                 "upload": false
             },
             "Seattle Public Library": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q7442157",
+                "upload": true
             },
             "South Bay Japanese American Citizens League": {
                 "Wikidata": "",
@@ -17690,7 +17690,7 @@
             },
             "Staley Museum": {
                 "Wikidata": "",
-                "upload": false
+                "upload": true
             },
             "State Library of Oregon": {
                 "Wikidata": "",
@@ -17714,11 +17714,11 @@
             },
             "Tekoa Museum": {
                 "Wikidata": "",
-                "upload": false
+                "upload": true
             },
             "Town of Farmington": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q1505702",
+                "upload": true
             },
             "UW Nikkei Alumni Association (UWNAA)": {
                 "Wikidata": "",
@@ -17737,8 +17737,8 @@
                 "upload": false
             },
             "Washington State Library": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q48771349",
+                "upload": true
             },
             "Washington State University. Extension": {
                 "Wikidata": "",
@@ -17750,15 +17750,15 @@
             },
             "Whitman County Historical Society": {
                 "Wikidata": "",
-                "upload": false
+                "upload": true
             },
             "Whitman County Library": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q69494133",
+                "upload": true
             },
             "Whitman Hospital and Medical Center": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q50039349",
+                "upload": true
             },
             "Wing Luke Asian Museum": {
                 "Wikidata": "",
