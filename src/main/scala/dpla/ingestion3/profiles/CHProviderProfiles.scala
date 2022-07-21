@@ -6,6 +6,13 @@ import dpla.ingestion3.harvesters.file._
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.mappers.providers._
 
+class ArtstorProfile extends JsonProfile {
+  type Mapping = CdlMapping
+
+  override def getHarvester: Class[DplaJsonlFileHarvester] = classOf[DplaJsonlFileHarvester]
+  override def getMapping = new CdlMapping // fixme
+}
+
 /**
   * Biodiversity Heritage Library
   */
@@ -147,23 +154,33 @@ class IaProfile extends JsonProfile {
 }
 
 /**
-  * Library of Congress
-  */
-class LocProfile extends JsonProfile {
-  type Mapping = LcMapping
+ * Library of Congress
+ */
+class KyProfile extends JsonProfile {
+  type Mapping = LcMapping // FIXME
 
-  override def getHarvester: Class[LcCsvFileHarvester] = classOf[LcCsvFileHarvester]
-  override def getMapping = new LcMapping
+  override def getHarvester: Class[DplaJsonlFileHarvester] = classOf[DplaJsonlFileHarvester]
+  override def getMapping = new LcMapping // FIXME
 }
 
 /**
-  * Maine
+  * Library of Congress
   */
-class MeProfile extends XmlProfile {
-  type Mapping = MeMapping
+class LocProfile extends JsonProfile {
+  type Mapping = LcMapping // FIXME
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiHarvester]
-  override def getMapping = new MeMapping
+  override def getHarvester: Class[_ <: Harvester] = classOf[DplaJsonlFileHarvester]
+  override def getMapping = new LcMapping // FIXME
+}
+
+/**
+  * Digital Maine
+  */
+class MeProfile extends JsonProfile {
+  type Mapping = LcMapping // FIXME
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[DplaJsonlFileHarvester]
+  override def getMapping = new LcMapping // FIXME
 }
 
 /**
@@ -436,6 +453,16 @@ class VtProfile extends XmlProfile {
 
   override def getHarvester: Class[VtFileHarvester] = classOf[VtFileHarvester]
   override def getMapping = new VtMapping
+}
+
+/**
+ * University of Washington
+ */
+class WashingtonProfile extends JsonProfile {
+  type Mapping = LcMapping // FIXME
+
+  override def getHarvester: Class[DplaJsonlFileHarvester] = classOf[DplaJsonlFileHarvester]
+  override def getMapping = new LcMapping // FIXME
 }
 
 /**
