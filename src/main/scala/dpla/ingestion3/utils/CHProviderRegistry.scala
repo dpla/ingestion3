@@ -58,6 +58,7 @@ object CHProviderRegistry {
     "ia" -> Register(profile = new IaProfile),
     "il" -> Register(profile = new IlProfile),
     "indiana" -> Register(profile = new InProfile),
+    "jhn" -> Register(profile = new JhnProfile),
     "kentucky" -> Register(profile = new KyProfile),
     "lc" -> Register(profile = new LocProfile),
     "bpl" -> Register(profile = new MaProfile),

@@ -346,8 +346,8 @@ package object model {
     }
   })
 
-  val avroSchema: Schema = new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
-  val sparkSchema: StructType = SchemaConverters.toSqlType(avroSchema).dataType.asInstanceOf[StructType]
+  lazy val avroSchema: Schema = new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
+  lazy val sparkSchema: StructType = SchemaConverters.toSqlType(avroSchema).dataType.asInstanceOf[StructType]
 
   def toJsonString(json: JValue): String = JsonMethods.compact(JsonMethods.render(json))
   def fromJsonString(jsonString: String): json4s.JValue = JsonMethods.parse(jsonString)
