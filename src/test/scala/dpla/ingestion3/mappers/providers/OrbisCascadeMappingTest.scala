@@ -91,4 +91,9 @@ class OrbisCascadeMappingTest extends FlatSpec with BeforeAndAfter {
     ).map(stringOnlyWebResource)
     assert(extractor.isShownAt(xml) === expected)
   }
+
+  it should "apply a nwdh tag" in {
+    val expected = Seq(URI("nwdh"))
+    assert(extractor.tags(xml) === expected)
+  }
 }
