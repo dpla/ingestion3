@@ -1,7 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.{Document, Mapping}
-import dpla.ingestion3.model.{DcmiTypeCollection, EdmAgent, EdmTimeSpan, EdmWebResource, URI, nameOnlyAgent, stringOnlyTimeSpan, uriOnlyWebResource}
+import dpla.ingestion3.model.{DcmiTypeCollection, DplaPlace, EdmAgent, EdmTimeSpan, EdmWebResource, LiteralOrUri, URI, nameOnlyAgent, nameOnlyConcept, nameOnlyPlace, stringOnlyTimeSpan, uriOnlyWebResource}
 import dpla.ingestion3.utils.FlatFileIO
 import org.json4s.JValue
 import org.json4s.jackson.JsonMethods
@@ -465,7 +465,7 @@ class JsonRetconMappingTest extends FlatSpec {
     )
 
   it should "extract description" in
-    runTests (
+    runTests(
       Seq(
         TestCase(
           Seq(),
@@ -501,7 +501,7 @@ class JsonRetconMappingTest extends FlatSpec {
     )
 
   it should "extract extent" in
-    runTests (
+    runTests(
       Seq(
         TestCase(
           Seq(),
@@ -532,7 +532,7 @@ class JsonRetconMappingTest extends FlatSpec {
     )
 
   it should "extract format" in
-    runTests (
+    runTests(
       Seq(
         TestCase(
           Seq(
@@ -575,7 +575,7 @@ class JsonRetconMappingTest extends FlatSpec {
     )
 
   it should "extract genre" in
-    runTests (
+    runTests(
       Seq(
         TestCase(Seq(), artstor.mapping.genre, artstor.document),
         TestCase(Seq(), kentucky.mapping.genre, kentucky.document),
@@ -584,6 +584,359 @@ class JsonRetconMappingTest extends FlatSpec {
         TestCase(Seq(), washington.mapping.genre, washington.document)
       )
     )
+
+  it should "extract identifier" in
+    runTests(
+      Seq(
+        TestCase(Seq(), artstor.mapping.identifier, artstor.document),
+        TestCase(Seq(), kentucky.mapping.identifier, kentucky.document),
+        TestCase(
+          Seq(
+            "http://www.loc.gov/item/78695093/"
+          ),
+          lc.mapping.identifier,
+          lc.document
+        ),
+        TestCase(Seq(), maine.mapping.identifier, maine.document),
+        TestCase(
+          Seq(
+            "JWS13945",
+            "S-S-851",
+            "http://cdm16786.contentdm.oclc.org/cdm/ref/collection/sayre/id/9054"
+          ),
+          washington.mapping.identifier,
+          washington.document
+        )
+      )
+    )
+
+  it should "extract language" in
+    runTests(
+      Seq(
+        TestCase(Seq(), artstor.mapping.language, artstor.document),
+        TestCase(
+          Seq(
+            nameOnlyConcept("English")
+          ),
+          kentucky.mapping.language,
+          kentucky.document
+        ),
+        TestCase(
+          Seq(
+            nameOnlyConcept("English")
+          ),
+          lc.mapping.language,
+          lc.document
+        ),
+        TestCase(
+          Seq(
+            nameOnlyConcept("English")
+          ),
+          maine.mapping.language,
+          maine.document
+        ),
+        TestCase(Seq(), washington.mapping.language, washington.document)
+      )
+    )
+
+  it should "extract place" in
+    runTests(
+      Seq(
+        TestCase(
+          Seq(
+
+          ),
+          artstor.mapping.place,
+          artstor.document
+        ),
+        TestCase(
+          Seq(
+            nameOnlyPlace("McCracken County, Kentucky")
+          ),
+          kentucky.mapping.place,
+          kentucky.document
+        ),
+        TestCase(
+          Seq(
+            DplaPlace(
+              name = Some("massachusetts"),
+              coordinates = Some("42.36565, -71.10832")
+            ),
+            DplaPlace(
+              name = Some("newton"),
+              coordinates = Some("41.05815, -74.75267")
+            ),
+            DplaPlace(
+              name = Some("united states"),
+              coordinates = Some("39.76, -98.5")
+            )
+          ),
+          lc.mapping.place,
+          lc.document
+        ),
+        TestCase(Seq(), maine.mapping.place, maine.document),
+        TestCase(Seq(), washington.mapping.place, washington.document)
+      )
+    )
+
+  it should "extract publisher" in
+    runTests(
+      Seq(
+        TestCase(
+          Seq(
+            nameOnlyAgent("Trinity College")
+          ),
+          artstor.mapping.publisher,
+          artstor.document
+        ),
+        TestCase(Seq(), kentucky.mapping.publisher, kentucky.document),
+        TestCase(Seq(), lc.mapping.publisher, lc.document),
+        TestCase(Seq(), maine.mapping.publisher, maine.document),
+        TestCase(Seq(), washington.mapping.publisher, washington.document)
+      )
+    )
+
+  it should "extract relation" in
+    runTests(
+      Seq(
+        TestCase(Seq(), artstor.mapping.relation, artstor.document),
+        TestCase(Seq(), kentucky.mapping.relation, kentucky.document),
+        TestCase(Seq(), lc.mapping.relation, lc.document),
+        TestCase(Seq(), maine.mapping.relation, maine.document),
+        TestCase(
+          Seq(
+            LiteralOrUri(
+              "J. Willis Sayre Photographs",
+              isUri = false
+            ),
+            LiteralOrUri(
+              "J. Willis Sayre Photograph Collection Ph Coll 200",
+              isUri = false
+            ),
+            LiteralOrUri(
+              "http://archiveswest.orbiscascade.org/ark:/80444/xv08822",
+              isUri = false
+            )
+          ),
+          washington.mapping.relation,
+          washington.document
+        )
+      )
+    )
+
+  it should "extract rights" in
+    runTests(
+      Seq(
+        TestCase(
+          Seq(
+            "This digital collection and its contents are made available by Trinity College Library for limited non-commercial, educational and personal use only. For other uses, or for additional information regarding the collection, contact the staff of Watkinson Library (www.watkinsonlibrary.org). Shared Shelf Commons is a free service provided by ARTstor. ARTstor does not screen or select these images, and is acting as an online service provider under the Digital Millennium Copyright act in making this service available. Should you have copyright concerns about an image, please go to the Reporting a Copyright Problem of our website and follow the instructions, which will provide us with the necessary information to proceed."
+          ),
+          artstor.mapping.rights,
+          artstor.document
+        ),
+        TestCase(
+          Seq(
+            "This digital resource may be freely searched and displayed. Permission must be received for subsequent distribution in print or electronically. Physical rights are retained by the owning repository. Copyright is retained in accordance with U. S. copyright laws. Please go to http://kdl.kyvl.org for more information."
+          ),
+          kentucky.mapping.rights,
+          kentucky.document
+        ),
+        TestCase(
+          Seq(
+            "For rights relating to this resource, visit https://www.loc.gov/item/78695093/"
+          ),
+          lc.mapping.rights,
+          lc.document
+        ),
+        TestCase(Seq(), maine.mapping.rights, maine.document),
+        TestCase(
+          Seq(
+            "All rights reserved."
+          ),
+          washington.mapping.rights,
+          washington.document
+        )
+      )
+    )
+
+  it should "extract subject" in
+    runTests(
+      Seq(
+        TestCase(
+          Seq(
+            nameOnlyConcept("Ornithology"),
+            nameOnlyConcept("Lantern slides"),
+            nameOnlyConcept("Birds--United States"),
+            nameOnlyConcept("Gulls, Terns and Skimmers"),
+            nameOnlyConcept("Birds--North Dakota")
+          ),
+          artstor.mapping.subject,
+          artstor.document
+        ),
+        TestCase(Seq(), kentucky.mapping.subject, kentucky.document),
+        TestCase(
+          Seq(
+            nameOnlyConcept("Newton (Mass.)--Aerial views"),
+            nameOnlyConcept("United States--Massachusetts--Newton")
+          ),
+          lc.mapping.subject,
+          lc.document
+        ),
+        TestCase(
+          Seq(
+            nameOnlyConcept("State Planning Office"),
+            nameOnlyConcept("Recycling"),
+            nameOnlyConcept("Plastics"),
+            nameOnlyConcept("Maine")
+          ),
+          maine.mapping.subject,
+          maine.document
+        ),
+        TestCase(
+          Seq(
+            nameOnlyConcept("actresses, motion pictures")
+          ),
+          washington.mapping.subject,
+          washington.document
+        )
+      )
+    )
+
+  it should "extract temporal" in
+    runTests(
+      Seq(
+        TestCase(Seq(), artstor.mapping.temporal, artstor.document),
+        TestCase(Seq(), kentucky.mapping.temporal, kentucky.document),
+        TestCase(Seq(), lc.mapping.temporal, lc.document),
+        TestCase(Seq(), maine.mapping.temporal, maine.document),
+        TestCase(Seq(), washington.mapping.temporal, washington.document)
+      )
+    )
+
+  it should "extract title" in
+    runTests(
+      Seq(
+        TestCase(
+          Seq(
+            "Ring-billed Gulls, Nelson County, North Dakota; overall"
+          ),
+          artstor.mapping.title,
+          artstor.document
+        ),
+        TestCase(
+          Seq(
+            "Image 1 of Paducah sun (Paducah, Ky. : 1898), February 20, 1906"
+          ),
+          kentucky.mapping.title,
+          kentucky.document
+        ),
+        TestCase(
+          Seq(
+            "View of Newton, Mass. : comprising wards 1 & 7 & environs of the city of Newton"
+          ),
+          lc.mapping.title,
+          lc.document
+        ),
+        TestCase(
+          Seq(
+            "Report on the Costs and Benefits of State and Local Options to Stimulate an Increase in the Recycling of Plastics. 2009"
+          ),
+          maine.mapping.title,
+          maine.document
+        ),
+        TestCase(
+          Seq(
+            "Valeska Suratt, silent film actress"
+          ),
+          washington.mapping.title,
+          washington.document
+        )
+      )
+    )
+
+  it should "extract type" in
+    runTests(
+      Seq(
+        TestCase(
+          Seq(),
+          artstor.mapping.`type`,
+          artstor.document
+        ),
+        TestCase(Seq("text"), kentucky.mapping.`type`, kentucky.document),
+        TestCase(Seq("image"), lc.mapping.`type`, lc.document),
+        TestCase(Seq("text"), maine.mapping.`type`, maine.document),
+        TestCase(Seq("image"), washington.mapping.`type`, washington.document)
+      )
+    )
+
+  it should "implement useProviderName" in {
+    assert(artstor.mapping.useProviderName === true)
+    assert(kentucky.mapping.useProviderName === true)
+    assert(lc.mapping.useProviderName === false)
+    assert(maine.mapping.useProviderName === true)
+    assert(washington.mapping.useProviderName === false)
+  }
+
+  it should "implement getProviderName" in {
+    assert(artstor.mapping.getProviderName === Some("artstor"))
+    assert(kentucky.mapping.getProviderName === Some("kentucky"))
+    assert(lc.mapping.getProviderName === Some("lc"))
+    assert(maine.mapping.getProviderName === Some("maine"))
+    assert(washington.mapping.getProviderName === Some("washington"))
+  }
+
+  it should "extract originalId" in {
+    assert(
+      artstor.mapping.originalId(artstor.document) ===
+        Some("oai:oaicat.oclc.org:SS7729997_7729997_8329558_TRINITY")
+    )
+    assert(
+      kentucky.mapping.originalId(kentucky.document) ===
+        Some("http://kdl.kyvl.org/catalog/xt7cnp1wfn5x_1")
+    )
+    assert(
+      lc.mapping.originalId(lc.document) ===
+        Some("8bca6ea2341791bb4b30c471115e76e8")
+    )
+    assert(
+      maine.mapping.originalId(maine.document) ===
+        Some("oai:the.european.library.msl_statedocs:oai:digitalmaine.com:spo_docs-1067")
+    )
+    assert(
+      washington.mapping.originalId(washington.document) ===
+        Some("a2a415d0f3030e86e0349f90747d1c86")
+    )
+  }
+
+  it should "return the correct provider" in {
+    Map(
+      artstor -> EdmAgent(
+        name = Some("Artstor"),
+        uri = Some(URI("http://dp.la/api/contributor/artstor"))
+      ),
+      kentucky -> EdmAgent(
+        name = Some("Kentucky Digital Library"),
+        uri = Some(URI("http://dp.la/api/contributor/kdl"))
+      ),
+      lc -> EdmAgent(
+        name = Some("Library of Congress"),
+        uri = Some(URI("http://dp.la/api/contributor/lc"))
+      ),
+      maine -> EdmAgent(
+        name = Some("Digital Maine"),
+        uri = Some(URI("http://dp.la/api/contributor/maine"))
+      ),
+      washington -> EdmAgent(
+        name = Some("University of Washington"),
+        uri = Some(URI("http://dp.la/api/contributor/washington"))
+      )
+    ).foreach(
+      entry =>
+        assert(entry._1.mapping.provider(entry._1.document) === entry._2)
+    )
+  }
+
+
 
   /*
   def foo() = {
