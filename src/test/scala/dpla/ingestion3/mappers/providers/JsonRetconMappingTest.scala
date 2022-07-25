@@ -935,22 +935,4 @@ class JsonRetconMappingTest extends FlatSpec {
         assert(entry._1.mapping.provider(entry._1.document) === entry._2)
     )
   }
-
-
-
-  /*
-  def foo() = {
-  runTests (
-    Seq(
-      TestCase(, artstor.mapping., artstor.document),
-      TestCase(, kentucky.mapping., kentucky.document),
-      TestCase(, lc.mapping., lc.document),
-      TestCase(, maine.mapping., maine.document),
-      TestCase(, washington.mapping., washington.document)
-    )
-  )
-
-   */
 }
-
-
