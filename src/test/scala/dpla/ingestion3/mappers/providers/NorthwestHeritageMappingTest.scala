@@ -122,5 +122,10 @@ class NorthwestHeritageMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("http://media.master/").map(stringOnlyWebResource)
     assert(extractor.mediaMaster(xml) === expected)
   }
+
+  it should "apply a nwdh tag" in {
+    val expected = Seq(URI("nwdh"))
+    assert(extractor.tags(xml) === expected)
+  }
 }
 
