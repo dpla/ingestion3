@@ -20,7 +20,7 @@ abstract class JsonRetconMapping extends JsonMapping with JsonExtractor {
 
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", originalId(data)) ~
-      ("dplaId", extractString(data.get \ "_source" \ "id").getOrElse(""))
+      ("dplaId", extractString(data.get \ "_source" \ "id").get)
 
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(data.get \ "_source" \ "dataProvider")
