@@ -1,0 +1,96 @@
+{
+  "_type": "item",
+  "_id": "artstor--oai:oaicat.oclc.org:SS7729997_7729997_8329558_TRINITY",
+  "_source": {
+    "@context": "http://dp.la/api/items/context",
+    "_id": "artstor--oai:oaicat.oclc.org:SS7729997_7729997_8329558_TRINITY",
+    "admin": {
+      "object_status": 1
+    },
+    "originalRecord": {
+      "status": [],
+      "publisher": "Trinity College",
+      "handle": [
+        "http://www.trincoll.edu/LITC/Library/Pages/default.aspx",
+        "http://media.artstor.net/imgstor/size1/sslps/c7729997/2842515.jpg",
+        "http://search.openlibrary.artstor.org/object/SS7729997_7729997_8329558_TRINITY"
+      ],
+      "description": null,
+      "rights": "This digital collection and its contents are made available by Trinity College Library for limited non-commercial, educational and personal use only. For other uses, or for additional information regarding the collection, contact the staff of Watkinson Library (www.watkinsonlibrary.org). Shared Shelf Commons is a free service provided by ARTstor. ARTstor does not screen or select these images, and is acting as an online service provider under the Digital Millennium Copyright act in making this service available. Should you have copyright concerns about an image, please go to the Reporting a Copyright Problem of our website and follow the instructions, which will provide us with the necessary information to proceed.",
+      "format": "dimensions of image: 6.99 x 7.62 cm (2.75 x 3 inches) approximately, dimensions of slide: 3.25 x 4 inches approximately; photography; Lantern slide",
+      "collection": {
+        "title": "SSDPLATrinity",
+        "@id": "http://dp.la/api/collections/e14e690d4bf40114ac139c015bcb4cb7",
+        "description": "SSDPLATrinity",
+        "id": "e14e690d4bf40114ac139c015bcb4cb7"
+      },
+      "label": "Ring-billed Gulls, Nelson County, North Dakota; overall",
+      "date": "May 31, 1901 (creation date)",
+      "coverage": "Trinity College, Watkinson Library (Hartford, Connecticut, USA)",
+      "provider": {
+        "@id": "http://dp.la/api/contributor/artstor",
+        "name": "ARTstor"
+      },
+      "datestamp": "2018-05-01",
+      "title": "Ring-billed Gulls, Nelson County, North Dakota; overall",
+      "creator": "Job, Herbert Keightley (photographer, American, 1864-1933), American",
+      "id": "oai:oaicat.oclc.org:SS7729997_7729997_8329558_TRINITY",
+      "setSpec": "SSDPLATrinity",
+      "subject": "Ornithology; Lantern slides; Birds -- United States; Gulls, Terns and Skimmers; Birds -- North Dakota"
+    },
+    "object": "http://media.artstor.net/imgstor/size1/sslps/c7729997/2842515.jpg",
+    "aggregatedCHO": "#sourceResource",
+    "ingestDate": "2018-10-17T18:30:57.436749Z",
+    "@type": "ore:Aggregation",
+    "ingestionSequence": null,
+    "isShownAt": "http://search.openlibrary.artstor.org/object/SS7729997_7729997_8329558_TRINITY",
+    "provider": {
+      "@id": "http://dp.la/api/contributor/artstor",
+      "name": "ARTstor"
+    },
+    "sourceResource": {
+      "publisher": "Trinity College",
+      "rights": "This digital collection and its contents are made available by Trinity College Library for limited non-commercial, educational and personal use only. For other uses, or for additional information regarding the collection, contact the staff of Watkinson Library (www.watkinsonlibrary.org). Shared Shelf Commons is a free service provided by ARTstor. ARTstor does not screen or select these images, and is acting as an online service provider under the Digital Millennium Copyright act in making this service available. Should you have copyright concerns about an image, please go to the Reporting a Copyright Problem of our website and follow the instructions, which will provide us with the necessary information to proceed.",
+      "format": [
+        "Dimensions of image: 6.99 x 7.62 cm (2.75 x 3 inches) approximately, dimensions of slide: 3.25 x 4 inches approximately",
+        "Photography",
+        "Lantern slide"
+      ],
+      "creator": "Job, Herbert Keightley (photographer, American, 1864-1933), American",
+      "collection": {
+        "title": "SSDPLATrinity",
+        "@id": "http://dp.la/api/collections/e14e690d4bf40114ac139c015bcb4cb7",
+        "description": "SSDPLATrinity",
+        "id": "e14e690d4bf40114ac139c015bcb4cb7"
+      },
+      "date": {
+        "begin": null,
+        "end": null,
+        "displayDate": "May 31, 1901 (creation date)"
+      },
+      "title": "Ring-billed Gulls, Nelson County, North Dakota; overall",
+      "@id": "http://dp.la/api/items/997cbfdb65b54b965d1197968d39083f#sourceResource",
+      "subject": [
+        {
+          "name": "Ornithology"
+        },
+        {
+          "name": "Lantern slides"
+        },
+        {
+          "name": "Birds--United States"
+        },
+        {
+          "name": "Gulls, Terns and Skimmers"
+        },
+        {
+          "name": "Birds--North Dakota"
+        }
+      ]
+    },
+    "ingestType": "item",
+    "dataProvider": "Trinity College",
+    "@id": "http://dp.la/api/items/997cbfdb65b54b965d1197968d39083f",
+    "id": "997cbfdb65b54b965d1197968d39083f"
+  }
+}

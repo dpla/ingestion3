@@ -62,7 +62,7 @@ object CHProviderRegistry {
     "kentucky" -> Register(profile = new KyProfile),
     "lc" -> Register(profile = new LocProfile),
     "bpl" -> Register(profile = new MaProfile),
-    "me" -> Register(profile = new MeProfile),
+    "maine" -> Register(profile = new MeProfile),
     "maryland" -> Register(profile = new MarylandProfile),
     "mi" -> Register(profile = new MiProfile),
     "minnesota" -> Register(profile = new MdlProfile),

@@ -165,30 +165,30 @@ class IaProfile extends JsonProfile {
  * Library of Congress
  */
 class KyProfile extends JsonProfile {
-  type Mapping = LcMapping // FIXME
+  type Mapping = KentuckyRetconMapping
 
   override def getHarvester: Class[DplaJsonlFileHarvester] = classOf[DplaJsonlFileHarvester]
-  override def getMapping = new LcMapping // FIXME
+  override def getMapping = new KentuckyRetconMapping
 }
 
 /**
   * Library of Congress
   */
 class LocProfile extends JsonProfile {
-  type Mapping = LcMapping // FIXME
+  type Mapping = LcRetconMapping
 
   override def getHarvester: Class[_ <: Harvester] = classOf[DplaJsonlFileHarvester]
-  override def getMapping = new LcMapping // FIXME
+  override def getMapping = new LcRetconMapping
 }
 
 /**
   * Digital Maine
   */
 class MeProfile extends JsonProfile {
-  type Mapping = LcMapping // FIXME
+  type Mapping = MaineRetconMapping
 
   override def getHarvester: Class[_ <: Harvester] = classOf[DplaJsonlFileHarvester]
-  override def getMapping = new LcMapping // FIXME
+  override def getMapping = new MaineRetconMapping
 }
 
 /**
@@ -467,10 +467,10 @@ class VtProfile extends XmlProfile {
  * University of Washington
  */
 class WashingtonProfile extends JsonProfile {
-  type Mapping = LcMapping // FIXME
+  type Mapping = WashingtonRetconMapping
 
   override def getHarvester: Class[DplaJsonlFileHarvester] = classOf[DplaJsonlFileHarvester]
-  override def getMapping = new LcMapping // FIXME
+  override def getMapping = new WashingtonRetconMapping
 }
 
 /**
