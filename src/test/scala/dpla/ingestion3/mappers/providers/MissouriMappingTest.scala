@@ -117,7 +117,7 @@ class MissouriMappingTest extends FlatSpec with BeforeAndAfter {
 
     // subject
   it should "extract the correct subjects" in {
-    val expected = List("Schools--Missouri--Springfield", " Alternative education", " Springfield (Mo.)", "")
+    val expected = List("Schools--Missouri--Springfield", " Alternative education", " Springfield (Mo.)")
       .map(nameOnlyConcept)
     assert(extractor.subject(json) === expected)
   }
