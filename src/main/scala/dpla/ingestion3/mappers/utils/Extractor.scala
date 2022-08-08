@@ -88,12 +88,15 @@ trait XmlExtractor extends Extractor[NodeSeq] {
     * @param xValue
     * @return Seq[String]
     */
-  override def extractStrings(xValue: NodeSeq): Seq[String] = xValue match {
-    case v if v.size > 1 => v.flatMap(value => extractString(value))
-    case _ => extractString(xValue) match {
-      case Some(stringValue) => Seq(stringValue)
-      case _ => Seq()
+  override def extractStrings(xValue: NodeSeq): Seq[String] = {
+    val values = xValue match {
+      case v if v.size > 1 => v.flatMap(value => extractString(value))
+      case _ => extractString(xValue) match {
+        case Some(stringValue) => Seq(stringValue)
+        case _ => Seq()
+      }
     }
+    values.filter(_.nonEmpty)
   }
 
   /**
@@ -236,13 +239,16 @@ trait JsonExtractor extends Extractor[JValue] {
     *      path-walking syntax: jsonTree \ "someChild" \\ "someDecendant"
     *
     */
-  def extractStrings(jValue: JValue): Seq[String] = jValue match {
-    case JArray(array) => array.flatMap(entry => extractString(entry))
-    case JObject(fields) => fields.flatMap({case (_, value) => extractString(value)})
-    case _ => extractString(jValue) match {
-      case Some(stringValue) => Seq(stringValue)
-      case None => Seq()
+  def extractStrings(jValue: JValue): Seq[String] = {
+    val values = jValue match {
+      case JArray(array) => array.flatMap(entry => extractString(entry))
+      case JObject(fields) => fields.flatMap({case (_, value) => extractString(value)})
+      case _ => extractString(jValue) match {
+        case Some(stringValue) => Seq(stringValue)
+        case None => Seq()
+      }
     }
+    values.filter(_.nonEmpty)
   }
 
   /**
