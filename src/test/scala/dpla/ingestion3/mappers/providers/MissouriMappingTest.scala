@@ -100,9 +100,24 @@ class MissouriMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.rights(json) === expected)
   }
 
-  // subject
+  // rights
+  it should "extract the correct rights when empty string provided" in {
+    val jsonString =
+    """
+        |{
+        |  "sourceResource": {
+        |     "rights": ""
+        |  }
+        |}
+        |""".stripMargin
+    val json: Document[JValue] = Document(parse(jsonString))
+    val expected = List()
+    assert(extractor.rights(json) === expected)
+  }
+
+    // subject
   it should "extract the correct subjects" in {
-    val expected = List("Schools--Missouri--Springfield", " Alternative education", " Springfield (Mo.)", "")
+    val expected = List("Schools--Missouri--Springfield", " Alternative education", " Springfield (Mo.)")
       .map(nameOnlyConcept)
     assert(extractor.subject(json) === expected)
   }
