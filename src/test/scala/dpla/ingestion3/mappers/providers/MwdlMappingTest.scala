@@ -82,5 +82,16 @@ class MwdlMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Some(URI("http://dp.la/api/items/5c31abd09b535552592bf97cbed6557a"))
     assert(extractor.dplaUri(xml) === expected)
   }
+  it should "apply nwdh tags" in {
+    val expected = Seq(URI("nwdh"))
+    val xml: NodeSeq = <PrimoNMBib xmlns="http://www.exlibrisgroup.com/xsd/primo/primo_nm_bib">
+        <record>
+            <display>
+                <lds03>Bushnell University</lds03>
+              </display>
+          </record>
+      </PrimoNMBib>
+    assert(extractor.tags(Document(xml)) === expected)
+  }
 }
 

@@ -7,8 +7,8 @@ object TaggingUtils {
   implicit class Tags(value: String) {
 
     /**
-      * Applies at standard tag for records to be included in the PanAm portal
-      */
+     * Applies at standard tag for records to be included in the PanAm portal
+     */
     lazy val applyAviationTags: Option[URI] = {
       // tag value to apply
       val aviationTag = URI("aviation")
@@ -27,5 +27,34 @@ object TaggingUtils {
       }
     }
 
+    /**
+     * Applies tag for NWDH local
+     */
+    lazy val applyNwdhTags: Option[URI] = {
+      val nwdhTag = URI("nwdh")
+
+      // NWDH data providers in MWDL
+      val providers = Seq(
+        "Bushnell University",
+        "Center for Asian Pacific Studies, University of Oregon",
+        "African Studies Program, University of Oregon",
+        "Department of Classics and the Department of the History of Art and Architecture, University of Oregon",
+        "Emerald Media Group",
+        "Jordan Schnitzer Museum of Art and the National Endowmant for the Humanities",
+        "Latino Roots Project and the Center for Latino/a American Studies, University of Oregon, and SELCO Community Credit Union",
+        "National Endowment for the Humanities and the American Council of Learned Societies",
+        "Oregon State Highway Department",
+        "Oregon State University Libraries",
+        "Randall V. Mills Archives of Northwest Folklore and the Folklore Program, University of Oregon",
+        "University of Central Florida, and Shandong University of Art and Design",
+        "University of Oregon Libraries"
+      )
+
+      if (providers.contains(value)) {
+        Some(nwdhTag)
+      } else {
+        None
+      }
+    }
   }
 }
