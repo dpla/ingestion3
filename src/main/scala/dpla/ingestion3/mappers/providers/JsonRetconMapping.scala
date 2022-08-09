@@ -3,6 +3,7 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.mappers.utils.{Document, JsonExtractor, JsonMapping}
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model.{DcmiTypeCollection, DplaPlace, EdmAgent, EdmTimeSpan, EdmWebResource, LiteralOrUri, SkosConcept, URI, eitherStringOrUri, nameOnlyAgent, nameOnlyConcept, nameOnlyPlace, uriOnlyWebResource}
+import org.json4s
 import org.json4s.JValue
 import org.json4s.JsonAST.{JArray, JObject, JString}
 import org.json4s.JsonDSL._
@@ -232,4 +233,7 @@ class WashingtonRetconMapping extends JsonRetconMapping {
     name = Some("University of Washington"),
     uri = Some(URI("http://dp.la/api/contributor/washington"))
   )
+
+  override def tags(data: Document[json4s.JValue]): ZeroToMany[URI] =
+    Seq(URI("nwdh"))
 }
