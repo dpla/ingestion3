@@ -10,7 +10,7 @@ class ArtstorProfile extends JsonProfile {
   type Mapping = CdlMapping
 
   override def getHarvester: Class[DplaJsonlFileHarvester] = classOf[DplaJsonlFileHarvester]
-  override def getMapping = new CdlMapping // fixme
+  override def getMapping = new ArtstorRetconMapping
 }
 
 /**
