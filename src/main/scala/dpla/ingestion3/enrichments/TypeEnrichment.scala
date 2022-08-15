@@ -20,6 +20,7 @@ class TypeEnrichment extends VocabEnrichment[String] {
     "albumen prints" -> dcmiType.Image,
     "appliance" -> dcmiType.PhysicalObject,
     "architectural drawing" -> dcmiType.Image,
+    "archived website" -> dcmiType.InteractiveResource,
     "art print" -> dcmiType.Image,
     "audio" -> dcmiType.Sound,
     "audiofile" -> dcmiType.Sound,

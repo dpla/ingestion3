@@ -37,7 +37,7 @@ class CommunityWebsMapping extends JsonMapping with JsonExtractor with IngestMes
       .map(stringOnlyWebResource)
 
   override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
-    extractStrings(unwrap(data) \ "preview").map(stringOnlyWebResource)
+    extractStrings(unwrap(data) \ "preview_image").map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
     Utils.formatJson(data)
@@ -70,9 +70,8 @@ class CommunityWebsMapping extends JsonMapping with JsonExtractor with IngestMes
 //  override def extent(data: Document[JValue]): ZeroToMany[String] =
 //    extractStrings(unwrap(data) \ "sourceResource" \ "extent")
 
-//  override def format(data: Document[JValue]): ZeroToMany[String] =
-//    extractStrings(unwrap(data) \ "sourceResource" \ "format") ++
-//      extractStrings(unwrap(data) \ "sourceResource" \ "genre" \ "name")
+  override def format(data: Document[JValue]): ZeroToMany[String] =
+    extractStrings(unwrap(data) \ "type")
 
 //  override def genre(data: Document[JValue]): ZeroToMany[SkosConcept] =
 //    extractStrings(unwrap(data) \ "sourceResource" \ "genre" \ "name")
