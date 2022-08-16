@@ -64,7 +64,6 @@ end
 
 Vagrant.configure("2") do |config|
   config.vm.box = "dummy"
-  config.disksize.size = '75GB' # Requires --- vagrant plugin install vagrant-disksize
   config.vm.provider :aws do |aws, override|
     aws.access_key_id = ENV['AWS_ACCESS_KEY_ID']
     aws.secret_access_key = ENV['AWS_SECRET_ACCESS_KEY']
@@ -72,7 +71,6 @@ Vagrant.configure("2") do |config|
     aws.iam_instance_profile_name = 'ingestion3-spark'
     aws.security_groups = ['sg-58f1803d', 'sg-07cfcb840697354e3'] # default, staff-jenkins-flintrock-access
     aws.subnet_id = "subnet-e8c8f3c0" # main vpc
-#     aws.subnet_id = "subnet-0e48dbb6557f1e7c6"  # default vpc
     aws.ssh_host_attribute = :private_ip_address
     aws.keypair_name = "general"
     aws.instance_type = "m6g.2xlarge"
@@ -82,6 +80,12 @@ Vagrant.configure("2") do |config|
     aws.tags = {
         'Name' => 'ingest'
     }
+    aws.block_device_mapping = [{
+          'DeviceName' => "/dev/sda1",
+          'Ebs.VolumeSize' => 100, # Size in GB
+          'Ebs.DeleteOnTermination' => true,
+          'Ebs.VolumeType' => "GP2"
+        }]
   end
   config.vm.provision "shell", inline: $script
   config.vm.provision "shell", privileged: false, inline: $sdk_script
