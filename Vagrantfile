@@ -1,9 +1,19 @@
+
+# removed dependency ["vagrant-aws-mkubenka",["= 0.7.2.pre.24"]]
+
+# Installs/updates SDKs/packages as root
 $script = <<-'SCRIPT'
 
-sudo yum -y update
-sudo yum -y upgrade
-sudo yum -y install git
-sudo yum -y install awscli
+yum -y update
+yum -y upgrade
+yum -y install git
+yum -y install awscli
+yum -y install git
+
+SCRIPT
+
+# Installs SDKs/packages as ec2-user
+$sdk_script = <<-'SCRIPT'
 
 curl -s "https://get.sdkman.io" | bash
 source "$HOME/.sdkman/bin/sdkman-init.sh"
@@ -12,12 +22,15 @@ sdk install scala 2.11.8
 sdk install spark 2.4.7
 sdk install sbt
 
-cd ~/
+cd $HOME
 git clone https://github.com/dpla/ingestion3.git
-mkdir ~/ingestion3/conf/
-mkdir ~/data/
+mkdir $HOME/ingestion3/conf/
+mkdir $HOME/data/
 
-sudo echo 'i3-harvest ()
+cd $HOME/ingestion3
+sbt compile
+
+echo 'i3-harvest ()
 {
   SBT_OPTS=-Xmx15g sbt "runMain dpla.ingestion3.entries.ingest.HarvestEntry
     --output /home/ec2-user/data/
@@ -49,10 +62,9 @@ class Hash
   end unless Hash.method_defined?(:except)
 end
 
-
 Vagrant.configure("2") do |config|
-  #config.vm.box = "ubuntu/focal64"
   config.vm.box = "dummy"
+  config.disksize.size = '75GB' # Requires --- vagrant plugin install vagrant-disksize
   config.vm.provider :aws do |aws, override|
     aws.access_key_id = ENV['AWS_ACCESS_KEY_ID']
     aws.secret_access_key = ENV['AWS_SECRET_ACCESS_KEY']
@@ -65,11 +77,12 @@ Vagrant.configure("2") do |config|
     aws.keypair_name = "general"
     aws.instance_type = "m6g.2xlarge"
     override.ssh.username = "ec2-user"
-    override.vm.synced_folder ".", "/vagrant", disabled: true 
+    override.vm.synced_folder ".", "/vagrant", disabled: true
     override.ssh.private_key_path = "~/.ssh/general.pem"
     aws.tags = {
         'Name' => 'ingest'
     }
   end
   config.vm.provision "shell", inline: $script
+  config.vm.provision "shell", privileged: false, inline: $sdk_script
 end
