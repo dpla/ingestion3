@@ -47,6 +47,7 @@ object CHProviderRegistry {
     "bhl" -> Register(profile = new BhlProfile),
     "cdl" -> Register(profile = new CdlProfile),
     "ct" -> Register(profile = new CtProfile),
+    "community-webs" -> Register(profile = new CommunityWebsProfile),
     "dc" -> Register(profile = new DcProfile),
     "esdn" -> Register(profile = new EsdnProfile),
     "florida" -> Register(profile = new FlProfile),

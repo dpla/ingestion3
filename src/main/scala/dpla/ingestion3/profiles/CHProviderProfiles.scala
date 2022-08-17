@@ -44,6 +44,16 @@ class CtProfile extends XmlProfile {
 }
 
 /**
+ * Community Webs
+ */
+class CommunityWebsProfile extends JsonProfile {
+  type Mapping = CommunityWebsMapping
+
+  override def getHarvester: Class[CommunityWebsHarvester] = classOf[CommunityWebsHarvester]
+  override def getMapping = new CommunityWebsMapping
+}
+
+/**
   * District Digital
   */
 class DcProfile extends XmlProfile {
