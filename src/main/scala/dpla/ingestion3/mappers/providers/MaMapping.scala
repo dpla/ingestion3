@@ -63,36 +63,35 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     * </mods:name>
     **/
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
-    val names = (getModsRoot(data) \ "name")
+    (getModsRoot(data) \ "name")
       .filter(n => extractStrings(n \ "role" \ "roleTerm").map(_.trim).contains("Contributor"))
-      .flatMap(node => nameConstructor(node))
+      .map(node => edmAgentUriHelper(node))
+  }
 
-    names
-    // nameConstructor(names)
+  def edmAgentUriHelper(node: Node): EdmAgent = {
+    val uri = getAttributeValue(node, "valueURI").filter(_.nonEmpty).map(URI).toSeq
+    val scheme = getAttributeValue(node, "authorityURI").filter(_.nonEmpty).map(URI)
+    val name = nameConstructor(node)
+    EdmAgent(name = name, exactMatch = uri, scheme = scheme )
   }
 
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] = {
     // <name><namePart> + " , " <namePart type=date>
-    val names = (getModsRoot(data) \ "name")
+    (getModsRoot(data) \ "name")
       .filterNot(n => extractStrings(n \ "role" \ "roleTerm").map(_.trim).contains("Contributor"))
-      .flatMap(node => nameConstructor(node))
-    names
-    // nameConstructor(names)
+      .map(node => edmAgentUriHelper(node))
   }
 
-  private def nameConstructor(names: NodeSeq): Seq[EdmAgent] = {
-    names.map(node => {
+  private def nameConstructor(node: Node): Option[String] = {
       val name = extractStrings((node \ "namePart").filter(p => p.attributes.isEmpty)).mkString(". ")
       val date = extractString((node \ "namePart").filter(p => filterAttribute(p, "type", "date")))
       // val uri = extractStrings() FIXME when jhn is merged in with attribute namespace mapping functionality
 
       (name.isEmpty, date) match {
-        case(false, Some(d)) => s"$name, $d"
-        case(false, None) => s"$name"
-        case(_, _) => ""
+        case(false, Some(d)) => Some(s"$name, $d")
+        case(false, None) => Some(s"$name")
+        case(_, _) => None
       }
-    })
-      .map(nameOnlyAgent)
   }
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] = {
@@ -237,16 +236,11 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     (getModsRoot(data) \ "accessCondition")
       .flatMap(extractStrings)
 
-  override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
-  // Any <mods:subject> field, except <mods:hierarchicalGeographic>, <mods:geographic>, and <mods:cartographics><mods:coordinates>.
-    ((getModsRoot(data) \ "subject" \ "topic") ++
-      (getModsRoot(data) \ "subject" \ "temporal") ++
-      (getModsRoot(data) \ "subject" \ "titleInfo") ++
-      (getModsRoot(data) \ "subject" \ "name") ++
-      (getModsRoot(data) \ "subject" \ "genre"))
-      .flatMap(extractStrings)
-      .map(_.trim)
-      .map(nameOnlyConcept)
+  override def subject(data: Document[NodeSeq]): Seq[SkosConcept] = {
+    // Any <mods:subject> field, except <mods:hierarchicalGeographic>, <mods:geographic>, and <mods:cartographics><mods:coordinates>.
+    val properties = Seq("topic", "termporal", "titleInfo", "name", "genre")
+    properties.flatMap(property => (getModsRoot(data) \ "subject" \ property).map(node => skosConceptUriHelper(node)))
+  }
 
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
     extractStrings(getModsRoot(data) \ "subject" \\ "temporal").map(stringOnlyTimeSpan)
@@ -323,5 +317,12 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   )
 
   private lazy val getModsRoot = (data: Document[NodeSeq]) => data \ "metadata" \ "mods"
+
+  def skosConceptUriHelper(node: Node): SkosConcept = {
+    val uri = getAttributeValue(node, "valueURI").map(URI).toSeq
+    val scheme = getAttributeValue(node, "authorityURI").map(URI)
+    val label = extractString(node)
+    SkosConcept(providedLabel = label, exactMatch = uri, scheme = scheme )
+  }
 }
 

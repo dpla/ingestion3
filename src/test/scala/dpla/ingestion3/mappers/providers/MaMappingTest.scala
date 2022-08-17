@@ -38,32 +38,116 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct contributor" in {
-    val expected = Seq("American Photo-Relief Printing Co").map(nameOnlyAgent)
+    // val expected = Seq("American Photo-Relief Printing Co").map(nameOnlyAgent)
+
+    val expected = Seq(
+      EdmAgent(name = Some("American Photo-Relief Printing Co"))
+    )
     assert(extractor.contributor(xml) === expected)
   }
 
   it should "extract the correct creators" in {
-    val expected = Seq("Alfred, 2000", "John").map(nameOnlyAgent)
+     val expected = Seq("Alfred, 2000", "John").map(nameOnlyAgent)
+//    val expected = Seq(
+//      EdmAgent(
+//        name = Some("Alfred, 2000"),
+//        exactMatch = Seq(URI("http://id.loc.gov/vocabulary/relators/ctb")),
+//        scheme = Some(URI("http://id.loc.gov/vocabulary/relators"))
+//      ),
+//      EdmAgent(
+//        name = Some("John"),
+//        exactMatch = Seq(URI("http://id.loc.gov/vocabulary/relators/ctb")),
+//        scheme = Some(URI("http://id.loc.gov/vocabulary/relators"))
+//      )
+//    )
+
     assert(extractor.creator(xml) == expected)
   }
 
   it should "extract the correct creators from xmlCreators" in {
+//    val expected = Seq(
+//      "Bonet, Honoré, active 1378-1398",
+//      "Moris, V.C.",
+//      "Caxton, William, approximately 1422-1491 or 1492",
+//      "Sonnyng, William",
+//      "Sonnyng, John",
+//      "Wall, Thomas, 1504-1536",
+//      "Spelman, Henry, Sir, 1564?-1641",
+//      "Macro, Cox, -1767",
+//      "Patteson, John, 1755-1833",
+//      "Gurney, Hudson, 1775-1864",
+//      "Gurney, J. H. (John Henry), 1848-1922",
+//      "Gurney, Q. E. (Quintin Edward), 1883-",
+//      "Abbaye Saint-Pierre de Hasnon (Hasnon, France)",
+//      "Maggs Bros."
+//    ).map(nameOnlyAgent)
+
+    val scheme = Some(URI("http://id.loc.gov/authorities/names"))
+
     val expected = Seq(
-      "Bonet, Honoré, active 1378-1398",
-      "Moris, V.C.",
-      "Caxton, William, approximately 1422-1491 or 1492",
-      "Sonnyng, William",
-      "Sonnyng, John",
-      "Wall, Thomas, 1504-1536",
-      "Spelman, Henry, Sir, 1564?-1641",
-      "Macro, Cox, -1767",
-      "Patteson, John, 1755-1833",
-      "Gurney, Hudson, 1775-1864",
-      "Gurney, J. H. (John Henry), 1848-1922",
-      "Gurney, Q. E. (Quintin Edward), 1883-",
-      "Abbaye Saint-Pierre de Hasnon (Hasnon, France)",
-      "Maggs Bros."
-    ).map(nameOnlyAgent)
+      EdmAgent(
+        name = Some("Bonet, Honoré, active 1378-1398"),
+        exactMatch = Seq(URI("http://id.loc.gov/authorities/names/n87878545")),
+        scheme = scheme
+      ),
+      EdmAgent(
+        name = Some("Moris, V.C.")
+      ),
+      EdmAgent(
+        name = Some("Caxton, William, approximately 1422-1491 or 1492"),
+        exactMatch = Seq(URI("http://id.loc.gov/authorities/names/n79007370")),
+        scheme = scheme
+      ),
+      EdmAgent(
+        name = Some("Sonnyng, William")
+      ),
+      EdmAgent(
+        name = Some("Sonnyng, John")
+      ),
+      EdmAgent(
+        name = Some("Wall, Thomas, 1504-1536"),
+        exactMatch = Seq(URI("http://id.loc.gov/authorities/names/no2007058416")),
+        scheme = scheme
+      ),
+    EdmAgent(
+      name = Some("Spelman, Henry, Sir, 1564?-1641"),
+      exactMatch = Seq(URI("http://id.loc.gov/authorities/names/n79106215")),
+      scheme = scheme
+    ),
+    EdmAgent(
+      name = Some("Macro, Cox, -1767")
+    ),
+    EdmAgent(
+      name = Some("Patteson, John, 1755-1833"),
+      exactMatch = Seq(URI("http://id.loc.gov/authorities/names/no2004036230")),
+      scheme = scheme
+    ),
+
+
+      EdmAgent(
+        name = Some("Gurney, Hudson, 1775-1864"),
+        exactMatch = Seq(URI("http://id.loc.gov/authorities/names/n86113546")),
+        scheme = scheme
+      ),
+      EdmAgent(
+        name = Some("Gurney, J. H. (John Henry), 1848-1922"),
+        exactMatch = Seq(URI("http://id.loc.gov/authorities/names/no2004030768")),
+        scheme = scheme
+      ),
+      EdmAgent(
+        name = Some("Gurney, Q. E. (Quintin Edward), 1883-"),
+        exactMatch = Seq(URI("http://id.loc.gov/authorities/names/no00065442")),
+        scheme = scheme
+      ),
+      EdmAgent(
+        name = Some("Abbaye Saint-Pierre de Hasnon (Hasnon, France)")
+      ),
+      EdmAgent(
+        name = Some("Maggs Bros."),
+        exactMatch = Seq(URI("http://id.loc.gov/authorities/names/n82075696")),
+        scheme = scheme
+      )
+    )
 
     assert(extractor.creator(xmlCreator) == expected)
   }
@@ -91,8 +175,16 @@ class MaMappingTest extends FlatSpec with BeforeAndAfter {
          </metadata>
       </record>)
 
-    val expected = Seq("Massachusetts. Metropolitan Water and Sewerage Board", "Tryon, Oliver, 1883-1922")
-      .map(nameOnlyAgent)
+    val expected = Seq(
+      EdmAgent(
+        name = Some("Massachusetts. Metropolitan Water and Sewerage Board"),
+        exactMatch = Seq(URI("http://id.loc.gov/authorities/names/nr2001006723")),
+        scheme = Some(URI("http://id.loc.gov/authorities/names"))
+      ),
+      EdmAgent(
+        name = Some("Tryon, Oliver, 1883-1922")
+      )
+    )
 
     assert(extractor.creator(xmlNameParts) === expected)
   }
