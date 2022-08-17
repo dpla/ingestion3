@@ -59,7 +59,7 @@ class InMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct intermediateProvider" in {
-    val expected = Some("IUPUI (Campus). University Library").map(nameOnlyAgent)
+    val expected = Some(nameOnlyAgent("IUPUI (Campus). University Library, IUPUI (Campus). University Libraryv2"))
     assert(extractor.intermediateProvider(xml) == expected)
   }
 
