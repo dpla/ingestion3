@@ -58,11 +58,35 @@ class InMappingTest extends FlatSpec with BeforeAndAfter {
     assert(expected === extractor.edmRights(Document(xml)))
   }
 
-  it should "extract the correct intermediateProvider" in {
+  it should "extract the correct multiple intermediateProvidesr" in {
     val expected = Some(nameOnlyAgent("IUPUI (Campus). University Library, IUPUI (Campus). University Libraryv2"))
     assert(extractor.intermediateProvider(xml) == expected)
   }
 
+  it should "extract the correct single intermediateProvider" in {
+    val xml: Document[NodeSeq] = Document(
+      <record>
+        <metadata>
+          <oai_qdc:qualifieddc>
+            <dcterms:mediator>provider A</dcterms:mediator>
+          </oai_qdc:qualifieddc>
+        </metadata>
+      </record>)
+    val expected = Some(nameOnlyAgent("provider A"))
+    assert(extractor.intermediateProvider(xml) == expected)
+  }
+
+  it should "extract no intermediateProvider" in {
+    val xml: Document[NodeSeq] = Document(
+      <record>
+        <metadata>
+          <oai_qdc:qualifieddc>
+          </oai_qdc:qualifieddc>
+        </metadata>
+      </record>)
+    val expected = None
+    assert(extractor.intermediateProvider(xml) == expected)
+  }
   it should "extract the correct isShownAt" in {
     val expected = Seq("http://palni.contentdm.oclc.org/cdm/ref/collection/herbarium4/id/22274")
       .map(stringOnlyWebResource)
