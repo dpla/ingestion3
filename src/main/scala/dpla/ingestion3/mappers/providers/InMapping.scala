@@ -43,7 +43,7 @@ class InMapping extends XmlMapping with XmlExtractor
   }
 
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] = {
-    extractStrings(data \ "metadata" \ "qualifieddc" \ "mediator").mkString(", ") match {
+    extractStrings(data \ "metadata" \ "qualifieddc" \ "mediator").mkString(": ") match {
       case n if n.nonEmpty => Some(nameOnlyAgent(n))
       case _ => None
     }
