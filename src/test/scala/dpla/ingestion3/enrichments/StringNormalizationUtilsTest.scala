@@ -321,48 +321,6 @@ class StringNormalizationUtilsTest extends FlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
     assert(enrichedValue === "moving image")
   }
-
-  "stripBrackets" should "remove leading and trailing ( )" in {
-    val originalValue = "(hello)"
-    val enrichedValue = originalValue.stripBrackets
-    assert(enrichedValue === "hello")
-  }
-  it should "remove [ ] from [Discharge of Four Army Reserve Soldiers]" in {
-    val originalValue = "[Discharge of Four Army Reserve Soldiers]"
-    val enrichedValue = originalValue.stripBrackets
-    assert(enrichedValue === "Discharge of Four Army Reserve Soldiers")
-  }
-  it should "remove leading and trailing [ ]" in {
-    val originalValue = "[hello]"
-    val enrichedValue = originalValue.stripBrackets
-    assert(enrichedValue === "hello")
-  }
-  it should "remove leading and trailing { }" in {
-    val originalValue = "{hello}"
-    val enrichedValue = originalValue.stripBrackets
-    assert(enrichedValue === "hello")
-  }
-  it should "ignore whitespace and remove leading and trailing { } " in {
-    val originalValue = " \t{hello} \n"
-    val enrichedValue = originalValue.stripBrackets
-    assert(enrichedValue === "hello")
-  }
-  it should "leave interior brackets alone" in {
-    val originalValue = "Hello ()[]{} Goodbye"
-    val enrichedValue = originalValue.stripBrackets
-    assert(enrichedValue === "Hello ()[]{} Goodbye")
-  }
-  it should "remove surrounding brackets and interior brackets alone" in {
-    val originalValue = "( {Hello ()[]{} Goodbye)"
-    val enrichedValue = originalValue.stripBrackets
-    assert(enrichedValue === "{Hello ()[]{} Goodbye")
-  }
-  it should "do nothing with unmatched brackets" in {
-    val originalValue = "(Hello"
-    val enrichedValue = originalValue.stripBrackets
-    assert(enrichedValue === "(Hello")
-  }
-
   "stripEndingPeriod" should "remove a single trailing period" in {
     val originalValue = "Hello."
     val enrichedValue = originalValue.stripEndingPeriod

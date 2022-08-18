@@ -55,7 +55,6 @@ class StringNormalizations {
       temporal = sourceResource.temporal.map(enrichEdmTimeSpan),
       title = sourceResource.title.map(_.stripHTML
         .reduceWhitespace
-        .stripBrackets
         .cleanupLeadingPunctuation
         .cleanupEndingPunctuation),
       `type` = sourceResource.`type`.map(_.stripHTML.reduceWhitespace)
@@ -66,7 +65,6 @@ class StringNormalizations {
       name = edmAgent.name.map(
         _.stripHTML
           .reduceWhitespace
-          .stripBrackets
           .stripEndingPeriod
           .cleanupLeadingPunctuation
           .cleanupEndingPunctuation)
@@ -98,7 +96,6 @@ class StringNormalizations {
           .reduceWhitespace
           .cleanupLeadingPunctuation
           .cleanupEndingPunctuation
-          .stripBrackets
           .stripEndingPeriod
           .capitalizeFirstChar),
       providedLabel = skosConcept.providedLabel.map(
@@ -106,7 +103,6 @@ class StringNormalizations {
           .reduceWhitespace
           .cleanupLeadingPunctuation
           .cleanupEndingPunctuation
-          .stripBrackets
           .stripEndingPeriod
           .capitalizeFirstChar)
     )
