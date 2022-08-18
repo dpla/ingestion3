@@ -15,6 +15,10 @@ import scala.xml.{Node, NodeSeq}
 
 class NaraMapping extends XmlMapping with XmlExtractor {
 
+  private val uriBase = "https://catalog.archives.org/id/"
+
+  private def uri(naid: String): URI = URI(s"$uriBase$naid")
+
   // Why is this here?
   override val enforceDuplicateIds: Boolean = true
   override val enforceEdmRights: Boolean = true // edmRights is now a required property for NARA
@@ -224,7 +228,11 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     extractRights(data)
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
-    extractStrings(data \\ "topicalSubjectArray" \ "topicalSubject" \ "termName").map(nameOnlyConcept)
+    (data \\ "topicalSubjectArray" \ "topicalSubject").map(node => {
+      val name = extractString(node \ "termName")
+      val subjectUri = extractStrings(node \ "naId").map(uri)
+      SkosConcept(concept = name, exactMatch = subjectUri)
+    })
 
   override def title(data: Document[NodeSeq]): AtLeastOne[String] =
     extractStrings("title")(data)
