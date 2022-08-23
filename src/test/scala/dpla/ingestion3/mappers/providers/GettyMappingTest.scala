@@ -83,7 +83,7 @@ class GettyMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "create the correct DPLA URI" in {
-    val expected = Some(URI("http://dp.la/api/items/f0673ec42a766c8fb7e4fec72784597d"))
+    val expected = Some(URI("http://dp.la/api/items/5d9b9564a6694799ef391438be7d8a2b"))
     assert(extractor.dplaUri(xml) === expected)
   }
 }
