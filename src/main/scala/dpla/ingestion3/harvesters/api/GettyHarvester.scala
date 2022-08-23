@@ -30,10 +30,9 @@ class GettyHarvester(spark: SparkSession,
       .setHost("api-na.hosted.exlibrisgroup.com")
       .setPath("/primo/v1/search")
       .setParameter("indx", params.getOrElse("indx", "1")) // record offset
-      .setParameter("vid", "GRI")
-      .setParameter("tab", "all_gri")
-      .setParameter("scope", "COMBINED")
-      .setParameter("loc", "local,scope:(GETTY_OCP,GETTY_ROSETTA)")
+      .setParameter("vid", "DPLA")
+      .setParameter("tab", "dpla")
+      .setParameter("scope", "DPLA")
       .setParameter("lang", "eng")
       .setParameter("inst", "01GRI")
       .setParameter("q", params.getOrElse("query", throw new RuntimeException("No query parameter provided")))
