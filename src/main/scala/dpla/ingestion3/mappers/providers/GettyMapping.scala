@@ -105,36 +105,17 @@ class GettyMapping extends JsonMapping with JsonExtractor {
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
     Seq(nameOnlyAgent("Getty Research Institute"))
 
-  override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
-//    val baseIsShownAt = "https://primo.getty.edu/primo-explore/fulldisplay?vid=GRI-OCP&context=L&tab=all_gri&lang=en_US&docid="
-//
-//    extractString(unwrap(data) \\ "control" \ "sourceid") match {
-//      case Some("GETTY_ROSETTA") =>
-        extractStrings(unwrap(data) \ "delivery" \ "availabilityLinksUrl")
-          .map(stringOnlyWebResource)
-//      case Some("GETTY_OCP") =>
-//        extractStrings(unwrap(data) \\ "control" \ "recordid")
-//          .map(baseIsShownAt + _.trim)
-//          .map(stringOnlyWebResource)
-//      case _ => Seq()
-//    }
-  }
+  override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] = 
+    extractStrings(unwrap(data) \ "delivery" \ "availabilityLinksUrl")
+      .map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(unwrap(data))
 
   override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
-  // sear/thumbnail
-//    "link": [
-  //          {
-  //            "displayLabel": "thumbnail",
-  //            "hyperlinkText": "",
-  //            "inst4opac": "01GRI",
-  //            "linkURL": "https://rosettaapp.getty.edu/delivery/DeliveryManagerServlet?dps_pid=IE1318448&dps_func=thumbnail",
-  //            "linkType": "http://purl.org/pnx/linkType/thumbnail",
-  //            "@id": "_:0"
-  //          },
   (unwrap(data) \ "delivery" \ "link")
-    .filter(extractString("displayLabel")(_).getOrElse("").equalsIgnoreCase("thumbnail"))
+    .filter(extractString("displayLabel")(_)
+      .getOrElse("")
+      .equalsIgnoreCase("thumbnail"))
     .flatMap(extractStrings("linkURL")(_))
     .map(stringOnlyWebResource)
   }
