@@ -86,7 +86,7 @@ class FlProfile extends JsonProfile {
 /**
   * J. Paul Getty Trust
   */
-class GettyProfile extends XmlProfile {
+class GettyProfile extends JsonProfile {
   type Mapping = GettyMapping
 
   override def getHarvester: Class[GettyHarvester] = classOf[GettyHarvester]

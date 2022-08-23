@@ -35,7 +35,7 @@ abstract class PrimoVEHarvester(spark: SparkSession,
   override protected val queryParams: Map[String, String] = Map(
     "query" -> conf.harvest.query,
     "rows" -> conf.harvest.rows,
-    "indx" -> Some("1"),
+    "offset" -> Some("1"),
     "api_key" -> conf.harvest.apiKey
   ).collect{ case (key, Some(value)) => key -> value } // remove None values
 
@@ -49,10 +49,10 @@ abstract class PrimoVEHarvester(spark: SparkSession,
 
     // Mutable vars for controlling harvest loop
     var continueHarvest = true
-    var indx = "1" // record offset, deliberate misspelling to match Primo naming for this parameter
+    var offset = "1" // record offset, deliberate misspelling to match Primo naming for this parameter
     var totalRecords = "" // total number of records to fetch
 
-    while(continueHarvest) getSinglePage(indx) match {
+    while(continueHarvest) getSinglePage(offset) match {
       // Handle errors
       case error: ApiError with ApiResponse =>
         logger.error("Error returned by request %s\n%s\n%s".format(
@@ -69,7 +69,7 @@ abstract class PrimoVEHarvester(spark: SparkSession,
             val primoRecords = (json \ "docs")
               .children
               .map(doc => {
-                val id = (doc \\ "record" \ "control" \ "recordid").toString // FIXME validate that each record has ID
+                val id = (doc \\ "control" \ "recordid").toString // FIXME validate that each record has ID
                 ApiRecord(id, compact(render(doc)))
               })
 
@@ -77,7 +77,7 @@ abstract class PrimoVEHarvester(spark: SparkSession,
             saveOutRecords(primoRecords)
 
             // Loop control
-            val nextIndx = (primoRecords.size + indx.toInt).toString
+            val nextIndx = (primoRecords.size + offset.toInt).toString
             // Only extract total records once
             totalRecords = if (totalRecords.isEmpty)
               extractString(json \ "info" \ "total").get
@@ -88,9 +88,9 @@ abstract class PrimoVEHarvester(spark: SparkSession,
               s"of ${Utils.formatNumber(totalRecords.toLong)} " +
               s"from ${src.url.getOrElse("No url")}")
 
-            if (indx.toInt >= totalRecords.toInt) {
+            if (offset.toInt >= totalRecords.toInt) {
               continueHarvest = false
-            } else indx = nextIndx
+            } else offset = nextIndx
           case _ =>
             logger.error(s"Response body is empty.\n" +
               s"URL: ${src.url.getOrElse("!!! URL not set !!!")}\n" +
@@ -111,7 +111,7 @@ abstract class PrimoVEHarvester(spark: SparkSession,
     * @return ApiSource or ApiError
     */
   private def getSinglePage(indx: String): ApiResponse = {
-    val url = buildUrl(queryParams.updated("indx", indx))
+    val url = buildUrl(queryParams.updated("offset", indx))
 
     HttpUtils.makeGetRequest(url) match {
       case Failure(e) =>

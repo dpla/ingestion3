@@ -1,0 +1,345 @@
+{
+  "enrichment": {
+    "virtualBrowseObject": {
+      "callNumber": "",
+      "isVirtualBrowseEnabled": false,
+      "callNumberBrowseField": "browse_callnumber"
+    }
+  },
+  "delivery": {
+    "availabilityLinks": [
+      "directlink"
+    ],
+    "physicalItemTextCodes": "",
+    "displayLocation": false,
+    "availabilityLinksUrl": [
+      "https://rosettaapp.getty.edu/delivery/DeliveryManagerServlet?dps_pid=IE1318448"
+    ],
+    "link": [
+      {
+        "displayLabel": "thumbnail",
+        "hyperlinkText": "",
+        "inst4opac": "01GRI",
+        "linkURL": "https://rosettaapp.getty.edu/delivery/DeliveryManagerServlet?dps_pid=IE1318448&dps_func=thumbnail",
+        "linkType": "http://purl.org/pnx/linkType/thumbnail",
+        "@id": "_:0"
+      },
+      {
+        "displayLabel": "<img src=\"https://rosettaapp.getty.edu/delivery/DeliveryManagerServlet?dps_pid=IE1318448&dps_func=thumbnail\">",
+        "hyperlinkText": "<img src=\"https://rosettaapp.getty.edu/delivery/DeliveryManagerServlet?dps_pid=IE1318448&dps_func=thumbnail\">",
+        "inst4opac": "01GRI",
+        "linkURL": "https://rosettaapp.getty.edu/delivery/DeliveryManagerServlet?dps_pid=IE1318448",
+        "linkType": "http://purl.org/pnx/linkType/lln02",
+        "@id": "_:1"
+      },
+      {
+        "displayLabel": "Access digital files",
+        "hyperlinkText": "Access digital files",
+        "inst4opac": "01GRI",
+        "linkURL": "https://rosettaapp.getty.edu/delivery/DeliveryManagerServlet?dps_pid=IE1318448",
+        "linkType": "http://purl.org/pnx/linkType/linktorsrc",
+        "@id": "_:2"
+      },
+      {
+        "displayLabel": "openurlfulltext",
+        "hyperlinkText": "",
+        "inst4opac": "01GRI",
+        "linkURL": "http://1.1.1.1?ctx_ver=Z39.88-2004&ctx_enc=info:ofi/enc:UTF-8&ctx_tim=2022-08-23T08%3A06%3A25IST&url_ver=Z39.88-2004&url_ctx_fmt=infofi/fmt:kev:mtx:ctx&rfr_id=info:sid/primo.exlibrisgroup.com:primo3-Journal-GETTY_ROSETTA&rft_val_fmt=info:ofi/fmt:kev:mtx:book&rft.genre=unknown&rft.btitle=Job%201791:%20Josef%20Van%20der%20Kar,%20Wohlstetter%20House%20(Los%20Angeles,%20Calif.),%201954&rft.au=Shulman,%20Julius,%20photographer&rft_id=info:doi/&svc_val_fmt=info:ofi/fmt:kev:mtx:sch_svc&svc.fulltext=yes&rft_dat=%3CGETTY_ROSETTA%3EIE1318448%3C/GETTY_ROSETTA%3E%3Curl%3E%3C/url%3E&rft_id=info:oai/&req.language=eng&rft_id=info:pmid/",
+        "linkType": "http://purl.org/pnx/linkType/openurlfulltext",
+        "@id": "_:3"
+      },
+      {
+        "displayLabel": "thumbnail",
+        "linkURL": "https://rosettaapp.getty.edu/delivery/DeliveryManagerServlet?dps_pid=IE1318448&dps_func=thumbnail",
+        "linkType": "http://purl.org/pnx/linkType/thumbnail",
+        "@id": "_:4"
+      }
+    ],
+    "availability": [
+      "not_restricted"
+    ],
+    "additionalLocations": false,
+    "displayedAvailability": "not_restricted",
+    "holding": [],
+    "deliveryCategory": [
+      "Online Resource"
+    ],
+    "serviceMode": [
+      "display"
+    ],
+    "feDisplayOtherLocations": false,
+    "GetIt1": [
+      {
+        "links": [
+          {
+            "isLinktoOnline": true,
+            "displayText": "Access digital files",
+            "hyperlinkText": "Access digital files",
+            "getItTabText": "alma_tab1_norestrict",
+            "link": "https://rosettaapp.getty.edu/delivery/DeliveryManagerServlet?dps_pid=IE1318448",
+            "@id": "_:0",
+            "openInNewWindow": "True"
+          }
+        ],
+        "category": "Online Resource"
+      }
+    ]
+  },
+  "@rta_link": "https://getty-primo.hosted.exlibrisgroup.com/primo_library/libweb/webservices/rest/v1/rta/DPLA?recordInformation=IE1318448|,|GETTY_ROSETTA|,|__NO_VALUE__|,|Other|,|GETTY_ROSETTAIE1318448|,|__NO_VALUE__|,|__NO_VALUE__|,|Online Resource|,|__NO_VALUE__|,|__NO_VALUE__|,|__NO_VALUE__|,|__NO_VALUE__|,|__NO_VALUE__|,|__NO_VALUE__",
+  "context": "L",
+  "adaptor": "Local Search Engine",
+  "pnx": {
+    "delivery": {
+      "delcategory": [
+        "Online Resource"
+      ]
+    },
+    "search": {
+      "sourceid": [
+        "GETTY_ROSETTA"
+      ],
+      "creatorcontrib": [
+        "Shulman, Julius, photographer",
+        "Van der Kar, Josef, architect"
+      ],
+      "creationdate": [
+        "1954"
+      ],
+      "subject": [
+        "Architecture, Modern--20th century"
+      ],
+      "rsrctype": [
+        "image",
+        "Still Image"
+      ],
+      "format": [
+        "53 items"
+      ],
+      "description": [
+        "Julius Shulman, 1910-2009, was an active architectural photographer from 1936 until 1986. Representing his career, the archive documents the modern movement in architecture spanning several decades and serves as a historical record of the Southern California landscape. Shulman's prolific career has helped to promote and broaden the knowledge of modern architecture by the thoughtful manner which he conveyed architectural design.",
+        "Series IV contains the bulk of Shulman's archive. Represented here are more than 5,000 jobs that Shulman did not separate into smaller series based on architect or project. Most of the following descriptions include the names of artists, landscape designers or interior designers, but not builders, contractors or other clients."
+      ],
+      "lsr34": [
+        "Julius Shulman photography archive 1936 1997 Series IV Job numbers 1934 2009"
+      ],
+      "title": [
+        "Job 1791: Josef Van der Kar, Wohlstetter House (Los Angeles, Calif.)"
+      ],
+      "startdate": [
+        "19540101"
+      ],
+      "addtitle": [
+        "Julius Shulman Photography Archive|Van der Kar, Josef",
+        "Access File Job 1791: Josef Van der Kar, Wohlstetter House (Los Angeles, Calif.), 1954 Black and white prints 1791-2 1791-3 1791-4 1791-5 1791-6 1791-9 1791-11 1791-12 1791-13 1791-14 1791-15 1791-18 1791-20 1791-21 1791-23 1791-24 1791-25 1791-26 1791-27 Color images 1791K 1791-18K 1791-21K 1791-22K 1791-27K 1791-27K Black-and-white contact prints 1791-1 1791-2 1791-3 1791-4 1791-5 1791-6 1791-7 1791-8 1791-9 1791-10 1791-11 1791-12 1791-13 1791-14 1791-15 1791-16 1791-17 1791-18 1791-19 1791-20 1791-21 1791-22 1791-23 1791-24 1791-25 1791-26 1791-27 1791-28 Modified Master File Job 1791: Josef Van der Kar, Wohlstetter House (Los Angeles, Calif.), 1954 Black and white prints 1791-2 1791-3 1791-4 1791-5 1791-6 1791-9 1791-11 1791-12 1791-13 1791-14 1791-15 1791-18 1791-20 1791-21 1791-23 1791-24 1791-25 1791-26 1791-27 Color images 1791K 1791-18K 1791-21K 1791-22K 1791-27K 1791-27K Black-and-white contact prints 1791-1 1791-2 1791-3 1791-4 1791-5 1791-6 1791-7 1791-8 1791-9 1791-10 1791-11 1791-12 1791-13 1791-14 1791-15 1791-16 1791-17 1791-18 1791-19 1791-20 1791-21 1791-22 1791-23 1791-24 1791-25 1791-26 1791-27 1791-28 Preservation Master File Job 1791: Josef Van der Kar, Wohlstetter House (Los Angeles, Calif.), 1954 Black and white prints 1791-2 1791-3 1791-4 1791-5 1791-6 1791-9 1791-11 1791-12 1791-13 1791-14 1791-15 1791-18 1791-20 1791-21 1791-23 1791-24 1791-25 1791-26 1791-27 Color images 1791K 1791-18K 1791-21K 1791-22K 1791-27K 1791-27K Black-and-white contact prints 1791-1 1791-2 1791-3 1791-4 1791-5 1791-6 1791-7 1791-8 1791-9 1791-10 1791-11 1791-12 1791-13 1791-14 1791-15 1791-16 1791-17 1791-18 1791-19 1791-20 1791-21 1791-22 1791-23 1791-24 1791-25 1791-26 1791-27 1791-28",
+        "Julius Shulman photography archive, 1936-1997. Series IV. Job numbers, 1934-2009(http://hdl.handle.net/10020/cat657475)",
+        "GRI Special Collections"
+      ],
+      "recordid": [
+        "GETTY_ROSETTAIE1318448"
+      ],
+      "general": [
+        "http://hdl.handle.net/10020/2004r10/job1791",
+        "2004.R.10(Job 1791)",
+        "Julius Shulman photography archive, 1936-1997. Series IV. Job numbers, 1934-2009(http://hdl.handle.net/10020/cat657475)",
+        "GRI Special Collections",
+        "Access File Job 1791: Josef Van der Kar, Wohlstetter House (Los Angeles, Calif.), 1954 Black and white prints 1791-2 1791-3 1791-4 1791-5 1791-6 1791-9 1791-11 1791-12 1791-13 1791-14 1791-15 1791-18 1791-20 1791-21 1791-23 1791-24 1791-25 1791-26 1791-27 Color images 1791K 1791-18K 1791-21K 1791-22K 1791-27K 1791-27K Black-and-white contact prints 1791-1 1791-2 1791-3 1791-4 1791-5 1791-6 1791-7 1791-8 1791-9 1791-10 1791-11 1791-12 1791-13 1791-14 1791-15 1791-16 1791-17 1791-18 1791-19 1791-20 1791-21 1791-22 1791-23 1791-24 1791-25 1791-26 1791-27 1791-28 Modified Master File Job 1791: Josef Van der Kar, Wohlstetter House (Los Angeles, Calif.), 1954 Black and white prints 1791-2 1791-3 1791-4 1791-5 1791-6 1791-9 1791-11 1791-12 1791-13 1791-14 1791-15 1791-18 1791-20 1791-21 1791-23 1791-24 1791-25 1791-26 1791-27 Color images 1791K 1791-18K 1791-21K 1791-22K 1791-27K 1791-27K Black-and-white contact prints 1791-1 1791-2 1791-3 1791-4 1791-5 1791-6 1791-7 1791-8 1791-9 1791-10 1791-11 1791-12 1791-13 1791-14 1791-15 1791-16 1791-17 1791-18 1791-19 1791-20 1791-21 1791-22 1791-23 1791-24 1791-25 1791-26 1791-27 1791-28 Preservation Master File Job 1791: Josef Van der Kar, Wohlstetter House (Los Angeles, Calif.), 1954 Black and white prints 1791-2 1791-3 1791-4 1791-5 1791-6 1791-9 1791-11 1791-12 1791-13 1791-14 1791-15 1791-18 1791-20 1791-21 1791-23 1791-24 1791-25 1791-26 1791-27 Color images 1791K 1791-18K 1791-21K 1791-22K 1791-27K 1791-27K Black-and-white contact prints 1791-1 1791-2 1791-3 1791-4 1791-5 1791-6 1791-7 1791-8 1791-9 1791-10 1791-11 1791-12 1791-13 1791-14 1791-15 1791-16 1791-17 1791-18 1791-19 1791-20 1791-21 1791-22 1791-23 1791-24 1791-25 1791-26 1791-27 1791-28",
+        "Los Angeles, Calif.",
+        "These images may be reproduced free of charge in print and/or electronic formats. Please include the following copyright notice and credit line: © J. Paul Getty Trust. Getty Research Institute, Los Angeles (2004.R.10). Be aware that third parties may claim privacy or publicity rights in these images, or rights to artworks depicted that are not in the public domain. The Getty assumes no liability for your use of these images. By downloading these images you agree that it is your responsibility to identify any potential claimants and obtain any necessary permissions for your use, and you agree to indemnify, defend, and hold the Getty harmless from all costs, charges, fees, or expenses, losses, damages, liabilities, or judgments arising from or relating to any claim, cause or allegation asserted by a third party against the Getty based entirely or in part on your use of these images."
+      ],
+      "enddate": [
+        "19541231"
+      ],
+      "lsr08": [
+        "Julius Shulman, 1910-2009, was an active architectural photographer from 1936 until 1986. Representing his career, the archive documents the modern movement in architecture spanning several decades and serves as a historical record of the Southern California landscape. Shulman's prolific career has helped to promote and broaden the knowledge of modern architecture by the thoughtful manner which he conveyed architectural design.",
+        "Series IV contains the bulk of Shulman's archive. Represented here are more than 5,000 jobs that Shulman did not separate into smaller series based on architect or project. Most of the following descriptions include the names of artists, landscape designers or interior designers, but not builders, contractors or other clients."
+      ],
+      "scope": [
+        "GETTY_ROSETTA"
+      ]
+    },
+    "display": {
+      "contributor": [
+        "Contributor"
+      ],
+      "publisher": [
+        "Publisher"
+      ],
+      "coverage": [
+        "Los Angeles, Calif."
+      ],
+      "lds27": [
+        "For more information, see the <a href='http://hdl.handle.net/10020/repro_perm'>Library Reproductions & Permissions page.</a>"
+      ],
+      "creator": [
+        "Shulman, Julius, photographer; Van der Kar, Josef, architect"
+      ],
+      "creationdate": [
+        "1954"
+      ],
+      "lds29": [
+        "http://hdl.handle.net/10020/2004r10/job1791"
+      ],
+      "subject": [
+        "Architecture, Modern--20th century"
+      ],
+      "format": [
+        "53 items"
+      ],
+      "source": [
+        "GRI Digital Collections"
+      ],
+      "type": [
+        "image"
+      ],
+      "title": [
+        "Job 1791: Josef Van der Kar, Wohlstetter House (Los Angeles, Calif.), 1954"
+      ],
+      "lds44": [
+        "Your search term(s) appears in the digital object. See the Links section to access the digital files and search the file labels."
+      ],
+      "lds34": [
+        "Julius Shulman photography archive, 1936-1997. Series IV. Job numbers, 1934-2009$$QJulius Shulman photography archive 1936 1997 Series IV Job numbers 1934 2009"
+      ],
+      "lds04": [
+        "Julius Shulman, 1910-2009, was an active architectural photographer from 1936 until 1986. Representing his career, the archive documents the modern movement in architecture spanning several decades and serves as a historical record of the Southern California landscape. Shulman's prolific career has helped to promote and broaden the knowledge of modern architecture by the thoughtful manner which he conveyed architectural design.",
+        "Series IV contains the bulk of Shulman's archive. Represented here are more than 5,000 jobs that Shulman did not separate into smaller series based on architect or project. Most of the following descriptions include the names of artists, landscape designers or interior designers, but not builders, contractors or other clients."
+      ],
+      "lds26": [
+        "Still image"
+      ],
+      "lds14": [
+        "2004.R.10(Job 1791)"
+      ],
+      "lds47": [
+        "<a href=\"http://hdl.handle.net/10020/cat657475\">Collection description</a>"
+      ]
+    },
+    "control": {
+      "recordid": [
+        "GETTY_ROSETTAIE1318448"
+      ],
+      "sourceid": [
+        "GETTY_ROSETTA"
+      ],
+      "sourceformat": [
+        "XML"
+      ],
+      "sourcerecordid": [
+        "IE1318448"
+      ],
+      "sourcesystem": [
+        "Other"
+      ]
+    },
+    "links": {
+      "thumbnail": [
+        "$$Tgetty_rosetta_thumb"
+      ],
+      "lln02": [
+        "$$Tgetty_rosetta_linktorscr$$D<img src=\"https://rosettaapp.getty.edu/delivery/DeliveryManagerServlet?dps_pid=IE1318448&dps_func=thumbnail\">"
+      ],
+      "linktorsrc": [
+        "$$Tgetty_rosetta_linktorscr$$DAccess digital files"
+      ],
+      "openurlfulltext": [
+        "$$Topenurlfull_journal"
+      ]
+    },
+    "ranking": {
+      "booster1": [
+        "4"
+      ]
+    },
+    "sort": {
+      "creationdate": [
+        "1954"
+      ],
+      "author": [
+        "Shulman, Julius, photographer; Van der Kar, Josef, architect"
+      ],
+      "title": [
+        "Job 1791: Josef Van der Kar, Wohlstetter House (Los Angeles, Calif.), 1954"
+      ],
+      "lso01": [
+        "1954"
+      ]
+    },
+    "addata": {
+      "date": [
+        "1954"
+      ],
+      "au": [
+        "Shulman, Julius, photographer",
+        "Van der Kar, Josef, architect"
+      ],
+      "format": [
+        "book"
+      ],
+      "genre": [
+        "unknown"
+      ],
+      "ristype": [
+        "GEN"
+      ],
+      "btitle": [
+        "Job 1791: Josef Van der Kar, Wohlstetter House (Los Angeles, Calif.), 1954"
+      ],
+      "risdate": [
+        "1954"
+      ]
+    },
+    "facets": {
+      "frbrtype": [
+        "6"
+      ],
+      "creatorcontrib": [
+        "Shulman, Julius, photographer",
+        "Van der Kar, Josef, architect"
+      ],
+      "creationdate": [
+        "1954"
+      ],
+      "newrecords": [
+        "20210222_719"
+      ],
+      "toplevel": [
+        "online_resources"
+      ],
+      "frbrgroupid": [
+        "2216104529"
+      ],
+      "rsrctype": [
+        "images"
+      ],
+      "topic": [
+        "Architecture, Modern--20th century"
+      ],
+      "lfc02": [
+        "GRI Digital Collections",
+        "GRI Special Collections"
+      ],
+      "collection": [
+        "GRI Digital Collections"
+      ],
+      "prefilter": [
+        "images"
+      ],
+      "lfc05": [
+        "DPLA"
+      ]
+    },
+    "browse": {
+      "subject": [
+        "$$DArchitecture, Modern--20th century$$EArchitecture, Modern--20th century"
+      ],
+      "author": [
+        "$$DShulman, Julius, photographer$$EShulman, Julius, photographer",
+        "$$DVan der Kar, Josef, architect$$EVan der Kar, Josef, architect"
+      ],
+      "title": [
+        "$$DJob 1791: Josef Van der Kar, Wohlstetter House (Los Angeles, Calif.)$$EJob 1791: Josef Van der Kar, Wohlstetter House (Los Angeles, Calif.)"
+      ]
+    }
+  },
+  "@id": "https://getty-primo.hosted.exlibrisgroup.com/primo_library/libweb/webservices/rest/primo-explore/v1/pnxs/L/GETTY_ROSETTAIE1318448"
+}
