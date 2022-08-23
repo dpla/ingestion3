@@ -17,87 +17,86 @@ class GettyMapping extends JsonMapping with JsonExtractor {
 
   // ID minting functions
   override def useProviderName(): Boolean = true
-
   override def getProviderName(): Option[String] = Some("getty")
 
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] = {
-    extractStrings(unwrap(data) \\ "control" \ "recordid").headOption
+    extractStrings(unwrap(data) \ "pnx" \ "control" \ "recordid").headOption
   }
 
   // SourceResource mapping
   override def collection(data: Document[JValue]): Seq[DcmiTypeCollection] =
   // display/lds43 AND display/lds34
-    (extractStrings(unwrap(data) \\ "display" \ "lds43") ++
-      extractStrings(unwrap(data) \\ "display" \ "lds34"))
+    (extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds43") ++
+      extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds34"))
       .map(nameOnlyCollection)
 
   override def contributor(data: Document[JValue]): Seq[EdmAgent] =
-    extractStrings(unwrap(data) \\ "display" \ "contributor")
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "contributor")
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
   override def creator(data: Document[JValue]): Seq[EdmAgent] =
-    (extractStrings(unwrap(data) \\ "display" \ "creator") ++
-      extractStrings(unwrap(data) \\ "display" \ "lds50"))
+    (extractStrings(unwrap(data) \ "pnx" \ "display" \ "creator") ++
+      extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds50"))
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
   override def date(data: Document[JValue]): Seq[EdmTimeSpan] =
   // display/creationdate
-    extractStrings(unwrap(data) \\ "display" \ "creationdate")
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "creationdate")
       .map(stringOnlyTimeSpan)
 
   override def description(data: Document[JValue]): Seq[String] =
   // display/lds04 AND display/lds28 AND display/format
-    extractStrings(unwrap(data) \\ "display" \ "lds04") ++
-      extractStrings(unwrap(data) \\ "display" \ "lds28") ++
-      extractStrings(unwrap(data) \\ "display" \ "format")
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds04") ++
+      extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds28") ++
+      extractStrings(unwrap(data) \ "pnx" \ "display" \ "format")
 
   override def format(data: Document[JValue]): ZeroToMany[String] =
-    extractStrings(unwrap(data) \\ "display" \ "lds09")
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds09")
       .map(_.applyBlockFilter(extentAllowList))
       .filter(_.nonEmpty)
 
   override def identifier(data: Document[JValue]): Seq[String] =
-    extractStrings(unwrap(data) \\ "display" \ "lds14")
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds14")
       .flatMap(_.splitAtDelimiter(";"))
 
   override def language(data: Document[JValue]): Seq[SkosConcept] =
-    extractStrings(unwrap(data) \\ "display" \ "language")
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "language")
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyConcept)
 
   override def place(data: Document[JValue]): Seq[DplaPlace] =
-    extractStrings(unwrap(data) \\ "display" \ "coverage")
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "coverage")
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyPlace)
 
   override def publisher(data: Document[JValue]): Seq[EdmAgent] =
-    extractStrings(unwrap(data) \\ "display" \ "publisher")
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "publisher")
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
   override def rights(data: Document[JValue]): AtLeastOne[String] =
   // display/lds27 AND display/rights
-    extractStrings((unwrap(data) \\ "display" \ "rights") ++
-      extractStrings(unwrap(data) \\ "display" \ "lds27"))
+    extractStrings((unwrap(data) \ "pnx" \ "display" \ "rights") ++
+      extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds27"))
 
   override def subject(data: Document[JValue]): Seq[SkosConcept] =
   // display/subject AND display/lds49
-    (extractStrings(unwrap(data) \\ "display" \ "subject") ++
-      extractStrings(unwrap(data) \\ "display" \ "lds49"))
+    (extractStrings(unwrap(data) \ "pnx" \ "display" \ "subject") ++
+      extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds49"))
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyConcept)
 
   override def title(data: Document[JValue]): Seq[String] =
   // display/title AND display/lds03
-    (extractStrings(unwrap(data) \\ "display" \ "title") ++
-      extractStrings(unwrap(data) \\ "display" \ "lds03"))
+    (extractStrings(unwrap(data) \ "pnx" \ "display" \ "title") ++
+      extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds03"))
       .flatMap(_.splitAtDelimiter(";"))
 
   override def `type`(data: Document[JValue]): Seq[String] =
   // display/lds26
-    extractStrings(unwrap(data) \\ "display" \ "lds26")
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds26")
 
   // OreAggregation
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
@@ -105,7 +104,7 @@ class GettyMapping extends JsonMapping with JsonExtractor {
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
     Seq(nameOnlyAgent("Getty Research Institute"))
 
-  override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] = 
+  override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \ "delivery" \ "availabilityLinksUrl")
       .map(stringOnlyWebResource)
 

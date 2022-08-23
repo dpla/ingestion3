@@ -29,14 +29,15 @@ class GettyHarvester(spark: SparkSession,
       .setScheme("https")
       .setHost("api-na.hosted.exlibrisgroup.com")
       .setPath("/primo/v1/search")
-      .setParameter("indx", params.getOrElse("indx", "1")) // record offset
+      .setParameter("offset", params.getOrElse("offset", "1")) // record offset
       .setParameter("vid", "DPLA")
       .setParameter("tab", "dpla")
       .setParameter("scope", "DPLA")
-      .setParameter("lang", "eng")
       .setParameter("inst", "01GRI")
       .setParameter("q", params.getOrElse("query", throw new RuntimeException("No query parameter provided")))
       .setParameter("apikey", params.getOrElse("api_key", throw new RuntimeException("No API key provided")))
+      .setParameter("lang", "eng")
+      .setParameter("limit", "500")
       .build()
       .toURL
 }
