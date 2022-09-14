@@ -21,8 +21,8 @@ class DateBuilder {
         EdmTimeSpan(
           originalSourceDate = Some(d),
           prefLabel = Some(d),
-          begin = createBegin(d),
-          end = createEnd(d)
+          begin = createBegin(d.trim),
+          end = createEnd(d.trim)
         )
     }
   }
@@ -35,7 +35,7 @@ class DateBuilder {
     */
   def createBegin(str: String): Option[String] = str match {
     case `str` if str.matches("^[0-9]{4}$") => Some(str)
-    case `str` if str.matches("^[0-9]{4}-[0-9]{4}$") => str.split("-").headOption
+    case `str` if str.matches("^[0-9]{4}\\s*-\\s*[0-9]{4}$") => Option(str.split("-").head.trim)
     case _ => None
   }
 
@@ -47,7 +47,7 @@ class DateBuilder {
     */
   def createEnd(str: String): Option[String] = str match {
       case `str` if str.matches("^[0-9]{4}$") => Some(str)
-      case `str` if str.matches("^[0-9]{4}-[0-9]{4}$") => str.split("-").lastOption
+      case `str` if str.matches("^[0-9]{4}\\s*-\\s*[0-9]{4}$") => Option(str.split("-").last.trim)
       case _ => None
     }
 }
