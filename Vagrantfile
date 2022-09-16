@@ -82,9 +82,9 @@ Vagrant.configure("2") do |config|
     }
     aws.block_device_mapping = [{
           'DeviceName' => "/dev/sda1",
-          'Ebs.VolumeSize' => 100, # Size in GB
+          'Ebs.VolumeSize' => 500, # Size in GB
           'Ebs.DeleteOnTermination' => true,
-          'Ebs.VolumeType' => "GP2"
+          'Ebs.VolumeType' => "gp3"
         }]
   end
   config.vm.provision "shell", inline: $script
