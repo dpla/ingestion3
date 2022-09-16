@@ -9,7 +9,7 @@ import dpla.ingestion3.mappers.providers._
 class ArtstorProfile extends JsonProfile {
   type Mapping = CdlMapping
 
-  override def getHarvester: Class[DplaJsonlFileHarvester] = classOf[DplaJsonlFileHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new ArtstorRetconMapping
 }
 
