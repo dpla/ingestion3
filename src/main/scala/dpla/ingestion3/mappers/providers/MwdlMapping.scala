@@ -121,7 +121,7 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
   // baseIsShownAt + control\recordid
     (data \\ "control" \ "recordid")
       .flatMap(extractStrings)
-      .map(baseIsShownAt + _ + suffixIsShownAt)
+      .map(baseIsShownAt + _.trim + suffixIsShownAt)
       .map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
