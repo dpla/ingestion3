@@ -70,8 +70,17 @@ class MwdlMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.edmRights(xml) === expected)
   }
   it should "extract the correct isShownAt" in {
+    val xml: NodeSeq = <PrimoNMBib xmlns="http://www.exlibrisgroup.com/xsd/primo/primo_nm_bib">
+        <record>
+            <control>
+                <recordid>
+                  digcoll_slc_27works_598
+                </recordid>
+              </control>
+          </record>
+      </PrimoNMBib>
     val expected = Seq(uriOnlyWebResource(URI("https://utah-primoprod.hosted.exlibrisgroup.com/primo-explore/fulldisplay?docid=digcoll_slc_27works_598&context=L&vid=MWDL")))
-    assert(extractor.isShownAt(xml) === expected)
+    assert(extractor.isShownAt(Document(xml)) === expected)
   }
   it should "extract the correct preview" in {
     val expected = Seq("https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/",
