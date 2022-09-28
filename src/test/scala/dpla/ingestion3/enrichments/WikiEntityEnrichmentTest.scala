@@ -49,4 +49,23 @@ class WikiEntityEnrichmentTest extends FlatSpec with BeforeAndAfter {
     )
     assert(wikiEnrichment.enrichEntity(originalValue) === expectedValue)
   }
+
+  it should "return an non-enriched EdmAgent for 'bogus' (case-insensitive)" in {
+    val originalValue = nameOnlyAgent("bogus")
+    val expectedValue = EdmAgent(
+      name = Some("bogus"),
+      exactMatch = Seq()
+    )
+    assert(wikiEnrichment.enrichEntity(originalValue) === expectedValue)
+  }
+
+  it should "return an non-enriched EdmAgent for entities without IDs (case-insensitive)" in {
+    val qualifiedValue = nameOnlyAgent("Missouri Hub")
+    val originalValue = nameOnlyAgent("Springfield - Greene County Library")
+    val expectedValue = EdmAgent(
+      name = Some("Springfield - Greene County Library"),
+      exactMatch = Seq()
+    )
+    assert(wikiEnrichment.enrichEntity(originalValue, Some(qualifiedValue)) === expectedValue)
+  }
 }

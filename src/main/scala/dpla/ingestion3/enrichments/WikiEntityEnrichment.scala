@@ -55,7 +55,7 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] wit
     */
   //noinspection TypeAnnotation,UnitMethodIsParameterless
   private def loadVocab =
-    getInstitutionVocab(files).foreach { case (key: String, value: String) => addEntity(key, value) }
+    getInstitutionVocab(files).foreach { case (key: String, value: String) => if(value.nonEmpty) addEntity(key, value) }
 
   private def getInstitutionVocab(files: Seq[String]): Seq[(String, String)] = {
     files.flatMap(file => {
