@@ -1,0 +1,69 @@
+{
+  "_index": "dpla-20150410-144958",
+  "_type": "item",
+  "_id": "a2a415d0f3030e86e0349f90747d1c86",
+  "_score": 0,
+  "_source": {
+    "ingestType": "item",
+    "ingestionSequence": 999999,
+    "ingestDate": "2016-03-29",
+    "@context": "http://dp.la/api/items/context",
+    "aggregatedCHO": "#sourceResource",
+    "@id": "http://dp.la/api/items/a2a415d0f3030e86e0349f90747d1c86",
+    "id": "a2a415d0f3030e86e0349f90747d1c86",
+    "dataProvider": "University of Washington",
+    "originalRecord": "http://ldp.dp.la/ldp/original_record/a2a415d0f3030e86e0349f90747d1c86.xml",
+    "sourceResource": {
+      "@id": "http://dp.la/api/items/a2a415d0f3030e86e0349f90747d1c86#sourceResource",
+      "description": "Valeska Suratt, silent film actress",
+      "format": [
+        "image",
+        "photograph",
+        "Scanned at 600ppi with an Epson 20000 flatbed scanner. Image then rotated, cropped, level-adjusted, and sharpened using Photoshop CS3. Converted to a JPEG2000 image upon ingest into CONTENTdm"
+      ],
+      "identifier": [
+        "JWS13945",
+        "S-S-851",
+        "http://cdm16786.contentdm.oclc.org/cdm/ref/collection/sayre/id/9054"
+      ],
+      "relation": [
+        "J. Willis Sayre Photographs",
+        "J. Willis Sayre Photograph Collection Ph Coll 200",
+        "http://archiveswest.orbiscascade.org/ark:/80444/xv08822"
+      ],
+      "rights": "All rights reserved.",
+      "title": [
+        "Valeska Suratt, silent film actress"
+      ],
+      "collection": [
+        {
+          "title": [
+            "sayre"
+          ],
+          "@id": "_:15367973aa41de",
+          "id": "_:15367973aa41de"
+        }
+      ],
+      "type": "image",
+      "date": [
+        {
+          "displayDate": "1917",
+          "begin": "1917-01-01",
+          "end": "1917-12-31"
+        }
+      ],
+      "subject": [
+        {
+          "name": "actresses, motion pictures"
+        }
+      ]
+    },
+    "provider": {
+      "name": "University of Washington",
+      "@id": "http://dp.la/api/contributor/washington"
+    },
+    "isShownAt": "http://cdm16786.contentdm.oclc.org/cdm/ref/collection/sayre/id/9054",
+    "object": "http://cdm16786.contentdm.oclc.org/utils/getthumbnail/collection/sayre/id/9054",
+    "_id": "a2a415d0f3030e86e0349f90747d1c86"
+  }
+}

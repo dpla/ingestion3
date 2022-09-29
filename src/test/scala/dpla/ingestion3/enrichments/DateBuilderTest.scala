@@ -30,4 +30,15 @@ class DateBuilderTest extends FlatSpec with BeforeAndAfter with Matchers with Ch
     )
     assert(dateBuilder.generateBeginEnd(dateStr) === expectedDate)
   }
+
+  it should "create a valid EdmTimeSpan with begin and end dates for `2015  - 2017 `" in {
+    val dateStr = Some("2015  - 2017 ")
+    val expectedDate = EdmTimeSpan(
+      originalSourceDate = dateStr,
+      prefLabel = dateStr,
+      begin = Some("2015"),
+      end = Some("2017")
+    )
+    assert(dateBuilder.generateBeginEnd(dateStr) === expectedDate)
+  }
 }

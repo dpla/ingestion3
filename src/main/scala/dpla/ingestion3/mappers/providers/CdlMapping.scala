@@ -110,7 +110,7 @@ class CdlMapping extends JsonMapping with JsonExtractor {
     extractStrings("temporal_ss")(data).map(stringOnlyTimeSpan)
 
   override def title(data: Document[JValue]): AtLeastOne[String] =
-    extractStrings("title_ss")(data).map(_.stripBrackets)
+    extractStrings("title_ss")(data)
 
   override def `type`(data: Document[JValue]): ZeroToMany[String] = extractStrings("type")(data)
 

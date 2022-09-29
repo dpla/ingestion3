@@ -2,6 +2,7 @@ package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.TaggingUtils._
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{nameOnlyAgent, _}
@@ -120,7 +121,7 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
   // baseIsShownAt + control\recordid
     (data \\ "control" \ "recordid")
       .flatMap(extractStrings)
-      .map(baseIsShownAt + _ + suffixIsShownAt)
+      .map(baseIsShownAt + _.trim + suffixIsShownAt)
       .map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
@@ -134,6 +135,11 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
 
   override def sidecar(data: Document[NodeSeq]): JValue =
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+
+  override def tags(data: Document[NodeSeq]): ZeroToMany[URI] =
+    dataProvider(data)
+      .flatMap(p => p.name)
+      .flatMap(_.applyNwdhTags)
 
   // Helper method
   def agent = EdmAgent(

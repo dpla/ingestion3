@@ -43,9 +43,11 @@ object CHProviderRegistry {
   private val registry = Map(
     // FIXME Register is redundant here and should be removed
 
+    "artstor" -> Register(profile = new ArtstorProfile),
     "bhl" -> Register(profile = new BhlProfile),
     "cdl" -> Register(profile = new CdlProfile),
     "ct" -> Register(profile = new CtProfile),
+    "community-webs" -> Register(profile = new CommunityWebsProfile),
     "dc" -> Register(profile = new DcProfile),
     "esdn" -> Register(profile = new EsdnProfile),
     "florida" -> Register(profile = new FlProfile),
@@ -57,9 +59,11 @@ object CHProviderRegistry {
     "ia" -> Register(profile = new IaProfile),
     "il" -> Register(profile = new IlProfile),
     "indiana" -> Register(profile = new InProfile),
+    "jhn" -> Register(profile = new JhnProfile),
+    "kentucky" -> Register(profile = new KyProfile),
     "lc" -> Register(profile = new LocProfile),
     "bpl" -> Register(profile = new MaProfile),
-    "me" -> Register(profile = new MeProfile),
+    "maine" -> Register(profile = new MeProfile),
     "maryland" -> Register(profile = new MarylandProfile),
     "mi" -> Register(profile = new MiProfile),
     "minnesota" -> Register(profile = new MdlProfile),
@@ -86,6 +90,7 @@ object CHProviderRegistry {
     "smithsonian" -> Register(profile = new SiProfile),
     "virginias" -> Register(profile = new VirginiasProfile),
     "vt" -> Register(profile = new VtProfile),
+    "washington" -> Register(profile = new WashingtonProfile),
     "wisconsin" -> Register(profile = new WiProfile)
   )
 

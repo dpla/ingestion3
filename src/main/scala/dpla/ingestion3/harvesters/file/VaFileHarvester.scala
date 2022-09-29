@@ -2,13 +2,13 @@ package dpla.ingestion3.harvesters.file
 
 import java.io.{File, FileInputStream}
 import java.util.zip.ZipInputStream
-
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import com.databricks.spark.avro._
+import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
 
 import scala.util.{Failure, Success, Try}
 import scala.xml.{MinimizeMode, Node, Utility, XML}

@@ -1,12 +1,11 @@
 package dpla.ingestion3.utils
 
 import java.io.{BufferedWriter, File, FileWriter}
-
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.apache.spark.sql.functions.col
 import com.databricks.spark.avro._
-import dpla.ingestion3.harvesters.file.XmlFileFilter
+import dpla.ingestion3.harvesters.file.FileFilters.XmlFileFilter
 
 import scala.xml.XML
 

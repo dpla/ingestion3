@@ -42,9 +42,12 @@ class InMapping extends XmlMapping with XmlExtractor
     rights ++ accessRights
   }
 
-  override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
-    extractString(data \ "metadata" \ "qualifieddc" \ "mediator")
-      .map(nameOnlyAgent)
+  override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] = {
+    extractStrings(data \ "metadata" \ "qualifieddc" \ "mediator").mkString(": ") match {
+      case n if n.nonEmpty => Some(nameOnlyAgent(n))
+      case _ => None
+    }
+  }
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "identifier").map(stringOnlyWebResource)

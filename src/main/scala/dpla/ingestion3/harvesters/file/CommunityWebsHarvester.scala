@@ -1,7 +1,5 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
-import java.util.zip.ZipInputStream
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
@@ -13,21 +11,23 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
 
+import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
+import java.util.zip.ZipInputStream
 import scala.util.{Failure, Success, Try}
 
 
 /**
   * Extracts values from parsed JSON
   */
-class FlFileExtractor extends JsonExtractor
+class CommunityWebsExtractor extends JsonExtractor
 
 /**
-  * Entry for performing a Florida file harvest
+  * Entry for performing a Community Webs file harvest
   */
-class FlFileHarvester(spark: SparkSession,
-                      shortName: String,
-                      conf: i3Conf,
-                      logger: Logger)
+class CommunityWebsHarvester(
+                              spark: SparkSession,
+                              shortName: String,
+                              conf: i3Conf, logger: Logger)
   extends FileHarvester(spark, shortName, conf, logger) {
 
   def mimeType: String = "application_json"
@@ -57,7 +57,7 @@ class FlFileHarvester(spark: SparkSession,
     */
   def getJsonResult(json: JValue): Option[ParsedResult] =
     Option(ParsedResult(
-      extractor.extractString(json \ "sourceResource" \ "identifier")
+      extractor.extractString(json \ "id")
         .getOrElse(throw new RuntimeException("Missing ID")),
       compact(render(json))
     ))

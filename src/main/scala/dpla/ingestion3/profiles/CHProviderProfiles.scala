@@ -6,6 +6,13 @@ import dpla.ingestion3.harvesters.file._
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.mappers.providers._
 
+class ArtstorProfile extends JsonProfile {
+  type Mapping = CdlMapping
+
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
+  override def getMapping = new ArtstorRetconMapping
+}
+
 /**
   * Biodiversity Heritage Library
   */
@@ -34,6 +41,16 @@ class CtProfile extends XmlProfile {
 
   override def getHarvester: Class[VaFileHarvester] = classOf[VaFileHarvester] // CT reuses the VA zipped XML file harvester
   override def getMapping = new CtMapping
+}
+
+/**
+ * Community Webs
+ */
+class CommunityWebsProfile extends JsonProfile {
+  type Mapping = CommunityWebsMapping
+
+  override def getHarvester: Class[CommunityWebsHarvester] = classOf[CommunityWebsHarvester]
+  override def getMapping = new CommunityWebsMapping
 }
 
 /**
@@ -69,7 +86,7 @@ class FlProfile extends JsonProfile {
 /**
   * J. Paul Getty Trust
   */
-class GettyProfile extends XmlProfile {
+class GettyProfile extends JsonProfile {
   type Mapping = GettyMapping
 
   override def getHarvester: Class[GettyHarvester] = classOf[GettyHarvester]
@@ -137,6 +154,14 @@ class InProfile extends XmlProfile {
 }
 
 /**
+ * Jewish Heritage Network
+ */
+class JhnProfile extends XmlProfile {
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
+  override def getMapping = new JhnMapping
+}
+
+/**
   * Internet Archive
   */
 class IaProfile extends JsonProfile {
@@ -147,23 +172,33 @@ class IaProfile extends JsonProfile {
 }
 
 /**
-  * Library of Congress
-  */
-class LocProfile extends JsonProfile {
-  type Mapping = LcMapping
+ * Library of Congress
+ */
+class KyProfile extends JsonProfile {
+  type Mapping = KentuckyRetconMapping
 
-  override def getHarvester: Class[LcCsvFileHarvester] = classOf[LcCsvFileHarvester]
-  override def getMapping = new LcMapping
+  override def getHarvester: Class[DplaJsonlFileHarvester] = classOf[DplaJsonlFileHarvester]
+  override def getMapping = new KentuckyRetconMapping
 }
 
 /**
-  * Maine
+  * Library of Congress
   */
-class MeProfile extends XmlProfile {
-  type Mapping = MeMapping
+class LocProfile extends JsonProfile {
+  type Mapping = LcRetconMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiHarvester]
-  override def getMapping = new MeMapping
+  override def getHarvester: Class[_ <: Harvester] = classOf[DplaJsonlFileHarvester]
+  override def getMapping = new LcRetconMapping
+}
+
+/**
+  * Digital Maine
+  */
+class MeProfile extends JsonProfile {
+  type Mapping = MaineRetconMapping
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[DplaJsonlFileHarvester]
+  override def getMapping = new MaineRetconMapping
 }
 
 /**
@@ -436,6 +471,16 @@ class VtProfile extends XmlProfile {
 
   override def getHarvester: Class[VtFileHarvester] = classOf[VtFileHarvester]
   override def getMapping = new VtMapping
+}
+
+/**
+ * University of Washington
+ */
+class WashingtonProfile extends JsonProfile {
+  type Mapping = WashingtonRetconMapping
+
+  override def getHarvester: Class[DplaJsonlFileHarvester] = classOf[DplaJsonlFileHarvester]
+  override def getMapping = new WashingtonRetconMapping
 }
 
 /**

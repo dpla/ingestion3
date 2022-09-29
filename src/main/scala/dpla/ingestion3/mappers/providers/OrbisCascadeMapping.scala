@@ -169,6 +169,9 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
   override def sidecar(data: Document[NodeSeq]): JValue =
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
 
+  override def tags(data: Document[NodeSeq]): ZeroToMany[URI] =
+    Seq(URI("nwdh"))
+
   // Helper method
   def agent = EdmAgent(
     name = Some("Orbis Cascade Alliance"),

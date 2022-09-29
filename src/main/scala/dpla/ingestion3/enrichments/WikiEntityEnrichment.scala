@@ -11,7 +11,7 @@ import scala.io.Source
 /**
   * Wikimedia entity enrichments
   */
-class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] with JsonExtractor with WikiUri {
+class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] with JsonExtractor {
 
   // Files to source vocabulary from
   private val fileList = Seq(
@@ -55,7 +55,7 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] wit
     */
   //noinspection TypeAnnotation,UnitMethodIsParameterless
   private def loadVocab =
-    getInstitutionVocab(files).foreach { case (key: String, value: String) => addEntity(key, value) }
+    getInstitutionVocab(files).foreach { case (key: String, value: String) => if(value.nonEmpty) addEntity(key, value) }
 
   private def getInstitutionVocab(files: Seq[String]): Seq[(String, String)] = {
     files.flatMap(file => {
@@ -92,7 +92,7 @@ class WikiEntityEnrichment extends FileLoader with VocabEnrichment[EdmAgent] wit
     lookup.add(
       EdmAgent(
         name = Some(entityName),
-        exactMatch = Seq(URI(s"${baseWikiUri}$entityWikiId"))
+        exactMatch = Seq(URI(s"${WikiUri.baseWikiUri}$entityWikiId"))
     ))
   }
 

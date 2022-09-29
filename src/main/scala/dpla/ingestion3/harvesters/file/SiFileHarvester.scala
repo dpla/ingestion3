@@ -2,9 +2,9 @@ package dpla.ingestion3.harvesters.file
 
 import java.io.{File, FileFilter, FileInputStream, InputStreamReader}
 import java.util.zip.GZIPInputStream
-
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.harvesters.file.FileFilters.GzFileFilter
 import dpla.ingestion3.utils.Utils
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger

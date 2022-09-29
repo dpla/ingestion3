@@ -2,7 +2,7 @@ package dpla.ingestion3.wiki
 
 import dpla.ingestion3.model._
 import org.scalatest.{FlatSpec, Matchers}
-
+import dpla.ingestion3.wiki.WikiUri
 /**
   * Tests for validating wikimedia eligibility  
   */
@@ -39,20 +39,20 @@ class WikiMapperTest extends FlatSpec with Matchers {
   }
 
   "institutionalEligibility" should " return true if the partner is Wiki eligible and dataProvider is not" in {
-    val partnerUri = Some(URI(s"${wiki.baseWikiUri}Q518155")) // nara
-    val dataProviderUri = Some(URI(s"${wiki.baseWikiUri}Q59661289")) // obama library
+    val partnerUri = Some(URI(s"${WikiUri.baseWikiUri}Q518155")) // nara
+    val dataProviderUri = Some(URI(s"${WikiUri.baseWikiUri}Q59661289")) // obama library
     assert(wiki.institutionalEligibility(partnerUri, dataProviderUri) === true)
   }
 
   it should " return `true` if a partner is not eligible but a dataProvider is " in {
-    val partnerUri = Some(URI(s"${wiki.baseWikiUri}Q5275908")) // DLG
-    val dataProviderUri = Some(URI(s"${wiki.baseWikiUri}Q30267984")) // Augusta-Richmond County Public Library
+    val partnerUri = Some(URI(s"${WikiUri.baseWikiUri}Q5275908")) // DLG
+    val dataProviderUri = Some(URI(s"${WikiUri.baseWikiUri}Q30267984")) // Augusta-Richmond County Public Library
     assert(wiki.institutionalEligibility(partnerUri, dataProviderUri) === true)
   }
 
   it should " return `false` if neither partner nor dataProvider is eligible" in {
-    val partnerUri = Some(URI(s"${wiki.baseWikiUri}Q5275908")) // DLG
-    val dataProviderUri = Some(URI(s"${wiki.baseWikiUri}Q4815975")) // Atlanta-Fulton Public Library System
+    val partnerUri = Some(URI(s"${WikiUri.baseWikiUri}Q5275908")) // DLG
+    val dataProviderUri = Some(URI(s"${WikiUri.baseWikiUri}Q4815975")) // Atlanta-Fulton Public Library System
     assert(wiki.institutionalEligibility(partnerUri, dataProviderUri) === false)
   }
 

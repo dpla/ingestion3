@@ -1,0 +1,74 @@
+{
+  "_type": "item",
+  "_id": "kentucky--http://kdl.kyvl.org/catalog/xt7cnp1wfn5x_1",
+  "_source": {
+    "dataProvider": "University of Kentucky",
+    "admin": {
+      "object_status": 1
+    },
+    "sourceResource": {
+      "rights": "This digital resource may be freely searched and displayed. Permission must be received for subsequent distribution in print or electronically. Physical rights are retained by the owning repository. Copyright is retained in accordance with U. S. copyright laws. Please go to http://kdl.kyvl.org for more information.",
+      "language": [
+        {
+          "iso639_3": "eng",
+          "name": "English"
+        }
+      ],
+      "creator": "Paducah sun (Paducah, Ky. : 1898)",
+      "type": [
+        "text"
+      ],
+      "format": "Newspapers",
+      "spatial": [
+        {
+          "name": "McCracken County, Kentucky"
+        }
+      ],
+      "date": {
+        "begin": "1906",
+        "end": "1906",
+        "displayDate": "1906"
+      },
+      "title": "Image 1 of Paducah sun (Paducah, Ky. : 1898), February 20, 1906",
+      "@id": "http://dp.la/api/items/7781509fd5609a093a5c58dcf5017d4d#sourceResource"
+    },
+    "object": "http://nyx.uky.edu/dips/xt7cnp1wfn5x/data/0358/0358_tb.jpg",
+    "aggregatedCHO": "#sourceResource",
+    "provider": {
+      "@id": "http://dp.la/api/contributor/kdl",
+      "name": "Kentucky Digital Library"
+    },
+    "ingestDate": "2019-09-23T16:39:08.052751Z",
+    "id": "7781509fd5609a093a5c58dcf5017d4d",
+    "originalRecord": {
+      "status": [],
+      "publisher": "University of Kentucky",
+      "handle": "http://kdl.kyvl.org/catalog/xt7cnp1wfn5x_1",
+      "language": "english",
+      "format": "newspapers",
+      "rights": "This digital resource may be freely searched and displayed. Permission must be received for subsequent distribution in print or electronically. Physical rights are retained by the owning repository. Copyright is retained in accordance with U. S. copyright laws. Please go to http://kdl.kyvl.org for more information.",
+      "label": "Image 1 of Paducah sun (Paducah, Ky. : 1898), February 20, 1906",
+      "contributor": "University of Kentucky",
+      "creator": "Paducah sun (Paducah, Ky. : 1898).",
+      "datestamp": "2014-06-26T05:57:01Z",
+      "relation": "http://nyx.uky.edu/dips/xt7cnp1wfn5x/data/0358/0358.jpg",
+      "source": "Paducah sun (Paducah, Ky. : 1898)",
+      "coverage": "McCracken County, Kentucky",
+      "provider": {
+        "@id": "http://dp.la/api/contributor/kdl",
+        "name": "Kentucky Digital Library"
+      },
+      "date": "1906",
+      "title": "Image 1 of Paducah sun (Paducah, Ky. : 1898), February 20, 1906",
+      "type": "text",
+      "id": "kdl.kyvl.org/xt7cnp1wfn5x_1"
+    },
+    "ingestionSequence": null,
+    "isShownAt": "https://exploreuk.uky.edu/catalog/xt7cnp1wfn5x_1",
+    "@context": "http://dp.la/api/items/context",
+    "ingestType": "item",
+    "_id": "kentucky--http://kdl.kyvl.org/catalog/xt7cnp1wfn5x_1",
+    "@id": "http://dp.la/api/items/7781509fd5609a093a5c58dcf5017d4d",
+    "@type": "ore:Aggregation"
+  }
+}

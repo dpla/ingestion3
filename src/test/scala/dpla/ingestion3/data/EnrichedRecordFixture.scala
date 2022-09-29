@@ -2,14 +2,14 @@ package dpla.ingestion3.data
 
 import dpla.ingestion3.model._
 import org.json4s.JsonDSL._
-
+import dpla.ingestion3.wiki.WikiUri
 object EnrichedRecordFixture {
 
   val wikimediaEntrichedRecord =
     OreAggregation(
       dataProvider = EdmAgent(
         name = Some("Big Sky Digital Network"),
-        exactMatch = Seq(URI("https://wikidata.org/wiki/Q83878447"))
+        exactMatch = Seq(URI(s"${WikiUri.baseWikiUri}Q83878447"))
       ),
       dplaUri = URI("https://dp.la/item/123"),
       originalRecord = "The Original Record",

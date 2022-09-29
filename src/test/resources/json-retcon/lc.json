@@ -1,0 +1,117 @@
+{
+  "_index": "dpla-20150410-144958",
+  "_type": "item",
+  "_id": "8bca6ea2341791bb4b30c471115e76e8",
+  "_score": 0,
+  "_source": {
+    "ingestType": "item",
+    "ingestionSequence": 999999,
+    "ingestDate": "2016-12-14",
+    "@context": "http://dp.la/api/items/context",
+    "aggregatedCHO": "#sourceResource",
+    "@id": "http://dp.la/api/items/8bca6ea2341791bb4b30c471115e76e8",
+    "id": "8bca6ea2341791bb4b30c471115e76e8",
+    "dataProvider": "Library of Congress Geography and Map Division Washington, D.C. 20540-4650 USA dcu",
+    "originalRecord": "http://ldp.staging.dp.la/ldp/original_record/8bca6ea2341791bb4b30c471115e76e8.json",
+    "sourceResource": {
+      "@id": "http://dp.la/api/items/8bca6ea2341791bb4b30c471115e76e8#sourceResource",
+      "contributor": [
+        "O.H. Bailey & Co."
+      ],
+      "description": [
+        "Perspective map not drawn to scale. LC Panoramic maps (2nd ed.), 312.2 Available also through the Library of Congress Web site as a raster image. Indexed for points of interest. AACR2",
+        "Boston : The Co., 1878."
+      ],
+      "format": [
+        "map"
+      ],
+      "identifier": [
+        "http://www.loc.gov/item/78695093/"
+      ],
+      "language": [
+        {
+          "name": "English",
+          "iso639_3": "eng"
+        }
+      ],
+      "rights": "For rights relating to this resource, visit https://www.loc.gov/item/78695093/",
+      "title": [
+        "View of Newton, Mass. : comprising wards 1 & 7 & environs of the city of Newton"
+      ],
+      "collection": [
+        {
+          "title": [
+            "panoramic maps"
+          ],
+          "@id": "_:158f9edfd2e3c6",
+          "id": "_:158f9edfd2e3c6"
+        },
+        {
+          "title": [
+            "cities and towns"
+          ],
+          "@id": "_:158f9edfd338b",
+          "id": "_:158f9edfd338b"
+        },
+        {
+          "title": [
+            "geography and map division"
+          ],
+          "@id": "_:158f9edfd37ac",
+          "id": "_:158f9edfd37ac"
+        },
+        {
+          "title": [
+            "catalog"
+          ],
+          "@id": "_:158f9edfd3b1ea",
+          "id": "_:158f9edfd3b1ea"
+        },
+        {
+          "title": [
+            "american memory"
+          ],
+          "@id": "_:158f9edfd3f93",
+          "id": "_:158f9edfd3f93"
+        }
+      ],
+      "type": "image",
+      "date": [
+        {
+          "displayDate": "1878",
+          "begin": "1878-01-01",
+          "end": "1878-12-31"
+        }
+      ],
+      "spatial": [
+        {
+          "name": "massachusetts",
+          "coordinates": "42.36565, -71.10832"
+        },
+        {
+          "name": "newton",
+          "coordinates": "41.05815, -74.75267"
+        },
+        {
+          "name": "united states",
+          "coordinates": "39.76, -98.5"
+        }
+      ],
+      "subject": [
+        {
+          "name": "Newton (Mass.)--Aerial views"
+        },
+        {
+          "name": "United States--Massachusetts--Newton"
+        }
+      ]
+    },
+    "provider": {
+      "name": "Library of Congress",
+      "@id": "http://dp.la/api/contributor/lc"
+    },
+    "isShownAt": "https://www.loc.gov/item/78695093/",
+    "object": "http://cdn.loc.gov/service/gmd/gmd376/g3764/g3764n/pm003122.gif",
+    "_id": "8bca6ea2341791bb4b30c471115e76e8"
+  }
+}

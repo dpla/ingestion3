@@ -1,7 +1,5 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
-import java.util.zip.ZipInputStream
 import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
@@ -13,32 +11,35 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
 
+import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
+import java.util.zip.ZipInputStream
 import scala.util.{Failure, Success, Try}
 
 
 /**
   * Extracts values from parsed JSON
   */
-class FlFileExtractor extends JsonExtractor
+class DplaJsonlFileExtractor extends JsonExtractor
 
 /**
-  * Entry for performing a Florida file harvest
+  * Entry for performing a DPLA JSONL file harvest
   */
-class FlFileHarvester(spark: SparkSession,
-                      shortName: String,
-                      conf: i3Conf,
-                      logger: Logger)
+class DplaJsonlFileHarvester(
+                              spark: SparkSession,
+                              shortName: String,
+                              conf: i3Conf,
+                              logger: Logger)
   extends FileHarvester(spark, shortName, conf, logger) {
 
   def mimeType: String = "application_json"
 
-  protected val extractor = new FlFileExtractor()
+  protected val extractor = new DplaJsonlFileExtractor()
 
   /**
-    * Loads .zip files
+    * Loads .zip files containing DPLA JSONL
     *
     * @param file File to parse
-    * @return ZipInputstream of the zip contents
+    * @return FileInputStream of the file contents
     */
   def getInputStream(file: File): Option[ZipInputStream] = {
     file.getName match {
@@ -57,8 +58,8 @@ class FlFileHarvester(spark: SparkSession,
     */
   def getJsonResult(json: JValue): Option[ParsedResult] =
     Option(ParsedResult(
-      extractor.extractString(json \ "sourceResource" \ "identifier")
-        .getOrElse(throw new RuntimeException("Missing ID")),
+      extractor.extractString(json \ "_id")
+        .getOrElse(throw new RuntimeException("Missing ID")).split("--").last,
       compact(render(json))
     ))
 
@@ -66,7 +67,7 @@ class FlFileHarvester(spark: SparkSession,
     * Parses and extracts ZipInputStream and writes
     * parsed records out.
     *
-    * @param zipResult  Case class representing extracted items from the zip
+    * @param fileResult  Case class representing extracted items from the zip
     * @return Count of metadata items found.
     */
   def handleFile(zipResult: FileResult,
@@ -79,7 +80,7 @@ class FlFileHarvester(spark: SparkSession,
         Success(0) // a directory, no results
       case Some(data) => Try {
 
-        //  FL now provides JSONL (one record per line)
+        // JSONL (one record per line)
         var line: String = data.readLine
 
         while (line != null) {
@@ -128,8 +129,9 @@ class FlFileHarvester(spark: SparkSession,
         FileResult(entry.getName, None, result) #:: iter(zipInputStream)
     }
 
+
   /**
-    * Executes the Florida harvest
+    * Executes the DPLA JSON file harvest
     */
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
