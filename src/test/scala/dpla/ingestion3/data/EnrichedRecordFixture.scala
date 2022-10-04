@@ -115,7 +115,8 @@ object EnrichedRecordFixture {
         relation = Seq("x", "https://example.org/x").map(eitherStringOrUri),
         rights = Seq("Public Domain"),
         subject = Seq(SkosConcept(
-          providedLabel = Some("Birds")
+          providedLabel = Some("Birds"),
+          exactMatch = Seq(URI("http://loc.gov/id/123"))
         )),
         temporal = Seq(
           EdmTimeSpan(

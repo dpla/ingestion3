@@ -204,7 +204,8 @@ package object model {
           // stateLocatedIn is omitted.
           ("subject" -> record.sourceResource.subject.map { subject =>
             ("name" -> subject.providedLabel) ~
-            ("scheme" -> subject.scheme.map(_.toString))
+            ("scheme" -> subject.scheme.map(_.toString)) ~
+            ("exactMatch" -> subject.exactMatch.map(_.toString))
           }) ~
           ("temporal" ->
             record.sourceResource.temporal.map{ t =>
