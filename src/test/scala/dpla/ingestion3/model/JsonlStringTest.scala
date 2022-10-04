@@ -31,6 +31,14 @@ class JsonlStringTest extends FlatSpec {
     assert(compact(render(title(0))) == "\"The Title\"")
   }
 
+  it should "render a subject.exactMatch" in {
+      val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord)
+      val jvalue = parse(s)
+      val subjectExactMatch = jvalue \ "_source" \ "sourceResource" \ "subject" \ "exactMatch"
+      assert(subjectExactMatch.isInstanceOf[JArray])
+      assert(compact(render(subjectExactMatch(0))) == "\"http://loc.gov/id/123\"")
+    }
+
   it should "render a field that requires a map() on a sequence" in {
     val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord)
     val jvalue = parse(s)
