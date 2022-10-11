@@ -107,6 +107,12 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
     extractStrings(data \\ "mods" \ "originInfo" \ "publisher")
       .map(nameOnlyAgent)
 
+  override def rights(data: Document[NodeSeq]): Seq[String] = {
+//    <mods:note type=“freetext”>Blah blah blah</mods:note>
+    (data \ "note")
+      .flatMap(node => getByAttribute(node, "type", "freetext"))
+      .flatMap(extractStrings)
+  }
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
   // <mods:subject><mods:topic>
     extractStrings(data \ "subject" \ "topic").map(nameOnlyConcept)
@@ -124,7 +130,6 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
   // note @type='ownershpip'
-  // TODO CONFIRM MAPPING
     (data \ "note")
       .flatMap(node => getByAttribute(node, "type", "ownership"))
       .flatMap(extractStrings)
@@ -132,7 +137,6 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
 
   override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] =
   // note @type='admin'
-  // TODO CONFIRM MAPPING
     (data \ "note")
       .flatMap(node => getByAttribute(node, "type", "admin"))
       .flatMap(extractStrings)

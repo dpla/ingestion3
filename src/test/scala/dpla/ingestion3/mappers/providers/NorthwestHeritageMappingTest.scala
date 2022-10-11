@@ -127,5 +127,10 @@ class NorthwestHeritageMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq(URI("nwdh"))
     assert(extractor.tags(xml) === expected)
   }
+
+  it should "extract the correct freetext rights" in {
+    val expected = Seq("blah blah blah")
+    assert(extractor.rights(xml) === expected)
+  }
 }
 
