@@ -99,9 +99,13 @@ class DlgMapping extends JsonMapping with JsonExtractor {
     extractStrings("dcterms_language_display")(data)
       .map(nameOnlyConcept)
 
-  override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
-    extractStrings("dcterms_spatial_display")(data)
-      .map(nameOnlyPlace)
+  override def place(data: Document[JValue]): ZeroToMany[DplaPlace] = {
+    (unwrap(data) \ "dcterms_spatial_display").map(node => {
+      val names = extractStrings(node \ "names")
+    }
+//    extractStrings("dcterms_spatial_display")(data)
+//      .map(nameOnlyPlace)
+  }
 
   override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings("dcterms_publisher_display")(data).map(nameOnlyAgent)
