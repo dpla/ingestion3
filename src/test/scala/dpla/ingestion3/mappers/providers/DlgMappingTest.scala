@@ -106,9 +106,21 @@ class DlgMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.language(json) === expected)
   }
 
-  // place
+//  {
+//    "names":["United States","Alabama","Mobile County","Mobile"],
+//    "coordinates":"30.69436, -88.04305",
+//    "uri":"geonames.org/4076598"
+//  }
+
   it should "create the correct place" in {
-    val expected = Seq("United States, Alabama, Jefferson County, Birmingham, 33.5206608, -86.80249").map(nameOnlyPlace)
+    val expected =
+      Seq("United States", "Alabama", "Mobile County").map(nameOnlyPlace) ++
+      Seq(DplaPlace(
+        name = Some("Mobile"),
+        exactMatch = Seq(URI("geonames.org/4076598")),
+        coordinates = Some("30.69436, -88.04305")
+      ))
+
     assert(extractor.place(json) === expected)
   }
 
