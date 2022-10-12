@@ -100,16 +100,17 @@ class DlgMapping extends JsonMapping with JsonExtractor {
       .map(nameOnlyConcept)
 
   override def place(data: Document[JValue]): ZeroToMany[DplaPlace] = {
-    val spatials = extractStrings(unwrap(data) \ "dcterms_spatial_display")
-      spatials.flatMap(node => {
-        val names = extractStrings("name")(node)
-        val coordinates = extractString("coordinates")(node)
-        val uri = extractStrings("uri")(node).map(URI)
+    val spatials = (unwrap(data) \ "dcterms_spatial_display")
 
-        val places: Seq[DplaPlace] = names.map(nameOnlyPlace)
-        val lastPlace: DplaPlace = places.last.copy(coordinates = coordinates, exactMatch = uri)
-        places.dropRight(1) ++ Seq(lastPlace)
-      })
+    iterify(spatials).children.flatMap(node => {
+      val names = extractStrings("names")(node)
+      val coordinates = extractString("coordinates")(node)
+      val uri = extractStrings("uri")(node).map(URI)
+
+      val places: Seq[DplaPlace] = names.map(nameOnlyPlace)
+      val lastPlace: DplaPlace = places.last.copy(coordinates = coordinates, exactMatch = uri)
+      places.dropRight(1) ++ Seq(lastPlace)
+    })
   }
 
   override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
