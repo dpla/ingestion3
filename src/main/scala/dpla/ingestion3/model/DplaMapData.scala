@@ -128,7 +128,8 @@ case class DplaPlace(
                       state: ZeroToOne[String] = None,
                       country: ZeroToOne[String] = None,
                       region: ZeroToOne[String] = None,
-                      coordinates: ZeroToOne[String] = None
+                      coordinates: ZeroToOne[String] = None,
+                      exactMatch: ZeroToMany[URI] = Seq()
                     )
 
 case class EdmTimeSpan(

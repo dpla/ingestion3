@@ -160,9 +160,9 @@ class SpatialEnrichment(geocoder: Twofisher) extends Serializable {
     * @return The query term: either the name or coordinates, or None
     */
   private def queryTerm(place: DplaPlace): Option[String] = place match {
-    case DplaPlace(_, _, _, _, _, _, Some(coordinates)) =>
+    case DplaPlace(_, _, _, _, _, _, Some(coordinates), _) =>
       Some(coordinates)
-    case DplaPlace(Some(name), _, _, _, _, _, _) =>
+    case DplaPlace(Some(name), _, _, _, _, _, _, _) =>
       name match {
         case s if s matches """^United States(?!\-\-)""" => None
         case s if s matches "^USA" => None

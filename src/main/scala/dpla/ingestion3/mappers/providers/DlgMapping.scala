@@ -7,7 +7,7 @@ import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
 import dpla.ingestion3.utils.Utils
 import org.json4s
-import org.json4s.JValue
+import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
 
 class DlgMapping extends JsonMapping with JsonExtractor {
@@ -99,9 +99,19 @@ class DlgMapping extends JsonMapping with JsonExtractor {
     extractStrings("dcterms_language_display")(data)
       .map(nameOnlyConcept)
 
-  override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
-    extractStrings("dcterms_spatial_display")(data)
-      .map(nameOnlyPlace)
+  override def place(data: Document[JValue]): ZeroToMany[DplaPlace] = {
+    val spatials = (unwrap(data) \ "dcterms_spatial_display")
+
+    iterify(spatials).children.flatMap(node => {
+      val names = extractStrings("names")(node)
+      val coordinates = extractString("coordinates")(node)
+      val uri = extractStrings("uri")(node).map(URI)
+
+      val places: Seq[DplaPlace] = names.map(nameOnlyPlace)
+      val lastPlace: DplaPlace = places.last.copy(coordinates = coordinates, exactMatch = uri)
+      places.dropRight(1) ++ Seq(lastPlace)
+    })
+  }
 
   override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings("dcterms_publisher_display")(data).map(nameOnlyAgent)
