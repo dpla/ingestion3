@@ -22,7 +22,7 @@ class ArtstorMapping extends XmlMapping with XmlExtractor
   // ID minting functions
   override def useProviderName(): Boolean = false
 
-  override def getProviderName(): String = "artstor"
+  override def getProviderName(): Option[String] = Some("artstor")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     isShownAtStrings(data).headOption
