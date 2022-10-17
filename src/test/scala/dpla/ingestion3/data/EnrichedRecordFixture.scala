@@ -83,7 +83,8 @@ object EnrichedRecordFixture {
       sourceResource = DplaSourceResource(
         collection = Seq(DcmiTypeCollection(
           title = Some("The Collection"),
-          description = Some("The Archives of Some Department, U. of X")
+          description = Some("The Archives of Some Department, U. of X"),
+          isShownAt = Some(stringOnlyWebResource("http://catalog.archives.gov/id/123"))
         )),
         contributor = Seq(EdmAgent(
           name = Some("J Doe")

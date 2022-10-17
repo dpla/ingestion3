@@ -428,6 +428,14 @@
                       "null",
                       "string"
                     ]
+                  },
+                  {
+                    "name": "exactMatch",
+                    "type": {
+                      "name": "exactMatchArray",
+                      "type": "array",
+                      "items": "string"
+                    }
                   }
                 ]
               }

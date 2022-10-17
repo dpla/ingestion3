@@ -109,7 +109,8 @@ case class EdmAgent(
 
 case class DcmiTypeCollection(
                                title: ZeroToOne[String] = None,
-                               description: ZeroToOne[String] = None
+                               description: ZeroToOne[String] = None,
+                               isShownAt: ZeroToOne[EdmWebResource] = None
                              )
 
 case class SkosConcept(
