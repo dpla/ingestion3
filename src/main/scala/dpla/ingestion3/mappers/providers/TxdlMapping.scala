@@ -118,5 +118,7 @@ class TxdlMapping extends XmlMapping with XmlExtractor
   override def sidecar(data: Document[NodeSeq]): JValue =
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data) )
 
+  override def tags(data: Document[NodeSeq]): ZeroToMany[URI] = Seq(URI("texas"))
+
   def metadataRoot(data: Document[NodeSeq]): NodeSeq = data \ "dc"
 }
