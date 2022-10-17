@@ -34,6 +34,7 @@
             <dc:identifier>http://collections.carli.illinois.edu/cdm/ref/collection/uic_pic/id/5601</dc:identifier>
             <edm:preview>http://collections.carli.illinois.edu/utils/getthumbnail/collection/uic_pic/id/5601</edm:preview>
             <edm:isShownAt>http://collections.carli.illinois.edu/cdm/ref/collection/uic_pic/id/5601</edm:isShownAt>
+            <edm:iiifManifest>http://idhh.org/iiif/1</edm:iiifManifest>
         </oai_qdc:qualifieddc>
     </metadata>
     <about>

@@ -127,4 +127,10 @@ class IllinoisMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = List(stringOnlyWebResource("http://collections.carli.illinois.edu/utils/getthumbnail/collection/uic_pic/id/5601"))
     assert(extractor.preview(xml) === expected)
   }
+
+  // iiif manifest
+  it should "extract the correct iiifManfiest" in {
+    val expected = Seq(URI("http://idhh.org/iiif/1"))
+    assert(extractor.iiifManifest(xml) === expected)
+  }
 }
