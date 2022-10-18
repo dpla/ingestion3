@@ -11,17 +11,18 @@ import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 class ModelConverterTest extends FlatSpec with BeforeAndAfter {
 
-  val schema = new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
-  val sqlSchema = SchemaConverters.toSqlType(schema).dataType.asInstanceOf[StructType]
-  val enrichedRecord = EnrichedRecordFixture.enrichedRecord
+  val schema: Schema = new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
+  val sqlSchema: StructType = SchemaConverters.toSqlType(schema).dataType.asInstanceOf[StructType]
+  val enrichedRecord: OreAggregation = EnrichedRecordFixture.enrichedRecord
 
   val urlString1 = "http://example.com"
   val urlString2 = "http://google.com"
   val urlString3 = "http://yahoo.com"
   val urlisRefBy = "http://isRefd.by/"
   val urlTags = "http://dp.la/tag/1"
+  val placeUri = "geonames.org/123"
 
-  val testEdmAgent = Row(
+  val testEdmAgent: Row = Row(
     urlString1,
     "Sam",
     "Sam Example",
@@ -31,23 +32,27 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
     Seq(urlString3, urlString1)
   )
 
-  val testIngestMessage = Row("msg", "ERROR", "123", "type", "StillImage", "images")
+  val testIngestMessage: Row = Row("msg", "ERROR", "123", "type", "StillImage", "images")
 
-  val testEdmWebResource = Row(urlString1, Seq("foo"), Seq("bar"), "baz", urlisRefBy)
+  val testEdmWebResource: Row = Row(urlString1, Seq("foo"), Seq("bar"), "baz", urlisRefBy)
 
-  val testEdmTimeSpan = Row("2012", "2013", "2014", "2015")
+  val testEdmTimeSpan: Row = Row("2012", "2013", "2014", "2015")
 
-  val testDcmiTypeCollection = Row("Foo", "Bar")
+  val testDcmiTypeCollection: Row = Row("Foo", "Bar", null)
 
-  val testSkosConcept = Row("foo", "bar", "baz", urlString1, Seq(urlString2, urlString3), Seq(urlString1))
+  val testCollectionIsShownAt: Row = Row(urlisRefBy, List(), List(), null, null)
 
-  val testDplaPlace = Row("foo", "bar", "baz", "buzz", "Booga", "Wooga", "Oooga")
+  val testDcmiTypeCollectionIsShownAt: Row = Row("Foo", "Bar", testCollectionIsShownAt)
 
-  val literal = Row("I'm very literal", false)
-  val uri = Row(urlString1, true)
+  val testSkosConcept: Row = Row("foo", "bar", "baz", urlString1, Seq(urlString2, urlString3), Seq(urlString1))
 
-  val stringSeq = Seq("booga", "wooga", "oooga")
-  val testSourceResource = Row(
+  val testDplaPlace: Row = Row("foo", "bar", "baz", "buzz", "Booga", "Wooga", "Oooga", Seq(placeUri))
+
+  val literal: Row = Row("I'm very literal", false)
+  val uri: Row = Row(urlString1, true)
+
+  val stringSeq: Seq[String] = Seq("booga", "wooga", "oooga")
+  val testSourceResource: Row = Row(
     stringSeq,                                          //alternateTitle
     Seq(testDcmiTypeCollection, testDcmiTypeCollection),//collection
     Seq(testEdmAgent, testEdmAgent),                    //contributor
@@ -190,12 +195,20 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
 
   it should "convert DcmiTypeCollection" in {
     val testResult1 = ModelConverter.toDcmiTypeCollection(testDcmiTypeCollection)
-    val testResult2 = ModelConverter.toDcmiTypeCollection(Row(null, null))
+    val testResult2 = ModelConverter.toDcmiTypeCollection(Row(null, null, null))
+    val testResult3 = ModelConverter.toDcmiTypeCollection(testDcmiTypeCollectionIsShownAt)
 
     assert(testResult1.title === Some("Foo"))
     assert(testResult1.description === Some("Bar"))
+    assert(testResult1.isShownAt === None)
+
     assert(testResult2.title === None)
     assert(testResult2.description === None)
+    assert(testResult2.isShownAt === None)
+
+    assert(testResult3.title === Some("Foo"))
+    assert(testResult3.description === Some("Bar"))
+    assert(testResult3.isShownAt === Some(stringOnlyWebResource(urlisRefBy)))
   }
 
   it should "convert EdmTimeSpan" in {
@@ -234,7 +247,7 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
 
   it should "convert DplaPlace" in {
     val testResult1 = ModelConverter.toDplaPlace(testDplaPlace)
-    val testResult2 = ModelConverter.toDplaPlace(Row(null, null, null, null, null, null, null))
+    val testResult2 = ModelConverter.toDplaPlace(Row(null, null, null, null, null, null, null, List()))
 
     assert(testResult1.name === Some("foo"))
     assert(testResult1.city === Some("bar"))
@@ -243,6 +256,7 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
     assert(testResult1.state === Some("Booga"))
     assert(testResult1.country === Some("Wooga"))
     assert(testResult1.coordinates === Some("Oooga"))
+    assert(testResult1.exactMatch === Seq(URI("geonames.org/123")))
 
     assert(testResult2.name === None)
     assert(testResult2.city === None)

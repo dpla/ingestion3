@@ -51,6 +51,42 @@
                       "null",
                       "string"
                     ]
+                  },
+                  {
+                    "name": "isShownAt",
+                    "type": {
+                      "name": "DcmiCollectionIsShownAtEdmWebResource",
+                      "type": "record",
+                      "fields": [
+                        {
+                          "name": "uri",
+                          "type": "string"
+                        },
+                        {
+                          "name": "fileFormat",
+                          "type": {
+                            "name": "fileFormatsArray",
+                            "type": "array",
+                            "items": "string"
+                          }
+                        },
+                        {
+                          "name": "dcRights",
+                          "type": {
+                            "name": "dcRightsArray",
+                            "type": "array",
+                            "items": "string"
+                          }
+                        },
+                        {
+                          "name": "edmRights",
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        }
+                      ]
+                    }
                   }
                 ]
               }
@@ -428,6 +464,14 @@
                       "null",
                       "string"
                     ]
+                  },
+                  {
+                    "name": "exactMatch",
+                    "type": {
+                      "name": "exactMatchArray",
+                      "type": "array",
+                      "items": "string"
+                    }
                   }
                 ]
               }
@@ -926,8 +970,6 @@
         ]
       }
     },
-
-
     {
       "name": "object",
       "type": [

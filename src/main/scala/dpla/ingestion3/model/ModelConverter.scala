@@ -70,7 +70,8 @@ object ModelConverter {
     region = optionalString(row, 3),
     state = optionalString(row, 4),
     country = optionalString(row, 5),
-    coordinates = optionalString(row, 6)
+    coordinates = optionalString(row, 6),
+    exactMatch = uriSeq(row, 7)
   )
 
   private[model] def toSkosConcept(row: Row): SkosConcept = SkosConcept(
@@ -91,7 +92,8 @@ object ModelConverter {
 
   private[model] def toDcmiTypeCollection(row: Row): DcmiTypeCollection = DcmiTypeCollection(
     title = optionalString(row, 0),
-    description = optionalString(row, 1)
+    description = optionalString(row, 1),
+    isShownAt = toOptionEdmWebResource(row.getStruct(2))
   )
 
   private[model] def toOptionEdmWebResource(row: Row): Option[EdmWebResource] =

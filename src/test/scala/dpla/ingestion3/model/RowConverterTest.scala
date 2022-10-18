@@ -9,37 +9,38 @@ import org.scalatest.{BeforeAndAfter, FlatSpec}
 
 class RowConverterTest extends FlatSpec with BeforeAndAfter {
 
-  val uri1 = URI("http://hampsterdance.com")
-  val uri2 = URI("http://zombo.com")
-  val uri3 = URI("http://realultimatepower.net")
-  val uri4 = URI("http://timecube.com")
-  val uri5 = URI("http://ytmnd.com")
-  val refByUri = URI("http://isRef.by")
+  val uri1: URI = URI("http://hampsterdance.com")
+  val uri2: URI = URI("http://zombo.com")
+  val uri3: URI = URI("http://realultimatepower.net")
+  val uri4: URI = URI("http://timecube.com")
+  val uri5: URI = URI("http://ytmnd.com")
+  val refByUri: URI = URI("http://isRef.by")
 
-  val schema = new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
-  val sqlSchema = SchemaConverters.toSqlType(schema).dataType.asInstanceOf[StructType]
-  val enrichedRecord = EnrichedRecordFixture.enrichedRecord
+  val schema: Schema = new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
+  val sqlSchema: StructType = SchemaConverters.toSqlType(schema).dataType.asInstanceOf[StructType]
+  val enrichedRecord: OreAggregation = EnrichedRecordFixture.enrichedRecord
 
-  val dcmiTypeCollection = enrichedRecord.sourceResource.collection
+  val dcmiTypeCollection: DcmiTypeCollection = enrichedRecord.sourceResource.collection
     .headOption.getOrElse(throw new RuntimeException("You cut off my head"))
-  val emptyDcmiTypeCollection = DcmiTypeCollection()
+  val emptyDcmiTypeCollection: DcmiTypeCollection = DcmiTypeCollection()
 
-  val edmTimeSpan = enrichedRecord.sourceResource.date
+  val edmTimeSpan: EdmTimeSpan = enrichedRecord.sourceResource.date
     .headOption.getOrElse(throw new RuntimeException("You cut off my head"))
-  val emptyEdmTimeSpan = EdmTimeSpan()
+  val emptyEdmTimeSpan: EdmTimeSpan = EdmTimeSpan()
 
-  val dplaPlace = DplaPlace(
+  val dplaPlace: DplaPlace = DplaPlace(
     name = Some("Boston"),
     city = Some("Boston"),
     county = Some("Suffolk County"),
     state = Some("Massachusetts"),
     country = Some("United States of America"),
     region = Some("North America"),
-    coordinates = Some("42.358333,71.059722")
+    coordinates = Some("42.358333,71.059722"),
+    exactMatch = Seq(URI("geonames.org/123"))
   )
-  val emptyDplaPlace = DplaPlace()
+  val emptyDplaPlace: DplaPlace = DplaPlace()
 
-  val skosConcept = SkosConcept(
+  val skosConcept: SkosConcept = SkosConcept(
     concept = Some("Food"),
     providedLabel = Some("Food label"),
     note = Some("Food notes"),
@@ -47,12 +48,12 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
     exactMatch = Seq(uri2, uri3),
     closeMatch = Seq(uri4, uri5)
   )
-  val emtpySkosConcept = SkosConcept()
+  val emtpySkosConcept: SkosConcept = SkosConcept()
 
-  val stringLiteralOrUri = LiteralOrUri("String", isUri = false)
-  val uriLiteralOrUri = LiteralOrUri(uri1.toString, isUri = true)
+  val stringLiteralOrUri: LiteralOrUri = LiteralOrUri("String", isUri = false)
+  val uriLiteralOrUri: LiteralOrUri = LiteralOrUri(uri1.toString, isUri = true)
 
-  val edmAgent = EdmAgent(
+  val edmAgent: EdmAgent = EdmAgent(
     uri = Some(uri1),
     name = Some("Michael Scott"),
     providedLabel = Some("Michael Scarn"),
@@ -61,9 +62,9 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
     exactMatch = Seq(uri1, uri2),
     closeMatch = Seq(uri3, uri4)
   )
-  val emptyEdmAgent = EdmAgent()
+  val emptyEdmAgent: EdmAgent = EdmAgent()
 
-  val edmWebResource = EdmWebResource(
+  val edmWebResource: EdmWebResource = EdmWebResource(
     uri = uri1,
     fileFormat = Seq("image/gif", "image/jpeg"),
     dcRights = Seq("free speech", "peaceful assembly"),
@@ -71,7 +72,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
     isReferencedBy = Some(refByUri)
   )
 
-  val emptyEdmWebResource = EdmWebResource(uri = uri1)
+  val emptyEdmWebResource: EdmWebResource = EdmWebResource(uri = uri1)
 
   "A RowConverter" should "convert a DplaMapModel to a Row with a schema" in {
     val row = RowConverter.toRow(enrichedRecord, sqlSchema)
@@ -134,6 +135,7 @@ class RowConverterTest extends FlatSpec with BeforeAndAfter {
     assert(row(4) === dplaPlace.state.orNull)
     assert(row(5) === dplaPlace.country.orNull)
     assert(row(6) === dplaPlace.coordinates.orNull)
+    assert(row(7) === dplaPlace.exactMatch.map(_.toString))
   }
 
   it should "convert an empty DplaPlace" in {

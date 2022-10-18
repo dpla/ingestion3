@@ -43,8 +43,12 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract collections" in {
+    val expected = Seq(
+      DcmiTypeCollection(title = Some("Records of the Forest Service"), isShownAt = Some(stringOnlyWebResource(uri = "https://catalog.archives.gov/id/424"))),
+      DcmiTypeCollection(title = Some("Historic Photographs"), isShownAt = Some(stringOnlyWebResource("https://catalog.archives.gov/id/1812856")))
+    )
     val collections = extractor.collection(xml)
-    assert(collections === Seq("Records of the Forest Service", "Historic Photographs").map(nameOnlyCollection))
+    assert(collections === expected)
   }
 
   it should "extract contributors" in {
@@ -152,8 +156,8 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract subjects" in {
     val subjects = extractor.subject(xml)
     assert(subjects === Seq(
-      SkosConcept(concept = Some("Recreation"), exactMatch = Seq(URI("https://catalog.archives.org/id/10643552"))),
-      SkosConcept(concept = Some("Wilderness areas"), exactMatch = Seq(URI("https://catalog.archives.org/id/10644630"))))
+      SkosConcept(concept = Some("Recreation"), exactMatch = Seq(URI("https://catalog.archives.gov/id/10643552"))),
+      SkosConcept(concept = Some("Wilderness areas"), exactMatch = Seq(URI("https://catalog.archives.gov/id/10644630"))))
     )
   }
 

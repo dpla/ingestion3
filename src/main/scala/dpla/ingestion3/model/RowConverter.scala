@@ -4,7 +4,6 @@ import dpla.ingestion3.messages.IngestMessage
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.types.StructType
-import org.json4s.jackson.JsonMethods._
 
 /**
   * Responsible for desugaring a DplaMapModel and converting it to a Spark-native Row-based structure.
@@ -107,7 +106,8 @@ object RowConverter {
     dplaPlace.region.orNull, //3
     dplaPlace.state.orNull, //4
     dplaPlace.country.orNull, //5
-    dplaPlace.coordinates.orNull //6
+    dplaPlace.coordinates.orNull, //6
+    dplaPlace.exactMatch.map(_.toString) //7
   )
 
   private[model] def fromSkosConcept(skosConcept: SkosConcept): Row = Row(
@@ -128,7 +128,8 @@ object RowConverter {
 
   private[model] def fromDcmiTypeCollection(dcmiTypeCollection: DcmiTypeCollection): Row = Row(
     dcmiTypeCollection.title.orNull, //0
-    dcmiTypeCollection.description.orNull //1
+    dcmiTypeCollection.description.orNull, //1
+    dcmiTypeCollection.isShownAt.map(fromEdmWebResource).orNull //2
   )
 
 }

@@ -15,7 +15,7 @@ import scala.xml.{Node, NodeSeq}
 
 class NaraMapping extends XmlMapping with XmlExtractor {
 
-  private val uriBase = "https://catalog.archives.org/id/"
+  private val uriBase = "https://catalog.archives.gov/id/"
 
   private def uri(naid: String): URI = URI(s"$uriBase$naid")
 
@@ -189,7 +189,7 @@ class NaraMapping extends XmlMapping with XmlExtractor {
 
   // SourceResource
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
-    extractCollection(data).map(nameOnlyCollection)
+    extractCollection(data)
 
   override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
     extractContributor(data).map(nameOnlyAgent)
@@ -247,22 +247,34 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     uri = Some(URI("http://dp.la/api/contributor/nara"))
   )
 
-  private def extractCollection(data: NodeSeq): Seq[String] = {
+  private def extractCollection(data: NodeSeq): Seq[DcmiTypeCollection] = {
     val parentRecordGroupIds = for {
       prg <- data \\ "parentRecordGroup" \\ "title"
-    } yield prg.text
+      prgUri <- extractString(data \\ "parentRecordGroup" \\ "naId")
+        .map(naId => s"$uriBase$naId")
+        .map(stringOnlyWebResource)
+    } yield DcmiTypeCollection(title = Option(prg.text), isShownAt = Some(prgUri))
 
     val parentCollectionIds = for {
       pc <- data \\ "parentCollection" \ "title"
-    } yield pc.text
+      pcUri <- extractString(data \\ "parentCollection" \ "naId")
+        .map(naId => s"$uriBase$naId")
+        .map(stringOnlyWebResource)
+    } yield DcmiTypeCollection(title = Option(pc.text), isShownAt = Some(pcUri))
 
     val parentSeries = for {
       ps <- data \\ "parentSeries" \ "title"
-    } yield ps.text
+      psUri <- extractString(data \\ "parentSeries" \ "naId")
+        .map(naId => s"$uriBase$naId")
+        .map(stringOnlyWebResource)
+    } yield DcmiTypeCollection(title = Option(ps.text), isShownAt = Some(psUri))
 
     val parentFileUnit = for {
       pfu <- data \\ "parentFileUnit" \ "title"
-    } yield pfu.text
+      pfuUri <- extractString(data \\ "parentFileUnit" \ "naId")
+        .map(naId => s"$uriBase$naId")
+        .map(stringOnlyWebResource)
+    } yield DcmiTypeCollection(title = Option(pfu.text), isShownAt = Some(pfuUri))
 
     if (parentRecordGroupIds.nonEmpty)
       parentRecordGroupIds ++ parentSeries ++ parentFileUnit
