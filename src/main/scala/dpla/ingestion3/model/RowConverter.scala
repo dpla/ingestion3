@@ -1,11 +1,9 @@
 package dpla.ingestion3.model
 
 import dpla.ingestion3.messages.IngestMessage
-import dpla.ingestion3.model.RowConverter.fromEdmWebResource
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.types.StructType
-import org.json4s.jackson.JsonMethods._
 
 /**
   * Responsible for desugaring a DplaMapModel and converting it to a Spark-native Row-based structure.
