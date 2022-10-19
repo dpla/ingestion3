@@ -112,6 +112,10 @@ class IllinoisMapping extends XmlMapping with XmlExtractor with IngestMessageTem
       }
     })
 
+  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] =
+    extractStrings(data \ "metadata" \\ "iiifManifest")
+      .map(URI)
+
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "metadata" \\ "isShownAt")
       .map(stringOnlyWebResource)
