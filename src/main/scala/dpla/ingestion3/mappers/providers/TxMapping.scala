@@ -4,6 +4,7 @@ import java.net.URL
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.TaggingUtils._
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
@@ -196,7 +197,6 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     }
   }
 
-
   override def `type`(data: Document[NodeSeq]): AtLeastOne[String] = {
     // This greatly simplifies the ingestion1 mapping and pushes the filtering logic from ingestion1 to the ingestion3
     // type enrichment
@@ -227,6 +227,9 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       })
       .map(nameOnlyAgent)
   }
+
+  override def tags(data: Document[NodeSeq]): ZeroToMany[URI] = Seq(URI("texas"))
+
 
   /**
     * Helper method to get to metadata root
