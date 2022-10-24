@@ -58,8 +58,8 @@ class MdlMappingTest extends FlatSpec with BeforeAndAfter {
   // collection
   it should "extract the correct collections" in {
     val expected = List(
-      DcmiTypeCollection(title = Some("collection1"), description = Some("description1")),
-      DcmiTypeCollection(title = Some("collection2"), description = None)
+      DcmiTypeCollection(title = Some("collection1"), description = Some("description1"), isShownAt = None),
+      DcmiTypeCollection(title = Some("collection2"), description = None, isShownAt = None)
     )
     assert(extractor.collection(json) === expected)
   }

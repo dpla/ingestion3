@@ -2,7 +2,7 @@ package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.{Document, JsonExtractor, JsonMapping}
 import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
-import dpla.ingestion3.model.{DcmiTypeCollection, DplaPlace, EdmAgent, EdmTimeSpan, EdmWebResource, LiteralOrUri, SkosConcept, URI, eitherStringOrUri, nameOnlyAgent, nameOnlyConcept, nameOnlyPlace, uriOnlyWebResource}
+import dpla.ingestion3.model.{DcmiTypeCollection, DplaPlace, EdmAgent, EdmTimeSpan, EdmWebResource, LiteralOrUri, SkosConcept, URI, eitherStringOrUri, nameOnlyAgent, nameOnlyConcept, uriOnlyWebResource}
 import org.json4s
 import org.json4s.JValue
 import org.json4s.JsonAST.{JArray, JObject, JString}
@@ -65,7 +65,7 @@ abstract class JsonRetconMapping extends JsonMapping with JsonExtractor {
       (fields) => {
         val title = extractStrings("title")(fields).headOption
         val description = extractStrings("description")(fields).headOption
-        if (title.nonEmpty) Some(DcmiTypeCollection(title = title, description = description))
+        if (title.nonEmpty) Some(DcmiTypeCollection(title = title, description = description, isShownAt = None))
         else None
       }
     )

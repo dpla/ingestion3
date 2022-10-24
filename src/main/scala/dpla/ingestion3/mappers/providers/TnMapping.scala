@@ -43,7 +43,7 @@ class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
         extractStrings(collection \ "titleInfo" \ "title").map(Option(_))
           .zipAll(extractStrings(collection \ "abstract").map(Option(_)), None, None)
       })
-      .map({ case (title: Option[String], desc: Option[String]) => DcmiTypeCollection(title = title, description = desc) })
+      .map({ case (title: Option[String], desc: Option[String]) => DcmiTypeCollection(title = title, description = desc, isShownAt = None) })
 
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
