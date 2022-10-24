@@ -135,7 +135,8 @@ class MdlMapping extends JsonMapping with JsonExtractor with IngestMessageTempla
     iterify(collection).children.map(c => {
       DcmiTypeCollection(
         title = extractString(c \\ "title"),
-        description = extractString(c \\ "description")
+        description = extractString(c \\ "description"),
+        isShownAt = None
       )
     })
   }

@@ -129,7 +129,8 @@ class StringNormalizations {
   def enrichDcmiTypeCollection(collection: DcmiTypeCollection): DcmiTypeCollection =
     collection.copy(
       title = collection.title.map(_.stripHTML.reduceWhitespace),
-      description = collection.description.map(_.stripHTML.reduceWhitespace)
+      description = collection.description.map(_.stripHTML.reduceWhitespace),
+      isShownAt = collection.isShownAt.map(enrichEdmWebResource)
     )
 
   def enrichRelation(relation: LiteralOrUri): LiteralOrUri = {
