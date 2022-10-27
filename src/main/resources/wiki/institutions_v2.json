@@ -8991,7 +8991,7 @@
                 "upload": false
             },
             "Abraham Lincoln Presidential Library & Museum": {
-                "Wikidata": "",
+                "Wikidata": "Q330237",
                 "upload": false
             },
             "Abraham Lincoln Presidential Library and Museum": {
@@ -9007,7 +9007,7 @@
                 "upload": false
             },
             "Arlington Heights Memorial Library with materials owned by the Arlington Heights Historical Society": {
-                "Wikidata": "",
+                "Wikidata": "Q69473097",
                 "upload": false
             },
             "Arthur Public Library": {
@@ -9059,11 +9059,11 @@
                 "upload": false
             },
             "Cherry Valley Public Library District (Ill.)": {
-                "Wikidata": "",
+                "Wikidata": "Q69473315",
                 "upload": false
             },
             "Cherry Valley Public Library District (Ill.); Cherry Valley Historical Society (Ill.)": {
-                "Wikidata": "",
+                "Wikidata": "Q69473315",
                 "upload": false
             },
             "Chicago History Museum": {
@@ -9095,7 +9095,11 @@
                 "upload": false
             },
             "DePaul University. Special Collections and Archives": {
-                "Wikidata": "",
+                "Wikidata": "Q114873748",
+                "upload": false
+            },
+            "Des Plaines Public Library": {
+                "Wikidata": "Q5263546",
                 "upload": false
             },
             "Deerfield Public Library": {
@@ -9231,7 +9235,7 @@
                 "upload": false
             },
             "Garrett-Evangelical Theological Seminary": {
-                "Wikidata": "",
+                "Wikidata": "Q5523962",
                 "upload": false
             },
             "Geneseo Public Library District": {
@@ -9251,7 +9255,7 @@
                 "upload": false
             },
             "Harper College": {
-                "Wikidata": "",
+                "Wikidata": "Q2983593",
                 "upload": false
             },
             "Henderson County Historical Society Museum - Raritan, Illinois": {
@@ -9375,7 +9379,7 @@
                 "upload": false
             },
             "Lewis & Clark Community College": {
-                "Wikidata": "",
+                "Wikidata": "Q16981182",
                 "upload": false
             },
             "Lewis University": {
@@ -9407,7 +9411,7 @@
                 "upload": false
             },
             "Marshall Public Library, Marshall (Ill.)": {
-                "Wikidata": "",
+                "Wikidata": "Q69474028",
                 "upload": false
             },
             "McLean County Historical Society": {
@@ -9427,7 +9431,7 @@
                 "upload": false
             },
             "Methodist College (Peoria, IL)": {
-                "Wikidata": "",
+                "Wikidata": "Q109502016",
                 "upload": false
             },
             "Midway Village and Museum Center": {
@@ -9459,7 +9463,7 @@
                 "upload": false
             },
             "National Louis University": {
-                "Wikidata": "",
+                "Wikidata": "Q6974219",
                 "upload": false
             },
             "Newberry Library": {
@@ -9555,11 +9559,11 @@
                 "upload": false
             },
             "Prospect Heights Public Library District": {
-                "Wikidata": "",
+                "Wikidata": "Q69474354",
                 "upload": false
             },
             "Pullman State Historic Site": {
-                "Wikidata": "",
+                "Wikidata": "Q7259479",
                 "upload": false
             },
             "Quincy Public Library": {
@@ -9567,7 +9571,7 @@
                 "upload": false
             },
             "Ridgewood High School": {
-                "Wikidata": "",
+                "Wikidata": "Q17029265",
                 "upload": false
             },
             "Ridgewood Historical Society": {
@@ -9599,7 +9603,7 @@
                 "upload": false
             },
             "Sallie Logan Public Library, Murphysboro, Illinois sallieloganlibrary.com": {
-                "Wikidata": "",
+                "Wikidata": "Q69474143",
                 "upload": false
             },
             "Skokie Public Library": {
@@ -9607,7 +9611,7 @@
                 "upload": false
             },
             "Skokie Public Library; Skokie Public Library": {
-                "Wikidata": "",
+                "Wikidata": "Q24061805",
                 "upload": false
             },
             "Southeast Chicago Historical Society": {
@@ -9647,7 +9651,7 @@
                 "upload": false
             },
             "The Art Institute of Chicago": {
-                "Wikidata": "",
+                "Wikidata": "Q239303",
                 "upload": false
             },
             "Thomas Ford Memorial Library": {
@@ -9667,11 +9671,11 @@
                 "upload": false
             },
             "University of Illinois Chicago": {
-                "Wikidata": "",
+                "Wikidata": "Q955764",
                 "upload": false
             },
             "University of Illinois Springfield": {
-                "Wikidata": "",
+                "Wikidata": "Q941855",
                 "upload": false
             },
             "University of Illinois at Springfield": {
@@ -9719,7 +9723,7 @@
                 "upload": false
             }
         },
-        "upload": false
+        "upload": true
     },
     "Indiana Memory": {
         "Wikidata": "Q83878471",
