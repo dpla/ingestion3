@@ -78,24 +78,43 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     val dplaMap = new DplaMap()
 
     // Load the harvested record dataframe, repartition data
-    val harvestedRecords: DataFrame = spark.read.avro(dataIn).repartition(1000)
+    val coresPerExecutor = spark.sparkContext.range(0,1)
+      .map(_ => java.lang.Runtime.getRuntime.availableProcessors).collect.head
+
+    val harvestedRecords: DataFrame = spark.read.avro(dataIn)
+
+    val totalCount = harvestedRecords.count
 
     // Get distinct harvest records
     val distinctHarvest: DataFrame = harvestedRecords.distinct
 
     // For reporting purposes, calculate number of duplicate harvest records
-    val duplicateHarvest: Long = harvestedRecords.count - distinctHarvest.count
+    val duplicateHarvest: Long = totalCount - distinctHarvest.count
 
     // Run the mapping over the Dataframe
     // Transformation only
     val extractorClass = getExtractorClass(shortName) // lookup from registry
 
     val mappingResults: RDD[OreAggregation] = harvestedRecords
+      .repartition(coresPerExecutor)
       .select("document")
       .as[String]
       .rdd
       .map(document => dplaMap.map(document, extractorClass))
-      .persist(StorageLevel.MEMORY_AND_DISK_SER)
+      .persist(StorageLevel.DISK_ONLY)
+
+    mappingResults.count
+
+    // TODO  force evaluation of mappingResults here with .count?
+    // Then this .count could be totalCount
+    // Or write intermediate results to s3 rather than saving to local disk
+    // s3 has read after write consistency
+    // and then delete intermediate results after mapping completes
+    // Or, may as well just persist to disk b/c it won't be able to store whole rdd block in mem
+    // Or, is there a way to just read the original ID from the harvested record instead of mapping first?
+    // Or, map just the ID and perist?  still have to touch all the records
+
+
 
     // Get a list of originalIds that appear in more than one record
     val duplicateOriginalIds: Broadcast[Array[String]] =
@@ -107,9 +126,8 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
           .toArray
       )
 
-
     // Update messages to include duplicate originalId
-    val enforceDuplidateIds = getExtractorClass(shortName).getMapping.enforceDuplicateIds
+    val enforceDuplidateIds: Boolean = getExtractorClass(shortName).getMapping.enforceDuplicateIds
 
     val updatedResults: RDD[OreAggregation] = mappingResults.map(oreAgg => {
       oreAgg.copy(messages =
@@ -120,6 +138,9 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       )
     })
 
+    // TODO If encodedMappingResults has the same count as mappingResults, we can count mappingResults
+    // and then we don't need to persist encodedMappingResults
+
     // Encode to Row-based structure
     val encodedMappingResults: DataFrame =
       spark.createDataset(
@@ -129,7 +150,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     // Must evaluate encodedMappingResults before successResults is called.
     // Otherwise spark will attempt to evaluate the filter transformation before the encoding transformation.
-    val totalCount = encodedMappingResults.count
+//    val totalCount = encodedMappingResults.count
 
     // Removes records from mappingResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
@@ -149,7 +170,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     // Get counts
     val validRecordCount = spark.read.avro(outputPath).count // requires read-after-write consistency
-    val attemptedCount = totalCount
+    val attemptedCount = totalCount  // TODO can't this just be count of input?
 
     // Write manifest
     val manifestOpts: Map[String, String] = Map(
