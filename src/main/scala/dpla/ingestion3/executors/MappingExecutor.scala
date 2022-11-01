@@ -4,11 +4,11 @@ import java.time.LocalDateTime
 
 import com.databricks.spark.avro._
 import dpla.eleanor.Schemata.Ebook
-import dpla.eleanor.profiles.{EbookProfile, Profile}
+import dpla.eleanor.profiles.EbookProfile
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
-import dpla.ingestion3.model.{OreAggregation, RowConverter}
+import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
 import dpla.ingestion3.profiles.CHProfile
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{CHProviderRegistry, Utils}
@@ -77,23 +77,19 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     val dplaMap = new DplaMap()
 
-    // Load the harvested record dataframe, repartition data
-    val coresPerExecutor = spark.sparkContext.range(0,1)
-      .map(_ => java.lang.Runtime.getRuntime.availableProcessors).collect.head
-
     val harvestedRecords: DataFrame = spark.read.avro(dataIn)
 
-    val totalCount = harvestedRecords.count
-
-    // Get distinct harvest records
-    val distinctHarvest: DataFrame = harvestedRecords.distinct
-
-    // For reporting purposes, calculate number of duplicate harvest records
-    val duplicateHarvest: Long = totalCount - distinctHarvest.count
+    // Get distinct harvest record count
+    val distinctHarvestCount: Long = harvestedRecords.distinct.count
 
     // Run the mapping over the Dataframe
     // Transformation only
     val extractorClass = getExtractorClass(shortName) // lookup from registry
+
+    // Repartition based on number of available threads
+    // This assumes running in standalone mode (one executor)
+    val coresPerExecutor = spark.sparkContext.range(0,1)
+      .map(_ => java.lang.Runtime.getRuntime.availableProcessors).collect.head
 
     val mappingResults: RDD[OreAggregation] = harvestedRecords
       .repartition(coresPerExecutor)
@@ -101,52 +97,66 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       .as[String]
       .rdd
       .map(document => dplaMap.map(document, extractorClass))
-      .persist(StorageLevel.DISK_ONLY)
 
-    mappingResults.count
+    // Encode to Row-based structure
+    // Must be encoded to save to parquet
+    val encodedMappingResults: DataFrame =
+      spark.createDataset(
+        mappingResults.map(oreAgg => RowConverter.toRow(oreAgg, model.sparkSchema))
+      )(oreAggregationEncoder)
 
-    // TODO  force evaluation of mappingResults here with .count?
-    // Then this .count could be totalCount
-    // Or write intermediate results to s3 rather than saving to local disk
-    // s3 has read after write consistency
-    // and then delete intermediate results after mapping completes
-    // Or, may as well just persist to disk b/c it won't be able to store whole rdd block in mem
-    // Or, is there a way to just read the original ID from the harvested record instead of mapping first?
-    // Or, map just the ID and perist?  still have to touch all the records
+    // Save mapped results locally as parquet
+    val tempLocation1 = s"/tmp/$shortName-intermediate-results-1.parquet"
+    encodedMappingResults.write.parquet(tempLocation1)
+    val intermediateResults1: DataFrame = spark.read.parquet(tempLocation1)
 
+    // For reporting purposes, calculate number of duplicate harvest records
+    // Since nothing has been filtered yet, the number of mapped intermediate results equals
+    // the number of harvested records
+    val totalCount: Long = intermediateResults1.count
+    val duplicateHarvest: Long = totalCount - distinctHarvestCount
 
-
+    // TODO only do this if enforceDuplicateIds is true
     // Get a list of originalIds that appear in more than one record
     val duplicateOriginalIds: Broadcast[Array[String]] =
       spark.sparkContext.broadcast(
-        mappingResults
-          .map(_.originalId)
+        intermediateResults1
+          .select("originalId")
+          .rdd
+          .map(_.getString(0))
           .countByValue  // action, forces evaluation
           .collect{ case(origId, count) if count > 1 && origId != "" => origId }
           .toArray
       )
 
     // Update messages to include duplicate originalId
+    // Since we are changing the contents of the messages column,
+    // we convert back to rows of OreAggregation to make the change,
+    // and then re-encode to ensure that the final encoding is correct.
     val enforceDuplidateIds: Boolean = getExtractorClass(shortName).getMapping.enforceDuplicateIds
 
-    val updatedResults: RDD[OreAggregation] = mappingResults.map(oreAgg => {
-      oreAgg.copy(messages =
-        if (duplicateOriginalIds.value.contains(oreAgg.originalId))
-          duplicateOriginalId(oreAgg.originalId, enforceDuplidateIds) +: oreAgg.messages // prepend is faster that append on seq
-        else
-          oreAgg.messages
-      )
-    })
-
-    // TODO If encodedMappingResults has the same count as mappingResults, we can count mappingResults
-    // and then we don't need to persist encodedMappingResults
+    val updatedResults: RDD[OreAggregation] = intermediateResults1
+      .map(row => ModelConverter.toModel(row))
+      .map(oreAgg => {
+        oreAgg.copy(messages =
+          if (duplicateOriginalIds.value.contains(oreAgg.originalId))
+            duplicateOriginalId(oreAgg.originalId, enforceDuplidateIds) +: oreAgg.messages // prepend is faster that append on seq
+          else
+            oreAgg.messages
+        )
+      })
+      .rdd
 
     // Encode to Row-based structure
-    val encodedMappingResults: DataFrame =
+    val encodedUpdatedResults: DataFrame =
       spark.createDataset(
         updatedResults.map(oreAgg => RowConverter.toRow(oreAgg, model.sparkSchema))
       )(oreAggregationEncoder)
-        .persist(StorageLevel.MEMORY_AND_DISK_SER)
+
+    // Save mapped results locally as parquet
+    val tempLocation2 = s"/tmp/$shortName-intermediate-results-2.parquet"
+    encodedUpdatedResults.write.parquet(tempLocation2)
+    val intermediateResults2: DataFrame = spark.read.parquet(tempLocation2)
 
     // Must evaluate encodedMappingResults before successResults is called.
     // Otherwise spark will attempt to evaluate the filter transformation before the encoding transformation.
@@ -155,7 +165,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     // Removes records from mappingResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
     // Transformation only
-    val successResults: DataFrame = encodedMappingResults
+    val successResults: DataFrame = intermediateResults2
       .filter(oreAggRow => {
         !oreAggRow // not
           .getAs[mutable.WrappedArray[Row]]("messages") // get all messages
@@ -170,7 +180,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     // Get counts
     val validRecordCount = spark.read.avro(outputPath).count // requires read-after-write consistency
-    val attemptedCount = totalCount  // TODO can't this just be count of input?
+    val attemptedCount = totalCount
 
     // Write manifest
     val manifestOpts: Map[String, String] = Map(
@@ -191,7 +201,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     // Collect the values needed to generate the report
     val finalReport =
     buildFinalReport(
-      encodedMappingResults,
+      intermediateResults2,
       shortName,
       logsPath,
       startTime,
@@ -210,6 +220,8 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     logger.info(mappingSummary)
 
     spark.stop()
+
+    // TODO delete tmp files
 
     // Return output destination of mapped records
     outputPath
