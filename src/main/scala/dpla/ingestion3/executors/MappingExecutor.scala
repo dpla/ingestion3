@@ -36,7 +36,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
   def getExtractorClass(shortName: String): CHProfile[_ >: NodeSeq with JValue] =
     CHProviderRegistry.lookupProfile(shortName) match {
       case Success(extClass) => extClass
-      case Failure(e) => throw new RuntimeException(s"Unable to load $shortName mapping from CHProviderRegistry")
+      case Failure(_) => throw new RuntimeException(s"Unable to load $shortName mapping from CHProviderRegistry")
     }
 
   /**
@@ -82,6 +82,15 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     // Locations for temporary files
     val tempLocation1 = s"/tmp/$shortName-intermediate-results-1.parquet"
     val tempLocation2 = s"/tmp/$shortName-intermediate-results-2.parquet"
+
+    def deleteTempFiles(): Unit = {
+      val tempDir1 = new Directory(new File(tempLocation1))
+      val tempDir2 = new Directory(new File(tempLocation2))
+      if (tempDir1.exists) tempDir1.deleteRecursively()
+      if (tempDir2.exists) tempDir2.deleteRecursively()
+    }
+
+    deleteTempFiles()
 
     val enforceDuplicateIds: Boolean = getExtractorClass(shortName).getMapping.enforceDuplicateIds
 
@@ -235,10 +244,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     spark.stop()
 
     // Delete temporary files
-    val tempDir1 = new Directory(new File(tempLocation1))
-    val tempDir2 = new Directory(new File(tempLocation2))
-    tempDir1.deleteRecursively()
-    tempDir2.deleteRecursively()
+    deleteTempFiles()
 
     // Return output destination of mapped records
     outputPath
@@ -270,8 +276,6 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     // Transformation
     val messages: DataFrame = MessageProcessor.getAllMessages(results)(spark)
-      .persist(StorageLevel.MEMORY_AND_DISK_SER)
-
     val warnings: DataFrame = MessageProcessor.getWarnings(messages)
     val errors: DataFrame = MessageProcessor.getErrors(messages)
 
