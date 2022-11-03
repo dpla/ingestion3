@@ -18,7 +18,6 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
-import org.apache.spark.storage.StorageLevel
 import org.json4s.JsonAST.JValue
 
 import scala.collection.mutable
@@ -96,7 +95,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     val harvestedRecords: DataFrame = spark.read.avro(dataIn)
 
-    val attemptedCount: Long = harvestedRecords.count
+    val attemptedCount: Long = harvestedRecords.count // evaluation
 
     // For reporting purposes, calculate number of duplicate harvest records
     val duplicateHarvest: Long = if(enforceDuplicateIds) {
@@ -109,15 +108,21 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       0
     }
 
-    // Repartition based on number of available threads, only if there are unused threads
-    // This assumes running in standalone mode (one executor)
-    val availableThreads = spark.sparkContext.range(0,1)
+    // Repartition based on number of available cores/threads, only if there are unused threads
+    val coresPerExecutor: Int = spark.sparkContext.range(0,1)
       .map(_ => java.lang.Runtime.getRuntime.availableProcessors).collect.head
 
-    val currentPartitions = harvestedRecords.rdd.getNumPartitions
+    // This should work in theory but has not been tested on a cluster.
+    // If this is called before executors have time to set up, it might return the wrong count
+    // but since harvestedRecords has already been evaluated it should be okay.
+    val numExecutors: Int = spark.sparkContext.getExecutorMemoryStatus.size
+
+    val availableCores = numExecutors * coresPerExecutor
+
+    val currentPartitions: Int = harvestedRecords.rdd.getNumPartitions
 
     val partitionedHarvest: DataFrame =
-      if (availableThreads > currentPartitions) harvestedRecords.repartition(availableThreads)
+      if (availableCores > currentPartitions) harvestedRecords.repartition(coresPerExecutor)
       else harvestedRecords
 
     // Run the mapping over the Dataframe
