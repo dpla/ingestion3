@@ -196,9 +196,9 @@ object NaraMergeUtil {
 
     val summary = getLogs(logs)
 
-    // Write merged data
+    // Write merged data with deletes
     new File(outputPath).mkdirs()
-    mergedDf
+    mergedWithDeletesDf
       .write
       .mode(SaveMode.Overwrite)
       .avro(outputPath)
