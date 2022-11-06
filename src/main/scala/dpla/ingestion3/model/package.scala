@@ -247,7 +247,6 @@ package object model {
         |       | local_id = ${record.sourceResource.identifier.map(escapeWikiChars).mkString("; ")}
         |   }}
         |   | Institution = {{ Institution | wikidata = $dataProviderWikiUri }}
-        |   | Other fields = ${getWikiOtherFieldsRights(record.edmRights)}
         | }}""".stripMargin
   }
 
@@ -265,7 +264,8 @@ package object model {
   def getWikiPermissionTemplate(edmRights: Option[URI]): String = {
     edmRights match {
       case Some(uri) => uri.toString match {
-        case t if t.startsWith("http://rightsstatements.org/vocab/NoC-US/") => "PD-US"
+        case t if t.startsWith("http://rightsstatements.org/vocab/NKC/") => "NKC | $dataProviderWikiUri"
+        case t if t.startsWith("http://rightsstatements.org/vocab/NoC-US/") => "NoC-US | $dataProviderWikiUri"
         case t if t.startsWith("http://creativecommons.org/publicdomain/mark/") => "PD-US"
         case t if t.startsWith("http://creativecommons.org/publicdomain/zero/") => "cc-zero"
         case t if t.startsWith("http://creativecommons.org/licenses/by/") => licenseToMarkupCode(t)
