@@ -13,7 +13,7 @@ class WikiMarkupStringTest extends FlatSpec {
                         |   | title = The Title
                         |   | description = The description
                         |   | date = 2012-05-07
-                        |   | permission = {{PD-US}}
+                        |   | permission = {{NoC-US|Q83878447}}
                         |   | source = {{ DPLA
                         |       | Q83878447
                         |       | hub = The Provider
@@ -22,7 +22,6 @@ class WikiMarkupStringTest extends FlatSpec {
                         |       | local_id = us-history-13243; j-doe-archives-2343
                         |   }}
                         |   | Institution = {{ Institution | wikidata = Q83878447 }}
-                        |   | Other fields = {{ InFi | Standardized rights statement | {{ rights statement | http://rightsstatements.org/vocab/NoC-US/ }} }}
                         | }}""".stripMargin
     assert(expectedMarkup === markup)
   }
