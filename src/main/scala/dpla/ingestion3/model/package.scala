@@ -250,17 +250,6 @@ package object model {
         | }}""".stripMargin
   }
 
-  def getWikiOtherFieldsRights(edmRights: Option[URI]): String =
-    edmRights match {
-      case Some(uri) =>
-        if(uri.toString.startsWith("http://rightsstatements.org"))
-          s"{{ InFi | Standardized rights statement | {{ rights statement | ${escapeWikiChars(uri.toString)} }} }}"
-        else
-          ""
-      case None => ""
-    }
-
-
   def getWikiPermissionTemplate(edmRights: Option[URI]): String = {
     edmRights match {
       case Some(uri) => uri.toString match {
