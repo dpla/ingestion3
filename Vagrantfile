@@ -80,12 +80,6 @@ Vagrant.configure("2") do |config|
     aws.tags = {
         'Name' => 'ingest'
     }
-    aws.block_device_mapping = [{
-          'DeviceName' => "/dev/sda1",
-          'Ebs.VolumeSize' => 500, # Size in GB
-          'Ebs.DeleteOnTermination' => true,
-          'Ebs.VolumeType' => "gp3"
-        }]
   end
   config.vm.provision "shell", inline: $script
   config.vm.provision "shell", privileged: false, inline: $sdk_script
