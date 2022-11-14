@@ -20,7 +20,7 @@ class NaraMapping extends XmlMapping with XmlExtractor {
   private def uri(naid: String): URI = URI(s"$uriBase$naid")
 
   // Why is this here?
-  override val enforceDuplicateIds: Boolean = true
+  override val enforceDuplicateIds: Boolean = false
   override val enforceEdmRights: Boolean = true // edmRights is now a required property for NARA
 
   // ID minting functions

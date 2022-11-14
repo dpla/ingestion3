@@ -65,9 +65,9 @@ object IngestRemap extends MappingExecutor
     val shortName = cmdArgs.getProviderName
     val input = cmdArgs.getInput
     val sparkMaster: Option[String] = cmdArgs.getSparkMaster
-    val stopWords: String = cmdArgs.getStopWords.getOrElse(MachineLearningConf.stopWordsPath)
-    val cvModel: String = cmdArgs.getCvModel.getOrElse(MachineLearningConf.cvModelPath)
-    val ldaModel: String = cmdArgs.getLdaModel.getOrElse(MachineLearningConf.ldaModelPath)
+//    val stopWords: String = cmdArgs.getStopWords.getOrElse(MachineLearningConf.stopWordsPath)
+//    val cvModel: String = cmdArgs.getCvModel.getOrElse(MachineLearningConf.cvModelPath)
+//    val ldaModel: String = cmdArgs.getLdaModel.getOrElse(MachineLearningConf.ldaModelPath)
 
     // Get logger
     val logger = Utils.createLogger("ingest", shortName)
