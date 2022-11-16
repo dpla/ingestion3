@@ -231,7 +231,7 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     (data \\ "topicalSubjectArray" \ "topicalSubject").map(node => {
       val name = extractString(node \ "termName")
       val subjectUri = extractStrings(node \ "naId").map(uri)
-      SkosConcept(concept = name, exactMatch = subjectUri)
+      SkosConcept(providedLabel = name, exactMatch = subjectUri)
     })
 
   override def title(data: Document[NodeSeq]): AtLeastOne[String] =

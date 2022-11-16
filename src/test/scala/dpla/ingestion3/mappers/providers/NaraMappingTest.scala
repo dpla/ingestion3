@@ -156,8 +156,8 @@ class NaraMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract subjects" in {
     val subjects = extractor.subject(xml)
     assert(subjects === Seq(
-      SkosConcept(concept = Some("Recreation"), exactMatch = Seq(URI("https://catalog.archives.gov/id/10643552"))),
-      SkosConcept(concept = Some("Wilderness areas"), exactMatch = Seq(URI("https://catalog.archives.gov/id/10644630"))))
+      SkosConcept(providedLabel = Some("Recreation"), exactMatch = Seq(URI("https://catalog.archives.gov/id/10643552"))),
+      SkosConcept(providedLabel = Some("Wilderness areas"), exactMatch = Seq(URI("https://catalog.archives.gov/id/10644630"))))
     )
   }
 
