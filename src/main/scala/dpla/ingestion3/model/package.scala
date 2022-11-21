@@ -231,6 +231,11 @@ package object model {
   def buildWikiMarkup(record: OreAggregation): String = {
     val dataProviderWikiUri = getDataProviderWikiId(record)
     val dplaId = getDplaId(record)
+    val permissionsTemplate = getWikiPermissionTemplate(record.edmRights)
+    val permissions = record.edmRights.toString match {
+      case pt if pt.contains("http://rightsstatements.org") => s"$permissionsTemplate | ${dataProviderWikiUri}"
+      case _ => permissionsTemplate
+    }
 
     s"""|== {{int:filedesc}} ==
         | {{ Artwork
@@ -238,7 +243,7 @@ package object model {
         |   | title = ${record.sourceResource.title.map(escapeWikiChars).mkString("; ")}
         |   | description = ${record.sourceResource.description.map(escapeWikiChars).mkString("; ")}
         |   | date = ${record.sourceResource.date.flatMap { _.prefLabel }.map(escapeWikiChars).mkString("; ")}
-        |   | permission = {{${getWikiPermissionTemplate(record.edmRights)}}}
+        |   | permission = {{${permissions}}}
         |   | source = {{ DPLA
         |       | ${escapeWikiChars(dataProviderWikiUri)}
         |       | hub = ${escapeWikiChars(record.provider.name.getOrElse(""))}
@@ -253,8 +258,8 @@ package object model {
   def getWikiPermissionTemplate(edmRights: Option[URI]): String = {
     edmRights match {
       case Some(uri) => uri.toString match {
-        case t if t.startsWith("http://rightsstatements.org/vocab/NKC/") => "NKC | $dataProviderWikiUri"
-        case t if t.startsWith("http://rightsstatements.org/vocab/NoC-US/") => "NoC-US | $dataProviderWikiUri"
+        case t if t.startsWith("http://rightsstatements.org/vocab/NKC/") => "NKC"
+        case t if t.startsWith("http://rightsstatements.org/vocab/NoC-US/") => "NoC-US"
         case t if t.startsWith("http://creativecommons.org/publicdomain/mark/") => "PD-US"
         case t if t.startsWith("http://creativecommons.org/publicdomain/zero/") => "cc-zero"
         case t if t.startsWith("http://creativecommons.org/licenses/by/") => licenseToMarkupCode(t)
