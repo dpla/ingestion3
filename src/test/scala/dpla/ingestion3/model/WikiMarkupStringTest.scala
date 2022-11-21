@@ -13,7 +13,7 @@ class WikiMarkupStringTest extends FlatSpec {
                         |   | title = The Title
                         |   | description = The description
                         |   | date = 2012-05-07
-                        |   | permission = {{NoC-US|Q83878447}}
+                        |   | permission = {{NoC-US | Q83878447}}
                         |   | source = {{ DPLA
                         |       | Q83878447
                         |       | hub = The Provider
