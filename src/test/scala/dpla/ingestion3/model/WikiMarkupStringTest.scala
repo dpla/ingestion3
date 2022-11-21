@@ -46,7 +46,6 @@ class WikiMarkupStringTest extends FlatSpec {
                            |       | local_id = us-history-13243; j-doe-archives-2343
                            |   }}
                            |   | Institution = {{ Institution | wikidata = Q83878447 }}
-                           |   | Other fields =$whitespace
                            | }}""".stripMargin
     assert(expectedMarkup === markup)
   }
