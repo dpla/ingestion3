@@ -9958,7 +9958,7 @@
             },
             "Children's Museum of Indianapolis": {
                 "Wikidata": "Q1336277",
-                "upload": false
+                "upload": true
             },
             "Chris Gonzalez Library & Archives": {
                 "Wikidata": "Q5106680",
@@ -9982,7 +9982,11 @@
             },
             "Columbia University.‏ Rare Book and Manuscript Library": {
                 "Wikidata": "Q5975426",
-                "upload": false
+                "upload": true
+            },
+            "Columbia University. Rare Book and Manuscript Library": {
+                "Wikidata": "Q5975426",
+                "upload": true
             },
             "Columbus Indiana Architectural Archives": {
                 "Wikidata": "Q56221367",
