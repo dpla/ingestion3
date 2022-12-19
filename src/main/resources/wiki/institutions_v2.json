@@ -9778,7 +9778,7 @@
             },
             "Archival Operations Washington D.C.; Pensions, National Archives and Records Administration": {
                 "Wikidata": "Q69475339",
-                "upload": false
+                "upload": true
             },
             "Arlington High School": {
                 "Wikidata": "Q4792344",
@@ -9958,7 +9958,7 @@
             },
             "Children's Museum of Indianapolis": {
                 "Wikidata": "Q1336277",
-                "upload": false
+                "upload": true
             },
             "Chris Gonzalez Library & Archives": {
                 "Wikidata": "Q5106680",
@@ -9982,7 +9982,11 @@
             },
             "Columbia University.‏ Rare Book and Manuscript Library": {
                 "Wikidata": "Q5975426",
-                "upload": false
+                "upload": true
+            },
+            "Columbia University. Rare Book and Manuscript Library": {
+                "Wikidata": "Q5975426",
+                "upload": true
             },
             "Columbus Indiana Architectural Archives": {
                 "Wikidata": "Q56221367",
@@ -10246,11 +10250,11 @@
             },
             "Herron Art Library": {
                 "Wikidata": "Q97570005",
-                "upload": false
+                "upload": true
             },
             "Herron Art Library - http://www.ulib.iupui.edu/herron": {
                 "Wikidata": "Q97570005",
-                "upload": false
+                "upload": true
             },
             "Hett Art Gallery and Museum at Camp Chesterfield": {
                 "Wikidata": "Q5027063",
@@ -10326,7 +10330,7 @@
             },
             "IUPUI (Campus). School of Liberal Arts": {
                 "Wikidata": "Q5975426",
-                "upload": false
+                "upload": true
             },
             "IUPUI (Campus). University Library": {
                 "Wikidata": "Q5975426",
@@ -10338,7 +10342,7 @@
             },
             "IUPUI (Campus).‏ School of Liberal Arts": {
                 "Wikidata": "Q5975426",
-                "upload": false
+                "upload": true
             },
             "IUPUI (Campus).‏ ‎University Library.‏ ‎Special Collections and Archives": {
                 "Wikidata": "Q79671108",
@@ -10349,7 +10353,7 @@
                 "upload": true
             },
             "IUPUI University Library": {
-                "Wikidata": "",
+                "Wikidata": "Q5975426",
                 "upload": true
             },
             "IUPUI University Library Ruth Lilly Special Collections and Archives": {
@@ -10409,7 +10413,7 @@
                 "upload": false
             },
             "Indiana Repertory Theatre": {
-                "Wikidata": "",
+                "Wikidata": "Q6023385",
                 "upload": false
             },
             "Indiana Room, Huntington City-Township Public Library": {
@@ -10469,11 +10473,11 @@
                 "upload": false
             },
             "Indianapolis Chamber Orchestra Offices": {
-                "Wikidata": "",
+                "Wikidata": "Q18148958",
                 "upload": false
             },
             "Indianapolis Chamber Orchestra offices": {
-                "Wikidata": "",
+                "Wikidata": "Q18148958",
                 "upload": false
             },
             "Indianapolis Children's Choir Offices": {
@@ -10485,7 +10489,7 @@
                 "upload": false
             },
             "Indianapolis Marion County Public Library": {
-                "Wikidata": "",
+                "Wikidata": "Q5839345",
                 "upload": false
             },
             "Indianapolis Mayor's Office": {
@@ -10521,20 +10525,20 @@
                 "upload": false
             },
             "Indianapolis Special Collections Room": {
-                "Wikidata": "",
+                "Wikidata": "Q5839345",
                 "upload": false
             },
             "Indianapolis Special Collections Room, Central Library": {
-                "Wikidata": "",
+                "Wikidata": "Q5839345",
                 "upload": false
             },
             "Indianapolis Special Collections Room, Indianapolis Public Library": {
-                "Wikidata": "",
+                "Wikidata": "Q5839345",
                 "upload": false
             },
             "Indianapolis State Library": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q14688462",
+                "upload": true
             },
             "Indianapolis Symphonic Choir": {
                 "Wikidata": "",
@@ -10545,7 +10549,7 @@
                 "upload": false
             },
             "Indianapolis-Marion County Public Library": {
-                "Wikidata": "",
+                "Wikidata": "Q5839345",
                 "upload": false
             },
             "Institute of American Thought": {
@@ -10638,11 +10642,15 @@
             },
             "Library of Congress": {
                 "Wikidata": "Q131454",
-                "upload": false
+                "upload": true
+            },
+            "Library of Congress. Prints and Photographs Division": {
+                "Wikidata": "Q66812256",
+                "upload": true
             },
             "Library of Congress.‏ ‎Prints and Photographs Division": {
                 "Wikidata": "Q66812256",
-                "upload": false
+                "upload": true
             },
             "Lincoln Financial Foundation Collection, Allen County Public Library, Fort Wayne, Indiana": {
                 "Wikidata": "",
