@@ -9790,7 +9790,7 @@
             },
             "Arsenal Technical High School and Indianapolis Special Collections Room, Indianapolis Public Library": {
                 "Wikidata": "Q4796416",
-                "upload": false
+                "upload": true
             },
             "Arts Council of Indianapolis": {
                 "Wikidata": "Q112122526",
@@ -10126,11 +10126,11 @@
             },
             "Emmerich Manual High School": {
                 "Wikidata": "Q5373447",
-                "upload": false
+                "upload": true
             },
             "Emmerich Manual High School and Indianapolis Special Collections Room, Indianapolis Public Library": {
                 "Wikidata": "Q5373447",
-                "upload": false
+                "upload": true
             },
             "Eskenazi": {
                 "Wikidata": "Q5975426",
@@ -10318,11 +10318,7 @@
             },
             "IMCPL": {
                 "Wikidata": "Q5839345",
-                "upload": false
-            },
-            "IMPCL": {
-                "Wikidata": "Q5975426",
-                "upload": false
+                "upload": true
             },
             "IPFW Walter E. Helmke Library": {
                 "Wikidata": "Q5975426",
@@ -10490,7 +10486,7 @@
             },
             "Indianapolis Marion County Public Library": {
                 "Wikidata": "Q5839345",
-                "upload": false
+                "upload": true
             },
             "Indianapolis Mayor's Office": {
                 "Wikidata": "",
@@ -10514,7 +10510,7 @@
             },
             "Indianapolis Public Library": {
                 "Wikidata": "Q5839345",
-                "upload": false
+                "upload": true
             },
             "Indianapolis Recorder": {
                 "Wikidata": "Q16996897",
@@ -10534,7 +10530,7 @@
             },
             "Indianapolis Special Collections Room, Indianapolis Public Library": {
                 "Wikidata": "Q5839345",
-                "upload": false
+                "upload": true
             },
             "Indianapolis State Library": {
                 "Wikidata": "Q14688462",
@@ -10561,12 +10557,12 @@
                 "upload": false
             },
             "Irvington Historical Society": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q115779375",
+                "upload": true
             },
             "Irvington Historical Society (Irvington, Indianapolis, Ind)": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q115779375",
+                "upload": true
             },
             "Jacob, Andrew": {
                 "Wikidata": "",
