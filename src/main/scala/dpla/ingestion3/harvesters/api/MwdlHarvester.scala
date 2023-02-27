@@ -39,6 +39,7 @@ class MwdlHarvester(spark: SparkSession,
       .addParameter("query_exc", "facet_local1,exact,Utah Valley University Student Theses Collection")
       .addParameter("query_exc", "facet_local1,exact,Harvard Peabody Site Reports")
       .addParameter("query_exc", "facet_local1,exact,Westminster College Institutional Repository")
+      .addParameter("query_exec", "facet_local4,exact,Salt Lake Community College Digital Archives")
       .build()
       .toURL
 }
