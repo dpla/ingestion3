@@ -120,6 +120,11 @@ class OklahomaMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.isShownAt(xml) === expected)
   }
 
+  it should "extract the correct IIIF manifest" in {
+    val expected = Seq(URI("http://hdl.handle.net/11244/50280"))
+    assert(extractor.iiifManifest(xml) === expected)
+  }
+
   it should "extract the correct preview" in {
     val expected = Seq(stringOnlyWebResource("http://img.preview/thumb"))
     assert(extractor.preview(xml) === expected)
