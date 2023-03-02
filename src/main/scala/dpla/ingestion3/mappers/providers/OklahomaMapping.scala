@@ -155,6 +155,13 @@ class OklahomaMapping extends XmlMapping with XmlExtractor with IngestMessageTem
       .flatMap(n => extractString(n.head))
       .map(URI)
 
+  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] =
+  // <location><url note="iiif-manifest">
+    (data \ "metadata" \ "mods" \ "location" \ "url")
+      .flatMap(node => getByAttribute(node.asInstanceOf[Elem], "note", "iiif-manifest"))
+      .flatMap(extractStrings)
+      .map(URI)
+
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
   // <mods:location><mods:url usage="primary display" access="object in  context">
     (data \ "metadata" \ "mods" \ "location" \ "url")

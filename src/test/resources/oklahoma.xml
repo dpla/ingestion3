@@ -68,6 +68,9 @@
                 <url usage="primary display" access="object in context">http://hdl.handle.net/11244/50280</url>
             </location>
             <location>
+                <url note="iiif-manifest">http://hdl.handle.net/11244/50280</url>
+            </location>
+            <location>
                 <url access="preview">http://img.preview/thumb</url>
             </location>
             <note type="ownership">Oklahoma State University Library</note>
