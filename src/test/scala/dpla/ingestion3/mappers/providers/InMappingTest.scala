@@ -206,4 +206,9 @@ class InMappingTest extends FlatSpec with BeforeAndAfter {
       .map(stringOnlyWebResource)
     assert(extractor.preview(xml) == expected)
   }
+
+  it should "extract the correct collection title" in {
+    val expected = Seq(nameOnlyCollection("Butler University Friesner Herbarium Digital Collection"))
+    assert(extractor.collection(xml) == expected)
+  }
 }
