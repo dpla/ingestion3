@@ -59,6 +59,10 @@ class InMapping extends XmlMapping with XmlExtractor
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "alternative")
 
+  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
+    extractStrings(data \ "metadata" \ "qualifieddc" \ "isPartOf")
+      .map(nameOnlyCollection)
+
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "contributor")
       .map(nameOnlyAgent)
