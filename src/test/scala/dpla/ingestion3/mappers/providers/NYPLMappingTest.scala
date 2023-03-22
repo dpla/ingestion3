@@ -2,11 +2,13 @@ package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
-import dpla.ingestion3.model._
+import dpla.ingestion3.model.{nameOnlyPlace, _}
 import dpla.ingestion3.utils.FlatFileIO
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.JsonMethods.parse
 import org.scalatest.{BeforeAndAfter, FlatSpec}
+
+import scala.language.postfixOps
 
 class NYPLMappingTest extends FlatSpec with BeforeAndAfter {
 
@@ -31,6 +33,15 @@ class NYPLMappingTest extends FlatSpec with BeforeAndAfter {
 
   it should "use the correct provider prefix" in {
     assert(extractor.getProviderName === shortName)
+  }
+
+  it should "extract the correct place" in {
+    val expected = Seq(
+      DplaPlace(
+        name=Some("Ohio"),
+        exactMatch = Seq(URI("http://uri.org/1"))
+      ), nameOnlyPlace("Cincinnati"))
+    assert(extractor.place(json) === expected)
   }
 
   it should "extract the correct title " in {
@@ -59,7 +70,20 @@ class NYPLMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct subjects" in {
-    val expected = Seq("temporal subject", "Public figures", "Subject title", "Subject name").map(nameOnlyConcept)
+//    val expected = Seq("temporal subject", "Public figures", "Subject title", "Subject name", "Ohio", "Cincinnati").map(nameOnlyConcept)
+
+    val expected = Seq(
+      nameOnlyConcept("temporal subject"),
+      nameOnlyConcept("Public figures"),
+      nameOnlyConcept("Subject title"),
+      nameOnlyConcept("Subject name"),
+      SkosConcept(
+        providedLabel = Some("Ohio"),
+        exactMatch = Seq(URI("http://uri.org/1"))
+      ),
+      nameOnlyConcept("Cincinnati")
+    )
+
     assert(extractor.subject(json) forall(expected contains))
   }
 
