@@ -29548,7 +29548,7 @@
 		"count": "21"
 	},
 	"Reunions": {
-		"id": [],
+		"id": ["Q2548750"],
 		"count": "21"
 	},
 	"Tents": {
@@ -30476,7 +30476,7 @@
 		"count": "20"
 	},
 	"Presidential trips": {
-		"id": [],
+		"id": ["Q17561488"],
 		"count": "20"
 	},
 	"Batavia Ohio Maps": {
@@ -32320,7 +32320,7 @@
 		"count": "18"
 	},
 	"Slaughtering and slaughter-houses": {
-		"id": [],
+		"id": ["Q95542513"],
 		"count": "18"
 	},
 	"Archbold Ohio Maps": {
@@ -36296,7 +36296,7 @@
 		"count": "15"
 	},
 	"Presidential family": {
-		"id": ["Q19888039"],
+		"id": ["Q863372"],
 		"count": "15"
 	},
 	"Christmas presents": {
@@ -49984,7 +49984,7 @@
 		"count": "6"
 	},
 	"Reunions -- Indiana": {
-		"id": ["Q1415"],
+		"id": ["Q1415", "Q2548750"],
 		"count": "6"
 	},
 	"Scott, Mary": {
@@ -55612,7 +55612,7 @@
 		"count": "5"
 	},
 	"Insect control": {
-		"id": [],
+		"id": ["Q70442071"],
 		"count": "5"
 	},
 	"Meyer, Heinrich Friedrich Ludwig, 1839-1928": {
@@ -70272,7 +70272,7 @@
 		"count": "2"
 	},
 	"Family reunions": {
-		"id": [],
+		"id": ["Q3001563"],
 		"count": "2"
 	},
 	"Ferree, Isaac": {
@@ -134704,7 +134704,7 @@
 		"count": "1"
 	},
 	"Indians of North America--War--South Dakota--Wounded Knee": {
-		"id": ["Q15571255", "Q1211, "],
+		"id": ["Q15571255", "Q1211"],
 		"count": "1"
 	},
 	"Irrigation--Colorado--Denver--Maps": {
