@@ -69,7 +69,7 @@ class SiMapping extends XmlMapping with XmlExtractor {
       case _ => ""
     }
 
-  private def rightsFromMedia(strs: Seq[String]): Seq[URI] = {
+  private def rightsFromMedia(strs: Seq[String]): ZeroToMany[URI] = {
     strs.map(_.trim.toLowerCase).distinct match {
       case Seq("cc0") => Seq(URI("http://rightsstatements.org/vocab/NoC-US/1.0/")) // TODO confirm with Dominic
       case _ => Seq()
