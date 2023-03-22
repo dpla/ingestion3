@@ -138,7 +138,6 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
   override def subject(data: Document[json4s.JValue]): ZeroToMany[SkosConcept] = {
     val subjectKeys = Seq("topic", "geographic", "temporal", "occupation", "Ohio", "Cincinnati")
 
-//    val subjectTitles = xml.extractStrings(modsXml \ "subject" \ "titleInfo" \ "title")
     val subjectTitles = (modsXml \ "subject" \ "titleInfo" \ "title").map(node => {
       SkosConcept(
         providedLabel = xml.extractString(node),
@@ -146,17 +145,12 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
       )
     })
 
-//    val subjectNames = xml.extractStrings(modsXml \ "subject" \ "name" \ "namePart")
     val subjectNames = (modsXml \ "subject" \ "name" \ "namePart").map(node => {
       SkosConcept(
         providedLabel = xml.extractString(node),
         exactMatch = xml.getAttributeValue(node, "valueURI").map(URI).toSeq
       )
     })
-
-//    val subjects = subjectKeys
-//      .map(key => modsXml \ "subject" \ key)
-//      .flatMap(xml.extractStrings)
 
     val subjects = subjectKeys.flatMap(
       key => {
