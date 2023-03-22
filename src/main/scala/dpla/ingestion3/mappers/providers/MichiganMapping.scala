@@ -173,10 +173,19 @@ class MichiganMapping extends XmlMapping with XmlExtractor with IngestMessageTem
     // second <mods:recordInfo><mods:recordContentSource> if exists
     val providers = extractStrings(data \\ "mods" \ "recordInfo" \ "recordContentSource")
       .map(nameOnlyAgent)
-    if (providers.length > 1)
-      Some(providers(1))
-    else None
+    providers.lift(1)
   }
+
+  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] =
+//    <mods:location>
+//      <mods:url note="iiif-manifest">
+//        https://quod.lib.umich.edu/cgi/i/image/api/manifest/herb00ic:571543:MICH-B-571543
+//      </mods:url>
+//    </mods:location>
+  (data \\ "mods" \ "location" \ "url")
+    .flatMap(getByAttribute(_, "note", "iiif-manifest").flatten)
+    .flatMap(extractStrings)
+    .map(URI)
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
   // <mods:location><mods:url usage="primary">
