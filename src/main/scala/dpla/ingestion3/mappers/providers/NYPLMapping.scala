@@ -136,15 +136,40 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
       .map(stringOnlyWebResource)
 
   override def subject(data: Document[json4s.JValue]): ZeroToMany[SkosConcept] = {
-    val subjectKeys = Seq("topic", "geographic", "temporal", "occupation")
+    val subjectKeys = Seq("topic", "geographic", "temporal", "occupation", "Ohio", "Cincinnati")
 
-    val subjectTitles = xml.extractStrings(modsXml \ "subject" \ "titleInfo" \ "title")
-    val subjectNames = xml.extractStrings(modsXml \ "subject" \ "name" \ "namePart")
-    val subjects = subjectKeys
-      .map(key => modsXml \ "subject" \ key)
-      .flatMap(xml.extractStrings)
+//    val subjectTitles = xml.extractStrings(modsXml \ "subject" \ "titleInfo" \ "title")
+    val subjectTitles = (modsXml \ "subject" \ "titleInfo" \ "title").map(node => {
+      SkosConcept(
+        providedLabel = xml.extractString(node),
+        exactMatch = xml.getAttributeValue(node, "valueURI").map(URI).toSeq
+      )
+    })
 
-    (subjects ++ subjectNames ++ subjectTitles).map(nameOnlyConcept)
+//    val subjectNames = xml.extractStrings(modsXml \ "subject" \ "name" \ "namePart")
+    val subjectNames = (modsXml \ "subject" \ "name" \ "namePart").map(node => {
+      SkosConcept(
+        providedLabel = xml.extractString(node),
+        exactMatch = xml.getAttributeValue(node, "valueURI").map(URI).toSeq
+      )
+    })
+
+//    val subjects = subjectKeys
+//      .map(key => modsXml \ "subject" \ key)
+//      .flatMap(xml.extractStrings)
+
+    val subjects = subjectKeys.flatMap(
+      key => {
+        (modsXml \ "subject" \ key).map(node => {
+          SkosConcept(
+            providedLabel = xml.extractString(node),
+            exactMatch = xml.getAttributeValue(node, "valueURI").map(URI).toSeq
+          )
+        })
+      }
+    )
+
+    subjects ++ subjectNames ++ subjectTitles
   }
 
   override def `type`(data: Document[json4s.JValue]): ZeroToMany[String] =
@@ -182,8 +207,14 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
   override def rights(data: Document[json4s.JValue]): AtLeastOne[String] =
     json.extractStrings("useStatementText_rtxt")(solrRoot(data))
 
-  override def place(data: Document[json4s.JValue]): ZeroToMany[DplaPlace] =
-    xml.extractStrings(modsXml \ "subject" \ "geographic").map(nameOnlyPlace)
+  override def place(data: Document[json4s.JValue]): ZeroToMany[DplaPlace] = {
+    (modsXml \ "subject" \ "geographic").map(node => {
+      DplaPlace(
+        name = xml.extractString(node),
+        exactMatch = xml.getAttributeValue(node, "valueURI").map(URI).toSeq
+      )
+    })
+  }
 
   override def language(data: Document[json4s.JValue]): ZeroToMany[SkosConcept] =
     xml.extractStrings(modsXml \ "language" \ "languageTerm").map(nameOnlyConcept)
