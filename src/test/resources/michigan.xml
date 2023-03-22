@@ -8,6 +8,9 @@
     </header>
     <metadata>
         <mods:mods xmlns:mods="http://www.loc.gov/mods/v3" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/">
+            <mods:location>
+                <mods:url note="iiif-manifest">https://quod.lib.umich.edu/cgi/i/image/api/manifest/herb00ic:571543:MICH-B-571543</mods:url>
+            </mods:location>
             <mods:titleInfo>
                 <mods:title>Avon Township Offices</mods:title>
             </mods:titleInfo>

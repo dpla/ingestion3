@@ -410,4 +410,9 @@ class MichiganMappingTest extends FlatSpec with BeforeAndAfter {
       .map(stringOnlyWebResource)
     assert(extractor.preview(xml) == expected)
   }
+
+  it should "extract the correct IIIF value" in {
+    val expected = Seq(URI("https://quod.lib.umich.edu/cgi/i/image/api/manifest/herb00ic:571543:MICH-B-571543"))
+    assert(extractor.iiifManifest(xml) === expected)
+  }
 }
