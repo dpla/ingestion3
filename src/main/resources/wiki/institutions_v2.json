@@ -1471,8 +1471,8 @@
                 "upload": false
             },
             "Phillips Academy, Oliver Wendell Holmes Library (archive.org)": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q1432645",
+                "upload": true
             },
             "Phillips Library at The Peabody Essex Museum": {
                 "Wikidata": "",
@@ -4897,6 +4897,10 @@
             "Perkins School for the Blind": {
                 "Wikidata": "Q114071",
                 "upload": false
+            },
+            "Phillips Academy": {
+                "Wikidata": "Q1432645",
+                "upload": true
             },
             "Phillips Academy Andover": {
                 "Wikidata": "Q1432645",
@@ -12408,15 +12412,15 @@
             },
             "Phillips Academy": {
                 "Wikidata": "Q1432645",
-                "upload": false
+                "upload": true
             },
             "Phillips Academy Andover, The Robert S. Peabody Museum of Archaeology": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q7349497",
+                "upload": true
             },
             "Phillips Academy, Archives and Special Collections": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q1432645",
+                "upload": true
             },
             "Pierre Finck": {
                 "Wikidata": "",
