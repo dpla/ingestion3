@@ -10106,7 +10106,7 @@
             },
             "Eiteljorg Museum of American Indians and Western Art Library": {
                 "Wikidata": "Q5350016",
-                "upload": false
+                "upload": true
             },
             "Elkhart County Historical Museum": {
                 "Wikidata": "",
@@ -10190,7 +10190,7 @@
             },
             "Hamilton County Surveyor's Office": {
                 "Wikidata": "Q506151",
-                "upload": false
+                "upload": true
             },
             "Hamilton East Public Library": {
                 "Wikidata": "Q506151",
@@ -10198,7 +10198,7 @@
             },
             "Hancock County Public Library": {
                 "Wikidata": "Q5975426",
-                "upload": false
+                "upload": true
             },
             "Harney, Tarja": {
                 "Wikidata": "Q16892258",
@@ -10326,7 +10326,7 @@
             },
             "IPFW Walter E. Helmke Library": {
                 "Wikidata": "Q5975426",
-                "upload": false
+                "upload": true
             },
             "IUPUI (Campus). School of Liberal Arts": {
                 "Wikidata": "Q5975426",
@@ -10408,6 +10408,14 @@
                 "Wikidata": "Q6023311 ",
                 "upload": false
             },
+            "Indiana Museum of Medical History": {
+                "Wikidata": "Q6023326",
+                "upload": true
+            },
+            "Indiana Museum of Medical History (http://www.imhm.org/) 317-635-7329": {
+                "Wikidata": "Q6023326",
+                "upload": true
+            },
             "Indiana Red Cross": {
                 "Wikidata": "Q113175066",
                 "upload": false
@@ -10434,7 +10442,7 @@
             },
             "Indiana State Archives": {
                 "Wikidata": "Q30289636",
-                "upload": false
+                "upload": true
             },
             "Indiana State Libary": {
                 "Wikidata": "Q30289637",
@@ -10458,7 +10466,7 @@
             },
             "Indiana University Libraries": {
                 "Wikidata": "Q58241552",
-                "upload": false
+                "upload": true
             },
             "Indiana University Northwest. Calumet Regional Archives": {
                 "Wikidata": "",
@@ -10873,8 +10881,8 @@
                 "upload": false
             },
             "Riley Old Home Society": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q117279774",
+                "upload": true
             },
             "Rohde, Erin": {
                 "Wikidata": "",
@@ -10974,15 +10982,15 @@
             },
             "The Children's Museum of Indianapolis": {
                 "Wikidata": "Q1336277",
-                "upload": false
+                "upload": true
             },
             "The Creative Change Project": {
                 "Wikidata": "",
                 "upload": false
             },
             "The James Whitcomb Riley Museum Home": {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q6145403",
+                "upload": true
             },
             "The Maurer School of Law, Indiana University, Bloomington": {
                 "Wikidata": "",
