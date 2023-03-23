@@ -47,31 +47,31 @@ class SiMapping extends XmlMapping with XmlExtractor {
 
     edmRightsReadable.length match {
       case 0 => rightsFromMedia(extractStrings(data \\ "media" \ "usage" \ "access"))
-      case 1 => edmRightsReadable.map(lookupRightsText).map(URI)
+      case 1 => edmRightsReadable.map(lookupRightsUriFromText)
       case _ => Seq()
     }
   }
-  private def lookupRightsText(str: String): String =
+  private def lookupRightsUriFromText(str: String): URI =
     str.toLowerCase.trim match {
-      case "cc0" => "http://rightsstatements.org/vocab/NoC-US/1.0/" // TODO confirm with Dominic
-      case "in copyright" => "http://rightsstatements.org/vocab/InC/1.0/"
-      case "in copyright - eu orphan work" => "http://rightsstatements.org/vocab/InC-EDU/1.0/"
-      case "in copyright - non-commercial use permitted" => "http://rightsstatements.org/vocab/InC-EDU/1.0/"
-      case "in copyright - educational use permitted" => "http://rightsstatements.org/vocab/InC-NC/1.0/"
-      case "in copyright - rights- holder(s) unlocatable or unidentifiable" => "http://rightsstatements.org/vocab/InC-RUU/1.0/"
-      case "no copyright - contractual restrictions" => "http://rightsstatements.org/vocab/NoC-CR/1.0/"
-      case "no copyright - non-commercial use only" => "http://rightsstatements.org/vocab/NoC-NC/1.0/"
-      case "no copyright - other known legal restrictions" => "http://rightsstatements.org/vocab/NoC-OKLR/1.0/"
-      case "no copyright - united states" => "http://rightsstatements.org/vocab/NoC-US/1.0/"
-      case "copyright not evaluated" => "http://rightsstatements.org/vocab/CNE/1.0/"
-      case "copyright undetermined" => "http://rightsstatements.org/vocab/UND/1.0/"
-      case "no known copyright" => "http://rightsstatements.org/vocab/NKC/1.0/"
-      case _ => ""
+      case "cc0" => URI("http://creativecommons.org/publicdomain/zero/1.0/")
+      case "in copyright" => URI("http://rightsstatements.org/vocab/InC/1.0/")
+      case "in copyright - eu orphan work" => URI("http://rightsstatements.org/vocab/InC-EDU/1.0/")
+      case "in copyright - non-commercial use permitted" => URI("http://rightsstatements.org/vocab/InC-EDU/1.0/")
+      case "in copyright - educational use permitted" => URI("http://rightsstatements.org/vocab/InC-NC/1.0/")
+      case "in copyright - rights- holder(s) unlocatable or unidentifiable" => URI("http://rightsstatements.org/vocab/InC-RUU/1.0/")
+      case "no copyright - contractual restrictions" => URI("http://rightsstatements.org/vocab/NoC-CR/1.0/")
+      case "no copyright - non-commercial use only" => URI("http://rightsstatements.org/vocab/NoC-NC/1.0/")
+      case "no copyright - other known legal restrictions" => URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/")
+      case "no copyright - united states" => URI("http://rightsstatements.org/vocab/NoC-US/1.0/")
+      case "copyright not evaluated" => URI("http://rightsstatements.org/vocab/CNE/1.0/")
+      case "copyright undetermined" => URI("http://rightsstatements.org/vocab/UND/1.0/")
+      case "no known copyright" => URI("http://rightsstatements.org/vocab/NKC/1.0/")
+      case _ => URI("")
     }
 
   private def rightsFromMedia(strs: Seq[String]): ZeroToMany[URI] = {
     strs.map(_.trim.toLowerCase).distinct match {
-      case Seq("cc0") => Seq(URI("http://rightsstatements.org/vocab/NoC-US/1.0/")) // TODO confirm with Dominic
+      case Seq("cc0") => Seq(URI("http://creativecommons.org/publicdomain/zero/1.0/"))
       case _ => Seq()
     }
   }

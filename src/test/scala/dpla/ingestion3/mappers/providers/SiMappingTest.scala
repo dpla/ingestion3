@@ -198,7 +198,7 @@ class SiMappingTest extends FlatSpec with BeforeAndAfter {
         </descriptiveNonRepeating>
       </doc>
 
-    val expected = Seq(URI("http://rightsstatements.org/vocab/NoC-US/1.0/"))
+    val expected = Seq(URI("http://creativecommons.org/publicdomain/zero/1.0/"))
     assert(extractor.edmRights(Document(xml)) === expected)
   }
 
