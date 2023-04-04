@@ -19,13 +19,15 @@ class ArtstorMapping extends XmlMapping with XmlExtractor
     DigitalSurrogateBlockList.termList ++
       FormatTypeValuesBlockList.termList
 
+  lazy val isShownAtBaseUrl = "https://www.jstor.org/stable/community."
+
   // ID minting functions
   override def useProviderName(): Boolean = false
 
   override def getProviderName(): Option[String] = Some("artstor")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
-    isShownAtStrings(data).headOption
+    extractString(data \ "header" \ "identifier")
 
   // dc:creator
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] =
@@ -79,15 +81,20 @@ class ArtstorMapping extends XmlMapping with XmlExtractor
   
   // dc:publisher
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    extractStrings(data \\ "publisher")
+    extractStrings(data \\ "about" \\ "publisher")
       .map(nameOnlyAgent)
 
   // <identifier type=”hdl>
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    isShownAtStrings(data)
-      .filter(_.startsWith("ADLImageViewer"))
-      .map(_.replaceFirst("ADLImageViewer:", ""))
+    extractStrings(data \ "header" \ "identifier")
+      .map(id => s"$isShownAtBaseUrl$id")
       .map(stringOnlyWebResource)
+
+  // Old mapping
+//    isShownAtStrings(data)
+//      .filter(_.startsWith("ADLImageViewer"))
+//      .map(_.replaceFirst("ADLImageViewer:", ""))
+//      .map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
