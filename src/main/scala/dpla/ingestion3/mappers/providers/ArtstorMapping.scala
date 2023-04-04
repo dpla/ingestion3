@@ -91,10 +91,10 @@ class ArtstorMapping extends XmlMapping with XmlExtractor
       .map(stringOnlyWebResource)
 
   // Old mapping
-//    isShownAtStrings(data)
-//      .filter(_.startsWith("ADLImageViewer"))
-//      .map(_.replaceFirst("ADLImageViewer:", ""))
-//      .map(stringOnlyWebResource)
+  //    isShownAtStrings(data)
+  //      .filter(_.startsWith("ADLImageViewer"))
+  //      .map(_.replaceFirst("ADLImageViewer:", ""))
+  //      .map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
