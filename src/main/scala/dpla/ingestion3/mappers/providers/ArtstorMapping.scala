@@ -52,7 +52,6 @@ class ArtstorMapping extends XmlMapping with XmlExtractor
   override def identifier(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \\ "identifier")
 
-
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
     extractStrings(data \\ "rights")
 
@@ -89,12 +88,6 @@ class ArtstorMapping extends XmlMapping with XmlExtractor
     extractStrings(data \ "header" \ "identifier")
       .map(id => s"$isShownAtBaseUrl$id")
       .map(stringOnlyWebResource)
-
-  // Old mapping
-  //    isShownAtStrings(data)
-  //      .filter(_.startsWith("ADLImageViewer"))
-  //      .map(_.replaceFirst("ADLImageViewer:", ""))
-  //      .map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
