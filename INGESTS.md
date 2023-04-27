@@ -9,13 +9,15 @@ Running DPLA Cultural Heritage ingests
 
 ## Helpful links and tools
 * [Hub ingest schedule](https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/CT/pages/84969744/Hub+Re-ingest+Schedule)
-* [Using the `screen` command](https://lazyprogrammer.me/tutorial-how-to-use-linux-screen/)
 * [Ingestion3 configuration](https://github.com/dpla/ingestion3-conf/)
+* [xmll](https://github.com/dpla/xmll)
+* [`screen` command](https://lazyprogrammer.me/tutorial-how-to-use-linux-screen/)
+* [`vim` quickstart ](https://eastmanreference.com/a-quick-start-guide-for-beginners-to-the-vim-text-editor)
 * [OhMyZsh `copyfile` plugin](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/copyfile) 
 * [jq](https://stedolan.github.io/jq/)
 * [pyoaiharvester](https://github.com/dpla/pyoaiharvester)
-* [Vagrant](https://www.vagrantup.com/)
-* [awscli](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+* [vagrant](https://www.vagrantup.com/)
+* [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
 ## Scheduling email
 Monthly scheduling emails are sent to the hubs a month before they are scheduled to be run. We have used a common template for those scheduling emails to remind folks about the Wikimedia project and available documentation.
@@ -62,24 +64,23 @@ April 24-28th
 ## Running ingests on EC2 Vagrant box 
 We use [Vagrant](https://www.vagrantup.com/) to build the EC2 instance and install all required dependencies for running metadata ingests.  
 
-Bring up the Vagrant ingest box 
+1. Bring up the Vagrant ingest box  
 ```shell
 > cd ~/ingestion3
 > vagrant up
 ```
-
-Create the i3.conf file inside ingestion3/conf/ folder 
+2. Create the i3.conf file inside ingestion3/conf/ folder 
 ```shell
 # run on local copy of i3.conf file
 > copyfile ./ingestion3/confi/i3.conf
 # run on Vagrant box
+> vagrant ssh
 > touch ~/ingestion3/conf/i3.conf
 > vim ~/ingestion3/conf/i3.conf
 # paste i3.conf file contents into this file
 # save the file
 ```
-
-Start screen sessions for each provider you need to harvest. This makes re-attaching to running screen sessions much easier.  
+3. Start screen sessions for each provider you need to harvest. This makes re-attaching to running screen sessions much easier.
 ```shell
 > cd ~/ingestion3/
 > screen -S gpo  
@@ -89,9 +90,16 @@ Start screen sessions for each provider you need to harvest. This makes re-attac
 # Re-attach to gpo session
 > screen -xS gpo
 ```
+4. Sync data back to s3
+```shell
+> cd ~/data/gpo
+> aws s3 sync . s3://dpla-master-dataset/gpo/
+```
+
+5. Run `vagrant destroy` when the ingests are finished, the data has been synced to s3 and the instance is no longer needed. 
 
 ## Running ingests locally
-Low record count harvests (often faster than running on EC2 instance or at least don't require us to use that heavy box to save money).
+Bringing up the Vagrant EC2 instance is not always required. You can run a lot of the ingests on your laptop to save $$$ and overhead. Typically, these would be low record count harvests. Providers like Maryland, Vermont, or Digital Virginias which have ~150,000 records. 
 
 ## Exceptions and unusual ingests
 Not all ingests are fire and forget, some require a bit of massaging before we can successfully harvest their data.
