@@ -175,3 +175,8 @@ metastore_db/
 # for ingestion3-conf submodule
 conf/
 .gitmodules
+
+.bsp/*
+.metals/*
+.vagrant/*
+.vscode/*
