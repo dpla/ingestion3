@@ -18,6 +18,7 @@ Running DPLA Cultural Heritage ingests
 * [pyoaiharvester](https://github.com/dpla/pyoaiharvester)
 * [vagrant](https://www.vagrantup.com/)
 * [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+* s3cmd
 
 ## Scheduling email
 Monthly scheduling emails are sent to the hubs a month before they are scheduled to be run. We have used a common template for those scheduling emails to remind folks about the Wikimedia project and available documentation.
@@ -109,44 +110,44 @@ Some hubs have their feed endpoints behind a firewall so the harvests needs to b
 - Indiana
 
 ### Community Webs
-Internet Archive community webs will send us a SQL database which we need to open and export as a JSON file. Then convert the JSON file to JSONL 
+Internet Archive community webs will send us a SQL database which we need to open and export as a JSON file. Then convert the JSON file to JSONL
 
-**Requirements**
-- [Install SQLite](https://sqlitebrowser.org/dl/)
+- [Install SQLite DB Brower](https://sqlitebrowser.org/dl/)
 - Install `jq` if needed, `brew install jq` 
 
 **Steps**
-- Open `.sql` file they emailed in SQLite DB Browser and export to JSON `File -> Export -> JSON`
-- Convert JSON to JSONL 
-
-  `jq -c '.[]' community-web-json-export.json > community-webs-jsonl-export.jsonl`
-- Zip the JSONL file `zip cw.zip community-webs-jsonl-export.jsonl`
-- Update the i3.conf file with the new endpoint/location of the zip file, e.g.  `./community-webs/originalRecords/20230426/`
+1. Open `.sql` file they emailed in SQLite DB Browser and export to JSON `File -> Export -> JSON`
+2. Convert JSON to JSONL `jq -c '.[]' community-web-json-export.json > community-webs-jsonl-export.jsonl`
+3. Zip the JSONL file `zip cw.zip community-webs-jsonl-export.jsonl`
+4. Update the i3.conf file with the new endpoint/location of the zip file, e.g.  `./community-webs/originalRecords/20230426/`
 ### Digital Virginias
-`git clone` weirdness 
-### NARA
-Delta
-### Smithsonian
-xmll
-### Local file harvests
+Digital Virginias uses [multiple Github repositories](https://github.com/dplava) to publish their metadata. We need to clone these repos in order to harvest their metadata. This is a handy invocation to clone all the repositories for a Github account. 
 
-Harvest file exports locally
-- NARA, SI, FL, DLG, MO, 
+```shell
+> cd ./data/virginias/originalRecords/20230425/
+> curl -s https://[GITHUB_USER]:@api.github.com/orgs/dplava/repos\?per_page\=200 | jq ".[].ssh_url" | xargs -n 1 git clone
+> zip -r -X ./dva-20230426.zip .
+```
+
+Then execute the harvest after updating the `virginas.harvest.endpoint` value in `i3.conf`
+
+### NARA
+Please see the [NARA specific documentation](https://github.com/dpla/ingestion3/blob/develop/README_NARA.md)
+
+### Smithsonian
+Please see the [Smithsonian specific documentation](https://github.com/dpla/ingestion3/blob/develop/README_SMITHSONIAN.md)
  
-- When you see this error in a file harvest stacktrace there is a bug when loading zip files created on Windows (IIRC)
+### Common errors
+A list of common errors seen during ingests.
+#### Zip file bug 
+If you see this error in a file harvest stacktrace there is a bug when loading zip files created on Windows.
 
 ```shell
 java.lang.IllegalArgumentException: Size must be equal or greater than zero: -1
     at org.apache.commons.io.IOUtils.toByteArray(IOUtils.java:505)
 ```
-The easiest solution is simply to unzip and zip the file OSX using command line tools and then rerun the ingest 
-
+The easiest solution is simply to unzip and zip the file OSX using command line tools and then rerun the ingest
 ```shell
 > unzip target.zip
 > zip -r -X ./target-20230426.zip .
 ```
-
-Issues with Texas this week
-- it timed out after 30 minutes (timeouts w/exponential backoff)
-- Look at some requests to see what is going on, the HTTP requests in browser are working
-- change http to https in i3conf file for TX and retry
