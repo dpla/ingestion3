@@ -145,6 +145,63 @@ class SiMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("rights attr", "rights attr 2")
     assert(extractor.rights(Document(xml)) === expected)
   }
+
+  it should "extract edmRights from online_media when objectRights label maps to RS.org" in {
+    val xml =
+      <doc>
+        <descriptiveNonRepeating>
+          <objectRights label="Restrictions &amp; Rights">
+                No Known Copyright
+              </objectRights>
+        </descriptiveNonRepeating>
+      </doc>
+
+    val expected = Seq(URI("http://rightsstatements.org/vocab/NKC/1.0/"))
+    assert(extractor.edmRights(Document(xml)) === expected)
+  }
+
+  it should "extract edmRights from media \\ usage \\ access when conflicting labels" in {
+    val xml =
+      <doc>
+        <descriptiveNonRepeating>
+          <media>
+            <usage>
+              <access>CC0</access>
+            </usage>
+          </media>
+          <media>
+            <usage>
+              <access>InC</access>
+            </usage>
+          </media>
+        </descriptiveNonRepeating>
+      </doc>
+
+    val expected = Seq()
+    assert(extractor.edmRights(Document(xml)) === expected)
+  }
+
+  it should "extract edmRights from media \\ usage \\ access when cc0" in {
+    val xml =
+      <doc>
+        <descriptiveNonRepeating>
+          <media>
+            <usage>
+              <access>CC0</access>
+            </usage>
+          </media>
+          <media>
+            <usage>
+              <access>CC0</access>
+            </usage>
+          </media>
+        </descriptiveNonRepeating>
+      </doc>
+
+    val expected = Seq(URI("http://creativecommons.org/publicdomain/zero/1.0/"))
+    assert(extractor.edmRights(Document(xml)) === expected)
+  }
+
   it should "extract the correct subjects" in {
     val expected = Seq("topic").map(nameOnlyConcept)
     assert(extractor.subject(xml) === expected)
@@ -163,5 +220,33 @@ class SiMappingTest extends FlatSpec with BeforeAndAfter {
   it should "extract the correct types" in {
     val expected = Seq("dashiki", "cloth", "3x5 feet") // these will get cleaned up by type enrichment
     assert(extractor.`type`(xml) === expected)
+  }
+
+  it should "extract the correct mediaMaster" in {
+    val xml = <doc>
+      <descriptiveNonrepeating>
+        <online_media>
+          <media thumbnail="https://ids.si.edu/ids/deliveryService/id/ark:/65665/m354db31afb0f64d4c8a06b75b1179e81b/90" type="Images">
+            <usage>
+              <access>CC0</access>
+            </usage>
+              https://ids.si.edu/ids/deliveryService/id/ark:/65665/m354db31afb0f64d4c8a06b75b1179e81b
+          </media>
+          <media thumbnail="https://ids.si.edu/ids/deliveryService/id/ark:/65665/m3d9f23b1f4f1d4b1eb31fd6df431027aa/90" type="Images">
+            <usage>
+              <access>CC0</access>
+            </usage>
+            https://ids.si.edu/ids/deliveryService/id/ark:/65665/m3d9f23b1f4f1d4b1eb31fd6df431027aa
+          </media>
+        </online_media>
+      </descriptiveNonrepeating>
+    </doc>
+
+    val expected = Seq(
+      "https://ids.si.edu/ids/deliveryService/id/ark:/65665/m354db31afb0f64d4c8a06b75b1179e81b/90",
+      "https://ids.si.edu/ids/deliveryService/id/ark:/65665/m3d9f23b1f4f1d4b1eb31fd6df431027aa/90"
+    ).map(stringOnlyWebResource)
+
+    assert(extractor.mediaMaster(Document(xml)) === expected)
   }
 }
