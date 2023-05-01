@@ -2,6 +2,10 @@
 
 This project is an ETL system for cultural heritage metadata. The system has five primary components, harvesting original records, mapping original records into DPLA MAP records, enriching DPLA MAP records, exporting DPLA MAP records as JSON-L to be indexed, and exporting eligible DPLA MAP records in Wikimedia markup.
 
+* Running ingests
+  * [Overview](README_INGESTS.md)
+  * [NARA](README_NARA.md)
+  * [Smithsonian](README_SMITHSONIAN.md)
 * [Harvest](#harvest)
 * [Mapping and validation](#mapping-and-validation)
     * [XML mapping example](#xml-mapping-example)
