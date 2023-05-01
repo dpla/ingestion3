@@ -132,10 +132,10 @@ Digital Virginias uses [multiple Github repositories](https://github.com/dplava)
 Then execute the harvest after updating the `virginas.harvest.endpoint` value in `i3.conf`
 
 ### NARA
-Please see the [NARA specific documentation](https://github.com/dpla/ingestion3/blob/develop/README_NARA.md)
+Please see the [NARA specific documentation](README_NARA.md)
 
 ### Smithsonian
-Please see the [Smithsonian specific documentation](https://github.com/dpla/ingestion3/blob/develop/README_SMITHSONIAN.md)
+Please see the [Smithsonian specific documentation](README_SMITHSONIAN.md)
  
 ### Common errors
 A list of common errors seen during ingests.
