@@ -1,19 +1,20 @@
 # DPLA Ingestion 3
 
-This project is an ETL system for cultural heritage metadata. The system has five primary components, harvesting original records, mapping original records into DPLA MAP records, enriching DPLA MAP records, exporting DPLA MAP records as JSON-L to be indexed, and exporting eligible DPLA MAP records in Wikimedia markup.
+DPLA's ingestion system is one of the core business systems and is the source of data for the DPLA search portal. It is responsible for harvesting, mapping and enriching cultural heritage metadata from DPLA's network of partners into the DPLA Metadata Application Profile. These records are then indexed and populate our discovery portal of more than [47,000,000 images, texts, videos, and sounds](https://dp.la) from across the United States.
 
 * [How to run ingests](#-running-dpla-cultural-heritage-ingests-)
   * [Helpful links and tools](#helpful-links-and-tools)
   * [Monthly scheduling communications](#scheduling-email)
-  * Running ingests
-    * [Vagrant + EC2 instance](#running-ingests-on-ec2-vagrant-box)
+  * [Running ingests](#running-ingests)
+    * [Vagrant + EC2 instance](#ec2-vagrant-box)
     * [Locally](#running-ingests-locally)
     * [Hub specific instructions](#exceptions-and-unusual-ingests)
+      * [Firewalled endpoints](#firewalled-endpoints) 
       * [Community Webs](#community-webs)
       * [Digital Virginias](#digital-virginias)
       * [NARA](README_NARA.md)
       * [Smithsonian](README_SMITHSONIAN.md)
-* ingestion3 
+* [ingestion 3](#ingestion-3)
   * [Harvest](#harvest)
   * [Mapping and validation](#mapping-and-validation)
       * [XML mapping example](#xml-mapping-example)
@@ -106,7 +107,8 @@ April 24-28th
 - Hub B
 ```
 
-## Running ingests on EC2 Vagrant box
+## Running ingests
+### EC2 Vagrant box
 We use [Vagrant](https://www.vagrantup.com/) to build the EC2 instance and install all required dependencies for running metadata ingests.
 
 1. Bring up the Vagrant ingest box
@@ -143,7 +145,7 @@ We use [Vagrant](https://www.vagrantup.com/) to build the EC2 instance and insta
 
 5. Run `vagrant destroy` when the ingests are finished, the data has been synced to s3 and the instance is no longer needed.
 
-## Running ingests locally
+### Local
 Bringing up the Vagrant EC2 instance is not always required. You can run a lot of the ingests on your laptop to save $$$ and overhead. Typically, these would be low record count harvests. Providers like Maryland, Vermont, or Digital Virginias which have ~150,000 records.
 
 ## Exceptions and unusual ingests
@@ -317,6 +319,9 @@ The easiest solution is simply to unzip and zip the file OSX using command line 
 > unzip target.zip
 > zip -r -X ./target-20230426.zip .
 ```
+# ingestion 3
+
+This project is an ETL system for aggregating cultural heritage metadata from the [DPLA hub network](https://pro.dp.la/hubs). The system has five primary components, harvesting original records, mapping original records into DPLA MAP records, enriching DPLA MAP records, exporting DPLA MAP records as JSON-L to be indexed, and exporting eligible DPLA MAP records in Wiki markup.
 
 # Harvest
 
