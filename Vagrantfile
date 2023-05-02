@@ -1,6 +1,3 @@
-
-# removed dependency ["vagrant-aws-mkubenka",["= 0.7.2.pre.24"]]
-
 # Installs/updates SDKs/packages as root
 $script = <<-'SCRIPT'
 
@@ -8,7 +5,6 @@ yum -y update
 yum -y upgrade
 yum -y install git
 yum -y install awscli
-yum -y install git
 
 SCRIPT
 
@@ -81,7 +77,7 @@ Vagrant.configure("2") do |config|
         'Name' => 'ingest'
     }
     aws.block_device_mapping = [{
-          'DeviceName' => "/dev/sda1",
+          'DeviceName' => "/dev/xvda",
           'Ebs.VolumeSize' => 500, # Size in GB
           'Ebs.DeleteOnTermination' => true,
           'Ebs.VolumeType' => "gp3"
