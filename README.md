@@ -176,10 +176,132 @@ Digital Virginias uses [multiple Github repositories](https://github.com/dplava)
 Then execute the harvest after updating the `virginas.harvest.endpoint` value in `i3.conf`
 
 ### NARA
-Please see the [NARA specific documentation](README_NARA.md)
+NARA will email a link to a ZIP file containing the new and updated records as well as IDs for records to be deleted each ingest cycle.
+
+**Preprocessing**
+1. Examine file export from NARA
+2. Move `deletes_*.xml` files into `./deletes` directory
+3. Rename "deletes_XXX.xml" to include a datestamp
+   
+   `> for f in *.xml ; do mv ./$f ./<DATE>_$f ; done`
+4. Files are typically shipped as `.zip` this needs to be re-compressed as `.tar.gz` or `.bz2` after removing the `deletes_*.xml` files
+    
+   `> tar -cvzf ../<YYYYMMDD>-nara-delta.tar.gz ./`
+
+Here is how the files should be organized before running a delta ingest
+```
+~/nara/delta/<YYYYMMDD>/
+-- /deletes/deletes_XXX.xml
+-- <YYYYMMDD>_nara_delta.tar.gz
+```
+
+**Delta Harvest**
+After preprocessing the data export from NARA run the `NaraDeltaHarvester`
+1. Configure the `i3.conf` file to point to the delta directory
+```
+nara.provider = "National Archives and Records Administration"
+nara.harvest.type = "nara.file.delta"
+nara.harvest.delta.update =   "~/nara/delta/<YYYYMMDD>/"
+```
+Run NARA harvest
+
+This will produce a harvest data set with all records provided in the delta (no deletions are performed at this step).
+`<YYYYMMDD>_121258-nara-OriginalRecord.avro`. Move this into the delta directory. We want the deletes, original records and original harvest all alongside each other.
+
+```
+~/nara/delta/<YYYYMMDD>/
+-- /deletes/deletes_XXX.xml
+-- <YYYYMMDD>_nara_delta.tar.gz
+-- <YYYYMMDD>_121258-nara-OriginalRecord.avro
+```
+
+**Merge Utility**
+The `NaraMergeUtil` will take two harvested data sets (base and delta) and merge the delta into the base data set. Using the last successful harvest as the base, and the output from the last step as the delta.
+
+The entry expects five parameters
+1. The path to the last full harvest (`~/nara/harvest/20200301_000000.avro`)
+2. The path to the delta harvest (`~/nara/delta/20200704/202000704_121258-nara-OriginalRecord.avro`)
+3. The path to folder containing the `deletes_*.xml` files (`~/nara/delta/20200704/deletes/`)
+4. The path to save the merged output between the previous harvest and the delta (`~/nara/harvest/20200704_000000-nara-OriginalRecord.avro`)
+5. spark master (`local[*]`)
+
+```shell
+sbt "runMain dpla.ingestion3.utils.NaraMergeUtil 
+~/nara/harvest/20200301_000000.avro
+~/nara/delta/20200704/202000704_121258-nara-OriginalRecord.avro
+~/nara/delta/20200704/deletes/ 
+~/nara/harvest/20200704_000000-nara-OriginalRecord.avro 
+local[*]"
+```
+
+The merge utility will log details about the merge and delete operations (duplicates, updates, inserts, deletions, failed deletions) in a summary files (e.g. `~/nara/harvest/20200704_000000.avro/_LOGS/_SUMMARY.txt`)
+```
+ Base
+ ----------
+ path: ~/nara/harvest/20200301_000000.avro
+ record count 14,468,257
+ duplicate count 0
+ unique count 14,468,257
+
+ Delta
+ -----------
+ path: ~/nara/delta/20200704/202000704_121258-nara-OriginalRecord.avro 
+ record count: 149,750
+ duplicate count: 1
+ unique count: 149,749
+
+ Merged
+ -----------
+ path: ~/nara/harvest/20200704_000000.avro
+ new: 54,412
+ update: 95,337
+ total [actual]: 14,522,669
+ total [expected]: 14,522,669 = 14,468,257 (base) + 54,412 (new)
+
+ Delete
+ ------------
+ path: ~/nara/delta/20200704/deletes/
+ ids to delete specified at path: 109,015
+ invalid deletes (IDs not in merged dataset): 103,509
+ valid deletes (IDs in merged dataset): 5,506
+ actual removed (merged total - total after deletes): 5,506
+
+ Final
+ -----
+ total [actual]: 14,517,163 = 14,522,669 (merge actual) - 5,506 (delete actual)
+```
+
+Additionally, all of insert, update, delete operations are logged with the corresponding NARA IDs in a series of CSV files alongside the summary text file.
+```
+id,operation
+100104443,insert
+100108988,update
+100111103,delete
+```
+
+The final merged data set is ready for mapping/enrichment/topic_modeling/indexing.
+
 
 ### Smithsonian
-Please see the [Smithsonian specific documentation](README_SMITHSONIAN.md)
+For all of the following instructions replace `<DATE>` with `YYYYMMDD`  
+
+**Preprocessing**
+1. Download the latest export from Smithsonian in `s3://dpla-hub-si/` into `./smithsonian/originalRecords/<DATE>/`
+2. Recompress files, there is some kind of issue the gzip files produced by their export scripts.
+
+   ```shell
+   > mkdir -p ./smithsonian/originalRecords/<DATE>/fixed/
+   > find ./smithsonian/originalRecords/<DATE> -name "*.gz" -type f | xargs -I{} sh -c 'echo "$1" "./$(basename ${1%.*}).${1##*.}"' -- {} | xargs -n 2 -P 8 sh -c 'gunzip -dckv $0 | gzip -kv > ./smithsonian/originalRecords/<DATE>/fixed/$1'
+   ```
+3. Run [dpla/xmll](https://github.com/dpla/xmll) over the fixed files (clone the project if you haven't already!) 
+
+```shell
+> mkdir -p ./smithsonian/originalRecords/<DATE>/xmll/
+> find ./smithsonian/originalRecords/<DATE>/fixed/ -name "*.gz" -type f | xargs -I{} sh -c 'echo "$1" ".smithsonian/originalRecords/<DATE>/xmll/$(basename ${1%.*}).${1##*.}"' -- {} | xargs -n 2 -P 8 sh -c 'java -jar ~/dpla/code/xmll/target/scala-2.13/xmll-assembly-0.1.jar doc $0 $1
+```
+
+4. The original downloaded files and the contents of `./fixed/` can be deleted and only the xmll'd files need to be retained for harvesting
+5. Update the `smithsonian.harvest.enpoint` value in `i3.conf` and run standard Smithsonian harvest.
 
 ### Common errors
 A list of common errors seen during ingests.
