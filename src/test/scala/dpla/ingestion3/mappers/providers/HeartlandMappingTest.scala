@@ -8,9 +8,9 @@ import org.json4s.JsonAST.JValue
 import org.json4s.jackson.JsonMethods._
 import org.scalatest.{BeforeAndAfter, FlatSpec}
 
-class MissouriMappingTest extends FlatSpec with BeforeAndAfter {
+class HeartlandMappingTest extends FlatSpec with BeforeAndAfter {
 
-  val shortName = Some("missouri")
+  val shortName = Some("heartland-hub")
   val jsonString: String = new FlatFileIO().readFileAsString("/mo.json")
   val json: Document[JValue] = Document(parse(jsonString))
   val extractor = new HeartlandMapping
