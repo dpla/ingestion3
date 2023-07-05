@@ -207,7 +207,7 @@ class MeProfile extends JsonProfile {
 class MaProfile extends XmlProfile {
   type Mapping = MaMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[OaiFileHarvester]
   override def getMapping = new MaMapping
 }
 
@@ -246,20 +246,20 @@ class MiProfile extends XmlProfile {
   * Mississippi Hub
   */
 class MississippiProfile extends JsonProfile {
-  type Mapping = MissouriMapping // FIXME
+  type Mapping = HeartlandMapping // FIXME
 
   override def getHarvester: Class[_ <: Harvester] = classOf[MississippiHarvester]
-  override def getMapping = new MissouriMapping // FIXME
+  override def getMapping = new HeartlandMapping // FIXME
 }
 
 /**
-  * Missouri Hub
+  * Heartland Hub
   */
-class MissouriProfile extends JsonProfile {
-  type Mapping = MissouriMapping
+class HeartlandProfile extends JsonProfile {
+  type Mapping = HeartlandMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[MissouriFileHarvester]
-  override def getMapping = new MissouriMapping
+  override def getHarvester: Class[_ <: Harvester] = classOf[HeartlandFileHarvester]
+  override def getMapping = new HeartlandMapping
 }
 
 /**
