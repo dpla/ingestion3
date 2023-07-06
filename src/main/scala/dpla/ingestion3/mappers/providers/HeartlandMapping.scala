@@ -11,14 +11,15 @@ import org.json4s.JsonDSL._
 import org.json4s._
 
 
-class MissouriMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
+// Heartland Hub is Missouri and Iowa
+class HeartlandMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
 
   val formatBlockList: Set[String] = ExtentIdentificationList.termList
 
   // ID minting functions
-  override def useProviderName: Boolean = false // Missouri provides ids with the provider name already prepended
+  override def useProviderName: Boolean = false // Heartland provides ids with the provider name already prepended
 
-  override def getProviderName: Option[String] = Some("missouri")
+  override def getProviderName: Option[String] = Some("heartland-hub")
 
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString(unwrap(data) \ "@id")
@@ -38,6 +39,9 @@ class MissouriMapping extends JsonMapping with JsonExtractor with IngestMessageT
 
   override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
     extractString(unwrap(data) \ "intermediateProvider").map(nameOnlyAgent)
+
+  override def iiifManifest(data: Document[JValue]): ZeroToMany[URI] =
+    extractStrings(unwrap(data) \ "iiifManifest").map(URI)
 
   override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \ "isShownAt").map(stringOnlyWebResource)
@@ -93,8 +97,8 @@ class MissouriMapping extends JsonMapping with JsonExtractor with IngestMessageT
     extractStrings(unwrap(data) \ "sourceResource" \ "type")
 
   def agent = EdmAgent(
-    name = Some("Missouri Hub"),
-    uri = Some(URI("http://dp.la/api/contributor/missouri-hub"))
+    name = Some("Heartland Hub"),
+    uri = Some(URI("http://dp.la/api/contributor/heartland-hub"))
   )
 
   def extractDate(date: JValue): ZeroToMany[EdmTimeSpan] = {

@@ -19,20 +19,20 @@ import scala.util.{Failure, Success, Try}
 /**
   * Extracts values from parsed JSON
   */
-class MissouriFileExtractor extends JsonExtractor
+class HeartlandFileExtractor extends JsonExtractor
 
 /**
-  * Entry for performing a Missouri file harvest
+  * Entry for performing a Heartland (Missouri + Iowa) file harvest
   */
-class MissouriFileHarvester(spark: SparkSession,
-                            shortName: String,
-                            conf: i3Conf,
-                            logger: Logger)
+class HeartlandFileHarvester(spark: SparkSession,
+                             shortName: String,
+                             conf: i3Conf,
+                             logger: Logger)
   extends FileHarvester(spark, shortName, conf, logger) {
 
   def mimeType: String = "application_json"
 
-  protected val extractor = new MissouriFileExtractor()
+  protected val extractor = new HeartlandFileExtractor()
 
   /**
     * Loads .zip files
@@ -129,7 +129,7 @@ class MissouriFileHarvester(spark: SparkSession,
     }
 
   /**
-    * Executes the Missouri harvest
+    * Executes the Heartland (Missouri + Iowa) harvest
     */
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
