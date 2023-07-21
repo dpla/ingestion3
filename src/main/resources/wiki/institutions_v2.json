@@ -10885,7 +10885,11 @@
                 "upload": false
             },
             "Riley Old Home Society": {
-                "Wikidata": "Q117279774",
+                "Wikidata": "Q7334182",
+                "upload": true
+            },
+            "Robert T. Ramsay, Jr. Archival Center of Wabash College": {
+                "Wikidata": "Q120000385",
                 "upload": true
             },
             "Rohde, Erin": {
@@ -15993,7 +15997,7 @@
                 "upload": false
             },
             "Gerald R. Ford Museum": {
-                "Wikidata": "Q59493330",
+                "Wikidata": "Q3103913",
                 "upload": false
             },
             "Harry S. Truman Library": {
@@ -16001,7 +16005,7 @@
                 "upload": false
             },
             "Herbert Hoover Library": {
-                "Wikidata": "Q59493795",
+                "Wikidata": "Q5734521",
                 "upload": false
             },
             "Jimmy Carter Library": {
@@ -16009,7 +16013,7 @@
                 "upload": false
             },
             "John F. Kennedy Library": {
-                "Wikidata": "Q66363021",
+                "Wikidata": "Q2007919",
                 "upload": false
             },
             "Lyndon Baines Johnson Library": {
@@ -16113,15 +16117,15 @@
                 "upload": false
             },
             "Richard Nixon Library": {
-                "Wikidata": "Q59493226",
+                "Wikidata": "Q1754354",
                 "upload": false
             },
             "Richard Nixon Library - College Park": {
-                "Wikidata": "",
+                "Wikidata": "Q1754354",
                 "upload": false
             },
             "Ronald Reagan Library": {
-                "Wikidata": "Q59493679",
+                "Wikidata": "Q1432360",
                 "upload": false
             },
             "William J. Clinton Library": {
@@ -23549,7 +23553,7 @@
                 "upload": false
             },
             "Shamrock Public Library": {
-                "Wikidata": "Q69970191",
+                "Wikidata": "Q69492083",
                 "upload": false
             },
             "Sherman Jazz Museum": {
