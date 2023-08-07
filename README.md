@@ -1,35 +1,327 @@
 # DPLA Ingestion 3
 
-This project is an ETL system for cultural heritage metadata. The system has five primary components, harvesting original records, mapping original records into DPLA MAP records, enriching DPLA MAP records, exporting DPLA MAP records as JSON-L to be indexed, and exporting eligible DPLA MAP records in Wikimedia markup.
+DPLA's ingestion system is one of the core business systems and is the source of data for the DPLA search portal. It is responsible for harvesting, mapping and enriching cultural heritage metadata from DPLA's network of partners into the DPLA Metadata Application Profile. These records are then indexed and populate our discovery portal of more than [47,000,000 images, texts, videos, and sounds](https://dp.la) from across the United States.
 
-* [Harvest](#harvest)
-* [Mapping and validation](#mapping-and-validation)
-    * [XML mapping example](#xml-mapping-example)
-    * [JSON mapping example](#json-mapping-example)
-    * [Filtering](#filtering)
-    * [Validations](#validations)
-        * [edmRights](#edmrights-normalization-and-validation)  
-    * [Summary and logs](#summary-and-logs)
-* [Enrichment and normalization](#enrichment-and-normalization)
-    * [Text normalizations](#text-normalizations)
-    * [Enrichments](#enrichments)
-        * [dataProvider](#dataprovider)
-        * [date](#date)
-        * [language](#language)
-        * [type](#type)
-    * [Summary and reports](#summary-and-reports)
-* [JSON-L](#jsonl)
-* [Wikimedia](#wikimedia)
-    * [Eligibility](#eligibility)
-      * [Institutional](#institutional)
-      * [Standardized rights](#standardized-rights)
-      * [Media assets](#media-assets)
-      * [Data provider URI](#data-provider-uri)
-    * [Wikimedia metadata](#wikimedia-metadata)
-    * [Media](#media)
-        * [CONTENTdm and IIIF Manifests](#contentdm-and-iiif-manifests)
+* [How to run ingests](#-running-dpla-cultural-heritage-ingests-)
+  * [Helpful links and tools](#helpful-links-and-tools)
+  * [Monthly scheduling communications](#scheduling-email)
+  * [Running ingests](#running-ingests)
+    * [Vagrant + EC2 instance](#ec2-vagrant-box)
+    * [Locally](#running-ingests-locally)
+    * [Hub specific instructions](#exceptions-and-unusual-ingests)
+      * [Firewalled endpoints](#firewalled-endpoints) 
+      * [Community Webs](#community-webs)
+      * [Digital Virginias](#digital-virginias)
+      * [NARA](README_NARA.md)
+      * [Smithsonian](README_SMITHSONIAN.md)
+* [ingestion 3](#ingestion-3)
+  * [Harvest](#harvest)
+  * [Mapping and validation](#mapping-and-validation)
+      * [XML mapping example](#xml-mapping-example)
+      * [JSON mapping example](#json-mapping-example)
+      * [Filtering](#filtering)
+      * [Validations](#validations)
+          * [edmRights](#edmrights-normalization-and-validation)  
+      * [Summary and logs](#summary-and-logs)
+  * [Enrichment and normalization](#enrichment-and-normalization)
+      * [Text normalizations](#text-normalizations)
+      * [Enrichments](#enrichments)
+          * [dataProvider](#dataprovider)
+          * [date](#date)
+          * [language](#language)
+          * [type](#type)
+      * [Summary and reports](#summary-and-reports)
+  * [JSON-L](#jsonl)
+  * [Wikimedia](#wikimedia)
+      * [Eligibility](#eligibility)
+        * [Institutional](#institutional)
+        * [Standardized rights](#standardized-rights)
+        * [Media assets](#media-assets)
+        * [Data provider URI](#data-provider-uri)
+      * [Wikimedia metadata](#wikimedia-metadata)
+      * [Media](#media)
+          * [CONTENTdm and IIIF Manifests](#contentdm-and-iiif-manifests)
 
 
+📚 Running DPLA Cultural Heritage ingests 📚
+----
+
+- [Helpful links and tools](#helpful-links-and-tools)
+- [Scheduling](#scheduling-email)
+- [Running ingests on Vagrant EC2 instance](#running-ingests-on-ec2-vagrant-box)
+- [Running ingests locally](#running-ingests-locally)
+- [Exceptions / Usual ingests](#exceptions-and-unusual-ingests)
+
+## Helpful links and tools
+* [Hub ingest schedule](https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/CT/pages/84969744/Hub+Re-ingest+Schedule)
+* [Ingestion3 configuration](https://github.com/dpla/ingestion3-conf/)
+* [xmll](https://github.com/dpla/xmll)
+* [`screen` command](https://lazyprogrammer.me/tutorial-how-to-use-linux-screen/)
+* [`vim` quickstart ](https://eastmanreference.com/a-quick-start-guide-for-beginners-to-the-vim-text-editor)
+* [OhMyZsh `copyfile` plugin](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/copyfile)
+* [jq](https://stedolan.github.io/jq/)
+* [pyoaiharvester](https://github.com/dpla/pyoaiharvester)
+* [vagrant](https://www.vagrantup.com/)
+* [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+* s3cmd
+
+## Scheduling email
+Monthly scheduling emails are sent to the hubs a month before they are scheduled to be run. We have used a common template for those scheduling emails to remind folks about the Wikimedia project and available documentation.
+
+```text
+Good morning - 
+
+Here is the ingest schedule for ____.
+
+1. Going forward we will trying to run all ingests on the last week 
+of the month. 
+
+2. We have automated our search index rebuild process 
+and have it scheduled to run on Thursday evenings. You can expect 
+your records to be available online the Friday of the week your 
+ingest is scheduled to run.
+
+3. Please let us know number of records to expect in your harvest and 
+if you are providing a file export to DPLA, please let us know when 
+we can expect delivery of the data to your s3 bucket
+
+4. If you are participating in our Wikimedia project we will try to 
+run an upload of images into Wikimedia the week following your DPLA 
+metadata ingest. If you have any questions about that project, please 
+contact our Data Fellow, Dominic, at dominic@dp.la
+
+5. Lastly - we have updated some of the documentation for our ingestion 
+system to provide a high level overview of how we map, normalize, 
+validate and enrich your metadata, available at 
+https://github.com/dpla/ingestion3. This documentation also unpacks some of those 
+summary/error messages you are all quite familiar with. Please let me know 
+if you have any questions about those stages or documentation.
+
+The Wikimedia uploads will happen sometime in ____.  Please let us know 
+if anything needs to be updated and, if possible, the number of records 
+we can expect in our harvest.
+
+
+April 24-28th
+- Hub A
+- Hub B
+```
+
+## Running ingests
+### EC2 Vagrant box
+We use [Vagrant](https://www.vagrantup.com/) to build the EC2 instance and install all required dependencies for running metadata ingests.
+
+1. Bring up the Vagrant ingest box
+```shell
+> cd ~/ingestion3
+> vagrant up
+```
+2. Create the i3.conf file inside ingestion3/conf/ folder
+```shell
+# run on local copy of i3.conf file
+> copyfile ./ingestion3/confi/i3.conf
+# run on Vagrant box
+> vagrant ssh
+> touch ~/ingestion3/conf/i3.conf
+> vim ~/ingestion3/conf/i3.conf
+# paste i3.conf file contents into this file
+# save the file
+```
+3. Start screen sessions for each provider you need to harvest. This makes re-attaching to running screen sessions much easier.
+```shell
+> cd ~/ingestion3/
+> screen -S gpo  
+> i3-harvest gpo
+# Detach from session Ctrl+A, d
+
+# Re-attach to gpo session
+> screen -xS gpo
+```
+4. Sync data back to s3
+```shell
+> cd ~/data/gpo
+> aws s3 sync . s3://dpla-master-dataset/gpo/
+```
+
+5. Run `vagrant destroy` when the ingests are finished, the data has been synced to s3 and the instance is no longer needed.
+
+### Local
+Bringing up the Vagrant EC2 instance is not always required. You can run a lot of the ingests on your laptop to save $$$ and overhead. Typically, these would be low record count harvests. Providers like Maryland, Vermont, or Digital Virginias which have ~150,000 records.
+
+## Exceptions and unusual ingests
+Not all ingests are fire and forget, some require a bit of massaging before we can successfully harvest their data.
+### Firewalled endpoints
+Some hubs have their feed endpoints behind a firewall so the harvests needs to be run while behind out VPN. I've been meaning to try and get the EC2 instance behind the VPN but that work is not a high priority right now because we have a workaround (run locally behind VPN). Hubs which need to be harvested will on the VPN
+- Illinois
+- Indiana
+
+### Community Webs
+Internet Archive community webs will send us a SQL database which we need to open and export as a JSON file. Then convert the JSON file to JSONL
+
+- [Install SQLite DB Brower](https://sqlitebrowser.org/dl/)
+- Install `jq` if needed, `brew install jq`
+
+**Steps**
+1. Open `.sql` file they emailed in SQLite DB Browser and export to JSON `File -> Export -> JSON`
+2. Convert JSON to JSONL `jq -c '.[]' community-web-json-export.json > community-webs-jsonl-export.jsonl`
+3. Zip the JSONL file `zip cw.zip community-webs-jsonl-export.jsonl`
+4. Update the i3.conf file with the new endpoint/location of the zip file, e.g.  `./community-webs/originalRecords/20230426/`
+### Digital Virginias
+Digital Virginias uses [multiple Github repositories](https://github.com/dplava) to publish their metadata. We need to clone these repos in order to harvest their metadata. This is a handy invocation to clone all the repositories for a Github account.
+
+```shell
+> cd ./data/virginias/originalRecords/20230425/
+> curl -s https://[GITHUB_USER]:@api.github.com/orgs/dplava/repos\?per_page\=200 | jq ".[].ssh_url" | xargs -n 1 git clone
+> zip -r -X ./dva-20230426.zip .
+```
+
+Then execute the harvest after updating the `virginas.harvest.endpoint` value in `i3.conf`
+
+### NARA
+NARA will email a link to a ZIP file containing the new and updated records as well as IDs for records to be deleted each ingest cycle.
+
+**Preprocessing**
+1. Examine file export from NARA
+2. Move `deletes_*.xml` files into `./deletes` directory
+3. Rename "deletes_XXX.xml" to include a datestamp
+   
+   `> for f in *.xml ; do mv ./$f ./<DATE>_$f ; done`
+4. Files are typically shipped as `.zip` this needs to be re-compressed as `.tar.gz` or `.bz2` after removing the `deletes_*.xml` files
+    
+   `> tar -cvzf ../<YYYYMMDD>-nara-delta.tar.gz ./`
+
+Here is how the files should be organized before running a delta ingest
+```
+~/nara/delta/<YYYYMMDD>/
+-- /deletes/deletes_XXX.xml
+-- <YYYYMMDD>_nara_delta.tar.gz
+```
+
+**Delta Harvest**
+After preprocessing the data export from NARA run the `NaraDeltaHarvester`
+1. Configure the `i3.conf` file to point to the delta directory
+```
+nara.provider = "National Archives and Records Administration"
+nara.harvest.type = "nara.file.delta"
+nara.harvest.delta.update =   "~/nara/delta/<YYYYMMDD>/"
+```
+Run NARA harvest
+
+This will produce a harvest data set with all records provided in the delta (no deletions are performed at this step).
+`<YYYYMMDD>_121258-nara-OriginalRecord.avro`. Move this into the delta directory. We want the deletes, original records and original harvest all alongside each other.
+
+```
+~/nara/delta/<YYYYMMDD>/
+-- /deletes/deletes_XXX.xml
+-- <YYYYMMDD>_nara_delta.tar.gz
+-- <YYYYMMDD>_121258-nara-OriginalRecord.avro
+```
+
+**Merge Utility**
+The `NaraMergeUtil` will take two harvested data sets (base and delta) and merge the delta into the base data set. Using the last successful harvest as the base, and the output from the last step as the delta.
+
+The entry expects five parameters
+1. The path to the last full harvest (`~/nara/harvest/20200301_000000.avro`)
+2. The path to the delta harvest (`~/nara/delta/20200704/202000704_121258-nara-OriginalRecord.avro`)
+3. The path to folder containing the `deletes_*.xml` files (`~/nara/delta/20200704/deletes/`)
+4. The path to save the merged output between the previous harvest and the delta (`~/nara/harvest/20200704_000000-nara-OriginalRecord.avro`)
+5. spark master (`local[*]`)
+
+```shell
+sbt "runMain dpla.ingestion3.utils.NaraMergeUtil 
+~/nara/harvest/20200301_000000.avro
+~/nara/delta/20200704/202000704_121258-nara-OriginalRecord.avro
+~/nara/delta/20200704/deletes/ 
+~/nara/harvest/20200704_000000-nara-OriginalRecord.avro 
+local[*]"
+```
+
+The merge utility will log details about the merge and delete operations (duplicates, updates, inserts, deletions, failed deletions) in a summary files (e.g. `~/nara/harvest/20200704_000000.avro/_LOGS/_SUMMARY.txt`)
+```
+ Base
+ ----------
+ path: ~/nara/harvest/20200301_000000.avro
+ record count 14,468,257
+ duplicate count 0
+ unique count 14,468,257
+
+ Delta
+ -----------
+ path: ~/nara/delta/20200704/202000704_121258-nara-OriginalRecord.avro 
+ record count: 149,750
+ duplicate count: 1
+ unique count: 149,749
+
+ Merged
+ -----------
+ path: ~/nara/harvest/20200704_000000.avro
+ new: 54,412
+ update: 95,337
+ total [actual]: 14,522,669
+ total [expected]: 14,522,669 = 14,468,257 (base) + 54,412 (new)
+
+ Delete
+ ------------
+ path: ~/nara/delta/20200704/deletes/
+ ids to delete specified at path: 109,015
+ invalid deletes (IDs not in merged dataset): 103,509
+ valid deletes (IDs in merged dataset): 5,506
+ actual removed (merged total - total after deletes): 5,506
+
+ Final
+ -----
+ total [actual]: 14,517,163 = 14,522,669 (merge actual) - 5,506 (delete actual)
+```
+
+Additionally, all of insert, update, delete operations are logged with the corresponding NARA IDs in a series of CSV files alongside the summary text file.
+```
+id,operation
+100104443,insert
+100108988,update
+100111103,delete
+```
+
+The final merged data set is ready for mapping/enrichment/topic_modeling/indexing.
+
+
+### Smithsonian
+For all of the following instructions replace `<DATE>` with `YYYYMMDD`  
+
+**Preprocessing**
+1. Download the latest export from Smithsonian in `s3://dpla-hub-si/` into `./smithsonian/originalRecords/<DATE>/`
+2. Recompress files, there is some kind of issue the gzip files produced by their export scripts.
+
+   ```shell
+   > mkdir -p ./smithsonian/originalRecords/<DATE>/fixed/
+   > find ./smithsonian/originalRecords/<DATE> -name "*.gz" -type f | xargs -I{} sh -c 'echo "$1" "./$(basename ${1%.*}).${1##*.}"' -- {} | xargs -n 2 -P 8 sh -c 'gunzip -dckv $0 | gzip -kv > ./smithsonian/originalRecords/<DATE>/fixed/$1'
+   ```
+3. Run [dpla/xmll](https://github.com/dpla/xmll) over the fixed files (clone the project if you haven't already!) 
+
+```shell
+> mkdir -p ./smithsonian/originalRecords/<DATE>/xmll/
+> find ./smithsonian/originalRecords/<DATE>/fixed/ -name "*.gz" -type f | xargs -I{} sh -c 'echo "$1" ".smithsonian/originalRecords/<DATE>/xmll/$(basename ${1%.*}).${1##*.}"' -- {} | xargs -n 2 -P 8 sh -c 'java -jar ~/dpla/code/xmll/target/scala-2.13/xmll-assembly-0.1.jar doc $0 $1
+```
+
+4. The original downloaded files and the contents of `./fixed/` can be deleted and only the xmll'd files need to be retained for harvesting
+5. Update the `smithsonian.harvest.enpoint` value in `i3.conf` and run standard Smithsonian harvest.
+
+### Common errors
+A list of common errors seen during ingests.
+#### Zip file bug
+If you see this error in a file harvest stacktrace there is a bug when loading zip files created on Windows.
+
+```shell
+java.lang.IllegalArgumentException: Size must be equal or greater than zero: -1
+    at org.apache.commons.io.IOUtils.toByteArray(IOUtils.java:505)
+```
+The easiest solution is simply to unzip and zip the file OSX using command line tools and then rerun the ingest
+```shell
+> unzip target.zip
+> zip -r -X ./target-20230426.zip .
+```
+# ingestion 3
+
+This project is an ETL system for aggregating cultural heritage metadata from the [DPLA hub network](https://pro.dp.la/hubs). The system has five primary components, harvesting original records, mapping original records into DPLA MAP records, enriching DPLA MAP records, exporting DPLA MAP records as JSON-L to be indexed, and exporting eligible DPLA MAP records in Wiki markup.
 
 # Harvest
 

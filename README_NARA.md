@@ -41,11 +41,11 @@ This will produce a harvest data set with all records provided in the delta (no 
 **Merge Utility**
 The `NaraMergeUtil` will take two harvested data sets (base and delta) and merge the delta into the base data set. Using the last successful harvest as the base, and the output from the last step as the delta.
 ```
-sbt "run-main dpla.ingestion3.utils.NaraMergeUtil 
+sbt "runMain dpla.ingestion3.utils.NaraMergeUtil 
 ~/nara/harvest/20200301_000000.avro # base
 ~/nara/delta/20200704/202000704_121258-nara-OriginalRecord.avro # delta
 ~/nara/delta/20200704/deletes/ 
-~/nara/harvest/20200704_000000.avro # merged output 
+~/nara/harvest/20200704_000000-nara-OriginalRecord.avro # merged output 
 local[*]"
 ```
 
