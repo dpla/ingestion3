@@ -6,6 +6,26 @@ object TaggingUtils {
 
   implicit class Tags(value: String) {
 
+    lazy val applyWisconsinGovernmentTags: Option[URI] = {
+      val wisconsinTag = URI("wisconsin_gov_doc")
+      val taggingValues = Seq(
+          "p267601coll4",
+          "p16831coll2",
+          "p16831coll3",
+          "p16831coll4",
+          "p16831coll5",
+          "p16831coll6",
+          "p16831coll8"
+      )
+
+      if(taggingValues.contains(value)) {
+        Some(wisconsinTag)
+      } else {
+        None
+      }
+
+    }
+
     /**
      * Applies at standard tag for records to be included in the PanAm portal
      */

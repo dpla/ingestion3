@@ -1,8 +1,9 @@
 package dpla.ingestion3.mappers.providers
 
+import dpla.ingestion3.enrichments.TaggingUtils.Tags
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList}
-import dpla.ingestion3.mappers.utils.{Document, XmlMapping, XmlExtractor}
+import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
@@ -133,6 +134,10 @@ class WiMapping extends XmlMapping with XmlExtractor
 
   override def sidecar(data: Document[NodeSeq]): JValue =
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+
+  override def tags(data: Document[NodeSeq]): ZeroToMany[URI] =
+    extractStrings(data \ "header" \ "setSpec").flatMap(_.applyWisconsinGovernmentTags)
+
 
 
   def agent = EdmAgent(
