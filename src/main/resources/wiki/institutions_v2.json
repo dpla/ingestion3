@@ -17636,6 +17636,10 @@
                 "Wikidata": "",
                 "upload": false
             },
+            "Oregon State Archives": {
+                "Wikidata": "Q7101346",
+                "upload": true
+            },
             "Oregon State University, Oregon Multicultural Archives": {
                 "Wikidata": "",
                 "upload": false
@@ -17921,7 +17925,7 @@
                 "upload": false
             },
             "Columbus Metropolitan Library": {
-                "Wikidata": "Q69487420",
+                "Wikidata": "Q5150078",
                 "upload": true
             },
             "Dayton Metro Library": {
