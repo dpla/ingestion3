@@ -60,4 +60,16 @@ class WiMappingTest extends FlatSpec with BeforeAndAfter {
     val expected = Seq("Access rights")
     assert(extractor.rights(Document(xml)) === expected)
   }
+
+  it should "apply the correct tags" in {
+    val xml =
+      <record>
+        <header>
+          <setSpec>p267601coll4</setSpec>
+        </header>
+      </record>
+
+    val expected = Seq(URI("wisconsin_gov_doc"))
+    assert(extractor.tags(Document(xml)) === expected)
+  }
 }
