@@ -32,6 +32,7 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None) 
     }
 
     i3Conf(
+      email = getProp(providerConf, "email"),
       provider = getProp(providerConf, "provider"),
       Harvest(
         // Generally applicable to all harvesters
@@ -208,6 +209,7 @@ case class Harvest (
                    )
 
 case class i3Conf(
+                   email: Option[String] = None,
                    provider: Option[String] = None,
                    harvest: Harvest = Harvest(),
                    spark: i3Spark = i3Spark(),

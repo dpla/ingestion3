@@ -1,10 +1,10 @@
 package dpla.ingestion3.entries.ingest
 
-import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, MachineLearningConf}
+import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
 import dpla.ingestion3.dataStorage.InputHelper
-import dpla.ingestion3.executors.{EnrichExecutor, JsonlExecutor, MappingExecutor, TopicModelExecutor, WikimediaMetadataExecutor}
-import dpla.ingestion3.entries.reports.ReporterMain._
-import dpla.ingestion3.utils.Utils
+import dpla.ingestion3.executors._
+import dpla.ingestion3.utils.{Emailer, Utils}
+//import dpla.ingestion3.entries.reports.ReporterMain._
 import org.apache.spark.SparkConf
 /**
   * Single entry point to run harvest, mapping, enrichment, indexing jobs and all reports.
@@ -65,10 +65,6 @@ object IngestRemap extends MappingExecutor
     val shortName = cmdArgs.getProviderName
     val input = cmdArgs.getInput
     val sparkMaster: Option[String] = cmdArgs.getSparkMaster
-//    val stopWords: String = cmdArgs.getStopWords.getOrElse(MachineLearningConf.stopWordsPath)
-//    val cvModel: String = cmdArgs.getCvModel.getOrElse(MachineLearningConf.cvModelPath)
-//    val ldaModel: String = cmdArgs.getLdaModel.getOrElse(MachineLearningConf.ldaModelPath)
-
     // Get logger
     val logger = Utils.createLogger("ingest", shortName)
 
@@ -115,11 +111,10 @@ object IngestRemap extends MappingExecutor
     // Reports commented out by S. Williams for efficiency and because they aren't being used on a regular basis
     // executeAllReports(sparkConf, mapDataOut, baseDataOut, shortName, logger)
 
-    // Topic models are no longer needed 
-    // LDA vectors
-    // executeTopicModel(sparkConf, enrichDataOut, baseDataOut, shortName, stopWords, cvModel, ldaModel, logger)
-
     // Wikimedia
     executeWikimediaMetadata(sparkConf, enrichDataOut, baseDataOut, shortName, logger)
+
+    // Email
+    Emailer.emailSummary(mapDataOut, shortName, conf)
   }
 }
