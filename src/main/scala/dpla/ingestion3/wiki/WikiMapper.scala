@@ -209,7 +209,7 @@ trait WikiMapper extends JsonExtractor {
     blockedIdsFileList.flatMap(file => io.readFileAsSeq(file)).toSet
   }
 
-  def getEligibleIds(fileList: Seq[String]: Set[String] = {
+  def getEligibleIds(fileList: Seq[String]): Set[String] = {
     val io = new FlatFileIO()
     fileList.flatMap(file => io.readFileAsSeq(file)).toSet
   }
