@@ -39,11 +39,15 @@ trait WikiMapper extends JsonExtractor {
     "http://creativecommons.org/licenses/by/",
     "http://creativecommons.org/licenses/by-sa/")
 
-  protected lazy val blockedIds: Set[String] = getBlockedIds
+  protected lazy val blockedIds: Set[String] = getEligibleIds(blockedIdsFileList)
+  protected lazy val allowedIds: Set[String] = getEligibleIds(allowedIdsFileList)
 
   // Files to source blocked ids from
   private val blockedIdsFileList = Seq(
     "/wiki/ignore-nara.txt"
+  )
+  private val allowedIdsFileList = Seq(
+    "/wiki/allow-nara.txt"
   )
 
   // Files to source from
@@ -171,12 +175,12 @@ trait WikiMapper extends JsonExtractor {
     }
 
   /**
-    * Evaluate whether the DPLA ID belongs to the set of IDS which should be excluded from being uploaded to Wikimedia
+    * Evaluate whether the DPLA ID belongs to the set of IDs which should be excluded from being uploaded to Wikimedia
     * @param id DPLA ID
     * @return True if id is *not* in block list
     *         False if id is in block list
     */
-  def isIdEligible(id: ExactlyOne[String]): Boolean = !blockedIds.contains(id)
+  def isIdEligible(id: ExactlyOne[String]): Boolean = allowedIds.contains(id) | !blockedIds.contains(id)
 
   /**
     * Evaluate all eligibility checks, dataProvider, rights, asset, id
@@ -203,5 +207,10 @@ trait WikiMapper extends JsonExtractor {
   def getBlockedIds: Set[String] = {
     val io = new FlatFileIO()
     blockedIdsFileList.flatMap(file => io.readFileAsSeq(file)).toSet
+  }
+
+  def getEligibleIds(fileList: Seq[String]: Set[String] = {
+    val io = new FlatFileIO()
+    fileList.flatMap(file => io.readFileAsSeq(file)).toSet
   }
 }
