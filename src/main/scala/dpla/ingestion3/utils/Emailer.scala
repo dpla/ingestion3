@@ -96,11 +96,11 @@ object Emailer {
   private def zip(zipped_logs: String, mapOutput: String): File = {
     // Build the zip file contents
     val zip_out = new ZipFile(zipped_logs)
-    val warnings = new File(s"${mapOutput}/_LOGS/warnings/")
+//    val warnings = new File(s"${mapOutput}/_LOGS/warnings/")
     val errors = new File(s"${mapOutput}/_LOGS/errors/")
 
-    if(warnings.exists())
-      zip_out.addFolder(warnings, zipParameters)
+//    if(warnings.exists())
+//      zip_out.addFolder(warnings, zipParameters)
     if(errors.exists())
       zip_out.addFolder(errors, zipParameters)
     zip_out.close()
