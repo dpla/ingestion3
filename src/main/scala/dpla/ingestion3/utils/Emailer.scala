@@ -56,13 +56,23 @@ object Emailer {
     val _summary = s"${mapOutput}/_SUMMARY"
     val zipped_logs = s"${mapOutput}/_LOGS/logs.zip" // FIXME provider-date-mapping-logs.zip
 
+
     val body = emailBody(_summary)
+
     val zip_file = zip(zipped_logs, mapOutput)
+    // If the attachment is too large then don't attach it.
+    val attachment =
+      if (zip_file.length > 7485760) {
+        None
+      } else {
+        Some(zip_file)
+      }
+
     send(
       recipients = emails,
       subject = s"DPLA Ingest Summary for $partner", // FIXME Add current month in subject
       text = body,
-      attachments = Seq(zip_file)
+      attachment = attachment
     )
   }
 
@@ -99,13 +109,12 @@ object Emailer {
   }
 
   // Body must be plain text - HTML markup would require a `withHtml` call, not a `withText` call.
-  private def send(recipients: Seq[String], subject: String, text: String, attachments: Seq[File]): Unit = {
+  private def send(recipients: Seq[String], subject: String, text: String, attachment: Option[File]): Unit = {
     // Message builder to add attachments
     // https://docs.aws.amazon.com/ses/latest/dg/example_ses_SendEmail_section.html
 
     try {
       val client = AmazonSimpleEmailServiceClientBuilder.defaultClient()
-      val file = attachments.head
 
       val session = Session.getDefaultInstance(new Properties())
       val message = new MimeMessage(session)
@@ -140,17 +149,18 @@ object Emailer {
       message.setContent(msg)
       msg.addBodyPart(wrap)
 
-      // Define the attachment.
-      val fileBytes = Files.readAllBytes(file.toPath)
-      val att = new MimeBodyPart()
-      val fds = new ByteArrayDataSource(fileBytes, "application/zip;")
-      att.setDataHandler(new DataHandler(fds))
-      val reportName: String = "log_file.zip"
-      att.setFileName(reportName)
-      msg.addBodyPart(att)
+      // Define the attachment if small enough
+      if (attachment.isDefined) {
+        val fileBytes = Files.readAllBytes(attachment.get.toPath)
+        val att = new MimeBodyPart()
+        val fds = new ByteArrayDataSource(fileBytes, "application/zip;")
+        att.setDataHandler(new DataHandler(fds))
+        val reportName: String = "log_file.zip"
+        att.setFileName(reportName)
+        msg.addBodyPart(att)
+      }
 
       val bos = new ByteArrayOutputStream()
-
       message.writeTo(bos)
       val bb = nio.ByteBuffer.wrap(bos.toByteArray)
       val rawMessage = new RawMessage().withData(bb)
