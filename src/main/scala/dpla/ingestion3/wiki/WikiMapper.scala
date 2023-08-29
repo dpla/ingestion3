@@ -42,6 +42,8 @@ trait WikiMapper extends JsonExtractor {
   protected lazy val blockedIds: Set[String] = getEligibleIds(blockedIdsFileList)
   protected lazy val allowedIds: Set[String] = getEligibleIds(allowedIdsFileList)
 
+  def getAllowedIds: Set[String] = allowedIds
+
   // Files to source blocked ids from
   private val blockedIdsFileList = Seq(
     "/wiki/ignore-nara.txt"
