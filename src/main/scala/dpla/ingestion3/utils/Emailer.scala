@@ -41,6 +41,7 @@ object Emailer {
       |-----------------  END  -----------------
       |
       |""".stripMargin.split("\n")
+
   // Only include the *.csv files in the zipped export
   lazy val excludeFileFilter: ExcludeFileFilter = new ExcludeFileFilter {
     override def isExcluded(file: File): Boolean = {
@@ -59,14 +60,10 @@ object Emailer {
 
     val body = emailBody(_summary)
 
-    val zip_file = zip(zipped_logs, mapOutput)
-    // If the attachment is too large then don't attach it.
-    val attachment =
-      if (zip_file.length > 7485760) {
-        None
-      } else {
-        Some(zip_file)
-      }
+    val attachment: Option[File] = zip(zipped_logs, mapOutput) match {
+      case Some(z) => if(z.length() < 7485760) Some(z) else None
+      case _ => None
+    }
 
     send(
       recipients = emails,
@@ -93,19 +90,22 @@ object Emailer {
       List("</pre>")).mkString("\n")
   }
 
-  private def zip(zipped_logs: String, mapOutput: String): File = {
+  private def zip(zipped_logs: String, mapOutput: String): Option[File] = {
     // Build the zip file contents
     val zip_out = new ZipFile(zipped_logs)
-//    val warnings = new File(s"${mapOutput}/_LOGS/warnings/")
     val errors = new File(s"${mapOutput}/_LOGS/errors/")
 
-//    if(warnings.exists())
-//      zip_out.addFolder(warnings, zipParameters)
-    if(errors.exists())
+    if (errors.exists()) {
       zip_out.addFolder(errors, zipParameters)
-    zip_out.close()
-
-    new File(zipped_logs)
+      zip_out.close()
+      Some(new File(zipped_logs))
+    } else {
+      None
+    }
+    // Not currently reporting warnings (files generally too large for attachments)
+    //    val warnings = new File(s"${mapOutput}/_LOGS/warnings/")
+    //    if(warnings.exists())
+    //      zip_out.addFolder(warnings, zipParameters)
   }
 
   // Body must be plain text - HTML markup would require a `withHtml` call, not a `withText` call.
