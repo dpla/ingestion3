@@ -62,7 +62,10 @@ libraryDependencies ++= Seq(
 
   // For Elasticsearch, see https://www.elastic.co/guide/en/elasticsearch/hadoop/current/install.html
   // "org.elasticsearch" % "elasticsearch-spark-20_2.11" % "5.3.2", // Spark 2.0+, Scala 2.11+ | ingestion3
-  "org.elasticsearch" %% "elasticsearch-spark-20" % "7.3.2" // eleanor
+  "org.elasticsearch" %% "elasticsearch-spark-20" % "7.3.2", // eleanor
+  // https://mvnrepository.com/artifact/net.lingala.zip4j/zip4j
+  "net.lingala.zip4j" % "zip4j" % "2.11.5",
+  "javax.mail" % "mail" % "1.4.7"
 )
 
  resolvers += "SparkPackages" at "https://repos.spark-packages.org/"

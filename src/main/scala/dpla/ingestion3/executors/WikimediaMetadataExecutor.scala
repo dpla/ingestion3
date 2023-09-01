@@ -56,7 +56,8 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
     val tupleRowBooleanEncoder: ExpressionEncoder[(Row, Boolean)] =
       ExpressionEncoder.tuple(RowEncoder(model.sparkSchema), ExpressionEncoder())
 
-    val enrichedRows: DataFrame = spark.read.avro(dataIn)
+    val aSeq = allowedIds.toSeq
+    val enrichedRows: DataFrame = spark.read.avro(dataIn).filter($"dplaUri".isin(aSeq: _*))
 
     val enrichResults: Dataset[(Row, Boolean)] = enrichedRows.map(row => {
       Try{ ModelConverter.toModel(row) } match {
