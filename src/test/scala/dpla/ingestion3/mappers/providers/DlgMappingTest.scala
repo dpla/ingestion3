@@ -124,6 +124,21 @@ class DlgMappingTest extends FlatSpec with BeforeAndAfter {
     assert(extractor.place(json) === expected)
   }
 
+  it should "create the correct place when no name provided" in {
+    val jsonString: String = new FlatFileIO().readFileAsString("/dlg_missing_preview.json")
+    val json: Document[JValue] = Document(parse(jsonString))
+
+    val expected =
+        Seq(DplaPlace(
+          name = None,
+          exactMatch = Seq(URI("geonames.org/4076598")),
+          coordinates = Some("30.69436, -88.04305")
+        ))
+
+    assert(extractor.place(json) === expected)
+  }
+
+
   it should "create the correct preview when `edm_is_shown_by_display` is missing" in {
     val jsonString: String = new FlatFileIO().readFileAsString("/dlg_missing_preview.json")
     val json: Document[JValue] = Document(parse(jsonString))

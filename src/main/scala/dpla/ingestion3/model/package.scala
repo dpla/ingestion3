@@ -62,6 +62,8 @@ package object model {
 
   def eitherStringOrUri(uri: URI): LiteralOrUri = LiteralOrUri(uri.value, isUri = true)
 
+  def emptyDplaPlace = DplaPlace()
+
   def emptyEdmAgent = EdmAgent()
 
   def emptyEdmTimeSpan = EdmTimeSpan()

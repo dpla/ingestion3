@@ -41,7 +41,11 @@
     "1899-12-14"
   ],
   "dcterms_spatial_display": [
-    "United States, Alabama, Jefferson County, Birmingham, 33.5206608, -86.80249"
+    {
+      "names":[],
+      "coordinates":"30.69436, -88.04305",
+      "uri":"geonames.org/4076598"
+    }
   ],
   "dc_format_display": [
     "application/pdf"
