@@ -107,7 +107,12 @@ class DlgMapping extends JsonMapping with JsonExtractor {
       val coordinates = extractString("coordinates")(node)
       val uri = extractStrings("uri")(node).map(URI)
 
-      val places: Seq[DplaPlace] = names.map(nameOnlyPlace)
+      val places: Seq[DplaPlace] = if (names.nonEmpty) {
+        names.map(nameOnlyPlace)
+      } else {
+         Seq(emptyDplaPlace)
+      }
+
       val lastPlace: DplaPlace = places.last.copy(coordinates = coordinates, exactMatch = uri)
       places.dropRight(1) ++ Seq(lastPlace)
     })
