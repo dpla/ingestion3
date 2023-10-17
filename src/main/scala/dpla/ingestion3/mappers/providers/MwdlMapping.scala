@@ -117,12 +117,18 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
       .flatMap(extractStrings)
       .map(URI)
 
-  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-  // baseIsShownAt + control\recordid
-    (data \\ "control" \ "recordid")
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
+  // PrimoNMBib > record > display > identifier.
+    (data \\ "display" \ "identifier")
       .flatMap(extractStrings)
-      .map(baseIsShownAt + _.trim + suffixIsShownAt)
       .map(stringOnlyWebResource)
+  }
+
+  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] =
+    // links > lln02
+    (data \\ "links" \ "lln02")
+      .flatMap(extractStrings)
+      .map(URI)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
 
