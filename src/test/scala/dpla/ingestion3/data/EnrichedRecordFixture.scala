@@ -14,8 +14,9 @@ object EnrichedRecordFixture {
       dplaUri = URI("https://dp.la/item/123"),
       originalRecord = "The Original Record",
       provider = EdmAgent(
-        uri = Some(URI("http://dp.la/api/contributor/thedataprovider")),
-        name = Some("The Provider")
+        uri = Some(URI("http://dp.la/api/contributor/bscdn")),
+        name = Some("Big Sky Digital Network"),
+        exactMatch = Seq(URI(s"${WikiUri.baseWikiUri}Q83878447"))
       ),
       intermediateProvider = Some(
         EdmAgent(name = Some("The Intermediate Provider"))

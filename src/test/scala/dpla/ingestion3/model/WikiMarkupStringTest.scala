@@ -16,7 +16,7 @@ class WikiMarkupStringTest extends FlatSpec {
                         |   | permission = {{NoC-US | Q83878447}}
                         |   | source = {{ DPLA
                         |       | Q83878447
-                        |       | hub = The Provider
+                        |       | hub = Q83878447
                         |       | url = https://example.org/record/123
                         |       | dpla_id = 4b1bd605bd1d75ee23baadb0e1f24457
                         |       | local_id = us-history-13243; j-doe-archives-2343
@@ -40,7 +40,7 @@ class WikiMarkupStringTest extends FlatSpec {
                            |   | permission = {{Cc-by-sa-1.0}}
                            |   | source = {{ DPLA
                            |       | Q83878447
-                           |       | hub = The Provider
+                           |       | hub = Q83878447
                            |       | url = https://example.org/record/123
                            |       | dpla_id = 4b1bd605bd1d75ee23baadb0e1f24457
                            |       | local_id = us-history-13243; j-doe-archives-2343

@@ -232,6 +232,7 @@ package object model {
     */
   def buildWikiMarkup(record: OreAggregation): String = {
     val dataProviderWikiUri = getDataProviderWikiId(record)
+    val providerWikiUri = getProviderWikiId(record)
     val dplaId = getDplaId(record)
     val permissionsTemplate = getWikiPermissionTemplate(record.edmRights)
     val permissions = record.edmRights.toString match {
@@ -248,7 +249,7 @@ package object model {
         |   | permission = {{${permissions}}}
         |   | source = {{ DPLA
         |       | ${escapeWikiChars(dataProviderWikiUri)}
-        |       | hub = ${escapeWikiChars(record.provider.name.getOrElse(""))}
+        |       | hub = ${escapeWikiChars(providerWikiUri)}
         |       | url = ${escapeWikiChars(record.isShownAt.uri.toString)}
         |       | dpla_id = $dplaId
         |       | local_id = ${record.sourceResource.identifier.map(escapeWikiChars).mkString("; ")}
@@ -313,18 +314,32 @@ package object model {
     * @param record
     * @return
     */
-  def getDataProviderWikiId(record: OreAggregation): String =
-    record
-      .dataProvider
+  private def getDataProviderWikiId(record: OreAggregation): String = {
+    getWikiId(record.dataProvider) match {
+      case Some(uri) => uri
+      case None =>
+        throw new RuntimeException(s"dataProvider ${record.dataProvider.name.getOrElse("__MISSING__")} " +
+          s"in ${getDplaId(record)} does not have wiki identifier ")
+    }
+  }
+
+  private def getProviderWikiId(record: OreAggregation): String = {
+    getWikiId(record.provider) match {
+      case Some(uri) => uri
+      case None =>
+        throw new RuntimeException(s"provider ${record.provider.name.getOrElse("__MISSING__")} " +
+          s"in ${getDplaId(record)} does not have wiki identifier ")
+    }
+  }
+  private def getWikiId(agent: EdmAgent): Option[String] = {
+    agent
       .exactMatch
       .map(_.toString)
       .find(_.startsWith(WikiUri.baseWikiUri)) match {
-        case Some(uri) => uri.replace(WikiUri.baseWikiUri, "")
-        case None =>
-          throw new RuntimeException(s"dataProvider ${record.dataProvider.name.getOrElse("__MISSING__")} " +
-            s"in ${getDplaId(record)} does not have wiki identifier ")
+      case Some(uri) => Some(uri.replace(WikiUri.baseWikiUri, ""))
+      case None => None
     }
-
+  }
 
   // Taken from
   // https://stackoverflow.com/questions/40128816/remove-json-field-when-empty-value-in-serialize-with-json4s
