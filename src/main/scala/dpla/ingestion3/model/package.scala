@@ -249,7 +249,7 @@ package object model {
         |   | permission = {{${permissions}}}
         |   | source = {{ DPLA
         |       | ${escapeWikiChars(dataProviderWikiUri)}
-        |       | ${escapeWikiChars(providerWikiUri)}
+        |       | hub = ${escapeWikiChars(providerWikiUri)}
         |       | url = ${escapeWikiChars(record.isShownAt.uri.toString)}
         |       | dpla_id = $dplaId
         |       | local_id = ${record.sourceResource.identifier.map(escapeWikiChars).mkString("; ")}
