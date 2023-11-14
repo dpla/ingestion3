@@ -1,65 +1,74 @@
-<mods:mods xmlns:oai="http://www.openarchives.org/OAI/2.0/"
-           xmlns:mods="http://www.loc.gov/mods/v3"
-           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-           xsi:schemaLocation="http://www.loc.gov/mods/v3 https://www.loc.gov/standards/mods/mods.xsd">
-    <mods:identifier>oai:nwdh:densho:ddr.densho.org:ddr-densho-101-1</mods:identifier>
-    <mods:titleInfo>
-        <mods:title>Group in front of the Japanese American Courier offices</mods:title>
-    </mods:titleInfo>
-    <mods:typeOfResource>Image</mods:typeOfResource>
-    <mods:abstract>(L to R): Yone Bartholomew, Clarence Arai, unidentified, Misao Sakamoto holding daughter Marie, Jimmie Sakamoto, Slocum Nishimura (Tokie Slocum) in front of the offices of the Japanese American Courier. Names: Bartholomew, Yone; Arai, Clarence; Sakamoto, Misao; Sakamoto, Marie; Sakamoto, Jimmie; Nishimura, Slocum</mods:abstract>
-    <mods:subject>
-        <mods:topic>Industry and employment -- Journalism</mods:topic>
-        <mods:geographic>Seattle, Washington (State), United States</mods:geographic>
-    </mods:subject>
-    <mods:genre authority="aat">photographs</mods:genre>
-    <mods:note type="ownership">Densho</mods:note>
-    <mods:physicalDescription>
-        <mods:form>image/jpeg</mods:form>
-        <mods:extent>3.5 x 7 in.</mods:extent>
-    </mods:physicalDescription>
-    <mods:recordInfo>
-        <mods:recordIdentifier>ddr-densho-101-1</mods:recordIdentifier>
-    </mods:recordInfo>
-    <mods:accessCondition type="use and reproduction">http://rightsstatements.org/vocab/InC/1.0/</mods:accessCondition>
-    <mods:note type="freetext">blah blah blah</mods:note>
-    <mods:location>
-        <mods:url usage="primary" access="object in context">http://ddr.densho.org/ddr-densho-101-1/</mods:url>
-    </mods:location>
-    <mods:location>
-        <mods:url note="iiifManifest">http://iiif.manifest/</mods:url>
-    </mods:location>
-    <mods:location>
-        <mods:url note="mediaMaster">http://media.master/</mods:url>
-    </mods:location>
-    <mods:location>
-        <mods:url access="preview">https://ddr.densho.org/media/ddr-densho-101/ddr-densho-101-1-mezzanine-96054e814c-a.jpg</mods:url>
-    </mods:location>
-    <mods:location>
-        <mods:url access="raw object">https://ddr.densho.org/media/ddr-densho-101/ddr-densho-101-1-mezzanine-96054e814c-a.jpg</mods:url>
-    </mods:location>
-    <mods:name>
-        <mods:namePart>Lenggenhager, Werner W., 1899-1988</mods:namePart>
-        <mods:role>
-            <mods:roleTerm>creator</mods:roleTerm>
-        </mods:role>
-    </mods:name>
-    <mods:name>
-        <mods:namePart>Thiry, Paul, 1904-1993</mods:namePart>
-        <mods:role>
-            <mods:roleTerm>contributor</mods:roleTerm>
-        </mods:role>
-    </mods:name>
-    <mods:language>
-        <mods:languageTerm>eng</mods:languageTerm>
-    </mods:language>
-    <mods:originInfo>
-        <mods:publisher>Watkins, Carleton E., 1829-1916</mods:publisher>
-        <mods:dateCreated>1891?</mods:dateCreated>
-    </mods:originInfo>
-    <mods:relatedItem type="host">
-        <mods:titleInfo>
-            <mods:title>Seattle Historical Photograph Collection</mods:title>
-        </mods:titleInfo>
-    </mods:relatedItem>
-</mods:mods>
+
+<record>
+    <header>
+        <identifier>oai:nwdh:densho:ddr.densho.org:ddr-densho-101-1</identifier>
+        <datestamp>2023-11-13T16:50:24Z</datestamp>
+    </header>
+    <metadata>
+        <mods:mods xmlns:oai="http://www.openarchives.org/OAI/2.0/"
+                   xmlns:mods="http://www.loc.gov/mods/v3"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.loc.gov/mods/v3 https://www.loc.gov/standards/mods/mods.xsd">
+            <mods:identifier>oai:nwdh:densho:ddr.densho.org:ddr-densho-101-1</mods:identifier>
+            <mods:titleInfo>
+                <mods:title>Group in front of the Japanese American Courier offices</mods:title>
+            </mods:titleInfo>
+            <mods:typeOfResource>Image</mods:typeOfResource>
+            <mods:abstract>(L to R): Yone Bartholomew, Clarence Arai, unidentified, Misao Sakamoto holding daughter Marie, Jimmie Sakamoto, Slocum Nishimura (Tokie Slocum) in front of the offices of the Japanese American Courier. Names: Bartholomew, Yone; Arai, Clarence; Sakamoto, Misao; Sakamoto, Marie; Sakamoto, Jimmie; Nishimura, Slocum</mods:abstract>
+            <mods:subject>
+                <mods:topic>Industry and employment -- Journalism</mods:topic>
+                <mods:geographic>Seattle, Washington (State), United States</mods:geographic>
+            </mods:subject>
+            <mods:genre authority="aat">photographs</mods:genre>
+            <mods:note type="ownership">Densho</mods:note>
+            <mods:physicalDescription>
+                <mods:form>image/jpeg</mods:form>
+                <mods:extent>3.5 x 7 in.</mods:extent>
+            </mods:physicalDescription>
+            <mods:recordInfo>
+                <mods:recordIdentifier>ddr-densho-101-1</mods:recordIdentifier>
+            </mods:recordInfo>
+            <mods:accessCondition type="use and reproduction">http://rightsstatements.org/vocab/InC/1.0/</mods:accessCondition>
+            <mods:note type="freetext">blah blah blah</mods:note>
+            <mods:location>
+                <mods:url usage="primary" access="object in context">http://ddr.densho.org/ddr-densho-101-1/</mods:url>
+            </mods:location>
+            <mods:location>
+                <mods:url note="iiifManifest">http://iiif.manifest/</mods:url>
+            </mods:location>
+            <mods:location>
+                <mods:url note="mediaMaster">http://media.master/</mods:url>
+            </mods:location>
+            <mods:location>
+                <mods:url access="preview">https://ddr.densho.org/media/ddr-densho-101/ddr-densho-101-1-mezzanine-96054e814c-a.jpg</mods:url>
+            </mods:location>
+            <mods:location>
+                <mods:url access="raw object">https://ddr.densho.org/media/ddr-densho-101/ddr-densho-101-1-mezzanine-96054e814c-a.jpg</mods:url>
+            </mods:location>
+            <mods:name>
+                <mods:namePart>Lenggenhager, Werner W., 1899-1988</mods:namePart>
+                <mods:role>
+                    <mods:roleTerm>creator</mods:roleTerm>
+                </mods:role>
+            </mods:name>
+            <mods:name>
+                <mods:namePart>Thiry, Paul, 1904-1993</mods:namePart>
+                <mods:role>
+                    <mods:roleTerm>contributor</mods:roleTerm>
+                </mods:role>
+            </mods:name>
+            <mods:language>
+                <mods:languageTerm>eng</mods:languageTerm>
+            </mods:language>
+            <mods:originInfo>
+                <mods:publisher>Watkins, Carleton E., 1829-1916</mods:publisher>
+                <mods:dateCreated>1891?</mods:dateCreated>
+            </mods:originInfo>
+            <mods:relatedItem type="host">
+                <mods:titleInfo>
+                    <mods:title>Seattle Historical Photograph Collection</mods:title>
+                </mods:titleInfo>
+            </mods:relatedItem>
+        </mods:mods>
+    </metadata>
+</record>
