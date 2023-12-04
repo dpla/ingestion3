@@ -12388,12 +12388,12 @@
             "Butler University":
             {
                 "Wikidata": "Q73784433",
-                "upload": false
+                "upload": true
             },
             "Butler University Special Collections, Rare Books, and University Archives":
             {
                 "Wikidata": "Q18148958",
-                "upload": false
+                "upload": true
             },
             "Byron R. Lewis Historical Library, Vincennes University":
             {
@@ -18599,7 +18599,7 @@
             "Missouri Historical Society":
             {
                 "Wikidata": "Q6879571",
-                "upload": false
+                "upload": true
             },
             "Missouri Humane Society through Missouri Digital Heritage":
             {
