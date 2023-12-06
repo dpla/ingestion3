@@ -13013,12 +13013,12 @@
             "Indiana Landmarks":
             {
                 "Wikidata": "Q6023311",
-                "upload": false
+                "upload": true
             },
             "Indiana Landmarks http://www.indianalandmarks.org/ 800-450-4534":
             {
                 "Wikidata": "Q6023311 ",
-                "upload": false
+                "upload": true
             },
             "Indiana Museum of Medical History":
             {
