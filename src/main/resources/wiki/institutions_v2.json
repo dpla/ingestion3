@@ -2302,8 +2302,8 @@
             },
             "University Library, University of Illinois Urbana Champaign":
             {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q22096046",
+                "upload": true
             },
             "University Library, University of North Carolina at Chapel Hill (archive.org)":
             {
@@ -12118,6 +12118,11 @@
                 "upload": false
             },
             "University of Illinois at Urbana-Champaign Library":
+            {
+                "Wikidata": "Q22096046",
+                "upload": true
+            },
+            "University of Illinois Urbana-Champaign Library":
             {
                 "Wikidata": "Q22096046",
                 "upload": true
