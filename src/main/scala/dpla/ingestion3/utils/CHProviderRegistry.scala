@@ -81,7 +81,7 @@ object CHProviderRegistry {
     "orbis-cascade" -> Register(profile = new OrbisCascadeProfile),
     "p2p" -> Register(profile = new P2PProfile),
     "pa" -> Register(profile = new PaProfile),
-    "david_rumsey" -> Register(profile = new RumseyProfile),
+    "david-rumsey" -> Register(profile = new RumseyProfile),
     "scdl" -> Register(profile = new ScProfile),
     "sd" -> Register(profile = new SdProfile),
     "smithsonian" -> Register(profile = new SiProfile),
