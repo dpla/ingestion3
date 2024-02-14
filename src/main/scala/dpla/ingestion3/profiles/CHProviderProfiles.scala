@@ -318,7 +318,7 @@ class NcProfile extends XmlProfile {
 class NorthwestHeritageProfile extends XmlProfile {
   type Mapping = NorthwestHeritageMapping
 
-  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiFileHarvester] = classOf[OaiFileHarvester]
   override def getMapping = new NorthwestHeritageMapping
 }
 
