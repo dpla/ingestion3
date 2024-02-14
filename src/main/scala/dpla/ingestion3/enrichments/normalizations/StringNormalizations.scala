@@ -21,6 +21,7 @@ class StringNormalizations {
       dataProvider = enrichEdmAgent(record.dataProvider),
       edmRights = record.edmRights.map(enrichEdmRights),
       hasView = record.hasView.map(enrichEdmWebResource),
+      iiifManifest = record.iiifManifest.map(enrichUri),
       intermediateProvider = record.intermediateProvider.map(enrichEdmAgent),
       isShownAt = enrichEdmWebResource(record.isShownAt),
       `object` = record.`object`.map(enrichEdmWebResource),
@@ -70,6 +71,9 @@ class StringNormalizations {
           .cleanupEndingPunctuation)
     )
 
+  def enrichUri(value: URI): URI = {
+    URI(value.toString.reduceWhitespace)
+  }
   def enrichEdmRights(edmRights: URI): URI = {
     val uri = new java.net.URI(edmRights.toString) // value already validated as URI in mapping
     // normalize uri path
