@@ -1,12 +1,12 @@
 # DPLA Ingestion 3
 
-DPLA's ingestion system is one of the core business systems and is the source of data for the DPLA search portal. It is responsible for harvesting, mapping and enriching cultural heritage metadata from DPLA's network of partners into the DPLA Metadata Application Profile. These records are then indexed and populate our discovery portal of more than [47,000,000 images, texts, videos, and sounds](https://dp.la) from across the United States.
+DPLA's ingestion system is one of the core business systems and is the source of data for the DPLA search portal. It is responsible for harvesting, mapping and enriching cultural heritage metadata from DPLA's network of partners into the DPLA Metadata Application Profile. These records are then indexed and populate our discovery portal of more than [49,000,000 images, texts, videos, and sounds](https://dp.la) from across the United States.
 
 * [How to run ingests](#-running-dpla-cultural-heritage-ingests-)
   * [Helpful links and tools](#helpful-links-and-tools)
   * [Monthly scheduling communications](#scheduling-email)
   * [Running ingests](#running-ingests)
-    * [Vagrant + EC2 instance](#ec2-vagrant-box)
+    * [EC2 ingest instance](#ec2-ingest-box)
     * [Locally](#running-ingests-locally)
     * [Hub specific instructions](#exceptions-and-unusual-ingests)
       * [Firewalled endpoints](#firewalled-endpoints) 
@@ -48,7 +48,7 @@ DPLA's ingestion system is one of the core business systems and is the source of
 
 - [Helpful links and tools](#helpful-links-and-tools)
 - [Scheduling](#scheduling-email)
-- [Running ingests on Vagrant EC2 instance](#running-ingests-on-ec2-vagrant-box)
+- [Running ingests on EC2 instance](#ec2-ingest-box)
 - [Running ingests locally](#running-ingests-locally)
 - [Exceptions / Usual ingests](#exceptions-and-unusual-ingests)
 
@@ -61,9 +61,7 @@ DPLA's ingestion system is one of the core business systems and is the source of
 * [OhMyZsh `copyfile` plugin](https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/copyfile)
 * [jq](https://stedolan.github.io/jq/)
 * [pyoaiharvester](https://github.com/dpla/pyoaiharvester)
-* [vagrant](https://www.vagrantup.com/)
 * [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-* s3cmd
 
 ## Scheduling email
 Monthly scheduling emails are sent to the hubs a month before they are scheduled to be run. We have used a common template for those scheduling emails to remind folks about the Wikimedia project and available documentation.
@@ -108,26 +106,63 @@ April 24-28th
 ```
 
 ## Running ingests
-### EC2 Vagrant box
-We use [Vagrant](https://www.vagrantup.com/) to build the EC2 instance and install all required dependencies for running metadata ingests.
 
-1. Bring up the Vagrant ingest box
+### EC2 Ingest box
+There is an existing EC2 instance we use to run ingests and we bring it up and down as needed. Below are some useful alias commands for dealing with our ingestion and wikimedia ec2 boxes as well as syncing data to the `s3://dpla-master-dataset/` bucket. These commands depend on the aws cli. 
+
+Add these commands to your `.bashrc` or `.zshrc` files. 
 ```shell
-> cd ~/ingestion3
-> vagrant up
+# Example
+#   ec2-status ingest
+#   ec2-status wikimedia
+ec2-status ()
+{
+ aws ec2 describe-instance-status \
+  --include-all-instances \
+  --instance-ids $(aws ec2 describe-instances \
+    --query 'Reservations[].Instances[].InstanceId' \
+    --filters "Name=tag-value,Values=$1" \
+    --output text) \
+  | jq ".InstanceStatuses[0].InstanceState.Name"
+}
+# Example
+#   ec2-start ingest
+#   ec2-stop wikimedia
+ec2-start ()
+{
+ aws ec2 start-instances \
+  --instance-ids $(aws ec2 describe-instances --query 'Reservations[].Instances[].InstanceId' --filters "Name=tag-value,Values=$1" --output text) \
+  | jq
+}
+# Example
+#   ec2-stop ingest
+#   ec2-stop wikimedia
+ec2-stop ()
+{
+ aws ec2 stop-instances \
+  --instance-ids $(aws ec2 describe-instances \
+    --query 'Reservations[].Instances[].InstanceId' \
+    --filters "Name=tag-value,Values=$1" \
+    --output text) \
+  | jq
+}
+# Sync data to and from s3. Set the $DPLA_DATA ENV value to the 
+# root directory of ingest data (ex. /Users/dpla/data/).
+# This command already exists on the ingest EC2 instance and does 
+# not need to be modified. 
+
+# Example
+#   sync-s3 gpo
+#   sync-s3 smithsonian
+sync-s3 () {
+  echo "Sync from $DPLA_DATA$1/ to s3://dpla-master-dataset/$1/"
+  aws s3 sync --exclude '*.DS_Store' $DPLA_DATA$1/ s3://dpla-master-dataset/$1/
+}
 ```
-2. Create the i3.conf file inside ingestion3/conf/ folder
-```shell
-# run on local copy of i3.conf file
-> copyfile ./ingestion3/confi/i3.conf
-# run on Vagrant box
-> vagrant ssh
-> touch ~/ingestion3/conf/i3.conf
-> vim ~/ingestion3/conf/i3.conf
-# paste i3.conf file contents into this file
-# save the file
-```
-3. Start screen sessions for each provider you need to harvest. This makes re-attaching to running screen sessions much easier.
+
+1. Start the EC2 instance by running `ec2-start ingest`
+
+2. Start screen sessions for each provider you need to harvest. This makes re-attaching to running screen sessions much easier.
 ```shell
 > cd ~/ingestion3/
 > screen -S gpo  
@@ -137,16 +172,15 @@ We use [Vagrant](https://www.vagrantup.com/) to build the EC2 instance and insta
 # Re-attach to gpo session
 > screen -xS gpo
 ```
-4. Sync data back to s3
+3. Sync data back to s3
 ```shell
-> cd ~/data/gpo
-> aws s3 sync . s3://dpla-master-dataset/gpo/
+> sync-s3 gpo
 ```
 
-5. Run `vagrant destroy` when the ingests are finished, the data has been synced to s3 and the instance is no longer needed.
+4. Run `ec2-stop ingest` when the ingests are finished, the data has been synced to s3 and the instance is no longer needed. Data on the EBS volume will persist.
 
 ### Local
-Bringing up the Vagrant EC2 instance is not always required. You can run a lot of the ingests on your laptop to save $$$ and overhead. Typically, these would be low record count harvests. Providers like Maryland, Vermont, or Digital Virginias which have ~150,000 records.
+Bringing up the ingest EC2 instance is not always required. You can run a lot of the ingests on your laptop to save $$$ and overhead. Typically, these would be low record count harvests. Providers like Maryland, Vermont, or Digital Virginias which have ~150,000 records.
 
 ## Exceptions and unusual ingests
 Not all ingests are fire and forget, some require a bit of massaging before we can successfully harvest their data.
@@ -154,6 +188,7 @@ Not all ingests are fire and forget, some require a bit of massaging before we c
 Some hubs have their feed endpoints behind a firewall so the harvests needs to be run while behind out VPN. I've been meaning to try and get the EC2 instance behind the VPN but that work is not a high priority right now because we have a workaround (run locally behind VPN). Hubs which need to be harvested will on the VPN
 - Illinois
 - Indiana
+- MWDL
 
 ### Community Webs
 Internet Archive community webs will send us a SQL database which we need to open and export as a JSON file. Then convert the JSON file to JSONL
@@ -855,7 +890,7 @@ Key points to note:
 
 When validating whether a record meets the minimum requirements, and neither a IIIF manifest nor media master value is provided, we will attempt to programmatically generate a IIIF manifest url if the isShownAt value looks like a CONTENTdm URL.
 
-```Java
+```Scala
 // If there is neither a IIIF manifest or media master mapped from the original  
 // record then try to construct a IIIF manifest from the isShownAt value.
 // This should only work for CONTENTdm URLs.
@@ -867,7 +902,7 @@ val dplaMapRecord =
 Where `buildIIIFFromUrl()` uses regex matching to identify and extract the necessary
 components of the isShownAt URL.
 
-```Java
+```Scala
 def buildIIIFFromUrl(isShownAt: EdmWebResource): Option[URI] = {
 //    We want to go from this isShownAt URL
 //    http://www.ohiomemory.org/cdm/ref/collection/p16007coll33/id/126923
