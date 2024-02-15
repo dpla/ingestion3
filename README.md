@@ -76,12 +76,16 @@ DPLA's ingestion system is one of the core business systems and is the source of
 * [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
 ## Scheduling email
-Monthly scheduling emails are sent to the hubs a month before they are scheduled to be run. We have used a common template for those scheduling emails to remind folks about the Wikimedia project and available documentation.
+Monthly scheduling emails are sent to the hubs a month before they are scheduled to be run. We have used a common template for those scheduling emails to remind folks about the Wikimedia project and available documentation. The monthly schedule and contact information is documented [here](https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/CT/pages/84969744/Hub+Re-ingest+Schedule). 
 
 ```text
 Good morning - 
 
-Here is the ingest schedule for ____.
+Here is the ingest schedule for <MONTH>.
+
+<MONTH> DD-DD
+- Hub A
+- Hub B
 
 1. Going forward we will trying to run all ingests on the last week 
 of the month. 
@@ -107,14 +111,11 @@ https://github.com/dpla/ingestion3. This documentation also unpacks some of thos
 summary/error messages you are all quite familiar with. Please let me know 
 if you have any questions about those stages or documentation.
 
-The Wikimedia uploads will happen sometime in ____.  Please let us know 
+The Wikimedia uploads will happen sometime in <MONTH>.  Please let us know 
 if anything needs to be updated and, if possible, the number of records 
 we can expect in our harvest.
 
 
-April 24-28th
-- Hub A
-- Hub B
 ```
 
 ## Running ingests
