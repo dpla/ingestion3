@@ -10,7 +10,7 @@ DPLA's ingestion system is one of the core business systems and is the source of
     * [Locally](#running-ingests-locally)
     * [Hub specific instructions](#exceptions-and-unusual-ingests)
       * [Firewalled endpoints](#firewalled-endpoints) 
-      * [Community Webs](#community-webs)
+      * [Internet Archive - Community Webs](#community-webs)
       * [Digital Virginias](#digital-virginias)
       * Digital Commonwealth
       * Northwest Digital Heritage
@@ -54,6 +54,15 @@ DPLA's ingestion system is one of the core business systems and is the source of
 - [Running ingests on EC2 instance](#ec2-ingest-box)
 - [Running ingests locally](#running-ingests-locally)
 - [Exceptions / Usual ingests](#exceptions-and-unusual-ingests)
+      
+  - [Firewalled endpoints](#firewalled-endpoints) 
+  - [Internet Archive - Community Webs](#community-webs)
+  - [Digital Virginias](#digital-virginias)
+  - Digital Commonwealth
+  - Northwest Digital Heritage
+  - Tennessee
+  - [NARA](README_NARA.md)
+  - [Smithsonian](README_SMITHSONIAN.md)
 
 ## Helpful links and tools
 * [Hub ingest schedule](https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/CT/pages/84969744/Hub+Re-ingest+Schedule)
@@ -135,7 +144,26 @@ ex.
     └── 20240214_102901-txdl-wiki.parquet
 ```
 
-For hubs which send file exports those original records are stored in an `./originalRecords` directory and that directory should be named `YYYYMMDD`. When running a harvest for these hubs the target originalRecords directory should be updated in the `./conf/i3.conf` file. 
+### File export Hubs
+
+Some hubs submit data via a file export process. Some are exported to s3 and others are emailed or linked to. If there is any question about how a hub submits data check the `i3.conf` file or [ingestion3-conf](https://github.com/dpla/ingestion3-conf) project.
+
+These original records are kept in an `./originalRecords` directory for the hub and each export should be placed in a directory named `YYYYMMDD`. When running a harvest for these hubs the target originalRecords directory should be updated in the `./conf/i3.conf` file.
+
+**Hubs which submit file exports**
+```text
+Conneticut              s3://dpla-hub-ct/
+Florida                 s3://dpla-hub-fl/
+Georgia                 s3://dpla-hub-ga/
+Heartland               s3://dpla-hub-mo/
+Massachusetts           Sends a download link
+NARA                    Sends a download link
+NYPL                    s3://dpla-hub-nypl/
+Ohio                    s3://dpla-hub-ohio/
+Smithsonian             s3://dpla-hub-si/
+Texas Digital Library   s3://dpla-hub-tdl/
+Vermont                 s3://dpla-hub-vt
+```
 
 ### EC2 Ingest box
 There is an existing EC2 instance we use to run ingests and we bring it up and down as needed. Below are some useful alias commands for dealing with our ingestion and wikimedia ec2 boxes as well as syncing data to the `s3://dpla-master-dataset/` bucket. These commands depend on the aws cli. 
@@ -214,13 +242,16 @@ Bringing up the ingest EC2 instance is not always required. You can run a lot of
 
 ## Exceptions and unusual ingests
 Not all ingests are fire and forget, some require a bit of massaging before we can successfully harvest their data.
+
 ### Firewalled endpoints
-Some hubs have their feed endpoints behind a firewall so the harvests needs to be run while behind out VPN. I've been meaning to try and get the EC2 instance behind the VPN but that work is not a high priority right now because we have a workaround (run locally behind VPN). Hubs which need to be harvested will on the VPN
+Some hubs have their feed endpoints behind a firewall so the harvests needs to be run while behind out VPN. I've been meaning to try and get the EC2 instance behind the VPN but that work is not a high priority right now because we have a workaround (run locally behind the VPN). Hubs that need to be harvested while connected to the VPN:
+
 - Illinois
 - Indiana
 - MWDL
 
 ### Community Webs
+
 Internet Archive community webs will send us a SQL database which we need to open and export as a JSON file. Then convert the JSON file to JSONL
 
 - [Install SQLite DB Brower](https://sqlitebrowser.org/dl/)
