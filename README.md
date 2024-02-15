@@ -12,6 +12,9 @@ DPLA's ingestion system is one of the core business systems and is the source of
       * [Firewalled endpoints](#firewalled-endpoints) 
       * [Community Webs](#community-webs)
       * [Digital Virginias](#digital-virginias)
+      * Digital Commonwealth
+      * Northwest Digital Heritage
+      * Tennessee
       * [NARA](README_NARA.md)
       * [Smithsonian](README_SMITHSONIAN.md)
 * [ingestion 3](#ingestion-3)
@@ -106,6 +109,33 @@ April 24-28th
 ```
 
 ## Running ingests
+
+Aggregation data is laid out in the following way
+
+```text
+./data/<hub>/<activity>/<DATE_TIME>_ACTIVITY/<DATA>
+./data/<hub>/<activity>/<DATE_TIME>_ACTIVITY/_LOGS/
+./data/<hub>/<activity>/<DATE_TIME>_ACTIVITY/_LOGS/WARNINGS/
+./data/<hub>/<activity>/<DATE_TIME>_ACTIVITY/_LOGS/ERRORS/
+
+ex. 
+
+./data/txdl/
+├── enrichment
+│   └── 20240214_102322-txdl-MAP4_0.EnrichRecord.avro
+├── harvest
+│   └── 20240214_100659-txdl-OriginalRecord.avro
+├── jsonl
+│   └── 20240214_102733-txdl-MAP3_1.IndexRecord.jsonl
+├── mapping
+│   └── 20240214_101733-txdl-MAP4_0.MAPRecord.avro
+├── originalRecords
+│   └── 20240214
+└── wiki
+    └── 20240214_102901-txdl-wiki.parquet
+```
+
+For hubs which send file exports those original records are stored in an `./originalRecords` directory and that directory should be named `YYYYMMDD`. When running a harvest for these hubs the target originalRecords directory should be updated in the `./conf/i3.conf` file. 
 
 ### EC2 Ingest box
 There is an existing EC2 instance we use to run ingests and we bring it up and down as needed. Below are some useful alias commands for dealing with our ingestion and wikimedia ec2 boxes as well as syncing data to the `s3://dpla-master-dataset/` bucket. These commands depend on the aws cli. 
