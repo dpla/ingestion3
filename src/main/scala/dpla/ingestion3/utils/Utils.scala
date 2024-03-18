@@ -20,18 +20,6 @@ import scala.xml.NodeSeq
 
 object Utils {
 
-  /**
-    * Count the number of files in the given directory, outDir.
-    *
-    * @param outDir Directory to count
-    * @param ext    File extension to filter by
-    * @return The number of files that match the extension
-    */
-  def countFiles(outDir: File, ext: String): Long = {
-    outDir.list()
-      .par
-      .count(fileName => fileName.endsWith(ext))
-  }
 
   /**
     * Creates and returns a logger object
@@ -218,33 +206,4 @@ object Utils {
       .csv(out)
   }
 
-  /**
-    *
-    * @param out
-    * @param name
-    * @param df
-    * @param shortName
-    */
-  def writeLogsAsTxt(out: String, name: String, df: Dataset[String], shortName: String): Unit = {
-    df.coalesce(1)
-      .write
-      .mode(SaveMode.Overwrite)
-      .option("header", "false")
-      .csv(out)
-  }
-
-  /**
-    * Attempts to reach the Twofishes service
-    *
-    * @param conf Configuration file
-    * @throws RuntimeException If the service cannot be reached
-    */
-  def pingTwofishes(conf: i3Conf): Unit = {
-    val host = conf.twofishes.hostname.getOrElse("localhost")
-    val port = conf.twofishes.port.getOrElse("8081")
-    val url = s"http://$host:$port/query?query=nyc"
-
-    if (HttpUtils.validateUrl(url)) Unit
-    else throw new RuntimeException(s"Cannot reach Twofishes at $url")
-  }
 }

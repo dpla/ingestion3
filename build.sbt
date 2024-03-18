@@ -4,7 +4,7 @@ organization := "dpla"
 version := "0.0.1"
 scalaVersion := "2.11.8"
 
-parallelExecution in Test := false
+ThisBuild / Test / parallelExecution := false
 
 val HADOOP_VERSION = "2.10.1"
 

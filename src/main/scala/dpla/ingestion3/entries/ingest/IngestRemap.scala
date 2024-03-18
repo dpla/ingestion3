@@ -52,7 +52,6 @@ import org.apache.spark.SparkConf
 object IngestRemap extends MappingExecutor
   with JsonlExecutor
   with EnrichExecutor
-  with TopicModelExecutor
   with WikimediaMetadataExecutor {
 
   def main(args: Array[String]): Unit = {

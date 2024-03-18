@@ -2,7 +2,7 @@ package dpla.ingestion3.wiki
 
 import dpla.ingestion3.model._
 import org.scalatest.{FlatSpec, Matchers}
-import dpla.ingestion3.wiki.WikiUri
+
 /**
   * Tests for validating wikimedia eligibility  
   */
