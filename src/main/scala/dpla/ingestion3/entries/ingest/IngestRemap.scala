@@ -72,9 +72,10 @@ object IngestRemap extends MappingExecutor
     // If given input path is a harvest, use it as `harvestData'.
     // If not, assume that it is a directory containing several harvests and
     // get the most recent harvest from that directory.
-    val harvestData = InputHelper.isActivityPath(input) match {
-      case true => input
-      case false => InputHelper.mostRecent(input)
+    val harvestData = if (InputHelper.isActivityPath(input)) {
+      input
+    } else {
+      InputHelper.mostRecent(input)
         .getOrElse(throw new RuntimeException("Unable to load harvest data."))
     }
 
