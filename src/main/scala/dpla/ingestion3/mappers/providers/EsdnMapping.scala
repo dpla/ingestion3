@@ -20,9 +20,9 @@ class EsdnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
       FormatTypeValuesBlockList.termList
 
   // ID minting functions
-  override def useProviderName(): Boolean = true
+  override def useProviderName: Boolean = true
 
-  override def getProviderName(): Option[String] = Some("esdn")
+  override def getProviderName: Option[String] = Some("esdn")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
@@ -183,7 +183,7 @@ class EsdnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Empire State Digital Network"),
     uri = Some(URI("http://dp.la/api/contributor/esdn"))
   )

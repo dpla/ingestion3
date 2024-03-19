@@ -25,9 +25,9 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
       FormatTypeValuesBlockList.termList
 
   // ID minting functions
-  override def useProviderName(): Boolean = true
+  override def useProviderName: Boolean = true
 
-  override def getProviderName(): Option[String] = Some("mwdl")
+  override def getProviderName: Option[String] = Some("mwdl")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \\ "PrimoNMBib" \ "record" \ "control" \ "recordid")

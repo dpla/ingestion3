@@ -13,5 +13,5 @@ class XmlParser extends Parser[NodeSeq] {
 
 
 class JsonParser extends Parser[JValue] {
-  override def parse(data: String): Document[JValue] = Document(org.json4s.jackson.JsonMethods.parse(data))
+  override def parse(data: String): Document[JValue] = Document(org.json4s.native.JsonMethods.parse(data))
 }

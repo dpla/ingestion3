@@ -1,9 +1,10 @@
 package dpla.ingestion3.enrichments
 
 import dpla.ingestion3.model.EdmTimeSpan
-import org.scalatest.{BeforeAndAfter, FlatSpec, PrivateMethodTester}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.{BeforeAndAfter, PrivateMethodTester}
 
-class ParseDateEnrichmentTest extends FlatSpec
+class ParseDateEnrichmentTest extends AnyFlatSpec
     with BeforeAndAfter
     with PrivateMethodTester {
 

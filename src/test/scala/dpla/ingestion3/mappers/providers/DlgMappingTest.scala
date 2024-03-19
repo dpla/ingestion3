@@ -4,12 +4,12 @@ import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.utils.FlatFileIO
 import org.json4s.JsonAST.JValue
-import org.json4s._
-import org.json4s.jackson.JsonMethods.parse
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.json4s.native.JsonMethods.parse
+import org.scalatest.BeforeAndAfter
 import dpla.ingestion3.model._
+import org.scalatest.flatspec.AnyFlatSpec
 
-class DlgMappingTest extends FlatSpec with BeforeAndAfter {
+class DlgMappingTest extends AnyFlatSpec with BeforeAndAfter {
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
   val shortName = "dlg"
   val jsonString: String = new FlatFileIO().readFileAsString("/dlg.json")

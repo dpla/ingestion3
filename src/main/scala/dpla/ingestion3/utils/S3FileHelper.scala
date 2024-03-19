@@ -1,34 +1,18 @@
 package dpla.ingestion3.utils
 
 import java.util
-
-import com.amazonaws.services.s3.AmazonS3Client
+import com.amazonaws.services.s3.{AmazonS3, AmazonS3Client, AmazonS3ClientBuilder}
 import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion
 import com.amazonaws.services.s3.model.{DeleteObjectsRequest, ListObjectsRequest, ObjectListing}
 
 import scala.annotation.tailrec
-import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 
 trait S3FileHelper {
-  lazy val s3client: AmazonS3Client = new AmazonS3Client
+  lazy val s3client: AmazonS3 =  AmazonS3ClientBuilder.defaultClient()
 
-  def getBucket(path: String): String = path.split("://")(1).split("/")(0)
   def getKey(path: String): String = path.split("://")(1).split("/").drop(1).mkString("/")
 
-  def deleteS3Path(path: String): Unit = {
-    val bucket = getBucket(path)
-    val key = getKey(path)
-
-    val listObjectsRequest = new ListObjectsRequest().withBucketName(bucket).withPrefix(key)
-    val listObjectsResponse = s3client.listObjects(listObjectsRequest)
-    val keys = getS3Keys(listObjectsResponse)
-
-    if (keys.isEmpty)
-      return
-
-    deleteS3Keys(bucket, keys)
-  }
 
   def deleteS3Keys(bucket: String, keys: Seq[String]): Unit = {
     val groupedKeys = keys.grouped(1000)
@@ -41,19 +25,11 @@ trait S3FileHelper {
     }
   }
 
-  def s3ObjectExists(path: String): Boolean = {
-    val bucket = getBucket(path)
-    val key = getKey(path)
-
-    val s3client: AmazonS3Client = new AmazonS3Client
-    val req = new ListObjectsRequest().withBucketName(bucket).withPrefix(key)
-    val rsp = s3client.listObjects(req)
-    rsp.getObjectSummaries.size() > 0
-  }
 
   @tailrec
   final def getS3Keys(objects: ObjectListing, files: ListBuffer[String] = new ListBuffer[String]): ListBuffer[String] = {
-    files ++= objects.getObjectSummaries.toSeq.map(x => x.getKey)
+    import scala.jdk.CollectionConverters._
+    files ++= objects.getObjectSummaries.asScala.toSeq.map(x => x.getKey)
     if (!objects.isTruncated) files
     else getS3Keys(s3client.listNextBatchOfObjects(objects), files)
   }

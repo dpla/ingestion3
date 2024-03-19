@@ -1,12 +1,12 @@
 package dpla.ingestion3.model
 
 
-import org.scalatest.FlatSpec
 import dpla.ingestion3.data.EnrichedRecordFixture
 import org.json4s._
-import org.json4s.jackson.JsonMethods._
+import org.json4s.native.JsonMethods._
+import org.scalatest.flatspec.AnyFlatSpec
 
-class JsonlStringTest extends FlatSpec {
+class JsonlStringTest extends AnyFlatSpec {
 
   "jsonlRecord" should "print a valid JSON string" in {
     val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord)

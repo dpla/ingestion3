@@ -461,14 +461,14 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
           `type` = validatedType
         ),
         originalId = validatedOriginalId,
-        messages = msgCollector.getAll()
+        messages = msgCollector.getAll().toSeq
       )
     } match {
       case Success(oreAggregation) => oreAggregation
       case Failure(f) =>
         msgCollector.add(exception(providerId, f))
         // Return an empty oreAggregation that contains all the messages generated from failed mapping
-        emptyOreAggregation.copy(messages = msgCollector.getAll())
+        emptyOreAggregation.copy(messages = msgCollector.getAll().toSeq)
     }
   }
 }
@@ -555,14 +555,14 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
           `type` = validatedType
         ),
         originalId = validatedOriginalId,
-        messages = msgCollector.getAll()
+        messages = msgCollector.getAll().toSeq
       )
     } match {
       case Success(oreAggregation) => oreAggregation
       case Failure(f) => {
         msgCollector.add(exception(providerId, f))
         // Return an empty oreAggregation that contains all the messages generated from failed mapping
-        emptyOreAggregation.copy(messages = msgCollector.getAll())
+        emptyOreAggregation.copy(messages = msgCollector.getAll().toSeq)
       }
     }
   }

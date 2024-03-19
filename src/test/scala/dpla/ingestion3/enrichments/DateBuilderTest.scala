@@ -3,9 +3,11 @@ package dpla.ingestion3.enrichments
 import dpla.ingestion3.enrichments.date.DateBuilder
 import dpla.ingestion3.model.EdmTimeSpan
 import org.scalatest._
-import org.scalatest.prop.Checkers
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatestplus.scalacheck.Checkers
 
-class DateBuilderTest extends FlatSpec with BeforeAndAfter with Matchers with Checkers {
+class DateBuilderTest extends AnyFlatSpec with BeforeAndAfter with Matchers with Checkers {
 
   val dateBuilder = new DateBuilder()
 

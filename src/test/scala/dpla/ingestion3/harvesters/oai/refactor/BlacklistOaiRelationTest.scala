@@ -2,9 +2,9 @@ package dpla.ingestion3.harvesters.oai.refactor
 
 import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.spark.sql.SparkSession
-import org.scalatest.{FlatSpec, FunSuite}
+import org.scalatest.flatspec.AnyFlatSpec
 
-class BlacklistOaiRelationTest extends FlatSpec with SharedSparkContext {
+class BlacklistOaiRelationTest extends AnyFlatSpec with SharedSparkContext {
 
   private val oaiConfiguration = OaiConfiguration(Map(
     "verb" -> "ListRecords",
@@ -37,7 +37,7 @@ class BlacklistOaiRelationTest extends FlatSpec with SharedSparkContext {
 
   "A BlacklistOaiRelation" should "build a scan using OaiMethods" in {
     val rdd = relation.buildScan()
-    assert(rdd.count === 4)
+    assert(rdd.count == 4)
   }
 
 }

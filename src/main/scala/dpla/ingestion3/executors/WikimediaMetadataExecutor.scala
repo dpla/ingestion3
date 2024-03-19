@@ -1,16 +1,15 @@
 package dpla.ingestion3.executors
 
-import java.time.LocalDateTime
-
-import com.databricks.spark.avro._
 import dpla.ingestion3.dataStorage.OutputHelper
+
+import java.time.LocalDateTime
 import dpla.ingestion3.model
 import dpla.ingestion3.model._
 import dpla.ingestion3.wiki.{WikiCriteria, WikiMapper}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Row, SparkSession}
 
 import scala.util.{Failure, Success, Try}
 
@@ -53,11 +52,11 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
 
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
-    val tupleRowBooleanEncoder: ExpressionEncoder[(Row, Boolean)] =
-      ExpressionEncoder.tuple(RowEncoder(model.sparkSchema), ExpressionEncoder())
+    val dplaMapDataRowEncoder: Encoder[Row] = RowEncoder.encoderFor(model.sparkSchema)
+    val tupleRowBooleanEncoder: Encoder[(Row, Boolean)] = ExpressionEncoder()
 
     val aSeq = allowedIds.toSeq
-    val enrichedRows: DataFrame = spark.read.avro(dataIn).filter($"dplaUri".isin(aSeq: _*))
+    val enrichedRows: DataFrame = spark.read.format("avro").load(dataIn).filter($"dplaUri".isin(aSeq: _*))
 
     val enrichResults: Dataset[(Row, Boolean)] = enrichedRows.map(row => {
       Try{ ModelConverter.toModel(row) } match {

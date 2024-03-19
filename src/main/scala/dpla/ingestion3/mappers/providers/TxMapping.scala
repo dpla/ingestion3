@@ -257,7 +257,7 @@ object TxMapping {
 
   val endpoint = "https://digital2.library.unt.edu/vocabularies/institutions/json/"
   val jsonString = HttpUtils.makeGetRequest(new URL(endpoint), None).getOrElse("")
-  val json = org.json4s.jackson.JsonMethods.parse(jsonString)
+  val json = org.json4s.native.JsonMethods.parse(jsonString)
 
   val dataproviderTermLabel: Map[String, String] = (for {
     JArray(terms) <- json \ "terms"

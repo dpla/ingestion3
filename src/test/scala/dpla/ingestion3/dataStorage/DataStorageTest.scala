@@ -1,8 +1,8 @@
 package dpla.ingestion3.dataStorage
 
-import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpec
 
-class DataStorageTest extends FlatSpec {
+class DataStorageTest extends AnyFlatSpec {
 
   "parseS3Address" should "correctly parse an S3 protocol" in {
     val path = "s3a://my-bucket/foo/bar/"
@@ -16,7 +16,7 @@ class DataStorageTest extends FlatSpec {
 
   "parseS3Address" should "correctly parse an S3 prefix" in {
     val path = "s3a://my-bucket/foo/bar/"
-    assert(parseS3Address(path).prefix == Some("foo/bar"))
+    assert(parseS3Address(path).prefix === Some("foo/bar"))
   }
 
   "parseS3Address" should "throw exception in absence of s3 protocol" in {
@@ -31,11 +31,11 @@ class DataStorageTest extends FlatSpec {
 
   "S3Address.fullPath" should "compose full path" in {
     val address = S3Address("s3a", "my-bucket", Some("prefix"))
-    assert(S3Address.fullPath(address) == "s3a://my-bucket/prefix")
+    assert(S3Address.fullPath(address) === "s3a://my-bucket/prefix")
   }
 
   "S3Address.fullPath" should "handle leading/trailing slashes" in {
     val address = S3Address("s3a", "my-bucket/", Some("/prefix/"))
-    assert(S3Address.fullPath(address) == "s3a://my-bucket/prefix")
+    assert(S3Address.fullPath(address) === "s3a://my-bucket/prefix")
   }
 }

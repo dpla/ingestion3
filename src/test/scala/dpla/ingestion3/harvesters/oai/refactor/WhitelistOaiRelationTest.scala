@@ -2,9 +2,9 @@ package dpla.ingestion3.harvesters.oai.refactor
 
 import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.spark.sql.SparkSession
-import org.scalatest.{FlatSpec, FunSuite}
+import org.scalatest.flatspec.AnyFlatSpec
 
-class WhitelistOaiRelationTest extends FlatSpec with SharedSparkContext {
+class WhitelistOaiRelationTest extends AnyFlatSpec with SharedSparkContext {
 
   private val oaiConfiguration = OaiConfiguration(Map(
     "verb" -> "ListRecords",

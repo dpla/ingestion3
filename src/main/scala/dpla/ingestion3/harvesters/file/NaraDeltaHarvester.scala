@@ -2,7 +2,7 @@ package dpla.ingestion3.harvesters.file
 
 import java.io.{BufferedReader, File, FileInputStream}
 import java.util.zip.GZIPInputStream
-import com.databricks.spark.avro._
+
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.dataStorage.InputHelper
 import dpla.ingestion3.harvesters.file.FileFilters.GzFileFilter
@@ -218,7 +218,7 @@ class NaraDeltaHarvester(
       .getAbsolutePath
 
     val localSrcPath = new Path(naraTempFile)
-    val dfDeltaRecords = spark.read.avro(localSrcPath.toString)
+    val dfDeltaRecords = spark.read.format("avro").load(localSrcPath.toString)
 
     dfDeltaRecords
   }

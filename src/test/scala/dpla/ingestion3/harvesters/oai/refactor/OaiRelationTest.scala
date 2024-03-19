@@ -1,10 +1,11 @@
 package dpla.ingestion3.harvesters.oai.refactor
 
-import org.apache.spark.sql.SQLContext
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.BeforeAndAfter
 
-class OaiRelationTest extends FlatSpec with Matchers with BeforeAndAfter with MockFactory {
+class OaiRelationTest extends AnyFlatSpec with Matchers with BeforeAndAfter with MockFactory {
 
   private[this] val oaiMethods = mock[OaiMethods]
 

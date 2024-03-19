@@ -3,11 +3,13 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.utils.FlatFileIO
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
 import dpla.ingestion3.model._
+import org.scalatest.flatspec.AnyFlatSpec
+
 import scala.xml.{NodeSeq, XML}
 
-class CtMappingTest extends FlatSpec with BeforeAndAfter {
+class CtMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
   val shortName = "ct"

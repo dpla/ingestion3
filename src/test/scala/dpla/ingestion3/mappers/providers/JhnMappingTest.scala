@@ -3,11 +3,12 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.FlatFileIO
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.xml.{NodeSeq, XML}
 
-class JhnMappingTest extends FlatSpec with BeforeAndAfter {
+class JhnMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
   val shortName = "jhn"
   val xmlString: String = new FlatFileIO().readFileAsString("/jhn.xml")

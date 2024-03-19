@@ -3,12 +3,13 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.utils.FlatFileIO
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
 import dpla.ingestion3.model._
+import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.xml.{NodeSeq, XML}
 
-class OhioMappingTest extends FlatSpec with BeforeAndAfter {
+class OhioMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
   val shortName = "ohio"
@@ -17,7 +18,7 @@ class OhioMappingTest extends FlatSpec with BeforeAndAfter {
   val extractor = new OhioMapping
 
   it should "not use the provider shortname in minting IDs " in
-    assert(!extractor.useProviderName())
+    assert(!extractor.useProviderName)
 
   it should "extract the correct original identifier " in
     assert(extractor.originalId(xml) === Some("urn:ohiodplahub.library.ohio.gov:bgsu_12:oai:digitalgallery.bgsu.edu:14058"))

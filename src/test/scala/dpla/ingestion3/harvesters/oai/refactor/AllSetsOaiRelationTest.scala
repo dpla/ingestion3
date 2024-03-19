@@ -2,28 +2,28 @@ package dpla.ingestion3.harvesters.oai.refactor
 
 import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.spark.sql.SparkSession
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
-class AllSetsOaiRelationTest extends FlatSpec with SharedSparkContext {
+class AllSetsOaiRelationTest extends AnyFlatSpec with SharedSparkContext {
 
   private val oaiConfiguration = OaiConfiguration(Map("verb" -> "ListRecords"))
 
-  private val oaiMethods = new OaiMethods with Serializable {
+  private val oaiMethods: OaiMethods = new OaiMethods with Serializable {
 
-    override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage], removeDeleted: Boolean) = Seq(
+    override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage], removeDeleted: Boolean): Seq[Right[Nothing, OaiRecord]] = Seq(
       Right(OaiRecord("a", "document", Seq()))
     )
 
-    override def listAllRecordPages() =  ???
+    override def listAllRecordPages(): Seq[Nothing] = Seq()
 
-    override def listAllSetPages() = Seq(
+    override def listAllSetPages(): Seq[Right[Nothing, OaiPage]] = Seq(
       Right(OaiPage("1")),
       Right(OaiPage("2"))
     )
 
-    override def listAllRecordPagesForSet(setEither: Either[OaiError, OaiSet]) = listAllSetPages()
+    override def listAllRecordPagesForSet(setEither: Either[OaiError, OaiSet]): Seq[Right[Nothing, OaiPage]] = listAllSetPages()
 
-    override def parsePageIntoSets(pageEither: Either[OaiError, OaiPage]) = Seq(
+    override def parsePageIntoSets(pageEither: Either[OaiError, OaiPage]): Seq[Right[Nothing, OaiSet]] = Seq(
       Right(OaiSet("1", "")), Right(OaiSet("2", ""))
     )
   }

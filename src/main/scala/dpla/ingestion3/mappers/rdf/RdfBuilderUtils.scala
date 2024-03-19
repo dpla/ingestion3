@@ -55,7 +55,7 @@ trait RdfBuilderUtils extends RdfValueUtils with DefaultVocabularies {
     option match {
       case Some(URI(value)) => builder.add(predicate, iri(value))
       case Some(value: String) => builder.add(predicate, literal(value))
-      case _ => Unit
+      case _ => ()
     }
 
   def build(): Model = builder.build()

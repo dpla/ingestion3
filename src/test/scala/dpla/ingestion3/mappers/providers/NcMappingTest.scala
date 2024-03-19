@@ -4,11 +4,12 @@ import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.FlatFileIO
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.xml.{NodeSeq, XML}
 
-class NcMappingTest extends FlatSpec with BeforeAndAfter {
+class NcMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
   val shortName = "digitalnc"
@@ -18,7 +19,7 @@ class NcMappingTest extends FlatSpec with BeforeAndAfter {
   val extractor = new NcMapping
 
   it should "use the provider shortname in minting IDs " in
-    assert(extractor.useProviderName())
+    assert(extractor.useProviderName)
 
   it should "extract the correct original identifier" in {
     val expected = Some("urn:brevard.lib.unc.educampbell_p15834coll2:oai:cdm15834.contentdm.oclc.org:p15834coll2/9")

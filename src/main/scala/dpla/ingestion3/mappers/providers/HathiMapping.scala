@@ -7,7 +7,7 @@ import dpla.ingestion3.mappers.utils.{Document, JsonExtractor, MarcXmlMapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.{HttpUtils, Utils}
-import org.json4s.jackson.JsonMethods._
+import org.json4s.native.JsonMethods._
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 

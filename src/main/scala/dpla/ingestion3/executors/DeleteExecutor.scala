@@ -2,7 +2,6 @@ package dpla.ingestion3.executors
 
 import java.time.LocalDateTime
 
-import com.databricks.spark.avro._
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.model.{ModelConverter, jsonlRecord}
 import org.apache.log4j.Logger
@@ -49,7 +48,7 @@ trait DeleteExecutor extends Serializable {
     import spark.implicits._
     val sc = spark.sparkContext
 
-    val enrichedRows: DataFrame = spark.read.avro(dataIn)
+    val enrichedRows: DataFrame = spark.read.format("avro").load(dataIn)
 
     // delete items
     val deleteUris = deleteIds.split(",").map(id => s"http://dp.la/api/items/$id")

@@ -2,9 +2,6 @@ package dpla.ingestion3.executors
 
 import java.time.LocalDateTime
 
-import com.databricks.spark.avro._
-import dpla.eleanor.Schemata.Ebook
-import dpla.eleanor.profiles.EbookProfile
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
@@ -74,7 +71,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     import spark.implicits._
 
     // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
-    val oreAggregationEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
+    val oreAggregationEncoder = RowEncoder.encoderFor(model.sparkSchema)
 
     val dplaMap = new DplaMap()
 
@@ -93,7 +90,8 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     val enforceDuplicateIds: Boolean = getExtractorClass(shortName).getMapping.enforceDuplicateIds
 
-    val harvestedRecords: DataFrame = spark.read.avro(dataIn)
+    val harvestedRecords: DataFrame = spark.read.format("avro").load(dataIn)
+
 
     val attemptedCount: Long = harvestedRecords.count // evaluation
 
@@ -204,10 +202,10 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     // Results must be written before _LOGS.
     // Otherwise, spark interpret the `successResults' `outputPath' as
     // already existing, and will fail to write.
-    successResults.write.avro(outputPath)
+    successResults.write.format("avro").save(outputPath)
 
     // Get counts
-    val validRecordCount = spark.read.avro(outputPath).count // requires read-after-write consistency
+    val validRecordCount = spark.read.format("avro").load(outputPath).count // requires read-after-write consistency
 
     // Write manifest
     val manifestOpts: Map[String, String] = Map(
@@ -353,14 +351,3 @@ class DplaMap extends Serializable {
   }
 }
 
-// TODO Merge DplaMap and EbookMap --- duplicative for now
-/**
-  *
-  */
-class EbookMap extends Serializable {
-  def map(document: String, extractorClass: EbookProfile[_ >: NodeSeq with JValue]): Ebook = {
-    val oreAggregation = extractorClass.mapOreAggregation(document) // maps the OreAggregation piece of an ebook
-    val payloads = extractorClass.mapPayload(document) // maps the Payload piece of an ebook
-    Ebook(oreAggregation, payloads)
-  }
-}

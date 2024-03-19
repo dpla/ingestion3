@@ -20,9 +20,9 @@ class DcMapping extends XmlMapping with XmlExtractor {
       FormatTypeValuesBlockList.termList
 
   // ID minting functions
-  override def useProviderName(): Boolean = false // TODO confirm prefix
+  override def useProviderName: Boolean = false // TODO confirm prefix
 
-  override def getProviderName(): Option[String] = Some("dc") // TODO confirm prefix
+  override def getProviderName: Option[String] = Some("dc") // TODO confirm prefix
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")

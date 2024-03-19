@@ -12,9 +12,9 @@ import scala.xml._
 
 class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
   // ID minting functions
-  override def useProviderName(): Boolean = true
+  override def useProviderName: Boolean = true
 
-  override def getProviderName(): Option[String] = Some("orbis-cascade")
+  override def getProviderName: Option[String] = Some("orbis-cascade")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] = {
     val xml: Elem = data.get.asInstanceOf[Elem]
@@ -119,7 +119,7 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
     dataProvider
       .flatMap(extractStrings)
       .flatMap(uri => lookup.get(uri))
-      .map(nameOnlyAgent)
+      .map(nameOnlyAgent).toSeq
   }
 
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
@@ -128,7 +128,7 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
 
     rights
       .flatMap(extractStrings)
-      .map(URI)
+      .map(URI).toSeq
   }
 
   override def rights(data: Document[NodeSeq]): Seq[String] =
@@ -145,7 +145,7 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
       case None => Seq()
     }
 
-    srAbout.map(stringOnlyWebResource)
+    srAbout.map(stringOnlyWebResource).toSeq
   }
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
@@ -161,7 +161,7 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
       case None => Seq()
     }
 
-    preview.map(stringOnlyWebResource)
+    preview.map(stringOnlyWebResource).toSeq
   }
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent

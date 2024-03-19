@@ -19,9 +19,9 @@ class VirginiasMapping extends XmlMapping with XmlExtractor with IngestMessageTe
       FormatTypeValuesBlockList.termList
 
   // ID minting functions
-  override def useProviderName(): Boolean = false
+  override def useProviderName: Boolean = false
 
-  override def getProviderName(): Option[String] = Some("virginias")
+  override def getProviderName: Option[String] = Some("virginias")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "identifier")

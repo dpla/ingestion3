@@ -1,36 +1,38 @@
 package dpla.ingestion3.harvesters.oai.refactor
 
 import java.io.File
-
 import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.commons.io.FileUtils
 import org.apache.spark.sql.{Row, SparkSession}
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
-import scala.collection.JavaConversions._
+import java.nio.charset.Charset
+import scala.jdk.CollectionConverters._
 
-class AllRecordsOaiRelationTest extends FlatSpec with SharedSparkContext {
+
+class AllRecordsOaiRelationTest extends AnyFlatSpec with SharedSparkContext {
 
   private val oaiConfiguration = OaiConfiguration(Map("verb" -> "ListRecords"))
 
-  private val oaiMethods = new OaiMethods with Serializable {
+  private val oaiMethods: OaiMethods = new OaiMethods with Serializable {
 
-    override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage], removeDeleted: Boolean) = Seq(
+    override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage], removeDeleted: Boolean): Seq[Right[Nothing, OaiRecord]] = Seq(
       Right(OaiRecord("a", "document", Seq()))
     )
 
-    override def listAllRecordPages() = Seq(
+    override def listAllRecordPages(): Seq[Either[OaiError, OaiPage]] = Seq(
       Right(OaiPage("blah")),
       Right(OaiPage("blah2")),
       Right(OaiPage("blah3")),
       Left(OaiError("oops", None))
     )
 
-    override def listAllSetPages() = ???
 
-    override def listAllRecordPagesForSet(setEither: Either[OaiError, OaiSet]) = ???
+    override def listAllRecordPagesForSet(setEither: Either[OaiError, OaiSet]): IterableOnce[Either[OaiError, OaiPage]] = Seq()
 
-    override def parsePageIntoSets(pageEither: Either[OaiError, OaiPage]) = ???
+    override def parsePageIntoSets(pageEither: Either[OaiError, OaiPage]): IterableOnce[Either[OaiError, OaiSet]] = Seq()
+
+    def listAllSetPages(): IterableOnce[Either[OaiError, OaiPage]] = Seq()
   }
 
   private lazy val sqlContext = SparkSession.builder().getOrCreate().sqlContext
@@ -59,7 +61,7 @@ class AllRecordsOaiRelationTest extends FlatSpec with SharedSparkContext {
   it should "write OAI harvest results to a temp file" in {
     val tempFile = File.createTempFile("oai", "test")
     relation.cacheTempFile(tempFile)
-    val lines = FileUtils.readLines(tempFile).toIndexedSeq
+    val lines = FileUtils.readLines(tempFile, Charset.forName("UTF-8")).asScala.toIndexedSeq
     assert(lines(0) === "\"page\",\"blah\",\"\"")
     assert(lines(1) === "\"page\",\"blah2\",\"\"")
     assert(lines(2) === "\"page\",\"blah3\",\"\"")
@@ -70,7 +72,7 @@ class AllRecordsOaiRelationTest extends FlatSpec with SharedSparkContext {
 
   it should "parse a temp file and return an RDD of the contents as Row(Either[OaiError,OaiPage])" in {
     val tempFile = File.createTempFile("oai", "test")
-    FileUtils.writeLines(tempFile, Seq("page,blah,", "page,blah2,", "page,blah3,", "error,oops,None"))
+    FileUtils.writeLines(tempFile, Seq("page,blah,", "page,blah2,", "page,blah3,", "error,oops,None").asJava)
     val data = relation.tempFileToRdd(tempFile).collect().toIndexedSeq
     assert(data.size === 4)
     assert(data(0) === Row(None, OaiRecord("a", "document", Seq()), None))

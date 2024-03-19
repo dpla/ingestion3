@@ -2,14 +2,13 @@ package dpla.ingestion3.harvesters.file
 
 import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
 import java.util.zip.ZipInputStream
-import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.json4s.jackson.JsonMethods._
+import org.json4s.native.JsonMethods._
 import org.json4s.{JValue, _}
 
 import scala.util.{Failure, Success, Try}
@@ -164,6 +163,6 @@ class NYPLFileHarvester(spark: SparkSession,
     getAvroWriter.flush()
 
     // Read harvested data into Spark DataFrame.
-    spark.read.avro(tmpOutStr)
+    spark.read.format("avro").load(tmpOutStr)
   }
 }

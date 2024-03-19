@@ -1,18 +1,17 @@
 package dpla.ingestion3.utils
 
+import org.apache.commons.lang3.StringUtils
+
 import java.io.{File, PrintWriter}
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
 import java.util.Calendar
-
-import dpla.ingestion3.confs.i3Conf
-import org.apache.commons.lang.StringUtils
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
 import org.apache.spark.sql.{Dataset, Row, SaveMode}
 import org.json4s.JValue
-import org.json4s.jackson.JsonMethods._
+import org.json4s.native.JsonMethods._
 
 import scala.concurrent.duration._
 import scala.util.Try

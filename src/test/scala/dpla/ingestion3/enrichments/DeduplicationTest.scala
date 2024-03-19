@@ -3,9 +3,10 @@ package dpla.ingestion3.enrichments
 import dpla.ingestion3.data.MappedRecordsFixture
 import dpla.ingestion3.enrichments.normalizations.Deduplication
 import dpla.ingestion3.model._
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.{BeforeAndAfter}
 
-class DeduplicationTest extends FlatSpec with BeforeAndAfter {
+class DeduplicationTest extends AnyFlatSpec with BeforeAndAfter {
 
   val deDuplicationEnrichment = new Deduplication
 

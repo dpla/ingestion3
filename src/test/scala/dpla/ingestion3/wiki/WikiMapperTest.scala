@@ -1,14 +1,15 @@
 package dpla.ingestion3.wiki
 
 import dpla.ingestion3.model._
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 /**
   * Tests for validating wikimedia eligibility  
   */
 class MapperTest extends WikiMapper
 
-class WikiMapperTest extends FlatSpec with Matchers {
+class WikiMapperTest extends AnyFlatSpec with Matchers {
 
   val wiki = new MapperTest
 

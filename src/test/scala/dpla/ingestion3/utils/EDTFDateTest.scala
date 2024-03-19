@@ -1,10 +1,10 @@
 package dpla.ingestion3.utils
 
 import dpla.ingestion3.utils.EDTFDate.DateRangeStrings
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
 
-class EDTFDateTest extends FlatSpec {
+class EDTFDateTest extends AnyFlatSpec {
 
   case class tuple2(a: String, b: String)
   case class tuple3(a: String, b: String, c: String)

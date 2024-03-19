@@ -1,13 +1,14 @@
 package dpla.ingestion3.model
 
-import com.databricks.spark.avro.SchemaConverters
 import dpla.ingestion3.data.EnrichedRecordFixture
 import dpla.ingestion3.utils.FlatFileIO
 import org.apache.avro.Schema
+import org.apache.spark.sql.avro.SchemaConverters
 import org.apache.spark.sql.types.StructType
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
-class RowConverterTest extends FlatSpec with BeforeAndAfter {
+class RowConverterTest extends AnyFlatSpec with BeforeAndAfter {
 
   val uri1: URI = URI("http://hampsterdance.com")
   val uri2: URI = URI("http://zombo.com")

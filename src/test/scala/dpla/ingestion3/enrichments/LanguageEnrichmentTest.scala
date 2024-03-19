@@ -1,9 +1,10 @@
 package dpla.ingestion3.enrichments
 
 import dpla.ingestion3.model.SkosConcept
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
-class LanguageEnrichmentTest extends FlatSpec with BeforeAndAfter {
+class LanguageEnrichmentTest extends AnyFlatSpec with BeforeAndAfter {
 
   val languageEnrichment = new LanguageEnrichment
 

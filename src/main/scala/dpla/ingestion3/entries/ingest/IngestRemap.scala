@@ -4,7 +4,6 @@ import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
 import dpla.ingestion3.dataStorage.InputHelper
 import dpla.ingestion3.executors._
 import dpla.ingestion3.utils.{Emailer, Utils}
-//import dpla.ingestion3.entries.reports.ReporterMain._
 import org.apache.spark.SparkConf
 /**
   * Single entry point to run harvest, mapping, enrichment, indexing jobs and all reports.

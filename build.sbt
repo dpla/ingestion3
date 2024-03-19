@@ -2,11 +2,10 @@
 name := "ingestion3"
 organization := "dpla"
 version := "0.0.1"
-scalaVersion := "2.11.8"
+scalaVersion := "2.13.13"
+val SPARK_VERSION = "3.5.1"
 
 ThisBuild / Test / parallelExecution := false
-
-val HADOOP_VERSION = "2.10.1"
 
 assembly / assemblyMergeStrategy := {
   case "META-INF/MANIFEST.MF" => MergeStrategy.discard
@@ -14,58 +13,26 @@ assembly / assemblyMergeStrategy := {
 }
 
 libraryDependencies ++= Seq(
-   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-
-  /**
-    * The following dependencies enable S3 file writes:
-    *   spark 2.3.1
-    *   spark-avro 4.0.0
-    *   aws-java-sdk 1.7.4
-    *   hadoop-aws 2.7.6
-    */
-  "org.apache.spark" %% "spark-core" % "2.3.1" exclude("org.scalatest", "scalatest_2.11"),
-  "org.apache.spark" %% "spark-sql" % "2.3.1" exclude("org.scalatest", "scalatest_2.11"),
-  "org.apache.spark" %% "spark-mllib" % "2.3.1" exclude("org.scalatest", "scalatest_2.11"),
-  "org.apache.ant" % "ant" % "1.10.1",
-  "org.apache.hadoop" % "hadoop-aws" % HADOOP_VERSION,
-  "com.databricks" %% "spark-avro" % "4.0.0",
-  "org.json4s" %% "json4s-core" % "3.2.11" % "provided",
-  "org.json4s" %% "json4s-jackson" % "3.2.11" % "provided",
+  "org.apache.spark" %% "spark-core" % SPARK_VERSION,
+  "org.apache.spark" %% "spark-sql" % SPARK_VERSION,
+  "org.apache.spark" %% "spark-avro" % SPARK_VERSION,
+  "org.apache.spark" %% "spark-hadoop-cloud" % SPARK_VERSION,
+  "org.json4s" %% "json4s-core" % "4.0.7" % "provided",
+  "org.json4s" %% "json4s-native" % "4.0.7" % "provided",
   "org.eclipse.rdf4j" % "rdf4j" % "2.2",
   "org.eclipse.rdf4j" % "rdf4j-model" % "2.2",
-  "org.eclipse.rdf4j" % "rdf4j-rio-api" % "2.2",
-  "org.eclipse.rdf4j" % "rdf4j-rio-turtle" % "2.2",
-
-  // CdlHarvester depends
-  "org.apache.httpcomponents" % "httpclient" % "4.5.2",
-  "org.apache.httpcomponents" % "fluent-hc" % "4.5.2",
-  // Enricher dependencies
-  // TODO: reconcile with httpclient above.
-  "org.jsoup" % "jsoup" % "1.10.2",
-  "org.scalaj" %% "scalaj-http" % "2.3.0",
-  "org.eclipse.rdf4j" % "rdf4j-model" % "2.2",
-  "org.eclipse.rdf4j" % "rdf4j-rio-api" % "2.2",
-  "org.eclipse.rdf4j" % "rdf4j-rio-turtle" % "2.2",
-  "org.scalaj" % "scalaj-http_2.11" % "2.3.0",
-  "org.rogach" % "scallop_2.11" % "3.0.3",
-  //"org.scalamock" %% "scalamock-scalatest-support" % "3.6.0" % "test",
-  "org.scalamock" %% "scalamock" % "4.0.0" % "test",
-  "com.holdenkarau" %% "spark-testing-base" % "2.1.0_0.8.0" % "test",
+  "org.jsoup" % "jsoup" % "1.17.2",
+  "org.apache.commons" % "commons-text" % "1.11.0",
+  "org.rogach" % "scallop_2.13" % "5.1.0",
+  "org.scalamock" %% "scalamock" % "5.1.0" % "test",
+  "com.holdenkarau" %% "spark-testing-base" % "3.5.0_1.4.7" % "test",
   "com.typesafe" % "config" % "1.3.1",
-  "com.amazonaws" % "aws-java-sdk" % "1.7.4",
   "com.squareup.okhttp3" % "okhttp" % "3.8.0",
   "com.opencsv" % "opencsv" % "3.7",
-  "databricks" % "spark-corenlp" % "0.3.1-s_2.11",
-  "edu.stanford.nlp" % "stanford-corenlp" % "3.9.1" classifier "models",
-  // specify hadoop-mapreduce-client-core version to avoid Stopwatch/guava dependency conflicts
-  "org.apache.hadoop" % "hadoop-mapreduce-client-core" % "2.8.1",
-
-  // For Elasticsearch, see https://www.elastic.co/guide/en/elasticsearch/hadoop/current/install.html
-  // "org.elasticsearch" % "elasticsearch-spark-20_2.11" % "5.3.2", // Spark 2.0+, Scala 2.11+ | ingestion3
-  "org.elasticsearch" %% "elasticsearch-spark-20" % "7.3.2", // eleanor
-  // https://mvnrepository.com/artifact/net.lingala.zip4j/zip4j
   "net.lingala.zip4j" % "zip4j" % "2.11.5",
-  "javax.mail" % "mail" % "1.4.7"
+  "javax.mail" % "mail" % "1.4.7",
+  "org.apache.ant" % "ant" % "1.10.1",
+  "org.apache.ant" % "ant-compress" % "1.5"
 )
 
  resolvers += "SparkPackages" at "https://repos.spark-packages.org/"

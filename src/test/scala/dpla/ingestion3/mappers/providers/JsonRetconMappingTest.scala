@@ -4,11 +4,11 @@ import dpla.ingestion3.mappers.utils.{Document, Mapping}
 import dpla.ingestion3.model.{DcmiTypeCollection, DplaPlace, EdmAgent, EdmTimeSpan, EdmWebResource, LiteralOrUri, URI, nameOnlyAgent, nameOnlyConcept, nameOnlyPlace, stringOnlyTimeSpan, uriOnlyWebResource}
 import dpla.ingestion3.utils.FlatFileIO
 import org.json4s.JValue
-import org.json4s.jackson.JsonMethods
-import org.scalatest.FlatSpec
+import org.json4s.native.JsonMethods
 import org.json4s.JsonDSL._
+import org.scalatest.flatspec.AnyFlatSpec
 
-class JsonRetconMappingTest extends FlatSpec {
+class JsonRetconMappingTest extends AnyFlatSpec {
 
   def loadRecord(path: String): Document[JValue] = Document(
     JsonMethods.parse(

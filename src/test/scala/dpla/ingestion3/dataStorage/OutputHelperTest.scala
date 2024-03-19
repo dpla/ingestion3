@@ -1,15 +1,16 @@
 package dpla.ingestion3.dataStorage
 
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+
 import java.time.LocalDateTime
 
-import org.scalatest.{FlatSpec, Matchers}
-
-class OutputHelperTest extends FlatSpec with Matchers {
+class OutputHelperTest extends AnyFlatSpec with Matchers {
 
   val root = "s3a://my-bucket"
   val shortName = "foo"
   val activity = "harvest"
-  val dateTime = LocalDateTime.of(2018, 9, 10, 9, 57, 2)
+  val dateTime: LocalDateTime = LocalDateTime.of(2018, 9, 10, 9, 57, 2)
 
   val outputHelper = new OutputHelper(root, shortName, activity, dateTime)
 

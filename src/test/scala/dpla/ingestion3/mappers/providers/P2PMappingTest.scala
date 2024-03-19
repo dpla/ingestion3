@@ -3,11 +3,12 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model._
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.xml.NodeSeq
 
-class P2PMappingTest extends FlatSpec with BeforeAndAfter {
+class P2PMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
 

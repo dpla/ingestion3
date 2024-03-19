@@ -14,7 +14,7 @@ class PssHarvester(spark: SparkSession,
 
   override def mimeType: String = "application_json"
 
-  override def localHarvest: DataFrame = {
+  override def localHarvest(): DataFrame = {
 
     val endpoint = conf.harvest.endpoint
       .getOrElse(throw new RuntimeException("No endpoint specified."))
@@ -34,5 +34,5 @@ class PssHarvester(spark: SparkSession,
       .withColumn("mimetype", lit(mimeType))
   }
 
-  override def cleanUp(): Unit = Unit
+  override def cleanUp(): Unit = ()
 }

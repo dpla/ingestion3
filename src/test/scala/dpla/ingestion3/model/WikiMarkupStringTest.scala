@@ -1,9 +1,9 @@
 package dpla.ingestion3.model
 
 import dpla.ingestion3.data.EnrichedRecordFixture
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpec
 
-class WikiMarkupStringTest extends FlatSpec {
+class WikiMarkupStringTest extends AnyFlatSpec {
 
   "buildWikiMarkup" should "generate valid wiki markup for rightstatements.org value"  in {
     val markup: String = buildWikiMarkup(EnrichedRecordFixture.wikimediaEntrichedRecord)

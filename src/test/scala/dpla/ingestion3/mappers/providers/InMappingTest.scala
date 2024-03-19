@@ -4,11 +4,12 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.FlatFileIO
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.xml.{NodeSeq, XML}
 
-class InMappingTest extends FlatSpec with BeforeAndAfter {
+class InMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
   val shortName = "in"
   val xmlString: String = new FlatFileIO().readFileAsString("/in.xml")

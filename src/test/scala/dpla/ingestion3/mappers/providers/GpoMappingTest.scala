@@ -4,11 +4,12 @@ import dpla.ingestion3.mappers.utils.{Document, MappingException}
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.FlatFileIO
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.xml.{NodeSeq, XML}
 
-class GpoMappingTest extends FlatSpec with BeforeAndAfter {
+class GpoMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
   val shortName = "gpo"

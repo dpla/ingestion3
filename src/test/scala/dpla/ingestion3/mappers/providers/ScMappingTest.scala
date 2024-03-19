@@ -3,11 +3,12 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.FlatFileIO
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.xml.{NodeSeq, XML}
 
-class ScMappingTest extends FlatSpec with BeforeAndAfter {
+class ScMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
   val shortName = "scdl"
   val xmlString: String = new FlatFileIO().readFileAsString("/scdl.xml")

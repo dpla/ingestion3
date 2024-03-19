@@ -5,12 +5,13 @@ import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model.{nameOnlyPlace, _}
 import dpla.ingestion3.utils.FlatFileIO
 import org.json4s.JsonAST.JValue
-import org.json4s.jackson.JsonMethods.parse
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.json4s.native.JsonMethods.parse
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.language.postfixOps
 
-class NYPLMappingTest extends FlatSpec with BeforeAndAfter {
+class NYPLMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
   val shortName = Some("nypl")

@@ -2,16 +2,16 @@ package dpla.ingestion3
 
 import java.text.SimpleDateFormat
 import java.util.{Calendar, TimeZone}
-import com.databricks.spark.avro.SchemaConverters
 import dpla.ingestion3.utils.FlatFileIO
 import dpla.ingestion3.wiki.WikiUri
 import org.apache.avro.Schema
 import org.apache.spark.sql.types.StructType
-import org.json4s
-import org.json4s.JsonAST._
+import org.apache.spark.sql.avro.SchemaConverters
+
+import org.json4s.native.JsonMethods._
 import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods
-import org.json4s.jackson.JsonMethods._
+import org.json4s._
+import org.json4s.native.JsonMethods
 import org.json4s.prefs.EmptyValueStrategy
 import org.json4s.{DefaultFormats, Formats}
 
@@ -222,7 +222,7 @@ package object model {
         ("tags" -> record.tags.map {_.toString})
       )
 
-    compact(render(jobj)(formats))
+    compact(render(jobj))
   }
 
   /**
@@ -362,6 +362,6 @@ package object model {
   lazy val sparkSchema: StructType = SchemaConverters.toSqlType(avroSchema).dataType.asInstanceOf[StructType]
 
   def toJsonString(json: JValue): String = JsonMethods.compact(JsonMethods.render(json))
-  def fromJsonString(jsonString: String): json4s.JValue = JsonMethods.parse(jsonString)
+  def fromJsonString(jsonString: String): JValue = JsonMethods.parse(jsonString)
 
 }

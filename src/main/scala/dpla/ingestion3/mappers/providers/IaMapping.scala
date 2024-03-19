@@ -24,7 +24,7 @@ class IaMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
     val candidateDataProviders =
       extractStrings(unwrap(data) \\ "contributor")
         .map(nameOnlyAgent)
-    if (candidateDataProviders isEmpty)
+    if (candidateDataProviders.isEmpty)
       Seq(nameOnlyAgent("Internet Archive"))
     else
       candidateDataProviders

@@ -8,12 +8,11 @@ import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
-import org.json4s.jackson.JsonMethods._
+import org.json4s.native.JsonMethods._
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 import scala.xml.XML
-import com.databricks.spark.avro._
 
 /**
   * Class for harvesting records from the Library of Congress's API
@@ -38,7 +37,7 @@ class LocHarvester(spark: SparkSession,
   /**
     * Entry method for invoking LC harvest
     */
-  override def localHarvest: DataFrame = {
+  override def localHarvest(): DataFrame = {
     implicit val formats = DefaultFormats
     // Get sets from conf
     val collections = conf.harvest.setlist
@@ -78,6 +77,8 @@ class LocHarvester(spark: SparkSession,
             logError(ApiError("Response body is empty", src))
             continueHarvest = false
         }
+        case _ => throw new RuntimeException("Not sure how we got here!")
+
       }
     })
     // Log results of item gathering
@@ -86,13 +87,13 @@ class LocHarvester(spark: SparkSession,
       harvestLogger.info(s"${itemUrls.distinct.size} distinct values. " +
         s"${itemUrls.size-itemUrls.distinct.size} duplicates}")
     // Fetch items
-    val locFetched = fetchLocRecords(itemUrls.distinct)
+    val locFetched = fetchLocRecords(itemUrls.distinct.toSeq)
 
     // @see ApiHarvester
     saveOutAll(locFetched)
 
     // Read harvested data into Spark DataFrame and return.
-    spark.read.avro(tmpOutStr)
+    spark.read.format("avro").load(tmpOutStr)
   }
 
   /**

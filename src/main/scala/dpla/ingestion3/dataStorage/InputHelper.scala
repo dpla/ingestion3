@@ -1,7 +1,8 @@
 package dpla.ingestion3.dataStorage
 
-import java.io.File
+import com.amazonaws.services.s3.AmazonS3ClientBuilder
 
+import java.io.File
 import com.amazonaws.services.s3.model.{ObjectListing, S3ObjectSummary}
 
 import scala.annotation.tailrec
@@ -9,6 +10,8 @@ import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 object InputHelper {
+
+  private val s3Client = AmazonS3ClientBuilder.defaultClient()
 
   /**
     * Check if a given local or S3 path is a valid activity path.
@@ -89,10 +92,7 @@ object InputHelper {
     val fullPath = S3Address.fullPath(address) + s"/$folder"
 
     // Ensure that the return value is a valid activity path.
-    isActivityPath(fullPath) match {
-      case true => Some(fullPath)
-      case false => None
-    }
+    Some(fullPath).filter(isActivityPath)
   }
 
   /**
@@ -107,13 +107,13 @@ object InputHelper {
     @tailrec
     def lastBatch(ol: ObjectListing): ObjectListing = {
       // If there are more results, `ol.isTruncated' will return `true'
-      if (ol.isTruncated) lastBatch(s3client.listNextBatchOfObjects(ol))
+      if (ol.isTruncated) lastBatch(s3Client.listNextBatchOfObjects(ol))
       else ol
     }
 
     val bucket = address.bucket
     val prefix = address.prefix.getOrElse("")
-    val firstBatch: ObjectListing = s3client.listObjects(bucket, prefix)
+    val firstBatch: ObjectListing = s3Client.listObjects(bucket, prefix)
     lastBatch(firstBatch)
   }
 

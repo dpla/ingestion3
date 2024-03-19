@@ -22,9 +22,9 @@ class MaMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       FormatTypeValuesBlockList.termList
 
   // ID minting functions
-  override def useProviderName(): Boolean = true
+  override def useProviderName: Boolean = true
 
-  override def getProviderName(): Option[String] = Some("bpl") // boston public library
+  override def getProviderName: Option[String] = Some("bpl") // boston public library
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")

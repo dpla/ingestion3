@@ -2,9 +2,8 @@ package dpla.ingestion3.executors
 
 import java.io.File
 import java.time.LocalDateTime
-
-import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.enrichments.EnrichmentDriver
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
@@ -12,11 +11,11 @@ import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
 import dpla.ingestion3.reports.PrepareEnrichmentReport
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.Utils
-import dpla.ingestion3.dataStorage.OutputHelper
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Encoders, Row, SparkSession}
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
+import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
@@ -38,9 +37,6 @@ trait EnrichExecutor extends Serializable {
                         shortName: String,
                         logger: Logger,
                         i3conf: i3Conf): String = {
-
-    // Verify that twofishes is reachable
-    // Utils.pingTwofishes(i3conf)
 
     // This start time is used for documentation and output file naming.
     val startDateTime = LocalDateTime.now
@@ -66,12 +62,11 @@ trait EnrichExecutor extends Serializable {
 
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
-    val dplaMapDataRowEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
-    val tupleRowStringEncoder: ExpressionEncoder[(Row, String)] =
-      ExpressionEncoder.tuple(RowEncoder(model.sparkSchema), ExpressionEncoder())
+    val dplaMapDataRowEncoder: Encoder[Row] = RowEncoder.encoderFor(model.sparkSchema)
+    val tupleRowStringEncoder: Encoder[(Row, String)] = ExpressionEncoder()
 
     // Load the mapped records
-    val mappedRows: DataFrame = spark.read.avro(dataIn)
+    val mappedRows: DataFrame = spark.read.format("avro").load(dataIn)
 
     // Wrapping an instance of EnrichmentDriver in an object allows it to be
     // used in distributed operations. Without the object wrapper, it throws
@@ -83,9 +78,8 @@ trait EnrichExecutor extends Serializable {
     }
 
     // Create the enrichment outside map function so it is not recreated for each record.
-    // If the Twofishes host is not reachable it will die hard
     // Transformation
-    val enrichResults: Dataset[(Row, String)] = mappedRows.map(row => {
+    val enrichResults = mappedRows.map(row => {
       val driver = SharedDriver.get
       attemptedCount.add(1)
       Try{ ModelConverter.toModel(row) } match {

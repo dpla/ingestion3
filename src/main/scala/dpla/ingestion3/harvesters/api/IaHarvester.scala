@@ -2,7 +2,6 @@ package dpla.ingestion3.harvesters.api
 
 import java.net.URL
 
-import com.databricks.spark.avro._
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.utils.HttpUtils
 import org.apache.http.client.utils.URIBuilder
@@ -10,7 +9,7 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
 import org.json4s.JsonAST.JValue
-import org.json4s.jackson.JsonMethods.{compact, parse, render}
+import org.json4s.native.JsonMethods.{compact, parse, render}
 
 import scala.util.{Failure, Success, Try}
 
@@ -97,10 +96,11 @@ class IaHarvester (spark: SparkSession,
                 s"Body: ${src.text}")
               continueHarvest = false
           }
+        case _ => throw new RuntimeException("Not sure how we got here!")
       }
     })
 
-    spark.read.avro(tmpOutStr)
+    spark.read.format("avro").load(tmpOutStr)
   }
 
   /**

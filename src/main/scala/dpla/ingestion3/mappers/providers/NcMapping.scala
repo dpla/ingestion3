@@ -20,9 +20,9 @@ class NcMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       FormatTypeValuesBlockList.termList
 
   // ID minting functions
-  override def useProviderName(): Boolean = true
+  override def useProviderName: Boolean = true
 
-  override def getProviderName(): Option[String] = Some("digitalnc")
+  override def getProviderName: Option[String] = Some("digitalnc")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
