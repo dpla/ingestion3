@@ -2,8 +2,8 @@ package dpla.ingestion3.harvesters.pss
 
 import org.apache.log4j.LogManager
 import org.json4s.{JValue, JArray, DefaultFormats}
-import org.json4s.native.JsonMethods._
-import org.json4s.native.Serialization
+import org.json4s.jackson.JsonMethods._
+import org.json4s.jackson.Serialization
 
 /*
  * This class parses primary source set response data during harvest.

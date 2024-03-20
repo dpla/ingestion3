@@ -37,7 +37,8 @@ class TxMappingTest extends AnyFlatSpec with BeforeAndAfter {
       </record>
 
     val expected = Seq("Contributor text").map(nameOnlyAgent)
-    assert(extractor.contributor(Document(xml)) === expected)
+    val actual = extractor.contributor(Document(xml))
+    assert(actual === expected)
   }
 
   it should "extract the correct creator" in {

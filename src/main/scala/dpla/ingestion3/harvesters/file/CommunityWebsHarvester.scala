@@ -8,7 +8,7 @@ import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.json4s.native.JsonMethods._
+import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
 
 import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}

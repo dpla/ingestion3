@@ -6,7 +6,7 @@ import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.mappers.{JsonMapper, Mapper, XmlMapper}
 import dpla.ingestion3.model.OreAggregation
 import org.json4s.JValue
-import org.json4s.jackson.JsonMethods.parse
+import org.json4s.jackson.JsonMethods._
 
 import scala.xml.NodeSeq
 

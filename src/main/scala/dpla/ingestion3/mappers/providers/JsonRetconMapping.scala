@@ -7,7 +7,7 @@ import org.json4s
 import org.json4s.JValue
 import org.json4s.JsonAST.{JArray, JObject, JString}
 import org.json4s.JsonDSL._
-import org.json4s.native.JsonMethods.{compact, render}
+import org.json4s.jackson.JsonMethods.{compact, render}
 
 abstract class JsonRetconMapping extends JsonMapping with JsonExtractor {
 

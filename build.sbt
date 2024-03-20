@@ -17,8 +17,6 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % SPARK_VERSION,
   "org.apache.spark" %% "spark-avro" % SPARK_VERSION,
   "org.apache.spark" %% "spark-hadoop-cloud" % SPARK_VERSION,
-  "org.json4s" %% "json4s-core" % "4.0.7" % "provided",
-  "org.json4s" %% "json4s-native" % "4.0.7" % "provided",
   "org.eclipse.rdf4j" % "rdf4j" % "2.2",
   "org.eclipse.rdf4j" % "rdf4j-model" % "2.2",
   "org.jsoup" % "jsoup" % "1.17.2",
@@ -31,7 +29,7 @@ libraryDependencies ++= Seq(
   "com.opencsv" % "opencsv" % "3.7",
   "net.lingala.zip4j" % "zip4j" % "2.11.5",
   "javax.mail" % "mail" % "1.4.7",
-  "org.apache.ant" % "ant" % "1.10.1",
+  "org.apache.ant" % "ant" % "1.8.0",
   "org.apache.ant" % "ant-compress" % "1.5"
 )
 

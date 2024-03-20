@@ -11,7 +11,7 @@ import java.util.Calendar
 import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
 import org.apache.spark.sql.{Dataset, Row, SaveMode}
 import org.json4s.JValue
-import org.json4s.native.JsonMethods._
+import org.json4s.jackson.JsonMethods._
 
 import scala.concurrent.duration._
 import scala.util.Try

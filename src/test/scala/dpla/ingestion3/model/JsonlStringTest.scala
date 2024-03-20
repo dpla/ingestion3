@@ -3,7 +3,7 @@ package dpla.ingestion3.model
 
 import dpla.ingestion3.data.EnrichedRecordFixture
 import org.json4s._
-import org.json4s.native.JsonMethods._
+import org.json4s.jackson.JsonMethods._
 import org.scalatest.flatspec.AnyFlatSpec
 
 class JsonlStringTest extends AnyFlatSpec {
@@ -36,7 +36,7 @@ class JsonlStringTest extends AnyFlatSpec {
       val jvalue = parse(s)
       val subjectExactMatch = jvalue \ "_source" \ "sourceResource" \ "subject" \ "exactMatch"
       assert(subjectExactMatch.isInstanceOf[JArray])
-      assert(compact(render(subjectExactMatch(0))) == "\"http://loc.gov/id/123\"")
+      assert(compact(render(subjectExactMatch(0))) == "[\"http://loc.gov/id/123\"]")
     }
 
   it should "render a field that requires a map() on a sequence" in {
@@ -63,8 +63,9 @@ class JsonlStringTest extends AnyFlatSpec {
     // Those fields that are optional are 0-n, so they will be arrays.
     val s: String = jsonlRecord(EnrichedRecordFixture.minimalEnrichedRecord)
     val jvalue = parse(s)
+    val outputString = compact(render(jvalue \ "_source" \ "sourceResource" \ "collection"))
     assert(
-      compact(render(jvalue \ "_source" \ "sourceResource" \ "collection")) == ""
+       outputString == ""
     )
   }
 

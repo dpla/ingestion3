@@ -5,7 +5,7 @@ import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.FlatFileIO
 import org.json4s.JsonAST.JValue
-import org.json4s.native.JsonMethods.parse
+import org.json4s.jackson.JsonMethods.parse
 import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpec
 

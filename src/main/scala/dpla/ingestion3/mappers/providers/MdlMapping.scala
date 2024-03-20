@@ -10,7 +10,7 @@ import dpla.ingestion3.utils.Utils
 import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
-import org.json4s.native.JsonMethods.parse
+import org.json4s.jackson.JsonMethods.parse
 
 import scala.util.{Success, Try}
 

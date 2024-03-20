@@ -6,7 +6,7 @@ import dpla.ingestion3.model._
 import dpla.ingestion3.utils.FlatFileIO
 import org.json4s.JsonAST.{JNull, JObject}
 import org.json4s._
-import org.json4s.native.JsonMethods._
+import org.json4s.jackson.JsonMethods._
 import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpec
 
@@ -87,7 +87,7 @@ class IaMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct title and vol" in {
-    val json = org.json4s.native.JsonMethods.parse(
+    val json = parse(
       """{
         |  "volume" : "vol 1.",
         |  "title" : "The art of dying well"
@@ -98,7 +98,7 @@ class IaMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct title and vol and issue" in {
-    val json = org.json4s.native.JsonMethods.parse(
+    val json = parse(
       """{
         |  "issue" : "issue",
         |  "volume" : "vol 1.",
@@ -110,7 +110,7 @@ class IaMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct multiple title and vol and issue" in {
-    val json = org.json4s.native.JsonMethods.parse(
+    val json = parse(
       """{
         |  "issue" : "issue",
         |  "volume" : "vol 1.",
@@ -122,7 +122,7 @@ class IaMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct multiple title and multiple vol and issue" in {
-    val json = org.json4s.native.JsonMethods.parse(
+    val json = parse(
       """{
         |  "issue" : "issue",
         |  "volume" : ["vol 1.", "vol 2."],
@@ -134,7 +134,7 @@ class IaMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct multiple title and multiple vol and multiple issue" in {
-    val json = org.json4s.native.JsonMethods.parse(
+    val json = parse(
       """{
         |  "issue" : ["issue 1", "issue 1"],
         |  "volume" : ["vol 1.", "vol 2."],

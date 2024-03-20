@@ -7,7 +7,7 @@ import dpla.ingestion3.harvesters.file.FileFilters.CsvFileFilter
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.json4s.native.JsonMethods._
+import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
 
 import scala.io.Source

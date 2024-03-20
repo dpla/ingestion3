@@ -5,7 +5,7 @@ import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.FlatFileIO
 import org.json4s.JsonAST.JValue
-import org.json4s.native.JsonMethods._
+import org.json4s.jackson.JsonMethods._
 import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpec
 

@@ -8,7 +8,7 @@ import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
-import org.json4s.native.JsonMethods._
+import org.json4s.jackson.JsonMethods._
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}

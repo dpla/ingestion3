@@ -10,7 +10,7 @@ import dpla.ingestion3.utils.{HttpUtils, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
-import org.json4s.native.JsonMethods.{compact, parse, render}
+import org.json4s.jackson.JsonMethods.{compact, parse, render}
 
 import scala.util.{Failure, Success}
 
