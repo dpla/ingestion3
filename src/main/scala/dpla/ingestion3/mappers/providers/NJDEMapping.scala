@@ -1,6 +1,9 @@
 package dpla.ingestion3.mappers.providers
 
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.normalizations.filters.{
+  DigitalSurrogateBlockList,
+  FormatTypeValuesBlockList
+}
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
@@ -11,8 +14,10 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
-
-class NJDEMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
+class NJDEMapping
+    extends XmlMapping
+    with XmlExtractor
+    with IngestMessageTemplates {
 
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
@@ -27,7 +32,9 @@ class NJDEMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
     extractString(data \ "header" \ "identifier").map(_.trim)
 
   // SourceResource mapping
-  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
+  override def collection(
+      data: Document[NodeSeq]
+  ): ZeroToMany[DcmiTypeCollection] =
     (metadata(data) \\ "isPartOf")
       .flatMap(extractStrings)
       .map(nameOnlyCollection)
@@ -75,7 +82,8 @@ class NJDEMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
     extractStrings(metadata(data) \\ "type")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(metadata(data) \\ "dataProvider")
@@ -91,7 +99,8 @@ class NJDEMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
       .filter(Utils.isUrl)
       .map(stringOnlyWebResource)
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(metadata(data) \\ "preview")
@@ -100,7 +109,9 @@ class NJDEMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   // Helper method
   def agent = EdmAgent(
@@ -108,5 +119,7 @@ class NJDEMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
     uri = Some(URI("http://dp.la/api/contributor/njde"))
   )
 
-  protected def metadata(data: Document[NodeSeq]): Document[NodeSeq] = Document(data)
+  protected def metadata(data: Document[NodeSeq]): Document[NodeSeq] = Document(
+    data
+  )
 }

@@ -12,9 +12,10 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
-
-class InMapping extends XmlMapping with XmlExtractor
-  with IngestMessageTemplates {
+class InMapping
+    extends XmlMapping
+    with XmlExtractor
+    with IngestMessageTemplates {
 
   override def useProviderName: Boolean = true
 
@@ -23,7 +24,8 @@ class InMapping extends XmlMapping with XmlExtractor
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
 
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "provenance")
@@ -34,32 +36,40 @@ class InMapping extends XmlMapping with XmlExtractor
       .map(_.stripSuffix(";"))
       .map(URI)
 
-    val accessRights = extractStrings(data \ "metadata" \ "qualifieddc" \ "accessRights")
-      .filter(_.startsWith("http"))
-      .map(_.stripSuffix(";"))
-      .map(URI)
+    val accessRights =
+      extractStrings(data \ "metadata" \ "qualifieddc" \ "accessRights")
+        .filter(_.startsWith("http"))
+        .map(_.stripSuffix(";"))
+        .map(URI)
 
     rights ++ accessRights
   }
 
-  override def intermediateProvider(data: Document[NodeSeq]): ZeroToOne[EdmAgent] = {
-    extractStrings(data \ "metadata" \ "qualifieddc" \ "mediator").mkString(": ") match {
+  override def intermediateProvider(
+      data: Document[NodeSeq]
+  ): ZeroToOne[EdmAgent] = {
+    extractStrings(data \ "metadata" \ "qualifieddc" \ "mediator")
+      .mkString(": ") match {
       case n if n.nonEmpty => Some(nameOnlyAgent(n))
-      case _ => None
+      case _               => None
     }
   }
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    extractStrings(data \ "metadata" \ "qualifieddc" \ "identifier").map(stringOnlyWebResource)
+    extractStrings(data \ "metadata" \ "qualifieddc" \ "identifier")
+      .map(stringOnlyWebResource)
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   // SourceResource
 
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "alternative")
 
-  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
+  override def collection(
+      data: Document[NodeSeq]
+  ): ZeroToMany[DcmiTypeCollection] =
     extractStrings(data \ "metadata" \ "qualifieddc" \ "isPartOf")
       .map(nameOnlyCollection)
 
@@ -90,7 +100,8 @@ class InMapping extends XmlMapping with XmlExtractor
     val qdcType = extractStrings(data \ "metadata" \ "qualifieddc" \ "type")
       .flatMap(_.splitAtDelimiter(";"))
 
-    (medium ++ qdcType).map(_.applyBlockFilter(DigitalSurrogateBlockList.termList))
+    (medium ++ qdcType)
+      .map(_.applyBlockFilter(DigitalSurrogateBlockList.termList))
       .filter(_.nonEmpty)
   }
 
@@ -140,7 +151,9 @@ class InMapping extends XmlMapping with XmlExtractor
       .flatMap(_.splitAtDelimiter(";"))
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   def agent = EdmAgent(
     name = Some("Indiana Memory"),

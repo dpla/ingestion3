@@ -5,15 +5,12 @@ import dpla.ingestion3.executors.HarvestExecutor
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
 
-/**
-  * Entry point for running a harvest.
+/** Entry point for running a harvest.
   *
-  * Expects three command-line args:
-  *   --output  Path to output directory or S3 bucket
-  *   --conf    Path to conf file
-  *   --name    Provider short name
-  *   --sparkMaster optional parameter that overrides a --master param submitted
-  *                 via spark-submit (e.g. local[*])
+  * Expects three command-line args: --output Path to output directory or S3
+  * bucket --conf Path to conf file --name Provider short name --sparkMaster
+  * optional parameter that overrides a --master param submitted via
+  * spark-submit (e.g. local[*])
   */
 object HarvestEntry extends HarvestExecutor {
 
@@ -41,7 +38,7 @@ object HarvestEntry extends HarvestExecutor {
 
     val sparkConf = sparkMaster match {
       case Some(m) => baseConf.setMaster(m)
-      case None => baseConf
+      case None    => baseConf
     }
 
     // Execute harvest.

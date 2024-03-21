@@ -1,7 +1,11 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.normalizations.filters.{
+  DigitalSurrogateBlockList,
+  ExtentIdentificationList,
+  FormatTypeValuesBlockList
+}
 import dpla.ingestion3.mappers.utils.{Document, XmlMapping, XmlExtractor}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany, ZeroToOne}
@@ -12,9 +16,10 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
-
-class OhioMapping extends XmlMapping with XmlExtractor
-  with IngestMessageTemplates {
+class OhioMapping
+    extends XmlMapping
+    with XmlExtractor
+    with IngestMessageTemplates {
 
   // ID minting functions
   override def useProviderName: Boolean = false
@@ -58,10 +63,13 @@ class OhioMapping extends XmlMapping with XmlExtractor
   override def format(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \ "metadata" \\ "format")
       .flatMap(_.splitAtDelimiter(";"))
-      .map(_.applyBlockFilter(
-        DigitalSurrogateBlockList.termList ++
-          FormatTypeValuesBlockList.termList ++
-          ExtentIdentificationList.termList))
+      .map(
+        _.applyBlockFilter(
+          DigitalSurrogateBlockList.termList ++
+            FormatTypeValuesBlockList.termList ++
+            ExtentIdentificationList.termList
+        )
+      )
       .filter(_.nonEmpty)
 
   override def identifier(data: Document[NodeSeq]): Seq[String] =
@@ -86,12 +94,14 @@ class OhioMapping extends XmlMapping with XmlExtractor
       .map(eitherStringOrUri)
 
   override def rights(data: Document[NodeSeq]): Seq[String] =
-    (data \ "metadata" \\ "rights").map(r => {
-      r.prefix match {
-        case "dc" => r.text
-        case _ => ""
-      }
-    }).filter(_.nonEmpty)
+    (data \ "metadata" \\ "rights")
+      .map(r => {
+        r.prefix match {
+          case "dc" => r.text
+          case _    => ""
+        }
+      })
+      .filter(_.nonEmpty)
 
   override def rightsHolder(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "rightsHolder")
@@ -110,17 +120,21 @@ class OhioMapping extends XmlMapping with XmlExtractor
     extractStrings(data \ "metadata" \\ "type")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "dataProvider")
       .map(nameOnlyAgent)
 
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
-    (data \ "metadata" \\ "rights").map(r => r.prefix match {
-      case "edm" => r.text
-      case _ => ""
-    })
+    (data \ "metadata" \\ "rights")
+      .map(r =>
+        r.prefix match {
+          case "edm" => r.text
+          case _     => ""
+        }
+      )
       .filter(_.nonEmpty)
       .map(URI)
   }
@@ -133,7 +147,8 @@ class OhioMapping extends XmlMapping with XmlExtractor
     extractStrings(data \ "metadata" \\ "isShownAt")
       .map(stringOnlyWebResource)
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "metadata" \\ "preview")
@@ -142,7 +157,9 @@ class OhioMapping extends XmlMapping with XmlExtractor
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   // Helper method
   def agent = EdmAgent(
@@ -150,8 +167,7 @@ class OhioMapping extends XmlMapping with XmlExtractor
     uri = Some(URI("http://dp.la/api/contributor/ohio"))
   )
 
-  /**
-    * Extracts values from format field and returns values that appear to be
+  /** Extracts values from format field and returns values that appear to be
     * extent statements
     *
     * @param data

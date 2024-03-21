@@ -2,15 +2,22 @@ package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
-import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
+import dpla.ingestion3.model.DplaMapData.{
+  AtLeastOne,
+  ExactlyOne,
+  ZeroToMany,
+  ZeroToOne
+}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
 
-
-class CommunityWebsMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
+class CommunityWebsMapping
+    extends JsonMapping
+    with JsonExtractor
+    with IngestMessageTemplates {
   // ID minting functions
   override def useProviderName: Boolean = true
 
@@ -23,7 +30,8 @@ class CommunityWebsMapping extends JsonMapping with JsonExtractor with IngestMes
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data) \ "data_provider").map(nameOnlyAgent)
 
-  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \ "rights_statement")
@@ -49,7 +57,9 @@ class CommunityWebsMapping extends JsonMapping with JsonExtractor with IngestMes
     extractStrings(unwrap(data) \ "creator")
       .map(nameOnlyAgent)
 
-  override def collection(data: Document[JValue]): ZeroToMany[DcmiTypeCollection] =
+  override def collection(
+      data: Document[JValue]
+  ): ZeroToMany[DcmiTypeCollection] =
     extractStrings(unwrap(data) \ "collection")
       .map(nameOnlyCollection)
 

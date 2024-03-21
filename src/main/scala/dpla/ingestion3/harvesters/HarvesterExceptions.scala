@@ -1,7 +1,6 @@
 package dpla.ingestion3.harvesters
 
-/**
-  * Harvester Exceptions
+/** Harvester Exceptions
   */
 object HarvesterExceptions {
 

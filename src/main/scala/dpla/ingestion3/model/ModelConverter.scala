@@ -7,13 +7,15 @@ import org.json4s.jackson.JsonMethods.parse
 
 import scala.util.{Failure, Success, Try}
 
-/**
-  * Responsible for taking a Row representing a structure of fields that represents a DplaMapData in Avro or other
-  * lower-level Spark output formats and turning it back into a DplaMapData.
+/** Responsible for taking a Row representing a structure of fields that
+  * represents a DplaMapData in Avro or other lower-level Spark output formats
+  * and turning it back into a DplaMapData.
   *
-  * PLEASE NOTE: The field index values represented here are significant and cannot be changed without a concurrent
-  * effort to rewrite all the existing data stored in our master dataset, and a matching change to RowConverter, which
-  * is responsible for converting a DplaMapData to a Row and represents the opposite of this transformation.
+  * PLEASE NOTE: The field index values represented here are significant and
+  * cannot be changed without a concurrent effort to rewrite all the existing
+  * data stored in our master dataset, and a matching change to RowConverter,
+  * which is responsible for converting a DplaMapData to a Row and represents
+  * the opposite of this transformation.
   */
 
 object ModelConverter {
@@ -33,35 +35,39 @@ object ModelConverter {
     sidecar = row.getString(11),
     messages = toMulti(row, 12, toIngestMessage),
     originalId = potentiallyMissingStringField(row, 13).getOrElse("MISSING"),
-    tags = potentiallyMissingArrayOfUrisField(row, 14), // FIXME with potentiallyMissing[T]
+    tags = potentiallyMissingArrayOfUrisField(
+      row,
+      14
+    ), // FIXME with potentiallyMissing[T]
     iiifManifest = optionalUri(row, 15),
     mediaMaster = potentiallyMissing(row, 16, toEdmWebResource)
   )
 
-  private[model] def toSourceResource(row: Row): DplaSourceResource = DplaSourceResource(
-    alternateTitle = stringSeq(row, 0),
-    collection = toMulti(row, 1, toDcmiTypeCollection),
-    contributor = toMulti(row, 2, toEdmAgent),
-    creator = toMulti(row, 3, toEdmAgent),
-    date = toMulti(row, 4, toEdmTimeSpan),
-    description = stringSeq(row, 5),
-    extent = stringSeq(row, 6),
-    format = stringSeq(row, 7),
-    genre = toMulti(row, 8, toSkosConcept),
-    identifier = stringSeq(row, 9),
-    language = toMulti(row, 10, toSkosConcept),
-    place = toMulti(row, 11, toDplaPlace),
-    publisher = toMulti(row, 12, toEdmAgent),
-    relation = toMulti(row, 13, toLiteralOrUri),
-    replacedBy = stringSeq(row, 14),
-    replaces = stringSeq(row, 15),
-    rights = stringSeq(row, 16),
-    rightsHolder = toMulti(row, 17, toEdmAgent),
-    subject = toMulti(row, 18, toSkosConcept),
-    temporal = toMulti(row, 19, toEdmTimeSpan),
-    title = stringSeq(row, 20),
-    `type` = stringSeq(row, 21)
-  )
+  private[model] def toSourceResource(row: Row): DplaSourceResource =
+    DplaSourceResource(
+      alternateTitle = stringSeq(row, 0),
+      collection = toMulti(row, 1, toDcmiTypeCollection),
+      contributor = toMulti(row, 2, toEdmAgent),
+      creator = toMulti(row, 3, toEdmAgent),
+      date = toMulti(row, 4, toEdmTimeSpan),
+      description = stringSeq(row, 5),
+      extent = stringSeq(row, 6),
+      format = stringSeq(row, 7),
+      genre = toMulti(row, 8, toSkosConcept),
+      identifier = stringSeq(row, 9),
+      language = toMulti(row, 10, toSkosConcept),
+      place = toMulti(row, 11, toDplaPlace),
+      publisher = toMulti(row, 12, toEdmAgent),
+      relation = toMulti(row, 13, toLiteralOrUri),
+      replacedBy = stringSeq(row, 14),
+      replaces = stringSeq(row, 15),
+      rights = stringSeq(row, 16),
+      rightsHolder = toMulti(row, 17, toEdmAgent),
+      subject = toMulti(row, 18, toSkosConcept),
+      temporal = toMulti(row, 19, toEdmTimeSpan),
+      title = stringSeq(row, 20),
+      `type` = stringSeq(row, 21)
+    )
 
   private[model] def toDplaPlace(row: Row): DplaPlace = DplaPlace(
     name = optionalString(row, 0),
@@ -90,25 +96,27 @@ object ModelConverter {
     end = optionalString(row, 3)
   )
 
-  private[model] def toDcmiTypeCollection(row: Row): DcmiTypeCollection = DcmiTypeCollection(
-    title = optionalString(row, 0),
-    description = optionalString(row, 1),
-    isShownAt = toOptionEdmWebResource(row.getStruct(2))
-  )
+  private[model] def toDcmiTypeCollection(row: Row): DcmiTypeCollection =
+    DcmiTypeCollection(
+      title = optionalString(row, 0),
+      description = optionalString(row, 1),
+      isShownAt = toOptionEdmWebResource(row.getStruct(2))
+    )
 
   private[model] def toOptionEdmWebResource(row: Row): Option[EdmWebResource] =
     Option(row) match {
-      case None => None
+      case None      => None
       case Some(row) => Some(toEdmWebResource(row))
     }
 
-  private[model] def toEdmWebResource(row: Row): EdmWebResource = EdmWebResource(
-    uri = requiredUri(row, 0),
-    fileFormat = stringSeq(row, 1),
-    dcRights = stringSeq(row, 2),
-    edmRights = optionalString(row, 3),
-    isReferencedBy = optionalUri(row, 4)
-  )
+  private[model] def toEdmWebResource(row: Row): EdmWebResource =
+    EdmWebResource(
+      uri = requiredUri(row, 0),
+      fileFormat = stringSeq(row, 1),
+      dcRights = stringSeq(row, 2),
+      edmRights = optionalString(row, 3),
+      isReferencedBy = optionalUri(row, 4)
+    )
 
   private[model] def toLiteralOrUri(row: Row): LiteralOrUri =
     if (row.getBoolean(1)) LiteralOrUri(row.getString(0), isUri = true)
@@ -133,7 +141,11 @@ object ModelConverter {
     enrichedValue = requiredString(row, 5) // TODO Fixup and add back
   )
 
-  private[model] def toMulti[T](row: Row, fieldPosition: Integer, f: (Row) => T): Seq[T] = {
+  private[model] def toMulti[T](
+      row: Row,
+      fieldPosition: Integer,
+      f: (Row) => T
+  ): Seq[T] = {
     toRows(row, fieldPosition).map(f)
   }
 
@@ -143,9 +155,16 @@ object ModelConverter {
 
   private[model] def requiredUri(row: Row, fieldPosition: Integer): URI =
     optionalUri(row, fieldPosition)
-      .getOrElse(throw new RuntimeException(s"Couldn't parse URI in row $row, field position $fieldPosition"))
+      .getOrElse(
+        throw new RuntimeException(
+          s"Couldn't parse URI in row $row, field position $fieldPosition"
+        )
+      )
 
-  private[model] def optionalUri(row: Row, fieldPosition: Integer): Option[URI] = {
+  private[model] def optionalUri(
+      row: Row,
+      fieldPosition: Integer
+  ): Option[URI] = {
     Try {
       Option(row.getString(fieldPosition)).map(URI)
     }.getOrElse(None)
@@ -153,9 +172,16 @@ object ModelConverter {
 
   private[model] def requiredString(row: Row, fieldPosition: Integer): String =
     optionalString(row, fieldPosition)
-      .getOrElse(throw new RuntimeException(s"Couldn't retrieve string in row $row, field position $fieldPosition"))
+      .getOrElse(
+        throw new RuntimeException(
+          s"Couldn't retrieve string in row $row, field position $fieldPosition"
+        )
+      )
 
-  private[model] def optionalString(row: Row, fieldPosition: Integer): Option[String] =
+  private[model] def optionalString(
+      row: Row,
+      fieldPosition: Integer
+  ): Option[String] =
     Option(row.getString(fieldPosition))
 
   private[model] def stringSeq(row: Row, fieldPosition: Integer): Seq[String] =
@@ -169,21 +195,31 @@ object ModelConverter {
       parse(row.getString(fieldPosition))
     } match {
       case Success(jv) => jv
-      case Failure(_) => JNothing
+      case Failure(_)  => JNothing
     }
 
   // Handle field index that may not be present in the data.
-  private[model] def potentiallyMissingStringField(row: Row, fieldPosition: Integer): Option[String] =
+  private[model] def potentiallyMissingStringField(
+      row: Row,
+      fieldPosition: Integer
+  ): Option[String] =
     Try {
       optionalString(row, fieldPosition)
     }.getOrElse(None)
 
-  private[model] def potentiallyMissingArrayOfUrisField(row: Row, fieldPosition: Integer): Seq[URI] =
+  private[model] def potentiallyMissingArrayOfUrisField(
+      row: Row,
+      fieldPosition: Integer
+  ): Seq[URI] =
     Try {
       uriSeq(row, fieldPosition)
     }.getOrElse(Seq())
 
-  private[model] def potentiallyMissing[T](row: Row, fieldPosition: Integer, f: (Row) => T): Seq[T] =
+  private[model] def potentiallyMissing[T](
+      row: Row,
+      fieldPosition: Integer,
+      f: (Row) => T
+  ): Seq[T] =
     Try {
       toMulti(row, fieldPosition, f)
     }.getOrElse(Seq())

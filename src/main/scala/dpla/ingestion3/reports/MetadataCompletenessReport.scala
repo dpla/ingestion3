@@ -4,15 +4,14 @@ import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import dpla.ingestion3.model._
 import org.apache.spark.sql.functions.mean
 
-/**
-  * Metadata Completeness QA report.
+/** Metadata Completeness QA report.
   */
 class MetadataCompletenessReport(
-                                  val input: Dataset[OreAggregation],
-                                  val spark: SparkSession,
-                                  val params: Array[String] = Array()
-                                ) extends Report with Serializable {
-
+    val input: Dataset[OreAggregation],
+    val spark: SparkSession,
+    val params: Array[String] = Array()
+) extends Report
+    with Serializable {
 
   override val sparkAppName: String = "MetadataCompletenessReport"
   override def getInput: Dataset[OreAggregation] = input
@@ -21,16 +20,22 @@ class MetadataCompletenessReport(
     if (params.nonEmpty) Some(params) else None
   }
 
-  /**
-    * Process the incoming dataset.
+  /** Process the incoming dataset.
     *
-    * @see          Report.process()
+    * @see
+    *   Report.process()
     *
-    * @param ds     Dataset of DplaMapData (mapped or enriched records)
-    * @param spark  The Spark session, which contains encoding / parsing info.
-    * @return       DataFrame, typically of Row[value: String, count: Int]
+    * @param ds
+    *   Dataset of DplaMapData (mapped or enriched records)
+    * @param spark
+    *   The Spark session, which contains encoding / parsing info.
+    * @return
+    *   DataFrame, typically of Row[value: String, count: Int]
     */
-  override def process(ds: Dataset[OreAggregation], spark: SparkSession): DataFrame = {
+  override def process(
+      ds: Dataset[OreAggregation],
+      spark: SparkSession
+  ): DataFrame = {
 
     val sqlContext = spark.sqlContext
 
@@ -80,11 +85,12 @@ class MetadataCompletenessReport(
     )
   }
 
-  /**
-    * Map a Dataset of DplaMapData to a Dataset of CompletenessTally.
+  /** Map a Dataset of DplaMapData to a Dataset of CompletenessTally.
     */
-  private def getItemTallies(ds: Dataset[OreAggregation], spark: SparkSession):
-  Dataset[CompletenessTally] = {
+  private def getItemTallies(
+      ds: Dataset[OreAggregation],
+      spark: SparkSession
+  ): Dataset[CompletenessTally] = {
 
     import spark.implicits._
 
@@ -122,43 +128,44 @@ class MetadataCompletenessReport(
     })
   }
 
-  /**
-    * Get an integer representing whether or not a value is present.
+  /** Get an integer representing whether or not a value is present.
     *
-    * @param value: A Sequence containing zero to many values from a DplaDataMap
-    *               object.
-    * @return 1 if there is at least one value; otherwise 0
+    * @param value:
+    *   A Sequence containing zero to many values from a DplaDataMap object.
+    * @return
+    *   1 if there is at least one value; otherwise 0
     */
   private def tally(value: Seq[Any]): Integer = {
-    if(value.nonEmpty) 1 else 0
+    if (value.nonEmpty) 1 else 0
   }
 }
 
-/**
-  * Tallies the presence or absence of values in certain fields for a single record;
-  * 1 if the field value is present; 0 if the field value is absent.
-  * Numerical representations are used b/c it makes it easier to calculate totals,
-  * averages, etc.
+/** Tallies the presence or absence of values in certain fields for a single
+  * record; 1 if the field value is present; 0 if the field value is absent.
+  * Numerical representations are used b/c it makes it easier to calculate
+  * totals, averages, etc.
   */
-case class CompletenessTally(title: Integer,
-                             collection: Integer,
-                             description: Integer,
-                             creator: Integer,
-                             publisher: Integer,
-                             contributor: Integer,
-                             `type`: Integer,
-                             identifier: Integer,
-                             language: Integer,
-                             temporal: Integer,
-                             place: Integer,
-                             subject: Integer,
-                             date: Integer,
-                             extent: Integer,
-                             format: Integer,
-                             relation: Integer,
-                             id: Integer,
-                             dataProvider: Integer,
-                             provider: Integer,
-                             preview: Integer,
-                             isShownAt: Integer,
-                             rights: Integer)
+case class CompletenessTally(
+    title: Integer,
+    collection: Integer,
+    description: Integer,
+    creator: Integer,
+    publisher: Integer,
+    contributor: Integer,
+    `type`: Integer,
+    identifier: Integer,
+    language: Integer,
+    temporal: Integer,
+    place: Integer,
+    subject: Integer,
+    date: Integer,
+    extent: Integer,
+    format: Integer,
+    relation: Integer,
+    id: Integer,
+    dataProvider: Integer,
+    provider: Integer,
+    preview: Integer,
+    isShownAt: Integer,
+    rights: Integer
+)

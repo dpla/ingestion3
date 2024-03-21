@@ -73,7 +73,8 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
       .flatMap(_.splitAtDelimiter(";"))
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "source")
@@ -90,14 +91,17 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
       .map(stringOnlyWebResource)
       .slice(1, 2) // get second instance
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
-    val url: Option[String] = extractStrings(data \ "metadata" \\ "identifier").lift(1) // get second instance
+    val url: Option[String] = extractStrings(data \ "metadata" \\ "identifier")
+      .lift(1) // get second instance
 
     val parts: Seq[String] = url.getOrElse("").stripSuffix("/").split("/")
 
-    val collection: Option[String] = parts.reverse.lift(2) // get third to last element
+    val collection: Option[String] =
+      parts.reverse.lift(2) // get third to last element
     val item: Option[String] = parts.lastOption // get last element
 
     if (collection.isDefined && item.isDefined) {
@@ -108,14 +112,15 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
           item.get
 
       Seq(stringOnlyWebResource(url))
-    }
-    else Seq()
+    } else Seq()
   }
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   // Helper method
   def agent = EdmAgent(

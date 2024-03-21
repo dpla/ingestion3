@@ -4,10 +4,10 @@ import org.eclipse.rdf4j.model._
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory
 
 import RdfValueUtils._
-/**
-  * Mixin for conveniently creating RDF4J datamodel objects. Maintains a SimpleValueFactory singleton so they're not
-  * being created all over the place.
-  *
+
+/** Mixin for conveniently creating RDF4J datamodel objects. Maintains a
+  * SimpleValueFactory singleton so they're not being created all over the
+  * place.
   */
 
 trait RdfValueUtils {
@@ -35,4 +35,3 @@ trait RdfValueUtils {
 object RdfValueUtils {
   private lazy val valueFactory = SimpleValueFactory.getInstance()
 }
-

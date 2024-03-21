@@ -11,9 +11,10 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
-
-class JhnMapping extends XmlMapping with XmlExtractor
-  with IngestMessageTemplates {
+class JhnMapping
+    extends XmlMapping
+    with XmlExtractor
+    with IngestMessageTemplates {
 
   override def useProviderName: Boolean = true
 
@@ -22,7 +23,8 @@ class JhnMapping extends XmlMapping with XmlExtractor
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
 
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(metadataRoot(data) \ "Aggregation" \ "dataProvider")
@@ -38,11 +40,15 @@ class JhnMapping extends XmlMapping with XmlExtractor
       .flatMap(node => getAttributeValue(node, "rdf:resource"))
       .map(stringOnlyWebResource)
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   // SourceResource
-  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] = 
-    extractStrings(metadataRoot(data) \ "ProvidedCHO" \ "isPartOf").map(nameOnlyCollection)
+  override def collection(
+      data: Document[NodeSeq]
+  ): ZeroToMany[DcmiTypeCollection] =
+    extractStrings(metadataRoot(data) \ "ProvidedCHO" \ "isPartOf")
+      .map(nameOnlyCollection)
 
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     val agents = (metadataRoot(data) \ "Agent").map(agent => {
@@ -57,11 +63,12 @@ class JhnMapping extends XmlMapping with XmlExtractor
       )
     })
 
-    val creators = extractStrings(metadataRoot(data) \ "ProvidedCHO" \ "creator")
-      .map(nameOnlyAgent)
+    val creators =
+      extractStrings(metadataRoot(data) \ "ProvidedCHO" \ "creator")
+        .map(nameOnlyAgent)
 
     // Similar values exist in both dc:creators and edm:Agent, prefer to use edm:Agent
-    if(agents.nonEmpty)
+    if (agents.nonEmpty)
       agents
     else
       creators
@@ -97,10 +104,11 @@ class JhnMapping extends XmlMapping with XmlExtractor
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = {
     val placeConcepts = (metadataRoot(data) \ "Place").map(node => {
       val prefLabel = extractString(node \ "prefLabel")
-      val coordinates = (extractString(node \ "lat"), extractString(node \ "long")) match {
-        case (Some(lat: String), Some(long: String)) => Some(s"$lat,$long")
-        case _ => None
-      }
+      val coordinates =
+        (extractString(node \ "lat"), extractString(node \ "long")) match {
+          case (Some(lat: String), Some(long: String)) => Some(s"$lat,$long")
+          case _                                       => None
+        }
       DplaPlace(
         name = prefLabel,
         coordinates = coordinates
@@ -111,7 +119,7 @@ class JhnMapping extends XmlMapping with XmlExtractor
       .map(nameOnlyPlace)
 
     // Similar values can exist in both edm:Place and dc:spatial, use edm:Place if defined otherwise dc:spatial
-    if(placeConcepts.nonEmpty)
+    if (placeConcepts.nonEmpty)
       placeConcepts
     else
       spatial
@@ -124,7 +132,8 @@ class JhnMapping extends XmlMapping with XmlExtractor
     val concepts = (metadataRoot(data) \ "Concept").map(node => {
       val prefLabel = extractString(node \ "prefLabel")
       val note = extractString(node \ "note")
-      val altLabel = extractString(node \ "altLabel") // FIXME no good place to map this
+      val altLabel =
+        extractString(node \ "altLabel") // FIXME no good place to map this
       val uri = getAttributeValue(node, "rdf:about").toSeq.map(URI)
 
       SkosConcept(
@@ -134,9 +143,11 @@ class JhnMapping extends XmlMapping with XmlExtractor
       )
     })
 
-    val subjects = extractStrings(metadataRoot(data) \ "ProvidedCHO" \ "subject").map(nameOnlyConcept)
+    val subjects = extractStrings(
+      metadataRoot(data) \ "ProvidedCHO" \ "subject"
+    ).map(nameOnlyConcept)
     // Similar values exist in skos:Concept and dc:subject, prefer skos:Concept over dc:subject
-    if(concepts.nonEmpty)
+    if (concepts.nonEmpty)
       concepts
     else
       subjects
@@ -144,19 +155,22 @@ class JhnMapping extends XmlMapping with XmlExtractor
 
   // TODO filter by language..?
   override def title(data: Document[NodeSeq]): AtLeastOne[String] =
-    extractStrings(metadataRoot(data ) \ "ProvidedCHO" \ "title")
+    extractStrings(metadataRoot(data) \ "ProvidedCHO" \ "title")
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(metadataRoot(data ) \ "ProvidedCHO" \ "type")
+    extractStrings(metadataRoot(data) \ "ProvidedCHO" \ "type")
       .flatMap(_.splitAtDelimiter(";"))
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   private def agent = EdmAgent(
     name = Some("Jewish Heritage Network"),
     uri = Some(URI("http://dp.la/api/contributor/jhn"))
   )
 
-  private def metadataRoot(data: Document[NodeSeq]): NodeSeq = data \ "metadata" \ "RDF"
+  private def metadataRoot(data: Document[NodeSeq]): NodeSeq =
+    data \ "metadata" \ "RDF"
 }

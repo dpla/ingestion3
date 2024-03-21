@@ -1,9 +1,9 @@
 package dpla.ingestion3.enrichments
 
-/**
-  * Generic vocabulary builder and and term lookup
+/** Generic vocabulary builder and and term lookup
   *
-  * @tparam T Class of vocab (e.g. SkosConcept, String, EdmAgent)
+  * @tparam T
+  *   Class of vocab (e.g. SkosConcept, String, EdmAgent)
   */
 
 class VocabLookup[T](normalizationFunc: (T) => String) {
@@ -11,62 +11,70 @@ class VocabLookup[T](normalizationFunc: (T) => String) {
   // Vocab mapping
   private val data = scala.collection.mutable.Map[String, T]()
 
-  /**
-    * Add vocabulary map to `data`
+  /** Add vocabulary map to `data`
     *
-    * @param vocabulary Map[String,T] Terms to add
+    * @param vocabulary
+    *   Map[String,T] Terms to add
     */
   def add(vocabulary: Map[String, T]) = data ++= vocabulary.toList
 
-  /**
-    * Adds term to vocab mapping and normalizes key value for retrieval
+  /** Adds term to vocab mapping and normalizes key value for retrieval
     *
-    * @param term T Term to add
+    * @param term
+    *   T Term to add
     */
   def add(term: T) = data += normalizationFunc(term) -> term
 
-  /**
-    * Get term from vocab mapping
+  /** Get term from vocab mapping
     *
-    * @param originalRecord Original term
-    * @return Enriched form of `originalRecord`
+    * @param originalRecord
+    *   Original term
+    * @return
+    *   Enriched form of `originalRecord`
     */
   def lookup(originalRecord: T): Option[T] =
     data.get(normalizationFunc(originalRecord))
 
-  /**
-    * Print the vocab mapping
+  /** Print the vocab mapping
     */
-  def print = data.keys.foreach(key => println(s"$key->${data.getOrElse(key, "*NO VALUE FOR KEY*")}"))
+  def print = data.keys.foreach(key =>
+    println(s"$key->${data.getOrElse(key, "*NO VALUE FOR KEY*")}")
+  )
 }
 
-/**
-  * Merge vocabulary terms
+/** Merge vocabulary terms
   *
-  * @param mergeFunc Defines how to perform the merge
+  * @param mergeFunc
+  *   Defines how to perform the merge
   */
-class VocabMerge[T](mergeFunc: (T,T) => T){
-  /**
-    * Merge original and enriched values into a single value
+class VocabMerge[T](mergeFunc: (T, T) => T) {
+
+  /** Merge original and enriched values into a single value
     *
-    * @param originalRecord Value from mapped record
-    * @param enrichedRecord Value returned by enrichment process
-    * @return A single record
+    * @param originalRecord
+    *   Value from mapped record
+    * @param enrichedRecord
+    *   Value returned by enrichment process
+    * @return
+    *   A single record
     */
-  def merge(originalRecord: T, enrichedRecord: T) = mergeFunc(originalRecord, enrichedRecord)
+  def merge(originalRecord: T, enrichedRecord: T) =
+    mergeFunc(originalRecord, enrichedRecord)
 }
 
-/**
-  * Vocabulary enrichment
+/** Vocabulary enrichment
   *
-  * @tparam T Class of vocabulary to enrich
+  * @tparam T
+  *   Class of vocabulary to enrich
   */
 trait VocabEnrichment[T] {
-  /**
-    * Returns either an enriched version of T or None
+
+  /** Returns either an enriched version of T or None
     *
-    * @param value Original value
-    * @return T
+    * @param value
+    *   Original value
+    * @return
+    *   T
     */
   def enrich(value: T): Option[T]
 }

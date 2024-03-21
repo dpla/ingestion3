@@ -2,17 +2,16 @@ package dpla.ingestion3.enrichments.normalizations
 
 import dpla.ingestion3.model._
 
-/**
-  * Enrichment to remove duplicate values in multi-value fields.
-  *
+/** Enrichment to remove duplicate values in multi-value fields.
   */
 class Deduplication {
 
-  /**
-    * Main entry point.
+  /** Main entry point.
     *
-    * @param record OreAggregation
-    * @return enriched OreAggregation
+    * @param record
+    *   OreAggregation
+    * @return
+    *   enriched OreAggregation
     */
   def enrich(record: OreAggregation): OreAggregation = {
     record.copy(
@@ -27,7 +26,9 @@ class Deduplication {
     )
   }
 
-  def enrichSourceResource(sourceResource: DplaSourceResource): DplaSourceResource =
+  def enrichSourceResource(
+      sourceResource: DplaSourceResource
+  ): DplaSourceResource =
     sourceResource.copy(
       alternateTitle = sourceResource.alternateTitle.distinct,
       collection = sourceResource.collection.distinct,
@@ -46,7 +47,8 @@ class Deduplication {
       replacedBy = sourceResource.replacedBy.distinct,
       replaces = sourceResource.replaces.distinct,
       rights = sourceResource.rights.distinct,
-      rightsHolder = sourceResource.rightsHolder.map(enrichEdmAgent(_)).distinct,
+      rightsHolder =
+        sourceResource.rightsHolder.map(enrichEdmAgent(_)).distinct,
       subject = sourceResource.subject.map(enrichSkosConcept(_)).distinct,
       temporal = sourceResource.temporal.distinct,
       title = sourceResource.title.distinct,

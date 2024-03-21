@@ -1,8 +1,10 @@
-
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.normalizations.filters.{
+  DigitalSurrogateBlockList,
+  FormatTypeValuesBlockList
+}
 import dpla.ingestion3.mappers.utils.{Document, XmlMapping, XmlExtractor}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
@@ -11,7 +13,6 @@ import org.json4s.JValue
 import org.json4s.JsonDSL._
 
 import scala.xml._
-
 
 class DcMapping extends XmlMapping with XmlExtractor {
 
@@ -22,13 +23,17 @@ class DcMapping extends XmlMapping with XmlExtractor {
   // ID minting functions
   override def useProviderName: Boolean = false // TODO confirm prefix
 
-  override def getProviderName: Option[String] = Some("dc") // TODO confirm prefix
+  override def getProviderName: Option[String] = Some(
+    "dc"
+  ) // TODO confirm prefix
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
 
   // SourceResource mapping
-  override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] = // done
+  override def collection(
+      data: Document[NodeSeq]
+  ): Seq[DcmiTypeCollection] = // done
     extractStrings(data \ "metadata" \\ "isPartOf")
       .map(nameOnlyCollection)
 
@@ -73,7 +78,7 @@ class DcMapping extends XmlMapping with XmlExtractor {
     (data \ "metadata" \\ "rights").flatMap(r => {
       r.prefix match {
         case "dc" => Option(r.text)
-        case _ => None
+        case _    => None
       }
     })
 
@@ -90,25 +95,28 @@ class DcMapping extends XmlMapping with XmlExtractor {
       extractStrings(data \ "metadata" \\ "format"))
       .flatMap(_.splitAtDelimiter(";"))
 
-
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "dataProvider")
       .map(nameOnlyAgent)
 
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
-    (data \ "metadata" \\ "rights").flatMap(r => r.prefix match {
-      case "edm" => Some(URI(r.text))
-      case _ => None
-    })
+    (data \ "metadata" \\ "rights").flatMap(r =>
+      r.prefix match {
+        case "edm" => Some(URI(r.text))
+        case _     => None
+      }
+    )
   }
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "metadata" \\ "isShownAt").map(stringOnlyWebResource)
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "metadata" \\ "preview")
@@ -117,7 +125,9 @@ class DcMapping extends XmlMapping with XmlExtractor {
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   // Helper method
   def agent = EdmAgent(

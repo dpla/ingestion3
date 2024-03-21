@@ -3,14 +3,18 @@ import dpla.ingestion3.model._
 import org.apache.spark.sql.functions.{col, explode}
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 
-case class PropertyValueRpt(dplaUri: String,
-                            localUri: String,
-                            value: Seq[String])
+case class PropertyValueRpt(
+    dplaUri: String,
+    localUri: String,
+    value: Seq[String]
+)
 
-class PropertyValueReport (
-                            val input: Dataset[OreAggregation],
-                            val spark: SparkSession,
-                            val params: Array[String]) extends Report with Serializable {
+class PropertyValueReport(
+    val input: Dataset[OreAggregation],
+    val spark: SparkSession,
+    val params: Array[String]
+) extends Report
+    with Serializable {
 
   override val sparkAppName: String = "PropertyValueReport"
   override def getInput: Dataset[OreAggregation] = input
@@ -27,30 +31,32 @@ class PropertyValueReport (
 
   def splitOnPipe(str: String) = str.split("|")
 
-  /**
-    * Process the incoming dataset (mapped or enriched records) and return a
+  /** Process the incoming dataset (mapped or enriched records) and return a
     * DataFrame of computed results.
     *
-    * This report returns:
-    *   local uri, dpla uri, value
+    * This report returns: local uri, dpla uri, value
     *
-    * If value is an array then multiple values are sent to separate rows.
-    * E.x.
-    *   id1, format1, dplaId1
-    *   id1, format2, dplaId1
+    * If value is an array then multiple values are sent to separate rows. E.x.
+    * id1, format1, dplaId1 id1, format2, dplaId1
     *
     * Overridden by classes in dpla.ingestion3.reports
     *
-    * @param ds    Dataset of DplaMapData (mapped or enriched records)
-    * @param spark The Spark session, which contains encoding / parsing info.
-    * @return DataFrame, typically of Row[value: String, count: Int]
+    * @param ds
+    *   Dataset of DplaMapData (mapped or enriched records)
+    * @param spark
+    *   The Spark session, which contains encoding / parsing info.
+    * @return
+    *   DataFrame, typically of Row[value: String, count: Int]
     */
-  override def process(ds: Dataset[OreAggregation], spark: SparkSession): DataFrame = {
+  override def process(
+      ds: Dataset[OreAggregation],
+      spark: SparkSession
+  ): DataFrame = {
     import spark.implicits._
 
     val token: String = getParams match {
       case Some(p) => p.head
-      case _ => throw new RuntimeException(s"No field specified")
+      case _       => throw new RuntimeException(s"No field specified")
     }
 
     implicit val dplaMapDataEncoder =
@@ -94,7 +100,8 @@ class PropertyValueReport (
           PropertyValueRpt(
             dplaUri = oreAggregation.dplaUri.toString,
             localUri = oreAggregation.isShownAt.uri.toString,
-            value = extractValue(oreAggregation.preview.map(_.uri.toString).toSeq)
+            value =
+              extractValue(oreAggregation.preview.map(_.uri.toString).toSeq)
           )
         })
       case "sourceResource.alternateTitle" =>
@@ -191,7 +198,8 @@ class PropertyValueReport (
             dplaUri = oreAggregation.dplaUri.toString,
             localUri = oreAggregation.isShownAt.uri.toString,
             value = oreAggregation.sourceResource.language.map(l =>
-              l.concept.getOrElse("__MISSING SkosConcept.concept__"))
+              l.concept.getOrElse("__MISSING SkosConcept.concept__")
+            )
           )
         })
       case "sourceResource.place.name" =>
@@ -289,23 +297,27 @@ class PropertyValueReport (
     makeTable(rptDataset, spark, token)
   }
 
-  /**
-    * Responsible for exploding the value column of the
-    * DataFrame so that multiple values occur on separate
-    * rows.
+  /** Responsible for exploding the value column of the DataFrame so that
+    * multiple values occur on separate rows.
     *
-    * @param rptDataset Report dataset
-    * @param spark Spark Session
-    * @param token The name of the column being reported on
+    * @param rptDataset
+    *   Report dataset
+    * @param spark
+    *   Spark Session
+    * @param token
+    *   The name of the column being reported on
     * @return
     */
-  def makeTable(rptDataset: Dataset[PropertyValueRpt],
-                spark: SparkSession,
-                token: String): DataFrame = {
+  def makeTable(
+      rptDataset: Dataset[PropertyValueRpt],
+      spark: SparkSession,
+      token: String
+  ): DataFrame = {
     val sqlContext = spark.sqlContext
     rptDataset.createOrReplaceTempView("tmpPropValRpt")
 
-    sqlContext.sql("""SELECT * FROM tmpPropValRpt""")
+    sqlContext
+      .sql("""SELECT * FROM tmpPropValRpt""")
       .withColumn(token, explode(col("value")))
       .drop(col("value"))
   }

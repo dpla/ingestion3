@@ -1,4 +1,3 @@
-
 package dpla.ingestion3.harvesters.api
 
 import java.net.URL
@@ -13,18 +12,17 @@ import org.json4s.jackson.JsonMethods._
 
 import scala.util.{Failure, Success}
 
-/**
-  * Class for harvesting records from the California Digital Library's Solr API
+/** Class for harvesting records from the California Digital Library's Solr API
   *
   * Calisphere API documentation
   * https://help.oac.cdlib.org/support/solutions/articles/9000101639-calisphere-api
-  *
   */
-class CdlHarvester(spark: SparkSession,
-                   shortName: String,
-                   conf: i3Conf,
-                   harvestLogger: Logger)
-  extends ApiHarvester(spark, shortName, conf, harvestLogger) {
+class CdlHarvester(
+    spark: SparkSession,
+    shortName: String,
+    conf: i3Conf,
+    harvestLogger: Logger
+) extends ApiHarvester(spark, shortName, conf, harvestLogger) {
 
   def mimeType: String = "application_json"
 
@@ -32,7 +30,7 @@ class CdlHarvester(spark: SparkSession,
     "query" -> conf.harvest.query,
     "rows" -> conf.harvest.rows,
     "api_key" -> conf.harvest.apiKey
-  ).collect{ case (key, Some(value)) => key -> value } // remove None values
+  ).collect { case (key, Some(value)) => key -> value } // remove None values
 
   override def localHarvest(): DataFrame = {
     implicit val formats: DefaultFormats.type = DefaultFormats
@@ -44,14 +42,16 @@ class CdlHarvester(spark: SparkSession,
     // Runtime tracking
     val startTime = System.currentTimeMillis()
 
-    while(continueHarvest) getSinglePage(cursorMark) match {
+    while (continueHarvest) getSinglePage(cursorMark) match {
       // Handle errors
       case error: ApiError with ApiResponse =>
-        harvestLogger.error("Error returned by request %s\n%s\n%s".format(
-          error.errorSource.url.getOrElse("Undefined url"),
-          error.errorSource.queryParams,
-          error.message
-        ))
+        harvestLogger.error(
+          "Error returned by request %s\n%s\n%s".format(
+            error.errorSource.url.getOrElse("Undefined url"),
+            error.errorSource.queryParams,
+            error.message
+          )
+        )
         continueHarvest = false
       // Handle a successful response
       case src: ApiSource with ApiResponse =>
@@ -76,10 +76,12 @@ class CdlHarvester(spark: SparkSession,
             }
 
           case _ =>
-            harvestLogger.error(s"Response body is empty.\n" +
-              s"URL: ${src.url.getOrElse("!!! URL not set !!!")}\n" +
-              s"Params: ${src.queryParams}\n" +
-              s"Body: ${src.text}")
+            harvestLogger.error(
+              s"Response body is empty.\n" +
+                s"URL: ${src.url.getOrElse("!!! URL not set !!!")}\n" +
+                s"Params: ${src.queryParams}\n" +
+                s"Body: ${src.text}"
+            )
             continueHarvest = false
         }
       case _ => throw new RuntimeException("Unsure how we got here!")
@@ -88,13 +90,14 @@ class CdlHarvester(spark: SparkSession,
     spark.read.format("avro").load(tmpOutStr)
   }
 
-  /**
-    * Get a single-page, un-parsed response from the CDL feed, or an error if
+  /** Get a single-page, un-parsed response from the CDL feed, or an error if
     * one occurs.
     *
-    * @param cursorMark Uses cursor and not start/offset to paginate. Used to work around Solr
-    *                   deep-paging performance issues.
-    * @return ApiSource or ApiError
+    * @param cursorMark
+    *   Uses cursor and not start/offset to paginate. Used to work around Solr
+    *   deep-paging performance issues.
+    * @return
+    *   ApiSource or ApiError
     */
   private def getSinglePage(cursorMark: String): ApiResponse = {
     val apiKey = queryParams.getOrElse("api_key", "")
@@ -106,17 +109,23 @@ class CdlHarvester(spark: SparkSession,
     HttpUtils.makeGetRequest(url, headers) match {
       case Failure(e) =>
         ApiError(e.toString, ApiSource(queryParams, Some(url.toString)))
-      case Success(response) => response.isEmpty match {
-        case true => ApiError("Response body is empty", ApiSource(queryParams, Some(url.toString)))
-        case false => ApiSource(queryParams, Some(url.toString), Some(response))
-      }
+      case Success(response) =>
+        response.isEmpty match {
+          case true =>
+            ApiError(
+              "Response body is empty",
+              ApiSource(queryParams, Some(url.toString))
+            )
+          case false =>
+            ApiSource(queryParams, Some(url.toString), Some(response))
+        }
     }
   }
 
-  /**
-    * Constructs the URL for CDL API requests
+  /** Constructs the URL for CDL API requests
     *
-    * @param params URL parameters
+    * @param params
+    *   URL parameters
     * @return
     */
   def buildUrl(params: Map[String, String]): URL =

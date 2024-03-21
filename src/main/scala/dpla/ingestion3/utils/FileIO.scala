@@ -11,26 +11,28 @@ import org.apache.commons.io.IOUtils
 
 import scala.io.Source
 
-/**
-  * Basic FileIO ops
-  *
+/** Basic FileIO ops
   */
 class FlatFileIO extends FileIO {
-  /**
-    * Save the file to disk
+
+  /** Save the file to disk
     *
-    * @param record String
-    * @param outputFile String
+    * @param record
+    *   String
+    * @param outputFile
+    *   String
     *
-    * @return String representation of the file path
+    * @return
+    *   String representation of the file path
     */
   def writeFile(record: String, outputFile: String): String = {
     val outFile = new File(outputFile).toPath
-    Files.write(outFile, record.getBytes("utf8"), CREATE, TRUNCATE_EXISTING).toString
+    Files
+      .write(outFile, record.getBytes("utf8"), CREATE, TRUNCATE_EXISTING)
+      .toString
   }
 
-  /**
-    * Reads a file and returns it as a single string
+  /** Reads a file and returns it as a single string
     * @param name
     * @return
     */
@@ -41,8 +43,7 @@ class FlatFileIO extends FileIO {
     result
   }
 
-  /**
-    * Reads a file and returns a Seq[String]
+  /** Reads a file and returns a Seq[String]
     * @param name
     * @return
     */
@@ -51,9 +52,8 @@ class FlatFileIO extends FileIO {
     readFileAsString(name).split("""\n""").toSeq
   }
 
-  /**
-    * Creates missing parent directories or deletes existing all
-    * files on the path
+  /** Creates missing parent directories or deletes existing all files on the
+    * path
     * @param pathStr
     */
   def deletePathContents(pathStr: String): Unit = {
@@ -65,29 +65,32 @@ class FlatFileIO extends FileIO {
   }
 }
 
-/**
-  * Helper functions for working Avros
+/** Helper functions for working Avros
   */
 object AvroUtils {
-  /**
-    * Builds a writer for saving Avros.
+
+  /** Builds a writer for saving Avros.
     *
-    * @param outputFile Place to save Avro
-    * @param schema     Parsed schema of the output
-    * @return DataFileWriter for writing Avros in the given schema
+    * @param outputFile
+    *   Place to save Avro
+    * @param schema
+    *   Parsed schema of the output
+    * @return
+    *   DataFileWriter for writing Avros in the given schema
     */
-  def getAvroWriter(outputFile: File, schema: Schema): DataFileWriter[GenericRecord] = {
+  def getAvroWriter(
+      outputFile: File,
+      schema: Schema
+  ): DataFileWriter[GenericRecord] = {
     val datumWriter = new GenericDatumWriter[GenericRecord](schema)
     val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
     dataFileWriter.setCodec(CodecFactory.deflateCodec(1))
-    dataFileWriter.setSyncInterval(1024 * 100) //100k
+    dataFileWriter.setSyncInterval(1024 * 100) // 100k
     dataFileWriter.create(schema, outputFile)
   }
 }
 
-/**
-  *
-  */
+/** */
 trait FileIO {
   def writeFile(record: String, outputFile: String): String
 }

@@ -3,27 +3,33 @@ package dpla.ingestion3.harvesters.oai.refactor
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SQLContext}
 
-
-/**
-  * OaiRelation for harvests that want to havest all sets *except* those specified.
+/** OaiRelation for harvests that want to havest all sets *except* those
+  * specified.
   *
-  * @param oaiMethods Implementation of the OaiMethods trait.
-  * @param sqlContext Spark sqlContext.
+  * @param oaiMethods
+  *   Implementation of the OaiMethods trait.
+  * @param sqlContext
+  *   Spark sqlContext.
   */
-class BlacklistOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiMethods)
-                          (@transient override val sqlContext: SQLContext)
-  extends OaiRelation {
+class BlacklistOaiRelation(
+    oaiConfiguration: OaiConfiguration,
+    oaiMethods: OaiMethods
+)(@transient override val sqlContext: SQLContext)
+    extends OaiRelation {
   override def buildScan(): RDD[Row] = {
     val sparkContext = sqlContext.sparkContext
     val blacklist = oaiConfiguration.blacklist.getOrElse(Array()).toSet
-    val originalSets = oaiMethods.listAllSetPages().flatMap(oaiMethods.parsePageIntoSets)
+    val originalSets =
+      oaiMethods.listAllSetPages().flatMap(oaiMethods.parsePageIntoSets)
     val nonBlacklistedSets = originalSets.filter {
       case Right(OaiSet(set, _)) => blacklist.contains(set)
-      case _ => true
+      case _                     => true
     }
     val sets = sparkContext.parallelize(nonBlacklistedSets.toSeq)
     val pages = sets.flatMap(oaiMethods.listAllRecordPagesForSet)
-    val records = pages.flatMap(oaiMethods.parsePageIntoRecords(_, oaiConfiguration.removeDeleted))
+    val records = pages.flatMap(
+      oaiMethods.parsePageIntoRecords(_, oaiConfiguration.removeDeleted)
+    )
     records.map(OaiRelation.convertToOutputRow)
   }
 }

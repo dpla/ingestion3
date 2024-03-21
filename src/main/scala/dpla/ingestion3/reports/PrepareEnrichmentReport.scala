@@ -1,7 +1,16 @@
 package dpla.ingestion3.reports
 
-import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
-import dpla.ingestion3.model.{DplaPlace, EdmTimeSpan, OreAggregation, fromJsonString}
+import dpla.ingestion3.messages.{
+  IngestMessage,
+  IngestMessageTemplates,
+  MessageCollector
+}
+import dpla.ingestion3.model.{
+  DplaPlace,
+  EdmTimeSpan,
+  OreAggregation,
+  fromJsonString
+}
 import dpla.ingestion3.reports.summary.ReportFormattingUtils
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.sql.functions._
@@ -15,24 +24,31 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
       .where(s"field=='$field'")
       .drop("field")
       .groupBy("level", "message")
-      .agg(count("id")).as("count")
-      .orderBy("level","message")
+      .agg(count("id"))
+      .as("count")
+      .orderBy("level", "message")
       .orderBy(desc("count(id)"))
 
-    queryResult.collect().map(row => ReportFormattingUtils
-      .centerPad("- " + row(1).toString.trim, Utils.formatNumber(row.getLong(2))))
+    queryResult
+      .collect()
+      .map(row =>
+        ReportFormattingUtils
+          .centerPad(
+            "- " + row(1).toString.trim,
+            Utils.formatNumber(row.getLong(2))
+          )
+      )
       .mkString("\n")
   }
 
-  /**
-    *
-    * @param enriched
+  /** @param enriched
     * @param original
     * @param msgs
     * @return
     */
-  def prepareEnrichedData(enriched: OreAggregation, original: OreAggregation)
-                         (implicit msgs: MessageCollector[IngestMessage]) = {
+  def prepareEnrichedData(enriched: OreAggregation, original: OreAggregation)(
+      implicit msgs: MessageCollector[IngestMessage]
+  ) = {
     // Get messages for each field
     prepareLangauge(enriched)
     prepareType(original, enriched)
@@ -46,66 +62,73 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     // Put collected messages into copy of enriched
     enriched.copy(messages = msgs.getAll().toSeq)
   }
-  /**
-    *
-    * @param enriched
+
+  /** @param enriched
     * @param msgs
     */
-  def prepareProvider(enriched: OreAggregation)
-                         (implicit msgs: MessageCollector[IngestMessage]) = {
+  def prepareProvider(
+      enriched: OreAggregation
+  )(implicit msgs: MessageCollector[IngestMessage]) = {
 
     val dplaId = (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString
 
-    if(enriched.provider.exactMatch.nonEmpty){
-      msgs.add(enrichedValue(
-        dplaId,
-        "provider.exactMatch.URI",
-        enriched.provider.name.getOrElse(""),
-        enriched.provider.exactMatch.map(_.toString).mkString(" | ")))
+    if (enriched.provider.exactMatch.nonEmpty) {
+      msgs.add(
+        enrichedValue(
+          dplaId,
+          "provider.exactMatch.URI",
+          enriched.provider.name.getOrElse(""),
+          enriched.provider.exactMatch.map(_.toString).mkString(" | ")
+        )
+      )
     } else {
-      msgs.add(originalValue(
-        dplaId,
-        "provider.exactMatch.URI",
-        enriched.provider.name.getOrElse("")
-      ))
+      msgs.add(
+        originalValue(
+          dplaId,
+          "provider.exactMatch.URI",
+          enriched.provider.name.getOrElse("")
+        )
+      )
     }
   }
 
-  /**
-    *
-    * @param enriched
+  /** @param enriched
     * @param msgs
     */
-  def prepareDataProvider(enriched: OreAggregation)
-                         (implicit msgs: MessageCollector[IngestMessage]) = {
+  def prepareDataProvider(
+      enriched: OreAggregation
+  )(implicit msgs: MessageCollector[IngestMessage]) = {
 
     val dplaId = (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString
 
-      if(enriched.dataProvider.exactMatch.nonEmpty){
-        msgs.add(enrichedValue(
+    if (enriched.dataProvider.exactMatch.nonEmpty) {
+      msgs.add(
+        enrichedValue(
           dplaId,
           "dataProvider.exactMatch.URI",
           enriched.dataProvider.name.getOrElse(""),
-          enriched.dataProvider.exactMatch.map(_.toString).mkString(" | ")))
-      } else {
-        msgs.add(originalValue(
+          enriched.dataProvider.exactMatch.map(_.toString).mkString(" | ")
+        )
+      )
+    } else {
+      msgs.add(
+        originalValue(
           dplaId,
           "dataProvider.exactMatch.URI",
           enriched.dataProvider.name.getOrElse("")
-        ))
-      }
+        )
+      )
+    }
   }
 
-  /**
-    *
-    * @param original
+  /** @param original
     * @param enriched
     * @param msgs
     * @return
     */
-  def prepareDate(original: OreAggregation,
-                  enriched: OreAggregation)
-                     (implicit msgs: MessageCollector[IngestMessage]) = {
+  def prepareDate(original: OreAggregation, enriched: OreAggregation)(implicit
+      msgs: MessageCollector[IngestMessage]
+  ) = {
 
     val enrichDateValues = enriched.sourceResource.date
     val originalDateValues = original.sourceResource.date
@@ -113,8 +136,8 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
 
     val dateTuples = enrichDateValues zip originalDateValues
 
-    dateTuples.map( { case (e: EdmTimeSpan, o: EdmTimeSpan) =>
-      if( e.begin != o.begin || e.end != o.end) { // if the begin and end dates don't match then assume the record was improved
+    dateTuples.map({ case (e: EdmTimeSpan, o: EdmTimeSpan) =>
+      if (e.begin != o.begin || e.end != o.end) { // if the begin and end dates don't match then assume the record was improved
         msgs.add(
           enrichedValue(
             id, // id
@@ -123,8 +146,7 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
             s"begin=${e.begin.getOrElse("")} end=${e.end.getOrElse("")}" // enriched values
           )
         )
-      }
-      else
+      } else
         msgs.add(
           originalValue(
             id, // id
@@ -135,43 +157,55 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     })
   }
 
-  /**
-    *
-    * @param enriched
+  /** @param enriched
     * @param msgs
     * @return
     */
-  def prepareLangauge(enriched: OreAggregation)
-                     (implicit msgs: MessageCollector[IngestMessage]) = {
+  def prepareLangauge(
+      enriched: OreAggregation
+  )(implicit msgs: MessageCollector[IngestMessage]) = {
 
-    enriched.sourceResource.language.map( l => {
-      if(l.concept.getOrElse("") != l.providedLabel.getOrElse("")){
-        msgs.add(enrichedValue(
-          (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString,
-          "language",
-          l.providedLabel.getOrElse(""),
-          l.concept.getOrElse("")))
+    enriched.sourceResource.language.map(l => {
+      if (l.concept.getOrElse("") != l.providedLabel.getOrElse("")) {
+        msgs.add(
+          enrichedValue(
+            (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString,
+            "language",
+            l.providedLabel.getOrElse(""),
+            l.concept.getOrElse("")
+          )
+        )
       } else
-        msgs.add(originalValue(
-          (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString,
-          "language",
-          l.providedLabel.getOrElse(""))
+        msgs.add(
+          originalValue(
+            (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString,
+            "language",
+            l.providedLabel.getOrElse("")
+          )
         )
     })
   }
 
-  /**
-    *
-    * @param enriched
+  /** @param enriched
     * @param msgs
     * @return
     */
-  def preparePlace(enriched: OreAggregation)
-                     (implicit msgs: MessageCollector[IngestMessage]) = {
+  def preparePlace(
+      enriched: OreAggregation
+  )(implicit msgs: MessageCollector[IngestMessage]) = {
 
-    enriched.sourceResource.place.map( p => {
-      if(p.city.isDefined | p.coordinates.isDefined | p.country.isDefined | p.region.isDefined | p.state.isDefined) {
-        msgs.add( enrichedValue((fromJsonString(enriched.sidecar) \\ "dplaId").values.toString, "place", p.name.getOrElse(""), printPlace(p)))
+    enriched.sourceResource.place.map(p => {
+      if (
+        p.city.isDefined | p.coordinates.isDefined | p.country.isDefined | p.region.isDefined | p.state.isDefined
+      ) {
+        msgs.add(
+          enrichedValue(
+            (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString,
+            "place",
+            p.name.getOrElse(""),
+            printPlace(p)
+          )
+        )
       }
     })
   }
@@ -187,25 +221,39 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
      """.stripMargin.split("\n").filter(_.nonEmpty).mkString("\n")
   }
 
-  /**
-    *
-    * @param original
+  /** @param original
     * @param enriched
     * @param msgs
     * @return
     */
-  def prepareType(original: OreAggregation, enriched: OreAggregation)
-                 (implicit msgs: MessageCollector[IngestMessage]) = {
+  def prepareType(original: OreAggregation, enriched: OreAggregation)(implicit
+      msgs: MessageCollector[IngestMessage]
+  ) = {
     val enrichTypeValues = enriched.sourceResource.`type`
     val originalTypeValues = original.sourceResource.`type`
 
     val typeTuples = enrichTypeValues zip originalTypeValues
 
-    typeTuples.map( { case (e: String, o: String) => {
-      if(e != o)
-        msgs.add(enrichedValue( (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString, "type", o, e))
-      else
-        msgs.add(originalValue( (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString, "type", o))
-    }})
+    typeTuples.map({
+      case (e: String, o: String) => {
+        if (e != o)
+          msgs.add(
+            enrichedValue(
+              (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString,
+              "type",
+              o,
+              e
+            )
+          )
+        else
+          msgs.add(
+            originalValue(
+              (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString,
+              "type",
+              o
+            )
+          )
+      }
+    })
   }
 }

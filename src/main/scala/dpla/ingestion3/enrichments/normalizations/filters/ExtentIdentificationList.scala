@@ -1,9 +1,9 @@
 package dpla.ingestion3.enrichments.normalizations.filters
 
 import dpla.ingestion3.enrichments.normalizations.FilterList
-/**
-  * Identifies values that are likely extend statements
-  * This filter is most commonly applied to the sourceResource.format field
+
+/** Identifies values that are likely extend statements This filter is most
+  * commonly applied to the sourceResource.format field
   */
 object ExtentIdentificationList extends FilterList {
   lazy val termList: Set[String] = Set(
@@ -12,8 +12,7 @@ object ExtentIdentificationList extends FilterList {
   )
 }
 
-/**
-  * Exceptions to the rules outlines above
+/** Exceptions to the rules outlines above
   */
 object ExtentExceptionsList extends FilterList {
   override lazy val termList: Set[String] = Set(

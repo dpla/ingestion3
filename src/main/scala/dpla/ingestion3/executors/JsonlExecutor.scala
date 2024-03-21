@@ -13,19 +13,25 @@ import scala.util.{Failure, Success}
 
 trait JsonlExecutor extends Serializable {
 
-  /**
-    * Generate JSON-L files from AVRO file
-    * @param sparkConf  Spark configuration
-    * @param dataIn     Data to transform into JSON-L
-    * @param dataOut    Location to save JSON-L
-    * @param shortName  Provider shortname
-    * @param logger     Logger object
+  /** Generate JSON-L files from AVRO file
+    * @param sparkConf
+    *   Spark configuration
+    * @param dataIn
+    *   Data to transform into JSON-L
+    * @param dataOut
+    *   Location to save JSON-L
+    * @param shortName
+    *   Provider shortname
+    * @param logger
+    *   Logger object
     */
-  def executeJsonl(sparkConf: SparkConf,
-                   dataIn: String,
-                   dataOut: String,
-                   shortName: String,
-                   logger: Logger): String = {
+  def executeJsonl(
+      sparkConf: SparkConf,
+      dataIn: String,
+      dataOut: String,
+      shortName: String,
+      logger: Logger
+  ): String = {
 
     // This start time is used for documentation and output file naming.
     val startDateTime: LocalDateTime = LocalDateTime.now
@@ -47,12 +53,12 @@ trait JsonlExecutor extends Serializable {
 
     val enrichedRows: DataFrame = spark.read.format("avro").load(dataIn)
 
-    val indexRecords: Dataset[String] = enrichedRows.map(
-      row => {
+    val indexRecords: Dataset[String] = enrichedRows
+      .map(row => {
         val record = ModelConverter.toModel(row)
         jsonlRecord(record)
-      }
-    ).persist(StorageLevel.MEMORY_AND_DISK_SER)
+      })
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     val indexCount = indexRecords.count
 

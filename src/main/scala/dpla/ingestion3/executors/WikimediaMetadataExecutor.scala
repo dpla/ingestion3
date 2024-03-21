@@ -17,19 +17,25 @@ case class WikimediaMetadata(dplaId: String, wikiMarkup: String)
 
 trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
 
-  /**
-    * Generate Wiki metadata JSON files from AVRO file
-    * @param sparkConf  Spark configuration
-    * @param dataIn     Data to transform into Wiki metadata
-    * @param dataOut    Location to save Wikimedia metadata
-    * @param shortName  Provider shortname
-    * @param logger     Logger object
+  /** Generate Wiki metadata JSON files from AVRO file
+    * @param sparkConf
+    *   Spark configuration
+    * @param dataIn
+    *   Data to transform into Wiki metadata
+    * @param dataOut
+    *   Location to save Wikimedia metadata
+    * @param shortName
+    *   Provider shortname
+    * @param logger
+    *   Logger object
     */
-  def executeWikimediaMetadata(sparkConf: SparkConf,
-                               dataIn: String,
-                               dataOut: String,
-                               shortName: String,
-                               logger: Logger): String = {
+  def executeWikimediaMetadata(
+      sparkConf: SparkConf,
+      dataIn: String,
+      dataOut: String,
+      shortName: String,
+      logger: Logger
+  ): String = {
 
     // This start time is used for documentation and output file naming.
     val startDateTime: LocalDateTime = LocalDateTime.now
@@ -52,30 +58,43 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
 
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
-    val dplaMapDataRowEncoder: Encoder[Row] = RowEncoder.encoderFor(model.sparkSchema)
+    val dplaMapDataRowEncoder: Encoder[Row] =
+      RowEncoder.encoderFor(model.sparkSchema)
     val tupleRowBooleanEncoder: Encoder[(Row, Boolean)] = ExpressionEncoder()
 
     val aSeq = allowedIds.toSeq
-    val enrichedRows: DataFrame = spark.read.format("avro").load(dataIn).filter($"dplaUri".isin(aSeq: _*))
+    val enrichedRows: DataFrame =
+      spark.read.format("avro").load(dataIn).filter($"dplaUri".isin(aSeq: _*))
 
     val enrichResults: Dataset[(Row, Boolean)] = enrichedRows.map(row => {
-      Try{ ModelConverter.toModel(row) } match {
+      Try { ModelConverter.toModel(row) } match {
         case Success(dplaMapData) =>
           // If there is neither a IIIF manifest or media master mapped from the original record then try to construct
           // a IIIF manifest from the isShownAt value. This should only work for ContentDM URLs.
           val dplaMapRecord =
-            if(dplaMapData.iiifManifest.isEmpty && dplaMapData.mediaMaster.isEmpty) {
-              dplaMapData.copy(iiifManifest = buildIIIFFromUrl(dplaMapData.isShownAt))
+            if (
+              dplaMapData.iiifManifest.isEmpty && dplaMapData.mediaMaster.isEmpty
+            ) {
+              dplaMapData.copy(iiifManifest =
+                buildIIIFFromUrl(dplaMapData.isShownAt)
+              )
             } else
               dplaMapData
 
           // evaluate the record for Wikimedia eligibility
           val criteria: WikiCriteria = isWikiEligible(dplaMapRecord)
 
-          (criteria.dataProvider, criteria.asset, criteria.rights, criteria.id) match {
+          (
+            criteria.dataProvider,
+            criteria.asset,
+            criteria.rights,
+            criteria.id
+          ) match {
             // All required properties exist
-            case (true, true, true, true) => (RowConverter.toRow(dplaMapRecord, model.sparkSchema), true)
-            case (_, _, _, _) => (RowConverter.toRow(dplaMapRecord, model.sparkSchema), false)
+            case (true, true, true, true) =>
+              (RowConverter.toRow(dplaMapRecord, model.sparkSchema), true)
+            case (_, _, _, _) =>
+              (RowConverter.toRow(dplaMapRecord, model.sparkSchema), false)
           }
         case Failure(_) => (null, false)
       }
@@ -89,21 +108,21 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
     // - iiifManifest
     // - mediaMaster: Seq[String]
     // - title [first value only]
-    val wikiRecords: Dataset[(String, String, String, Seq[String], String)] = enrichResults
-      // Filter out only the wiki eligible records
-      .filter(tuple => tuple._2)
-      .map(tuple => {
-        val record = ModelConverter.toModel(tuple._1)
-        val dplaId = getDplaId(record)
-        val wikiMetadata = buildWikiMarkup(record)
-        val iiif = record.iiifManifest.getOrElse("").toString
-        val mediaMaster = record.mediaMaster.map(_.uri.toString)
-        val title = record.sourceResource.title
-        (dplaId, wikiMetadata, iiif, mediaMaster, title.head)
-      })
+    val wikiRecords: Dataset[(String, String, String, Seq[String], String)] =
+      enrichResults
+        // Filter out only the wiki eligible records
+        .filter(tuple => tuple._2)
+        .map(tuple => {
+          val record = ModelConverter.toModel(tuple._1)
+          val dplaId = getDplaId(record)
+          val wikiMetadata = buildWikiMarkup(record)
+          val iiif = record.iiifManifest.getOrElse("").toString
+          val mediaMaster = record.mediaMaster.map(_.uri.toString)
+          val title = record.sourceResource.title
+          (dplaId, wikiMetadata, iiif, mediaMaster, title.head)
+        })
 
-    wikiRecords
-      .write
+    wikiRecords.write
       .parquet(outputPath)
 
     // Create and write manifest.
@@ -127,4 +146,3 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
     outputPath
   }
 }
-

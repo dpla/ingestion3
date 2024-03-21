@@ -37,8 +37,8 @@ object PssResponseProcessor {
 
     // The set has minimal metadata for its component parts in "hasPart".
     // Replace this minimal metadata with the full parts metadata.
-    val setWithParts: JValue = jsonSet.transformField {
-      case ("hasPart", _) => ("hasPart", cleanJsonParts)
+    val setWithParts: JValue = jsonSet.transformField { case ("hasPart", _) =>
+      ("hasPart", cleanJsonParts)
     }
     // Convert JValue to String.
     Serialization.write(setWithParts)
@@ -48,15 +48,15 @@ object PssResponseProcessor {
   // Identical @context values are present in the set.
   def cleanParts(parts: JArray): JValue = {
     parts.removeField {
-      case("@context", _) => true
-      case _ => false
+      case ("@context", _) => true
+      case _               => false
     }
   }
 
   // Parse the set ID (ie. slug) from its endpoint (ie. url).
   def getSetId(endpoint: String): String = {
     val id = endpoint.split("/").lastOption.getOrElse {
-      throw new RuntimeException ("""Could not get set ID from: """ + endpoint)
+      throw new RuntimeException("""Could not get set ID from: """ + endpoint)
     }
     id.stripSuffix(".json")
   }

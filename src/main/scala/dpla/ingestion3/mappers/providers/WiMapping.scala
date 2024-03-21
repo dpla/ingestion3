@@ -2,7 +2,10 @@ package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.TaggingUtils.Tags
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList}
+import dpla.ingestion3.enrichments.normalizations.filters.{
+  DigitalSurrogateBlockList,
+  ExtentIdentificationList
+}
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany, ZeroToOne}
@@ -13,9 +16,10 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
-
-class WiMapping extends XmlMapping with XmlExtractor
-  with IngestMessageTemplates {
+class WiMapping
+    extends XmlMapping
+    with XmlExtractor
+    with IngestMessageTemplates {
 
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
@@ -37,7 +41,9 @@ class WiMapping extends XmlMapping with XmlExtractor
     extractStrings(data \ "metadata" \\ "isPartOf").map(nameOnlyCollection)
 
   override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
-    extractStrings(data \ "metadata" \\ "contributor").dropRight(1).map(nameOnlyAgent)
+    extractStrings(data \ "metadata" \\ "contributor")
+      .dropRight(1)
+      .map(nameOnlyAgent)
 
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] =
     extractStrings(data \ "metadata" \\ "creator").map(nameOnlyAgent)
@@ -86,9 +92,9 @@ class WiMapping extends XmlMapping with XmlExtractor
     ((data \ "metadata" \\ "rights") ++
       (data \ "metadata" \\ "accessRights")).flatMap(rights => {
       rights.prefix match {
-        case "dc" => Some(rights.text.trim) // dc:rights
+        case "dc"  => Some(rights.text.trim) // dc:rights
         case "dct" => Some(rights.text.trim) // dct:accessRights
-        case _ => None
+        case _     => None
       }
     })
 
@@ -107,7 +113,8 @@ class WiMapping extends XmlMapping with XmlExtractor
     extractStrings(data \ "metadata" \\ "type").filter(isDcmiType)
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "metadata" \\ "dataProvider").map(nameOnlyAgent)
@@ -117,7 +124,7 @@ class WiMapping extends XmlMapping with XmlExtractor
     (data \ "metadata" \\ "rights").flatMap(rights => {
       rights.prefix match {
         case "edm" => Some(URI(rights.text.trim))
-        case _ => None
+        case _     => None
       }
     })
   }
@@ -125,7 +132,8 @@ class WiMapping extends XmlMapping with XmlExtractor
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "metadata" \\ "isShownAt").map(stringOnlyWebResource)
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "metadata" \\ "preview").map(stringOnlyWebResource)
@@ -133,12 +141,13 @@ class WiMapping extends XmlMapping with XmlExtractor
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   override def tags(data: Document[NodeSeq]): ZeroToMany[URI] =
-    extractStrings(data \ "header" \ "setSpec").flatMap(_.applyWisconsinGovernmentTags)
-
-
+    extractStrings(data \ "header" \ "setSpec")
+      .flatMap(_.applyWisconsinGovernmentTags)
 
   def agent = EdmAgent(
     name = Some("Recollection Wisconsin"),

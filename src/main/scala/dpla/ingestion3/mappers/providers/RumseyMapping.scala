@@ -12,8 +12,10 @@ import org.json4s.JsonDSL._
 
 import scala.xml.NodeSeq
 
-class RumseyMapping extends XmlMapping with XmlExtractor
-  with IngestMessageTemplates {
+class RumseyMapping
+    extends XmlMapping
+    with XmlExtractor
+    with IngestMessageTemplates {
 
   // IdMinter methods
   override def useProviderName: Boolean = true
@@ -30,10 +32,14 @@ class RumseyMapping extends XmlMapping with XmlExtractor
 
   // done, sbw. hard coded
   override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
-    Seq(DcmiTypeCollection(
+    Seq(
+      DcmiTypeCollection(
         title = Some("David Rumsey Map Collection"),
-        description = Some("The historical map collection has over 38,000 maps and images online. The collection focuses on rare 18th and 19th century North American and South American maps and other cartographic materials. Historic maps of the World, Europe, Asia, and Africa are also represented.")
-    ))
+        description = Some(
+          "The historical map collection has over 38,000 maps and images online. The collection focuses on rare 18th and 19th century North American and South American maps and other cartographic materials. Historic maps of the World, Europe, Asia, and Africa are also represented."
+        )
+      )
+    )
 
   override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
     extractStrings(metadataRoot(data) \ "contributor")
@@ -114,7 +120,8 @@ class RumseyMapping extends XmlMapping with XmlExtractor
   override def `type`(data: Document[NodeSeq]): Seq[String] = Seq("image")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   // done, sbw hard-coded
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
@@ -129,11 +136,13 @@ class RumseyMapping extends XmlMapping with XmlExtractor
     extractStrings(metadataRoot(data) \ "identifier")
       .filter(Utils.isUrl)
       .take(1)
-      .map(_.replace("74.126.224.22", "www.davidrumsey.com")) // replace hard coded IP address in value
+      .map(
+        _.replace("74.126.224.22", "www.davidrumsey.com")
+      ) // replace hard coded IP address in value
       .map(stringOnlyWebResource)
 
-
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   // second occurrence of dc:identifier
   // done, sbw
@@ -143,13 +152,16 @@ class RumseyMapping extends XmlMapping with XmlExtractor
       .map(stringOnlyWebResource)
 
   // done, sbw
-  override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = EdmAgent(
-    name = Some("David Rumsey"),
-    uri = Some(URI("http://dp.la/api/contributor/david_rumsey"))
-  )
+  override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] =
+    EdmAgent(
+      name = Some("David Rumsey"),
+      uri = Some(URI("http://dp.la/api/contributor/david_rumsey"))
+    )
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data) )
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   // Helper methods
   def metadataRoot(data: Document[NodeSeq]): NodeSeq = data \ "metadata" \ "dc"

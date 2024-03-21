@@ -9,7 +9,6 @@ import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
-
 class GettyMapping extends JsonMapping with JsonExtractor {
 
   val extentAllowList: Set[String] =
@@ -19,13 +18,15 @@ class GettyMapping extends JsonMapping with JsonExtractor {
   override def useProviderName: Boolean = true
   override def getProviderName: Option[String] = Some("getty")
 
-  override def originalId(implicit data: Document[JValue]): ZeroToOne[String] = {
+  override def originalId(implicit
+      data: Document[JValue]
+  ): ZeroToOne[String] = {
     extractStrings(unwrap(data) \ "pnx" \ "control" \ "recordid").headOption
   }
 
   // SourceResource mapping
   override def collection(data: Document[JValue]): Seq[DcmiTypeCollection] =
-  // display/lds43 AND display/lds34
+    // display/lds43 AND display/lds34
     (extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds43") ++
       extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds34"))
       .map(nameOnlyCollection)
@@ -42,12 +43,12 @@ class GettyMapping extends JsonMapping with JsonExtractor {
       .map(nameOnlyAgent)
 
   override def date(data: Document[JValue]): Seq[EdmTimeSpan] =
-  // display/creationdate
+    // display/creationdate
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "creationdate")
       .map(stringOnlyTimeSpan)
 
   override def description(data: Document[JValue]): Seq[String] =
-  // display/lds04 AND display/lds28 AND display/format
+    // display/lds04 AND display/lds28 AND display/format
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds04") ++
       extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds28") ++
       extractStrings(unwrap(data) \ "pnx" \ "display" \ "format")
@@ -77,29 +78,32 @@ class GettyMapping extends JsonMapping with JsonExtractor {
       .map(nameOnlyAgent)
 
   override def rights(data: Document[JValue]): AtLeastOne[String] =
-  // display/lds27 AND display/rights
-    extractStrings((unwrap(data) \ "pnx" \ "display" \ "rights") ++
-      extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds27"))
+    // display/lds27 AND display/rights
+    extractStrings(
+      (unwrap(data) \ "pnx" \ "display" \ "rights") ++
+        extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds27")
+    )
 
   override def subject(data: Document[JValue]): Seq[SkosConcept] =
-  // display/subject AND display/lds49
+    // display/subject AND display/lds49
     (extractStrings(unwrap(data) \ "pnx" \ "display" \ "subject") ++
       extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds49"))
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyConcept)
 
   override def title(data: Document[JValue]): Seq[String] =
-  // display/title AND display/lds03
+    // display/title AND display/lds03
     (extractStrings(unwrap(data) \ "pnx" \ "display" \ "title") ++
       extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds03"))
       .flatMap(_.splitAtDelimiter(";"))
 
   override def `type`(data: Document[JValue]): Seq[String] =
-  // display/lds26
+    // display/lds26
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds26")
 
   // OreAggregation
-  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
     Seq(nameOnlyAgent("Getty Research Institute"))
@@ -108,15 +112,18 @@ class GettyMapping extends JsonMapping with JsonExtractor {
     extractStrings(unwrap(data) \ "delivery" \ "availabilityLinksUrl")
       .map(stringOnlyWebResource)
 
-  override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(unwrap(data))
+  override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
+    Utils.formatJson(unwrap(data))
 
   override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
-  (unwrap(data) \ "delivery" \ "link")
-    .filter(extractString("displayLabel")(_)
-      .getOrElse("")
-      .equalsIgnoreCase("thumbnail"))
-    .flatMap(extractStrings("linkURL")(_))
-    .map(stringOnlyWebResource)
+    (unwrap(data) \ "delivery" \ "link")
+      .filter(
+        extractString("displayLabel")(_)
+          .getOrElse("")
+          .equalsIgnoreCase("thumbnail")
+      )
+      .flatMap(extractStrings("linkURL")(_))
+      .map(stringOnlyWebResource)
   }
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = agent
@@ -130,4 +137,3 @@ class GettyMapping extends JsonMapping with JsonExtractor {
     uri = Some(URI("http://dp.la/api/contributor/getty"))
   )
 }
-

@@ -2,9 +2,7 @@ package dpla.ingestion3.enrichments.normalizations
 
 import dpla.ingestion3.model.OreAggregation
 
-/**
-  * Standard enrichments.
-  *
+/** Standard enrichments.
   */
 object StandardNormalizations {
 

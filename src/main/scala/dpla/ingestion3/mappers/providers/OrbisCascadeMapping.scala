@@ -10,15 +10,21 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
-class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
+class OrbisCascadeMapping
+    extends XmlMapping
+    with XmlExtractor
+    with IngestMessageTemplates {
   // ID minting functions
   override def useProviderName: Boolean = true
 
   override def getProviderName: Option[String] = Some("orbis-cascade")
 
-  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] = {
+  override def originalId(implicit
+      data: Document[NodeSeq]
+  ): ZeroToOne[String] = {
     val xml: Elem = data.get.asInstanceOf[Elem]
-    xml.attribute(xml.getNamespace("rdf"), "about")
+    xml
+      .attribute(xml.getNamespace("rdf"), "about")
       .getOrElse(throw new Exception("Missing required record ID"))
       .flatMap(extractStrings(_))
       .headOption
@@ -34,17 +40,20 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
       .map(nameOnlyAgent)
 
   override def date(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
-    val dateEarly = extractStrings(data \\ "SourceResource" \ "date" \ "TimeSpan" \ "begin")
-    val dateLate = extractStrings(data \\ "SourceResource" \ "date" \ "TimeSpan" \ "end")
+    val dateEarly = extractStrings(
+      data \\ "SourceResource" \ "date" \ "TimeSpan" \ "begin"
+    )
+    val dateLate = extractStrings(
+      data \\ "SourceResource" \ "date" \ "TimeSpan" \ "end"
+    )
 
     if (dateEarly.length == dateLate.length) {
-      dateEarly.zip(dateLate).map {
-        case (begin: String, end: String) =>
-          EdmTimeSpan(
-            originalSourceDate = Some(s"$begin-$end"),
-            begin = Some(begin),
-            end = Some(end)
-          )
+      dateEarly.zip(dateLate).map { case (begin: String, end: String) =>
+        EdmTimeSpan(
+          originalSourceDate = Some(s"$begin-$end"),
+          begin = Some(begin),
+          end = Some(end)
+        )
       }
     } else {
       Seq(emptyEdmTimeSpan)
@@ -79,7 +88,8 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
     extractStrings(data \\ "SourceResource" \ "hasType")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     // <edm:dataProvider rdf:resource="http://harvester.orbiscascade.org/agency/wauar"/>
@@ -112,29 +122,36 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
       "http://archiveswest.orbiscascade.org/contact#oru" -> "University of Oregon Libraries, Special Collections and University Archives"
     )
 
-
-    val xml: Elem = (data \ "dataProvider").headOption.getOrElse(Node).asInstanceOf[Elem]
-    val dataProvider = xml.attribute(xml.getNamespace("rdf"), "resource").getOrElse(Seq())
+    val xml: Elem =
+      (data \ "dataProvider").headOption.getOrElse(Node).asInstanceOf[Elem]
+    val dataProvider =
+      xml.attribute(xml.getNamespace("rdf"), "resource").getOrElse(Seq())
 
     dataProvider
       .flatMap(extractStrings)
       .flatMap(uri => lookup.get(uri))
-      .map(nameOnlyAgent).toSeq
+      .map(nameOnlyAgent)
+      .toSeq
   }
 
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
-    val xml: Elem = (data \ "rights").headOption.getOrElse(Node).asInstanceOf[Elem]
-    val rights = xml.attribute(xml.getNamespace("rdf"), "resource").getOrElse(Seq())
+    val xml: Elem =
+      (data \ "rights").headOption.getOrElse(Node).asInstanceOf[Elem]
+    val rights =
+      xml.attribute(xml.getNamespace("rdf"), "resource").getOrElse(Seq())
 
     rights
       .flatMap(extractStrings)
-      .map(URI).toSeq
+      .map(URI)
+      .toSeq
   }
 
   override def rights(data: Document[NodeSeq]): Seq[String] =
     extractStrings(data \\ "SourceResource" \ "rights")
 
-  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
+  override def isShownAt(
+      data: Document[NodeSeq]
+  ): ZeroToMany[EdmWebResource] = {
     val srAbout = (data \\ "SourceResource").headOption match {
       case Some(node) =>
         val elem = node.asInstanceOf[Elem]
@@ -148,7 +165,8 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
     srAbout.map(stringOnlyWebResource).toSeq
   }
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
     val preview = (data \ "preview" \ "WebResource").headOption match {
@@ -167,7 +185,9 @@ class OrbisCascadeMapping extends XmlMapping with XmlExtractor with IngestMessag
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   override def tags(data: Document[NodeSeq]): ZeroToMany[URI] =
     Seq(URI("nwdh"))

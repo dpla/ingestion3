@@ -14,30 +14,29 @@ import org.json4s.{JValue, _}
 
 import scala.util.{Failure, Success, Try}
 
-
-/**
-  * Extracts values from parsed JSON
+/** Extracts values from parsed JSON
   */
 class FlFileExtractor extends JsonExtractor
 
-/**
-  * Entry for performing a Florida file harvest
+/** Entry for performing a Florida file harvest
   */
-class FlFileHarvester(spark: SparkSession,
-                      shortName: String,
-                      conf: i3Conf,
-                      logger: Logger)
-  extends FileHarvester(spark, shortName, conf, logger) {
+class FlFileHarvester(
+    spark: SparkSession,
+    shortName: String,
+    conf: i3Conf,
+    logger: Logger
+) extends FileHarvester(spark, shortName, conf, logger) {
 
   def mimeType: String = "application_json"
 
   protected val extractor = new FlFileExtractor()
 
-  /**
-    * Loads .zip files
+  /** Loads .zip files
     *
-    * @param file File to parse
-    * @return ZipInputstream of the zip contents
+    * @param file
+    *   File to parse
+    * @return
+    *   ZipInputstream of the zip contents
     */
   def getInputStream(file: File): Option[ZipInputStream] = {
     file.getName match {
@@ -47,72 +46,76 @@ class FlFileHarvester(spark: SparkSession,
     }
   }
 
-  /**
-    * Parses JValue to extract item local item id and renders compact
-    * full record
+  /** Parses JValue to extract item local item id and renders compact full
+    * record
     *
-    * @param json Full JSON item record
-    * @return Option[ParsedResult]
+    * @param json
+    *   Full JSON item record
+    * @return
+    *   Option[ParsedResult]
     */
   def getJsonResult(json: JValue): Option[ParsedResult] =
-    Option(ParsedResult(
-      extractor.extractString(json \ "sourceResource" \ "identifier")
-        .getOrElse(throw new RuntimeException("Missing ID")),
-      compact(render(json))
-    ))
+    Option(
+      ParsedResult(
+        extractor
+          .extractString(json \ "sourceResource" \ "identifier")
+          .getOrElse(throw new RuntimeException("Missing ID")),
+        compact(render(json))
+      )
+    )
 
-  /**
-    * Parses and extracts ZipInputStream and writes
-    * parsed records out.
+  /** Parses and extracts ZipInputStream and writes parsed records out.
     *
-    * @param zipResult  Case class representing extracted items from the zip
-    * @return Count of metadata items found.
+    * @param zipResult
+    *   Case class representing extracted items from the zip
+    * @return
+    *   Count of metadata items found.
     */
-  def handleFile(zipResult: FileResult,
-                 unixEpoch: Long): Try[Int] = {
+  def handleFile(zipResult: FileResult, unixEpoch: Long): Try[Int] = {
 
     var itemCount: Int = 0
 
     zipResult.bufferedData match {
       case None =>
         Success(0) // a directory, no results
-      case Some(data) => Try {
+      case Some(data) =>
+        Try {
 
-        //  FL now provides JSONL (one record per line)
-        var line: String = data.readLine
+          //  FL now provides JSONL (one record per line)
+          var line: String = data.readLine
 
-        while (line != null) {
-          val count = Try {
+          while (line != null) {
+            val count = Try {
 
-            // Clean up leading/trailing characters
-            val json: JValue = parse(line.stripPrefix("[").stripPrefix(","))
+              // Clean up leading/trailing characters
+              val json: JValue = parse(line.stripPrefix("[").stripPrefix(","))
 
-            getJsonResult(json) match {
-              case Some(item) =>
-                writeOut(unixEpoch, item)
-                1
-              case _ => 0
+              getJsonResult(json) match {
+                case Some(item) =>
+                  writeOut(unixEpoch, item)
+                  1
+                case _ => 0
+              }
+            } match {
+              case Success(num) => num
+              case _            => 0
             }
-          } match {
-            case Success(num) => num
-            case _ => 0
-          }
 
-          itemCount += count
-          line = data.readLine
+            itemCount += count
+            line = data.readLine
+          }
+          itemCount
         }
-        itemCount
-      }
     }
   }
 
-  /**
-    * Implements a stream of files from the zip
-    * Can't use @tailrec here because the compiler can't recognize it as tail recursive,
-    * but this won't blow the stack.
+  /** Implements a stream of files from the zip Can't use @tailrec here because
+    * the compiler can't recognize it as tail recursive, but this won't blow the
+    * stack.
     *
     * @param zipInputStream
-    * @return Lazy stream of zip records
+    * @return
+    *   Lazy stream of zip records
     */
   def iter(zipInputStream: ZipInputStream): Stream[FileResult] =
     Option(zipInputStream.getNextEntry) match {
@@ -127,28 +130,31 @@ class FlFileHarvester(spark: SparkSession,
         FileResult(entry.getName, None, result) #:: iter(zipInputStream)
     }
 
-  /**
-    * Executes the Florida harvest
+  /** Executes the Florida harvest
     */
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
-    inFiles.listFiles(new ZipFileFilter).foreach( inFile => {
-      val inputStream: ZipInputStream = getInputStream(inFile)
-        .getOrElse(throw new IllegalArgumentException("Couldn't load ZIP files."))
-      val recordCount = (for (result <- iter(inputStream)) yield {
-        handleFile(result, unixEpoch) match {
-          case Failure(exception) =>
-            logger.error(s"Caught exception on $inFile.", exception)
-            0
-          case Success(count) =>
-            count
-        }
-      }).sum
-      IOUtils.closeQuietly(inputStream)
-    })
+    inFiles
+      .listFiles(new ZipFileFilter)
+      .foreach(inFile => {
+        val inputStream: ZipInputStream = getInputStream(inFile)
+          .getOrElse(
+            throw new IllegalArgumentException("Couldn't load ZIP files.")
+          )
+        val recordCount = (for (result <- iter(inputStream)) yield {
+          handleFile(result, unixEpoch) match {
+            case Failure(exception) =>
+              logger.error(s"Caught exception on $inFile.", exception)
+              0
+            case Success(count) =>
+              count
+          }
+        }).sum
+        IOUtils.closeQuietly(inputStream)
+      })
 
     getAvroWriter.flush()
 

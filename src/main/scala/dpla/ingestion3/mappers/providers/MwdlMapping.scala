@@ -1,7 +1,10 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.normalizations.filters.{
+  DigitalSurrogateBlockList,
+  FormatTypeValuesBlockList
+}
 import dpla.ingestion3.enrichments.TaggingUtils._
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.model.DplaMapData._
@@ -12,12 +15,12 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
-
 class MwdlMapping extends XmlMapping with XmlExtractor {
 
   override val enforceDuplicateIds: Boolean = false
 
-  private val baseIsShownAt = "https://utah-primoprod.hosted.exlibrisgroup.com/primo-explore/fulldisplay?docid="
+  private val baseIsShownAt =
+    "https://utah-primoprod.hosted.exlibrisgroup.com/primo-explore/fulldisplay?docid="
   private val suffixIsShownAt = "&context=L&vid=MWDL"
 
   val formatBlockList: Set[String] =
@@ -48,13 +51,13 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyAgent)
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
-  // search/creationdate AND PrimoNMBib/record/display/creationdate
+    // search/creationdate AND PrimoNMBib/record/display/creationdate
     extractStrings(data \\ "display" \ "creationdate")
       .flatMap(_.splitAtDelimiter(";"))
       .map(stringOnlyTimeSpan)
 
   override def description(data: Document[NodeSeq]): Seq[String] =
-  // search/description (contains dc:description, dcterms:abstract, and dcterms:tableOfContents)
+    // search/description (contains dc:description, dcterms:abstract, and dcterms:tableOfContents)
     extractStrings(data \\ "search" \ "description")
       .map(_.limitCharacters(1000))
 
@@ -88,7 +91,7 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
       .flatMap(extractStrings)
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
-  // display/subject
+    // display/subject
     extractStrings(data \\ "display" \ "subject")
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyConcept)
@@ -101,11 +104,12 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
     extractStrings(data \\ "display" \ "title")
 
   override def `type`(data: Document[NodeSeq]): Seq[String] =
-  // facets/rsrctype
+    // facets/rsrctype
     extractStrings(data \\ "facets" \ "rsrctype")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     (data \\ "display" \ "lds03")
@@ -118,7 +122,7 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
       .map(URI)
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-  // baseIsShownAt + control\recordid
+    // baseIsShownAt + control\recordid
     (data \\ "control" \ "recordid")
       .flatMap(extractStrings)
       .map(baseIsShownAt + _.trim + suffixIsShownAt)
@@ -130,7 +134,8 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
       .flatMap(extractStrings)
       .map(URI)
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     (data \\ "LINKS" \ "thumbnail")
@@ -140,7 +145,9 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   override def tags(data: Document[NodeSeq]): ZeroToMany[URI] =
     dataProvider(data)
@@ -153,4 +160,3 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
     uri = Some(URI("http://dp.la/api/contributor/mwdl"))
   )
 }
-

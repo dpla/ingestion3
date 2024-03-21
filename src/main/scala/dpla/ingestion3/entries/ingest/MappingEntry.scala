@@ -5,25 +5,14 @@ import dpla.ingestion3.executors.MappingExecutor
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
 
-
-/**
-  * Expects four parameters:
-  * 1) a path to the harvested data
-  * 2) a path to output the mapped data
-  * 3) a path to the configuration file
-  * 4) provider short name (e.g. 'mdl', 'cdl', 'harvard')
-  * 5) spark master (optional parameter that overrides a --master param submitted
-  *    via spark-submit)
+/** Expects four parameters: 1) a path to the harvested data 2) a path to output
+  * the mapped data 3) a path to the configuration file 4) provider short name
+  * (e.g. 'mdl', 'cdl', 'harvard') 5) spark master (optional parameter that
+  * overrides a --master param submitted via spark-submit)
   *
-  * Usage
-  * -----
-  * To invoke via sbt:
-  * sbt "run-main dpla.ingestion3.MappingEntry
-  *       --input=/input/path/to/harvested/
-  *       --output=/output/path/to/mapped/
-  *       --conf=/path/to/conf
-  *       --name=shortName"
-  *       --sparkMaster=local[*]
+  * Usage ----- To invoke via sbt: sbt "run-main dpla.ingestion3.MappingEntry
+  * --input=/input/path/to/harvested/ --output=/output/path/to/mapped/
+  * --conf=/path/to/conf --name=shortName" --sparkMaster=local[*]
   */
 
 object MappingEntry extends MappingExecutor {
@@ -51,7 +40,7 @@ object MappingEntry extends MappingExecutor {
 
     val sparkConf = sparkMaster match {
       case Some(m) => baseConf.setMaster(m)
-      case None => baseConf
+      case None    => baseConf
     }
 
     // Log config file location and provider short name.

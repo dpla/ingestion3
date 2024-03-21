@@ -4,41 +4,37 @@ import dpla.ingestion3.profiles._
 
 import scala.util.Try
 
-/**
-  * Main entry point for accessing a provider's associated classes based on its
+/** Main entry point for accessing a provider's associated classes based on its
   * short name.
-  *
   */
 object CHProviderRegistry {
-  /**
-    *
-    * @param short Provider shortname
+
+  /** @param short
+    *   Provider shortname
     * @return
     */
   def lookupRegister(short: String) = Try {
     registry.getOrElse(short, noProfileException(short))
   }
 
-  /**
-    * Get a providers ingestion profile
+  /** Get a providers ingestion profile
     *
-    * @param short Provider shortname
+    * @param short
+    *   Provider shortname
     * @return
     */
   def lookupProfile(short: String) = Try {
     registry.getOrElse(short, noProfileException(short)).profile
   }
 
-  /**
-    *
-    * @param short
+  /** @param short
     * @return
     */
   def lookupHarvesterClass(short: String) = Try {
     registry.getOrElse(short, noProfileException(short)).profile.getHarvester
   }
 
-  case class Register[IngestionProfile] (profile: IngestionProfile)
+  case class Register[IngestionProfile](profile: IngestionProfile)
 
   private val registry = Map(
     // FIXME Register is redundant here and should be removed
@@ -95,7 +91,8 @@ object CHProviderRegistry {
   )
 
   private def noProfileException(short: String) = {
-    val msg = s"No ingestion profile for '$short' found in Cultural Heritage Provider Registry."
+    val msg =
+      s"No ingestion profile for '$short' found in Cultural Heritage Provider Registry."
     throw new RuntimeException(msg)
   }
 }

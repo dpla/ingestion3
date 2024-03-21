@@ -6,28 +6,31 @@ import org.apache.avro.generic.GenericData
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
 
-/**
-  * API base harvester
+/** API base harvester
   *
-  * @param shortName Provider short name
-  * @param conf      Configurations
-  * @param logger    Logger
+  * @param shortName
+  *   Provider short name
+  * @param conf
+  *   Configurations
+  * @param logger
+  *   Logger
   */
-abstract class ApiHarvester(spark: SparkSession,
-                            shortName: String,
-                            conf: i3Conf,
-                            logger: Logger)
-  extends LocalHarvester(spark, shortName, conf, logger) {
+abstract class ApiHarvester(
+    spark: SparkSession,
+    shortName: String,
+    conf: i3Conf,
+    logger: Logger
+) extends LocalHarvester(spark, shortName, conf, logger) {
 
   // Abstract method queryParams should set base query parameters for API call.
   protected val queryParams: Map[String, String]
 
   override def cleanUp(): Unit = ()
 
-  /**
-    * Writes errors and documents to log file and avro file respectively
+  /** Writes errors and documents to log file and avro file respectively
     *
-    * @param msgs List[ApiResponse]
+    * @param msgs
+    *   List[ApiResponse]
     */
   protected def saveOutAll(msgs: List[ApiResponse]): Unit = {
     val docs = msgs.collect { case a: ApiRecord => a }
@@ -38,17 +41,16 @@ abstract class ApiHarvester(spark: SparkSession,
 
   }
 
-  /**
-    * Saves the records
+  /** Saves the records
     *
-    *
-    * @param docs - List of ApiRecords to save out
+    * @param docs
+    *   \- List of ApiRecords to save out
     */
   protected def saveOutRecords(docs: List[ApiRecord]): Unit = {
 
     val avroWriter = getAvroWriter
 
-    // TODO Integrate this with File harvester save out methods 
+    // TODO Integrate this with File harvester save out methods
     docs.foreach(doc => {
       val startTime = System.currentTimeMillis()
       val unixEpoch = startTime / 1000L
@@ -63,15 +65,18 @@ abstract class ApiHarvester(spark: SparkSession,
       avroWriter.append(genericRecord)
     })
   }
-  /**
-    * Writes errors out to log file
+
+  /** Writes errors out to log file
     *
-    * @param errors List[ApiErrors}
+    * @param errors
+    *   List[ApiErrors}
     */
   protected def saveOutErrors(errors: List[ApiError]): Unit =
     errors.foreach(error => {
-      logger.error(s"URL: ${error.errorSource.url.getOrElse("No url")}" +
-        s"\nMessage: ${error.message} \n\n")
+      logger.error(
+        s"URL: ${error.errorSource.url.getOrElse("No url")}" +
+          s"\nMessage: ${error.message} \n\n"
+      )
     })
 
 }

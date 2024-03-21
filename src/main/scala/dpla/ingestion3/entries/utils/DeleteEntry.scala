@@ -6,28 +6,19 @@ import dpla.ingestion3.executors.DeleteExecutor
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
 
-/**
-  * Driver for reading DplaMapData records (mapped or enriched), deleting specific IDs
-  * and generating JSONL text, which can be bulk loaded into a DPLA Ingestion1 index, in
-  * Elasticsearch 0.90
+/** Driver for reading DplaMapData records (mapped or enriched), deleting
+  * specific IDs and generating JSONL text, which can be bulk loaded into a DPLA
+  * Ingestion1 index, in Elasticsearch 0.90
   *
-  * Expects three parameters:
-  * 1) a path to the enriched data
-  * 2) a path to output the jsonl data
-  * 3) provider short name (e.g. 'mdl', 'cdl', 'harvard')
-  * 4) spark master (optional parameter that overrides a --master param submitted
-  *    via spark-submit
-  * 5) a comma separated list of DPLA IDs to delete
+  * Expects three parameters: 1) a path to the enriched data 2) a path to output
+  * the jsonl data 3) provider short name (e.g. 'mdl', 'cdl', 'harvard') 4)
+  * spark master (optional parameter that overrides a --master param submitted
+  * via spark-submit 5) a comma separated list of DPLA IDs to delete
   *
-  * Usage
-  * -----
-  * To invoke via sbt:
-  * sbt "run-main dpla.ingestion3.entries.utils.DeleteEntry
-  *       --input=/input/path/to/enriched/
-  *       --output=/output/path/provider/
-  *       --deleteIds=1,2,3,4
-  *       --name=shortName"
-  *       --sparkMaster=local[*]
+  * Usage ----- To invoke via sbt: sbt "run-main
+  * dpla.ingestion3.entries.utils.DeleteEntry --input=/input/path/to/enriched/
+  * --output=/output/path/provider/ --deleteIds=1,2,3,4 --name=shortName"
+  * --sparkMaster=local[*]
   */
 object DeleteEntry extends DeleteExecutor {
 
@@ -47,8 +38,12 @@ object DeleteEntry extends DeleteExecutor {
     // get the most recent enrichment from that directory.
     val enrichedData = InputHelper.isActivityPath(dataIn) match {
       case true => dataIn
-      case false => InputHelper.mostRecent(dataIn)
-        .getOrElse(throw new RuntimeException("Unable to load enriched data."))
+      case false =>
+        InputHelper
+          .mostRecent(dataIn)
+          .getOrElse(
+            throw new RuntimeException("Unable to load enriched data.")
+          )
     }
 
     val baseConf =
@@ -57,11 +52,18 @@ object DeleteEntry extends DeleteExecutor {
 
     val sparkConf = sparkMaster match {
       case Some(m) => baseConf.setMaster(m)
-      case None => baseConf
+      case None    => baseConf
     }
 
     val logger = Utils.createLogger("delete")
 
-    executeDelete(sparkConf, enrichedData, dataOut, deleteIds, shortName, logger)
+    executeDelete(
+      sparkConf,
+      enrichedData,
+      dataOut,
+      deleteIds,
+      shortName,
+      logger
+    )
   }
 }

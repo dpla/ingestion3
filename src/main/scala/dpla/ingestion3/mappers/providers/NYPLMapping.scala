@@ -1,6 +1,9 @@
 package dpla.ingestion3.mappers.providers
 
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.normalizations.filters.{
+  DigitalSurrogateBlockList,
+  FormatTypeValuesBlockList
+}
 import dpla.ingestion3.mappers.utils
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
@@ -18,7 +21,9 @@ class NyplJsonExtractor extends JsonExtractor
 
 class NyplXmlExtractor extends XmlExtractor
 
-class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestMessageTemplates {
+class NyplMapping(doc: Document[JValue] = null)
+    extends JsonMapping
+    with IngestMessageTemplates {
 
   // extractors
   lazy val json: NyplJsonExtractor = new NyplJsonExtractor
@@ -26,96 +31,326 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
 
   // mods xml from json
   lazy val modsXml: Elem = Try {
-    val xmlString = json.extractString(modsRoot(doc))
-      .getOrElse(throw new Exception(s"No MODS XML for ${originalId(doc)}")).trim
+    val xmlString = json
+      .extractString(modsRoot(doc))
+      .getOrElse(throw new Exception(s"No MODS XML for ${originalId(doc)}"))
+      .trim
     XML.loadString(xmlString)
   } match {
     case Success(mods) => mods
-    case Failure(f) => throw new Exception(s"Unable to load MODS XML for ${originalId(doc)}\n${f.getMessage}")
+    case Failure(f) =>
+      throw new Exception(
+        s"Unable to load MODS XML for ${originalId(doc)}\n${f.getMessage}"
+      )
   }
 
-  private def modsRoot(data: JValue): JValue = data \ "solr_doc_hash" \ "mods_st"
+  private def modsRoot(data: JValue): JValue =
+    data \ "solr_doc_hash" \ "mods_st"
 
   private def solrRoot(data: JValue): JValue = data \ "solr_doc_hash"
 
-  /**
-    * Does the provider use a prefix (typically their provider shortname/abbreviation) to
-    * salt the base identifier?
+  /** Does the provider use a prefix (typically their provider
+    * shortname/abbreviation) to salt the base identifier?
     *
-    * @return Boolean
+    * @return
+    *   Boolean
     */
   override def useProviderName: Boolean = true
 
   override def getProviderName: Option[String] = Some("nypl")
 
-  /**
-    * Extract the record's "persistent" identifier. Implementations should raise
+  /** Extract the record's "persistent" identifier. Implementations should raise
     * an Exception if no ID can be extracted
     *
-    * @return String Record identifier
-    * @throws Exception If ID can not be extracted
+    * @return
+    *   String Record identifier
+    * @throws Exception
+    *   If ID can not be extracted
     */
-  override def originalId(implicit data: utils.Document[JValue]): ZeroToOne[String] = json.extractString("uuid")(data)
+  override def originalId(implicit
+      data: utils.Document[JValue]
+  ): ZeroToOne[String] = json.extractString("uuid")(data)
 
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
       FormatTypeValuesBlockList.termList
 
-  val latLongRegex = "^[-+]?([1-8]?\\d(\\.\\d+)?|90(\\.0+)?),\\s*[-+]?(180(\\.0+)?|((1[0-7]\\d)|([1-9]?\\d))(\\.\\d+)?)$"
+  val latLongRegex =
+    "^[-+]?([1-8]?\\d(\\.\\d+)?|90(\\.0+)?),\\s*[-+]?(180(\\.0+)?|((1[0-7]\\d)|([1-9]?\\d))(\\.\\d+)?)$"
 
-  val creatorRoles = Seq("architect", "art copyist", "artist", "attributed name", "author", "binder", "binding designer",
-    "book jacket designer", "bookplate designer", "calligrapher", "cartographer", "choreographer", "composer", "correspondent",
-    "costume designer", "cover designer", "creator", "dedicator", "designer", "director", "dissertant", "dubious author",
-    "engraver", "etcher", "facsimilist", "film director", "forger", "illustrator", "interviewee", "interviewer", "inventor",
-    "landscape architect", "librettist", "lighting designer", "lithographer", "lyricist", "papermaker", "performer",
-    "photographer", "sculptor", "set designer", "singer", "sound designer", "wood engraver", "woodcutter")
+  val creatorRoles = Seq(
+    "architect",
+    "art copyist",
+    "artist",
+    "attributed name",
+    "author",
+    "binder",
+    "binding designer",
+    "book jacket designer",
+    "bookplate designer",
+    "calligrapher",
+    "cartographer",
+    "choreographer",
+    "composer",
+    "correspondent",
+    "costume designer",
+    "cover designer",
+    "creator",
+    "dedicator",
+    "designer",
+    "director",
+    "dissertant",
+    "dubious author",
+    "engraver",
+    "etcher",
+    "facsimilist",
+    "film director",
+    "forger",
+    "illustrator",
+    "interviewee",
+    "interviewer",
+    "inventor",
+    "landscape architect",
+    "librettist",
+    "lighting designer",
+    "lithographer",
+    "lyricist",
+    "papermaker",
+    "performer",
+    "photographer",
+    "sculptor",
+    "set designer",
+    "singer",
+    "sound designer",
+    "wood engraver",
+    "woodcutter"
+  )
 
-  val contributorRoles = Seq("actor", "adapter", "addressee", "analyst", "animator", "annotator", "applicant", "arranger",
-    "art director", "artistic director", "assignee", "associated name", "auctioneer", "author in quotations or text extracts",
-    "author of afterword, colophon, etc.", "author of dialog", "author of introduction, etc.", "bibliographic antecedent",
-    "blurbwriter", "book designer", "book producer", "bookseller", "censor", "cinematographer", "client", "collector",
-    "collotyper", "colorist", "commentator", "commentator for written text", "compiler", "complainant", "complainant-appellant",
-    "complainant-appellee", "compositor", "conceptor", "conductor", "conservator", "consultant", "consultant to a project",
-    "contestant", "contestant-appellant", "contestant-appellee", "contestee", "contestee-appellant", "contestee-appellee",
-    "contractor", "contributor", "copyright claimant", "copyright holder", "corrector",
-    "curator", "curator of an exhibition", "dancer", "data contributor", "data manager", "dedicatee", "defendant", "defendant-appellant",
-    "defendant-appellee", "degree granting institution", "degree grantor", "delineator", "depositor", "distributor", "donor",
-    "draftsman", "editor", "editor of compilation", "editor of moving image work", "electrician", "electrotyper", "engineer", "expert",
-    "field director", "film distributor", "film editor", "film producer", "first party", "former owner", "funder",
-    "geographic information specialist", "honoree", "host", "illuminator", "inscriber", "instrumentalist", "issuing body", "judge", "laboratory",
-    "laboratory director", "lead", "lender", "libelant", "libelant-appellant", "libelant-appellee", "libelee", "libelee-appellant",
-    "libelee-appellee", "licensee", "licensor", "manufacturer", "marbler", "markup editor", "metadata contact", "metal-engraver",
-    "moderator", "monitor", "music copyist", "musical director", "musician", "narrator", "opponent", "organizer", "originator",
-    "other", "owner", "panelist", "patent applicant", "patent holder", "patron", "permitting agency", "plaintiff", "plaintiff-appellant",
-    "plaintiff-appellee", "platemaker", "presenter", "printer", "printer of plates", "printmaker", "process contact", "producer",
-    "production company", "production manager", "production personnel", "programmer", "project director", "proofreader",
-    "publisher", "publishing director", "puppeteer", "radio producer", "recording engineer", "redaktor", "fenderer", "feporter",
-    "research team head", "research team member", "researcher", "respondent", "respondent-appellant", "respondent-appellee",
-    "responsible party", "restager", "reviewer", "rubricator", "scenarist", "scientific advisor", "screenwriter", "scribe",
-    "second party", "secretary", "signer", "speaker", "sponsor", "stage director", "stage manager", "standards body", "stereotyper",
-    "storyteller", "supporting host", "surveyor", "teacher", "technical director", "television director", "television producer",
-    "thesis advisor", "transcriber", "translator", "type designer", "typographer", "videographer", "voice actor", "witness",
-    "writer of accompanying material")
+  val contributorRoles = Seq(
+    "actor",
+    "adapter",
+    "addressee",
+    "analyst",
+    "animator",
+    "annotator",
+    "applicant",
+    "arranger",
+    "art director",
+    "artistic director",
+    "assignee",
+    "associated name",
+    "auctioneer",
+    "author in quotations or text extracts",
+    "author of afterword, colophon, etc.",
+    "author of dialog",
+    "author of introduction, etc.",
+    "bibliographic antecedent",
+    "blurbwriter",
+    "book designer",
+    "book producer",
+    "bookseller",
+    "censor",
+    "cinematographer",
+    "client",
+    "collector",
+    "collotyper",
+    "colorist",
+    "commentator",
+    "commentator for written text",
+    "compiler",
+    "complainant",
+    "complainant-appellant",
+    "complainant-appellee",
+    "compositor",
+    "conceptor",
+    "conductor",
+    "conservator",
+    "consultant",
+    "consultant to a project",
+    "contestant",
+    "contestant-appellant",
+    "contestant-appellee",
+    "contestee",
+    "contestee-appellant",
+    "contestee-appellee",
+    "contractor",
+    "contributor",
+    "copyright claimant",
+    "copyright holder",
+    "corrector",
+    "curator",
+    "curator of an exhibition",
+    "dancer",
+    "data contributor",
+    "data manager",
+    "dedicatee",
+    "defendant",
+    "defendant-appellant",
+    "defendant-appellee",
+    "degree granting institution",
+    "degree grantor",
+    "delineator",
+    "depositor",
+    "distributor",
+    "donor",
+    "draftsman",
+    "editor",
+    "editor of compilation",
+    "editor of moving image work",
+    "electrician",
+    "electrotyper",
+    "engineer",
+    "expert",
+    "field director",
+    "film distributor",
+    "film editor",
+    "film producer",
+    "first party",
+    "former owner",
+    "funder",
+    "geographic information specialist",
+    "honoree",
+    "host",
+    "illuminator",
+    "inscriber",
+    "instrumentalist",
+    "issuing body",
+    "judge",
+    "laboratory",
+    "laboratory director",
+    "lead",
+    "lender",
+    "libelant",
+    "libelant-appellant",
+    "libelant-appellee",
+    "libelee",
+    "libelee-appellant",
+    "libelee-appellee",
+    "licensee",
+    "licensor",
+    "manufacturer",
+    "marbler",
+    "markup editor",
+    "metadata contact",
+    "metal-engraver",
+    "moderator",
+    "monitor",
+    "music copyist",
+    "musical director",
+    "musician",
+    "narrator",
+    "opponent",
+    "organizer",
+    "originator",
+    "other",
+    "owner",
+    "panelist",
+    "patent applicant",
+    "patent holder",
+    "patron",
+    "permitting agency",
+    "plaintiff",
+    "plaintiff-appellant",
+    "plaintiff-appellee",
+    "platemaker",
+    "presenter",
+    "printer",
+    "printer of plates",
+    "printmaker",
+    "process contact",
+    "producer",
+    "production company",
+    "production manager",
+    "production personnel",
+    "programmer",
+    "project director",
+    "proofreader",
+    "publisher",
+    "publishing director",
+    "puppeteer",
+    "radio producer",
+    "recording engineer",
+    "redaktor",
+    "fenderer",
+    "feporter",
+    "research team head",
+    "research team member",
+    "researcher",
+    "respondent",
+    "respondent-appellant",
+    "respondent-appellee",
+    "responsible party",
+    "restager",
+    "reviewer",
+    "rubricator",
+    "scenarist",
+    "scientific advisor",
+    "screenwriter",
+    "scribe",
+    "second party",
+    "secretary",
+    "signer",
+    "speaker",
+    "sponsor",
+    "stage director",
+    "stage manager",
+    "standards body",
+    "stereotyper",
+    "storyteller",
+    "supporting host",
+    "surveyor",
+    "teacher",
+    "technical director",
+    "television director",
+    "television producer",
+    "thesis advisor",
+    "transcriber",
+    "translator",
+    "type designer",
+    "typographer",
+    "videographer",
+    "voice actor",
+    "witness",
+    "writer of accompanying material"
+  )
 
   override def title(data: Document[json4s.JValue]): AtLeastOne[String] =
-  // titleInfo \ "title" @usage='primary'
+    // titleInfo \ "title" @usage='primary'
     (modsXml \ "titleInfo")
       .flatMap(node => xml.getByAttribute(node, "usage", "primary"))
       .flatMap(node => xml.extractStrings(node \ "title"))
 
-  override def alternateTitle(data: Document[json4s.JValue]): ZeroToMany[String] =
-  // all other title values
-    xml.extractStrings(modsXml \ "titleInfo" \ "title")
+  override def alternateTitle(
+      data: Document[json4s.JValue]
+  ): ZeroToMany[String] =
+    // all other title values
+    xml
+      .extractStrings(modsXml \ "titleInfo" \ "title")
       .diff(title(data))
 
   override def identifier(data: Document[json4s.JValue]): ZeroToMany[String] = {
-    val types = Seq("local_imageid", "isbn", "isrc", "isan", "ismn", "iswc", "issn", "uri", "urn")
+    val types = Seq(
+      "local_imageid",
+      "isbn",
+      "isrc",
+      "isan",
+      "ismn",
+      "iswc",
+      "issn",
+      "uri",
+      "urn"
+    )
     (modsXml \ "identifier")
-      .filter(node => xml.filterAttributeListOptions(node, "type", types) || xml.filterAttributeListOptions(node, "displayLabel", types))
+      .filter(node =>
+        xml.filterAttributeListOptions(node, "type", types) || xml
+          .filterAttributeListOptions(node, "displayLabel", types)
+      )
       .flatMap(xml.extractStrings)
   }
 
-  override def description(data: Document[json4s.JValue]): ZeroToMany[String] = {
+  override def description(
+      data: Document[json4s.JValue]
+  ): ZeroToMany[String] = {
     // note @type='content'
     // abstract
     (modsXml \ "note")
@@ -123,27 +358,33 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
       .flatMap(xml.extractStrings) ++ xml.extractStrings(modsXml \ "abstract")
   }
 
-  override def isShownAt(data: Document[json4s.JValue]): ZeroToMany[EdmWebResource] =
-  // For the base URL was https://digitalcollections.nypl.org/items/
-  // plus
-  // uuid 4d0e0bc0-c540-012f-1857-58d385a7bc34
-  // twas ever thus
-  // https://digitalcollections.nypl.org/items/4d0e0bc0-c540-012f-1857-58d385a7bc34
+  override def isShownAt(
+      data: Document[json4s.JValue]
+  ): ZeroToMany[EdmWebResource] =
+    // For the base URL was https://digitalcollections.nypl.org/items/
+    // plus
+    // uuid 4d0e0bc0-c540-012f-1857-58d385a7bc34
+    // twas ever thus
+    // https://digitalcollections.nypl.org/items/4d0e0bc0-c540-012f-1857-58d385a7bc34
     (modsXml \ "identifier")
       .flatMap(node => xml.getByAttribute(node, "type", "uuid"))
       .flatMap(xml.extractStrings)
       .map(uuid => s"https://digitalcollections.nypl.org/items/$uuid")
       .map(stringOnlyWebResource)
 
-  override def subject(data: Document[json4s.JValue]): ZeroToMany[SkosConcept] = {
-    val subjectKeys = Seq("topic", "geographic", "temporal", "occupation", "Ohio", "Cincinnati")
+  override def subject(
+      data: Document[json4s.JValue]
+  ): ZeroToMany[SkosConcept] = {
+    val subjectKeys =
+      Seq("topic", "geographic", "temporal", "occupation", "Ohio", "Cincinnati")
 
-    val subjectTitles = (modsXml \ "subject" \ "titleInfo" \ "title").map(node => {
-      SkosConcept(
-        providedLabel = xml.extractString(node),
-        exactMatch = xml.getAttributeValue(node, "valueURI").map(URI).toSeq
-      )
-    })
+    val subjectTitles =
+      (modsXml \ "subject" \ "titleInfo" \ "title").map(node => {
+        SkosConcept(
+          providedLabel = xml.extractString(node),
+          exactMatch = xml.getAttributeValue(node, "valueURI").map(URI).toSeq
+        )
+      })
 
     val subjectNames = (modsXml \ "subject" \ "name" \ "namePart").map(node => {
       SkosConcept(
@@ -152,16 +393,14 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
       )
     })
 
-    val subjects = subjectKeys.flatMap(
-      key => {
-        (modsXml \ "subject" \ key).map(node => {
-          SkosConcept(
-            providedLabel = xml.extractString(node),
-            exactMatch = xml.getAttributeValue(node, "valueURI").map(URI).toSeq
-          )
-        })
-      }
-    )
+    val subjects = subjectKeys.flatMap(key => {
+      (modsXml \ "subject" \ key).map(node => {
+        SkosConcept(
+          providedLabel = xml.extractString(node),
+          exactMatch = xml.getAttributeValue(node, "valueURI").map(URI).toSeq
+        )
+      })
+    })
 
     subjects ++ subjectNames ++ subjectTitles
   }
@@ -176,22 +415,33 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
   override def extent(data: Document[json4s.JValue]): ZeroToMany[String] =
     xml.extractStrings(modsXml \ "physicalDescription" \ "extent")
 
-  override def temporal(data: Document[json4s.JValue]): ZeroToMany[EdmTimeSpan] =
+  override def temporal(
+      data: Document[json4s.JValue]
+  ): ZeroToMany[EdmTimeSpan] =
     xml.extractStrings(modsXml \ "subject" \ "temporal").map(stringOnlyTimeSpan)
 
   override def creator(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] =
     agentHelper(modsXml, creatorRoles)
 
-  override def contributor(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] =
+  override def contributor(
+      data: Document[json4s.JValue]
+  ): ZeroToMany[EdmAgent] =
     agentHelper(modsXml, contributorRoles)
 
-  override def collection(data: Document[json4s.JValue]): ZeroToMany[DcmiTypeCollection] =
-    json.extractStrings("rootCollection_s")(solrRoot(data)).map(nameOnlyCollection)
+  override def collection(
+      data: Document[json4s.JValue]
+  ): ZeroToMany[DcmiTypeCollection] =
+    json
+      .extractStrings("rootCollection_s")(solrRoot(data))
+      .map(nameOnlyCollection)
 
   override def date(data: Document[json4s.JValue]): ZeroToMany[EdmTimeSpan] =
-    json.extractStrings("keyDate_st")(solrRoot(data)).map(stringOnlyTimeSpan) // TODO confirm
+    json
+      .extractStrings("keyDate_st")(solrRoot(data))
+      .map(stringOnlyTimeSpan) // TODO confirm
 
-  override def publisher(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] = Seq(emptyEdmAgent)
+  override def publisher(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] =
+    Seq(emptyEdmAgent)
 
   // TODO this is complicated
 
@@ -210,20 +460,32 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
     })
   }
 
-  override def language(data: Document[json4s.JValue]): ZeroToMany[SkosConcept] =
-    xml.extractStrings(modsXml \ "language" \ "languageTerm").map(nameOnlyConcept)
+  override def language(
+      data: Document[json4s.JValue]
+  ): ZeroToMany[SkosConcept] =
+    xml
+      .extractStrings(modsXml \ "language" \ "languageTerm")
+      .map(nameOnlyConcept)
 
   // OreAggregation
-  override def dplaUri(data: Document[json4s.JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[json4s.JValue]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
-  override def originalRecord(data: Document[json4s.JValue]): ExactlyOne[String] = Utils.formatJson(data)
+  override def originalRecord(
+      data: Document[json4s.JValue]
+  ): ExactlyOne[String] = Utils.formatJson(data)
 
-  override def provider(data: Document[json4s.JValue]): ExactlyOne[EdmAgent] = agent
+  override def provider(data: Document[json4s.JValue]): ExactlyOne[EdmAgent] =
+    agent
 
-  override def preview(data: Document[json4s.JValue]): ZeroToMany[EdmWebResource] =
+  override def preview(
+      data: Document[json4s.JValue]
+  ): ZeroToMany[EdmWebResource] =
     json.extractStrings("thumbnail_url")(data).map(stringOnlyWebResource)
 
-  override def dataProvider(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] = {
+  override def dataProvider(
+      data: Document[json4s.JValue]
+  ): ZeroToMany[EdmAgent] = {
     (modsXml \ "location" \ "physicalLocation")
       .filterNot(node => xml.filterAttribute(node, "authority", "marcorg"))
       .map(node => xml.getByAttribute(node, "type", "division"))
@@ -235,7 +497,9 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
   }
 
   override def sidecar(data: Document[json4s.JValue]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   // Helper method
   def agent = EdmAgent(
@@ -246,11 +510,11 @@ class NyplMapping(doc: Document[JValue] = null) extends JsonMapping with IngestM
   def agentHelper(data: NodeSeq, roles: Seq[String]): ZeroToMany[EdmAgent] =
     (data \ "name")
       .filter(node =>
-        xml.extractStrings(node \ "role" \ "roleTerm")
+        xml
+          .extractStrings(node \ "role" \ "roleTerm")
           .map(_.toLowerCase.stripSuffix(" ."))
-          .exists(roles.contains(_)))
+          .exists(roles.contains(_))
+      )
       .flatMap(node => xml.extractStrings(node \ "namePart"))
       .map(nameOnlyAgent)
 }
-
-

@@ -10,8 +10,10 @@ import org.json4s.JsonDSL._
 
 import scala.xml.NodeSeq
 
-class TxdlMapping extends XmlMapping with XmlExtractor
-  with IngestMessageTemplates {
+class TxdlMapping
+    extends XmlMapping
+    with XmlExtractor
+    with IngestMessageTemplates {
 
   // IdMinter methods
   override def useProviderName: Boolean = true
@@ -66,18 +68,23 @@ class TxdlMapping extends XmlMapping with XmlExtractor
       .map(nameOnlyAgent)
 
   override def rights(data: Document[NodeSeq]): Seq[String] =
-    (metadataRoot(data) \\ "rights").map(r => {
-      r.prefix match {
-        case "dc" => r.text
-        case _ => ""
-      }
-    }).filter(_.nonEmpty)
+    (metadataRoot(data) \\ "rights")
+      .map(r => {
+        r.prefix match {
+          case "dc" => r.text
+          case _    => ""
+        }
+      })
+      .filter(_.nonEmpty)
 
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
-    (metadataRoot(data) \\ "rights").map(r => r.prefix match {
-      case "edm" => r.text
-      case _ => ""
-    })
+    (metadataRoot(data) \\ "rights")
+      .map(r =>
+        r.prefix match {
+          case "edm" => r.text
+          case _     => ""
+        }
+      )
       .filter(_.nonEmpty)
       .map(URI)
   }
@@ -93,7 +100,8 @@ class TxdlMapping extends XmlMapping with XmlExtractor
     extractStrings(metadataRoot(data) \ "type")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   // DONE
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
@@ -104,21 +112,27 @@ class TxdlMapping extends XmlMapping with XmlExtractor
     extractStrings(metadataRoot(data) \ "isShownAt")
       .map(stringOnlyWebResource)
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(metadataRoot(data) \ "preview")
       .map(stringOnlyWebResource)
 
-  override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = EdmAgent(
-    name = Some("Texas Digital Library"),
-    uri = Some(URI("http://dp.la/api/contributor/txdl"))
-  )
+  override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] =
+    EdmAgent(
+      name = Some("Texas Digital Library"),
+      uri = Some(URI("http://dp.la/api/contributor/txdl"))
+    )
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data) )
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
-  override def tags(data: Document[NodeSeq]): ZeroToMany[URI] = Seq(URI("texas"))
+  override def tags(data: Document[NodeSeq]): ZeroToMany[URI] = Seq(
+    URI("texas")
+  )
 
   def metadataRoot(data: Document[NodeSeq]): NodeSeq = data \ "dc"
 }

@@ -7,12 +7,12 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
 
-
-class OaiHarvester(spark: SparkSession,
-                   shortName: String,
-                   conf: i3Conf,
-                   harvestLogger: Logger)
-  extends Harvester(spark, shortName, conf, harvestLogger) {
+class OaiHarvester(
+    spark: SparkSession,
+    shortName: String,
+    conf: i3Conf,
+    harvestLogger: Logger
+) extends Harvester(spark, shortName, conf, harvestLogger) {
 
   override def mimeType: String = "application_xml"
 
@@ -26,7 +26,7 @@ class OaiHarvester(spark: SparkSession,
       "blacklist" -> conf.harvest.blacklist,
       "endpoint" -> conf.harvest.endpoint,
       "removeDeleted" -> Some("true")
-    ).collect{ case (key, Some(value)) => key -> value } // remove None values
+    ).collect { case (key, Some(value)) => key -> value } // remove None values
 
     // Run harvest.
     val harvestedData: DataFrame = spark.read
@@ -36,14 +36,16 @@ class OaiHarvester(spark: SparkSession,
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Log errors.
-    harvestedData.select("error.message", "error.url")
+    harvestedData
+      .select("error.message", "error.url")
       .where("error is not null")
       .collect
       .foreach(row => {
-          harvestLogger.warn(s"OAI harvest error ${row.getString(0)} when fetching ${row.getString(1)}" )
-          println(row)
-        }
-      )
+        harvestLogger.warn(
+          s"OAI harvest error ${row.getString(0)} when fetching ${row.getString(1)}"
+        )
+        println(row)
+      })
 
     val startTime = System.currentTimeMillis()
     val unixEpoch = startTime / 1000L

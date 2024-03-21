@@ -15,6 +15,17 @@ trait DefaultVocabularies {
   val wgs84 = WGS84()
 
   def defaultVocabularies: Seq[Vocabulary] = Seq(
-    cnt, dc, dcmiType, dcTerms, dpla, edm, gn, oa, ore, rdf, skos, wgs84
+    cnt,
+    dc,
+    dcmiType,
+    dcTerms,
+    dpla,
+    edm,
+    gn,
+    oa,
+    ore,
+    rdf,
+    skos,
+    wgs84
   )
 }

@@ -8,18 +8,26 @@ import dpla.ingestion3.model.EdmTimeSpan
 import dpla.ingestion3.utils.EDTFDate
 import scala.annotation.tailrec
 
-
 class ParseDateEnrichment extends Serializable {
 
-  def parse(originalDate: EdmTimeSpan, allowInterval: Boolean = false): EdmTimeSpan = {
+  def parse(
+      originalDate: EdmTimeSpan,
+      allowInterval: Boolean = false
+  ): EdmTimeSpan = {
 
     val dateString = originalDate.originalSourceDate.getOrElse("")
     val str = preprocess(dateString)
 
     EDTFDate.rangeForEDTF(str) match {
       case Some(range) =>
-        val begin = range.begin match { case "" => None case _ => Some(range.begin)}
-        val end = range.end match { case "" => None case _ => Some(range.end)}
+        val begin = range.begin match {
+          case "" => None
+          case _  => Some(range.begin)
+        }
+        val end = range.end match {
+          case "" => None
+          case _  => Some(range.end)
+        }
         return EdmTimeSpan(
           originalSourceDate = Some(dateString),
           prefLabel = Some(str),
@@ -29,7 +37,7 @@ class ParseDateEnrichment extends Serializable {
       case None => ()
     }
 
-    //if we can get an interval out of this, return that
+    // if we can get an interval out of this, return that
     parseInterval(str)
       .map(
         { case (begin, end) =>
@@ -42,8 +50,7 @@ class ParseDateEnrichment extends Serializable {
         }
       )
 
-
-    //helper function to return a string
+    // helper function to return a string
     def timespanify(result: String): Option[EdmTimeSpan] =
       Some(
         EdmTimeSpan(
@@ -52,10 +59,11 @@ class ParseDateEnrichment extends Serializable {
           // TODO: Get these values out of enrichment
           begin = None,
           end = None
-        ))
+        )
+      )
 
-    //calling flatMap on an option doesn't iterate, so each of these chains
-    //short circuits the rest of the execution if the result is Some(string)
+    // calling flatMap on an option doesn't iterate, so each of these chains
+    // short circuits the rest of the execution if the result is Some(string)
 
     parseDate(str).flatMap(timespanify).foreach(return _)
     decadeHyphen(str).flatMap(timespanify).foreach(return _)
@@ -64,16 +72,17 @@ class ParseDateEnrichment extends Serializable {
     hyphenatedPartialRange(str).flatMap(timespanify).foreach(return _)
     circa(str).flatMap(timespanify).foreach(return _)
 
-    //by default, return the input if we get here
+    // by default, return the input if we get here
     originalDate
 
   }
 
-
   private def preprocess(str: String): String = {
 
     val removedLateAndEarly =
-      str.replaceAll("[lL]ate", "").replaceAll("[eE]arly", "")
+      str
+        .replaceAll("[lL]ate", "")
+        .replaceAll("[eE]arly", "")
         .trim
         .replaceAll("\\s+", " ")
 
@@ -92,21 +101,22 @@ class ParseDateEnrichment extends Serializable {
   }
 
   private def circa(str: String): Option[String] = {
-    val cleaned = str.replaceAll(""".*[cC]{1}[irca\.]*""", "").replaceAll(""".*about""", "")
-    parseDate(cleaned) match { //todo i removed recusrion by changing parse() to parseDate().
+    val cleaned =
+      str.replaceAll(""".*[cC]{1}[irca\.]*""", "").replaceAll(""".*about""", "")
+    parseDate(cleaned) match { // todo i removed recusrion by changing parse() to parseDate().
       case Some(date) => Some(cleaned)
-      case None => None
+      case None       => None
     }
-    //todo EDTF stuff
+    // todo EDTF stuff
   }
 
   private def parseInterval(str: String): Option[(String, String)] = {
-    //todo parse the dates from the range?
+    // todo parse the dates from the range?
     rangeMatch(str) match {
       case Some((begin, end)) =>
         (parseDate(begin), parseDate(end)) match {
           case (Some(b), Some(e)) => Some(b, e)
-          case _ => None
+          case _                  => None
         }
       case None => None
     }
@@ -116,13 +126,13 @@ class ParseDateEnrichment extends Serializable {
     val cleanedString = str.replace("to", "-").replace("until", "-")
     rangeMatchRexp.findFirstMatchIn(cleanedString) match {
       case Some(matched) => Some((matched.group(1), matched.group(2)))
-      case None => None
+      case None          => None
     }
   }
 
   private def parseDate(str: String): Option[String] = {
 
-    //TODO ideally these are ThreadLocal and stick around rather than being rebuilt all the time
+    // TODO ideally these are ThreadLocal and stick around rather than being rebuilt all the time
     val trialFormats = List(
       "yyyy-MM-dd",
       "MMM dd, yyyy",
@@ -164,7 +174,14 @@ class ParseDateEnrichment extends Serializable {
   private def hyphenatedPartialRange(str: String): Option[String] = {
     hyphenatedPartialRangeRegexp.findFirstMatchIn(str) match {
       case Some(matched) =>
-        Some("%s-%s/%s-%s".format(matched.group(1), matched.group(2), matched.group(1), matched.group(3)))
+        Some(
+          "%s-%s/%s-%s".format(
+            matched.group(1),
+            matched.group(2),
+            matched.group(1),
+            matched.group(3)
+          )
+        )
       case None => None
     }
   }
@@ -172,23 +189,23 @@ class ParseDateEnrichment extends Serializable {
   private def decadeString(str: String): Option[String] = {
     decadeStringRegexp.findFirstMatchIn(str) match {
       case Some(matched) => Some(matched.group(1) + "x")
-      case None => None
+      case None          => None
     }
   }
 
   private def decadeHyphen(str: String): Option[String] = {
     decadeHyphenRegexp.findFirstMatchIn(str) match {
       case Some(matched) => Some(matched.group(1) + "x")
-      case None => None
+      case None          => None
     }
   }
 
 }
 
-
 object ParseDateEnrichment {
 
-  val rangeMatchRexp = """([a-zA-Z]{0,3}\s?[\d\-\/\.xu\?\~a-zA-Z]*,?\s?\d{3}[\d\-xs][s\d\-\.xu\?\~]*)\s*[-\.]+\s*([a-zA-Z]{0,3}\s?[\d\-\/\.xu\?\~a-zA-Z]*,?\s?\d{3}[\d\-xs][s\d\-\.xu\?\~]*)""".r
+  val rangeMatchRexp =
+    """([a-zA-Z]{0,3}\s?[\d\-\/\.xu\?\~a-zA-Z]*,?\s?\d{3}[\d\-xs][s\d\-\.xu\?\~]*)\s*[-\.]+\s*([a-zA-Z]{0,3}\s?[\d\-\/\.xu\?\~a-zA-Z]*,?\s?\d{3}[\d\-xs][s\d\-\.xu\?\~]*)""".r
 
   val monthYearRexp = """^(\d{2})-(\d{4})$""".r
 

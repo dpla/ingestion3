@@ -13,41 +13,45 @@ import scala.io.Source
 import scala.util.{Failure, Success, Try}
 import scala.xml.{MinimizeMode, Node, Utility, XML}
 
-/**
-  * Entry for performing Smithsonian file harvest
+/** Entry for performing Smithsonian file harvest
   */
-class SiFileHarvester(spark: SparkSession,
-                      shortName: String,
-                      conf: i3Conf,
-                      logger: Logger)
-  extends FileHarvester(spark, shortName, conf, logger) {
+class SiFileHarvester(
+    spark: SparkSession,
+    shortName: String,
+    conf: i3Conf,
+    logger: Logger
+) extends FileHarvester(spark, shortName, conf, logger) {
 
   def mimeType: String = "application_xml"
 
-  /**
-    * Loads .gz files
+  /** Loads .gz files
     *
-    * @param file File to parse
-    * @return Option[InputStreamReader] of the zip contents
+    * @param file
+    *   File to parse
+    * @return
+    *   Option[InputStreamReader] of the zip contents
     *
-    *
-    * TODO: Because we're only handling zips in this class,
-    * and they should already be filtered by the FilenameFilter,
-    * I wonder if we even need the match statement here.
+    * TODO: Because we're only handling zips in this class, and they should
+    * already be filtered by the FilenameFilter, I wonder if we even need the
+    * match statement here.
     */
   def getInputStream(file: File): Option[InputStreamReader] = {
     file.getName match {
       case zipName if zipName.endsWith("gz") =>
-        Some(new InputStreamReader(new GZIPInputStream(new FileInputStream(file))))
+        Some(
+          new InputStreamReader(new GZIPInputStream(new FileInputStream(file)))
+        )
       case _ => None
     }
   }
 
-  /**
-    * Takes care of parsing an xml file into a list of Nodes each representing an item
+  /** Takes care of parsing an xml file into a list of Nodes each representing
+    * an item
     *
-    * @param xml Root of the xml document
-    * @return List of Options of id/item pairs.
+    * @param xml
+    *   Root of the xml document
+    * @return
+    *   List of Options of id/item pairs.
     */
   def handleXML(xml: Node): List[Option[ParsedResult]] = {
     for {
@@ -56,7 +60,9 @@ class SiFileHarvester(spark: SparkSession,
     } yield item match {
       case record: Node =>
         // Extract required record identifier
-        val id = Option((record \ "descriptiveNonRepeating" \ "record_ID").text.toString)
+        val id = Option(
+          (record \ "descriptiveNonRepeating" \ "record_ID").text.toString
+        )
         val outputXML = xmlToString(record)
 
         id match {
@@ -71,18 +77,17 @@ class SiFileHarvester(spark: SparkSession,
     }
   }
 
-  /**
-    * Main logic for handling individual lines in the zipped file.
+  /** Main logic for handling individual lines in the zipped file.
     *
-    * @param line String line from file
-    * @return Count of metadata items found.
+    * @param line
+    *   String line from file
+    * @return
+    *   Count of metadata items found.
     */
-  def handleLine(line: String,
-                 unixEpoch: Long): Try[Int] =
-
+  def handleLine(line: String, unixEpoch: Long): Try[Int] =
     Option(line) match {
       case None =>
-        Success(0) //a directory, no results
+        Success(0) // a directory, no results
 
       case Some(data) =>
         Try {
@@ -101,38 +106,43 @@ class SiFileHarvester(spark: SparkSession,
         }
     }
 
-  /**
-    * Get the expected record counts for each provided file from a text file provided along side metadata. Contents of
-    * file are expected to match this format:
+  /** Get the expected record counts for each provided file from a text file
+    * provided along side metadata. Contents of file are expected to match this
+    * format:
     *
-    *   AAADCD_DPLA.xml records = 15,234
-    *   ACAH_DPLA.xml records = 0
-    *   ACM_DPLA.xml records = 1,500
-    *   CHNDM_DPLA.xml records = 156,226
+    * AAADCD_DPLA.xml records = 15,234 ACAH_DPLA.xml records = 0 ACM_DPLA.xml
+    * records = 1,500 CHNDM_DPLA.xml records = 156,226
     *
-    * @param inFiles File           Input directory with metadata and summary file
-    * @return Map[String, String]   Map of filename to record count (formatted as string in file)
+    * @param inFiles
+    *   File Input directory with metadata and summary file
+    * @return
+    *   Map[String, String] Map of filename to record count (formatted as string
+    *   in file)
     */
   def getExpectedFileCounts(inFiles: File): Map[String, String] = {
     var loadCounts = Map[String, String]()
-    inFiles.listFiles(new TxtFileFilter).foreach(file => {
-      Source.fromFile(file).getLines().foreach(line => {
-        Try {
-          val lineVals = line.split(" records = ")
-          // rename .xml to .xml.gz to match filename processed by harvester
-          lineVals(0).replace(".xml", ".xml.gz") -> lineVals(1)
-        } match {
-          case Success(row) => loadCounts += row
-          case Failure(_) => loadCounts
-        }
+    inFiles
+      .listFiles(new TxtFileFilter)
+      .foreach(file => {
+        Source
+          .fromFile(file)
+          .getLines()
+          .foreach(line => {
+            Try {
+              val lineVals = line.split(" records = ")
+              // rename .xml to .xml.gz to match filename processed by harvester
+              lineVals(0).replace(".xml", ".xml.gz") -> lineVals(1)
+            } match {
+              case Success(row) => loadCounts += row
+              case Failure(_)   => loadCounts
+            }
 
+          })
       })
-    })
     loadCounts
   }
 
-  /**
-    * Executes the Smithsonian harvest
+  /** Executes the Smithsonian harvest
     */
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
@@ -144,38 +154,52 @@ class SiFileHarvester(spark: SparkSession,
     // counts
     val expectedFileCounts = getExpectedFileCounts(inFiles)
 
-    inFiles.listFiles(new GzFileFilter).foreach( inFile => {
-      val inputStream = getInputStream(inFile)
-        .getOrElse(throw new IllegalArgumentException(s"Couldn't load file, ${inFile.getAbsolutePath}"))
+    inFiles
+      .listFiles(new GzFileFilter)
+      .foreach(inFile => {
+        val inputStream = getInputStream(inFile)
+          .getOrElse(
+            throw new IllegalArgumentException(
+              s"Couldn't load file, ${inFile.getAbsolutePath}"
+            )
+          )
 
-      // create lineIterator to read contents one line at a time
-      val iter = IOUtils.lineIterator(inputStream)
+        // create lineIterator to read contents one line at a time
+        val iter = IOUtils.lineIterator(inputStream)
 
-      var lineCount: Int = 0
+        var lineCount: Int = 0
 
-      while (iter.hasNext) {
-       Option(iter.nextLine) match {
-          case Some(line) => lineCount += handleLine(line, unixEpoch).get
-          case None => 0
+        while (iter.hasNext) {
+          Option(iter.nextLine) match {
+            case Some(line) => lineCount += handleLine(line, unixEpoch).get
+            case None       => 0
+          }
         }
-      }
-      IOUtils.closeQuietly(inputStream)
+        IOUtils.closeQuietly(inputStream)
 
-      // Format the harvested and expected counts for logging
-      val fromFileFloat  = lineCount.toFloat
-      val fromFilePretty = Utils.formatNumber(fromFileFloat.toLong)
-      val getFilenameKey = (filename: String) => filename.substring(0, inFile.getName.indexOf("."))
-      val expectedPretty = expectedFileCounts.getOrElse(getFilenameKey(inFile.getName), "0")
-      val expectedFloat  = expectedPretty.replaceAll(",","").trim.toFloat // remove commas from string and make float
-      val percentage     = (fromFileFloat / expectedFloat) * 100.0f match {
-        case x if x.isNaN => 0.0f // account for NaN
-        case x if x.isInfinity => fromFileFloat // account for infinity
-        case x if !x.isNaN => x.intValue()
-      }
+        // Format the harvested and expected counts for logging
+        val fromFileFloat = lineCount.toFloat
+        val fromFilePretty = Utils.formatNumber(fromFileFloat.toLong)
+        val getFilenameKey = (filename: String) =>
+          filename.substring(0, inFile.getName.indexOf("."))
+        val expectedPretty =
+          expectedFileCounts.getOrElse(getFilenameKey(inFile.getName), "0")
+        val expectedFloat =
+          expectedPretty
+            .replaceAll(",", "")
+            .trim
+            .toFloat // remove commas from string and make float
+        val percentage = (fromFileFloat / expectedFloat) * 100.0f match {
+          case x if x.isNaN      => 0.0f // account for NaN
+          case x if x.isInfinity => fromFileFloat // account for infinity
+          case x if !x.isNaN     => x.intValue()
+        }
 
-      // Log a summary of the file
-      logger.info(s"Harvested $percentage% ($fromFilePretty / $expectedPretty) of records from ${inFile.getName}")
-    })
+        // Log a summary of the file
+        logger.info(
+          s"Harvested $percentage% ($fromFilePretty / $expectedPretty) of records from ${inFile.getName}"
+        )
+      })
 
     // flush the avroWriter
     flush()
@@ -184,25 +208,28 @@ class SiFileHarvester(spark: SparkSession,
     spark.read.format("avro").load(tmpOutStr)
   }
 
-  /**
-    * Converts a Node to an xml string
+  /** Converts a Node to an xml string
     *
-    * @param node The root of the tree to write to a string
-    * @return a String containing xml
+    * @param node
+    *   The root of the tree to write to a string
+    * @return
+    *   a String containing xml
     */
   def xmlToString(node: Node): String =
     Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
 
-  /**
-    * Parses and extracts ZipInputStream and writes
-    * parses records out.
+  /** Parses and extracts ZipInputStream and writes parses records out.
     *
-    * @param fileResult Case class representing extracted items from a compressed file
-    * @return Count of metadata items found.
+    * @param fileResult
+    *   Case class representing extracted items from a compressed file
+    * @return
+    *   Count of metadata items found.
     */
-  override def handleFile(fileResult: FileResult, unixEpoch: Long): Try[Int] = ???
+  override def handleFile(fileResult: FileResult, unixEpoch: Long): Try[Int] =
+    ???
 }
 
 class TxtFileFilter extends FileFilter {
-  override def accept(pathname: File): Boolean = pathname.getName.endsWith("txt")
+  override def accept(pathname: File): Boolean =
+    pathname.getName.endsWith("txt")
 }

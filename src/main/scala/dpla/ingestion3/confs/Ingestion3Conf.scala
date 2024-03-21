@@ -3,31 +3,38 @@ package dpla.ingestion3.confs
 import com.typesafe.config.ConfigFactory
 import org.rogach.scallop.{ScallopConf, ScallopOption}
 
-/**
+/** @param confFilePath
+  *   Required for all operations (harvest, mapping, or enrichment)
+  * @param providerName
+  *   Optional - Provider shortName used to lookup provider specific settings in
+  *   application configuration file.
   *
-  * @param confFilePath Required for all operations (harvest, mapping,
-  *                     or enrichment)
-  * @param providerName Optional - Provider shortName used to lookup provider
-  *                     specific settings in application configuration file.
-  *
-  *                     Harvest operations require a set of provider settings
-  *
+  * Harvest operations require a set of provider settings
   */
-class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None) extends ConfUtils {
+class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None)
+    extends ConfUtils {
   def load(): i3Conf = {
     ConfigFactory.invalidateCaches()
 
-    if (confFilePath.isEmpty) throw new IllegalArgumentException("Missing path to conf file")
+    if (confFilePath.isEmpty)
+      throw new IllegalArgumentException("Missing path to conf file")
 
     val confString = getConfigContents(confFilePath)
 
-    val baseConfig = ConfigFactory.parseString(confString.getOrElse(
-      throw new RuntimeException(s"Unable to load configuration file at $confFilePath")))
+    val baseConfig = ConfigFactory.parseString(
+      confString.getOrElse(
+        throw new RuntimeException(
+          s"Unable to load configuration file at $confFilePath"
+        )
+      )
+    )
 
     val providerConf = providerName match {
-      case Some(name) => baseConfig.getConfig(name)
-        .withFallback(baseConfig)
-        .resolve()
+      case Some(name) =>
+        baseConfig
+          .getConfig(name)
+          .withFallback(baseConfig)
+          .resolve()
       case _ => baseConfig.resolve()
     }
 
@@ -56,16 +63,16 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None) 
       i3Spark(
         // FIXME these should be removed
         sparkDriverMemory = getProp(providerConf, "spark.driverMemory"),
-        sparkExecutorMemory= getProp(providerConf, "spark.executorMemory")
+        sparkExecutorMemory = getProp(providerConf, "spark.executorMemory")
       )
     )
   }
 }
 
-/**
-  * Command line arguments
+/** Command line arguments
   *
-  * @param arguments Command line arguments
+  * @param arguments
+  *   Command line arguments
   */
 class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
   val input: ScallopOption[String] = opt[String](
@@ -110,34 +117,34 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     validate = _.nonEmpty
   )
 
-  /**
-    * Gets the configuration file property from command line arguments
+  /** Gets the configuration file property from command line arguments
     *
-    * @return Configuration file location
+    * @return
+    *   Configuration file location
     */
   def getConfigFile: String = configFile.toOption
     .getOrElse(throw new RuntimeException("No configuration file specified."))
 
-  /**
-    * Gets the input property from command line arguments
+  /** Gets the input property from command line arguments
     *
-    * @return Input location
+    * @return
+    *   Input location
     */
   def getInput: String = input.toOption
     .getOrElse(throw new RuntimeException("No input specified."))
 
-  /**
-    * Gets the output property from command line arguments
+  /** Gets the output property from command line arguments
     *
-    * @return Output location
+    * @return
+    *   Output location
     */
   def getOutput: String = output.toOption
     .getOrElse(throw new RuntimeException("No output specified."))
 
-  /**
-    * Gets the provider short name from command line arguments
+  /** Gets the provider short name from command line arguments
     *
-    * @return Provider short name
+    * @return
+    *   Provider short name
     */
   def getProviderName: String = providerName.toOption
     .getOrElse(throw new RuntimeException("No provider name specified."))
@@ -149,38 +156,37 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
   verify()
 }
 
-/**
-  * Classes for defining the application.conf file
+/** Classes for defining the application.conf file
   */
-case class Harvest (
-                     // General
-                     endpoint: Option[String] = None,
-                     setlist: Option[String] = None,
-                     blacklist: Option[String] = None,
-                     harvestType: Option[String] = None,
-                     // OAI
-                     verb: Option[String] = None,
-                     metadataPrefix: Option[String] = None,
-                     harvestAllSets: Option[String] = None,
-                     // API
-                     rows: Option[String] = None,
-                     query: Option[String] = None,
-                     apiKey: Option[String] = None,
-                     // File delta
-                     // Process NARA ingest using a incremental update of records
-                     update: Option[String] = None, // Path to delta update records
-                     previous: Option[String] = None, // Path to previously harvested records
-                     deletes: Option[String] = None // Path to deletes
-                   )
+case class Harvest(
+    // General
+    endpoint: Option[String] = None,
+    setlist: Option[String] = None,
+    blacklist: Option[String] = None,
+    harvestType: Option[String] = None,
+    // OAI
+    verb: Option[String] = None,
+    metadataPrefix: Option[String] = None,
+    harvestAllSets: Option[String] = None,
+    // API
+    rows: Option[String] = None,
+    query: Option[String] = None,
+    apiKey: Option[String] = None,
+    // File delta
+    // Process NARA ingest using a incremental update of records
+    update: Option[String] = None, // Path to delta update records
+    previous: Option[String] = None, // Path to previously harvested records
+    deletes: Option[String] = None // Path to deletes
+)
 
 case class i3Conf(
-                   email: Option[String] = None,
-                   provider: Option[String] = None,
-                   harvest: Harvest = Harvest(),
-                   spark: i3Spark = i3Spark()
-                 )
+    email: Option[String] = None,
+    provider: Option[String] = None,
+    harvest: Harvest = Harvest(),
+    spark: i3Spark = i3Spark()
+)
 
-case class i3Spark (
-                     sparkDriverMemory: Option[String] = None,
-                     sparkExecutorMemory: Option[String] = None
-                   )
+case class i3Spark(
+    sparkDriverMemory: Option[String] = None,
+    sparkExecutorMemory: Option[String] = None
+)

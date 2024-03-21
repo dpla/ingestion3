@@ -7,9 +7,8 @@ import okhttp3.{OkHttpClient, Request}
 
 import scala.util.{Failure, Success, Try}
 
-/**
-  * Utility object for making and working with HTTP requests. Uses the OkHttp library.
-  *
+/** Utility object for making and working with HTTP requests. Uses the OkHttp
+  * library.
   */
 object HttpUtils {
 
@@ -24,20 +23,24 @@ object HttpUtils {
     .followRedirects(true)
     .build()
 
-  /**
-    * Performs a Get request with retries and exponential backoff
+  /** Performs a Get request with retries and exponential backoff
     *
-    * @param url URL to request
-    * @return Body of the response
+    * @param url
+    *   URL to request
+    * @return
+    *   Body of the response
     */
-  def makeGetRequest(url: URL, headers: Option[Map[String,String]] = None): Try[String] = {
-    retry(retryMax, backoffMax)( execute(constructRequest(url, headers)) )
+  def makeGetRequest(
+      url: URL,
+      headers: Option[Map[String, String]] = None
+  ): Try[String] = {
+    retry(retryMax, backoffMax)(execute(constructRequest(url, headers)))
   }
 
-  /**
-    * Give me a ping Vasili. One ping only.
+  /** Give me a ping Vasili. One ping only.
     *
-    * @param url URL to ping
+    * @param url
+    *   URL to ping
     * @return
     */
   def validateUrl(url: String): Boolean = {
@@ -47,12 +50,12 @@ object HttpUtils {
     }
   }
 
-
-  /**
-    * Executes the Request
+  /** Executes the Request
     *
-    * @param request Request to perform
-    * @return Body of the response or error message
+    * @param request
+    *   Request to perform
+    * @return
+    *   Body of the response or error message
     */
   private def execute(request: Request): String = {
     val response = httpClient
@@ -74,12 +77,14 @@ object HttpUtils {
     }
   }
 
-  /**
-    * Generic retry method. Taken from stackoverflow...
+  /** Generic retry method. Taken from stackoverflow...
     *
-    * @param n Number of retries
-    * @param wait Time to wait between retries
-    * @param fn The method to retry
+    * @param n
+    *   Number of retries
+    * @param wait
+    *   Time to wait between retries
+    * @param fn
+    *   The method to retry
     * @tparam T
     * @return
     */
@@ -91,27 +96,32 @@ object HttpUtils {
       case _ if n > 1 => {
         Thread.sleep(wait)
         // TODO some better way of incrementing wait period
-        retry(n - 1, wait*2)(fn)
+        retry(n - 1, wait * 2)(fn)
       }
       // Retries exhausted, return whatever the last result was
       case fn => fn
     }
   }
 
-  /**
-    * Constructs a Request object from the URL and headers
+  /** Constructs a Request object from the URL and headers
     *
-    * @param url URL
-    * @param headers HTTP headers
-    * @return Request object
+    * @param url
+    *   URL
+    * @param headers
+    *   HTTP headers
+    * @return
+    *   Request object
     */
-  private def constructRequest(url: URL, headers: Option[Map[String,String]] = None ): Request = {
-    val request = new Request
-      .Builder()
+  private def constructRequest(
+      url: URL,
+      headers: Option[Map[String, String]] = None
+  ): Request = {
+    val request = new Request.Builder()
       .url(url)
 
     headers match {
-      case Some(h) => h.foreach({ case (key, value) => request.addHeader(key, value) })
+      case Some(h) =>
+        h.foreach({ case (key, value) => request.addHeader(key, value) })
       case _ => // Do nothing, no headers
     }
 

@@ -13,11 +13,11 @@ import scala.util.{Failure, Success}
  * This class handles requests to the PSS feed.
  * It partitions data at strategic points.
  */
-class PssResponseBuilder (@transient val sqlContext: SQLContext)
-  extends Serializable {
+class PssResponseBuilder(@transient val sqlContext: SQLContext)
+    extends Serializable {
 
   // Get all sets.
-  def getSets(endpoint: String): RDD[(String,String)] = {
+  def getSets(endpoint: String): RDD[(String, String)] = {
     // The given endpoint returns a list of all set URLs.
     val url = new URL(endpoint)
     val allSets = getStringResponse(url)
@@ -48,15 +48,14 @@ class PssResponseBuilder (@transient val sqlContext: SQLContext)
     })
   }
 
-  /**
-    * Executes the request and returns the response
+  /** Executes the request and returns the response
     *
-    * @param url URL
-    *            PSS request URL
-    * @return String
-    *         String response
+    * @param url
+    *   URL PSS request URL
+    * @return
+    *   String String response
     */
-  def getStringResponse(url: URL) : String = {
+  def getStringResponse(url: URL): String = {
     HttpUtils.makeGetRequest(url) match {
       case Success(s) => s
       // TODO: Handle failed HTTP request.
