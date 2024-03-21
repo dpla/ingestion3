@@ -57,8 +57,7 @@ object ReporterMain {
   )
 
   def usage(): Unit = {
-    println(
-      """
+    println("""
         |Usage:
         |
         |ReporterMain <input> <output> <spark master> <report token> \
@@ -81,7 +80,8 @@ object ReporterMain {
     val logger = Utils.createLogger("reports")
 
     // Start spark session
-    implicit val spark = SparkSession.builder()
+    implicit val spark = SparkSession
+      .builder()
       .config(sparkConf)
       .config("spark.ui.showConsoleProgress", false)
       .getOrCreate()
@@ -93,24 +93,34 @@ object ReporterMain {
 
     val mappedData: Dataset[OreAggregation] = dplaMapData(inputDF)
 
-    executeReport(spark, mappedData, outputURI, reportName, reportParams, logger)
+    executeReport(
+      spark,
+      mappedData,
+      outputURI,
+      reportName,
+      reportParams,
+      logger
+    )
 
     sc.stop
   }
 
-
-  /**
-    * Single entry point for executing all reports
+  /** Single entry point for executing all reports
     *
-    * @param sparkConf Spark configuration
-    * @param input Path to data set to report against
-    * @param baseOutput Base path for where to save all reports.
+    * @param sparkConf
+    *   Spark configuration
+    * @param input
+    *   Path to data set to report against
+    * @param baseOutput
+    *   Base path for where to save all reports.
     */
-  def executeAllReports(sparkConf: SparkConf,
-                        input: String,
-                        baseOutput: String,
-                        shortName: String,
-                        logger: Logger): String = {
+  def executeAllReports(
+      sparkConf: SparkConf,
+      input: String,
+      baseOutput: String,
+      shortName: String,
+      logger: Logger
+  ): String = {
 
     // This start time is used for documentation and output file naming.
     val startDateTime: LocalDateTime = LocalDateTime.now
@@ -121,7 +131,8 @@ object ReporterMain {
     val reportsPath = outputHelper.activityPath
 
     // Start spark session
-    implicit val spark = SparkSession.builder()
+    implicit val spark = SparkSession
+      .builder()
       .config(sparkConf)
       .config("spark.ui.showConsoleProgress", false)
       .getOrCreate()
@@ -136,30 +147,53 @@ object ReporterMain {
 
     // Metadata completion report
     logger.info(s"Executing metadataCompleteness report")
-    executeReport(spark, mappedData, s"$reportsPath/metadataCompleteness",
-      "metadataCompleteness", logger = logger)
+    executeReport(
+      spark,
+      mappedData,
+      s"$reportsPath/metadataCompleteness",
+      "metadataCompleteness",
+      logger = logger
+    )
 
     // Thumbnail reports
     thumbnailOpts.foreach(rptOpt => {
       logger.info(s"Executing thumbnail report for $rptOpt")
-      executeReport(spark, mappedData, s"$reportsPath/thumbnail/$rptOpt",
-        "thumbnail", Array(rptOpt), logger)
+      executeReport(
+        spark,
+        mappedData,
+        s"$reportsPath/thumbnail/$rptOpt",
+        "thumbnail",
+        Array(rptOpt),
+        logger
+      )
     })
 
     // Property distinct value
     reportFields.foreach(field => {
       val rptOut = s"$reportsPath/propertyDistinctValue/$field"
       logger.info(s"Executing propertyDistinctValue for $field")
-      executeReport(spark, mappedData, rptOut, "propertyDistinctValue",
-        Array(field), logger)
+      executeReport(
+        spark,
+        mappedData,
+        rptOut,
+        "propertyDistinctValue",
+        Array(field),
+        logger
+      )
     })
 
     // Property value
     reportFields.foreach(field => {
       val rptOut = s"$reportsPath/propertyValue/$field"
       logger.info(s"Executing propertyValue for $field")
-      executeReport(spark, mappedData, rptOut, "propertyValue",
-        Array(field), logger)
+      executeReport(
+        spark,
+        mappedData,
+        rptOut,
+        "propertyValue",
+        Array(field),
+        logger
+      )
     })
 
     // Enrichment meta information
@@ -191,22 +225,28 @@ object ReporterMain {
     input.map(row => ModelConverter.toModel(row))
   }
 
-  /**
-    * Execute the report
+  /** Execute the report
     *
-    * @param sparkConf Spark configurations
-    * @param input Source data to report on
-    * @param output Destination for reports
-    * @param reportName Name of report to run
-    * @param reportParams Supplemental report params
+    * @param sparkConf
+    *   Spark configurations
+    * @param input
+    *   Source data to report on
+    * @param output
+    *   Destination for reports
+    * @param reportName
+    *   Name of report to run
+    * @param reportParams
+    *   Supplemental report params
     * @return
     */
-  def executeReport(spark: SparkSession,
-                    input: Dataset[OreAggregation],
-                    output: String,
-                    reportName: String,
-                    reportParams: Array[String] = Array(),
-                    logger: Logger): Unit = {
+  def executeReport(
+      spark: SparkSession,
+      input: Dataset[OreAggregation],
+      output: String,
+      reportName: String,
+      reportParams: Array[String] = Array(),
+      logger: Logger
+  ): Unit = {
 
     new Reporter(spark, reportName, input, reportParams, logger).main() match {
       case Success(rpt) =>

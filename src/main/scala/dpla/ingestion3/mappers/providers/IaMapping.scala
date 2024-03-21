@@ -2,14 +2,22 @@ package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
-import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
+import dpla.ingestion3.model.DplaMapData.{
+  AtLeastOne,
+  ExactlyOne,
+  ZeroToMany,
+  ZeroToOne
+}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
 
-class IaMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
+class IaMapping
+    extends JsonMapping
+    with JsonExtractor
+    with IngestMessageTemplates {
 
   // ID minting functions
   override def useProviderName: Boolean = true
@@ -30,34 +38,45 @@ class IaMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
       candidateDataProviders
   }
 
-  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \\ "licenseurl").map(URI)
 
   override def iiifManifest(data: Document[JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \\ "identifier")
-      .map(identifier => URI(s"https://iiif.archivelab.org/iiif/$identifier/manifest.json"))
+      .map(identifier =>
+        URI(s"https://iiif.archivelab.org/iiif/$identifier/manifest.json")
+      )
 
-  override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
-    extractStrings(unwrap(data) \\ "collection").flatMap {
-      // transforms institution shortnames into properly formatted names
-      case "medicalheritagelibrary" => Some("Medical Heritage Library")
-      case "blc" => Some("Boston Library Consortium")
-      case _ => None
-    }
+  override def intermediateProvider(
+      data: Document[JValue]
+  ): ZeroToOne[EdmAgent] =
+    extractStrings(unwrap(data) \\ "collection")
+      .flatMap {
+        // transforms institution shortnames into properly formatted names
+        case "medicalheritagelibrary" => Some("Medical Heritage Library")
+        case "blc"                    => Some("Boston Library Consortium")
+        case _                        => None
+      }
       .map(nameOnlyAgent)
       .headOption
 
   override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \\ "identifier")
-      .map(identifier => stringOnlyWebResource("http://www.archive.org/details/" + identifier))
+      .map(identifier =>
+        stringOnlyWebResource("http://www.archive.org/details/" + identifier)
+      )
 
-  override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(data)
+  override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
+    Utils.formatJson(data)
 
   override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \\ "identifier")
-      .map(identifier => stringOnlyWebResource("https://archive.org/services/img/" + identifier))
+      .map(identifier =>
+        stringOnlyWebResource("https://archive.org/services/img/" + identifier)
+      )
 
   override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = agent
 
@@ -81,10 +100,12 @@ class IaMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
     extractStrings(unwrap(data) \\ "publisher").map(nameOnlyAgent)
 
   override def rights(data: Document[JValue]): AtLeastOne[String] = {
-    val defaultRights = Seq("Access to the Internet Archive’s Collections is granted for scholarship " +
-      "and research purposes only. Some of the content available through the Archive may be governed " +
-      "by local, national, and/or international laws and regulations, and your use of such content " +
-      "is solely at your own risk")
+    val defaultRights = Seq(
+      "Access to the Internet Archive’s Collections is granted for scholarship " +
+        "and research purposes only. Some of the content available through the Archive may be governed " +
+        "by local, national, and/or international laws and regulations, and your use of such content " +
+        "is solely at your own risk"
+    )
     val rights = extractStrings(unwrap(data) \\ "rights") ++
       extractStrings(unwrap(data) \\ "possible-copyright-status")
 
@@ -106,17 +127,21 @@ class IaMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
     val i_max = issues.padTo(max, "")
 
     // Merges t_max, v_max and i_max together separated by comma.
-    ((t_max zip v_max).map(a => (a._1.isEmpty, a._2.isEmpty) match {
-      case (false, false) => s"${a._1}, ${a._2}"
-      case (true, true) => ""
-      case (true, false) => s"${a._2}"
-      case (false, true) => s"${a._1}"
-    }) zip i_max).map(a => (a._1.isEmpty, a._2.isEmpty) match {
-      case (false, false) => s"${a._1}, ${a._2}"
-      case (true, true) => ""
-      case (true, false) => s"${a._2}"
-      case (false, true) => s"${a._1}"
-    })
+    ((t_max zip v_max).map(a =>
+      (a._1.isEmpty, a._2.isEmpty) match {
+        case (false, false) => s"${a._1}, ${a._2}"
+        case (true, true)   => ""
+        case (true, false)  => s"${a._2}"
+        case (false, true)  => s"${a._1}"
+      }
+    ) zip i_max).map(a =>
+      (a._1.isEmpty, a._2.isEmpty) match {
+        case (false, false) => s"${a._1}, ${a._2}"
+        case (true, true)   => ""
+        case (true, false)  => s"${a._2}"
+        case (false, true)  => s"${a._1}"
+      }
+    )
   }
 
   override def `type`(data: Document[JValue]): ZeroToMany[String] =

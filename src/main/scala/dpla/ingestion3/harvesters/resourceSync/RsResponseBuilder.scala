@@ -10,86 +10,97 @@ import scala.annotation.tailrec
 import scala.util.{Failure, Success}
 import scala.xml.XML
 
-
-/**
-  * This class handles requests to the ResourceSync feed.
-  * It partitions data per resourceList.
+/** This class handles requests to the ResourceSync feed. It partitions data per
+  * resourceList.
   */
 
-class RsResponseBuilder (endpoint: String)
-                         (@transient val sqlContext: SQLContext) extends Serializable {
-  /**
-    * Gets all the records described by the source
+class RsResponseBuilder(endpoint: String)(@transient val sqlContext: SQLContext)
+    extends Serializable {
+
+  /** Gets all the records described by the source
     *
     * TODO: We can make better us of our ability to parallelize here by
-    * partitioning a sequence of resource URLs and then mapping them to HTTP responses.
-    * That would be more efficient than doing the HTTP request sequentially.
+    * partitioning a sequence of resource URLs and then mapping them to HTTP
+    * responses. That would be more efficient than doing the HTTP request
+    * sequentially.
     *
-    * @return RDD[RsResponse]
+    * @return
+    *   RDD[RsResponse]
     */
   def getAllResourceList(): RDD[RsResponse] = {
     val multiPageResponse = getMultiResourceResponse()
     sqlContext.sparkContext.parallelize(multiPageResponse)
   }
 
-  /**
-    * Expects the capabilitylist list URL and returns a list of the capabilities of the endpoint
+  /** Expects the capabilitylist list URL and returns a list of the capabilities
+    * of the endpoint
     *
-    * @see https://www.openarchives.org/rs/1.1/resourcesync#CapabilityList
-    * @param capUrl URL that describes the capabilities of the source
-    * @return Map of the capability term and it's corresponding URL
+    * @see
+    *   https://www.openarchives.org/rs/1.1/resourcesync#CapabilityList
+    * @param capUrl
+    *   URL that describes the capabilities of the source
+    * @return
+    *   Map of the capability term and it's corresponding URL
     */
   def getCapibilityUrls(capUrl: URL): Map[String, String] = {
     val rsp = XML.load(capUrl)
-    (rsp \\ "url").map( u => {
-      (u \\ "@capability").text -> (u \\ "loc").text
-    }).toMap
+    (rsp \\ "url")
+      .map(u => {
+        (u \\ "@capability").text -> (u \\ "loc").text
+      })
+      .toMap
   }
 
-  /**
-    * Take the capability URL and extracts all of the resource lists
-    * defined
+  /** Take the capability URL and extracts all of the resource lists defined
     *
     * TODO This should support Sitemaps in addition to RS capabilities
-    * @see https://www.openarchives.org/rs/1.1/resourcesync#Walkthrough
+    * @see
+    *   https://www.openarchives.org/rs/1.1/resourcesync#Walkthrough
     *
-    * @param  url Capability URL
-    * @return Sequence of resource list urls
+    * @param url
+    *   Capability URL
+    * @return
+    *   Sequence of resource list urls
     */
   def getResourceLists(url: URL): Seq[String] = {
     val rsp = XML.load(url)
-    (rsp \\ "url").map( u => {
-      (u \\ "loc").text -> (u \\ "@capability").text
-    }).filter(pairs => pairs match {
-      case (_, "resourcelist") => true
-      case (_,_) => false
-    }).map{ case (r, _) => r }
+    (rsp \\ "url")
+      .map(u => {
+        (u \\ "loc").text -> (u \\ "@capability").text
+      })
+      .filter(pairs =>
+        pairs match {
+          case (_, "resourcelist") => true
+          case (_, _)              => false
+        }
+      )
+      .map { case (r, _) => r }
   }
-  /**
-    * Loads XML from URL and extracts all values in <loc> properties
+
+  /** Loads XML from URL and extracts all values in <loc> properties
     *
     * @param url
-    * @return Sequence of strings
+    * @return
+    *   Sequence of strings
     */
   def getUrls(url: URL): Seq[String] = {
     val rsp = XML.load(url)
     (rsp \\ "loc").map(r => r.text)
   }
 
-  /**
-    * Parses XML string and extracts all values in <loc> properties
+  /** Parses XML string and extracts all values in <loc> properties
     *
-    * @param xmlStr String value representing XML
-    * @return Sequence of URLs
+    * @param xmlStr
+    *   String value representing XML
+    * @return
+    *   Sequence of URLs
     */
   def getUrls(xmlStr: String): Seq[String] = {
     val rsp = XML.loadString(xmlStr)
     (rsp \\ "loc").map(r => r.text)
   }
 
-  /**
-    *
-    * @return
+  /** @return
     */
   def getMultiResourceResponse(): List[RsResponse] = {
     // Request the capability/page that describes resourceLists / resourceDumps
@@ -97,7 +108,10 @@ class RsResponseBuilder (endpoint: String)
 
     // validates
     resourceLists.headOption.getOrElse(
-      throw new RsHarvesterException(s"resourcelist capability not supported by endpoint ${endpoint}"))
+      throw new RsHarvesterException(
+        s"resourcelist capability not supported by endpoint ${endpoint}"
+      )
+    )
 
     @tailrec
     def loop(data: List[RsResponse], lists: Seq[String]): List[RsResponse] = {
@@ -122,16 +136,15 @@ class RsResponseBuilder (endpoint: String)
     }
 
     val firstList = resourceLists.lastOption.getOrElse(
-      throw RsHarvesterException("Empty resourceList. Nothing to harvest"))
+      throw RsHarvesterException("Empty resourceList. Nothing to harvest")
+    )
     val firstData = getResources(firstList)
 
     loop(firstData, resourceLists.init)
 
   }
 
-  /**
-    *
-    * @param resourceListUrl
+  /** @param resourceListUrl
     * @return
     */
   def getResources(resourceListUrl: String): List[RsResponse] = {
@@ -139,17 +152,24 @@ class RsResponseBuilder (endpoint: String)
     HttpUtils.makeGetRequest(new URL(resourceListUrl), Some(headers)) match {
       case Success(indexDoc) => {
         val items = getUrls(indexDoc)
-        items.map(i => {
-          val url = new URL(i)
-          HttpUtils.makeGetRequest(url, Some(headers)) match {
-            case Success(item) => RsRecord("id", item, RsSource(Some(i)))
-            case Failure(error) => RsError(error.getMessage, RsSource(Some(i)))
-          }
-        }).toList
+        items
+          .map(i => {
+            val url = new URL(i)
+            HttpUtils.makeGetRequest(url, Some(headers)) match {
+              case Success(item) => RsRecord("id", item, RsSource(Some(i)))
+              case Failure(error) =>
+                RsError(error.getMessage, RsSource(Some(i)))
+            }
+          })
+          .toList
       }
       case Failure(f) => {
-        List(RsError(s"Unable to get resource list page ${f.getMessage}",
-          RsSource(Some(resourceListUrl))))
+        List(
+          RsError(
+            s"Unable to get resource list page ${f.getMessage}",
+            RsSource(Some(resourceListUrl))
+          )
+        )
       }
     }
   }

@@ -1,7 +1,11 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.normalizations.filters.{
+  DigitalSurrogateBlockList,
+  ExtentIdentificationList,
+  FormatTypeValuesBlockList
+}
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
@@ -12,7 +16,10 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
-class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
+class VtMapping
+    extends XmlMapping
+    with XmlExtractor
+    with IngestMessageTemplates {
 
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
@@ -51,7 +58,7 @@ class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     (data \ "rights").flatMap(r => {
       r.prefix match {
         case "edm" => Seq(URI(r.text))
-        case _ => None
+        case _     => None
       }
     })
 
@@ -102,7 +109,7 @@ class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     (data \ "rights").flatMap(r => {
       r.prefix match {
         case "dc" => Option(r.text)
-        case _ => None
+        case _    => None
       }
     })
 
@@ -117,7 +124,9 @@ class VtMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     extractStrings(data \ "type")
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   def agent = EdmAgent(
     name = Some("Vermont Green Mountain Digital Archive"),

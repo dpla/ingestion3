@@ -1,7 +1,11 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.normalizations.filters.{
+  DigitalSurrogateBlockList,
+  ExtentIdentificationList,
+  FormatTypeValuesBlockList
+}
 import dpla.ingestion3.mappers.utils.{Document, JsonExtractor, JsonMapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
@@ -19,35 +23,45 @@ class CdlMapping extends JsonMapping with JsonExtractor {
   override def getProviderName: Option[String] = Some("cdl")
 
   // OreAggregation fields
-  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
-  override def originalId(implicit data: Document[JValue]): ZeroToOne[String] = extractString("id")(data)
+  override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
+    extractString("id")(data)
 
   override def sidecar(data: Document[JValue]): JValue =
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
 
-  override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] = Seq(nameOnlyAgent(getDataProvider(data)))
+  override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] = Seq(
+    nameOnlyAgent(getDataProvider(data))
+  )
 
   override def edmRights(data: Document[JValue]): ZeroToMany[URI] =
     extractStrings("rights_uri")(data)
-    .map(URI)
+      .map(URI)
 
-  override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(data)
+  override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
+    Utils.formatJson(data)
 
-  override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] = thumbnail(data)
+  override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
+    thumbnail(data)
 
-  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
-    name = Some("California Digital Library"),
-    uri = Some(URI("http://dp.la/api/contributor/cdl"))
-  )
+  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] =
+    EdmAgent(
+      name = Some("California Digital Library"),
+      uri = Some(URI("http://dp.la/api/contributor/cdl"))
+    )
 
-  override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] = providerUri(data)
+  override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
+    providerUri(data)
 
   // SourceResource
   override def alternateTitle(data: Document[JValue]): ZeroToMany[String] =
     extractStrings("alternative_title_ss")(data)
 
-  override def collection(data: Document[JValue]): ZeroToMany[DcmiTypeCollection] =
+  override def collection(
+      data: Document[JValue]
+  ): ZeroToMany[DcmiTypeCollection] =
     extractStrings("collection_name")(data).map(nameOnlyCollection)
 
   override def contributor(data: Document[JValue]): ZeroToMany[EdmAgent] =
@@ -68,10 +82,13 @@ class CdlMapping extends JsonMapping with JsonExtractor {
 
   override def format(data: Document[JValue]): ZeroToMany[String] =
     extractStrings("format")(data)
-      .map(_.applyBlockFilter(
-        DigitalSurrogateBlockList.termList ++
-        FormatTypeValuesBlockList.termList ++
-        ExtentIdentificationList.termList))
+      .map(
+        _.applyBlockFilter(
+          DigitalSurrogateBlockList.termList ++
+            FormatTypeValuesBlockList.termList ++
+            ExtentIdentificationList.termList
+        )
+      )
       .filter(_.nonEmpty)
 
   override def genre(data: Document[JValue]): ZeroToMany[SkosConcept] =
@@ -112,11 +129,14 @@ class CdlMapping extends JsonMapping with JsonExtractor {
   override def title(data: Document[JValue]): AtLeastOne[String] =
     extractStrings("title_ss")(data)
 
-  override def `type`(data: Document[JValue]): ZeroToMany[String] = extractStrings("type")(data)
+  override def `type`(data: Document[JValue]): ZeroToMany[String] =
+    extractStrings("type")(data)
 
-  override def intermediateProvider(data: Document[json4s.JValue]): ZeroToOne[EdmAgent] = {
+  override def intermediateProvider(
+      data: Document[json4s.JValue]
+  ): ZeroToOne[EdmAgent] = {
     val repositories = extractStrings("repository_name")(data)
-    if(repositories.tail.nonEmpty)
+    if (repositories.tail.nonEmpty)
       repositories.take(2).lastOption.map(nameOnlyAgent)
     else
       None
@@ -128,7 +148,8 @@ class CdlMapping extends JsonMapping with JsonExtractor {
     val repository = extractStrings("repository_name")(json).headOption
 
     (campus, repository) match {
-      case (Some(campusVal), Some(repositoryVal)) => campusVal + ", " + repositoryVal
+      case (Some(campusVal), Some(repositoryVal)) =>
+        campusVal + ", " + repositoryVal
       case (None, Some(repositoryVal)) => repositoryVal
       case _ => throw new Exception("Unable to determine provider.")
     }
@@ -136,16 +157,22 @@ class CdlMapping extends JsonMapping with JsonExtractor {
 
   def thumbnail(json: JValue): ZeroToMany[EdmWebResource] =
     extractStrings("reference_image_md5")(json)
-      .map(md5 => stringOnlyWebResource("https://thumbnails.calisphere.org/clip/150x150/" + md5))
+      .map(md5 =>
+        stringOnlyWebResource(
+          "https://thumbnails.calisphere.org/clip/150x150/" + md5
+        )
+      )
 
-  def providerUri(json: JValue): ZeroToMany[EdmWebResource] = extractStrings("url_item")(json).map(stringOnlyWebResource)
+  def providerUri(json: JValue): ZeroToMany[EdmWebResource] =
+    extractStrings("url_item")(json).map(stringOnlyWebResource)
 
-  /**
-    * Extracts values from format field and returns only those values which appear to be
-    * extent statements
+  /** Extracts values from format field and returns only those values which
+    * appear to be extent statements
     *
-    * @param data Original record
-    * @return ZeroToMany[String] Extent values
+    * @param data
+    *   Original record
+    * @return
+    *   ZeroToMany[String] Extent values
     */
   def extentFromFormat(data: Document[JValue]): ZeroToMany[String] =
     extractStrings("format")(data)

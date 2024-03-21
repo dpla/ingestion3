@@ -6,16 +6,19 @@ import com.opencsv.CSVWriter
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SQLContext}
 
-/**
-  * OaiRelation for harvests that don't specify sets.
+/** OaiRelation for harvests that don't specify sets.
   *
-  * @param oaiMethods Implementation of the OaiMethods trait.
-  * @param sqlContext Spark sqlContext.
+  * @param oaiMethods
+  *   Implementation of the OaiMethods trait.
+  * @param sqlContext
+  *   Spark sqlContext.
   */
 
-class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiMethods)
-                           (@transient override val sqlContext: SQLContext)
-  extends OaiRelation {
+class AllRecordsOaiRelation(
+    oaiConfiguration: OaiConfiguration,
+    oaiMethods: OaiMethods
+)(@transient override val sqlContext: SQLContext)
+    extends OaiRelation {
 
   override def buildScan(): RDD[Row] = {
     val tempFile = File.createTempFile("oai", ".txt")
@@ -25,16 +28,17 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiM
   }
 
   private[refactor] def tempFileToRdd(tempFile: File): RDD[Row] = {
-    val csvRdd = sqlContext
-      .read
+    val csvRdd = sqlContext.read
       .format("com.databricks.spark.csv")
       .option("header", "false")
-      //.option("mode", "FAILFAST")
+      // .option("mode", "FAILFAST")
       .load(tempFile.getAbsolutePath)
       .rdd
 
     val eitherRdd = csvRdd.map(handleCsvRow)
-    val pagesEitherRdd = eitherRdd.flatMap(oaiMethods.parsePageIntoRecords(_, oaiConfiguration.removeDeleted))
+    val pagesEitherRdd = eitherRdd.flatMap(
+      oaiMethods.parsePageIntoRecords(_, oaiConfiguration.removeDeleted)
+    )
     pagesEitherRdd.map(OaiRelation.convertToOutputRow)
   }
 
@@ -56,7 +60,12 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiM
     //
     def t(n: Object*) = n
 
-    val writer = new CSVWriter(new FileWriter(tempFile), ',', CSVWriter.DEFAULT_QUOTE_CHARACTER, '\\')
+    val writer = new CSVWriter(
+      new FileWriter(tempFile),
+      ',',
+      CSVWriter.DEFAULT_QUOTE_CHARACTER,
+      '\\'
+    )
 
     try {
       for (page <- oaiMethods.listAllRecordPages()) {
@@ -64,15 +73,17 @@ class AllRecordsOaiRelation(oaiConfiguration: OaiConfiguration, oaiMethods: OaiM
           .filter(o => o.isInstanceOf[String])
           .map(l => l.toString)
           .toArray
-          .padTo(3,"")
+          .padTo(3, "")
         writer.writeNext(line)
       }
     } finally {
-       writer.close()
+      writer.close()
     }
   }
 
-  private[refactor] def eitherToArray(either: Either[OaiError, OaiPage]): Seq[String] =
+  private[refactor] def eitherToArray(
+      either: Either[OaiError, OaiPage]
+  ): Seq[String] =
     either match {
       case Right(OaiPage(string)) =>
         Seq("page", string.replaceAll("(\r\n)|\r|\n", " "), "")

@@ -5,27 +5,17 @@ import dpla.ingestion3.entries.reports.ReporterMain.executeAllReports
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
 
-/**
-  * Driver for reading DplaMapData records (mapped or enriched) and generating
+/** Driver for reading DplaMapData records (mapped or enriched) and generating
   * Reports
   *
-  * Expects three parameters:
-  * 1) a path to the mapped/enriched data
-  * 2) a path to output the reports
-  * 3) a path to the application configuration file
-  * 4) provider short name
-  * 5) spark master (optional parameter that overrides a --master param submitted
-  *    via spark-submit
+  * Expects three parameters: 1) a path to the mapped/enriched data 2) a path to
+  * output the reports 3) a path to the application configuration file 4)
+  * provider short name 5) spark master (optional parameter that overrides a
+  * --master param submitted via spark-submit
   *
-  * Usage
-  * -----
-  * To invoke via sbt:
-  * sbt "run-main dpla.ingestion3.ReportsEntry
-  *       --input=/input/path/to/enriched/
-  *       --output=/output/path/to/reports/
-  *       --conf=/path/to/application.conf
-  *       --name=shortName"
-  *       --sparkMaster=local[*]
+  * Usage ----- To invoke via sbt: sbt "run-main dpla.ingestion3.ReportsEntry
+  * --input=/input/path/to/enriched/ --output=/output/path/to/reports/
+  * --conf=/path/to/application.conf --name=shortName" --sparkMaster=local[*]
   */
 object ReportsEntry {
 
@@ -52,7 +42,7 @@ object ReportsEntry {
 
     val sparkConf = sparkMaster match {
       case Some(m) => baseConf.setMaster(m)
-      case None => baseConf
+      case None    => baseConf
     }
 
     executeAllReports(sparkConf, dataIn, dataOut, shortName, logger)

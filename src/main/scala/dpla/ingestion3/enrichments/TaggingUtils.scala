@@ -9,16 +9,16 @@ object TaggingUtils {
     lazy val applyWisconsinGovernmentTags: Option[URI] = {
       val wisconsinTag = URI("wisconsin_gov_doc")
       val taggingValues = Seq(
-          "p267601coll4",
-          "p16831coll2",
-          "p16831coll3",
-          "p16831coll4",
-          "p16831coll5",
-          "p16831coll6",
-          "p16831coll8"
+        "p267601coll4",
+        "p16831coll2",
+        "p16831coll3",
+        "p16831coll4",
+        "p16831coll5",
+        "p16831coll6",
+        "p16831coll8"
       )
 
-      if(taggingValues.contains(value)) {
+      if (taggingValues.contains(value)) {
         Some(wisconsinTag)
       } else {
         None
@@ -26,9 +26,8 @@ object TaggingUtils {
 
     }
 
-    /**
-     * Applies at standard tag for records to be included in the PanAm portal
-     */
+    /** Applies at standard tag for records to be included in the PanAm portal
+      */
     lazy val applyAviationTags: Option[URI] = {
       // tag value to apply
       val aviationTag = URI("aviation")
@@ -36,7 +35,6 @@ object TaggingUtils {
       // Values for which the aviation tag will be applied
       val taggingValues = Seq(
         "This item was digitized as part of the \"Cleared to Land\" project, supported by a grant from the National Historical Publications & Records Commission (NHPRC).",
-
         "This item was digitized as part of the \"Digitizing the 'World's Most Experienced Airline'\" project, supported by a grant from the Council on Library and Information Resources (CLIR). The grant program is made possible by funding from The Andrew W. Mellon Foundation."
       )
 
@@ -47,9 +45,8 @@ object TaggingUtils {
       }
     }
 
-    /**
-     * Applies tag for NWDH local
-     */
+    /** Applies tag for NWDH local
+      */
     lazy val applyNwdhTags: Option[URI] = {
       val nwdhTag = URI("nwdh")
 

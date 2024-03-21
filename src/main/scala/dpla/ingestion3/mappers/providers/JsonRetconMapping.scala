@@ -1,8 +1,26 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.{Document, JsonExtractor, JsonMapping}
-import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
-import dpla.ingestion3.model.{DcmiTypeCollection, DplaPlace, EdmAgent, EdmTimeSpan, EdmWebResource, LiteralOrUri, SkosConcept, URI, eitherStringOrUri, nameOnlyAgent, nameOnlyConcept, uriOnlyWebResource}
+import dpla.ingestion3.model.DplaMapData.{
+  AtLeastOne,
+  ExactlyOne,
+  ZeroToMany,
+  ZeroToOne
+}
+import dpla.ingestion3.model.{
+  DcmiTypeCollection,
+  DplaPlace,
+  EdmAgent,
+  EdmTimeSpan,
+  EdmWebResource,
+  LiteralOrUri,
+  SkosConcept,
+  URI,
+  eitherStringOrUri,
+  nameOnlyAgent,
+  nameOnlyConcept,
+  uriOnlyWebResource
+}
 import org.json4s
 import org.json4s.JValue
 import org.json4s.JsonAST.{JArray, JObject, JString}
@@ -15,7 +33,7 @@ abstract class JsonRetconMapping extends JsonMapping with JsonExtractor {
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = {
     data.get \ "_source" \ "id" match {
       case JString(value) => Some(URI(f"http://dp.la/api/items/$value"))
-      case _ => None
+      case _              => None
     }
   }
 
@@ -47,25 +65,34 @@ abstract class JsonRetconMapping extends JsonMapping with JsonExtractor {
   // this function deals with the fact that ingestion1 was a pile
   // that let you emit anything
   private def maybeArray[T](
-                             value: JValue,
-                             f: List[(String, JValue)] => Option[T]
-                           ): Seq[T] = value match {
+      value: JValue,
+      f: List[(String, JValue)] => Option[T]
+  ): Seq[T] = value match {
     case JObject(fields) =>
       f(fields).toSeq
     case JArray(values) =>
-      values.flatMap({case JObject(fields) => f(fields)})
+      values.flatMap({ case JObject(fields) => f(fields) })
     case _ =>
       Seq()
   }
 
   // SourceResource
-  override def collection(data: Document[JValue]): ZeroToMany[DcmiTypeCollection] =
+  override def collection(
+      data: Document[JValue]
+  ): ZeroToMany[DcmiTypeCollection] =
     maybeArray(
       data.get \ "_source" \ "sourceResource" \ "collection",
       (fields) => {
         val title = extractStrings("title")(fields).headOption
         val description = extractStrings("description")(fields).headOption
-        if (title.nonEmpty) Some(DcmiTypeCollection(title = title, description = description, isShownAt = None))
+        if (title.nonEmpty)
+          Some(
+            DcmiTypeCollection(
+              title = title,
+              description = description,
+              isShownAt = None
+            )
+          )
         else None
       }
     )
@@ -78,21 +105,24 @@ abstract class JsonRetconMapping extends JsonMapping with JsonExtractor {
     extractStrings(data.get \ "_source" \ "sourceResource" \ "creator")
       .map(nameOnlyAgent)
 
-  private def extractEdmTimeSpan(fields: List[(String, JValue)]): Option[EdmTimeSpan] = {
+  private def extractEdmTimeSpan(
+      fields: List[(String, JValue)]
+  ): Option[EdmTimeSpan] = {
     {
       val begin = extractStrings("begin")(fields).headOption
       val end = extractStrings("end")(fields).headOption
       val displayDate = extractStrings("displayDate")(fields).headOption
 
       if (begin.isEmpty && end.isEmpty && displayDate.isEmpty) None
-      else Some(
-        EdmTimeSpan(
-          originalSourceDate = displayDate,
-          prefLabel = displayDate,
-          begin = begin,
-          end = end
+      else
+        Some(
+          EdmTimeSpan(
+            originalSourceDate = displayDate,
+            prefLabel = displayDate,
+            begin = begin,
+            end = end
+          )
         )
-      )
     }
   }
 
@@ -120,7 +150,9 @@ abstract class JsonRetconMapping extends JsonMapping with JsonExtractor {
     extractStrings(data.get \ "_source" \ "sourceResource" \ "identifier")
 
   override def language(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings(data.get \ "_source" \ "sourceResource" \ "language" \ "name")
+    extractStrings(
+      data.get \ "_source" \ "sourceResource" \ "language" \ "name"
+    )
       .map(nameOnlyConcept)
 
   override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
@@ -135,18 +167,29 @@ abstract class JsonRetconMapping extends JsonMapping with JsonExtractor {
         val region = extractStrings("region")(fields).headOption
         val coordinates = extractStrings("coordinates")(fields).headOption
 
-        if (Seq(name, city, county, state, country, region, coordinates).flatten.isEmpty) None
-        else Some(
-          DplaPlace(
-            name = name,
-            city = city,
-            county = county,
-            state = state,
-            country = country,
-            region = region,
-            coordinates = coordinates
+        if (
+          Seq(
+            name,
+            city,
+            county,
+            state,
+            country,
+            region,
+            coordinates
+          ).flatten.isEmpty
+        ) None
+        else
+          Some(
+            DplaPlace(
+              name = name,
+              city = city,
+              county = county,
+              state = state,
+              country = country,
+              region = region,
+              coordinates = coordinates
+            )
           )
-        )
       }
     )
 
@@ -169,7 +212,7 @@ abstract class JsonRetconMapping extends JsonMapping with JsonExtractor {
     maybeArray(
       data.get \ "_source" \ "sourceResource" \ "temporal",
       extractEdmTimeSpan
-  )
+    )
   override def title(data: Document[JValue]): AtLeastOne[String] =
     extractStrings(data.get \ "_source" \ "sourceResource" \ "title")
 
@@ -181,14 +224,17 @@ abstract class JsonRetconMapping extends JsonMapping with JsonExtractor {
 class ArtstorRetconMapping extends JsonRetconMapping {
   override def useProviderName: Boolean = true
   override def getProviderName: Option[String] = Some("artstor")
-  override def originalId(implicit data: Document[JValue]): ZeroToOne[String] = {
+  override def originalId(implicit
+      data: Document[JValue]
+  ): ZeroToOne[String] = {
     extractString("_id")(data).map(_.substring("artstor--".length))
   }
 
-  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
-    name = Some("Artstor"),
-    uri = Some(URI("http://dp.la/api/contributor/artstor"))
-  )
+  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] =
+    EdmAgent(
+      name = Some("Artstor"),
+      uri = Some(URI("http://dp.la/api/contributor/artstor"))
+    )
 }
 
 class KentuckyRetconMapping extends JsonRetconMapping {
@@ -196,10 +242,11 @@ class KentuckyRetconMapping extends JsonRetconMapping {
   override def getProviderName: Option[String] = Some("kentucky")
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString("_id")(data).map(_.substring("kentucky--".length))
-  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
-    name = Some("Kentucky Digital Library"),
-    uri = Some(URI("http://dp.la/api/contributor/kdl"))
-  )
+  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] =
+    EdmAgent(
+      name = Some("Kentucky Digital Library"),
+      uri = Some(URI("http://dp.la/api/contributor/kdl"))
+    )
 }
 
 class LcRetconMapping extends JsonRetconMapping {
@@ -207,10 +254,11 @@ class LcRetconMapping extends JsonRetconMapping {
   override def getProviderName: Option[String] = Some("lc")
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString("_id")(data)
-  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
-    name = Some("Library of Congress"),
-    uri = Some(URI("http://dp.la/api/contributor/lc"))
-  )
+  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] =
+    EdmAgent(
+      name = Some("Library of Congress"),
+      uri = Some(URI("http://dp.la/api/contributor/lc"))
+    )
 }
 
 class MaineRetconMapping extends JsonRetconMapping {
@@ -218,10 +266,11 @@ class MaineRetconMapping extends JsonRetconMapping {
   override def getProviderName: Option[String] = Some("maine")
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString("_id")(data).map(_.substring("maine--".length))
-  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
-    name = Some("Digital Maine"),
-    uri = Some(URI("http://dp.la/api/contributor/maine"))
-  )
+  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] =
+    EdmAgent(
+      name = Some("Digital Maine"),
+      uri = Some(URI("http://dp.la/api/contributor/maine"))
+    )
 }
 
 class WashingtonRetconMapping extends JsonRetconMapping {
@@ -229,10 +278,11 @@ class WashingtonRetconMapping extends JsonRetconMapping {
   override def getProviderName: Option[String] = Some("washington")
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString("_id")(data)
-  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
-    name = Some("University of Washington"),
-    uri = Some(URI("http://dp.la/api/contributor/washington"))
-  )
+  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] =
+    EdmAgent(
+      name = Some("University of Washington"),
+      uri = Some(URI("http://dp.la/api/contributor/washington"))
+    )
 
   override def tags(data: Document[json4s.JValue]): ZeroToMany[URI] =
     Seq(URI("nwdh"))

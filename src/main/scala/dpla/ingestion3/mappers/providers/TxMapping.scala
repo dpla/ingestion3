@@ -2,7 +2,10 @@ package dpla.ingestion3.mappers.providers
 
 import java.net.URL
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.normalizations.filters.{
+  DigitalSurrogateBlockList,
+  FormatTypeValuesBlockList
+}
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
@@ -15,7 +18,10 @@ import org.json4s.jackson.JsonMethods._
 import scala.collection.mutable.ArrayBuffer
 import scala.xml.{NodeSeq, Text}
 
-class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
+class TxMapping
+    extends XmlMapping
+    with XmlExtractor
+    with IngestMessageTemplates {
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
       FormatTypeValuesBlockList.termList
@@ -26,17 +32,20 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
 
   override def getProviderName: Option[String] = Some("texas")
 
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     val dataProviders = extractStrings(data \ "header" \ "setSpec")
       .filter(_.startsWith("partner"))
-      .map(setSpec => TxMapping.dataproviderTermLabel.getOrElse(setSpec.split(":").last, ""))
+      .map(setSpec =>
+        TxMapping.dataproviderTermLabel.getOrElse(setSpec.split(":").last, "")
+      )
       .filter(_.nonEmpty)
 
     dataProviders.lastOption match {
       case Some(dataProvider) => Seq(nameOnlyAgent(dataProvider))
-      case None => Seq()
+      case None               => Seq()
     }
   }
 
@@ -44,18 +53,25 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     // <untl:rights qualifier="statement">http://rightsstatements.org/vocab/NoC-US/1.0/</untl:rights>
     // <untl:rights qualifier="license">https://creativecommons.org/licenses/by/4.0/</untl:rights>
     (metadata(data) \ "rights")
-      .filter(node => filterAttributeListOptions(node, "qualifier", Seq("statement", "license")))
+      .filter(node =>
+        filterAttributeListOptions(
+          node,
+          "qualifier",
+          Seq("statement", "license")
+        )
+      )
       .flatMap(extractStrings)
       .map(URI)
 
   override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] =
-  // <untl:identifier qualifier="iiif-manifest">https://texashistory.unt.edu/ark:/67531/metapth2719/manifest/
+    // <untl:identifier qualifier="iiif-manifest">https://texashistory.unt.edu/ark:/67531/metapth2719/manifest/
     (metadata(data) \ "identifier")
       .filter(node => filterAttribute(node, "qualifier", "iiif-manifest"))
       .flatMap(extractStrings)
       .map(URI)
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     (metadata(data) \ "identifier")
@@ -72,11 +88,14 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] =
     EdmAgent(
       name = Some("The Portal to Texas History"),
-      uri = Some(URI("http://dp.la/api/contributor/the_portal_to_texas_history"))
+      uri =
+        Some(URI("http://dp.la/api/contributor/the_portal_to_texas_history"))
     )
 
   override def sidecar(data: Document[NodeSeq]): JsonAST.JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   override def useProviderName: Boolean = true
 
@@ -99,7 +118,13 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .headOption
 
     val otherDates = (metadata(data) \ "date")
-      .filterNot(node => filterAttribute(node, "qualifier", "digitized") | filterAttribute(node, "qualifier", "embargoUntil"))
+      .filterNot(node =>
+        filterAttribute(node, "qualifier", "digitized") | filterAttribute(
+          node,
+          "qualifier",
+          "embargoUntil"
+        )
+      )
       .flatMap(extractStrings)
       .map(stringOnlyTimeSpan)
       .headOption
@@ -145,10 +170,13 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     val locations = extractStrings(metadata(data) \ "publisher" \ "location")
     val names = extractStrings(metadata(data) \ "publisher" \ "name")
 
-    locations.zipAll(names, None, None).flatMap {
-      case (location: String, name: String) => Some(s"$location: $name")
-      case (_, _) => None
-    }.map(nameOnlyAgent)
+    locations
+      .zipAll(names, None, None)
+      .flatMap {
+        case (location: String, name: String) => Some(s"$location: $name")
+        case (_, _)                           => None
+      }
+      .map(nameOnlyAgent)
   }
 
   override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
@@ -163,14 +191,15 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       val term = extractString(node)
       val scheme = node.attribute("qualifier") match {
         case Some(nodes) => extractString(nodes.head)
-        case None => None
+        case None        => None
       }
 
       // LCSH == http://id.loc.gov/authorities#conceptscheme
       // UNTL-BS == https://digital2.library.unt.edu/subjects/
       // KWD == ???
       val schemeUri = scheme match {
-        case Some("LCSH") => Some(URI("http://id.loc.gov/authorities#conceptscheme"))
+        case Some("LCSH") =>
+          Some(URI("http://id.loc.gov/authorities#conceptscheme"))
         case _ => None
       }
 
@@ -178,7 +207,7 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     })
 
   override def title(data: Document[NodeSeq]): AtLeastOne[String] = {
-    val titles =  metadata(data) \ "title"
+    val titles = metadata(data) \ "title"
 
     val officialTitle = titles
       .filter(node => filterAttribute(node, "qualifier", "officialtitle"))
@@ -190,9 +219,9 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .headOption
 
     (officialTitle, altTitle) match {
-      case (Some(ot), _) => Seq(ot)
+      case (Some(ot), _)    => Seq(ot)
       case (None, Some(at)) => Seq(at)
-      case (_, _) => Seq()
+      case (_, _)           => Seq()
     }
   }
 
@@ -202,8 +231,8 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     extractStrings(metadata(data) \ "format")
   }
 
-  /**
-    * Helper method to extract value directly associated with property or <name> sub-property
+  /** Helper method to extract value directly associated with property or <name>
+    * sub-property
     *
     * @param data
     * @param property
@@ -211,7 +240,6 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     */
   def extractName(data: NodeSeq, property: String): ZeroToMany[EdmAgent] = {
     (data \ property)
-
 
     (data \ property)
       .flatMap(node => {
@@ -224,11 +252,11 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
       .map(nameOnlyAgent)
   }
 
-  override def tags(data: Document[NodeSeq]): ZeroToMany[URI] = Seq(URI("texas"))
+  override def tags(data: Document[NodeSeq]): ZeroToMany[URI] = Seq(
+    URI("texas")
+  )
 
-
-  /**
-    * Helper method to get to metadata root
+  /** Helper method to get to metadata root
     *
     * @param data
     * @return
@@ -236,23 +264,24 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
   def metadata(data: NodeSeq): NodeSeq = data \ "metadata" \ "metadata"
 }
 
-
 object TxMapping {
   import org.json4s.JsonAST._
 
   val rightsTermLabel: Map[String, String] = Map[String, String](
     "by" -> "License: Attribution.",
-    "by-nc"-> "License: Attribution Noncommercial.",
-    "by-nc-nd"-> "License: Attribution Non-commercial No Derivatives.",
-    "by-nc-sa"-> "License: Attribution Noncommercial Share Alike.",
-    "by-nd"-> "License: Attribution No Derivatives.",
-    "by-sa"-> "License: Attribution Share Alike.",
-    "copyright"-> "License: Copyright.",
-    "pd"-> "License: Public Domain."
+    "by-nc" -> "License: Attribution Noncommercial.",
+    "by-nc-nd" -> "License: Attribution Non-commercial No Derivatives.",
+    "by-nc-sa" -> "License: Attribution Noncommercial Share Alike.",
+    "by-nd" -> "License: Attribution No Derivatives.",
+    "by-sa" -> "License: Attribution Share Alike.",
+    "copyright" -> "License: Copyright.",
+    "pd" -> "License: Public Domain."
   )
 
-  val endpoint = "https://digital2.library.unt.edu/vocabularies/institutions/json/"
-  val jsonString = HttpUtils.makeGetRequest(new URL(endpoint), None).getOrElse("")
+  val endpoint =
+    "https://digital2.library.unt.edu/vocabularies/institutions/json/"
+  val jsonString =
+    HttpUtils.makeGetRequest(new URL(endpoint), None).getOrElse("")
   val json = parse(jsonString)
 
   val dataproviderTermLabel: Map[String, String] = (for {

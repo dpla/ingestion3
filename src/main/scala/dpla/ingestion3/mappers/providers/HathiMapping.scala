@@ -14,7 +14,6 @@ import org.json4s.JsonDSL._
 import scala.util.{Success, Try}
 import scala.xml._
 
-
 class HathiMapping extends MarcXmlMapping {
 
   val isShownAtPrefix: String = "http://catalog.hathitrust.org/Record/"
@@ -37,10 +36,13 @@ class HathiMapping extends MarcXmlMapping {
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     // <datafield> tag = 700, 710, 711, or 720
     marcFields(data, Seq("700", "710", "711", "720"))
-      .filterNot(filterSubfields(_, Seq("e")) // exclude subfields with @code=e and...
-      .flatMap(extractStrings)
-      .exists(Seq("aut", "cre").contains(_)) // ...where #text = "aut" or "cre"
-    )
+      .filterNot(
+        filterSubfields(_, Seq("e")) // exclude subfields with @code=e and...
+          .flatMap(extractStrings)
+          .exists(
+            Seq("aut", "cre").contains(_)
+          ) // ...where #text = "aut" or "cre"
+      )
       .map(extractStrings)
       .map(_.mkString(" "))
       .map(nameOnlyAgent)
@@ -75,7 +77,11 @@ class HathiMapping extends MarcXmlMapping {
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     // <datafield> tag = 300 <subfield> code = a or c
     // <datafield> tag = 340 <subfield> code = b
-    (marcFields(data, Seq("300"), Seq("a", "c")) ++ marcFields(data, Seq("340"), Seq("b")))
+    (marcFields(data, Seq("300"), Seq("a", "c")) ++ marcFields(
+      data,
+      Seq("340"),
+      Seq("b")
+    ))
       .map(extractStrings)
       .map(_.mkString(" "))
 
@@ -83,18 +89,22 @@ class HathiMapping extends MarcXmlMapping {
     // <leader> #text character at index 6
     // map character to String value in leaderFormats
     val lFormats: Seq[String] = leaderAt(data, 6)
-      .flatMap(key => Try{ leaderFormats(key) }.toOption)
+      .flatMap(key => Try { leaderFormats(key) }.toOption)
       .toSeq
 
     // <controlfield> code = 007 #text character at index 0
     // map character to String value in controlFormats
     val cFormats: Seq[String] = controlAt(data, "007", 0)
-      .flatMap(key => Try{ controlFormats(key) }.toOption)
+      .flatMap(key => Try { controlFormats(key) }.toOption)
 
     // <datafield> tag = 337 or 338            <subfield> code = a
     // <datafield> tag = any from subjectTags  <subfield> code = v
-    val dFormats = (marcFields(data, Seq("337", "338"), Seq("a")) ++ marcFields(data, subjectTags, Seq("v")))
-        .flatMap(extractStrings)
+    val dFormats = (marcFields(data, Seq("337", "338"), Seq("a")) ++ marcFields(
+      data,
+      subjectTags,
+      Seq("v")
+    ))
+      .flatMap(extractStrings)
 
     (lFormats ++ cFormats ++ dFormats).distinct
   }
@@ -136,10 +146,16 @@ class HathiMapping extends MarcXmlMapping {
       .flatMap(_.grouped(3).toList)
 
     // <controlfield> tag = 008 #text characters 35-37 if #text length > 37
-    val controlText: String = controlfield(data, Seq("008")).flatMap(extractStrings).headOption.getOrElse("")
+    val controlText: String = controlfield(data, Seq("008"))
+      .flatMap(extractStrings)
+      .headOption
+      .getOrElse("")
 
     val cLang: Seq[String] =
-      if (controlText.length > 37) Seq(controlText.slice(35,38)) // slice is inclusive on first param, exclusive on second
+      if (controlText.length > 37)
+        Seq(
+          controlText.slice(35, 38)
+        ) // slice is inclusive on first param, exclusive on second
       else Seq()
 
     (dLang ++ cLang).map(nameOnlyConcept)
@@ -148,7 +164,11 @@ class HathiMapping extends MarcXmlMapping {
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
     // <datafield> tag = 651                  <subfield> code = a
     // <datafield> tag = any from subjectTags <subfield> code = z
-    (marcFields(data, Seq("651"), Seq("a")) ++ marcFields(data, subjectTags, Seq("z")))
+    (marcFields(data, Seq("651"), Seq("a")) ++ marcFields(
+      data,
+      subjectTags,
+      Seq("z")
+    ))
       .flatMap(extractStrings)
       .map(_.stripSuffix("."))
       .distinct
@@ -172,10 +192,13 @@ class HathiMapping extends MarcXmlMapping {
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
     // <datafield> tag = 506 or 540
     // <datafield> tag = 974          <subfield> code = r
-    (marcFields(data, Seq("974"), Seq("r")) ++ marcFields(data, Seq("506", "540")))
+    (marcFields(data, Seq("974"), Seq("r")) ++ marcFields(
+      data,
+      Seq("506", "540")
+    ))
       .flatMap(extractStrings)
-      .slice(0,1)
-      .flatMap(key => Try{ rightsMapping(key) }.toOption)
+      .slice(0, 1)
+      .flatMap(key => Try { rightsMapping(key) }.toOption)
       .map(_ + ". Learn more at http://www.hathitrust.org/access_use")
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
@@ -195,8 +218,9 @@ class HathiMapping extends MarcXmlMapping {
 
   override def title(data: Document[NodeSeq]): ZeroToMany[String] = {
     // <datafield> tag = 245 <subfield> where code != c
-    val d1: NodeSeq = datafield(data, Seq("245")).map(n => n \ "subfield")
-      .flatMap(nseq => nseq.filterNot(n=> filterAttribute(n, "code", "c")))
+    val d1: NodeSeq = datafield(data, Seq("245"))
+      .map(n => n \ "subfield")
+      .flatMap(nseq => nseq.filterNot(n => filterAttribute(n, "code", "c")))
 
     // <datafield> tag = 242 or 240
     val d2: Seq[NodeSeq] = marcFields(data, Seq("242", "240"))
@@ -221,19 +245,22 @@ class HathiMapping extends MarcXmlMapping {
     else
       marcFields(data, Seq("970"), Seq("a"))
         .flatMap(extractStrings)
-        .flatMap(key => Try{ typeMapping(key) }.toOption)
+        .flatMap(key => Try { typeMapping(key) }.toOption)
         .flatMap(_._2)
   }
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     // <datafield> tag = 974 <subfield> code = u
     marcFields(data, Seq("974"), Seq("u"))
       .flatMap(extractStrings)
-      .flatMap(_.splitAtDelimiter("\\.").slice(0,1)) // split at "." and take first value
-      .flatMap(key => Try{ dataProviderMapping(key) }.toOption)
+      .flatMap(
+        _.splitAtDelimiter("\\.").slice(0, 1)
+      ) // split at "." and take first value
+      .flatMap(key => Try { dataProviderMapping(key) }.toOption)
       .map(nameOnlyAgent)
   }
 
@@ -244,11 +271,17 @@ class HathiMapping extends MarcXmlMapping {
       .map(isShownAtPrefix + _)
       .map(stringOnlyWebResource)
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
     val hathiThumbnailFetcher =
-      new HathiThumbnailFetcher(originalId(data), oclcId(data), isbnId(data), googlePrefix(data))
+      new HathiThumbnailFetcher(
+        originalId(data),
+        oclcId(data),
+        isbnId(data),
+        googlePrefix(data)
+      )
 
     hathiThumbnailFetcher.thumbnailUrl.toSeq.map(stringOnlyWebResource)
   }
@@ -275,7 +308,8 @@ class HathiMapping extends MarcXmlMapping {
       .map(namespace => {
         // e.g. if namespace = "pst.000061785779", then prefixKey = "pst" and barcode = "000061785779"
         val prefixKey: String = namespace.split("\\.").headOption.getOrElse("")
-        lazy val barcode: String = namespace.split("\\.").lastOption.getOrElse("")
+        lazy val barcode: String =
+          namespace.split("\\.").lastOption.getOrElse("")
 
         Try {
           // try to match prefixKey to googlePrefixMapping value
@@ -283,14 +317,17 @@ class HathiMapping extends MarcXmlMapping {
         } match {
           // if initial google prefix is "UCAL", use barcode to update prefix
           case Success(p) => if (p == "UCAL") getUcalPrefix(barcode) else p
-          case _ => "" // no match
+          case _          => "" // no match
         }
-      }).find(_.nonEmpty) // get first prefix
+      })
+      .find(_.nonEmpty) // get first prefix
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   // Helper method
   def agent = EdmAgent(
@@ -304,7 +341,8 @@ class HathiMapping extends MarcXmlMapping {
 
   // <datafield> tags for subjects
   private val subjectTags: Seq[String] =
-    (Seq(600, 630, 650, 651) ++ (610 to 619) ++ (653 to 658) ++ (690 to 699)).map(_.toString)
+    (Seq(600, 630, 650, 651) ++ (610 to 619) ++ (653 to 658) ++ (690 to 699))
+      .map(_.toString)
 
   // type and genre mappings, derived from <datafield>
   private val typeMapping: Map[String, (Option[String], Option[String])] = Map(
@@ -418,7 +456,7 @@ class HathiMapping extends MarcXmlMapping {
     if (barcode.length == 11 && barcode.startsWith("l")) "UCLA"
     else if (barcode.length == 10) "UCB"
     else if (barcode.length == 14) {
-      barcode.slice(1,5) match {
+      barcode.slice(1, 5) match {
         case "1822" => "UCSD"
         case "1970" => "UCI"
         case "1378" => "UCSF"
@@ -427,16 +465,18 @@ class HathiMapping extends MarcXmlMapping {
         case "1175" => "UCD"
         case "1158" => "UCLA"
         case "1210" => "UCR"
-        case _ => "UCAL"
+        case _      => "UCAL"
       }
     } else "UCAL"
   }
 }
 
-class HathiThumbnailFetcher(hathiIdOpt: Option[String],
-                            oclcIdOpt: Option[String],
-                            isbnIdOpt: Option[String],
-                            googlePrefixOpt: Option[String]) extends JsonExtractor {
+class HathiThumbnailFetcher(
+    hathiIdOpt: Option[String],
+    oclcIdOpt: Option[String],
+    isbnIdOpt: Option[String],
+    googlePrefixOpt: Option[String]
+) extends JsonExtractor {
 
   val baseUrl: String = "http://books.google.com/books?jscmd=viewapi&bibkeys="
 
@@ -453,7 +493,8 @@ class HathiThumbnailFetcher(hathiIdOpt: Option[String],
     if (hathiId.isEmpty || oclcId.isEmpty || googlePrefix.isEmpty) None
     else {
       val isbnSuffix = if (isbnId.isEmpty) "" else ",ISBN:" + isbnId
-      val url = baseUrl + googlePrefix + ":" + hathiId + ",OCLC:" + oclcId + isbnSuffix
+      val url =
+        baseUrl + googlePrefix + ":" + hathiId + ",OCLC:" + oclcId + isbnSuffix
       Some(url)
     }
   }
@@ -466,8 +507,11 @@ class HathiThumbnailFetcher(hathiIdOpt: Option[String],
 
   // Make GET request to Google Books
   def googleResponse(requestUrl: String): Try[String] = {
-    val userAgent: String = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:20.0) Gecko/20100101 Firefox/20.0"
-    val headers: Option[Map[String, String]] = Some(Map("User-agent" -> userAgent))
+    val userAgent: String =
+      "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:20.0) Gecko/20100101 Firefox/20.0"
+    val headers: Option[Map[String, String]] = Some(
+      Map("User-agent" -> userAgent)
+    )
     HttpUtils.makeGetRequest(new URL(requestUrl), headers)
   }
 
@@ -482,6 +526,6 @@ class HathiThumbnailFetcher(hathiIdOpt: Option[String],
   // Extract thumbnail URL from JSON
   def extractUrl(json: JValue): Option[String] = {
     val root = "OCLC:" + oclcId
-    extractString(json \root \ "thumbnail_url")
+    extractString(json \ root \ "thumbnail_url")
   }
 }

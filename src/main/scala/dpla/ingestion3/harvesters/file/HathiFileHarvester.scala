@@ -14,20 +14,22 @@ import dpla.ingestion3.mappers.utils.XmlExtractor
 import scala.util.{Failure, Success, Try}
 import scala.xml._
 
-class HathiFileHarvester(spark: SparkSession,
-                         shortName: String,
-                         conf: i3Conf,
-                         logger: Logger)
-  extends FileHarvester(spark, shortName, conf, logger) with XmlExtractor {
+class HathiFileHarvester(
+    spark: SparkSession,
+    shortName: String,
+    conf: i3Conf,
+    logger: Logger
+) extends FileHarvester(spark, shortName, conf, logger)
+    with XmlExtractor {
 
   def mimeType: String = "application_xml"
 
-  /**
-    * Loads .tar.gz files
+  /** Loads .tar.gz files
     *
-    * @param file File to parse
-    * @return Option[TarInputStream] of the zip contents
-    *
+    * @param file
+    *   File to parse
+    * @return
+    *   Option[TarInputStream] of the zip contents
     */
   def getInputStream(file: File): Option[TarInputStream] = {
     file.getName match {
@@ -40,11 +42,13 @@ class HathiFileHarvester(spark: SparkSession,
     }
   }
 
-  /**
-    * Takes care of parsing an xml file into a list of Nodes each representing an item
+  /** Takes care of parsing an xml file into a list of Nodes each representing
+    * an item
     *
-    * @param xml Root of the xml document
-    * @return List of Options of id/item pairs.
+    * @param xml
+    *   Root of the xml document
+    * @return
+    *   List of Options of id/item pairs.
     */
   def handleXML(xml: Node): List[Option[ParsedResult]] = {
     for {
@@ -56,7 +60,8 @@ class HathiFileHarvester(spark: SparkSession,
         val id: Option[String] = (record \ "controlfield")
           .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "tag", "001"))
           .map(extractString)
-          .headOption.flatten
+          .headOption
+          .flatten
 
         val outputXML = xmlToString(record)
 
@@ -72,13 +77,13 @@ class HathiFileHarvester(spark: SparkSession,
     }
   }
 
-  /**
-    * Implements a stream of files from the tar.
-    * Can't use @tailrec here because the compiler can't recognize it as tail recursive,
-    * but this won't blow the stack.
+  /** Implements a stream of files from the tar. Can't use @tailrec here because
+    * the compiler can't recognize it as tail recursive, but this won't blow the
+    * stack.
     *
     * @param tarInputStream
-    * @return Lazy stream of tar records
+    * @return
+    *   Lazy stream of tar records
     */
   def iter(tarInputStream: TarInputStream): Stream[FileResult] =
     Option(tarInputStream.getNextEntry) match {
@@ -91,7 +96,9 @@ class HathiFileHarvester(spark: SparkSession,
         }.getOrElse("")
 
         val result =
-          if (entry.isDirectory || filename.contains("._")) // drop OSX hidden files
+          if (
+            entry.isDirectory || filename.contains("._")
+          ) // drop OSX hidden files
             None
           else if (filename.endsWith(".xml")) // only read xml files
             Some(IOUtils.toByteArray(tarInputStream, entry.getSize))
@@ -101,31 +108,39 @@ class HathiFileHarvester(spark: SparkSession,
         FileResult(entry.getName, result) #:: iter(tarInputStream)
     }
 
-  /**
-    * Executes the harvest
+  /** Executes the harvest
     */
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
-    inFiles.listFiles(new GzFileFilter).foreach( inFile => {
+    inFiles
+      .listFiles(new GzFileFilter)
+      .foreach(inFile => {
 
-      val inputStream = getInputStream(inFile)
-        .getOrElse(throw new IllegalArgumentException(s"Couldn't load file, ${inFile.getAbsolutePath}"))
+        val inputStream = getInputStream(inFile)
+          .getOrElse(
+            throw new IllegalArgumentException(
+              s"Couldn't load file, ${inFile.getAbsolutePath}"
+            )
+          )
 
-      val recordCount = (for (tarResult <- iter(inputStream)) yield {
-        handleFile(tarResult, unixEpoch) match {
-          case Failure(exception) =>
-            logger.error(s"Caught exception on ${tarResult.entryName}.", exception)
-            0
-          case Success(count) =>
-            count
-        }
-      }).sum
+        val recordCount = (for (tarResult <- iter(inputStream)) yield {
+          handleFile(tarResult, unixEpoch) match {
+            case Failure(exception) =>
+              logger.error(
+                s"Caught exception on ${tarResult.entryName}.",
+                exception
+              )
+              0
+            case Success(count) =>
+              count
+          }
+        }).sum
 
-      IOUtils.closeQuietly(inputStream)
-    })
+        IOUtils.closeQuietly(inputStream)
+      })
 
     // flush the avroWriter
     flush()
@@ -134,26 +149,27 @@ class HathiFileHarvester(spark: SparkSession,
     spark.read.format("avro").load(tmpOutStr)
   }
 
-  /**
-    * Converts a Node to an xml string
+  /** Converts a Node to an xml string
     *
-    * @param node The root of the tree to write to a string
-    * @return a String containing xml
+    * @param node
+    *   The root of the tree to write to a string
+    * @return
+    *   a String containing xml
     */
   def xmlToString(node: Node): String =
     Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
 
-  /**
-    * Main logic for handling individual entries in the tar.
+  /** Main logic for handling individual entries in the tar.
     *
-    * @param tarResult  Case class representing extracted item from the tar
-    * @return Count of metadata items found.
+    * @param tarResult
+    *   Case class representing extracted item from the tar
+    * @return
+    *   Count of metadata items found.
     */
-  def handleFile(tarResult: FileResult,
-                 unixEpoch: Long): Try[Int] =
+  def handleFile(tarResult: FileResult, unixEpoch: Long): Try[Int] =
     tarResult.data match {
       case None =>
-        Success(0) //a directory, no results
+        Success(0) // a directory, no results
 
       case Some(data) =>
         Try {

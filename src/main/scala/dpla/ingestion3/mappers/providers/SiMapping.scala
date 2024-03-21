@@ -10,7 +10,6 @@ import org.json4s.JsonDSL._
 
 import scala.xml.NodeSeq
 
-
 class SiMapping extends XmlMapping with XmlExtractor {
 
   override val enforceRights: Boolean = false // allow records without rights
@@ -20,33 +19,41 @@ class SiMapping extends XmlMapping with XmlExtractor {
 
   override def getProviderName: Option[String] = Some("smithsonian")
 
-  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] = {
+  override def originalId(implicit
+      data: Document[NodeSeq]
+  ): ZeroToOne[String] = {
     // Hard code URL query for item as basis for DPLA identifier to maintain SI ids between ingestion1 and ingestion3
     // The URL is unnecessary and DPLA should ideally only rely upon the record_ID value. This does not exactly match
     // the itemUri value because it uses %3A instead of `=` in one place (again for consistency between ingestion1 and
     // ingestion3.
-    Some(s"http://collections.si.edu/search/results.htm?" +
-      s"q=record_ID%%3A${getRecordId(data).getOrElse(throw MappingException("Missing required property `record_ID`"))}" +
-      s"&repo=DPLA")
+    Some(
+      s"http://collections.si.edu/search/results.htm?" +
+        s"q=record_ID%%3A${getRecordId(data).getOrElse(throw MappingException("Missing required property `record_ID`"))}" +
+        s"&repo=DPLA"
+    )
   }
 
   def itemUri(implicit data: Document[NodeSeq]): URI =
-    URI(s"http://collections.si.edu/search/results.htm?" +
-      s"q=record_ID=${getRecordId(data).getOrElse(throw MappingException("Missing required property `recordId`"))}" +
-      s"&repo=DPLA")
+    URI(
+      s"http://collections.si.edu/search/results.htm?" +
+        s"q=record_ID=${getRecordId(data).getOrElse(throw MappingException("Missing required property `recordId`"))}" +
+        s"&repo=DPLA"
+    )
 
   // OreAggregation
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(data \ "descriptiveNonRepeating" \ "data_source")
       .map(nameOnlyAgent)
 
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
-    val edmRightsReadable = extractStrings( data \\ "objectRights")
+    val edmRightsReadable = extractStrings(data \\ "objectRights")
 
     edmRightsReadable.length match {
-      case 0 => rightsFromMedia(extractStrings(data \\ "media" \ "usage" \ "access"))
+      case 0 =>
+        rightsFromMedia(extractStrings(data \\ "media" \ "usage" \ "access"))
       case 1 => edmRightsReadable.map(lookupRightsUriFromText)
       case _ => Seq()
     }
@@ -55,28 +62,42 @@ class SiMapping extends XmlMapping with XmlExtractor {
     str.toLowerCase.trim match {
       case "cc0" => URI("http://creativecommons.org/publicdomain/zero/1.0/")
       case "in copyright" => URI("http://rightsstatements.org/vocab/InC/1.0/")
-      case "in copyright - eu orphan work" => URI("http://rightsstatements.org/vocab/InC-EDU/1.0/")
-      case "in copyright - non-commercial use permitted" => URI("http://rightsstatements.org/vocab/InC-EDU/1.0/")
-      case "in copyright - educational use permitted" => URI("http://rightsstatements.org/vocab/InC-NC/1.0/")
-      case "in copyright - rights- holder(s) unlocatable or unidentifiable" => URI("http://rightsstatements.org/vocab/InC-RUU/1.0/")
-      case "no copyright - contractual restrictions" => URI("http://rightsstatements.org/vocab/NoC-CR/1.0/")
-      case "no copyright - non-commercial use only" => URI("http://rightsstatements.org/vocab/NoC-NC/1.0/")
-      case "no copyright - other known legal restrictions" => URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/")
-      case "no copyright - united states" => URI("http://rightsstatements.org/vocab/NoC-US/1.0/")
-      case "copyright not evaluated" => URI("http://rightsstatements.org/vocab/CNE/1.0/")
-      case "copyright undetermined" => URI("http://rightsstatements.org/vocab/UND/1.0/")
-      case "no known copyright" => URI("http://rightsstatements.org/vocab/NKC/1.0/")
+      case "in copyright - eu orphan work" =>
+        URI("http://rightsstatements.org/vocab/InC-EDU/1.0/")
+      case "in copyright - non-commercial use permitted" =>
+        URI("http://rightsstatements.org/vocab/InC-EDU/1.0/")
+      case "in copyright - educational use permitted" =>
+        URI("http://rightsstatements.org/vocab/InC-NC/1.0/")
+      case "in copyright - rights- holder(s) unlocatable or unidentifiable" =>
+        URI("http://rightsstatements.org/vocab/InC-RUU/1.0/")
+      case "no copyright - contractual restrictions" =>
+        URI("http://rightsstatements.org/vocab/NoC-CR/1.0/")
+      case "no copyright - non-commercial use only" =>
+        URI("http://rightsstatements.org/vocab/NoC-NC/1.0/")
+      case "no copyright - other known legal restrictions" =>
+        URI("http://rightsstatements.org/vocab/NoC-OKLR/1.0/")
+      case "no copyright - united states" =>
+        URI("http://rightsstatements.org/vocab/NoC-US/1.0/")
+      case "copyright not evaluated" =>
+        URI("http://rightsstatements.org/vocab/CNE/1.0/")
+      case "copyright undetermined" =>
+        URI("http://rightsstatements.org/vocab/UND/1.0/")
+      case "no known copyright" =>
+        URI("http://rightsstatements.org/vocab/NKC/1.0/")
       case _ => URI("")
     }
 
   private def rightsFromMedia(strs: Seq[String]): ZeroToMany[URI] = {
     strs.map(_.trim.toLowerCase).distinct match {
-      case Seq("cc0") => Seq(URI("http://creativecommons.org/publicdomain/zero/1.0/"))
+      case Seq("cc0") =>
+        Seq(URI("http://creativecommons.org/publicdomain/zero/1.0/"))
       case _ => Seq()
     }
   }
 
-  override def mediaMaster(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
+  override def mediaMaster(
+      data: Document[NodeSeq]
+  ): ZeroToMany[EdmWebResource] = {
     (data \\ "online_media" \ "media")
       .flatMap(n => getAttributeValue(n, "thumbnail"))
       .map(stringOnlyWebResource)
@@ -133,10 +154,14 @@ class SiMapping extends XmlMapping with XmlExtractor {
     (data \ "freetext" \ "name")
       .filterNot(node => filterAttribute(node, "label", "contributor"))
       .flatMap(extractStrings)
-      .map(nameOnlyAgent) // done but might need to add this extensive set of label={value} filters to the mapping
+      .map(
+        nameOnlyAgent
+      ) // done but might need to add this extensive set of label={value} filters to the mapping
   }
 
-  override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] = extractDate(data)
+  override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] = extractDate(
+    data
+  )
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "freetext" \ "notes") // done
@@ -149,8 +174,13 @@ class SiMapping extends XmlMapping with XmlExtractor {
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
     (data \ "freetext" \ "physicalDescription")
       .filter(node => {
-        filterAttribute(node, "label", "Physical description") || filterAttribute(node, "label", "Medium")
-      }).flatMap(extractStrings)
+        filterAttribute(
+          node,
+          "label",
+          "Physical description"
+        ) || filterAttribute(node, "label", "Medium")
+      })
+      .flatMap(extractStrings)
 
   override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
     for {
@@ -165,7 +195,11 @@ class SiMapping extends XmlMapping with XmlExtractor {
       .map(_.replaceAll(" language", "")) // removes ' language' from term
       .map(nameOnlyConcept) // done
 
-  private def placeExtractor(node: NodeSeq, level: String, `type`: String): String = {
+  private def placeExtractor(
+      node: NodeSeq,
+      level: String,
+      `type`: String
+  ): String = {
     getByAttribute(node \ level, "type", `type`)
       .flatMap(extractStrings(_))
       .mkString(", ")
@@ -195,51 +229,89 @@ class SiMapping extends XmlMapping with XmlExtractor {
 
     def valueToOption(str: String): Option[String] = str match {
       case "" => None
-      case _ => Some(str)
+      case _  => Some(str)
     }
 
-    val preciseGeoLocation = (data \ "indexedStructured" \ "geoLocation").map(node => {
+    val preciseGeoLocation =
+      (data \ "indexedStructured" \ "geoLocation").map(node => {
 
-      val country = (node \ "L2")
-        .flatMap(n => getByAttribute(n, "type", "Country") ++ getByAttribute(n, "type", "Nation"))
-        .flatMap(extractStrings(_))
-        .mkString(", ")
+        val country = (node \ "L2")
+          .flatMap(n =>
+            getByAttribute(n, "type", "Country") ++ getByAttribute(
+              n,
+              "type",
+              "Nation"
+            )
+          )
+          .flatMap(extractStrings(_))
+          .mkString(", ")
 
-      val state = (node \ "L3")
-        .flatMap(n => getByAttribute(n, "type", "State") ++ getByAttribute(n, "type", "Province"))
-        .flatMap(extractStrings(_))
-        .mkString(", ")
+        val state = (node \ "L3")
+          .flatMap(n =>
+            getByAttribute(n, "type", "State") ++ getByAttribute(
+              n,
+              "type",
+              "Province"
+            )
+          )
+          .flatMap(extractStrings(_))
+          .mkString(", ")
 
-      val county = (node \ "L4")
-        .flatMap(n => getByAttribute(n, "type", "County") ++ getByAttribute(n, "type", "Island"))
-        .flatMap(extractStrings(_))
-        .mkString(", ")
+        val county = (node \ "L4")
+          .flatMap(n =>
+            getByAttribute(n, "type", "County") ++ getByAttribute(
+              n,
+              "type",
+              "Island"
+            )
+          )
+          .flatMap(extractStrings(_))
+          .mkString(", ")
 
-      val city = (node \ "L5")
-        .flatMap(n => getByAttribute(n, "type", "City") ++ getByAttribute(n, "type", "Town"))
-        .flatMap(extractStrings(_))
-        .mkString(", ")
+        val city = (node \ "L5")
+          .flatMap(n =>
+            getByAttribute(n, "type", "City") ++ getByAttribute(
+              n,
+              "type",
+              "Town"
+            )
+          )
+          .flatMap(extractStrings(_))
+          .mkString(", ")
 
-      val region = extractStrings(node \ "Other")
-        .mkString(", ")
+        val region = extractStrings(node \ "Other")
+          .mkString(", ")
 
-      val lat = (node \ "points" \ "point" \ "latitude")
-        .filter(node => filterAttribute(node, "type", "decimal") | filterAttribute(node, "type", "degrees"))
-        .flatMap(extractStrings(_))
-      val long = (node \ "points" \ "point" \ "longitude")
-        .filter(node => filterAttribute(node, "type", "decimal") | filterAttribute(node, "type", "degrees"))
-        .flatMap(extractStrings(_))
-      val point = lat.zipAll(long, None, None).map(p => s"${p._1},${p._2}").mkString
+        val lat = (node \ "points" \ "point" \ "latitude")
+          .filter(node =>
+            filterAttribute(node, "type", "decimal") | filterAttribute(
+              node,
+              "type",
+              "degrees"
+            )
+          )
+          .flatMap(extractStrings(_))
+        val long = (node \ "points" \ "point" \ "longitude")
+          .filter(node =>
+            filterAttribute(node, "type", "decimal") | filterAttribute(
+              node,
+              "type",
+              "degrees"
+            )
+          )
+          .flatMap(extractStrings(_))
+        val point =
+          lat.zipAll(long, None, None).map(p => s"${p._1},${p._2}").mkString
 
-      DplaPlace(
-        country = valueToOption(country),
-        state = valueToOption(state),
-        county = valueToOption(county),
-        region = valueToOption(region),
-        city = valueToOption(city),
-        coordinates = valueToOption(point)
-      )
-    })
+        DplaPlace(
+          country = valueToOption(country),
+          state = valueToOption(state),
+          county = valueToOption(county),
+          region = valueToOption(region),
+          city = valueToOption(city),
+          coordinates = valueToOption(point)
+        )
+      })
 
     // return structured DPLA Place if non-empty, otherwise use freetext spatial information
     if (preciseGeoLocation.nonEmpty)
@@ -257,9 +329,10 @@ class SiMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyAgent) // done
 
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] = {
-    val mediaRights = (data \ "descriptiveNonRepeating" \ "online_media" \ "media")
-      .flatMap(node => node.attribute("rights"))
-      .flatMap(extractStrings(_))
+    val mediaRights =
+      (data \ "descriptiveNonRepeating" \ "online_media" \ "media")
+        .flatMap(node => node.attribute("rights"))
+        .flatMap(extractStrings(_))
 
     if (mediaRights.isEmpty)
       (data \ "freetext" \ "creditLine")
@@ -273,18 +346,34 @@ class SiMapping extends XmlMapping with XmlExtractor {
   } // done
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = {
-    val subjectProps = Seq("topic", "name", "culture", "tax_kingdom", "tax_phylum", "tax_division", "tax_class",
-      "tax_order", "tax_family", "tax_sub-family", "scientific_name", "common_name", "strat_group", "strat_formation",
-      "strat_member")
+    val subjectProps = Seq(
+      "topic",
+      "name",
+      "culture",
+      "tax_kingdom",
+      "tax_phylum",
+      "tax_division",
+      "tax_class",
+      "tax_order",
+      "tax_family",
+      "tax_sub-family",
+      "scientific_name",
+      "common_name",
+      "strat_group",
+      "strat_formation",
+      "strat_member"
+    )
     val topicAttrLabels = Seq("Topic", "subject", "event")
 
-    (subjectProps.flatMap(subjectProp => extractStrings(data \ "indexedStructured" \ subjectProp)) ++
+    (subjectProps.flatMap(subjectProp =>
+      extractStrings(data \ "indexedStructured" \ subjectProp)
+    ) ++
       topicAttrLabels.flatMap(topic => {
         (data \ "freetext" \ "topic")
           .flatMap(node => getByAttribute(node, "label", topic))
           .flatMap(extractStrings(_))
-      })
-      ).flatMap(_.splitAtDelimiter("\\\\"))
+      }))
+      .flatMap(_.splitAtDelimiter("\\\\"))
       .flatMap(_.splitAtDelimiter(":"))
       .map(nameOnlyConcept)
   } // done
@@ -297,7 +386,8 @@ class SiMapping extends XmlMapping with XmlExtractor {
       .filter(node =>
         filterAttribute(node, "label", "title") ||
           filterAttribute(node, "label", "object name") ||
-          filterAttribute(node, "label", "title (spanish)"))
+          filterAttribute(node, "label", "title (spanish)")
+      )
       .flatMap(node => extractStrings(node)) // done
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
@@ -326,9 +416,6 @@ class SiMapping extends XmlMapping with XmlExtractor {
       .flatMap(node => extractStrings(node))
       .map(stringOnlyWebResource)
 
-
   private def getRecordId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "descriptiveNonRepeating" \ "record_ID")
 }
-
-

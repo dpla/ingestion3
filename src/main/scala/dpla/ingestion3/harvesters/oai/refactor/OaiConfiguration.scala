@@ -1,13 +1,15 @@
 package dpla.ingestion3.harvesters.oai.refactor
 
-import dpla.ingestion3.harvesters.HarvesterExceptions.{throwMissingArgException, throwUnrecognizedArgException, throwValidationException}
+import dpla.ingestion3.harvesters.HarvesterExceptions.{
+  throwMissingArgException,
+  throwUnrecognizedArgException,
+  throwValidationException
+}
 import dpla.ingestion3.utils.HttpUtils
 
-
-/**
-  * Case class that holds the responsibility of interpreting the parameters map from the DefaultSource.
-
- */
+/** Case class that holds the responsibility of interpreting the parameters map
+  * from the DefaultSource.
+  */
 case class OaiConfiguration(parameters: Map[String, String]) {
 
   def endpoint: String = {
@@ -16,11 +18,13 @@ case class OaiConfiguration(parameters: Map[String, String]) {
       // An endpoint url was provided and is reachable
       case (Some(url), true) => url
       // An endpoint url was provided but is unreachable
-      case (Some(url), false) => throwValidationException(s"OAI endpoint $url is not reachable.")
+      case (Some(url), false) =>
+        throwValidationException(s"OAI endpoint $url is not reachable.")
       // No endpoint parameter was provided, it is a redundant validation of those in OaiHarvesterConf
       case (None, false) => throwMissingArgException("endpoint")
       // Something very unexpected
-      case _ => throwValidationException(s"Unable to validate the OAI endpoint.")
+      case _ =>
+        throwValidationException(s"Unable to validate the OAI endpoint.")
     }
   }
 
@@ -30,7 +34,10 @@ case class OaiConfiguration(parameters: Map[String, String]) {
       // A verb parameter was given and it matches the list of valid OAI verbs
       case (Some(v), true) => v
       // A verb parameter was given but it is not a supported OAI verb
-      case (Some(v), false) => throwValidationException(s"$v is not a valid or currently supported OAI verb")
+      case (Some(v), false) =>
+        throwValidationException(
+          s"$v is not a valid or currently supported OAI verb"
+        )
       // A verb was not provided, it is a redundant validation of those in OaiHarvesterConf
       case (None, false) => throwMissingArgException("verb")
       // Something very unexpected
@@ -40,26 +47,29 @@ case class OaiConfiguration(parameters: Map[String, String]) {
 
   def metadataPrefix: Option[String] = parameters.get("metadataPrefix")
 
-  def harvestAllSets: Boolean = parameters.get("harvestAllSets")
+  def harvestAllSets: Boolean = parameters
+    .get("harvestAllSets")
     .map(_.toLowerCase) match {
-    case Some("true") => true
+    case Some("true")  => true
     case Some("false") => false
-    case None => false
-    case x => throwUnrecognizedArgException(s"harvestAllSets => $x")
+    case None          => false
+    case x             => throwUnrecognizedArgException(s"harvestAllSets => $x")
   }
 
   def setlist: Option[Array[String]] = parameters.get("setlist").map(parseSets)
 
-  def blacklist: Option[Array[String]] = parameters.get("blacklist").map(parseSets)
+  def blacklist: Option[Array[String]] =
+    parameters.get("blacklist").map(parseSets)
 
   def removeDeleted: Boolean = parameters.get("removeDeleted") match {
     case Some("true") => true
-    case _ => false
+    case _            => false
   }
 
-  private [this] val oaiVerbs = Set("ListRecords", "ListSets")
+  private[this] val oaiVerbs = Set("ListRecords", "ListSets")
 
-  private[this] def parseSets(sets: String): Array[String] = sets.split(",").map(_.trim)
+  private[this] def parseSets(sets: String): Array[String] =
+    sets.split(",").map(_.trim)
 
   // Ensure that set handlers are only used with the "ListRecords" verb.
   private[this] def validateArguments: Boolean =

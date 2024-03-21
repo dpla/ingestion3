@@ -12,10 +12,12 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-abstract class Harvester(spark: SparkSession,
-                         shortName: String,
-                         conf: i3Conf,
-                         logger: Logger) {
+abstract class Harvester(
+    spark: SparkSession,
+    shortName: String,
+    conf: i3Conf,
+    logger: Logger
+) {
 
   def harvest: DataFrame = {
     val harvestData: DataFrame = localHarvest()
@@ -29,28 +31,30 @@ abstract class Harvester(spark: SparkSession,
   def cleanUp(): Unit = ()
 
 }
-/**
-  * Abstract class for local harvesters.
+
+/** Abstract class for local harvesters.
   *
-  * The harvester abstract class has methods to manage aspects of a harvest
-  * that are common among all providers, including:
-  *   1. Provide an entry point to run a harvest.
-  *   2. If the output directory already exists, delete its contents.
-  *   3. Log and timestamp the beginning and end of a harvest.
-  *   4. Log information about the completed harvest.
-  *   5. Validate the schema final DataFrame (only for logging purposes).
-  *   6. Manage the spark session.
+  * The harvester abstract class has methods to manage aspects of a harvest that
+  * are common among all providers, including:
+  *   1. Provide an entry point to run a harvest. 2. If the output directory
+  *      already exists, delete its contents. 3. Log and timestamp the beginning
+  *      and end of a harvest. 4. Log information about the completed harvest.
+  *      5. Validate the schema final DataFrame (only for logging purposes). 6.
+  *      Manage the spark session.
   *
-  * @param shortName [String] Provider short name
-  * @param conf      [i3Conf] contains configs for the harvester.
-  * @param logger    [Logger] for the harvester.
+  * @param shortName
+  *   [String] Provider short name
+  * @param conf
+  *   [i3Conf] contains configs for the harvester.
+  * @param logger
+  *   [Logger] for the harvester.
   */
 abstract class LocalHarvester(
-                               spark: SparkSession,
-                               shortName: String,
-                               conf: i3Conf,
-                               logger: Logger)
-  extends Harvester(spark, shortName, conf, logger) {
+    spark: SparkSession,
+    shortName: String,
+    conf: i3Conf,
+    logger: Logger
+) extends Harvester(spark, shortName, conf, logger) {
 
   // Temporary output path.
   // Harvests that use AvroWriter cannot be written directly to S3.
@@ -58,7 +62,8 @@ abstract class LocalHarvester(
   //   then loaded into a spark DataFrame,
   //   then written to their final destination.
   // TODO: make tmp path configurable rather than hard-coded
-  val tmpOutStr = new File(FileUtils.getTempDirectory, shortName).getAbsolutePath
+  val tmpOutStr =
+    new File(FileUtils.getTempDirectory, shortName).getAbsolutePath
 
   // Delete temporary output directory and files if they already exist.
   Utils.deleteRecursively(new File(tmpOutStr))
@@ -80,7 +85,8 @@ object Harvester {
 
   // Schema for harvested records.
   val schema: Schema =
-    new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc"))
+    new Schema.Parser()
+      .parse(new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc"))
 
   def validateSchema(df: DataFrame): Unit = {
     val idSt = StructField("id", StringType, true)
@@ -112,4 +118,3 @@ object Harvester {
     }
   }
 }
-

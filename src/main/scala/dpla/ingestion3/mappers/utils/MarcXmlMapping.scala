@@ -8,56 +8,78 @@ import scala.util.{Success, Try}
 import scala.xml.{Node, NodeSeq}
 
 trait MarcXmlMapping extends XmlMapping with XmlExtractor {
-  /**
-    * Get <dataset><subfield> nodes by tag and code
+
+  /** Get <dataset><subfield> nodes by tag and code
     *
-    * @param data   Document
-    * @param tags   Seq[String] tags for <dataset>
-    * @param codes  Seq[String] codes for <subfield> (if empty or undefined, all <subfield> nodes will be returned)
-    * @return       Seq[NodeSeq] <subfield> nodes
+    * @param data
+    *   Document
+    * @param tags
+    *   Seq[String] tags for <dataset>
+    * @param codes
+    *   Seq[String] codes for <subfield> (if empty or undefined, all <subfield>
+    *   nodes will be returned)
+    * @return
+    *   Seq[NodeSeq] <subfield> nodes
     */
-  def marcFields(data: Document[NodeSeq], tags: Seq[String], codes: Seq[String] = Seq()): Seq[NodeSeq] = {
+  def marcFields(
+      data: Document[NodeSeq],
+      tags: Seq[String],
+      codes: Seq[String] = Seq()
+  ): Seq[NodeSeq] = {
     val sub: Seq[NodeSeq] = datafield(data, tags).map(n => n \ "subfield")
     if (codes.nonEmpty) sub.map(n => filterSubfields(n, codes)) else sub
   }
 
-  /**
-    * Get <dataset> nodes by tag
+  /** Get <dataset> nodes by tag
     *
-    * @param data   Document
-    * @param tags   Seq[String] tags for <dataset>
-    * @return       NodeSeq <dataset> nodes
+    * @param data
+    *   Document
+    * @param tags
+    *   Seq[String] tags for <dataset>
+    * @return
+    *   NodeSeq <dataset> nodes
     */
   def datafield(data: Document[NodeSeq], tags: Seq[String]): NodeSeq =
-    (data \\ "datafield").flatMap(n => getByAttributeListOptions(n, "tag", tags))
+    (data \\ "datafield").flatMap(n =>
+      getByAttributeListOptions(n, "tag", tags)
+    )
 
-  /**
-    * Filter <subfield> nodes by code
+  /** Filter <subfield> nodes by code
     *
-    * @param subfields  NodeSeq <subfield> nodes
-    * @param codes      Seq[String] codes for <subfield>
-    * @return           NodeSeq <subfield> nodes
+    * @param subfields
+    *   NodeSeq <subfield> nodes
+    * @param codes
+    *   Seq[String] codes for <subfield>
+    * @return
+    *   NodeSeq <subfield> nodes
     */
   def filterSubfields(subfields: NodeSeq, codes: Seq[String]): NodeSeq =
     subfields.flatMap(n => getByAttributeListOptions(n, "code", codes))
 
-  /**
-    * Get <controlfield> nodes by code
+  /** Get <controlfield> nodes by code
     *
-    * @param data   Document
-    * @param tags   Seq[String] codes for <controlfield>
-    * @return       NodeSeq <controlfield> nodes
+    * @param data
+    *   Document
+    * @param tags
+    *   Seq[String] codes for <controlfield>
+    * @return
+    *   NodeSeq <controlfield> nodes
     */
   def controlfield(data: Document[NodeSeq], tags: Seq[String]): NodeSeq =
-    (data \\ "controlfield").flatMap(n => getByAttributeListOptions(n, "tag", tags))
+    (data \\ "controlfield").flatMap(n =>
+      getByAttributeListOptions(n, "tag", tags)
+    )
 
-  /**
-    * Get the character at a specified index of a <controlfield> node
+  /** Get the character at a specified index of a <controlfield> node
     *
-    * @param data   Document
-    * @param tag    String tag for <controlfield> node
-    * @param index  Int index of the desired character
-    * @return       Option[Char] character if found
+    * @param data
+    *   Document
+    * @param tag
+    *   String tag for <controlfield> node
+    * @param index
+    *   Int index of the desired character
+    * @return
+    *   Option[Char] character if found
     */
   def controlAt(data: Document[NodeSeq], tag: String, index: Int): Seq[Char] =
     Try {
@@ -66,24 +88,27 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
         .map(_.charAt(index))
     } match {
       case Success(c) => c
-      case _ => Seq()
+      case _          => Seq()
     }
 
-  /**
-    * Get <leader> node
+  /** Get <leader> node
     *
-    * @param data   Document
-    * @return       String text value of <leader> (empty String if leader not found)
+    * @param data
+    *   Document
+    * @return
+    *   String text value of <leader> (empty String if leader not found)
     */
   def leader(data: Document[NodeSeq]): String =
     extractStrings(data \\ "leader").headOption.getOrElse("")
 
-  /**
-    * Get the character at a specified index of the <leader> text
+  /** Get the character at a specified index of the <leader> text
     *
-    * @param data   Document
-    * @param index  Int index of the desired character
-    * @return       Option[Char] character if found
+    * @param data
+    *   Document
+    * @param index
+    *   Int index of the desired character
+    * @return
+    *   Option[Char] character if found
     */
   def leaderAt(data: Document[NodeSeq], index: Int): Option[Char] = {
     Try {
@@ -141,46 +166,52 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
     'z' -> "Unspecified"
   )
 
-  /**
-    * Extract a subject string from a Node
+  /** Extract a subject string from a Node
     *
-    * @param node Node containing subject data
-    * @return     String
+    * @param node
+    *   Node containing subject data
+    * @return
+    *   String
     */
   def extractMarcSubject(node: Node): String = {
     val tag: String = node \@ "tag" // get tag for this datafield
 
     (node \\ "subfield")
-      .filter(n => ('a' to 'z').toList.map(_.toString).contains(n \@ "code")) // reject subfields with numeric codes
-      .flatMap(subfield => {  // iterate through subfields
+      .filter(n =>
+        ('a' to 'z').toList.map(_.toString).contains(n \@ "code")
+      ) // reject subfields with numeric codes
+      .flatMap(subfield => { // iterate through subfields
 
-      val code: String = subfield \@ "code"
+        val code: String = subfield \@ "code"
 
-      // choose appropriate delimiter based on tag and/or code values
-      val delimiter =
-        if (tag == "658")
-          code match {
-            case "b" => ":"
-            case "c" => ", "
-            case "d" => "--"
-            case _ => ". "
-          }
-        else if (tag == "653") "--"
-        else if ((690 to 699).map(_.toString).contains(tag)) "--"
-        else if (Seq("654", "655").contains(tag) && code == "b") "--"
-        else if (Seq("v", "x", "y", "z").contains(code)) "--"
-        else if (code == "d") ", "
-        else ". "
+        // choose appropriate delimiter based on tag and/or code values
+        val delimiter =
+          if (tag == "658")
+            code match {
+              case "b" => ":"
+              case "c" => ", "
+              case "d" => "--"
+              case _   => ". "
+            }
+          else if (tag == "653") "--"
+          else if ((690 to 699).map(_.toString).contains(tag)) "--"
+          else if (Seq("654", "655").contains(tag) && code == "b") "--"
+          else if (Seq("v", "x", "y", "z").contains(code)) "--"
+          else if (code == "d") ", "
+          else ". "
 
-      // strip trailing punctuation
-      val text: String =
-        if (delimiter == ". ") subfield.text.stripSuffix(",").stripSuffix(".")
-        else subfield.text.stripSuffix(",")
+        // strip trailing punctuation
+        val text: String =
+          if (delimiter == ". ") subfield.text.stripSuffix(",").stripSuffix(".")
+          else subfield.text.stripSuffix(",")
 
-      // return delimiter and text - note that the delimiter goes before the text
-      Seq(delimiter, text)
+        // return delimiter and text - note that the delimiter goes before the text
+        Seq(delimiter, text)
 
-    }).drop(1).mkString("").stripSuffix(".") // drop leading delimiter and join substrings
+      })
+      .drop(1)
+      .mkString("")
+      .stripSuffix(".") // drop leading delimiter and join substrings
   }
 
   def extractMarcLeaderType(data: Document[NodeSeq]): Option[String] = {
@@ -199,8 +230,10 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
           val regex = key.r // make regex from a key in leaderTypes
 
           mappingKey match {
-            case regex() => leaderTypes(key)._2 // return value if mappingKey matches regex
-            case _ => matchLeaderType(keys.drop(1)) // else try next leaderTypes key
+            case regex() =>
+              leaderTypes(key)._2 // return value if mappingKey matches regex
+            case _ =>
+              matchLeaderType(keys.drop(1)) // else try next leaderTypes key
           }
         }
         case None => None // no more leaderTypes keys to iterate through
@@ -211,18 +244,22 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
     matchLeaderType(leaderTypes.keys.toList)
   }
 
-  /**
-    * Extract date from MARC controlfield.
-    * The tag of the controlfield is 008.
+  /** Extract date from MARC controlfield. The tag of the controlfield is 008.
     *
-    * @param data The metadata record
+    * @param data
+    *   The metadata record
     * @return
     */
-  def extractMarcControlDate(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] = {
-    val control: String = controlfield(data, Seq("008")).flatMap(extractStrings).headOption.getOrElse("")
+  def extractMarcControlDate(
+      data: Document[NodeSeq]
+  ): ZeroToMany[EdmTimeSpan] = {
+    val control: String = controlfield(data, Seq("008"))
+      .flatMap(extractStrings)
+      .headOption
+      .getOrElse("")
 
     // character at index 6 indicates type of date
-    val dateType = control.slice(6,7)
+    val dateType = control.slice(6, 7)
 
     val cDate: Seq[String] = dateType match {
       case "s" | "r" | "t" | "c" =>
@@ -235,7 +272,10 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
         if (end == "9999") Seq(begin) else Seq(begin + end)
       case "e" =>
         // year-month-day
-        Seq(control.slice(7, 11) + "-" + control.slice(11, 13) + "-" + control.slice(13, 15))
+        Seq(
+          control.slice(7, 11) + "-" + control.slice(11, 13) + "-" + control
+            .slice(13, 15)
+        )
       case _ => Seq()
     }
 

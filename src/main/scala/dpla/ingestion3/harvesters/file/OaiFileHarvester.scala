@@ -13,35 +13,33 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import scala.util.{Failure, Success, Try}
 import scala.xml._
 
-
-/**
-  * Extracts values from parsed Xml
+/** Extracts values from parsed Xml
   */
 class OaiFileExtractor extends XmlExtractor
 
-/**
-  * Entry for harvesting XML serialized from an OAI endpoint
+/** Entry for harvesting XML serialized from an OAI endpoint
   */
-class OaiFileHarvester(spark: SparkSession,
-                      shortName: String,
-                      conf: i3Conf,
-                      logger: Logger)
-  extends FileHarvester(spark, shortName, conf, logger) {
+class OaiFileHarvester(
+    spark: SparkSession,
+    shortName: String,
+    conf: i3Conf,
+    logger: Logger
+) extends FileHarvester(spark, shortName, conf, logger) {
 
   def mimeType: String = "application_xml"
 
   protected val extractor = new OaiFileExtractor()
 
-  /**
-    * Loads .zip files
+  /** Loads .zip files
     *
-    * @param file File to parse
-    * @return ZipInputstream of the zip contents
+    * @param file
+    *   File to parse
+    * @return
+    *   ZipInputstream of the zip contents
     *
-    *
-    * TODO: Because we're only handling zips in this class,
-    * and they should already be filtered by the FilenameFilter,
-    * I wonder if we even need the match statement here.
+    * TODO: Because we're only handling zips in this class, and they should
+    * already be filtered by the FilenameFilter, I wonder if we even need the
+    * match statement here.
     */
   def getInputStream(file: File): Option[ZipInputStream] = {
     file.getName match {
@@ -51,19 +49,20 @@ class OaiFileHarvester(spark: SparkSession,
     }
   }
 
-  /**
-    * Main logic for handling individual entries in the zip.
+  /** Main logic for handling individual entries in the zip.
     *
-    * @param zipResult  Case class representing extracted item from the zip
-    * @return Count of metadata items found.
+    * @param zipResult
+    *   Case class representing extracted item from the zip
+    * @return
+    *   Count of metadata items found.
     */
-  def handleFile(zipResult: FileResult,
-                 unixEpoch: Long): Try[Int] =
+  def handleFile(zipResult: FileResult, unixEpoch: Long): Try[Int] =
     zipResult.data match {
       case None =>
-        Success(0) //a directory, no results
+        Success(0) // a directory, no results
 
-      case Some(data) => Try {
+      case Some(data) =>
+        Try {
           val xml = XML.loadString(new String(data)) // parse string to XML
 
           val items = handleXML(xml)
@@ -76,14 +75,16 @@ class OaiFileHarvester(spark: SparkSession,
             1
           }
           counts.sum
-      }
+        }
     }
 
-  /**
-    * Takes care of parsing an xml file into a list of Nodes each representing an item
+  /** Takes care of parsing an xml file into a list of Nodes each representing
+    * an item
     *
-    * @param xml Root of the xml document
-    * @return List of Options of id/item pairs.
+    * @param xml
+    *   Root of the xml document
+    * @return
+    *   List of Options of id/item pairs.
     */
   def handleXML(xml: Node): List[Option[ParsedResult]] = {
     for {
@@ -91,11 +92,18 @@ class OaiFileHarvester(spark: SparkSession,
       item <- items
     } yield item match {
       case record: Node =>
-        if((record \ "header").head.attribute("status").getOrElse(<foo></foo>).text.equalsIgnoreCase("deleted")) {
+        if (
+          (record \ "header").head
+            .attribute("status")
+            .getOrElse(<foo></foo>)
+            .text
+            .equalsIgnoreCase("deleted")
+        ) {
           None
         }
         // Extract required record identifier
-        val id: Option[String] = extractor.extractString(record \ "header" \ "identifier")
+        val id: Option[String] =
+          extractor.extractString(record \ "header" \ "identifier")
 
         val outputXML = xmlToString(record)
 
@@ -111,13 +119,13 @@ class OaiFileHarvester(spark: SparkSession,
     }
   }
 
-  /**
-    * Implements a stream of files from the zip
-    * Can't use @tailrec here because the compiler can't recognize it as tail recursive,
-    * but this won't blow the stack.
+  /** Implements a stream of files from the zip Can't use @tailrec here because
+    * the compiler can't recognize it as tail recursive, but this won't blow the
+    * stack.
     *
     * @param zipInputStream
-    * @return Lazy stream of zip records
+    * @return
+    *   Lazy stream of zip records
     */
   def iter(zipInputStream: ZipInputStream): Stream[FileResult] =
     Option(zipInputStream.getNextEntry) match {
@@ -133,28 +141,31 @@ class OaiFileHarvester(spark: SparkSession,
         FileResult(entry.getName, result) #:: iter(zipInputStream)
     }
 
-  /**
-    * Executes the Digital Virginias harvest
+  /** Executes the Digital Virginias harvest
     */
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
-    inFiles.listFiles(new ZipFileFilter).foreach( inFile => {
-      val inputStream = getInputStream(inFile)
-        .getOrElse(throw new IllegalArgumentException("Couldn't load ZIP files."))
-      val recordCount = (for (result <- iter(inputStream)) yield {
-        handleFile(result, unixEpoch) match {
-          case Failure(exception) =>
-            logger.error(s"Caught exception on $inFile.", exception)
-            0
-          case Success(count) =>
-            count
-        }
-      }).sum
-      IOUtils.closeQuietly(inputStream)
-    })
+    inFiles
+      .listFiles(new ZipFileFilter)
+      .foreach(inFile => {
+        val inputStream = getInputStream(inFile)
+          .getOrElse(
+            throw new IllegalArgumentException("Couldn't load ZIP files.")
+          )
+        val recordCount = (for (result <- iter(inputStream)) yield {
+          handleFile(result, unixEpoch) match {
+            case Failure(exception) =>
+              logger.error(s"Caught exception on $inFile.", exception)
+              0
+            case Success(count) =>
+              count
+          }
+        }).sum
+        IOUtils.closeQuietly(inputStream)
+      })
 
     flush()
 
@@ -162,11 +173,12 @@ class OaiFileHarvester(spark: SparkSession,
     spark.read.format("avro").load(tmpOutStr)
   }
 
-  /**
-    * Converts a Node to an xml string
+  /** Converts a Node to an xml string
     *
-    * @param node The root of the tree to write to a string
-    * @return a String containing xml
+    * @param node
+    *   The root of the tree to write to a string
+    * @return
+    *   a String containing xml
     */
   def xmlToString(node: Node): String =
     Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString

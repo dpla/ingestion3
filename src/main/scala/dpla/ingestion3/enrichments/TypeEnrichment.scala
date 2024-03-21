@@ -5,8 +5,8 @@ import org.eclipse.rdf4j.model.IRI
 class TypeEnrichment extends VocabEnrichment[String] {
 
   // Performs term lookup
-  private val typeLookup = new VocabLookup[String](
-    (term: String) => normalizationFunc(term)
+  private val typeLookup = new VocabLookup[String]((term: String) =>
+    normalizationFunc(term)
   )
   // Normalizes retrieval and accessed terms
   private def normalizationFunc(term: String): String = term.toLowerCase.trim
@@ -40,7 +40,7 @@ class TypeEnrichment extends VocabEnrichment[String] {
     "copy photograph" -> dcmiType.Image,
     "correspondence" -> dcmiType.Text,
     "costume plate" -> dcmiType.Image,
-    "costume"  -> dcmiType.PhysicalObject,
+    "costume" -> dcmiType.PhysicalObject,
     "cyanotypes" -> dcmiType.Image,
     "deposition" -> dcmiType.Text,
     "diaries" -> dcmiType.Text,
@@ -58,9 +58,9 @@ class TypeEnrichment extends VocabEnrichment[String] {
     "essay" -> dcmiType.Text,
     "film" -> dcmiType.MovingImage,
     "finding aid" -> dcmiType.Collection,
-    "frame"  -> dcmiType.PhysicalObject,
+    "frame" -> dcmiType.PhysicalObject,
     "furnishing" -> dcmiType.PhysicalObject,
-    "furniture"  -> dcmiType.PhysicalObject,
+    "furniture" -> dcmiType.PhysicalObject,
     "glass negative" -> dcmiType.Image,
     "glass negatives" -> dcmiType.Image,
     "glass plate negative" -> dcmiType.Image,
@@ -70,7 +70,7 @@ class TypeEnrichment extends VocabEnrichment[String] {
     "image" -> dcmiType.Image,
     "images" -> dcmiType.Image,
     "interactiveResources" -> dcmiType.InteractiveResource,
-    "jewelry"  -> dcmiType.PhysicalObject,
+    "jewelry" -> dcmiType.PhysicalObject,
     "journal" -> dcmiType.Text,
     "landscape photographs" -> dcmiType.Image,
     "landscapes" -> dcmiType.Image,
@@ -85,7 +85,7 @@ class TypeEnrichment extends VocabEnrichment[String] {
     "memorandum" -> dcmiType.Text,
     "minutes" -> dcmiType.Text,
     "mixed material" -> dcmiType.Image,
-    "monochromatic" -> dcmiType. Image,
+    "monochromatic" -> dcmiType.Image,
     "motion picture" -> dcmiType.MovingImage,
     "moving image" -> dcmiType.MovingImage,
     "movingimage" -> dcmiType.MovingImage,
@@ -124,8 +124,8 @@ class TypeEnrichment extends VocabEnrichment[String] {
     "receipt" -> dcmiType.Text,
     "recording" -> dcmiType.Sound,
     "report" -> dcmiType.Text,
-    "sample book"  -> dcmiType.PhysicalObject,
-    "sculpture"  -> dcmiType.PhysicalObject,
+    "sample book" -> dcmiType.PhysicalObject,
+    "sculpture" -> dcmiType.PhysicalObject,
     "self-portraits" -> dcmiType.Image,
     "sheet music" -> dcmiType.Image,
     "silver gelatin glass transparencies" -> dcmiType.Image,
@@ -134,15 +134,15 @@ class TypeEnrichment extends VocabEnrichment[String] {
     "sound" -> dcmiType.Sound,
     "sound recording" -> dcmiType.Sound,
     "sounds" -> dcmiType.Sound,
-    "specimen"  -> dcmiType.PhysicalObject,
-    "statue"  -> dcmiType.PhysicalObject,
+    "specimen" -> dcmiType.PhysicalObject,
+    "statue" -> dcmiType.PhysicalObject,
     "still image" -> dcmiType.Image,
     "stillimage" -> dcmiType.Image,
     "technical drawing" -> dcmiType.Image,
     "text" -> dcmiType.Text,
-    "textile"  -> dcmiType.PhysicalObject,
+    "textile" -> dcmiType.PhysicalObject,
     "three dimensional artifact" -> dcmiType.PhysicalObject,
-    "tool"  -> dcmiType.PhysicalObject,
+    "tool" -> dcmiType.PhysicalObject,
     "transcript" -> dcmiType.Text,
     "transparency" -> dcmiType.Image,
     "video game" -> dcmiType.InteractiveResource,
@@ -152,15 +152,12 @@ class TypeEnrichment extends VocabEnrichment[String] {
     "written" -> dcmiType.Text
   )
 
-  /**
-    * Create a Map[String,String] from the DcmiTypeMap[String, IRI]
-    * mapping the non-standard term to a an appropriate web label
-    * representation of the IRI. The final map is loaded into
-    * `typeLookup`.
+  /** Create a Map[String,String] from the DcmiTypeMap[String, IRI] mapping the
+    * non-standard term to a an appropriate web label representation of the IRI.
+    * The final map is loaded into `typeLookup`.
     *
-    * Example:
-    * ('tools' -> DcmiType.Image) -> ('tools' -> 'image')
-    * ('statue' -> DcmiType.PhysicalObject) -> ('statue' -> 'physical object')
+    * Example: ('tools' -> DcmiType.Image) -> ('tools' -> 'image') ('statue' ->
+    * DcmiType.PhysicalObject) -> ('statue' -> 'physical object')
     *
     * @return
     */
@@ -169,44 +166,46 @@ class TypeEnrichment extends VocabEnrichment[String] {
   // Load vocab
   loadVocab
 
-  /**
-    * Gets the web label representation of the given IRI
+  /** Gets the web label representation of the given IRI
     *
     * @param iri
-    * @return String
+    * @return
+    *   String
     */
-  private def getTypeLabel(iri: IRI): String = { iri match {
+  private def getTypeLabel(iri: IRI): String = {
+    iri match {
       case dcmiType.InteractiveResource => "interactive resource"
-      case dcmiType.MovingImage => "moving image"
-      case dcmiType.PhysicalObject => "physical object"
-      case dcmiType.StillImage => "still image"
-      case _ => iri.getLocalName.toLowerCase()
+      case dcmiType.MovingImage         => "moving image"
+      case dcmiType.PhysicalObject      => "physical object"
+      case dcmiType.StillImage          => "still image"
+      case _                            => iri.getLocalName.toLowerCase()
     }
   }
 
-  /**
-    * Convert a Map[String,IRI] to Map[String,String]
+  /** Convert a Map[String,IRI] to Map[String,String]
     *
-    * @param vocabMap Map[String,IRI]
-    * @return Map[String,String]
+    * @param vocabMap
+    *   Map[String,IRI]
+    * @return
+    *   Map[String,String]
     */
-  private def convertMap(vocabMap: Map[String, IRI]): Map[String,String] =
+  private def convertMap(vocabMap: Map[String, IRI]): Map[String, String] =
     vocabMap.map(p => p._1 -> getTypeLabel(p._2))
 
-  /**
-    * Add a vocab map to `typeLookup` vocabulary
+  /** Add a vocab map to `typeLookup` vocabulary
     *
-    * @param vocabulary Map[String,Any]
+    * @param vocabulary
+    *   Map[String,Any]
     */
   def addVocab(vocabulary: Map[String, IRI]): Unit =
     typeLookup.add(convertMap(vocabulary))
 
-
-  /**
-    * Find the original value in the controlled vocabulary
+  /** Find the original value in the controlled vocabulary
     *
-    * @param value Original value
-    * @return T Value from the controlled vocabulary if found
+    * @param value
+    *   Original value
+    * @return
+    *   T Value from the controlled vocabulary if found
     */
   override def enrich(value: String): Option[String] =
     typeLookup.lookup(value)

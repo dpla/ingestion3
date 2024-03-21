@@ -17,27 +17,33 @@ import scala.util.{Failure, Success, Try}
 
 trait HarvestExecutor {
 
-  /**
-    * Run the appropriate type of harvest.
+  /** Run the appropriate type of harvest.
     *
-    * @param shortName Provider short name (e.g. cdl, mdl, nara, loc).
-    * @see CHProviderRegistry.register() for the authoritative
-    *      list of provider short names.
-    * @param conf      Configurations read from application configuration file
-    * @param logger    Logger object
+    * @param shortName
+    *   Provider short name (e.g. cdl, mdl, nara, loc).
+    * @see
+    *   CHProviderRegistry.register() for the authoritative list of provider
+    *   short names.
+    * @param conf
+    *   Configurations read from application configuration file
+    * @param logger
+    *   Logger object
     */
-  def execute(sparkConf: SparkConf,
-              shortName: String,
-              dataOut: String,
-              conf: i3Conf,
-              logger: Logger): Unit = {
+  def execute(
+      sparkConf: SparkConf,
+      shortName: String,
+      dataOut: String,
+      conf: i3Conf,
+      logger: Logger
+  ): Unit = {
 
     // Log config file location and provider short name.
     logger.info(s"Harvest initiated")
     logger.info(s"Provider short name: $shortName")
 
-    //todo build spark here
-    val spark = SparkSession.builder()
+    // todo build spark here
+    val spark = SparkSession
+      .builder()
       .config(sparkConf)
       .getOrCreate()
 
@@ -55,8 +61,7 @@ trait HarvestExecutor {
     val start = System.currentTimeMillis()
 
     val outputHelper: OutputHelper =
-      new
-          OutputHelper(dataOut, shortName, "harvest", startDateTime)
+      new OutputHelper(dataOut, shortName, "harvest", startDateTime)
 
     val outputPath = outputHelper.activityPath
 
@@ -66,35 +71,38 @@ trait HarvestExecutor {
       val harvestData: DataFrame = harvester.harvest
 
       // if there are setIds in the returned dataframe then generate a count summary by setId
-      val setSummary: Option[String] = if (harvestData.columns.contains("setIds")) {
-         val summary = harvestData.groupBy("setIds")
-          .count()
-          .sort("setIds")
-          .collect()
-          .map( row => row.getSeq[String](0).mkString(" ") -> row.getLong(1))
-          .map { case ( set: String, count: Long ) => s"$set, $count" }.mkString("\n")
+      val setSummary: Option[String] =
+        if (harvestData.columns.contains("setIds")) {
+          val summary = harvestData
+            .groupBy("setIds")
+            .count()
+            .sort("setIds")
+            .collect()
+            .map(row => row.getSeq[String](0).mkString(" ") -> row.getLong(1))
+            .map { case (set: String, count: Long) => s"$set, $count" }
+            .mkString("\n")
 
-        // drop setIds column from dataframe
-        harvestData.drop("setIds")
+          // drop setIds column from dataframe
+          harvestData.drop("setIds")
 
-        Some(summary)
-      } else {
-        None
-      }
+          Some(summary)
+        } else {
+          None
+        }
 
       // Write harvested data to output file.
-      harvestData
-        .write
+      harvestData.write
         .format("com.databricks.spark.avro")
         .option("avroSchema", harvestData.schema.toString)
         .format("avro")
         .save(outputPath)
 
       setSummary match {
-        case Some(s) => outputHelper.writeSetSummary(s) match {
-          case Success (s) => logger.info (s"OAI set summary written to $s.")
-          case Failure (f) => print (f.toString)
-        }
+        case Some(s) =>
+          outputHelper.writeSetSummary(s) match {
+            case Success(s) => logger.info(s"OAI set summary written to $s.")
+            case Failure(f) => print(f.toString)
+          }
         case None =>
       }
 
@@ -105,7 +113,13 @@ trait HarvestExecutor {
         Harvester.validateSchema(df)
         val recordCount = df.count()
 
-        logger.info(Utils.harvestSummary(outputPath, System.currentTimeMillis() - start, recordCount))
+        logger.info(
+          Utils.harvestSummary(
+            outputPath,
+            System.currentTimeMillis() - start,
+            recordCount
+          )
+        )
 
         val manifestOpts: Map[String, String] = Map(
           "Activity" -> "Harvest",
@@ -124,7 +138,13 @@ trait HarvestExecutor {
     spark.stop()
   }
 
-  private def buildHarvester(spark: SparkSession, shortName: String, conf: i3Conf, logger: Logger, harvestType: String) = {
+  private def buildHarvester(
+      spark: SparkSession,
+      shortName: String,
+      conf: i3Conf,
+      logger: Logger,
+      harvestType: String
+  ) = {
     harvestType match {
       case "oai" =>
         new OaiHarvester(spark, shortName, conf, logger)
@@ -135,14 +155,20 @@ trait HarvestExecutor {
       case "nara.file.delta" =>
         new NaraDeltaHarvester(spark, shortName, conf, logger)
       case "api" | "file" =>
-        val harvesterClass = CHProviderRegistry.lookupHarvesterClass(shortName) match {
-          case Success(harvClass) => harvClass
-          case Failure(e) =>
-            logger.fatal(e.getMessage)
-            throw e
-        }
+        val harvesterClass =
+          CHProviderRegistry.lookupHarvesterClass(shortName) match {
+            case Success(harvClass) => harvClass
+            case Failure(e) =>
+              logger.fatal(e.getMessage)
+              throw e
+          }
         harvesterClass
-          .getConstructor(classOf[SparkSession], classOf[String], classOf[i3Conf], classOf[Logger])
+          .getConstructor(
+            classOf[SparkSession],
+            classOf[String],
+            classOf[i3Conf],
+            classOf[Logger]
+          )
           .newInstance(spark, shortName, conf, logger)
       case _ =>
         val msg = s"Harvest type not recognized."

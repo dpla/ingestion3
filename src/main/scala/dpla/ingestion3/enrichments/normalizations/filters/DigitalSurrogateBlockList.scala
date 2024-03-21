@@ -3,10 +3,9 @@ package dpla.ingestion3.enrichments.normalizations.filters
 import dpla.ingestion3.enrichments.normalizations.FilterList
 import dpla.ingestion3.enrichments.normalizations.FilterRegex._
 
-
-/**
-  * List of file format, digital surrogate and content-type values to be removed.
-  * This filter is most commonly applied to the sourceResource.format field
+/** List of file format, digital surrogate and content-type values to be
+  * removed. This filter is most commonly applied to the sourceResource.format
+  * field
   */
 object DigitalSurrogateBlockList extends FilterList {
   lazy val termList: Set[String] = getTermsFromFiles.map(_.blockListRegex)

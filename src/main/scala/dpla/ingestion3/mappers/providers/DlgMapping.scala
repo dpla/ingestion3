@@ -1,7 +1,11 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList, FormatTypeValuesBlockList}
+import dpla.ingestion3.enrichments.normalizations.filters.{
+  DigitalSurrogateBlockList,
+  ExtentIdentificationList,
+  FormatTypeValuesBlockList
+}
 import dpla.ingestion3.mappers.utils.{Document, JsonExtractor, JsonMapping}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model.{EdmAgent, _}
@@ -19,7 +23,8 @@ class DlgMapping extends JsonMapping with JsonExtractor {
   override def getProviderName: Option[String] = Some("dlg")
 
   // OreAggregation fields
-  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
     extractString("id")(data)
@@ -39,7 +44,8 @@ class DlgMapping extends JsonMapping with JsonExtractor {
   //    extractStrings("edm_is_shown_by_display")(data).map(stringOnlyWebResource)
   //  }
 
-  override def originalRecord(data: Document[JValue]): ExactlyOne[String] = Utils.formatJson(data)
+  override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
+    Utils.formatJson(data)
 
   override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     originalId(data)
@@ -52,17 +58,20 @@ class DlgMapping extends JsonMapping with JsonExtractor {
       .map(URI)
   }
 
-  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = EdmAgent(
-    name = Some("Digital Library of Georgia"),
-    uri = Some(URI("http://dp.la/api/contributor/dlg"))
-  )
+  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] =
+    EdmAgent(
+      name = Some("Digital Library of Georgia"),
+      uri = Some(URI("http://dp.la/api/contributor/dlg"))
+    )
 
   override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings("edm_is_shown_at_display")(data)
       .map(stringOnlyWebResource)
 
   // SourceResource
-  override def collection(data: Document[JValue]): ZeroToMany[DcmiTypeCollection] =
+  override def collection(
+      data: Document[JValue]
+  ): ZeroToMany[DcmiTypeCollection] =
     extractStrings("collection_titles_sms")(data)
       .map(nameOnlyCollection)
 
@@ -86,10 +95,13 @@ class DlgMapping extends JsonMapping with JsonExtractor {
 
   override def format(data: Document[JValue]): ZeroToMany[String] =
     extractStrings("dc_format_display")(data)
-      .map(_.applyBlockFilter(
-        DigitalSurrogateBlockList.termList ++
-          FormatTypeValuesBlockList.termList ++
-          ExtentIdentificationList.termList))
+      .map(
+        _.applyBlockFilter(
+          DigitalSurrogateBlockList.termList ++
+            FormatTypeValuesBlockList.termList ++
+            ExtentIdentificationList.termList
+        )
+      )
       .filter(_.nonEmpty)
 
   override def identifier(data: Document[JValue]): ZeroToMany[String] =
@@ -110,10 +122,11 @@ class DlgMapping extends JsonMapping with JsonExtractor {
       val places: Seq[DplaPlace] = if (names.nonEmpty) {
         names.map(nameOnlyPlace)
       } else {
-         Seq(emptyDplaPlace)
+        Seq(emptyDplaPlace)
       }
 
-      val lastPlace: DplaPlace = places.last.copy(coordinates = coordinates, exactMatch = uri)
+      val lastPlace: DplaPlace =
+        places.last.copy(coordinates = coordinates, exactMatch = uri)
       places.dropRight(1) ++ Seq(lastPlace)
     })
   }

@@ -25,30 +25,40 @@ import java.io.File
 
 trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
-  /**
-    * Lookup the profile and mapping class
-    * TODO this could be better (accepts registry as param etc.)
-   */
-  def getExtractorClass(shortName: String): CHProfile[_ >: NodeSeq with JValue] =
+  /** Lookup the profile and mapping class TODO this could be better (accepts
+    * registry as param etc.)
+    */
+  def getExtractorClass(
+      shortName: String
+  ): CHProfile[_ >: NodeSeq with JValue] =
     CHProviderRegistry.lookupProfile(shortName) match {
       case Success(extClass) => extClass
-      case Failure(_) => throw new RuntimeException(s"Unable to load $shortName mapping from CHProviderRegistry")
+      case Failure(_) =>
+        throw new RuntimeException(
+          s"Unable to load $shortName mapping from CHProviderRegistry"
+        )
     }
 
-  /**
-    * Performs the mapping for the given provider
+  /** Performs the mapping for the given provider
     *
-    * @param sparkConf Spark configurations
-    * @param dataIn Path to harvested data
-    * @param dataOut Path to save mapped data
-    * @param shortName Provider short name
-    * @param logger Logger to use
+    * @param sparkConf
+    *   Spark configurations
+    * @param dataIn
+    *   Path to harvested data
+    * @param dataOut
+    *   Path to save mapped data
+    * @param shortName
+    *   Provider short name
+    * @param logger
+    *   Logger to use
     */
-  def executeMapping( sparkConf: SparkConf,
-                      dataIn: String,
-                      dataOut: String,
-                      shortName: String,
-                      logger: Logger): String = {
+  def executeMapping(
+      sparkConf: SparkConf,
+      dataIn: String,
+      dataOut: String,
+      shortName: String,
+      logger: Logger
+  ): String = {
 
     // This start time is used for documentation and output file naming.
     val startDateTime = LocalDateTime.now
@@ -62,7 +72,8 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     val outputPath = outputHelper.activityPath
 
     // @michael Any issues with making SparkSession implicit?
-    implicit val spark: SparkSession = SparkSession.builder()
+    implicit val spark: SparkSession = SparkSession
+      .builder()
       .config(sparkConf)
       .config("spark.ui.showConsoleProgress", value = false)
       .getOrCreate()
@@ -88,15 +99,16 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     deleteTempFiles()
 
-    val enforceDuplicateIds: Boolean = getExtractorClass(shortName).getMapping.enforceDuplicateIds
+    val enforceDuplicateIds: Boolean = getExtractorClass(
+      shortName
+    ).getMapping.enforceDuplicateIds
 
     val harvestedRecords: DataFrame = spark.read.format("avro").load(dataIn)
-
 
     val attemptedCount: Long = harvestedRecords.count // evaluation
 
     // For reporting purposes, calculate number of duplicate harvest records
-    val duplicateHarvest: Long = if(enforceDuplicateIds) {
+    val duplicateHarvest: Long = if (enforceDuplicateIds) {
       // Get distinct harvest records
       val distinctHarvest: DataFrame = harvestedRecords.distinct
 
@@ -107,8 +119,11 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     }
 
     // Repartition based on number of available cores/threads, only if there are unused threads
-    val coresPerExecutor: Int = spark.sparkContext.range(0,1)
-      .map(_ => java.lang.Runtime.getRuntime.availableProcessors).collect.head
+    val coresPerExecutor: Int = spark.sparkContext
+      .range(0, 1)
+      .map(_ => java.lang.Runtime.getRuntime.availableProcessors)
+      .collect
+      .head
 
     // This should work in theory but has not been tested on a cluster.
     // If this is called before executors have time to set up, it might return the wrong count
@@ -120,7 +135,8 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     val currentPartitions: Int = harvestedRecords.rdd.getNumPartitions
 
     val partitionedHarvest: DataFrame =
-      if (availableCores > currentPartitions) harvestedRecords.repartition(coresPerExecutor)
+      if (availableCores > currentPartitions)
+        harvestedRecords.repartition(coresPerExecutor)
       else harvestedRecords
 
     // Run the mapping over the Dataframe
@@ -137,7 +153,9 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     // Must be encoded to save to parquet
     val encodedMappingResults: DataFrame =
       spark.createDataset(
-        mappingResults.map(oreAgg => RowConverter.toRow(oreAgg, model.sparkSchema))
+        mappingResults.map(oreAgg =>
+          RowConverter.toRow(oreAgg, model.sparkSchema)
+        )
       )(oreAggregationEncoder)
 
     // Save mapped results locally as parquet
@@ -154,8 +172,10 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
               .select("originalId")
               .rdd
               .map(_.getString(0))
-              .countByValue  // action, forces evaluation
-              .collect{ case(origId, count) if count > 1 && origId != "" => origId }
+              .countByValue // action, forces evaluation
+              .collect {
+                case (origId, count) if count > 1 && origId != "" => origId
+              }
               .toArray
           )
 
@@ -168,7 +188,10 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
           .map(oreAgg => {
             oreAgg.copy(messages =
               if (duplicateOriginalIds.value.contains(oreAgg.originalId))
-                duplicateOriginalId(oreAgg.originalId, enforceDuplicateIds) +: oreAgg.messages // prepend is faster that append on seq
+                duplicateOriginalId(
+                  oreAgg.originalId,
+                  enforceDuplicateIds
+                ) +: oreAgg.messages // prepend is faster that append on seq
               else
                 oreAgg.messages
             )
@@ -178,14 +201,15 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
         // Encode to Row-based structure
         val encodedUpdatedResults: DataFrame =
           spark.createDataset(
-            updatedResults.map(oreAgg => RowConverter.toRow(oreAgg, model.sparkSchema))
+            updatedResults.map(oreAgg =>
+              RowConverter.toRow(oreAgg, model.sparkSchema)
+            )
           )(oreAggregationEncoder)
 
         // Save mapped results locally as parquet
         encodedUpdatedResults.write.parquet(tempLocation2)
         spark.read.parquet(tempLocation2)
-      }
-      else
+      } else
         intermediateResults1
 
     // Removes records from mappingResults that have at least one IngestMessage
@@ -205,7 +229,11 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     successResults.write.format("avro").save(outputPath)
 
     // Get counts
-    val validRecordCount = spark.read.format("avro").load(outputPath).count // requires read-after-write consistency
+    val validRecordCount =
+      spark.read
+        .format("avro")
+        .load(outputPath)
+        .count // requires read-after-write consistency
 
     // Write manifest
     val manifestOpts: Map[String, String] = Map(
@@ -225,15 +253,16 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     // Collect the values needed to generate the report
     val finalReport =
-    buildFinalReport(
-      intermediateResults2,
-      shortName,
-      logsPath,
-      startTime,
-      endTime,
-      attemptedCount,
-      validRecordCount,
-      duplicateHarvest)(spark)
+      buildFinalReport(
+        intermediateResults2,
+        shortName,
+        logsPath,
+        startTime,
+        endTime,
+        attemptedCount,
+        validRecordCount,
+        duplicateHarvest
+      )(spark)
 
     // Format the summary report and write it log file
     val mappingSummary = MappingSummary.getSummary(finalReport)
@@ -253,25 +282,33 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     outputPath
   }
 
-  /**
-    * Creates a summary report of the ingest by using the MappingSummary object
+  /** Creates a summary report of the ingest by using the MappingSummary object
     *
-    * @param results All attempted records
-    * @param shortName Provider short name
-    * @param logsBasePath Root directory to write to
-    * @param startTime Start time of operation
-    * @param endTime End time of operation
-    * @param spark SparkSession
-    * @return MappingSummaryData
+    * @param results
+    *   All attempted records
+    * @param shortName
+    *   Provider short name
+    * @param logsBasePath
+    *   Root directory to write to
+    * @param startTime
+    *   Start time of operation
+    * @param endTime
+    *   End time of operation
+    * @param spark
+    *   SparkSession
+    * @return
+    *   MappingSummaryData
     */
-  def buildFinalReport(results: Dataset[Row],
-                       shortName: String,
-                       logsBasePath: String,
-                       startTime: Long,
-                       endTime: Long,
-                       attemptedCount: Long,
-                       validRecordCount: Long,
-                       duplicateHarvestRecords: Long)(implicit spark: SparkSession): MappingSummaryData = {
+  def buildFinalReport(
+      results: Dataset[Row],
+      shortName: String,
+      logsBasePath: String,
+      startTime: Long,
+      endTime: Long,
+      attemptedCount: Long,
+      validRecordCount: Long,
+      duplicateHarvestRecords: Long
+  )(implicit spark: SparkSession): MappingSummaryData = {
     import spark.implicits._
 
     // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
@@ -290,7 +327,9 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       "errors" -> (errors, errorCount),
       "warnings" -> (warnings, warnCount)
     ).filter { case (_, (_, count: Long)) => count > 0 } // drop empty
-      .map{ case (key: String, (data: Dataset[_], _: Long)) => key -> data} // drop count
+      .map { case (key: String, (data: Dataset[_], _: Long)) =>
+        key -> data
+      } // drop count
 
     // write out warnings and errors
     val logFileSeq: List[String] = logFileList.map {
@@ -312,7 +351,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     val timeSummary = TimeSummary(
       Utils.formatDateTime(startTime),
       Utils.formatDateTime(endTime),
-      Utils.formatRuntime(endTime-startTime)
+      Utils.formatRuntime(endTime - startTime)
     )
     // operation summary
     val operationSummary = OperationSummary(
@@ -336,18 +375,23 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
   }
 }
 
-
 class DplaMap extends Serializable {
-  /**
-    * Perform the mapping for a single record
+
+  /** Perform the mapping for a single record
     *
-    * @param document The harvested record to map
-    * @param extractorClass Mapping/extraction class defined in CHProfile
+    * @param document
+    *   The harvested record to map
+    * @param extractorClass
+    *   Mapping/extraction class defined in CHProfile
     *
-    * @return An OreAggregation representing the mapping results (both success and failure)
+    * @return
+    *   An OreAggregation representing the mapping results (both success and
+    *   failure)
     */
-  def map(document: String, extractorClass: CHProfile[_ >: NodeSeq with JValue]): OreAggregation = {
+  def map(
+      document: String,
+      extractorClass: CHProfile[_ >: NodeSeq with JValue]
+  ): OreAggregation = {
     extractorClass.mapOreAggregation(document)
   }
 }
-

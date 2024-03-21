@@ -3,21 +3,29 @@ package dpla.ingestion3.mappers.providers
 import dpla.ingestion3.enrichments.normalizations.filters.ExtentIdentificationList
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
-import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
+import dpla.ingestion3.model.DplaMapData.{
+  AtLeastOne,
+  ExactlyOne,
+  ZeroToMany,
+  ZeroToOne
+}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
 
-
 // Heartland Hub is Missouri and Iowa
-class HeartlandMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
+class HeartlandMapping
+    extends JsonMapping
+    with JsonExtractor
+    with IngestMessageTemplates {
 
   val formatBlockList: Set[String] = ExtentIdentificationList.termList
 
   // ID minting functions
-  override def useProviderName: Boolean = false // Heartland provides ids with the provider name already prepended
+  override def useProviderName: Boolean =
+    false // Heartland provides ids with the provider name already prepended
 
   override def getProviderName: Option[String] = Some("heartland-hub")
 
@@ -29,7 +37,8 @@ class HeartlandMapping extends JsonMapping with JsonExtractor with IngestMessage
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data) \ "dataProvider").map(nameOnlyAgent)
 
-  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \ "rights").map(URI)
@@ -37,7 +46,9 @@ class HeartlandMapping extends JsonMapping with JsonExtractor with IngestMessage
   override def hasView(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \ "hasView" \ "@id").map(stringOnlyWebResource)
 
-  override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
+  override def intermediateProvider(
+      data: Document[JValue]
+  ): ZeroToOne[EdmAgent] =
     extractString(unwrap(data) \ "intermediateProvider").map(nameOnlyAgent)
 
   override def iiifManifest(data: Document[JValue]): ZeroToMany[URI] =
@@ -60,7 +71,8 @@ class HeartlandMapping extends JsonMapping with JsonExtractor with IngestMessage
   // SourceResource
 
   override def creator(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data) \ "sourceResource" \ "creator").map(nameOnlyAgent)
+    extractStrings(unwrap(data) \ "sourceResource" \ "creator")
+      .map(nameOnlyAgent)
 
   override def description(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "sourceResource" \ "description")
@@ -70,7 +82,8 @@ class HeartlandMapping extends JsonMapping with JsonExtractor with IngestMessage
 
   // TODO: Confirm with team that this is an appropriate mapping
   override def genre(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings(unwrap(data) \ "sourceResource" \ "specType").map(nameOnlyConcept)
+    extractStrings(unwrap(data) \ "sourceResource" \ "specType")
+      .map(nameOnlyConcept)
 
   override def identifier(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "sourceResource" \ "identifier")
@@ -85,7 +98,8 @@ class HeartlandMapping extends JsonMapping with JsonExtractor with IngestMessage
     extractStrings(unwrap(data) \ "sourceResource" \ "rights")
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
-    extractStrings(unwrap(data) \ "sourceResource" \ "subject" \ "name").map(nameOnlyConcept)
+    extractStrings(unwrap(data) \ "sourceResource" \ "subject" \ "name")
+      .map(nameOnlyConcept)
 
   override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
     extractDate(unwrap(data) \ "sourceResource" \ "temporal")
@@ -107,6 +121,7 @@ class HeartlandMapping extends JsonMapping with JsonExtractor with IngestMessage
         begin = extractString(d \ "start"),
         end = extractString(d \ "end"),
         originalSourceDate = extractString(d \ "displayDate")
-      ))
+      )
+    )
   }
 }

@@ -10,7 +10,6 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
-
 class BhlMapping extends XmlMapping with XmlExtractor {
 
   // ID minting functions
@@ -23,8 +22,10 @@ class BhlMapping extends XmlMapping with XmlExtractor {
 
   // SourceResource mapping
 
-  override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
-  // <mods:relatedItem @type="series"><titleInfo><title>
+  override def collection(
+      data: Document[NodeSeq]
+  ): ZeroToMany[DcmiTypeCollection] =
+    // <mods:relatedItem @type="series"><titleInfo><title>
     (data \\ "metadata" \ "mods" \ "relatedItem")
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "type", "series"))
       .flatMap(n => extractStrings(n \ "titleInfo" \ "title"))
@@ -37,7 +38,11 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     val badTypes = List("affiliation", "displayForm", "description", "role")
 
     val parentNodes: NodeSeq = (data \\ "metadata" \ "mods" \ "name")
-      .flatMap(_.filter(n => (n \\ "roleTerm").map(_.text.toLowerCase).contains("contributor")))
+      .flatMap(
+        _.filter(n =>
+          (n \\ "roleTerm").map(_.text.toLowerCase).contains("contributor")
+        )
+      )
 
     val names: Seq[String] = parentNodes.map(n =>
       (n \ "namePart")
@@ -57,7 +62,11 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     val badTypes = List("affiliation", "displayForm", "description", "role")
 
     val parentNodes: NodeSeq = (data \\ "metadata" \ "mods" \ "name")
-      .flatMap(_.filter(n => (n \\ "roleTerm").map(_.text.toLowerCase).contains("creator")))
+      .flatMap(
+        _.filter(n =>
+          (n \\ "roleTerm").map(_.text.toLowerCase).contains("creator")
+        )
+      )
 
     val names: Seq[String] = parentNodes.map(n =>
       (n \ "namePart")
@@ -75,14 +84,16 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     // <mods:originInfo><mods:dateOther type="issueDate" keyDate="yes>
     // Records should have only one or the other
 
-    val dateIssued: Seq[String] = (data \\ "metadata" \ "mods" \ "originInfo" \ "dateIssued")
-      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "keyDate", "yes"))
-      .flatMap(extractStrings)
+    val dateIssued: Seq[String] =
+      (data \\ "metadata" \ "mods" \ "originInfo" \ "dateIssued")
+        .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "keyDate", "yes"))
+        .flatMap(extractStrings)
 
-    val dateOther: Seq[String] = (data \\ "metadata" \ "mods" \ "originInfo" \ "dateOther")
-      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "keyDate", "yes"))
-      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "type", "issueDate"))
-      .flatMap(extractStrings)
+    val dateOther: Seq[String] =
+      (data \\ "metadata" \ "mods" \ "originInfo" \ "dateOther")
+        .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "keyDate", "yes"))
+        .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "type", "issueDate"))
+        .flatMap(extractStrings)
 
     getDateValues(dateIssued ++ dateOther)
       .map(stringOnlyTimeSpan)
@@ -93,28 +104,32 @@ class BhlMapping extends XmlMapping with XmlExtractor {
 
     sorted.lastOption match { // get last date in sequence
       case Some(d) =>
-        if (d.contains("/") || d.contains("-")) Seq(d) // date is already range so just use it
-        else if (dates.size > 1) Seq(sorted.head + "-" + d) // create range using first and last date
+        if (d.contains("/") || d.contains("-"))
+          Seq(d) // date is already range so just use it
+        else if (dates.size > 1)
+          Seq(sorted.head + "-" + d) // create range using first and last date
         else Seq(d) // use only available date
       case None => Seq() // no date
     }
   }
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
-  // <mods:note @type="content">
+    // <mods:note @type="content">
     (data \\ "metadata" \ "mods" \ "note")
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "type", "content"))
       .flatMap(extractStrings)
       .map(_.stripSuffix(","))
 
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
-  // <mods:physicalDescription><mods:form @authority="marcform">
+    // <mods:physicalDescription><mods:form @authority="marcform">
     (data \\ "metadata" \ "mods" \ "physicalDescription" \ "form")
-      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "authority", "marcform"))
+      .flatMap(n =>
+        getByAttribute(n.asInstanceOf[Elem], "authority", "marcform")
+      )
       .flatMap(extractStrings)
 
   override def genre(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
-  // <mods:genre authority="marcgt">
+    // <mods:genre authority="marcgt">
     (data \\ "metadata" \ "mods" \ "genre")
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "authority", "marcgt"))
       .flatMap(extractStrings)
@@ -124,10 +139,12 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     extractStrings(data \\ "metadata" \ "mods" \ "identifier")
 
   override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
-  // <mods:language><mods:languageTerm @type="text" @authority="iso639-2b">
+    // <mods:language><mods:languageTerm @type="text" @authority="iso639-2b">
     (data \\ "metadata" \ "mods" \ "language" \ "languageTerm")
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "type", "text"))
-      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "authority", "iso639-2b"))
+      .flatMap(n =>
+        getByAttribute(n.asInstanceOf[Elem], "authority", "iso639-2b")
+      )
       .flatMap(extractStrings)
       .map(nameOnlyConcept)
 
@@ -140,19 +157,27 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     // <mods:originInfo><mods:publisher>
     // If <mods:originInfo><mods:place><mods:placeName> exists, add it to beginning of publisher name string
 
-    val names: Seq[String] = extractStrings(data \\ "metadata" \ "mods" \ "originInfo" \ "publisher")
+    val names: Seq[String] = extractStrings(
+      data \\ "metadata" \ "mods" \ "originInfo" \ "publisher"
+    )
 
-    val places: Seq[String] = extractStrings(data \\ "metadata" \ "mods" \ "originInfo" \ "place" \ "placeTerm")
+    val places: Seq[String] = extractStrings(
+      data \\ "metadata" \ "mods" \ "originInfo" \ "place" \ "placeTerm"
+    )
 
-    val publishers: Seq[String] = names.zipWithIndex.map{ case(n, i) => {
-      if (places.lift(i).isDefined) places(i) + " " + n else n
-    }}
+    val publishers: Seq[String] = names.zipWithIndex.map {
+      case (n, i) => {
+        if (places.lift(i).isDefined) places(i) + " " + n else n
+      }
+    }
 
     publishers.map(nameOnlyAgent)
   }
 
   override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
-    extractStrings(data \\ "metadata" \ "mods" \ "relatedItem" \ "titleInfo" \ "title")
+    extractStrings(
+      data \\ "metadata" \ "mods" \ "relatedItem" \ "titleInfo" \ "title"
+    )
       .map(_.stripSuffix("."))
       .map(eitherStringOrUri)
 
@@ -162,8 +187,12 @@ class BhlMapping extends XmlMapping with XmlExtractor {
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = {
     // <mods:subject><mods:topic> AND <mods:subject><mods:genre>
 
-    val topic = extractStrings(data \\ "metadata" \ "mods" \ "subject" \ "topic")
-    val genre = extractStrings(data \\ "metadata" \ "mods" \ "subject" \ "genre")
+    val topic = extractStrings(
+      data \\ "metadata" \ "mods" \ "subject" \ "topic"
+    )
+    val genre = extractStrings(
+      data \\ "metadata" \ "mods" \ "subject" \ "genre"
+    )
 
     (topic ++ genre).map(nameOnlyConcept)
   }
@@ -190,37 +219,47 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     extractStrings(data \\ "metadata" \ "mods" \ "typeOfResource")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-  // <mods:note @type="ownership">
+    // <mods:note @type="ownership">
     (data \\ "metadata" \ "mods" \ "note")
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "type", "ownership"))
       .flatMap(extractStrings)
       .map(nameOnlyAgent)
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-  // <mods:location><mods:url @access="raw object" @usage="primary">
+    // <mods:location><mods:url @access="raw object" @usage="primary">
     (data \\ "metadata" \ "mods" \ "location" \ "url")
-      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "access", "raw object"))
+      .flatMap(n =>
+        getByAttribute(n.asInstanceOf[Elem], "access", "raw object")
+      )
       .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "usage", "primary"))
       .flatMap(extractStrings)
       .map(stringOnlyWebResource)
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-  // <mods:location><mods:url @access="object in context" @usage="primary display">
+    // <mods:location><mods:url @access="object in context" @usage="primary display">
     (data \\ "metadata" \ "mods" \ "location" \ "url")
-      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "access", "object in context"))
-      .flatMap(n => getByAttribute(n.asInstanceOf[Elem], "usage", "primary display"))
+      .flatMap(n =>
+        getByAttribute(n.asInstanceOf[Elem], "access", "object in context")
+      )
+      .flatMap(n =>
+        getByAttribute(n.asInstanceOf[Elem], "usage", "primary display")
+      )
       .flatMap(extractStrings)
       .map(stringOnlyWebResource)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   // Helper method
   def agent = EdmAgent(

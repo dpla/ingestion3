@@ -2,8 +2,13 @@ package dpla.ingestion3.messages
 
 trait IngestMessageTemplates {
 
-  def moreThanOneValueMsg(id: String, field: String, value: String,
-                          msg: Option[String] = None, enforce: Boolean): IngestMessage =
+  def moreThanOneValueMsg(
+      id: String,
+      field: String,
+      value: String,
+      msg: Option[String] = None,
+      enforce: Boolean
+  ): IngestMessage =
     IngestMessage(
       message = s"More than one value mapped, one expected".trim,
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
@@ -12,8 +17,13 @@ trait IngestMessageTemplates {
       value = value
     )
 
-  def mintUriMsg(id: String, field: String, value: String,
-                 msg: Option[String] = None, enforce: Boolean): IngestMessage =
+  def mintUriMsg(
+      id: String,
+      field: String,
+      value: String,
+      msg: Option[String] = None,
+      enforce: Boolean
+  ): IngestMessage =
     IngestMessage(
       message = s"Unable to mint URI ${msg.getOrElse("No URI")}".trim,
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
@@ -22,8 +32,13 @@ trait IngestMessageTemplates {
       value = value
     )
 
-  def invalidEdmRightsMsg(id: String, field: String, value: String,
-                          msg: Option[String] = None, enforce: Boolean): IngestMessage =
+  def invalidEdmRightsMsg(
+      id: String,
+      field: String,
+      value: String,
+      msg: Option[String] = None,
+      enforce: Boolean
+  ): IngestMessage =
     IngestMessage(
       message = s"Not a valid edmRights URI".trim,
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
@@ -32,8 +47,13 @@ trait IngestMessageTemplates {
       value = value
     )
 
-  def multipleEdmRightsMsg(id: String, field: String, value: String,
-                          msg: Option[String] = None, enforce: Boolean): IngestMessage =
+  def multipleEdmRightsMsg(
+      id: String,
+      field: String,
+      value: String,
+      msg: Option[String] = None,
+      enforce: Boolean
+  ): IngestMessage =
     IngestMessage(
       message = s"Multiple valid edmRights URIs".trim,
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
@@ -42,8 +62,13 @@ trait IngestMessageTemplates {
       value = value
     )
 
-  def normalizedEdmRightsHttpsMsg(id: String, field: String, value: String,
-                                  msg: Option[String] = None, enforce: Boolean): IngestMessage =
+  def normalizedEdmRightsHttpsMsg(
+      id: String,
+      field: String,
+      value: String,
+      msg: Option[String] = None,
+      enforce: Boolean
+  ): IngestMessage =
     IngestMessage(
       message = s"Normalized https://".trim,
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
@@ -52,8 +77,13 @@ trait IngestMessageTemplates {
       value = value
     )
 
-  def normalizedEdmRightsWWWMsg(id: String, field: String, value: String,
-                                  msg: Option[String] = None, enforce: Boolean): IngestMessage =
+  def normalizedEdmRightsWWWMsg(
+      id: String,
+      field: String,
+      value: String,
+      msg: Option[String] = None,
+      enforce: Boolean
+  ): IngestMessage =
     IngestMessage(
       message = s"Normalized www".trim,
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
@@ -62,8 +92,13 @@ trait IngestMessageTemplates {
       value = value
     )
 
-  def normalizedEdmRightsRsPageMsg(id: String, field: String, value: String,
-                                   msg: Option[String] = None, enforce: Boolean): IngestMessage =
+  def normalizedEdmRightsRsPageMsg(
+      id: String,
+      field: String,
+      value: String,
+      msg: Option[String] = None,
+      enforce: Boolean
+  ): IngestMessage =
     IngestMessage(
       message = s"Normalized /page/ to /vocab/".trim,
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
@@ -72,8 +107,13 @@ trait IngestMessageTemplates {
       value = value
     )
 
-  def normalizedEdmRightsWhitespaceMsg(id: String, field: String, value: String,
-                                   msg: Option[String] = None, enforce: Boolean): IngestMessage =
+  def normalizedEdmRightsWhitespaceMsg(
+      id: String,
+      field: String,
+      value: String,
+      msg: Option[String] = None,
+      enforce: Boolean
+  ): IngestMessage =
     IngestMessage(
       message = s"Normalized whitespace".trim,
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
@@ -82,8 +122,13 @@ trait IngestMessageTemplates {
       value = value
     )
 
-  def normalizedEdmRightsTrailingSlashMsg(id: String, field: String, value: String,
-                                       msg: Option[String] = None, enforce: Boolean): IngestMessage =
+  def normalizedEdmRightsTrailingSlashMsg(
+      id: String,
+      field: String,
+      value: String,
+      msg: Option[String] = None,
+      enforce: Boolean
+  ): IngestMessage =
     IngestMessage(
       message = s"Normalized add trailing `/`".trim,
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
@@ -92,8 +137,13 @@ trait IngestMessageTemplates {
       value = value
     )
 
-  def normalizedEdmRightsTrailingPunctuationMsg(id: String, field: String, value: String,
-                                                msg: Option[String] = None, enforce: Boolean): IngestMessage =
+  def normalizedEdmRightsTrailingPunctuationMsg(
+      id: String,
+      field: String,
+      value: String,
+      msg: Option[String] = None,
+      enforce: Boolean
+  ): IngestMessage =
     IngestMessage(
       message = s"Normalized remove trailing punctuation".trim,
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
@@ -102,8 +152,13 @@ trait IngestMessageTemplates {
       value = value
     )
 
-  def normalizedEdmRightsQueryMsg(id: String, field: String, value: String,
-                                   msg: Option[String] = None, enforce: Boolean): IngestMessage =
+  def normalizedEdmRightsQueryMsg(
+      id: String,
+      field: String,
+      value: String,
+      msg: Option[String] = None,
+      enforce: Boolean
+  ): IngestMessage =
     IngestMessage(
       message = s"Normalized dropped query".trim,
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
@@ -112,8 +167,13 @@ trait IngestMessageTemplates {
       value = value
     )
 
-  def normalizedEdmRightsMsg(id: String, field: String, value: String,
-                          msg: Option[String] = None, enforce: Boolean): IngestMessage =
+  def normalizedEdmRightsMsg(
+      id: String,
+      field: String,
+      value: String,
+      msg: Option[String] = None,
+      enforce: Boolean
+  ): IngestMessage =
     IngestMessage(
       message = s"Normalized value".trim,
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
@@ -131,7 +191,11 @@ trait IngestMessageTemplates {
       value = "MISSING"
     )
 
-  def missingRequiredFieldMsg(id: String, field: String, enforce: Boolean): IngestMessage =
+  def missingRequiredFieldMsg(
+      id: String,
+      field: String,
+      enforce: Boolean
+  ): IngestMessage =
     IngestMessage(
       message = s"Missing required field",
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
@@ -165,7 +229,12 @@ trait IngestMessageTemplates {
       value = "at least one other record shares this originalId"
     )
 
-  def enrichedValue(id: String, field: String, origValue: String, enrichValue: String): IngestMessage =
+  def enrichedValue(
+      id: String,
+      field: String,
+      origValue: String,
+      enrichValue: String
+  ): IngestMessage =
     IngestMessage(
       message = s"Enriched value",
       level = IngestLogLevel.info,

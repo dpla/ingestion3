@@ -10,8 +10,10 @@ import org.json4s.JsonDSL._
 
 import scala.xml.NodeSeq
 
-class MeMapping extends XmlMapping with XmlExtractor
-  with IngestMessageTemplates {
+class MeMapping
+    extends XmlMapping
+    with XmlExtractor
+    with IngestMessageTemplates {
 
   // IdMinter methods
   override def useProviderName: Boolean = true
@@ -63,7 +65,8 @@ class MeMapping extends XmlMapping with XmlExtractor
     extractStrings(metadataRoot(data) \ "type")
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(metadataRoot(data) \ "contributor")
@@ -77,20 +80,25 @@ class MeMapping extends XmlMapping with XmlExtractor
     extractStrings(metadataRoot(data) \ "identifier")
       .map(stringOnlyWebResource)
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(metadataRoot(data) \ "hasFormat")
       .map(_.trim)
       .map(stringOnlyWebResource)
 
-  override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = EdmAgent(
-    name = Some("Digital Maine"),
-    uri = Some(URI("http://dp.la/api/contributor/maine"))
-  )
+  override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] =
+    EdmAgent(
+      name = Some("Digital Maine"),
+      uri = Some(URI("http://dp.la/api/contributor/maine"))
+    )
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
-  def metadataRoot(data: Document[NodeSeq]): NodeSeq = data \ "metadata" \ "qualifieddc"
+  def metadataRoot(data: Document[NodeSeq]): NodeSeq =
+    data \ "metadata" \ "qualifieddc"
 }

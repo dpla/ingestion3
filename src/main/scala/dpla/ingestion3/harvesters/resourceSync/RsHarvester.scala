@@ -6,22 +6,22 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.lit
 
-class RsHarvester(spark: SparkSession,
-                  shortName: String,
-                  conf: i3Conf,
-                  harvestLogger: Logger)
-  extends Harvester(spark, shortName, conf, harvestLogger) {
+class RsHarvester(
+    spark: SparkSession,
+    shortName: String,
+    conf: i3Conf,
+    harvestLogger: Logger
+) extends Harvester(spark, shortName, conf, harvestLogger) {
 
   // TODO Do all RS enpoints support JSON?
   override def mimeType: String = "application_json"
-
 
   override def localHarvest(): DataFrame = {
 
     // Set options.
     val readerOptions: Map[String, String] = Map(
       "endpoint" -> conf.harvest.endpoint
-    ).collect{ case (key, Some(value)) => key -> value } // remove None values
+    ).collect { case (key, Some(value)) => key -> value } // remove None values
 
     // Run harvest.
     val harvestedData: DataFrame = spark.read
@@ -30,7 +30,8 @@ class RsHarvester(spark: SparkSession,
       .load()
 
     // Log errors.
-    harvestedData.select("error.message", "error.errorSource.url")
+    harvestedData
+      .select("error.message", "error.errorSource.url")
       .where("error is not null")
       .collect
       .foreach(row => harvestLogger.warn("ResourceSync harvest error: " + row))

@@ -3,19 +3,20 @@ package dpla.ingestion3.mappers.rdf
 import org.eclipse.rdf4j.model.impl.{SimpleIRI, SimpleNamespace}
 import org.eclipse.rdf4j.model.{IRI, Namespace}
 
-/**
-  * An abstract class that represents a suite of IRIs for an ontology. Similar to the classes in
-  * org.eclipse.rdf4j.model.vocabulary, but tidier given the scala syntax.
-
- */
-abstract class Vocabulary(nsPrefix: String, nsUri: String) extends RdfValueUtils {
+/** An abstract class that represents a suite of IRIs for an ontology. Similar
+  * to the classes in org.eclipse.rdf4j.model.vocabulary, but tidier given the
+  * scala syntax.
+  */
+abstract class Vocabulary(nsPrefix: String, nsUri: String)
+    extends RdfValueUtils {
 
   def ns: Namespace = new SimpleNamespace(nsPrefix, nsUri)
 
   def apply(name: String): IRI = iri(nsUri, name)
 }
 
-case class RDF() extends Vocabulary("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#") {
+case class RDF()
+    extends Vocabulary("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#") {
 
   import org.eclipse.rdf4j.model.vocabulary.RDF._
 
@@ -49,8 +50,7 @@ case class DPLA() extends Vocabulary("dpla", "http://dp.la/about/map/") {
   val replaces: IRI = apply("replaces")
 }
 
-case class CNT()
-  extends Vocabulary("cnt", "http://www.w3.org/2011/content#") {
+case class CNT() extends Vocabulary("cnt", "http://www.w3.org/2011/content#") {
   val Content: IRI = apply("#Content")
   val ContentAsBase64: IRI = apply("ContentAsBase64")
   val ContentAsText: IRI = apply("ContentAsText")
@@ -71,8 +71,7 @@ case class CNT()
   val version: IRI = apply("version")
 }
 
-case class DC()
-  extends Vocabulary("dc", "http://purl.org/dc/elements/1.1/") {
+case class DC() extends Vocabulary("dc", "http://purl.org/dc/elements/1.1/") {
   val contributor: IRI = apply("contributor")
   val coverage: IRI = apply("coverage")
   val creator: IRI = apply("creator")
@@ -91,7 +90,7 @@ case class DC()
 }
 
 case class DCTerms()
-  extends Vocabulary("dcterms", "http://purl.org/dc/terms/") {
+    extends Vocabulary("dcterms", "http://purl.org/dc/terms/") {
   val `abstract`: IRI = apply("abstract")
   val accessRights: IRI = apply("accessRights")
   val accrualMethod: IRI = apply("accrualMethod")
@@ -173,7 +172,7 @@ case class DCTerms()
 }
 
 case class DCMIType()
-  extends Vocabulary("dcmitype", "http://purl.org/dc/dcmitype/") {
+    extends Vocabulary("dcmitype", "http://purl.org/dc/dcmitype/") {
   val Collection: IRI = apply("Collection")
   val Dataset: IRI = apply("Dataset")
   val Event: IRI = apply("Event")
@@ -189,7 +188,7 @@ case class DCMIType()
 }
 
 case class EDM()
-  extends Vocabulary("edm", "http://www.europeana.eu/schemas/edm/") {
+    extends Vocabulary("edm", "http://www.europeana.eu/schemas/edm/") {
   val Agent: IRI = apply("Agent")
   val EuropeanaAggregation: IRI = apply("EuropeanaAggregation")
   val EuropeanaObject: IRI = apply("EuropeanaObject")
@@ -240,8 +239,7 @@ case class EDM()
   val year: IRI = apply("year")
 }
 
-case class GN()
-  extends Vocabulary("gn", "http://www.geonames.org/ontology#") {
+case class GN() extends Vocabulary("gn", "http://www.geonames.org/ontology#") {
   val Class: IRI = apply("Class")
   val Code: IRI = apply("Code")
   val GeonamesFeature: IRI = apply("GeonamesFeature")
@@ -279,8 +277,7 @@ case class GN()
   val wikipediaArticle: IRI = apply("wikipediaArticle")
 }
 
-case class OA()
-  extends Vocabulary("oa", "http://www.w3.org/ns/oa#") {
+case class OA() extends Vocabulary("oa", "http://www.w3.org/ns/oa#") {
   val Annotation: IRI = apply("Annotation")
   val Choice: IRI = apply("Choice")
   val CssSelector: IRI = apply("CssSelector")
@@ -350,7 +347,7 @@ case class OA()
 }
 
 case class ORE()
-  extends Vocabulary("ore", "http://www.openarchives.org/ore/terms/") {
+    extends Vocabulary("ore", "http://www.openarchives.org/ore/terms/") {
   val Aggregation: IRI = apply("Aggregation")
   val AggregatedResource: IRI = apply("AggregatedResource")
   val Proxy: IRI = apply("Proxy")
@@ -366,7 +363,7 @@ case class ORE()
 }
 
 case class SKOS()
-  extends Vocabulary("skos", "http://www.w3.org/2004/02/skos/core/") {
+    extends Vocabulary("skos", "http://www.w3.org/2004/02/skos/core/") {
   val Concept: IRI = apply("Concept")
   val ConceptScheme: IRI = apply("ConceptScheme")
   val Collection: IRI = apply("Collection")
@@ -402,7 +399,7 @@ case class SKOS()
 }
 
 case class WGS84()
-  extends Vocabulary("wgs84", "http://www.w3.org/2003/01/geo/wgs84_pos#") {
+    extends Vocabulary("wgs84", "http://www.w3.org/2003/01/geo/wgs84_pos#") {
   val LAT: IRI = apply("lat")
   val LONG: IRI = apply("long")
   val ALT: IRI = apply("alt")

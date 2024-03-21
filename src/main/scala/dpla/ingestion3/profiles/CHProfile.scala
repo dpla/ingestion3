@@ -22,7 +22,6 @@ trait CHProfile[T] extends Serializable {
 
   def getMapping: Mapping[T]
 
-
   def mapOreAggregation(data: String): OreAggregation = {
     val parser = getParser
     val mapping = getMapping
@@ -45,9 +44,8 @@ trait XmlProfile extends CHProfile[NodeSeq] {
   override def getMapper = new XmlMapper
 }
 
-/**
- * This is weird
- */
+/** This is weird
+  */
 trait NyplCHProfile extends CHProfile[JValue] {
   override def getMapper = new JsonMapper
 
@@ -63,4 +61,3 @@ trait NyplCHProfile extends CHProfile[JValue] {
     mapper.map(document, mapping)
   }
 }
-

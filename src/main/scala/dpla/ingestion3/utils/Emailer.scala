@@ -13,7 +13,12 @@ import java.util.Properties
 import javax.activation.DataHandler
 import javax.mail.Message.RecipientType
 import javax.mail._
-import javax.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMultipart}
+import javax.mail.internet.{
+  InternetAddress,
+  MimeBodyPart,
+  MimeMessage,
+  MimeMultipart
+}
 import javax.mail.util.ByteArrayDataSource
 import scala.io.{BufferedSource, Source}
 
@@ -55,19 +60,20 @@ object Emailer {
     val emails = i3conf.email.getOrElse("tech@dp.la").split(',')
 
     val _summary = s"${mapOutput}/_SUMMARY"
-    val zipped_logs = s"${mapOutput}/_LOGS/logs.zip" // FIXME provider-date-mapping-logs.zip
-
+    val zipped_logs =
+      s"${mapOutput}/_LOGS/logs.zip" // FIXME provider-date-mapping-logs.zip
 
     val body = emailBody(_summary)
 
     val attachment: Option[File] = zip(zipped_logs, mapOutput) match {
-      case Some(z) => if(z.length() < 7485760) Some(z) else None
-      case _ => None
+      case Some(z) => if (z.length() < 7485760) Some(z) else None
+      case _       => None
     }
 
     send(
       recipients = emails,
-      subject = s"DPLA Ingest Summary for $partner", // FIXME Add current month in subject
+      subject =
+        s"DPLA Ingest Summary for $partner", // FIXME Add current month in subject
       text = body,
       attachment = attachment
     )
@@ -76,18 +82,17 @@ object Emailer {
   private def emailBody(summaryFile: String): String = {
     // READ in _SUMMARY file
     val source: BufferedSource = Source.fromFile(summaryFile)
-    val lines = try {
-      source.getLines().toList
-    } finally {
-      source.close
-    }
+    val lines =
+      try {
+        source.getLines().toList
+      } finally {
+        source.close
+      }
     // Create body of email by wrapping text in <pre> tags and dropping the last five line (which reference local
     // log files)
-    List.concat(List("<pre>"),
-      prefix,
-      lines.dropRight(5),
-      suffix,
-      List("</pre>")).mkString("\n")
+    List
+      .concat(List("<pre>"), prefix, lines.dropRight(5), suffix, List("</pre>"))
+      .mkString("\n")
   }
 
   private def zip(zipped_logs: String, mapOutput: String): Option[File] = {
@@ -109,7 +114,12 @@ object Emailer {
   }
 
   // Body must be plain text - HTML markup would require a `withHtml` call, not a `withText` call.
-  private def send(recipients: Seq[String], subject: String, text: String, attachment: Option[File]): Unit = {
+  private def send(
+      recipients: Seq[String],
+      subject: String,
+      text: String,
+      attachment: Option[File]
+  ): Unit = {
     // Message builder to add attachments
     // https://docs.aws.amazon.com/ses/latest/dg/example_ses_SendEmail_section.html
 
@@ -121,7 +131,8 @@ object Emailer {
 
       message.setSubject(subject)
 
-      val sendTo: Array[Address] = recipients.toArray.map(new InternetAddress(_))
+      val sendTo: Array[Address] =
+        recipients.toArray.map(new InternetAddress(_))
       val replyTo: Array[Address] = Array(new InternetAddress(sender))
       val sendFrom: Address = new InternetAddress(sender)
       val sendCc: Array[Address] = Array[Address](
@@ -163,7 +174,8 @@ object Emailer {
       val bb = nio.ByteBuffer.wrap(bos.toByteArray)
       val rawMessage = new RawMessage().withData(bb)
 
-      val sendRawEmailRequest = new SendRawEmailRequest().withRawMessage(rawMessage)
+      val sendRawEmailRequest =
+        new SendRawEmailRequest().withRawMessage(rawMessage)
       client.sendRawEmail(sendRawEmailRequest)
 
       System.out.println(s"Email sent to ${recipients.mkString(", ")}")

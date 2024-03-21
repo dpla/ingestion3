@@ -6,19 +6,19 @@ import org.apache.spark.sql.SparkSession
 
 object ThumbnailPurgeEntry {
 
-  /**
-    * Entry to delete all thumbnails for a provider
+  /** Entry to delete all thumbnails for a provider
     *
     * @param args
-    *             Path to mapped data
-    *             S3 bucket for thumbnails
+    *   Path to mapped data S3 bucket for thumbnails
     */
   def main(args: Array[String]): Unit = {
 
-    if(args.length.!=(2)) {
-      println("Not enough args. Expecting: " +
-        "(1) path to mapped data" +
-        "(2) thumbnail bucket")
+    if (args.length.!=(2)) {
+      println(
+        "Not enough args. Expecting: " +
+          "(1) path to mapped data" +
+          "(2) thumbnail bucket"
+      )
       return
     }
 

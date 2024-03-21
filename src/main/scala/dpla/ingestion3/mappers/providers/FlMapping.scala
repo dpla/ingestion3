@@ -4,15 +4,22 @@ import dpla.ingestion3.enrichments.normalizations.filters.ExtentIdentificationLi
 import dpla.ingestion3.enrichments.TaggingUtils._
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
-import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
+import dpla.ingestion3.model.DplaMapData.{
+  AtLeastOne,
+  ExactlyOne,
+  ZeroToMany,
+  ZeroToOne
+}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s
 import org.json4s.JsonDSL._
 import org.json4s._
 
-
-class FlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplates {
+class FlMapping
+    extends JsonMapping
+    with JsonExtractor
+    with IngestMessageTemplates {
 
   val formatBlockList: Set[String] = ExtentIdentificationList.termList
 
@@ -28,14 +35,19 @@ class FlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data) \ "dataProvider").map(nameOnlyAgent)
 
-  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \ "sourceResource" \ "rights" \ "@id")
-      .filter(_.nonEmpty) // FIXME filtering non-empty values should be a standard edmRights normalization
+      .filter(
+        _.nonEmpty
+      ) // FIXME filtering non-empty values should be a standard edmRights normalization
       .map(URI)
 
-  override def intermediateProvider(data: Document[JValue]): ZeroToOne[EdmAgent] =
+  override def intermediateProvider(
+      data: Document[JValue]
+  ): ZeroToOne[EdmAgent] =
     extractString(unwrap(data) \ "intermediateProvider")
       .map(nameOnlyAgent)
 
@@ -91,7 +103,9 @@ class FlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
 
   override def language(data: Document[JValue]): ZeroToMany[SkosConcept] =
     (extractStrings(unwrap(data) \ "sourceResource" \ "language" \ "name") ++
-      extractStrings(unwrap(data) \ "sourceResource" \ "language" \ "iso_639_3"))
+      extractStrings(
+        unwrap(data) \ "sourceResource" \ "language" \ "iso_639_3"
+      ))
       .map(nameOnlyConcept)
 
   override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
@@ -126,6 +140,7 @@ class FlMapping extends JsonMapping with JsonExtractor with IngestMessageTemplat
         begin = extractString(d \ "begin"),
         end = extractString(d \ "end"),
         originalSourceDate = extractString(d \ "displayDate")
-      ))
+      )
+    )
   }
 }

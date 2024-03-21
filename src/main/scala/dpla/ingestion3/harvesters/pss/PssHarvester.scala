@@ -6,11 +6,12 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.functions._
 
-class PssHarvester(spark: SparkSession,
-                   shortName: String,
-                   conf: i3Conf,
-                   harvestLogger: Logger)
-  extends Harvester(spark, shortName, conf, harvestLogger) {
+class PssHarvester(
+    spark: SparkSession,
+    shortName: String,
+    conf: i3Conf,
+    harvestLogger: Logger
+) extends Harvester(spark, shortName, conf, harvestLogger) {
 
   override def mimeType: String = "application_json"
 

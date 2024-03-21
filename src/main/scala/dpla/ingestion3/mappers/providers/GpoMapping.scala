@@ -1,7 +1,11 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.mappers.utils.{Document, MappingException, MarcXmlMapping}
+import dpla.ingestion3.mappers.utils.{
+  Document,
+  MappingException,
+  MarcXmlMapping
+}
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -10,7 +14,6 @@ import org.json4s.JsonDSL._
 
 import scala.util.Try
 import scala.xml._
-
 
 class GpoMapping extends MarcXmlMapping {
 
@@ -25,12 +28,16 @@ class GpoMapping extends MarcXmlMapping {
   // SourceResource mapping
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-  // <datafield> tag = 700, 710, or 711
+    // <datafield> tag = 700, 710, or 711
     marcFields(data, Seq("700", "710", "711"))
-      .filter(filterSubfields(_, Seq("e")) // include if subfield with @code=e exists and...
-        .flatMap(extractStrings)
-        .map(_.stripSuffix("."))
-        .exists(_ != "author") // ...#text != "author"
+      .filter(
+        filterSubfields(
+          _,
+          Seq("e")
+        ) // include if subfield with @code=e exists and...
+          .flatMap(extractStrings)
+          .map(_.stripSuffix("."))
+          .exists(_ != "author") // ...#text != "author"
       )
       .map(extractStrings)
       .map(_.mkString(" "))
@@ -42,10 +49,14 @@ class GpoMapping extends MarcXmlMapping {
     val creator1xx = marcFields(data, Seq("100", "110", "111"))
 
     val creator7xx = marcFields(data, Seq("700", "710", "711"))
-      .filter(filterSubfields(_, Seq("e")) // include if subfield with @code=e exists and...
-        .flatMap(extractStrings)
-        .map(_.stripSuffix("."))
-        .exists(_ == "author") // ...#text = "author"
+      .filter(
+        filterSubfields(
+          _,
+          Seq("e")
+        ) // include if subfield with @code=e exists and...
+          .flatMap(extractStrings)
+          .map(_.stripSuffix("."))
+          .exists(_ == "author") // ...#text = "author"
       )
 
     (creator1xx ++ creator7xx)
@@ -83,7 +94,8 @@ class GpoMapping extends MarcXmlMapping {
   override def description(data: Document[NodeSeq]): ZeroToMany[String] = {
     // <datafield> tag = 255, 310, 500 to 537, 539 to 582, or 584 to 599
     // <datafield> tag = 583    <subfield> code  = z
-    val descTags = (Seq(255) ++ (500 to 537) ++ (539 to 582) ++ (584 to 599)).map(_.toString)
+    val descTags =
+      (Seq(255) ++ (500 to 537) ++ (539 to 582) ++ (584 to 599)).map(_.toString)
 
     val desc310 = marcFields(data, Seq("310"))
     val desc583 = marcFields(data, Seq("583"), Seq("z"))
@@ -101,14 +113,16 @@ class GpoMapping extends MarcXmlMapping {
 
     val freq: Option[String] = controlKey match {
       case Some(k) => descFrequency.get(k)
-      case None => None
+      case None    => None
     }
 
     val theDesc =
-      if ((desc310 ++ desc583).isEmpty && leader7.contains('s') && freq.isDefined)
+      if (
+        (desc310 ++ desc583).isEmpty && leader7.contains('s') && freq.isDefined
+      )
         freq match {
           case Some(f) => baseDesc :+ f
-          case None => baseDesc
+          case None    => baseDesc
         }
       else baseDesc
 
@@ -137,7 +151,7 @@ class GpoMapping extends MarcXmlMapping {
   )
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
-  // <datafield> tag = 300  <subfield> code = a
+    // <datafield> tag = 300  <subfield> code = a
     marcFields(data, Seq("300"), Seq("a"))
       .map(extractStrings)
       .map(_.mkString(" "))
@@ -148,17 +162,21 @@ class GpoMapping extends MarcXmlMapping {
     // <leader> #text character at index 6
     // map character to String value in leaderFormats
     val lFormats: Seq[String] = leaderAt(data, 6)
-      .flatMap(key => Try {
-        leaderFormats(key)
-      }.toOption)
+      .flatMap(key =>
+        Try {
+          leaderFormats(key)
+        }.toOption
+      )
       .toSeq
 
     // <controlfield> code = 007 #text character at index 0
     // map character to String value in controlFormats
     val cFormats: Seq[String] = controlAt(data, "007", 0)
-      .flatMap(key => Try {
-        controlFormats(key)
-      }.toOption)
+      .flatMap(key =>
+        Try {
+          controlFormats(key)
+        }.toOption
+      )
 
     // <datafield> tag = 337, 338, or 340   <subfield> code = a
     val dFormats = marcFields(data, Seq("337", "338", "340"), Seq("a"))
@@ -189,7 +207,11 @@ class GpoMapping extends MarcXmlMapping {
       .map(_.mkString(" "))
       .map("ISSN: " + _)
 
-    val genericIds = (marcFields(data, Seq("001")) ++ marcFields(data, Seq("035", "074", "082", "086"), Seq("a")))
+    val genericIds = (marcFields(data, Seq("001")) ++ marcFields(
+      data,
+      Seq("035", "074", "082", "086"),
+      Seq("a")
+    ))
       .map(extractStrings)
       .map(_.mkString(" "))
 
@@ -214,16 +236,20 @@ class GpoMapping extends MarcXmlMapping {
   }
 
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] =
-  // <datafield> tag = 650  <subfield> code = z
-  // <datafield> tag = 651  <subfield> code = a
-    (marcFields(data, Seq("650"), Seq("z")) ++ marcFields(data, Seq("651"), Seq("a")))
+    // <datafield> tag = 650  <subfield> code = z
+    // <datafield> tag = 651  <subfield> code = a
+    (marcFields(data, Seq("650"), Seq("z")) ++ marcFields(
+      data,
+      Seq("651"),
+      Seq("a")
+    ))
       .flatMap(extractStrings)
       .map(_.stripSuffix("."))
       .map(nameOnlyPlace)
       .distinct
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-  // <datafield> tag = 260 or 264   <subfield> code = a or b
+    // <datafield> tag = 260 or 264   <subfield> code = a or b
     marcFields(data, Seq("260", "264"), Seq("a", "b"))
       .map(extractStrings)
       .map(_.mkString(" "))
@@ -245,11 +271,13 @@ class GpoMapping extends MarcXmlMapping {
     val rights506 = marcFields(data, Seq("506"))
       .flatMap(extractStrings)
 
-    val theRights = if (rights506.isEmpty) Seq(default_rights_statement) else rights506
+    val theRights =
+      if (rights506.isEmpty) Seq(default_rights_statement) else rights506
 
     // Do not map records that have incompatible rights statements.
     theRights.foreach(r =>
-      if (excludedRights.contains(r)) throw MappingException("Incompatible rights statement")
+      if (excludedRights.contains(r))
+        throw MappingException("Incompatible rights statement")
     )
 
     theRights
@@ -264,78 +292,61 @@ class GpoMapping extends MarcXmlMapping {
 
   private val excludedRights = Array(
     "Access may require a library card.",
-
     "Access restricted to U.S. military service members and Dept. " +
       "of Defense employees; the only issues available are those " +
       "from Monday of the prior week through Friday of current week.",
-
     "Access to data provided for a fee except for requests " +
       "generated from Internet domains of .gov, .edu, .k12, .us, " +
       "and .mil.",
-
     "Access to issues published prior to 2001 restricted to " +
       "Picatinny Arsenal users.",
-
     "Access to some volumes or items may be restricted",
-
     "Document removed from the GPO Permanent Access Archive at " +
       "agency request",
-
     "FAA employees only.",
-
     "First nine issues (Apr.-Dec. 2002) were law enforcement " +
       "restricted publications and are not available to the general " +
       "public.",
-
     "Free to users at U.S. Federal depository libraries; other " +
       "users are required to pay a fee.",
-
     "Full text available to subscribers only.",
-
     "Login and password required to access web page where " +
       "electronic files may be downloaded.",
-
     "Login and password required to access web page where " +
       "electronic formats may be downloaded.",
-
     "Not available for external use as of Monday, Oct. 20, 2003.",
-
     "Personal registration and/or payment required to access some " +
       "features.",
-
     "Restricted access for security reasons",
-
     "Restricted to Federal depository libraries and other users " +
       "with valid user accounts.",
-
     "Restricted to federal depository libraries with valid user " +
       "IDs and passwords.",
-
     "Restricted to institutions with a site license to the USA " +
       "trade online database. Free to users at federal depository " +
       "libraries.",
-
     "Some components of this directory may not be publicly " +
       "accessible.",
-
     "Some v. are for official use only, i.e. distribution of Oct. " +
       "1998 v. 2 is restricted.",
-
     "Special issue for Oct./Dec. 2007 for official use only.",
-
     "Subscription required for access."
   )
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
-  // <datafield> tag = 600, 610, 611, 630, 650, or 651  <subfield> code is a letter (not a number)
+    // <datafield> tag = 600, 610, 611, 630, 650, or 651  <subfield> code is a letter (not a number)
     datafield(data, Seq("600", "610", "611", "630", "650", "651"))
       .map(extractMarcSubject)
       .map(nameOnlyConcept)
 
   override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
-  // <datafield> tag = 600, 610, 650, or 651  <subfield> code = y
-  // <datafield> tag = 611                    <subfield> code = d
-    (marcFields(data, Seq("600", "610", "650", "651"), Seq("y")) ++ marcFields(data, Seq("611"), Seq("d")))
+    // <datafield> tag = 600, 610, 650, or 651  <subfield> code = y
+    // <datafield> tag = 611                    <subfield> code = d
+    (marcFields(data, Seq("600", "610", "650", "651"), Seq("y")) ++ marcFields(
+      data,
+      Seq("611"),
+      Seq("d")
+    ))
       .flatMap(extractStrings)
       .map(_.stripSuffix("."))
       .map(stringOnlyTimeSpan)
@@ -370,11 +381,15 @@ class GpoMapping extends MarcXmlMapping {
   }
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] = mintDplaItemUri(data)
+  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+    mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = Seq(agent)
+  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+    Seq(agent)
 
-  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
+  override def isShownAt(
+      data: Document[NodeSeq]
+  ): ZeroToMany[EdmWebResource] = {
     val uriPrefix: String = "http://catalog.gpo.gov/F/?func=direct&doc_number="
     val uriSuffix: String = "&format=999"
 
@@ -384,16 +399,19 @@ class GpoMapping extends MarcXmlMapping {
 
     cIsShownAt match {
       case Some(c) => Seq(uriPrefix + c + uriSuffix).map(stringOnlyWebResource)
-      case None => Seq()
+      case None    => Seq()
     }
   }
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] = Utils.formatXml(data)
+  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
+    Utils.formatXml(data)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
   override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
+      data
+    ))
 
   // Helper method
   def agent = EdmAgent(
