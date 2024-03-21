@@ -1,7 +1,7 @@
 package dpla.ingestion3.harvesters.file
 
 import java.io.File
-import com.databricks.spark.avro._
+
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.CsvFileFilter
 import dpla.ingestion3.mappers.utils.JsonExtractor
@@ -147,7 +147,7 @@ class LcCsvFileHarvester(spark: SparkSession,
     flush()
 
     // Read harvested data into Spark DataFrame.
-    spark.read.avro(tmpOutStr)
+    spark.read.format("avro").load(tmpOutStr)
   }
 }
 

@@ -3,9 +3,10 @@ package dpla.ingestion3.enrichments
 import dpla.ingestion3.data.MappedRecordsFixture
 import dpla.ingestion3.enrichments.normalizations.StringNormalizations
 import dpla.ingestion3.model._
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
-class StringNormalizationsTest extends FlatSpec with BeforeAndAfter {
+class StringNormalizationsTest extends AnyFlatSpec with BeforeAndAfter {
 
   val stringEnrichments = new StringNormalizations
 

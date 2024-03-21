@@ -16,7 +16,7 @@ class RsHarvester(spark: SparkSession,
   override def mimeType: String = "application_json"
 
 
-  override def localHarvest: DataFrame = {
+  override def localHarvest(): DataFrame = {
 
     // Set options.
     val readerOptions: Map[String, String] = Map(

@@ -1,9 +1,10 @@
 package dpla.ingestion3.model
 
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
 
-class UriTest extends FlatSpec with BeforeAndAfter {
+class UriTest extends AnyFlatSpec with BeforeAndAfter {
 
 //  "normalize URI" should "replace `/page/` with `/vocab/`" in {
 //    val uri = URI("http://rightsstatements.org/page/CNE/1.0/")

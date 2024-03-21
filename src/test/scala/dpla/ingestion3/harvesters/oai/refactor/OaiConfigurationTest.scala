@@ -1,8 +1,9 @@
 package dpla.ingestion3.harvesters.oai.refactor
 
-import org.scalatest.{FlatSpec, FunSuite}
+import org.scalatest.flatspec.AnyFlatSpec
 
-class OaiConfigurationTest extends FlatSpec {
+
+class OaiConfigurationTest extends AnyFlatSpec {
 
   val defaults = Map("verb" -> "ListRecords")
 

@@ -1,6 +1,6 @@
 package dpla.ingestion3.harvesters.file
 
-import com.databricks.spark.avro._
+
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
 import dpla.ingestion3.mappers.utils.JsonExtractor
@@ -154,7 +154,7 @@ class CommunityWebsHarvester(
     getAvroWriter.flush()
 
     // Read harvested data into Spark DataFrame.
-    val df = spark.read.avro(tmpOutStr)
+    val df = spark.read.format("avro").load(tmpOutStr)
 
     // Filter out records with "status":"deleted"
     df.where(!col("document").like("%\"status\":\"deleted\"%"))

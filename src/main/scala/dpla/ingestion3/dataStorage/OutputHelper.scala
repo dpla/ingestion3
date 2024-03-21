@@ -1,11 +1,11 @@
 package dpla.ingestion3.dataStorage
 
+import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import dpla.ingestion3.utils.FlatFileIO
 
 import java.io.ByteArrayInputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-
 import com.amazonaws.services.s3.model.{ObjectMetadata, PutObjectRequest}
 
 import scala.util.{Failure, Success, Try}
@@ -27,7 +27,9 @@ class OutputHelper(root: String,
                    activity: String,
                    startDateTime: LocalDateTime) {
 
-  val s3WriteProtocol: String = "s3a"
+  private val s3WriteProtocol: String = "s3a"
+
+  private val s3Client = AmazonS3ClientBuilder.defaultClient()
 
   /**
     * If the given root is an S3 path, parse an S3Address.
@@ -205,7 +207,7 @@ class OutputHelper(root: String,
     */
   def writeS3File(bucket: String, key: String, text: String): Try[String] = Try {
     val in = new ByteArrayInputStream(text.getBytes("utf-8"))
-    s3client.putObject(new PutObjectRequest(bucket, key, in, new ObjectMetadata))
+    s3Client.putObject(new PutObjectRequest(bucket, key, in, new ObjectMetadata))
     // Return filepath
     s"$bucket/$key"
   }

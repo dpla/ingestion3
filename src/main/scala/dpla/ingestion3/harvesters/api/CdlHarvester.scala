@@ -10,7 +10,6 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
-import com.databricks.spark.avro._
 
 import scala.util.{Failure, Success}
 
@@ -35,8 +34,8 @@ class CdlHarvester(spark: SparkSession,
     "api_key" -> conf.harvest.apiKey
   ).collect{ case (key, Some(value)) => key -> value } // remove None values
 
-  override def localHarvest: DataFrame = {
-    implicit val formats = DefaultFormats
+  override def localHarvest(): DataFrame = {
+    implicit val formats: DefaultFormats.type = DefaultFormats
 
     // Mutable vars for controlling harvest loop
     var continueHarvest = true
@@ -83,9 +82,10 @@ class CdlHarvester(spark: SparkSession,
               s"Body: ${src.text}")
             continueHarvest = false
         }
+      case _ => throw new RuntimeException("Unsure how we got here!")
     }
     // Read harvested data into Spark DataFrame and return.
-    spark.read.avro(tmpOutStr)
+    spark.read.format("avro").load(tmpOutStr)
   }
 
   /**

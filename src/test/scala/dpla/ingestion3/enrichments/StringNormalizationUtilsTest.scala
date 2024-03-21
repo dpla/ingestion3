@@ -2,9 +2,10 @@ package dpla.ingestion3.enrichments
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.FilterList
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
-class StringNormalizationUtilsTest extends FlatSpec with BeforeAndAfter {
+class StringNormalizationUtilsTest extends AnyFlatSpec with BeforeAndAfter {
 
   // Helper objects
   object BlockList extends FilterList {

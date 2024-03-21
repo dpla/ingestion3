@@ -26,7 +26,7 @@ abstract class Harvester(spark: SparkSession,
 
   def localHarvest(): DataFrame
 
-  def cleanUp(): Unit = Unit
+  def cleanUp(): Unit = ()
 
 }
 /**

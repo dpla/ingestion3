@@ -6,9 +6,10 @@ import dpla.ingestion3.model._
 import dpla.ingestion3.utils.FlatFileIO
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.JsonMethods._
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
-class HeartlandMappingTest extends FlatSpec with BeforeAndAfter {
+class HeartlandMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
   val shortName = Some("heartland-hub")
   val jsonString: String = new FlatFileIO().readFileAsString("/mo.json")

@@ -1,15 +1,16 @@
 package dpla.ingestion3.model
 
-import com.databricks.spark.avro.SchemaConverters
 import dpla.ingestion3.data.EnrichedRecordFixture
 import dpla.ingestion3.utils.FlatFileIO
 import org.apache.avro.Schema
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.avro.SchemaConverters
 import org.apache.spark.sql.types.StructType
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.BeforeAndAfter
 
 
-class ModelConverterTest extends FlatSpec with BeforeAndAfter {
+class ModelConverterTest extends AnyFlatSpec with BeforeAndAfter {
 
   val schema: Schema = new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
   val sqlSchema: StructType = SchemaConverters.toSqlType(schema).dataType.asInstanceOf[StructType]
@@ -186,7 +187,7 @@ class ModelConverterTest extends FlatSpec with BeforeAndAfter {
 
   it should "handle optional EdmWebResources" in {
     ModelConverter.toOptionEdmWebResource(testEdmWebResource) match {
-      case Some(edmWebResource: EdmWebResource) => Unit
+      case Some(edmWebResource: EdmWebResource) => ()
       case None => fail("Got a none back for something that should be a Some")
     }
 

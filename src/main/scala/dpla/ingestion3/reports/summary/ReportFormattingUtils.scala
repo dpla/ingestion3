@@ -1,6 +1,7 @@
 package dpla.ingestion3.reports.summary
 
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
+
 
 /**
   * Provides utility functions for formatting strings in a report of

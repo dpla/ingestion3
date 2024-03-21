@@ -14,9 +14,9 @@ import scala.xml._
 class TnMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
 
   // ID minting functions
-  override def useProviderName(): Boolean = false
+  override def useProviderName: Boolean = false
 
-  override def getProviderName(): Option[String] = Some("tn")
+  override def getProviderName: Option[String] = Some("tn")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
   // ingestion1 ID minting >> /select-id?prop=id&use_source=no

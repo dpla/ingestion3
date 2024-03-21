@@ -7,7 +7,6 @@ import dpla.ingestion3.mappers.utils.XmlExtractor
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import com.databricks.spark.avro._
 import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
 
 import scala.util.{Failure, Success, Try}
@@ -116,7 +115,7 @@ class VtFileHarvester(spark: SparkSession,
     })
 
     // Read harvested data into Spark DataFrame and return.
-    spark.read.avro(tmpOutStr)
+    spark.read.format("avro").load(tmpOutStr)
   }
 
   /**

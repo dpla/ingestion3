@@ -2,9 +2,8 @@ package dpla.ingestion3.harvesters.file
 
 import java.io.{BufferedReader, File, FileInputStream}
 import java.util.zip.GZIPInputStream
-import com.databricks.spark.avro._
+
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.dataStorage.InputHelper
 import dpla.ingestion3.harvesters.file.FileFilters.GzFileFilter
 import dpla.ingestion3.harvesters.{AvroHelper, Harvester}
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
@@ -14,7 +13,6 @@ import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.hadoop.fs.Path
 import org.apache.log4j.Logger
-import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.tools.bzip2.CBZip2InputStream
 import org.apache.tools.tar.TarInputStream
@@ -218,7 +216,7 @@ class NaraDeltaHarvester(
       .getAbsolutePath
 
     val localSrcPath = new Path(naraTempFile)
-    val dfDeltaRecords = spark.read.avro(localSrcPath.toString)
+    val dfDeltaRecords = spark.read.format("avro").load(localSrcPath.toString)
 
     dfDeltaRecords
   }

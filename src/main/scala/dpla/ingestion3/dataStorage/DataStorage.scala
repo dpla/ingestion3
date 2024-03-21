@@ -1,12 +1,10 @@
 package dpla.ingestion3
 
-import com.amazonaws.services.s3.AmazonS3Client
 
 package object dataStorage {
 
   lazy val s3Protocols: List[String] = List("s3", "s3a", "s3n")
 
-  lazy val s3client: AmazonS3Client = new AmazonS3Client
 
   /**
     * Component parts of an S3 address.

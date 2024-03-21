@@ -4,7 +4,6 @@ import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
 import dpla.ingestion3.dataStorage.InputHelper
 import dpla.ingestion3.executors._
 import dpla.ingestion3.utils.{Emailer, Utils}
-//import dpla.ingestion3.entries.reports.ReporterMain._
 import org.apache.spark.SparkConf
 /**
   * Single entry point to run harvest, mapping, enrichment, indexing jobs and all reports.
@@ -52,7 +51,6 @@ import org.apache.spark.SparkConf
 object IngestRemap extends MappingExecutor
   with JsonlExecutor
   with EnrichExecutor
-  with TopicModelExecutor
   with WikimediaMetadataExecutor {
 
   def main(args: Array[String]): Unit = {
@@ -73,9 +71,10 @@ object IngestRemap extends MappingExecutor
     // If given input path is a harvest, use it as `harvestData'.
     // If not, assume that it is a directory containing several harvests and
     // get the most recent harvest from that directory.
-    val harvestData = InputHelper.isActivityPath(input) match {
-      case true => input
-      case false => InputHelper.mostRecent(input)
+    val harvestData = if (InputHelper.isActivityPath(input)) {
+      input
+    } else {
+      InputHelper.mostRecent(input)
         .getOrElse(throw new RuntimeException("Unable to load harvest data."))
     }
 

@@ -1,8 +1,9 @@
 package dpla.ingestion3.enrichments
 
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
-class TypeEnrichmentTest  extends FlatSpec with BeforeAndAfter {
+class TypeEnrichmentTest  extends AnyFlatSpec with BeforeAndAfter {
 
   val typeEnrichment = new TypeEnrichment
 

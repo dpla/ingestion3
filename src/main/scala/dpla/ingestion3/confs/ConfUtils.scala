@@ -2,8 +2,6 @@ package dpla.ingestion3.confs
 
 import java.net.URL
 
-import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3URI}
-import com.amazonaws.services.s3.model.S3Object
 import com.typesafe.config.Config
 
 import scala.io.{BufferedSource, Source}
@@ -31,28 +29,9 @@ trait ConfUtils {
     */
   def getConfigContents(path: String): Option[String] = {
     path match {
-      case path if path.startsWith("s3") => getS3Conf(path)
       case path if path.startsWith("http") => throw new UnsupportedOperationException("HTTP not supported yet")
       case _ => getLocalConf(path)
     }
-  }
-
-  /**
-    * Reads file on S3 and returns contents as Option[String]
-    *
-    * @param path Path to file
-    * @return Contents of file as Option[String]
-    */
-  def getS3Conf(path: String): Option[String] = {
-    val s3Client = new AmazonS3Client()
-    val uri: AmazonS3URI = new AmazonS3URI(path)
-    val s3Object: S3Object = s3Client.getObject(uri.getBucket, uri.getKey)
-    val source: BufferedSource = Source.fromInputStream(s3Object.getObjectContent)
-    // Try-block exists to ensure closure of input stream
-    try
-      Option(source.getLines().mkString("\n"))
-    finally
-      source.close()
   }
 
   /**

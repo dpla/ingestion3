@@ -21,9 +21,9 @@ class NorthwestHeritageMapping extends XmlMapping with XmlExtractor with IngestM
   val latLongRegex = "^[-+]?([1-8]?\\d(\\.\\d+)?|90(\\.0+)?),\\s*[-+]?(180(\\.0+)?|((1[0-7]\\d)|([1-9]?\\d))(\\.\\d+)?)$"
 
   // ID minting functions
-  override def useProviderName(): Boolean = true
+  override def useProviderName: Boolean = true
 
-  override def getProviderName(): Option[String] = Some("nwdh")
+  override def getProviderName: Option[String] = Some("nwdh")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")

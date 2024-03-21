@@ -3,7 +3,7 @@ package dpla.ingestion3.harvesters.api
 
 import java.net.URL
 
-import com.databricks.spark.avro._
+
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.utils.{HttpUtils, Utils}
@@ -100,7 +100,7 @@ abstract class PrimoVEHarvester(spark: SparkSession,
         }
     }
     // Read harvested data into Spark DataFrame and return.
-    spark.read.avro(tmpOutStr)
+    spark.read.format("avro").load(tmpOutStr)
   }
 
   /**

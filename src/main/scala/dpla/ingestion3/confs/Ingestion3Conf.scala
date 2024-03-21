@@ -57,10 +57,6 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None) 
         // FIXME these should be removed
         sparkDriverMemory = getProp(providerConf, "spark.driverMemory"),
         sparkExecutorMemory= getProp(providerConf, "spark.executorMemory")
-      ),
-      i3Twofishes(
-        hostname = getProp(providerConf, "twofishes.hostname"),
-        port = getProp(providerConf, "twofishes.port")
       )
     )
   }
@@ -107,27 +103,6 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     noshort = true
   )
 
-  val stopWords: ScallopOption[String] = opt[String](
-    "stopWords",
-    required = false,
-    noshort = true,
-    validate = _.nonEmpty
-  )
-
-  val cvModel: ScallopOption[String] = opt[String](
-    "cvModel",
-    required = false,
-    noshort = true,
-    validate = _.nonEmpty
-  )
-
-  val ldaModel: ScallopOption[String] = opt[String](
-    "ldaModel",
-    required = false,
-    noshort = true,
-    validate = _.nonEmpty
-  )
-
   val deleteIds: ScallopOption[String] = opt[String](
     "deleteIds",
     required = false,
@@ -141,7 +116,6 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     * @return Configuration file location
     */
   def getConfigFile: String = configFile.toOption
-    .map(_.toString)
     .getOrElse(throw new RuntimeException("No configuration file specified."))
 
   /**
@@ -150,7 +124,6 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     * @return Input location
     */
   def getInput: String = input.toOption
-    .map(_.toString)
     .getOrElse(throw new RuntimeException("No input specified."))
 
   /**
@@ -159,7 +132,6 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     * @return Output location
     */
   def getOutput: String = output.toOption
-    .map(_.toString)
     .getOrElse(throw new RuntimeException("No output specified."))
 
   /**
@@ -168,16 +140,9 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     * @return Provider short name
     */
   def getProviderName: String = providerName.toOption
-    .map(_.toString)
     .getOrElse(throw new RuntimeException("No provider name specified."))
 
   def getSparkMaster: Option[String] = sparkMaster.toOption
-
-  def getStopWords:  Option[String] = stopWords.toOption
-
-  def getCvModel: Option[String] = cvModel.toOption
-
-  def getLdaModel: Option[String] = ldaModel.toOption
 
   def getDeleteIds: Option[String] = deleteIds.toOption
 
@@ -212,14 +177,8 @@ case class i3Conf(
                    email: Option[String] = None,
                    provider: Option[String] = None,
                    harvest: Harvest = Harvest(),
-                   spark: i3Spark = i3Spark(),
-                   twofishes: i3Twofishes = i3Twofishes()
+                   spark: i3Spark = i3Spark()
                  )
-
-case class i3Twofishes(
-                        hostname: Option[String] = None,
-                        port: Option[String] = None
-                      )
 
 case class i3Spark (
                      sparkDriverMemory: Option[String] = None,

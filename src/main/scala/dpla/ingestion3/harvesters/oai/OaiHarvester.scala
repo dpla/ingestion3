@@ -57,5 +57,5 @@ class OaiHarvester(spark: SparkSession,
       .withColumn("mimetype", lit(mimeType))
   }
 
-  override def cleanUp(): Unit = Unit
+  override def cleanUp(): Unit = ()
 }

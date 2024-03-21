@@ -6,7 +6,6 @@ import dpla.ingestion3.reports.summary.ReportFormattingUtils
 import dpla.ingestion3.utils.Utils
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Dataset, Row}
-import org.json4s.jackson.JsonMethods
 
 object PrepareEnrichmentReport extends IngestMessageTemplates {
 
@@ -45,7 +44,7 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     // messages are correctly collected
 
     // Put collected messages into copy of enriched
-    enriched.copy(messages = msgs.getAll())
+    enriched.copy(messages = msgs.getAll().toSeq)
   }
   /**
     *

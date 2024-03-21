@@ -1,11 +1,11 @@
 package dpla.ingestion3.enrichments.normalizations
 
 import dpla.ingestion3.enrichments.normalizations.filters.{ExtentExceptionsList, ExtentIdentificationList}
-import org.apache.commons.lang.StringEscapeUtils
+import org.apache.commons.text.StringEscapeUtils
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document.OutputSettings
 import org.jsoup.nodes.Entities.EscapeMode
-import org.jsoup.safety.Whitelist
+import org.jsoup.safety.Safelist
 
 /**
   * String enrichments
@@ -214,10 +214,12 @@ object StringNormalizationUtils {
     /**
      *
      */
+
+
     lazy val stripHTML: SingleStringEnrichment = {
-      val unescaped = StringEscapeUtils.unescapeHtml(value)
-      val cleaned = Jsoup.clean(unescaped, "", Whitelist.none(), new OutputSettings().escapeMode(EscapeMode.xhtml))
-      StringEscapeUtils.unescapeHtml(cleaned)
+      val unescaped = StringEscapeUtils.unescapeHtml4(value)
+      val cleaned = Jsoup.clean(unescaped, "", Safelist.none(), new OutputSettings().escapeMode(EscapeMode.xhtml))
+      StringEscapeUtils.unescapeHtml4(cleaned)
     }
 
     /**

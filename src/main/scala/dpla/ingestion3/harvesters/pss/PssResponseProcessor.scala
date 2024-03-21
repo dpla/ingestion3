@@ -1,6 +1,5 @@
 package dpla.ingestion3.harvesters.pss
 
-
 import org.apache.log4j.LogManager
 import org.json4s.{JValue, JArray, DefaultFormats}
 import org.json4s.jackson.JsonMethods._
@@ -13,7 +12,7 @@ object PssResponseProcessor {
   private[this] val logger = LogManager.getLogger("OaiHarvester")
 
   // Setting formats allows you to parse (ie. extract) Strings from JValues.
-  implicit val formats = DefaultFormats
+  implicit val formats: DefaultFormats.type = DefaultFormats
 
   // Parse the set endpoints (ie. urls) from an ItemList of all sets.
   def getSetEndpoints(sets: String): List[String] = {

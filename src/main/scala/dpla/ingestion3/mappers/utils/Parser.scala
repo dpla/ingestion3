@@ -3,6 +3,7 @@ package dpla.ingestion3.mappers.utils
 import org.json4s.JValue
 import scala.xml.{NodeSeq, XML}
 
+
 trait Parser[T] {
   def parse(data: String): Document[T]
 }

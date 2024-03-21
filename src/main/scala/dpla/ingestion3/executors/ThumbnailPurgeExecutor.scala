@@ -2,7 +2,7 @@
 
 package dpla.ingestion3.executors
 
-import com.databricks.spark.avro._
+
 import dpla.ingestion3.utils.S3FileHelper
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
@@ -17,7 +17,7 @@ object ThumbnailPurgeExecutor extends S3FileHelper {
 
   def execute(spark: SparkSession, input: String, bucket: String): Unit = {
 
-    val df = spark.read.avro(input)
+    val df = spark.read.format("avro").load(input)
 
     df.createOrReplaceTempView("df")
 

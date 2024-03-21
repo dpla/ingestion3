@@ -7,9 +7,10 @@ import dpla.ingestion3.utils.FlatFileIO
 import org.json4s.JsonAST.{JNull, JObject}
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
-class IaMappingTest extends FlatSpec with BeforeAndAfter {
+class IaMappingTest extends AnyFlatSpec with BeforeAndAfter {
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
   val shortName = "ia"
   val jsonString: String = new FlatFileIO().readFileAsString("/ia.json")
@@ -86,7 +87,7 @@ class IaMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct title and vol" in {
-    val json = org.json4s.jackson.JsonMethods.parse(
+    val json = parse(
       """{
         |  "volume" : "vol 1.",
         |  "title" : "The art of dying well"
@@ -97,7 +98,7 @@ class IaMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct title and vol and issue" in {
-    val json = org.json4s.jackson.JsonMethods.parse(
+    val json = parse(
       """{
         |  "issue" : "issue",
         |  "volume" : "vol 1.",
@@ -109,7 +110,7 @@ class IaMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct multiple title and vol and issue" in {
-    val json = org.json4s.jackson.JsonMethods.parse(
+    val json = parse(
       """{
         |  "issue" : "issue",
         |  "volume" : "vol 1.",
@@ -121,7 +122,7 @@ class IaMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct multiple title and multiple vol and issue" in {
-    val json = org.json4s.jackson.JsonMethods.parse(
+    val json = parse(
       """{
         |  "issue" : "issue",
         |  "volume" : ["vol 1.", "vol 2."],
@@ -133,7 +134,7 @@ class IaMappingTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct multiple title and multiple vol and multiple issue" in {
-    val json = org.json4s.jackson.JsonMethods.parse(
+    val json = parse(
       """{
         |  "issue" : ["issue 1", "issue 1"],
         |  "volume" : ["vol 1.", "vol 2."],

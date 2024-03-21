@@ -17,9 +17,9 @@ class OhioMapping extends XmlMapping with XmlExtractor
   with IngestMessageTemplates {
 
   // ID minting functions
-  override def useProviderName(): Boolean = false
+  override def useProviderName: Boolean = false
 
-  override def getProviderName(): Option[String] = Some("ohio")
+  override def getProviderName: Option[String] = Some("ohio")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")

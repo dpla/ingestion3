@@ -5,10 +5,10 @@ import dpla.ingestion3.model.{DcmiTypeCollection, DplaPlace, EdmAgent, EdmTimeSp
 import dpla.ingestion3.utils.FlatFileIO
 import org.json4s.JValue
 import org.json4s.jackson.JsonMethods
-import org.scalatest.FlatSpec
 import org.json4s.JsonDSL._
+import org.scalatest.flatspec.AnyFlatSpec
 
-class JsonRetconMappingTest extends FlatSpec {
+class JsonRetconMappingTest extends AnyFlatSpec {
 
   def loadRecord(path: String): Document[JValue] = Document(
     JsonMethods.parse(

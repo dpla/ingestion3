@@ -1,10 +1,11 @@
 package dpla.ingestion3.enrichments
 
 import dpla.ingestion3.model.{EdmAgent, URI}
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
 import dpla.ingestion3.model._
+import org.scalatest.flatspec.AnyFlatSpec
 
-class WikiEntityEnrichmentTest extends FlatSpec with BeforeAndAfter {
+class WikiEntityEnrichmentTest extends AnyFlatSpec with BeforeAndAfter {
 
   val wikiEnrichment = new WikiEntityEnrichment
 

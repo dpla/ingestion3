@@ -20,9 +20,9 @@ class IllinoisMapping extends XmlMapping with XmlExtractor with IngestMessageTem
       ExtentIdentificationList.termList
 
   // ID minting functions
-  override def useProviderName(): Boolean = true
+  override def useProviderName: Boolean = true
 
-  override def getProviderName(): Option[String] = Some("il")
+  override def getProviderName: Option[String] = Some("il")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")

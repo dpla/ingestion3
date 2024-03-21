@@ -16,8 +16,8 @@ class GettyMapping extends JsonMapping with JsonExtractor {
     ExtentIdentificationList.termList
 
   // ID minting functions
-  override def useProviderName(): Boolean = true
-  override def getProviderName(): Option[String] = Some("getty")
+  override def useProviderName: Boolean = true
+  override def getProviderName: Option[String] = Some("getty")
 
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] = {
     extractStrings(unwrap(data) \ "pnx" \ "control" \ "recordid").headOption
@@ -125,7 +125,7 @@ class GettyMapping extends JsonMapping with JsonExtractor {
     ("prehashId", buildProviderBaseId()(data)) ~ ("dplaId", mintDplaId(data))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("J. Paul Getty Trust"),
     uri = Some(URI("http://dp.la/api/contributor/getty"))
   )

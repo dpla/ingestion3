@@ -3,12 +3,13 @@ package dpla.ingestion3.mappers
 import dpla.ingestion3.mappers.utils.{Document, Mapping, XmlMapping}
 import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates, MessageCollector}
 import dpla.ingestion3.model.{OreAggregation, _}
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.xml.NodeSeq
 
 
-class MapperTest extends FlatSpec with BeforeAndAfter with IngestMessageTemplates {
+class MapperTest extends AnyFlatSpec with BeforeAndAfter with IngestMessageTemplates {
 
   val enforce = false
 

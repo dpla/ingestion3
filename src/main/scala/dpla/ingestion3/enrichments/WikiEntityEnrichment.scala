@@ -4,7 +4,7 @@ import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.{EdmAgent, URI, nameOnlyAgent}
 import dpla.ingestion3.utils.FileLoader
 import dpla.ingestion3.wiki.WikiUri
-import org.json4s.jackson.JsonMethods.parse
+import org.json4s.jackson.JsonMethods._
 
 import scala.io.Source
 

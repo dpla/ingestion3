@@ -2,12 +2,13 @@ package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.model._
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.xml.NodeSeq
 
 
-class PaMappingTest extends FlatSpec with BeforeAndAfter {
+class PaMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
   val extractor = new PaMapping
 

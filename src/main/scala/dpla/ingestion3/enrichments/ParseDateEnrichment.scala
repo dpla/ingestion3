@@ -26,7 +26,7 @@ class ParseDateEnrichment extends Serializable {
           begin = begin,
           end = end
         )
-      case None => Unit
+      case None => ()
     }
 
     //if we can get an interval out of this, return that

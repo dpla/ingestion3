@@ -2,10 +2,12 @@ package dpla.ingestion3.enrichments
 
 import dpla.ingestion3.enrichments.normalizations.FilterRegex._
 import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 import scala.util.matching
 
-class FilterRegexTest extends FlatSpec with BeforeAndAfter with Matchers {
+class FilterRegexTest extends AnyFlatSpec with BeforeAndAfter with Matchers {
 
   // Test terms
   val singleWordBlockTerm = "jpeg"
@@ -16,7 +18,7 @@ class FilterRegexTest extends FlatSpec with BeforeAndAfter with Matchers {
 
 
   // blockListRegex Tests
-  s"blockListRegex" should "match when the terms are the same" in {
+  "blockListRegex" should "match when the terms are the same" in {
     singleWordBlockTerm should fullyMatch regex singleWordBlockTermRegex
     multiWordBlockTerm should fullyMatch regex multiWordBlockTermRegex
   }

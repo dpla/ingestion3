@@ -198,11 +198,9 @@ class TypeEnrichment extends VocabEnrichment[String] {
     *
     * @param vocabulary Map[String,Any]
     */
-  //noinspection TypeAnnotation
-  def addVocab(vocabulary: Map[String, Any]) = vocabulary match {
-    case iri: Map[String, IRI] => typeLookup.add(convertMap(iri))
-    case str: Map[String, String] => typeLookup.add(str)
-  }
+  def addVocab(vocabulary: Map[String, IRI]): Unit =
+    typeLookup.add(convertMap(vocabulary))
+
 
   /**
     * Find the original value in the controlled vocabulary

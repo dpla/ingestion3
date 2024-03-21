@@ -126,8 +126,6 @@ object Emailer {
       val sendFrom: Address = new InternetAddress(sender)
       val sendCc: Array[Address] = Array[Address](
         new InternetAddress("tech@dp.la")
-//        TODO Who else should be cc'd on these?
-//        , new InternetAddress("shanee@dp.la")
       )
 
       message.setFrom(sendFrom)

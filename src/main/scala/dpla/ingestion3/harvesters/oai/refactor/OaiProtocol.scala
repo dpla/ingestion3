@@ -14,17 +14,17 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Se
   lazy val endpoint: String = oaiConfiguration.endpoint
   lazy val metadataPrefix: Option[String] = oaiConfiguration.metadataPrefix
 
-  override def listAllRecordPages: TraversableOnce[Either[OaiError, OaiPage]] = {
+  override def listAllRecordPages(): IterableOnce[Either[OaiError, OaiPage]] = {
     val responseBuilder = new OaiMultiPageResponseBuilder(endpoint,
       "ListRecords", metadataPrefix)
 
     val multiPageResponse = responseBuilder.getResponse
     // TODO: Is there a better way to make a TraversableOnce return type?
-    multiPageResponse.toIterator
+    multiPageResponse.iterator
   }
 
   override def listAllRecordPagesForSet(setEither: Either[OaiError, OaiSet]):
-    TraversableOnce[Either[OaiError, OaiPage]] = {
+  IterableOnce[Either[OaiError, OaiPage]] = {
 
     val listResponse = setEither match {
       case Left(error) => List(Left(error))
@@ -36,32 +36,28 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration) extends OaiMethods with Se
         responseBuilder.getResponse
       }
     }
-    // TODO: Is there a better way to make a TraversableOnce return type?
-    listResponse.toIterator
+    listResponse.iterator
   }
 
-  override def listAllSetPages: TraversableOnce[Either[OaiError, OaiPage]] = {
+  override def listAllSetPages(): IterableOnce[Either[OaiError, OaiPage]] = {
     val responseBuilder = new OaiMultiPageResponseBuilder(endpoint, "ListSets")
     val multiPageResponse = responseBuilder.getResponse
-    // TODO: Is there a better way to make a TraversableOnce return type?
-    multiPageResponse.toIterator
+    multiPageResponse.iterator
   }
 
   override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage], removeDeleted: Boolean):
-    TraversableOnce[Either[OaiError, OaiRecord]] = {
+  IterableOnce[Either[OaiError, OaiRecord]] = {
 
     val xmlEither = OaiXmlParser.parsePageIntoXml(pageEither)
     val records = OaiXmlParser.parseXmlIntoRecords(xmlEither, removeDeleted)
-    // TODO: Is there a better way to make a TraversableOnce return type?
-    records.toIterator
+    records.iterator
   }
 
   override def parsePageIntoSets(pageEither: Either[OaiError, OaiPage]):
-    TraversableOnce[Either[OaiError, OaiSet]] = {
+    IterableOnce[Either[OaiError, OaiSet]] = {
 
     val xmlEither = OaiXmlParser.parsePageIntoXml(pageEither)
     val sets = OaiXmlParser.parseXmlIntoSets(xmlEither)
-    // TODO: Is there a better way to make a TraversableOnce return type?
-    sets.toIterator
+    sets.iterator
   }
 }

@@ -2,16 +2,16 @@ package dpla.ingestion3
 
 import java.text.SimpleDateFormat
 import java.util.{Calendar, TimeZone}
-import com.databricks.spark.avro.SchemaConverters
 import dpla.ingestion3.utils.FlatFileIO
 import dpla.ingestion3.wiki.WikiUri
 import org.apache.avro.Schema
 import org.apache.spark.sql.types.StructType
-import org.json4s
-import org.json4s.JsonAST._
-import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods
+import org.apache.spark.sql.avro.SchemaConverters
+
 import org.json4s.jackson.JsonMethods._
+import org.json4s.JsonDSL._
+import org.json4s._
+//todo empty values??
 import org.json4s.prefs.EmptyValueStrategy
 import org.json4s.{DefaultFormats, Formats}
 
@@ -111,6 +111,7 @@ package object model {
   }
 
   def jsonlRecord(record: OreAggregation): String = {
+
     // We require the that DPLA ID and prehash ID (the providers 'permanent' identifier) be passed forward via the
     // metadata sidecar. Currently, there is no place to store these values in either the DPLA MAPv3.1 or MAPv4.0 models
     val dplaId = fromJsonString(record.sidecar) \ "dplaId" match {
@@ -222,7 +223,7 @@ package object model {
         ("tags" -> record.tags.map {_.toString})
       )
 
-    compact(render(jobj)(formats))
+    compact(render(jobj))
   }
 
   /**
@@ -343,6 +344,9 @@ package object model {
 
   // Taken from
   // https://stackoverflow.com/questions/40128816/remove-json-field-when-empty-value-in-serialize-with-json4s
+
+  //implicit val formats: Formats = jackson.Serialization.formats(NoTypeHints).skippingEmptyValues
+
   implicit val formats: Formats = DefaultFormats.withEmptyValueStrategy(new EmptyValueStrategy {
     def noneValReplacement = None
 
@@ -361,7 +365,7 @@ package object model {
   lazy val avroSchema: Schema = new Schema.Parser().parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
   lazy val sparkSchema: StructType = SchemaConverters.toSqlType(avroSchema).dataType.asInstanceOf[StructType]
 
-  def toJsonString(json: JValue): String = JsonMethods.compact(JsonMethods.render(json))
-  def fromJsonString(jsonString: String): json4s.JValue = JsonMethods.parse(jsonString)
+  def toJsonString(json: JValue): String = compact(render(json))
+  def fromJsonString(jsonString: String): JValue = parse(jsonString)
 
 }

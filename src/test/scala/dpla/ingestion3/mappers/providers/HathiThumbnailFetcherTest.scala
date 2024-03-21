@@ -1,8 +1,9 @@
 package dpla.ingestion3.mappers.providers
 
-import org.scalatest.{BeforeAndAfter, FlatSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.flatspec.AnyFlatSpec
 
-class HathiThumbnailFetcherTest extends FlatSpec with BeforeAndAfter {
+class HathiThumbnailFetcherTest extends AnyFlatSpec with BeforeAndAfter {
 
   val hathiIdOpt: Option[String] = Some("000443495")
   val oclcIdOpt: Option[String] = Some("13230493")

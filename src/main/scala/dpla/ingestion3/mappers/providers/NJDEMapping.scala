@@ -19,9 +19,9 @@ class NJDEMapping extends XmlMapping with XmlExtractor with IngestMessageTemplat
       FormatTypeValuesBlockList.termList
 
   // ID minting functions
-  override def useProviderName(): Boolean = true
+  override def useProviderName: Boolean = true
 
-  override def getProviderName(): Option[String] = Some("njde")
+  override def getProviderName: Option[String] = Some("njde")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier").map(_.trim)
