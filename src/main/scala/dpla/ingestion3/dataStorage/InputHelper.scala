@@ -1,5 +1,6 @@
 package dpla.ingestion3.dataStorage
 
+import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 
 import java.io.File
@@ -11,7 +12,8 @@ import scala.util.{Failure, Success, Try}
 
 object InputHelper {
 
-  private val s3Client = AmazonS3ClientBuilder.defaultClient()
+  // Hardcoding the region to get around a github actions build bug.
+  private val s3Client = AmazonS3ClientBuilder.standard().withRegion(Regions.US_EAST_1).build()
 
   /**
     * Check if a given local or S3 path is a valid activity path.
