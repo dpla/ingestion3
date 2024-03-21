@@ -13,7 +13,7 @@ import scala.util.{Failure, Success, Try}
 object InputHelper {
 
   // Hardcoding the region to get around a github actions build bug.
-  private val s3Client = AmazonS3ClientBuilder.standard().withRegion(Regions.US_EAST_1).build()
+  private val s3Client = AmazonS3ClientBuilder.defaultClient()
 
   /**
     * Check if a given local or S3 path is a valid activity path.
