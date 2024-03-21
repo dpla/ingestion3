@@ -4,7 +4,6 @@ import java.io.{BufferedReader, File, FileInputStream}
 import java.util.zip.GZIPInputStream
 
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.dataStorage.InputHelper
 import dpla.ingestion3.harvesters.file.FileFilters.GzFileFilter
 import dpla.ingestion3.harvesters.{AvroHelper, Harvester}
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
@@ -14,7 +13,6 @@ import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.hadoop.fs.Path
 import org.apache.log4j.Logger
-import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.tools.bzip2.CBZip2InputStream
 import org.apache.tools.tar.TarInputStream
