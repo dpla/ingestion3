@@ -1,7 +1,6 @@
 package dpla.ingestion3.mappers.providers
 
 import java.net.URL
-
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, FormatTypeValuesBlockList}
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
@@ -14,7 +13,7 @@ import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
 import scala.collection.mutable.ArrayBuffer
-import scala.xml.NodeSeq
+import scala.xml.{NodeSeq, Text}
 
 class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates {
   val formatBlockList: Set[String] =
@@ -212,18 +211,15 @@ class TxMapping extends XmlMapping with XmlExtractor with IngestMessageTemplates
     */
   def extractName(data: NodeSeq, property: String): ZeroToMany[EdmAgent] = {
     (data \ property)
+
+
+    (data \ property)
       .flatMap(node => {
         val name = extractStrings(node \ "name")
-        val propertyValue = node.child match {
-          case _: ArrayBuffer[_] => Seq(node.text)
-          case _ => Seq()
-        }
-
-        // If propertyValue is empty then return the value of the <name> sub-property
-        if(propertyValue.isEmpty)
-          name
+        if (name.isEmpty)
+          Seq(node.text)
         else
-          propertyValue
+          name
       })
       .map(nameOnlyAgent)
   }
