@@ -10871,236 +10871,231 @@
         "Wikidata": "Q3232931",
         "institutions":
         {
-"Andover-Harvard Theological Library, Harvard Divinity School, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Arnold Arboretum Horticultural Library (Jamaica Plain), Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Arnold Arboretum Library (Cambridge), Botany Libraries, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Arthur and Elizabeth Schlesinger Library on the History of Women in America, Radcliffe Institute for Advanced Study, Harvard University":
-            {
-                "Wikidata" : "Q7431696",
-                "upload" : "false"
-            },      	
-            "Baker Library Special Collections, Harvard Business School, Harvard University":
-            {
-                "Wikidata" : "Q42377658",
-                "upload" : "false"
-            },      	
-            "Baker Library, Harvard Business School, Harvard University":
-            {
-                "Wikidata" : "Q42377658",
-                "upload" : "false"
-            },      	
-            "Biblioteca Berenson, I Tatti - The Harvard University Center for Italian Renaissance Studies":
-            {
-                "Wikidata" : "Q59452059",
-                "upload" : "false"
-            },      	
-            "Cabot Science Library, Harvard University":
-            {
-                "Wikidata" : "Q39087142",
-                "upload" : "false"
-            },      	
-            "Center for the History of Medicine (Francis A. Countway Library of Medicine)":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Collection of Historical Scientific Instruments, Harvard University":
-            {
-                "Wikidata" : "Q22022153",
-                "upload" : "false"
-            },      	
-            "Dumbarton Oaks Research Library and Collection, Harvard University":
-            {
-                "Wikidata" : "Q1264942",
-                "upload" : "false"
-            },      	
-            "Economic Botany Library of Oakes Ames, Botany Libraries, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Eda Kuhn Loeb Music Library, Harvard University":
-            {
-                "Wikidata" : "Q102114826",
-                "upload" : "false"
-            },      	
-            "Ernst Mayr Library of the Museum of Comparative Zoology, Harvard University":
-            {
-                "Wikidata" : "Q53528757",
-                "upload" : "false"
-            },      	
-            "Farlow Reference Library of Cryptogamic Botany, Botany Libraries, Harvard University":
-            {
-                "Wikidata" : "Q18354774",
-                "upload" : "false"
-            },      	
-            "Fine Arts Library, Special Collections, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Frances L. Loeb Library, Graduate School of Design, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Francis A. Countway Library of Medicine":
-            {
-                "Wikidata" : "Q4947982",
-                "upload" : "false"
-            },      	
-            "General Artemas Ward Museum, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Gibb Islamic Seminar Library, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Government Documents and Microforms Collection, Harvard Library, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Gray Herbarium Library, Botany Libraries, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Harvard Art Museums":
-            {
-                "Wikidata" : "Q3783572",
-                "upload" : "false"
-            },      	
-            "Harvard Law School Library, Harvard University":
-            {
-                "Wikidata" : "Q18719675",
-                "upload" : "false"
-            },      	
-            "Harvard Law School Library, Historical & Special Collections":
-            {
-                "Wikidata" : "Q18719675",
-                "upload" : "false"
-            },      	
-            "Harvard Library, Harvard University":
-            {
-                "Wikidata" : "Q3232931",
-                "upload" : "false"
-            },      	
-            "Harvard Map Collection, Harvard University":
-            {
-                "Wikidata" : "Q124418156",
-                "upload" : "false"
-            },      	
-            "Harvard Theatre Collection, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Harvard University Archives":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Harvard-Yenching Library, Harvard University":
-            {
-                "Wikidata" : "Q5676691",
-                "upload" : "false"
-            },      	
-            "History Departmental Library, Harvard University":
-            {
-                "Wikidata" : "Q55613464",
-                "upload" : "false"
-            },      	
-            "History of Science Library, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Houghton Library, Harvard University":
-            {
-                "Wikidata" : "Q3719374",
-                "upload" : "false"
-            },      	
-            "John G. Wolbach Library, Harvard-Smithsonian Center for Astrophysics":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Kirkland House Library, Harvard University":
-            {
-                "Wikidata" : "Q3815603",
-                "upload" : "false"
-            },      	
-            "Lamont Library, Harvard University":
-            {
-                "Wikidata" : "Q6482212",
-                "upload" : "false"
-            },      	
-            "Master Microforms, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Microforms, Lamont Library, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Monroe C. Gutman Library, Graduate School of Education, Harvard University":
-            {
-                "Wikidata" : "Q48977184",
-                "upload" : "false"
-            },      	
-            "National master microform":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Orchid Library of Oakes Ames, Botany Libraries, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Peabody Museum of Archaeology and Ethnology Archives, Harvard University":
-            {
-                "Wikidata" : "Q1249027",
-                "upload" : "false"
-            },      	
-            "Robbins Library of Philosophy, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Tozzer Library, Harvard University":
-            {
-                "Wikidata" : "Q96419566",
-                "upload" : "false"
-            },      	
-            "Ukrainian Research Institute Reference Library, Harvard University":
-            {
-                "Wikidata" : "",
-                "upload" : "false"
-            },      	
-            "Widener Library, Harvard University":
-            {
-                "Wikidata" : "Q1060854",
-                "upload" : "false"
-            }
+        	"Andover-Harvard Theological Library, Harvard Divinity School, Harvard University":
+        	{
+                "Wikidata": "",
+                "upload": false
+        	},
+           "Arnold Arboretum Horticultural Library (Jamaica Plain), Harvard University":
+        	{
+            	"Wikidata": "",
+            	"upload": false
+        	},
+        	"Arnold Arboretum Library (Cambridge), Botany Libraries, Harvard University":
+        	{
+                "Wikidata": "",
+                "upload": false
+        	},
+        	"Arthur and Elizabeth Schlesinger Library on the History of Women in America, Radcliffe Institute for Advanced Study, Harvard University":
+        	{
+                "Wikidata": "Q7431696",
+                "upload": false
+        	},
+        	"Baker Library, Harvard Business School, Harvard University":
+        	{
+                "Wikidata": "Q42377658",
+            	"upload": false
+        	},
+        	"Biblioteca Berenson, I Tatti - The Harvard University Center for Italian Renaissance Studies":
+        	{
+                "Wikidata": "Q59452059",
+            	"upload": false
+        	},
+        	"Cabot Science Library, Harvard University":
+        	{
+                "Wikidata": "Q39087142",
+            	"upload": false
+        	},
+        	"Center for the History of Medicine (Francis A. Countway Library of Medicine)":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Collection of Historical Scientific Instruments, Harvard University":
+        	{
+                "Wikidata": "Q22022153",
+            	"upload": false
+        	},
+        	"Dumbarton Oaks Research Library and Collection, Harvard University":
+        	{
+                "Wikidata": "Q1264942",
+            	"upload": false
+        	},
+        	"Economic Botany Library of Oakes Ames, Botany Libraries, Harvard University":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Eda Kuhn Loeb Music Library, Harvard University":
+        	{
+                "Wikidata": "Q102114826",
+            	"upload": false
+        	},
+        	"Ernst Mayr Library of the Museum of Comparative Zoology, Harvard University":
+        	{
+                "Wikidata": "Q53528757",
+            	"upload": false
+        	},
+        	"Farlow Reference Library of Cryptogamic Botany, Botany Libraries, Harvard University":
+        	{
+                "Wikidata": "Q18354774",
+            	"upload": false
+        	},
+        	"Fine Arts Library, Special Collections, Harvard University":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Frances L. Loeb Library, Graduate School of Design, Harvard University":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Francis A. Countway Library of Medicine":
+        	{
+                "Wikidata": "Q4947982",
+            	"upload": false
+        	},
+        	"General Artemas Ward Museum, Harvard University":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Gibb Islamic Seminar Library, Harvard University":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Government Documents and Microforms Collection, Harvard Library, Harvard University":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Gray Herbarium Library, Botany Libraries, Harvard University":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Harvard Art Museums":
+        	{
+                "Wikidata": "Q3783572",
+            	"upload": false
+        	},
+        	"Harvard Law School Library, Harvard University":
+        	{
+                "Wikidata": "Q18719675",
+            	"upload": false
+        	},
+        	"Harvard Law School Library, Historical & Special Collections":
+        	{
+                "Wikidata": "Q18719675",
+            	"upload": false
+        	},
+        	"Harvard Library, Harvard University":
+        	{
+                "Wikidata": "Q3232931",
+            	"upload": false
+        	},
+        	"Harvard Map Collection, Harvard University":
+        	{
+                "Wikidata": "Q124418156",
+            	"upload": false
+        	},
+        	"Harvard Theatre Collection, Harvard University":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Harvard University Archives":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Harvard-Yenching Library, Harvard University":
+        	{
+                "Wikidata": "Q5676691",
+            	"upload": false
+        	},
+        	"History Departmental Library, Harvard University":
+        	{
+                "Wikidata": "Q55613464",
+            	"upload": false
+        	},
+        	"History of Science Library, Harvard University":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Houghton Library, Harvard University":
+        	{
+                "Wikidata": "Q3719374",
+            	"upload": false
+        	},
+        	"John G. Wolbach Library, Harvard-Smithsonian Center for Astrophysics":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Kirkland House Library, Harvard University":
+        	{
+                "Wikidata": "Q3815603",
+            	"upload": false
+        	},
+        	"Lamont Library, Harvard University":
+        	{
+                "Wikidata": "Q6482212",
+            	"upload": false
+        	},
+        	"Master Microforms, Harvard University":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Microforms, Lamont Library, Harvard University":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Monroe C. Gutman Library, Graduate School of Education, Harvard University":
+        	{
+                "Wikidata": "Q48977184",
+            	"upload": false
+        	},
+        	"National master microform":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Orchid Library of Oakes Ames, Botany Libraries, Harvard University":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Peabody Museum of Archaeology and Ethnology Archives, Harvard University":
+        	{
+                "Wikidata": "Q1249027",
+            	"upload": false
+        	},
+        	"Robbins Library of Philosophy, Harvard University":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Tozzer Library, Harvard University":
+        	{
+                "Wikidata": "Q96419566",
+            	"upload": false
+        	},
+        	"Ukrainian Research Institute Reference Library, Harvard University":
+        	{
+                "Wikidata": "",
+            	"upload": false
+        	},
+        	"Widener Library, Harvard University":
+        	{
+                "Wikidata": "Q1060854",
+            	"upload": false
+        	}
         },
         "upload": false
     },
