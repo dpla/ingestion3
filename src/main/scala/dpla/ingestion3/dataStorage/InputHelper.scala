@@ -12,7 +12,6 @@ import scala.util.{Failure, Success, Try}
 
 object InputHelper {
 
-  // Hardcoding the region to get around a github actions build bug.
   private val s3Client = AmazonS3ClientBuilder.defaultClient()
 
   /**
