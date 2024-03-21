@@ -1,0 +1,228 @@
+{
+  "context": "L",
+  "adaptor": "Local Search Engine",
+  "@id": "https://na04.alma.exlibrisgroup.com/primaws/rest/pub/pnxs/L/991014100609305566",
+  "pnx": {
+    "display": {
+      "source": [
+        "mdlmsu"
+      ],
+      "type": [
+        "other"
+      ],
+      "language": [
+        "eng"
+      ],
+      "title": [
+        "My Ramapoo"
+      ],
+      "subject": [
+        "Piano"
+      ],
+      "format": [
+        "1 score; (6 p.)",
+        "JPEG"
+      ],
+      "identifier": [
+        "011491515-1910;32278011491515;Box 85; Folder 1; Piece 7;digital_TIF_archive\\Templeton_master\\Folder_85-1;http://cdm16631.contentdm.oclc.org/cdm/ref/collection/p16631coll10/id/3729;oai:cdm16631.contentdm.oclc.org:p16631coll10/3729"
+      ],
+      "creationdate": [
+        "1910"
+      ],
+      "creator": [
+        "Hager, Frederick W., 1874-1958"
+      ],
+      "publisher": [
+        "New York : The Jos. Morris Co.",
+        "Mississippi State University Libraries (electronic version)"
+      ],
+      "description": [
+        "Illustration of Native American girl sitting and Native American man on  horse. Forest and teepees"
+      ],
+      "mms": [
+        "991014100609305566"
+      ],
+      "contributor": [
+        "Starmer, William A. (William Austin), b. 1872; Starmer, Frederick S., b. 1879"
+      ],
+      "rights": [
+        "Item Unavailable Due to Copyright Restrictions"
+      ],
+      "version": [
+        "0"
+      ]
+    },
+    "control": {
+      "sourcerecordid": [
+        "991014100609305566"
+      ],
+      "recordid": [
+        "alma991014100609305566"
+      ],
+      "sourceid": "alma",
+      "originalsourceid": [
+        "oai:cdm16631.contentdm.oclc.org:p16631coll10/3729"
+      ],
+      "sourcesystem": [
+        "ContentDM"
+      ],
+      "sourceformat": [
+        "DC"
+      ],
+      "score": [
+        "0.58937836"
+      ],
+      "isDedup": false
+    },
+    "addata": {
+      "au": [
+        "Hager, Frederick W., 1874-1958"
+      ],
+      "aucorp": [
+        "Starmer, William A. (William Austin), b. 1872; Starmer, Frederick S., b. 1879"
+      ],
+      "date": [
+        "1910"
+      ],
+      "pub": [
+        "New York : The Jos. Morris Co.",
+        "Mississippi State University Libraries (electronic version)"
+      ],
+      "format": [
+        "book"
+      ],
+      "genre": [
+        "unknown"
+      ],
+      "ristype": [
+        "gen"
+      ],
+      "btitle": [
+        "My Ramapoo"
+      ]
+    },
+    "sort": {
+      "title": [
+        "My Ramapoo"
+      ],
+      "author": [
+        "Hager, Frederick W., 1874-1958"
+      ]
+    },
+    "facets": {
+      "frbrtype": [
+        "6"
+      ]
+    }
+  },
+  "delivery": {
+    "bestlocation": null,
+    "holding": null,
+    "electronicServices": [
+      {
+        "adaptorid": "ALMA_01",
+        "ilsApiId": "oai:cdm16631.contentdm.oclc.org:p16631coll10/3729",
+        "serviceUrl": "http://cdm16631.contentdm.oclc.org/cdm/ref/collection/p16631coll10/id/3729",
+        "licenceUrl": null,
+        "licenceExist": "false",
+        "packageName": "Display resource from MDL - Mississippi State University",
+        "availiability": null,
+        "authNote": null,
+        "publicNote": null,
+        "serviceNotAvailable": null,
+        "serviceNotAvailableReason": null,
+        "relatedTitle": null,
+        "filteredByAfGroups": null,
+        "hasAccess": false,
+        "serviceType": "ELECTRONIC",
+        "pdfFilesUrl": null,
+        "serviceDescription": null,
+        "researchFileList": null,
+        "researchLinksList": null,
+        "publicAccessModel": null,
+        "representationEntityType": null,
+        "representationVolume": null,
+        "representationDate": null,
+        "representationYear": null,
+        "registrationRequired": false,
+        "deniedNote": null,
+        "numberOfFiles": 0,
+        "fileType": null,
+        "firstFileSize": null,
+        "representationViewerServiceCode": null,
+        "@id": null
+      }
+    ],
+    "filteredByGroupServices": null,
+    "quickAccessService": null,
+    "deliveryCategory": [
+      "Remote Search Resource"
+    ],
+    "serviceMode": [
+      "Viewit"
+    ],
+    "availability": [
+      "ext_not_restricted"
+    ],
+    "availabilityLinks": [
+      "directlink"
+    ],
+    "availabilityLinksUrl": [
+      "http://cdm16631.contentdm.oclc.org/cdm/ref/collection/p16631coll10/id/3729"
+    ],
+    "displayedAvailability": "ext_not_restricted",
+    "displayLocation": null,
+    "additionalLocations": null,
+    "physicalItemTextCodes": null,
+    "feDisplayOtherLocations": null,
+    "almaInstitutionsList": null,
+    "recordInstitutionCode": null,
+    "recordOwner": "01USM_INST",
+    "hasFilteredServices": null,
+    "digitalAuxiliaryMode": false,
+    "hideResourceSharing": false,
+    "sharedDigitalCandidates": null,
+    "GetIt1": [
+      {
+        "category": "Remote Search Resource",
+        "links": [
+          {
+            "isLinktoOnline": true,
+            "getItTabText": "service_viewit",
+            "adaptorid": "ALMA_01",
+            "ilsApiId": "oai:cdm16631.contentdm.oclc.org:p16631coll10/3729",
+            "link": "http://cdm16631.contentdm.oclc.org/cdm/ref/collection/p16631coll10/id/3729",
+            "inst4opac": "",
+            "displayText": null,
+            "@id": "_:0"
+          }
+        ]
+      }
+    ],
+    "physicalServiceId": null,
+    "link": [
+      {
+        "displayLabel": "Display resource from MDL - Mississippi State University",
+        "linkURL": "http://cdm16631.contentdm.oclc.org/cdm/ref/collection/p16631coll10/id/3729",
+        "linkType": "addlink",
+        "publicNote": null,
+        "@id": "_:0"
+      },
+      {
+        "displayLabel": "thumbnail",
+        "linkURL": "http://cdm16631.contentdm.oclc.org/utils/getthumbnail/collection/p16631coll10/id/3729",
+        "linkType": "http://purl.org/pnx/linkType/thumbnail",
+        "publicNote": null,
+        "@id": "_:0"
+      }
+    ],
+    "hasD": null
+  },
+  "enrichment": {
+    "virtualBrowseObject": {
+      "isVirtualBrowseEnabled": false,
+      "callNumber": "",
+      "callNumberBrowseField": ""
+    }
+  }
+}
