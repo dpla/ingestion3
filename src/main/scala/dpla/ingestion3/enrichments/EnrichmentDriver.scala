@@ -11,7 +11,6 @@ import scala.util.Try
 class EnrichmentDriver(conf: i3Conf) extends Serializable {
 
   val dateEnrichment = new DateBuilder()
-  // val spatialEnrichment = new SpatialEnrichment(Geocoder)
   val languageEnrichment = new LanguageEnrichment
   val typeEnrichment = new TypeEnrichment
   val wikiEntityEnrichment = new WikiEntityEnrichment
