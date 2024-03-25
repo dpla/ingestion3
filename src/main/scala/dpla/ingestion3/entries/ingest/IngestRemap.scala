@@ -3,7 +3,7 @@ package dpla.ingestion3.entries.ingest
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
 import dpla.ingestion3.dataStorage.InputHelper
 import dpla.ingestion3.executors._
-import dpla.ingestion3.utils.{Emailer, Utils}
+import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
 
 /** Single entry point to run harvest, mapping, enrichment, indexing jobs and
@@ -105,12 +105,8 @@ object IngestRemap
         conf
       )
 
-    // Json-l
+    // Json - l
     executeJsonl(sparkConf, enrichDataOut, baseDataOut, shortName, logger)
-
-    // Reports
-    // Reports commented out by S. Williams for efficiency and because they aren't being used on a regular basis
-    // executeAllReports(sparkConf, mapDataOut, baseDataOut, shortName, logger)
 
     // Wikimedia
     executeWikimediaMetadata(
@@ -122,6 +118,6 @@ object IngestRemap
     )
 
     // Email
-    Emailer.emailSummary(mapDataOut, shortName, conf)
+//    Emailer.emailSummary(mapDataOut, shortName, conf)
   }
 }
