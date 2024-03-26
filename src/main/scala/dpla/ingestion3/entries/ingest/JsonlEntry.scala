@@ -2,7 +2,6 @@ package dpla.ingestion3.entries.ingest
 
 import dpla.ingestion3.confs.CmdArgs
 import dpla.ingestion3.executors.JsonlExecutor
-import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
 
 /** Driver for reading DplaMapData records (mapped or enriched) and generating
@@ -39,8 +38,6 @@ object JsonlEntry extends JsonlExecutor {
       case None    => baseConf
     }
 
-    val logger = Utils.createLogger("jsonl")
-
-    executeJsonl(sparkConf, dataIn, dataOut, shortName, logger)
+    executeJsonl(sparkConf, dataIn, dataOut, shortName)
   }
 }

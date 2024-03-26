@@ -11,7 +11,7 @@ import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.hadoop.fs.Path
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -24,9 +24,8 @@ import scala.xml._
 class NaraFileHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    logger: Logger
-) extends Harvester(spark, shortName, conf, logger) {
+    conf: i3Conf
+) extends Harvester(spark, shortName, conf) {
 
   /** Case class hold the parsed value from a given FileResult
     */
@@ -106,6 +105,7 @@ class NaraFileHarvester(
         val label = item.label
         Some(ParsedResult(id, outputXML))
       case _ =>
+        val logger = LogManager.getLogger(this.getClass)
         logger.warn("Got weird result back for item path: " + item.getClass)
         None
     }
@@ -210,6 +210,8 @@ class NaraFileHarvester(
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
 
+    val logger = LogManager.getLogger(this.getClass)
+
     logger.info(s"Writing harvest tmp output to $naraTmp")
 
     // FIXME This assumes files on local file system and not on S3. Files should be able to read off of S3.
@@ -292,6 +294,7 @@ class NaraFileHarvester(
   }
 
   override def cleanUp(): Unit = {
+    val logger = LogManager.getLogger(this.getClass)
     logger.info(s"Cleaning up $naraTmp directory and files")
     avroWriterNara.flush()
     avroWriterNara.close()
@@ -310,6 +313,7 @@ class NaraFileHarvester(
     val recordCount = (for (tarResult <- iter(inputStream)) yield {
       handleFile(tarResult, unixEpoch, file.getName) match {
         case Failure(exception) =>
+          val logger = LogManager.getLogger(this.getClass)
           logger
             .error(s"Caught exception on ${tarResult.entryName}.", exception)
           0
@@ -318,6 +322,7 @@ class NaraFileHarvester(
       }
     }).sum
 
+    val logger = LogManager.getLogger(this.getClass)
     logger.info(s"Harvested $recordCount records from ${file.getName}")
 
     IOUtils.closeQuietly(inputStream)

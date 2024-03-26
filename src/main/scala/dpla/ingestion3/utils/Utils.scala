@@ -1,38 +1,20 @@
 package dpla.ingestion3.utils
 
 import org.apache.commons.lang3.StringUtils
-
-import java.io.{File, PrintWriter}
-import java.net.URL
-import java.text.SimpleDateFormat
-import java.time.format.DateTimeFormatter
-import java.time.{Instant, ZoneId, ZonedDateTime}
-import java.util.Calendar
-import org.apache.log4j.{FileAppender, LogManager, Logger, PatternLayout}
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{Dataset, Row, SaveMode}
 import org.json4s.JValue
 import org.json4s.jackson.JsonMethods._
 
+import java.io.{File, PrintWriter}
+import java.net.URL
+import java.time.format.DateTimeFormatter
+import java.time.{Instant, ZoneId, ZonedDateTime}
 import scala.concurrent.duration._
 import scala.util.Try
 import scala.xml.NodeSeq
 
 object Utils {
-
-  /** Creates and returns a logger object
-    *
-    * @param operation
-    *   Name of operation to log
-    * @param shortName
-    *   Provider short name
-    * @return
-    */
-  def createLogger(operation: String, shortName: String = ""): Logger = {
-    val logger: Logger = LogManager.getLogger("ingestion3")
-    val appender = Utils.getFileAppender(shortName, operation)
-    logger.addAppender(appender)
-    logger
-  }
 
   /** Delete a directory Taken from
     * http://stackoverflow.com/questions/25999255/delete-directory-recursively-in-scala#25999465
@@ -110,27 +92,7 @@ object Utils {
     */
   def formatXml(xml: NodeSeq): String = {
     val prettyPrinter = new scala.xml.PrettyPrinter(80, 2)
-    prettyPrinter.format(xml.head).toString
-  }
-
-  /** Uses runtime information to create a log4j file appender.
-    *
-    * @param provider
-    *   \- Name partner
-    * @param process
-    *   \- Process name [harvest, mapping, enrichment]
-    * @return
-    *   FileAppender
-    */
-  def getFileAppender(provider: String, process: String): FileAppender = {
-    val layout = new PatternLayout()
-    layout.setConversionPattern("[%p] %d %c %M - %m%n")
-
-    // Date formatting for the file name
-    val format = new SimpleDateFormat("y-M-d")
-    val date = format.format(Calendar.getInstance().getTime)
-
-    new FileAppender(layout, s"log/$provider-$process-$date.log", true)
+    prettyPrinter.format(xml.head)
   }
 
   // TODO These *Summary methods should be refactored and normalized when we fixup logging
@@ -186,10 +148,11 @@ object Utils {
       errors: Array[String],
       outDir: String,
       shortName: String,
-      logger: Logger
   ): Unit = {
     val logDir = new File(s"$outDir/logs/")
     logDir.mkdirs()
+
+    val logger = LogManager.getLogger(this.getClass)
 
     logger.info(s"Mapped ${Utils.formatNumber(mapCount)} records.")
     logger.info(s"Failed to map ${Utils.formatNumber(failureCount)} records.")
@@ -205,11 +168,6 @@ object Utils {
     pw.close()
   }
 
-  /** @param out
-    * @param name
-    * @param df
-    * @param shortName
-    */
   def writeLogsAsCsv(
       out: String,
       name: String,

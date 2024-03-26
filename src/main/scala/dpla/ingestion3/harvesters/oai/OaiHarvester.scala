@@ -2,7 +2,7 @@ package dpla.ingestion3.harvesters.oai
 
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.Harvester
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
@@ -10,9 +10,8 @@ import org.apache.spark.storage.StorageLevel
 class OaiHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    harvestLogger: Logger
-) extends Harvester(spark, shortName, conf, harvestLogger) {
+    conf: i3Conf
+) extends Harvester(spark, shortName, conf) {
 
   override def mimeType: String = "application_xml"
 
@@ -35,13 +34,15 @@ class OaiHarvester(
       .load()
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
+    val logger = LogManager.getLogger(this.getClass)
+
     // Log errors.
     harvestedData
       .select("error.message", "error.url")
       .where("error is not null")
       .collect
       .foreach(row => {
-        harvestLogger.warn(
+        logger.warn(
           s"OAI harvest error ${row.getString(0)} when fetching ${row.getString(1)}"
         )
         println(row)

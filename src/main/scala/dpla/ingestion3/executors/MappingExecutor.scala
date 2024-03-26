@@ -8,7 +8,7 @@ import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
 import dpla.ingestion3.profiles.CHProfile
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{CHProviderRegistry, Utils}
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
@@ -47,15 +47,12 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     *   Path to save mapped data
     * @param shortName
     *   Provider short name
-    * @param logger
-    *   Logger to use
     */
   def executeMapping(
       sparkConf: SparkConf,
       dataIn: String,
       dataOut: String,
-      shortName: String,
-      logger: Logger
+      shortName: String
   ): String = {
 
     // This start time is used for documentation and output file naming.
@@ -248,6 +245,9 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       "Record count" -> Utils.formatNumber(validRecordCount),
       "Input" -> dataIn
     )
+
+    val logger = LogManager.getLogger(this.getClass)
+
     outputHelper.writeManifest(manifestOpts) match {
       case Success(s) => logger.info(s"Manifest written to $s.")
       case Failure(f) => logger.warn(s"Manifest failed to write: $f")

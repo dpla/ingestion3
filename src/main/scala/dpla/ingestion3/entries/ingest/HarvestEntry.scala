@@ -2,7 +2,6 @@ package dpla.ingestion3.entries.ingest
 
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.executors.HarvestExecutor
-import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
 
 /** Entry point for running a harvest.
@@ -24,9 +23,6 @@ object HarvestEntry extends HarvestExecutor {
     val shortName = cmdArgs.getProviderName
     val sparkMaster: Option[String] = cmdArgs.getSparkMaster
 
-    // Get mapping logger.
-    val harvestLogger = Utils.createLogger("harvest", shortName)
-
     // Load configuration from file.
     val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
     val providerConf: i3Conf = i3Conf.load()
@@ -42,6 +38,6 @@ object HarvestEntry extends HarvestExecutor {
     }
 
     // Execute harvest.
-    execute(sparkConf, shortName, dataOut, providerConf, harvestLogger)
+    execute(sparkConf, shortName, dataOut, providerConf)
   }
 }

@@ -20,7 +20,7 @@ abstract class ApiHarvester(
     shortName: String,
     conf: i3Conf,
     logger: Logger
-) extends LocalHarvester(spark, shortName, conf, logger) {
+) extends LocalHarvester(spark, shortName, conf) {
 
   // Abstract method queryParams should set base query parameters for API call.
   protected val queryParams: Map[String, String]

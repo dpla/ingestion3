@@ -2,7 +2,6 @@ package dpla.ingestion3.entries.ingest
 
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.executors.MappingExecutor
-import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
 
 /** Expects four parameters: 1) a path to the harvested data 2) a path to output
@@ -23,16 +22,8 @@ object MappingEntry extends MappingExecutor {
 
     val dataIn = cmdArgs.getInput
     val dataOut = cmdArgs.getOutput
-    val confFile = cmdArgs.getConfigFile
     val shortName = cmdArgs.getProviderName
     val sparkMaster: Option[String] = cmdArgs.getSparkMaster
-
-    // Get mapping logger.
-    val logger = Utils.createLogger("mapping", shortName)
-
-    // Load configuration from file.
-    val i3Conf = new Ingestion3Conf(confFile, Some(shortName))
-    val conf: i3Conf = i3Conf.load()
 
     val baseConf = new SparkConf()
       .setAppName(s"Mapping: $shortName")
@@ -44,6 +35,6 @@ object MappingEntry extends MappingExecutor {
     }
 
     // Log config file location and provider short name.
-    executeMapping(sparkConf, dataIn, dataOut, shortName, logger)
+    executeMapping(sparkConf, dataIn, dataOut, shortName)
   }
 }

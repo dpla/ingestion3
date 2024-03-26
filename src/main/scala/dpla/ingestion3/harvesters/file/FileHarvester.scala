@@ -24,7 +24,7 @@ abstract class FileHarvester(
     shortName: String,
     conf: i3Conf,
     logger: Logger
-) extends LocalHarvester(spark, shortName, conf, logger) {
+) extends LocalHarvester(spark, shortName, conf) {
 
   /** Case class to hold the results of a file
     *
