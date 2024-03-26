@@ -6,8 +6,6 @@ import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.file.NaraDeltaHarvester
 import dpla.ingestion3.harvesters.oai.OaiHarvester
-import dpla.ingestion3.harvesters.pss.PssHarvester
-import dpla.ingestion3.harvesters.resourceSync.RsHarvester
 import dpla.ingestion3.model.harvestAvroSchema
 import dpla.ingestion3.utils.{CHProviderRegistry, Utils}
 import org.apache.log4j.Logger
@@ -148,10 +146,6 @@ trait HarvestExecutor {
     harvestType match {
       case "oai" =>
         new OaiHarvester(spark, shortName, conf, logger)
-      case "pss" =>
-        new PssHarvester(spark, shortName, conf, logger)
-      case "rs" =>
-        new RsHarvester(spark, shortName, conf, logger)
       case "nara.file.delta" =>
         new NaraDeltaHarvester(spark, shortName, conf, logger)
       case "api" | "file" =>
