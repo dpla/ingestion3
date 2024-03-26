@@ -95,7 +95,6 @@ trait HarvestExecutor {
       harvestData.write
         .format("avro")
         .option("avroSchema", harvestAvroSchema.toString)
-        .format("avro")
         .save(outputPath)
 
       setSummary match {
