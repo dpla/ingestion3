@@ -1,6 +1,5 @@
 package dpla.ingestion3.harvesters.oai.refactor
 
-import scala.collection.TraversableOnce
 
 /** TODO: Would it be easier for OaiProtocol to take the args (endpoint: String,
   * metadataPrefix: Option[String] rather than a whole OaiConfiguration?
