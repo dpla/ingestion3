@@ -4,7 +4,7 @@ import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.model
 import dpla.ingestion3.model._
 import dpla.ingestion3.wiki.{WikiCriteria, WikiMapper}
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
@@ -24,15 +24,12 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
     *   Location to save Wikimedia metadata
     * @param shortName
     *   Provider shortname
-    * @param logger
-    *   Logger object
     */
   def executeWikimediaMetadata(
       sparkConf: SparkConf,
       dataIn: String,
       dataOut: String,
       shortName: String,
-      logger: Logger
   ): String = {
 
     // This start time is used for documentation and output file naming.
@@ -43,6 +40,7 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
 
     val outputPath: String = outputHelper.activityPath
 
+    val logger = LogManager.getLogger(this.getClass)
     logger.info("Starting Wikimedia export")
     logger.info(s"dataIn  > $dataIn")
     logger.info(s"dataOut > $outputPath")
@@ -95,7 +93,7 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
       }
     })
 
-    println(enrichResults.count());
+    println(enrichResults.count())
 
     // TODO There should be a better way to combine these two blocks
     // Parquet schema

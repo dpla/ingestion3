@@ -36,14 +36,14 @@ object DeleteEntry extends DeleteExecutor {
     // If given input path is enrichment, use it as `enrichedData'.
     // If not, assume that it is a directory containing several enriched sets and
     // get the most recent enrichment from that directory.
-    val enrichedData = InputHelper.isActivityPath(dataIn) match {
-      case true => dataIn
-      case false =>
-        InputHelper
-          .mostRecent(dataIn)
-          .getOrElse(
-            throw new RuntimeException("Unable to load enriched data.")
-          )
+    val enrichedData = if (InputHelper.isActivityPath(dataIn)) {
+      dataIn
+    } else {
+      InputHelper
+        .mostRecent(dataIn)
+        .getOrElse(
+          throw new RuntimeException("Unable to load enriched data.")
+        )
     }
 
     val baseConf =
@@ -55,15 +55,12 @@ object DeleteEntry extends DeleteExecutor {
       case None    => baseConf
     }
 
-    val logger = Utils.createLogger("delete")
-
     executeDelete(
       sparkConf,
       enrichedData,
       dataOut,
       deleteIds,
-      shortName,
-      logger
+      shortName
     )
   }
 }

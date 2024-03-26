@@ -2,7 +2,6 @@ package dpla.ingestion3.entries.wiki
 
 import dpla.ingestion3.confs.CmdArgs
 import dpla.ingestion3.executors.WikimediaMetadataExecutor
-import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
 
 object WikiMetadataEntry extends WikimediaMetadataExecutor {
@@ -41,8 +40,6 @@ object WikiMetadataEntry extends WikimediaMetadataExecutor {
       case None    => baseConf
     }
 
-    val logger = Utils.createLogger("wiki")
-
-    executeWikimediaMetadata(sparkConf, dataIn, dataOut, shortName, logger)
+    executeWikimediaMetadata(sparkConf, dataIn, dataOut, shortName)
   }
 }

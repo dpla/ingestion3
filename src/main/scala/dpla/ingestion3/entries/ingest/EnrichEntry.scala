@@ -2,7 +2,6 @@ package dpla.ingestion3.entries.ingest
 
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
 import dpla.ingestion3.executors.EnrichExecutor
-import dpla.ingestion3.utils.Utils
 import org.apache.spark.SparkConf
 
 /** Expects four parameters: 1) a path to the harvested data 2) a path to output
@@ -28,8 +27,6 @@ object EnrichEntry extends EnrichExecutor {
     val shortName = cmdArgs.getProviderName
     val sparkMaster: Option[String] = cmdArgs.getSparkMaster
 
-    // Create enrichment logger.
-    val enrichLogger = Utils.createLogger("enrichment", shortName)
 
     // Load configuration from file
     val i3Conf: i3Conf = new Ingestion3Conf(confFile).load()
@@ -49,7 +46,6 @@ object EnrichEntry extends EnrichExecutor {
       dataIn,
       dataOut,
       shortName,
-      enrichLogger,
       i3Conf
     )
   }

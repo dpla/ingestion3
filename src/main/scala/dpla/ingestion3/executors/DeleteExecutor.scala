@@ -1,10 +1,9 @@
 package dpla.ingestion3.executors
 
 import java.time.LocalDateTime
-
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.model.{ModelConverter, jsonlRecord}
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import org.apache.spark.storage.StorageLevel
@@ -23,16 +22,13 @@ trait DeleteExecutor extends Serializable {
     *   IDs to delete
     * @param shortName
     *   Provider shortname
-    * @param logger
-    *   Logger object
     */
   def executeDelete(
       sparkConf: SparkConf,
       dataIn: String,
       dataOut: String,
       deleteIds: String,
-      shortName: String,
-      logger: Logger
+      shortName: String
   ): String = {
 
     // This start time is used for documentation and output file naming.
@@ -43,6 +39,8 @@ trait DeleteExecutor extends Serializable {
       new OutputHelper(dataOut, shortName, "jsonl", startDateTime)
 
     val outputPath: String = outputHelper.activityPath
+
+    val logger = LogManager.getLogger(this.getClass)
 
     logger.info("Starting delete")
 

@@ -12,7 +12,7 @@ import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.hadoop.fs.Path
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.tools.bzip2.CBZip2InputStream
 import org.apache.tools.tar.TarInputStream
@@ -23,9 +23,8 @@ import scala.xml._
 class NaraDeltaHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    logger: Logger
-) extends Harvester(spark, shortName, conf, logger) {
+    conf: i3Conf
+) extends Harvester(spark, shortName, conf) {
 
   /** Case class hold the parsed value from a given FileResult
     */
@@ -104,6 +103,7 @@ class NaraDeltaHarvester(
         val label = item.label
         Some(ParsedResult(id, outputXML))
       case _ =>
+        val logger = LogManager.getLogger(this.getClass)
         logger.warn("Got weird result back for item path: " + item.getClass)
         None
     }
@@ -212,6 +212,7 @@ class NaraDeltaHarvester(
       for (
         file: File <- deltaHarvestInFile.listFiles(new GzFileFilter).sorted
       ) {
+        val logger = LogManager.getLogger(this.getClass)
         logger.info(s"Harvesting NARA delta changes from ${file.getName}")
         harvestFile(file, unixEpoch)
       }
@@ -239,6 +240,7 @@ class NaraDeltaHarvester(
   }
 
   override def cleanUp(): Unit = {
+    val logger = LogManager.getLogger(this.getClass)
     logger.info(s"Cleaning up $naraTmp directory and files")
     avroWriterNara.flush()
     avroWriterNara.close()
@@ -257,6 +259,7 @@ class NaraDeltaHarvester(
     val recordCount = (for (tarResult <- iter(inputStream)) yield {
       handleFile(tarResult, unixEpoch, file.getName) match {
         case Failure(exception) =>
+          val logger = LogManager.getLogger(this.getClass)
           logger
             .error(s"Caught exception on ${tarResult.entryName}.", exception)
           0
@@ -265,6 +268,7 @@ class NaraDeltaHarvester(
       }
     }).sum
 
+    val logger = LogManager.getLogger(this.getClass)
     logger.info(s"Harvested $recordCount records from ${file.getName}")
 
     IOUtils.closeQuietly(inputStream)

@@ -9,7 +9,7 @@ import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
 import dpla.ingestion3.reports.PrepareEnrichmentReport
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.Utils
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.storage.StorageLevel
@@ -30,15 +30,12 @@ trait EnrichExecutor extends Serializable {
     *   Location to save output
     * @param shortName
     *   Provider short name
-    * @param logger
-    *   Logger
     */
   def executeEnrichment(
       sparkConf: SparkConf,
       dataIn: String,
       dataOut: String,
       shortName: String,
-      logger: Logger,
       i3conf: i3Conf
   ): String = {
 
@@ -119,6 +116,8 @@ trait EnrichExecutor extends Serializable {
       "Record count" -> Utils.formatNumber(successCount.count),
       "Input" -> dataIn
     )
+
+    val logger = LogManager.getLogger(this.getClass)
 
     outputHelper.writeManifest(manifestOpts) match {
       case Success(s) => logger.info(s"Manifest written to $s.")
