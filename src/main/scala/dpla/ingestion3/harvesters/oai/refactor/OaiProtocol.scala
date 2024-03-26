@@ -1,12 +1,5 @@
 package dpla.ingestion3.harvesters.oai.refactor
 
-
-/** TODO: Would it be easier for OaiProtocol to take the args (endpoint: String,
-  * metadataPrefix: Option[String] rather than a whole OaiConfiguration?
-  *
-  * @param oaiConfiguration
-  */
-
 class OaiProtocol(oaiConfiguration: OaiConfiguration)
     extends OaiMethods
     with Serializable {
@@ -29,7 +22,7 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration)
 
     val listResponse = setEither match {
       case Left(error) => List(Left(error))
-      case Right(set) => {
+      case Right(set) =>
 
         val responseBuilder = new OaiMultiPageResponseBuilder(
           endpoint,
@@ -39,7 +32,6 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration)
         )
 
         responseBuilder.getResponse
-      }
     }
     listResponse.iterator
   }
