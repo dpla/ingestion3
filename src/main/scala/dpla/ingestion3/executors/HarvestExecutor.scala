@@ -92,9 +92,8 @@ trait HarvestExecutor {
 
       // Write harvested data to output file.
       harvestData.write
-        .format("com.databricks.spark.avro")
-        .option("avroSchema", harvestData.schema.toString)
         .format("avro")
+        .option("avroSchema", harvestData.schema.toString)
         .save(outputPath)
 
       setSummary match {
