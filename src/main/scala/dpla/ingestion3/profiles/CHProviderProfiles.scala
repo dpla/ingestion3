@@ -13,7 +13,8 @@ class ArtstorProfile extends JsonProfile {
   override def getMapping = new ArtstorRetconMapping
 }
 
-/** Biodiversity Heritage Library
+/**
+  * Biodiversity Heritage Library
   */
 class BhlProfile extends XmlProfile {
   type Mapping = BhlMapping
@@ -22,7 +23,8 @@ class BhlProfile extends XmlProfile {
   override def getMapping = new BhlMapping
 }
 
-/** California Digital Library
+/**
+  * California Digital Library
   */
 class CdlProfile extends JsonProfile {
   type Mapping = CdlMapping
@@ -31,27 +33,28 @@ class CdlProfile extends JsonProfile {
   override def getMapping = new CdlMapping
 }
 
-/** Connecticut Digital Library
+/**
+  * Connecticut Digital Library
   */
 class CtProfile extends XmlProfile {
   type Mapping = CtMapping
 
-  override def getHarvester: Class[VaFileHarvester] =
-    classOf[VaFileHarvester] // CT reuses the VA zipped XML file harvester
+  override def getHarvester: Class[VaFileHarvester] = classOf[VaFileHarvester] // CT reuses the VA zipped XML file harvester
   override def getMapping = new CtMapping
 }
 
-/** Community Webs
-  */
+/**
+ * Community Webs
+ */
 class CommunityWebsProfile extends JsonProfile {
   type Mapping = CommunityWebsMapping
 
-  override def getHarvester: Class[CommunityWebsHarvester] =
-    classOf[CommunityWebsHarvester]
+  override def getHarvester: Class[CommunityWebsHarvester] = classOf[CommunityWebsHarvester]
   override def getMapping = new CommunityWebsMapping
 }
 
-/** District Digital
+/**
+  * District Digital
   */
 class DcProfile extends XmlProfile {
   type Mapping = DcMapping
@@ -60,7 +63,8 @@ class DcProfile extends XmlProfile {
   override def getMapping = new DcMapping
 }
 
-/** Empire State Digital Network
+/**
+  * Empire State Digital Network
   */
 class EsdnProfile extends XmlProfile {
   type Mapping = EsdnMapping
@@ -69,7 +73,8 @@ class EsdnProfile extends XmlProfile {
   override def getMapping = new EsdnMapping
 }
 
-/** Sunshine State Digital Network
+/**
+  * Sunshine State Digital Network
   */
 class FlProfile extends JsonProfile {
   type Mapping = FlMapping
@@ -78,7 +83,8 @@ class FlProfile extends JsonProfile {
   override def getMapping = new FlMapping
 }
 
-/** J. Paul Getty Trust
+/**
+  * J. Paul Getty Trust
   */
 class GettyProfile extends JsonProfile {
   type Mapping = GettyMapping
@@ -87,7 +93,8 @@ class GettyProfile extends JsonProfile {
   override def getMapping = new GettyMapping
 }
 
-/** United States Government Publishing Office (GPO)
+/**
+  * United States Government Publishing Office (GPO)
   */
 class GpoProfile extends XmlProfile {
   type Mapping = GpoMapping
@@ -96,7 +103,8 @@ class GpoProfile extends XmlProfile {
   override def getMapping = new GpoMapping
 }
 
-/** Digital Library of Georgia
+/**
+  * Digital Library of Georgia
   */
 class DlgProfile extends JsonProfile {
   type Mapping = DlgMapping
@@ -105,7 +113,8 @@ class DlgProfile extends JsonProfile {
   override def getMapping = new DlgMapping
 }
 
-/** Harvard Library
+/**
+  * Harvard Library
   */
 class HarvardProfile extends XmlProfile {
   type Mapping = HarvardMapping
@@ -114,17 +123,18 @@ class HarvardProfile extends XmlProfile {
   override def getMapping = new HarvardMapping
 }
 
-/** HathiTrust
+/**
+  * HathiTrust
   */
 class HathiProfile extends XmlProfile {
   type Mapping = HathiMapping
 
-  override def getHarvester: Class[HathiFileHarvester] =
-    classOf[HathiFileHarvester]
+  override def getHarvester: Class[HathiFileHarvester] = classOf[HathiFileHarvester]
   override def getMapping = new HathiMapping
 }
 
-/** Illinois Digital Heritage Hub
+/**
+  * Illinois Digital Heritage Hub
   */
 class IlProfile extends XmlProfile {
   type Mapping = IllinoisMapping
@@ -133,7 +143,8 @@ class IlProfile extends XmlProfile {
   override def getMapping = new IllinoisMapping
 }
 
-/** Indiana Memory
+/**
+  * Indiana Memory
   */
 class InProfile extends XmlProfile {
   type Mapping = InMapping
@@ -142,14 +153,16 @@ class InProfile extends XmlProfile {
   override def getMapping = new InMapping
 }
 
-/** Jewish Heritage Network
-  */
+/**
+ * Jewish Heritage Network
+ */
 class JhnProfile extends XmlProfile {
   override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new JhnMapping
 }
 
-/** Internet Archive
+/**
+  * Internet Archive
   */
 class IaProfile extends JsonProfile {
   type Mapping = IaMapping
@@ -158,37 +171,38 @@ class IaProfile extends JsonProfile {
   override def getMapping = new IaMapping
 }
 
-/** Library of Congress
-  */
+/**
+ * Library of Congress
+ */
 class KyProfile extends JsonProfile {
   type Mapping = KentuckyRetconMapping
 
-  override def getHarvester: Class[DplaJsonlFileHarvester] =
-    classOf[DplaJsonlFileHarvester]
+  override def getHarvester: Class[DplaJsonlFileHarvester] = classOf[DplaJsonlFileHarvester]
   override def getMapping = new KentuckyRetconMapping
 }
 
-/** Library of Congress
+/**
+  * Library of Congress
   */
 class LocProfile extends JsonProfile {
   type Mapping = LcRetconMapping
 
-  override def getHarvester: Class[_ <: Harvester] =
-    classOf[DplaJsonlFileHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[DplaJsonlFileHarvester]
   override def getMapping = new LcRetconMapping
 }
 
-/** Digital Maine
+/**
+  * Digital Maine
   */
 class MeProfile extends JsonProfile {
   type Mapping = MaineRetconMapping
 
-  override def getHarvester: Class[_ <: Harvester] =
-    classOf[DplaJsonlFileHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[DplaJsonlFileHarvester]
   override def getMapping = new MaineRetconMapping
 }
 
-/** Massachusetts - Digital Commonwealth
+/**
+  * Massachusetts - Digital Commonwealth
   */
 class MaProfile extends XmlProfile {
   type Mapping = MaMapping
@@ -197,7 +211,9 @@ class MaProfile extends XmlProfile {
   override def getMapping = new MaMapping
 }
 
-/** Digital Maryland
+
+/**
+  * Digital Maryland
   */
 class MarylandProfile extends XmlProfile {
   type Mapping = MarylandMapping
@@ -206,7 +222,8 @@ class MarylandProfile extends XmlProfile {
   override def getMapping = new MarylandMapping
 }
 
-/** Minnesota Digital Library
+/**
+  * Minnesota Digital Library
   */
 class MdlProfile extends JsonProfile {
   type Mapping = MdlMapping
@@ -215,7 +232,8 @@ class MdlProfile extends JsonProfile {
   override def getMapping = new MdlMapping
 }
 
-/** Michigan Service Hub
+/**
+  * Michigan Service Hub
   */
 class MiProfile extends XmlProfile {
   type Mapping = MichiganMapping
@@ -224,27 +242,28 @@ class MiProfile extends XmlProfile {
   override def getMapping = new MichiganMapping
 }
 
-/** Mississippi Hub
+/**
+  * Mississippi Hub
   */
 class MississippiProfile extends JsonProfile {
   type Mapping = HeartlandMapping // FIXME
 
-  override def getHarvester: Class[_ <: Harvester] =
-    classOf[MississippiHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[MississippiHarvester]
   override def getMapping = new HeartlandMapping // FIXME
 }
 
-/** Heartland Hub
+/**
+  * Heartland Hub
   */
 class HeartlandProfile extends JsonProfile {
   type Mapping = HeartlandMapping
 
-  override def getHarvester: Class[_ <: Harvester] =
-    classOf[HeartlandFileHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[HeartlandFileHarvester]
   override def getMapping = new HeartlandMapping
 }
 
-/** (Montana) Big Sky Digital Network
+/**
+  * (Montana) Big Sky Digital Network
   */
 class MtProfile extends XmlProfile {
   type Mapping = MtMapping
@@ -253,7 +272,8 @@ class MtProfile extends XmlProfile {
   override def getMapping = new MtMapping
 }
 
-/** Mountain West Digital Library
+/**
+  * Mountain West Digital Library
   */
 class MwdlProfile extends XmlProfile {
   type Mapping = MwdlMapping
@@ -262,7 +282,8 @@ class MwdlProfile extends XmlProfile {
   override def getMapping = new MwdlMapping
 }
 
-/** National Archives and Records Administration
+/**
+  * National Archives and Records Administration
   */
 class NaraProfile extends XmlProfile {
   type Mapping = NaraMapping
@@ -271,7 +292,8 @@ class NaraProfile extends XmlProfile {
   override def getMapping = new NaraMapping
 }
 
-/** NJ/DE Digital Collective
+/**
+  * NJ/DE Digital Collective
   */
 class NJDEProfile extends XmlProfile {
   type Mapping = NJDEMapping
@@ -280,7 +302,8 @@ class NJDEProfile extends XmlProfile {
   override def getMapping = new NJDEMapping
 }
 
-/** North Carolina
+/**
+  * North Carolina
   */
 class NcProfile extends XmlProfile {
   type Mapping = NcMapping
@@ -289,7 +312,8 @@ class NcProfile extends XmlProfile {
   override def getMapping = new NcMapping
 }
 
-/** Northwest Digital Heritage
+/**
+  * Northwest Digital Heritage
   */
 class NorthwestHeritageProfile extends XmlProfile {
   type Mapping = NorthwestHeritageMapping
@@ -298,17 +322,18 @@ class NorthwestHeritageProfile extends XmlProfile {
   override def getMapping = new NorthwestHeritageMapping
 }
 
-/** New York Public Library
+/**
+  * New York Public Library
   */
 class NYPLProfile extends NyplCHProfile {
   type Mapping = NyplMapping
 
-  override def getHarvester: Class[NYPLFileHarvester] =
-    classOf[NYPLFileHarvester]
+  override def getHarvester: Class[NYPLFileHarvester] = classOf[NYPLFileHarvester]
   override def getMapping = new NyplMapping
 }
 
-/** Ohio Hub
+/**
+  * Ohio Hub
   */
 class OhioProfile extends XmlProfile {
   type Mapping = OhioMapping
@@ -317,17 +342,18 @@ class OhioProfile extends XmlProfile {
   override def getMapping = new OhioMapping
 }
 
-/** Orbis-Cascade
+/**
+  * Orbis-Cascade
   */
 class OrbisCascadeProfile extends XmlProfile {
   type Mapping = OrbisCascadeMapping
 
-  override def getHarvester: Class[OrbisCascadeFileHarvester] =
-    classOf[OrbisCascadeFileHarvester]
+  override def getHarvester: Class[OrbisCascadeFileHarvester] = classOf[OrbisCascadeFileHarvester]
   override def getMapping = new OrbisCascadeMapping
 }
 
-/** Oklahoma Hub
+/**
+  * Oklahoma Hub
   */
 class OklahomaProfile extends XmlProfile {
   type Mapping = OklahomaMapping
@@ -336,8 +362,9 @@ class OklahomaProfile extends XmlProfile {
   override def getMapping = new OklahomaMapping
 }
 
-/** P2P (Plains2Peaks)
-  *   - Colorado and Wyoming
+/**
+  * P2P (Plains2Peaks)
+  * - Colorado and Wyoming
   */
 class P2PProfile extends XmlProfile {
   type Mapping = P2PMapping
@@ -346,7 +373,8 @@ class P2PProfile extends XmlProfile {
   override def getMapping = new P2PMapping
 }
 
-/** Pennsylvania Hub
+/**
+  * Pennsylvania Hub
   */
 class PaProfile extends XmlProfile {
   type Mapping = PaMapping
@@ -355,16 +383,18 @@ class PaProfile extends XmlProfile {
   override def getMapping = new PaMapping
 }
 
-/** David Rumsey Map Collection
+/**
+  * David Rumsey Map Collection
   */
 class RumseyProfile extends XmlProfile {
   type Mapping = RumseyMapping
 
-  override def getHarvester: Class[OaiFileHarvester] = classOf[OaiFileHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new RumseyMapping
 }
 
-/** South Carolina Digital Library
+/**
+  * South Carolina Digital Library
   */
 class ScProfile extends XmlProfile {
   type Mapping = ScMapping
@@ -373,7 +403,8 @@ class ScProfile extends XmlProfile {
   override def getMapping = new ScMapping
 }
 
-/** South Dakota
+/**
+  * South Dakota
   */
 class SdProfile extends JsonProfile {
   type Mapping = SdMapping
@@ -382,7 +413,8 @@ class SdProfile extends JsonProfile {
   override def getMapping = new SdMapping
 }
 
-/** Tennessee Digital Library
+/**
+  * Tennessee Digital Library
   */
 class TnProfile extends XmlProfile {
   type Mapping = TnMapping
@@ -391,7 +423,8 @@ class TnProfile extends XmlProfile {
   override def getMapping = new TnMapping
 }
 
-/** The Portal to Texas History
+/**
+  * The Portal to Texas History
   */
 class TxProfile extends XmlProfile {
   type Mapping = TnMapping
@@ -400,7 +433,8 @@ class TxProfile extends XmlProfile {
   override def getMapping = new TxMapping
 }
 
-/** Texas Digital Library (aka Texas 2)
+/**
+  * Texas Digital Library (aka Texas 2)
   */
 class TxdlProfile extends XmlProfile {
   type Mapping = TxdlMapping
@@ -409,7 +443,8 @@ class TxdlProfile extends XmlProfile {
   override def getMapping = new TxdlMapping
 }
 
-/** Smithsonian Institution
+/**
+  * Smithsonian Institution
   */
 class SiProfile extends XmlProfile {
   type Mapping = SiMapping
@@ -418,7 +453,8 @@ class SiProfile extends XmlProfile {
   override def getMapping = new SiMapping
 }
 
-/** Digital Virginias
+/**
+  * Digital Virginias
   */
 class VirginiasProfile extends XmlProfile {
   type Mapping = VirginiasMapping
@@ -427,7 +463,8 @@ class VirginiasProfile extends XmlProfile {
   override def getMapping = new VirginiasMapping
 }
 
-/** Vermont (Green Mountain Digital Archives)
+/**
+  * Vermont (Green Mountain Digital Archives)
   */
 class VtProfile extends XmlProfile {
   type Mapping = VtMapping
@@ -436,17 +473,18 @@ class VtProfile extends XmlProfile {
   override def getMapping = new VtMapping
 }
 
-/** University of Washington
-  */
+/**
+ * University of Washington
+ */
 class WashingtonProfile extends JsonProfile {
   type Mapping = WashingtonRetconMapping
 
-  override def getHarvester: Class[DplaJsonlFileHarvester] =
-    classOf[DplaJsonlFileHarvester]
+  override def getHarvester: Class[DplaJsonlFileHarvester] = classOf[DplaJsonlFileHarvester]
   override def getMapping = new WashingtonRetconMapping
 }
 
-/** Recollection Wisconsin
+/**
+  * Recollection Wisconsin
   */
 class WiProfile extends XmlProfile {
   type Mapping = WiMapping
