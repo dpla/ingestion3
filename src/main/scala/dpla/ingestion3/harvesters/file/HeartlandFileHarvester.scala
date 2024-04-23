@@ -10,8 +10,9 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
-
 import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
+import dpla.ingestion3.model.AVRO_MIME_JSON
+import org.apache.avro.generic.GenericData
 
 import scala.util.{Failure, Success, Try}
 
@@ -28,7 +29,7 @@ class HeartlandFileHarvester(
     logger: Logger
 ) extends FileHarvester(spark, shortName, conf, logger) {
 
-  def mimeType: String = "application_json"
+  def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
 
   protected val extractor = new HeartlandFileExtractor()
 

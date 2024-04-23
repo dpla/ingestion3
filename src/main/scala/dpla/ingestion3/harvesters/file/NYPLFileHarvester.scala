@@ -5,6 +5,8 @@ import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
 import dpla.ingestion3.mappers.utils.JsonExtractor
+import dpla.ingestion3.model.AVRO_MIME_JSON
+import org.apache.avro.generic.GenericData
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -31,7 +33,7 @@ class NYPLFileHarvester(
   //  "uuid": "f30c5ae0-f14a-0134-cd0c-6111f36df79b",
   //  "desc_xml": "<?xml version=\"1.0\" .... </xml>"
   // }
-  def mimeType: String = "application_json"
+  def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
 
   protected val extractor = new FlFileExtractor()
 

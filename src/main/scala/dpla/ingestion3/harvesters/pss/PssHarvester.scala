@@ -2,6 +2,8 @@ package dpla.ingestion3.harvesters.pss
 
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.Harvester
+import dpla.ingestion3.model.AVRO_MIME_JSON
+import org.apache.avro.generic.GenericData
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.functions._
@@ -13,7 +15,7 @@ class PssHarvester(
     harvestLogger: Logger
 ) extends Harvester(spark, shortName, conf, harvestLogger) {
 
-  override def mimeType: String = "application_json"
+  override def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
 
   override def localHarvest(): DataFrame = {
 

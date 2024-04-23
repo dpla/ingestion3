@@ -1,10 +1,11 @@
 package dpla.ingestion3.harvesters.file
 
 import java.io.File
-
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.CsvFileFilter
 import dpla.ingestion3.mappers.utils.JsonExtractor
+import dpla.ingestion3.model.AVRO_MIME_JSON
+import org.apache.avro.generic.GenericData
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.jackson.JsonMethods._
@@ -26,7 +27,7 @@ class LcCsvFileHarvester(
     logger: Logger
 ) extends FileHarvester(spark, shortName, conf, logger) {
 
-  def mimeType: String = "application_json"
+  def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
 
   protected val extractor = new CsvFileExtractor()
 

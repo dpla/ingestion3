@@ -1,12 +1,11 @@
 package dpla.ingestion3.harvesters
 
 import java.io.File
-
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
-import org.apache.avro.generic.GenericRecord
+import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.commons.io.FileUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types._
@@ -24,7 +23,7 @@ abstract class Harvester(
     harvestData
   }
 
-  def mimeType: String
+  def mimeType: GenericData.EnumSymbol
 
   def localHarvest(): DataFrame
 

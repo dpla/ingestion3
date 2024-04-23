@@ -7,8 +7,9 @@ import dpla.ingestion3.mappers.utils.XmlExtractor
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
-
 import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
+import dpla.ingestion3.model.AVRO_MIME_XML
+import org.apache.avro.generic.GenericData
 
 import scala.util.{Failure, Success, Try}
 import scala.xml.{MinimizeMode, Node, Utility, XML}
@@ -26,7 +27,7 @@ class VaFileHarvester(
     logger: Logger
 ) extends FileHarvester(spark, shortName, conf, logger) {
 
-  def mimeType: String = "application_xml"
+  def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
   protected val extractor = new VaFileExtractor()
 

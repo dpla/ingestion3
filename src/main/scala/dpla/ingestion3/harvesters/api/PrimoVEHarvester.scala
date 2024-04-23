@@ -1,10 +1,11 @@
 package dpla.ingestion3.harvesters.api
 
 import java.net.URL
-
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.mappers.utils.JsonExtractor
+import dpla.ingestion3.model.{AVRO_MIME_JSON, avroSchema}
 import dpla.ingestion3.utils.{HttpUtils, Utils}
+import org.apache.avro.generic.GenericData
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
@@ -28,7 +29,7 @@ abstract class PrimoVEHarvester(
 ) extends ApiHarvester(spark, shortName, conf, logger)
     with JsonExtractor {
 
-  def mimeType: String = "application_json"
+  def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
 
   override protected val queryParams: Map[String, String] = Map(
     "query" -> conf.harvest.query,

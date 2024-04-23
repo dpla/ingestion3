@@ -2,10 +2,10 @@ package dpla.ingestion3.harvesters.file
 
 import java.io.{BufferedReader, File, FileInputStream}
 import java.util.zip.GZIPInputStream
-
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.GzFileFilter
 import dpla.ingestion3.harvesters.{AvroHelper, Harvester}
+import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
@@ -58,7 +58,7 @@ class NaraDeltaHarvester(
   lazy val naraTmp: String =
     new File(FileUtils.getTempDirectory, shortName).getAbsolutePath
 
-  def mimeType: String = "application_xml"
+  def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
   /** Loads .gz, .tgz, .bz, and .tbz2, and plain old .tar files.
     *

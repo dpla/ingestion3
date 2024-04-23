@@ -5,9 +5,9 @@ import java.util.{Calendar, TimeZone}
 import dpla.ingestion3.utils.FlatFileIO
 import dpla.ingestion3.wiki.WikiUri
 import org.apache.avro.Schema
+import org.apache.avro.generic.GenericData
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.avro.SchemaConverters
-
 import org.json4s.jackson.JsonMethods._
 import org.json4s.JsonDSL._
 import org.json4s._
@@ -412,8 +412,21 @@ package object model {
 
   lazy val avroSchema: Schema = new Schema.Parser()
     .parse(new FlatFileIO().readFileAsString("/avro/MAPRecord.avsc"))
+
+  lazy val harvestAvroSchema: Schema = new Schema.Parser()
+    .parse(new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc"))
+
+  lazy val harvestMimeTypeSchema: Schema =
+    harvestAvroSchema.getField("mimetype").schema()
+
   lazy val sparkSchema: StructType =
     SchemaConverters.toSqlType(avroSchema).dataType.asInstanceOf[StructType]
+
+  lazy val AVRO_MIME_JSON =
+    new GenericData.EnumSymbol(harvestMimeTypeSchema, "application_json")
+
+  lazy val AVRO_MIME_XML =
+    new GenericData.EnumSymbol(harvestMimeTypeSchema, "application_xml")
 
   def toJsonString(json: JValue): String = compact(render(json))
   def fromJsonString(jsonString: String): JValue = parse(jsonString)

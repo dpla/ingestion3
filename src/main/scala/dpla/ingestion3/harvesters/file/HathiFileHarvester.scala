@@ -7,9 +7,10 @@ import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.tools.tar.TarInputStream
-
 import dpla.ingestion3.harvesters.file.FileFilters.GzFileFilter
 import dpla.ingestion3.mappers.utils.XmlExtractor
+import dpla.ingestion3.model.AVRO_MIME_XML
+import org.apache.avro.generic.GenericData
 
 import scala.util.{Failure, Success, Try}
 import scala.xml._
@@ -22,7 +23,7 @@ class HathiFileHarvester(
 ) extends FileHarvester(spark, shortName, conf, logger)
     with XmlExtractor {
 
-  def mimeType: String = "application_xml"
+  def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
   /** Loads .tar.gz files
     *
