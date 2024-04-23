@@ -5,7 +5,6 @@ import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import org.apache.commons.io.IOUtils
-import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import org.json4s.jackson.JsonMethods._
@@ -13,6 +12,7 @@ import org.json4s.{JValue, _}
 import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
 import dpla.ingestion3.model.AVRO_MIME_JSON
 import org.apache.avro.generic.GenericData
+import org.apache.logging.log4j.LogManager
 
 import scala.util.{Failure, Success, Try}
 
@@ -25,9 +25,8 @@ class HeartlandFileExtractor extends JsonExtractor
 class HeartlandFileHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    logger: Logger
-) extends FileHarvester(spark, shortName, conf, logger) {
+    conf: i3Conf
+) extends FileHarvester(spark, shortName, conf) {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
 
@@ -149,7 +148,9 @@ class HeartlandFileHarvester(
         val recordCount = (for (result <- iter(inputStream)) yield {
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
-              logger.error(s"Caught exception on $inFile.", exception)
+              LogManager
+                .getLogger(this.getClass)
+                .error(s"Caught exception on $inFile.", exception)
               0
             case Success(count) =>
               count

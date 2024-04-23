@@ -9,6 +9,7 @@ import dpla.ingestion3.utils.Utils
 import org.apache.avro.generic.GenericData
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.io.Source
@@ -20,9 +21,8 @@ import scala.xml.{MinimizeMode, Node, Utility, XML}
 class SiFileHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    logger: Logger
-) extends FileHarvester(spark, shortName, conf, logger) {
+    conf: i3Conf
+) extends FileHarvester(spark, shortName, conf) {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
@@ -56,6 +56,7 @@ class SiFileHarvester(
     *   List of Options of id/item pairs.
     */
   def handleXML(xml: Node): List[Option[ParsedResult]] = {
+    val logger = LogManager.getLogger(this.getClass)
     for {
       items <- xml \\ "doc" :: Nil
       item <- items
@@ -198,9 +199,11 @@ class SiFileHarvester(
         }
 
         // Log a summary of the file
-        logger.info(
-          s"Harvested $percentage% ($fromFilePretty / $expectedPretty) of records from ${inFile.getName}"
-        )
+        LogManager
+          .getLogger(this.getClass)
+          .info(
+            s"Harvested $percentage% ($fromFilePretty / $expectedPretty) of records from ${inFile.getName}"
+          )
       })
 
     // flush the avroWriter

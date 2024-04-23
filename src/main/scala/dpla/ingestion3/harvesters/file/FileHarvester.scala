@@ -22,8 +22,7 @@ import scala.util.Try
 abstract class FileHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    logger: Logger
+    conf: i3Conf
 ) extends LocalHarvester(spark, shortName, conf) {
 
   /** Case class to hold the results of a file

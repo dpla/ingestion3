@@ -7,6 +7,7 @@ import dpla.ingestion3.utils.HttpUtils
 import org.apache.avro.generic.GenericData
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
 import org.json4s.JsonAST.JValue
@@ -17,9 +18,8 @@ import scala.util.{Failure, Success, Try}
 class IaHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    harvestLogger: Logger
-) extends ApiHarvester(spark, shortName, conf, harvestLogger) {
+    conf: i3Conf
+) extends ApiHarvester(spark, shortName, conf) {
 
   //
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
@@ -35,6 +35,8 @@ class IaHarvester(
 
     val iaCollections = conf.harvest.setlist.getOrElse("").split(",")
 
+    val logger = LogManager.getLogger(this.getClass)
+
     iaCollections.foreach(collection => {
       // Mutable vars for controlling harvest loop
       var continueHarvest = true
@@ -45,7 +47,7 @@ class IaHarvester(
       while (continueHarvest) getSinglePage(cursor, collection) match {
         // Handle errors
         case error: ApiError with ApiResponse =>
-          harvestLogger.error(
+          logger.error(
             "Error returned by request %s\n%s\n%s".format(
               error.errorSource.url.getOrElse("Undefined url"),
               error.errorSource.queryParams,
@@ -65,7 +67,7 @@ class IaHarvester(
                       if (identifier.nonEmpty)
                         ApiRecord(identifier, compact(render(doc)))
                       else
-                        harvestLogger.error(s"""No identifier in original record
+                        logger.error(s"""No identifier in original record
                              |URL: ${src.url.getOrElse("Not set")}
                              |Params: ${src.queryParams}
                              |Body: $doc
@@ -83,7 +85,7 @@ class IaHarvester(
                     continueHarvest = false
                 }
                 case Failure(f) =>
-                  harvestLogger.error(
+                  logger.error(
                     s"Unable to parse response\n" +
                       s"URL: ${src.url.getOrElse("Not set")}\n" +
                       s"Params: ${src.queryParams}\n" +
@@ -93,7 +95,7 @@ class IaHarvester(
               }
             // Handle unknown case
             case _ =>
-              harvestLogger.error(
+              logger.error(
                 s"Response body is empty.\n" +
                   s"URL: ${src.url.getOrElse("!!! URL not set !!!")}\n" +
                   s"Params: ${src.queryParams}\n" +
@@ -125,7 +127,7 @@ class IaHarvester(
         .filter { case (k: String, v: String) => v.nonEmpty }
     )
 
-    harvestLogger.info(s"Requesting ${url.toString}")
+    LogManager.getLogger(this.getClass).info(s"Requesting ${url.toString}")
 
     HttpUtils.makeGetRequest(url) match {
       case Failure(e) =>

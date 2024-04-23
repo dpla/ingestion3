@@ -12,9 +12,8 @@ import org.apache.spark.sql.SparkSession
 class GettyHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    harvestLogger: Logger
-) extends PrimoVEHarvester(spark, shortName, conf, harvestLogger) {
+    conf: i3Conf
+) extends PrimoVEHarvester(spark, shortName, conf) {
 
   /** Constructs the URL for Getty Primo VE API requests
     *

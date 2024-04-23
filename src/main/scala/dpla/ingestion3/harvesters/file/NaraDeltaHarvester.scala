@@ -249,6 +249,7 @@ class NaraDeltaHarvester(
   }
 
   private def harvestFile(file: File, unixEpoch: Long): Unit = {
+    val logger = LogManager.getLogger(this.getClass)
     val inputStream = getInputStream(file)
       .getOrElse(
         throw new IllegalArgumentException(
@@ -268,7 +269,6 @@ class NaraDeltaHarvester(
       }
     }).sum
 
-    val logger = LogManager.getLogger(this.getClass)
     logger.info(s"Harvested $recordCount records from ${file.getName}")
 
     IOUtils.closeQuietly(inputStream)

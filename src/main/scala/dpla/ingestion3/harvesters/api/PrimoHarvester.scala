@@ -6,6 +6,7 @@ import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.{HttpUtils, Utils}
 import org.apache.avro.generic.GenericData
 import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
 
@@ -21,9 +22,8 @@ import scala.xml.XML
 abstract class PrimoHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    logger: Logger
-) extends ApiHarvester(spark, shortName, conf, logger) {
+    conf: i3Conf
+) extends ApiHarvester(spark, shortName, conf) {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
@@ -39,6 +39,8 @@ abstract class PrimoHarvester(
     *   DataFrame of harvested records
     */
   override def localHarvest(): DataFrame = {
+
+    val logger = LogManager.getLogger(this.getClass)
     implicit val formats: DefaultFormats.type = DefaultFormats
 
     // Mutable vars for controlling harvest loop
