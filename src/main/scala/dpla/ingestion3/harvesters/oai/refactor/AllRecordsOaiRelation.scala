@@ -31,8 +31,7 @@ class AllRecordsOaiRelation(
     val csvRdd = sqlContext.read
       .format("com.databricks.spark.csv")
       .option("header", "false")
-      // .option("mode", "FAILFAST")
-      .load(tempFile.getAbsolutePath)
+      .load("file://" + tempFile.getAbsolutePath)
       .rdd
 
     val eitherRdd = csvRdd.map(handleCsvRow)
