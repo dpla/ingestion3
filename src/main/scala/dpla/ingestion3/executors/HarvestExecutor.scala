@@ -8,6 +8,7 @@ import dpla.ingestion3.harvesters.file.NaraDeltaHarvester
 import dpla.ingestion3.harvesters.oai.OaiHarvester
 import dpla.ingestion3.harvesters.pss.PssHarvester
 import dpla.ingestion3.harvesters.resourceSync.RsHarvester
+import dpla.ingestion3.model.harvestAvroSchema
 import dpla.ingestion3.utils.{CHProviderRegistry, Utils}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
@@ -92,8 +93,8 @@ trait HarvestExecutor {
 
       // Write harvested data to output file.
       harvestData.write
-        .format("com.databricks.spark.avro")
-        .option("avroSchema", harvestData.schema.toString)
+        .format("avro")
+        .option("avroSchema", harvestAvroSchema.toString)
         .format("avro")
         .save(outputPath)
 
