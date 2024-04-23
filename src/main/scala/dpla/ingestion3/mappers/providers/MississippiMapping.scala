@@ -109,7 +109,7 @@ class MississippiMapping
   override def `type`(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "type")
 
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Mississippi Digital Library"),
     uri = Some(URI("http://dp.la/api/contributor/mississippi-digital-library"))
   )
