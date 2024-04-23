@@ -227,11 +227,11 @@ class MiProfile extends XmlProfile {
 /** Mississippi Hub
   */
 class MississippiProfile extends JsonProfile {
-  type Mapping = HeartlandMapping // FIXME
+  type Mapping = MississippiMapping
 
   override def getHarvester: Class[_ <: Harvester] =
     classOf[MississippiHarvester]
-  override def getMapping = new HeartlandMapping // FIXME
+  override def getMapping = new MississippiMapping
 }
 
 /** Heartland Hub
@@ -360,7 +360,7 @@ class PaProfile extends XmlProfile {
 class RumseyProfile extends XmlProfile {
   type Mapping = RumseyMapping
 
-  override def getHarvester: Class[OaiFileHarvester] = classOf[OaiFileHarvester]
+  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
   override def getMapping = new RumseyMapping
 }
 
