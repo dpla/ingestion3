@@ -29,7 +29,7 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
       sparkConf: SparkConf,
       dataIn: String,
       dataOut: String,
-      shortName: String,
+      shortName: String
   ): String = {
 
     // This start time is used for documentation and output file naming.
@@ -56,10 +56,10 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
     import spark.implicits._
 
     val aSeq = allowedIds.toSeq
-    val enrichedRows: DataFrame =
+    val enrichedRows =
       spark.read.format("avro").load(dataIn).filter($"dplaUri".isin(aSeq: _*))
 
-    val enrichResults = enrichedRows.map(row => {
+    val enrichResults = enrichedRows.rdd.map(row => {
       Try { ModelConverter.toModel(row) } match {
         case Success(dplaMapData) =>
           // If there is neither a IIIF manifest or media master mapped from the original record then try to construct
@@ -102,35 +102,36 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
     // - iiifManifest
     // - mediaMaster: Seq[String]
     // - title [first value only]
-//    val wikiRecords: Dataset[(String, String, String, Seq[String], String)] =
-//      enrichResults
-//        // Filter out only the wiki eligible records
-//        .filter(tuple => tuple._2)
-//        .map(tuple => {
-//          val record = ModelConverter.toModel(tuple._1)
-//          val dplaId = getDplaId(record)
-//          val wikiMetadata = buildWikiMarkup(record)
-//          val iiif = record.iiifManifest.getOrElse("").toString
-//          val mediaMaster = record.mediaMaster.map(_.uri.toString)
-//          val title = record.sourceResource.title
-//          (dplaId, wikiMetadata, iiif, mediaMaster, title.head)
-//        })
-//
-//    wikiRecords.write
-//      .parquet(outputPath)
-//
-//    // Create and write manifest.
-//    val manifestOpts: Map[String, String] = Map(
-//      "Activity" -> "Wiki",
-//      "Provider" -> shortName,
-//      "Record count" -> s"${wikiRecords.count}",
-//      "Input" -> dataIn
-//    )
-//
-//    outputHelper.writeManifest(manifestOpts) match {
-//      case Success(s) => logger.info(s"Manifest written to $s")
-//      case Failure(f) => logger.warn(s"Manifest failed to write: $f")
-//    }
+    val wikiRecords: Dataset[(String, String, String, Seq[String], String)] =
+      enrichResults
+        // Filter out only the wiki eligible records
+        .filter(tuple => tuple._2)
+        .map(tuple => {
+          val record = ModelConverter.toModel(tuple._1)
+          val dplaId = getDplaId(record)
+          val wikiMetadata = buildWikiMarkup(record)
+          val iiif = record.iiifManifest.getOrElse("").toString
+          val mediaMaster = record.mediaMaster.map(_.uri.toString)
+          val title = record.sourceResource.title
+          (dplaId, wikiMetadata, iiif, mediaMaster, title.head)
+        })
+        .toDS()
+
+    wikiRecords.write
+      .parquet(outputPath)
+
+    // Create and write manifest.
+    val manifestOpts: Map[String, String] = Map(
+      "Activity" -> "Wiki",
+      "Provider" -> shortName,
+      "Record count" -> s"${wikiRecords.count}",
+      "Input" -> dataIn
+    )
+
+    outputHelper.writeManifest(manifestOpts) match {
+      case Success(s) => logger.info(s"Manifest written to $s")
+      case Failure(f) => logger.warn(s"Manifest failed to write: $f")
+    }
 
     sc.stop()
 
