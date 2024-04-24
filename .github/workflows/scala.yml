@@ -12,13 +12,5 @@ jobs:
         with:
           distribution: temurin
           java-version: 11
-      - name: Configure AWS Credentials Action for GitHub Actions
-        uses: aws-actions/configure-aws-credentials@v4.0.2
       - name: Run tests
         run: sbt clean compile test
-#    - name: Run coverage test
-#      run: sbt clean coverage test
-#    - name: Run coverage report
-#      run: sbt coverageReport
-#    - name: Run codacy coverage
-#      run: sbt codacyCoverage
