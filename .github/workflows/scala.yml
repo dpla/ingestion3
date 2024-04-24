@@ -12,5 +12,9 @@ jobs:
         with:
           distribution: temurin
           java-version: 11
+      - name: Configure AWS Credentials Action for GitHub Actions
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          aws-region: us-east-1
       - name: Run tests
         run: sbt clean compile test
