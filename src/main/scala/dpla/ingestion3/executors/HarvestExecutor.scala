@@ -157,8 +157,7 @@ trait HarvestExecutor {
           .getConstructor(
             classOf[SparkSession],
             classOf[String],
-            classOf[i3Conf],
-            classOf[Logger]
+            classOf[i3Conf]
           )
           .newInstance(spark, shortName, conf)
       case _ =>
