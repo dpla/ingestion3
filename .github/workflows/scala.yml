@@ -17,10 +17,8 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 1.8
-
     - name: "Configure AWS Credentials" Action for GitHub Actions
       uses: aws-actions/configure-aws-credentials@v4.0.2
-
     - name: Run tests
       run: sbt clean compile test
 #    - name: Run coverage test
