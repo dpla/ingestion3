@@ -14,6 +14,7 @@ import dpla.ingestion3.harvesters.oai.refactor.{
   OaiSet,
   WhitelistOaiRelation
 }
+import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -24,7 +25,7 @@ class LocalOaiHarvester(
     conf: i3Conf
 ) extends LocalHarvester(spark, shortName, conf) {
 
-  override def mimeType: String = "application_xml"
+  override def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
   override def localHarvest(): DataFrame = {
 

@@ -5,15 +5,11 @@ import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import org.apache.commons.io.IOUtils
-import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
-<<<<<<< HEAD
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
-=======
 import org.apache.logging.log4j.LogManager
->>>>>>> b1ee899 (WIP)
 
 import scala.util.{Failure, Success, Try}
 import scala.xml.{MinimizeMode, Node, Utility, XML}
