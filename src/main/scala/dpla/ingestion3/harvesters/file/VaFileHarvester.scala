@@ -5,11 +5,11 @@ import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import org.apache.commons.io.IOUtils
-import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
+import org.apache.logging.log4j.LogManager
 
 import scala.util.{Failure, Success, Try}
 import scala.xml.{MinimizeMode, Node, Utility, XML}
@@ -23,9 +23,8 @@ class VaFileExtractor extends XmlExtractor
 class VaFileHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    logger: Logger
-) extends FileHarvester(spark, shortName, conf, logger) {
+    conf: i3Conf
+) extends FileHarvester(spark, shortName, conf) {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
@@ -117,7 +116,9 @@ class VaFileHarvester(
         val recordCount = (for (result <- iter(inputStream)) yield {
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
-              logger.error(s"Caught exception on $inFile.", exception)
+              LogManager
+                .getLogger(this.getClass)
+                .error(s"Caught exception on $inFile.", exception)
               0
             case Success(count) =>
               count

@@ -75,7 +75,7 @@ class AllRecordsOaiRelationTest extends AnyFlatSpec with SharedSparkContext {
     FileUtils.writeLines(tempFile, Seq("page,blah,", "page,blah2,", "page,blah3,", "error,oops,None").asJava)
     val data = relation.tempFileToRdd(tempFile).collect().toIndexedSeq
     assert(data.size === 4)
-    assert(data(0) === Row(None, OaiRecord("a", "document", Seq()), None))
+    assert(data(0) === Row(null, Row("a", "document", Seq()), null))
     tempFile.delete()
   }
 

@@ -1,7 +1,6 @@
 package dpla.ingestion3.executors
 
 import java.time.LocalDateTime
-
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.messages._
 import dpla.ingestion3.model
@@ -9,12 +8,11 @@ import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
 import dpla.ingestion3.profiles.CHProfile
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{CHProviderRegistry, Utils}
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
-import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.json4s.JsonAST.JValue
 
 import scala.collection.mutable
@@ -49,15 +47,12 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     *   Path to save mapped data
     * @param shortName
     *   Provider short name
-    * @param logger
-    *   Logger to use
     */
   def executeMapping(
       sparkConf: SparkConf,
       dataIn: String,
       dataOut: String,
-      shortName: String,
-      logger: Logger
+      shortName: String
   ): String = {
 
     // This start time is used for documentation and output file naming.
@@ -82,7 +77,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     import spark.implicits._
 
     // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
-    val oreAggregationEncoder = RowEncoder.encoderFor(model.sparkSchema)
+    // val oreAggregationEncoder = RowEncoder.encoderFor(model.sparkSchema)
 
     val dplaMap = new DplaMap()
 
@@ -151,12 +146,19 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     // Encode to Row-based structure
     // Must be encoded to save to parquet
+
+    import spark.implicits._
+    val mappingResultsRows: RDD[Row] = mappingResults.map(oreAgg =>
+      RowConverter.toRow(oreAgg, model.sparkSchema)
+    )
+
+    // val mappingResultsDF = spark.createDatamappingResultsRows.toDF()
+
     val encodedMappingResults: DataFrame =
-      spark.createDataset(
-        mappingResults.map(oreAgg =>
-          RowConverter.toRow(oreAgg, model.sparkSchema)
-        )
-      )(oreAggregationEncoder)
+      spark.createDataFrame(
+        mappingResultsRows,
+        model.sparkSchema
+      )
 
     // Save mapped results locally as parquet
     encodedMappingResults.write.parquet(tempLocation1)
@@ -200,11 +202,12 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
         // Encode to Row-based structure
         val encodedUpdatedResults: DataFrame =
-          spark.createDataset(
+          spark.createDataFrame(
             updatedResults.map(oreAgg =>
               RowConverter.toRow(oreAgg, model.sparkSchema)
-            )
-          )(oreAggregationEncoder)
+            ),
+            model.sparkSchema
+          )
 
         // Save mapped results locally as parquet
         encodedUpdatedResults.write.parquet(tempLocation2)
@@ -242,6 +245,9 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       "Record count" -> Utils.formatNumber(validRecordCount),
       "Input" -> dataIn
     )
+
+    val logger = LogManager.getLogger(this.getClass)
+
     outputHelper.writeManifest(manifestOpts) match {
       case Success(s) => logger.info(s"Manifest written to $s.")
       case Failure(f) => logger.warn(s"Manifest failed to write: $f")

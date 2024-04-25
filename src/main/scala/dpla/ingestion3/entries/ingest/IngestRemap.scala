@@ -3,7 +3,8 @@ package dpla.ingestion3.entries.ingest
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
 import dpla.ingestion3.dataStorage.InputHelper
 import dpla.ingestion3.executors._
-import dpla.ingestion3.utils.{Emailer, Utils}
+import dpla.ingestion3.utils.Emailer
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
 
 /** Single entry point to run harvest, mapping, enrichment, indexing jobs and
@@ -49,16 +50,14 @@ object IngestRemap
 
   def main(args: Array[String]): Unit = {
 
-    // Read in command line args.
-    val cmdArgs = new CmdArgs(args)
+    val logger = LogManager.getLogger(this.getClass)
 
+    val cmdArgs = new CmdArgs(args)
     val baseDataOut = cmdArgs.getOutput
     val confFile = cmdArgs.getConfigFile
     val shortName = cmdArgs.getProviderName
     val input = cmdArgs.getInput
     val sparkMaster: Option[String] = cmdArgs.getSparkMaster
-    // Get logger
-    val logger = Utils.createLogger("ingest", shortName)
 
     // Outputs
 
@@ -92,7 +91,7 @@ object IngestRemap
     // TODO These processes should return some flag or metric to help determine whether to proceed
     // Mapping
     val mapDataOut: String =
-      executeMapping(sparkConf, harvestData, baseDataOut, shortName, logger)
+      executeMapping(sparkConf, harvestData, baseDataOut, shortName)
 
     // Enrichment
     val enrichDataOut: String =
@@ -101,24 +100,18 @@ object IngestRemap
         mapDataOut,
         baseDataOut,
         shortName,
-        logger,
         conf
       )
 
-    // Json-l
-    executeJsonl(sparkConf, enrichDataOut, baseDataOut, shortName, logger)
-
-    // Reports
-    // Reports commented out by S. Williams for efficiency and because they aren't being used on a regular basis
-    // executeAllReports(sparkConf, mapDataOut, baseDataOut, shortName, logger)
+    // Json - l
+    executeJsonl(sparkConf, enrichDataOut, baseDataOut, shortName)
 
     // Wikimedia
     executeWikimediaMetadata(
       sparkConf,
       enrichDataOut,
       baseDataOut,
-      shortName,
-      logger
+      shortName
     )
 
     // Email

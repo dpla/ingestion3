@@ -7,15 +7,14 @@ import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.commons.io.FileUtils
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 abstract class Harvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    logger: Logger
+    conf: i3Conf
 ) {
 
   def harvest: DataFrame = {
@@ -45,15 +44,12 @@ abstract class Harvester(
   *   [String] Provider short name
   * @param conf
   *   [i3Conf] contains configs for the harvester.
-  * @param logger
-  *   [Logger] for the harvester.
   */
 abstract class LocalHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf,
-    logger: Logger
-) extends Harvester(spark, shortName, conf, logger) {
+) extends Harvester(spark, shortName, conf) {
 
   // Temporary output path.
   // Harvests that use AvroWriter cannot be written directly to S3.
@@ -113,7 +109,7 @@ object Harvester {
         s"""Harvested DataFrame did not match expected schema.\n
         Actual fields: ${actualFields.mkString(", ")}\n
         Expected fields: ${expectedFields.mkString(", ")}"""
-      Logger.getLogger(Harvester.getClass).warn(msg)
+      LogManager.getLogger(this.getClass).warn(msg)
     }
   }
 }

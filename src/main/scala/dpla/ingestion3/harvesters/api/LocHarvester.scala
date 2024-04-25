@@ -7,6 +7,7 @@ import dpla.ingestion3.utils.HttpUtils
 import org.apache.avro.generic.GenericData
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
@@ -22,9 +23,8 @@ import scala.xml.XML
 class LocHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    harvestLogger: Logger
-) extends ApiHarvester(spark, shortName, conf, harvestLogger) {
+    conf: i3Conf
+) extends ApiHarvester(spark, shortName, conf) {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
 
@@ -36,6 +36,9 @@ class LocHarvester(
   /** Entry method for invoking LC harvest
     */
   override def localHarvest(): DataFrame = {
+
+    val logger = LogManager.getLogger(this.getClass)
+
     implicit val formats = DefaultFormats
     // Get sets from conf
     val collections = conf.harvest.setlist
@@ -49,7 +52,7 @@ class LocHarvester(
       var continueHarvest = true
       var page = "1"
 
-      harvestLogger.info(s"Processing sitemaps for collection: $collection")
+      logger.info(s"Processing sitemaps for collection: $collection")
 
       while (continueHarvest) getSinglePage(page, collection) match {
         // Handle errors
@@ -82,9 +85,9 @@ class LocHarvester(
       }
     })
     // Log results of item gathering
-    harvestLogger.info(s"Fetched ${itemUrls.size} urls")
+    logger.info(s"Fetched ${itemUrls.size} urls")
     if (itemUrls.distinct.size != itemUrls.size)
-      harvestLogger.info(
+      logger.info(
         s"${itemUrls.distinct.size} distinct values. " +
           s"${itemUrls.size - itemUrls.distinct.size} duplicates}"
       )
@@ -227,13 +230,15 @@ class LocHarvester(
     *   Error message
     */
   def logError(error: ApiError, msg: Option[String] = None): Unit = {
-    harvestLogger.error(
-      "%s  %s\n%s\n%s".format(
-        msg.getOrElse("URL: "),
-        error.errorSource.url.getOrElse("!!! Undefined URL !!!"),
-        error.errorSource.queryParams,
-        error.message
+    LogManager
+      .getLogger(this.getClass)
+      .error(
+        "%s  %s\n%s\n%s".format(
+          msg.getOrElse("URL: "),
+          error.errorSource.url.getOrElse("!!! Undefined URL !!!"),
+          error.errorSource.queryParams,
+          error.message
+        )
       )
-    )
   }
 }

@@ -6,7 +6,7 @@ import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.AVRO_MIME_JSON
 import org.apache.avro.generic.GenericData
 import org.apache.commons.io.IOUtils
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.jackson.JsonMethods._
@@ -25,9 +25,8 @@ class CommunityWebsExtractor extends JsonExtractor
 class CommunityWebsHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    logger: Logger
-) extends FileHarvester(spark, shortName, conf, logger) {
+    conf: i3Conf
+) extends FileHarvester(spark, shortName, conf) {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
 
@@ -149,7 +148,9 @@ class CommunityWebsHarvester(
         val recordCount = (for (result <- iter(inputStream)) yield {
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
-              logger.error(s"Caught exception on $inFile.", exception)
+              LogManager
+                .getLogger(this.getClass)
+                .error(s"Caught exception on $inFile.", exception)
               0
             case Success(count) =>
               count

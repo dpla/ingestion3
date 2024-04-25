@@ -7,6 +7,7 @@ import dpla.ingestion3.utils.HttpUtils
 import org.apache.avro.generic.GenericData
 import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.{compact, parse, render}
@@ -16,9 +17,8 @@ import scala.util.{Failure, Success}
 class MdlHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    harvestLogger: Logger
-) extends ApiHarvester(spark, shortName, conf, harvestLogger) {
+    conf: i3Conf
+) extends ApiHarvester(spark, shortName, conf) {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
 
@@ -31,6 +31,9 @@ class MdlHarvester(
   )
 
   override def localHarvest(): DataFrame = {
+
+    val logger = LogManager.getLogger(this.getClass)
+
     implicit val formats: DefaultFormats.type = DefaultFormats
 
     // Mutable var for controlling harvest loop
@@ -52,7 +55,7 @@ class MdlHarvester(
                 // Get next page to request. If there is no next page to request the 'next' property will not exist
                 requestUrl = (json \ "links" \ "next").extractOpt[String]
 
-                harvestLogger.info(
+                logger.info(
                   s"Next page to request -- ${requestUrl.getOrElse("No next URL")}"
                 )
 
@@ -69,7 +72,7 @@ class MdlHarvester(
                 saveOutRecords(mdlRecords)
               // valid response (e.g. http 200) from api but empty body
               case None =>
-                harvestLogger.error(
+                logger.error(
                   s"The body of the response is empty. Stopping run.\nApiSource >> ${src.toString}"
                 )
                 requestUrl = None // stop the harvest
@@ -77,7 +80,7 @@ class MdlHarvester(
 
           // Case 2 - error returned by requesting page
           case error: ApiError with ApiResponse =>
-            harvestLogger.error(
+            logger.error(
               "Error returned by request %s\n%s\n%s".format(
                 error.errorSource.url.getOrElse("Undefined url"),
                 error.errorSource.queryParams,
@@ -88,7 +91,7 @@ class MdlHarvester(
 
           // Case 3 - unknown
           case _ =>
-            harvestLogger.error("Harvest returned None")
+            logger.error("Harvest returned None")
             requestUrl = None // stop the harvest
         }
     }

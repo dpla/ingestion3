@@ -1,7 +1,5 @@
 package dpla.ingestion3.executors
 
-import java.io.File
-import java.time.LocalDateTime
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.enrichments.EnrichmentDriver
@@ -11,21 +9,14 @@ import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
 import dpla.ingestion3.reports.PrepareEnrichmentReport
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.Utils
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.{
-  DataFrame,
-  Dataset,
-  Encoder,
-  Encoders,
-  Row,
-  SparkSession
-}
-import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
-import org.apache.spark.sql.types.{StringType, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
+import java.io.File
+import java.time.LocalDateTime
 import scala.util.{Failure, Success, Try}
 
 trait EnrichExecutor extends Serializable {
@@ -39,15 +30,12 @@ trait EnrichExecutor extends Serializable {
     *   Location to save output
     * @param shortName
     *   Provider short name
-    * @param logger
-    *   Logger
     */
   def executeEnrichment(
       sparkConf: SparkConf,
       dataIn: String,
       dataOut: String,
       shortName: String,
-      logger: Logger,
       i3conf: i3Conf
   ): String = {
 
@@ -62,10 +50,10 @@ trait EnrichExecutor extends Serializable {
 
     val outputPath = outputHelper.activityPath
 
-    implicit val spark = SparkSession
+    implicit val spark: SparkSession = SparkSession
       .builder()
       .config(sparkConf)
-      .config("spark.ui.showConsoleProgress", false)
+      .config("spark.ui.showConsoleProgress", value = false)
       .getOrCreate()
 
     val sc = spark.sparkContext
@@ -76,12 +64,6 @@ trait EnrichExecutor extends Serializable {
       sc.longAccumulator("Total Enriched Record Count")
     val improvedCount: LongAccumulator =
       sc.longAccumulator("Improved Record Count")
-
-    // Need to keep this here despite what IntelliJ and Codacy say
-    import spark.implicits._
-    val dplaMapDataRowEncoder: Encoder[Row] =
-      RowEncoder.encoderFor(model.sparkSchema)
-    val tupleRowStringEncoder: Encoder[(Row, String)] = ExpressionEncoder()
 
     // Load the mapped records
     val mappedRows: DataFrame = spark.read.format("avro").load(dataIn)
@@ -97,34 +79,35 @@ trait EnrichExecutor extends Serializable {
 
     // Create the enrichment outside map function so it is not recreated for each record.
     // Transformation
-    val enrichResults = mappedRows.map(row => {
-      val driver = SharedDriver.get
-      attemptedCount.add(1)
-      Try { ModelConverter.toModel(row) } match {
-        case Success(dplaMapData) =>
-          enrich(dplaMapData, driver, improvedCount, successCount)
-        case Failure(err) =>
-          (
-            null,
-            s"Error parsing mapped data: ${err.getMessage}\n" +
-              s"${err.getStackTrace.mkString("\n")}"
-          )
-      }
-    })(tupleRowStringEncoder)
-
-    // Transformation
-    val successResults: Dataset[Row] = enrichResults
+    val successResults = mappedRows.rdd
+      .map(row => {
+        val driver = SharedDriver.get
+        attemptedCount.add(1)
+        Try { ModelConverter.toModel(row) } match {
+          case Success(dplaMapData) =>
+            enrich(dplaMapData, driver, improvedCount, successCount)
+          case Failure(err) =>
+            (
+              null,
+              s"Error parsing mapped data: ${err.getMessage}\n" +
+                s"${err.getStackTrace.mkString("\n")}"
+            )
+        }
+      })
       .filter(tuple => Option(tuple._1).isDefined)
-      .map(tuple => tuple._1)(dplaMapDataRowEncoder)
-      .persist(StorageLevel.MEMORY_AND_DISK_SER)
+      .map((tuple: (Row, String)) => tuple._1)
+
+    val successResultsDF =
+      spark.createDataFrame(successResults, model.sparkSchema)
 
     // Save mapped records out to Avro file
     // Action
-    successResults
-      .toDF()
-      .write
-      .format("com.databricks.spark.avro")
+    successResultsDF.write
+      .format("avro")
       .save(outputPath)
+
+    val successResultsDFReread =
+      spark.read.format("avro").format("avro").load(outputPath)
 
     // Create and write manifest.
     val manifestOpts: Map[String, String] = Map(
@@ -133,6 +116,8 @@ trait EnrichExecutor extends Serializable {
       "Record count" -> Utils.formatNumber(successCount.count),
       "Input" -> dataIn
     )
+
+    val logger = LogManager.getLogger(this.getClass)
 
     outputHelper.writeManifest(manifestOpts) match {
       case Success(s) => logger.info(s"Manifest written to $s.")
@@ -144,7 +129,7 @@ trait EnrichExecutor extends Serializable {
 
     // Get all the messages for all records.
     val messages: DataFrame = MessageProcessor
-      .getAllMessages(successResults)(spark)
+      .getAllMessages(successResultsDFReread)(spark)
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Transformations.
@@ -258,7 +243,8 @@ trait EnrichExecutor extends Serializable {
   ): (Row, String) = {
     driver.enrich(dplaMapData) match {
       case Success(enriched) =>
-        implicit val msgs = new MessageCollector[IngestMessage]()
+        implicit val msgs: MessageCollector[IngestMessage] =
+          new MessageCollector[IngestMessage]()
 
         val oreAggMitMsgs =
           PrepareEnrichmentReport.prepareEnrichedData(enriched, dplaMapData)(

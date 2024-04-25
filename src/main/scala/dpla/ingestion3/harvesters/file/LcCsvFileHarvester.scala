@@ -4,9 +4,10 @@ import java.io.File
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.CsvFileFilter
 import dpla.ingestion3.mappers.utils.JsonExtractor
+
 import dpla.ingestion3.model.AVRO_MIME_JSON
 import org.apache.avro.generic.GenericData
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
@@ -23,9 +24,8 @@ class CsvFileExtractor extends JsonExtractor
 class LcCsvFileHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    logger: Logger
-) extends FileHarvester(spark, shortName, conf, logger) {
+    conf: i3Conf
+) extends FileHarvester(spark, shortName, conf) {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
 
@@ -138,7 +138,7 @@ class LcCsvFileHarvester(
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
-
+    val logger = LogManager.getLogger(this.getClass)
     inFiles
       .listFiles(new CsvFileFilter)
       .foreach(inFile => {

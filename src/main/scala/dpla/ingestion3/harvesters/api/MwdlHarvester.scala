@@ -12,9 +12,8 @@ import org.apache.spark.sql.SparkSession
 class MwdlHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    harvestLogger: Logger
-) extends PrimoHarvester(spark, shortName, conf, harvestLogger) {
+    conf: i3Conf
+) extends PrimoHarvester(spark, shortName, conf) {
 
   /** Constructs the URL for MWDL Primo API requests
     *

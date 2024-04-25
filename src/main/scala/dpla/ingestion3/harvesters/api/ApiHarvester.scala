@@ -3,7 +3,7 @@ package dpla.ingestion3.harvesters.api
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.{Harvester, LocalHarvester}
 import org.apache.avro.generic.GenericData
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.SparkSession
 
 /** API base harvester
@@ -12,15 +12,12 @@ import org.apache.spark.sql.SparkSession
   *   Provider short name
   * @param conf
   *   Configurations
-  * @param logger
-  *   Logger
   */
 abstract class ApiHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    logger: Logger
-) extends LocalHarvester(spark, shortName, conf, logger) {
+    conf: i3Conf
+) extends LocalHarvester(spark, shortName, conf) {
 
   // Abstract method queryParams should set base query parameters for API call.
   protected val queryParams: Map[String, String]
@@ -73,10 +70,12 @@ abstract class ApiHarvester(
     */
   protected def saveOutErrors(errors: List[ApiError]): Unit =
     errors.foreach(error => {
-      logger.error(
-        s"URL: ${error.errorSource.url.getOrElse("No url")}" +
-          s"\nMessage: ${error.message} \n\n"
-      )
+      LogManager
+        .getLogger(this.getClass)
+        .error(
+          s"URL: ${error.errorSource.url.getOrElse("No url")}" +
+            s"\nMessage: ${error.message} \n\n"
+        )
     })
 
 }

@@ -12,7 +12,7 @@ import scala.util.{Failure, Success, Try}
 
 object InputHelper {
 
-  private val s3Client = AmazonS3ClientBuilder.defaultClient()
+  private lazy val s3Client = AmazonS3ClientBuilder.defaultClient()
 
   /** Check if a given local or S3 path is a valid activity path. An activity is
     * a harvest, mapping, etc.

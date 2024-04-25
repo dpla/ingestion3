@@ -9,6 +9,7 @@ import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.util.{Failure, Success, Try}
@@ -23,9 +24,8 @@ class NorthwestHeritageFileExtractor extends XmlExtractor
 class NorthwestHeritageFileHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    logger: Logger
-) extends FileHarvester(spark, shortName, conf, logger) {
+    conf: i3Conf
+) extends FileHarvester(spark, shortName, conf) {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
@@ -100,12 +100,16 @@ class NorthwestHeritageFileHarvester(
 
         id match {
           case None =>
-            logger.warn(s"Missing required record_ID for $outputXML")
+            LogManager
+              .getLogger(this.getClass)
+              .warn(s"Missing required record_ID for $outputXML")
             None
           case Some(id) => Some(ParsedResult(id, outputXML))
         }
       case _ =>
-        logger.warn("Got weird result back for item path: " + item.getClass)
+        LogManager
+          .getLogger(this.getClass)
+          .warn("Got weird result back for item path: " + item.getClass)
         None
     }
   }
@@ -149,7 +153,9 @@ class NorthwestHeritageFileHarvester(
         val recordCount = (for (result <- iter(inputStream)) yield {
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
-              logger.error(s"Caught exception on $inFile.", exception)
+              LogManager
+                .getLogger(this.getClass)
+                .error(s"Caught exception on $inFile.", exception)
               0
             case Success(count) =>
               count

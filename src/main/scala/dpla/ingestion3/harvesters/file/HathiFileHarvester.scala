@@ -4,13 +4,13 @@ import java.io.{File, FileInputStream}
 import java.util.zip.GZIPInputStream
 import dpla.ingestion3.confs.i3Conf
 import org.apache.commons.io.IOUtils
-import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.tools.tar.TarInputStream
 import dpla.ingestion3.harvesters.file.FileFilters.GzFileFilter
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
+import org.apache.logging.log4j.LogManager
 
 import scala.util.{Failure, Success, Try}
 import scala.xml._
@@ -18,9 +18,8 @@ import scala.xml._
 class HathiFileHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    logger: Logger
-) extends FileHarvester(spark, shortName, conf, logger)
+    conf: i3Conf
+) extends FileHarvester(spark, shortName, conf)
     with XmlExtractor {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
@@ -52,6 +51,7 @@ class HathiFileHarvester(
     *   List of Options of id/item pairs.
     */
   def handleXML(xml: Node): List[Option[ParsedResult]] = {
+    val logger = LogManager.getLogger(this.getClass)
     for {
       items <- xml \\ "record" :: Nil
       item <- items
@@ -130,10 +130,12 @@ class HathiFileHarvester(
         val recordCount = (for (tarResult <- iter(inputStream)) yield {
           handleFile(tarResult, unixEpoch) match {
             case Failure(exception) =>
-              logger.error(
-                s"Caught exception on ${tarResult.entryName}.",
-                exception
-              )
+              LogManager
+                .getLogger(this.getClass)
+                .error(
+                  s"Caught exception on ${tarResult.entryName}.",
+                  exception
+                )
               0
             case Success(count) =>
               count

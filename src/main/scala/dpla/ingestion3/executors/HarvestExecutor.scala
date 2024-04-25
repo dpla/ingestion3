@@ -6,11 +6,10 @@ import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.file.NaraDeltaHarvester
 import dpla.ingestion3.harvesters.oai.OaiHarvester
-import dpla.ingestion3.harvesters.pss.PssHarvester
-import dpla.ingestion3.harvesters.resourceSync.RsHarvester
 import dpla.ingestion3.model.harvestAvroSchema
 import dpla.ingestion3.utils.{CHProviderRegistry, Utils}
 import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
@@ -27,22 +26,20 @@ trait HarvestExecutor {
     *   short names.
     * @param conf
     *   Configurations read from application configuration file
-    * @param logger
-    *   Logger object
     */
   def execute(
       sparkConf: SparkConf,
       shortName: String,
       dataOut: String,
-      conf: i3Conf,
-      logger: Logger
+      conf: i3Conf
   ): Unit = {
+
+    val logger = LogManager.getLogger(this.getClass)
 
     // Log config file location and provider short name.
     logger.info(s"Harvest initiated")
     logger.info(s"Provider short name: $shortName")
 
-    // todo build spark here
     val spark = SparkSession
       .builder()
       .config(sparkConf)
@@ -53,7 +50,7 @@ trait HarvestExecutor {
       .getOrElse(throw new RuntimeException("No harvest type specified."))
     logger.info(s"Harvest type: $harvestType")
 
-    val harvester = buildHarvester(spark, shortName, conf, logger, harvestType)
+    val harvester = buildHarvester(spark, shortName, conf, harvestType)
 
     // This start time is used for documentation and output file naming.
     val startDateTime = LocalDateTime.now
@@ -95,7 +92,6 @@ trait HarvestExecutor {
       harvestData.write
         .format("avro")
         .option("avroSchema", harvestAvroSchema.toString)
-        .format("avro")
         .save(outputPath)
 
       setSummary match {
@@ -143,38 +139,29 @@ trait HarvestExecutor {
       spark: SparkSession,
       shortName: String,
       conf: i3Conf,
-      logger: Logger,
       harvestType: String
   ) = {
     harvestType match {
       case "oai" =>
-        new OaiHarvester(spark, shortName, conf, logger)
-      case "pss" =>
-        new PssHarvester(spark, shortName, conf, logger)
-      case "rs" =>
-        new RsHarvester(spark, shortName, conf, logger)
+        new OaiHarvester(spark, shortName, conf)
       case "nara.file.delta" =>
-        new NaraDeltaHarvester(spark, shortName, conf, logger)
+        new NaraDeltaHarvester(spark, shortName, conf)
       case "api" | "file" =>
         val harvesterClass =
           CHProviderRegistry.lookupHarvesterClass(shortName) match {
             case Success(harvClass) => harvClass
             case Failure(e) =>
-              logger.fatal(e.getMessage)
               throw e
           }
         harvesterClass
           .getConstructor(
             classOf[SparkSession],
             classOf[String],
-            classOf[i3Conf],
-            classOf[Logger]
+            classOf[i3Conf]
           )
-          .newInstance(spark, shortName, conf, logger)
+          .newInstance(spark, shortName, conf)
       case _ =>
-        val msg = s"Harvest type not recognized."
-        logger.fatal(msg)
-        throw new RuntimeException(msg)
+        throw new RuntimeException("Can't find harvest type " + harvestType)
     }
   }
 }

@@ -1,16 +1,14 @@
 package dpla.ingestion3.executors
 
 import dpla.ingestion3.dataStorage.OutputHelper
-
-import java.time.LocalDateTime
 import dpla.ingestion3.model
 import dpla.ingestion3.model._
 import dpla.ingestion3.wiki.{WikiCriteria, WikiMapper}
-import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
-import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
+import java.time.LocalDateTime
 import scala.util.{Failure, Success, Try}
 
 case class WikimediaMetadata(dplaId: String, wikiMarkup: String)
@@ -26,15 +24,12 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
     *   Location to save Wikimedia metadata
     * @param shortName
     *   Provider shortname
-    * @param logger
-    *   Logger object
     */
   def executeWikimediaMetadata(
       sparkConf: SparkConf,
       dataIn: String,
       dataOut: String,
-      shortName: String,
-      logger: Logger
+      shortName: String
   ): String = {
 
     // This start time is used for documentation and output file naming.
@@ -45,6 +40,7 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
 
     val outputPath: String = outputHelper.activityPath
 
+    val logger = LogManager.getLogger(this.getClass)
     logger.info("Starting Wikimedia export")
     logger.info(s"dataIn  > $dataIn")
     logger.info(s"dataOut > $outputPath")
@@ -58,15 +54,12 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
 
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
-    val dplaMapDataRowEncoder: Encoder[Row] =
-      RowEncoder.encoderFor(model.sparkSchema)
-    val tupleRowBooleanEncoder: Encoder[(Row, Boolean)] = ExpressionEncoder()
 
     val aSeq = allowedIds.toSeq
-    val enrichedRows: DataFrame =
+    val enrichedRows =
       spark.read.format("avro").load(dataIn).filter($"dplaUri".isin(aSeq: _*))
 
-    val enrichResults: Dataset[(Row, Boolean)] = enrichedRows.map(row => {
+    val enrichResults = enrichedRows.rdd.map(row => {
       Try { ModelConverter.toModel(row) } match {
         case Success(dplaMapData) =>
           // If there is neither a IIIF manifest or media master mapped from the original record then try to construct
@@ -98,10 +91,11 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
           }
         case Failure(_) => (null, false)
       }
-    })(tupleRowBooleanEncoder)
+    })
+
+    println(enrichResults.count())
 
     // TODO There should be a better way to combine these two blocks
-    import spark.implicits._
     // Parquet schema
     // - dplaId
     // - wikiMarkup
@@ -121,6 +115,7 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
           val title = record.sourceResource.title
           (dplaId, wikiMetadata, iiif, mediaMaster, title.head)
         })
+        .toDS()
 
     wikiRecords.write
       .parquet(outputPath)

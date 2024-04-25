@@ -63,9 +63,9 @@ object OaiRelation {
   def convertToOutputRow(oaiRecordEither: Either[OaiError, OaiRecord]): Row =
     oaiRecordEither match {
       case Right(oaiRecord: OaiRecord) =>
-        Row(None, oaiRecord, None)
+        Row(null, Row(oaiRecord.id, oaiRecord.document, oaiRecord.setIds), null)
       case Left(oaiError: OaiError) =>
-        Row(None, None, oaiError)
+        Row(null, null, Row(oaiError.message, oaiError.url.orNull))
     }
 
 }

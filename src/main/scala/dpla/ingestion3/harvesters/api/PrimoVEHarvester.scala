@@ -7,6 +7,7 @@ import dpla.ingestion3.model.{AVRO_MIME_JSON, avroSchema}
 import dpla.ingestion3.utils.{HttpUtils, Utils}
 import org.apache.avro.generic.GenericData
 import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.{compact, parse, render}
@@ -24,9 +25,8 @@ import scala.util.{Failure, Success}
 abstract class PrimoVEHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    logger: Logger
-) extends ApiHarvester(spark, shortName, conf, logger)
+    conf: i3Conf
+) extends ApiHarvester(spark, shortName, conf)
     with JsonExtractor {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
@@ -44,6 +44,7 @@ abstract class PrimoVEHarvester(
     *   DataFrame of harvested records
     */
   override def localHarvest(): DataFrame = {
+    val logger = LogManager.getLogger(this.getClass)
     implicit val formats: DefaultFormats.type = DefaultFormats
 
     // Mutable vars for controlling harvest loop
@@ -125,14 +126,13 @@ abstract class PrimoVEHarvester(
       case Failure(e) =>
         ApiError(e.toString, ApiSource(queryParams, Some(url.toString)))
       case Success(response) =>
-        response.isEmpty match {
-          case true =>
-            ApiError(
-              "Response body is empty",
-              ApiSource(queryParams, Some(url.toString))
-            )
-          case false =>
-            ApiSource(queryParams, Some(url.toString), Some(response))
+        if (response.isEmpty) {
+          ApiError(
+            "Response body is empty",
+            ApiSource(queryParams, Some(url.toString))
+          )
+        } else {
+          ApiSource(queryParams, Some(url.toString), Some(response))
         }
     }
   }
