@@ -114,6 +114,6 @@ object IngestRemap
     )
 
     // Email
-//    Emailer.emailSummary(mapDataOut, shortName, conf)
+    Emailer.emailSummary(mapDataOut, shortName, conf)
   }
 }
