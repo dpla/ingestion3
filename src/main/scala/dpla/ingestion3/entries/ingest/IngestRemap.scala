@@ -3,6 +3,7 @@ package dpla.ingestion3.entries.ingest
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
 import dpla.ingestion3.dataStorage.InputHelper
 import dpla.ingestion3.executors._
+import dpla.ingestion3.utils.Emailer
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
 
