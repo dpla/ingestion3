@@ -35,7 +35,7 @@ class OutputHelper(
 
   private val s3WriteProtocol: String = "s3a"
 
-  private val s3Client = AmazonS3ClientBuilder.defaultClient()
+  private lazy val s3Client = AmazonS3ClientBuilder.defaultClient()
 
   /** If the given root is an S3 path, parse an S3Address. Evaluate on
     * instantiation so invalid S3 protocol is caught immediately. This val can
