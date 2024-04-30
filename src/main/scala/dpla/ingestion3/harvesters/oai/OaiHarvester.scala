@@ -55,11 +55,11 @@ class OaiHarvester(
 
     // return DataFrame
     harvestedData
-      .select("record.id", "record.document", "record.setIds")
+      .select("record.id", "record.document")
       .where("document is not null")
       .withColumn("ingestDate", lit(unixEpoch))
       .withColumn("provider", lit(shortName))
-      .withColumn("mimetype", lit(mimeType))
+      .withColumn("mimetype", lit(mimeType.toString))
   }
 
   override def cleanUp(): Unit = ()
