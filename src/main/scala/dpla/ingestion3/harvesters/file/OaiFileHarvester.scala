@@ -9,6 +9,7 @@ import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
 import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.util.{Failure, Success, Try}
@@ -27,6 +28,8 @@ class OaiFileHarvester(
 ) extends FileHarvester(spark, shortName, conf) {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
+
+  private val logger = LogManager.getLogger(this.getClass)
 
   protected val extractor = new OaiFileExtractor()
 
@@ -87,6 +90,7 @@ class OaiFileHarvester(
     *   List of Options of id/item pairs.
     */
   def handleXML(xml: Node): List[Option[ParsedResult]] = {
+
     for {
       items <- xml \\ "record" :: Nil
       item <- items
@@ -141,8 +145,6 @@ class OaiFileHarvester(
         FileResult(entry.getName, result) #:: iter(zipInputStream)
     }
 
-  /** Executes the Digital Virginias harvest
-    */
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
