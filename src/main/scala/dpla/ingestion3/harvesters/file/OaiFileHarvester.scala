@@ -23,8 +23,7 @@ class OaiFileExtractor extends XmlExtractor
 class OaiFileHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf,
-    logger: Logger
+    conf: i3Conf
 ) extends FileHarvester(spark, shortName, conf) {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
