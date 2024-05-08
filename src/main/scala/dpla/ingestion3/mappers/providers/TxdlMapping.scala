@@ -1,7 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
-import dpla.ingestion3.messages.IngestMessageTemplates
+import dpla.ingestion3.messages.{IngestMessage, IngestMessageTemplates}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -19,6 +19,8 @@ class TxdlMapping
   override def useProviderName: Boolean = true
 
   override def getProviderName: Option[String] = Some("txdl")
+
+  override val enforceDuplicateIds = false
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier").map(_.trim)

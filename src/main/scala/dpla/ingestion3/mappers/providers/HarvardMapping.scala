@@ -20,6 +20,8 @@ class HarvardMapping
     with XmlExtractor
     with IngestMessageTemplates {
 
+  override val enforceDuplicateIds = false
+
   // SourceResource fields
 
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] =
