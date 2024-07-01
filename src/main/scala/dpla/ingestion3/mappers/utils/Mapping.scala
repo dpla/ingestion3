@@ -57,7 +57,7 @@ trait Mapping[T] {
   def title(data: Document[T]): AtLeastOne[String] = emptySeq
   def `type`(data: Document[T]): ZeroToMany[String] = emptySeq
 
-  val enforceDuplicateIds: Boolean = true
+  val enforceDuplicateIds: Boolean = false
 
   /** Define the defaults for required field validations
     */
