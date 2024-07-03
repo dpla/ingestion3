@@ -360,7 +360,7 @@ class PaProfile extends XmlProfile {
 class RumseyProfile extends XmlProfile {
   type Mapping = RumseyMapping
 
-  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiFileHarvester] = classOf[OaiFileHarvester]
   override def getMapping = new RumseyMapping
 }
 
