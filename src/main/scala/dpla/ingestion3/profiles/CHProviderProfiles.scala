@@ -129,7 +129,7 @@ class HathiProfile extends XmlProfile {
 class IlProfile extends XmlProfile {
   type Mapping = IllinoisMapping
 
-  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiFileHarvester] = classOf[OaiFileHarvester]
   override def getMapping = new IllinoisMapping
 }
 

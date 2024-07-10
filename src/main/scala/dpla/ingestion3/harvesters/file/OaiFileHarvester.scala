@@ -1,6 +1,6 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{File, FileInputStream}
+import java.io.{ByteArrayInputStream, File, FileInputStream}
 import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
@@ -66,8 +66,7 @@ class OaiFileHarvester(
 
       case Some(data) =>
         Try {
-          val xml = XML.loadString(new String(data)) // parse string to XML
-
+          val xml = XML.load(new ByteArrayInputStream(data))
           val items = handleXML(xml)
 
           val counts = for {
