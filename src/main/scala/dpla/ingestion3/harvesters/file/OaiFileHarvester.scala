@@ -148,8 +148,6 @@ class OaiFileHarvester(
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
-    println(s"Harvesting from $inFiles")
-    println(s"${inFiles.listFiles().length} files found")
 
     inFiles
       .listFiles(new ZipFileFilter)
