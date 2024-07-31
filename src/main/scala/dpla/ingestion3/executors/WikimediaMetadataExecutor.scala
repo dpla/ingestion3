@@ -11,8 +11,6 @@ import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import java.time.LocalDateTime
 import scala.util.{Failure, Success, Try}
 
-case class WikimediaMetadata(dplaId: String, wikiMarkup: String)
-
 trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
 
   /** Generate Wiki metadata JSON files from AVRO file
@@ -55,9 +53,8 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
     // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
 
-    val aSeq = allowedIds.toSeq
     val enrichedRows =
-      spark.read.format("avro").load(dataIn) //.filter($"dplaUri".isin(aSeq: _*))
+      spark.read.format("avro").load(dataIn)
 
     val enrichResults = enrichedRows.rdd.map(row => {
       Try { ModelConverter.toModel(row) } match {
