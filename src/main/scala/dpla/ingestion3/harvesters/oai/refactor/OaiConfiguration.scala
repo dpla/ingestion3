@@ -47,6 +47,8 @@ case class OaiConfiguration(parameters: Map[String, String]) {
 
   def metadataPrefix: Option[String] = parameters.get("metadataPrefix")
 
+  def sleep: Int = parameters.getOrElse("sleep", "0").toInt
+
   def harvestAllSets: Boolean = parameters
     .get("harvestAllSets")
     .map(_.toLowerCase) match {

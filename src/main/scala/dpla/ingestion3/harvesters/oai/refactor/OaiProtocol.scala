@@ -11,7 +11,9 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration)
     new OaiMultiPageResponseBuilder(
       endpoint,
       "ListRecords",
-      metadataPrefix
+      metadataPrefix,
+      None,
+      oaiConfiguration.sleep
     ).getResponse.iterator
 
   override def listAllRecordPagesForSet(

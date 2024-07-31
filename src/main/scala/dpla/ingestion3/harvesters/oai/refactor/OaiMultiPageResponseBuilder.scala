@@ -5,14 +5,14 @@ import java.net.URL
 import dpla.ingestion3.utils.HttpUtils
 import org.apache.http.client.utils.URIBuilder
 
-import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
 class OaiMultiPageResponseBuilder(
     endpoint: String,
     verb: String,
     metadataPrefix: Option[String] = None,
-    set: Option[String] = None
+    set: Option[String] = None,
+    sleep: Int = 0
 ) extends Serializable {
 
   /** Main entry point. Get all pages of results from an OAI feed. OaiPages may
@@ -66,6 +66,9 @@ class OaiMultiPageResponseBuilder(
       // Error building URL
       case Failure(e) => Left(OaiError(e.toString))
       case Success(url) => {
+        if (sleep > 0) {
+          Thread.sleep(sleep)
+        }
         HttpUtils.makeGetRequest(url) match {
           // HTTP error
           case Failure(e) => Left(OaiError(e.toString, Some(url.toString)))
