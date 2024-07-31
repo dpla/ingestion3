@@ -176,7 +176,8 @@ case class Harvest(
     // Process NARA ingest using a incremental update of records
     update: Option[String] = None, // Path to delta update records
     previous: Option[String] = None, // Path to previously harvested records
-    deletes: Option[String] = None // Path to deletes
+    deletes: Option[String] = None, // Path to deletes
+    sleep: Option[String] = None
 )
 
 case class i3Conf(
