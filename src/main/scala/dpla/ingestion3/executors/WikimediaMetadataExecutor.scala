@@ -57,7 +57,7 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
 
     val aSeq = allowedIds.toSeq
     val enrichedRows =
-      spark.read.format("avro").load(dataIn).filter($"dplaUri".isin(aSeq: _*))
+      spark.read.format("avro").load(dataIn) //.filter($"dplaUri".isin(aSeq: _*))
 
     val enrichResults = enrichedRows.rdd.map(row => {
       Try { ModelConverter.toModel(row) } match {
