@@ -512,7 +512,7 @@ class HathiThumbnailFetcher(
     val headers: Option[Map[String, String]] = Some(
       Map("User-agent" -> userAgent)
     )
-    HttpUtils.makeGetRequest(new URL(requestUrl), headers)
+    Try { HttpUtils.makeGetRequest(new URL(requestUrl), headers) }
   }
 
   // Parse JSON response from Google Books

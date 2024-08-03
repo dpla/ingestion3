@@ -6,13 +6,12 @@ import dpla.ingestion3.model.AVRO_MIME_JSON
 import dpla.ingestion3.utils.HttpUtils
 import org.apache.avro.generic.GenericData
 import org.apache.http.client.utils.URIBuilder
-import org.apache.log4j.Logger
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 /** Class for harvesting records from the California Digital Library's Solr API
   *
@@ -109,18 +108,17 @@ class CdlHarvester(
 
     LogManager.getLogger(this.getClass).info(s"Requesting ${url.toString}")
 
-    HttpUtils.makeGetRequest(url, headers) match {
+    Try { HttpUtils.makeGetRequest(url, headers) } match {
       case Failure(e) =>
         ApiError(e.toString, ApiSource(queryParams, Some(url.toString)))
       case Success(response) =>
-        response.isEmpty match {
-          case true =>
-            ApiError(
-              "Response body is empty",
-              ApiSource(queryParams, Some(url.toString))
-            )
-          case false =>
-            ApiSource(queryParams, Some(url.toString), Some(response))
+        if (response.isEmpty) {
+          ApiError(
+            "Response body is empty",
+            ApiSource(queryParams, Some(url.toString))
+          )
+        } else {
+          ApiSource(queryParams, Some(url.toString), Some(response))
         }
     }
   }

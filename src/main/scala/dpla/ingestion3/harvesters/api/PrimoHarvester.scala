@@ -5,12 +5,11 @@ import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.{HttpUtils, Utils}
 import org.apache.avro.generic.GenericData
-import org.apache.log4j.Logger
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 import scala.xml.XML
 
 /** Class for harvesting records from Primo Classic Web Services endpoints
@@ -122,7 +121,7 @@ abstract class PrimoHarvester(
   private def getSinglePage(indx: String): ApiResponse = {
     val url = buildUrl(queryParams.updated("indx", indx))
 
-    HttpUtils.makeGetRequest(url) match {
+    Try { HttpUtils.makeGetRequest(url) } match {
       case Failure(e) =>
         ApiError(e.toString, ApiSource(queryParams, Some(url.toString)))
       case Success(response) =>

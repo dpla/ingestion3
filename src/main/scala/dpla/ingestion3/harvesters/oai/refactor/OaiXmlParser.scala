@@ -1,83 +1,31 @@
 package dpla.ingestion3.harvesters.oai.refactor
 
-import scala.util.{Failure, Success, Try}
-import scala.xml.{Node, NodeSeq, XML}
+import scala.xml.{Node, XML}
 
-/** OAI-PMH harvester for DPLA's Ingestion3 system
-  */
-
-// TODO: Refactor to be a class instead of an object
 object OaiXmlParser {
 
-  /** Parse an OaiPage into an XML Node. Return an OaiError if the XML is
-    * invalid or if it contains an error message.
-    *
-    * @param pageEither
-    * @return
-    */
   def parsePageIntoXml(
-      pageEither: Either[OaiError, OaiPage]
-  ): Either[OaiError, Node] = {
+      page: OaiPage
+  ): Node = XML.loadString(page.page)
 
-    pageEither match {
-      case Left(error) => Left(error)
-      case Right(oaiPage) =>
-        val xmlTry: Try[Node] = Try { XML.loadString(oaiPage.page) }
-
-        xmlTry match {
-          case Failure(e)   => Left(OaiError(e.toString))
-          case Success(xml) => Right(xml)
-        }
-    }
-  }
-
-  /** Parse XML into OaiRecord, or OaiError if the XML contains an OAI error.
-    *
-    * @param xmlEither:
-    *   Either[OaiError, Node] Node - an XML node containing 0-n records
-    *   OaiError = a previously incurred error.
-    *
-    * @return
-    *   Seq[Either[OaiError, OaiRecord]] OaiRecord - a record appearing in the
-    *   XML node. OaiError - an error appearing in the XML node, or a previously
-    *   incurred error.
-    */
   def parseXmlIntoRecords(
-      xmlEither: Either[OaiError, Node],
+      xml: Node,
       removeDeleted: Boolean
-  ): Seq[Either[OaiError, OaiRecord]] = xmlEither match {
-    case Left(e) => Seq(Left(e))
-    case Right(xml) =>
-      getError(xml) match {
-        // If the XML contains an error, return an OaiError
-        case Some(e) => Seq(Left(e))
-        // Otherwise, parse records from the XML
-        case None => getRecords(xml, removeDeleted).map(Right(_))
-      }
+  ): Seq[OaiRecord] = {
+    containsError(xml)
+    getRecords(xml, removeDeleted)
   }
 
-  /** Parse XML into OaiSet, or OaiError if the XML contains an OAI error.
-    *
-    * @param xmlEither:
-    *   Either[OaiError, Node] Node - an XML node containing 0-n sets. OaiError
-    *   \= a previously incurred error.
-    *
-    * @return
-    *   Seq[Either[OaiError, OaiSet]] OaiSet - a set appearing in the XML node.
-    *   OaiError - an error appearing in the XML node, or a previously incurred
-    *   error.
-    */
   def parseXmlIntoSets(
-      xmlEither: Either[OaiError, Node]
-  ): Seq[Either[OaiError, OaiSet]] = xmlEither match {
-    case Left(e) => Seq(Left(e))
-    case Right(xml) =>
-      getError(xml) match {
-        // If the XML contains an error, return an OaiError
-        case Some(e) => Seq(Left(e))
-        // Otherwise, parse records from the XML
-        case None => getSets(xml).map(Right(_))
-      }
+      xml: Node
+  ): Seq[OaiSet] = {
+    containsError(xml)
+    getSets(xml)
+  }
+
+  def getResumptionToken(xml: Node): Option[String] = {
+    val resumptionToken = (xml \\ "resumptionToken").text
+    if (resumptionToken.nonEmpty) Some(resumptionToken) else None
   }
 
   def getRecords(xml: Node, removeDeleted: Boolean): Seq[OaiRecord] =
@@ -98,8 +46,9 @@ object OaiXmlParser {
         OaiSet(id, set.toString)
       }
 
-  def getError(xml: Node): Option[OaiError] = {
+  private def containsError(xml: Node): Unit = {
     val error = (xml \ "error")
-    if (error.nonEmpty) Some(OaiError(error.text.trim)) else None
+    if (error.nonEmpty)
+      throw new RuntimeException("Error in OAI response: " + error.text)
   }
 }

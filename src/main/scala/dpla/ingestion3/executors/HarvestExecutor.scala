@@ -5,10 +5,9 @@ import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.file.NaraDeltaHarvester
-import dpla.ingestion3.harvesters.oai.OaiHarvester
+import dpla.ingestion3.harvesters.oai.{LocalOaiHarvester, OaiHarvester}
 import dpla.ingestion3.model.harvestAvroSchema
 import dpla.ingestion3.utils.{CHProviderRegistry, Utils}
-import org.apache.log4j.Logger
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -144,6 +143,8 @@ trait HarvestExecutor {
     harvestType match {
       case "oai" =>
         new OaiHarvester(spark, shortName, conf)
+      case "localoai" =>
+        new LocalOaiHarvester(spark, shortName, conf)
       case "nara.file.delta" =>
         new NaraDeltaHarvester(spark, shortName, conf)
       case "api" | "file" =>

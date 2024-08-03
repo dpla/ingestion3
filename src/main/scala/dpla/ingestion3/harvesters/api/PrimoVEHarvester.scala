@@ -6,13 +6,12 @@ import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.{AVRO_MIME_JSON, avroSchema}
 import dpla.ingestion3.utils.{HttpUtils, Utils}
 import org.apache.avro.generic.GenericData
-import org.apache.log4j.Logger
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.{compact, parse, render}
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 /** Class for harvesting records from Primo VE endpoints
   *
@@ -122,7 +121,7 @@ abstract class PrimoVEHarvester(
   private def getSinglePage(indx: String): ApiResponse = {
     val url = buildUrl(queryParams.updated("offset", indx))
 
-    HttpUtils.makeGetRequest(url) match {
+    Try { HttpUtils.makeGetRequest(url) } match {
       case Failure(e) =>
         ApiError(e.toString, ApiSource(queryParams, Some(url.toString)))
       case Success(response) =>

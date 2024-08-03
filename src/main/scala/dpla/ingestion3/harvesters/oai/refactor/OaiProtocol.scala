@@ -1,13 +1,17 @@
 package dpla.ingestion3.harvesters.oai.refactor
 
+import org.apache.logging.log4j.LogManager
+
 class OaiProtocol(oaiConfiguration: OaiConfiguration)
     extends OaiMethods
     with Serializable {
 
+  private val logger = LogManager.getLogger(this.getClass)
+
   lazy val endpoint: String = oaiConfiguration.endpoint
   lazy val metadataPrefix: Option[String] = oaiConfiguration.metadataPrefix
 
-  override def listAllRecordPages(): IterableOnce[Either[OaiError, OaiPage]] =
+  override def listAllRecordPages(): IterableOnce[OaiPage] =
     new OaiMultiPageResponseBuilder(
       endpoint,
       "ListRecords",
@@ -17,46 +21,37 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration)
     ).getResponse.iterator
 
   override def listAllRecordPagesForSet(
-      setEither: Either[OaiError, OaiSet]
-  ): IterableOnce[Either[OaiError, OaiPage]] = {
+      set: OaiSet
+  ): IterableOnce[OaiPage] = {
 
-    val listResponse = setEither match {
-      case Left(error) => List(Left(error))
-      case Right(set) =>
-        val responseBuilder = new OaiMultiPageResponseBuilder(
-          endpoint,
-          "ListRecords",
-          metadataPrefix,
-          Some(set.id)
-        )
-
-        responseBuilder.getResponse
-    }
-    listResponse.iterator
+    logger.info("IN: listAllRecordPagesForSet {}", set)
+    new OaiMultiPageResponseBuilder(
+      endpoint,
+      "ListRecords",
+      metadataPrefix,
+      Some(set.id)
+    ).getResponse.iterator
   }
 
-  override def listAllSetPages(): IterableOnce[Either[OaiError, OaiPage]] = {
-    val responseBuilder = new OaiMultiPageResponseBuilder(endpoint, "ListSets")
-    val multiPageResponse = responseBuilder.getResponse
-    multiPageResponse.iterator
+  override def listAllSetPages(): IterableOnce[OaiPage] = {
+    logger.info("IN: listAllSetPages")
+    new OaiMultiPageResponseBuilder(endpoint, "ListSets").getResponse.iterator
   }
 
   override def parsePageIntoRecords(
-      pageEither: Either[OaiError, OaiPage],
+      page: OaiPage,
       removeDeleted: Boolean
-  ): IterableOnce[Either[OaiError, OaiRecord]] = {
-
-    val xmlEither = OaiXmlParser.parsePageIntoXml(pageEither)
-    val records = OaiXmlParser.parseXmlIntoRecords(xmlEither, removeDeleted)
-    records.iterator
+  ): IterableOnce[OaiRecord] = {
+    logger.info("IN: parsePageIntoRecords")
+    OaiXmlParser
+      .parseXmlIntoRecords(OaiXmlParser.parsePageIntoXml(page), removeDeleted)
+      .iterator
   }
 
   override def parsePageIntoSets(
-      pageEither: Either[OaiError, OaiPage]
-  ): IterableOnce[Either[OaiError, OaiSet]] = {
-
-    val xmlEither = OaiXmlParser.parsePageIntoXml(pageEither)
-    val sets = OaiXmlParser.parseXmlIntoSets(xmlEither)
-    sets.iterator
+      page: OaiPage
+  ): IterableOnce[OaiSet] = {
+    logger.info("IN: parsePageIntoSets")
+    OaiXmlParser.parseXmlIntoSets(OaiXmlParser.parsePageIntoXml(page)).iterator
   }
 }

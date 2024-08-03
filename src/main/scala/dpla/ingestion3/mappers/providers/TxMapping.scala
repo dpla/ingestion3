@@ -15,7 +15,6 @@ import org.json4s.JsonAST
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
-import scala.collection.mutable.ArrayBuffer
 import scala.xml.{NodeSeq, Text}
 
 class TxMapping
@@ -280,8 +279,7 @@ object TxMapping {
 
   val endpoint =
     "https://digital2.library.unt.edu/vocabularies/institutions/json/"
-  val jsonString =
-    HttpUtils.makeGetRequest(new URL(endpoint), None).getOrElse("")
+  val jsonString = HttpUtils.makeGetRequest(new URL(endpoint), None)
   val json = parse(jsonString)
 
   val dataproviderTermLabel: Map[String, String] = (for {

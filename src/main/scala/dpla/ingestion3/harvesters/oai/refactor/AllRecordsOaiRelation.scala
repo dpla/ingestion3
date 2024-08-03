@@ -41,18 +41,13 @@ class AllRecordsOaiRelation(
     pagesEitherRdd.map(OaiRelation.convertToOutputRow)
   }
 
-  private[refactor] def handleCsvRow(row: Row): Either[OaiError, OaiPage] =
+  private[refactor] def handleCsvRow(row: Row): OaiPage =
     row.toSeq match {
-      case Seq("page", page: String, _) =>
-        Right(OaiPage(page))
-      // Changed from null to "" b/c empty strings are are written out
-      // to the csv in lieu of null. See padTo() in cacheTempFile().
-      case Seq("error", message: String, "") =>
-        Left(OaiError(message, None))
-      case Seq("error", message: String, "") =>
-        Left(OaiError(message, None))
-      case Seq("error", message: String, url: String) =>
-        Left(OaiError(message, Some(url)))
+      case Seq("page", page: String, _) => OaiPage(page)
+      case _ =>
+        throw new RuntimeException(
+          "Don't know how to handle row " + row.mkString(",")
+        )
     }
 
   private[refactor] def cacheTempFile(tempFile: File): Unit = {
@@ -68,7 +63,7 @@ class AllRecordsOaiRelation(
 
     try {
       for (page <- oaiMethods.listAllRecordPages()) {
-        val line = t(eitherToArray(page): _*)
+        val line = t(pageToArray(page): _*)
           .filter(o => o.isInstanceOf[String])
           .map(l => l.toString)
           .toArray
@@ -80,16 +75,8 @@ class AllRecordsOaiRelation(
     }
   }
 
-  private[refactor] def eitherToArray(
-      either: Either[OaiError, OaiPage]
-  ): Seq[String] =
-    either match {
-      case Right(OaiPage(string)) =>
-        Seq("page", string.replaceAll("(\r\n)|\r|\n", " "), "")
-      case Left(OaiError(message, None)) =>
-        Seq("error", message, "")
-      case Left(OaiError(message, Some(url))) =>
-        Seq("error", message, url)
-    }
+  private[refactor] def pageToArray(
+      page: OaiPage
+  ): Seq[String] = Seq("page", page.page.replaceAll("(\r\n)|\r|\n", " "), "")
 
 }

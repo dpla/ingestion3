@@ -1,7 +1,5 @@
 package dpla.ingestion3.harvesters.oai.refactor
 
-import scala.collection.TraversableOnce
-
 /** Trait that specifies OAI calls for the common functionality the data source
   * needs.
   */
@@ -9,19 +7,19 @@ import scala.collection.TraversableOnce
 trait OaiMethods {
 
   def listAllRecordPagesForSet(
-      setEither: Either[OaiError, OaiSet]
-  ): IterableOnce[Either[OaiError, OaiPage]]
+      set: OaiSet
+  ): IterableOnce[OaiPage]
 
   def parsePageIntoRecords(
-      pageEither: Either[OaiError, OaiPage],
+      page: OaiPage,
       removeDeleted: Boolean
-  ): IterableOnce[Either[OaiError, OaiRecord]]
+  ): IterableOnce[OaiRecord]
 
-  def listAllSetPages(): IterableOnce[Either[OaiError, OaiPage]]
+  def listAllSetPages(): IterableOnce[OaiPage]
 
   def parsePageIntoSets(
-      pageEither: Either[OaiError, OaiPage]
-  ): IterableOnce[Either[OaiError, OaiSet]]
+      page: OaiPage
+  ): IterableOnce[OaiSet]
 
-  def listAllRecordPages(): IterableOnce[Either[OaiError, OaiPage]]
+  def listAllRecordPages(): IterableOnce[OaiPage]
 }

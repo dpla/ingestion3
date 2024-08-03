@@ -1,10 +1,11 @@
 package dpla.ingestion3.utils
 
 import java.net.URL
-import java.util.concurrent.TimeUnit
-
-import okhttp3.{OkHttpClient, Request}
-
+import org.apache.logging.log4j.LogManager
+import java.net.http.{HttpClient, HttpRequest}
+import java.net.http.HttpClient.Redirect
+import java.net.http.HttpResponse.BodyHandlers
+import java.time.Duration
 import scala.util.{Failure, Success, Try}
 
 /** Utility object for making and working with HTTP requests. Uses the OkHttp
@@ -12,16 +13,17 @@ import scala.util.{Failure, Success, Try}
   */
 object HttpUtils {
 
-  protected lazy val timeout = 120 // TODO load from config?
-  protected lazy val retryMax = 10
-  protected lazy val backoffMax = 1000
+  private val TIMEOUT = 20
+  private val RETRIES = 5
+  private val INITIAL_SLEEP = 1000
 
-  protected lazy val httpClient: OkHttpClient = new OkHttpClient.Builder()
-    .connectTimeout(timeout, TimeUnit.SECONDS)
-    .readTimeout(timeout, TimeUnit.SECONDS)
-    .retryOnConnectionFailure(true)
-    .followRedirects(true)
-    .build()
+  private val httpClient = HttpClient
+    .newBuilder()
+    .followRedirects(Redirect.NORMAL)
+    .connectTimeout(Duration.ofSeconds(TIMEOUT))
+    .build();
+
+  private val logger = LogManager.getLogger(getClass)
 
   /** Performs a Get request with retries and exponential backoff
     *
@@ -33,8 +35,15 @@ object HttpUtils {
   def makeGetRequest(
       url: URL,
       headers: Option[Map[String, String]] = None
-  ): Try[String] = {
-    retry(retryMax, backoffMax)(execute(constructRequest(url, headers)))
+  ): String = {
+    retry(RETRIES, INITIAL_SLEEP)(
+      execute(constructRequest(url, headers))
+    ) match {
+      case Success(response) => response
+      case Failure(e) =>
+        logger.error(s"Failed to get response from $url", e)
+        throw e
+    }
   }
 
   /** Give me a ping Vasili. One ping only.
@@ -57,24 +66,18 @@ object HttpUtils {
     * @return
     *   Body of the response or error message
     */
-  private def execute(request: Request): String = {
-    val response = httpClient
-      .newCall(request)
-      .execute
+  private def execute(request: HttpRequest): String = {
+    val response = httpClient.send(request, BodyHandlers.ofString())
 
-    // try is used here to ensure closure of response
-    try {
-      if (response.isSuccessful) {
-        response.body().string()
-      } else {
-        val msg = s"Unsuccessful request: ${request.url().toString}\n" +
-          s"Code: ${response.code()}\n" +
-          s"Message: ${response.message()}\n"
-        throw new RuntimeException(msg)
-      }
-    } finally {
-      response.close()
+    if (response.statusCode() == 200) {
+      response.body()
+    } else {
+      val msg = s"Unsuccessful request: ${request.uri().toString}\n" +
+        s"Code: ${response.statusCode()}\n" +
+        s"Message: ${response.body()}\n"
+      throw new RuntimeException(msg)
     }
+
   }
 
   /** Generic retry method. Taken from stackoverflow...
@@ -93,11 +96,12 @@ object HttpUtils {
     util.Try { fn } match {
       case x: Success[T] => x
       // If we haven't maxed out our retries
-      case _ if n > 1 => {
+      case _ if n > 1 =>
+        logger.warn("Retry " + n)
         Thread.sleep(wait)
         // TODO some better way of incrementing wait period
         retry(n - 1, wait * 2)(fn)
-      }
+
       // Retries exhausted, return whatever the last result was
       case fn => fn
     }
@@ -115,13 +119,14 @@ object HttpUtils {
   private def constructRequest(
       url: URL,
       headers: Option[Map[String, String]] = None
-  ): Request = {
-    val request = new Request.Builder()
-      .url(url)
+  ): HttpRequest = {
+    val request = HttpRequest
+      .newBuilder()
+      .uri(url.toURI)
 
     headers match {
       case Some(h) =>
-        h.foreach({ case (key, value) => request.addHeader(key, value) })
+        h.foreach({ case (key, value) => request.header(key, value) })
       case _ => // Do nothing, no headers
     }
 
