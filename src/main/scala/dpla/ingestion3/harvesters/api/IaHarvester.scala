@@ -59,7 +59,7 @@ class IaHarvester(
           src.text match {
             case Some(docs) =>
               Try { parse(docs) } match {
-                case Success(json: JValue) => {
+                case Success(json: JValue) =>
                   val iaRecords = (json \\ "items").children
                     .map(doc => {
                       val identifier = (doc \\ "identifier").toString

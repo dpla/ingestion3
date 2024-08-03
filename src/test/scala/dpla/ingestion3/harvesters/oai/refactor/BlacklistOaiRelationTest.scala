@@ -13,24 +13,28 @@ class BlacklistOaiRelationTest extends AnyFlatSpec with SharedSparkContext {
     )
   )
 
-  private val oaiMethods = new OaiMethods with Serializable {
+  private val oaiMethods: OaiMethods = new OaiMethods with Serializable {
 
-    override def parsePageIntoRecords(page: OaiPage, removeDeleted: Boolean) =
+    override def parsePageIntoRecords(
+        page: OaiPage,
+        removeDeleted: Boolean
+    ): Seq[OaiRecord] =
       Seq(
         OaiRecord("a", "document", Seq())
       )
 
-    override def listAllRecordPages() = ???
+    override def listAllRecordPages(): IterableOnce[OaiPage] =
+      Seq() // not implemented
 
-    override def listAllSetPages() = Seq(
+    override def listAllSetPages(): IterableOnce[OaiPage] = Seq(
       OaiPage("1"),
       OaiPage("2")
     )
 
-    override def listAllRecordPagesForSet(set: OaiSet) =
+    override def listAllRecordPagesForSet(set: OaiSet): Seq[OaiPage] =
       listAllSetPages()
 
-    override def parsePageIntoSets(page: OaiPage) = Seq(
+    override def parsePageIntoSets(page: OaiPage): Seq[OaiSet] = Seq(
       OaiSet("1", ""),
       OaiSet("moe", "")
     )

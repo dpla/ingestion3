@@ -54,6 +54,8 @@ class OaiMultiPageResponseBuilder(
       }
     }
 
+  private val OAI_ERROR_PATTERN = """<error.*>(.*)</error>""".r
+
   /** Get a single-page, un-parsed String response from the OAI feed, or an
     * error if one occurs.
     *
@@ -64,7 +66,7 @@ class OaiMultiPageResponseBuilder(
     * @return
     *   Either[OaiError, Page]
     */
-  private val OAI_ERROR_PATTERN = """<error.*>(.*)</error>""".r
+
   def getSinglePage(url: URL): OaiPage = {
     if (sleep > 0)
       Thread.sleep(sleep)

@@ -21,7 +21,7 @@ object HttpUtils {
     .newBuilder()
     .followRedirects(Redirect.NORMAL)
     .connectTimeout(Duration.ofSeconds(TIMEOUT))
-    .build();
+    .build()
 
   private val logger = LogManager.getLogger(getClass)
 
@@ -89,6 +89,7 @@ object HttpUtils {
     * @param fn
     *   The method to retry
     * @tparam T
+    *  Return type of the method
     * @return
     */
   @annotation.tailrec

@@ -20,7 +20,7 @@ class BlacklistOaiRelation(
     val sparkContext = sqlContext.sparkContext
     val blacklist = oaiConfiguration.blacklist.getOrElse(Array()).toSet
     val originalSets =
-      oaiMethods.listAllSetPages().flatMap(oaiMethods.parsePageIntoSets)
+      oaiMethods.listAllSetPages().iterator.flatMap(oaiMethods.parsePageIntoSets)
     val nonBlacklistedSets = originalSets.iterator.filter(set => !blacklist.contains(set.id))
     val sets = sparkContext.parallelize(nonBlacklistedSets.toSeq)
     val pages = sets.flatMap(oaiMethods.listAllRecordPagesForSet)

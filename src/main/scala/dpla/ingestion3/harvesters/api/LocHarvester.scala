@@ -38,7 +38,7 @@ class LocHarvester(
 
     val logger = LogManager.getLogger(this.getClass)
 
-    implicit val formats = DefaultFormats
+    implicit val formats: DefaultFormats.type = DefaultFormats
     // Get sets from conf
     val collections = conf.harvest.setlist
       .getOrElse(throw new RuntimeException("No sets"))

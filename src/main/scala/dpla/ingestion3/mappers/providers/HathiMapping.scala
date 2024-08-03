@@ -16,9 +16,9 @@ import scala.xml._
 
 class HathiMapping extends MarcXmlMapping {
 
-  val isShownAtPrefix: String = "http://catalog.hathitrust.org/Record/"
+  private val IS_SHOWN_AT_PREFIX: String = "http://catalog.hathitrust.org/Record/"
 
-  override val enforceDataProvider = false;
+  override val enforceDataProvider = false
 
   // ID minting functions
   override def useProviderName: Boolean = true
@@ -268,7 +268,7 @@ class HathiMapping extends MarcXmlMapping {
     // <controlfield> tag = 001
     controlfield(data, Seq("001"))
       .flatMap(extractStrings)
-      .map(isShownAtPrefix + _)
+      .map(IS_SHOWN_AT_PREFIX + _)
       .map(stringOnlyWebResource)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
@@ -503,7 +503,7 @@ class HathiThumbnailFetcher(
   val thumbnailUrl: Option[String] = requestUrl
     .flatMap(googleResponse(_).toOption)
     .flatMap(parseResponse(_).toOption)
-    .flatMap(extractUrl(_))
+    .flatMap(extractUrl)
 
   // Make GET request to Google Books
   def googleResponse(requestUrl: String): Try[String] = {

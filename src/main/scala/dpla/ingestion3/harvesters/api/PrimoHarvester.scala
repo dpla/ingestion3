@@ -125,14 +125,13 @@ abstract class PrimoHarvester(
       case Failure(e) =>
         ApiError(e.toString, ApiSource(queryParams, Some(url.toString)))
       case Success(response) =>
-        response.isEmpty match {
-          case true =>
-            ApiError(
-              "Response body is empty",
-              ApiSource(queryParams, Some(url.toString))
-            )
-          case false =>
-            ApiSource(queryParams, Some(url.toString), Some(response))
+        if (response.isEmpty) {
+          ApiError(
+            "Response body is empty",
+            ApiSource(queryParams, Some(url.toString))
+          )
+        } else {
+          ApiSource(queryParams, Some(url.toString), Some(response))
         }
     }
   }
