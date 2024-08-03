@@ -61,10 +61,10 @@ class OaiMultiPageResponseBuilder(
     *
     * The page may contain an OAI error (HTTP code 200) or invalid XML.
     *
-    * @param urlTry
-    *   Try[URL] URL for a single OAI request
+    * @param url
+    *   URL for a single OAI request
     * @return
-    *   Either[OaiError, Page]
+    *   OaiPage
     */
 
   def getSinglePage(url: URL): OaiPage = {

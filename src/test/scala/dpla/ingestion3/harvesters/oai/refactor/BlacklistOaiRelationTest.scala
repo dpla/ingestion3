@@ -31,7 +31,7 @@ class BlacklistOaiRelationTest extends AnyFlatSpec with SharedSparkContext {
       OaiPage("2")
     )
 
-    override def listAllRecordPagesForSet(set: OaiSet): Seq[OaiPage] =
+    override def listAllRecordPagesForSet(set: OaiSet): IterableOnce[OaiPage] =
       listAllSetPages()
 
     override def parsePageIntoSets(page: OaiPage): Seq[OaiSet] = Seq(

@@ -16,7 +16,8 @@ import scala.xml._
 
 class HathiMapping extends MarcXmlMapping {
 
-  private val IS_SHOWN_AT_PREFIX: String = "http://catalog.hathitrust.org/Record/"
+  private val IS_SHOWN_AT_PREFIX: String =
+    "http://catalog.hathitrust.org/Record/"
 
   override val enforceDataProvider = false
 
@@ -330,7 +331,7 @@ class HathiMapping extends MarcXmlMapping {
     ))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("HathiTrust"),
     uri = Some(URI("http://dp.la/api/contributor/hathi"))
   )

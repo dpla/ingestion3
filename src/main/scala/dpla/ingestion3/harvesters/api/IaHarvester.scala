@@ -82,7 +82,7 @@ class IaHarvester(
 
                   if (cursor.isEmpty)
                     continueHarvest = false
-                }
+
                 case Failure(f) =>
                   logger.error(
                     s"Unable to parse response\n" +
