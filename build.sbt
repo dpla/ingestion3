@@ -25,7 +25,6 @@ libraryDependencies ++= Seq(
   "org.scalamock" %% "scalamock" % "5.1.0" % "test",
   "com.holdenkarau" %% "spark-testing-base" % "3.5.0_1.4.7" % "test",
   "com.typesafe" % "config" % "1.3.1",
-  "com.squareup.okhttp3" % "okhttp" % "3.8.0",
   "com.opencsv" % "opencsv" % "3.7",
   "net.lingala.zip4j" % "zip4j" % "2.11.5",
   "javax.mail" % "mail" % "1.4.7",
