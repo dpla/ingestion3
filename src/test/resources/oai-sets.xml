@@ -1,0 +1,649 @@
+<?xml version='1.0'?>
+<OAI-PMH xsi:schemaLocation='http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd' xmlns='http://www.openarchives.org/OAI/2.0/' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'><responseDate>2024-08-04T16:02:28Z</responseDate><request verb='ListSets'>https://api.lib.harvard.edu/oai/</request><ListSets xmlns="http://www.openarchives.org/OAI/2.0/">
+    <set>
+        <setSpec>crimes</setSpec>
+        <setName>English Crime and Execution Broadsides</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>This collection of nearly 600 broadsides highlights crime and capital punishment, primarily in England, as seen through the popular press in the 18th and 19th century.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>scarlet</setSpec>
+        <setName>Studies in Scarlet: Marriage and Sexuality in the U.S. &amp; U.K., 1815-1914</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Drawn from the Harvard Law School Library&#x2019;s extensive trial collections, Studies in Scarlet features over 420 trial narratives involving the crimes and passions of both renowned and ordinary people.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>ward</setSpec>
+        <setName>Artemas Ward House and Its Collections</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>The first commander-in-chief of the Patriot forces.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>scores</setSpec>
+        <setName>Digital Scores and Libretti</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Loeb Music Library's digital collection of scores and libretti, selected for their rare or unique natures and their popularity as objects of research and teaching.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>rubbings</setSpec>
+        <setName>Chinese Rubbings Collection</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>The Fine Arts Library and Harvard-Yenching Library holds rubbings of objects that date from the Qin Dynasty to the Ming Dynasty.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>medmss</setSpec>
+        <setName>Medieval &amp; Renaissance Manuscripts</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Delve into the literature, art, history, music, philosophy, and theology of the Middle Ages and the Renaissance in Western Europe found Houghton Library's collection.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>ihp</setSpec>
+        <setName>Islamic Heritage Project</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>A digital collection of Islamic manuscripts, published texts, and maps from across Harvard's libraries and museums.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>reading</setSpec>
+        <setName>Reading: Harvard Views of Readers, Readership, and Reading History</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Exploring the intellectual, cultural, and political history of reading as reflected in the historical holdings of the Harvard's libraries.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>lap</setSpec>
+        <setName>Latin American Pamphlet Digital Collection</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Scarce and unique pamphlets, primarily from Chile, Cuba, Bolivia and Mexico, published during the 19th and early 20th centuries.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>maps</setSpec>
+        <setName>Scanned Maps</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Thousands of the Harvard Map Collection's maps and atlases from around the world are available online in hi-res.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>ww</setSpec>
+        <setName>Women Working, 1800-1930</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>An exploration of women's impact on the economic life of the United States between 1800 and the Great Depression.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>contagion</setSpec>
+        <setName>Contagion: Historical Views of Diseases and Epidemics</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>This online collection offers important historical perspectives on the science and public policy of epidemiology today and contributes to the understanding of the global, social&#x2013;history, and public&#x2013;policy implications of diseases.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>exp</setSpec>
+        <setName>Expeditions and Discoveries: Sponsored Exploration and Scientific Discovery in the Modern Age</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>This collection includes a variety of materials from selected expeditions between 1626 and 1953.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>immigration</setSpec>
+        <setName>Immigration to the United States, 1789-1930</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Documenting voluntary immigration to the United States from the signing of the Constitution to the start of the Great Depression.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>iohp</setSpec>
+        <setName>Iranian Oral History Project</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>The Iranian Oral History Project (IOHP) is a unique resource for the study of modern Iranian history. The collection consists of the personal accounts of 134 individuals who played major roles in or were eyewitnesses to important political events in Iran from the 1920s to the 1980s.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>jbsd</setSpec>
+        <setName>Jacques Burkhardt Scientific Drawings</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Illustrations of fishes and miscellaneous vertebrates and invertebrates drawn by Louis Agassiz&#x2019;s personal artist, Jacques Burkhardt, mostly produced during the Thayer Expedition to Brazil (1865-1866).</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>mpcol</setSpec>
+        <setName>Milman Parry Collection of Oral Literature</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>The Milman Parry Collection of Oral Literature (MPCOL) provides a guide the heroic songs, conversations, and stories in the Parry Collection (1933-35), and the entire contents of the Lord Collection (1950-51). These collections form part of MPCOL, a unique archive of materials relating to South Slavic and other Balkan oral traditions. </dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>demo</setSpec>
+        <setName>Demo Collection</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>This set is used for the demo collection website.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>crb</setSpec>
+        <setName>Chinese Rare Books</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>With over 9,600 items, Harvard-Yenching's rare book collection is one of the largest of its kind in the Western world.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>buttons</setSpec>
+        <setName>Political Buttons</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Glimpse U.S. history through Harvard's collection of political buttons featuring candidate campaigns, political demonstrations, and social movements.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>channing</setSpec>
+        <setName>The William Ellery Channing Collection</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Discover the work of the American theologian, author, Unitarian minister, and Harvard graduate.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>botanicals</setSpec>
+        <setName>Botanical Illustrations</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>The beauty of botany and the importance of scientific accuracy come together at the Harvard University Herbaria.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>morganVhennigan</setSpec>
+        <setName>Tallulah Morgan v. James W. Hennigan Case File</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Online facsimile of the civil action case file for Tallulah Morgan et al. v. James W. Hennigan et al., held by the National Archives at Boston and digitized in partnership with Harvard Library. This is an OAI-PMH dataset to send to Digital Commonwealth, there is no collection website for this set.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>fia</setSpec>
+        <setName>France in the Americas</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>A collection documenting the French presence in the Americas from the early 16th century through the 19th century.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>citymaps</setSpec>
+        <setName>City Maps and Urban Environments</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Cities and city maps have changed dramatically over the last 500 years. Explore maps of urban design and urban planning for cities around the world from the 16th century to the present.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>currency</setSpec>
+        <setName>American Currency</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Baker Library&#x2019;s collection of over 700 pieces of paper money ranging in date from 1709 to 1878.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>dag</setSpec>
+        <setName>Daguerreotypes at Harvard</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Access more than 3,500 daguerreotypes from libraries, museums, and archives across Harvard.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>epj</setSpec>
+        <setName>Early Photography of Japan</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>An online collection of more than 40 souvenir photograph albums and illustrated publications from across three Harvard libraries.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>horblit</setSpec>
+        <setName>Harrison D. Horblit Collection of Early Photography</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Discover the history and science of early photography through a collection of photographs and other materials.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>ssb</setSpec>
+        <setName>The South Sea Bubble, 1720</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Explore the rich resources of Baker Library, which holds one of the most extensive collections in the world relating to the first international stock market crash.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>bac</setSpec>
+        <setName>Berenson Art Collection</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Discover the masterpieces collected by Bernard Berenson to decorate his villa in the suburbs of Florence, Italy, now owned by I Tatti, the Harvard Center for Renaissance Studies.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>story</setSpec>
+        <setName>Joseph Story: Manuscripts, Correspondence, and Visual Materials</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Explore items related to the life and work of Supreme Court Justice and Harvard Professor Joseph Story (1779-1845). </dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>saef</setSpec>
+        <setName>Slavery, Abolition, Emancipation and Freedom: Primary Sources from Houghton Library</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Rare and unique materials from Houghton library by and about Black people in the Americas, from the 18th through the beginning of the 20th century.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>sba</setSpec>
+        <setName>Susan B. Anthony: Papers at Schlesinger Library</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Explore the diaries, correspondence, and memorabilia of suffragist Susan B. Anthony.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>woc</setSpec>
+        <setName>Worlds of Change: Materials from 17th and 18th century North America</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Explore manuscript materials in the Harvard Library that relate to 17th- and 18th-century North America.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>brewster</setSpec>
+        <setName>William Brewster</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Diaries, journals, correspondence, and photographs documenting ornithologist William Brewster's years exploring the woods, fields, rivers, and lakes of New England.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>amw</setSpec>
+        <setName> Anna May Wong Abroad, 1928-1936</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>This digital collection includes scripts, musical scores, photographs, and other materials documenting Anna May Wong's years abroad and her emergence in 1930s theater and cinema as a global icon.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>bta</setSpec>
+        <setName>The Black Teacher Archive</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>An archival initiative to centralize serial publications of Black educator organizations during Jim Crow.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>coptica</setSpec>
+        <setName>Coptica at Harvard</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Materials related to Coptic language, culture, history, and the Coptic Orthodox Church in Egypt, ranging from 4th-century papyri and medieval chronicles to early-printed psalmodies and modern magazines.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>kurdish</setSpec>
+        <setName>Kurdish People of the Near East</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Recordings of Kurdish people from the Near East region from within Harvard Library&#xe2;&#x20ac;&#x2122;s collections.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>ctw</setSpec>
+        <setName>Catching the Wave</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Photographs of the Women's Movement by Bettye Lane and Freda Leinwand.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>jeffry</setSpec>
+        <setName>In Black and White: Photographs of Black Theater by Alix Jeffry</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Explore a pivotal moment in Black theater history through production photographs and portraits by New York Times photographer Alix Jeffry.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>horblit-review</setSpec>
+        <setName>Review-horblit-2024-02-20</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>pins-review</setSpec>
+        <setName>Review-pins-2024-02-23</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>wwwk</setSpec>
+        <setName>What Women Want To Know</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>A selection from Schlesinger Library&#xe2;&#x20ac;&#x2122;s advertising pamphlets selling good health, clean homes, cooking expertise, leisure, beauty, and happiness.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>pins</setSpec>
+        <setName>Soviet Pins</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>bls</setSpec>
+        <setName>Boston Latin School</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Publications by and about Boston Latin School, founded in 1635, covering curriculum, school history, student body, and anniversary celebrations.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>hedda-review</setSpec>
+        <setName>Review-hedda-2024-06-07</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>salt</setSpec>
+        <setName>Salt Prints</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+                <dc:description>Salt prints represent the first negative-to-positive photographic technique, include some of the earliest photographic images created, and represent a seminal chapter in the history of photography.</dc:description>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+    <set>
+        <setSpec>salt-review</setSpec>
+        <setName>Review-salt-2024-07-22</setName>
+        <setDescription>
+            <oai_dc:dc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:dc="http://purl.org/dc/elements/1.1/"
+                       xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                       xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                <dc:creator>Harvard University Library</dc:creator>
+            </oai_dc:dc>
+        </setDescription>
+    </set>
+</ListSets>
+</OAI-PMH>

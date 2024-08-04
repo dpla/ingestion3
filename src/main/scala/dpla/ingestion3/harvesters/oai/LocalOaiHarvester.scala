@@ -68,7 +68,7 @@ class LocalOaiHarvester(
       page <- oaiMethods.listAllRecordPagesForSet(OaiSet(set, ""))
       record <- oaiMethods.parsePageIntoRecords(
         page,
-        removeDeleted = oaiConfig.removeDeleted
+        removeDeleted = oaiConfig.removeDeleted()
       )
     } writeRecord(unixEpoch, record)
   }
@@ -81,7 +81,7 @@ class LocalOaiHarvester(
       pageEither <- oaiMethods.listAllRecordPagesForSet(set)
       record <- oaiMethods.parsePageIntoRecords(
         pageEither,
-        removeDeleted = oaiConfig.removeDeleted
+        removeDeleted = oaiConfig.removeDeleted()
       )
     } writeRecord(unixEpoch, record)
   }
@@ -92,7 +92,7 @@ class LocalOaiHarvester(
       pageEither <- oaiMethods.listAllRecordPages()
       record <- oaiMethods.parsePageIntoRecords(
         pageEither,
-        removeDeleted = oaiConfig.removeDeleted
+        removeDeleted = oaiConfig.removeDeleted()
       )
     } writeRecord(unixEpoch, record)
   }
@@ -111,7 +111,7 @@ class LocalOaiHarvester(
       pageEither <- oaiMethods.listAllRecordPagesForSet(set)
       record <- oaiMethods.parsePageIntoRecords(
         pageEither,
-        removeDeleted = oaiConfig.removeDeleted
+        removeDeleted = oaiConfig.removeDeleted()
       )
     } writeRecord(unixEpoch, record)
   }

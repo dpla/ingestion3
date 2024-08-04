@@ -63,7 +63,7 @@ case class OaiConfiguration(parameters: Map[String, String]) {
   def blacklist: Option[Array[String]] =
     parameters.get("blacklist").map(parseSets)
 
-  def removeDeleted: Boolean = parameters.get("removeDeleted") match {
+  def removeDeleted(): Boolean = parameters.get("removeDeleted") match {
     case Some("true") => true
     case _            => false
   }

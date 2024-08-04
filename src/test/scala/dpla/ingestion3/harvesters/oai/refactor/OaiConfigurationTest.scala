@@ -2,10 +2,9 @@ package dpla.ingestion3.harvesters.oai.refactor
 
 import org.scalatest.flatspec.AnyFlatSpec
 
-
 class OaiConfigurationTest extends AnyFlatSpec {
 
-  val defaults = Map("verb" -> "ListRecords")
+  private val defaults = Map("verb" -> "ListRecords")
 
   "An OaiConfiguration" should "parse out the endpoint from parameters" in {
     val endpoint = "http://www.google.com"
@@ -35,26 +34,41 @@ class OaiConfigurationTest extends AnyFlatSpec {
 
   it should "parse out the metadataPrefix" in {
     val metadataPrefix = "CLODS"
-    val config = OaiConfiguration(defaults.updated("metadataPrefix", metadataPrefix))
+    val config =
+      OaiConfiguration(defaults.updated("metadataPrefix", metadataPrefix))
     assert(config.metadataPrefix === Some(metadataPrefix))
   }
 
   it should "determine whether to harvest all sets" in {
-    assert(OaiConfiguration(defaults.updated("harvestAllSets", "true")).harvestAllSets === true)
-    assert(OaiConfiguration(defaults.updated("harvestAllSets", "false")).harvestAllSets === false)
+    assert(
+      OaiConfiguration(
+        defaults.updated("harvestAllSets", "true")
+      ).harvestAllSets === true
+    )
+    assert(
+      OaiConfiguration(
+        defaults.updated("harvestAllSets", "false")
+      ).harvestAllSets === false
+    )
     assert(OaiConfiguration(defaults).harvestAllSets === false)
-    assertThrows[Exception](OaiConfiguration(defaults.updated("harvestAllSets", "boing")).harvestAllSets)
+    assertThrows[Exception](
+      OaiConfiguration(
+        defaults.updated("harvestAllSets", "boing")
+      ).harvestAllSets
+    )
   }
 
   it should "parse a set list" in {
-    val sets = Seq("a","b","c","d")
-    val config = OaiConfiguration(defaults.updated("setlist", sets.mkString(",")))
+    val sets = Seq("a", "b", "c", "d")
+    val config =
+      OaiConfiguration(defaults.updated("setlist", sets.mkString(",")))
     assert(config.setlist.getOrElse(Array()) === sets)
   }
 
   it should "parse a blacklist" in {
-    val sets = Seq("a","b","c","d")
-    val config = OaiConfiguration(defaults.updated("blacklist", sets.mkString(",")))
+    val sets = Seq("a", "b", "c", "d")
+    val config =
+      OaiConfiguration(defaults.updated("blacklist", sets.mkString(",")))
     assert(config.blacklist.getOrElse(Array()) === sets)
   }
 

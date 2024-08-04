@@ -1,0 +1,1445 @@
+<?xml version='1.0'?>
+<OAI-PMH xsi:schemaLocation='http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd' xmlns='http://www.openarchives.org/OAI/2.0/' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'><responseDate>2024-08-04T15:44:58Z</responseDate><request verb='ListRecords' metadataPrefix='mods' set='botanicals'>https://api.lib.harvard.edu/oai/</request><ListRecords xmlns="http://www.openarchives.org/OAI/2.0/">
+    <record>
+        <header>
+            <identifier>arn00007c00001</identifier>
+            <datestamp>20210311</datestamp>
+        </header>
+        <metadata>
+            <mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:mods="http://www.loc.gov/mods/v3"
+                       xmlns:sets="http://hul.harvard.edu/ois/xml/ns/sets"
+                       xmlns:xlink="http://www.w3.org/1999/xlink"
+                       xmlns:marc="http://www.loc.gov/MARC21/slim"
+                       xmlns:HarvardDRS="http://hul.harvard.edu/ois/xml/ns/HarvardDRS"
+                       xmlns:librarycloud="http://hul.harvard.edu/ois/xml/ns/librarycloud"
+                       xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-6.xsd"
+                       version="3.6">
+                <mods:titleInfo>
+                    <mods:title>Plate 1. Clematis cylindrica</mods:title>
+                </mods:titleInfo>
+                <mods:physicalDescription>
+                    <mods:note type="organization">item</mods:note>
+                </mods:physicalDescription>
+                <mods:location>
+                    <mods:physicalLocation type="container">1</mods:physicalLocation>
+                </mods:location>
+                <mods:location>
+                    <mods:physicalLocation type="container">1</mods:physicalLocation>
+                </mods:location>
+                <mods:language>
+                    <mods:languageTerm authority="iso639-2b" type="code">und</mods:languageTerm>
+                    <mods:languageTerm authority="iso639-2b" type="text">Undefined</mods:languageTerm>
+                </mods:language>
+                <mods:accessCondition>The collection is available by appointment for research. Researchers must register and provide valid photo identification. Please contact botref@oeb.harvard.edu for additional information.</mods:accessCondition>
+                <mods:abstract>Full color. Reproduced in Herbier G&#xe9;n&#xe9;ral, page 70, by Mme. Deville, Aumont.</mods:abstract>
+                <mods:location>
+                    <mods:url displayLabel="Thumbnail" access="preview">https://nrs.harvard.edu/urn-3:FMUS.ARN:37524536?width=150</mods:url>
+                    <mods:url displayLabel="Full Image" access="raw object">https://nrs.harvard.edu/urn-3:FMUS.ARN:37524535</mods:url>
+                    <mods:url displayLabel="Botanical Illustrations" access="object in context">https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-arn00007c00001</mods:url>
+                    <mods:url displayLabel="Harvard Digital Collections" access="object in context">https://id.lib.harvard.edu/digital_collections/arn00007c00001</mods:url>
+                </mods:location>
+                <mods:relatedItem otherType="HOLLIS for Archival Discovery record">
+                    <mods:location>
+                        <mods:url>https://id.lib.harvard.edu/ead/c/arn00007c00001/catalog</mods:url>
+                    </mods:location>
+                </mods:relatedItem>
+                <mods:relatedItem type="host" displayLabel="collection">
+                    <mods:location>
+                        <mods:physicalLocation displayLabel="Harvard repository" type="repository">Arnold Arboretum Library (Cambridge), Botany Libraries, Harvard University</mods:physicalLocation>
+                    </mods:location>
+                    <mods:identifier>arn00007</mods:identifier>
+                    <mods:name>
+                        <mods:namePart>Riocreux, Alfred, 1820-1912</mods:namePart>
+                        <mods:role>
+                            <mods:roleTerm>originator</mods:roleTerm>
+                        </mods:role>
+                        <mods:role>
+                            <mods:roleTerm>creator</mods:roleTerm>
+                        </mods:role>
+                    </mods:name>
+                    <mods:titleInfo>
+                        <mods:title>Alfred Riocreux botanical watercolors</mods:title>
+                    </mods:titleInfo>
+                    <mods:originInfo>
+                        <mods:dateCreated point="start">1860</mods:dateCreated>
+                        <mods:dateCreated point="end">1860</mods:dateCreated>
+                        <mods:dateCreated>1860</mods:dateCreated>
+                    </mods:originInfo>
+                    <mods:recordInfo>
+                        <mods:recordIdentifier>arn00007</mods:recordIdentifier>
+                    </mods:recordInfo>
+                    <mods:relatedItem otherType="HOLLIS record">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/alma/990068175320203941/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:relatedItem otherType="Finding Aid">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/ead/arn00007/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:extension>
+                        <librarycloud:librarycloud>
+                            <librarycloud:HarvardRepositories>
+                                <librarycloud:HarvardRepository>Botany Arnold (Cambr.)</librarycloud:HarvardRepository>
+                            </librarycloud:HarvardRepositories>
+                        </librarycloud:librarycloud>
+                    </mods:extension>
+                </mods:relatedItem>
+                <mods:extension>
+                    <HarvardDRS:DRSMetadata>
+                        <HarvardDRS:inDRS>true</HarvardDRS:inDRS>
+                        <HarvardDRS:drsObjectId>457731773</HarvardDRS:drsObjectId>
+                        <HarvardDRS:accessFlag>P</HarvardDRS:accessFlag>
+                        <HarvardDRS:contentModel>PDS DOCUMENT</HarvardDRS:contentModel>
+                        <HarvardDRS:contentModelCode>CMID-4.0</HarvardDRS:contentModelCode>
+                        <HarvardDRS:uriType>PDS</HarvardDRS:uriType>
+                        <HarvardDRS:fileDeliveryURL>https://nrs.harvard.edu/urn-3:FMUS.ARN:37524535</HarvardDRS:fileDeliveryURL>
+                        <HarvardDRS:ownerCode>FMUS.ARN</HarvardDRS:ownerCode>
+                        <HarvardDRS:ownerCodeDisplayName>Arnold Library, Cambridge</HarvardDRS:ownerCodeDisplayName>
+                        <HarvardDRS:metsLabel>Alfred Riocreux botanical watercolors,1860. arn00007. Botany Libraries, Arnold Arboretum Library (Cambridge), Harvard University.</HarvardDRS:metsLabel>
+                        <HarvardDRS:lastModifiedDate>2018-09-17T18:30:16Z</HarvardDRS:lastModifiedDate>
+                        <HarvardDRS:insertionDate>2018-09-13T18:23:30Z</HarvardDRS:insertionDate>
+                        <HarvardDRS:ownerSuppliedName>BI_arn00007_Riocreux</HarvardDRS:ownerSuppliedName>
+                        <HarvardDRS:viewText>on</HarvardDRS:viewText>
+                        <HarvardDRS:harvardMetadataLinks>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/alma/990068175320203941/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Alma</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Alma</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/ead/arn00007/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Finding Aid</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Finding Aid</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                        </HarvardDRS:harvardMetadataLinks>
+                    </HarvardDRS:DRSMetadata>
+                </mods:extension>
+                <mods:extension>
+                    <librarycloud:librarycloud>
+                        <librarycloud:availableTo>Everyone</librarycloud:availableTo>
+                        <librarycloud:digitalFormats>
+                            <librarycloud:digitalFormat>Books and documents</librarycloud:digitalFormat>
+                        </librarycloud:digitalFormats>
+                        <librarycloud:originalDocument>https://s3.amazonaws.com/harvard.ead/arn00007.xml</librarycloud:originalDocument>
+                        <librarycloud:processingDate>2021-03-11T10:31Z</librarycloud:processingDate>
+                    </librarycloud:librarycloud>
+                </mods:extension>
+                <mods:extension>
+                    <sets:sets>
+                        <sets:set>
+                            <sets:systemId>24</sets:systemId>
+                            <sets:setName>Botanical Illustrations</sets:setName>
+                            <sets:setSpec>botanicals</sets:setSpec>
+                            <sets:baseUrl>https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-</sets:baseUrl>
+                        </sets:set>
+                    </sets:sets>
+                </mods:extension>
+                <mods:recordInfo>
+                    <mods:recordChangeDate encoding="iso8601">20210311</mods:recordChangeDate>
+                    <mods:recordIdentifier source="MH:OASIS">arn00007c00001</mods:recordIdentifier>
+                </mods:recordInfo>
+            </mods:mods>
+        </metadata>
+    </record>
+    <record>
+        <header>
+            <identifier>arn00007c00002</identifier>
+            <datestamp>20210311</datestamp>
+        </header>
+        <metadata>
+            <mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:mods="http://www.loc.gov/mods/v3"
+                       xmlns:sets="http://hul.harvard.edu/ois/xml/ns/sets"
+                       xmlns:xlink="http://www.w3.org/1999/xlink"
+                       xmlns:marc="http://www.loc.gov/MARC21/slim"
+                       xmlns:HarvardDRS="http://hul.harvard.edu/ois/xml/ns/HarvardDRS"
+                       xmlns:librarycloud="http://hul.harvard.edu/ois/xml/ns/librarycloud"
+                       xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-6.xsd"
+                       version="3.6">
+                <mods:titleInfo>
+                    <mods:title>Plate 2. Clematis viticella</mods:title>
+                </mods:titleInfo>
+                <mods:physicalDescription>
+                    <mods:note type="organization">item</mods:note>
+                </mods:physicalDescription>
+                <mods:location>
+                    <mods:physicalLocation type="container">1</mods:physicalLocation>
+                </mods:location>
+                <mods:location>
+                    <mods:physicalLocation type="container">1</mods:physicalLocation>
+                </mods:location>
+                <mods:language>
+                    <mods:languageTerm authority="iso639-2b" type="code">und</mods:languageTerm>
+                    <mods:languageTerm authority="iso639-2b" type="text">Undefined</mods:languageTerm>
+                </mods:language>
+                <mods:accessCondition>The collection is available by appointment for research. Researchers must register and provide valid photo identification. Please contact botref@oeb.harvard.edu for additional information.</mods:accessCondition>
+                <mods:abstract>Full color, signed by Riocreux.</mods:abstract>
+                <mods:location>
+                    <mods:url displayLabel="Thumbnail" access="preview">https://nrs.harvard.edu/urn-3:FMUS.ARN:37524537?width=150</mods:url>
+                    <mods:url displayLabel="Full Image" access="raw object">https://nrs.harvard.edu/urn-3:FMUS.ARN:37536094</mods:url>
+                    <mods:url displayLabel="Botanical Illustrations" access="object in context">https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-arn00007c00002</mods:url>
+                    <mods:url displayLabel="Harvard Digital Collections" access="object in context">https://id.lib.harvard.edu/digital_collections/arn00007c00002</mods:url>
+                </mods:location>
+                <mods:relatedItem otherType="HOLLIS for Archival Discovery record">
+                    <mods:location>
+                        <mods:url>https://id.lib.harvard.edu/ead/c/arn00007c00002/catalog</mods:url>
+                    </mods:location>
+                </mods:relatedItem>
+                <mods:relatedItem type="host" displayLabel="collection">
+                    <mods:location>
+                        <mods:physicalLocation displayLabel="Harvard repository" type="repository">Arnold Arboretum Library (Cambridge), Botany Libraries, Harvard University</mods:physicalLocation>
+                    </mods:location>
+                    <mods:identifier>arn00007</mods:identifier>
+                    <mods:name>
+                        <mods:namePart>Riocreux, Alfred, 1820-1912</mods:namePart>
+                        <mods:role>
+                            <mods:roleTerm>originator</mods:roleTerm>
+                        </mods:role>
+                        <mods:role>
+                            <mods:roleTerm>creator</mods:roleTerm>
+                        </mods:role>
+                    </mods:name>
+                    <mods:titleInfo>
+                        <mods:title>Alfred Riocreux botanical watercolors</mods:title>
+                    </mods:titleInfo>
+                    <mods:originInfo>
+                        <mods:dateCreated point="start">1860</mods:dateCreated>
+                        <mods:dateCreated point="end">1860</mods:dateCreated>
+                        <mods:dateCreated>1860</mods:dateCreated>
+                    </mods:originInfo>
+                    <mods:recordInfo>
+                        <mods:recordIdentifier>arn00007</mods:recordIdentifier>
+                    </mods:recordInfo>
+                    <mods:relatedItem otherType="HOLLIS record">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/alma/990068175320203941/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:relatedItem otherType="Finding Aid">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/ead/arn00007/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:extension>
+                        <librarycloud:librarycloud>
+                            <librarycloud:HarvardRepositories>
+                                <librarycloud:HarvardRepository>Botany Arnold (Cambr.)</librarycloud:HarvardRepository>
+                            </librarycloud:HarvardRepositories>
+                        </librarycloud:librarycloud>
+                    </mods:extension>
+                </mods:relatedItem>
+                <mods:extension>
+                    <HarvardDRS:DRSMetadata>
+                        <HarvardDRS:inDRS>true</HarvardDRS:inDRS>
+                        <HarvardDRS:drsObjectId>457731773</HarvardDRS:drsObjectId>
+                        <HarvardDRS:accessFlag>P</HarvardDRS:accessFlag>
+                        <HarvardDRS:contentModel>PDS DOCUMENT</HarvardDRS:contentModel>
+                        <HarvardDRS:contentModelCode>CMID-4.0</HarvardDRS:contentModelCode>
+                        <HarvardDRS:uriType>PDS</HarvardDRS:uriType>
+                        <HarvardDRS:fileDeliveryURL>https://nrs.harvard.edu/urn-3:FMUS.ARN:37536094</HarvardDRS:fileDeliveryURL>
+                        <HarvardDRS:ownerCode>FMUS.ARN</HarvardDRS:ownerCode>
+                        <HarvardDRS:ownerCodeDisplayName>Arnold Library, Cambridge</HarvardDRS:ownerCodeDisplayName>
+                        <HarvardDRS:metsLabel>Alfred Riocreux botanical watercolors,1860. arn00007. Botany Libraries, Arnold Arboretum Library (Cambridge), Harvard University.</HarvardDRS:metsLabel>
+                        <HarvardDRS:lastModifiedDate>2018-09-17T18:30:16Z</HarvardDRS:lastModifiedDate>
+                        <HarvardDRS:insertionDate>2018-09-13T18:23:30Z</HarvardDRS:insertionDate>
+                        <HarvardDRS:ownerSuppliedName>BI_arn00007_Riocreux</HarvardDRS:ownerSuppliedName>
+                        <HarvardDRS:viewText>on</HarvardDRS:viewText>
+                        <HarvardDRS:harvardMetadataLinks>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/alma/990068175320203941/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Alma</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Alma</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/ead/arn00007/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Finding Aid</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Finding Aid</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                        </HarvardDRS:harvardMetadataLinks>
+                    </HarvardDRS:DRSMetadata>
+                </mods:extension>
+                <mods:extension>
+                    <librarycloud:librarycloud>
+                        <librarycloud:availableTo>Everyone</librarycloud:availableTo>
+                        <librarycloud:digitalFormats>
+                            <librarycloud:digitalFormat>Books and documents</librarycloud:digitalFormat>
+                        </librarycloud:digitalFormats>
+                        <librarycloud:originalDocument>https://s3.amazonaws.com/harvard.ead/arn00007.xml</librarycloud:originalDocument>
+                        <librarycloud:processingDate>2021-03-11T10:31Z</librarycloud:processingDate>
+                    </librarycloud:librarycloud>
+                </mods:extension>
+                <mods:extension>
+                    <sets:sets>
+                        <sets:set>
+                            <sets:systemId>24</sets:systemId>
+                            <sets:setName>Botanical Illustrations</sets:setName>
+                            <sets:setSpec>botanicals</sets:setSpec>
+                            <sets:baseUrl>https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-</sets:baseUrl>
+                        </sets:set>
+                    </sets:sets>
+                </mods:extension>
+                <mods:recordInfo>
+                    <mods:recordChangeDate encoding="iso8601">20210311</mods:recordChangeDate>
+                    <mods:recordIdentifier source="MH:OASIS">arn00007c00002</mods:recordIdentifier>
+                </mods:recordInfo>
+            </mods:mods>
+        </metadata>
+    </record>
+    <record>
+        <header>
+            <identifier>arn00007c00003</identifier>
+            <datestamp>20210311</datestamp>
+        </header>
+        <metadata>
+            <mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:mods="http://www.loc.gov/mods/v3"
+                       xmlns:sets="http://hul.harvard.edu/ois/xml/ns/sets"
+                       xmlns:xlink="http://www.w3.org/1999/xlink"
+                       xmlns:marc="http://www.loc.gov/MARC21/slim"
+                       xmlns:HarvardDRS="http://hul.harvard.edu/ois/xml/ns/HarvardDRS"
+                       xmlns:librarycloud="http://hul.harvard.edu/ois/xml/ns/librarycloud"
+                       xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-6.xsd"
+                       version="3.6">
+                <mods:titleInfo>
+                    <mods:title>Plate 3. Epimedium grandiflorum</mods:title>
+                </mods:titleInfo>
+                <mods:physicalDescription>
+                    <mods:note type="organization">item</mods:note>
+                </mods:physicalDescription>
+                <mods:location>
+                    <mods:physicalLocation type="container">1</mods:physicalLocation>
+                </mods:location>
+                <mods:location>
+                    <mods:physicalLocation type="container">1</mods:physicalLocation>
+                </mods:location>
+                <mods:language>
+                    <mods:languageTerm authority="iso639-2b" type="code">und</mods:languageTerm>
+                    <mods:languageTerm authority="iso639-2b" type="text">Undefined</mods:languageTerm>
+                </mods:language>
+                <mods:accessCondition>The collection is available by appointment for research. Researchers must register and provide valid photo identification. Please contact botref@oeb.harvard.edu for additional information.</mods:accessCondition>
+                <mods:abstract>Full color, Reproduced in Herbier G&#xe9;n&#xe9;ral, page 5, by Aumont.</mods:abstract>
+                <mods:location>
+                    <mods:url displayLabel="Thumbnail" access="preview">https://nrs.harvard.edu/urn-3:FMUS.ARN:37524538?width=150</mods:url>
+                    <mods:url displayLabel="Full Image" access="raw object">https://nrs.harvard.edu/urn-3:FMUS.ARN:37536095</mods:url>
+                    <mods:url displayLabel="Harvard Digital Collections" access="object in context">https://id.lib.harvard.edu/digital_collections/arn00007c00003</mods:url>
+                    <mods:url displayLabel="Botanical Illustrations" access="object in context">https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-arn00007c00003</mods:url>
+                </mods:location>
+                <mods:relatedItem otherType="HOLLIS for Archival Discovery record">
+                    <mods:location>
+                        <mods:url>https://id.lib.harvard.edu/ead/c/arn00007c00003/catalog</mods:url>
+                    </mods:location>
+                </mods:relatedItem>
+                <mods:relatedItem type="host" displayLabel="collection">
+                    <mods:location>
+                        <mods:physicalLocation displayLabel="Harvard repository" type="repository">Arnold Arboretum Library (Cambridge), Botany Libraries, Harvard University</mods:physicalLocation>
+                    </mods:location>
+                    <mods:identifier>arn00007</mods:identifier>
+                    <mods:name>
+                        <mods:namePart>Riocreux, Alfred, 1820-1912</mods:namePart>
+                        <mods:role>
+                            <mods:roleTerm>originator</mods:roleTerm>
+                        </mods:role>
+                        <mods:role>
+                            <mods:roleTerm>creator</mods:roleTerm>
+                        </mods:role>
+                    </mods:name>
+                    <mods:titleInfo>
+                        <mods:title>Alfred Riocreux botanical watercolors</mods:title>
+                    </mods:titleInfo>
+                    <mods:originInfo>
+                        <mods:dateCreated point="start">1860</mods:dateCreated>
+                        <mods:dateCreated point="end">1860</mods:dateCreated>
+                        <mods:dateCreated>1860</mods:dateCreated>
+                    </mods:originInfo>
+                    <mods:recordInfo>
+                        <mods:recordIdentifier>arn00007</mods:recordIdentifier>
+                    </mods:recordInfo>
+                    <mods:relatedItem otherType="HOLLIS record">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/alma/990068175320203941/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:relatedItem otherType="Finding Aid">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/ead/arn00007/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:extension>
+                        <librarycloud:librarycloud>
+                            <librarycloud:HarvardRepositories>
+                                <librarycloud:HarvardRepository>Botany Arnold (Cambr.)</librarycloud:HarvardRepository>
+                            </librarycloud:HarvardRepositories>
+                        </librarycloud:librarycloud>
+                    </mods:extension>
+                </mods:relatedItem>
+                <mods:extension>
+                    <HarvardDRS:DRSMetadata>
+                        <HarvardDRS:inDRS>true</HarvardDRS:inDRS>
+                        <HarvardDRS:drsObjectId>457731773</HarvardDRS:drsObjectId>
+                        <HarvardDRS:accessFlag>P</HarvardDRS:accessFlag>
+                        <HarvardDRS:contentModel>PDS DOCUMENT</HarvardDRS:contentModel>
+                        <HarvardDRS:contentModelCode>CMID-4.0</HarvardDRS:contentModelCode>
+                        <HarvardDRS:uriType>PDS</HarvardDRS:uriType>
+                        <HarvardDRS:fileDeliveryURL>https://nrs.harvard.edu/urn-3:FMUS.ARN:37536095</HarvardDRS:fileDeliveryURL>
+                        <HarvardDRS:ownerCode>FMUS.ARN</HarvardDRS:ownerCode>
+                        <HarvardDRS:ownerCodeDisplayName>Arnold Library, Cambridge</HarvardDRS:ownerCodeDisplayName>
+                        <HarvardDRS:metsLabel>Alfred Riocreux botanical watercolors,1860. arn00007. Botany Libraries, Arnold Arboretum Library (Cambridge), Harvard University.</HarvardDRS:metsLabel>
+                        <HarvardDRS:lastModifiedDate>2018-09-17T18:30:16Z</HarvardDRS:lastModifiedDate>
+                        <HarvardDRS:insertionDate>2018-09-13T18:23:30Z</HarvardDRS:insertionDate>
+                        <HarvardDRS:ownerSuppliedName>BI_arn00007_Riocreux</HarvardDRS:ownerSuppliedName>
+                        <HarvardDRS:viewText>on</HarvardDRS:viewText>
+                        <HarvardDRS:harvardMetadataLinks>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/alma/990068175320203941/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Alma</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Alma</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/ead/arn00007/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Finding Aid</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Finding Aid</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                        </HarvardDRS:harvardMetadataLinks>
+                    </HarvardDRS:DRSMetadata>
+                </mods:extension>
+                <mods:extension>
+                    <librarycloud:librarycloud>
+                        <librarycloud:availableTo>Everyone</librarycloud:availableTo>
+                        <librarycloud:digitalFormats>
+                            <librarycloud:digitalFormat>Books and documents</librarycloud:digitalFormat>
+                        </librarycloud:digitalFormats>
+                        <librarycloud:originalDocument>https://s3.amazonaws.com/harvard.ead/arn00007.xml</librarycloud:originalDocument>
+                        <librarycloud:processingDate>2021-03-11T10:31Z</librarycloud:processingDate>
+                    </librarycloud:librarycloud>
+                </mods:extension>
+                <mods:extension>
+                    <sets:sets>
+                        <sets:set>
+                            <sets:systemId>24</sets:systemId>
+                            <sets:setName>Botanical Illustrations</sets:setName>
+                            <sets:setSpec>botanicals</sets:setSpec>
+                            <sets:baseUrl>https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-</sets:baseUrl>
+                        </sets:set>
+                    </sets:sets>
+                </mods:extension>
+                <mods:recordInfo>
+                    <mods:recordChangeDate encoding="iso8601">20210311</mods:recordChangeDate>
+                    <mods:recordIdentifier source="MH:OASIS">arn00007c00003</mods:recordIdentifier>
+                </mods:recordInfo>
+            </mods:mods>
+        </metadata>
+    </record>
+    <record>
+        <header>
+            <identifier>arn00007c00004</identifier>
+            <datestamp>20210311</datestamp>
+        </header>
+        <metadata>
+            <mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:mods="http://www.loc.gov/mods/v3"
+                       xmlns:sets="http://hul.harvard.edu/ois/xml/ns/sets"
+                       xmlns:xlink="http://www.w3.org/1999/xlink"
+                       xmlns:marc="http://www.loc.gov/MARC21/slim"
+                       xmlns:HarvardDRS="http://hul.harvard.edu/ois/xml/ns/HarvardDRS"
+                       xmlns:librarycloud="http://hul.harvard.edu/ois/xml/ns/librarycloud"
+                       xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-6.xsd"
+                       version="3.6">
+                <mods:titleInfo>
+                    <mods:title>Plate 4. Sollya heterophylla</mods:title>
+                </mods:titleInfo>
+                <mods:physicalDescription>
+                    <mods:note type="organization">item</mods:note>
+                </mods:physicalDescription>
+                <mods:location>
+                    <mods:physicalLocation type="container">1</mods:physicalLocation>
+                </mods:location>
+                <mods:location>
+                    <mods:physicalLocation type="container">1</mods:physicalLocation>
+                </mods:location>
+                <mods:language>
+                    <mods:languageTerm authority="iso639-2b" type="code">und</mods:languageTerm>
+                    <mods:languageTerm authority="iso639-2b" type="text">Undefined</mods:languageTerm>
+                </mods:language>
+                <mods:accessCondition>The collection is available by appointment for research. Researchers must register and provide valid photo identification. Please contact botref@oeb.harvard.edu for additional information.</mods:accessCondition>
+                <mods:abstract>Full color, signed by Riocreux. Reproduced in Herbier G&#xe9;n&#xe9;ral, page 91, by Riocreux, Aumont.</mods:abstract>
+                <mods:location>
+                    <mods:url displayLabel="Thumbnail" access="preview">https://nrs.harvard.edu/urn-3:FMUS.ARN:37524539?width=150</mods:url>
+                    <mods:url displayLabel="Full Image" access="raw object">https://nrs.harvard.edu/urn-3:FMUS.ARN:37536096</mods:url>
+                    <mods:url displayLabel="Botanical Illustrations" access="object in context">https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-arn00007c00004</mods:url>
+                    <mods:url displayLabel="Harvard Digital Collections" access="object in context">https://id.lib.harvard.edu/digital_collections/arn00007c00004</mods:url>
+                </mods:location>
+                <mods:relatedItem otherType="HOLLIS for Archival Discovery record">
+                    <mods:location>
+                        <mods:url>https://id.lib.harvard.edu/ead/c/arn00007c00004/catalog</mods:url>
+                    </mods:location>
+                </mods:relatedItem>
+                <mods:relatedItem type="host" displayLabel="collection">
+                    <mods:location>
+                        <mods:physicalLocation displayLabel="Harvard repository" type="repository">Arnold Arboretum Library (Cambridge), Botany Libraries, Harvard University</mods:physicalLocation>
+                    </mods:location>
+                    <mods:identifier>arn00007</mods:identifier>
+                    <mods:name>
+                        <mods:namePart>Riocreux, Alfred, 1820-1912</mods:namePart>
+                        <mods:role>
+                            <mods:roleTerm>originator</mods:roleTerm>
+                        </mods:role>
+                        <mods:role>
+                            <mods:roleTerm>creator</mods:roleTerm>
+                        </mods:role>
+                    </mods:name>
+                    <mods:titleInfo>
+                        <mods:title>Alfred Riocreux botanical watercolors</mods:title>
+                    </mods:titleInfo>
+                    <mods:originInfo>
+                        <mods:dateCreated point="start">1860</mods:dateCreated>
+                        <mods:dateCreated point="end">1860</mods:dateCreated>
+                        <mods:dateCreated>1860</mods:dateCreated>
+                    </mods:originInfo>
+                    <mods:recordInfo>
+                        <mods:recordIdentifier>arn00007</mods:recordIdentifier>
+                    </mods:recordInfo>
+                    <mods:relatedItem otherType="HOLLIS record">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/alma/990068175320203941/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:relatedItem otherType="Finding Aid">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/ead/arn00007/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:extension>
+                        <librarycloud:librarycloud>
+                            <librarycloud:HarvardRepositories>
+                                <librarycloud:HarvardRepository>Botany Arnold (Cambr.)</librarycloud:HarvardRepository>
+                            </librarycloud:HarvardRepositories>
+                        </librarycloud:librarycloud>
+                    </mods:extension>
+                </mods:relatedItem>
+                <mods:extension>
+                    <HarvardDRS:DRSMetadata>
+                        <HarvardDRS:inDRS>true</HarvardDRS:inDRS>
+                        <HarvardDRS:drsObjectId>457731773</HarvardDRS:drsObjectId>
+                        <HarvardDRS:accessFlag>P</HarvardDRS:accessFlag>
+                        <HarvardDRS:contentModel>PDS DOCUMENT</HarvardDRS:contentModel>
+                        <HarvardDRS:contentModelCode>CMID-4.0</HarvardDRS:contentModelCode>
+                        <HarvardDRS:uriType>PDS</HarvardDRS:uriType>
+                        <HarvardDRS:fileDeliveryURL>https://nrs.harvard.edu/urn-3:FMUS.ARN:37536096</HarvardDRS:fileDeliveryURL>
+                        <HarvardDRS:ownerCode>FMUS.ARN</HarvardDRS:ownerCode>
+                        <HarvardDRS:ownerCodeDisplayName>Arnold Library, Cambridge</HarvardDRS:ownerCodeDisplayName>
+                        <HarvardDRS:metsLabel>Alfred Riocreux botanical watercolors,1860. arn00007. Botany Libraries, Arnold Arboretum Library (Cambridge), Harvard University.</HarvardDRS:metsLabel>
+                        <HarvardDRS:lastModifiedDate>2018-09-17T18:30:16Z</HarvardDRS:lastModifiedDate>
+                        <HarvardDRS:insertionDate>2018-09-13T18:23:30Z</HarvardDRS:insertionDate>
+                        <HarvardDRS:ownerSuppliedName>BI_arn00007_Riocreux</HarvardDRS:ownerSuppliedName>
+                        <HarvardDRS:viewText>on</HarvardDRS:viewText>
+                        <HarvardDRS:harvardMetadataLinks>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/alma/990068175320203941/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Alma</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Alma</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/ead/arn00007/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Finding Aid</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Finding Aid</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                        </HarvardDRS:harvardMetadataLinks>
+                    </HarvardDRS:DRSMetadata>
+                </mods:extension>
+                <mods:extension>
+                    <librarycloud:librarycloud>
+                        <librarycloud:availableTo>Everyone</librarycloud:availableTo>
+                        <librarycloud:digitalFormats>
+                            <librarycloud:digitalFormat>Books and documents</librarycloud:digitalFormat>
+                        </librarycloud:digitalFormats>
+                        <librarycloud:originalDocument>https://s3.amazonaws.com/harvard.ead/arn00007.xml</librarycloud:originalDocument>
+                        <librarycloud:processingDate>2021-03-11T10:31Z</librarycloud:processingDate>
+                    </librarycloud:librarycloud>
+                </mods:extension>
+                <mods:extension>
+                    <sets:sets>
+                        <sets:set>
+                            <sets:systemId>24</sets:systemId>
+                            <sets:setName>Botanical Illustrations</sets:setName>
+                            <sets:setSpec>botanicals</sets:setSpec>
+                            <sets:baseUrl>https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-</sets:baseUrl>
+                        </sets:set>
+                    </sets:sets>
+                </mods:extension>
+                <mods:recordInfo>
+                    <mods:recordChangeDate encoding="iso8601">20210311</mods:recordChangeDate>
+                    <mods:recordIdentifier source="MH:OASIS">arn00007c00004</mods:recordIdentifier>
+                </mods:recordInfo>
+            </mods:mods>
+        </metadata>
+    </record>
+    <record>
+        <header>
+            <identifier>arn00007c00005</identifier>
+            <datestamp>20210311</datestamp>
+        </header>
+        <metadata>
+            <mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:mods="http://www.loc.gov/mods/v3"
+                       xmlns:sets="http://hul.harvard.edu/ois/xml/ns/sets"
+                       xmlns:xlink="http://www.w3.org/1999/xlink"
+                       xmlns:marc="http://www.loc.gov/MARC21/slim"
+                       xmlns:HarvardDRS="http://hul.harvard.edu/ois/xml/ns/HarvardDRS"
+                       xmlns:librarycloud="http://hul.harvard.edu/ois/xml/ns/librarycloud"
+                       xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-6.xsd"
+                       version="3.6">
+                <mods:titleInfo>
+                    <mods:title>Plate 5. Mahonia aquifolium</mods:title>
+                </mods:titleInfo>
+                <mods:physicalDescription>
+                    <mods:note type="organization">item</mods:note>
+                </mods:physicalDescription>
+                <mods:location>
+                    <mods:physicalLocation type="container">1</mods:physicalLocation>
+                </mods:location>
+                <mods:location>
+                    <mods:physicalLocation type="container">1</mods:physicalLocation>
+                </mods:location>
+                <mods:language>
+                    <mods:languageTerm authority="iso639-2b" type="code">und</mods:languageTerm>
+                    <mods:languageTerm authority="iso639-2b" type="text">Undefined</mods:languageTerm>
+                </mods:language>
+                <mods:accessCondition>The collection is available by appointment for research. Researchers must register and provide valid photo identification. Please contact botref@oeb.harvard.edu for additional information.</mods:accessCondition>
+                <mods:abstract>Full color.</mods:abstract>
+                <mods:location>
+                    <mods:url displayLabel="Thumbnail" access="preview">https://nrs.harvard.edu/urn-3:FMUS.ARN:37524540?width=150</mods:url>
+                    <mods:url displayLabel="Full Image" access="raw object">https://nrs.harvard.edu/urn-3:FMUS.ARN:37536097</mods:url>
+                    <mods:url displayLabel="Botanical Illustrations" access="object in context">https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-arn00007c00005</mods:url>
+                    <mods:url displayLabel="Harvard Digital Collections" access="object in context">https://id.lib.harvard.edu/digital_collections/arn00007c00005</mods:url>
+                </mods:location>
+                <mods:relatedItem otherType="HOLLIS for Archival Discovery record">
+                    <mods:location>
+                        <mods:url>https://id.lib.harvard.edu/ead/c/arn00007c00005/catalog</mods:url>
+                    </mods:location>
+                </mods:relatedItem>
+                <mods:relatedItem type="host" displayLabel="collection">
+                    <mods:location>
+                        <mods:physicalLocation displayLabel="Harvard repository" type="repository">Arnold Arboretum Library (Cambridge), Botany Libraries, Harvard University</mods:physicalLocation>
+                    </mods:location>
+                    <mods:identifier>arn00007</mods:identifier>
+                    <mods:name>
+                        <mods:namePart>Riocreux, Alfred, 1820-1912</mods:namePart>
+                        <mods:role>
+                            <mods:roleTerm>originator</mods:roleTerm>
+                        </mods:role>
+                        <mods:role>
+                            <mods:roleTerm>creator</mods:roleTerm>
+                        </mods:role>
+                    </mods:name>
+                    <mods:titleInfo>
+                        <mods:title>Alfred Riocreux botanical watercolors</mods:title>
+                    </mods:titleInfo>
+                    <mods:originInfo>
+                        <mods:dateCreated point="start">1860</mods:dateCreated>
+                        <mods:dateCreated point="end">1860</mods:dateCreated>
+                        <mods:dateCreated>1860</mods:dateCreated>
+                    </mods:originInfo>
+                    <mods:recordInfo>
+                        <mods:recordIdentifier>arn00007</mods:recordIdentifier>
+                    </mods:recordInfo>
+                    <mods:relatedItem otherType="HOLLIS record">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/alma/990068175320203941/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:relatedItem otherType="Finding Aid">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/ead/arn00007/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:extension>
+                        <librarycloud:librarycloud>
+                            <librarycloud:HarvardRepositories>
+                                <librarycloud:HarvardRepository>Botany Arnold (Cambr.)</librarycloud:HarvardRepository>
+                            </librarycloud:HarvardRepositories>
+                        </librarycloud:librarycloud>
+                    </mods:extension>
+                </mods:relatedItem>
+                <mods:extension>
+                    <HarvardDRS:DRSMetadata>
+                        <HarvardDRS:inDRS>true</HarvardDRS:inDRS>
+                        <HarvardDRS:drsObjectId>457731773</HarvardDRS:drsObjectId>
+                        <HarvardDRS:accessFlag>P</HarvardDRS:accessFlag>
+                        <HarvardDRS:contentModel>PDS DOCUMENT</HarvardDRS:contentModel>
+                        <HarvardDRS:contentModelCode>CMID-4.0</HarvardDRS:contentModelCode>
+                        <HarvardDRS:uriType>PDS</HarvardDRS:uriType>
+                        <HarvardDRS:fileDeliveryURL>https://nrs.harvard.edu/urn-3:FMUS.ARN:37536097</HarvardDRS:fileDeliveryURL>
+                        <HarvardDRS:ownerCode>FMUS.ARN</HarvardDRS:ownerCode>
+                        <HarvardDRS:ownerCodeDisplayName>Arnold Library, Cambridge</HarvardDRS:ownerCodeDisplayName>
+                        <HarvardDRS:metsLabel>Alfred Riocreux botanical watercolors,1860. arn00007. Botany Libraries, Arnold Arboretum Library (Cambridge), Harvard University.</HarvardDRS:metsLabel>
+                        <HarvardDRS:lastModifiedDate>2018-09-17T18:30:16Z</HarvardDRS:lastModifiedDate>
+                        <HarvardDRS:insertionDate>2018-09-13T18:23:30Z</HarvardDRS:insertionDate>
+                        <HarvardDRS:ownerSuppliedName>BI_arn00007_Riocreux</HarvardDRS:ownerSuppliedName>
+                        <HarvardDRS:viewText>on</HarvardDRS:viewText>
+                        <HarvardDRS:harvardMetadataLinks>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/alma/990068175320203941/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Alma</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Alma</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/ead/arn00007/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Finding Aid</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Finding Aid</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                        </HarvardDRS:harvardMetadataLinks>
+                    </HarvardDRS:DRSMetadata>
+                </mods:extension>
+                <mods:extension>
+                    <librarycloud:librarycloud>
+                        <librarycloud:availableTo>Everyone</librarycloud:availableTo>
+                        <librarycloud:digitalFormats>
+                            <librarycloud:digitalFormat>Books and documents</librarycloud:digitalFormat>
+                        </librarycloud:digitalFormats>
+                        <librarycloud:originalDocument>https://s3.amazonaws.com/harvard.ead/arn00007.xml</librarycloud:originalDocument>
+                        <librarycloud:processingDate>2021-03-11T10:31Z</librarycloud:processingDate>
+                    </librarycloud:librarycloud>
+                </mods:extension>
+                <mods:extension>
+                    <sets:sets>
+                        <sets:set>
+                            <sets:systemId>24</sets:systemId>
+                            <sets:setName>Botanical Illustrations</sets:setName>
+                            <sets:setSpec>botanicals</sets:setSpec>
+                            <sets:baseUrl>https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-</sets:baseUrl>
+                        </sets:set>
+                    </sets:sets>
+                </mods:extension>
+                <mods:recordInfo>
+                    <mods:recordChangeDate encoding="iso8601">20210311</mods:recordChangeDate>
+                    <mods:recordIdentifier source="MH:OASIS">arn00007c00005</mods:recordIdentifier>
+                </mods:recordInfo>
+            </mods:mods>
+        </metadata>
+    </record>
+    <record>
+        <header>
+            <identifier>arn00007c00006</identifier>
+            <datestamp>20210311</datestamp>
+        </header>
+        <metadata>
+            <mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:mods="http://www.loc.gov/mods/v3"
+                       xmlns:sets="http://hul.harvard.edu/ois/xml/ns/sets"
+                       xmlns:xlink="http://www.w3.org/1999/xlink"
+                       xmlns:marc="http://www.loc.gov/MARC21/slim"
+                       xmlns:HarvardDRS="http://hul.harvard.edu/ois/xml/ns/HarvardDRS"
+                       xmlns:librarycloud="http://hul.harvard.edu/ois/xml/ns/librarycloud"
+                       xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-6.xsd"
+                       version="3.6">
+                <mods:titleInfo>
+                    <mods:title>Plate 6. Argemone grandiflora</mods:title>
+                </mods:titleInfo>
+                <mods:physicalDescription>
+                    <mods:note type="organization">item</mods:note>
+                </mods:physicalDescription>
+                <mods:location>
+                    <mods:physicalLocation type="container">1</mods:physicalLocation>
+                </mods:location>
+                <mods:location>
+                    <mods:physicalLocation type="container">2</mods:physicalLocation>
+                </mods:location>
+                <mods:language>
+                    <mods:languageTerm authority="iso639-2b" type="code">und</mods:languageTerm>
+                    <mods:languageTerm authority="iso639-2b" type="text">Undefined</mods:languageTerm>
+                </mods:language>
+                <mods:accessCondition>The collection is available by appointment for research. Researchers must register and provide valid photo identification. Please contact botref@oeb.harvard.edu for additional information.</mods:accessCondition>
+                <mods:abstract>Full color. Reproduced in Herbier G&#xe9;n&#xe9;ral, page 69, by Mme. Deville, Aumont.</mods:abstract>
+                <mods:location>
+                    <mods:url displayLabel="Thumbnail" access="preview">https://nrs.harvard.edu/urn-3:FMUS.ARN:37524541?width=150</mods:url>
+                    <mods:url displayLabel="Full Image" access="raw object">https://nrs.harvard.edu/urn-3:FMUS.ARN:37536098</mods:url>
+                    <mods:url displayLabel="Botanical Illustrations" access="object in context">https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-arn00007c00006</mods:url>
+                    <mods:url displayLabel="Harvard Digital Collections" access="object in context">https://id.lib.harvard.edu/digital_collections/arn00007c00006</mods:url>
+                </mods:location>
+                <mods:relatedItem otherType="HOLLIS for Archival Discovery record">
+                    <mods:location>
+                        <mods:url>https://id.lib.harvard.edu/ead/c/arn00007c00006/catalog</mods:url>
+                    </mods:location>
+                </mods:relatedItem>
+                <mods:relatedItem type="host" displayLabel="collection">
+                    <mods:location>
+                        <mods:physicalLocation displayLabel="Harvard repository" type="repository">Arnold Arboretum Library (Cambridge), Botany Libraries, Harvard University</mods:physicalLocation>
+                    </mods:location>
+                    <mods:identifier>arn00007</mods:identifier>
+                    <mods:name>
+                        <mods:namePart>Riocreux, Alfred, 1820-1912</mods:namePart>
+                        <mods:role>
+                            <mods:roleTerm>originator</mods:roleTerm>
+                        </mods:role>
+                        <mods:role>
+                            <mods:roleTerm>creator</mods:roleTerm>
+                        </mods:role>
+                    </mods:name>
+                    <mods:titleInfo>
+                        <mods:title>Alfred Riocreux botanical watercolors</mods:title>
+                    </mods:titleInfo>
+                    <mods:originInfo>
+                        <mods:dateCreated point="start">1860</mods:dateCreated>
+                        <mods:dateCreated point="end">1860</mods:dateCreated>
+                        <mods:dateCreated>1860</mods:dateCreated>
+                    </mods:originInfo>
+                    <mods:recordInfo>
+                        <mods:recordIdentifier>arn00007</mods:recordIdentifier>
+                    </mods:recordInfo>
+                    <mods:relatedItem otherType="HOLLIS record">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/alma/990068175320203941/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:relatedItem otherType="Finding Aid">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/ead/arn00007/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:extension>
+                        <librarycloud:librarycloud>
+                            <librarycloud:HarvardRepositories>
+                                <librarycloud:HarvardRepository>Botany Arnold (Cambr.)</librarycloud:HarvardRepository>
+                            </librarycloud:HarvardRepositories>
+                        </librarycloud:librarycloud>
+                    </mods:extension>
+                </mods:relatedItem>
+                <mods:extension>
+                    <HarvardDRS:DRSMetadata>
+                        <HarvardDRS:inDRS>true</HarvardDRS:inDRS>
+                        <HarvardDRS:drsObjectId>457731773</HarvardDRS:drsObjectId>
+                        <HarvardDRS:accessFlag>P</HarvardDRS:accessFlag>
+                        <HarvardDRS:contentModel>PDS DOCUMENT</HarvardDRS:contentModel>
+                        <HarvardDRS:contentModelCode>CMID-4.0</HarvardDRS:contentModelCode>
+                        <HarvardDRS:uriType>PDS</HarvardDRS:uriType>
+                        <HarvardDRS:fileDeliveryURL>https://nrs.harvard.edu/urn-3:FMUS.ARN:37536098</HarvardDRS:fileDeliveryURL>
+                        <HarvardDRS:ownerCode>FMUS.ARN</HarvardDRS:ownerCode>
+                        <HarvardDRS:ownerCodeDisplayName>Arnold Library, Cambridge</HarvardDRS:ownerCodeDisplayName>
+                        <HarvardDRS:metsLabel>Alfred Riocreux botanical watercolors,1860. arn00007. Botany Libraries, Arnold Arboretum Library (Cambridge), Harvard University.</HarvardDRS:metsLabel>
+                        <HarvardDRS:lastModifiedDate>2018-09-17T18:30:16Z</HarvardDRS:lastModifiedDate>
+                        <HarvardDRS:insertionDate>2018-09-13T18:23:30Z</HarvardDRS:insertionDate>
+                        <HarvardDRS:ownerSuppliedName>BI_arn00007_Riocreux</HarvardDRS:ownerSuppliedName>
+                        <HarvardDRS:viewText>on</HarvardDRS:viewText>
+                        <HarvardDRS:harvardMetadataLinks>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/alma/990068175320203941/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Alma</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Alma</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/ead/arn00007/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Finding Aid</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Finding Aid</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                        </HarvardDRS:harvardMetadataLinks>
+                    </HarvardDRS:DRSMetadata>
+                </mods:extension>
+                <mods:extension>
+                    <librarycloud:librarycloud>
+                        <librarycloud:availableTo>Everyone</librarycloud:availableTo>
+                        <librarycloud:digitalFormats>
+                            <librarycloud:digitalFormat>Books and documents</librarycloud:digitalFormat>
+                        </librarycloud:digitalFormats>
+                        <librarycloud:originalDocument>https://s3.amazonaws.com/harvard.ead/arn00007.xml</librarycloud:originalDocument>
+                        <librarycloud:processingDate>2021-03-11T10:31Z</librarycloud:processingDate>
+                    </librarycloud:librarycloud>
+                </mods:extension>
+                <mods:extension>
+                    <sets:sets>
+                        <sets:set>
+                            <sets:systemId>24</sets:systemId>
+                            <sets:setName>Botanical Illustrations</sets:setName>
+                            <sets:setSpec>botanicals</sets:setSpec>
+                            <sets:baseUrl>https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-</sets:baseUrl>
+                        </sets:set>
+                    </sets:sets>
+                </mods:extension>
+                <mods:recordInfo>
+                    <mods:recordChangeDate encoding="iso8601">20210311</mods:recordChangeDate>
+                    <mods:recordIdentifier source="MH:OASIS">arn00007c00006</mods:recordIdentifier>
+                </mods:recordInfo>
+            </mods:mods>
+        </metadata>
+    </record>
+    <record>
+        <header>
+            <identifier>arn00007c00008</identifier>
+            <datestamp>20210311</datestamp>
+        </header>
+        <metadata>
+            <mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:mods="http://www.loc.gov/mods/v3"
+                       xmlns:sets="http://hul.harvard.edu/ois/xml/ns/sets"
+                       xmlns:xlink="http://www.w3.org/1999/xlink"
+                       xmlns:marc="http://www.loc.gov/MARC21/slim"
+                       xmlns:HarvardDRS="http://hul.harvard.edu/ois/xml/ns/HarvardDRS"
+                       xmlns:librarycloud="http://hul.harvard.edu/ois/xml/ns/librarycloud"
+                       xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-6.xsd"
+                       version="3.6">
+                <mods:titleInfo>
+                    <mods:title>Plate 8. Viola (garden varieties) of lutea and Curtisii</mods:title>
+                </mods:titleInfo>
+                <mods:physicalDescription>
+                    <mods:note type="organization">item</mods:note>
+                </mods:physicalDescription>
+                <mods:location>
+                    <mods:physicalLocation type="container">1</mods:physicalLocation>
+                </mods:location>
+                <mods:location>
+                    <mods:physicalLocation type="container">2</mods:physicalLocation>
+                </mods:location>
+                <mods:language>
+                    <mods:languageTerm authority="iso639-2b" type="code">und</mods:languageTerm>
+                    <mods:languageTerm authority="iso639-2b" type="text">Undefined</mods:languageTerm>
+                </mods:language>
+                <mods:accessCondition>The collection is available by appointment for research. Researchers must register and provide valid photo identification. Please contact botref@oeb.harvard.edu for additional information.</mods:accessCondition>
+                <mods:abstract>Full color, signed by Riocreux. Reproduced in Herbier G&#xe9;n&#xe9;ral, page 85, by Riocreux, Aumont.</mods:abstract>
+                <mods:location>
+                    <mods:url displayLabel="Thumbnail" access="preview">https://nrs.harvard.edu/urn-3:FMUS.ARN:37524544?width=150</mods:url>
+                    <mods:url displayLabel="Full Image" access="raw object">https://nrs.harvard.edu/urn-3:FMUS.ARN:37536100</mods:url>
+                    <mods:url displayLabel="Botanical Illustrations" access="object in context">https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-arn00007c00008</mods:url>
+                    <mods:url displayLabel="Harvard Digital Collections" access="object in context">https://id.lib.harvard.edu/digital_collections/arn00007c00008</mods:url>
+                </mods:location>
+                <mods:relatedItem otherType="HOLLIS for Archival Discovery record">
+                    <mods:location>
+                        <mods:url>https://id.lib.harvard.edu/ead/c/arn00007c00008/catalog</mods:url>
+                    </mods:location>
+                </mods:relatedItem>
+                <mods:relatedItem type="host" displayLabel="collection">
+                    <mods:location>
+                        <mods:physicalLocation displayLabel="Harvard repository" type="repository">Arnold Arboretum Library (Cambridge), Botany Libraries, Harvard University</mods:physicalLocation>
+                    </mods:location>
+                    <mods:identifier>arn00007</mods:identifier>
+                    <mods:name>
+                        <mods:namePart>Riocreux, Alfred, 1820-1912</mods:namePart>
+                        <mods:role>
+                            <mods:roleTerm>originator</mods:roleTerm>
+                        </mods:role>
+                        <mods:role>
+                            <mods:roleTerm>creator</mods:roleTerm>
+                        </mods:role>
+                    </mods:name>
+                    <mods:titleInfo>
+                        <mods:title>Alfred Riocreux botanical watercolors</mods:title>
+                    </mods:titleInfo>
+                    <mods:originInfo>
+                        <mods:dateCreated point="start">1860</mods:dateCreated>
+                        <mods:dateCreated point="end">1860</mods:dateCreated>
+                        <mods:dateCreated>1860</mods:dateCreated>
+                    </mods:originInfo>
+                    <mods:recordInfo>
+                        <mods:recordIdentifier>arn00007</mods:recordIdentifier>
+                    </mods:recordInfo>
+                    <mods:relatedItem otherType="HOLLIS record">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/alma/990068175320203941/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:relatedItem otherType="Finding Aid">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/ead/arn00007/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:extension>
+                        <librarycloud:librarycloud>
+                            <librarycloud:HarvardRepositories>
+                                <librarycloud:HarvardRepository>Botany Arnold (Cambr.)</librarycloud:HarvardRepository>
+                            </librarycloud:HarvardRepositories>
+                        </librarycloud:librarycloud>
+                    </mods:extension>
+                </mods:relatedItem>
+                <mods:extension>
+                    <HarvardDRS:DRSMetadata>
+                        <HarvardDRS:inDRS>true</HarvardDRS:inDRS>
+                        <HarvardDRS:drsObjectId>457731773</HarvardDRS:drsObjectId>
+                        <HarvardDRS:accessFlag>P</HarvardDRS:accessFlag>
+                        <HarvardDRS:contentModel>PDS DOCUMENT</HarvardDRS:contentModel>
+                        <HarvardDRS:contentModelCode>CMID-4.0</HarvardDRS:contentModelCode>
+                        <HarvardDRS:uriType>PDS</HarvardDRS:uriType>
+                        <HarvardDRS:fileDeliveryURL>https://nrs.harvard.edu/urn-3:FMUS.ARN:37536100</HarvardDRS:fileDeliveryURL>
+                        <HarvardDRS:ownerCode>FMUS.ARN</HarvardDRS:ownerCode>
+                        <HarvardDRS:ownerCodeDisplayName>Arnold Library, Cambridge</HarvardDRS:ownerCodeDisplayName>
+                        <HarvardDRS:metsLabel>Alfred Riocreux botanical watercolors,1860. arn00007. Botany Libraries, Arnold Arboretum Library (Cambridge), Harvard University.</HarvardDRS:metsLabel>
+                        <HarvardDRS:lastModifiedDate>2018-09-17T18:30:16Z</HarvardDRS:lastModifiedDate>
+                        <HarvardDRS:insertionDate>2018-09-13T18:23:30Z</HarvardDRS:insertionDate>
+                        <HarvardDRS:ownerSuppliedName>BI_arn00007_Riocreux</HarvardDRS:ownerSuppliedName>
+                        <HarvardDRS:viewText>on</HarvardDRS:viewText>
+                        <HarvardDRS:harvardMetadataLinks>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/alma/990068175320203941/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Alma</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Alma</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/ead/arn00007/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Finding Aid</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Finding Aid</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                        </HarvardDRS:harvardMetadataLinks>
+                    </HarvardDRS:DRSMetadata>
+                </mods:extension>
+                <mods:extension>
+                    <librarycloud:librarycloud>
+                        <librarycloud:availableTo>Everyone</librarycloud:availableTo>
+                        <librarycloud:digitalFormats>
+                            <librarycloud:digitalFormat>Books and documents</librarycloud:digitalFormat>
+                        </librarycloud:digitalFormats>
+                        <librarycloud:originalDocument>https://s3.amazonaws.com/harvard.ead/arn00007.xml</librarycloud:originalDocument>
+                        <librarycloud:processingDate>2021-03-11T10:31Z</librarycloud:processingDate>
+                    </librarycloud:librarycloud>
+                </mods:extension>
+                <mods:extension>
+                    <sets:sets>
+                        <sets:set>
+                            <sets:systemId>24</sets:systemId>
+                            <sets:setName>Botanical Illustrations</sets:setName>
+                            <sets:setSpec>botanicals</sets:setSpec>
+                            <sets:baseUrl>https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-</sets:baseUrl>
+                        </sets:set>
+                    </sets:sets>
+                </mods:extension>
+                <mods:recordInfo>
+                    <mods:recordChangeDate encoding="iso8601">20210311</mods:recordChangeDate>
+                    <mods:recordIdentifier source="MH:OASIS">arn00007c00008</mods:recordIdentifier>
+                </mods:recordInfo>
+            </mods:mods>
+        </metadata>
+    </record>
+    <record>
+        <header>
+            <identifier>arn00007c00009</identifier>
+            <datestamp>20210311</datestamp>
+        </header>
+        <metadata>
+            <mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:mods="http://www.loc.gov/mods/v3"
+                       xmlns:sets="http://hul.harvard.edu/ois/xml/ns/sets"
+                       xmlns:xlink="http://www.w3.org/1999/xlink"
+                       xmlns:marc="http://www.loc.gov/MARC21/slim"
+                       xmlns:HarvardDRS="http://hul.harvard.edu/ois/xml/ns/HarvardDRS"
+                       xmlns:librarycloud="http://hul.harvard.edu/ois/xml/ns/librarycloud"
+                       xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-6.xsd"
+                       version="3.6">
+                <mods:titleInfo>
+                    <mods:title>Plate 9. Viola (garden varieties) of lutea and Curtisii</mods:title>
+                </mods:titleInfo>
+                <mods:physicalDescription>
+                    <mods:note type="organization">item</mods:note>
+                </mods:physicalDescription>
+                <mods:location>
+                    <mods:physicalLocation type="container">1</mods:physicalLocation>
+                </mods:location>
+                <mods:location>
+                    <mods:physicalLocation type="container">2</mods:physicalLocation>
+                </mods:location>
+                <mods:language>
+                    <mods:languageTerm authority="iso639-2b" type="code">und</mods:languageTerm>
+                    <mods:languageTerm authority="iso639-2b" type="text">Undefined</mods:languageTerm>
+                </mods:language>
+                <mods:accessCondition>The collection is available by appointment for research. Researchers must register and provide valid photo identification. Please contact botref@oeb.harvard.edu for additional information.</mods:accessCondition>
+                <mods:abstract>Full color.</mods:abstract>
+                <mods:location>
+                    <mods:url displayLabel="Thumbnail" access="preview">https://nrs.harvard.edu/urn-3:FMUS.ARN:37524545?width=150</mods:url>
+                    <mods:url displayLabel="Full Image" access="raw object">https://nrs.harvard.edu/urn-3:FMUS.ARN:37536101</mods:url>
+                    <mods:url displayLabel="Botanical Illustrations" access="object in context">https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-arn00007c00009</mods:url>
+                    <mods:url displayLabel="Harvard Digital Collections" access="object in context">https://id.lib.harvard.edu/digital_collections/arn00007c00009</mods:url>
+                </mods:location>
+                <mods:relatedItem otherType="HOLLIS for Archival Discovery record">
+                    <mods:location>
+                        <mods:url>https://id.lib.harvard.edu/ead/c/arn00007c00009/catalog</mods:url>
+                    </mods:location>
+                </mods:relatedItem>
+                <mods:relatedItem type="host" displayLabel="collection">
+                    <mods:location>
+                        <mods:physicalLocation displayLabel="Harvard repository" type="repository">Arnold Arboretum Library (Cambridge), Botany Libraries, Harvard University</mods:physicalLocation>
+                    </mods:location>
+                    <mods:identifier>arn00007</mods:identifier>
+                    <mods:name>
+                        <mods:namePart>Riocreux, Alfred, 1820-1912</mods:namePart>
+                        <mods:role>
+                            <mods:roleTerm>originator</mods:roleTerm>
+                        </mods:role>
+                        <mods:role>
+                            <mods:roleTerm>creator</mods:roleTerm>
+                        </mods:role>
+                    </mods:name>
+                    <mods:titleInfo>
+                        <mods:title>Alfred Riocreux botanical watercolors</mods:title>
+                    </mods:titleInfo>
+                    <mods:originInfo>
+                        <mods:dateCreated point="start">1860</mods:dateCreated>
+                        <mods:dateCreated point="end">1860</mods:dateCreated>
+                        <mods:dateCreated>1860</mods:dateCreated>
+                    </mods:originInfo>
+                    <mods:recordInfo>
+                        <mods:recordIdentifier>arn00007</mods:recordIdentifier>
+                    </mods:recordInfo>
+                    <mods:relatedItem otherType="HOLLIS record">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/alma/990068175320203941/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:relatedItem otherType="Finding Aid">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/ead/arn00007/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:extension>
+                        <librarycloud:librarycloud>
+                            <librarycloud:HarvardRepositories>
+                                <librarycloud:HarvardRepository>Botany Arnold (Cambr.)</librarycloud:HarvardRepository>
+                            </librarycloud:HarvardRepositories>
+                        </librarycloud:librarycloud>
+                    </mods:extension>
+                </mods:relatedItem>
+                <mods:extension>
+                    <HarvardDRS:DRSMetadata>
+                        <HarvardDRS:inDRS>true</HarvardDRS:inDRS>
+                        <HarvardDRS:drsObjectId>457731773</HarvardDRS:drsObjectId>
+                        <HarvardDRS:accessFlag>P</HarvardDRS:accessFlag>
+                        <HarvardDRS:contentModel>PDS DOCUMENT</HarvardDRS:contentModel>
+                        <HarvardDRS:contentModelCode>CMID-4.0</HarvardDRS:contentModelCode>
+                        <HarvardDRS:uriType>PDS</HarvardDRS:uriType>
+                        <HarvardDRS:fileDeliveryURL>https://nrs.harvard.edu/urn-3:FMUS.ARN:37536101</HarvardDRS:fileDeliveryURL>
+                        <HarvardDRS:ownerCode>FMUS.ARN</HarvardDRS:ownerCode>
+                        <HarvardDRS:ownerCodeDisplayName>Arnold Library, Cambridge</HarvardDRS:ownerCodeDisplayName>
+                        <HarvardDRS:metsLabel>Alfred Riocreux botanical watercolors,1860. arn00007. Botany Libraries, Arnold Arboretum Library (Cambridge), Harvard University.</HarvardDRS:metsLabel>
+                        <HarvardDRS:lastModifiedDate>2018-09-17T18:30:16Z</HarvardDRS:lastModifiedDate>
+                        <HarvardDRS:insertionDate>2018-09-13T18:23:30Z</HarvardDRS:insertionDate>
+                        <HarvardDRS:ownerSuppliedName>BI_arn00007_Riocreux</HarvardDRS:ownerSuppliedName>
+                        <HarvardDRS:viewText>on</HarvardDRS:viewText>
+                        <HarvardDRS:harvardMetadataLinks>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/alma/990068175320203941/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Alma</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Alma</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/ead/arn00007/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Finding Aid</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Finding Aid</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                        </HarvardDRS:harvardMetadataLinks>
+                    </HarvardDRS:DRSMetadata>
+                </mods:extension>
+                <mods:extension>
+                    <librarycloud:librarycloud>
+                        <librarycloud:availableTo>Everyone</librarycloud:availableTo>
+                        <librarycloud:digitalFormats>
+                            <librarycloud:digitalFormat>Books and documents</librarycloud:digitalFormat>
+                        </librarycloud:digitalFormats>
+                        <librarycloud:originalDocument>https://s3.amazonaws.com/harvard.ead/arn00007.xml</librarycloud:originalDocument>
+                        <librarycloud:processingDate>2021-03-11T10:31Z</librarycloud:processingDate>
+                    </librarycloud:librarycloud>
+                </mods:extension>
+                <mods:extension>
+                    <sets:sets>
+                        <sets:set>
+                            <sets:systemId>24</sets:systemId>
+                            <sets:setName>Botanical Illustrations</sets:setName>
+                            <sets:setSpec>botanicals</sets:setSpec>
+                            <sets:baseUrl>https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-</sets:baseUrl>
+                        </sets:set>
+                    </sets:sets>
+                </mods:extension>
+                <mods:recordInfo>
+                    <mods:recordChangeDate encoding="iso8601">20210311</mods:recordChangeDate>
+                    <mods:recordIdentifier source="MH:OASIS">arn00007c00009</mods:recordIdentifier>
+                </mods:recordInfo>
+            </mods:mods>
+        </metadata>
+    </record>
+    <record>
+        <header>
+            <identifier>arn00007c00010</identifier>
+            <datestamp>20210311</datestamp>
+        </header>
+        <metadata>
+            <mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:mods="http://www.loc.gov/mods/v3"
+                       xmlns:sets="http://hul.harvard.edu/ois/xml/ns/sets"
+                       xmlns:xlink="http://www.w3.org/1999/xlink"
+                       xmlns:marc="http://www.loc.gov/MARC21/slim"
+                       xmlns:HarvardDRS="http://hul.harvard.edu/ois/xml/ns/HarvardDRS"
+                       xmlns:librarycloud="http://hul.harvard.edu/ois/xml/ns/librarycloud"
+                       xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-6.xsd"
+                       version="3.6">
+                <mods:titleInfo>
+                    <mods:title>Plate 10. Viola</mods:title>
+                </mods:titleInfo>
+                <mods:physicalDescription>
+                    <mods:note type="organization">item</mods:note>
+                </mods:physicalDescription>
+                <mods:location>
+                    <mods:physicalLocation type="container">1</mods:physicalLocation>
+                </mods:location>
+                <mods:location>
+                    <mods:physicalLocation type="container">2</mods:physicalLocation>
+                </mods:location>
+                <mods:language>
+                    <mods:languageTerm authority="iso639-2b" type="code">und</mods:languageTerm>
+                    <mods:languageTerm authority="iso639-2b" type="text">Undefined</mods:languageTerm>
+                </mods:language>
+                <mods:accessCondition>The collection is available by appointment for research. Researchers must register and provide valid photo identification. Please contact botref@oeb.harvard.edu for additional information.</mods:accessCondition>
+                <mods:abstract>Full color.</mods:abstract>
+                <mods:location>
+                    <mods:url displayLabel="Thumbnail" access="preview">https://nrs.harvard.edu/urn-3:FMUS.ARN:37524546?width=150</mods:url>
+                    <mods:url displayLabel="Full Image" access="raw object">https://nrs.harvard.edu/urn-3:FMUS.ARN:37536102</mods:url>
+                    <mods:url displayLabel="Botanical Illustrations" access="object in context">https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-arn00007c00010</mods:url>
+                    <mods:url displayLabel="Harvard Digital Collections" access="object in context">https://id.lib.harvard.edu/digital_collections/arn00007c00010</mods:url>
+                </mods:location>
+                <mods:relatedItem otherType="HOLLIS for Archival Discovery record">
+                    <mods:location>
+                        <mods:url>https://id.lib.harvard.edu/ead/c/arn00007c00010/catalog</mods:url>
+                    </mods:location>
+                </mods:relatedItem>
+                <mods:relatedItem type="host" displayLabel="collection">
+                    <mods:location>
+                        <mods:physicalLocation displayLabel="Harvard repository" type="repository">Arnold Arboretum Library (Cambridge), Botany Libraries, Harvard University</mods:physicalLocation>
+                    </mods:location>
+                    <mods:identifier>arn00007</mods:identifier>
+                    <mods:name>
+                        <mods:namePart>Riocreux, Alfred, 1820-1912</mods:namePart>
+                        <mods:role>
+                            <mods:roleTerm>originator</mods:roleTerm>
+                        </mods:role>
+                        <mods:role>
+                            <mods:roleTerm>creator</mods:roleTerm>
+                        </mods:role>
+                    </mods:name>
+                    <mods:titleInfo>
+                        <mods:title>Alfred Riocreux botanical watercolors</mods:title>
+                    </mods:titleInfo>
+                    <mods:originInfo>
+                        <mods:dateCreated point="start">1860</mods:dateCreated>
+                        <mods:dateCreated point="end">1860</mods:dateCreated>
+                        <mods:dateCreated>1860</mods:dateCreated>
+                    </mods:originInfo>
+                    <mods:recordInfo>
+                        <mods:recordIdentifier>arn00007</mods:recordIdentifier>
+                    </mods:recordInfo>
+                    <mods:relatedItem otherType="HOLLIS record">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/alma/990068175320203941/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:relatedItem otherType="Finding Aid">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/ead/arn00007/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:extension>
+                        <librarycloud:librarycloud>
+                            <librarycloud:HarvardRepositories>
+                                <librarycloud:HarvardRepository>Botany Arnold (Cambr.)</librarycloud:HarvardRepository>
+                            </librarycloud:HarvardRepositories>
+                        </librarycloud:librarycloud>
+                    </mods:extension>
+                </mods:relatedItem>
+                <mods:extension>
+                    <HarvardDRS:DRSMetadata>
+                        <HarvardDRS:inDRS>true</HarvardDRS:inDRS>
+                        <HarvardDRS:drsObjectId>457731773</HarvardDRS:drsObjectId>
+                        <HarvardDRS:accessFlag>P</HarvardDRS:accessFlag>
+                        <HarvardDRS:contentModel>PDS DOCUMENT</HarvardDRS:contentModel>
+                        <HarvardDRS:contentModelCode>CMID-4.0</HarvardDRS:contentModelCode>
+                        <HarvardDRS:uriType>PDS</HarvardDRS:uriType>
+                        <HarvardDRS:fileDeliveryURL>https://nrs.harvard.edu/urn-3:FMUS.ARN:37536102</HarvardDRS:fileDeliveryURL>
+                        <HarvardDRS:ownerCode>FMUS.ARN</HarvardDRS:ownerCode>
+                        <HarvardDRS:ownerCodeDisplayName>Arnold Library, Cambridge</HarvardDRS:ownerCodeDisplayName>
+                        <HarvardDRS:metsLabel>Alfred Riocreux botanical watercolors,1860. arn00007. Botany Libraries, Arnold Arboretum Library (Cambridge), Harvard University.</HarvardDRS:metsLabel>
+                        <HarvardDRS:lastModifiedDate>2018-09-17T18:30:16Z</HarvardDRS:lastModifiedDate>
+                        <HarvardDRS:insertionDate>2018-09-13T18:23:30Z</HarvardDRS:insertionDate>
+                        <HarvardDRS:ownerSuppliedName>BI_arn00007_Riocreux</HarvardDRS:ownerSuppliedName>
+                        <HarvardDRS:viewText>on</HarvardDRS:viewText>
+                        <HarvardDRS:harvardMetadataLinks>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/alma/990068175320203941/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Alma</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Alma</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/ead/arn00007/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Finding Aid</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Finding Aid</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                        </HarvardDRS:harvardMetadataLinks>
+                    </HarvardDRS:DRSMetadata>
+                </mods:extension>
+                <mods:extension>
+                    <librarycloud:librarycloud>
+                        <librarycloud:availableTo>Everyone</librarycloud:availableTo>
+                        <librarycloud:digitalFormats>
+                            <librarycloud:digitalFormat>Books and documents</librarycloud:digitalFormat>
+                        </librarycloud:digitalFormats>
+                        <librarycloud:originalDocument>https://s3.amazonaws.com/harvard.ead/arn00007.xml</librarycloud:originalDocument>
+                        <librarycloud:processingDate>2021-03-11T10:31Z</librarycloud:processingDate>
+                    </librarycloud:librarycloud>
+                </mods:extension>
+                <mods:extension>
+                    <sets:sets>
+                        <sets:set>
+                            <sets:systemId>24</sets:systemId>
+                            <sets:setName>Botanical Illustrations</sets:setName>
+                            <sets:setSpec>botanicals</sets:setSpec>
+                            <sets:baseUrl>https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-</sets:baseUrl>
+                        </sets:set>
+                    </sets:sets>
+                </mods:extension>
+                <mods:recordInfo>
+                    <mods:recordChangeDate encoding="iso8601">20210311</mods:recordChangeDate>
+                    <mods:recordIdentifier source="MH:OASIS">arn00007c00010</mods:recordIdentifier>
+                </mods:recordInfo>
+            </mods:mods>
+        </metadata>
+    </record>
+    <record>
+        <header>
+            <identifier>arn00007c00011</identifier>
+            <datestamp>20210311</datestamp>
+        </header>
+        <metadata>
+            <mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xmlns:mods="http://www.loc.gov/mods/v3"
+                       xmlns:sets="http://hul.harvard.edu/ois/xml/ns/sets"
+                       xmlns:xlink="http://www.w3.org/1999/xlink"
+                       xmlns:marc="http://www.loc.gov/MARC21/slim"
+                       xmlns:HarvardDRS="http://hul.harvard.edu/ois/xml/ns/HarvardDRS"
+                       xmlns:librarycloud="http://hul.harvard.edu/ois/xml/ns/librarycloud"
+                       xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-6.xsd"
+                       version="3.6">
+                <mods:titleInfo>
+                    <mods:title>Plate 11. Helianthemum roseum</mods:title>
+                </mods:titleInfo>
+                <mods:physicalDescription>
+                    <mods:note type="organization">item</mods:note>
+                </mods:physicalDescription>
+                <mods:location>
+                    <mods:physicalLocation type="container">1</mods:physicalLocation>
+                </mods:location>
+                <mods:location>
+                    <mods:physicalLocation type="container">3</mods:physicalLocation>
+                </mods:location>
+                <mods:language>
+                    <mods:languageTerm authority="iso639-2b" type="code">und</mods:languageTerm>
+                    <mods:languageTerm authority="iso639-2b" type="text">Undefined</mods:languageTerm>
+                </mods:language>
+                <mods:accessCondition>The collection is available by appointment for research. Researchers must register and provide valid photo identification. Please contact botref@oeb.harvard.edu for additional information.</mods:accessCondition>
+                <mods:abstract>Full color. Reproduced in Herbier G&#xe9;n&#xe9;ral, page 14, by Mme. Deville, Aumont.</mods:abstract>
+                <mods:location>
+                    <mods:url displayLabel="Thumbnail" access="preview">https://nrs.harvard.edu/urn-3:FMUS.ARN:37524547?width=150</mods:url>
+                    <mods:url displayLabel="Full Image" access="raw object">https://nrs.harvard.edu/urn-3:FMUS.ARN:37536103</mods:url>
+                    <mods:url displayLabel="Botanical Illustrations" access="object in context">https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-arn00007c00011</mods:url>
+                    <mods:url displayLabel="Harvard Digital Collections" access="object in context">https://id.lib.harvard.edu/digital_collections/arn00007c00011</mods:url>
+                </mods:location>
+                <mods:relatedItem otherType="HOLLIS for Archival Discovery record">
+                    <mods:location>
+                        <mods:url>https://id.lib.harvard.edu/ead/c/arn00007c00011/catalog</mods:url>
+                    </mods:location>
+                </mods:relatedItem>
+                <mods:relatedItem type="host" displayLabel="collection">
+                    <mods:location>
+                        <mods:physicalLocation displayLabel="Harvard repository" type="repository">Arnold Arboretum Library (Cambridge), Botany Libraries, Harvard University</mods:physicalLocation>
+                    </mods:location>
+                    <mods:identifier>arn00007</mods:identifier>
+                    <mods:name>
+                        <mods:namePart>Riocreux, Alfred, 1820-1912</mods:namePart>
+                        <mods:role>
+                            <mods:roleTerm>originator</mods:roleTerm>
+                        </mods:role>
+                        <mods:role>
+                            <mods:roleTerm>creator</mods:roleTerm>
+                        </mods:role>
+                    </mods:name>
+                    <mods:titleInfo>
+                        <mods:title>Alfred Riocreux botanical watercolors</mods:title>
+                    </mods:titleInfo>
+                    <mods:originInfo>
+                        <mods:dateCreated point="start">1860</mods:dateCreated>
+                        <mods:dateCreated point="end">1860</mods:dateCreated>
+                        <mods:dateCreated>1860</mods:dateCreated>
+                    </mods:originInfo>
+                    <mods:recordInfo>
+                        <mods:recordIdentifier>arn00007</mods:recordIdentifier>
+                    </mods:recordInfo>
+                    <mods:relatedItem otherType="HOLLIS record">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/alma/990068175320203941/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:relatedItem otherType="Finding Aid">
+                        <mods:location>
+                            <mods:url>https://id.lib.harvard.edu/ead/arn00007/catalog</mods:url>
+                        </mods:location>
+                    </mods:relatedItem>
+                    <mods:extension>
+                        <librarycloud:librarycloud>
+                            <librarycloud:HarvardRepositories>
+                                <librarycloud:HarvardRepository>Botany Arnold (Cambr.)</librarycloud:HarvardRepository>
+                            </librarycloud:HarvardRepositories>
+                        </librarycloud:librarycloud>
+                    </mods:extension>
+                </mods:relatedItem>
+                <mods:extension>
+                    <HarvardDRS:DRSMetadata>
+                        <HarvardDRS:inDRS>true</HarvardDRS:inDRS>
+                        <HarvardDRS:drsObjectId>457731773</HarvardDRS:drsObjectId>
+                        <HarvardDRS:accessFlag>P</HarvardDRS:accessFlag>
+                        <HarvardDRS:contentModel>PDS DOCUMENT</HarvardDRS:contentModel>
+                        <HarvardDRS:contentModelCode>CMID-4.0</HarvardDRS:contentModelCode>
+                        <HarvardDRS:uriType>PDS</HarvardDRS:uriType>
+                        <HarvardDRS:fileDeliveryURL>https://nrs.harvard.edu/urn-3:FMUS.ARN:37536103</HarvardDRS:fileDeliveryURL>
+                        <HarvardDRS:ownerCode>FMUS.ARN</HarvardDRS:ownerCode>
+                        <HarvardDRS:ownerCodeDisplayName>Arnold Library, Cambridge</HarvardDRS:ownerCodeDisplayName>
+                        <HarvardDRS:metsLabel>Alfred Riocreux botanical watercolors,1860. arn00007. Botany Libraries, Arnold Arboretum Library (Cambridge), Harvard University.</HarvardDRS:metsLabel>
+                        <HarvardDRS:lastModifiedDate>2018-09-17T18:30:16Z</HarvardDRS:lastModifiedDate>
+                        <HarvardDRS:insertionDate>2018-09-13T18:23:30Z</HarvardDRS:insertionDate>
+                        <HarvardDRS:ownerSuppliedName>BI_arn00007_Riocreux</HarvardDRS:ownerSuppliedName>
+                        <HarvardDRS:viewText>on</HarvardDRS:viewText>
+                        <HarvardDRS:harvardMetadataLinks>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/alma/990068175320203941/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Alma</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Alma</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                            <HarvardDRS:harvardMetadataLink>
+                                <HarvardDRS:metadataIdentifier>http://id.lib.harvard.edu/ead/arn00007/catalog</HarvardDRS:metadataIdentifier>
+                                <HarvardDRS:metadataType>Finding Aid</HarvardDRS:metadataType>
+                                <HarvardDRS:displayLabel>Finding Aid</HarvardDRS:displayLabel>
+                            </HarvardDRS:harvardMetadataLink>
+                        </HarvardDRS:harvardMetadataLinks>
+                    </HarvardDRS:DRSMetadata>
+                </mods:extension>
+                <mods:extension>
+                    <librarycloud:librarycloud>
+                        <librarycloud:availableTo>Everyone</librarycloud:availableTo>
+                        <librarycloud:digitalFormats>
+                            <librarycloud:digitalFormat>Books and documents</librarycloud:digitalFormat>
+                        </librarycloud:digitalFormats>
+                        <librarycloud:originalDocument>https://s3.amazonaws.com/harvard.ead/arn00007.xml</librarycloud:originalDocument>
+                        <librarycloud:processingDate>2021-03-11T10:31Z</librarycloud:processingDate>
+                    </librarycloud:librarycloud>
+                </mods:extension>
+                <mods:extension>
+                    <sets:sets>
+                        <sets:set>
+                            <sets:systemId>24</sets:systemId>
+                            <sets:setName>Botanical Illustrations</sets:setName>
+                            <sets:setSpec>botanicals</sets:setSpec>
+                            <sets:baseUrl>https://id.lib.harvard.edu/curiosity/botanical-illustrations/62-</sets:baseUrl>
+                        </sets:set>
+                    </sets:sets>
+                </mods:extension>
+                <mods:recordInfo>
+                    <mods:recordChangeDate encoding="iso8601">20210311</mods:recordChangeDate>
+                    <mods:recordIdentifier source="MH:OASIS">arn00007c00011</mods:recordIdentifier>
+                </mods:recordInfo>
+            </mods:mods>
+        </metadata>
+    </record>
+    <resumptionToken completeListSize="4147">AoEuYXJuMDAwMDdjMDAwMTE=:botanicals:10:mods</resumptionToken>
+</ListRecords>
+</OAI-PMH>
