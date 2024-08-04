@@ -15,7 +15,6 @@ import org.json4s.JsonAST
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 
-import scala.collection.mutable.ArrayBuffer
 import scala.xml.{NodeSeq, Text}
 
 class TxMapping
@@ -233,14 +232,8 @@ class TxMapping
 
   /** Helper method to extract value directly associated with property or <name>
     * sub-property
-    *
-    * @param data
-    * @param property
-    * @return
     */
-  def extractName(data: NodeSeq, property: String): ZeroToMany[EdmAgent] = {
-    (data \ property)
-
+  def extractName(data: NodeSeq, property: String): ZeroToMany[EdmAgent] =
     (data \ property)
       .flatMap(node => {
         val name = extractStrings(node \ "name")
@@ -250,16 +243,12 @@ class TxMapping
           name
       })
       .map(nameOnlyAgent)
-  }
 
   override def tags(data: Document[NodeSeq]): ZeroToMany[URI] = Seq(
     URI("texas")
   )
 
   /** Helper method to get to metadata root
-    *
-    * @param data
-    * @return
     */
   def metadata(data: NodeSeq): NodeSeq = data \ "metadata" \ "metadata"
 }
@@ -280,15 +269,15 @@ object TxMapping {
 
   val endpoint =
     "https://digital2.library.unt.edu/vocabularies/institutions/json/"
-  val jsonString =
-    HttpUtils.makeGetRequest(new URL(endpoint), None).getOrElse("")
-  val json = parse(jsonString)
+  private lazy val jsonString =
+    HttpUtils.makeGetRequest(new URL(endpoint), None)
+  private lazy val json = parse(jsonString)
 
   val dataproviderTermLabel: Map[String, String] = (for {
     JArray(terms) <- json \ "terms"
     JObject(term) <- terms
     JField("name", JString(name)) <- term
     JField("label", JString(label)) <- term
-  } yield (name -> label)).toMap[String, String]
+  } yield name -> label).toMap[String, String]
 
 }

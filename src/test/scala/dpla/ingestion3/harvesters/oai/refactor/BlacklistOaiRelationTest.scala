@@ -6,34 +6,43 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class BlacklistOaiRelationTest extends AnyFlatSpec with SharedSparkContext {
 
-  private val oaiConfiguration = OaiConfiguration(Map(
-    "verb" -> "ListRecords",
-    "blacklist" -> "ennie,meenie,miney,moe"
-  ))
+  private val oaiConfiguration = OaiConfiguration(
+    Map(
+      "verb" -> "ListRecords",
+      "blacklist" -> "ennie,meenie,miney,moe"
+    )
+  )
 
-  private val oaiMethods = new OaiMethods with Serializable {
+  private val oaiMethods: OaiMethods = new OaiMethods with Serializable {
 
-    override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage], removeDeleted: Boolean) = Seq(
-      Right(OaiRecord("a", "document", Seq()))
+    override def parsePageIntoRecords(
+        page: OaiPage,
+        removeDeleted: Boolean
+    ): Seq[OaiRecord] =
+      Seq(
+        OaiRecord("a", "document", Seq())
+      )
+
+    override def listAllRecordPages(): IterableOnce[OaiPage] =
+      Seq() // not implemented
+
+    override def listAllSetPages(): IterableOnce[OaiPage] = Seq(
+      OaiPage("1"),
+      OaiPage("2")
     )
 
-    override def listAllRecordPages() =  ???
+    override def listAllRecordPagesForSet(set: OaiSet): IterableOnce[OaiPage] =
+      listAllSetPages()
 
-    override def listAllSetPages() = Seq(
-      Right(OaiPage("1")),
-      Right(OaiPage("2"))
-    )
-
-    override def listAllRecordPagesForSet(setEither: Either[OaiError, OaiSet]) = listAllSetPages()
-
-    override def parsePageIntoSets(pageEither: Either[OaiError, OaiPage]) = Seq(
-      Right(OaiSet("1", "")), Right(OaiSet("moe", ""))
+    override def parsePageIntoSets(page: OaiPage): Seq[OaiSet] = Seq(
+      OaiSet("1", ""),
+      OaiSet("moe", "")
     )
   }
 
   private lazy val sqlContext = SparkSession.builder().getOrCreate().sqlContext
-  private lazy val relation = new BlacklistOaiRelation(oaiConfiguration, oaiMethods)(sqlContext)
-
+  private lazy val relation =
+    new BlacklistOaiRelation(oaiConfiguration, oaiMethods)(sqlContext)
 
   "A BlacklistOaiRelation" should "build a scan using OaiMethods" in {
     val rdd = relation.buildScan()

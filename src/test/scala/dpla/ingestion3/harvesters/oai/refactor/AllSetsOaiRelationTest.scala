@@ -10,27 +10,35 @@ class AllSetsOaiRelationTest extends AnyFlatSpec with SharedSparkContext {
 
   private val oaiMethods: OaiMethods = new OaiMethods with Serializable {
 
-    override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage], removeDeleted: Boolean): Seq[Right[Nothing, OaiRecord]] = Seq(
-      Right(OaiRecord("a", "document", Seq()))
+    override def parsePageIntoRecords(
+        page: OaiPage,
+        removeDeleted: Boolean
+    ): Seq[OaiRecord] = Seq(
+      OaiRecord("a", "document", Seq())
     )
 
     override def listAllRecordPages(): Seq[Nothing] = Seq()
 
-    override def listAllSetPages(): Seq[Right[Nothing, OaiPage]] = Seq(
-      Right(OaiPage("1")),
-      Right(OaiPage("2"))
+    override def listAllSetPages(): Seq[OaiPage] = Seq(
+      OaiPage("1"),
+      OaiPage("2")
     )
 
-    override def listAllRecordPagesForSet(setEither: Either[OaiError, OaiSet]): Seq[Right[Nothing, OaiPage]] = listAllSetPages()
+    override def listAllRecordPagesForSet(
+        set: OaiSet
+    ): Seq[OaiPage] = listAllSetPages()
 
-    override def parsePageIntoSets(pageEither: Either[OaiError, OaiPage]): Seq[Right[Nothing, OaiSet]] = Seq(
-      Right(OaiSet("1", "")), Right(OaiSet("2", ""))
+    override def parsePageIntoSets(
+        page: OaiPage
+    ): Seq[OaiSet] = Seq(
+      OaiSet("1", ""),
+      OaiSet("2", "")
     )
   }
 
   private lazy val sqlContext = SparkSession.builder().getOrCreate().sqlContext
-  private lazy val relation = new AllSetsOaiRelation(oaiConfiguration, oaiMethods)(sqlContext)
-
+  private lazy val relation =
+    new AllSetsOaiRelation(oaiConfiguration, oaiMethods)(sqlContext)
 
   "An AllSetsOaiRelation" should "build a scan using OaiMethods" in {
     val rdd = relation.buildScan()

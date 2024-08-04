@@ -20,8 +20,7 @@ class WhitelistOaiRelation(
     val sparkContext = sqlContext.sparkContext
     val whitelist =
       sparkContext.parallelize(oaiConfiguration.setlist.getOrElse(Array()))
-    val whitelistEithers = whitelist.map(set => Right(OaiSet(set, "")))
-    val pages = whitelistEithers.flatMap(oaiMethods.listAllRecordPagesForSet)
+    val pages = whitelist.flatMap(set => oaiMethods.listAllRecordPagesForSet(OaiSet(set, "")))
     val records = pages.flatMap(
       oaiMethods.parsePageIntoRecords(_, oaiConfiguration.removeDeleted)
     )

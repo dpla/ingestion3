@@ -27,12 +27,9 @@ abstract class OaiRelation
       ScalaReflection.schemaFor[OaiSet].dataType.asInstanceOf[StructType]
     val recordType =
       ScalaReflection.schemaFor[OaiRecord].dataType.asInstanceOf[StructType]
-    val errorType =
-      ScalaReflection.schemaFor[OaiError].dataType.asInstanceOf[StructType]
     val setField = StructField("set", setType, nullable = true)
     val recordField = StructField("record", recordType, nullable = true)
-    val errorField = StructField("error", errorType, nullable = true)
-    StructType(Seq(setField, recordField, errorField))
+    StructType(Seq(setField, recordField))
   }
 
   override def buildScan(): RDD[Row]
@@ -60,12 +57,7 @@ object OaiRelation {
         )
     }
 
-  def convertToOutputRow(oaiRecordEither: Either[OaiError, OaiRecord]): Row =
-    oaiRecordEither match {
-      case Right(oaiRecord: OaiRecord) =>
-        Row(null, Row(oaiRecord.id, oaiRecord.document, oaiRecord.setIds), null)
-      case Left(oaiError: OaiError) =>
-        Row(null, null, Row(oaiError.message, oaiError.url.orNull))
-    }
+  def convertToOutputRow(oaiRecord: OaiRecord): Row =
+    Row(null, Row(oaiRecord.id, oaiRecord.document, oaiRecord.setIds), null)
 
 }

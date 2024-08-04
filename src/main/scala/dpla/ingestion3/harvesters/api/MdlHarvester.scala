@@ -6,13 +6,12 @@ import dpla.ingestion3.model.AVRO_MIME_JSON
 import dpla.ingestion3.utils.HttpUtils
 import org.apache.avro.generic.GenericData
 import org.apache.http.client.utils.URIBuilder
-import org.apache.log4j.Logger
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods.{compact, parse, render}
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class MdlHarvester(
     spark: SparkSession,
@@ -110,7 +109,7 @@ class MdlHarvester(
     */
   private def getSinglePage(urlString: String): ApiResponse = {
     val url = new URL(urlString)
-    HttpUtils.makeGetRequest(url) match {
+    Try { HttpUtils.makeGetRequest(url) } match {
       case Failure(e) =>
         ApiError(e.toString, ApiSource(queryParams, Some(url.toString)))
       case Success(response) if response.isEmpty =>

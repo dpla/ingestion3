@@ -9,91 +9,84 @@ import org.scalatest.flatspec.AnyFlatSpec
 import java.nio.charset.Charset
 import scala.jdk.CollectionConverters._
 
-
 class AllRecordsOaiRelationTest extends AnyFlatSpec with SharedSparkContext {
 
   private val oaiConfiguration = OaiConfiguration(Map("verb" -> "ListRecords"))
 
   private val oaiMethods: OaiMethods = new OaiMethods with Serializable {
 
-    override def parsePageIntoRecords(pageEither: Either[OaiError, OaiPage], removeDeleted: Boolean): Seq[Right[Nothing, OaiRecord]] = Seq(
-      Right(OaiRecord("a", "document", Seq()))
+    override def parsePageIntoRecords(
+        page: OaiPage,
+        removeDeleted: Boolean
+    ): Seq[OaiRecord] = Seq(OaiRecord("a", "document", Seq()))
+
+    override def listAllRecordPages(): Seq[OaiPage] = Seq(
+      OaiPage("blah"),
+      OaiPage("blah2"),
+      OaiPage("blah3")
     )
 
-    override def listAllRecordPages(): Seq[Either[OaiError, OaiPage]] = Seq(
-      Right(OaiPage("blah")),
-      Right(OaiPage("blah2")),
-      Right(OaiPage("blah3")),
-      Left(OaiError("oops", None))
-    )
+    override def listAllRecordPagesForSet(
+        set: OaiSet
+    ): IterableOnce[OaiPage] = Seq()
 
+    override def parsePageIntoSets(
+        page: OaiPage
+    ): IterableOnce[OaiSet] = Seq()
 
-    override def listAllRecordPagesForSet(setEither: Either[OaiError, OaiSet]): IterableOnce[Either[OaiError, OaiPage]] = Seq()
-
-    override def parsePageIntoSets(pageEither: Either[OaiError, OaiPage]): IterableOnce[Either[OaiError, OaiSet]] = Seq()
-
-    def listAllSetPages(): IterableOnce[Either[OaiError, OaiPage]] = Seq()
+    def listAllSetPages(): IterableOnce[OaiPage] = Seq()
   }
 
   private lazy val sqlContext = SparkSession.builder().getOrCreate().sqlContext
-  private lazy val relation = new AllRecordsOaiRelation(oaiConfiguration, oaiMethods)(sqlContext)
+  private lazy val relation =
+    new AllRecordsOaiRelation(oaiConfiguration, oaiMethods)(sqlContext)
 
-  "a AllRecordsOaiRelation" should "parse a CSV row into an Either[OaiError, OaiPage]" in {
+  "a AllRecordsOaiRelation" should "parse a CSV row into an OaiPage" in {
     val pageRow = Row("page", "abcd", "")
-    val errorRow1 = Row("error", "abcd", "")
-    val errorRow2 = Row("error", "efgh", "foo")
-
     val page = relation.handleCsvRow(pageRow)
-    assert(page.isRight)
-    assert(page.right.getOrElse(throw new RuntimeException("No page")).page === pageRow.getString(1))
-
-    val error1 = relation.handleCsvRow(errorRow1)
-    assert(error1.isLeft)
-    assert(error1.left.getOrElse(throw new RuntimeException("No page")).message === errorRow1.getString(1))
-    assert(error1.left.getOrElse(throw new RuntimeException("No page")).url === None)
-
-    val error2 = relation.handleCsvRow(errorRow2)
-    assert(error2.isLeft)
-    assert(error2.left.getOrElse(throw new RuntimeException("No page")).message === errorRow2.getString(1))
-    assert(error2.left.getOrElse(throw new RuntimeException("No page")).url === Some(errorRow2.getString(2)))
+    assert(
+      page.page === pageRow.getString(1)
+    )
   }
 
   it should "write OAI harvest results to a temp file" in {
     val tempFile = File.createTempFile("oai", "test")
     relation.cacheTempFile(tempFile)
-    val lines = FileUtils.readLines(tempFile, Charset.forName("UTF-8")).asScala.toIndexedSeq
+    val lines = FileUtils
+      .readLines(tempFile, Charset.forName("UTF-8"))
+      .asScala
+      .toIndexedSeq
     assert(lines(0) === "\"page\",\"blah\",\"\"")
     assert(lines(1) === "\"page\",\"blah2\",\"\"")
     assert(lines(2) === "\"page\",\"blah3\",\"\"")
-    assert(lines(3) === "\"error\",\"oops\",\"\"")
-    assert(lines(3) === "\"error\",\"oops\",\"\"")
     tempFile.delete
   }
 
   it should "parse a temp file and return an RDD of the contents as Row(Either[OaiError,OaiPage])" in {
     val tempFile = File.createTempFile("oai", "test")
-    FileUtils.writeLines(tempFile, Seq("page,blah,", "page,blah2,", "page,blah3,", "error,oops,None").asJava)
+    FileUtils.writeLines(
+      tempFile,
+      Seq("page,blah,", "page,blah2,", "page,blah3,").asJava
+    )
     val data = relation.tempFileToRdd(tempFile).collect().toIndexedSeq
-    assert(data.size === 4)
+    assert(data.size === 3)
     assert(data(0) === Row(null, Row("a", "document", Seq()), null))
     tempFile.delete()
   }
 
   it should "parse Rows into OaiPages and OaiErrors" in {
-    assert(relation.handleCsvRow(Row("page", "foo", "")) === Right(OaiPage("foo")))
-    assert(relation.handleCsvRow(Row("error", "sorry", "")) === Left(OaiError("sorry", None)))
-    assert(relation.handleCsvRow(Row("page", "sorry\nsucker", "")) === Right(OaiPage("sorry\nsucker")))
+    assert(
+      relation.handleCsvRow(Row("page", "foo", "")) === OaiPage("foo")
+    )
+    assert(
+      relation.handleCsvRow(Row("page", "sorry\nsucker", "")) ===
+        OaiPage("sorry\nsucker")
+    )
   }
 
-  it should "render Either[OaiError,OaiPage] into approprate Seqs" in {
+  it should "render OaiPage into appropriate Seqs" in {
     assert(
-      relation.eitherToArray(Left(OaiError("sorry", None))) === Seq("error", "sorry", "")
-    )
-    assert(
-      relation.eitherToArray(Left(OaiError("sorry", Some("bar")))) === Seq("error", "sorry", "bar")
-    )
-    assert(
-      relation.eitherToArray(Right(OaiPage("pagey"))) === Seq("page", "pagey", "")
+      relation.pageToArray(OaiPage("pagey")) === Seq("page", "pagey", "")
     )
   }
 
