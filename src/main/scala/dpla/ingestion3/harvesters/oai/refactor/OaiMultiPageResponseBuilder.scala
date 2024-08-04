@@ -5,8 +5,6 @@ import dpla.ingestion3.utils.HttpUtils
 import org.apache.http.client.utils.URIBuilder
 import org.apache.logging.log4j.LogManager
 
-import scala.util.{Failure, Success, Try}
-
 class OaiMultiPageResponseBuilder(
     endpoint: String,
     verb: String,
@@ -42,14 +40,14 @@ class OaiMultiPageResponseBuilder(
           case None =>
             throw new RuntimeException("Called next() on end of iterator.")
           case Some(last) =>
-            val response = last
-            val resumptionToken = getResumptionToken(last)
-            resumptionToken match {
+            OaiXmlParser.getResumptionToken(
+              OaiXmlParser.parsePageIntoXml(last)
+            ) match {
               case None => onDeck = None
-              case Some(_) =>
-                onDeck = Some(getSinglePage(buildUrl(resumptionToken)))
+              case Some(tokenValue) =>
+                onDeck = Some(getSinglePage(buildUrl(Some(tokenValue))))
             }
-            response
+            last
         }
       }
     }
@@ -117,20 +115,5 @@ class OaiMultiPageResponseBuilder(
 
     urlParams.build.toURL
   }
-
-  /** Get the resumptionToken from the response
-    *
-    * @param page
-    *   A single page OAI response.
-    * @return
-    *   Option[String] The resumptionToken to fetch the next page response. or
-    *   None if no more records can be fetched. No resumption token does not
-    *   necessarily mean that all pages were successfully fetched (an error
-    *   could have occurred), only that no more pages can be fetched.
-    */
-  def getResumptionToken(
-      page: OaiPage
-  ): Option[String] =
-    OaiXmlParser.getResumptionToken(OaiXmlParser.parsePageIntoXml(page))
 
 }

@@ -46,7 +46,7 @@ object OaiXmlParser {
         OaiSet(id, set.toString)
       }
 
-  private def containsError(xml: Node): Unit = {
+  def containsError(xml: Node): Unit = {
     val error = xml \ "error"
     if (error.nonEmpty)
       throw new RuntimeException("Error in OAI response: " + error.text)
