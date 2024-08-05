@@ -66,24 +66,18 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     val outputPath = outputHelper.activityPath
 
-    // @michael Any issues with making SparkSession implicit?
     implicit val spark: SparkSession = SparkSession
       .builder()
       .config(sparkConf)
       .config("spark.ui.showConsoleProgress", value = false)
       .getOrCreate()
 
-    // Need to keep this here despite what IntelliJ and Codacy say
     import spark.implicits._
-
-    // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
-    // val oreAggregationEncoder = RowEncoder.encoderFor(model.sparkSchema)
 
     val dplaMap = new DplaMap()
 
-    // Locations for temporary files
-    val tempLocation1 = s"/tmp/$shortName-intermediate-results-1.parquet"
-    val tempLocation2 = s"/tmp/$shortName-intermediate-results-2.parquet"
+    val tempLocation1 = s"$shortName-intermediate-results-1.parquet"
+    val tempLocation2 = s"$shortName-intermediate-results-2.parquet"
 
     def deleteTempFiles(): Unit = {
       val tempDir1 = new Directory(new File(tempLocation1))
@@ -144,15 +138,9 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       .rdd
       .map(document => dplaMap.map(document, extractorClass))
 
-    // Encode to Row-based structure
-    // Must be encoded to save to parquet
-
-    import spark.implicits._
     val mappingResultsRows: RDD[Row] = mappingResults.map(oreAgg =>
       RowConverter.toRow(oreAgg, model.sparkSchema)
     )
-
-    // val mappingResultsDF = spark.createDatamappingResultsRows.toDF()
 
     val encodedMappingResults: DataFrame =
       spark.createDataFrame(
@@ -174,7 +162,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
               .select("originalId")
               .rdd
               .map(_.getString(0))
-              .countByValue // action, forces evaluation
+              .countByValue
               .collect {
                 case (origId, count) if count > 1 && origId != "" => origId
               }
@@ -200,7 +188,6 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
           })
           .rdd
 
-        // Encode to Row-based structure
         val encodedUpdatedResults: DataFrame =
           spark.createDataFrame(
             updatedResults.map(oreAgg =>
@@ -221,7 +208,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     val successResults: DataFrame = intermediateResults2
       .filter(oreAggRow => {
         !oreAggRow // not
-          .getAs[mutable.WrappedArray[Row]]("messages") // get all messages
+          .getAs[mutable.ArraySeq[Row]]("messages") // get all messages
           .map(msg => msg.getString(1)) // extract the levels into a list
           .contains(IngestLogLevel.error) // does that list contain any errors?
       })
@@ -315,11 +302,6 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       validRecordCount: Long,
       duplicateHarvestRecords: Long
   )(implicit spark: SparkSession): MappingSummaryData = {
-    import spark.implicits._
-
-    // these three Encoders allow us to tell Spark/Catalyst how to encode our data in a DataSet.
-    // val oreAggregationEncoder: ExpressionEncoder[Row] = RowEncoder(model.sparkSchema)
-
     // Transformation
     val messages: DataFrame = MessageProcessor.getAllMessages(results)(spark)
     val warnings: DataFrame = MessageProcessor.getWarnings(messages)
