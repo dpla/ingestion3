@@ -16801,17 +16801,17 @@
             "Bethel University":
             {
                 "Wikidata": "Q3445045",
-                "upload": false
+                "upload": true
             },
             "Bethel University Digital Herbarium":
             {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q3445045",
+                "upload": true
             },
             "Bethel University Digital Library":
             {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q3445045",
+                "upload": true
             },
             "Big Stone County Historical Society":
             {
@@ -16825,8 +16825,8 @@
             },
             "Blue Earth County Historical Society":
             {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q108556264",
+                "upload": true
             },
             "Calhoun Yacht Club":
             {
@@ -16836,7 +16836,7 @@
             "Carleton College":
             {
                 "Wikidata": "Q1041671",
-                "upload": false
+                "upload": true
             },
             "Carlton County Historical Society":
             {
@@ -17055,8 +17055,8 @@
             },
             "Hennepin County Library, James K. Hosmer Special Collections Library":
             {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q530512",
+                "upload": true
             },
             "Hennepin Medical History Center":
             {
@@ -17215,8 +17215,8 @@
             },
             "Minitex":
             {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q17125431",
+                "upload": true
             },
             "Minneapolis Institute of Art":
             {
@@ -17355,8 +17355,8 @@
             },
             "Nicollet County Historical Society":
             {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q124695691",
+                "upload": true
             },
             "Nobles County Historical Society":
             {
@@ -17410,8 +17410,8 @@
             },
             "Norwegian-American Historical Association":
             {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q7060972",
+                "upload": true
             },
             "Olmsted County Historical Society":
             {
@@ -17525,8 +17525,8 @@
             },
             "Saint Paul Public Library":
             {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q69480731",
+                "upload": true
             },
             "Salem Covenant Church":
             {
@@ -17585,8 +17585,8 @@
             },
             "St. Cloud State University":
             {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q1136874",
+                "upload": true
             },
             "St. Cloud State University - Sinclair Lewis Collection":
             {
@@ -17640,8 +17640,8 @@
             },
             "Stillwater Public Library":
             {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q30258272",
+                "upload": true
             },
             "Striegel Archives, Southwest Minnesota State University":
             {
@@ -17795,8 +17795,8 @@
             },
             "Weavers Guild of Minnesota":
             {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q130236027",
+                "upload": true
             },
             "Westonka Historical Society":
             {
@@ -19817,7 +19817,7 @@
             "University of Oregon Libraries":
             {
                 "Wikidata": "Q65385681",
-                "upload": false
+                "upload": true
             },
             "University of Utah":
             {
