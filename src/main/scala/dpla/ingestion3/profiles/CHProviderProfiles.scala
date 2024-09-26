@@ -332,7 +332,7 @@ class OrbisCascadeProfile extends XmlProfile {
 class OklahomaProfile extends XmlProfile {
   type Mapping = OklahomaMapping
 
-  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiXmllHarvester] = classOf[OaiXmllHarvester]
   override def getMapping = new OklahomaMapping
 }
 
@@ -396,7 +396,7 @@ class TnProfile extends XmlProfile {
 class TxProfile extends XmlProfile {
   type Mapping = TnMapping
 
-  override def getHarvester: Class[OaiHarvester] = classOf[OaiHarvester]
+  override def getHarvester: Class[OaiXmllHarvester] = classOf[OaiXmllHarvester]
   override def getMapping = new TxMapping
 }
 
