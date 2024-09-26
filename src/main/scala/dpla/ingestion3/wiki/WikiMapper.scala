@@ -33,6 +33,7 @@ trait WikiMapper extends JsonExtractor {
 
   /** Standardized rightsstatment and creative commons URIs eligible for
     * Wikimedia upload NoC-US http://rightsstatements.org/vocab/NoC-US PDM
+    * http://rightsstatements.org/vocab/NKC/
     * http://creativecommons.org/publicdomain/mark CC0
     * http://creativecommons.org/publicdomain/zero CC-BY
     * http://creativecommons.org/licenses/by CC-BY-SA
@@ -40,6 +41,7 @@ trait WikiMapper extends JsonExtractor {
     */
   protected val wikiEligibleRightsUris = Seq(
     "http://rightsstatements.org/vocab/NoC-US/",
+    "http://rightsstatements.org/vocab/NKC/",
     "http://creativecommons.org/publicdomain/mark/",
     "http://creativecommons.org/publicdomain/zero/",
     "http://creativecommons.org/licenses/by/",
