@@ -3,13 +3,13 @@ package dpla.ingestion3.profiles
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.api._
 import dpla.ingestion3.harvesters.file._
-import dpla.ingestion3.harvesters.oai.OaiHarvester
+import dpla.ingestion3.harvesters.oai.{LocalOaiHarvester, OaiHarvester}
 import dpla.ingestion3.mappers.providers._
 
 class ArtstorProfile extends JsonProfile {
   type Mapping = CdlMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new ArtstorRetconMapping
 }
 
@@ -18,7 +18,7 @@ class ArtstorProfile extends JsonProfile {
 class BhlProfile extends XmlProfile {
   type Mapping = BhlMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new BhlMapping
 }
 
@@ -59,7 +59,7 @@ class CommunityWebsProfile extends JsonProfile {
 class DcProfile extends XmlProfile {
   type Mapping = DcMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new DcMapping
 }
 
@@ -69,7 +69,7 @@ class DcProfile extends XmlProfile {
 class EsdnProfile extends XmlProfile {
   type Mapping = EsdnMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new EsdnMapping
 }
 
@@ -97,7 +97,7 @@ class GettyProfile extends JsonProfile {
 class GpoProfile extends XmlProfile {
   type Mapping = GpoMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new GpoMapping
 }
 
@@ -115,7 +115,7 @@ class DlgProfile extends JsonProfile {
 class HarvardProfile extends XmlProfile {
   type Mapping = HarvardMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new HarvardMapping
 }
 
@@ -135,7 +135,7 @@ class HathiProfile extends XmlProfile {
 class IlProfile extends XmlProfile {
   type Mapping = IllinoisMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new IllinoisMapping
 }
 
@@ -144,14 +144,14 @@ class IlProfile extends XmlProfile {
 class InProfile extends XmlProfile {
   type Mapping = InMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new InMapping
 }
 
 /** Jewish Heritage Network
  */
 class JhnProfile extends XmlProfile {
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new JhnMapping
 }
 
@@ -201,7 +201,7 @@ class MeProfile extends JsonProfile {
 class MaProfile extends XmlProfile {
   type Mapping = MaMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new MaMapping
 }
 
@@ -210,7 +210,7 @@ class MaProfile extends XmlProfile {
 class MarylandProfile extends XmlProfile {
   type Mapping = MarylandMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new MarylandMapping
 }
 
@@ -228,7 +228,7 @@ class MdlProfile extends JsonProfile {
 class MiProfile extends XmlProfile {
   type Mapping = MichiganMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new MichiganMapping
 }
 
@@ -257,7 +257,7 @@ class HeartlandProfile extends JsonProfile {
 class MtProfile extends XmlProfile {
   type Mapping = MtMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new MtMapping
 }
 
@@ -284,7 +284,7 @@ class NaraProfile extends XmlProfile {
 class NJDEProfile extends XmlProfile {
   type Mapping = NJDEMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new NJDEMapping
 }
 
@@ -293,7 +293,7 @@ class NJDEProfile extends XmlProfile {
 class NcProfile extends XmlProfile {
   type Mapping = NcMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new NcMapping
 }
 
@@ -321,7 +321,7 @@ class NYPLProfile extends NyplCHProfile {
 class OhioProfile extends XmlProfile {
   type Mapping = OhioMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new OhioMapping
 }
 
@@ -341,7 +341,7 @@ class OrbisCascadeProfile extends XmlProfile {
 class OklahomaProfile extends XmlProfile {
   type Mapping = OklahomaMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new OklahomaMapping
 }
 
@@ -351,7 +351,7 @@ class OklahomaProfile extends XmlProfile {
 class P2PProfile extends XmlProfile {
   type Mapping = P2PMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new P2PMapping
 }
 
@@ -360,7 +360,7 @@ class P2PProfile extends XmlProfile {
 class PaProfile extends XmlProfile {
   type Mapping = PaMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new PaMapping
 }
 
@@ -369,7 +369,7 @@ class PaProfile extends XmlProfile {
 class RumseyProfile extends XmlProfile {
   type Mapping = RumseyMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new RumseyMapping
 }
 
@@ -378,7 +378,7 @@ class RumseyProfile extends XmlProfile {
 class ScProfile extends XmlProfile {
   type Mapping = ScMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new ScMapping
 }
 
@@ -396,7 +396,7 @@ class SdProfile extends JsonProfile {
 class TnProfile extends XmlProfile {
   type Mapping = TnMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new TnMapping
 }
 
@@ -405,7 +405,7 @@ class TnProfile extends XmlProfile {
 class TxProfile extends XmlProfile {
   type Mapping = TnMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new TxMapping
 }
 
@@ -462,6 +462,6 @@ class WashingtonProfile extends JsonProfile {
 class WiProfile extends XmlProfile {
   type Mapping = WiMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new WiMapping
 }
