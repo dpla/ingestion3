@@ -131,8 +131,6 @@ class CommunityWebsHarvester(
         FileResult(entry.getName, None, result) #:: iter(zipInputStream)
     }
 
-  /** Executes the Florida harvest
-    */
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
