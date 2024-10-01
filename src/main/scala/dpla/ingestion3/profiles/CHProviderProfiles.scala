@@ -321,7 +321,7 @@ class NYPLProfile extends NyplCHProfile {
 class OhioProfile extends XmlProfile {
   type Mapping = OhioMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[OaiFileHarvester]
   override def getMapping = new OhioMapping
 }
 
