@@ -106,14 +106,6 @@ object IngestRemap
     // Json - l
     executeJsonl(sparkConf, enrichDataOut, baseDataOut, shortName)
 
-    // Wikimedia
-    executeWikimediaMetadata(
-      sparkConf,
-      enrichDataOut,
-      baseDataOut,
-      shortName
-    )
-
     // Email
     Emailer.emailSummary(mapDataOut, shortName, conf)
   }
