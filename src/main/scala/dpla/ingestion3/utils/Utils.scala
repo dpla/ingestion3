@@ -61,11 +61,11 @@ object Utils {
     val runDuration = Duration.create(runtime, MILLISECONDS)
     val hr = StringUtils.leftPad(runDuration.toHours.toString, 2, "0")
     val min =
-      StringUtils.leftPad((runDuration.toMinutes % 60).round.toString, 2, "0")
+      StringUtils.leftPad((runDuration.toMinutes % 60).toString, 2, "0")
     val sec =
-      StringUtils.leftPad((runDuration.toSeconds % 60).round.toString, 2, "0")
+      StringUtils.leftPad((runDuration.toSeconds % 60).toString, 2, "0")
     val ms =
-      StringUtils.rightPad((runDuration.toMillis % 1000).round.toString, 3, "0")
+      StringUtils.rightPad((runDuration.toMillis % 1000).toString, 3, "0")
 
     s"$hr:$min:$sec.$ms"
   }
@@ -178,6 +178,7 @@ object Utils {
       .write
       .mode(SaveMode.Overwrite)
       .option("header", "true")
+      .option("compression", "gzip")
       .csv(out)
   }
 
