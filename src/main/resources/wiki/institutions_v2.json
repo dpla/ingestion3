@@ -16813,6 +16813,11 @@
                 "Wikidata": "Q3445045",
                 "upload": true
             },
+            "The History Center, Archives of Bethel University and Converge Worldwide - BGC":
+            {
+                "Wikidata": "Q3445045",
+                "upload": true
+            },
             "Big Stone County Historical Society":
             {
                 "Wikidata": "",
@@ -16834,6 +16839,11 @@
                 "upload": false
             },
             "Carleton College":
+            {
+                "Wikidata": "Q1041671",
+                "upload": true
+            },
+            "Carleton College Archives":
             {
                 "Wikidata": "Q1041671",
                 "upload": true
@@ -17051,7 +17061,7 @@
             "Hennepin County Library":
             {
                 "Wikidata": "Q530512",
-                "upload": false
+                "upload": true
             },
             "Hennepin County Library, James K. Hosmer Special Collections Library":
             {
@@ -17697,6 +17707,11 @@
             {
                 "Wikidata": "",
                 "upload": false
+            },
+            "University Archives and Southern Minnesota Historical Center, Memorial Library, Minnesota State University, Mankato":
+            {
+                "Wikidata": "Q1937387",
+                "upload": true
             },
             "University of Minnesota Duluth Kathryn A. Martin Library, University Archives":
             {
