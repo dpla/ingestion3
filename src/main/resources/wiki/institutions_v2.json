@@ -16813,11 +16813,6 @@
                 "Wikidata": "Q3445045",
                 "upload": true
             },
-            "The History Center, Archives of Bethel University and Converge Worldwide - BGC":
-            {
-                "Wikidata": "Q3445045",
-                "upload": true
-            },
             "Big Stone County Historical Society":
             {
                 "Wikidata": "",
@@ -17680,8 +17675,8 @@
             },
             "The History Center, Archives of Bethel University and Converge Worldwide - BGC":
             {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q3445045",
+                "upload": true
             },
             "The Public Relations Office of Northwestern College":
             {
