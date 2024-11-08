@@ -13748,7 +13748,7 @@
             "The Children's Museum of Indianapolis":
             {
                 "Wikidata": "Q1336277",
-                "upload": true
+                "upload": false
             },
             "The Creative Change Project":
             {
@@ -19566,8 +19566,8 @@
             },
             "Center for Asian Pacific Studies, University of Oregon":
             {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q65385681",
+                "upload": true
             },
             "City of Mapleton (Utah)":
             {
@@ -19726,8 +19726,8 @@
             },
             "Oregon State Highway Department":
             {
-                "Wikidata": "",
-                "upload": false
+                "Wikidata": "Q65385681",
+                "upload": true
             },
             "Oregon State University Libraries":
             {
