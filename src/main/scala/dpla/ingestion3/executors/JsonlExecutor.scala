@@ -64,7 +64,7 @@ trait JsonlExecutor extends Serializable {
     // This should always write out as #text() because if we use #json() then the
     // data will be written out inside a JSON object (e.g. {'value': <doc>}) which is
     // invalid for our use
-    indexRecords.write.text(outputPath)
+    indexRecords.write.option("compression", "gzip").text(outputPath)
 
     // Create and write manifest.
 
