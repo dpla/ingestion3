@@ -25,8 +25,10 @@ class MdlHarvester(
   protected val defaultQuery = "*:*"
 
   override protected val queryParams: Map[String, String] = Map(
+    "endpoint" -> conf.harvest.endpoint.getOrElse(""),
     "query" -> conf.harvest.query.getOrElse(defaultQuery),
-    "rows" -> conf.harvest.rows.getOrElse(defaultRows)
+    "rows" -> conf.harvest.rows.getOrElse(defaultRows),
+
   )
 
   override def localHarvest(): DataFrame = {
@@ -132,10 +134,7 @@ class MdlHarvester(
     *   URI
     */
   def getFirstUrl(queryParams: Map[String, String]): String = {
-    val url = new URIBuilder()
-      .setScheme("https")
-      .setHost("lib-metl-prd-01.oit.umn.edu")
-      .setPath("/api/v2/records")
+    val url = new URIBuilder(queryParams.getOrElse("endpoint", ""))
       .setParameter("page[size]", queryParams.getOrElse("rows", defaultRows))
 
     /** This is a real mangling. The configuration file does not really support
