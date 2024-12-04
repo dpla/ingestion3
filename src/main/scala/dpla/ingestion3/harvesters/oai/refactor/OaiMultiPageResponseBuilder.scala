@@ -85,7 +85,7 @@ class OaiMultiPageResponseBuilder(
       Thread.sleep(sleep)
     logger.info("Loading page from: " + url.toString)
     val page = HttpUtils.makeGetRequest(url)
-    if (OAI_ERROR_PATTERN.matches(page)) {
+    if (OAI_ERROR_PATTERN.findFirstMatchIn(page).isDefined) {
       val xml = OaiXmlParser.parsePageIntoXml(OaiPage(page))
       val errorCode = xml \ "error" \@ "code"
       Left(OaiError.errorForCode(errorCode))
