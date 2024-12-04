@@ -313,7 +313,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     val logFileList: List[(String, Dataset[Row])] = List(
       "errors" -> (errors, errorCount),
-      "warnings" -> (warnings, warnCount)
+      //"warnings" -> (warnings, warnCount) //commenting this out to avoid data explosion
     ).filter { case (_, (_, count: Long)) => count > 0 } // drop empty
       .map { case (key: String, (data: Dataset[_], _: Long)) =>
         key -> data

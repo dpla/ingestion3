@@ -178,7 +178,6 @@ object Utils {
       .write
       .mode(SaveMode.Overwrite)
       .option("header", "true")
-      .option("compression", "gzip")
       .csv(out)
   }
 
