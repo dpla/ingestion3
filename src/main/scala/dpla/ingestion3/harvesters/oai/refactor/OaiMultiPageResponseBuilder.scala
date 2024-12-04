@@ -30,9 +30,23 @@ class OaiMultiPageResponseBuilder(
     new Iterable[OaiPage] {
       override def iterator: Iterator[OaiPage] = new Iterator[OaiPage]() {
 
-        var onDeck: Option[OaiPage] = Some(
-          getSinglePage(buildUrl())
-        )
+        def handleErrors(eitherResponse: Either[OaiError, OaiPage], url: URL): Option[OaiPage] = eitherResponse match {
+          case Left(error) =>
+            error match {
+              case NoRecordsMatch() =>
+                None // Not an error that should interrupt execution.
+              case _ =>
+                throw new RuntimeException(s"OAI Error: $error for $url")
+            }
+          case Right(page) =>
+            Some(page)
+         }
+
+        var onDeck: Option[OaiPage] = {
+          val url = buildUrl()
+          handleErrors(getSinglePage(url), url)
+        }
+
 
         override def hasNext: Boolean = onDeck.isDefined
 
@@ -45,14 +59,15 @@ class OaiMultiPageResponseBuilder(
             ) match {
               case None => onDeck = None
               case Some(tokenValue) =>
-                onDeck = Some(getSinglePage(buildUrl(Some(tokenValue))))
+                val url = buildUrl(Some(tokenValue))
+                onDeck = handleErrors(getSinglePage(url), url)
             }
             last
         }
       }
     }
 
-  private val OAI_ERROR_PATTERN = """<error.*>(.*)</error>""".r
+  private val OAI_ERROR_PATTERN = """<error.*>.*</error>""".r
 
   /** Get a single-page, un-parsed String response from the OAI feed, or an
     * error if one occurs.
@@ -65,19 +80,17 @@ class OaiMultiPageResponseBuilder(
     *   OaiPage
     */
 
-  def getSinglePage(url: URL): OaiPage = {
+  def getSinglePage(url: URL): Either[OaiError, OaiPage] = {
     if (sleep > 0)
       Thread.sleep(sleep)
     logger.info("Loading page from: " + url.toString)
     val page = HttpUtils.makeGetRequest(url)
-    OAI_ERROR_PATTERN.findFirstMatchIn(page) match {
-      case Some(m) =>
-        throw new RuntimeException(
-          "OAI Error for URL " + url + ": " + m.group(1)
-        )
-      case _ =>
-        OaiPage(page)
-
+    if (OAI_ERROR_PATTERN.matches(page)) {
+      val xml = OaiXmlParser.parsePageIntoXml(OaiPage(page))
+      val errorCode = xml \ "error" \@ "code"
+      Left(OaiError.errorForCode(errorCode))
+    } else {
+      Right(OaiPage(page))
     }
   }
 

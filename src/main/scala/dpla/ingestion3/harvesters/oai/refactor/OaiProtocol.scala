@@ -34,7 +34,6 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration)
   }
 
   override def listAllSetPages(): IterableOnce[OaiPage] = {
-    logger.info("IN: listAllSetPages")
     new OaiMultiPageResponseBuilder(endpoint, "ListSets").getResponse.iterator
   }
 
@@ -42,7 +41,6 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration)
       page: OaiPage,
       removeDeleted: Boolean
   ): IterableOnce[OaiRecord] = {
-    logger.info("IN: parsePageIntoRecords")
     OaiXmlParser
       .parseXmlIntoRecords(OaiXmlParser.parsePageIntoXml(page), removeDeleted)
       .iterator
@@ -51,7 +49,6 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration)
   override def parsePageIntoSets(
       page: OaiPage
   ): IterableOnce[OaiSet] = {
-    logger.info("IN: parsePageIntoSets")
     OaiXmlParser.parseXmlIntoSets(OaiXmlParser.parsePageIntoXml(page)).iterator
   }
 }
