@@ -23,18 +23,17 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration)
   override def listAllRecordPagesForSet(
       set: OaiSet
   ): IterableOnce[OaiPage] = {
-
-    logger.info("IN: listAllRecordPagesForSet {}", set)
     new OaiMultiPageResponseBuilder(
       endpoint,
       "ListRecords",
       metadataPrefix,
-      Some(set.id)
+      Some(set.id),
+      oaiConfiguration.sleep
     ).getResponse.iterator
   }
 
   override def listAllSetPages(): IterableOnce[OaiPage] = {
-    new OaiMultiPageResponseBuilder(endpoint, "ListSets").getResponse.iterator
+    new OaiMultiPageResponseBuilder(endpoint, "ListSets", None, None, oaiConfiguration.sleep).getResponse.iterator
   }
 
   override def parsePageIntoRecords(

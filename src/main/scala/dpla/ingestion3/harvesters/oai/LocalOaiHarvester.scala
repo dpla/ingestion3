@@ -28,7 +28,8 @@ class LocalOaiHarvester(
     "setlist" -> conf.harvest.setlist,
     "blacklist" -> conf.harvest.blacklist,
     "endpoint" -> conf.harvest.endpoint,
-    "removeDeleted" -> Some("true")
+    "removeDeleted" -> Some("true"),
+    "sleep" -> conf.harvest.sleep
   ).collect { case (key, Some(value)) => key -> value }
 
   private val oaiConfig = OaiConfiguration(readerOptions)
