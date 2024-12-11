@@ -58,7 +58,8 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None)
         // Properties for FileDelta harvests
         update = getProp(providerConf, "harvest.delta.update"),
         previous = getProp(providerConf, "harvest.delta.previous"),
-        deletes = getProp(providerConf, "harvest.delta.deletes")
+        deletes = getProp(providerConf, "harvest.delta.deletes"),
+        sleep = getProp(providerConf, "harvest.sleep")
       ),
       i3Spark(
         // FIXME these should be removed
