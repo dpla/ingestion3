@@ -4,7 +4,7 @@ on:
   pull_request:
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04 #temporary not latest because 24 is broken
     steps:
       - uses: actions/checkout@v4
       - name: Setup JDK
@@ -12,5 +12,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 11
+          cache: sbt
       - name: Run tests
         run: sbt clean compile test
