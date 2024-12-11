@@ -3,6 +3,8 @@ name := "ingestion3"
 organization := "dpla"
 version := "0.0.1"
 scalaVersion := "2.13.13"
+fork  := true
+outputStrategy := Some(StdoutOutput)
 val SPARK_VERSION = "3.5.1"
 
 ThisBuild / Test / parallelExecution := false
