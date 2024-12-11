@@ -1,5 +1,6 @@
 package dpla.ingestion3.entries.utils
 
+import dpla.ingestion3.entries.Entry
 import dpla.ingestion3.executors.ThumbnailPurgeExecutor
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
@@ -12,6 +13,8 @@ object ThumbnailPurgeEntry {
     *   Path to mapped data S3 bucket for thumbnails
     */
   def main(args: Array[String]): Unit = {
+
+    Entry.suppressUnsafeWarnings()
 
     if (args.length.!=(2)) {
       println(

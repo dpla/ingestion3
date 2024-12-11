@@ -1,6 +1,7 @@
 package dpla.ingestion3.entries.wiki
 
 import dpla.ingestion3.confs.CmdArgs
+import dpla.ingestion3.entries.Entry
 import dpla.ingestion3.executors.WikimediaMetadataExecutor
 import org.apache.spark.SparkConf
 
@@ -22,6 +23,8 @@ object WikiMetadataEntry extends WikimediaMetadataExecutor {
     * --sparkMaster=local[*]
     */
   def main(args: Array[String]): Unit = {
+
+    Entry.suppressUnsafeWarnings()
 
     // Read in command line args.
     val cmdArgs = new CmdArgs(args)
