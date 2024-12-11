@@ -4,7 +4,7 @@ import java.io.{BufferedReader, File, FileInputStream}
 import java.util.zip.GZIPInputStream
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.GzFileFilter
-import dpla.ingestion3.harvesters.{AvroHelper, Harvester}
+import dpla.ingestion3.harvesters.{AvroHelper, Harvester, LocalHarvester}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
@@ -24,7 +24,7 @@ class NaraDeltaHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends Harvester(spark, shortName, conf) {
+) extends LocalHarvester(spark, shortName, conf) {
 
   /** Case class hold the parsed value from a given FileResult
     */
@@ -274,7 +274,7 @@ class NaraDeltaHarvester(
     IOUtils.closeQuietly(inputStream)
   }
 
-  /** Converts a Node to an xml string
+  /** Converts a Node to an XML string
     *
     * @param node
     *   The root of the tree to write to a string
