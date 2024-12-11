@@ -1,6 +1,7 @@
 package dpla.ingestion3.entries.ingest
 
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf, i3Conf}
+import dpla.ingestion3.entries.Entry
 import dpla.ingestion3.executors.MappingExecutor
 import org.apache.spark.SparkConf
 
@@ -17,6 +18,9 @@ import org.apache.spark.SparkConf
 object MappingEntry extends MappingExecutor {
 
   def main(args: Array[String]): Unit = {
+
+    Entry.suppressUnsafeWarnings()
+
     // Read in command line args.
     val cmdArgs = new CmdArgs(args)
 

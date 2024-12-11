@@ -2,6 +2,7 @@ package dpla.ingestion3.entries.ingest
 
 import dpla.ingestion3.confs.{CmdArgs, Ingestion3Conf}
 import dpla.ingestion3.dataStorage.InputHelper
+import dpla.ingestion3.entries.Entry
 import dpla.ingestion3.executors._
 import dpla.ingestion3.utils.Emailer
 import org.apache.logging.log4j.LogManager
@@ -49,6 +50,8 @@ object IngestRemap
     with WikimediaMetadataExecutor {
 
   def main(args: Array[String]): Unit = {
+
+    Entry.suppressUnsafeWarnings()
 
     val logger = LogManager.getLogger(this.getClass)
 

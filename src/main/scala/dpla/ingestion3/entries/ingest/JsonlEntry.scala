@@ -1,6 +1,7 @@
 package dpla.ingestion3.entries.ingest
 
 import dpla.ingestion3.confs.CmdArgs
+import dpla.ingestion3.entries.Entry
 import dpla.ingestion3.executors.JsonlExecutor
 import org.apache.spark.SparkConf
 
@@ -20,6 +21,8 @@ import org.apache.spark.SparkConf
 object JsonlEntry extends JsonlExecutor {
 
   def main(args: Array[String]): Unit = {
+
+    Entry.suppressUnsafeWarnings()
 
     // Read in command line args.
     val cmdArgs = new CmdArgs(args)
