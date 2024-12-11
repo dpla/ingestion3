@@ -1,7 +1,7 @@
 package dpla.ingestion3.harvesters.oai
 
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.Harvester
+import dpla.ingestion3.harvesters.{Harvester, LocalHarvester}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
 import org.apache.logging.log4j.LogManager
@@ -13,7 +13,7 @@ class OaiHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends Harvester(spark, shortName, conf) {
+) extends LocalHarvester(spark, shortName, conf) {
 
   override def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 

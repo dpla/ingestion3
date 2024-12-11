@@ -17,14 +17,11 @@ abstract class Harvester(
     conf: i3Conf
 ) {
 
-  def harvest: DataFrame = {
-    val harvestData: DataFrame = localHarvest()
-    harvestData
-  }
+  def harvest: DataFrame
 
   def mimeType: GenericData.EnumSymbol
 
-  def localHarvest(): DataFrame
+
 
   def cleanUp(): Unit = ()
 
@@ -34,10 +31,11 @@ abstract class Harvester(
   *
   * The harvester abstract class has methods to manage aspects of a harvest that
   * are common among all providers, including:
-  *   1. Provide an entry point to run a harvest. 2. If the output directory
-  *      already exists, delete its contents. 3. Log and timestamp the beginning
-  *      and end of a harvest. 4. Log information about the completed harvest.
-  *      5. Validate the schema final DataFrame (only for logging purposes). 6.
+  *   1. Provide an entry point to run a harvest.
+  *   2. If the output directory  already exists, delete its contents.
+  *   3. Log and timestamp the beginning and end of a harvest.
+  *   4. Log information about the completed harvest.
+  *   5. Validate the schema final DataFrame (only for logging purposes). 6.
   *      Manage the spark session.
   *
   * @param shortName
@@ -51,13 +49,21 @@ abstract class LocalHarvester(
     conf: i3Conf,
 ) extends Harvester(spark, shortName, conf) {
 
+
+  override def harvest: DataFrame = {
+    localHarvest()
+  }
+
+  def localHarvest(): DataFrame
+
+
   // Temporary output path.
   // Harvests that use AvroWriter cannot be written directly to S3.
   // Instead, they are written to this temp path,
   //   then loaded into a spark DataFrame,
   //   then written to their final destination.
   // TODO: make tmp path configurable rather than hard-coded
-  val tmpOutStr =
+  val tmpOutStr: String =
     new File(FileUtils.getTempDirectory, shortName).getAbsolutePath
 
   // Delete temporary output directory and files if they already exist.
