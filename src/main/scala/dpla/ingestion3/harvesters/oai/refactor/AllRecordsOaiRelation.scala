@@ -36,7 +36,7 @@ class AllRecordsOaiRelation(
 
     val eitherRdd = csvRdd.map(handleCsvRow)
     val pagesEitherRdd = eitherRdd.flatMap(
-      oaiMethods.parsePageIntoRecords(_, oaiConfiguration.removeDeleted)
+      oaiMethods.parsePageIntoRecords(_, oaiConfiguration.removeDeleted())
     )
     pagesEitherRdd.map(OaiRelation.convertToOutputRow)
   }
@@ -52,13 +52,15 @@ class AllRecordsOaiRelation(
 
   private[refactor] def cacheTempFile(tempFile: File): Unit = {
     //
-    def t(n: Object*) = n
+    def t(n: Object*): Seq[Object] = n
 
     val writer = new CSVWriter(
       new FileWriter(tempFile),
       ',',
-      CSVWriter.DEFAULT_QUOTE_CHARACTER,
-      '\\'
+      '"',
+      '\\',
+      "\n"
+
     )
 
     try {
