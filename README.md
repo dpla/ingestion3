@@ -1,3 +1,7 @@
+![Build Badge](https://github.com/dpla/ingestion3/actions/workflows/scala.yml/badge.svg)
+[![Codacy Quality Badge](https://app.codacy.com/project/badge/Grade/a1ec204babbd41f68c71617220357596)](https://app.codacy.com/gh/dpla/ingestion3/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+[![Codacy Coverage Badge](https://app.codacy.com/project/badge/Coverage/a1ec204babbd41f68c71617220357596)](https://app.codacy.com/gh/dpla/ingestion3/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
+---
 # DPLA Ingestion 3
 
 DPLA's ingestion system is one of the core business systems and is the source of data for the DPLA search portal. It is responsible for harvesting, mapping and enriching cultural heritage metadata from DPLA's network of partners into the DPLA Metadata Application Profile. These records are then indexed and populate our discovery portal of more than [49,000,000 images, texts, videos, and sounds](https://dp.la) from across the United States.
@@ -1002,10 +1006,3 @@ the overall Wikimedia validation process. The record will still need to pass bot
 the rights URI validation and eligible hub or contributing institution validation.
 
 Refer back to the [Wikimedia eligibility](#eligibility) section for details
-
-
-=======
-
-
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/6a9dfda51ad04ce3acfb7fcb441af846)](https://www.codacy.com/app/mdellabitta/ingestion3?utm_source=github.com&utm_medium=referral&utm_content=dpla/ingestion3&utm_campaign=badger)
-[![Build Status](https://travis-ci.org/dpla/ingestion3.svg?branch=master)](https://travis-ci.org/dpla/ingestion3)
