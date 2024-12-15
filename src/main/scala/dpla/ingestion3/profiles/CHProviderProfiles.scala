@@ -124,7 +124,7 @@ class InProfile extends XmlProfile {
 /** Jewish Heritage Network
  */
 class JhnProfile extends XmlProfile {
-  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
   override def getMapping = new JhnMapping
 }
 
