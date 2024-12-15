@@ -90,7 +90,7 @@ class CmdArgs(arguments: Seq[String]) extends ScallopConf(arguments) {
     validate = _.nonEmpty
   )
 
-  val configFile: ScallopOption[String] = opt[String](
+  private val configFile: ScallopOption[String] = opt[String](
     "conf",
     required = false,
     noshort = true,

@@ -2,7 +2,7 @@ package dpla.ingestion3.enrichments.normalizations
 
 import dpla.ingestion3.utils.FlatFileIO
 
-/** A abstraction for filtering values. These are lists of terms or regular
+/** An abstraction for filtering values. These are lists of terms or regular
   * expressions that are to be removed from the original values.
   *
   * This trait is implemented for a number of base filters

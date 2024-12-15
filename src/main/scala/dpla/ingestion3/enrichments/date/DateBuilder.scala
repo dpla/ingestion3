@@ -26,14 +26,14 @@ class DateBuilder {
     }
   }
 
-  /** Identifies a begin date
+  /** Identifies a beginning date
     *
     * @param str
     *   Original date value
     * @return
     *   Option[String]
     */
-  def createBegin(str: String): Option[String] = str match {
+  private def createBegin(str: String): Option[String] = str match {
     case `str` if str.matches("^[0-9]{4}$") => Some(str)
     case `str` if str.matches("^[0-9]{4}\\s*-\\s*[0-9]{4}$") =>
       Option(str.split("-").head.trim)
@@ -47,7 +47,7 @@ class DateBuilder {
     * @return
     *   Option[String]
     */
-  def createEnd(str: String): Option[String] = str match {
+  private def createEnd(str: String): Option[String] = str match {
     case `str` if str.matches("^[0-9]{4}$") => Some(str)
     case `str` if str.matches("^[0-9]{4}\\s*-\\s*[0-9]{4}$") =>
       Option(str.split("-").last.trim)

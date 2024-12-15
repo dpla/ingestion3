@@ -276,7 +276,7 @@ class HarvardMapping
         getByAttribute(node, "displayLabel", "Harvard Art Museums")
       )
       .flatMap(node => getByAttribute(node, "access", "object in context"))
-      .flatMap(extractString(_))
+      .flatMap(extractString)
       .map(stringOnlyWebResource)
 
     val collectionLinks =
@@ -290,7 +290,7 @@ class HarvardMapping
             .flatMap(node =>
               getByAttribute(node, "access", "object in context")
             )
-            .flatMap(extractString(_))
+            .flatMap(extractString)
             .map(stringOnlyWebResource)
         })
 
@@ -299,7 +299,7 @@ class HarvardMapping
         getByAttribute(node, "displayLabel", "Harvard Digital Collections")
       )
       .flatMap(node => getByAttribute(node, "access", "object in context"))
-      .flatMap(extractString(_))
+      .flatMap(extractString)
       .map(stringOnlyWebResource)
 
     artMuseumLink ++ collectionLinks ++ objectInContext
@@ -332,15 +332,6 @@ class HarvardMapping
 
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
     mintDplaItemUri(data)
-
-  private def name(name: Node): ZeroToOne[String] = name match {
-    case elem: Elem =>
-      val text = elem.text.trim
-      if (text.isEmpty) None
-      else Some(text)
-    case _ =>
-      None
-  }
 
   private def processTitleInfo(titleInfo: Node): ZeroToOne[String] =
     titleInfo match {
@@ -410,8 +401,8 @@ class HarvardMapping
 
   case class Name(name: String, roleTerm: Seq[String])
 
-  case class NamePart(part: String, `type`: String)
+  private case class NamePart(part: String, `type`: String)
 
-  case class Names(creators: Seq[EdmAgent], contributors: Seq[EdmAgent])
+  private case class Names(creators: Seq[EdmAgent], contributors: Seq[EdmAgent])
 
 }

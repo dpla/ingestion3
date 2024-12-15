@@ -123,7 +123,7 @@ class VirginiasMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "create the correct DPLA URI" in {
-    val expected = Some(new URI("http://dp.la/api/items/ad6472a5e0575718616b5fd54c599095"))
+    val expected = Some(URI("http://dp.la/api/items/ad6472a5e0575718616b5fd54c599095"))
     assert(extractor.dplaUri(xml) === expected)
   }
 
@@ -133,19 +133,19 @@ class VirginiasMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "extract edmRights value'" in {
-    val expected = List(new URI("http://rightsstatements.org/vocab/NoC-US/1.0/"))
+    val expected = List(URI("http://rightsstatements.org/vocab/NoC-US/1.0/"))
     assert(extractor.edmRights(xml) === expected)
   }
 
   it should "extract the correct isShownAt" in {
     val expected =
-      List(uriOnlyWebResource(new URI("http://search.lib.virginia.edu/catalog/uva-lib:1002813")))
+      List(uriOnlyWebResource(URI("http://search.lib.virginia.edu/catalog/uva-lib:1002813")))
     assert(extractor.isShownAt(xml) === expected)
   }
 
   it should "extract the correct preview" in {
     val expected =
-      List(uriOnlyWebResource(new URI("https://iiif.lib.virginia.edu/iiif/uva-lib:857804/full/!300,300/0/default.jpg")))
+      List(uriOnlyWebResource(URI("https://iiif.lib.virginia.edu/iiif/uva-lib:857804/full/!300,300/0/default.jpg")))
     assert(extractor.preview(xml) === expected)
   }
 }

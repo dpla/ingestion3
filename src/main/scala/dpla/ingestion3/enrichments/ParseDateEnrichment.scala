@@ -1,18 +1,18 @@
 package dpla.ingestion3.enrichments
 
-import java.text.SimpleDateFormat
-
+import java.text.{DateFormat, SimpleDateFormat}
 import scala.util.{Failure, Success, Try}
 import ParseDateEnrichment._
 import dpla.ingestion3.model.EdmTimeSpan
 import dpla.ingestion3.utils.EDTFDate
+
 import scala.annotation.tailrec
+import scala.util.matching.Regex
 
 class ParseDateEnrichment extends Serializable {
 
   def parse(
-      originalDate: EdmTimeSpan,
-      allowInterval: Boolean = false
+      originalDate: EdmTimeSpan
   ): EdmTimeSpan = {
 
     val dateString = originalDate.originalSourceDate.getOrElse("")
@@ -103,15 +103,14 @@ class ParseDateEnrichment extends Serializable {
   private def circa(str: String): Option[String] = {
     val cleaned =
       str.replaceAll(""".*[cC]{1}[irca\.]*""", "").replaceAll(""".*about""", "")
-    parseDate(cleaned) match { // todo i removed recusrion by changing parse() to parseDate().
-      case Some(date) => Some(cleaned)
+    parseDate(cleaned) match {
+      case Some(_) => Some(cleaned)
       case None       => None
     }
     // todo EDTF stuff
   }
 
   private def parseInterval(str: String): Option[(String, String)] = {
-    // todo parse the dates from the range?
     rangeMatch(str) match {
       case Some((begin, end)) =>
         (parseDate(begin), parseDate(end)) match {
@@ -131,9 +130,8 @@ class ParseDateEnrichment extends Serializable {
   }
 
   private def parseDate(str: String): Option[String] = {
-
-    // TODO ideally these are ThreadLocal and stick around rather than being rebuilt all the time
-    val trialFormats = List(
+    val trialFormats = new ThreadLocal[List[DateFormat]]()
+    trialFormats.set(List(
       "yyyy-MM-dd",
       "MMM dd, yyyy",
       "MM/dd/yyyy",
@@ -141,30 +139,34 @@ class ParseDateEnrichment extends Serializable {
       "MM-dd-yyyy",
       "MMM, yyyy",
       "yyyy"
-    )
+    ).map(s => {
+      val df = new SimpleDateFormat(s)
+      df.setLenient(false)
+      df
+    }))
+
+    val responseFormat = new ThreadLocal[DateFormat]()
+    responseFormat.set(new SimpleDateFormat("yyyy-MM-dd"))
+    responseFormat.get().setLenient(false)
 
     @tailrec
-    def innerParseDate(str: String, formats: List[String]): Option[String] =
+    def innerParseDate(str: String, formats: List[DateFormat]): Option[String] =
       formats match {
         case head :: rest =>
-          val df = new SimpleDateFormat(head)
-          df.setLenient(false)
-          val responseFormat = new SimpleDateFormat("yyyy-MM-dd")
-          df.setLenient(false)
-          Try(df.parse(str)) match {
+          Try(head.parse(str)) match {
             case Success(date) =>
-              Some(responseFormat.format(date))
-            case Failure(exception) =>
+              Some(responseFormat.get().format(date))
+            case Failure(_) =>
               innerParseDate(str, rest)
           }
         case Nil => None
       }
 
-    innerParseDate(str, trialFormats)
+    innerParseDate(str, trialFormats.get())
   }
 
   private def monthYear(str: String): Option[String] = {
-    monthYearRexp.findFirstMatchIn(str) match {
+    monthYearRegex.findFirstMatchIn(str) match {
       case Some(matched) =>
         Some("%s-%s".format(matched.group(2), matched.group(1)))
       case None => None
@@ -172,7 +174,7 @@ class ParseDateEnrichment extends Serializable {
   }
 
   private def hyphenatedPartialRange(str: String): Option[String] = {
-    hyphenatedPartialRangeRegexp.findFirstMatchIn(str) match {
+    hyphenatedPartialRangeRegex.findFirstMatchIn(str) match {
       case Some(matched) =>
         Some(
           "%s-%s/%s-%s".format(
@@ -186,33 +188,27 @@ class ParseDateEnrichment extends Serializable {
     }
   }
 
-  private def decadeString(str: String): Option[String] = {
-    decadeStringRegexp.findFirstMatchIn(str) match {
+  private def decadeString(str: String): Option[String] = innerDecade(str, decadeStringRegex)
+  private def decadeHyphen(str: String): Option[String] = innerDecade(str, decadeHyphenRegex)
+  private def innerDecade(string: String, regex: Regex): Option[String] =
+    regex.findFirstMatchIn(string) match {
       case Some(matched) => Some(matched.group(1) + "x")
       case None          => None
     }
-  }
-
-  private def decadeHyphen(str: String): Option[String] = {
-    decadeHyphenRegexp.findFirstMatchIn(str) match {
-      case Some(matched) => Some(matched.group(1) + "x")
-      case None          => None
-    }
-  }
-
 }
+
 
 object ParseDateEnrichment {
 
-  val rangeMatchRexp =
+  private val rangeMatchRexp =
     """([a-zA-Z]{0,3}\s?[\d\-\/\.xu\?\~a-zA-Z]*,?\s?\d{3}[\d\-xs][s\d\-\.xu\?\~]*)\s*[-\.]+\s*([a-zA-Z]{0,3}\s?[\d\-\/\.xu\?\~a-zA-Z]*,?\s?\d{3}[\d\-xs][s\d\-\.xu\?\~]*)""".r
 
-  val monthYearRexp = """^(\d{2})-(\d{4})$""".r
+  private val monthYearRegex = """^(\d{2})-(\d{4})$""".r
 
-  val hyphenatedPartialRangeRegexp = """^(\d{2})(\d{2})-(\d{2})$""".r
+  private val hyphenatedPartialRangeRegex = """^(\d{2})(\d{2})-(\d{2})$""".r
 
-  val decadeStringRegexp = """^(\d{3})0s$""".r
+  private val decadeStringRegex = """^(\d{3})0s$""".r
 
-  val decadeHyphenRegexp = """^(\d{3})-$""".r
+  private val decadeHyphenRegex = """^(\d{3})-$""".r
 
 }

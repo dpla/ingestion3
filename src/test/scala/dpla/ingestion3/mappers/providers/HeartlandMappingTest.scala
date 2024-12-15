@@ -11,7 +11,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class HeartlandMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
-  val shortName = Some("heartland-hub")
+  val shortName: Option[String] = Some("heartland-hub")
   val jsonString: String = new FlatFileIO().readFileAsString("/mo.json")
   val json: Document[JValue] = Document(parse(jsonString))
   val extractor = new HeartlandMapping

@@ -114,7 +114,7 @@ class NJDEMapping
     ))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("NJ/DE Digital Collective"),
     uri = Some(URI("http://dp.la/api/contributor/njde"))
   )

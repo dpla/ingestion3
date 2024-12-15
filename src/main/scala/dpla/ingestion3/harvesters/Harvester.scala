@@ -21,8 +21,6 @@ abstract class Harvester(
 
   def mimeType: GenericData.EnumSymbol
 
-
-
   def cleanUp(): Unit = ()
 
 }
@@ -90,11 +88,11 @@ object Harvester {
       .parse(new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc"))
 
   def validateSchema(df: DataFrame): Unit = {
-    val idSt = StructField("id", StringType, true)
-    val docSt = StructField("document", StringType, true)
-    val dateSt = StructField("ingestDate", LongType, false)
-    val provSt = StructField("provider", StringType, false)
-    val mimeSt = StructField("mimetype", StringType, false)
+    val idSt = StructField("id", StringType, nullable = true)
+    val docSt = StructField("document", StringType, nullable = true)
+    val dateSt = StructField("ingestDate", LongType, nullable = false)
+    val provSt = StructField("provider", StringType, nullable = false)
+    val mimeSt = StructField("mimetype", StringType, nullable = false)
 
     // Match the fields within the schema, rather than the schema itself.
     // This allows DataFrames where the fields are in different orders to pass
@@ -110,7 +108,7 @@ object Harvester {
     val expectedFields = mapFields(expectedStructs)
     val actualFields = mapFields(actualStructs)
 
-    if (actualFields.diff(expectedFields).size > 0) {
+    if (actualFields.diff(expectedFields).length > 0) {
       val msg =
         s"""Harvested DataFrame did not match expected schema.\n
         Actual fields: ${actualFields.mkString(", ")}\n

@@ -1,7 +1,7 @@
 package dpla.ingestion3.reports
 import dpla.ingestion3.model._
 import org.apache.spark.sql.functions.{col, explode}
-import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, Encoder, SparkSession}
 
 case class PropertyValueRpt(
     dplaUri: String,
@@ -29,7 +29,7 @@ class PropertyValueReport(
   val dplaUriCol = "dpla uri"
   val localUriCol = "local uri"
 
-  def splitOnPipe(str: String) = str.split("|")
+  def splitOnPipe(str: String): Array[String] = str.split("|")
 
   /** Process the incoming dataset (mapped or enriched records) and return a
     * DataFrame of computed results.
@@ -59,7 +59,7 @@ class PropertyValueReport(
       case _       => throw new RuntimeException(s"No field specified")
     }
 
-    implicit val dplaMapDataEncoder =
+    implicit val dplaMapDataEncoder: Encoder[OreAggregation] =
       org.apache.spark.sql.Encoders.kryo[OreAggregation]
 
     val rptDataset: Dataset[PropertyValueRpt] = token match {

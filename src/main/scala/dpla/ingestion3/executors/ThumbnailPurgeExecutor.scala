@@ -33,6 +33,6 @@ object ThumbnailPurgeExecutor extends S3FileHelper {
     * @return
     *   S3 object key
     */
-  def thumbnailKey(id: String): String =
+  private def thumbnailKey(id: String): String =
     s"${id(0)}/${id(1)}/${id(2)}/${id(3)}/$id.jpg"
 }

@@ -11,7 +11,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class FlMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
-  val shortName = Some("florida")
+  val shortName: Option[String] = Some("florida")
   val jsonString: String = new FlatFileIO().readFileAsString("/fl.json")
   val json: Document[JValue] = Document(parse(jsonString))
   val extractor = new FlMapping

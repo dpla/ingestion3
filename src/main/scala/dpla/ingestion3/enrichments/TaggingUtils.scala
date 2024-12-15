@@ -18,12 +18,10 @@ object TaggingUtils {
         "p16831coll8"
       )
 
-      if (taggingValues.contains(value)) {
+      if (taggingValues.contains(value))
         Some(wisconsinTag)
-      } else {
+      else
         None
-      }
-
     }
 
     /** Applies at standard tag for records to be included in the PanAm portal
@@ -38,11 +36,10 @@ object TaggingUtils {
         "This item was digitized as part of the \"Digitizing the 'World's Most Experienced Airline'\" project, supported by a grant from the Council on Library and Information Resources (CLIR). The grant program is made possible by funding from The Andrew W. Mellon Foundation."
       )
 
-      if (taggingValues.contains(value)) {
+      if (taggingValues.contains(value))
         Some(aviationTag)
-      } else {
+      else
         None
-      }
     }
 
     /** Applies tag for NWDH local
@@ -67,11 +64,10 @@ object TaggingUtils {
         "University of Oregon Libraries"
       )
 
-      if (providers.contains(value)) {
+      if (providers.contains(value))
         Some(nwdhTag)
-      } else {
+      else
         None
-      }
     }
   }
 }

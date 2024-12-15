@@ -144,7 +144,7 @@ object ModelConverter {
   private[model] def toMulti[T](
       row: Row,
       fieldPosition: Integer,
-      f: (Row) => T
+      f: Row => T
   ): Seq[T] = {
     toRows(row, fieldPosition).map(f)
   }
@@ -190,14 +190,6 @@ object ModelConverter {
   private[model] def uriSeq(row: Row, fieldPosition: Integer): Seq[URI] =
     stringSeq(row, fieldPosition).map(URI)
 
-  private[model] def optionalJValue(row: Row, fieldPosition: Integer): JValue =
-    Try {
-      parse(row.getString(fieldPosition))
-    } match {
-      case Success(jv) => jv
-      case Failure(_)  => JNothing
-    }
-
   // Handle field index that may not be present in the data.
   private[model] def potentiallyMissingStringField(
       row: Row,
@@ -218,7 +210,7 @@ object ModelConverter {
   private[model] def potentiallyMissing[T](
       row: Row,
       fieldPosition: Integer,
-      f: (Row) => T
+      f: Row => T
   ): Seq[T] =
     Try {
       toMulti(row, fieldPosition, f)

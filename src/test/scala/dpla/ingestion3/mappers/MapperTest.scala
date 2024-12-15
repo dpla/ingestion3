@@ -26,10 +26,10 @@ class MapperTest extends AnyFlatSpec with BeforeAndAfter with IngestMessageTempl
 
   it should "add an info warning if more than two dataProvider are given and return the first value" in {
     msgCollector.deleteAll()
-    val message = moreThanOneValueMsg(id, "dataProvider", "Person A | Person B", msg = None, enforce)
+    val message = moreThanOneValueMsg(id, "dataProvider", "Person A | Person B", enforce)
     val validatedDataProvider = mapTest.validateDataProvider(dataProviders, id, enforce)
 
-    assert(msgCollector.getAll().contains(message))
+    assert(msgCollector.getAll.contains(message))
     assert(validatedDataProvider === dataProviders.head)
   }
 
@@ -72,20 +72,20 @@ class MapperTest extends AnyFlatSpec with BeforeAndAfter with IngestMessageTempl
     val rightsUris = Seq(rightsString).map(URI)
 
     mapTest.validateEdmRights(rightsUris, id, enforce = false)
-    val msg = invalidEdmRightsMsg(id, "edmRights", rightsString, msg = None, enforce = false)
+    val msg = invalidEdmRightsMsg(id, "edmRights", rightsString, enforce = false)
 
-    assert(msgCollector.getAll().contains(msg))
+    assert(msgCollector.getAll.contains(msg))
   }
 
   it should "log a message when it normalized a edmRights value and enforce = FALSE" in {
     msgCollector.deleteAll()
     val rightsString = "https://rightsstatements.org/vocab/CNE/1.0/"
     val rightsUris = Seq(rightsString).map(URI)
-    val message = normalizedEdmRightsHttpsMsg(id, "edmRights", rightsString, msg = None, enforce = false)
+    val message = normalizedEdmRightsHttpsMsg(id, "edmRights", rightsString, enforce = false)
 
     mapTest.normalizeEdmRights(rightsUris, id)
     
-    assert(msgCollector.getAll().contains(message))
+    assert(msgCollector.getAll.contains(message))
   }
 
 
@@ -96,7 +96,7 @@ class MapperTest extends AnyFlatSpec with BeforeAndAfter with IngestMessageTempl
     val message = missingRights(id, enforce = true)
 
     mapTest.validateRights(rights, edmRights, id, enforce = true)
-    assert(msgCollector.getAll().contains(message))
+    assert(msgCollector.getAll.contains(message))
   }
 
   it should "not normalize a uri that is invalid because it contains a whitespace in the path and " +
@@ -112,7 +112,6 @@ class MapperTest extends AnyFlatSpec with BeforeAndAfter with IngestMessageTempl
     "enforce missing rights = TRUE for validateRights and enforce for validateEdmRights = FALSE" in {
     msgCollector.deleteAll()
     val missingRightsErrorMsg = missingRights(id, enforce = true)
-    val invalidErrorMsg = missingRights(id, enforce = true)
     val dcRights = Seq()
     val rightsString = "https://rightsstatements.org/"
     val rightsUris = Seq(rightsString).map(URI)
@@ -123,7 +122,7 @@ class MapperTest extends AnyFlatSpec with BeforeAndAfter with IngestMessageTempl
 
     mapTest.validateRights(dcRights, edmRights, id, enforce = true)
 
-    assert(msgCollector.getAll().contains(missingRightsErrorMsg))
+    assert(msgCollector.getAll.contains(missingRightsErrorMsg))
     assert(edmRights === None)
   }
 
@@ -131,7 +130,6 @@ class MapperTest extends AnyFlatSpec with BeforeAndAfter with IngestMessageTempl
     "enforce missing rights = TRUE for validateRights and enforce for validateEdmRights = FALSE" in {
     msgCollector.deleteAll()
     val missingRightsErrorMsg = missingRights(id, enforce = true)
-    val invalidErrorMsg = missingRights(id, enforce = true)
     val dcRights = Seq("Freetext Friday")
     val rightsString = "https://rightsstatements.org/"
     val rightsUris = Seq(rightsString).map(URI)
@@ -142,7 +140,7 @@ class MapperTest extends AnyFlatSpec with BeforeAndAfter with IngestMessageTempl
 
     mapTest.validateRights(dcRights, edmRights, id, enforce = true)
 
-    assert(!msgCollector.getAll().contains(missingRightsErrorMsg))
+    assert(!msgCollector.getAll.contains(missingRightsErrorMsg))
     assert(edmRights === None)
   }
 }

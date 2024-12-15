@@ -150,7 +150,7 @@ class IllinoisMapping
     ))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Illinois Digital Heritage Hub"),
     uri = Some(URI("http://dp.la/api/contributor/il"))
   )

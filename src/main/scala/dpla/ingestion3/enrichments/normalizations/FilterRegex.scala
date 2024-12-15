@@ -4,6 +4,7 @@ package dpla.ingestion3.enrichments.normalizations
   * patterns.
   */
 object FilterRegex {
+
   implicit class Regex(value: String) {
 
     /** A regex appropriate for removing all occurrences stop word from the
@@ -17,8 +18,9 @@ object FilterRegex {
       *   - ' jpeg ' -> 'jpeg'
       *   - 'JPEG' -> 'JPEG'
       *
-      * TODO Support for plurals TODO Support for ignoring punctuation
-      * separating terms TODO Support for multi-line matching
+      * TODO Support for plurals
+      * TODO Support for ignoring punctuation separating terms
+      * TODO Support for multi-line matching
       */
     val blockListRegex: String = """(?i)^\s*""" + escape(value) + """\s*$"""
 
@@ -28,8 +30,9 @@ object FilterRegex {
       *   - film DVD -> film
       *   - image and picture -> image
       *
-      * TODO Term filtering within string TODO Term filtering within string
-      * (ignore commas) TODO Term filtering within string (extra internal
+      * TODO Term filtering within string
+      * TODO Term filtering within string (ignore commas)
+      * TODO Term filtering within string (extra internal
       * whitespace)
       */
     /*

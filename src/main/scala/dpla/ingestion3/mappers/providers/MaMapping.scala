@@ -77,7 +77,7 @@ class MaMapping
       .map(node => edmAgentUriHelper(node))
   }
 
-  def edmAgentUriHelper(node: Node): EdmAgent = {
+  private def edmAgentUriHelper(node: Node): EdmAgent = {
     val uri =
       getAttributeValue(node, "valueURI").filter(_.nonEmpty).map(URI).toSeq
     val scheme =
@@ -196,7 +196,7 @@ class MaMapping
         val label = t.split("-").mkString(" ").capitalize
         val ids = (getModsRoot(data) \ "identifier")
           .flatMap(node => getByAttribute(node, "type", t))
-          .flatMap(extractString(_))
+          .flatMap(extractString)
           .map(_.trim)
 
         if (ids.nonEmpty) {
@@ -262,10 +262,6 @@ class MaMapping
       })
     }
 
-  private def places(data: Document[NodeSeq]) = extractStrings(
-    getModsRoot(data) \ "subject" \ "geographic"
-  )
-
   override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
     extractStrings(getModsRoot(data) \ "originInfo" \ "publisher")
       .map(nameOnlyAgent)
@@ -277,7 +273,7 @@ class MaMapping
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] = {
     // Any <mods:subject> field, except <mods:hierarchicalGeographic>, <mods:geographic>, and <mods:cartographics><mods:coordinates>.
-    val properties = Seq("topic", "termporal", "titleInfo", "name", "genre")
+    val properties = Seq("topic", "temporal", "titleInfo", "name", "genre")
     properties.flatMap(property =>
       (getModsRoot(data) \ "subject" \ property).map(node =>
         skosConceptUriHelper(node)
@@ -363,7 +359,7 @@ class MaMapping
     ))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Digital Commonwealth"),
     uri = Some(URI("http://dp.la/api/contributor/digital-commonwealth"))
   )
@@ -371,7 +367,7 @@ class MaMapping
   private lazy val getModsRoot = (data: Document[NodeSeq]) =>
     data \ "metadata" \ "mods"
 
-  def skosConceptUriHelper(node: Node): SkosConcept = {
+  private def skosConceptUriHelper(node: Node): SkosConcept = {
     val uri = getAttributeValue(node, "valueURI").map(URI).toSeq
     val scheme = getAttributeValue(node, "authorityURI").map(URI)
     val label = extractString(node)

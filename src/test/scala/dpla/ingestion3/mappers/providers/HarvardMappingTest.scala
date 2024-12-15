@@ -598,9 +598,9 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
     assert(result.contains(stringOnlyTimeSpan("now")))
   }
 
-  def metadata(metadata: NodeSeq) = record(Seq(), metadata)
+  def metadata(metadata: NodeSeq): Document[NodeSeq] = record(Seq(), metadata)
 
-  def header(header: NodeSeq) = record(header, Seq())
+  def header(header: NodeSeq): Document[NodeSeq] = record(header, Seq())
 
   def record(header: NodeSeq, metadata: NodeSeq): Document[NodeSeq] =
     Document(

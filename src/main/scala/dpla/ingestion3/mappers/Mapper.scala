@@ -47,7 +47,7 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
   ): ZeroToMany[URI] = {
     values.map(value => {
       val normalized = Try { new java.net.URI(value.toString.trim) } match {
-        case Success(uri) => {
+        case Success(uri) =>
           Try {
 
             // does scheme (http/https) require normalization
@@ -57,7 +57,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                   providerId,
                   "edmRights",
                   value.toString,
-                  msg = None,
                   enforce = false
                 )
               )
@@ -69,7 +68,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                   providerId,
                   "edmRights",
                   value.toString,
-                  msg = None,
                   enforce = false
                 )
               )
@@ -85,7 +83,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                     providerId,
                     "edmRights",
                     value.toString,
-                    msg = None,
                     enforce = false
                   )
                 )
@@ -103,7 +100,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                   providerId,
                   "edmRights",
                   value.toString,
-                  msg = None,
                   enforce = false
                 )
               )
@@ -115,7 +111,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                   providerId,
                   "edmRights",
                   value.toString,
-                  msg = None,
                   enforce = false
                 )
               )
@@ -130,14 +125,13 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                   providerId,
                   "edmRights",
                   value.toString,
-                  msg = None,
                   enforce = false
                 )
               )
             }
-
+            // force http, drop parameters and trailing punctuation
             val uriString =
-              s"http://${uri.getHost}${path.cleanupEndingPunctuation}/" // force http, drop parameters and trailing punctuation
+              s"http://${uri.getHost}${path.cleanupEndingPunctuation}/"
 
             // normalize() drops duplicates //
             new java.net.URI(uriString).normalize.toString
@@ -151,14 +145,12 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                   providerId,
                   "edmRights",
                   s"${value.toString}: $f",
-                  msg = None,
                   enforce = false
                 )
               )
               // return original value
               value.toString
           }
-        }
         case Failure(_) => value.toString
       }
 
@@ -196,7 +188,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           providerId,
           "dataProvider",
           values.map(_.print).mkString(" | "),
-          msg = None,
           enforce = false
         )
       )
@@ -242,7 +233,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           providerId,
           "edmRights",
           values.mkString(" | "),
-          msg = None,
           enforce
         )
       )
@@ -255,7 +245,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
             providerId,
             "edmRights",
             value.toString,
-            msg = None,
             enforce
           )
         )
@@ -270,7 +259,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           providerId,
           "edmRights",
           validEdmRights.map(_.toString).mkString(" | "),
-          msg = None,
           enforce = true
         )
       )
@@ -311,7 +299,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           providerId,
           "isShownAt",
           values.mkString(" | "),
-          msg = None,
           enforce = false
         )
       )
@@ -356,7 +343,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           providerId,
           "object",
           values.toString(),
-          msg = None,
           enforce
         )
       )
@@ -395,7 +381,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           providerId,
           "preview",
           values.mkString(" | "),
-          msg = None,
           enforce
         )
       )
@@ -419,15 +404,15 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
     * @param collector
     *   MessageCollector Ingest message collector
     */
-  def validateRecommendedProperty[T](
-      values: ZeroToMany[T],
+  def validateRecommendedProperty[U](
+      values: ZeroToMany[U],
       field: String,
       providerId: String,
       enforce: Boolean
-  )(implicit collector: MessageCollector[IngestMessage]): ZeroToMany[T] = {
-//    if (values.isEmpty & enforce) {
-//      collector.add(missingRecommendedFieldMsg(providerId, field))
-//    }
+  )(implicit collector: MessageCollector[IngestMessage]): ZeroToMany[U] = {
+    if (values.isEmpty && enforce) {
+      collector.add(missingRecommendedFieldMsg(providerId, field))
+    }
     values
   }
 
@@ -542,7 +527,7 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
       enforce: Boolean
   )(implicit collector: MessageCollector[IngestMessage]): URI = {
     values match {
-      case Some(dplaUri) => {
+      case Some(dplaUri) =>
         if (!dplaUri.validate) {
           // Not a valid URI
           collector.add(
@@ -556,12 +541,10 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           )
           URI("")
         } else dplaUri
-      }
-      case None => {
+      case None =>
         // No URI
         collector.add(missingRequiredFieldMsg(providerId, "dplaUri", enforce))
         URI("")
-      }
     }
   }
 
@@ -587,17 +570,16 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
       providerId: String,
       enforce: Boolean
   )(implicit collector: MessageCollector[IngestMessage]): Option[URI] = {
-    if (values.size > 1) {
+    if (values.size > 1)
       collector.add(
         moreThanOneValueMsg(
           providerId,
           "iiifManifest",
           values.toString(),
-          msg = None,
           enforce
         )
       )
-    }
+
     values.headOption
 
     // TODO Validate manifest URL format
@@ -613,10 +595,10 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
     implicit val msgCollector: MessageCollector[IngestMessage] =
       new MessageCollector[IngestMessage]
     val providerId = Try {
-      (mapping.sidecar(document) \\ "prehashId")
+      mapping.sidecar(document) \\ "prehashId"
     } match {
       case Success(s) => s.extractOrElse[String]("Unknown")
-      case Failure(f) => s"Fatal error - Missing required ID $document"
+      case Failure(_) => s"Fatal error - Missing required ID $document"
     }
 
     // Field validation
@@ -779,14 +761,14 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
           `type` = validatedType
         ),
         originalId = validatedOriginalId,
-        messages = msgCollector.getAll().toSeq
+        messages = msgCollector.getAll.toSeq
       )
     } match {
       case Success(oreAggregation) => oreAggregation
       case Failure(f) =>
         msgCollector.add(exception(providerId, f))
         // Return an empty oreAggregation that contains all the messages generated from failed mapping
-        emptyOreAggregation.copy(messages = msgCollector.getAll().toSeq)
+        emptyOreAggregation.copy(messages = msgCollector.getAll.toSeq)
     }
   }
 }
@@ -962,15 +944,14 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
           `type` = validatedType
         ),
         originalId = validatedOriginalId,
-        messages = msgCollector.getAll().toSeq
+        messages = msgCollector.getAll.toSeq
       )
     } match {
       case Success(oreAggregation) => oreAggregation
-      case Failure(f) => {
+      case Failure(f) =>
         msgCollector.add(exception(providerId, f))
         // Return an empty oreAggregation that contains all the messages generated from failed mapping
-        emptyOreAggregation.copy(messages = msgCollector.getAll().toSeq)
-      }
+        emptyOreAggregation.copy(messages = msgCollector.getAll.toSeq)
     }
   }
 }

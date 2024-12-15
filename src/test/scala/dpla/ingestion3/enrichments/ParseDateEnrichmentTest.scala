@@ -9,7 +9,7 @@ class ParseDateEnrichmentTest extends AnyFlatSpec
     with PrivateMethodTester {
 
   val enrichment = new ParseDateEnrichment
-  val preprocess: PrivateMethod[String] = PrivateMethod[String]('preprocess)
+  val preprocess: PrivateMethod[String] = PrivateMethod[String](Symbol("preprocess"))
 
   "ParseDateEnrichment.preprocess" should "remove 'late' and 'early'" in {
     // val preprocess = PrivateMethod[String]('preprocess)

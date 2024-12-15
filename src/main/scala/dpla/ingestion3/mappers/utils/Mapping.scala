@@ -5,6 +5,7 @@ import dpla.ingestion3.model._
 import org.apache.commons.codec.digest.DigestUtils
 import org.json4s.JsonAST.JValue
 
+import scala.language.implicitConversions
 import scala.xml.NodeSeq
 
 trait Mapping[T] {
@@ -13,49 +14,49 @@ trait Mapping[T] {
 
   // OreAggregation
   def dplaUri(data: Document[T]): ZeroToOne[URI] = None
-  def dataProvider(data: Document[T]): ZeroToMany[EdmAgent] = emptySeq
-  def originalRecord(data: Document[T]): ExactlyOne[String] = emptyString
-  def hasView(data: Document[T]): ZeroToMany[EdmWebResource] = emptySeq
+  def dataProvider(data: Document[T]): ZeroToMany[EdmAgent] = Seq()
+  def originalRecord(data: Document[T]): ExactlyOne[String] = ""
+  def hasView(data: Document[T]): ZeroToMany[EdmWebResource] = Seq()
   def intermediateProvider(data: Document[T]): ZeroToOne[EdmAgent] = None
 
-  def isShownAt(data: Document[T]): ZeroToMany[EdmWebResource] = emptySeq
+  def isShownAt(data: Document[T]): ZeroToMany[EdmWebResource] = Seq()
   def `object`(data: Document[T]): ZeroToMany[EdmWebResource] =
-    emptySeq // full size image
+    Seq() // full size image
   def preview(data: Document[T]): ZeroToMany[EdmWebResource] =
-    emptySeq // thumbnail
+    Seq() // thumbnail
   def mediaMaster(data: Document[T]): ZeroToMany[EdmWebResource] =
-    emptySeq // master media, ignore `object`
+    Seq() // master media, ignore `object`
   def iiifManifest(data: Document[T]): ZeroToMany[URI] =
-    emptySeq // URL for IIIF presentation manifest
+    Seq() // URL for IIIF presentation manifest
 
   def provider(data: Document[T]): ExactlyOne[EdmAgent] = emptyEdmAgent
-  def edmRights(data: Document[T]): ZeroToMany[URI] = emptySeq
+  def edmRights(data: Document[T]): ZeroToMany[URI] = Seq()
   def sidecar(data: Document[T]): JValue = emptyJValue
-  def tags(data: Document[T]): ZeroToMany[URI] = emptySeq
+  def tags(data: Document[T]): ZeroToMany[URI] = Seq()
 
   // SourceResource
-  def alternateTitle(data: Document[T]): ZeroToMany[String] = emptySeq
-  def collection(data: Document[T]): ZeroToMany[DcmiTypeCollection] = emptySeq
-  def contributor(data: Document[T]): ZeroToMany[EdmAgent] = emptySeq
-  def creator(data: Document[T]): ZeroToMany[EdmAgent] = emptySeq
-  def date(data: Document[T]): ZeroToMany[EdmTimeSpan] = emptySeq
-  def description(data: Document[T]): ZeroToMany[String] = emptySeq
-  def extent(data: Document[T]): ZeroToMany[String] = emptySeq
-  def format(data: Document[T]): ZeroToMany[String] = emptySeq
-  def genre(data: Document[T]): ZeroToMany[SkosConcept] = emptySeq
-  def identifier(data: Document[T]): ZeroToMany[String] = emptySeq
-  def language(data: Document[T]): ZeroToMany[SkosConcept] = emptySeq
-  def place(data: Document[T]): ZeroToMany[DplaPlace] = emptySeq
-  def publisher(data: Document[T]): ZeroToMany[EdmAgent] = emptySeq
-  def relation(data: Document[T]): ZeroToMany[LiteralOrUri] = emptySeq
-  def replacedBy(data: Document[T]): ZeroToMany[String] = emptySeq
-  def replaces(data: Document[T]): ZeroToMany[String] = emptySeq
-  def rights(data: Document[T]): AtLeastOne[String] = emptySeq
-  def rightsHolder(data: Document[T]): ZeroToMany[EdmAgent] = emptySeq
-  def subject(data: Document[T]): ZeroToMany[SkosConcept] = emptySeq
-  def temporal(data: Document[T]): ZeroToMany[EdmTimeSpan] = emptySeq
-  def title(data: Document[T]): AtLeastOne[String] = emptySeq
-  def `type`(data: Document[T]): ZeroToMany[String] = emptySeq
+  def alternateTitle(data: Document[T]): ZeroToMany[String] = Seq()
+  def collection(data: Document[T]): ZeroToMany[DcmiTypeCollection] = Seq()
+  def contributor(data: Document[T]): ZeroToMany[EdmAgent] = Seq()
+  def creator(data: Document[T]): ZeroToMany[EdmAgent] = Seq()
+  def date(data: Document[T]): ZeroToMany[EdmTimeSpan] = Seq()
+  def description(data: Document[T]): ZeroToMany[String] = Seq()
+  def extent(data: Document[T]): ZeroToMany[String] = Seq()
+  def format(data: Document[T]): ZeroToMany[String] = Seq()
+  def genre(data: Document[T]): ZeroToMany[SkosConcept] = Seq()
+  def identifier(data: Document[T]): ZeroToMany[String] = Seq()
+  def language(data: Document[T]): ZeroToMany[SkosConcept] = Seq()
+  def place(data: Document[T]): ZeroToMany[DplaPlace] = Seq()
+  def publisher(data: Document[T]): ZeroToMany[EdmAgent] = Seq()
+  def relation(data: Document[T]): ZeroToMany[LiteralOrUri] = Seq()
+  def replacedBy(data: Document[T]): ZeroToMany[String] = Seq()
+  def replaces(data: Document[T]): ZeroToMany[String] = Seq()
+  def rights(data: Document[T]): AtLeastOne[String] = Seq()
+  def rightsHolder(data: Document[T]): ZeroToMany[EdmAgent] = Seq()
+  def subject(data: Document[T]): ZeroToMany[SkosConcept] = Seq()
+  def temporal(data: Document[T]): ZeroToMany[EdmTimeSpan] = Seq()
+  def title(data: Document[T]): AtLeastOne[String] = Seq()
+  def `type`(data: Document[T]): ZeroToMany[String] = Seq()
 
   val enforceDuplicateIds: Boolean = false
 
@@ -92,9 +93,6 @@ trait Mapping[T] {
 
   /** Does the provider use a prefix (typically their provider
     * shortname/abbreviation) to salt the base identifier?
-    *
-    * @return
-    *   Boolean
     */
   def useProviderName: Boolean
 

@@ -129,7 +129,7 @@ class FlMapping
   override def `type`(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "sourceResource" \ "type")
 
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Sunshine State Digital Network"),
     uri = Some(URI("http://dp.la/api/contributor/florida"))
   )

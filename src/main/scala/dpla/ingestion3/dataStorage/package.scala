@@ -2,7 +2,7 @@ package dpla.ingestion3
 
 package object dataStorage {
 
-  lazy val s3Protocols: List[String] = List("s3", "s3a", "s3n")
+  private val s3Protocols: List[String] = List("s3", "s3a", "s3n")
 
   /** Component parts of an S3 address.
     *

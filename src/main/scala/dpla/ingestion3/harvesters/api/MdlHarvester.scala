@@ -21,8 +21,8 @@ class MdlHarvester(
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
 
-  protected val defaultRows = "50"
-  protected val defaultQuery = "*:*"
+  private val defaultRows = "50"
+  private val defaultQuery: String = "*:*"
 
   override protected val queryParams: Map[String, String] = Map(
     "endpoint" -> conf.harvest.endpoint.getOrElse(""),
@@ -41,9 +41,6 @@ class MdlHarvester(
     var requestUrl: Option[String] = Some(getFirstUrl(queryParams))
 
     while (requestUrl.isDefined) requestUrl match {
-      // do nothing, there is no url to request
-      case None => None
-
       // next url to request is defined
       case Some(url) =>
         getSinglePage(url) match {
@@ -133,7 +130,7 @@ class MdlHarvester(
     * @return
     *   URI
     */
-  def getFirstUrl(queryParams: Map[String, String]): String = {
+  private def getFirstUrl(queryParams: Map[String, String]): String = {
     val url = new URIBuilder(queryParams.getOrElse("endpoint", ""))
       .setParameter("page[size]", queryParams.getOrElse("rows", defaultRows))
 

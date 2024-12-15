@@ -76,12 +76,14 @@ class StringNormalizationUtilsTest extends AnyFlatSpec with BeforeAndAfter {
     val expectedValue = Array("subject-one", "subject-two", "subject-three")
     assert(enrichedValue === expectedValue)
   }
+
   it should "drop empty values" in {
     val originalValue = "subject-one; ; subject-three"
     val enrichedValue = originalValue.splitAtDelimiter(";")
     val expectedValue = Array("subject-one", "subject-three")
     assert(enrichedValue === expectedValue)
   }
+
   it should "split a string around comma." in {
     val originalValue = "subject-one, subject-two; subject-three"
     val enrichedValue = originalValue.splitAtDelimiter(",")
@@ -95,24 +97,28 @@ class StringNormalizationUtilsTest extends AnyFlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.stripHTML
     assert(enrichedValue === expectedValue)
   }
+
   it should "remove unbalanced and invalid html from a given string" in {
     val expectedValue = "foo bar baz buzz"
     val originalValue = f"<p>$expectedValue%s</i><html>"
     val enrichedValue = originalValue.stripHTML
     assert(enrichedValue === expectedValue)
   }
+
   it should "not modify strings that do not contain html markup" in {
     val expectedValue = "foo bar baz buzz"
     val originalValue = expectedValue
     val enrichedValue = originalValue.stripHTML
     assert(enrichedValue === expectedValue)
   }
+
   it should "not emit HTML entities" in {
     val expectedValue = "foo bar baz > buzz"
     val originalValue = expectedValue
     val enrichedValue = originalValue.stripHTML
     assert(enrichedValue === expectedValue)
   }
+
   it should "not turn html entities into html" in {
     val originalValue = "foo bar baz &lt;p&gt; buzz"
     val expectedValue = "foo bar baz  buzz"
@@ -126,24 +132,28 @@ class StringNormalizationUtilsTest extends AnyFlatSpec with BeforeAndAfter {
     val expectedValue = "It's @@ OK --- "
     assert(enrichedValue === expectedValue)
   }
+
   it should "remove whitespace" in {
     val originalValue = "   A good string "
     val enrichedValue = originalValue.cleanupLeadingPunctuation
     val expectedValue = "A good string "
     assert(enrichedValue === expectedValue)
   }
+
   it should "remove tabs" in {
     val originalValue = "\t\t\tA \tgood string "
     val enrichedValue = originalValue.cleanupLeadingPunctuation
     val expectedValue = "A \tgood string "
     assert(enrichedValue === expectedValue)
   }
+
   it should "remove new line characters" in {
     val originalValue = "\n\n\r\nA good string "
     val enrichedValue = originalValue.cleanupLeadingPunctuation
     val expectedValue = "A good string "
     assert(enrichedValue === expectedValue)
   }
+
   it should "do nothing if there is no punctuation" in {
     val originalValue = "A good string "
     val enrichedValue = originalValue.cleanupLeadingPunctuation
@@ -172,24 +182,28 @@ class StringNormalizationUtilsTest extends AnyFlatSpec with BeforeAndAfter {
     val expectedValue = "Synagogues -- Washington (D.C.)"
     assert(enrichedValue === expectedValue)
   }
+
   it should "remove whitespace" in {
     val originalValue = "A good string   "
     val enrichedValue = originalValue.cleanupEndingPunctuation
     val expectedValue = "A good string"
     assert(enrichedValue === expectedValue)
   }
+
   it should "remove tabs" in {
     val originalValue = "A \tgood string\t\t\t"
     val enrichedValue = originalValue.cleanupEndingPunctuation
     val expectedValue = "A \tgood string"
     assert(enrichedValue === expectedValue)
   }
+
   it should "remove new line characters" in {
     val originalValue = "A good string\n\n\r\n"
     val enrichedValue = originalValue.cleanupEndingPunctuation
     val expectedValue = "A good string"
     assert(enrichedValue === expectedValue)
   }
+
   it should "do nothing if there is no ending punctuation" in {
     val originalValue = "A good string"
     val enrichedValue = originalValue.cleanupEndingPunctuation
@@ -200,12 +214,13 @@ class StringNormalizationUtilsTest extends AnyFlatSpec with BeforeAndAfter {
   "limitCharacters" should "limit the number of characters in long strings" in {
     val longString = "Now is the time for all good people to come to the aid of the party."
     val enrichedValue = longString.limitCharacters(10)
-    assert(enrichedValue.size === 10)
+    assert(enrichedValue.length === 10)
   }
+
   it should "not limit strings shorter or equal to the limit" in {
     val shortString = "Now is the time"
     val enrichedValue = shortString.limitCharacters(shortString.length)
-    assert(enrichedValue.size === shortString.length)
+    assert(enrichedValue.length === shortString.length)
   }
 
   "reduceWhitespace" should "reduce two whitespaces to one whitespace" in {
@@ -213,16 +228,19 @@ class StringNormalizationUtilsTest extends AnyFlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.reduceWhitespace
     assert(enrichedValue === "foo bar")
   }
+
   it should "reduce five whitespaces to one whitespace" in {
     val originalValue = "foo     bar"
     val enrichedValue = originalValue.reduceWhitespace
     assert(enrichedValue === "foo bar")
   }
+
   it should "reduce multiple occurrences duplicate whitespace to single whitespace" in {
     val originalValue = "foo   bar  choo"
     val enrichedValue = originalValue.reduceWhitespace
     assert(enrichedValue === "foo bar choo")
   }
+
   it should "reduce remove leading and trailing white space" in {
     val originalValue = "   foo bar  choo "
     val enrichedValue = originalValue.reduceWhitespace
@@ -247,34 +265,36 @@ class StringNormalizationUtilsTest extends AnyFlatSpec with BeforeAndAfter {
     assert(enrichedValue === "foo choo")
   }
 
-
-
-
   "capitalizeFirstChar" should "not capitalize the b in '3 blind mice'" in {
     val originalValue = "3 blind mice"
     val enrichedValue = originalValue.capitalizeFirstChar
     assert(enrichedValue === "3 blind mice")
   }
+
   it should "capitalize the t in 'three blind mice'" in {
     val originalValue = "three blind mice"
     val enrichedValue = originalValue.capitalizeFirstChar
     assert(enrichedValue === "Three blind mice")
   }
+
   it should "capitalize the v in '...vacationland...'" in {
     val originalValue = "...vacationland..."
     val enrichedValue = originalValue.capitalizeFirstChar
     assert(enrichedValue === "...Vacationland...")
   }
+
   it should "capitalize the t in '  telephone'" in {
     val originalValue = "  telephone"
     val enrichedValue = originalValue.capitalizeFirstChar
     assert(enrichedValue === "  Telephone")
   }
+
   it should "not capitalize anything in a string with alphanumeric characters" in {
     val originalValue = "...@..|}"
     val enrichedValue = originalValue.capitalizeFirstChar
     assert(enrichedValue === "...@..|}")
   }
+
   it should "not capitalize anything in an empty string" in {
     val originalValue = ""
     val enrichedValue = originalValue.capitalizeFirstChar
@@ -286,16 +306,19 @@ class StringNormalizationUtilsTest extends AnyFlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
     assert(enrichedValue === "")
   }
+
   it should "remove a block term if surrounded by extra white space" in {
     val originalValue = "  jpeg  "
     val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
     assert(enrichedValue === "")
   }
+
   it should "remove a blocked term from a string" in {
     val originalValue = "jpeg photo"
     val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
     assert(enrichedValue === "photo")
   }
+
   it should "return the original string if it does not contain a blocked term" in {
     val originalValue = "photo"
     val enrichedValue = originalValue.applyBlockFilter(BlockList.termList)
@@ -307,51 +330,60 @@ class StringNormalizationUtilsTest extends AnyFlatSpec with BeforeAndAfter {
     val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
     assert(enrichedValue === "moving image")
   }
+
   it should "not match if the string contains an allowed term" in {
     val originalValue = "film 8mm"
     val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
     assert(enrichedValue === "film 8mm")
   }
+
   it should "return an empty string if the original string is not on the allow list" in {
     val originalValue = "dvd"
     val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
     assert(enrichedValue === "")
   }
+
   it should "match and remove extraneous white space ('  moving image  ' returns 'moving image')" in {
     val originalValue = " moving image      "
     val enrichedValue = originalValue.applyAllowFilter(AllowList.termList)
     assert(enrichedValue === "moving image")
   }
+
   "stripEndingPeriod" should "remove a single trailing period" in {
     val originalValue = "Hello."
     val enrichedValue = originalValue.stripEndingPeriod
     val expectedValue = "Hello"
     assert(enrichedValue === expectedValue)
   }
+
   it should "not remove ellipsis" in {
     val originalValue = "Hello..."
     val enrichedValue = originalValue.stripEndingPeriod
     val expectedValue = "Hello..."
     assert(enrichedValue === expectedValue)
   }
+
   it should "not remove leading or interior periods" in {
     val originalValue = "H.e.l.l.o."
     val enrichedValue = originalValue.stripEndingPeriod
     val expectedValue = "H.e.l.l.o"
     assert(enrichedValue === expectedValue)
   }
+
   it should "return the original value if only given a single period (e.g. '.')" in {
     val originalValue = "."
     val enrichedValue = originalValue.stripEndingPeriod
     val expectedValue = "."
     assert(enrichedValue === expectedValue)
   }
+
   it should "remove a trailing period if it followed by whitespace" in {
     val originalValue = "Hello.  "
     val enrichedValue = originalValue.stripEndingPeriod
     val expectedValue = "Hello"
     assert(enrichedValue === expectedValue)
   }
+
   it should "not remove a period followed by a closing paren" in {
     val originalValue = "Synagogues -- Washington (D.C.)"
     val enrichedValue = originalValue.stripEndingPeriod
@@ -363,5 +395,4 @@ class StringNormalizationUtilsTest extends AnyFlatSpec with BeforeAndAfter {
     val originalValue = """ "Hello John" """
     assert(originalValue.stripDblQuotes == " Hello John ")
   }
-
 }

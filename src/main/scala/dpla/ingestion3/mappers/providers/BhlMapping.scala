@@ -99,7 +99,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
       .map(stringOnlyTimeSpan)
   }
 
-  def getDateValues(dates: Seq[String]): Seq[String] = {
+  private def getDateValues(dates: Seq[String]): Seq[String] = {
     val sorted = dates.sorted
 
     sorted.lastOption match { // get last date in sequence
@@ -166,9 +166,8 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     )
 
     val publishers: Seq[String] = names.zipWithIndex.map {
-      case (n, i) => {
+      case (n, i) =>
         if (places.lift(i).isDefined) places(i) + " " + n else n
-      }
     }
 
     publishers.map(nameOnlyAgent)
@@ -262,7 +261,7 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     ))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Biodiversity Heritage Library"),
     uri = Some(URI("http://dp.la/api/contributor/bhl"))
   )

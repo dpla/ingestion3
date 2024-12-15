@@ -20,7 +20,7 @@ import scala.util.{Failure, Success, Try}
   * @param startDateTime:
   *   Start dateTime of the activity
   *
-  * @throws IllegalArgumentException
+  * @throws IllegalArgumentException If you give it an illegal argument
   *
   * @see
   *   https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/TECH/pages/84512319/Ingestion+3+Storage+Specification
@@ -39,21 +39,20 @@ class OutputHelper(
 
   /** If the given root is an S3 path, parse an S3Address. Evaluate on
     * instantiation so invalid S3 protocol is caught immediately. This val can
-    * be used to check wither a given root is an S3 path or not.
+    * be used to check whether a given root is an S3 path or not.
     *
     * @throws IllegalArgumentException
     *   if given root is S3 path with invalid protocol for writing files
     */
   val s3Address: Option[S3Address] = Try(parseS3Address(root)) match {
     // root is a valid S3 path
-    case Success(a) => {
+    case Success(a) =>
       if (a.protocol != s3WriteProtocol)
         // TODO: Instead of throwing exception, override given protocol and use s3a?
         throw new IllegalArgumentException(
           s"$s3WriteProtocol protocol required for writing output"
         )
       Some(a)
-    }
     // root is not a valid S3 path
     case Failure(_) => None
   }
@@ -104,9 +103,9 @@ class OutputHelper(
 
   lazy val manifestPath = s"$rootPath$manifestRelativePath"
 
-  lazy val setSummaryPath = s"$rootPath$setSummaryRelativePath"
+  private lazy val setSummaryPath = s"$rootPath$setSummaryRelativePath"
 
-  lazy val summaryPath = s"$rootPath$summaryRelativePath"
+  private lazy val summaryPath = s"$rootPath$summaryRelativePath"
 
   lazy val logsPath = s"$rootPath$logsRelativePath"
 
@@ -123,12 +122,11 @@ class OutputHelper(
     val text: String = manifestText(opts)
 
     s3Address match {
-      case Some(a) => {
+      case Some(a) =>
         val bucket = a.bucket
         val key = Array(a.prefix, Some(manifestRelativePath)).flatten
           .mkString("/")
         writeS3File(bucket, key, text)
-      }
       case None => writeLocalFile(manifestPath, text)
     }
   }
@@ -142,12 +140,11 @@ class OutputHelper(
     */
   def writeSetSummary(summary: String): Try[String] = {
     s3Address match {
-      case Some(a) => {
+      case Some(a) =>
         val bucket = a.bucket
         val key = Array(a.prefix, Some(setSummaryRelativePath)).flatten
           .mkString("/")
         writeS3File(bucket, key, summary)
-      }
       case None => writeLocalFile(setSummaryPath, summary)
     }
   }
@@ -161,12 +158,11 @@ class OutputHelper(
     */
   def writeSummary(summary: String): Try[String] = {
     s3Address match {
-      case Some(a) => {
+      case Some(a) =>
         val bucket = a.bucket
         val key = Array(a.prefix, Some(summaryRelativePath)).flatten
           .mkString("/")
         writeS3File(bucket, key, summary)
-      }
       case None => writeLocalFile(summaryPath, summary)
     }
   }
@@ -204,7 +200,7 @@ class OutputHelper(
     * @return
     *   Try[String]: Path of output file.
     */
-  def writeLocalFile(outPath: String, text: String): Try[String] =
+  private def writeLocalFile(outPath: String, text: String): Try[String] =
     Try { flatFileIO.writeFile(text, outPath) }
 
   /** Write a String to an S3 file.
@@ -219,7 +215,7 @@ class OutputHelper(
     * @return
     *   Try[String] Path of written file.
     */
-  def writeS3File(bucket: String, key: String, text: String): Try[String] =
+  private def writeS3File(bucket: String, key: String, text: String): Try[String] =
     Try {
       val in = new ByteArrayInputStream(text.getBytes("utf-8"))
       s3Client.putObject(

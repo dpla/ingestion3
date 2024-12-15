@@ -114,8 +114,7 @@ class VirginiasMapping
     ))
 
   // Helper method
-  // TODO: Is this the correct URI?
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Digital Virginias"),
     uri = Some(URI("http://dp.la/api/contributor/virginias"))
   )

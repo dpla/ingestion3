@@ -3,15 +3,8 @@ package dpla.ingestion3.profiles
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.api._
 import dpla.ingestion3.harvesters.file._
-import dpla.ingestion3.harvesters.oai.{LocalOaiHarvester, OaiHarvester}
+import dpla.ingestion3.harvesters.oai.LocalOaiHarvester
 import dpla.ingestion3.mappers.providers._
-
-class ArtstorProfile extends JsonProfile {
-  type Mapping = CdlMapping
-
-  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
-  override def getMapping = new ArtstorRetconMapping
-}
 
 /** Biodiversity Heritage Library
  */
@@ -20,16 +13,6 @@ class BhlProfile extends XmlProfile {
 
   override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new BhlMapping
-}
-
-/** California Digital Library
- * Currently down. They rebuilt on new tech and there's no current endpoint available.
- */
-class CdlProfile extends JsonProfile {
-  type Mapping = CdlMapping
-
-  override def getHarvester: Class[_ <: Harvester] = classOf[CdlHarvester]
-  override def getMapping = new CdlMapping
 }
 
 /** Connecticut Digital Library
@@ -61,16 +44,6 @@ class DcProfile extends XmlProfile {
 
   override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new DcMapping
-}
-
-/** Empire State Digital Network
- *  Dead hub.
- */
-class EsdnProfile extends XmlProfile {
-  type Mapping = EsdnMapping
-
-  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
-  override def getMapping = new EsdnMapping
 }
 
 /** Sunshine State Digital Network
@@ -164,16 +137,6 @@ class IaProfile extends JsonProfile {
   override def getMapping = new IaMapping
 }
 
-/** Kentucky
- * Dead hub. Profile based on migration from ingestion1
- */
-class KyProfile extends JsonProfile {
-  type Mapping = KentuckyRetconMapping
-
-  override def getHarvester: Class[_ <: Harvester] =
-    classOf[DplaJsonlFileHarvester]
-  override def getMapping = new KentuckyRetconMapping
-}
 
 /** Library of Congress
  */
@@ -185,16 +148,6 @@ class LocProfile extends JsonProfile {
   override def getMapping = new LcRetconMapping
 }
 
-/** Digital Maine
- * Hub has gone out of comms. Profile based on migration from ingestion1
- */
-class MeProfile extends JsonProfile {
-  type Mapping = MaineRetconMapping
-
-  override def getHarvester: Class[_ <: Harvester] =
-    classOf[DplaJsonlFileHarvester]
-  override def getMapping = new MaineRetconMapping
-}
 
 /** Massachusetts - Digital Commonwealth
  */
@@ -308,7 +261,7 @@ class NorthwestHeritageProfile extends XmlProfile {
 
 /** New York Public Library
  */
-class NYPLProfile extends NyplCHProfile {
+class NYPLProfile extends JsonProfile {
   type Mapping = NyplMapping
 
   override def getHarvester: Class[_ <: Harvester] =
@@ -325,16 +278,6 @@ class OhioProfile extends XmlProfile {
   override def getMapping = new OhioMapping
 }
 
-/** Orbis-Cascade
- * Dead hub.
- */
-class OrbisCascadeProfile extends XmlProfile {
-  type Mapping = OrbisCascadeMapping
-
-  override def getHarvester: Class[_ <: Harvester] =
-    classOf[OrbisCascadeFileHarvester]
-  override def getMapping = new OrbisCascadeMapping
-}
 
 /** Oklahoma Hub
  */
@@ -428,7 +371,7 @@ class SiProfile extends XmlProfile {
 }
 
 /** Digital Virginias
- * File obtained by going to the github repo and downloading it as a zip
+ * File obtained by going to the GitHub repo and downloading it as a zip
  */
 class VirginiasProfile extends XmlProfile {
   type Mapping = VirginiasMapping
@@ -444,17 +387,6 @@ class VtProfile extends XmlProfile {
 
   override def getHarvester: Class[_ <: Harvester] = classOf[VtFileHarvester]
   override def getMapping = new VtMapping
-}
-
-/** University of Washington
- * Seemingly down. Profile based on migration from ingestion1
- */
-class WashingtonProfile extends JsonProfile {
-  type Mapping = WashingtonRetconMapping
-
-  override def getHarvester: Class[_ <: Harvester] =
-    classOf[DplaJsonlFileHarvester]
-  override def getMapping = new WashingtonRetconMapping
 }
 
 /** Recollection Wisconsin

@@ -3,12 +3,10 @@ package dpla.ingestion3.harvesters.file
 import java.io.{ByteArrayInputStream, File, FileInputStream}
 import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
 import org.apache.commons.io.IOUtils
-import org.apache.log4j.Logger
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
@@ -103,18 +101,19 @@ class OaiFileHarvester(
             .equalsIgnoreCase("deleted")
         ) {
           None
-        }
-        // Extract required record identifier
-        val id: Option[String] =
-          extractor.extractString(record \ "header" \ "identifier")
+        } else {
+          // Extract required record identifier
+          val id: Option[String] =
+            extractor.extractString(record \ "header" \ "identifier")
 
-        val outputXML = xmlToString(record)
+          val outputXML = xmlToString(record)
 
-        id match {
-          case None =>
-            logger.warn(s"Missing required record_ID for $outputXML")
-            None
-          case Some(id) => Some(ParsedResult(id, outputXML))
+          id match {
+            case None =>
+              logger.warn(s"Missing required record_ID for $outputXML")
+              None
+            case Some(id) => Some(ParsedResult(id, outputXML))
+          }
         }
       case _ =>
         logger.warn("Got weird result back for item path: " + item.getClass)
@@ -125,15 +124,11 @@ class OaiFileHarvester(
   /** Implements a stream of files from the zip Can't use @tailrec here because
     * the compiler can't recognize it as tail recursive, but this won't blow the
     * stack.
-    *
-    * @param zipInputStream
-    * @return
-    *   Lazy stream of zip records
     */
-  def iter(zipInputStream: ZipInputStream): Stream[FileResult] =
+  def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
     Option(zipInputStream.getNextEntry) match {
       case None =>
-        Stream.empty
+        LazyList.empty
       case Some(entry) =>
         val result =
           if (entry.isDirectory || !entry.getName.endsWith(".xml"))
@@ -150,21 +145,19 @@ class OaiFileHarvester(
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
     inFiles
-      .listFiles(new ZipFileFilter)
+      .listFiles(FileFilters.zipFilter)
       .foreach(inFile => {
         val inputStream = getInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        val recordCount = (for (result <- iter(inputStream)) yield {
+        for (result <- iter(inputStream)) {
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               logger.error(s"Caught exception on $inFile.", exception)
-              0
-            case Success(count) =>
-              count
+            case Success(_) => //do nothing
           }
-        }).sum
+        }
         IOUtils.closeQuietly(inputStream)
       })
 

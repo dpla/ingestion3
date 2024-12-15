@@ -123,7 +123,7 @@ class ScMapping
     ))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("South Carolina Digital Library"),
     uri = Some(URI("http://dp.la/api/contributor/scdl"))
   )

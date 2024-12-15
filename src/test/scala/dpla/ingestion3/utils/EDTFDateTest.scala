@@ -35,7 +35,7 @@ class EDTFDateTest extends AnyFlatSpec {
     val dates = List(
       tuple3("199u", "1990", "1999"),
       tuple3("19uu", "1900", "1999"),
-      // Level 1 spec says day precision for "1999-01-uu but we're leaving that
+      // Level 1 spec says day precision for "1999-01-uu" but we're leaving that
       // for later -- too much work at the moment to find days per month
       tuple3("1999-01-uu", "1999-01", "1999-01"),
       tuple3("1999-uu-uu", "1999-01-01", "1999-12-31")

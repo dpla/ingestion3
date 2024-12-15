@@ -2,21 +2,21 @@ package dpla.ingestion3.data
 
 import dpla.ingestion3.model._
 import org.json4s.JsonDSL._
-import dpla.ingestion3.wiki.WikiUri
+
 object EnrichedRecordFixture {
 
-  val wikimediaEntrichedRecord =
+  val wikimediaEntrichedRecord: OreAggregation =
     OreAggregation(
       dataProvider = EdmAgent(
         name = Some("Big Sky Digital Network"),
-        exactMatch = Seq(URI(s"${WikiUri.baseWikiUri}Q83878447"))
+        exactMatch = Seq(URI(s"${WIKIDATA_ENTITY_PREFIX}Q83878447"))
       ),
       dplaUri = URI("https://dp.la/item/123"),
       originalRecord = "The Original Record",
       provider = EdmAgent(
         uri = Some(URI("http://dp.la/api/contributor/bscdn")),
         name = Some("Big Sky Digital Network"),
-        exactMatch = Seq(URI(s"${WikiUri.baseWikiUri}Q83878447"))
+        exactMatch = Seq(URI(s"${WIKIDATA_ENTITY_PREFIX}Q83878447"))
       ),
       intermediateProvider = Some(
         EdmAgent(name = Some("The Intermediate Provider"))
@@ -52,7 +52,7 @@ object EnrichedRecordFixture {
       mediaMaster = Seq(EdmWebResource(uri = URI("https://example.org/record/123.html")))
     )
 
-  val enrichedRecord =
+  val enrichedRecord: OreAggregation =
     OreAggregation(
       dataProvider = EdmAgent(
         name = Some("The Data Provider"),
@@ -77,7 +77,7 @@ object EnrichedRecordFixture {
       ),
       edmRights = Some(URI("https://example.org/rights/public_domain.html")),
       isShownAt = EdmWebResource(
-        uri = new URI("https://example.org/record/123")
+        uri = URI("https://example.org/record/123")
       ),
       sidecar = toJsonString(("prehashId" -> "oai:somestate:id123") ~ ("dplaId" -> "4b1bd605bd1d75ee23baadb0e1f24457")),
       originalId = "The original ID",
@@ -140,7 +140,7 @@ object EnrichedRecordFixture {
       mediaMaster = Seq(EdmWebResource(uri = URI("https://example.org/record/123.html")))
     )
 
-  val minimalEnrichedRecord =
+  val minimalEnrichedRecord: OreAggregation =
     OreAggregation(
       sidecar = toJsonString(("prehashId" -> "oai:somestate:id123") ~ ("dplaId" -> "123")),
       sourceResource = DplaSourceResource(

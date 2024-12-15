@@ -3,8 +3,8 @@ package dpla.ingestion3.harvesters.file
 import java.io.{BufferedReader, File, FileInputStream}
 import java.util.zip.GZIPInputStream
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.file.FileFilters.{GzFileFilter, XmlFileFilter}
-import dpla.ingestion3.harvesters.{AvroHelper, Harvester, LocalHarvester}
+import dpla.ingestion3.harvesters.file.FileFilters.{avroFilter, gzFilter, xmlFilter}
+import dpla.ingestion3.harvesters.{AvroHelper, LocalHarvester}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
@@ -101,9 +101,8 @@ class NaraFileHarvester(
     } yield item match {
       case record: Node =>
         val id =
-          (record \ "digitalObjectArray" \ "digitalObject" \ "objectIdentifier").text.toString
+          (record \ "digitalObjectArray" \ "digitalObject" \ "objectIdentifier").text
         val outputXML = xmlToString(record)
-        val label = item.label
         Some(ParsedResult(id, outputXML))
       case _ =>
         val logger = LogManager.getLogger(this.getClass)
@@ -182,10 +181,10 @@ class NaraFileHarvester(
     * @return
     *   Lazy stream of tar records
     */
-  def iter(tarInputStream: TarInputStream): Stream[FileResult] =
+  def iter(tarInputStream: TarInputStream): LazyList[FileResult] =
     Option(tarInputStream.getNextEntry) match {
       case None =>
-        Stream.empty
+        LazyList.empty
 
       case Some(entry) =>
         val filename = Try {
@@ -221,7 +220,7 @@ class NaraFileHarvester(
     val deletes = new File(inFile, "/deletes/")
 
     if (inFile.isDirectory)
-      for (file: File <- inFile.listFiles(new GzFileFilter).sorted) {
+      for (file: File <- inFile.listFiles(gzFilter).sorted) {
         logger.info(s"Harvesting from ${file.getName}")
         harvestFile(file, unixEpoch)
       }
@@ -234,7 +233,7 @@ class NaraFileHarvester(
     // Get the absolute path of the avro file written to naraTmp directory. copyFromLocalFile() cannot copy
     // a directory
     val naraTempFile = new File(naraTmp)
-      .listFiles(new AvroFileFilter)
+      .listFiles(avroFilter)
       .headOption
       .getOrElse(
         throw new RuntimeException(
@@ -281,13 +280,13 @@ class NaraFileHarvester(
     import spark.implicits._
 
     val files =
-      if (file.isDirectory) file.listFiles(new XmlFileFilter).sorted
+      if (file.isDirectory) file.listFiles(xmlFilter).sorted
       else Array(file)
 
     files
       .flatMap(file => {
         val xml = XML.loadFile(file)
-        (xml \\ "naId").map(_.text.toString)
+        (xml \\ "naId").map(_.text)
       })
       .distinct
       .toSeq

@@ -155,7 +155,7 @@ class MwdlMapping extends XmlMapping with XmlExtractor {
       .flatMap(_.applyNwdhTags)
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Mountain West Digital Library"),
     uri = Some(URI("http://dp.la/api/contributor/mwdl"))
   )

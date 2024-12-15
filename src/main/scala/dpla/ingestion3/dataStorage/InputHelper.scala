@@ -1,6 +1,5 @@
 package dpla.ingestion3.dataStorage
 
-import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 
 import java.io.File
@@ -76,7 +75,7 @@ object InputHelper {
     *   The full path of the most recent activity.
     */
   private def mostRecentS3(address: S3Address): Option[String] = {
-    // Given that `listObjects' returns results in alphabetical order,
+    // Given that `listObjects` returns results in alphabetical order,
     // and activity folder names begin with a timestamp,
     // we can assume the last item on the last page of results
     // will be from the most recent activity.
@@ -102,7 +101,6 @@ object InputHelper {
     * @return
     *   The last batch of objects within the S3 bucket/folder.
     */
-  // TODO: Handle network errors?
   private def fetchLastBatch(address: S3Address): ObjectListing = {
 
     @tailrec

@@ -6,7 +6,7 @@ import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import org.apache.commons.io.IOUtils
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
+import dpla.ingestion3.harvesters.file.FileFilters.zipFilter
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
 import org.apache.logging.log4j.LogManager
@@ -85,10 +85,10 @@ class VaFileHarvester(
     * @return
     *   Lazy stream of zip records
     */
-  def iter(zipInputStream: ZipInputStream): Stream[FileResult] =
+  def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
     Option(zipInputStream.getNextEntry) match {
       case None =>
-        Stream.empty
+        LazyList.empty
       case Some(entry) =>
         val result =
           if (entry.isDirectory || !entry.getName.endsWith(".xml"))
@@ -107,7 +107,7 @@ class VaFileHarvester(
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
     inFiles
-      .listFiles(new ZipFileFilter)
+      .listFiles(zipFilter)
       .foreach(inFile => {
         val inputStream = getInputStream(inFile)
           .getOrElse(

@@ -3,7 +3,7 @@ package dpla.ingestion3.harvesters.file
 import java.io.{File, FileInputStream}
 import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
+import dpla.ingestion3.harvesters.file.FileFilters.zipFilter
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
@@ -122,10 +122,10 @@ class NorthwestHeritageFileHarvester(
     * @return
     *   Lazy stream of zip records
     */
-  def iter(zipInputStream: ZipInputStream): Stream[FileResult] =
+  def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
     Option(zipInputStream.getNextEntry) match {
       case None =>
-        Stream.empty
+        LazyList.empty
       case Some(entry) =>
         val result =
           if (entry.isDirectory || !entry.getName.endsWith(".xml"))
@@ -144,7 +144,7 @@ class NorthwestHeritageFileHarvester(
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
     inFiles
-      .listFiles(new ZipFileFilter)
+      .listFiles(zipFilter)
       .foreach(inFile => {
         val inputStream = getInputStream(inFile)
           .getOrElse(

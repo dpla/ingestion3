@@ -73,6 +73,6 @@ abstract class FileHarvester(
     avroWriter.append(genericRecord)
   }
 
-  def flush() = getAvroWriter.flush()
+  def flush(): Unit = getAvroWriter.flush()
 
 }

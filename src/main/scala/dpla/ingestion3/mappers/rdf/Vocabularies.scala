@@ -1,6 +1,6 @@
 package dpla.ingestion3.mappers.rdf
 
-import org.eclipse.rdf4j.model.impl.{SimpleIRI, SimpleNamespace}
+import org.eclipse.rdf4j.model.impl.SimpleNamespace
 import org.eclipse.rdf4j.model.{IRI, Namespace}
 
 /** An abstract class that represents a suite of IRIs for an ontology. Similar
@@ -20,24 +20,24 @@ case class RDF()
 
   import org.eclipse.rdf4j.model.vocabulary.RDF._
 
-  val `type` = TYPE
-  val property = PROPERTY
-  val XMLLiteral = XMLLITERAL
-  val subject = SUBJECT
-  val predicate = PREDICATE
-  val `object` = OBJECT
-  val Statement = STATEMENT
-  val Bag = BAG
-  val Alt = ALT
-  val Seq = SEQ
-  val value = VALUE
-  val li = LI
-  val List = LIST
-  val first = FIRST
-  val rest = REST
-  val nil = NIL
-  val langString = LANGSTRING
-  val HTML = org.eclipse.rdf4j.model.vocabulary.RDF.HTML
+  val `type`: IRI = TYPE
+  val property: IRI = PROPERTY
+  val XMLLiteral: IRI = XMLLITERAL
+  val subject: IRI = SUBJECT
+  val predicate: IRI = PREDICATE
+  val `object`: IRI = OBJECT
+  val Statement: IRI = STATEMENT
+  val Bag: IRI = BAG
+  val Alt: IRI = ALT
+  val Seq: IRI = SEQ
+  val value: IRI = VALUE
+  val li: IRI = LI
+  val List: IRI = LIST
+  val first: IRI = FIRST
+  val rest: IRI = REST
+  val nil: IRI = NIL
+  val langString: IRI = LANGSTRING
+  val HTML: IRI = org.eclipse.rdf4j.model.vocabulary.RDF.HTML
 }
 
 case class DPLA() extends Vocabulary("dpla", "http://dp.la/about/map/") {

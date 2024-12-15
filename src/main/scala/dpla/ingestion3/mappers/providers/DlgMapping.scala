@@ -112,7 +112,7 @@ class DlgMapping extends JsonMapping with JsonExtractor {
       .map(nameOnlyConcept)
 
   override def place(data: Document[JValue]): ZeroToMany[DplaPlace] = {
-    val spatials = (unwrap(data) \ "dcterms_spatial_display")
+    val spatials = unwrap(data) \ "dcterms_spatial_display"
 
     iterify(spatials).children.flatMap(node => {
       val names = extractStrings("names")(node)

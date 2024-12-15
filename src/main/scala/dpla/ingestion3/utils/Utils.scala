@@ -8,6 +8,7 @@ import org.json4s.jackson.JsonMethods._
 
 import java.io.{File, PrintWriter}
 import java.net.URL
+import java.text.NumberFormat
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId, ZonedDateTime}
 import scala.concurrent.duration._
@@ -45,10 +46,8 @@ object Utils {
     * @return
     *   xxx,xxx
     */
-  def formatNumber(n: Long): String = {
-    val formatter = java.text.NumberFormat.getIntegerInstance
-    formatter.format(n)
-  }
+  def formatNumber(n: Long): String =
+    NumberFormat.getIntegerInstance.format(n)
 
   /** Formats runtime
     *
@@ -119,10 +118,10 @@ object Utils {
   /** Tries to create a URL object from the string
     *
     * @param url
-    *   String url
+    *   String URL
     * @return
-    *   True if a URL object can be made from url False if it fails (malformed
-    *   url, invalid characters, not a url, empty string)
+    *  True if a URL object can be made from URL
+    *  False if it fails (malformed URL, invalid characters, not a URL, empty string)
     */
   def isUrl(url: String): Boolean = url.trim.nonEmpty && Try {
     new URL(url)

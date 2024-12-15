@@ -68,11 +68,10 @@ class JsonExtractorTest extends AnyFlatSpec with JsonExtractor {
     )
 
     for (pair <- testData) pair match {
-      case (input, expected) => {
+      case (input, expected) =>
         val result = extractStrings(input)
         assert(result.length === 1)
         assert(result.contains(expected))
-      }
     }
   }
 

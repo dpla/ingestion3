@@ -10,7 +10,7 @@ import dpla.ingestion3.utils.Utils
 
 object MappingSummary {
 
-  /** Big picutre summary in one String
+  /** Big picture summary in one String
     * @param data
     *   MappingSummaryData Results of individual steps (failures, successes,
     *   warnings and errors)

@@ -132,8 +132,6 @@ class JhnMapping
     val concepts = (metadataRoot(data) \ "Concept").map(node => {
       val prefLabel = extractString(node \ "prefLabel")
       val note = extractString(node \ "note")
-      val altLabel =
-        extractString(node \ "altLabel") // FIXME no good place to map this
       val uri = getAttributeValue(node, "rdf:about").toSeq.map(URI)
 
       SkosConcept(

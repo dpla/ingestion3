@@ -234,7 +234,7 @@ class MdlMapping
     )
   }
 
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Minnesota Digital Library"),
     uri = Some(URI("http://dp.la/api/contributor/mdl"))
   )

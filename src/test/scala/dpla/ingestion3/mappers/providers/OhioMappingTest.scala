@@ -190,17 +190,17 @@ class OhioMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct edmRights" in {
-    val expected = List(new URI("http://rightsstatements.org/page/NoC-US/1.0/"))
+    val expected = List(URI("http://rightsstatements.org/page/NoC-US/1.0/"))
     assert(extractor.edmRights(xml) === expected)
   }
 
   it should "extract the correct isShownAt" in {
-    val expected = List(uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/collections/item/14058")))
+    val expected = List(uriOnlyWebResource(URI("https://digitalgallery.bgsu.edu/collections/item/14058")))
     assert(extractor.isShownAt(xml) === expected)
   }
 
   it should "extract the correct preview" in {
-    val expected = List(uriOnlyWebResource(new URI("https://digitalgallery.bgsu.edu/files/thumbnails/26e197915e9107914faa33ac166ead5a.jpg")))
+    val expected = List(uriOnlyWebResource(URI("https://digitalgallery.bgsu.edu/files/thumbnails/26e197915e9107914faa33ac166ead5a.jpg")))
     assert(extractor.preview(xml) === expected)
   }
 

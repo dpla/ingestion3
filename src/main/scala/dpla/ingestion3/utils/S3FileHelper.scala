@@ -17,7 +17,8 @@ import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 
 trait S3FileHelper {
-  lazy val s3client: AmazonS3 = AmazonS3ClientBuilder.defaultClient()
+
+  private lazy val s3client: AmazonS3 = AmazonS3ClientBuilder.defaultClient()
 
   def getKey(path: String): String =
     path.split("://")(1).split("/").drop(1).mkString("/")
@@ -28,20 +29,8 @@ trait S3FileHelper {
       val keyVersions = new util.LinkedList[DeleteObjectsRequest.KeyVersion]
       val group = groupedKeys.next()
       group.map(key => keyVersions.add(new KeyVersion(key)))
-      val deleteObjectsRequest =
-        new DeleteObjectsRequest(bucket).withKeys(keyVersions)
+      val deleteObjectsRequest = new DeleteObjectsRequest(bucket).withKeys(keyVersions)
       s3client.deleteObjects(deleteObjectsRequest)
     }
-  }
-
-  @tailrec
-  final def getS3Keys(
-      objects: ObjectListing,
-      files: ListBuffer[String] = new ListBuffer[String]
-  ): ListBuffer[String] = {
-    import scala.jdk.CollectionConverters._
-    files ++= objects.getObjectSummaries.asScala.toSeq.map(x => x.getKey)
-    if (!objects.isTruncated) files
-    else getS3Keys(s3client.listNextBatchOfObjects(objects), files)
   }
 }

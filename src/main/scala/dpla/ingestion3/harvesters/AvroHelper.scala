@@ -19,7 +19,7 @@ object AvroHelper {
     val outputDir = new File(path)
     outputDir.mkdirs()
     if (!outputDir.exists)
-      throw new RuntimeException(s"Output directory ${path} does not exist")
+      throw new RuntimeException(s"Output directory $path does not exist")
 
     val avroWriter = AvroUtils.getAvroWriter(new File(path + filename), schema)
     avroWriter.setFlushOnEveryBlock(true)

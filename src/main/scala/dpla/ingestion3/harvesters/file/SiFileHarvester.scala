@@ -3,7 +3,7 @@ package dpla.ingestion3.harvesters.file
 import java.io.{File, FileFilter, FileInputStream, InputStreamReader}
 import java.util.zip.GZIPInputStream
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.file.FileFilters.GzFileFilter
+import dpla.ingestion3.harvesters.file.FileFilters.gzFilter
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.Utils
 import org.apache.avro.generic.GenericData
@@ -13,7 +13,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.io.Source
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success, Try, Using}
 import scala.xml.{MinimizeMode, Node, Utility, XML}
 
 /** Entry for performing Smithsonian file harvest
@@ -64,15 +64,15 @@ class SiFileHarvester(
       case record: Node =>
         // Extract required record identifier
         val id = Option(
-          (record \ "descriptiveNonRepeating" \ "record_ID").text.toString
+          (record \ "descriptiveNonRepeating" \ "record_ID").text
         )
         val outputXML = xmlToString(record)
 
         id match {
-          case (None) =>
+          case None =>
             logger.warn(s"Missing required record_ID for $outputXML")
             None
-          case (Some(id)) => Some(ParsedResult(id, outputXML))
+          case Some(id) => Some(ParsedResult(id, outputXML))
         }
       case _ =>
         logger.warn("Got weird result back for item path: " + item.getClass)
@@ -87,7 +87,7 @@ class SiFileHarvester(
     * @return
     *   Count of metadata items found.
     */
-  def handleLine(line: String, unixEpoch: Long): Try[Int] =
+  private def handleLine(line: String, unixEpoch: Long): Try[Int] =
     Option(line) match {
       case None =>
         Success(0) // a directory, no results
@@ -122,25 +122,25 @@ class SiFileHarvester(
     *   Map[String, String] Map of filename to record count (formatted as string
     *   in file)
     */
-  def getExpectedFileCounts(inFiles: File): Map[String, String] = {
+  private def getExpectedFileCounts(inFiles: File): Map[String, String] = {
     var loadCounts = Map[String, String]()
     inFiles
       .listFiles(new TxtFileFilter)
       .foreach(file => {
-        Source
-          .fromFile(file)
-          .getLines()
-          .foreach(line => {
-            Try {
-              val lineVals = line.split(" records = ")
-              // rename .xml to .xml.gz to match filename processed by harvester
-              lineVals(0).replace(".xml", ".xml.gz") -> lineVals(1)
-            } match {
-              case Success(row) => loadCounts += row
-              case Failure(_)   => loadCounts
-            }
-
-          })
+        Using(Source
+          .fromFile(file)) { source =>
+          source.getLines()
+            .foreach(line => {
+              Try {
+                val lineVals = line.split(" records = ")
+                // rename .xml to .xml.gz to match filename processed by harvester
+                lineVals(0).replace(".xml", ".xml.gz") -> lineVals(1)
+              } match {
+                case Success(row) => loadCounts += row
+                case Failure(_) => loadCounts
+              }
+            })
+        }
       })
     loadCounts
   }
@@ -158,7 +158,7 @@ class SiFileHarvester(
     val expectedFileCounts = getExpectedFileCounts(inFiles)
 
     inFiles
-      .listFiles(new GzFileFilter)
+      .listFiles(gzFilter)
       .foreach(inFile => {
         val inputStream = getInputStream(inFile)
           .getOrElse(
@@ -230,8 +230,8 @@ class SiFileHarvester(
     * @return
     *   Count of metadata items found.
     */
-  override def handleFile(fileResult: FileResult, unixEpoch: Long): Try[Int] =
-    ???
+  override def handleFile(fileResult: FileResult, unixEpoch: Long): Try[Int] = Success(0) // this is a smell
+
 }
 
 class TxtFileFilter extends FileFilter {

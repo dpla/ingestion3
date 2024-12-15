@@ -45,7 +45,7 @@ class LanguageEnrichment extends FileLoader with VocabEnrichment[SkosConcept] {
     * @return
     *   Enriched SkosConcept with original value's providedLabel
     */
-  private def mergeFunc(prov: SkosConcept, enriched: SkosConcept) =
+  private def mergeFunc(prov: SkosConcept, enriched: SkosConcept): SkosConcept =
     enriched.copy(providedLabel = prov.providedLabel)
 
   /** Read CSV files and load vocabulary into mappers
@@ -53,7 +53,7 @@ class LanguageEnrichment extends FileLoader with VocabEnrichment[SkosConcept] {
     * @return
     */
   // noinspection TypeAnnotation,UnitMethodIsParameterless
-  private def loadVocab =
+  private def loadVocab: Unit =
     getVocabFromCsvFiles(files).foreach(term =>
       addLangConcept(term(0), term(1))
     )
@@ -63,18 +63,12 @@ class LanguageEnrichment extends FileLoader with VocabEnrichment[SkosConcept] {
 
   /** Adds to lookup map SkosConcepts using both provLabel and concept for the
     * lookup key
-    *
-    * @param langAbbv
-    *   Language abbreviation
-    * @param langTerm
-    *   Full language term
     */
-  // noinspection TypeAnnotation
-  private def addLangConcept(langAbbv: String, langTerm: String): Unit = {
+  private def addLangConcept(languageAbbreviation: String, langTerm: String): Unit = {
     // Use term abbrev for lookup key
     lookup.add(
       SkosConcept(
-        providedLabel = Some(langAbbv),
+        providedLabel = Some(languageAbbreviation),
         concept = Some(langTerm)
       )
     )
@@ -108,10 +102,9 @@ class LanguageEnrichment extends FileLoader with VocabEnrichment[SkosConcept] {
     *   SkosConcept Enriched version of original value or original value if
     *   enrichment was not possible
     */
-  def enrichLanguage(value: SkosConcept): SkosConcept = {
+  def enrichLanguage(value: SkosConcept): SkosConcept =
     enrich(value) match {
       case Some(e) => merger.merge(value, e)
       case _       => value
     }
-  }
 }

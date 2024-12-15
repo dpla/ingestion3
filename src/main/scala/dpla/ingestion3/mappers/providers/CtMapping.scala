@@ -126,7 +126,7 @@ class CtMapping
     extractStrings(data \ "accessCondition")
 
   // ALL CHILDREN of metadata/mods/subject/topic|name|titleInfo
-  // TODO Confirm this mappping, unsure what 'all children' means here
+  // TODO Confirm this mapping, unsure what 'all children' means here
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
     (extractStrings(data \ "subject" \ "topic") ++
       extractStrings(data \ "subject" \ "name") ++
@@ -186,13 +186,13 @@ class CtMapping
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
 
-  // Take the <identifier type=”hdl”> element, (e.g. http://hdl.handle.net/11134/20004:20073175)
+  // Take the <identifier type="hdl"> element, (e.g. http://hdl.handle.net/11134/20004:20073175)
   // Change http://hdl.handle.net/11134 into https://ctdigitalarchive.org/islandora/object
   // and then add the PID (20004:20073175) followed by /datastream/TN.
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     isShownAtStrings(data)
       .map(isa =>
-        isa.replaceAllLiterally(
+        isa.replace(
           "http://hdl.handle.net/11134/",
           "https://ctdigitalarchive.org/islandora/object/"
         )
@@ -208,13 +208,13 @@ class CtMapping
     ))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Connecticut Digital Archive"),
     uri = Some(URI("http://dp.la/api/contributor/ct"))
   )
 
   // Help functions
-  def constructTitles(nodeSeq: NodeSeq): ZeroToMany[String] = {
+  private def constructTitles(nodeSeq: NodeSeq): ZeroToMany[String] = {
     nodeSeq.map(node => {
       val nonSort = extractString(node \ "nonSort")
       val title = extractString(node \ "title")
@@ -225,7 +225,7 @@ class CtMapping
     })
   }
 
-  def isShownAtStrings(data: Document[NodeSeq]): Seq[String] =
+  private def isShownAtStrings(data: Document[NodeSeq]): Seq[String] =
     (data \ "identifier")
       .map(node => getByAttribute(node, "type", "hdl"))
       .flatMap(extractStrings)

@@ -25,7 +25,7 @@ class BlacklistOaiRelation(
     val sets = sparkContext.parallelize(nonBlacklistedSets.toSeq)
     val pages = sets.flatMap(oaiMethods.listAllRecordPagesForSet)
     val records = pages.flatMap(
-      oaiMethods.parsePageIntoRecords(_, oaiConfiguration.removeDeleted)
+      oaiMethods.parsePageIntoRecords(_, oaiConfiguration.removeDeleted())
     )
     records.map(OaiRelation.convertToOutputRow)
   }

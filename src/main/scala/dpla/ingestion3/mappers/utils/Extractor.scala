@@ -6,21 +6,17 @@ import scala.util.{Try, Success, Failure}
 import scala.xml.{Elem, MetaData, Node, NodeSeq, Text}
 
 /** For ripping data out of original records
-  *
-  * @tparam T
   */
 trait Extractor[T] {
   // Extract zero or one value
-  def extractString(fieldname: String)(implicit data: T): Option[String]
+  def extractString(fieldName: String)(implicit data: T): Option[String]
   def extractString(data: T): Option[String]
 
   // Extract zero to many values
-  def extractStrings(fieldname: String)(implicit data: T): Seq[String]
+  def extractStrings(fieldName: String)(implicit data: T): Seq[String]
   def extractStrings(data: T): Seq[String]
 }
 
-/** XML Extractor
-  */
 trait XmlExtractor extends Extractor[NodeSeq] {
 
   // list of common xml namespaces
@@ -40,56 +36,36 @@ trait XmlExtractor extends Extractor[NodeSeq] {
   protected val xsf = "http://www.w3.org/2001/XMLSchema#"
   protected val xsi = "http://www.w3.org/2001/XMLSchema-instance"
 
-  /** @param fieldName
-    * @param xml
-    * @return
-    */
   override def extractString(fieldName: String)(implicit
       xml: NodeSeq
   ): Option[String] =
     extractString(xml \ fieldName)
 
-  /** */
   def extractStrings(fieldName: String)(implicit xml: NodeSeq): Seq[String] =
     extractStrings(xml \ fieldName)
 
-  /** @param xValue
-    * @return
-    */
-  override def extractString(xValue: NodeSeq): Option[String] = {
+  override def extractString(xValue: NodeSeq): Option[String] =
     xValue match {
       case v if v.text.nonEmpty => Some(v.text)
       case _                    => None
     }
-  }
 
-  /** @param xValue
-    * @return
-    */
-  def extractString(xValue: Node): Option[String] = {
+  def extractString(xValue: Node): Option[String] =
     xValue match {
       case v if v.text.nonEmpty => Some(v.text)
       case _                    => None
     }
-  }
 
-  /** TODO swing back and deeper dive into NodeSeq vs JValue/JObject
-    *
-    * @param xValue
-    * @return
-    *   Seq[String]
-    */
-  override def extractStrings(xValue: NodeSeq): Seq[String] = {
-    val values = xValue match {
+  override def extractStrings(xValue: NodeSeq): Seq[String] =
+    (xValue match {
       case v if v.size > 1 => v.flatMap(value => extractString(value))
       case _ =>
         extractString(xValue) match {
           case Some(stringValue) => Seq(stringValue)
           case _                 => Seq()
         }
-    }
-    values.filter(_.nonEmpty)
-  }
+    }).filter(_.nonEmpty)
+
 
   /** Exclude nodes that do not have an attribute that matches att and value
     * parameters
@@ -116,13 +92,11 @@ trait XmlExtractor extends Extractor[NodeSeq] {
     * @return
     *   NodeSeq of matching nodes
     */
-  def getByAttribute(e: Elem, att: String, value: String): NodeSeq = {
+  def getByAttribute(e: Elem, att: String, value: String): NodeSeq =
     e \\ "_" filter { n => filterAttribute(n, att, value) }
-  }
 
-  def getByAttribute(e: NodeSeq, att: String, value: String): NodeSeq = {
+  def getByAttribute(e: NodeSeq, att: String, value: String): NodeSeq =
     getByAttribute(e.asInstanceOf[Elem], att, value)
-  }
 
   /** Exclude nodes that do not have an attribute that matches att and any of
     * the given value parameters
@@ -161,38 +135,25 @@ trait XmlExtractor extends Extractor[NodeSeq] {
       e: Elem,
       att: String,
       values: Seq[String]
-  ): NodeSeq = {
+  ): NodeSeq =
     e \\ "_" filter { n => filterAttributeListOptions(n, att, values) }
-  }
 
   def getByAttributeListOptions(
       e: NodeSeq,
       att: String,
       values: Seq[String]
-  ): NodeSeq = {
+  ): NodeSeq =
     getByAttributeListOptions(e.asInstanceOf[Elem], att, values)
-  }
 
   /** For each given node, get any immediate children that are text values.
     * Ignore nested text values.
-    *
-    * E.g. <foo>bar</foo> => "bar" E.g. <foo><bar>bat</bar></foo> => nothing
-    *
-    * @param xValue
-    *   NodeSeq
-    * @return
-    *   Seq[String]
     */
   def extractChildStrings(xValue: NodeSeq): Seq[String] = xValue.flatMap {
     node =>
       node.child.collect { case Text(t) => t }.map(_.trim).filterNot(_.isEmpty)
   }
 
-  /** @param node
-    * @param attribute
-    * @return
-    */
-  def getAttributeValue(node: Node, attribute: String): Option[String] = {
+  def getAttributeValue(node: Node, attribute: String): Option[String] =
     node.attributes.headOption match {
       case Some(metadata: MetaData) =>
         Try {
@@ -203,11 +164,8 @@ trait XmlExtractor extends Extractor[NodeSeq] {
         }
       case _ => None
     }
-  }
 }
 
-/** Json extractor
-  */
 trait JsonExtractor extends Extractor[JValue] {
 
   /** Pulls a single string from the implicit json data.
@@ -215,7 +173,7 @@ trait JsonExtractor extends Extractor[JValue] {
     * @param fieldName
     *   Name of field to extract string from.
     * @param json
-    *   JSON document or subdocument
+    *   JSON document or sub document
     * @return
     *   Some(string) if one could be found. Will fail on non-primitive values
     *   like arrays or objects.
@@ -228,7 +186,7 @@ trait JsonExtractor extends Extractor[JValue] {
     * @param fieldName
     *   Name of field to extract string from.
     * @param json
-    *   JSON document or subdocument
+    *   JSON document or sub document
     * @return
     *   A Seq[String].
     *
@@ -245,16 +203,6 @@ trait JsonExtractor extends Extractor[JValue] {
   def extractStrings(fieldName: String)(implicit json: JValue): Seq[String] =
     extractStrings(json \ fieldName)
 
-  /** Pulls a Seq[String] of values from the implicit json from the specified
-    * field name at any depth
-    *
-    * @param fieldName
-    * @param json
-    * @return
-    */
-  def extractStringsDeep(fieldName: String)(implicit
-      json: JValue
-  ): Seq[String] = extractStrings(json \\ fieldName)
 
   /** @see
     *   definition of extractStrings(fieldName: String), save for this version
@@ -290,9 +238,6 @@ trait JsonExtractor extends Extractor[JValue] {
   }
 
   /** Sometimes we need to map the keys
-    *
-    * @param jValue
-    * @return
     */
   def extractKeys(jValue: JValue): Seq[String] = jValue match {
     case JArray(array)   => array.flatMap(entry => extractKeys(entry))
@@ -300,17 +245,15 @@ trait JsonExtractor extends Extractor[JValue] {
     case _               => Seq()
   }
 
-  /** Wraps the JValue in JArray if it is not already a JArray Addresses the
-    * problem of inconsistent data types in value field. e.g. '"prop": ["val1"]'
+  /** Wraps the JValue in JArray if it is not already a JArray
+    * Addresses the problem of inconsistent data types in value
+    * field. e.g. '"prop": ["val1"]'
     * vs '"prop": "val1"'
-    *
-    * @param jvalue
-    * @return
     */
   // TODO Can we make this an implicit?
-  def iterify(jvalue: JValue): JArray = jvalue match {
+  def iterify(jValue: JValue): JArray = jValue match {
     case JArray(j) => JArray(j)
     case JNothing  => JArray(List())
-    case _         => JArray(List(jvalue))
+    case _         => JArray(List(jValue))
   }
 }

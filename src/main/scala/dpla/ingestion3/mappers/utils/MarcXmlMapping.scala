@@ -98,7 +98,7 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
     * @return
     *   String text value of <leader> (empty String if leader not found)
     */
-  def leader(data: Document[NodeSeq]): String =
+  private def leader(data: Document[NodeSeq]): String =
     extractStrings(data \\ "leader").headOption.getOrElse("")
 
   /** Get the character at a specified index of the <leader> text
@@ -110,11 +110,10 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
     * @return
     *   Option[Char] character if found
     */
-  def leaderAt(data: Document[NodeSeq], index: Int): Option[Char] = {
+  def leaderAt(data: Document[NodeSeq], index: Int): Option[Char] =
     Try {
       leader(data).charAt(index)
     }.toOption
-  }
 
   // type and genre mappings, derived from <leader> and <controlfield>
   private val leaderTypes: Map[String, (Option[String], Option[String])] = Map(
@@ -167,11 +166,6 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
   )
 
   /** Extract a subject string from a Node
-    *
-    * @param node
-    *   Node containing subject data
-    * @return
-    *   String
     */
   def extractMarcSubject(node: Node): String = {
     val tag: String = node \@ "tag" // get tag for this datafield
@@ -226,7 +220,7 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
     def matchLeaderType(keys: List[String]): Option[String] = {
 
       keys.headOption match {
-        case Some(key) => {
+        case Some(key) =>
           val regex = key.r // make regex from a key in leaderTypes
 
           mappingKey match {
@@ -235,7 +229,6 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
             case _ =>
               matchLeaderType(keys.drop(1)) // else try next leaderTypes key
           }
-        }
         case None => None // no more leaderTypes keys to iterate through
       }
     }

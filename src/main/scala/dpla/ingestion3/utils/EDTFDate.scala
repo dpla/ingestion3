@@ -4,24 +4,24 @@ import scala.util.matching.Regex
 
 object EDTFDate {
 
-  val yearPat4 = """-?\d{1,4}"""
-  val yearPatLong = """y-?\d{5,}"""
+  private val yearPat4 = """-?\d{1,4}"""
+  private val yearPatLong = """y-?\d{5,}"""
   // monthPat and dayPat try to provide a little insurance against impossible
   // dates, but do not verify whether the month actually has a particular
   // day, like 2017-11-31 or 2017-02-29, which are both invalid.
-  val monthPat = "(?:0[1-9]|1[0-2])"
-  val dayPat = "(?:0[1-9]|[12][0-9]|3[01])"
-  val monthAndDayPat = s"-?(?:$monthPat?-?$dayPat?|2[1-4])" // incl. season
-  val basicYmdPat = s"(?:$yearPat4|$yearPatLong)$monthAndDayPat"
-  val unspecDatePat = """(?:\d{3}u|\d{2}uu|\d{4}(?:-uu){1,2}|\d{4}-\d{2}-uu)"""
-  val fullYmdPat = s"(?:$basicYmdPat|$unspecDatePat)"
+  private val monthPat = "(?:0[1-9]|1[0-2])"
+  private val dayPat = "(?:0[1-9]|[12][0-9]|3[01])"
+  private val monthAndDayPat = s"-?(?:$monthPat?-?$dayPat?|2[1-4])" // incl. season
+  private val basicYmdPat = s"(?:$yearPat4|$yearPatLong)$monthAndDayPat"
+  private val unspecDatePat = """(?:\d{3}u|\d{2}uu|\d{4}(?:-uu){1,2}|\d{4}-\d{2}-uu)"""
+  private val fullYmdPat = s"(?:$basicYmdPat|$unspecDatePat)"
 
   /*
    * dateRegex has one match group, for the date. We allow for "uncertain /
    * approximate" symbols at the end of the string, but don't return them
    * with our range values.
    */
-  val dateRegex: Regex =
+  private val dateRegex: Regex =
     ("^(" + // start capture
       fullYmdPat +
       ")" + // end capture
@@ -34,14 +34,14 @@ object EDTFDate {
    * supposed to be dates, without time. If that's wrong, change this and
    * rangeForDateAndTime().
    */
-  val dateAndTimeRegex: Regex =
+  private val dateAndTimeRegex: Regex =
     """^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}:\d{2}(?:Z|[\+\-]\d{2}:\d{2})?$""".r
 
   /*
-   * There are two capture groups in intervalRegex, one for the begin and one
-   * for the end.
+   * There are two capture groups in intervalRegex, one for the beginning
+   * and one for the end.
    */
-  val intervalRegex: Regex =
+  private val intervalRegex: Regex =
     ("^(" + // start capture 1
       "(?:" + // start grouping for "unknown"
       fullYmdPat +
@@ -63,7 +63,7 @@ object EDTFDate {
    * extendedIntervalRegex deals with "open" dates in the Level 1
    * spec.
    */
-  val openIntervalRegex: Regex =
+  private val openIntervalRegex: Regex =
     ("^(" + // start capture
       fullYmdPat +
       ")" + // end capture

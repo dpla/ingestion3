@@ -81,13 +81,13 @@ class ModelConverterTest extends AnyFlatSpec with BeforeAndAfter {
 
   "A ModelConverter" should "work with RowConverter and round trip a DplaMapModel" in {
     val row = RowConverter.toRow(enrichedRecord, sqlSchema)
-    val roundTripRecord = ModelConverter.toModel(row)
+    ModelConverter.toModel(row)
   }
 
   it should "extract a sequence of URIs from a Row" in {
     val data = Row(Seq(urlString1, urlString2, urlString3))
     val output = ModelConverter.uriSeq(data, 0)
-    assert(output === Seq(urlString1, urlString2, urlString3).map(new URI(_)))
+    assert(output === Seq(urlString1, urlString2, urlString3).map(URI(_)))
   }
 
   it should "extract no URIs from an empty Row" in {
@@ -128,7 +128,7 @@ class ModelConverterTest extends AnyFlatSpec with BeforeAndAfter {
 
   it should "extract an Option[URI] from a Row" in {
     val output = ModelConverter.optionalUri(Row(urlString1), 0)
-    assert(output === Some(new URI(urlString1)))
+    assert(output === Some(URI(urlString1)))
   }
 
   it should "extract None when no uri is present" in {
@@ -138,7 +138,7 @@ class ModelConverterTest extends AnyFlatSpec with BeforeAndAfter {
 
   it should "extract a URI when one is expected to be present" in {
     val output = ModelConverter.requiredUri(Row(urlString3), 0)
-    assert(output === new URI(urlString3))
+    assert(output === URI(urlString3))
   }
 
   it should "throw an exception when a required uri isn't there" in {
@@ -165,7 +165,6 @@ class ModelConverterTest extends AnyFlatSpec with BeforeAndAfter {
 
   it should "convertRowsToEdmAgent" in {
     val edmAgent = ModelConverter.toEdmAgent(testEdmAgent)
-    val uri = edmAgent.uri.orNull
     assert(edmAgent.uri.map(_.value).orNull === testEdmAgent(0))
     assert(edmAgent.name.orNull === testEdmAgent(1))
     assert(edmAgent.providedLabel.orNull === testEdmAgent(2))
@@ -187,7 +186,7 @@ class ModelConverterTest extends AnyFlatSpec with BeforeAndAfter {
 
   it should "handle optional EdmWebResources" in {
     ModelConverter.toOptionEdmWebResource(testEdmWebResource) match {
-      case Some(edmWebResource: EdmWebResource) => ()
+      case Some(_) => ()
       case None => fail("Got a none back for something that should be a Some")
     }
 
@@ -234,9 +233,9 @@ class ModelConverterTest extends AnyFlatSpec with BeforeAndAfter {
     assert(testResult1.concept === Some("foo"))
     assert(testResult1.providedLabel === Some("bar"))
     assert(testResult1.note === Some("baz"))
-    assert(testResult1.scheme === Some(new URI(urlString1)))
-    assert(testResult1.exactMatch === Seq(new URI(urlString2), new URI(urlString3)))
-    assert(testResult1.closeMatch === Seq(new URI(urlString1)))
+    assert(testResult1.scheme === Some(URI(urlString1)))
+    assert(testResult1.exactMatch === Seq(URI(urlString2), URI(urlString3)))
+    assert(testResult1.closeMatch === Seq(URI(urlString1)))
 
     assert(testResult2.concept === None)
     assert(testResult2.providedLabel === None)

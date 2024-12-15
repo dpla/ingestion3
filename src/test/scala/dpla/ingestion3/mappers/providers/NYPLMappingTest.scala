@@ -14,7 +14,7 @@ import scala.language.postfixOps
 class NYPLMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
-  val shortName = Some("nypl")
+  val shortName: Option[String] = Some("nypl")
   val jsonString: String = new FlatFileIO().readFileAsString("/nypl.json")
   val json: Document[JValue] = Document(parse(jsonString))
   val extractor = new NyplMapping(json)

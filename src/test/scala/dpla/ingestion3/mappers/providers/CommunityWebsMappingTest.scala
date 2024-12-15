@@ -10,7 +10,7 @@ import org.scalatest.BeforeAndAfter
 
 class CommunityWebsMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
-  val shortName = Some("community-webs")
+  val shortName: Option[String] = Some("community-webs")
   val jsonString: String = new FlatFileIO().readFileAsString("/community-webs.json")
   val json: Document[JValue] = Document(parse(jsonString))
   val extractor = new CommunityWebsMapping

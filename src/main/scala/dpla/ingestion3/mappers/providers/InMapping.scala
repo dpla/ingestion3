@@ -155,7 +155,7 @@ class InMapping
       data
     ))
 
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Indiana Memory"),
     uri = Some(URI("http://dp.la/api/contributor/indiana"))
   )

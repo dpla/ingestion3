@@ -110,7 +110,7 @@ class HeartlandMapping
   override def `type`(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "sourceResource" \ "type")
 
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Heartland Hub"),
     uri = Some(URI("http://dp.la/api/contributor/heartland-hub"))
   )

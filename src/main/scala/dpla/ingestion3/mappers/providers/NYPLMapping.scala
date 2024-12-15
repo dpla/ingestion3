@@ -30,7 +30,7 @@ class NyplMapping(doc: Document[JValue] = null)
   lazy val xml: NyplXmlExtractor = new NyplXmlExtractor
 
   // mods xml from json
-  lazy val modsXml: Elem = Try {
+  private lazy val modsXml: Elem = Try {
     val xmlString = json
       .extractString(modsRoot(doc))
       .getOrElse(throw new Exception(s"No MODS XML for ${originalId(doc)}"))
@@ -78,7 +78,7 @@ class NyplMapping(doc: Document[JValue] = null)
   val latLongRegex =
     "^[-+]?([1-8]?\\d(\\.\\d+)?|90(\\.0+)?),\\s*[-+]?(180(\\.0+)?|((1[0-7]\\d)|([1-9]?\\d))(\\.\\d+)?)$"
 
-  val creatorRoles = Seq(
+  private val creatorRoles = Seq(
     "architect",
     "art copyist",
     "artist",
@@ -126,7 +126,7 @@ class NyplMapping(doc: Document[JValue] = null)
     "woodcutter"
   )
 
-  val contributorRoles = Seq(
+  private val contributorRoles = Seq(
     "actor",
     "adapter",
     "addressee",
@@ -502,12 +502,12 @@ class NyplMapping(doc: Document[JValue] = null)
     ))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("The New York Public Library"),
     uri = Some(URI("http://dp.la/api/contributor/nypl"))
   )
 
-  def agentHelper(data: NodeSeq, roles: Seq[String]): ZeroToMany[EdmAgent] =
+  private def agentHelper(data: NodeSeq, roles: Seq[String]): ZeroToMany[EdmAgent] =
     (data \ "name")
       .filter(node =>
         xml

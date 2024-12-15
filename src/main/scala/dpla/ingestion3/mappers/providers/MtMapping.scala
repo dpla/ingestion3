@@ -21,16 +21,6 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
-object BscdnImageExperimentList extends FilterList {
-  lazy val termList: Set[String] = getTermsFromFiles
-    .map(_.split(",").last)
-
-  // Defines where to get digital surrogate and format block terms
-  override val files: Seq[String] = Seq(
-    "/bscdn/images.txt"
-  )
-}
-
 class MtMapping
     extends XmlMapping
     with XmlExtractor
@@ -40,9 +30,7 @@ class MtMapping
     DigitalSurrogateBlockList.termList ++
       ExtentIdentificationList.termList
 
-  val extentAllowAlist: Set[String] = ExtentIdentificationList.termList
-
-  val thumbnailList: Set[String] = BscdnImageExperimentList.termList
+  private val extentAllowAlist: Set[String] = ExtentIdentificationList.termList
 
   // ID minting functions
   override def useProviderName: Boolean = true
@@ -172,17 +160,15 @@ class MtMapping
     ))
 
   override def tags(data: Document[NodeSeq]): ZeroToMany[URI] =
-    (extractStrings(data \\ "contribState") ++
-      experimentTag(data))
-      .map(URI)
+    extractStrings(data \\ "contribState").map(URI)
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Big Sky Country Digital Network"),
     uri = Some(URI("http://dp.la/api/contributor/mt"))
   )
 
-  def previewHelper(data: Document[NodeSeq]): ZeroToMany[String] = {
+  private def previewHelper(data: Document[NodeSeq]): ZeroToMany[String] = {
     (data \\ "location" \ "url")
       .flatMap(node =>
         getByAttribute(node.asInstanceOf[Elem], "access", "preview")
@@ -190,12 +176,4 @@ class MtMapping
       .flatMap(extractStrings)
   }
 
-  def experimentTag(data: Document[NodeSeq]): Seq[String] = {
-    val urls = previewHelper(data)
-    // lookup image preview url and apply tag if in list of images
-    thumbnailList.find(n => urls.head.equalsIgnoreCase(n)) match {
-      case Some(t) => Seq("bscdn-experiment")
-      case None    => Seq() // do nothing
-    }
-  }
 }

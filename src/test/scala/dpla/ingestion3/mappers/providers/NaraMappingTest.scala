@@ -13,10 +13,10 @@ import scala.xml.{NodeSeq, XML}
 class NaraMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
   implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
-  val shortName = Some("nara")
+  val shortName: Option[String] = Some("nara")
   val xmlString: String = new FlatFileIO().readFileAsString("/nara.xml")
   val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))
-  val itemUri = new URI("http://catalog.archives.gov/id/2132862")
+  val itemUri: URI = URI("http://catalog.archives.gov/id/2132862")
   val extractor = new NaraMapping
 
   it should "use the provider shortname in minting IDs" in
@@ -327,6 +327,7 @@ class NaraMappingTest extends AnyFlatSpec with BeforeAndAfter {
         <referenceUnitProposalArray/>
       </fileUnitPhysicalOccurrence>
     </physicalOccurrenceArray></item>
+    assert(extractor.dataProvider(Document(xml)) === Seq(nameOnlyAgent("National Archives at Washington, DC - Textual Reference")))
   }
 
   it should "extract dataProvider values" in {

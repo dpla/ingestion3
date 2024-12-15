@@ -1,16 +1,10 @@
 package dpla.ingestion3.harvesters.oai
 
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.oai.refactor.{
-  OaiConfiguration,
-  OaiProtocol,
-  OaiRecord,
-  OaiSet
-}
+import dpla.ingestion3.harvesters.oai.refactor.{OaiConfiguration, OaiProtocol, OaiRecord, OaiSet}
 import dpla.ingestion3.harvesters.{Harvester, LocalHarvester}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
-import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 class LocalOaiHarvester(
@@ -18,8 +12,6 @@ class LocalOaiHarvester(
     shortName: String,
     conf: i3Conf
 ) extends LocalHarvester(spark, shortName, conf) {
-
-  private val logger = LogManager.getLogger(this.getClass)
 
   private val readerOptions: Map[String, String] = Map(
     "verb" -> conf.harvest.verb,
@@ -57,9 +49,7 @@ class LocalOaiHarvester(
     }
 
     avroWriter.flush()
-
-    val df = spark.read.format("avro").load(tmpOutStr)
-    df
+    spark.read.format("avro").load(tmpOutStr)
   }
 
   private def allowListHarvest(sets: Array[String]): Unit = {
@@ -131,6 +121,6 @@ class LocalOaiHarvester(
 
   }
 
-  private def getUnixEpoch = System.currentTimeMillis() / 1000L
+  private def getUnixEpoch: Long = System.currentTimeMillis() / 1000L
 
 }

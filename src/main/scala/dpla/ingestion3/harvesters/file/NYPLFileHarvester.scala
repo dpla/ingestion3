@@ -3,7 +3,7 @@ package dpla.ingestion3.harvesters.file
 import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
 import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
+import dpla.ingestion3.harvesters.file.FileFilters.zipFilter
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.AVRO_MIME_JSON
 import org.apache.avro.generic.GenericData
@@ -64,7 +64,7 @@ class NYPLFileHarvester(
     //  "desc_xml": "<?xml version=\"1.0\" .... </xml>"
     // }
 
-    val id = extractor
+    extractor
       .extractString(json \ "uuid")
       .getOrElse(throw new RuntimeException("Missing ID"))
 
@@ -128,10 +128,10 @@ class NYPLFileHarvester(
     * @return
     *   Lazy stream of zip records
     */
-  def iter(zipInputStream: ZipInputStream): Stream[FileResult] =
+  def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
     Option(zipInputStream.getNextEntry) match {
       case None =>
-        Stream.empty
+        LazyList.empty
       case Some(entry) =>
         val result =
           if (entry.isDirectory)
@@ -149,21 +149,19 @@ class NYPLFileHarvester(
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
     inFiles
-      .listFiles(new ZipFileFilter)
+      .listFiles(zipFilter)
       .foreach(inFile => {
         val inputStream: ZipInputStream = getInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        val recordCount = (for (result <- iter(inputStream)) yield {
+        for (result <- iter(inputStream)) {
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               LogManager.getLogger(this.getClass).error(s"Caught exception on $inFile.", exception)
-              0
-            case Success(count) =>
-              count
+            case Success(_) => // do nothing
           }
-        }).sum
+        }
         IOUtils.closeQuietly(inputStream)
       })
 

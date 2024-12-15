@@ -6,8 +6,6 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration)
     extends OaiMethods
     with Serializable {
 
-  private val logger = LogManager.getLogger(this.getClass)
-
   lazy val endpoint: String = oaiConfiguration.endpoint
   lazy val metadataPrefix: Option[String] = oaiConfiguration.metadataPrefix
 

@@ -13,7 +13,7 @@ import scala.io.Source
 
 /** Basic FileIO ops
   */
-class FlatFileIO extends FileIO {
+class FlatFileIO {
 
   /** Save the file to disk
     *
@@ -33,8 +33,6 @@ class FlatFileIO extends FileIO {
   }
 
   /** Reads a file and returns it as a single string
-    * @param name
-    * @return
     */
   def readFileAsString(name: String): String = {
     val stream = getClass.getResourceAsStream(name)
@@ -44,25 +42,12 @@ class FlatFileIO extends FileIO {
   }
 
   /** Reads a file and returns a Seq[String]
-    * @param name
-    * @return
     */
   def readFileAsSeq(name: String): Seq[String] = {
     // FIXME This is a lazy kludge.
-    readFileAsString(name).split("""\n""").toSeq
+    readFileAsString(name).split("\n").toSeq
   }
 
-  /** Creates missing parent directories or deletes existing all files on the
-    * path
-    * @param pathStr
-    */
-  def deletePathContents(pathStr: String): Unit = {
-    val path = new File(pathStr)
-    path.getParentFile.mkdirs()
-    if (path.exists & !pathStr.startsWith("s3")) {
-      Utils.deleteRecursively(path)
-    }
-  }
 }
 
 /** Helper functions for working Avros
@@ -88,9 +73,4 @@ object AvroUtils {
     dataFileWriter.setSyncInterval(1024 * 100) // 100k
     dataFileWriter.create(schema, outputFile)
   }
-}
-
-/** */
-trait FileIO {
-  def writeFile(record: String, outputFile: String): String
 }

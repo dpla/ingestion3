@@ -43,9 +43,9 @@ object OaiRelation {
       sqlContext: SQLContext
   ): OaiRelation =
     (oaiConfig.setlist, oaiConfig.harvestAllSets, oaiConfig.blacklist) match {
-      case (None, false, Some(blacklist)) =>
+      case (None, false, Some(_)) =>
         new BlacklistOaiRelation(oaiConfig, oaiMethods)(sqlContext)
-      case (Some(setList), false, None) =>
+      case (Some(_), false, None) =>
         new WhitelistOaiRelation(oaiConfig, oaiMethods)(sqlContext)
       case (None, false, None) =>
         new AllRecordsOaiRelation(oaiConfig, oaiMethods)(sqlContext)
@@ -59,5 +59,4 @@ object OaiRelation {
 
   def convertToOutputRow(oaiRecord: OaiRecord): Row =
     Row(null, Row(oaiRecord.id, oaiRecord.document, oaiRecord.setIds), null)
-
 }

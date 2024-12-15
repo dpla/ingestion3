@@ -21,13 +21,10 @@ class TxMapping
     extends XmlMapping
     with XmlExtractor
     with IngestMessageTemplates {
+
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
       FormatTypeValuesBlockList.termList
-
-  // TODO uncomment after merging feature/duplicate-id-validation-toggle
-  // Do not fail records that appear in more than one set
-  // override val enforceDuplicateIds: Boolean = false
 
   override def getProviderName: Option[String] = Some("texas")
 
@@ -233,7 +230,7 @@ class TxMapping
   /** Helper method to extract value directly associated with property or <name>
     * sub-property
     */
-  def extractName(data: NodeSeq, property: String): ZeroToMany[EdmAgent] =
+  private def extractName(data: NodeSeq, property: String): ZeroToMany[EdmAgent] =
     (data \ property)
       .flatMap(node => {
         val name = extractStrings(node \ "name")
@@ -256,7 +253,7 @@ class TxMapping
 object TxMapping {
   import org.json4s.JsonAST._
 
-  val rightsTermLabel: Map[String, String] = Map[String, String](
+  private val rightsTermLabel: Map[String, String] = Map[String, String](
     "by" -> "License: Attribution.",
     "by-nc" -> "License: Attribution Noncommercial.",
     "by-nc-nd" -> "License: Attribution Non-commercial No Derivatives.",
@@ -273,7 +270,7 @@ object TxMapping {
     HttpUtils.makeGetRequest(new URL(endpoint), None)
   private lazy val json = parse(jsonString)
 
-  val dataproviderTermLabel: Map[String, String] = (for {
+  private val dataproviderTermLabel: Map[String, String] = (for {
     JArray(terms) <- json \ "terms"
     JObject(term) <- terms
     JField("name", JString(name)) <- term

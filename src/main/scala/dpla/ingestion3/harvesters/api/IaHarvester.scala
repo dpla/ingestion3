@@ -20,28 +20,23 @@ class IaHarvester(
     conf: i3Conf
 ) extends ApiHarvester(spark, shortName, conf) {
 
-  //
+  private val logger = LogManager.getLogger(this.getClass)
+
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
 
-  /** */
   override protected val queryParams: Map[String, String] = Map(
     "q" -> conf.harvest.query
   ).collect { case (key, Some(value)) => key -> value } // remove None values
 
-  /** */
   override def localHarvest(): DataFrame = {
     implicit val formats: DefaultFormats.type = DefaultFormats
 
     val iaCollections = conf.harvest.setlist.getOrElse("").split(",")
 
-    val logger = LogManager.getLogger(this.getClass)
-
     iaCollections.foreach(collection => {
       // Mutable vars for controlling harvest loop
       var continueHarvest = true
       var cursor = ""
-
-      queryParams.updated("q", s"collection:$collection")
 
       while (continueHarvest) getSinglePage(cursor, collection) match {
         // Handle errors
@@ -123,10 +118,10 @@ class IaHarvester(
       queryParams
         .updated("cursor", cursor)
         .updated("q", s"collection:$collection")
-        .filter { case (k: String, v: String) => v.nonEmpty }
+        .filter { case (_, v: String) => v.nonEmpty }
     )
 
-    LogManager.getLogger(this.getClass).info(s"Requesting ${url.toString}")
+    logger.info(s"Requesting ${url.toString}")
 
     Try { HttpUtils.makeGetRequest(url) } match {
       case Failure(e) =>

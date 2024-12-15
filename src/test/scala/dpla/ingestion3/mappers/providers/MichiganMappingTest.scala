@@ -386,7 +386,7 @@ class MichiganMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "create the correct DPLA Uri" in {
-    val expected = Some(new URI("http://dp.la/api/items/dfcebfc0d4ce4e47845dd76dc5a86b23"))
+    val expected = Some(URI("http://dp.la/api/items/dfcebfc0d4ce4e47845dd76dc5a86b23"))
     assert(extractor.dplaUri(xml) == expected)
   }
 

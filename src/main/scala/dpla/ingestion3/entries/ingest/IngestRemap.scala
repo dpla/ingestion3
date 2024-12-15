@@ -46,8 +46,7 @@ import org.apache.spark.SparkConf
 object IngestRemap
     extends MappingExecutor
     with JsonlExecutor
-    with EnrichExecutor
-    with WikimediaMetadataExecutor {
+    with EnrichExecutor {
 
   def main(args: Array[String]): Unit = {
 
@@ -102,8 +101,7 @@ object IngestRemap
         sparkConf,
         mapDataOut,
         baseDataOut,
-        shortName,
-        conf
+        shortName
       )
 
     // Json - l

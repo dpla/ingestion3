@@ -36,7 +36,7 @@
             </mods:physicalDescription>
             <mods:location>
                 <mods:url usage="primary">
-                    http://digital.library.wayne.edu/item/&wayne:StudentLife36797
+                    http://digital.library.wayne.edu/item/&amp;wayne:StudentLife36797
                 </mods:url>
             </mods:location>
             <mods:location>

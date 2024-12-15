@@ -4,7 +4,7 @@ import dpla.ingestion3.data.MappedRecordsFixture
 import dpla.ingestion3.enrichments.normalizations.Deduplication
 import dpla.ingestion3.model._
 import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.{BeforeAndAfter}
+import org.scalatest.BeforeAndAfter
 
 class DeduplicationTest extends AnyFlatSpec with BeforeAndAfter {
 

@@ -149,7 +149,7 @@ class WiMapping
     extractStrings(data \ "header" \ "setSpec")
       .flatMap(_.applyWisconsinGovernmentTags)
 
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Recollection Wisconsin"),
     uri = Some(URI("http://dp.la/api/contributor/wisconsin"))
   )

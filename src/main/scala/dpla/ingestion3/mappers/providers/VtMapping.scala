@@ -128,7 +128,7 @@ class VtMapping
       data
     ))
 
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Vermont Green Mountain Digital Archive"),
     uri = Some(URI("http://dp.la/api/contributor/vt"))
   )
