@@ -101,8 +101,7 @@ object IngestRemap
         sparkConf,
         mapDataOut,
         baseDataOut,
-        shortName,
-        conf
+        shortName
       )
 
     // Json - l

@@ -371,7 +371,7 @@ class SiProfile extends XmlProfile {
 }
 
 /** Digital Virginias
- * File obtained by going to the github repo and downloading it as a zip
+ * File obtained by going to the GitHub repo and downloading it as a zip
  */
 class VirginiasProfile extends XmlProfile {
   type Mapping = VirginiasMapping

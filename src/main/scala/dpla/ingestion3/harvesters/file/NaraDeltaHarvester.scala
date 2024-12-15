@@ -100,7 +100,6 @@ class NaraDeltaHarvester(
       case record: Node =>
         val id = (record \ "naId").text
         val outputXML = xmlToString(record)
-        val label = item.label
         Some(ParsedResult(id, outputXML))
       case _ =>
         val logger = LogManager.getLogger(this.getClass)

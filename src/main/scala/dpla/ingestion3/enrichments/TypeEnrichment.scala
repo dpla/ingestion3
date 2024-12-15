@@ -12,7 +12,7 @@ class TypeEnrichment extends VocabEnrichment[String] {
   private def normalizationFunc(term: String): String = term.toLowerCase.trim
 
   // DCMIType mappings
-  val dcmiType: DCMIType = DCMIType()
+  private val dcmiType: DCMIType = DCMIType()
 
   private val DcmiTypeMap: Map[String, IRI] = Map(
     "administrative record" -> dcmiType.Text,

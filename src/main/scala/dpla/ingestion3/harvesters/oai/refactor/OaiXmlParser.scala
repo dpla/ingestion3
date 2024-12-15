@@ -28,7 +28,7 @@ object OaiXmlParser {
     if (resumptionToken.nonEmpty) Some(resumptionToken) else None
   }
 
-  def getRecords(xml: Node, removeDeleted: Boolean): Seq[OaiRecord] =
+  private def getRecords(xml: Node, removeDeleted: Boolean): Seq[OaiRecord] =
     for {
       record <- xml \ "ListRecords" \ "record"
       id = (record \ "header" \ "identifier").text
@@ -39,7 +39,7 @@ object OaiXmlParser {
       if !removeDeleted || status != "deleted"
     } yield OaiRecord(id, record.toString, setIds)
 
-  def getSets(xml: Node): Seq[OaiSet] =
+  private def getSets(xml: Node): Seq[OaiSet] =
     for (set <- xml \ "ListSets" \ "set")
       yield {
         val id = (set \ "setSpec").text

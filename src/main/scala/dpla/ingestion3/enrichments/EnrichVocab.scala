@@ -8,7 +8,7 @@ import scala.collection.mutable
   *   Class of vocab (e.g. SkosConcept, String, EdmAgent)
   */
 
-class VocabLookup[T](normalizationFunc: (T) => String) {
+class VocabLookup[T](normalizationFunc: T => String) {
 
   // Vocab mapping
   val data: mutable.Map[String, T] = scala.collection.mutable.Map[String, T]()

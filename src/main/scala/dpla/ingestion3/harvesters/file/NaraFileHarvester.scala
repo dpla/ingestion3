@@ -101,9 +101,8 @@ class NaraFileHarvester(
     } yield item match {
       case record: Node =>
         val id =
-          (record \ "digitalObjectArray" \ "digitalObject" \ "objectIdentifier").text.toString
+          (record \ "digitalObjectArray" \ "digitalObject" \ "objectIdentifier").text
         val outputXML = xmlToString(record)
-        val label = item.label
         Some(ParsedResult(id, outputXML))
       case _ =>
         val logger = LogManager.getLogger(this.getClass)
@@ -182,10 +181,10 @@ class NaraFileHarvester(
     * @return
     *   Lazy stream of tar records
     */
-  def iter(tarInputStream: TarInputStream): Stream[FileResult] =
+  def iter(tarInputStream: TarInputStream): LazyList[FileResult] =
     Option(tarInputStream.getNextEntry) match {
       case None =>
-        Stream.empty
+        LazyList.empty
 
       case Some(entry) =>
         val filename = Try {
@@ -287,7 +286,7 @@ class NaraFileHarvester(
     files
       .flatMap(file => {
         val xml = XML.loadFile(file)
-        (xml \\ "naId").map(_.text.toString)
+        (xml \\ "naId").map(_.text)
       })
       .distinct
       .toSeq

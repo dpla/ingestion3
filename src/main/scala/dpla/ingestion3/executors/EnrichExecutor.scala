@@ -35,8 +35,7 @@ trait EnrichExecutor extends Serializable {
       sparkConf: SparkConf,
       dataIn: String,
       dataOut: String,
-      shortName: String,
-      i3conf: i3Conf
+      shortName: String
   ): String = {
 
     // This start time is used for documentation and output file naming.
@@ -164,14 +163,13 @@ trait EnrichExecutor extends Serializable {
 
     // This action re-evaluates `typeMessages', `dateMessages', etc.
     val logFileSeq = logEnrichedFields.map {
-      case (name: String, data: Dataset[_]) => {
+      case (name: String, data: Dataset[_]) =>
         val path = outputHelper.logsPath + s"/$name"
         Utils.writeLogsAsCsv(path, name, data, shortName)
         outputHelper.s3Address match {
           case Some(_) => path
           case None    => new File(path).getCanonicalPath
         }
-      }
     }
 
     val timeSummary = TimeSummary(
@@ -187,7 +185,7 @@ trait EnrichExecutor extends Serializable {
       logFileSeq
     )
 
-    // `generateFieldReport' is a shuffle operation and an action
+    // `generateFieldReport` is a shuffle operation and an action
     val enrichOpSummary = EnrichmentOpsSummary(
       typeImproved = typeMessagesCount,
       dateImproved = dateMessagesCount,

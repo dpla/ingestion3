@@ -66,9 +66,9 @@ abstract class ApiHarvester(
   /** Writes errors out to log file
     *
     * @param errors
-    *   List[ApiErrors}
+    *   List[ApiErrors]
     */
-  protected def saveOutErrors(errors: List[ApiError]): Unit =
+  private def saveOutErrors(errors: List[ApiError]): Unit =
     errors.foreach(error => {
       LogManager
         .getLogger(this.getClass)

@@ -19,11 +19,11 @@ class AllSetsOaiRelation(
 
   override def buildScan(): RDD[Row] = {
     val setPages =
-      sqlContext.sparkContext.parallelize(oaiMethods.listAllSetPages().toSeq)
+      sqlContext.sparkContext.parallelize(oaiMethods.listAllSetPages().iterator.toSeq)
     val sets = setPages.flatMap(oaiMethods.parsePageIntoSets)
     val pages = sets.flatMap(oaiMethods.listAllRecordPagesForSet)
     val records = pages.flatMap(
-      oaiMethods.parsePageIntoRecords(_, oaiConfiguration.removeDeleted)
+      oaiMethods.parsePageIntoRecords(_, oaiConfiguration.removeDeleted())
     )
     records.map(OaiRelation.convertToOutputRow)
   }

@@ -166,9 +166,8 @@ class BhlMapping extends XmlMapping with XmlExtractor {
     )
 
     val publishers: Seq[String] = names.zipWithIndex.map {
-      case (n, i) => {
+      case (n, i) =>
         if (places.lift(i).isDefined) places(i) + " " + n else n
-      }
     }
 
     publishers.map(nameOnlyAgent)

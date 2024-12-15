@@ -507,10 +507,10 @@ class NaraMapping extends XmlMapping with XmlExtractor {
         val day = lpad((node \ "day").text, 2)
 
         (year, month, day) match {
-          case (y, m, d) if y.isEmpty => None
-          case (y, m, d) if m.isEmpty => Some(year)
-          case (y, m, d) if d.isEmpty => Some(s"$year-$month")
-          case (y, m, d)              => Some(s"$year-$month-$day")
+          case (y, _, _) if y.isEmpty => None
+          case (y, m, _) if m.isEmpty => Some(y)
+          case (y, m, d) if d.isEmpty => Some(s"$y-$m")
+          case (y, m, d)              => Some(s"$y-$m-$d")
         }
     }
 

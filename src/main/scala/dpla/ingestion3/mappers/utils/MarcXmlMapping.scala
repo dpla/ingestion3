@@ -220,7 +220,7 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
     def matchLeaderType(keys: List[String]): Option[String] = {
 
       keys.headOption match {
-        case Some(key) => {
+        case Some(key) =>
           val regex = key.r // make regex from a key in leaderTypes
 
           mappingKey match {
@@ -229,7 +229,6 @@ trait MarcXmlMapping extends XmlMapping with XmlExtractor {
             case _ =>
               matchLeaderType(keys.drop(1)) // else try next leaderTypes key
           }
-        }
         case None => None // no more leaderTypes keys to iterate through
       }
     }

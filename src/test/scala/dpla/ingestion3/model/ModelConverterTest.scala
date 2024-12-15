@@ -81,7 +81,7 @@ class ModelConverterTest extends AnyFlatSpec with BeforeAndAfter {
 
   "A ModelConverter" should "work with RowConverter and round trip a DplaMapModel" in {
     val row = RowConverter.toRow(enrichedRecord, sqlSchema)
-    val roundTripRecord = ModelConverter.toModel(row)
+    ModelConverter.toModel(row)
   }
 
   it should "extract a sequence of URIs from a Row" in {
@@ -165,7 +165,6 @@ class ModelConverterTest extends AnyFlatSpec with BeforeAndAfter {
 
   it should "convertRowsToEdmAgent" in {
     val edmAgent = ModelConverter.toEdmAgent(testEdmAgent)
-    val uri = edmAgent.uri.orNull
     assert(edmAgent.uri.map(_.value).orNull === testEdmAgent(0))
     assert(edmAgent.name.orNull === testEdmAgent(1))
     assert(edmAgent.providedLabel.orNull === testEdmAgent(2))
@@ -187,7 +186,7 @@ class ModelConverterTest extends AnyFlatSpec with BeforeAndAfter {
 
   it should "handle optional EdmWebResources" in {
     ModelConverter.toOptionEdmWebResource(testEdmWebResource) match {
-      case Some(edmWebResource: EdmWebResource) => ()
+      case Some(edmWebResource) => ()
       case None => fail("Got a none back for something that should be a Some")
     }
 

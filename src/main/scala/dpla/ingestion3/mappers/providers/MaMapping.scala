@@ -262,10 +262,6 @@ class MaMapping
       })
     }
 
-  private def places(data: Document[NodeSeq]) = extractStrings(
-    getModsRoot(data) \ "subject" \ "geographic"
-  )
-
   override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
     extractStrings(getModsRoot(data) \ "originInfo" \ "publisher")
       .map(nameOnlyAgent)

@@ -257,7 +257,7 @@ object NaraMergeUtil {
       .toSeq
   }
 
-  def dropDuplicates(
+  private def dropDuplicates(
       df: DataFrame,
       spark: SparkSession
   ): (Seq[String], DataFrame) = {
@@ -283,7 +283,7 @@ object NaraMergeUtil {
   /**
    * Write logs
    */
-  def getLogs(logs: MergeLogs): String = {
+  private def getLogs(logs: MergeLogs): String = {
     val logText =
       s"""
         | Base

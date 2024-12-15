@@ -52,12 +52,11 @@ class ThumbnailReport(
   override val sparkAppName: String = "ThumbnailReport"
   override def getInput: Dataset[OreAggregation] = input
   override def getSparkSession: SparkSession = spark
-  override def getParams: Option[Array[String]] = {
-    params.nonEmpty match {
-      case true => Some(params)
-      case _    => None
-    }
-  }
+  override def getParams: Option[Array[String]] =
+    if (params.nonEmpty)
+      Some(params)
+    else
+      None
 
   /** Process the incoming dataset (mapped or enriched records) and return a
     * DataFrame of computed results.
@@ -88,7 +87,7 @@ class ThumbnailReport(
       case "dimensions" => dimensionsReport(ds, spark)
       case "preview"    => previewReport(ds, spark)
       case x =>
-        throw new RuntimeException(s"Unrecognized thumbnail report name '${x}'")
+        throw new RuntimeException(s"Unrecognized thumbnail report name '$x'")
     }
 
   }

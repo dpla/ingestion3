@@ -143,17 +143,15 @@ class CommunityWebsHarvester(
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        val recordCount = (for (result <- iter(inputStream)) yield {
+        for (result <- iter(inputStream))  {
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               LogManager
                 .getLogger(this.getClass)
                 .error(s"Caught exception on $inFile.", exception)
-              0
-            case Success(count) =>
-              count
+            case _ => // do nothing
           }
-        }).sum
+        }
         IOUtils.closeQuietly(inputStream)
       })
 

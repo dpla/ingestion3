@@ -333,15 +333,6 @@ class HarvardMapping
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
     mintDplaItemUri(data)
 
-  private def name(name: Node): ZeroToOne[String] = name match {
-    case elem: Elem =>
-      val text = elem.text.trim
-      if (text.isEmpty) None
-      else Some(text)
-    case _ =>
-      None
-  }
-
   private def processTitleInfo(titleInfo: Node): ZeroToOne[String] =
     titleInfo match {
       case elem: Elem =>

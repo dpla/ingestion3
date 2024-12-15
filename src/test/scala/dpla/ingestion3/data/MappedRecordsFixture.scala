@@ -4,7 +4,7 @@ import dpla.ingestion3.model._
 
 object MappedRecordsFixture {
 
-  val mappedRecord = OreAggregation(
+  val mappedRecord: OreAggregation = OreAggregation(
     dataProvider = EdmAgent(
       uri = Some(new URI("http://example.com"))
     ),

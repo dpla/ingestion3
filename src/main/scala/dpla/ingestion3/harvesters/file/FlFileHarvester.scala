@@ -119,10 +119,10 @@ class FlFileHarvester(
     * @return
     *   Lazy stream of zip records
     */
-  def iter(zipInputStream: ZipInputStream): Stream[FileResult] =
+  def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
     Option(zipInputStream.getNextEntry) match {
       case None =>
-        Stream.empty
+        LazyList.empty
       case Some(entry) =>
         val result =
           if (entry.isDirectory)
@@ -146,15 +146,13 @@ class FlFileHarvester(
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        val recordCount = (for (result <- iter(inputStream)) yield {
+        for (result <- iter(inputStream)) yield {
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               LogManager.getLogger(this.getClass).error(s"Caught exception on $inFile.", exception)
-              0
-            case Success(count) =>
-              count
+            case _ => //do nothing
           }
-        }).sum
+        }
         IOUtils.closeQuietly(inputStream)
       })
 

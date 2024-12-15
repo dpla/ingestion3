@@ -16,7 +16,7 @@ trait FileLoader {
   /**
    * Read text files ignoring lines starting with `#`
    */
-  def readFile(file: String): Seq[String] =
+  private def readFile(file: String): Seq[String] =
     Source
       .fromInputStream(getClass.getResourceAsStream(file))
       .getLines()

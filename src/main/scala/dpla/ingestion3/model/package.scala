@@ -103,7 +103,7 @@ package object model {
     sdf.format(now)
   }
 
-  lazy val providerToken: (Option[URI]) => String = { (uri: Option[URI]) =>
+  lazy val providerToken: Option[URI] => String = { (uri: Option[URI]) =>
     {
       uri match {
         case Some(x) =>
@@ -252,7 +252,7 @@ package object model {
     val permissionsTemplate = getWikiPermissionTemplate(record.edmRights)
     val permissions = record.edmRights.toString match {
       case pt if pt.contains("http://rightsstatements.org") =>
-        s"$permissionsTemplate | ${dataProviderWikiUri}"
+        s"$permissionsTemplate | $dataProviderWikiUri"
       case _ => permissionsTemplate
     }
 
@@ -272,7 +272,7 @@ package object model {
          .flatMap { _.prefLabel }
          .map(escapeWikiChars)
          .mkString("; ")}
-        |   | permission = {{${permissions}}}
+        |   | permission = {{$permissions}}
         |   | source = {{ DPLA
         |       | ${escapeWikiChars(dataProviderWikiUri)}
         |       | hub = ${escapeWikiChars(providerWikiUri)}
@@ -286,7 +286,7 @@ package object model {
         | }}""".stripMargin
   }
 
-  def getWikiPermissionTemplate(edmRights: Option[URI]): String = {
+  private def getWikiPermissionTemplate(edmRights: Option[URI]): String = {
     edmRights match {
       case Some(uri) =>
         uri.toString match {
@@ -334,15 +334,15 @@ package object model {
       list match {
         case Nil => value
         case h :: t =>
-          escapeWikiCharsAcc(t, value.replaceAllLiterally(h, escapeHelper(h)))
+          escapeWikiCharsAcc(t, value.replace(h, escapeHelper(h)))
       }
 
     escapeWikiCharsAcc(reservedWikiChars, string)
   }
 
-  def escapeHelper(chars: String) = s"<nowiki>$chars</nowiki>"
+  private def escapeHelper(chars: String) = s"<nowiki>$chars</nowiki>"
 
-  def getDplaId(record: OreAggregation): String =
+  private def getDplaId(record: OreAggregation): String =
     fromJsonString(record.sidecar) \ "dplaId" match {
       case JString(js) => js
       case _ => throw new RuntimeException("DPLA ID is not in metadata sidecar")
@@ -407,7 +407,7 @@ package object model {
   lazy val harvestAvroSchema: Schema = new Schema.Parser()
     .parse(new FlatFileIO().readFileAsString("/avro/OriginalRecord.avsc"))
 
-  lazy val harvestMimeTypeSchema: Schema =
+  private lazy val harvestMimeTypeSchema: Schema =
     harvestAvroSchema.getField("mimetype").schema()
 
   lazy val sparkSchema: StructType =

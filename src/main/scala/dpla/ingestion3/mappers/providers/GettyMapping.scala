@@ -11,7 +11,7 @@ import org.json4s.JsonDSL._
 
 class GettyMapping extends JsonMapping with JsonExtractor {
 
-  val extentAllowList: Set[String] =
+  private val extentAllowList: Set[String] =
     ExtentIdentificationList.termList
 
   // ID minting functions

@@ -60,7 +60,7 @@ class P2PMappingTest extends AnyFlatSpec with BeforeAndAfter {
           <mods:note type="admin">Foo</mods:note>
         </mods:mods>
       )
-    ).headOption.getOrElse(EdmAgent()).name
+    ).getOrElse(EdmAgent()).name
     assert(result === Some("Foo"))
   }
 
@@ -387,9 +387,9 @@ class P2PMappingTest extends AnyFlatSpec with BeforeAndAfter {
     assert(result === expected)
   }
 
-  def metadata(metadata: NodeSeq) = record(Seq(), metadata)
+  def metadata(metadata: NodeSeq): Document[NodeSeq] = record(Seq(), metadata)
 
-  def header(header: NodeSeq) = record(header, Seq())
+  def header(header: NodeSeq): Document[NodeSeq] = record(header, Seq())
 
   def record(header: NodeSeq, metadata: NodeSeq): Document[NodeSeq] =
     Document(

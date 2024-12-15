@@ -28,9 +28,4 @@ case class IngestMessage(
     field: String,
     value: String = "_missing_",
     enrichedValue: String = ""
-) {
-
-  def formatMessage(): String = {
-    s"${level.toUpperCase} $message $field $id $value"
-  }
-}
+)

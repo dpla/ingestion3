@@ -6,7 +6,6 @@ trait IngestMessageTemplates {
       id: String,
       field: String,
       value: String,
-      msg: Option[String] = None,
       enforce: Boolean
   ): IngestMessage =
     IngestMessage(
@@ -36,7 +35,6 @@ trait IngestMessageTemplates {
       id: String,
       field: String,
       value: String,
-      msg: Option[String] = None, //unused?
       enforce: Boolean
   ): IngestMessage =
     IngestMessage(
@@ -51,7 +49,6 @@ trait IngestMessageTemplates {
       id: String,
       field: String,
       value: String,
-      msg: Option[String] = None,
       enforce: Boolean
   ): IngestMessage =
     IngestMessage(
@@ -66,7 +63,6 @@ trait IngestMessageTemplates {
       id: String,
       field: String,
       value: String,
-      msg: Option[String] = None,
       enforce: Boolean
   ): IngestMessage =
     IngestMessage(
@@ -81,7 +77,6 @@ trait IngestMessageTemplates {
       id: String,
       field: String,
       value: String,
-      msg: Option[String] = None,
       enforce: Boolean
   ): IngestMessage =
     IngestMessage(
@@ -96,7 +91,6 @@ trait IngestMessageTemplates {
       id: String,
       field: String,
       value: String,
-      msg: Option[String] = None,
       enforce: Boolean
   ): IngestMessage =
     IngestMessage(
@@ -111,7 +105,6 @@ trait IngestMessageTemplates {
       id: String,
       field: String,
       value: String,
-      msg: Option[String] = None,
       enforce: Boolean
   ): IngestMessage =
     IngestMessage(
@@ -126,7 +119,6 @@ trait IngestMessageTemplates {
       id: String,
       field: String,
       value: String,
-      msg: Option[String] = None,
       enforce: Boolean
   ): IngestMessage =
     IngestMessage(

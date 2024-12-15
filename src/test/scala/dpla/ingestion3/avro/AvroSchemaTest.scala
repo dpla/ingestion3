@@ -12,7 +12,7 @@ class AvroSchemaTest  extends AnyFlatSpec with BeforeAndAfter {
   "an Avro schema file" should "parse" in {
     for (file <- schemaFiles) {
       val schemaString = new FlatFileIO().readFileAsString(file)
-      val schema = new Schema.Parser().parse(schemaString)
+      new Schema.Parser().parse(schemaString)
     }
   }
 }

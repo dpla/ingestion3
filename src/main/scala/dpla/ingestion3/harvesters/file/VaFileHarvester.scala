@@ -85,10 +85,10 @@ class VaFileHarvester(
     * @return
     *   Lazy stream of zip records
     */
-  def iter(zipInputStream: ZipInputStream): Stream[FileResult] =
+  def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
     Option(zipInputStream.getNextEntry) match {
       case None =>
-        Stream.empty
+        LazyList.empty
       case Some(entry) =>
         val result =
           if (entry.isDirectory || !entry.getName.endsWith(".xml"))

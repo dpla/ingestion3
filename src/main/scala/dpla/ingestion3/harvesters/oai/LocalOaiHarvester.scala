@@ -19,8 +19,6 @@ class LocalOaiHarvester(
     conf: i3Conf
 ) extends LocalHarvester(spark, shortName, conf) {
 
-  private val logger = LogManager.getLogger(this.getClass)
-
   private val readerOptions: Map[String, String] = Map(
     "verb" -> conf.harvest.verb,
     "metadataPrefix" -> conf.harvest.metadataPrefix,
@@ -57,9 +55,7 @@ class LocalOaiHarvester(
     }
 
     avroWriter.flush()
-
-    val df = spark.read.format("avro").load(tmpOutStr)
-    df
+    spark.read.format("avro").load(tmpOutStr)
   }
 
   private def allowListHarvest(sets: Array[String]): Unit = {
@@ -131,6 +127,6 @@ class LocalOaiHarvester(
 
   }
 
-  private def getUnixEpoch = System.currentTimeMillis() / 1000L
+  private def getUnixEpoch: Long = System.currentTimeMillis() / 1000L
 
 }

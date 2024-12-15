@@ -26,7 +26,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
   /** Lookup the profile and mapping class TODO this could be better (accepts
     * registry as param etc.)
     */
-  def getExtractorClass(
+  private def getExtractorClass(
       shortName: String
   ): CHProfile[_ >: NodeSeq with JValue] =
     CHProviderRegistry.lookupProfile(shortName) match {

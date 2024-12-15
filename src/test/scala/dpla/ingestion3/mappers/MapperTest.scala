@@ -26,7 +26,7 @@ class MapperTest extends AnyFlatSpec with BeforeAndAfter with IngestMessageTempl
 
   it should "add an info warning if more than two dataProvider are given and return the first value" in {
     msgCollector.deleteAll()
-    val message = moreThanOneValueMsg(id, "dataProvider", "Person A | Person B", msg = None, enforce)
+    val message = moreThanOneValueMsg(id, "dataProvider", "Person A | Person B", enforce)
     val validatedDataProvider = mapTest.validateDataProvider(dataProviders, id, enforce)
 
     assert(msgCollector.getAll.contains(message))
@@ -72,7 +72,7 @@ class MapperTest extends AnyFlatSpec with BeforeAndAfter with IngestMessageTempl
     val rightsUris = Seq(rightsString).map(URI)
 
     mapTest.validateEdmRights(rightsUris, id, enforce = false)
-    val msg = invalidEdmRightsMsg(id, "edmRights", rightsString, msg = None, enforce = false)
+    val msg = invalidEdmRightsMsg(id, "edmRights", rightsString, enforce = false)
 
     assert(msgCollector.getAll.contains(msg))
   }
@@ -81,7 +81,7 @@ class MapperTest extends AnyFlatSpec with BeforeAndAfter with IngestMessageTempl
     msgCollector.deleteAll()
     val rightsString = "https://rightsstatements.org/vocab/CNE/1.0/"
     val rightsUris = Seq(rightsString).map(URI)
-    val message = normalizedEdmRightsHttpsMsg(id, "edmRights", rightsString, msg = None, enforce = false)
+    val message = normalizedEdmRightsHttpsMsg(id, "edmRights", rightsString, enforce = false)
 
     mapTest.normalizeEdmRights(rightsUris, id)
     

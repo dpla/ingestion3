@@ -18,7 +18,7 @@ import org.apache.spark.sql.{Dataset, Row}
 
 object PrepareEnrichmentReport extends IngestMessageTemplates {
 
-  def generateFieldReport(ds: Dataset[Row], field: String) = {
+  def generateFieldReport(ds: Dataset[Row], field: String): String = {
     val queryResult = ds
       .select("level", "message", "id", "field")
       .where(s"field=='$field'")
@@ -48,9 +48,9 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     */
   def prepareEnrichedData(enriched: OreAggregation, original: OreAggregation)(
       implicit msgs: MessageCollector[IngestMessage]
-  ) = {
+  ): OreAggregation = {
     // Get messages for each field
-    prepareLangauge(enriched)
+    prepareLanguage(enriched)
     prepareType(original, enriched)
     preparePlace(enriched)
     prepareDate(original, enriched)
@@ -63,12 +63,9 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     enriched.copy(messages = msgs.getAll.toSeq)
   }
 
-  /** @param enriched
-    * @param msgs
-    */
-  def prepareProvider(
+  private def prepareProvider(
       enriched: OreAggregation
-  )(implicit msgs: MessageCollector[IngestMessage]) = {
+  )(implicit msgs: MessageCollector[IngestMessage]): Unit = {
 
     val dplaId = (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString
 
@@ -95,9 +92,9 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
   /** @param enriched
     * @param msgs
     */
-  def prepareDataProvider(
+  private def prepareDataProvider(
       enriched: OreAggregation
-  )(implicit msgs: MessageCollector[IngestMessage]) = {
+  )(implicit msgs: MessageCollector[IngestMessage]): Unit = {
 
     val dplaId = (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString
 
@@ -126,9 +123,9 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     * @param msgs
     * @return
     */
-  def prepareDate(original: OreAggregation, enriched: OreAggregation)(implicit
-      msgs: MessageCollector[IngestMessage]
-  ) = {
+  private def prepareDate(original: OreAggregation, enriched: OreAggregation)(implicit
+                                                                              msgs: MessageCollector[IngestMessage]
+  ) : Unit = {
 
     val enrichDateValues = enriched.sourceResource.date
     val originalDateValues = original.sourceResource.date
@@ -157,11 +154,7 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     })
   }
 
-  /** @param enriched
-    * @param msgs
-    * @return
-    */
-  def prepareLangauge(
+  private def prepareLanguage(
       enriched: OreAggregation
   )(implicit msgs: MessageCollector[IngestMessage]) = {
 
@@ -186,13 +179,9 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     })
   }
 
-  /** @param enriched
-    * @param msgs
-    * @return
-    */
-  def preparePlace(
+  private def preparePlace(
       enriched: OreAggregation
-  )(implicit msgs: MessageCollector[IngestMessage]) = {
+  )(implicit msgs: MessageCollector[IngestMessage]): Seq[Any] = {
 
     enriched.sourceResource.place.map(p => {
       if (
@@ -210,8 +199,7 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     })
   }
 
-  def printPlace(place: DplaPlace) = {
-    // TODO How else to format?
+  private def printPlace(place: DplaPlace) = {
     s"""
        |${place.country.getOrElse("")}
        |${place.region.getOrElse("")}
@@ -221,21 +209,15 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
      """.stripMargin.split("\n").filter(_.nonEmpty).mkString("\n")
   }
 
-  /** @param original
-    * @param enriched
-    * @param msgs
-    * @return
-    */
-  def prepareType(original: OreAggregation, enriched: OreAggregation)(implicit
-      msgs: MessageCollector[IngestMessage]
-  ) = {
+  private def prepareType(original: OreAggregation, enriched: OreAggregation)
+                         (implicit msgs: MessageCollector[IngestMessage]): Unit = {
     val enrichTypeValues = enriched.sourceResource.`type`
     val originalTypeValues = original.sourceResource.`type`
 
     val typeTuples = enrichTypeValues zip originalTypeValues
 
     typeTuples.map({
-      case (e: String, o: String) => {
+      case (e: String, o: String) =>
         if (e != o)
           msgs.add(
             enrichedValue(
@@ -253,7 +235,6 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
               o
             )
           )
-      }
     })
   }
 }

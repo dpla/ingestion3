@@ -424,7 +424,7 @@ This project is an ETL system for aggregating cultural heritage metadata from th
 
 We harvest data from multiple sources but generally they fall into three categories: api, file, and oai.
 
-<img src="https://i.imgur.com/WZWuYnr.png" height="300"/>
+<img alt="oai: 25%, file: 15%, api: 7%" src="https://i.imgur.com/WZWuYnr.png" height="300"/>
 
 
 # Mapping and Validation

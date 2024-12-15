@@ -85,7 +85,7 @@ abstract class JsonRetconMapping extends JsonMapping with JsonExtractor {
   ): ZeroToMany[DcmiTypeCollection] =
     maybeArray(
       data.get \ "_source" \ "sourceResource" \ "collection",
-      (fields) => {
+      fields => {
         val title = extractStrings("title")(fields).headOption
         val description = extractStrings("description")(fields).headOption
         if (title.nonEmpty)
@@ -161,7 +161,7 @@ abstract class JsonRetconMapping extends JsonMapping with JsonExtractor {
   override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
     maybeArray(
       data.get \ "_source" \ "sourceResource" \ "spatial",
-      (fields) => {
+      fields => {
         val name = extractStrings("name")(fields).headOption
         val city = extractStrings("city")(fields).headOption
         val county = extractStrings("county")(fields).headOption

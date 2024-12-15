@@ -29,7 +29,7 @@ object StringNormalizationUtils {
       * Construction and testing of those regular expressions is dependent on
       * the user
       */
-    lazy val applyAllowFilter: Set[String] => String = (allowList) => {
+    lazy val applyAllowFilter: Set[String] => String = allowList => {
       // Generates a term block list by applying a block filter with the allowed terms
       val termsToRemove = applyBlockFilter(allowList)
 
@@ -175,7 +175,7 @@ object StringNormalizationUtils {
 
     /** Splits a String value around a given delimiter.
       */
-    lazy val splitAtDelimiter: (String) => Array[String] = delimiter => {
+    lazy val splitAtDelimiter: String => Array[String] = delimiter => {
       value.split(delimiter).map(_.trim).filter(_.nonEmpty)
     }
 

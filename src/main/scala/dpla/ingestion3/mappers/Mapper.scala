@@ -47,7 +47,7 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
   ): ZeroToMany[URI] = {
     values.map(value => {
       val normalized = Try { new java.net.URI(value.toString.trim) } match {
-        case Success(uri) => {
+        case Success(uri) =>
           Try {
 
             // does scheme (http/https) require normalization
@@ -57,7 +57,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                   providerId,
                   "edmRights",
                   value.toString,
-                  msg = None,
                   enforce = false
                 )
               )
@@ -69,7 +68,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                   providerId,
                   "edmRights",
                   value.toString,
-                  msg = None,
                   enforce = false
                 )
               )
@@ -85,7 +83,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                     providerId,
                     "edmRights",
                     value.toString,
-                    msg = None,
                     enforce = false
                   )
                 )
@@ -103,7 +100,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                   providerId,
                   "edmRights",
                   value.toString,
-                  msg = None,
                   enforce = false
                 )
               )
@@ -115,7 +111,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                   providerId,
                   "edmRights",
                   value.toString,
-                  msg = None,
                   enforce = false
                 )
               )
@@ -130,7 +125,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                   providerId,
                   "edmRights",
                   value.toString,
-                  msg = None,
                   enforce = false
                 )
               )
@@ -151,14 +145,12 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
                   providerId,
                   "edmRights",
                   s"${value.toString}: $f",
-                  msg = None,
                   enforce = false
                 )
               )
               // return original value
               value.toString
           }
-        }
         case Failure(_) => value.toString
       }
 
@@ -196,7 +188,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           providerId,
           "dataProvider",
           values.map(_.print).mkString(" | "),
-          msg = None,
           enforce = false
         )
       )
@@ -242,7 +233,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           providerId,
           "edmRights",
           values.mkString(" | "),
-          msg = None,
           enforce
         )
       )
@@ -255,7 +245,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
             providerId,
             "edmRights",
             value.toString,
-            msg = None,
             enforce
           )
         )
@@ -270,7 +259,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           providerId,
           "edmRights",
           validEdmRights.map(_.toString).mkString(" | "),
-          msg = None,
           enforce = true
         )
       )
@@ -311,7 +299,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           providerId,
           "isShownAt",
           values.mkString(" | "),
-          msg = None,
           enforce = false
         )
       )
@@ -356,7 +343,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           providerId,
           "object",
           values.toString(),
-          msg = None,
           enforce
         )
       )
@@ -395,7 +381,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           providerId,
           "preview",
           values.mkString(" | "),
-          msg = None,
           enforce
         )
       )
@@ -542,7 +527,7 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
       enforce: Boolean
   )(implicit collector: MessageCollector[IngestMessage]): URI = {
     values match {
-      case Some(dplaUri) => {
+      case Some(dplaUri) =>
         if (!dplaUri.validate) {
           // Not a valid URI
           collector.add(
@@ -556,12 +541,10 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           )
           URI("")
         } else dplaUri
-      }
-      case None => {
+      case None =>
         // No URI
         collector.add(missingRequiredFieldMsg(providerId, "dplaUri", enforce))
         URI("")
-      }
     }
   }
 
@@ -593,7 +576,6 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
           providerId,
           "iiifManifest",
           values.toString(),
-          msg = None,
           enforce
         )
       )
@@ -966,11 +948,10 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
       )
     } match {
       case Success(oreAggregation) => oreAggregation
-      case Failure(f) => {
+      case Failure(f) =>
         msgCollector.add(exception(providerId, f))
         // Return an empty oreAggregation that contains all the messages generated from failed mapping
         emptyOreAggregation.copy(messages = msgCollector.getAll.toSeq)
-      }
     }
   }
 }

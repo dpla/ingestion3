@@ -22,6 +22,8 @@ class HathiFileHarvester(
 ) extends FileHarvester(spark, shortName, conf)
     with XmlExtractor {
 
+  private val logger = LogManager.getLogger(this.getClass)
+
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
   /** Loads .tar.gz files
@@ -51,7 +53,7 @@ class HathiFileHarvester(
     *   List of Options of id/item pairs.
     */
   def handleXML(xml: Node): List[Option[ParsedResult]] = {
-    val logger = LogManager.getLogger(this.getClass)
+
     for {
       items <- xml \\ "record" :: Nil
       item <- items
@@ -86,10 +88,10 @@ class HathiFileHarvester(
     * @return
     *   Lazy stream of tar records
     */
-  def iter(tarInputStream: TarInputStream): Stream[FileResult] =
+  def iter(tarInputStream: TarInputStream): LazyList[FileResult] =
     Option(tarInputStream.getNextEntry) match {
       case None =>
-        Stream.empty
+        LazyList.empty
 
       case Some(entry) =>
         val filename = Try {
@@ -127,20 +129,17 @@ class HathiFileHarvester(
             )
           )
 
-        val recordCount = (for (tarResult <- iter(inputStream)) yield {
+        for (tarResult <- iter(inputStream)) yield {
           handleFile(tarResult, unixEpoch) match {
             case Failure(exception) =>
-              LogManager
-                .getLogger(this.getClass)
+              logger
                 .error(
                   s"Caught exception on ${tarResult.entryName}.",
                   exception
                 )
-              0
-            case Success(count) =>
-              count
+            case _ => //do nothing
           }
-        }).sum
+        }
 
         IOUtils.closeQuietly(inputStream)
       })

@@ -5,14 +5,23 @@ import dpla.ingestion3.entries.Entry
 import dpla.ingestion3.executors.EnrichExecutor
 import org.apache.spark.SparkConf
 
-/** Expects four parameters: 1) a path to the harvested data 2) a path to output
-  * the mapped data 3) a path to the application configuration file 4) provider
-  * short name 5) spark master (optional parameter that overrides a --master
+/** Expects four parameters:
+  * 1) a path to the harvested data
+  * 2) a path to output the mapped data
+  * 3) a path to the application configuration file
+  * 4) provider short name
+  * 5) spark master (optional parameter that overrides a --master
   * param submitted via spark-submit
   *
-  * Usage ----- To invoke via sbt: sbt "run-main dpla.ingestion3.EnrichEntry
-  * --input=/input/path/to/mapped.avro --output=/output/path/to/enriched.avro
-  * --conf=/path/to/application.conf --name=provider --sparkMaster=local[*]
+  * Usage
+  * -----
+  * To invoke via sbt:
+  * sbt "run-main dpla.ingestion3.EnrichEntry
+  * --input=/input/path/to/mapped.avro
+  * --output=/output/path/to/enriched.avro
+  * --conf=/path/to/application.conf
+  * --name=provider
+  * --sparkMaster=local[*]"
   */
 
 object EnrichEntry extends EnrichExecutor {
@@ -48,8 +57,7 @@ object EnrichEntry extends EnrichExecutor {
       sparkConf,
       dataIn,
       dataOut,
-      shortName,
-      i3Conf
+      shortName
     )
   }
 }

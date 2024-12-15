@@ -139,7 +139,7 @@ case class URI(value: String) {
   def isValidEdmRightsUri: Boolean = validEdmRightsValues.contains(value)
 
   /** toString is overridden so that when URI values are extracted the type is
-    * dropped. Otherwise calling URI("http://abc.com").toString() will return
+    * dropped. Otherwise, calling URI("http://abc.com").toString() will return
     * URI("http://abc.com") when it should return "http://abc.com"
     *
     * @return
@@ -147,7 +147,7 @@ case class URI(value: String) {
     */
   override def toString: String = value
 
-  val validEdmRightsValues: Set[String] = Set(
+  private val validEdmRightsValues: Set[String] = Set(
     "http://rightsstatements.org/vocab/CNE/1.0/",
     "http://rightsstatements.org/vocab/InC-EDU/1.0/",
     "http://rightsstatements.org/vocab/InC-NC/1.0/",

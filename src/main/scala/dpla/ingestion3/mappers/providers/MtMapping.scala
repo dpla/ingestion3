@@ -30,7 +30,7 @@ class MtMapping
     DigitalSurrogateBlockList.termList ++
       ExtentIdentificationList.termList
 
-  val extentAllowAlist: Set[String] = ExtentIdentificationList.termList
+  private val extentAllowAlist: Set[String] = ExtentIdentificationList.termList
 
   // ID minting functions
   override def useProviderName: Boolean = true
@@ -163,12 +163,12 @@ class MtMapping
     extractStrings(data \\ "contribState").map(URI)
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Big Sky Country Digital Network"),
     uri = Some(URI("http://dp.la/api/contributor/mt"))
   )
 
-  def previewHelper(data: Document[NodeSeq]): ZeroToMany[String] = {
+  private def previewHelper(data: Document[NodeSeq]): ZeroToMany[String] = {
     (data \\ "location" \ "url")
       .flatMap(node =>
         getByAttribute(node.asInstanceOf[Elem], "access", "preview")

@@ -48,20 +48,18 @@ object Emailer {
       |""".stripMargin.split("\n")
 
   // Only include the *.csv files in the zipped export
-  lazy val excludeFileFilter: ExcludeFileFilter = new ExcludeFileFilter {
-    override def isExcluded(file: File): Boolean = {
-      file.isFile & !file.getName.endsWith("csv")
-    }
+  private val excludeFileFilter: ExcludeFileFilter = (file: File) => {
+    file.isFile & !file.getName.endsWith("csv")
   }
-  lazy val zipParameters: ZipParameters = new ZipParameters()
+
+  private lazy val zipParameters: ZipParameters = new ZipParameters()
   zipParameters.setExcludeFileFilter(excludeFileFilter)
 
   def emailSummary(mapOutput: String, partner: String, i3conf: i3Conf): Unit = {
     val emails = i3conf.email.getOrElse("tech@dp.la").split(',')
 
-    val _summary = s"${mapOutput}/_SUMMARY"
-    val zipped_logs =
-      s"${mapOutput}/_LOGS/logs.zip" // FIXME provider-date-mapping-logs.zip
+    val _summary = s"$mapOutput/_SUMMARY"
+    val zipped_logs = s"$mapOutput/_LOGS/logs.zip" // FIXME provider-date-mapping-logs.zip
 
     val body = emailBody(_summary)
 
@@ -95,22 +93,18 @@ object Emailer {
       .mkString("\n")
   }
 
-  private def zip(zipped_logs: String, mapOutput: String): Option[File] = {
+  private def zip(zippedLogs: String, mapOutput: String): Option[File] = {
     // Build the zip file contents
-    val zip_out = new ZipFile(zipped_logs)
-    val errors = new File(s"${mapOutput}/_LOGS/errors/")
+    val zipOut = new ZipFile(zippedLogs)
+    val errors = new File(s"$mapOutput/_LOGS/errors/")
 
     if (errors.exists()) {
-      zip_out.addFolder(errors, zipParameters)
-      zip_out.close()
-      Some(new File(zipped_logs))
+      zipOut.addFolder(errors, zipParameters)
+      zipOut.close()
+      Some(new File(zippedLogs))
     } else {
       None
     }
-    // Not currently reporting warnings (files generally too large for attachments)
-    //    val warnings = new File(s"${mapOutput}/_LOGS/warnings/")
-    //    if(warnings.exists())
-    //      zip_out.addFolder(warnings, zipParameters)
   }
 
   // Body must be plain text - HTML markup would require a `withHtml` call, not a `withText` call.

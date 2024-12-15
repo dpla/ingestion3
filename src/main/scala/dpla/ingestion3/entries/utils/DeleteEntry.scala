@@ -41,7 +41,7 @@ object DeleteEntry extends DeleteExecutor {
     val sparkMaster: Option[String] = cmdArgs.getSparkMaster
     val deleteIds: String = cmdArgs.getDeleteIds.getOrElse("")
 
-    // If given input path is enrichment, use it as `enrichedData'.
+    // If given input path is enrichment, use it as `enrichedData`.
     // If not, assume that it is a directory containing several enriched sets and
     // get the most recent enrichment from that directory.
     val enrichedData = if (InputHelper.isActivityPath(dataIn)) {
