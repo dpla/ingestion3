@@ -481,7 +481,7 @@ class HathiThumbnailFetcher(
 
   val baseUrl: String = "http://books.google.com/books?jscmd=viewapi&bibkeys="
 
-  val hathiId: String = hathiIdOpt.getOrElse("")
+  private val hathiId: String = hathiIdOpt.getOrElse("")
   val oclcId: String = oclcIdOpt.getOrElse("")
   val isbnId: String = isbnIdOpt.getOrElse("")
   val googlePrefix: String = googlePrefixOpt.getOrElse("")

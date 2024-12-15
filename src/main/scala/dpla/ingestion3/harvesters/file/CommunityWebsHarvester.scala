@@ -16,10 +16,6 @@ import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
 import java.util.zip.ZipInputStream
 import scala.util.{Failure, Success, Try}
 
-/** Extracts values from parsed JSON
-  */
-class CommunityWebsExtractor extends JsonExtractor
-
 /** Entry for performing a Community Webs file harvest
   */
 class CommunityWebsHarvester(
@@ -39,13 +35,12 @@ class CommunityWebsHarvester(
     * @return
     *   ZipInputstream of the zip contents
     */
-  def getInputStream(file: File): Option[ZipInputStream] = {
+  def getInputStream(file: File): Option[ZipInputStream] =
     file.getName match {
       case zipName if zipName.endsWith("zip") =>
         Some(new ZipInputStream(new FileInputStream(file)))
       case _ => None
     }
-  }
 
   /** Parses JValue to extract item local item id and renders compact full
     * record

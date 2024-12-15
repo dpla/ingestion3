@@ -24,7 +24,7 @@ class VtMappingTest extends AnyFlatSpec with BeforeAndAfter {
     assert(extractor.originalId(xml) === Some("http://archive.org/details/hhfbc-c7"))
 
   it should "create the correct DPLA URI" in {
-    val expected = Some(new URI("http://dp.la/api/items/9df2bbb82c4434954a12454414ca4174"))
+    val expected = Some(URI("http://dp.la/api/items/9df2bbb82c4434954a12454414ca4174"))
     assert(extractor.dplaUri(xml) === expected)
   }
 

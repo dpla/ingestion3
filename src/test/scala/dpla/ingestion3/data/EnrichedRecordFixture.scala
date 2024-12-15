@@ -77,7 +77,7 @@ object EnrichedRecordFixture {
       ),
       edmRights = Some(URI("https://example.org/rights/public_domain.html")),
       isShownAt = EdmWebResource(
-        uri = new URI("https://example.org/record/123")
+        uri = URI("https://example.org/record/123")
       ),
       sidecar = toJsonString(("prehashId" -> "oai:somestate:id123") ~ ("dplaId" -> "4b1bd605bd1d75ee23baadb0e1f24457")),
       originalId = "The original ID",

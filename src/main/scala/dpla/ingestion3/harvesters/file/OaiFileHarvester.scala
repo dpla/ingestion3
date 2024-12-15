@@ -101,18 +101,19 @@ class OaiFileHarvester(
             .equalsIgnoreCase("deleted")
         ) {
           None
-        }
-        // Extract required record identifier
-        val id: Option[String] =
-          extractor.extractString(record \ "header" \ "identifier")
+        } else {
+          // Extract required record identifier
+          val id: Option[String] =
+            extractor.extractString(record \ "header" \ "identifier")
 
-        val outputXML = xmlToString(record)
+          val outputXML = xmlToString(record)
 
-        id match {
-          case None =>
-            logger.warn(s"Missing required record_ID for $outputXML")
-            None
-          case Some(id) => Some(ParsedResult(id, outputXML))
+          id match {
+            case None =>
+              logger.warn(s"Missing required record_ID for $outputXML")
+              None
+            case Some(id) => Some(ParsedResult(id, outputXML))
+          }
         }
       case _ =>
         logger.warn("Got weird result back for item path: " + item.getClass)
@@ -150,15 +151,13 @@ class OaiFileHarvester(
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        val recordCount = (for (result <- iter(inputStream)) yield {
+        for (result <- iter(inputStream)) {
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               logger.error(s"Caught exception on $inFile.", exception)
-              0
-            case Success(count) =>
-              count
+            case Success(_) => //do nothing
           }
-        }).sum
+        }
         IOUtils.closeQuietly(inputStream)
       })
 

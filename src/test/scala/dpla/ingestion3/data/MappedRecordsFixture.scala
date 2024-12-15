@@ -6,12 +6,12 @@ object MappedRecordsFixture {
 
   val mappedRecord: OreAggregation = OreAggregation(
     dataProvider = EdmAgent(
-      uri = Some(new URI("http://example.com"))
+      uri = Some(URI("http://example.com"))
     ),
-    dplaUri = new URI(""), //uri of the record on our site
+    dplaUri = URI(""), //uri of the record on our site
     originalRecord = "", //map v4 specifies this as a ref, but that's LDP maybe?
     provider = EdmAgent(),
-    isShownAt = EdmWebResource(uri = new URI("http:/example.com/foo")),
+    isShownAt = EdmWebResource(uri = URI("http:/example.com/foo")),
     originalId = "The originial ID",
     sourceResource = DplaSourceResource(
       date = Seq(EdmTimeSpan(

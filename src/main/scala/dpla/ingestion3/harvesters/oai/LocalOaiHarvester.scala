@@ -1,16 +1,10 @@
 package dpla.ingestion3.harvesters.oai
 
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.oai.refactor.{
-  OaiConfiguration,
-  OaiProtocol,
-  OaiRecord,
-  OaiSet
-}
+import dpla.ingestion3.harvesters.oai.refactor.{OaiConfiguration, OaiProtocol, OaiRecord, OaiSet}
 import dpla.ingestion3.harvesters.{Harvester, LocalHarvester}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
-import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 class LocalOaiHarvester(

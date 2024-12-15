@@ -4,7 +4,7 @@ import java.io.{BufferedReader, File, FileInputStream}
 import java.util.zip.GZIPInputStream
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.{avroFilter, gzFilter, xmlFilter}
-import dpla.ingestion3.harvesters.{AvroHelper, Harvester, LocalHarvester}
+import dpla.ingestion3.harvesters.{AvroHelper, LocalHarvester}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema

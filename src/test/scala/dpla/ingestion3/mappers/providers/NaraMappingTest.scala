@@ -16,7 +16,7 @@ class NaraMappingTest extends AnyFlatSpec with BeforeAndAfter {
   val shortName: Option[String] = Some("nara")
   val xmlString: String = new FlatFileIO().readFileAsString("/nara.xml")
   val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))
-  val itemUri = new URI("http://catalog.archives.gov/id/2132862")
+  val itemUri: URI = URI("http://catalog.archives.gov/id/2132862")
   val extractor = new NaraMapping
 
   it should "use the provider shortname in minting IDs" in

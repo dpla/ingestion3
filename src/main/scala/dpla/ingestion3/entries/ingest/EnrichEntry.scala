@@ -35,14 +35,8 @@ object EnrichEntry extends EnrichExecutor {
 
     val dataIn = cmdArgs.getInput
     val dataOut = cmdArgs.getOutput
-    val confFile = cmdArgs.getConfigFile
     val shortName = cmdArgs.getProviderName
     val sparkMaster: Option[String] = cmdArgs.getSparkMaster
-
-
-    // Load configuration from file
-    val i3Conf: i3Conf = new Ingestion3Conf(confFile).load()
-
     val baseConf = new SparkConf()
       .setAppName(s"Enrichment: $shortName")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")

@@ -41,9 +41,6 @@ class MdlHarvester(
     var requestUrl: Option[String] = Some(getFirstUrl(queryParams))
 
     while (requestUrl.isDefined) requestUrl match {
-      // do nothing, there is no url to request
-      case None => None
-
       // next url to request is defined
       case Some(url) =>
         getSinglePage(url) match {
