@@ -1,7 +1,5 @@
 package dpla.ingestion3
 
-import com.google.cloud.hadoop.repackaged.gcs.com.google.protobuf.util.FieldMaskUtil.fromJsonString
-
 import java.text.SimpleDateFormat
 import java.util.{Calendar, TimeZone}
 import dpla.ingestion3.utils.FlatFileIO
@@ -13,8 +11,6 @@ import org.json4s.jackson.JsonMethods._
 import org.json4s.JsonDSL._
 import org.json4s._
 
-import scala.xml.NodeSeq.Empty.\
-//todo empty values??
 import org.json4s.prefs.EmptyValueStrategy
 import org.json4s.{DefaultFormats, Formats}
 
