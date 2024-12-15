@@ -14,4 +14,8 @@ jobs:
           java-version: 11
           cache: sbt
       - name: Run tests
-        run: sbt clean compile test
+        run: sbt clean coverage test coverageReport
+      - name: Codacy Coverage Reporter
+        uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
