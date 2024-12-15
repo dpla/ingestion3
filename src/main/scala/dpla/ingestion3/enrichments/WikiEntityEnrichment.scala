@@ -3,19 +3,16 @@ package dpla.ingestion3.enrichments
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.{EdmAgent, URI, nameOnlyAgent}
 import dpla.ingestion3.utils.FileLoader
-import dpla.ingestion3.wiki.WikiUri
+
 import org.json4s.jackson.JsonMethods._
 
 import scala.io.Source
 
-/** Wikimedia entity enrichments
-  */
 class WikiEntityEnrichment
     extends FileLoader
     with VocabEnrichment[EdmAgent]
     with JsonExtractor {
 
-  // Files to source vocabulary from
   private val fileList = Seq(
     "/wiki/institutions_v2.json"
   )
@@ -52,19 +49,18 @@ class WikiEntityEnrichment
     */
   private def mergeFunc(original: EdmAgent, enriched: EdmAgent) =
     original.copy(exactMatch = enriched.exactMatch)
-  // enriched.copy(name = original.name)
 
   /** Read JSON files and load vocabulary
     *
     * @return
     */
   // noinspection TypeAnnotation,UnitMethodIsParameterless
-  private def loadVocab =
+  private def loadVocab: Unit =
     getInstitutionVocab(files).foreach { case (key: String, value: String) =>
       if (value.nonEmpty) addEntity(key, value)
     }
 
-  private def getInstitutionVocab(files: Seq[String]): Seq[(String, String)] = {
+  private def getInstitutionVocab(files: Seq[String]): Seq[(String, String)] =
     files.flatMap(file => {
       val fileContentString = Source
         .fromInputStream(getClass.getResourceAsStream(file))
@@ -94,7 +90,6 @@ class WikiEntityEnrichment
 
       dataProviderKeys ++ institutionKeys
     })
-  }
   // Load the vocab
   loadVocab
 
@@ -111,7 +106,7 @@ class WikiEntityEnrichment
     lookup.add(
       EdmAgent(
         name = Some(entityName),
-        exactMatch = Seq(URI(s"${WikiUri.baseWikiUri}$entityWikiId"))
+        exactMatch = Seq(URI(s"http://www.wikidata.org/entity/$entityWikiId"))
       )
     )
   }

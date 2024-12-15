@@ -16,9 +16,14 @@ import org.apache.spark.SparkConf
   * spark master (optional parameter that overrides a --master param submitted
   * via spark-submit 5) a comma separated list of DPLA IDs to delete
   *
-  * Usage ----- To invoke via sbt: sbt "run-main
-  * dpla.ingestion3.entries.utils.DeleteEntry --input=/input/path/to/enriched/
-  * --output=/output/path/provider/ --deleteIds=1,2,3,4 --name=shortName"
+  * Usage
+  * -----
+  * To invoke via sbt:
+  * sbt "run-main dpla.ingestion3.entries.utils.DeleteEntry
+  * --input=/input/path/to/enriched/
+  * --output=/output/path/provider/
+  * --deleteIds=1,2,3,4
+  * --name=shortName"
   * --sparkMaster=local[*]
   */
 object DeleteEntry extends DeleteExecutor {

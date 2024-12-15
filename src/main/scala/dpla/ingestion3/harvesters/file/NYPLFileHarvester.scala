@@ -3,7 +3,7 @@ package dpla.ingestion3.harvesters.file
 import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
 import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
+import dpla.ingestion3.harvesters.file.FileFilters.zipFilter
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.AVRO_MIME_JSON
 import org.apache.avro.generic.GenericData
@@ -149,7 +149,7 @@ class NYPLFileHarvester(
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
     inFiles
-      .listFiles(new ZipFileFilter)
+      .listFiles(zipFilter)
       .foreach(inFile => {
         val inputStream: ZipInputStream = getInputStream(inFile)
           .getOrElse(

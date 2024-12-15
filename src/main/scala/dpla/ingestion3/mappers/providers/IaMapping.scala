@@ -147,7 +147,7 @@ class IaMapping
   override def `type`(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \\ "mediatype")
 
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Internet Archive"),
     uri = Some(URI("http://dp.la/api/contributor/ia"))
   )

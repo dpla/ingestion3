@@ -12,9 +12,9 @@ class TypeEnrichment extends VocabEnrichment[String] {
   private def normalizationFunc(term: String): String = term.toLowerCase.trim
 
   // DCMIType mappings
-  val dcmiType = DCMIType()
+  val dcmiType: DCMIType = DCMIType()
 
-  val DcmiTypeMap: Map[String, IRI] = Map(
+  private val DcmiTypeMap: Map[String, IRI] = Map(
     "administrative record" -> dcmiType.Text,
     "aerial photographs" -> dcmiType.Image,
     "albumen prints" -> dcmiType.Image,
@@ -161,16 +161,11 @@ class TypeEnrichment extends VocabEnrichment[String] {
     *
     * @return
     */
-  private def loadVocab = addVocab(DcmiTypeMap)
+  private def loadVocab(): Unit = addVocab(DcmiTypeMap)
 
-  // Load vocab
-  loadVocab
+  loadVocab()
 
   /** Gets the web label representation of the given IRI
-    *
-    * @param iri
-    * @return
-    *   String
     */
   private def getTypeLabel(iri: IRI): String = {
     iri match {

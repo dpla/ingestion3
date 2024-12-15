@@ -7,7 +7,7 @@ import dpla.ingestion3.messages._
 import dpla.ingestion3.model
 import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
 import dpla.ingestion3.reports.PrepareEnrichmentReport
-import dpla.ingestion3.reports.summary._
+import dpla.ingestion3.reports.summary.{EnrichmentOpsSummary, EnrichmentSummaryData, OperationSummary, TimeSummary}
 import dpla.ingestion3.utils.Utils
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
@@ -73,7 +73,7 @@ trait EnrichExecutor extends Serializable {
     // NotSerializableException errors, which originate in several of the
     // individual enrichments.
     object SharedDriver {
-      val driver = new EnrichmentDriver(i3conf)
+      val driver = new EnrichmentDriver
       def get: EnrichmentDriver = driver
     }
 

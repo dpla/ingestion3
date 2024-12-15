@@ -292,7 +292,7 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     * @return
     *   MappingSummaryData
     */
-  def buildFinalReport(
+  private def buildFinalReport(
       results: Dataset[Row],
       shortName: String,
       logsBasePath: String,

@@ -4,17 +4,17 @@ package dpla.ingestion3.harvesters
   */
 object HarvesterExceptions {
 
-  def throwMissingArgException(arg: String) = {
+  def throwMissingArgException(arg: String): Nothing = {
     val msg = s"Missing argument: $arg"
     throw new IllegalArgumentException(msg)
   }
 
-  def throwUnrecognizedArgException(arg: String) = {
+  def throwUnrecognizedArgException(arg: String): Nothing = {
     val msg = s"Unrecognized argument: $arg"
     throw new IllegalArgumentException(msg)
   }
 
-  def throwValidationException(arg: String) = {
+  def throwValidationException(arg: String): Nothing = {
     val msg = s"Validation error: $arg"
     throw new IllegalArgumentException(msg)
   }

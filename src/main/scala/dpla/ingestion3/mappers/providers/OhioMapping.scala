@@ -162,16 +162,13 @@ class OhioMapping
     ))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Ohio Digital Network"),
     uri = Some(URI("http://dp.la/api/contributor/ohio"))
   )
 
   /** Extracts values from format field and returns values that appear to be
     * extent statements
-    *
-    * @param data
-    * @return
     */
   def extentFromFormat(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \\ "format")

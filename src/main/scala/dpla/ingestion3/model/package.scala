@@ -1,9 +1,10 @@
 package dpla.ingestion3
 
+import com.google.cloud.hadoop.repackaged.gcs.com.google.protobuf.util.FieldMaskUtil.fromJsonString
+
 import java.text.SimpleDateFormat
 import java.util.{Calendar, TimeZone}
 import dpla.ingestion3.utils.FlatFileIO
-import dpla.ingestion3.wiki.WikiUri
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericData
 import org.apache.spark.sql.types.StructType
@@ -11,13 +12,15 @@ import org.apache.spark.sql.avro.SchemaConverters
 import org.json4s.jackson.JsonMethods._
 import org.json4s.JsonDSL._
 import org.json4s._
+
+import scala.xml.NodeSeq.Empty.\
 //todo empty values??
 import org.json4s.prefs.EmptyValueStrategy
 import org.json4s.{DefaultFormats, Formats}
 
 package object model {
 
-  val DcmiTypes = Set(
+  private val DcmiTypes = Set(
     "collection",
     "dataset",
     "event",
@@ -32,7 +35,7 @@ package object model {
     "text"
   )
 
-  val reservedWikiChars: List[String] = List(
+  private val reservedWikiChars: List[String] = List(
     "|",
     "=",
     "[[",
@@ -69,17 +72,17 @@ package object model {
   def eitherStringOrUri(uri: URI): LiteralOrUri =
     LiteralOrUri(uri.value, isUri = true)
 
-  def emptyDplaPlace = DplaPlace()
+  def emptyDplaPlace: DplaPlace = DplaPlace()
 
-  def emptyEdmAgent = EdmAgent()
+  def emptyEdmAgent: EdmAgent = EdmAgent()
 
-  def emptyEdmTimeSpan = EdmTimeSpan()
+  def emptyEdmTimeSpan: EdmTimeSpan = EdmTimeSpan()
 
   def emptyEdmWebResource: EdmWebResource = stringOnlyWebResource("")
 
   def emptyJValue: JValue = JNothing
 
-  def emptyOreAggregation = OreAggregation(
+  def emptyOreAggregation: OreAggregation = OreAggregation(
     dplaUri = URI(""),
     dataProvider = nameOnlyAgent(""),
     isShownAt = uriOnlyWebResource(URI("")),
@@ -91,10 +94,6 @@ package object model {
     ),
     originalId = ""
   )
-
-  def emptyString = ""
-
-  def emptySeq = Seq()
 
   lazy val ingestDate: String = {
     val now = Calendar.getInstance().getTime
@@ -131,7 +130,7 @@ package object model {
         throw new RuntimeException("Prehash ID is not in metadata sidecar")
     }
 
-    val jobj: JObject =
+    val dplaMapJsonLd: JObject =
       ("_type" -> "item") ~
         ("_id" -> _id) ~
         ("_source" ->
@@ -243,12 +242,9 @@ package object model {
           ("@type" -> "ore:Aggregation") ~
           ("tags" -> record.tags.map { _.toString }))
 
-    compact(render(jobj))
+    compact(render(dplaMapJsonLd))
   }
 
-  /** @param record
-    * @return
-    */
   def buildWikiMarkup(record: OreAggregation): String = {
     val dataProviderWikiUri = getDataProviderWikiId(record)
     val providerWikiUri = getProviderWikiId(record)
@@ -346,19 +342,13 @@ package object model {
 
   def escapeHelper(chars: String) = s"<nowiki>$chars</nowiki>"
 
-  /** @param record
-    * @return
-    */
   def getDplaId(record: OreAggregation): String =
     fromJsonString(record.sidecar) \ "dplaId" match {
       case JString(js) => js
       case _ => throw new RuntimeException("DPLA ID is not in metadata sidecar")
     }
 
-  /** @param record
-    * @return
-    */
-  private def getDataProviderWikiId(record: OreAggregation): String = {
+  private def getDataProviderWikiId(record: OreAggregation): String =
     getWikiId(record.dataProvider) match {
       case Some(uri) => uri
       case None =>
@@ -367,9 +357,8 @@ package object model {
             s"in ${getDplaId(record)} does not have wiki identifier "
         )
     }
-  }
 
-  private def getProviderWikiId(record: OreAggregation): String = {
+  private def getProviderWikiId(record: OreAggregation): String =
     getWikiId(record.provider) match {
       case Some(uri) => uri
       case None =>
@@ -378,15 +367,17 @@ package object model {
             s"in ${getDplaId(record)} does not have wiki identifier "
         )
     }
-  }
-  private def getWikiId(agent: EdmAgent): Option[String] = {
+
+  val WIKIDATA_ENTITY_PREFIX = "http://www.wikidata.org/entity/"
+
+  private def getWikiId(agent: EdmAgent): Option[String] =
     agent.exactMatch
       .map(_.toString)
-      .find(_.startsWith(WikiUri.baseWikiUri)) match {
-      case Some(uri) => Some(uri.replace(WikiUri.baseWikiUri, ""))
-      case None      => None
+      .find(_.startsWith(WIKIDATA_ENTITY_PREFIX)) match {
+      case Some(uri) => Some(uri.replace(WIKIDATA_ENTITY_PREFIX, ""))
+      case None => None
     }
-  }
+
 
   // Taken from
   // https://stackoverflow.com/questions/40128816/remove-json-field-when-empty-value-in-serialize-with-json4s
@@ -395,7 +386,7 @@ package object model {
 
   implicit val formats: Formats =
     DefaultFormats.withEmptyValueStrategy(new EmptyValueStrategy {
-      def noneValReplacement = None
+      def noneValReplacement: Option[Nothing] = None
 
       def replaceEmpty(value: JValue): JValue = value match {
         case JString("") => JNothing
@@ -427,6 +418,7 @@ package object model {
 
   lazy val AVRO_MIME_XML =
     new GenericData.EnumSymbol(harvestMimeTypeSchema, "application_xml")
+
 
   def toJsonString(json: JValue): String = compact(render(json))
   def fromJsonString(jsonString: String): JValue = parse(jsonString)

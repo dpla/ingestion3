@@ -3,7 +3,7 @@ package dpla.ingestion3.harvesters.file
 import java.io.{BufferedReader, File, FileInputStream}
 import java.util.zip.GZIPInputStream
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.file.FileFilters.GzFileFilter
+import dpla.ingestion3.harvesters.file.FileFilters.{avroFilter, gzFilter}
 import dpla.ingestion3.harvesters.{AvroHelper, Harvester, LocalHarvester}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
@@ -175,10 +175,10 @@ class NaraDeltaHarvester(
     * @return
     *   Lazy stream of tar records
     */
-  def iter(tarInputStream: TarInputStream): Stream[FileResult] =
+  def iter(tarInputStream: TarInputStream): LazyList[FileResult] =
     Option(tarInputStream.getNextEntry) match {
       case None =>
-        Stream.empty
+        LazyList.empty
 
       case Some(entry) =>
         val filename = Try {
@@ -210,7 +210,7 @@ class NaraDeltaHarvester(
 
     if (deltaHarvestInFile.isDirectory)
       for (
-        file: File <- deltaHarvestInFile.listFiles(new GzFileFilter).sorted
+        file: File <- deltaHarvestInFile.listFiles(gzFilter).sorted
       ) {
         val logger = LogManager.getLogger(this.getClass)
         logger.info(s"Harvesting NARA delta changes from ${file.getName}")
@@ -224,7 +224,7 @@ class NaraDeltaHarvester(
 
     // Get the absolute path of the avro file written to naraTmp directory
     val naraTempFile = new File(naraTmp)
-      .listFiles(new AvroFileFilter)
+      .listFiles(avroFilter)
       .headOption
       .getOrElse(
         throw new RuntimeException(

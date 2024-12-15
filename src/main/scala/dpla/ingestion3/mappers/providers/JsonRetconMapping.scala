@@ -71,7 +71,10 @@ abstract class JsonRetconMapping extends JsonMapping with JsonExtractor {
     case JObject(fields) =>
       f(fields).toSeq
     case JArray(values) =>
-      values.flatMap({ case JObject(fields) => f(fields) })
+      values.flatMap( value => value match {
+        case JObject(fields) => f(fields)
+        case _ => throw new RuntimeException("Unhandled value: " + value)
+      })
     case _ =>
       Seq()
   }

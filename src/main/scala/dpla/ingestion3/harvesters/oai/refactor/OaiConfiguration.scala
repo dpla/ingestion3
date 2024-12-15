@@ -31,9 +31,9 @@ case class OaiConfiguration(parameters: Map[String, String]) {
   def verb: String = {
     val verb = parameters.get("verb")
     (verb, oaiVerbs.contains(verb.getOrElse(""))) match {
-      // A verb parameter was given and it matches the list of valid OAI verbs
+      // A verb parameter was given, and it matches the list of valid OAI verbs
       case (Some(v), true) => v
-      // A verb parameter was given but it is not a supported OAI verb
+      // A verb parameter was given, but it is not a supported OAI verb
       case (Some(v), false) =>
         throwValidationException(
           s"$v is not a valid or currently supported OAI verb"

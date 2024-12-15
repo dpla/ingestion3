@@ -17,11 +17,11 @@ class Deduplication {
     record.copy(
       sourceResource = enrichSourceResource(record.sourceResource),
       dataProvider = enrichEdmAgent(record.dataProvider),
-      hasView = record.hasView.map(enrichEdmWebResource(_)).distinct,
-      intermediateProvider = record.intermediateProvider.map(enrichEdmAgent(_)),
+      hasView = record.hasView.map(enrichEdmWebResource).distinct,
+      intermediateProvider = record.intermediateProvider.map(enrichEdmAgent),
       isShownAt = enrichEdmWebResource(record.isShownAt),
-      `object` = record.`object`.map(enrichEdmWebResource(_)),
-      preview = record.preview.map(enrichEdmWebResource(_)),
+      `object` = record.`object`.map(enrichEdmWebResource),
+      preview = record.preview.map(enrichEdmWebResource),
       provider = enrichEdmAgent(record.provider)
     )
   }
@@ -32,24 +32,24 @@ class Deduplication {
     sourceResource.copy(
       alternateTitle = sourceResource.alternateTitle.distinct,
       collection = sourceResource.collection.distinct,
-      contributor = sourceResource.contributor.map(enrichEdmAgent(_)).distinct,
-      creator = sourceResource.creator.map(enrichEdmAgent(_)).distinct,
+      contributor = sourceResource.contributor.map(enrichEdmAgent).distinct,
+      creator = sourceResource.creator.map(enrichEdmAgent).distinct,
       date = sourceResource.date.distinct,
       description = sourceResource.description.distinct,
       extent = sourceResource.extent.distinct,
       format = sourceResource.format.distinct,
-      genre = sourceResource.genre.map(enrichSkosConcept(_)).distinct,
+      genre = sourceResource.genre.map(enrichSkosConcept).distinct,
       identifier = sourceResource.identifier.distinct,
-      language = sourceResource.language.map(enrichSkosConcept(_)).distinct,
+      language = sourceResource.language.map(enrichSkosConcept).distinct,
       place = sourceResource.place.distinct,
-      publisher = sourceResource.publisher.map(enrichEdmAgent(_)).distinct,
+      publisher = sourceResource.publisher.map(enrichEdmAgent).distinct,
       relation = sourceResource.relation.distinct,
       replacedBy = sourceResource.replacedBy.distinct,
       replaces = sourceResource.replaces.distinct,
       rights = sourceResource.rights.distinct,
       rightsHolder =
-        sourceResource.rightsHolder.map(enrichEdmAgent(_)).distinct,
-      subject = sourceResource.subject.map(enrichSkosConcept(_)).distinct,
+        sourceResource.rightsHolder.map(enrichEdmAgent).distinct,
+      subject = sourceResource.subject.map(enrichSkosConcept).distinct,
       temporal = sourceResource.temporal.distinct,
       title = sourceResource.title.distinct,
       `type` = sourceResource.`type`.distinct

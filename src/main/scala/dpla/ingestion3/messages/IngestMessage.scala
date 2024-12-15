@@ -4,7 +4,6 @@ object IngestLogLevel {
   val info: String = "info"
   val warn: String = "warn"
   val error: String = "error"
-  val fatal: String = "fatal"
 }
 
 /** IngestMessage
@@ -32,6 +31,6 @@ case class IngestMessage(
 ) {
 
   def formatMessage(): String = {
-    s"${level.toString.toUpperCase} $message $field $id $value"
+    s"${level.toUpperCase} $message $field $id $value"
   }
 }

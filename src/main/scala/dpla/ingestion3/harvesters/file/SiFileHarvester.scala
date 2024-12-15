@@ -3,7 +3,7 @@ package dpla.ingestion3.harvesters.file
 import java.io.{File, FileFilter, FileInputStream, InputStreamReader}
 import java.util.zip.GZIPInputStream
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.file.FileFilters.GzFileFilter
+import dpla.ingestion3.harvesters.file.FileFilters.gzFilter
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.Utils
 import org.apache.avro.generic.GenericData
@@ -158,7 +158,7 @@ class SiFileHarvester(
     val expectedFileCounts = getExpectedFileCounts(inFiles)
 
     inFiles
-      .listFiles(new GzFileFilter)
+      .listFiles(gzFilter)
       .foreach(inFile => {
         val inputStream = getInputStream(inFile)
           .getOrElse(

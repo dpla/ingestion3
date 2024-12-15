@@ -123,7 +123,7 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
     ))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Digital Maryland"),
     uri = Some(URI("http://dp.la/api/contributor/maryland"))
   )

@@ -4,33 +4,14 @@ import java.io.{File, FileFilter}
 
 object FileFilters {
 
-  class AvroFileFilter extends FileFilter {
+  private def newFilter(ext: String): FileFilter = new FileFilter {
     override def accept(pathname: File): Boolean =
-      pathname.getName.endsWith("avro")
+      pathname.getName.endsWith(ext)
   }
 
-  class CsvFileFilter extends FileFilter {
-    override def accept(pathname: File): Boolean =
-      pathname.getName.endsWith("csv")
-  }
-
-  class GzFileFilter extends FileFilter {
-    override def accept(pathname: File): Boolean =
-      pathname.getName.endsWith("gz")
-  }
-
-  class JsonFileFilter extends FileFilter {
-    override def accept(pathname: File): Boolean =
-      pathname.getName.endsWith("json")
-  }
-
-  class XmlFileFilter extends FileFilter {
-    override def accept(pathname: File): Boolean =
-      pathname.getName.endsWith("xml")
-  }
-
-  class ZipFileFilter extends FileFilter {
-    override def accept(pathname: File): Boolean =
-      pathname.getName.endsWith("zip")
-  }
+  val avroFilter: FileFilter = newFilter("avro")
+  val gzFilter: FileFilter = newFilter("gz")
+  val xmlFilter: FileFilter = newFilter("xml")
+  val zipFilter: FileFilter = newFilter("zip")
+  val txtFilter: FileFilter = newFilter("txt")
 }

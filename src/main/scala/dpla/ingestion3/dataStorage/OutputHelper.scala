@@ -20,7 +20,7 @@ import scala.util.{Failure, Success, Try}
   * @param startDateTime:
   *   Start dateTime of the activity
   *
-  * @throws IllegalArgumentException
+  * @throws IllegalArgumentException If you give it an illegal argument
   *
   * @see
   *   https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/TECH/pages/84512319/Ingestion+3+Storage+Specification
@@ -39,7 +39,7 @@ class OutputHelper(
 
   /** If the given root is an S3 path, parse an S3Address. Evaluate on
     * instantiation so invalid S3 protocol is caught immediately. This val can
-    * be used to check wither a given root is an S3 path or not.
+    * be used to check whether a given root is an S3 path or not.
     *
     * @throws IllegalArgumentException
     *   if given root is S3 path with invalid protocol for writing files

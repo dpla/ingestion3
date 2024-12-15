@@ -3,12 +3,10 @@ package dpla.ingestion3.harvesters.file
 import java.io.{ByteArrayInputStream, File, FileInputStream}
 import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.file.FileFilters.ZipFileFilter
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
 import org.apache.commons.io.IOUtils
-import org.apache.log4j.Logger
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
@@ -125,15 +123,11 @@ class OaiFileHarvester(
   /** Implements a stream of files from the zip Can't use @tailrec here because
     * the compiler can't recognize it as tail recursive, but this won't blow the
     * stack.
-    *
-    * @param zipInputStream
-    * @return
-    *   Lazy stream of zip records
     */
-  def iter(zipInputStream: ZipInputStream): Stream[FileResult] =
+  def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
     Option(zipInputStream.getNextEntry) match {
       case None =>
-        Stream.empty
+        LazyList.empty
       case Some(entry) =>
         val result =
           if (entry.isDirectory || !entry.getName.endsWith(".xml"))
@@ -150,7 +144,7 @@ class OaiFileHarvester(
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
     inFiles
-      .listFiles(new ZipFileFilter)
+      .listFiles(FileFilters.zipFilter)
       .foreach(inFile => {
         val inputStream = getInputStream(inFile)
           .getOrElse(

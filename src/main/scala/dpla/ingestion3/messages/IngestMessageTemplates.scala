@@ -36,7 +36,7 @@ trait IngestMessageTemplates {
       id: String,
       field: String,
       value: String,
-      msg: Option[String] = None,
+      msg: Option[String] = None, //unused?
       enforce: Boolean
   ): IngestMessage =
     IngestMessage(
@@ -107,21 +107,6 @@ trait IngestMessageTemplates {
       value = value
     )
 
-  def normalizedEdmRightsWhitespaceMsg(
-      id: String,
-      field: String,
-      value: String,
-      msg: Option[String] = None,
-      enforce: Boolean
-  ): IngestMessage =
-    IngestMessage(
-      message = s"Normalized whitespace".trim,
-      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
-      id = id,
-      field = field,
-      value = value
-    )
-
   def normalizedEdmRightsTrailingSlashMsg(
       id: String,
       field: String,
@@ -146,36 +131,6 @@ trait IngestMessageTemplates {
   ): IngestMessage =
     IngestMessage(
       message = s"Normalized remove trailing punctuation".trim,
-      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
-      id = id,
-      field = field,
-      value = value
-    )
-
-  def normalizedEdmRightsQueryMsg(
-      id: String,
-      field: String,
-      value: String,
-      msg: Option[String] = None,
-      enforce: Boolean
-  ): IngestMessage =
-    IngestMessage(
-      message = s"Normalized dropped query".trim,
-      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
-      id = id,
-      field = field,
-      value = value
-    )
-
-  def normalizedEdmRightsMsg(
-      id: String,
-      field: String,
-      value: String,
-      msg: Option[String] = None,
-      enforce: Boolean
-  ): IngestMessage =
-    IngestMessage(
-      message = s"Normalized value".trim,
       level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
       id = id,
       field = field,
@@ -252,15 +207,6 @@ trait IngestMessageTemplates {
       field = field,
       value = value,
       enrichedValue = "Not enriched"
-    )
-
-  def emptyRecord(): IngestMessage =
-    IngestMessage(
-      message = s"Empty record",
-      level = IngestLogLevel.error,
-      id = "Unknown",
-      field = "N/A",
-      value = "N/A"
     )
 
   def exception(id: String, exception: Throwable): IngestMessage =

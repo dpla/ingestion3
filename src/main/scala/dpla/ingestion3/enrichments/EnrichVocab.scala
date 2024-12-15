@@ -1,6 +1,8 @@
 package dpla.ingestion3.enrichments
 
-/** Generic vocabulary builder and and term lookup
+import scala.collection.mutable
+
+/** Generic vocabulary builder and term lookup
   *
   * @tparam T
   *   Class of vocab (e.g. SkosConcept, String, EdmAgent)
@@ -9,21 +11,21 @@ package dpla.ingestion3.enrichments
 class VocabLookup[T](normalizationFunc: (T) => String) {
 
   // Vocab mapping
-  private val data = scala.collection.mutable.Map[String, T]()
+  val data: mutable.Map[String, T] = scala.collection.mutable.Map[String, T]()
 
   /** Add vocabulary map to `data`
     *
     * @param vocabulary
     *   Map[String,T] Terms to add
     */
-  def add(vocabulary: Map[String, T]) = data ++= vocabulary.toList
+  def add(vocabulary: Map[String, T]): data.type = data ++= vocabulary.toList
 
   /** Adds term to vocab mapping and normalizes key value for retrieval
     *
     * @param term
     *   T Term to add
     */
-  def add(term: T) = data += normalizationFunc(term) -> term
+  def add(term: T): data.type = data += normalizationFunc(term) -> term
 
   /** Get term from vocab mapping
     *
@@ -37,7 +39,7 @@ class VocabLookup[T](normalizationFunc: (T) => String) {
 
   /** Print the vocab mapping
     */
-  def print = data.keys.foreach(key =>
+  def print(): Unit = data.keys.foreach(key =>
     println(s"$key->${data.getOrElse(key, "*NO VALUE FOR KEY*")}")
   )
 }
@@ -58,7 +60,7 @@ class VocabMerge[T](mergeFunc: (T, T) => T) {
     * @return
     *   A single record
     */
-  def merge(originalRecord: T, enrichedRecord: T) =
+  def merge(originalRecord: T, enrichedRecord: T): T =
     mergeFunc(originalRecord, enrichedRecord)
 }
 

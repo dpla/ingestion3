@@ -180,7 +180,7 @@ class NcMapping
     description(data).flatMap(_.applyAviationTags)
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("North Carolina Digital Heritage Center"),
     uri = Some(URI("http://dp.la/api/contributor/digitalnc"))
   )

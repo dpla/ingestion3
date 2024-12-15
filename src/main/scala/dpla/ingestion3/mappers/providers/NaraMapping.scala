@@ -467,16 +467,16 @@ class NaraMapping extends XmlMapping with XmlExtractor {
 
   /** removes the time portion of an ISO-8601 datetime
     *
-    * @param string
+    * @param string date string
     * @return
     *   string without the time, if there was one
     */
-  def removeTime(string: String): String = {
+  private def removeTime(string: String): String = {
     if (string.contains("T")) string.substring(0, string.indexOf('T'))
     else string
   }
 
-  def getDisplayDate(start: Option[Node], end: Option[Node]): Option[String] = {
+  private def getDisplayDate(start: Option[Node], end: Option[Node]): Option[String] = {
     if (start.isEmpty && end.isEmpty) {
       None
     } else {
@@ -486,19 +486,19 @@ class NaraMapping extends XmlMapping with XmlExtractor {
     }
   }
 
-  def simpleDate(nodeSeq: NodeSeq): Seq[EdmTimeSpan] =
+  private def simpleDate(nodeSeq: NodeSeq): Seq[EdmTimeSpan] =
     nodeSeq.map(node =>
       EdmTimeSpan(originalSourceDate = nodeToDateString(Some(node)))
     )
 
-  def lpad(string: String, digits: Int): String = {
+  private def lpad(string: String, digits: Int): String = {
     val trimString = string.trim
     if (trimString.isEmpty) string
     else if (!trimString.forall(Character.isDigit)) trimString
     else ("%0" + digits + "d").format(trimString.toInt)
   }
 
-  def nodeToDateString(nodeOption: Option[Node]): Option[String] =
+  private def nodeToDateString(nodeOption: Option[Node]): Option[String] =
     nodeOption match {
       case None => None
       case Some(node) =>
@@ -521,16 +521,15 @@ class NaraMapping extends XmlMapping with XmlExtractor {
       termName = (digitalObject \ "objectType" \ "termName").text.toLowerCase
 
       badPrefix = "https://opaexport-conv.s3.amazonaws.com/"
-      url = accessFileName.startsWith(badPrefix) match {
-        case false => accessFileName
-        case true => {
-          originalId(data) match {
-            case Some(id) =>
-              "https://catalog.archives.gov/OpaAPI/media/" +
-                id + "/content/" + accessFileName.stripPrefix(badPrefix)
-            case None => null
-          }
+      url = if (accessFileName.startsWith(badPrefix)) {
+        originalId(data) match {
+          case Some(id) =>
+            "https://catalog.archives.gov/OpaAPI/media/" +
+              id + "/content/" + accessFileName.stripPrefix(badPrefix)
+          case None => null
         }
+      } else {
+        accessFileName
       }
       if termName.contains("image") &&
         (termName.contains("jpg") || termName.contains("gif")) &&
@@ -609,8 +608,8 @@ class NaraMapping extends XmlMapping with XmlExtractor {
 }
 
 object NaraTypeVocabEnforcer {
-  val dcmiTypes = DCMIType()
-  val naraVocab: Map[String, IRI] = Map(
+  private val dcmiTypes = DCMIType()
+  private val naraVocab: Map[String, IRI] = Map(
     "architectural and engineering drawings" -> dcmiTypes.Image,
     "artifacts" -> dcmiTypes.PhysicalObject,
     "data files" -> dcmiTypes.Dataset,
@@ -622,7 +621,7 @@ object NaraTypeVocabEnforcer {
     "web pages" -> dcmiTypes.InteractiveResource
   )
 
-  val naraTypeMapper = new TypeEnrichment
+  private val naraTypeMapper = new TypeEnrichment
   naraTypeMapper.addVocab(naraVocab)
 
   def mapNaraType(value: String): Option[String] = naraTypeMapper.enrich(value)

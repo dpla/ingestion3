@@ -1,20 +1,15 @@
 package dpla.ingestion3.confs
 
-import java.net.URL
-
 import com.typesafe.config.Config
 
-import scala.io.{BufferedSource, Source}
-import scala.util.{Failure, Success, Try}
+import java.net.URL
+import scala.io.Source
+import scala.util.{Try, Using}
 
 trait ConfUtils {
 
   /** TODO: There are multiple "validateUrl" methods floating around the
     * project. Need to find them all and consolidate.
-    *
-    * @param url
-    * @return
-    *   Boolean
     */
   def validateUrl(url: String): Boolean = Try {
     url match {
@@ -45,12 +40,10 @@ trait ConfUtils {
     * @return
     *   Option[String] The contents of the file or None
     */
-  def getLocalConf(path: String): Option[String] = Try {
-    Source.fromFile(path).getLines.mkString("\n")
-  } match {
-    case Success(s) => Some(s)
-    case Failure(_) => None
-  }
+  private def getLocalConf(path: String): Option[String] =
+    Using(Source.fromFile(path)) { source =>
+      source.getLines.mkString("\n")
+    }.toOption
 
   /** @param conf
     * @param prop
@@ -61,10 +54,10 @@ trait ConfUtils {
       conf: Config,
       prop: String,
       default: Option[String] = None
-  ): Option[String] = {
-    conf.hasPath(prop) match {
-      case true  => Some(conf.getString(prop))
-      case false => default
+  ): Option[String] =
+    if (conf.hasPath(prop)) {
+      Some(conf.getString(prop))
+    } else {
+      default
     }
-  }
 }

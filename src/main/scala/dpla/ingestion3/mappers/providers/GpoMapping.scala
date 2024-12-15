@@ -414,7 +414,7 @@ class GpoMapping extends MarcXmlMapping {
     ))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("United States Government Publishing Office (GPO)"),
     uri = Some(URI("http://dp.la/api/contributor/gpo"))
   )

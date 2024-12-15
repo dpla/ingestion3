@@ -70,21 +70,19 @@ class StringNormalizations {
       )
     )
 
-  def enrichUri(value: URI): URI = {
+  private def enrichUri(value: URI): URI =
     URI(value.toString.reduceWhitespace)
-  }
-  def enrichEdmRights(edmRights: URI): URI = {
-    val uri =
-      new java.net.URI(
-        edmRights.toString
-      ) // value already validated as URI in mapping
-    // normalize uri path
-    val path = if (uri.getPath.startsWith("/page/")) {
-      uri.getPath.replaceFirst("page", "vocab") // rightstatements.org cleanup
-    } else
-      uri.getPath
 
-    URI(s"http://${uri.getHost}$path") // normalize to http and drop parameters
+  private def enrichEdmRights(edmRights: URI): URI = {
+    // value already validated as URI in mapping
+    val uri = new java.net.URI(edmRights.toString)
+    // normalize uri path
+    val path = if (uri.getPath.startsWith("/page/"))
+      uri.getPath.replaceFirst("page", "vocab") // rightstatements.org cleanup
+    else
+      uri.getPath
+    // normalize to http and drop parameters
+    URI(s"http://${uri.getHost}$path")
   }
 
   def enrichEdmWebResource(edmWebResource: EdmWebResource): EdmWebResource =
@@ -105,7 +103,7 @@ class StringNormalizations {
       )
     )
 
-  def enrichEdmTimeSpan(edmTimeSpan: EdmTimeSpan): EdmTimeSpan =
+  private def enrichEdmTimeSpan(edmTimeSpan: EdmTimeSpan): EdmTimeSpan =
     edmTimeSpan.copy(
       originalSourceDate =
         edmTimeSpan.originalSourceDate.map(_.stripHTML.reduceWhitespace),
@@ -116,7 +114,7 @@ class StringNormalizations {
       end = edmTimeSpan.end.map(_.stripHTML.reduceWhitespace.stripDblQuotes)
     )
 
-  def enrichDplaPlace(dplaPlace: DplaPlace): DplaPlace =
+  private def enrichDplaPlace(dplaPlace: DplaPlace): DplaPlace =
     dplaPlace.copy(
       name = dplaPlace.name.map(_.stripHTML.reduceWhitespace),
       city = dplaPlace.city.map(_.stripHTML.reduceWhitespace),
@@ -129,7 +127,7 @@ class StringNormalizations {
       )
     )
 
-  def enrichDcmiTypeCollection(
+  private def enrichDcmiTypeCollection(
       collection: DcmiTypeCollection
   ): DcmiTypeCollection =
     collection.copy(
@@ -138,10 +136,9 @@ class StringNormalizations {
       isShownAt = collection.isShownAt.map(enrichEdmWebResource)
     )
 
-  def enrichRelation(relation: LiteralOrUri): LiteralOrUri = {
+  private def enrichRelation(relation: LiteralOrUri): LiteralOrUri =
     if (!relation.isUri)
       LiteralOrUri(relation.value.stripHTML.reduceWhitespace, isUri = false)
     else
       relation
-  }
 }

@@ -6,7 +6,7 @@ import dpla.ingestion3.confs.i3Conf
 import org.apache.commons.io.IOUtils
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.tools.tar.TarInputStream
-import dpla.ingestion3.harvesters.file.FileFilters.GzFileFilter
+import dpla.ingestion3.harvesters.file.FileFilters.gzFilter
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
@@ -117,7 +117,7 @@ class HathiFileHarvester(
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
 
     inFiles
-      .listFiles(new GzFileFilter)
+      .listFiles(gzFilter)
       .foreach(inFile => {
 
         val inputStream = getInputStream(inFile)

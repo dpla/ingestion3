@@ -99,6 +99,6 @@ class MeMapping
       data
     ))
 
-  def metadataRoot(data: Document[NodeSeq]): NodeSeq =
+  private def metadataRoot(data: Document[NodeSeq]): NodeSeq =
     data \ "metadata" \ "qualifieddc"
 }

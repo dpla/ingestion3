@@ -1,11 +1,11 @@
 package dpla.ingestion3.utils
 
+import dpla.ingestion3.harvesters.file.FileFilters
+
 import java.io.{BufferedWriter, File, FileWriter}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.apache.spark.sql.functions.col
-
-import dpla.ingestion3.harvesters.file.FileFilters.XmlFileFilter
 
 import scala.xml.XML
 
@@ -52,7 +52,6 @@ object NaraMergeUtil {
     *   - Path to save merged output
     *   - Spark master
     *
-    * @param args
     */
   def main(args: Array[String]): Unit = {
     if (args.length != 5) {
@@ -247,7 +246,7 @@ object NaraMergeUtil {
     if (!file.exists())
       return Seq() // if deletes do not exist do nothing
     val files =
-      if (file.isDirectory) file.listFiles(new XmlFileFilter).sorted
+      if (file.isDirectory) file.listFiles(FileFilters.xmlFilter).sorted
       else Array(file)
     files
       .flatMap(file => {
@@ -258,10 +257,6 @@ object NaraMergeUtil {
       .toSeq
   }
 
-  /** @param df
-    * @param spark
-    * @return
-    */
   def dropDuplicates(
       df: DataFrame,
       spark: SparkSession
@@ -285,9 +280,9 @@ object NaraMergeUtil {
     }
   }
 
-  /** Write logs
-    * @param logs
-    */
+  /**
+   * Write logs
+   */
   def getLogs(logs: MergeLogs): String = {
     val logText =
       s"""

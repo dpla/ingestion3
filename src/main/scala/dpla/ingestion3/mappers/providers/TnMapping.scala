@@ -296,7 +296,7 @@ class TnMapping
     ))
 
   // Helper methods
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Digital Library of Tennessee"),
     uri = Some(URI("http://dp.la/api/contributor/tennessee"))
   )

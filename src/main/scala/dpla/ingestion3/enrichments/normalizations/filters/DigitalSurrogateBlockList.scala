@@ -12,7 +12,6 @@ object DigitalSurrogateBlockList extends FilterList {
 
   // Defines where to get digital surrogate and format block terms
   override val files: Seq[String] = Seq(
-    // TODO This file list should be stored in a config file and not hard coded
     "/formats/dc.csv",
     "/formats/in.csv",
     "/formats/ohio.csv",

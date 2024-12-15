@@ -60,7 +60,7 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
     // messages are correctly collected
 
     // Put collected messages into copy of enriched
-    enriched.copy(messages = msgs.getAll().toSeq)
+    enriched.copy(messages = msgs.getAll.toSeq)
   }
 
   /** @param enriched

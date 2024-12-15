@@ -103,7 +103,7 @@ class CommunityWebsMapping
   override def `type`(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "type")
 
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Community Webs"),
     uri = Some(URI("http://dp.la/api/contributor/community-webs"))
   )

@@ -13,11 +13,11 @@ class OaiHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends LocalHarvester(spark, shortName, conf) {
+) extends Harvester(spark, shortName, conf) {
 
   override def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
-  override def localHarvest(): DataFrame = {
+  override def harvest: DataFrame = {
     // Set options.
     val readerOptions: Map[String, String] = Map(
       "verb" -> conf.harvest.verb,

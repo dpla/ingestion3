@@ -3,7 +3,7 @@ package dpla.ingestion3.harvesters.file
 import java.io.{BufferedReader, File, FileInputStream}
 import java.util.zip.GZIPInputStream
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.file.FileFilters.{GzFileFilter, XmlFileFilter}
+import dpla.ingestion3.harvesters.file.FileFilters.{avroFilter, gzFilter, xmlFilter}
 import dpla.ingestion3.harvesters.{AvroHelper, Harvester, LocalHarvester}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
@@ -221,7 +221,7 @@ class NaraFileHarvester(
     val deletes = new File(inFile, "/deletes/")
 
     if (inFile.isDirectory)
-      for (file: File <- inFile.listFiles(new GzFileFilter).sorted) {
+      for (file: File <- inFile.listFiles(gzFilter).sorted) {
         logger.info(s"Harvesting from ${file.getName}")
         harvestFile(file, unixEpoch)
       }
@@ -234,7 +234,7 @@ class NaraFileHarvester(
     // Get the absolute path of the avro file written to naraTmp directory. copyFromLocalFile() cannot copy
     // a directory
     val naraTempFile = new File(naraTmp)
-      .listFiles(new AvroFileFilter)
+      .listFiles(avroFilter)
       .headOption
       .getOrElse(
         throw new RuntimeException(
@@ -281,7 +281,7 @@ class NaraFileHarvester(
     import spark.implicits._
 
     val files =
-      if (file.isDirectory) file.listFiles(new XmlFileFilter).sorted
+      if (file.isDirectory) file.listFiles(xmlFilter).sorted
       else Array(file)
 
     files

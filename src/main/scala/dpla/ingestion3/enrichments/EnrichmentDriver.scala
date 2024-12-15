@@ -1,6 +1,5 @@
 package dpla.ingestion3.enrichments
 
-import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.enrichments.date.DateBuilder
 import dpla.ingestion3.model._
 import dpla.ingestion3.enrichments.normalizations.StandardNormalizations._
@@ -8,12 +7,12 @@ import dpla.ingestion3.model.DplaMapData.ZeroToOne
 
 import scala.util.Try
 
-class EnrichmentDriver(conf: i3Conf) extends Serializable {
+class EnrichmentDriver extends Serializable {
 
-  val dateEnrichment = new DateBuilder()
+  private val dateEnrichment = new DateBuilder()
   val languageEnrichment = new LanguageEnrichment
   val typeEnrichment = new TypeEnrichment
-  val wikiEntityEnrichment = new WikiEntityEnrichment
+  private val wikiEntityEnrichment = new WikiEntityEnrichment
 
   lazy private val dplaContributorUri = "http://dp.la/api/contributor/"
 
@@ -26,7 +25,7 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
     *   Label of dataProvider
     * @return
     */
-  def createDataProviderUri(name: ZeroToOne[String]): ZeroToOne[URI] =
+  private def createDataProviderUri(name: ZeroToOne[String]): ZeroToOne[URI] =
     name match {
       case Some(dataProvider) =>
         val providerLabel = dataProvider.toLowerCase // lowercase
@@ -40,7 +39,7 @@ class EnrichmentDriver(conf: i3Conf) extends Serializable {
         )
     }
 
-  def enrichDataProvider(record: OreAggregation): EdmAgent = {
+  private def enrichDataProvider(record: OreAggregation): EdmAgent = {
     val enrichedWithWikiEntity: EdmAgent = wikiEntityEnrichment.enrichEntity(
       record.dataProvider,
       Option(record.provider)

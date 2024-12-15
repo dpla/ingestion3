@@ -5,7 +5,7 @@ import dpla.ingestion3.enrichments.normalizations.filters.{
   DigitalSurrogateBlockList,
   FormatTypeValuesBlockList
 }
-import dpla.ingestion3.mappers.utils.{Document, XmlMapping, XmlExtractor}
+import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
@@ -130,7 +130,7 @@ class DcMapping extends XmlMapping with XmlExtractor {
     ))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("District Digital"),
     uri = Some(URI("http://dp.la/api/contributor/dc"))
   )

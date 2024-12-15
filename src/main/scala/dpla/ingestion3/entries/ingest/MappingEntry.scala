@@ -10,7 +10,10 @@ import org.apache.spark.SparkConf
   * (e.g. 'mdl', 'cdl', 'harvard') 5) spark master (optional parameter that
   * overrides a --master param submitted via spark-submit)
   *
-  * Usage ----- To invoke via sbt: sbt "run-main dpla.ingestion3.MappingEntry
+  * Usage
+  * -----
+  * To invoke via sbt:
+  * sbt "run-main dpla.ingestion3.MappingEntry
   * --input=/input/path/to/harvested/ --output=/output/path/to/mapped/
   * --conf=/path/to/conf --name=shortName" --sparkMaster=local[*]
   */

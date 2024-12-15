@@ -35,7 +35,7 @@ object HttpUtils {
   def makeGetRequest(
       url: URL,
       headers: Option[Map[String, String]] = None
-  ): String = {
+  ): String =
     retry(RETRIES, INITIAL_SLEEP)(
       execute(constructRequest(url, headers))
     ) match {
@@ -44,7 +44,6 @@ object HttpUtils {
         logger.error(s"Failed to get response from $url", e)
         throw e
     }
-  }
 
   /** Give me a ping Vasili. One ping only.
     *
@@ -52,12 +51,11 @@ object HttpUtils {
     *   URL to ping
     * @return
     */
-  def validateUrl(url: String): Boolean = {
+  def validateUrl(url: String): Boolean =
     Try { new URL(url) } match {
       case Success(_) => true
       case Failure(_) => false
     }
-  }
 
   /** Executes the Request
     *
@@ -68,7 +66,6 @@ object HttpUtils {
     */
   private def execute(request: HttpRequest): String = {
     val response = httpClient.send(request, BodyHandlers.ofString())
-
     if (response.statusCode() == 200) {
       response.body()
     } else {
@@ -77,7 +74,6 @@ object HttpUtils {
         s"Message: ${response.body()}\n"
       throw new RuntimeException(msg)
     }
-
   }
 
   /** Generic retry method. Taken from stackoverflow...
@@ -93,7 +89,7 @@ object HttpUtils {
     * @return
     */
   @annotation.tailrec
-  private def retry[T](n: Int, wait: Long)(fn: => T): Try[T] = {
+  private def retry[T](n: Int, wait: Long)(fn: => T): Try[T] =
     util.Try { fn } match {
       case x: Success[T] => x
       // If we haven't maxed out our retries
@@ -106,7 +102,6 @@ object HttpUtils {
       // Retries exhausted, return whatever the last result was
       case fn => fn
     }
-  }
 
   /** Constructs a Request object from the URL and headers
     *

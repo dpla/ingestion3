@@ -16,8 +16,7 @@ object StringNormalizationUtils {
 
   implicit class Normalizations(value: String) {
 
-    type SingleStringEnrichment = String
-    type MultiStringEnrichment = Array[String]
+    private type SingleStringEnrichment = String
 
     /** Accepts a set of Strings to preserve in the original value. Those string
       * values can be literal strings or regular expressions. Regular
@@ -49,7 +48,7 @@ object StringNormalizationUtils {
     /** Applies the provided set of patterns and removes all matches from the
       * original string
       */
-    lazy val applyBlockFilter: Set[String] => String = (termList) =>
+    lazy val applyBlockFilter: Set[String] => String = termList =>
       termList
         .foldLeft(value) { case (string, pattern) =>
           Option(string.replaceAll(pattern, "").reduceWhitespace)
@@ -58,11 +57,10 @@ object StringNormalizationUtils {
 
     /** Find and capitalize the first character in a given string
       *
-      * 3 blind mice -> 3 blind mice three blind mice -> Three blind mice.
-      * ...vacationland... -> ...Vacationland... The first bike -> The first
-      * bike
-      *
-      * @return
+      * 3 blind mice -> 3 blind mice
+      * three blind mice -> Three blind mice.
+      * ...vacationland... -> ...Vacationland...
+      * The first bike -> The first bike
       */
     lazy val capitalizeFirstChar: SingleStringEnrichment = {
       val charIndex = findFirstChar(value)
@@ -72,17 +70,17 @@ object StringNormalizationUtils {
         value
     }
 
-    /** Removes trailing colons, semi-colons, commas, slashes, hyphens and
+    /** Removes trailing colons, semicolons, commas, slashes, hyphens and
       * whitespace characters (whitespace, tab, new line and line feed) that
       * follow the last letter or digit
       */
     lazy val cleanupEndingPunctuation: SingleStringEnrichment = {
       // FIXME rewrite as a regular expression
       val endIndex = value.lastIndexWhere(_.isLetterOrDigit)
-      if (endIndex == -1)
-        // If there is nothing to cleanup then return the existing string
+      if (endIndex == -1) {
+        // If there is nothing to clean up then return the existing string
         value
-      else {
+      } else {
         val start = value.substring(0, endIndex + 1)
         val end = value.substring(endIndex + 1)
         val cleanEnd = end.replaceAll(beginAndEndPunctuationToRemove, "")
@@ -94,10 +92,10 @@ object StringNormalizationUtils {
       */
     lazy val cleanupEndingCommaAndSpace: SingleStringEnrichment = {
       val endIndex = value.lastIndexWhere(_.isLetterOrDigit)
-      if (endIndex == -1)
-        // If there is nothing to cleanup then return the existing string
+      if (endIndex == -1) {
+        // If there is nothing to clean up then return the existing string
         value
-      else {
+      } else {
         val start = value.substring(0, endIndex + 1)
         val end = value.substring(endIndex + 1)
         val cleanEnd = end.replaceAll("""[,\s]""", "")
@@ -105,7 +103,7 @@ object StringNormalizationUtils {
       }
     }
 
-    /** Removes leading colons, semi-colons, commas, slashes, hyphens and
+    /** Removes leading colons, semicolons, commas, slashes, hyphens and
       * whitespace characters (whitespace, tab, new line and line feed) that
       * precede the first letter or digit
       */
@@ -136,17 +134,16 @@ object StringNormalizationUtils {
     /** */
     lazy val extractExtents: SingleStringEnrichment =
       value
-        .applyAllowFilter(
-          ExtentIdentificationList.termList
-        ) // allow things that look like extents
-        .applyBlockFilter(ExtentExceptionsList.termList) // block exceptions
+        // allow things that look like extents
+        .applyAllowFilter(ExtentIdentificationList.termList)
+        // block exceptions
+        .applyBlockFilter(ExtentExceptionsList.termList)
 
     /** Truncates the string at the specified length
       */
-    lazy val limitCharacters: (Int) => (String) = (length) => {
+    lazy val limitCharacters: Int => String = length =>
       if (value.length > length) value.substring(0, length)
       else value
-    }
 
     /** Reduce multiple whitespace values to a single and removes leading and
       * trailing white space
@@ -173,37 +170,32 @@ object StringNormalizationUtils {
             newCoordinates
           else
             ""
-        case _ =>
-          ""
+        case _ => ""
       }
 
     /** Splits a String value around a given delimiter.
       */
-    lazy val splitAtDelimiter: (String) => Array[String] = (delimiter) => {
+    lazy val splitAtDelimiter: (String) => Array[String] = delimiter => {
       value.split(delimiter).map(_.trim).filter(_.nonEmpty)
     }
 
     /** If string does not contain an opening bracket, strip all closing
       * brackets.
       */
-    lazy val stripUnmatchedClosingBrackets: SingleStringEnrichment = {
+    lazy val stripUnmatchedClosingBrackets: SingleStringEnrichment =
       if (value.contains("[")) value
       else value.replace("]", "")
-    }
 
-    /** If string does not contain an closing bracket, strip all opening
+    /** If string does not contain a closing bracket, strip all opening
       * brackets.
       */
-    lazy val stripUnmatchedOpeningBrackets: SingleStringEnrichment = {
+    lazy val stripUnmatchedOpeningBrackets: SingleStringEnrichment =
       if (value.contains("]")) value
       else value.replace("[", "")
-    }
 
     /** Strip all double quotes from the given string
       */
     lazy val stripDblQuotes: SingleStringEnrichment = value.replaceAll("\"", "")
-
-    /** */
 
     lazy val stripHTML: SingleStringEnrichment = {
       val unescaped = StringEscapeUtils.unescapeHtml4(value)
@@ -219,12 +211,11 @@ object StringNormalizationUtils {
     /** Removes singular period from the end of a string. Ignores and removes
       * trailing whitespace
       */
-    lazy val stripEndingPeriod: SingleStringEnrichment = {
+    lazy val stripEndingPeriod: SingleStringEnrichment =
       if (value.matches(""".*?[^\.]\.[\n\r\s]*$"""))
         value.replaceAll("""\.[\n\r\s\h\v]*$""", "")
       else
         value
-    }
 
     /** Punctuation and whitespace characters that should be removed from
       * leading and trailing parts of string
@@ -241,9 +232,8 @@ object StringNormalizationUtils {
       *   String to search
       * @return
       */
-    private def findFirstChar(str: String): Int = {
+    private def findFirstChar(str: String): Int =
       str.indexWhere(_.isLetterOrDigit)
-    }
 
     /** Replaces the character at the specified index in s with c
       *

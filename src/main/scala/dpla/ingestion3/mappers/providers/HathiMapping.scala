@@ -337,7 +337,7 @@ class HathiMapping extends MarcXmlMapping {
   )
 
   // <datafield> tags for description
-  val descriptionTags: Seq[String] =
+  private val descriptionTags: Seq[String] =
     (500 to 599).filterNot(_ == 538).map(_.toString)
 
   // <datafield> tags for subjects
@@ -507,7 +507,7 @@ class HathiThumbnailFetcher(
     .flatMap(extractUrl)
 
   // Make GET request to Google Books
-  def googleResponse(requestUrl: String): Try[String] = {
+  private def googleResponse(requestUrl: String): Try[String] = {
     val userAgent: String =
       "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:20.0) Gecko/20100101 Firefox/20.0"
     val headers: Option[Map[String, String]] = Some(

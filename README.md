@@ -840,34 +840,38 @@ Overall eligibility is controlled in the [institutions_v2.json](https://github.c
 A `hub` can have `"upload": true` and all `dataProviders` will have their records evaluated for eligibility.
 
 ```json
-"National Archives and Records Administration": {
-  "Wikidata": "Q518155",
-  "upload": true,
-  "institutions": {
-      ...
-    },
+{
+  "National Archives and Records Administration": {
+    "Wikidata": "Q518155",
+    "upload": true,
+    "institutions": {
+      
+    }
+  }
 }
 ```
 
 A hub can have defined `"upload": false` and specific `dataProviders` (defined as `institutions` in the `instituions_v2.json` file) within that hub can have `"upload": true` and only those `dataProviders` will have records evaluated for eligibly in the Wikimedia project. 
 
 ```json
-"Ohio Digital Network": {
-  "Wikidata": "Q83878495",
-  "upload": false,
-  "institutions": {
-    "Cleveland Public Library": {
+{
+  "Ohio Digital Network": {
+    "Wikidata": "Q83878495",
+    "upload": false,
+    "institutions": {
+      "Cleveland Public Library": {
         "Wikidata": "Q69487402",
         "upload": true
-    },
-    ...
+      }
+    }
+  }
 }
 ```
 
 In addition to how institutional eligibility is defined in `institutions_v2.json` records must meet three minimum metadata requirements to be eligible for upload.
 
 ### Standardized rights
-The record must have an `edmRights` URI and it must be one of these values. All ports and versions of these values are valid.
+The record must have an `edmRights` URI, and it must be one of these values. All ports and versions of these values are valid.
 ```text
 http://rightsstatements.org/vocab/NoC-US/
 http://creativecommons.org/publicdomain/mark/

@@ -12,7 +12,7 @@ import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
-class LcMapping() extends JsonMapping with JsonExtractor {
+class LcMapping extends JsonMapping with JsonExtractor {
 
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++

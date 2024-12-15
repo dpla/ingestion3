@@ -50,7 +50,7 @@ class OklahomaMapping
       .map(nameOnlyCollection)
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    // when <role><roleTerm> DOES equal "contributor>
+    // when <role><roleTerm> DOES equal <contributor>
     (data \\ "name")
       .filter(node =>
         (node \ "role" \ "roleTerm").text.equalsIgnoreCase("contributor")
@@ -92,7 +92,7 @@ class OklahomaMapping
     extractStrings(data \\ "physicalDescription" \ "extent")
 
   override def format(data: Document[NodeSeq]): Seq[String] =
-    // <mods:genre> AND <mods:physicialDescription><mods:note>
+    // <mods:genre> AND <mods:physicalDescription><mods:note>
     extractStrings(data \\ "genre") ++
       extractStrings(data \\ "physicalDescription" \ "note")
 
@@ -218,7 +218,7 @@ class OklahomaMapping
     ))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("OKHub"),
     uri = Some(URI("http://dp.la/api/contributor/oklahoma"))
   )

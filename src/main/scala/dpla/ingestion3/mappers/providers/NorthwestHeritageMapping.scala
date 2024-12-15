@@ -24,7 +24,7 @@ class NorthwestHeritageMapping
     DigitalSurrogateBlockList.termList ++
       FormatTypeValuesBlockList.termList
 
-  val latLongRegex =
+  private val latLongRegex =
     "^[-+]?([1-8]?\\d(\\.\\d+)?|90(\\.0+)?),\\s*[-+]?(180(\\.0+)?|((1[0-7]\\d)|([1-9]?\\d))(\\.\\d+)?)$"
 
   // ID minting functions
@@ -145,7 +145,7 @@ class NorthwestHeritageMapping
     mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    // note @type='ownershpip'
+    // note @type='ownership'
     (getRoot(data) \ "note")
       .flatMap(node => getByAttribute(node, "type", "ownership"))
       .flatMap(extractStrings)
@@ -195,12 +195,12 @@ class NorthwestHeritageMapping
     Seq(URI("nwdh"))
 
   // Helper method
-  def agent = EdmAgent(
+  def agent: EdmAgent = EdmAgent(
     name = Some("Northwest Digital Heritage"),
     uri = Some(URI("http://dp.la/api/contributor/northwest-digital-heritage"))
   )
 
-  def getRoot(data: Document[NodeSeq]): NodeSeq = {
+  private def getRoot(data: Document[NodeSeq]): NodeSeq = {
     data \ "metadata" \ "mods"
   }
 }
