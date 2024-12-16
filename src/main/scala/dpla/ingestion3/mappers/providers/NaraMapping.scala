@@ -215,7 +215,7 @@ class NaraMapping extends XmlMapping with XmlExtractor {
         }
       } else {
         accessFileName
-      }
+      }.replaceFirst("https/", "https:/") // some urls are missing the colon for some reason.
   } yield stringOnlyWebResource(url)
 
   override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
@@ -530,7 +530,7 @@ class NaraMapping extends XmlMapping with XmlExtractor {
         }
       } else {
         accessFileName
-      }
+      }.replaceFirst("https/", "https:/") // some urls are missing the colon for some reason.
       if termName.contains("image") &&
         (termName.contains("jpg") || termName.contains("gif")) &&
         url != null
