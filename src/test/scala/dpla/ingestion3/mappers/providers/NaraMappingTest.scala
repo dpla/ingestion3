@@ -25,9 +25,8 @@ class NaraMappingTest extends AnyFlatSpec with BeforeAndAfter {
   it should "pass through the short name to ID minting" in
     assert(extractor.getProviderName === shortName)
 
-  it should "extract original ID" in {
+  it should "extract original ID" in
     assert(extractor.originalId(xml) === Some("2132862"))
-  }
 
   it should "construct the correct item uri" in
     assert(extractor.itemUri(xml) === itemUri)
@@ -177,23 +176,20 @@ class NaraMappingTest extends AnyFlatSpec with BeforeAndAfter {
     assert(dataProvider === Seq(nameOnlyAgent("National Archives at Chicago")))
   }
 
-  it should "contain the hub agent as the provider" in {
+  it should "contain the hub agent as the provider" in
     assert(
       extractor.provider(xml) === EdmAgent(
         name = Some("National Archives and Records Administration"),
         uri = Some(URI("http://dp.la/api/contributor/nara"))
       )
     )
-  }
 
-  it should "contain the correct isShownAt" in {
+  it should "contain the correct isShownAt" in
     assert(extractor.isShownAt(xml) === Seq(uriOnlyWebResource(itemUri)))
-  }
 
   //todo should we eliminate these default thumbnails?
-  it should "find the item previews" in {
+  it should "find the item previews" in
     assert(extractor.preview(xml) === Seq(uriOnlyWebResource(URI("https://nara-media-001.s3.amazonaws.com/arcmedia/great-lakes/001/517805_a.jpg"))))
-  }
 
   it should "not map previews with invalid term names" in {
     val xml = <item>
@@ -228,6 +224,23 @@ class NaraMappingTest extends AnyFlatSpec with BeforeAndAfter {
     assert(extractor.preview(Document(xml)) === Seq(uriOnlyWebResource(URI(correctUrl))))
   }
 
+  it should "correct preview URLs that have a mangled scheme" in {
+    val xml = <item>
+      <naId>51046777</naId>
+      <digitalObjectArray>
+        <digitalObject>
+          <accessFilename>https//abcd.s3.amazonaws.com/TB149/Civil_War_Service_Index/M545-CW_ServRecdIndexUnion_MI/M545_0042/images/2514.jpg</accessFilename>
+          <objectType>
+            <termName>Image (JPG)</termName>
+          </objectType>
+        </digitalObject>
+      </digitalObjectArray>
+    </item>
+
+    val correctUrl = "https://abcd.s3.amazonaws.com/TB149/Civil_War_Service_Index/M545-CW_ServRecdIndexUnion_MI/M545_0042/images/2514.jpg"
+    assert(extractor.preview(Document(xml)) === Seq(uriOnlyWebResource(URI(correctUrl))))
+  }
+
   it should "not map previews that depend on providerIds if providerId is missing" in {
     val xml = <item>
       <digitalObjectArray>
@@ -243,6 +256,29 @@ class NaraMappingTest extends AnyFlatSpec with BeforeAndAfter {
     assert(extractor.preview(Document(xml)) === Seq())
   }
 
+  it should "fix mediaMaster URLs that begin with https/" in {
+    val xml = <item>
+      <naId>51046777</naId>
+      <digitalObjectArray>
+        <digitalObject>
+          <accessFilename>https//abcd.s3.amazonaws.com/TB149/Civil_War_Service_Index/M545-CW_ServRecdIndexUnion_MI/M545_0042/images/2514.jpg</accessFilename>
+          <objectType>
+            <termName>Image (JPG)</termName>
+          </objectType>
+        </digitalObject>
+        <digitalObject>
+          <accessFilename>https//abcd.s3.amazonaws.com/TB149/Civil_War_Service_Index/M545-CW_ServRecdIndexUnion_MI/M545_0042/images/2516.jpg</accessFilename>
+          <objectType>
+            <termName>Image (JPG)</termName>
+          </objectType>
+        </digitalObject>
+      </digitalObjectArray>
+    </item>
+
+    val correctUrls = Seq("https://abcd.s3.amazonaws.com/TB149/Civil_War_Service_Index/M545-CW_ServRecdIndexUnion_MI/M545_0042/images/2514.jpg",
+      "https://abcd.s3.amazonaws.com/TB149/Civil_War_Service_Index/M545-CW_ServRecdIndexUnion_MI/M545_0042/images/2516.jpg")
+    assert(extractor.preview(Document(xml)) === correctUrls.map(stringOnlyWebResource))
+  }
 
   it should "map multiple mediaMaster URLs that begin with https://opaexport-conv.s3.amazonaws.com/" in {
     val xml = <item>
