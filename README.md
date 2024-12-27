@@ -1,6 +1,4 @@
 ![Build Badge](https://github.com/dpla/ingestion3/actions/workflows/scala.yml/badge.svg)
-[![Codacy Quality Badge](https://app.codacy.com/project/badge/Grade/a1ec204babbd41f68c71617220357596)](https://app.codacy.com/gh/dpla/ingestion3/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
-[![Codacy Coverage Badge](https://app.codacy.com/project/badge/Coverage/a1ec204babbd41f68c71617220357596)](https://app.codacy.com/gh/dpla/ingestion3/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 ---
 # DPLA Ingestion 3
 
