@@ -115,7 +115,7 @@ class VtFileHarvester(
                 .getLogger(this.getClass)
                 .error(s"Caught exception on $inFile.", exception)
 
-            case Success(count) => _
+            case Success(count) => ()
           }
         )
         IOUtils.closeQuietly(inputStream)
