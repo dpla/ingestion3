@@ -40,13 +40,12 @@ class DlgFileHarvester(
     * @return
     *   ZipInputstream of the zip contents
     */
-  def getInputStream(file: File): Option[ZipInputStream] = {
+  def getInputStream(file: File): Option[ZipInputStream] =
     file.getName match {
       case zipName if zipName.endsWith("zip") =>
         Some(new ZipInputStream(new FileInputStream(file)))
       case _ => None
     }
-  }
 
   /** Parses JValue to extract item local item id and renders compact full
     * record
@@ -73,14 +72,12 @@ class DlgFileHarvester(
     * @return
     *   Count of metadata items found.
     */
-  def handleFile(zipResult: FileResult, unixEpoch: Long): Try[Int] = {
-
+  def handleFile(zipResult: FileResult, unixEpoch: Long): Try[Int] =
     zipResult.bufferedData match {
       case None =>
         Success(0) // a directory, no results
       case Some(data) =>
         Try {
-
           // Assume that each line of the file contains a single record.
           var line: String = data.readLine
           var itemCount: Int = 0
@@ -109,13 +106,12 @@ class DlgFileHarvester(
           itemCount
         }
     }
-  }
 
   /** Implements a stream of files from the zip Can't use @tailrec here because
     * the compiler can't recognize it as tail recursive, but this won't blow the
     * stack.
     *
-    * @param zipInputStream
+    * @param zipInputStream ZipInputStream from the zip file
     * @return
     *   Lazy stream of zip records
     */
@@ -146,7 +142,7 @@ class DlgFileHarvester(
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        for (result <- iter(inputStream)) yield {
+        iter(inputStream).foreach(result => {
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               LogManager
@@ -154,7 +150,7 @@ class DlgFileHarvester(
                 .error(s"Caught exception on $inFile.", exception)
             case _ => //do nothing
           }
-        }
+        })
         IOUtils.closeQuietly(inputStream)
       })
 
