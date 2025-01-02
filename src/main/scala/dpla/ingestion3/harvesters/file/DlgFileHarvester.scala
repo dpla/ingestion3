@@ -33,19 +33,6 @@ class DlgFileHarvester(
 
   protected val extractor = new DlgFileExtractor()
 
-  /** Loads .zip files
-    *
-    * @param file
-    *   File to parse
-    * @return
-    *   ZipInputstream of the zip contents
-    */
-  def getInputStream(file: File): Option[ZipInputStream] =
-    file.getName match {
-      case zipName if zipName.endsWith("zip") =>
-        Some(new ZipInputStream(new FileInputStream(file)))
-      case _ => None
-    }
 
   /** Parses JValue to extract item local item id and renders compact full
     * record
@@ -107,26 +94,6 @@ class DlgFileHarvester(
         }
     }
 
-  /** Implements a stream of files from the zip Can't use @tailrec here because
-    * the compiler can't recognize it as tail recursive, but this won't blow the
-    * stack.
-    *
-    * @param zipInputStream ZipInputStream from the zip file
-    * @return
-    *   Lazy stream of zip records
-    */
-  def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
-    Option(zipInputStream.getNextEntry) match {
-      case None =>
-        LazyList.empty
-      case Some(entry) =>
-        val result =
-          if (entry.isDirectory)
-            None
-          else
-            Some(new BufferedReader(new InputStreamReader(zipInputStream)))
-        FileResult(entry.getName, None, result) #:: iter(zipInputStream)
-    }
 
   /** Executes the Georgia harvest
     */
@@ -138,11 +105,11 @@ class DlgFileHarvester(
     inFiles
       .listFiles(zipFilter)
       .foreach(inFile => {
-        val inputStream: ZipInputStream = getInputStream(inFile)
+        val inputStream: ZipInputStream = FileHarvester.getZipInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        iter(inputStream).foreach(result => {
+        FileHarvester.iter(inputStream).foreach(result => {
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               LogManager

@@ -3,9 +3,9 @@ package dpla.ingestion3.harvesters.file
 import java.io.{File, FileInputStream}
 import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import org.apache.commons.io.IOUtils
-
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import dpla.ingestion3.harvesters.file.FileFilters.zipFilter
 import dpla.ingestion3.model.AVRO_MIME_XML
@@ -27,25 +27,6 @@ class VtFileHarvester(
 
   protected val extractor = new VtFileExtractor
 
-  /** Loads .zip files
-    *
-    * @param file
-    *   File to parse
-    * @return
-    *   ZipInputstream of the zip contents
-    *
-    * TODO: Because we're only handling zips in this class, and they should
-    * already be filtered by the FilenameFilter, I wonder if we even need the
-    * match statement here.
-    */
-  def getInputStream(file: File): Option[ZipInputStream] = {
-    file.getName match {
-      case zipName if zipName.endsWith("zip") =>
-        Some(new ZipInputStream(new FileInputStream(file)))
-      case _ => None
-    }
-  }
-
   /** Main logic for handling individual entries in the zip.
     *
     * @param zipResult
@@ -65,34 +46,13 @@ class VtFileHarvester(
           } match {
             case Success(xml) =>
               val id: String = zipResult.entryName
-              val outputXml: String = xmlToString(xml)
+              val outputXml: String = Harvester.xmlToString(xml)
               val item: ParsedResult = ParsedResult(id, outputXml)
               writeOut(unixEpoch, item)
               1
             case _ => 0
           }
         }
-    }
-
-  /** Implements a stream of files from the zip Can't use @tailrec here because
-    * the compiler can't recognize it as tail recursive, but this won't blow the
-    * stack.
-    *
-    * @param zipInputStream
-    * @return
-    *   Lazy stream of zip records
-    */
-  def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
-    Option(zipInputStream.getNextEntry) match {
-      case None =>
-        LazyList.empty
-      case Some(entry) =>
-        val result =
-          if (entry.isDirectory)
-            None
-          else
-            Some(IOUtils.toByteArray(zipInputStream, entry.getSize))
-        FileResult(entry.getName, result) #:: iter(zipInputStream)
     }
 
   /** Executes the Vermont harvest
@@ -105,36 +65,25 @@ class VtFileHarvester(
     inFiles
       .listFiles(zipFilter)
       .foreach(inFile => {
-        val inputStream = getInputStream(inFile)
+        val inputStream = FileHarvester.getZipInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        (for (result <- iter(inputStream)) yield {
+        FileHarvester.iter(inputStream).foreach(result =>
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               LogManager
                 .getLogger(this.getClass)
                 .error(s"Caught exception on $inFile.", exception)
-              0
-            case Success(count) =>
-              count
+
+            case Success(count) => ()
           }
-        }).sum
+        )
         IOUtils.closeQuietly(inputStream)
       })
 
     // Read harvested data into Spark DataFrame and return.
     spark.read.format("avro").load(tmpOutStr)
   }
-
-  /** Converts a Node to an xml string
-    *
-    * @param node
-    *   The root of the tree to write to a string
-    * @return
-    *   a String containing xml
-    */
-  def xmlToString(node: Node): String =
-    Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
 
 }

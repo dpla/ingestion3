@@ -3,6 +3,7 @@ package dpla.ingestion3.harvesters.file
 import java.io.{File, FileFilter, FileInputStream, InputStreamReader}
 import java.util.zip.GZIPInputStream
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.file.FileFilters.gzFilter
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.Utils
@@ -26,26 +27,6 @@ class SiFileHarvester(
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
-  /** Loads .gz files
-    *
-    * @param file
-    *   File to parse
-    * @return
-    *   Option[InputStreamReader] of the zip contents
-    *
-    * TODO: Because we're only handling zips in this class, and they should
-    * already be filtered by the FilenameFilter, I wonder if we even need the
-    * match statement here.
-    */
-  def getInputStream(file: File): Option[InputStreamReader] = {
-    file.getName match {
-      case zipName if zipName.endsWith("gz") =>
-        Some(
-          new InputStreamReader(new GZIPInputStream(new FileInputStream(file)))
-        )
-      case _ => None
-    }
-  }
 
   /** Takes care of parsing an xml file into a list of Nodes each representing
     * an item
@@ -66,7 +47,7 @@ class SiFileHarvester(
         val id = Option(
           (record \ "descriptiveNonRepeating" \ "record_ID").text
         )
-        val outputXML = xmlToString(record)
+        val outputXML = Harvester.xmlToString(record)
 
         id match {
           case None =>
@@ -125,7 +106,7 @@ class SiFileHarvester(
   private def getExpectedFileCounts(inFiles: File): Map[String, String] = {
     var loadCounts = Map[String, String]()
     inFiles
-      .listFiles(new TxtFileFilter)
+      .listFiles(FileFilters.txtFilter)
       .foreach(file => {
         Using(Source
           .fromFile(file)) { source =>
@@ -160,7 +141,7 @@ class SiFileHarvester(
     inFiles
       .listFiles(gzFilter)
       .foreach(inFile => {
-        val inputStream = getInputStream(inFile)
+        val inputStream = FileHarvester.getTarInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException(
               s"Couldn't load file, ${inFile.getAbsolutePath}"
@@ -168,7 +149,7 @@ class SiFileHarvester(
           )
 
         // create lineIterator to read contents one line at a time
-        val iter = IOUtils.lineIterator(inputStream)
+        val iter = IOUtils.lineIterator(inputStream, "utf-8")
 
         var lineCount: Int = 0
 
@@ -213,16 +194,6 @@ class SiFileHarvester(
     spark.read.format("avro").load(tmpOutStr)
   }
 
-  /** Converts a Node to an xml string
-    *
-    * @param node
-    *   The root of the tree to write to a string
-    * @return
-    *   a String containing xml
-    */
-  def xmlToString(node: Node): String =
-    Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
-
   /** Parses and extracts ZipInputStream and writes parses records out.
     *
     * @param fileResult
@@ -234,7 +205,3 @@ class SiFileHarvester(
 
 }
 
-class TxtFileFilter extends FileFilter {
-  override def accept(pathname: File): Boolean =
-    pathname.getName.endsWith("txt")
-}

@@ -1,6 +1,6 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
+import java.io.{File, FileInputStream}
 import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.zipFilter
@@ -8,7 +8,7 @@ import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.AVRO_MIME_JSON
 import org.apache.avro.generic.GenericData
 import org.apache.commons.io.IOUtils
-import org.apache.log4j.Logger
+
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -33,20 +33,6 @@ class FlFileHarvester(
 
   protected val extractor = new FlFileExtractor()
 
-  /** Loads .zip files
-    *
-    * @param file
-    *   File to parse
-    * @return
-    *   ZipInputstream of the zip contents
-    */
-  def getInputStream(file: File): Option[ZipInputStream] = {
-    file.getName match {
-      case zipName if zipName.endsWith("zip") =>
-        Some(new ZipInputStream(new FileInputStream(file)))
-      case _ => None
-    }
-  }
 
   /** Parses JValue to extract item local item id and renders compact full
     * record
@@ -111,27 +97,6 @@ class FlFileHarvester(
     }
   }
 
-  /** Implements a stream of files from the zip Can't use @tailrec here because
-    * the compiler can't recognize it as tail recursive, but this won't blow the
-    * stack.
-    *
-    * @param zipInputStream
-    * @return
-    *   Lazy stream of zip records
-    */
-  def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
-    Option(zipInputStream.getNextEntry) match {
-      case None =>
-        LazyList.empty
-      case Some(entry) =>
-        val result =
-          if (entry.isDirectory)
-            None
-          else
-            Some(new BufferedReader(new InputStreamReader(zipInputStream)))
-        FileResult(entry.getName, None, result) #:: iter(zipInputStream)
-    }
-
   /** Executes the Florida harvest
     */
   override def localHarvest(): DataFrame = {
@@ -142,17 +107,17 @@ class FlFileHarvester(
     inFiles
       .listFiles(zipFilter)
       .foreach(inFile => {
-        val inputStream: ZipInputStream = getInputStream(inFile)
+        val inputStream: ZipInputStream = FileHarvester.getZipInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        for (result <- iter(inputStream)) yield {
+        FileHarvester.iter(inputStream).foreach(result => {
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               LogManager.getLogger(this.getClass).error(s"Caught exception on $inFile.", exception)
             case _ => //do nothing
           }
-        }
+        })
         IOUtils.closeQuietly(inputStream)
       })
 

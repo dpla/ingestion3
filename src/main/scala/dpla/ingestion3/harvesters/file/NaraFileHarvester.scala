@@ -4,7 +4,7 @@ import java.io.{BufferedReader, File, FileInputStream}
 import java.util.zip.GZIPInputStream
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.{avroFilter, gzFilter, xmlFilter}
-import dpla.ingestion3.harvesters.{AvroHelper, LocalHarvester}
+import dpla.ingestion3.harvesters.{AvroHelper, Harvester, LocalHarvester}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
@@ -27,26 +27,6 @@ class NaraFileHarvester(
     shortName: String,
     conf: i3Conf
 ) extends LocalHarvester(spark, shortName, conf) {
-
-  /** Case class hold the parsed value from a given FileResult
-    */
-  case class ParsedResult(id: String, item: String)
-
-  /** Case class to hold the results of a file
-    *
-    * @param entryName
-    *   Path of the entry in the file
-    * @param data
-    *   Holds the data for the entry, or None if it's a directory.
-    * @param bufferedData
-    *   Holds a buffered reader for the entry if it's too large to be held in
-    *   memory.
-    */
-  case class FileResult(
-      entryName: String,
-      data: Option[Array[Byte]],
-      bufferedData: Option[BufferedReader] = None
-  )
 
   lazy val naraSchema: Schema =
     new Schema.Parser()
@@ -102,7 +82,7 @@ class NaraFileHarvester(
       case record: Node =>
         val id =
           (record \ "digitalObjectArray" \ "digitalObject" \ "objectIdentifier").text
-        val outputXML = xmlToString(record)
+        val outputXML = Harvester.xmlToString(record)
         Some(ParsedResult(id, outputXML))
       case _ =>
         val logger = LogManager.getLogger(this.getClass)
@@ -214,9 +194,9 @@ class NaraFileHarvester(
 
     logger.info(s"Writing harvest tmp output to $naraTmp")
 
-    // FIXME This assumes files on local file system and not on S3. Files should be able to read off of S3.
+
     val inFile = new File(conf.harvest.endpoint.getOrElse("in"))
-    // FIXME Deletes are tracked in files alongside harvest data, this should be done in a more sustainable way
+
     val deletes = new File(inFile, "/deletes/")
 
     if (inFile.isDirectory)
@@ -310,31 +290,19 @@ class NaraFileHarvester(
         )
       )
 
-    val recordCount = (for (tarResult <- iter(inputStream)) yield {
+    FileHarvester.iter(inputStream).foreach(tarResult =>
       handleFile(tarResult, unixEpoch, file.getName) match {
         case Failure(exception) =>
           val logger = LogManager.getLogger(this.getClass)
           logger
             .error(s"Caught exception on ${tarResult.entryName}.", exception)
-          0
-        case Success(count) =>
-          count
-      }
-    }).sum
 
-    val logger = LogManager.getLogger(this.getClass)
-    logger.info(s"Harvested $recordCount records from ${file.getName}")
+        case Success(count) => ()
+      }
+    )
 
     IOUtils.closeQuietly(inputStream)
   }
 
-  /** Converts a Node to an xml string
-    *
-    * @param node
-    *   The root of the tree to write to a string
-    * @return
-    *   a String containing xml
-    */
-  def xmlToString(node: Node): String =
-    Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
+
 }
