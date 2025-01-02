@@ -1,6 +1,6 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{BufferedReader, InputStreamReader}
+import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.{Harvester, LocalHarvester}
 import org.apache.avro.generic.GenericData
@@ -9,8 +9,9 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
 import org.apache.tools.tar.TarInputStream
 
-import java.util.zip.ZipInputStream
+import java.util.zip.{GZIPInputStream, ZipInputStream}
 import scala.util.Try
+import scala.xml._
 
 /** File based harvester
   *
@@ -46,18 +47,9 @@ abstract class FileHarvester(
     *   Harvested record
     */
 
-  def writeOut(unixEpoch: Long, item: ParsedResult): Unit = {
-    val avroWriter = getAvroWriter
-    val genericRecord = new GenericData.Record(Harvester.schema)
-    genericRecord.put("id", item.id)
-    genericRecord.put("ingestDate", unixEpoch)
-    genericRecord.put("provider", shortName)
-    genericRecord.put("document", item.item)
-    genericRecord.put("mimetype", mimeType)
-    avroWriter.append(genericRecord)
-  }
 
   def flush(): Unit = getAvroWriter.flush()
+
 
 }
 
@@ -83,6 +75,33 @@ case class FileResult(
 case class ParsedResult(id: String, item: String)
 
 object FileHarvester {
+
+  def getZipInputStream(file: File): Option[ZipInputStream] =
+    file.getName match {
+      case zipName if zipName.endsWith("zip") =>
+        Some(new ZipInputStream(new FileInputStream(file)))
+      case _ => None
+    }
+
+  /** Loads .tar.gz files
+   *
+   * @param file
+   *   File to parse
+   * @return
+   *   Option[TarInputStream] of the zip contents
+   */
+  def getTarInputStream(file: File): Option[TarInputStream] = {
+    file.getName match {
+      case zipName if zipName.endsWith("gz") =>
+        Some(new TarInputStream(new GZIPInputStream(new FileInputStream(file))))
+      case zipName if zipName.endsWith("tar") =>
+        Some(new TarInputStream(new FileInputStream(file)))
+
+      case _ => None
+    }
+  }
+
+
   def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
     Option(zipInputStream.getNextEntry) match {
       case None =>

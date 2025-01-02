@@ -37,20 +37,6 @@ class NYPLFileHarvester(
 
   protected val extractor = new FlFileExtractor()
 
-  /** Loads .zip files
-    *
-    * @param file
-    *   File to parse
-    * @return
-    *   ZipInputstream of the zip contents
-    */
-  def getInputStream(file: File): Option[ZipInputStream] = {
-    file.getName match {
-      case zipName if zipName.endsWith("zip") =>
-        Some(new ZipInputStream(new FileInputStream(file)))
-      case _ => None
-    }
-  }
 
   /** @param json
     *   Full JSON item record
@@ -130,7 +116,7 @@ class NYPLFileHarvester(
     inFiles
       .listFiles(zipFilter)
       .foreach(inFile => {
-        val inputStream: ZipInputStream = getInputStream(inFile)
+        val inputStream: ZipInputStream = FileHarvester.getZipInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )

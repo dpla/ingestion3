@@ -32,20 +32,6 @@ class HeartlandFileHarvester(
 
   protected val extractor = new HeartlandFileExtractor()
 
-  /** Loads .zip files
-    *
-    * @param file
-    *   File to parse
-    * @return
-    *   ZipInputstream of the zip contents
-    */
-  def getInputStream(file: File): Option[ZipInputStream] = {
-    file.getName match {
-      case zipName if zipName.endsWith("zip") =>
-        Some(new ZipInputStream(new FileInputStream(file)))
-      case _ => None
-    }
-  }
 
   /** Parses JValue to extract item local item id and renders compact full
     * record
@@ -121,7 +107,7 @@ class HeartlandFileHarvester(
     inFiles
       .listFiles(zipFilter)
       .foreach(inFile => {
-        val inputStream: ZipInputStream = getInputStream(inFile)
+        val inputStream: ZipInputStream = FileHarvester.getZipInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )

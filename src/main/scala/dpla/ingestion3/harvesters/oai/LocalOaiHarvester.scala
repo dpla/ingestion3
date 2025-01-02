@@ -1,6 +1,7 @@
 package dpla.ingestion3.harvesters.oai
 
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.harvesters.file.ParsedResult
 import dpla.ingestion3.harvesters.oai.refactor.{OaiConfiguration, OaiProtocol, OaiRecord, OaiSet}
 import dpla.ingestion3.harvesters.{Harvester, LocalHarvester}
 import dpla.ingestion3.model.AVRO_MIME_XML
@@ -61,7 +62,7 @@ class LocalOaiHarvester(
         page,
         removeDeleted = oaiConfig.removeDeleted()
       )
-    } writeRecord(unixEpoch, record)
+    } writeOut(unixEpoch, ParsedResult(record.id, record.document))
   }
 
   private def allSetsHarvest(): Unit = {
@@ -74,7 +75,7 @@ class LocalOaiHarvester(
         pageEither,
         removeDeleted = oaiConfig.removeDeleted()
       )
-    } writeRecord(unixEpoch, record)
+    } writeOut(unixEpoch, ParsedResult(record.id, record.document))
   }
 
   private def allRecordsHarvest(): Unit = {
@@ -85,7 +86,7 @@ class LocalOaiHarvester(
         pageEither,
         removeDeleted = oaiConfig.removeDeleted()
       )
-    } writeRecord(unixEpoch, record)
+    } writeOut(unixEpoch, ParsedResult(record.id, record.document))
   }
 
   private def banlistHarvest(
@@ -104,23 +105,8 @@ class LocalOaiHarvester(
         pageEither,
         removeDeleted = oaiConfig.removeDeleted()
       )
-    } writeRecord(unixEpoch, record)
+    } writeOut(unixEpoch, ParsedResult(record.id, record.document))
   }
-
-  private def writeRecord(
-      unixEpoch: Long,
-      record: OaiRecord
-  ): Unit = {
-    val genericRecord = new GenericData.Record(Harvester.schema)
-    genericRecord.put("id", record.id)
-    genericRecord.put("ingestDate", unixEpoch)
-    genericRecord.put("provider", shortName)
-    genericRecord.put("document", record.document)
-    genericRecord.put("mimetype", mimeType)
-    avroWriter.append(genericRecord)
-
-  }
-
   private def getUnixEpoch: Long = System.currentTimeMillis() / 1000L
 
 }

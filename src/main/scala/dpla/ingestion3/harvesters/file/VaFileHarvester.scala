@@ -3,6 +3,7 @@ package dpla.ingestion3.harvesters.file
 import java.io.{File, FileInputStream}
 import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import org.apache.commons.io.IOUtils
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -30,20 +31,7 @@ class VaFileHarvester(
 
   protected val extractor = new VaFileExtractor()
 
-  /** Loads .zip files
-    *
-    * @param file
-    *   File to parse
-    * @return
-    *   ZipInputstream of the zip contents
-    *
-    */
-  def getInputStream(file: File): Option[ZipInputStream] =
-    file.getName match {
-      case zipName if zipName.endsWith("zip") =>
-        Some(new ZipInputStream(new FileInputStream(file)))
-      case _ => None
-    }
+
 
   /** Main logic for handling individual entries in the zip.
     *
@@ -64,7 +52,7 @@ class VaFileHarvester(
           } match {
             case Success(xml) =>
               val id: String = zipResult.entryName
-              val outputXml: String = xmlToString(xml)
+              val outputXml: String = Harvester.xmlToString(xml)
               val item: ParsedResult = ParsedResult(id, outputXml)
               writeOut(unixEpoch, item)
               1
@@ -83,7 +71,7 @@ class VaFileHarvester(
     inFiles
       .listFiles(zipFilter)
       .foreach(inFile => {
-        val inputStream = getInputStream(inFile)
+        val inputStream = FileHarvester.getZipInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
@@ -106,14 +94,4 @@ class VaFileHarvester(
     // Read harvested data into Spark DataFrame and return.
     spark.read.format("avro").load(tmpOutStr)
   }
-
-  /** Converts a Node to an xml string
-    *
-    * @param node
-    *   The root of the tree to write to a string
-    * @return
-    *   a String containing xml
-    */
-  def xmlToString(node: Node): String =
-    Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
 }

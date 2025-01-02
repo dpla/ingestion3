@@ -1,11 +1,10 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{File, FileInputStream}
-import java.util.zip.GZIPInputStream
+import java.io.File
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.harvesters.Harvester
 import org.apache.commons.io.IOUtils
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.tools.tar.TarInputStream
 import dpla.ingestion3.harvesters.file.FileFilters.gzFilter
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import dpla.ingestion3.model.AVRO_MIME_XML
@@ -25,24 +24,6 @@ class HathiFileHarvester(
   private val logger = LogManager.getLogger(this.getClass)
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
-
-  /** Loads .tar.gz files
-    *
-    * @param file
-    *   File to parse
-    * @return
-    *   Option[TarInputStream] of the zip contents
-    */
-  def getInputStream(file: File): Option[TarInputStream] = {
-    file.getName match {
-      case zipName if zipName.endsWith("gz") =>
-        Some(new TarInputStream(new GZIPInputStream(new FileInputStream(file))))
-      case zipName if zipName.endsWith("tar") =>
-        Some(new TarInputStream(new FileInputStream(file)))
-
-      case _ => None
-    }
-  }
 
   /** Takes care of parsing an xml file into a list of Nodes each representing
     * an item
@@ -66,7 +47,7 @@ class HathiFileHarvester(
           .headOption
           .flatten
 
-        val outputXML = xmlToString(record)
+        val outputXML = Harvester.xmlToString(record)
 
         id match {
           case None =>
@@ -91,7 +72,7 @@ class HathiFileHarvester(
       .listFiles(gzFilter)
       .foreach(inFile => {
 
-        val inputStream = getInputStream(inFile)
+        val inputStream = FileHarvester.getTarInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException(
               s"Couldn't load file, ${inFile.getAbsolutePath}"
@@ -119,16 +100,6 @@ class HathiFileHarvester(
     // Read harvested data into Spark DataFrame and return.
     spark.read.format("avro").load(tmpOutStr)
   }
-
-  /** Converts a Node to an xml string
-    *
-    * @param node
-    *   The root of the tree to write to a string
-    * @return
-    *   a String containing xml
-    */
-  def xmlToString(node: Node): String =
-    Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
 
   /** Main logic for handling individual entries in the tar.
     *

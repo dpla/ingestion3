@@ -4,7 +4,7 @@ import java.io.{File, FileInputStream}
 import java.util.zip.GZIPInputStream
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.{avroFilter, gzFilter}
-import dpla.ingestion3.harvesters.{AvroHelper, LocalHarvester}
+import dpla.ingestion3.harvesters.{AvroHelper, Harvester, LocalHarvester}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
@@ -26,9 +26,6 @@ class NaraDeltaHarvester(
     conf: i3Conf
 ) extends LocalHarvester(spark, shortName, conf) {
 
-  /** Case class hold the parsed value from a given FileResult
-    */
-  case class ParsedResult(id: String, item: String)
 
   lazy val naraSchema: Schema =
     new Schema.Parser()
@@ -43,28 +40,6 @@ class NaraDeltaHarvester(
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
-  /** Loads .gz, .tgz, .bz, and .tbz2, and plain old .tar files.
-    *
-    * @param file
-    *   File to parse
-    * @return
-    *   TarInputstream of the tar contents
-    */
-  def getInputStream(file: File): Option[TarInputStream] =
-    file.getName match {
-      case gzName if gzName.endsWith("gz") || gzName.endsWith("tgz") =>
-        Some(new TarInputStream(new GZIPInputStream(new FileInputStream(file))))
-
-      case bz2name if bz2name.endsWith("bz2") || bz2name.endsWith("tbz2") =>
-        val inputStream = new FileInputStream(file)
-        inputStream.skip(2)
-        Some(new TarInputStream(new CBZip2InputStream(inputStream)))
-
-      case tarName if tarName.endsWith("tar") =>
-        Some(new TarInputStream(new FileInputStream(file)))
-
-      case _ => None
-    }
 
   /** Takes care of parsing an xml file into a list of Nodes each representing
     * an item
@@ -83,7 +58,7 @@ class NaraDeltaHarvester(
     } yield item match {
       case record: Node =>
         val id = (record \ "naId").text
-        val outputXML = xmlToString(record)
+        val outputXML = Harvester.xmlToString(record)
         Some(ParsedResult(id, outputXML))
       case _ =>
         val logger = LogManager.getLogger(this.getClass)
@@ -203,7 +178,7 @@ class NaraDeltaHarvester(
 
   private def harvestFile(file: File, unixEpoch: Long): Unit = {
     val logger = LogManager.getLogger(this.getClass)
-    val inputStream = getInputStream(file)
+    val inputStream = FileHarvester.getTarInputStream(file)
       .getOrElse(
         throw new IllegalArgumentException(
           s"Couldn't load tar file: ${file.getAbsolutePath}"
@@ -227,13 +202,4 @@ class NaraDeltaHarvester(
     IOUtils.closeQuietly(inputStream)
   }
 
-  /** Converts a Node to an XML string
-    *
-    * @param node
-    *   The root of the tree to write to a string
-    * @return
-    *   a String containing xml
-    */
-  def xmlToString(node: Node): String =
-    Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
 }

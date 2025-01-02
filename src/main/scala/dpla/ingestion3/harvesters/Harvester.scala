@@ -2,6 +2,7 @@ package dpla.ingestion3.harvesters
 
 import java.io.File
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.harvesters.file.ParsedResult
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
@@ -10,6 +11,7 @@ import org.apache.commons.io.FileUtils
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import scala.xml._
 
 abstract class Harvester(
     spark: SparkSession,
@@ -72,6 +74,17 @@ abstract class LocalHarvester(
 
   def getAvroWriter: DataFileWriter[GenericRecord] = avroWriter
 
+  def writeOut(unixEpoch: Long, item: ParsedResult): Unit = {
+    val avroWriter = getAvroWriter
+    val genericRecord = new GenericData.Record(Harvester.schema)
+    genericRecord.put("id", item.id)
+    genericRecord.put("ingestDate", unixEpoch)
+    genericRecord.put("provider", shortName)
+    genericRecord.put("document", item.item)
+    genericRecord.put("mimetype", mimeType)
+    avroWriter.append(genericRecord)
+  }
+
   override def cleanUp(): Unit = {
     avroWriter.flush()
     avroWriter.close()
@@ -81,6 +94,18 @@ abstract class LocalHarvester(
 }
 
 object Harvester {
+
+
+  /** Converts a Node to an xml string
+   *
+   * @param node
+   *   The root of the tree to write to a string
+   * @return
+   *   a String containing xml
+   */
+  def xmlToString(node: Node): String =
+    Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
+
 
   // Schema for harvested records.
   val schema: Schema =

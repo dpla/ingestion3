@@ -32,21 +32,6 @@ class DplaJsonlFileHarvester(
 
   protected val extractor = new DplaJsonlFileExtractor()
 
-  /** Loads .zip files containing DPLA JSONL
-    *
-    * @param file
-    *   File to parse
-    * @return
-    *   FileInputStream of the file contents
-    */
-  def getInputStream(file: File): Option[ZipInputStream] = {
-    file.getName match {
-      case zipName if zipName.endsWith("zip") =>
-        Some(new ZipInputStream(new FileInputStream(file)))
-      case _ => None
-    }
-  }
-
   /** Parses JValue to extract item local item id and renders compact full
     * record
     *
@@ -122,7 +107,7 @@ class DplaJsonlFileHarvester(
     inFiles
       .listFiles(zipFilter)
       .foreach(inFile => {
-        val inputStream: ZipInputStream = getInputStream(inFile)
+        val inputStream: ZipInputStream = FileHarvester.getZipInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )

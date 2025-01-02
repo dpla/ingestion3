@@ -3,6 +3,7 @@ package dpla.ingestion3.harvesters.file
 import java.io.{ByteArrayInputStream, File, FileInputStream}
 import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
@@ -30,21 +31,6 @@ class OaiFileHarvester(
   private val logger = LogManager.getLogger(this.getClass)
 
   protected val extractor = new OaiFileExtractor()
-
-  /** Loads .zip files
-    *
-    * @param file
-    *   File to parse
-    * @return
-    *   ZipInputstream of the zip contents
-    *
-    */
-  def getInputStream(file: File): Option[ZipInputStream] =
-    file.getName match {
-      case zipName if zipName.endsWith("zip") =>
-        Some(new ZipInputStream(new FileInputStream(file)))
-      case _ => None
-    }
 
   /** Main logic for handling individual entries in the zip.
     *
@@ -102,7 +88,7 @@ class OaiFileHarvester(
           val id: Option[String] =
             extractor.extractString(record \ "header" \ "identifier")
 
-          val outputXML = xmlToString(record)
+          val outputXML = Harvester.xmlToString(record)
 
           id match {
             case None =>
@@ -143,7 +129,7 @@ class OaiFileHarvester(
     inFiles
       .listFiles(FileFilters.zipFilter)
       .foreach(inFile => {
-        val inputStream = getInputStream(inFile)
+        val inputStream = FileHarvester.getZipInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
@@ -163,13 +149,4 @@ class OaiFileHarvester(
     spark.read.format("avro").load(tmpOutStr)
   }
 
-  /** Converts a Node to an xml string
-    *
-    * @param node
-    *   The root of the tree to write to a string
-    * @return
-    *   a String containing xml
-    */
-  def xmlToString(node: Node): String =
-    Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
 }

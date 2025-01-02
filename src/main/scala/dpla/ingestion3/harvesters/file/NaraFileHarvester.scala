@@ -4,7 +4,7 @@ import java.io.{BufferedReader, File, FileInputStream}
 import java.util.zip.GZIPInputStream
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.{avroFilter, gzFilter, xmlFilter}
-import dpla.ingestion3.harvesters.{AvroHelper, LocalHarvester}
+import dpla.ingestion3.harvesters.{AvroHelper, Harvester, LocalHarvester}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
@@ -82,7 +82,7 @@ class NaraFileHarvester(
       case record: Node =>
         val id =
           (record \ "digitalObjectArray" \ "digitalObject" \ "objectIdentifier").text
-        val outputXML = xmlToString(record)
+        val outputXML = Harvester.xmlToString(record)
         Some(ParsedResult(id, outputXML))
       case _ =>
         val logger = LogManager.getLogger(this.getClass)
@@ -304,13 +304,5 @@ class NaraFileHarvester(
     IOUtils.closeQuietly(inputStream)
   }
 
-  /** Converts a Node to an xml string
-    *
-    * @param node
-    *   The root of the tree to write to a string
-    * @return
-    *   a String containing xml
-    */
-  def xmlToString(node: Node): String =
-    Utility.serialize(node, minimizeTags = MinimizeMode.Always).toString
+
 }
