@@ -150,7 +150,7 @@ class NorthwestHeritageFileHarvester(
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        val recordCount = (for (result <- iter(inputStream)) yield {
+        val recordCount = iter(inputStream).map(result =>
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               LogManager
@@ -160,7 +160,7 @@ class NorthwestHeritageFileHarvester(
             case Success(count) =>
               count
           }
-        }).sum
+        ).sum
         IOUtils.closeQuietly(inputStream)
       })
 

@@ -41,13 +41,12 @@ class VaFileHarvester(
     * already be filtered by the FilenameFilter, I wonder if we even need the
     * match statement here.
     */
-  def getInputStream(file: File): Option[ZipInputStream] = {
+  def getInputStream(file: File): Option[ZipInputStream] =
     file.getName match {
       case zipName if zipName.endsWith("zip") =>
         Some(new ZipInputStream(new FileInputStream(file)))
       case _ => None
     }
-  }
 
   /** Main logic for handling individual entries in the zip.
     *
@@ -113,17 +112,16 @@ class VaFileHarvester(
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        val recordCount = (for (result <- iter(inputStream)) yield {
+        iter(inputStream).foreach(result => {
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               LogManager
                 .getLogger(this.getClass)
                 .error(s"Caught exception on $inFile.", exception)
-              0
             case Success(count) =>
               count
           }
-        }).sum
+        })
         IOUtils.closeQuietly(inputStream)
       })
 

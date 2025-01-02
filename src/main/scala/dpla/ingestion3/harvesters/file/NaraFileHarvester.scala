@@ -310,7 +310,7 @@ class NaraFileHarvester(
         )
       )
 
-    val recordCount = (for (tarResult <- iter(inputStream)) yield {
+    val recordCount = iter(inputStream).map(tarResult =>
       handleFile(tarResult, unixEpoch, file.getName) match {
         case Failure(exception) =>
           val logger = LogManager.getLogger(this.getClass)
@@ -319,8 +319,7 @@ class NaraFileHarvester(
           0
         case Success(count) =>
           count
-      }
-    }).sum
+      }).sum
 
     val logger = LogManager.getLogger(this.getClass)
     logger.info(s"Harvested $recordCount records from ${file.getName}")

@@ -145,7 +145,7 @@ class HeartlandFileHarvester(
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        for (result <- iter(inputStream)) yield {
+        iter(inputStream).foreach(result =>
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               LogManager
@@ -153,7 +153,7 @@ class HeartlandFileHarvester(
                 .error(s"Caught exception on $inFile.", exception)
             case _ => //do nothing
           }
-        }
+        )
         IOUtils.closeQuietly(inputStream)
       })
 

@@ -125,7 +125,7 @@ class SiFileHarvester(
   private def getExpectedFileCounts(inFiles: File): Map[String, String] = {
     var loadCounts = Map[String, String]()
     inFiles
-      .listFiles(new TxtFileFilter)
+      .listFiles(FileFilters.txtFilter)
       .foreach(file => {
         Using(Source
           .fromFile(file)) { source =>
@@ -234,7 +234,3 @@ class SiFileHarvester(
 
 }
 
-class TxtFileFilter extends FileFilter {
-  override def accept(pathname: File): Boolean =
-    pathname.getName.endsWith("txt")
-}

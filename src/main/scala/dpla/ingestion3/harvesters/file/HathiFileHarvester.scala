@@ -129,7 +129,7 @@ class HathiFileHarvester(
             )
           )
 
-        for (tarResult <- iter(inputStream)) yield {
+        iter(inputStream).foreach(tarResult => {
           handleFile(tarResult, unixEpoch) match {
             case Failure(exception) =>
               logger
@@ -139,7 +139,7 @@ class HathiFileHarvester(
                 )
             case _ => //do nothing
           }
-        }
+        })
 
         IOUtils.closeQuietly(inputStream)
       })

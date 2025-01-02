@@ -11,4 +11,5 @@ object FileFilters {
   val gzFilter: FileFilter = newFilter("gz")
   val xmlFilter: FileFilter = newFilter("xml")
   val zipFilter: FileFilter = newFilter("zip")
+  val txtFilter: FileFilter = newFilter("txt")
 }
