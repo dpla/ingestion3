@@ -38,9 +38,6 @@ class OaiFileHarvester(
     * @return
     *   ZipInputstream of the zip contents
     *
-    * TODO: Because we're only handling zips in this class, and they should
-    * already be filtered by the FilenameFilter, I wonder if we even need the
-    * match statement here.
     */
   def getInputStream(file: File): Option[ZipInputStream] =
     file.getName match {
@@ -150,7 +147,7 @@ class OaiFileHarvester(
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        iter(inputStream).foreach(result =>
+        FileHarvester.iter(inputStream).foreach(result =>
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               logger.error(s"Caught exception on $inFile.", exception)

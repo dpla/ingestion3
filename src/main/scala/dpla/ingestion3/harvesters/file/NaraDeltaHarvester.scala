@@ -1,6 +1,6 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{BufferedReader, File, FileInputStream}
+import java.io.{File, FileInputStream}
 import java.util.zip.GZIPInputStream
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.{avroFilter, gzFilter}
@@ -29,22 +29,6 @@ class NaraDeltaHarvester(
   /** Case class hold the parsed value from a given FileResult
     */
   case class ParsedResult(id: String, item: String)
-
-  /** Case class to hold the results of a file
-    *
-    * @param entryName
-    *   Path of the entry in the file
-    * @param data
-    *   Holds the data for the entry, or None if it's a directory.
-    * @param bufferedData
-    *   Holds a buffered reader for the entry if it's too large to be held in
-    *   memory.
-    */
-  case class FileResult(
-      entryName: String,
-      data: Option[Array[Byte]],
-      bufferedData: Option[BufferedReader] = None
-  )
 
   lazy val naraSchema: Schema =
     new Schema.Parser()
@@ -166,36 +150,6 @@ class NaraDeltaHarvester(
 
   }
 
-  /** Implements a stream of files from the tar. Can't use @tailrec here because
-    * the compiler can't recognize it as tail recursive, but this won't blow the
-    * stack.
-    *
-    * @param tarInputStream
-    * @return
-    *   Lazy stream of tar records
-    */
-  def iter(tarInputStream: TarInputStream): LazyList[FileResult] =
-    Option(tarInputStream.getNextEntry) match {
-      case None =>
-        LazyList.empty
-
-      case Some(entry) =>
-        val filename = Try {
-          entry.getName
-        }.getOrElse("")
-
-        val result =
-          if (
-            entry.isDirectory || filename.contains("._")
-          ) // drop OSX hidden files
-            None
-          else if (filename.endsWith(".xml")) // only read xml files
-            Some(IOUtils.toByteArray(tarInputStream, entry.getSize))
-          else
-            None
-
-        FileResult(entry.getName, result) #:: iter(tarInputStream)
-    }
 
   /** Executes the nara harvest
     */
@@ -256,7 +210,7 @@ class NaraDeltaHarvester(
         )
       )
 
-    val recordCount = iter(inputStream).map(tarResult =>
+    val recordCount = FileHarvester.iter(inputStream).map(tarResult =>
       handleFile(tarResult, unixEpoch, file.getName) match {
         case Failure(exception) =>
           val logger = LogManager.getLogger(this.getClass)

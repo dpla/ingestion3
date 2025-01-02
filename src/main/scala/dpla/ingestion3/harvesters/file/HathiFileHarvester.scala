@@ -80,37 +80,6 @@ class HathiFileHarvester(
     }
   }
 
-  /** Implements a stream of files from the tar. Can't use @tailrec here because
-    * the compiler can't recognize it as tail recursive, but this won't blow the
-    * stack.
-    *
-    * @param tarInputStream
-    * @return
-    *   Lazy stream of tar records
-    */
-  def iter(tarInputStream: TarInputStream): LazyList[FileResult] =
-    Option(tarInputStream.getNextEntry) match {
-      case None =>
-        LazyList.empty
-
-      case Some(entry) =>
-        val filename = Try {
-          entry.getName
-        }.getOrElse("")
-
-        val result =
-          if (
-            entry.isDirectory || filename.contains("._")
-          ) // drop OSX hidden files
-            None
-          else if (filename.endsWith(".xml")) // only read xml files
-            Some(IOUtils.toByteArray(tarInputStream, entry.getSize))
-          else
-            None
-
-        FileResult(entry.getName, result) #:: iter(tarInputStream)
-    }
-
   /** Executes the harvest
     */
   override def localHarvest(): DataFrame = {
@@ -129,7 +98,7 @@ class HathiFileHarvester(
             )
           )
 
-        iter(inputStream).foreach(tarResult => {
+        FileHarvester.iter(inputStream).foreach(tarResult => {
           handleFile(tarResult, unixEpoch) match {
             case Failure(exception) =>
               logger

@@ -34,9 +34,6 @@ class VtFileHarvester(
     * @return
     *   ZipInputstream of the zip contents
     *
-    * TODO: Because we're only handling zips in this class, and they should
-    * already be filtered by the FilenameFilter, I wonder if we even need the
-    * match statement here.
     */
   def getInputStream(file: File): Option[ZipInputStream] =
     file.getName match {
@@ -73,27 +70,6 @@ class VtFileHarvester(
         }
     }
 
-  /** Implements a stream of files from the zip Can't use @tailrec here because
-    * the compiler can't recognize it as tail recursive, but this won't blow the
-    * stack.
-    *
-    * @param zipInputStream
-    * @return
-    *   Lazy stream of zip records
-    */
-  def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
-    Option(zipInputStream.getNextEntry) match {
-      case None =>
-        LazyList.empty
-      case Some(entry) =>
-        val result =
-          if (entry.isDirectory)
-            None
-          else
-            Some(IOUtils.toByteArray(zipInputStream, entry.getSize))
-        FileResult(entry.getName, result) #:: iter(zipInputStream)
-    }
-
   /** Executes the Vermont harvest
     */
   override def localHarvest(): DataFrame = {
@@ -108,7 +84,7 @@ class VtFileHarvester(
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        iter(inputStream).foreach(result =>
+        FileHarvester.iter(inputStream).foreach(result =>
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               LogManager

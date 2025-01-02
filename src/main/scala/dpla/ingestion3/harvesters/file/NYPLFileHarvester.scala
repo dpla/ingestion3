@@ -120,27 +120,6 @@ class NYPLFileHarvester(
     }
   }
 
-  /** Implements a stream of files from the zip Can't use @tailrec here because
-    * the compiler can't recognize it as tail recursive, but this won't blow the
-    * stack.
-    *
-    * @param zipInputStream
-    * @return
-    *   Lazy stream of zip records
-    */
-  def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
-    Option(zipInputStream.getNextEntry) match {
-      case None =>
-        LazyList.empty
-      case Some(entry) =>
-        val result =
-          if (entry.isDirectory)
-            None
-          else
-            Some(new BufferedReader(new InputStreamReader(zipInputStream)))
-        FileResult(entry.getName, None, result) #:: iter(zipInputStream)
-    }
-
   /** Executes the NYPL harvest
     */
   override def localHarvest(): DataFrame = {
@@ -155,7 +134,7 @@ class NYPLFileHarvester(
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        iter(inputStream).foreach( result =>
+        FileHarvester.iter(inputStream).foreach( result =>
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               LogManager.getLogger(this.getClass).error(s"Caught exception on $inFile.", exception)

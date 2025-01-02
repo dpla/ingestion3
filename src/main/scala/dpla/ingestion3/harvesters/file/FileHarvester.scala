@@ -1,13 +1,15 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.BufferedReader
-
+import java.io.{BufferedReader, InputStreamReader}
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.{Harvester, LocalHarvester}
 import org.apache.avro.generic.GenericData
+import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
+import org.apache.tools.tar.TarInputStream
 
+import java.util.zip.ZipInputStream
 import scala.util.Try
 
 /** File based harvester
@@ -25,25 +27,7 @@ abstract class FileHarvester(
     conf: i3Conf
 ) extends LocalHarvester(spark, shortName, conf) {
 
-  /** Case class to hold the results of a file
-    *
-    * @param entryName
-    *   Path of the entry in the file
-    * @param data
-    *   Holds the data for the entry, or None if it's a directory.
-    * @param bufferedData
-    *   Holds a buffered reader for the entry if it's too large to be held in
-    *   memory.
-    */
-  case class FileResult(
-      entryName: String,
-      data: Option[Array[Byte]],
-      bufferedData: Option[BufferedReader] = None
-  )
 
-  /** Case class hold the parsed value from a given FileResult
-    */
-  case class ParsedResult(id: String, item: String)
 
   /** Parses and extracts ZipInputStream and writes parses records out.
     *
@@ -61,7 +45,7 @@ abstract class FileHarvester(
     * @param item
     *   Harvested record
     */
-  // todo this is in harvester?
+
   def writeOut(unixEpoch: Long, item: ParsedResult): Unit = {
     val avroWriter = getAvroWriter
     val genericRecord = new GenericData.Record(Harvester.schema)
@@ -75,4 +59,63 @@ abstract class FileHarvester(
 
   def flush(): Unit = getAvroWriter.flush()
 
+}
+
+/** Case class to hold the results of a file
+ *
+ * @param entryName
+ *   Path of the entry in the file
+ * @param data
+ *   Holds the data for the entry, or None if it's a directory.
+ * @param bufferedData
+ *   Holds a buffered reader for the entry if it's too large to be held in
+ *   memory.
+ */
+case class FileResult(
+                       entryName: String,
+                       data: Option[Array[Byte]],
+                       bufferedData: Option[BufferedReader] = None
+                     )
+
+/** Case class hold the parsed value from a given FileResult
+ */
+
+case class ParsedResult(id: String, item: String)
+
+object FileHarvester {
+  def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
+    Option(zipInputStream.getNextEntry) match {
+      case None =>
+        LazyList.empty
+      case Some(entry) =>
+        val result =
+          if (entry.isDirectory || entry.getName.contains("._"))
+            None
+          else
+            Some(new BufferedReader(new InputStreamReader(zipInputStream)))
+        FileResult(entry.getName, None, result) #:: iter(zipInputStream)
+    }
+
+  def iter(tarInputStream: TarInputStream): LazyList[FileResult] =
+    Option(tarInputStream.getNextEntry) match {
+      case None =>
+        LazyList.empty
+
+      case Some(entry) =>
+        val filename = Try {
+          entry.getName
+        }.getOrElse("")
+
+        val result =
+          if (
+            entry.isDirectory || filename.contains("._")
+          ) // drop OSX hidden files
+            None
+          else if (filename.endsWith(".xml")) // only read xml files
+            Some(IOUtils.toByteArray(tarInputStream, entry.getSize))
+          else
+            None
+
+        FileResult(entry.getName, result) #:: iter(tarInputStream)
+    }
 }
