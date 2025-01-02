@@ -151,13 +151,13 @@ class OaiFileHarvester(
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        for (result <- iter(inputStream)) {
+        iter(inputStream).foreach(result => {
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               logger.error(s"Caught exception on $inFile.", exception)
             case Success(_) => //do nothing
           }
-        }
+        })
         IOUtils.closeQuietly(inputStream)
       })
 
