@@ -57,17 +57,16 @@ trait JsonlExecutor extends Serializable {
         val record = ModelConverter.toModel(row)
         jsonlRecord(record)
       })
-      .persist(StorageLevel.MEMORY_AND_DISK_SER)
-
-    val indexCount = indexRecords.count
 
     // This should always write out as #text() because if we use #json() then the
     // data will be written out inside a JSON object (e.g. {'value': <doc>}) which is
     // invalid for our use
     indexRecords.write.option("compression", "gzip").text(outputPath)
+    indexRecords.unpersist(false)
+
+    val indexCount = spark.read.text(outputPath).count()
 
     // Create and write manifest.
-
     val manifestOpts: Map[String, String] = Map(
       "Activity" -> "JSON-L",
       "Provider" -> shortName,
