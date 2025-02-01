@@ -15,7 +15,8 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
 
-import scala.util.{Failure, Success, Try}
+import scala.io.Source
+import scala.util.{Failure, Success, Try, Using}
 
 /** Extracts values from parsed JSON
   */
@@ -60,16 +61,15 @@ class DlgFileHarvester(
     *   Count of metadata items found.
     */
   def handleFile(zipResult: FileResult, unixEpoch: Long): Try[Int] =
-    zipResult.bufferedData match {
+    zipResult.data match {
       case None =>
         Success(0) // a directory, no results
       case Some(data) =>
-        Try {
+        Using(Source.fromBytes(data)) { source =>
           // Assume that each line of the file contains a single record.
-          var line: String = data.readLine
           var itemCount: Int = 0
 
-          while (line != null) {
+          for (line <- source.getLines) {
             val count = Try {
 
               // Clean up leading/trailing characters
@@ -87,9 +87,7 @@ class DlgFileHarvester(
             }
 
             itemCount += count
-            line = data.readLine
           }
-
           itemCount
         }
     }

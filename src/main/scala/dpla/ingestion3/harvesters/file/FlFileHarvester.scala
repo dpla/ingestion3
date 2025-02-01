@@ -8,14 +8,14 @@ import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.AVRO_MIME_JSON
 import org.apache.avro.generic.GenericData
 import org.apache.commons.io.IOUtils
-
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
 
-import scala.util.{Failure, Success, Try}
+import scala.io.Source
+import scala.util.{Failure, Success, Try, Using}
 
 /** Extracts values from parsed JSON
   */
@@ -63,18 +63,13 @@ class FlFileHarvester(
 
     var itemCount: Int = 0
 
-    zipResult.bufferedData match {
+    zipResult.data match {
       case None =>
         Success(0) // a directory, no results
       case Some(data) =>
-        Try {
-
-          //  FL now provides JSONL (one record per line)
-          var line: String = data.readLine
-
-          while (line != null) {
+        Using(Source.fromBytes(data)) { source =>
+          for (line <- source.getLines) {
             val count = Try {
-
               // Clean up leading/trailing characters
               val json: JValue = parse(line.stripPrefix("[").stripPrefix(","))
 
@@ -90,7 +85,6 @@ class FlFileHarvester(
             }
 
             itemCount += count
-            line = data.readLine
           }
           itemCount
         }

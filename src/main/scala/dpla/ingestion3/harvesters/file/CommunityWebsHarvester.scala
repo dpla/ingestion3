@@ -14,7 +14,8 @@ import org.json4s.{JValue, _}
 
 import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
 import java.util.zip.ZipInputStream
-import scala.util.{Failure, Success, Try}
+import scala.io.Source
+import scala.util.{Failure, Success, Try, Using}
 
 /** Entry for performing a Community Webs file harvest
   */
@@ -54,43 +55,30 @@ class CommunityWebsHarvester(
     *   Count of metadata items found.
     */
   def handleFile(zipResult: FileResult, unixEpoch: Long): Try[Int] = {
-
     var itemCount: Int = 0
-
-    zipResult.bufferedData match {
+    zipResult.data match {
       case None =>
         Success(0) // a directory, no results
       case Some(data) =>
-        Try {
-
-          //  FL now provides JSONL (one record per line)
-          var line: String = data.readLine
-
-          while (line != null) {
+        val result = Using(Source.fromBytes(data)) { source =>
+          for (line <- source.getLines) {
             val count = Try {
-
               // Clean up leading/trailing characters
               val json: JValue = parse(line.stripPrefix("[").stripPrefix(","))
-
               getJsonResult(json) match {
                 case Some(item) =>
                   writeOut(unixEpoch, item)
                   1
                 case _ => 0
               }
-            } match {
-              case Success(num) => num
-              case _            => 0
-            }
-
+            }.getOrElse(0)
             itemCount += count
-            line = data.readLine
           }
           itemCount
         }
+        result
     }
   }
-
 
   override def localHarvest(): DataFrame = {
     val harvestTime = System.currentTimeMillis()
@@ -100,19 +88,22 @@ class CommunityWebsHarvester(
     inFiles
       .listFiles(zipFilter)
       .foreach(inFile => {
-        val inputStream: ZipInputStream = FileHarvester.getZipInputStream(inFile)
+        val inputStream: ZipInputStream = FileHarvester
+          .getZipInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        FileHarvester.iter(inputStream).foreach(result =>  {
-          handleFile(result, unixEpoch) match {
-            case Failure(exception) =>
-              LogManager
-                .getLogger(this.getClass)
-                .error(s"Caught exception on $inFile.", exception)
-            case _ => // do nothing
-          }
-        })
+        FileHarvester
+          .iter(inputStream)
+          .foreach(result => {
+            handleFile(result, unixEpoch) match {
+              case Failure(exception) =>
+                LogManager
+                  .getLogger(this.getClass)
+                  .error(s"Caught exception on $inFile.", exception)
+              case _ => // do nothing
+            }
+          })
         IOUtils.closeQuietly(inputStream)
       })
 
