@@ -11,7 +11,7 @@ import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
 import org.apache.logging.log4j.LogManager
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success, Try, Using}
 import scala.xml._
 
 class HathiFileHarvester(
@@ -72,26 +72,29 @@ class HathiFileHarvester(
       .listFiles(gzFilter)
       .foreach(inFile => {
 
-        val inputStream = FileHarvester.getTarInputStream(inFile)
-          .getOrElse(
-            throw new IllegalArgumentException(
-              s"Couldn't load file, ${inFile.getAbsolutePath}"
+        Using(
+          FileHarvester
+            .getTarInputStream(inFile)
+            .getOrElse(
+              throw new IllegalArgumentException(
+                s"Couldn't load file, ${inFile.getAbsolutePath}"
+              )
             )
-          )
-
-        FileHarvester.iter(inputStream).foreach(tarResult => {
-          handleFile(tarResult, unixEpoch) match {
-            case Failure(exception) =>
-              logger
-                .error(
-                  s"Caught exception on ${tarResult.entryName}.",
-                  exception
-                )
-            case _ => //do nothing
-          }
-        })
-
-        IOUtils.closeQuietly(inputStream)
+        ) { inputStream =>
+          FileHarvester
+            .iter(inputStream)
+            .foreach(tarResult => {
+              handleFile(tarResult, unixEpoch) match {
+                case Failure(exception) =>
+                  logger
+                    .error(
+                      s"Caught exception on ${tarResult.entryName}.",
+                      exception
+                    )
+                case _ => // do nothing
+              }
+            })
+        }
       })
 
     // flush the avroWriter

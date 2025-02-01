@@ -11,6 +11,7 @@ import org.apache.commons.io.IOUtils
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
+import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 import scala.xml._
 
@@ -39,16 +40,18 @@ class OaiFileHarvester(
     * @return
     *   Count of metadata items found.
     */
-  def handleFile(zipResult: FileResult, unixEpoch: Long): Try[Int] =
-    zipResult.data match {
+  def handleFile(zipResult: FileResult, unixEpoch: Long): Try[Int] = {
+    val xmlOption = if (zipResult.data.isDefined) {
+      Some(XML.load(new ByteArrayInputStream(zipResult.data.get)))
+    } else {
+      None
+    }
+    xmlOption match {
       case None =>
         Success(0) // a directory, no results
-
-      case Some(data) =>
+      case Some(xml) =>
         Try {
-          val xml = XML.load(new ByteArrayInputStream(data))
           val items = handleXML(xml)
-
           val counts = for {
             itemOption <- items
             item <- itemOption // filters out the Nones
@@ -59,8 +62,9 @@ class OaiFileHarvester(
           counts.sum
         }
     }
+  }
 
-  /** Takes care of parsing an xml file into a list of Nodes each representing
+  /** Takes care of parsing an XML file into a list of Nodes each representing
     * an item
     *
     * @param xml
@@ -129,6 +133,7 @@ class OaiFileHarvester(
     inFiles
       .listFiles(FileFilters.zipFilter)
       .foreach(inFile => {
+        println(inFile)
         val inputStream = FileHarvester.getZipInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
@@ -138,8 +143,7 @@ class OaiFileHarvester(
             case Failure(exception) =>
               logger.error(s"Caught exception on $inFile.", exception)
             case Success(_) => //do nothing
-          }
-        )
+          })
         IOUtils.closeQuietly(inputStream)
       })
 

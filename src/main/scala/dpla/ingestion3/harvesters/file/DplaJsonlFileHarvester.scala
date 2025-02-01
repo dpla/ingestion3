@@ -14,7 +14,8 @@ import org.json4s.{JValue, _}
 
 import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
 import java.util.zip.ZipInputStream
-import scala.util.{Failure, Success, Try}
+import scala.io.Source
+import scala.util.{Failure, Success, Try, Using}
 
 /** Extracts values from parsed JSON
   */
@@ -63,16 +64,15 @@ class DplaJsonlFileHarvester(
 
     var itemCount: Int = 0
 
-    zipResult.bufferedData match {
+    zipResult.data match {
       case None =>
         Success(0) // a directory, no results
       case Some(data) =>
-        Try {
+        Using(Source.fromBytes(data)) { source =>
 
           // JSONL (one record per line)
-          var line: String = data.readLine
 
-          while (line != null) {
+          for (line <- source.getLines) {
             val count = Try {
 
               // Clean up leading/trailing characters
@@ -84,13 +84,8 @@ class DplaJsonlFileHarvester(
                   1
                 case _ => 0
               }
-            } match {
-              case Success(num) => num
-              case _            => 0
-            }
-
+            }.getOrElse(0)
             itemCount += count
-            line = data.readLine
           }
           itemCount
         }
