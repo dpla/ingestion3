@@ -1,17 +1,15 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.{Harvester, LocalHarvester}
-import org.apache.avro.generic.GenericData
+import dpla.ingestion3.harvesters.LocalHarvester
+
+import java.io.{File, FileInputStream}
 import org.apache.commons.io.IOUtils
-import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
 import org.apache.tools.tar.TarInputStream
 
 import java.util.zip.{GZIPInputStream, ZipInputStream}
 import scala.util.Try
-import scala.xml._
 
 /** File based harvester
   *
@@ -27,8 +25,6 @@ abstract class FileHarvester(
     shortName: String,
     conf: i3Conf
 ) extends LocalHarvester(spark, shortName, conf) {
-
-
 
   /** Parses and extracts ZipInputStream and writes parses records out.
     *
@@ -63,10 +59,10 @@ abstract class FileHarvester(
  *   Holds a buffered reader for the entry if it's too large to be held in
  *   memory.
  */
+
 case class FileResult(
                        entryName: String,
-                       data: Option[Array[Byte]],
-                       bufferedData: Option[BufferedReader] = None
+                       data: Option[Array[Byte]]
                      )
 
 /** Case class hold the parsed value from a given FileResult
@@ -96,7 +92,6 @@ object FileHarvester {
         Some(new TarInputStream(new GZIPInputStream(new FileInputStream(file))))
       case zipName if zipName.endsWith("tar") =>
         Some(new TarInputStream(new FileInputStream(file)))
-
       case _ => None
     }
   }
@@ -111,8 +106,8 @@ object FileHarvester {
           if (entry.isDirectory || entry.getName.contains("._"))
             None
           else
-            Some(new BufferedReader(new InputStreamReader(zipInputStream)))
-        FileResult(entry.getName, None, result) #:: iter(zipInputStream)
+            Some(IOUtils.toByteArray(zipInputStream))
+        FileResult(entry.getName, result) #:: iter(zipInputStream)
     }
 
   def iter(tarInputStream: TarInputStream): LazyList[FileResult] =

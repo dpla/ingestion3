@@ -14,7 +14,8 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
 
-import scala.util.{Failure, Success, Try}
+import scala.io.Source
+import scala.util.{Failure, Success, Try, Using}
 
 /** Extracts values from parsed JSON
   */
@@ -75,15 +76,12 @@ class NYPLFileHarvester(
 
     var itemCount: Int = 0
 
-    zipResult.bufferedData match {
+    zipResult.data match {
       case None =>
         Success(0) // a directory, no results
       case Some(data) =>
-        Try {
-
-          //  NYPL now provides JSONL (one record per line)
-          var line: String = data.readLine
-          while (line != null) {
+        Using(Source.fromBytes(data)) { source =>
+          for (line <- source.getLines) {
             val count = Try {
               // Clean up leading/trailing characters
               val json: JValue = parse(line.stripPrefix("[").stripPrefix(","))
@@ -93,13 +91,8 @@ class NYPLFileHarvester(
                   1
                 case _ => 0
               }
-            } match {
-              case Success(num) => num
-              case _            => 0
-            }
-
+            }.getOrElse(0)
             itemCount += count
-            line = data.readLine
           }
           itemCount
         }
