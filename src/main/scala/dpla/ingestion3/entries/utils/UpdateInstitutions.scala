@@ -1,69 +1,256 @@
 package dpla.ingestion3.entries.utils
 
-import dpla.ingestion3.utils.HttpUtils
-import org.json4s.{JArray, JField, JNull}
 import org.json4s.JsonAST.{JObject, JString}
-import org.json4s.jackson.JsonMethods
+import org.json4s.jackson.JsonMethods._
+import org.json4s.jackson.Serialization
+import org.json4s._
+import org.json4s.prefs.EmptyValueStrategy
 
 import java.io.File
-import java.net.{URL, URLEncoder}
+import java.net.URI
+import java.net.http.HttpClient.Redirect
+import java.net.http.HttpRequest.BodyPublishers
+import java.net.http.HttpResponse.BodyHandlers
+import java.net.http.{HttpClient, HttpRequest}
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
+import java.time.Duration
 
-object UpdateInstitutions extends App {
+object UpdateInstitutions {
 
-  val apiKey = args(0)
-  val institutionsFilePath = "src/main/resources/wiki/institutions_v2.json"
-  val institutionsJson = JsonMethods.parse(new File(institutionsFilePath))
+  private val ELASTICSEARCH_ENDPOINT =
+    "http://search.internal.dp.la:9200/dpla_alias/_search"
+  private val MAX_FACET_BUCKETS = 5000
 
-  val hubsResponse = HttpUtils.makeGetRequest(
-    new URL("https://api.dp.la/items?facets=provider.name&page_size=0&facet_size=2000"),
-    Some(Map(("Authorization", apiKey)))
+  case class Hub(
+      Wikidata: Option[String],
+      institutions: Map[String, ContributingInstitution]
   )
+  case class ContributingInstitution(
+      Wikidata: Option[String],
+      upload: Option[Boolean]
+  )
+  private def getFormats = DefaultFormats.withEmptyValueStrategy(EmptyValueStrategy.preserve)
 
-  val hubsJson = JsonMethods.parse(hubsResponse)
-  val hubsNames =  for {
-    JString(term) <- hubsJson \ "facets" \ "provider.name" \ "terms" \ "term"
-  } yield term
+  private val client = HttpClient
+    .newBuilder()
+    .followRedirects(Redirect.NORMAL)
+    .connectTimeout(Duration.ofSeconds(20))
+    .build()
 
-  if (hubsNames.length == 2000) {
-    println("Warning: 2000 hubs found, some may be missing")
-  }
-
-  var count = 0
-  for (hubName <- hubsNames) {
-    val hubData = institutionsJson \ hubName match {
-      case existing: JObject => existing
-      case _ =>
-        val hubData = JObject(
-          List(
-            JField("Wikidata", JNull),
-            JField("institutions", JArray(Nil))
+  def getContributorNamesQuery(hubName: String): String = {
+    val query = Map(
+      "from" -> 0,
+      "size" -> 0,
+      "_source" -> Seq("*"),
+      "query" -> Map(
+        "bool" -> Map(
+          "must" -> List(
+            Map(
+              "query_string" -> Map(
+                "default_operator" -> "AND",
+                "fields" -> List(
+                  "provider.name"
+                ),
+                "lenient" -> true,
+                "query" -> hubName.replaceAll("/", "\\\\/")
+              )
+            )
           )
         )
-        hubsJson.merge(JObject(List(JField(hubName, hubData))))
-        hubData
-    }
-    val escapedName = URLEncoder.encode(hubName.replaceAll("/", " "), "UTF-8")
-    val contributorResponse = HttpUtils.makeGetRequest(
-        new URL(s"https://api.dp.la/items?facets=dataProvider.name&provider.name=$escapedName&page_size=0&facet_size=2000"),
-        Some(Map(("Authorization", apiKey)))
+      ),
+      "aggs" -> Map(
+        "dataProvider.name" -> Map(
+          "terms" -> Map(
+            "field" -> "dataProvider.name.not_analyzed",
+            "size" -> MAX_FACET_BUCKETS
+          )
+        )
+      )
     )
-    val contributorJson = JsonMethods.parse(contributorResponse)
+    Serialization.write(query)(getFormats)
+  }
+
+  private def execute(request: HttpRequest): String = {
+    val response = client.send(request, BodyHandlers.ofString())
+    if (response.statusCode() == 200) {
+      response.body()
+    } else {
+      val msg = s"Unsuccessful request: ${request.uri().toString}\n" +
+        s"Code: ${response.statusCode()}\n" +
+        s"Message: ${response.body()}\n"
+      throw new RuntimeException(msg)
+    }
+  }
+
+  def getHubNamesQuery: String = {
+    val query = Map(
+      "from" -> 0,
+      "size" -> 0,
+      "_source" -> Seq("*"),
+      "aggs" -> Map(
+        "provider.name" -> Map(
+          "terms" -> Map(
+            "field" -> "provider.name.not_analyzed",
+            "size" -> MAX_FACET_BUCKETS
+          )
+        )
+      )
+    )
+    Serialization.write(query)(getFormats)
+  }
+
+  def getHubNames: Seq[String] = {
+
+    val query = getHubNamesQuery
+    val request = HttpRequest
+      .newBuilder()
+      .method("POST", BodyPublishers.ofString(query))
+      .header("Content-Type", "application/json")
+      .uri(new URI(ELASTICSEARCH_ENDPOINT))
+      .build()
+    val response = execute(request)
+
+    val hubsJson = parse(response)
+
+    val hubsNames =
+      for (
+        JString(term) <-
+          hubsJson \ "aggregations" \ "provider.name" \ "buckets" \ "key"
+      ) yield term
+
+    if (hubsNames.length >= 4999)
+      throw new RuntimeException(
+        f"Warning: ${hubsNames.length} hubs found, some may be missing!"
+      )
+
+    hubsNames
+  }
+
+  def getContributorNames(hubName: String, apiKey: String): Seq[String] = {
+    val query = getContributorNamesQuery(hubName)
+    val request = HttpRequest
+      .newBuilder()
+      .method("POST", BodyPublishers.ofString(query))
+      .header("Content-Type", "application/json")
+      .uri(new URI(ELASTICSEARCH_ENDPOINT))
+      .build()
+    val response = execute(request)
+    val contributorJson = parse(response)
     val contributorNames = for {
-      JString(term) <- contributorJson \ "facets" \ "dataProvider.name" \ "terms" \ "term"
+      JString(term) <-
+        contributorJson \ "aggregations" \ "dataProvider.name" \ "buckets" \ "key"
     } yield term
 
-    if (contributorNames.length == 2000) {
-      println(s"Warning: 2000 contributors found for $hubName, some may be missing")
+    if (contributorNames.length >= 4999) {
+      println(contributorNames)
+      throw new RuntimeException(
+        s"Warning: ${contributorNames.length} contributors found for $hubName, some may be missing!"
+      )
     }
 
-    contributorNames.foreach(name => println(f"$hubName -> $name"))
-    count = count + contributorNames.length
+    contributorNames
   }
-  println(f"$count contributors found")
 
-//  val results = HttpUtils.makeGetRequest(
-//    new URL("https://api.dp.la/items&facets=dataProvider"),
-//    Some(Map(("Authorization", apiKey))))
+  def main(args: Array[String]): Unit = {
+    val apiKey = args(0)
+    val outFile = args(1)
+
+    implicit val formats: Formats = getFormats
+    val institutionsJson = parse(
+      new File("src/main/resources/wiki/institutions_v2.json")
+    )
+    val institutionsData = Map.from(
+      institutionsJson match {
+        case JObject(values) =>
+          values.map(value => (value._1 -> value._2.extract[Hub]))
+        case _ =>
+          throw new RuntimeException(
+            "Can't understand existing institutions file."
+          )
+      }
+    )
+
+    val hubNames = getHubNames
+
+    val newHubs = hubNames
+      .map(hubName => {
+        val existingHub =
+          institutionsData.getOrElse(hubName, Hub(None, Map.empty))
+        hubName -> updatedHub(
+          hubName,
+          existingHub,
+          apiKey
+        )
+      })
+      .toMap
+
+    val withDroppedHubs = newHubs ++ institutionsData.keys.flatMap(hubName =>
+      if (!newHubs.contains(hubName)) Some(hubName -> institutionsData(hubName))
+      else None
+    )
+
+    // no backsliding
+    for (hubName <- institutionsData.keys) {
+      assert(
+        withDroppedHubs.contains(hubName),
+        f"Missing hub: $hubName"
+      )
+      val oldHub = institutionsData(hubName)
+      val newHub = withDroppedHubs(hubName)
+      assert(
+        oldHub.Wikidata == newHub.Wikidata,
+        f"Wikidata mismatch for hub: $hubName"
+      )
+      for (institutionName <- oldHub.institutions.keys) {
+        assert(newHub.institutions.contains(institutionName), f"Missing institution: $institutionName in hub: $hubName")
+        val oldContributingInstitution = oldHub.institutions(institutionName)
+        val newContributingInstitution = newHub.institutions(institutionName)
+        assert(
+          oldContributingInstitution.upload == newContributingInstitution.upload,
+          f"Upload flag mismatch for institution: $institutionName in hub: $hubName"
+        )
+        assert(
+          oldContributingInstitution.Wikidata == newContributingInstitution.Wikidata,
+          f"Wikidata mismatch for institution: $institutionName in hub: $hubName"
+        )
+      }
+    }
+
+    val newHubsCount = withDroppedHubs.size - institutionsData.size
+    val contributorsCount = withDroppedHubs.values.flatMap(_.institutions).size
+    val newContributorsCount =
+      contributorsCount - institutionsData.values.flatMap(_.institutions).size
+
+    println(f"${newHubs.size} hubs found. $newHubsCount new hubs added.")
+    println(
+      f"$contributorsCount contributors found. $newContributorsCount new contributors added."
+    )
 
 
+    Files.write(
+      Paths.get(outFile),
+      Serialization.write(newHubs).getBytes(StandardCharsets.UTF_8)
+    )
+  }
+
+  def updatedHub(hubName: String, prevHub: Hub, apiKey: String): Hub = {
+    val contributorNames = getContributorNames(hubName, apiKey)
+    val newContributors = contributorNames
+      .map(name =>
+        name -> prevHub.institutions
+          .getOrElse(name, ContributingInstitution(None, None))
+      )
+      .toMap
+
+    val oldContributors = prevHub.institutions.keys.flatMap(contributorName =>
+      if (!contributorNames.contains(contributorName))
+        Some(contributorName -> prevHub.institutions(contributorName))
+      else None
+    )
+
+    prevHub.copy(
+      institutions = newContributors ++ oldContributors
+    )
+  }
 }
