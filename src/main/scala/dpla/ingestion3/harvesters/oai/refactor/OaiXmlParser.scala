@@ -6,7 +6,11 @@ object OaiXmlParser {
 
   def parsePageIntoXml(
       page: OaiPage
-  ): Node = XML.loadString(page.page)
+  ): Node = {
+    // some hubs have inline xml processing instructions that blow things up
+    val cleaned = page.page.replaceAll(raw"<\?xml[^>]*\?>", "")
+    XML.loadString(cleaned)
+  }
 
   def parseXmlIntoRecords(
       xml: Node,
