@@ -64,7 +64,7 @@ object HttpUtils {
     * @return
     *   Body of the response or error message
     */
-  private def execute(request: HttpRequest): String = {
+  def execute(request: HttpRequest): String = {
     val response = httpClient.send(request, BodyHandlers.ofString())
     if (response.statusCode() == 200) {
       response.body()
