@@ -12,6 +12,15 @@ trait Mapping[T] {
 
   implicit def unwrap(document: Document[T]): T = document.get
 
+  /*
+  Hooks to allow setup and teardown for an individual map.
+  Note that the mapper instance is used by multiple threads,
+  and may be serialized, so any local state should be thread-safe
+  and serializable or transient.
+   */
+  def preMap(data: Document[T]): Document[T] = data
+  def postMap(data: Document[T]): Unit = ()
+
   // OreAggregation
   def dplaUri(data: Document[T]): ZeroToOne[URI] = None
   def dataProvider(data: Document[T]): ZeroToMany[EdmAgent] = Seq()

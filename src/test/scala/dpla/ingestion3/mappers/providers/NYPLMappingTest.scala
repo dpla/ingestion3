@@ -19,6 +19,15 @@ class NYPLMappingTest extends AnyFlatSpec with BeforeAndAfter {
   val json: Document[JValue] = Document(parse(jsonString))
   val extractor = new NyplMapping
 
+  before {
+    extractor.preMap(json)
+  }
+
+  after {
+    extractor.postMap(json)
+  }
+
+
   it should "extract the correct original ID " in {
     val expected = Some("93cd9a10-c552-012f-20e8-58d385a7bc34")
     assert(extractor.originalId(json) === expected)
