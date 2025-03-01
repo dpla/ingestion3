@@ -325,7 +325,7 @@ class NyplMapping extends JsonMapping with IngestMessageTemplates {
 
   override def title(data: Document[json4s.JValue]): AtLeastOne[String] =
     // titleInfo \ "title" @usage='primary'
-    (modsXml.get().get \ "titleInfo")
+    (getMods \ "titleInfo")
       .flatMap(node => xml.getByAttribute(node, "usage", "primary"))
       .flatMap(node => xml.extractStrings(node \ "title"))
 
@@ -334,7 +334,7 @@ class NyplMapping extends JsonMapping with IngestMessageTemplates {
   ): ZeroToMany[String] =
     // all other title values
     xml
-      .extractStrings(modsXml.get().get \ "titleInfo" \ "title")
+      .extractStrings(getMods \ "titleInfo" \ "title")
       .diff(title(data))
 
   override def identifier(data: Document[json4s.JValue]): ZeroToMany[String] = {
