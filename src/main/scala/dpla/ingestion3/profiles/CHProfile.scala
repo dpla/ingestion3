@@ -26,7 +26,10 @@ trait CHProfile[T] extends Serializable {
     val mapper = getMapper
 
     val document = parser.parse(data)
-    mapper.map(document, mapping)
+    val internalDoc = mapping.preMap(document)
+    val oreAggregation = mapper.map(internalDoc, mapping)
+    mapping.postMap(internalDoc)
+    oreAggregation
   }
 }
 

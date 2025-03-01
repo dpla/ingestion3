@@ -14,12 +14,17 @@ import org.json4s
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
-import scala.util.{Failure, Success, Try}
 import scala.xml.{Elem, NodeSeq, XML}
 
 class NyplJsonExtractor extends JsonExtractor
 
 class NyplXmlExtractor extends XmlExtractor
+
+/*
+This is a weird mapper because NYPL now supplies us with a Solr document that has
+a MODS XML string embedded in it. The ThreadLocal field stores the parsed MODS XML
+so we're not reparsing it for every field we need to extract.
+*/
 
 class NyplMapping extends JsonMapping with IngestMessageTemplates {
 
@@ -27,43 +32,26 @@ class NyplMapping extends JsonMapping with IngestMessageTemplates {
   lazy val json: NyplJsonExtractor = new NyplJsonExtractor
   lazy val xml: NyplXmlExtractor = new NyplXmlExtractor
 
-  // mods xml from json
-
-  class LRUCache[K, V](maxEntries: Int)
-      extends java.util.LinkedHashMap[K, V](100, .75f, true) {
-
-    override def removeEldestEntry(eldest: java.util.Map.Entry[K, V]): Boolean =
-      size > maxEntries
-
+  @transient private val modsXml = new ThreadLocal[Option[Elem]]() {
+    override def initialValue(): Option[Elem] = None
   }
 
-  @transient private val cache =
-    new ThreadLocal[java.util.LinkedHashMap[JValue, Elem]] {
-      override def initialValue(): java.util.LinkedHashMap[JValue, Elem] =
-        new LRUCache[JValue, Elem](10)
-    }
-
-  private def modsXml(data: JValue): Elem = Try {
-    val localCache = cache.get()
-    if (localCache.containsKey(data)) {
-      localCache.get(data)
-    } else {
+  override def preMap(data: Document[JValue]): Document[JValue] = {
       val root = modsRoot(data)
       val xmlString = json
         .extractString(root)
         .getOrElse(throw new Exception(s"No MODS XML for $data"))
         .trim
       val xml = XML.loadString(xmlString)
-      localCache.put(data, xml)
-      xml
+
+      modsXml.set(Some(xml))
+      data
     }
-  } match {
-    case Success(mods) => mods
-    case Failure(f) =>
-      throw new Exception(
-        s"Unable to load MODS XML for $data\n${f.getMessage}"
-      )
-  }
+
+  override def postMap(data: Document[JValue]): Unit = modsXml.set(None)
+
+  private def getMods =
+    modsXml.get().getOrElse(throw new Exception("No MODS XML found"))
 
   private def modsRoot(data: JValue): JValue =
     data \ "solr_doc_hash" \ "mods_st"
@@ -337,7 +325,7 @@ class NyplMapping extends JsonMapping with IngestMessageTemplates {
 
   override def title(data: Document[json4s.JValue]): AtLeastOne[String] =
     // titleInfo \ "title" @usage='primary'
-    (modsXml(data) \ "titleInfo")
+    (modsXml.get().get \ "titleInfo")
       .flatMap(node => xml.getByAttribute(node, "usage", "primary"))
       .flatMap(node => xml.extractStrings(node \ "title"))
 
@@ -346,7 +334,7 @@ class NyplMapping extends JsonMapping with IngestMessageTemplates {
   ): ZeroToMany[String] =
     // all other title values
     xml
-      .extractStrings(modsXml(data) \ "titleInfo" \ "title")
+      .extractStrings(modsXml.get().get \ "titleInfo" \ "title")
       .diff(title(data))
 
   override def identifier(data: Document[json4s.JValue]): ZeroToMany[String] = {
@@ -361,7 +349,7 @@ class NyplMapping extends JsonMapping with IngestMessageTemplates {
       "uri",
       "urn"
     )
-    (modsXml(data) \ "identifier")
+    (getMods \ "identifier")
       .filter(node =>
         xml.filterAttributeListOptions(node, "type", types) || xml
           .filterAttributeListOptions(node, "displayLabel", types)
@@ -374,7 +362,7 @@ class NyplMapping extends JsonMapping with IngestMessageTemplates {
   ): ZeroToMany[String] = {
     // note @type='content'
     // abstract
-    val xmlData = modsXml(data)
+    val xmlData = getMods
     (xmlData \ "note")
       .flatMap(node => xml.getByAttribute(node, "type", "content"))
       .flatMap(xml.extractStrings) ++ xml.extractStrings(xmlData \ "abstract")
@@ -388,7 +376,7 @@ class NyplMapping extends JsonMapping with IngestMessageTemplates {
     // uuid 4d0e0bc0-c540-012f-1857-58d385a7bc34
     // twas ever thus
     // https://digitalcollections.nypl.org/items/4d0e0bc0-c540-012f-1857-58d385a7bc34
-    (modsXml(data) \ "identifier")
+    (getMods \ "identifier")
       .flatMap(node => xml.getByAttribute(node, "type", "uuid"))
       .flatMap(xml.extractStrings)
       .map(uuid => s"https://digitalcollections.nypl.org/items/$uuid")
@@ -400,7 +388,7 @@ class NyplMapping extends JsonMapping with IngestMessageTemplates {
     val subjectKeys =
       Seq("topic", "geographic", "temporal", "occupation", "Ohio", "Cincinnati")
 
-    val mods = modsXml(data)
+    val mods = getMods
 
     val subjectTitles =
       (mods \ "subject" \ "titleInfo" \ "title").map(node =>
@@ -430,27 +418,27 @@ class NyplMapping extends JsonMapping with IngestMessageTemplates {
   }
 
   override def `type`(data: Document[json4s.JValue]): ZeroToMany[String] =
-    xml.extractStrings(modsXml(data) \ "typeOfResource")
+    xml.extractStrings(getMods \ "typeOfResource")
 
   override def format(data: Document[json4s.JValue]): ZeroToMany[String] =
-    xml.extractStrings(modsXml(data) \ "physicalDescription" \ "format") ++
-      xml.extractStrings(modsXml(data) \ "genre")
+    xml.extractStrings(getMods \ "physicalDescription" \ "format") ++
+      xml.extractStrings(getMods \ "genre")
 
   override def extent(data: Document[json4s.JValue]): ZeroToMany[String] =
-    xml.extractStrings(modsXml(data) \ "physicalDescription" \ "extent")
+    xml.extractStrings(getMods \ "physicalDescription" \ "extent")
 
   override def temporal(
       data: Document[json4s.JValue]
   ): ZeroToMany[EdmTimeSpan] =
-    xml.extractStrings(modsXml(data) \ "subject" \ "temporal").map(stringOnlyTimeSpan)
+    xml.extractStrings(getMods \ "subject" \ "temporal").map(stringOnlyTimeSpan)
 
   override def creator(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] =
-    agentHelper(modsXml(data), creatorRoles)
+    agentHelper(getMods, creatorRoles)
 
   override def contributor(
       data: Document[json4s.JValue]
   ): ZeroToMany[EdmAgent] =
-    agentHelper(modsXml(data), contributorRoles)
+    agentHelper(getMods, contributorRoles)
 
   override def collection(
       data: Document[json4s.JValue]
@@ -462,12 +450,10 @@ class NyplMapping extends JsonMapping with IngestMessageTemplates {
   override def date(data: Document[json4s.JValue]): ZeroToMany[EdmTimeSpan] =
     json
       .extractStrings("keyDate_st")(solrRoot(data))
-      .map(stringOnlyTimeSpan) // TODO confirm
+      .map(stringOnlyTimeSpan)
 
   override def publisher(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] =
     Seq(emptyEdmAgent)
-
-  // TODO this is complicated
 
   override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
     json.extractStrings("useStatementURI_rtxt")(solrRoot(data)).map(URI)
@@ -476,7 +462,7 @@ class NyplMapping extends JsonMapping with IngestMessageTemplates {
     json.extractStrings("useStatementText_rtxt")(solrRoot(data))
 
   override def place(data: Document[json4s.JValue]): ZeroToMany[DplaPlace] = {
-    (modsXml(data) \ "subject" \ "geographic").map(node => {
+    (getMods \ "subject" \ "geographic").map(node => {
       DplaPlace(
         name = xml.extractString(node),
         exactMatch = xml.getAttributeValue(node, "valueURI").map(URI).toSeq
@@ -488,7 +474,7 @@ class NyplMapping extends JsonMapping with IngestMessageTemplates {
       data: Document[json4s.JValue]
   ): ZeroToMany[SkosConcept] =
     xml
-      .extractStrings(modsXml(data) \ "language" \ "languageTerm")
+      .extractStrings(getMods \ "language" \ "languageTerm")
       .map(nameOnlyConcept)
 
   // OreAggregation
@@ -510,7 +496,7 @@ class NyplMapping extends JsonMapping with IngestMessageTemplates {
   override def dataProvider(
       data: Document[json4s.JValue]
   ): ZeroToMany[EdmAgent] = {
-    (modsXml(data) \ "location" \ "physicalLocation")
+    (getMods \ "location" \ "physicalLocation")
       .filterNot(node => xml.filterAttribute(node, "authority", "marcorg"))
       .map(node => xml.getByAttribute(node, "type", "division"))
       .flatMap(xml.extractStrings)
