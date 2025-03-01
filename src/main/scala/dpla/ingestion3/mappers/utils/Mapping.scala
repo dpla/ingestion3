@@ -19,7 +19,7 @@ trait Mapping[T] {
   and serializable or transient.
    */
   def preMap(data: Document[T]): Document[T] = data
-  def postMap(data: Document[T]): Unit
+  def postMap(data: Document[T]): Unit = ()
 
   // OreAggregation
   def dplaUri(data: Document[T]): ZeroToOne[URI] = None
