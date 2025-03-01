@@ -51,7 +51,7 @@ class NyplMapping extends JsonMapping with IngestMessageTemplates {
       val root = modsRoot(data)
       val xmlString = json
         .extractString(root)
-        .getOrElse(throw new Exception(s"No MODS XML for $data}"))
+        .getOrElse(throw new Exception(s"No MODS XML for $data"))
         .trim
       val xml = XML.loadString(xmlString)
       localCache.put(data, xml)
