@@ -21,26 +21,47 @@ class NyplJsonExtractor extends JsonExtractor
 
 class NyplXmlExtractor extends XmlExtractor
 
-class NyplMapping(doc: Document[JValue] = null)
-    extends JsonMapping
-    with IngestMessageTemplates {
+class NyplMapping extends JsonMapping with IngestMessageTemplates {
 
   // extractors
   lazy val json: NyplJsonExtractor = new NyplJsonExtractor
   lazy val xml: NyplXmlExtractor = new NyplXmlExtractor
 
   // mods xml from json
-  private lazy val modsXml: Elem = Try {
-    val xmlString = json
-      .extractString(modsRoot(doc))
-      .getOrElse(throw new Exception(s"No MODS XML for ${originalId(doc)}"))
-      .trim
-    XML.loadString(xmlString)
+
+  class LRUCache[K, V](maxEntries: Int)
+      extends java.util.LinkedHashMap[K, V](100, .75f, true) {
+
+    override def removeEldestEntry(eldest: java.util.Map.Entry[K, V]): Boolean =
+      size > maxEntries
+
+  }
+
+  @transient private val cache =
+    new ThreadLocal[java.util.LinkedHashMap[JValue, Elem]] {
+      override def initialValue(): java.util.LinkedHashMap[JValue, Elem] =
+        new LRUCache[JValue, Elem](10)
+    }
+
+  private def modsXml(data: JValue): Elem = Try {
+    val localCache = cache.get()
+    if (localCache.containsKey(data)) {
+      localCache.get(data)
+    } else {
+      val root = modsRoot(data)
+      val xmlString = json
+        .extractString(root)
+        .getOrElse(throw new Exception(s"No MODS XML for $data"))
+        .trim
+      val xml = XML.loadString(xmlString)
+      localCache.put(data, xml)
+      xml
+    }
   } match {
     case Success(mods) => mods
     case Failure(f) =>
       throw new Exception(
-        s"Unable to load MODS XML for ${originalId(doc)}\n${f.getMessage}"
+        s"Unable to load MODS XML for $data\n${f.getMessage}"
       )
   }
 
@@ -316,7 +337,7 @@ class NyplMapping(doc: Document[JValue] = null)
 
   override def title(data: Document[json4s.JValue]): AtLeastOne[String] =
     // titleInfo \ "title" @usage='primary'
-    (modsXml \ "titleInfo")
+    (modsXml(data) \ "titleInfo")
       .flatMap(node => xml.getByAttribute(node, "usage", "primary"))
       .flatMap(node => xml.extractStrings(node \ "title"))
 
@@ -325,7 +346,7 @@ class NyplMapping(doc: Document[JValue] = null)
   ): ZeroToMany[String] =
     // all other title values
     xml
-      .extractStrings(modsXml \ "titleInfo" \ "title")
+      .extractStrings(modsXml(data) \ "titleInfo" \ "title")
       .diff(title(data))
 
   override def identifier(data: Document[json4s.JValue]): ZeroToMany[String] = {
@@ -340,7 +361,7 @@ class NyplMapping(doc: Document[JValue] = null)
       "uri",
       "urn"
     )
-    (modsXml \ "identifier")
+    (modsXml(data) \ "identifier")
       .filter(node =>
         xml.filterAttributeListOptions(node, "type", types) || xml
           .filterAttributeListOptions(node, "displayLabel", types)
@@ -353,9 +374,10 @@ class NyplMapping(doc: Document[JValue] = null)
   ): ZeroToMany[String] = {
     // note @type='content'
     // abstract
-    (modsXml \ "note")
+    val xmlData = modsXml(data)
+    (xmlData \ "note")
       .flatMap(node => xml.getByAttribute(node, "type", "content"))
-      .flatMap(xml.extractStrings) ++ xml.extractStrings(modsXml \ "abstract")
+      .flatMap(xml.extractStrings) ++ xml.extractStrings(xmlData \ "abstract")
   }
 
   override def isShownAt(
@@ -366,7 +388,7 @@ class NyplMapping(doc: Document[JValue] = null)
     // uuid 4d0e0bc0-c540-012f-1857-58d385a7bc34
     // twas ever thus
     // https://digitalcollections.nypl.org/items/4d0e0bc0-c540-012f-1857-58d385a7bc34
-    (modsXml \ "identifier")
+    (modsXml(data) \ "identifier")
       .flatMap(node => xml.getByAttribute(node, "type", "uuid"))
       .flatMap(xml.extractStrings)
       .map(uuid => s"https://digitalcollections.nypl.org/items/$uuid")
@@ -378,55 +400,57 @@ class NyplMapping(doc: Document[JValue] = null)
     val subjectKeys =
       Seq("topic", "geographic", "temporal", "occupation", "Ohio", "Cincinnati")
 
+    val mods = modsXml(data)
+
     val subjectTitles =
-      (modsXml \ "subject" \ "titleInfo" \ "title").map(node => {
+      (mods \ "subject" \ "titleInfo" \ "title").map(node =>
         SkosConcept(
           providedLabel = xml.extractString(node),
           exactMatch = xml.getAttributeValue(node, "valueURI").map(URI).toSeq
         )
-      })
+      )
 
-    val subjectNames = (modsXml \ "subject" \ "name" \ "namePart").map(node => {
+    val subjectNames = (mods \ "subject" \ "name" \ "namePart").map(node =>
       SkosConcept(
         providedLabel = xml.extractString(node),
         exactMatch = xml.getAttributeValue(node, "valueURI").map(URI).toSeq
       )
-    })
+    )
 
-    val subjects = subjectKeys.flatMap(key => {
-      (modsXml \ "subject" \ key).map(node => {
+    val subjects = subjectKeys.flatMap(key =>
+      (mods \ "subject" \ key).map(node =>
         SkosConcept(
           providedLabel = xml.extractString(node),
           exactMatch = xml.getAttributeValue(node, "valueURI").map(URI).toSeq
         )
-      })
-    })
+      )
+    )
 
     subjects ++ subjectNames ++ subjectTitles
   }
 
   override def `type`(data: Document[json4s.JValue]): ZeroToMany[String] =
-    xml.extractStrings(modsXml \ "typeOfResource")
+    xml.extractStrings(modsXml(data) \ "typeOfResource")
 
   override def format(data: Document[json4s.JValue]): ZeroToMany[String] =
-    xml.extractStrings(modsXml \ "physicalDescription" \ "format") ++
-      xml.extractStrings(modsXml \ "genre")
+    xml.extractStrings(modsXml(data) \ "physicalDescription" \ "format") ++
+      xml.extractStrings(modsXml(data) \ "genre")
 
   override def extent(data: Document[json4s.JValue]): ZeroToMany[String] =
-    xml.extractStrings(modsXml \ "physicalDescription" \ "extent")
+    xml.extractStrings(modsXml(data) \ "physicalDescription" \ "extent")
 
   override def temporal(
       data: Document[json4s.JValue]
   ): ZeroToMany[EdmTimeSpan] =
-    xml.extractStrings(modsXml \ "subject" \ "temporal").map(stringOnlyTimeSpan)
+    xml.extractStrings(modsXml(data) \ "subject" \ "temporal").map(stringOnlyTimeSpan)
 
   override def creator(data: Document[json4s.JValue]): ZeroToMany[EdmAgent] =
-    agentHelper(modsXml, creatorRoles)
+    agentHelper(modsXml(data), creatorRoles)
 
   override def contributor(
       data: Document[json4s.JValue]
   ): ZeroToMany[EdmAgent] =
-    agentHelper(modsXml, contributorRoles)
+    agentHelper(modsXml(data), contributorRoles)
 
   override def collection(
       data: Document[json4s.JValue]
@@ -452,7 +476,7 @@ class NyplMapping(doc: Document[JValue] = null)
     json.extractStrings("useStatementText_rtxt")(solrRoot(data))
 
   override def place(data: Document[json4s.JValue]): ZeroToMany[DplaPlace] = {
-    (modsXml \ "subject" \ "geographic").map(node => {
+    (modsXml(data) \ "subject" \ "geographic").map(node => {
       DplaPlace(
         name = xml.extractString(node),
         exactMatch = xml.getAttributeValue(node, "valueURI").map(URI).toSeq
@@ -464,7 +488,7 @@ class NyplMapping(doc: Document[JValue] = null)
       data: Document[json4s.JValue]
   ): ZeroToMany[SkosConcept] =
     xml
-      .extractStrings(modsXml \ "language" \ "languageTerm")
+      .extractStrings(modsXml(data) \ "language" \ "languageTerm")
       .map(nameOnlyConcept)
 
   // OreAggregation
@@ -486,7 +510,7 @@ class NyplMapping(doc: Document[JValue] = null)
   override def dataProvider(
       data: Document[json4s.JValue]
   ): ZeroToMany[EdmAgent] = {
-    (modsXml \ "location" \ "physicalLocation")
+    (modsXml(data) \ "location" \ "physicalLocation")
       .filterNot(node => xml.filterAttribute(node, "authority", "marcorg"))
       .map(node => xml.getByAttribute(node, "type", "division"))
       .flatMap(xml.extractStrings)
@@ -507,7 +531,10 @@ class NyplMapping(doc: Document[JValue] = null)
     uri = Some(URI("http://dp.la/api/contributor/nypl"))
   )
 
-  private def agentHelper(data: NodeSeq, roles: Seq[String]): ZeroToMany[EdmAgent] =
+  private def agentHelper(
+      data: NodeSeq,
+      roles: Seq[String]
+  ): ZeroToMany[EdmAgent] =
     (data \ "name")
       .filter(node =>
         xml

@@ -17,7 +17,7 @@ class NYPLMappingTest extends AnyFlatSpec with BeforeAndAfter {
   val shortName: Option[String] = Some("nypl")
   val jsonString: String = new FlatFileIO().readFileAsString("/nypl.json")
   val json: Document[JValue] = Document(parse(jsonString))
-  val extractor = new NyplMapping(json)
+  val extractor = new NyplMapping
 
   it should "extract the correct original ID " in {
     val expected = Some("93cd9a10-c552-012f-20e8-58d385a7bc34")
