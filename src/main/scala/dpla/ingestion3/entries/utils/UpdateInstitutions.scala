@@ -10,13 +10,12 @@ import org.json4s.prefs.EmptyValueStrategy
 
 import java.io.File
 import java.net.URI
-import java.net.http.HttpClient.Redirect
+
 import java.net.http.HttpRequest.BodyPublishers
 
-import java.net.http.{HttpClient, HttpRequest}
+import java.net.http.HttpRequest
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
-import java.time.Duration
 import scala.language.implicitConversions
 
 object UpdateInstitutions {
@@ -25,28 +24,31 @@ object UpdateInstitutions {
     EmptyValueStrategy.preserve
   )
 
-  private type HubTuple = (String, Hub)
-  private type ContributingInstitutionTuple = (String, ContributingInstitution)
-
-  implicit def contributingInstitutionToJValue(contributingInstitution: ContributingInstitution): JValue = {
+  implicit def contributingInstitutionToJValue(
+      contributingInstitution: ContributingInstitution
+  ): JValue =
     ("Wikidata" -> contributingInstitution.Wikidata) ~
       ("upload" -> contributingInstitution.upload)
-  }
 
-  implicit def hubToJValue(hub: Hub): JValue = {
+  implicit def hubToJValue(hub: Hub): JValue =
     ("Wikidata" -> hub.Wikidata) ~
       ("institutions" -> hub.institutions) ~
       ("upload" -> hub.upload)
-  }
 
-  implicit def map2jvalue[T](m: Map[String, T])(implicit ev: T => JValue): JObject =
-    JObject(m.toList.sortWith( (a, b) => {a._1.compareTo(b._1) < 0}).map { case (k, v) => JField(k, ev(v)) })
+  implicit def map2jvalue[T](
+      m: Map[String, T]
+  )(implicit ev: T => JValue): JObject =
+    JObject(
+      m.toList
+        .sortWith((a, b) => { a._1.compareTo(b._1) < 0 })
+        .map { case (k, v) => JField(k, ev(v)) }
+    )
 
   case class Hub(
-                  Wikidata: Option[String] = Some(""),
-                  institutions: Map[String, ContributingInstitution] = Map(),
-                  upload: Option[Boolean] = Some(false)
-                )
+      Wikidata: Option[String] = Some(""),
+      institutions: Map[String, ContributingInstitution] = Map(),
+      upload: Option[Boolean] = Some(false)
+  )
 
   case class ContributingInstitution(
       Wikidata: Option[String] = Some(""),
@@ -57,12 +59,6 @@ object UpdateInstitutions {
     "http://search.internal.dp.la:9200/dpla_alias/_search"
 
   private val MAX_FACET_BUCKETS = 5000
-
-  private val client = HttpClient
-    .newBuilder()
-    .followRedirects(Redirect.NORMAL)
-    .connectTimeout(Duration.ofSeconds(20))
-    .build()
 
   def getContributorNamesQuery(hubName: String): String = {
     val query = Map(
@@ -164,13 +160,13 @@ object UpdateInstitutions {
       new File("src/main/resources/wiki/institutions_v2.json")
     )
     val institutionsData = (institutionsJson match {
-        case JObject(values) =>
-          values.map(value => value._1 -> value._2.extract[Hub])
-        case _ =>
-          throw new RuntimeException(
-            "Can't understand existing institutions file."
-          )
-      }).toMap
+      case JObject(values) =>
+        values.map(value => value._1 -> value._2.extract[Hub])
+      case _ =>
+        throw new RuntimeException(
+          "Can't understand existing institutions file."
+        )
+    }).toMap
 
     val hubNames = getHubNames
 
@@ -187,25 +183,7 @@ object UpdateInstitutions {
     )
 
     // no backsliding
-    for (hubName <- institutionsData.keys) {
-      if (!withDroppedHubs.contains(hubName))
-        throw new RuntimeException(f"Missing hub: $hubName")
-      val oldHub = institutionsData(hubName)
-      val newHub = withDroppedHubs(hubName)
-      if (oldHub.Wikidata != newHub.Wikidata)
-        throw new RuntimeException(f"Wikidata mismatch for hub: $hubName")
-      for (institutionName <- oldHub.institutions.keys) {
-        if (!newHub.institutions.contains(institutionName))
-          throw new RuntimeException(f"Missing institution: $institutionName in hub: $hubName")
-        val oldContributingInstitution = oldHub.institutions(institutionName)
-        val newContributingInstitution = newHub.institutions(institutionName)
-        if (oldContributingInstitution.upload != newContributingInstitution.upload)
-          throw new RuntimeException(f"Upload flag mismatch for institution: $institutionName in hub: $hubName")
-        if (
-          oldContributingInstitution.Wikidata != newContributingInstitution.Wikidata)
-          throw new RuntimeException(f"Wikidata mismatch for institution: $institutionName in hub: $hubName")
-      }
-    }
+    noBacksliding(institutionsData, withDroppedHubs)
 
     val newHubsCount = withDroppedHubs.size - institutionsData.size
     val contributorsCount = withDroppedHubs.values.flatMap(_.institutions).size
@@ -226,6 +204,49 @@ object UpdateInstitutions {
     )
   }
 
+  private def noBacksliding(
+      institutionsData: Map[String, Hub],
+      withDroppedHubs: Map[String, Hub]
+  ): Unit = {
+    for (hubName <- institutionsData.keys) {
+      if (!withDroppedHubs.contains(hubName))
+        throw new RuntimeException(f"Missing hub: $hubName")
+      val oldHub = institutionsData(hubName)
+      val newHub = withDroppedHubs(hubName)
+      if (oldHub.Wikidata != newHub.Wikidata)
+        throw new RuntimeException(f"Wikidata mismatch for hub: $hubName")
+      for (institutionName <- oldHub.institutions.keys) {
+        val oldContributingInstitution = oldHub.institutions(institutionName)
+        if (
+          !newHub.institutions.contains(
+            institutionName
+          ) && oldContributingInstitution.Wikidata.isDefined && oldContributingInstitution.Wikidata.get.nonEmpty
+        )
+          throw new RuntimeException(
+            f"Missing institution: $institutionName in hub: $hubName"
+          )
+        if (
+          oldContributingInstitution.Wikidata.isDefined && oldContributingInstitution.Wikidata.get.nonEmpty
+        ) {
+          val newContributingInstitution = newHub.institutions(institutionName)
+          if (
+            oldContributingInstitution.upload != newContributingInstitution.upload
+          )
+            throw new RuntimeException(
+              f"Upload flag mismatch for institution: $institutionName in hub: $hubName"
+            )
+
+          if (
+            oldContributingInstitution.Wikidata != newContributingInstitution.Wikidata
+          )
+            throw new RuntimeException(
+              f"Wikidata mismatch for institution: $institutionName in hub: $hubName"
+            )
+        }
+      }
+    }
+  }
+
   private def updatedHub(hubName: String, prevHub: Hub): Hub = {
     val contributorNames = getContributorNames(hubName)
     val newContributors = contributorNames
@@ -235,12 +256,19 @@ object UpdateInstitutions {
       .toMap
 
     val oldContributors = prevHub.institutions.keys.flatMap(contributorName =>
-      if (!contributorNames.contains(contributorName))
-        Some(contributorName -> prevHub.institutions(contributorName))
-      else
+      if (!contributorNames.contains(contributorName)) {
+        val prevContributor = prevHub.institutions(contributorName)
+        if (
+          prevContributor.Wikidata.isDefined && prevContributor.Wikidata.get.nonEmpty
+        )
+          Some(contributorName -> prevHub.institutions(contributorName))
+        else
+          None
+      } else {
         None
+      }
     )
 
-    prevHub.copy(institutions =  newContributors ++ oldContributors)
+    prevHub.copy(institutions = newContributors ++ oldContributors)
   }
 }
