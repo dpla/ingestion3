@@ -256,20 +256,16 @@ object UpdateInstitutions {
       .toMap
 
     val oldContributors = prevHub.institutions.keys.flatMap(contributorName =>
-      if (!contributorNames.contains(contributorName)) {
+      if (
+        !contributorNames.contains(contributorName)
+          && prevHub.institutions(contributorName).Wikidata.exists(_.nonEmpty)
+      )
         // We explicitly drop contributors that are no longer in the hub's harvest
         // and have no Wikidata ID, since they have no chance to be uploaded, and
         // just create overhead for maintaining the institutions file.
-        val prevContributor = prevHub.institutions(contributorName)
-        if (
-          prevContributor.Wikidata.isDefined && prevContributor.Wikidata.get.nonEmpty
-        )
-          Some(contributorName -> prevHub.institutions(contributorName))
-        else
-          None
-      } else {
+        Some(contributorName -> prevHub.institutions(contributorName))
+      else
         None
-      }
     )
 
     prevHub.copy(institutions = newContributors ++ oldContributors)
