@@ -1,10 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{
-  DigitalSurrogateBlockList,
-  ExtentIdentificationList
-}
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList}
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
@@ -13,7 +10,7 @@ import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
-import scala.xml.{Elem, Node, NodeSeq}
+import scala.xml.{Elem, Node, NodeSeq, Text}
 
 class HarvardMapping
     extends XmlMapping
@@ -281,27 +278,29 @@ class HarvardMapping
     val displayLabel = "displayLabel"
 
     val artMuseumLinks = for {
-      node <- (data \ "metadata" \ "mods" \ "location" \ "url")
+      node <- data \ "metadata" \ "mods" \ "location" \ "url"
       if node \@ displayLabel == "Harvard Art Museums"
       if node \@ access == objectInContext
     } yield uriOnlyWebResource(URI(node.text.trim))
 
     if (artMuseumLinks.nonEmpty) return artMuseumLinks.headOption.toSeq
 
-    val setSpec = data \ "about" \ "request" \@ "set"
+    val setSpec = data.get \ "about" \ "request" \@ "set"
+
+    val record = data.get
+    println(record)
+
     val setName = (for {
-      set <- data \ "metadata" \ "mods" \ "extension" \ "sets" \ "set"
+      set <- data.get \ "metadata" \ "mods" \ "extension" \ "sets" \ "set"
       if (set \ "setSpec").text == setSpec
     } yield (set \ "setName").text).headOption.orNull
 
-    val setLocations = for {
-      location <- data \ "metadata" \ "mods" \ "location"
+    for {
+      location <- data.get \ "metadata" \ "mods" \ "location"
       url <- location \ "url"
-      if url \@ access == objectInContext
-      if url \@ displayLabel == setName
-    } yield uriOnlyWebResource(URI(url.text))
-
-    setLocations.headOption.toSeq
+      if url \@ "access" == "object in context"
+      if url \@ "displayLabel" == setName
+    } yield uriOnlyWebResource(URI(url.text.trim))
   }
 
   // <mods:location><mods:url access="preview">
