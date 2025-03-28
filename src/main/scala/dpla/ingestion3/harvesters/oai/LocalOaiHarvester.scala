@@ -1,12 +1,14 @@
 package dpla.ingestion3.harvesters.oai
 
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.harvesters.LocalHarvester
 import dpla.ingestion3.harvesters.file.ParsedResult
-import dpla.ingestion3.harvesters.oai.refactor.{OaiConfiguration, OaiProtocol, OaiRecord, OaiSet}
-import dpla.ingestion3.harvesters.{Harvester, LocalHarvester}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
 import org.apache.spark.sql.{DataFrame, SparkSession}
+
+import java.time.format.DateTimeFormatter
+import java.time.{Instant, OffsetDateTime, ZoneId}
 
 class LocalOaiHarvester(
     spark: SparkSession,
@@ -53,16 +55,40 @@ class LocalOaiHarvester(
     spark.read.format("avro").load(tmpOutStr)
   }
 
+  private def addAboutToDocument(oaiRecord: OaiRecord): OaiRecord = {
+    val document = oaiRecord.document
+    val info = oaiRecord.info
+
+    val requestElement = <request
+      verb={info.verb}
+      metadataPrefix={info.metadataPrefix.orNull}
+      set={info.set.orNull}
+      />
+
+    val resumptionToken = if (info.resumptionToken.isDefined) <resumptionToken>{info.resumptionToken.get}</resumptionToken> else null
+    val formatter = DateTimeFormatter.ISO_INSTANT
+    val dateString = formatter.format(OffsetDateTime.ofInstant(Instant.ofEpochMilli(info.timestamp), ZoneId.systemDefault()))
+    val responseDate = <responseDate>{dateString}</responseDate>
+
+    val documentXml = scala.xml.XML.loadString(document)
+    val header = documentXml \ "header"
+    val metadata = documentXml \ "metadata"
+    val about = <about>{requestElement}{resumptionToken}{responseDate}</about>
+    val record = <record>{header}{metadata}{about}</record>
+    oaiRecord.copy(document = record.toString)
+  }
+
   private def allowListHarvest(sets: Array[String]): Unit = {
     val unixEpoch = getUnixEpoch
     for {
       set <- sets
-      page <- oaiMethods.listAllRecordPagesForSet(OaiSet(set, ""))
+      page <- oaiMethods.listAllRecordPagesForSet(set)
       record <- oaiMethods.parsePageIntoRecords(
         page,
         removeDeleted = oaiConfig.removeDeleted()
       )
-    } writeOut(unixEpoch, ParsedResult(record.id, record.document))
+      fixedRecord = addAboutToDocument(record)
+    } writeOut(unixEpoch, ParsedResult(fixedRecord.id, fixedRecord.document))
   }
 
   private def allSetsHarvest(): Unit = {
@@ -70,12 +96,13 @@ class LocalOaiHarvester(
     for {
       pageEither <- oaiMethods.listAllSetPages()
       set <- oaiMethods.parsePageIntoSets(pageEither)
-      pageEither <- oaiMethods.listAllRecordPagesForSet(set)
+      pageEither <- oaiMethods.listAllRecordPagesForSet(set.id)
       record <- oaiMethods.parsePageIntoRecords(
         pageEither,
         removeDeleted = oaiConfig.removeDeleted()
       )
-    } writeOut(unixEpoch, ParsedResult(record.id, record.document))
+      fixedRecord = addAboutToDocument(record)
+    } writeOut(unixEpoch, ParsedResult(fixedRecord.id, fixedRecord.document))
   }
 
   private def allRecordsHarvest(): Unit = {
@@ -86,7 +113,8 @@ class LocalOaiHarvester(
         pageEither,
         removeDeleted = oaiConfig.removeDeleted()
       )
-    } writeOut(unixEpoch, ParsedResult(record.id, record.document))
+      fixedRecord = addAboutToDocument(record)
+    } writeOut(unixEpoch, ParsedResult(fixedRecord.id, fixedRecord.document))
   }
 
   private def banlistHarvest(
@@ -100,13 +128,14 @@ class LocalOaiHarvester(
     for {
       set <- originalSets
       if !blacklist.contains(set.id)
-      pageEither <- oaiMethods.listAllRecordPagesForSet(set)
+      pageEither <- oaiMethods.listAllRecordPagesForSet(set.id)
       record <- oaiMethods.parsePageIntoRecords(
         pageEither,
         removeDeleted = oaiConfig.removeDeleted()
       )
-    } writeOut(unixEpoch, ParsedResult(record.id, record.document))
+      fixedRecord = addAboutToDocument(record)
+    } writeOut(unixEpoch, ParsedResult(fixedRecord.id, fixedRecord.document))
   }
-  private def getUnixEpoch: Long = System.currentTimeMillis() / 1000L
 
+  private def getUnixEpoch: Long = System.currentTimeMillis() / 1000L
 }

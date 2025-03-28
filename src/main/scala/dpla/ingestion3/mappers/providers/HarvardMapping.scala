@@ -1,19 +1,16 @@
 package dpla.ingestion3.mappers.providers
 
-import dpla.ingestion3.enrichments.normalizations.filters.{
-  DigitalSurrogateBlockList,
-  ExtentIdentificationList
-}
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
+import dpla.ingestion3.enrichments.normalizations.filters.{DigitalSurrogateBlockList, ExtentIdentificationList}
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
-import dpla.ingestion3.model.{EdmAgent, _}
+import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
-import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 
-import scala.xml.{Elem, Node, NodeSeq}
+import scala.xml.{Elem, Node, NodeSeq, Text}
 
 class HarvardMapping
     extends XmlMapping
@@ -90,17 +87,16 @@ class HarvardMapping
         .flatMap(node => getByAttribute(node, "point", "end"))
         .flatMap(extractStrings(_))
 
-    val constructedDates = if (beginDate.length == endDate.length) {
-      beginDate.zip(endDate).map { case (begin: String, end: String) =>
-        EdmTimeSpan(
-          originalSourceDate = Some(""), // blank original source date
-          begin = Some(begin),
-          end = Some(end)
-        )
-      }
-    } else {
-      Seq()
-    }
+    val constructedDates =
+      if (beginDate.length == endDate.length)
+        beginDate.zip(endDate).map { case (begin: String, end: String) =>
+          EdmTimeSpan(
+            originalSourceDate = Some(""), // blank original source date
+            begin = Some(begin),
+            end = Some(end)
+          )
+        }
+      else Seq()
 
     dateIssued ++ keyDates ++ approxDates ++ constructedDates
   }
@@ -271,46 +267,58 @@ class HarvardMapping
   override def isShownAt(
       data: Document[NodeSeq]
   ): ZeroToMany[EdmWebResource] = {
-    val artMuseumLink = (data \ "metadata" \ "mods" \ "location" \ "url")
-      .flatMap(node =>
-        getByAttribute(node, "displayLabel", "Harvard Art Museums")
-      )
-      .flatMap(node => getByAttribute(node, "access", "object in context"))
-      .flatMap(extractString)
-      .map(stringOnlyWebResource)
 
-    val collectionLinks =
-      collection(data)
-        .flatMap(_.title)
-        .flatMap(collectionTitle => {
-          (data \ "metadata" \ "mods" \ "location" \ "url")
-            .flatMap(node =>
-              getByAttribute(node, "displayLabel", collectionTitle)
-            )
-            .flatMap(node =>
-              getByAttribute(node, "access", "object in context")
-            )
-            .flatMap(extractString)
-            .map(stringOnlyWebResource)
-        })
+    // If there is a “Harvard Art Museums” display label, always use that one
+    // If there is no Harvard Art Museums, but there is more than one set name for an OAI set,
+    // match the OAI setName for the collection you are harvesting with the name of the
+    // collection in the display label and use that one.
 
-    val objectInContext = (data \ "metadata" \ "mods" \ "location" \ "url")
-      .flatMap(node =>
-        getByAttribute(node, "displayLabel", "Harvard Digital Collections")
-      )
-      .flatMap(node => getByAttribute(node, "access", "object in context"))
-      .flatMap(extractString)
-      .map(stringOnlyWebResource)
+    val objectInContext = "object in context"
+    val access = "access"
+    val displayLabel = "displayLabel"
 
-    artMuseumLink ++ collectionLinks ++ objectInContext
+    val artMuseumLinks = for {
+      node <- data \ "metadata" \ "mods" \ "location" \ "url"
+      if node \@ displayLabel == "Harvard Art Museums"
+      if node \@ access == objectInContext
+    } yield uriOnlyWebResource(URI(node.text.trim))
+
+    if (artMuseumLinks.nonEmpty) return artMuseumLinks.headOption.toSeq
+
+    val setSpec = data.get \ "about" \ "request" \@ "set"
+
+    val record = data.get
+    println(record)
+
+    val setName = (for {
+      set <- data.get \ "metadata" \ "mods" \ "extension" \ "sets" \ "set"
+      if (set \ "setSpec").text == setSpec
+    } yield (set \ "setName").text).headOption.orNull
+
+    for {
+      location <- data.get \ "metadata" \ "mods" \ "location"
+      url <- location \ "url"
+      if url \@ "access" == "object in context"
+      if url \@ "displayLabel" == setName
+    } yield uriOnlyWebResource(URI(url.text.trim))
   }
 
   // <mods:location><mods:url access="preview">
-  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    for {
+  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
+    val mainUrls = for {
       node <- data \ "metadata" \ "mods" \ "location" \ "url"
       if node \@ "access" == "preview"
     } yield uriOnlyWebResource(URI(node.text.trim))
+
+    val constituentUrls = for {
+      node <- data \ "metadata" \ "mods" \ "relatedItem"
+      if node \@ "type" == "constituent"
+      url <- node \ "location" \ "url"
+      if url \@ "access" == "preview"
+    } yield uriOnlyWebResource(URI(url.text.trim))
+
+    if (mainUrls.nonEmpty) mainUrls else constituentUrls
+  }
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] =
     EdmAgent(
@@ -404,5 +412,4 @@ class HarvardMapping
   private case class NamePart(part: String, `type`: String)
 
   private case class Names(creators: Seq[EdmAgent], contributors: Seq[EdmAgent])
-
 }
