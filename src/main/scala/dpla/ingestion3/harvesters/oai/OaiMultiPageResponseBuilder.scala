@@ -1,9 +1,10 @@
-package dpla.ingestion3.harvesters.oai.refactor
+package dpla.ingestion3.harvesters.oai
 
-import java.net.URL
 import dpla.ingestion3.utils.HttpUtils
 import org.apache.http.client.utils.URIBuilder
 import org.apache.logging.log4j.LogManager
+
+import java.net.URL
 
 class OaiMultiPageResponseBuilder(
     endpoint: String,
@@ -30,23 +31,24 @@ class OaiMultiPageResponseBuilder(
     new Iterable[OaiPage] {
       override def iterator: Iterator[OaiPage] = new Iterator[OaiPage]() {
 
-        def handleErrors(eitherResponse: Either[OaiError, OaiPage], url: URL): Option[OaiPage] = eitherResponse match {
+        def handleErrors(eitherResponse: Either[OaiError, OaiPage], url: URL, requestInfo: OaiRequestInfo): Option[OaiPage] = eitherResponse match {
           case Left(error) =>
             error match {
-              case NoRecordsMatch() =>
+              case NoRecordsMatch(requestInfo) =>
                 None // Not an error that should interrupt execution.
               case _ =>
-                throw new RuntimeException(s"OAI Error: $error for $url")
+                throw new RuntimeException(s"OAI Error: $error for URL $url and request info: $requestInfo")
             }
           case Right(page) =>
             Some(page)
          }
 
         var onDeck: Option[OaiPage] = {
+          val requestInfo = OaiRequestInfo(verb=verb, metadataPrefix=metadataPrefix, set=set, resumptionToken = None, timestamp=System.currentTimeMillis())
           val url = buildUrl()
-          handleErrors(getSinglePage(url), url)
+          val page = getSinglePage(url, requestInfo)
+          handleErrors(page, url, requestInfo)
         }
-
 
         override def hasNext: Boolean = onDeck.isDefined
 
@@ -59,8 +61,9 @@ class OaiMultiPageResponseBuilder(
             ) match {
               case None => onDeck = None
               case Some(tokenValue) =>
+                val requestInfo = last.info.copy(resumptionToken = Some(tokenValue), timestamp=System.currentTimeMillis())
                 val url = buildUrl(Some(tokenValue))
-                onDeck = handleErrors(getSinglePage(url), url)
+                onDeck = handleErrors(getSinglePage(url, requestInfo), url, requestInfo)
             }
             last
         }
@@ -80,17 +83,17 @@ class OaiMultiPageResponseBuilder(
     *   OaiPage
     */
 
-  def getSinglePage(url: URL): Either[OaiError, OaiPage] = {
+  def getSinglePage(url: URL, requestInfo: OaiRequestInfo): Either[OaiError, OaiPage] = {
     if (sleep > 0)
       Thread.sleep(sleep)
-    logger.info("Loading page from: " + url.toString)
+    logger.info("Loading page {}: {}", url.toString, requestInfo)
     val page = HttpUtils.makeGetRequest(url)
     if (OAI_ERROR_PATTERN.matches(page)) {
-      val xml = OaiXmlParser.parsePageIntoXml(OaiPage(page))
+      val xml = OaiXmlParser.parsePageIntoXml(OaiPage(page, requestInfo))
       val errorCode = xml \ "error" \@ "code"
-      Left(OaiError.errorForCode(errorCode))
+      Left(OaiError.errorForCode(errorCode, requestInfo))
     } else {
-      Right(OaiPage(page))
+      Right(OaiPage(page, requestInfo))
     }
   }
 

@@ -1,5 +1,6 @@
-package dpla.ingestion3.harvesters.oai.refactor
+package dpla.ingestion3.harvesters.oai
 
+import dpla.ingestion3.harvesters.oai.OaiConfiguration
 import org.scalatest.flatspec.AnyFlatSpec
 
 class OaiConfigurationTest extends AnyFlatSpec {

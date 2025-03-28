@@ -1,4 +1,4 @@
-package dpla.ingestion3.harvesters.oai.refactor
+package dpla.ingestion3.harvesters.oai
 
 import scala.xml.{Node, XML}
 
@@ -14,17 +14,19 @@ object OaiXmlParser {
 
   def parseXmlIntoRecords(
       xml: Node,
-      removeDeleted: Boolean
+      removeDeleted: Boolean,
+      info: OaiRequestInfo
   ): Seq[OaiRecord] = {
     containsError(xml)
-    getRecords(xml, removeDeleted)
+    getRecords(xml, removeDeleted, info)
   }
 
   def parseXmlIntoSets(
-      xml: Node
+      xml: Node,
+      info: OaiRequestInfo
   ): Seq[OaiSet] = {
     containsError(xml)
-    getSets(xml)
+    getSets(xml, info)
   }
 
   def getResumptionToken(xml: Node): Option[String] = {
@@ -32,22 +34,21 @@ object OaiXmlParser {
     if (resumptionToken.nonEmpty) Some(resumptionToken) else None
   }
 
-  private def getRecords(xml: Node, removeDeleted: Boolean): Seq[OaiRecord] =
+  private def getRecords(xml: Node, removeDeleted: Boolean, info: OaiRequestInfo): Seq[OaiRecord] =
     for {
       record <- xml \ "ListRecords" \ "record"
       id = (record \ "header" \ "identifier").text
-      setIds = for (set <- record \ "header" \ "setSpec") yield set.text
       status = (record \ "header" \ "@status").headOption
         .getOrElse(<foo>foo</foo>)
         .text
       if !removeDeleted || status != "deleted"
-    } yield OaiRecord(id, record.toString, setIds)
+    } yield OaiRecord(id, record.toString, info)
 
-  private def getSets(xml: Node): Seq[OaiSet] =
+  private def getSets(xml: Node, info: OaiRequestInfo): Seq[OaiSet] =
     for (set <- xml \ "ListSets" \ "set")
       yield {
         val id = (set \ "setSpec").text
-        OaiSet(id, set.toString)
+        OaiSet(id, set.toString, info)
       }
 
   def containsError(xml: Node): Unit = {

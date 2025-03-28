@@ -1,6 +1,4 @@
-package dpla.ingestion3.harvesters.oai.refactor
-
-import org.apache.logging.log4j.LogManager
+package dpla.ingestion3.harvesters.oai
 
 class OaiProtocol(oaiConfiguration: OaiConfiguration)
     extends OaiMethods
@@ -19,13 +17,13 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration)
     ).getResponse.iterator
 
   override def listAllRecordPagesForSet(
-      set: OaiSet
+      setSpec: String
   ): IterableOnce[OaiPage] = {
     new OaiMultiPageResponseBuilder(
       endpoint,
       "ListRecords",
       metadataPrefix,
-      Some(set.id),
+      Some(setSpec),
       oaiConfiguration.sleep
     ).getResponse.iterator
   }
@@ -39,13 +37,13 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration)
       removeDeleted: Boolean
   ): IterableOnce[OaiRecord] = {
     OaiXmlParser
-      .parseXmlIntoRecords(OaiXmlParser.parsePageIntoXml(page), removeDeleted)
+      .parseXmlIntoRecords(OaiXmlParser.parsePageIntoXml(page), removeDeleted, page.info)
       .iterator
   }
 
   override def parsePageIntoSets(
       page: OaiPage
   ): IterableOnce[OaiSet] = {
-    OaiXmlParser.parseXmlIntoSets(OaiXmlParser.parsePageIntoXml(page)).iterator
+    OaiXmlParser.parseXmlIntoSets(OaiXmlParser.parsePageIntoXml(page), page.info).iterator
   }
 }

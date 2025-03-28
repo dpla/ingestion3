@@ -6,11 +6,12 @@ import dpla.ingestion3.model._
 import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpec
 
-import scala.xml.NodeSeq
+import scala.xml.{NodeSeq, Text}
 
 class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
-  implicit val msgCollector: MessageCollector[IngestMessage] = new MessageCollector[IngestMessage]
+  implicit val msgCollector: MessageCollector[IngestMessage] =
+    new MessageCollector[IngestMessage]
 
   val mapping = new HarvardMapping
 
@@ -19,8 +20,9 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct alternative title from MARC-derived records" in {
-    val result = mapping.alternateTitle(metadata(
-      <mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    val result = mapping.alternateTitle(
+      metadata(
+        <mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                  xmlns:mods="http://www.loc.gov/mods/v3"
                  xmlns:sets="http://hul.harvard.edu/ois/xml/ns/sets"
                  xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -38,13 +40,15 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
           <mods:partName>Cryptogamic botany</mods:partName>
         </mods:titleInfo>
       </mods:mods>
-    ))
+      )
+    )
     assert(result === Seq("Alaska Volume V Cryptogamic botany"))
   }
 
   it should "extract the correct alternative title from image metadata" in {
-    val result = mapping.alternateTitle(metadata(
-      <mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    val result = mapping.alternateTitle(
+      metadata(
+        <mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                  xmlns:mods="http://www.loc.gov/mods/v3"
                  xmlns:sets="http://hul.harvard.edu/ois/xml/ns/sets"
                  xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -96,25 +100,27 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
           <mods:title>Chunhua ge fa tie di ba (Wang Xizhi)</mods:title>
         </mods:titleInfo>
       </mods:mods>
-    ))
+      )
+    )
 
-    assert(result.sorted === Seq(
-      "Ge tie",
-      "Guan tie",
-      "Chunhua ge tie",
-      "Chun hua fa tie",
-      "Chunhua ge mi ge tie",
-      "Chunhua mi ge fa tie",
-      "Su wang fu ben Chunhua ge fa tie",
-      "Lanzhou Chunhua ge tie",
-      "Ming ta su fu ben",
-      "Xi'an ben",
-      "Guan zhong ben",
-      "Guan fa tie",
-      "Chunhua ge fa tie di ba (Wang Xizhi)"
-    ).sorted)
+    assert(
+      result.sorted === Seq(
+        "Ge tie",
+        "Guan tie",
+        "Chunhua ge tie",
+        "Chun hua fa tie",
+        "Chunhua ge mi ge tie",
+        "Chunhua mi ge fa tie",
+        "Su wang fu ben Chunhua ge fa tie",
+        "Lanzhou Chunhua ge tie",
+        "Ming ta su fu ben",
+        "Xi'an ben",
+        "Guan zhong ben",
+        "Guan fa tie",
+        "Chunhua ge fa tie di ba (Wang Xizhi)"
+      ).sorted
+    )
   }
-
 
   it should "get the correct original ID" in {
     val result = mapping.originalId(
@@ -131,61 +137,90 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
         <identifier>990000915260203941</identifier>
       )
     )
-    val expected = Some(URI("http://dp.la/api/items/7fd6f05e2d23801cb1bff577e6df5f14"))
+    val expected =
+      Some(URI("http://dp.la/api/items/7fd6f05e2d23801cb1bff577e6df5f14"))
     assert(result === expected)
   }
 
   it should "return the correct data provider" in {
-    val result = mapping.dataProvider(
-      metadata(
-        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+    val result = mapping
+      .dataProvider(
+        metadata(
+          <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
           <mods:location>
             <mods:physicalLocation type="repository" displayLabel="Harvard repository">
               Master Microforms, Harvard University
             </mods:physicalLocation>
           </mods:location>
         </mods:mods>
+        )
       )
-    ).headOption.getOrElse(EdmAgent()).name
+      .headOption
+      .getOrElse(EdmAgent())
+      .name
 
     assert(result === Some("Master Microforms, Harvard University"))
   }
 
   it should "return the correct rights statement" in {
-    //doesn't matter, canned right now
+    // doesn't matter, canned right now
     val result = mapping.rights(metadata(<modsorsomething/>))
     assert(result === Seq("Held in the collections of Harvard University."))
   }
 
   it should "return the correct isShownAt" in {
-    val results = mapping.isShownAt(
-      metadata(
-        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
-          <mods:extension>
-            <sets:sets>
-              <sets:set>
-                <sets:setName>Latin American Pamphlet Digital Collection</sets:setName>
-                <sets:setSpec>latin</sets:setSpec>
-              </sets:set>
-            </sets:sets>
-          </mods:extension>
-          <mods:location>
-            <mods:url access="raw object" note="Provides access to page images of entire work">
-              https://nrs.harvard.edu/urn-3:FHCL:923450
-            </mods:url>
-            <mods:url access="preview">https://ids.lib.harvard.edu/ids/view/4965202?width=150&amp;height=150&amp;usethumb=y</mods:url>
-            <mods:url access="object in context" displayLabel="Harvard Digital Collections">
-              https://id.lib.harvard.edu/digital_collections/990000915260203941
-            </mods:url>
-            <mods:url access="object in context" displayLabel="Latin American Pamphlet Digital Collection">
-              https://id.lib.harvard.edu/curiosity/latin-american-pamphlet-digital-collection/43-990000915260203941
-            </mods:url>
-          </mods:location>
-        </mods:mods>
+
+    val mods = metadata(
+      <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+        <mods:extension>
+          <sets:sets>
+            <sets:set>
+              <sets:setName>Latin American Pamphlet Digital Collection</sets:setName>
+              <sets:setSpec>latin</sets:setSpec>
+            </sets:set>
+            <sets:set>
+              <sets:systemId>10</sets:systemId>
+              <sets:setName>Scanned Maps</sets:setName>
+              <sets:setSpec>maps</sets:setSpec>
+              <sets:baseUrl>https://id.lib.harvard.edu/curiosity/scanned-maps/44-</sets:baseUrl>
+            </sets:set>
+          </sets:sets>
+        </mods:extension>
+        <mods:location>
+          <mods:url access="raw object" note="Provides access to page images of entire work">
+            https://nrs.harvard.edu/urn-3:FHCL:923450
+          </mods:url>
+          <mods:url access="preview">https://ids.lib.harvard.edu/ids/view/4965202?width=150&amp;height=150&amp;usethumb=y</mods:url>
+          <mods:url access="object in context" displayLabel="Harvard Digital Collections">
+            https://id.lib.harvard.edu/digital_collections/990000915260203941
+          </mods:url>
+          <mods:url access="object in context" displayLabel="Latin American Pamphlet Digital Collection">
+            https://id.lib.harvard.edu/curiosity/latin-american-pamphlet-digital-collection/43-990000915260203941
+          </mods:url>
+        </mods:location>
+      </mods:mods>
+    )
+
+    val documentWithAbout = Document(
+      <record>mods.get \ "metadata" ++ <about><request verb="ListRecords" metadataPrefix="mods" set="latin"/></about></record> ++ Text("")
+    )
+
+    val results = mapping
+      .isShownAt(documentWithAbout)
+      .map(_.uri)
+    // Harvard does not want Harvard Digital Collections links
+    assert(
+      !results.contains(
+        URI("https://id.lib.harvard.edu/digital_collections/990000915260203941")
       )
-    ).map(_.uri)
-    assert(results.contains(URI("https://id.lib.harvard.edu/digital_collections/990000915260203941")))
-    assert(results.contains(URI("https://id.lib.harvard.edu/curiosity/latin-american-pamphlet-digital-collection/43-990000915260203941")))
+    )
+    assert(
+      results.contains(
+        URI(
+          "https://id.lib.harvard.edu/curiosity/latin-american-pamphlet-digital-collection/43-990000915260203941"
+        )
+      )
+    )
 
   }
 
@@ -195,9 +230,10 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "return the preview" in {
-    val result = mapping.preview(
-      metadata(
-        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+    val result = mapping
+      .preview(
+        metadata(
+          <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
           <mods:location>
             <mods:url access="raw object" note="Provides access to page images of entire work">
               https://nrs.harvard.edu/urn-3:FHCL:923450
@@ -211,25 +247,67 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
             </mods:url>
           </mods:location>
         </mods:mods>
+        )
       )
-    ).headOption.getOrElse(EdmWebResource(uri = URI(""))).uri
-    assert(result === URI("https://ids.lib.harvard.edu/ids/view/4965202?width=150&height=150&usethumb=y"))
-  }
-
-  it should "return the provider" in {
-    val result = mapping.provider(metadata(Seq()))
-    assert(result ===
-      EdmAgent(
-        name = Some("Harvard Library"),
-        uri = Some(URI("http://dp.la/api/contributor/harvard"))
+      .headOption
+      .getOrElse(EdmWebResource(uri = URI("")))
+      .uri
+    assert(
+      result === URI(
+        "https://ids.lib.harvard.edu/ids/view/4965202?width=150&height=150&usethumb=y"
       )
     )
   }
 
-  it should "extract a contributor" in {
-    val result = mapping.contributor(
+  it should "look for previews in mods:relatedItem" in {
+    val results = mapping.preview(
       metadata(
-        <mods:mods>
+        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+          <mods:location>
+            <mods:url access="raw object" note="Provides access to page images of entire work">
+              https://nrs.harvard.edu/urn-3:FHCL:923450
+            </mods:url>
+            <mods:url access="object in context" displayLabel="Harvard Digital Collections">
+              https://id.lib.harvard.edu/digital_collections/990000915260203941
+            </mods:url>
+            <mods:url access="object in context" displayLabel="Latin American Pamphlet Digital Collection">
+              https://id.lib.harvard.edu/curiosity/latin-american-pamphlet-digital-collection/43-990000915260203941
+            </mods:url>
+            </mods:location>
+          <mods:relatedItem type="constituent">
+            <mods:location>
+              <mods:url access="preview">https://ids.lib.harvard.edu/ids/view/4965202?width=150&amp;height=150&amp;usethumb=y</mods:url>
+              <mods:url access="fofo">https://example.com</mods:url>
+            </mods:location>
+          </mods:relatedItem>
+        </mods:mods>
+      )
+    )
+    assert(results.size === 1)
+    assert(
+      results.headOption
+        .getOrElse(stringOnlyWebResource(""))
+        .uri
+        .toString === "https://ids.lib.harvard.edu/ids/view/4965202?width=150&height=150&usethumb=y"
+    )
+  }
+
+  it should "return the provider" in {
+    val result = mapping.provider(metadata(Seq()))
+    assert(
+      result ===
+        EdmAgent(
+          name = Some("Harvard Library"),
+          uri = Some(URI("http://dp.la/api/contributor/harvard"))
+        )
+    )
+  }
+
+  it should "extract a contributor" in {
+    val result = mapping
+      .contributor(
+        metadata(
+          <mods:mods>
           <mods:name type="personal">
             <mods:namePart>Garman, Samuel</mods:namePart>
             <mods:namePart type="date">1843-1927</mods:namePart>
@@ -249,20 +327,24 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
             <mods:namePart>Museum of Comparative Zoology.</mods:namePart>
           </mods:name>
         </mods:mods>
+        )
       )
-    ).flatMap(_.name)
+      .flatMap(_.name)
 
-    assert(result === Seq(
-      "Agassiz, Alexander, 1835-1910",
-      "Albatross (Steamer)",
-      "Harvard University Museum of Comparative Zoology."
-    ))
+    assert(
+      result === Seq(
+        "Agassiz, Alexander, 1835-1910",
+        "Albatross (Steamer)",
+        "Harvard University Museum of Comparative Zoology."
+      )
+    )
   }
 
   it should "extract a creator" in {
-    val result = mapping.creator(
-      metadata(
-        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+    val result = mapping
+      .creator(
+        metadata(
+          <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
           <mods:name type="personal">
             <mods:namePart>Garman, Samuel</mods:namePart>
             <mods:namePart type="date">1843-1927</mods:namePart>
@@ -282,15 +364,19 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
             <mods:namePart>Museum of Comparative Zoology.</mods:namePart>
           </mods:name>
         </mods:mods>
+        )
       )
-    ).headOption.getOrElse(EdmAgent()).name
+      .headOption
+      .getOrElse(EdmAgent())
+      .name
     assert(result === Some("Garman, Samuel, 1843-1927"))
   }
 
   it should "extract dates" in {
-    val result = mapping.date(
-      metadata(
-        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+    val result = mapping
+      .date(
+        metadata(
+          <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
           <mods:originInfo>
             <mods:place>
               <mods:placeTerm type="code" authority="marccountry">ve</mods:placeTerm>
@@ -308,12 +394,15 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
             <mods:issuance>monographic</mods:issuance>
           </mods:originInfo>
         </mods:mods>
+        )
       )
-    ).headOption.getOrElse(EdmTimeSpan()).originalSourceDate
+      .headOption
+      .getOrElse(EdmTimeSpan())
+      .originalSourceDate
     assert(result === Some("1888"))
   }
 
-  //TODO
+  // TODO
   it should "extract descriptions" in {
     val result = mapping.description(
       metadata(
@@ -327,16 +416,19 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "extract extent" in {
-    val result = mapping.extent(
-      metadata(
-        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+    val result = mapping
+      .extent(
+        metadata(
+          <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
           <mods:physicalDescription>
             <mods:form authority="marcform">print</mods:form>
             <mods:extent>74 p. ; 23 cm.</mods:extent>
           </mods:physicalDescription>
         </mods:mods>
+        )
       )
-    ).headOption.getOrElse("")
+      .headOption
+      .getOrElse("")
     assert(result === "74 p. ; 23 cm.")
   }
 
@@ -371,13 +463,16 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
         </mods:mods>
       )
     )
-    assert(results === Seq(SkosConcept(providedLabel = Some("Spanish; Castilian"))))
+    assert(
+      results === Seq(SkosConcept(providedLabel = Some("Spanish; Castilian")))
+    )
   }
 
   it should "extract subject" in {
-    val result = mapping.subject(
-      metadata(
-        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+    val result = mapping
+      .subject(
+        metadata(
+          <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
           <mods:subject authority="lcsh">
             <mods:name type="personal">
               <mods:namePart>Soublette, Félix</mods:namePart>
@@ -387,25 +482,31 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
             </mods:titleInfo>
           </mods:subject>
         </mods:mods>
+        )
       )
-    ).map(_.providedLabel.getOrElse(""))
+      .map(_.providedLabel.getOrElse(""))
     assert(result.contains("Soublette, Félix"))
     assert(result.contains("Gloria de Páez"))
   }
 
   it should "extract title" in {
-    val result = mapping.title(
-      metadata(
-        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+    val result = mapping
+      .title(
+        metadata(
+          <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
           <mods:titleInfo>
             <mods:title>Estudio crítico-histórico acerca del canto épico del señor Félix Soublette, La gloria de
               Páez, premiado por la Academia Venezolana
             </mods:title>
           </mods:titleInfo>
         </mods:mods>
+        )
       )
-    ).headOption.getOrElse("")
-    assert(result === "Estudio crítico-histórico acerca del canto épico del señor Félix Soublette, La gloria de\n              Páez, premiado por la Academia Venezolana")
+      .headOption
+      .getOrElse("")
+    assert(
+      result === "Estudio crítico-histórico acerca del canto épico del señor Félix Soublette, La gloria de\n              Páez, premiado por la Academia Venezolana"
+    )
   }
 
   it should "extract title and collection title" in {
@@ -453,17 +554,25 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
         </mods:mods>
       )
     )
-    assert(result === Seq("Title", "Foote, Henry Wilder, 1875-1964. Papers of Professor Henry Wilder Foote and Family, 1714-1959."))
+    assert(
+      result === Seq(
+        "Title",
+        "Foote, Henry Wilder, 1875-1964. Papers of Professor Henry Wilder Foote and Family, 1714-1959."
+      )
+    )
   }
 
   it should "extract type" in {
-    val result = mapping.`type`(
-      metadata(
-        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+    val result = mapping
+      .`type`(
+        metadata(
+          <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
           <mods:typeOfResource>text</mods:typeOfResource>
         </mods:mods>
+        )
       )
-    ).headOption.getOrElse("")
+      .headOption
+      .getOrElse("")
     assert(result === "text")
   }
 
@@ -485,9 +594,10 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "extract publisher" in {
-    val result = mapping.publisher(
-      metadata(
-        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+    val result = mapping
+      .publisher(
+        metadata(
+          <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
           <mods:originInfo>
             <mods:place>
               <mods:placeTerm type="code" authority="marccountry">ve</mods:placeTerm>
@@ -501,23 +611,30 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
             <mods:issuance>monographic</mods:issuance>
           </mods:originInfo>
         </mods:mods>
+        )
       )
-    ).headOption.getOrElse(EdmAgent()).name.getOrElse("")
+      .headOption
+      .getOrElse(EdmAgent())
+      .name
+      .getOrElse("")
     assert(result === "Tip. Editorial de \"El Avisador Comercial\"")
   }
 
   it should "extract format" in {
-    val result = mapping.format(
-      metadata(
-        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+    val result = mapping
+      .format(
+        metadata(
+          <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
           <mods:genre>foo</mods:genre>
         </mods:mods>
+        )
       )
-    ).headOption.getOrElse("")
+      .headOption
+      .getOrElse("")
     assert(result === "foo")
   }
 
-  //TODO
+  // TODO
   it should "extract place" in {
     val result = mapping.place(
       metadata(
@@ -560,15 +677,30 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
         </mods:mods>
       )
     )
-    assert(result.contains(LiteralOrUri("Latin American pamphlet digital project at Harvard University", isUri = false)))
-    assert(result.contains(LiteralOrUri("Latin American pamphlet digital project at Harvard University. 4245 Preservation microfilm collection", isUri = false)))
+    assert(
+      result.contains(
+        LiteralOrUri(
+          "Latin American pamphlet digital project at Harvard University",
+          isUri = false
+        )
+      )
+    )
+    assert(
+      result.contains(
+        LiteralOrUri(
+          "Latin American pamphlet digital project at Harvard University. 4245 Preservation microfilm collection",
+          isUri = false
+        )
+      )
+    )
   }
 
-  //todo
+  // todo
   it should "extract collection" in {
-    val result = mapping.collection(
-      metadata(
-        <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
+    val result = mapping
+      .collection(
+        metadata(
+          <mods:mods xmlns:mods="http://www.loc.gov/mods/v3">
           <mods:extension>
             <sets:sets>
               <sets:set>
@@ -580,8 +712,12 @@ class HarvardMappingTest extends AnyFlatSpec with BeforeAndAfter {
             </sets:sets>
           </mods:extension>
         </mods:mods>
+        )
       )
-    ).headOption.getOrElse(DcmiTypeCollection()).title.getOrElse("")
+      .headOption
+      .getOrElse(DcmiTypeCollection())
+      .title
+      .getOrElse("")
     assert(result === "Chinese Rubbings Collection")
   }
 

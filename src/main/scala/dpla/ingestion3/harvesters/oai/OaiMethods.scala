@@ -1,4 +1,4 @@
-package dpla.ingestion3.harvesters.oai.refactor
+package dpla.ingestion3.harvesters.oai
 
 /** Trait that specifies OAI calls for the common functionality the data source
   * needs.
@@ -7,7 +7,7 @@ package dpla.ingestion3.harvesters.oai.refactor
 trait OaiMethods {
 
   def listAllRecordPagesForSet(
-      set: OaiSet
+      setSpec: String
   ): IterableOnce[OaiPage]
 
   def parsePageIntoRecords(
