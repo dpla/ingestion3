@@ -30831,8 +30831,8 @@
         "upload" : false
       },
       "Columbus City Schools" : {
-        "Wikidata" : "",
-        "upload" : false
+        "Wikidata" : "Q5150021",
+        "upload" : true
       },
       "Columbus Metropolitan Library" : {
         "Wikidata" : "Q5150078",
@@ -30855,8 +30855,8 @@
         "upload" : false
       },
       "Kent Historical Society and Museum Digital Collection" : {
-        "Wikidata" : "",
-        "upload" : false
+        "Wikidata" : "Q118726937",
+        "upload" : true
       },
       "Kent State University" : {
         "Wikidata" : "Q1473615",
