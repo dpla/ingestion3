@@ -287,9 +287,6 @@ class HarvardMapping
 
     val setSpec = data.get \ "about" \ "request" \@ "set"
 
-    val record = data.get
-    println(record)
-
     val setName = (for {
       set <- data.get \ "metadata" \ "mods" \ "extension" \ "sets" \ "set"
       if (set \ "setSpec").text == setSpec
