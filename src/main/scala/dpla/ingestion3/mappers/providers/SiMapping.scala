@@ -8,7 +8,8 @@ import dpla.ingestion3.utils.Utils
 import org.json4s.JsonAST
 import org.json4s.JsonDSL._
 
-import scala.xml.NodeSeq
+import scala.util.Try
+import scala.xml.{NodeSeq, Text}
 
 class SiMapping extends XmlMapping with XmlExtractor {
 
@@ -32,13 +33,6 @@ class SiMapping extends XmlMapping with XmlExtractor {
         s"&repo=DPLA"
     )
   }
-
-  def itemUri(implicit data: Document[NodeSeq]): URI =
-    URI(
-      s"http://collections.si.edu/search/results.htm?" +
-        s"q=record_ID=${getRecordId(data).getOrElse(throw MappingException("Missing required property `recordId`"))}" +
-        s"&repo=DPLA"
-    )
 
   // OreAggregation
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
@@ -97,14 +91,37 @@ class SiMapping extends XmlMapping with XmlExtractor {
 
   override def mediaMaster(
       data: Document[NodeSeq]
-  ): ZeroToMany[EdmWebResource] = {
+  ): ZeroToMany[EdmWebResource] =
     (data \\ "online_media" \ "media")
-      .flatMap(n => getAttributeValue(n, "thumbnail"))
+      .flatMap(_.child)
+      .flatMap(_ match {
+        case Text(str) if str.trim.nonEmpty => Some(str)
+        case _                              => None
+      })
       .map(stringOnlyWebResource)
-  }
 
-  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    Seq(uriOnlyWebResource(itemUri(data))) // done
+  override def isShownAt(
+      data: Document[NodeSeq]
+  ): ZeroToMany[EdmWebResource] = {
+
+    val guidDerived = for {
+      guid <- data \ "descriptiveNonRepeating" \ "guid"
+      textValue = guid.text
+    } yield uriOnlyWebResource(URI(textValue))
+
+    if (guidDerived.nonEmpty) guidDerived
+    else
+      getRecordId(data)
+        .map(id =>
+          uriOnlyWebResource(
+            URI(
+              s"http://collections.si.edu/search/results.htm?" +
+                s"q=record_ID=${id}" + s"&repo=DPLA"
+            )
+          )
+        )
+        .toSeq
+  }
 
   override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractPreview(data) // done
@@ -194,16 +211,6 @@ class SiMapping extends XmlMapping with XmlExtractor {
     extractStrings(data \\ "indexedStructured" \ "language")
       .map(_.replaceAll(" language", "")) // removes ' language' from term
       .map(nameOnlyConcept) // done
-
-  private def placeExtractor(
-      node: NodeSeq,
-      level: String,
-      `type`: String
-  ): String = {
-    getByAttribute(node \ level, "type", `type`)
-      .flatMap(extractStrings(_))
-      .mkString(", ")
-  }
 
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = {
     // Get values from <indexedStructured> \ <geoLocation>

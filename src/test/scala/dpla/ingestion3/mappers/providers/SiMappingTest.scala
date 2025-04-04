@@ -16,6 +16,7 @@ class SiMappingTest extends AnyFlatSpec with BeforeAndAfter {
   val shortName = "si"
   val xmlString: String = new FlatFileIO().readFileAsString("/si.xml")
   val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))
+
   val extractor = new SiMapping
 
   it should "use the provider shortname in minting IDs " in
@@ -58,6 +59,18 @@ class SiMappingTest extends AnyFlatSpec with BeforeAndAfter {
     val expected = Seq("http://collections.si.edu/search/results.htm?q=record_ID=acm_1991.0076.0102&repo=DPLA")
       .map(stringOnlyWebResource)
     assert(extractor.isShownAt(xml) === expected)
+  }
+
+  it should "build an isShownAt from the guid if it's available" in {
+    val xml =
+      <doc>
+        <descriptiveNonRepeating>
+          <guid>http://example.com/12345</guid>
+        </descriptiveNonRepeating>
+      </doc>
+
+    val expected = Seq("http://example.com/12345").map(stringOnlyWebResource)
+    assert(extractor.isShownAt(Document(xml)) === expected)
   }
 
   it should "extract the correct language" in {
@@ -244,10 +257,12 @@ class SiMappingTest extends AnyFlatSpec with BeforeAndAfter {
     </doc>
 
     val expected = Seq(
-      "https://ids.si.edu/ids/deliveryService/id/ark:/65665/m354db31afb0f64d4c8a06b75b1179e81b/90",
-      "https://ids.si.edu/ids/deliveryService/id/ark:/65665/m3d9f23b1f4f1d4b1eb31fd6df431027aa/90"
+      "https://ids.si.edu/ids/deliveryService/id/ark:/65665/m354db31afb0f64d4c8a06b75b1179e81b",
+      "https://ids.si.edu/ids/deliveryService/id/ark:/65665/m3d9f23b1f4f1d4b1eb31fd6df431027aa"
     ).map(stringOnlyWebResource)
 
-    assert(extractor.mediaMaster(Document(xml)) === expected)
+    val result = extractor.mediaMaster(Document(xml))
+
+    assert(result === expected)
   }
 }
