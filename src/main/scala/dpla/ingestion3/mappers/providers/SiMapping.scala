@@ -109,18 +109,18 @@ class SiMapping extends XmlMapping with XmlExtractor {
       textValue = guid.text
     } yield uriOnlyWebResource(URI(textValue))
 
-    if (guidDerived.nonEmpty) return guidDerived
-
-    getRecordId(data)
-      .map(id =>
-        uriOnlyWebResource(
-          URI(
-            s"http://collections.si.edu/search/results.htm?" +
-              s"q=record_ID=${id}" + s"&repo=DPLA"
+    if (guidDerived.nonEmpty) guidDerived
+    else
+      getRecordId(data)
+        .map(id =>
+          uriOnlyWebResource(
+            URI(
+              s"http://collections.si.edu/search/results.htm?" +
+                s"q=record_ID=${id}" + s"&repo=DPLA"
+            )
           )
         )
-      )
-      .toSeq
+        .toSeq
   }
 
   override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
