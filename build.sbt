@@ -5,7 +5,7 @@ version := "0.0.1"
 scalaVersion := "2.13.15"
 fork  := true
 outputStrategy := Some(StdoutOutput)
-val SPARK_VERSION = "3.5.3"
+val SPARK_VERSION = "3.5.5"
 
 ThisBuild / Test / parallelExecution := false
 
