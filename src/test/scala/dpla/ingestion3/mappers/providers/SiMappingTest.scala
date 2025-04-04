@@ -244,10 +244,12 @@ class SiMappingTest extends AnyFlatSpec with BeforeAndAfter {
     </doc>
 
     val expected = Seq(
-      "https://ids.si.edu/ids/deliveryService/id/ark:/65665/m354db31afb0f64d4c8a06b75b1179e81b/90",
-      "https://ids.si.edu/ids/deliveryService/id/ark:/65665/m3d9f23b1f4f1d4b1eb31fd6df431027aa/90"
+      "https://ids.si.edu/ids/deliveryService/id/ark:/65665/m354db31afb0f64d4c8a06b75b1179e81b",
+      "https://ids.si.edu/ids/deliveryService/id/ark:/65665/m3d9f23b1f4f1d4b1eb31fd6df431027aa"
     ).map(stringOnlyWebResource)
 
-    assert(extractor.mediaMaster(Document(xml)) === expected)
+    val result = extractor.mediaMaster(Document(xml))
+
+    assert(result === expected)
   }
 }

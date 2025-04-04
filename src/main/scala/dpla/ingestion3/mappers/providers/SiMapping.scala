@@ -5,10 +5,12 @@ import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
+import org.apache.spark.sql.catalyst.expressions.SizeBasedWindowFunction.n
 import org.json4s.JsonAST
 import org.json4s.JsonDSL._
 
-import scala.xml.NodeSeq
+import scala.util.Try
+import scala.xml.{NodeSeq, Text}
 
 class SiMapping extends XmlMapping with XmlExtractor {
 
@@ -32,13 +34,6 @@ class SiMapping extends XmlMapping with XmlExtractor {
         s"&repo=DPLA"
     )
   }
-
-  def itemUri(implicit data: Document[NodeSeq]): URI =
-    URI(
-      s"http://collections.si.edu/search/results.htm?" +
-        s"q=record_ID=${getRecordId(data).getOrElse(throw MappingException("Missing required property `recordId`"))}" +
-        s"&repo=DPLA"
-    )
 
   // OreAggregation
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
@@ -97,14 +92,37 @@ class SiMapping extends XmlMapping with XmlExtractor {
 
   override def mediaMaster(
       data: Document[NodeSeq]
-  ): ZeroToMany[EdmWebResource] = {
+  ): ZeroToMany[EdmWebResource] =
     (data \\ "online_media" \ "media")
-      .flatMap(n => getAttributeValue(n, "thumbnail"))
+      .flatMap(_.child)
+      .flatMap(_ match {
+        case Text(str) if str.trim.nonEmpty => Some(str)
+        case _                              => None
+      })
       .map(stringOnlyWebResource)
-  }
 
-  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    Seq(uriOnlyWebResource(itemUri(data))) // done
+  override def isShownAt(
+      data: Document[NodeSeq]
+  ): ZeroToMany[EdmWebResource] = {
+
+    val guidDerived = for {
+      guid <- data \ "descriptiveNonRepeating" \ "guid"
+      textValue = guid.text
+    } yield uriOnlyWebResource(URI(textValue))
+
+    if (guidDerived.nonEmpty) return guidDerived
+
+    getRecordId(data)
+      .map(id =>
+        uriOnlyWebResource(
+          URI(
+            s"http://collections.si.edu/search/results.htm?" +
+              s"q=record_ID=${id}" + s"&repo=DPLA"
+          )
+        )
+      )
+      .toSeq
+  }
 
   override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractPreview(data) // done
@@ -194,16 +212,6 @@ class SiMapping extends XmlMapping with XmlExtractor {
     extractStrings(data \\ "indexedStructured" \ "language")
       .map(_.replaceAll(" language", "")) // removes ' language' from term
       .map(nameOnlyConcept) // done
-
-  private def placeExtractor(
-      node: NodeSeq,
-      level: String,
-      `type`: String
-  ): String = {
-    getByAttribute(node \ level, "type", `type`)
-      .flatMap(extractStrings(_))
-      .mkString(", ")
-  }
 
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = {
     // Get values from <indexedStructured> \ <geoLocation>
@@ -418,4 +426,79 @@ class SiMapping extends XmlMapping with XmlExtractor {
 
   private def getRecordId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "descriptiveNonRepeating" \ "record_ID")
+}
+
+object SiMapping {
+
+  def main(args: Array[String]): Unit = {
+    val siMapping = new SiMapping()
+    val document = Document(example ++ Text(""))
+    val result = siMapping.isShownAt(document)
+    println(result.head.uri)
+  }
+
+  private val example =
+    <doc>
+      <indexedStructured>
+        <date>1920s</date>
+        <geoLocation>
+          <L1 type="Continent">North America</L1>
+          <L2 type="Country">United States</L2>
+          <L3 type="State">Washington</L3>
+          <L4 type="County">Grant County</L4>
+          <L5 type="City">Wahluke Ferry</L5>
+        </geoLocation>
+        <object_type>Scrapers (finishing tools)</object_type>
+        <culture>Prehistoric</culture>
+        <name>Bureau Of American Ethnology</name>
+        <name>Herbert W. Krieger</name>
+        <topic>Archaeology</topic>
+        <topic>Anthropology</topic>
+        <place>Grant County</place>
+        <place>Wahluke Ferry</place>
+        <place>United States</place>
+        <place>North America</place>
+        <place>Washington</place>
+        <online_media_type>Images</online_media_type>
+      </indexedStructured>
+      <descriptiveNonRepeating>
+        <record_ID>nmnhanthropology_8089848</record_ID>
+        <online_media>
+          <media
+          thumbnail="https://ids.si.edu/ids/deliveryService/id/ark:/65665/m374ed5494007c43b5bc680956c7efdf7f/90"
+          altTextAccessibility=""
+          idsId="ark:/65665/m374ed5494007c43b5bc680956c7efdf7f"
+          guid="http://n2t.net/ark:/65665/m374ed5494-007c-43b5-bc68-0956c7efdf7f"
+          id="damsmdm:NMNH-anthro_mc_069_055_333851-333875" type="Images"><usage>
+            <access>Not determined</access>
+          </usage>
+            https://ids.si.edu/ids/deliveryService/id/ark:/65665/m374ed5494007c43b5bc680956c7efdf7f</media>
+        </online_media>
+        <guid>http://n2t.net/ark:/65665/306470d17-74d6-4694-8f29-24fc0033005a</guid>
+        <unit_code>NMNHANTHRO</unit_code>
+        <title_sort>SCRAPER AGATE AND CHALCEDONY</title_sort>
+        <record_link>https://collections.si.edu/search/detail/edanmdm:nmnhanthropology_8089848</record_link>
+        <title label="title">Scraper - Agate And Chalcedony</title>
+        <metadata_usage>
+          <access>CC0</access>
+        </metadata_usage>
+        <data_source>NMNH - Anthropology Dept.</data_source>
+      </descriptiveNonRepeating>
+      <freetext>
+        <date label="Accession Date">16 Oct 1926</date>
+        <setName label="See more items in">Anthropology</setName>
+        <identifier label="Accession Number">091522</identifier>
+        <identifier label="USNM Number">A333861-0</identifier>
+        <notes label="Record Last Modified">31 Jul 2020</notes>
+        <notes label="Specimen Count">1</notes>
+        <culture label="Culture">Prehistoric</culture>
+        <name label="Collector">Herbert W. Krieger</name>
+        <name label="Donor Name">Bureau Of American Ethnology</name>
+        <topic label="Topic">Archaeology</topic>
+        <place label="Place">Wahluke Ferry, Grant County, Washington, United States, North America</place>
+        <dataSource label="Data Source">NMNH - Anthropology Dept.</dataSource>
+        <objectType label="Object Type">Scraper</objectType>
+      </freetext>
+    </doc>
+
 }
