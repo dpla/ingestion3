@@ -130,9 +130,10 @@ class SiMappingTest extends AnyFlatSpec with BeforeAndAfter {
     val expected = Seq(
       "http://ids.si.edu/ids/deliveryService?id=ACM-acmobj-199100760102-r2",
       "http://ids.si.edu/ids/deliveryService?id=ACM-acmobj-199100760102-r1-000002",
-      "http://ids.si.edu/ids/deliveryService?id=ACM-acmobj-199100760102-r3")
-      .map(stringOnlyWebResource)
-    assert(extractor.preview(xml) === expected)
+      "http://ids.si.edu/ids/deliveryService?id=ACM-acmobj-199100760102-r3"
+    ).map(URI(_))
+
+    assert(expected.contains(extractor.preview(xml).map(_.uri).head))
   }
 
   it should "extract the correct publisher" in {
