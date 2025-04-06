@@ -118,7 +118,7 @@ class SiMapping extends XmlMapping with XmlExtractor {
           uriOnlyWebResource(
             URI(
               s"http://collections.si.edu/search/results.htm?" +
-                s"q=record_ID=${id}" + s"&repo=DPLA"
+                s"q=record_ID=$id" + s"&repo=DPLA"
             )
           )
         )
@@ -442,86 +442,4 @@ class SiMapping extends XmlMapping with XmlExtractor {
 
   private def getRecordId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "descriptiveNonRepeating" \ "record_ID")
-}
-
-object SiMapping extends SiMapping {
-
-  def main(args: Array[String]): Unit = {
-    val data = Document(example ++ Text(""))
-    val thePreview = preview(data)
-    println(thePreview.head.uri)
-  }
-
-  val example =
-    <doc>
-      <indexedStructured>
-        <date>1890s</date>
-        <tax_family>Poaceae</tax_family>
-        <geoLocation>
-          <L1 type="Continent">North America</L1>
-          <L2 type="Country">United States</L2>
-          <L3 type="State">Wyoming</L3>
-          <Other type="Locality">Clear Creek. Town 6 mi. W of Buffalo.</Other>
-        </geoLocation>
-        <tax_class>Monocotyledonae</tax_class>
-        <tax_order>Poales</tax_order>
-        <name>Williams, --</name>
-        <name>Griffiths, --</name>
-        <topic>Monocotyledonae</topic>
-        <tax_kingdom>Plantae</tax_kingdom>
-        <scientific_name> Aristida purpurea var. longiseta (Steud.) Vasey </scientific_name>
-        <place>United States</place>
-        <place>Wyoming</place>
-        <place>North America</place>
-        <online_media_type>Images</online_media_type>
-      </indexedStructured>
-      <descriptiveNonRepeating>
-        <record_ID>nmnhbotany_15997259</record_ID>
-        <online_media>
-          <media thumbnail="https://collections.nmnh.si.edu/media/?irn=15839241&amp;thumb=yes"
-                 idsId="https://collections.nmnh.si.edu/media/?irn=15839241"
-                 guid="http://n2t.net/ark:/65665/m3d3fcb954-b3dc-42b9-89bf-10cdb4eaf9d3"
-                 type="Images">
-            <usage>
-              <access>Not determined</access>
-            </usage>
-            https://collections.nmnh.si.edu/media/?irn=15839241</media>
-          <media
-          thumbnail="https://ids.si.edu/ids/deliveryService/id/ark:/65665/m3893e5b948b7a449cb5719e072fb4a3ad/90"
-          altTextAccessibility="" idsId="ark:/65665/m3893e5b948b7a449cb5719e072fb4a3ad"
-          guid="http://n2t.net/ark:/65665/m3893e5b94-8b7a-449c-b571-9e072fb4a3ad"
-          id="damsmdm:NMNH-04222265" type="Images">
-            <usage>
-              <access>CC0</access>
-            </usage>
-            https://ids.si.edu/ids/deliveryService/id/ark:/65665/m3893e5b948b7a449cb5719e072fb4a3ad</media>
-        </online_media>
-        <guid>http://n2t.net/ark:/65665/35d269903-a6c1-45be-9f3c-756d212b4777</guid>
-        <unit_code>NMNHBOTANY</unit_code>
-        <title_sort>ARISTIDA PURPUREA VAR LONGISETA STEUD VASEY</title_sort>
-        <record_link> https://collections.si.edu/search/detail/edanmdm:nmnhbotany_15997259 </record_link>
-        <title label="title">Aristida purpurea var. longiseta (Steud.) Vasey</title>
-        <metadata_usage>
-          <access>CC0</access>
-        </metadata_usage>
-        <data_source>NMNH - Botany Dept.</data_source>
-      </descriptiveNonRepeating>
-      <freetext>
-        <date label="Collection Date">5 Aug 1898</date>
-        <setName label="See more items in">Botany</setName>
-        <setName label="See more items in">Flowering plants and ferns</setName>
-        <identifier label="Barcode">04222265</identifier>
-        <identifier label="USNM Number">991020</identifier>
-        <notes label="Record Last Modified">23 Mar 2022</notes>
-        <notes label="Specimen Count">1</notes>
-        <name label="Biogeographical Region">73 - Northwestern U.S.A.</name>
-        <name label="Collector">-- Williams</name>
-        <name label="Collector">-- Griffiths</name>
-        <name label="Min. Elevation">1981</name>
-        <publisher label="Published Name"> Aristida purpurea var. longiseta (Steud.) Vasey </publisher>
-        <place label="Place"> Clear Creek. Town 6 mi. W of Buffalo., Wyoming, United States, North America </place>
-        <dataSource label="Data Source">NMNH - Botany Dept.</dataSource>
-        <taxonomicName label="Taxonomy"> Plantae Monocotyledonae Poales Poaceae Aristidoideae </taxonomicName>
-      </freetext>
-    </doc>
 }
