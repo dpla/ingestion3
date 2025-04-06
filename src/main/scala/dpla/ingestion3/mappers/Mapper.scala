@@ -117,6 +117,7 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
             }
             // trailing punctuation
             if (
+              !uri.getPath.endsWith("/") &&
               !uri.getPath
                 .equalsIgnoreCase(uri.getPath.cleanupEndingPunctuation)
             ) {
