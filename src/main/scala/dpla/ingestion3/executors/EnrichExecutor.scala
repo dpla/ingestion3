@@ -92,7 +92,7 @@ trait EnrichExecutor extends Serializable {
       .save(outputPath)
 
     val successResultsReread =
-      spark.read.format("avro").format("avro").load(outputPath).as[OreAggregation]
+      spark.read.format("avro").load(outputPath).as[OreAggregation]
 
     // Create and write manifest.
     val manifestOpts: Map[String, String] = Map(
