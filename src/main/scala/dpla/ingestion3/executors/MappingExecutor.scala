@@ -1,24 +1,22 @@
 package dpla.ingestion3.executors
 
-import java.time.LocalDateTime
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.messages._
-import dpla.ingestion3.model
-import dpla.ingestion3.model.{OreAggregation, RowConverter}
+import dpla.ingestion3.model.OreAggregation
 import dpla.ingestion3.profiles.CHProfile
 import dpla.ingestion3.reports.summary._
 import dpla.ingestion3.utils.{CHProviderRegistry, Utils}
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
-import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.json4s.JsonAST.JValue
 
-import scala.collection.mutable
+import java.io.File
+import java.time.LocalDateTime
+import scala.reflect.io.Directory
 import scala.util.{Failure, Success}
 import scala.xml.NodeSeq
-import scala.reflect.io.Directory
-import java.io.File
 
 trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
@@ -89,7 +87,6 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     deleteTempFiles()
 
-
     val harvestedRecords: DataFrame = spark.read.format("avro").load(dataIn)
     val attemptedCount: Long = harvestedRecords.count // evaluation
 
@@ -97,46 +94,43 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     // Transformation only
     val extractorClass = getExtractorClass(shortName) // lookup from registry
 
-    val encoder = ExpressionEncoder(model.sparkSchema)
     val mappingResults = harvestedRecords
       .select("document")
       .as[String]
-      .map(document =>
-        RowConverter.toRow(dplaMap.map(document, extractorClass), model.sparkSchema)
-      )(encoder)
+      .map(document => dplaMap.map(document, extractorClass))(
+        ExpressionEncoder[OreAggregation]
+      )
 
     // Save mapped results locally as parquet
     mappingResults.write.parquet(tempLocation1)
-    mappingResults.unpersist(blocking=true)
-    harvestedRecords.unpersist(blocking=true)
+    mappingResults.unpersist(blocking = true)
+    harvestedRecords.unpersist(blocking = true)
 
-    val intermediateResults1: DataFrame = spark.read.parquet(tempLocation1)
+    val intermediateResults1 =
+      spark.read.parquet(tempLocation1).as[OreAggregation]
 
     // Removes records from mappingResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
     // Transformation only
-    val successResults: DataFrame = intermediateResults1
-      .filter(oreAggRow => {
-        !oreAggRow // not
-          .getAs[mutable.ArraySeq[Row]]("messages") // get all messages
-          .map(msg => msg.getString(1)) // extract the levels into a list
-          .contains(IngestLogLevel.error) // does that list contain any errors?
-      })
+    val successResults = intermediateResults1
+      .filter(record =>
+        !record.messages.forall(_.level == IngestLogLevel.error)
+      )
 
     // Results must be written before _LOGS.
     // Otherwise, spark interpret the `successResults' `outputPath' as
     // already existing, and will fail to write.
     successResults.write.format("avro").save(outputPath)
 
-    intermediateResults1.unpersist(blocking=true)
-    successResults.unpersist(blocking=true)
+    intermediateResults1.unpersist(blocking = true)
+    successResults.unpersist(blocking = true)
 
     // Get counts
     val validRecords = spark.read
       .format("avro")
       .load(outputPath)
     val validRecordCount = validRecords.count
-    validRecords.unpersist(blocking=true)
+    validRecords.unpersist(blocking = true)
 
     // Write manifest
     val manifestOpts: Map[String, String] = Map(
@@ -145,8 +139,6 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
       "Record count" -> Utils.formatNumber(validRecordCount),
       "Input" -> dataIn
     )
-
-
 
     outputHelper.writeManifest(manifestOpts) match {
       case Success(s) => logger.info(s"Manifest written to $s.")
@@ -160,13 +152,13 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     // Collect the values needed to generate the report
     val finalReport =
       buildFinalReport(
-        spark.read.parquet(tempLocation1),
+        spark.read.parquet(tempLocation1).as[OreAggregation],
         shortName,
         logsPath,
         startTime,
         endTime,
         attemptedCount,
-        validRecordCount,
+        validRecordCount
       )(spark)
 
     // Format the summary report and write it log file
@@ -205,14 +197,14 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     *   MappingSummaryData
     */
   private def buildFinalReport(
-      results: Dataset[Row],
+      results: Dataset[OreAggregation],
       shortName: String,
       logsBasePath: String,
       startTime: Long,
       endTime: Long,
       attemptedCount: Long,
       validRecordCount: Long
-      //duplicateHarvestRecords: Long
+      // duplicateHarvestRecords: Long
   )(implicit spark: SparkSession): MappingSummaryData = {
     // Transformation
     val messages: DataFrame = MessageProcessor.getAllMessages(results)(spark)
@@ -224,8 +216,8 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     val errorCount: Long = errors.count
 
     val logFileList: List[(String, Dataset[Row])] = List(
-      "errors" -> (errors, errorCount),
-      //"warnings" -> (warnings, warnCount) //commenting this out to avoid data explosion
+      "errors" -> (errors, errorCount)
+      // "warnings" -> (warnings, warnCount) //commenting this out to avoid data explosion
     ).filter { case (_, (_, count: Long)) => count > 0 } // drop empty
       .map { case (key: String, (data: Dataset[_], _: Long)) =>
         key -> data

@@ -1,23 +1,22 @@
 package dpla.ingestion3.executors
 
-import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.enrichments.EnrichmentDriver
 import dpla.ingestion3.messages._
-import dpla.ingestion3.model
-import dpla.ingestion3.model.{ModelConverter, OreAggregation, RowConverter}
+import dpla.ingestion3.model.OreAggregation
 import dpla.ingestion3.reports.PrepareEnrichmentReport
 import dpla.ingestion3.reports.summary.{EnrichmentOpsSummary, EnrichmentSummaryData, OperationSummary, TimeSummary}
 import dpla.ingestion3.utils.Utils
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.LongAccumulator
 
 import java.io.File
 import java.time.LocalDateTime
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 trait EnrichExecutor extends Serializable {
 
@@ -65,7 +64,8 @@ trait EnrichExecutor extends Serializable {
       sc.longAccumulator("Improved Record Count")
 
     // Load the mapped records
-    val mappedRows: DataFrame = spark.read.format("avro").load(dataIn)
+    implicit val oreAggregationEncoder: ExpressionEncoder[OreAggregation] = ExpressionEncoder[OreAggregation]
+    val mappedRows: Dataset[OreAggregation] = spark.read.format("avro").load(dataIn).as[OreAggregation]
 
     // Wrapping an instance of EnrichmentDriver in an object allows it to be
     // used in distributed operations. Without the object wrapper, it throws
@@ -76,37 +76,23 @@ trait EnrichExecutor extends Serializable {
       def get: EnrichmentDriver = driver
     }
 
-    // Create the enrichment outside map function so it is not recreated for each record.
-    // Transformation
-    val successResults = mappedRows.rdd
-      .map(row => {
+    implicit val oreAggregationOrMessageEncoder: ExpressionEncoder[Either[String, OreAggregation]] =
+      ExpressionEncoder[Either[String, OreAggregation]]
+
+    val successResults = mappedRows
+      .map(dplaMapData => {
         val driver = SharedDriver.get
         attemptedCount.add(1)
-        Try { ModelConverter.toModel(row) } match {
-          case Success(dplaMapData) =>
-            enrich(dplaMapData, driver, improvedCount, successCount)
-          case Failure(err) =>
-            (
-              null,
-              s"Error parsing mapped data: ${err.getMessage}\n" +
-                s"${err.getStackTrace.mkString("\n")}"
-            )
-        }
+        enrich(dplaMapData, driver, improvedCount, successCount)
       })
-      .filter(tuple => Option(tuple._1).isDefined)
-      .map((tuple: (Row, String)) => tuple._1)
+      .flatMap(x => x.toOption)
 
-    val successResultsDF =
-      spark.createDataFrame(successResults, model.sparkSchema)
-
-    // Save mapped records out to Avro file
-    // Action
-    successResultsDF.write
+    successResults.write
       .format("avro")
       .save(outputPath)
 
-    val successResultsDFReread =
-      spark.read.format("avro").format("avro").load(outputPath)
+    val successResultsReread =
+      spark.read.format("avro").format("avro").load(outputPath).as[OreAggregation]
 
     // Create and write manifest.
     val manifestOpts: Map[String, String] = Map(
@@ -128,7 +114,7 @@ trait EnrichExecutor extends Serializable {
 
     // Get all the messages for all records.
     val messages: DataFrame = MessageProcessor
-      .getAllMessages(successResultsDFReread)(spark)
+      .getAllMessages(successResultsReread)(spark)
       .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Transformations.
@@ -238,7 +224,7 @@ trait EnrichExecutor extends Serializable {
       driver: EnrichmentDriver,
       improvedCount: LongAccumulator,
       successCount: LongAccumulator
-  ): (Row, String) = {
+  ): Either[String, OreAggregation] = {
     driver.enrich(dplaMapData) match {
       case Success(enriched) =>
         implicit val msgs: MessageCollector[IngestMessage] =
@@ -256,9 +242,10 @@ trait EnrichExecutor extends Serializable {
         // count all records that did not have terminal errors
         successCount.add(1)
 
-        (RowConverter.toRow(oreAggMitMsgs, model.sparkSchema), null)
+        Right(oreAggMitMsgs)
+
       case Failure(exception) =>
-        (null, s"${exception.getMessage}")
+        Left(s"${exception.getMessage}")
     }
   }
 }
