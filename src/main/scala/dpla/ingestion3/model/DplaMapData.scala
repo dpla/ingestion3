@@ -2,7 +2,6 @@ package dpla.ingestion3.model
 
 import dpla.ingestion3.messages.IngestMessage
 import dpla.ingestion3.model.DplaMapData._
-import org.json4s.{JNothing, JValue}
 
 import scala.util.Try
 

@@ -1,5 +1,6 @@
 package dpla.ingestion3.messages
 
+import dpla.ingestion3.model.OreAggregation
 import dpla.ingestion3.utils.Utils
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.functions._
@@ -11,7 +12,7 @@ case class MessageFieldRpt(msg: String, field: String, count: Long)
 
 object MessageProcessor {
   def getAllMessages(
-      ds: Dataset[Row]
+      ds: Dataset[OreAggregation]
   )(implicit spark: SparkSession): Dataset[Row] = {
     import spark.implicits._
 
@@ -60,10 +61,6 @@ object MessageProcessor {
 
   /** Builds group by and count summary from `ds`. For example: Unable to mint
     * URI isShownAt 5 Missing required field isShownAt 1
-    *
-    * @param ds
-    * @return
-    *   String
     */
   def getMessageFieldSummary(
       ds: Dataset[Row]

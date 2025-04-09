@@ -3,11 +3,10 @@ package dpla.ingestion3.executors
 import dpla.ingestion3.dataStorage.OutputHelper
 
 import java.time.LocalDateTime
-import dpla.ingestion3.model.{ModelConverter, jsonlRecord}
+import dpla.ingestion3.model.{OreAggregation, jsonlRecord}
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
-import org.apache.spark.storage.StorageLevel
+import org.apache.spark.sql.{Dataset, SparkSession}
 
 import scala.util.{Failure, Success}
 
@@ -48,21 +47,16 @@ trait JsonlExecutor extends Serializable {
       .getOrCreate()
 
     import spark.implicits._
-    val sc = spark.sparkContext
 
-    val enrichedRows: DataFrame = spark.read.format("avro").load(dataIn)
+    val enrichedRows = spark.read.format("avro").load(dataIn).as[OreAggregation]
 
-    val indexRecords: Dataset[String] = enrichedRows
-      .map(row => {
-        val record = ModelConverter.toModel(row)
-        jsonlRecord(record)
-      })
+    val indexRecords: Dataset[String] = enrichedRows.map(jsonlRecord)
 
     // This should always write out as #text() because if we use #json() then the
     // data will be written out inside a JSON object (e.g. {'value': <doc>}) which is
     // invalid for our use
     indexRecords.write.option("compression", "gzip").text(outputPath)
-    indexRecords.unpersist(false)
+    indexRecords.unpersist(true)
 
     val indexCount = spark.read.text(outputPath).count()
 
@@ -79,7 +73,7 @@ trait JsonlExecutor extends Serializable {
       case Failure(f) => logger.warn(s"Manifest failed to write: $f")
     }
 
-    sc.stop()
+    spark.stop()
 
     logger.info("JSON-L export complete")
 
