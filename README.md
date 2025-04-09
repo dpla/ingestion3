@@ -876,6 +876,7 @@ In addition to how institutional eligibility is defined in `institutions_v2.json
 The record must have an `edmRights` URI, and it must be one of these values. All ports and versions of these values are valid.
 ```text
 http://rightsstatements.org/vocab/NoC-US/
+http://rightsstatements.org/vocab/NKC/
 http://creativecommons.org/publicdomain/mark/
 http://creativecommons.org/publicdomain/zero/
 http://creativecommons.org/licenses/by/
