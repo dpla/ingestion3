@@ -18,7 +18,7 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-core" % SPARK_VERSION,
   "org.apache.spark" %% "spark-sql" % SPARK_VERSION,
   "org.apache.spark" %% "spark-avro" % SPARK_VERSION,
-  "org.apache.spark" %% "spark-hadoop-cloud" % SPARK_VERSION,
+  "org.apache.spark" %% "spark-hadoop-cloud" % SPARK_VERSION exclude("stax", "stax-api"),
   //"org.eclipse.rdf4j" % "rdf4j" % "5.1.0",
   "org.eclipse.rdf4j" % "rdf4j-model" % "5.1.0",
   "org.jsoup" % "jsoup" % "1.18.3",
