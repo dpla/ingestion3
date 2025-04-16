@@ -69,7 +69,7 @@ class IthakaMapping
     extractStrings(data \ "metadata" \ "dc" \ "title")
 
   override def creator(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    extractStrings(data \ "medatadata" \ "dc" \ "creator")
+    extractStrings(data \ "metadata" \ "dc" \ "creator")
       .flatMap(_.splitAtDelimiter("\\|"))
       .flatMap(_.splitAtDelimiter(";"))
       .filter(x => x.nonEmpty && !x.equalsIgnoreCase("unknown"))
