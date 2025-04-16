@@ -10,6 +10,7 @@ import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import java.nio.file.{Files, Path}
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, OffsetDateTime, ZoneId}
+import scala.util.Try
 
 class LocalOaiHarvester(
     spark: SparkSession,
@@ -144,12 +145,11 @@ class LocalOaiHarvester(
 
 object LocalOaiHarvester {
   def main(args: Array[String]): Unit = {
-    // -l http://oai.forum.jstor.org/oai/ -s 1041 -o artstor.xml -m oai_dc
     val spark = SparkSession.builder().appName("LocalOaiHarvester").master("local[6]").getOrCreate()
     val i3Conf = new Ingestion3Conf("conf/i3.conf", Some("artstor")).load()
     val harvester = new LocalOaiHarvester(spark, "artstor", i3Conf)
     val results = harvester.localHarvest()
     results.write.mode(SaveMode.Overwrite).format("json").save("artstor.jsonl")
-    Files.delete(Path.of(harvester.tmpOutStr))
+    Try(Files.delete(Path.of(harvester.tmpOutStr))).recover(_ => System.err.println("Failed to delete temporary output file: " + harvester.tmpOutStr))
   }
 }

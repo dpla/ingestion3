@@ -2,29 +2,25 @@ package dpla.ingestion3.entries.utils
 
 import dpla.ingestion3.dataStorage.InputHelper
 import dpla.ingestion3.entries.Entry
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions.{col, count, e, explode, lit, udf}
-import org.w3c.dom.{Attr, CDATASection, Comment, Document, DocumentFragment, DocumentType, Element, Entity, EntityReference, Notation, ProcessingInstruction, Text}
+import org.w3c.dom._
 
-import java.io.{ByteArrayInputStream, StringWriter}
-import java.nio.charset.Charset
+import java.io.ByteArrayInputStream
 import java.util
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
-import javax.xml.transform.TransformerFactory
-import javax.xml.transform.dom.DOMSource
-import javax.xml.transform.stream.StreamResult
 import javax.xml.xpath.{XPathConstants, XPathFactory}
 
 object XmlValueAnalyzer {
 
   def extractValues(xmlString: String, xpathString: String): Seq[String] = {
     val builderFactory = DocumentBuilderFactory.newDefaultInstance()
-    val builder = builderFactory.newDocumentBuilder
     builderFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
     builderFactory.setNamespaceAware(false)
+    val builder = builderFactory.newDocumentBuilder
     val bais = new ByteArrayInputStream(
-      xmlString.getBytes(Charset.defaultCharset())
+      xmlString.getBytes(java.nio.charset.StandardCharsets.UTF_8)
     )
     val xmlDocument = builder.parse(bais)
     bais.close()
@@ -33,14 +29,8 @@ object XmlValueAnalyzer {
     val xPath = xPathFactory.newXPath
 
     xPath.setNamespaceContext(new javax.xml.namespace.NamespaceContext {
-      def getNamespaceURI(prefix: String): String = {
-        println(prefix)
-        ""
-      }
-      def getPrefix(uri: String): String = {
-        println(uri)
-        ""
-      }
+      def getNamespaceURI(prefix: String): String = ""
+      def getPrefix(uri: String): String = ""
       def getPrefixes(uri: String): util.Iterator[String] =
         java.util.Collections.emptyIterator[String]
     })
