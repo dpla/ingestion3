@@ -1,12 +1,13 @@
 package dpla.ingestion3.harvesters.oai
 
-import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.confs.{Ingestion3Conf, i3Conf}
 import dpla.ingestion3.harvesters.LocalHarvester
 import dpla.ingestion3.harvesters.file.ParsedResult
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 
+import java.nio.file.{Files, Path}
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, OffsetDateTime, ZoneId}
 
@@ -138,4 +139,17 @@ class LocalOaiHarvester(
   }
 
   private def getUnixEpoch: Long = System.currentTimeMillis() / 1000L
+
+}
+
+object LocalOaiHarvester {
+  def main(args: Array[String]): Unit = {
+    // -l http://oai.forum.jstor.org/oai/ -s 1041 -o artstor.xml -m oai_dc
+    val spark = SparkSession.builder().appName("LocalOaiHarvester").master("local[6]").getOrCreate()
+    val i3Conf = new Ingestion3Conf("conf/i3.conf", Some("artstor")).load()
+    val harvester = new LocalOaiHarvester(spark, "artstor", i3Conf)
+    val results = harvester.localHarvest()
+    results.write.mode(SaveMode.Overwrite).format("json").save("artstor.jsonl")
+    Files.delete(Path.of(harvester.tmpOutStr))
+  }
 }
