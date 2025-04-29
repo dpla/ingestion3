@@ -108,6 +108,6 @@ object IngestRemap
     executeJsonl(sparkConf, enrichDataOut, baseDataOut, shortName)
 
     // Email
-    Emailer.emailSummary(mapDataOut, shortName, conf)
+    //Emailer.emailSummary(mapDataOut, shortName, conf)
   }
 }
