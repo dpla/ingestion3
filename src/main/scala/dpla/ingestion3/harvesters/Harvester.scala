@@ -89,7 +89,7 @@ abstract class LocalHarvester(
     avroWriter.flush()
     avroWriter.close()
     // Delete temporary output directory and files.
-    Utils.deleteRecursively(new File(tmpOutStr))
+    //Utils.deleteRecursively(new File(tmpOutStr))
   }
 }
 
