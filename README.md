@@ -260,7 +260,7 @@ Internet Archive community webs will send us a SQL database which we need to ope
 - Install `jq` and `sqlite3` if needed, `brew install jq sqlite3`
 
 **Steps**
-1. Run a command linke `sqlite3 20250124_dpla_export.db '.mode json' '.once community-webs-json-export.json' 'select * from ait'` against the database file.
+1. Run a command like `sqlite3 20250124_dpla_export.db '.mode json' '.once community-webs-json-export.json' 'select * from ait'` against the database file.
 2. Convert JSON to JSONL `jq -c '.[]' community-webs-json-export.json > community-webs-jsonl-export.jsonl`
 3. Zip the JSONL file `zip cw.zip community-webs-jsonl-export.jsonl`
 4. Update the i3.conf file with the new endpoint/location of the zip file, e.g.  `./community-webs/originalRecords/20230426/`
