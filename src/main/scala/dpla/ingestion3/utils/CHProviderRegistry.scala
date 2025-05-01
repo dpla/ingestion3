@@ -21,6 +21,8 @@ object CHProviderRegistry {
   }
 
   private val registry = Map(
+    "artstor" -> new IthakaProfile,
+    "ithaka" -> new IthakaProfile,
     "bhl" -> new BhlProfile,
     "bpl" -> new MaProfile,
     "community-webs" -> new CommunityWebsProfile,

@@ -6,8 +6,15 @@ import dpla.ingestion3.harvesters.file._
 import dpla.ingestion3.harvesters.oai.LocalOaiHarvester
 import dpla.ingestion3.mappers.providers._
 
+class IthakaProfile extends XmlProfile {
+  type Mapping = IthakaMapping
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
+  override def getMapping = new IthakaMapping
+}
+
 /** Biodiversity Heritage Library
- */
+  */
 class BhlProfile extends XmlProfile {
   type Mapping = BhlMapping
 
@@ -15,9 +22,9 @@ class BhlProfile extends XmlProfile {
   override def getMapping = new BhlMapping
 }
 
-/** Connecticut Digital Library
- * Currently down. They're migrating to a new repository.
- */
+/** Connecticut Digital Library Currently down. They're migrating to a new
+  * repository.
+  */
 class CtProfile extends XmlProfile {
   type Mapping = CtMapping
 
@@ -27,7 +34,7 @@ class CtProfile extends XmlProfile {
 }
 
 /** Community Webs
- */
+  */
 class CommunityWebsProfile extends JsonProfile {
   type Mapping = CommunityWebsMapping
 
@@ -36,9 +43,8 @@ class CommunityWebsProfile extends JsonProfile {
   override def getMapping = new CommunityWebsMapping
 }
 
-/** District Digital
- * Server not around at the moment...
- */
+/** District Digital Server not around at the moment...
+  */
 class DcProfile extends XmlProfile {
   type Mapping = DcMapping
 
@@ -47,7 +53,7 @@ class DcProfile extends XmlProfile {
 }
 
 /** Sunshine State Digital Network
- */
+  */
 class FlProfile extends JsonProfile {
   type Mapping = FlMapping
 
@@ -55,9 +61,8 @@ class FlProfile extends JsonProfile {
   override def getMapping = new FlMapping
 }
 
-/** J. Paul Getty Trust
- *  Currently down; Primo errors.
- */
+/** J. Paul Getty Trust Currently down; Primo errors.
+  */
 class GettyProfile extends JsonProfile {
   type Mapping = GettyMapping
 
@@ -66,7 +71,7 @@ class GettyProfile extends JsonProfile {
 }
 
 /** United States Government Publishing Office (GPO)
- */
+  */
 class GpoProfile extends XmlProfile {
   type Mapping = GpoMapping
 
@@ -75,7 +80,7 @@ class GpoProfile extends XmlProfile {
 }
 
 /** Digital Library of Georgia
- */
+  */
 class DlgProfile extends JsonProfile {
   type Mapping = DlgMapping
 
@@ -84,7 +89,7 @@ class DlgProfile extends JsonProfile {
 }
 
 /** Harvard Library
- */
+  */
 class HarvardProfile extends XmlProfile {
   type Mapping = HarvardMapping
 
@@ -92,9 +97,8 @@ class HarvardProfile extends XmlProfile {
   override def getMapping = new HarvardMapping
 }
 
-/** HathiTrust
- *  Currently needs rebuilding around their export formats.
- */
+/** HathiTrust Currently needs rebuilding around their export formats.
+  */
 class HathiProfile extends XmlProfile {
   type Mapping = HathiMapping
 
@@ -104,7 +108,7 @@ class HathiProfile extends XmlProfile {
 }
 
 /** Illinois Digital Heritage Hub
- */
+  */
 class IlProfile extends XmlProfile {
   type Mapping = IllinoisMapping
 
@@ -113,7 +117,7 @@ class IlProfile extends XmlProfile {
 }
 
 /** Indiana Memory
- */
+  */
 class InProfile extends XmlProfile {
   type Mapping = InMapping
 
@@ -122,14 +126,14 @@ class InProfile extends XmlProfile {
 }
 
 /** Jewish Heritage Network
- */
+  */
 class JhnProfile extends XmlProfile {
   override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
   override def getMapping = new JhnMapping
 }
 
 /** Internet Archive
- */
+  */
 class IaProfile extends JsonProfile {
   type Mapping = IaMapping
 
@@ -137,9 +141,8 @@ class IaProfile extends JsonProfile {
   override def getMapping = new IaMapping
 }
 
-
 /** Library of Congress
- */
+  */
 class LocProfile extends JsonProfile {
   type Mapping = LcRetconMapping
 
@@ -148,9 +151,8 @@ class LocProfile extends JsonProfile {
   override def getMapping = new LcRetconMapping
 }
 
-
 /** Massachusetts - Digital Commonwealth
- */
+  */
 class MaProfile extends XmlProfile {
   type Mapping = MaMapping
 
@@ -159,7 +161,7 @@ class MaProfile extends XmlProfile {
 }
 
 /** Digital Maryland
- */
+  */
 class MarylandProfile extends XmlProfile {
   type Mapping = MarylandMapping
 
@@ -168,7 +170,7 @@ class MarylandProfile extends XmlProfile {
 }
 
 /** Minnesota Digital Library
- */
+  */
 class MdlProfile extends JsonProfile {
   type Mapping = MdlMapping
 
@@ -177,7 +179,7 @@ class MdlProfile extends JsonProfile {
 }
 
 /** Michigan Service Hub
- */
+  */
 class MiProfile extends XmlProfile {
   type Mapping = MichiganMapping
 
@@ -186,7 +188,7 @@ class MiProfile extends XmlProfile {
 }
 
 /** Mississippi Hub
- */
+  */
 class MississippiProfile extends JsonProfile {
   type Mapping = MississippiMapping
 
@@ -196,7 +198,7 @@ class MississippiProfile extends JsonProfile {
 }
 
 /** Heartland Hub
- */
+  */
 class HeartlandProfile extends JsonProfile {
   type Mapping = HeartlandMapping
 
@@ -206,7 +208,7 @@ class HeartlandProfile extends JsonProfile {
 }
 
 /** (Montana) Big Sky Digital Network
- */
+  */
 class MtProfile extends XmlProfile {
   type Mapping = MtMapping
 
@@ -215,7 +217,7 @@ class MtProfile extends XmlProfile {
 }
 
 /** Mountain West Digital Library
- */
+  */
 class MwdlProfile extends XmlProfile {
   type Mapping = MwdlMapping
 
@@ -224,7 +226,7 @@ class MwdlProfile extends XmlProfile {
 }
 
 /** National Archives and Records Administration
- */
+  */
 class NaraProfile extends XmlProfile {
   type Mapping = NaraMapping
 
@@ -233,7 +235,7 @@ class NaraProfile extends XmlProfile {
 }
 
 /** NJ/DE Digital Collective
- */
+  */
 class NJDEProfile extends XmlProfile {
   type Mapping = NJDEMapping
 
@@ -242,7 +244,7 @@ class NJDEProfile extends XmlProfile {
 }
 
 /** North Carolina
- */
+  */
 class NcProfile extends XmlProfile {
   type Mapping = NcMapping
 
@@ -251,7 +253,7 @@ class NcProfile extends XmlProfile {
 }
 
 /** Northwest Digital Heritage
- */
+  */
 class NorthwestHeritageProfile extends XmlProfile {
   type Mapping = NorthwestHeritageMapping
 
@@ -260,7 +262,7 @@ class NorthwestHeritageProfile extends XmlProfile {
 }
 
 /** New York Public Library
- */
+  */
 class NYPLProfile extends JsonProfile {
   type Mapping = NyplMapping
 
@@ -270,7 +272,7 @@ class NYPLProfile extends JsonProfile {
 }
 
 /** Ohio Hub
- */
+  */
 class OhioProfile extends XmlProfile {
   type Mapping = OhioMapping
 
@@ -278,9 +280,8 @@ class OhioProfile extends XmlProfile {
   override def getMapping = new OhioMapping
 }
 
-
 /** Oklahoma Hub
- */
+  */
 class OklahomaProfile extends XmlProfile {
   type Mapping = OklahomaMapping
 
@@ -289,8 +290,8 @@ class OklahomaProfile extends XmlProfile {
 }
 
 /** P2P (Plains2Peaks)
- *   - Colorado and Wyoming
- */
+  *   - Colorado and Wyoming
+  */
 class P2PProfile extends XmlProfile {
   type Mapping = P2PMapping
 
@@ -299,7 +300,7 @@ class P2PProfile extends XmlProfile {
 }
 
 /** Pennsylvania Hub
- */
+  */
 class PaProfile extends XmlProfile {
   type Mapping = PaMapping
 
@@ -308,7 +309,7 @@ class PaProfile extends XmlProfile {
 }
 
 /** David Rumsey Map Collection
- */
+  */
 class RumseyProfile extends XmlProfile {
   type Mapping = RumseyMapping
 
@@ -317,7 +318,7 @@ class RumseyProfile extends XmlProfile {
 }
 
 /** South Carolina Digital Library
- */
+  */
 class ScProfile extends XmlProfile {
   type Mapping = ScMapping
 
@@ -326,7 +327,7 @@ class ScProfile extends XmlProfile {
 }
 
 /** South Dakota
- */
+  */
 class SdProfile extends JsonProfile {
   type Mapping = SdMapping
 
@@ -335,7 +336,7 @@ class SdProfile extends JsonProfile {
 }
 
 /** Tennessee Digital Library
- */
+  */
 class TnProfile extends XmlProfile {
   type Mapping = TnMapping
 
@@ -344,7 +345,7 @@ class TnProfile extends XmlProfile {
 }
 
 /** The Portal to Texas History
- */
+  */
 class TxProfile extends XmlProfile {
   type Mapping = TnMapping
 
@@ -353,7 +354,7 @@ class TxProfile extends XmlProfile {
 }
 
 /** Texas Digital Library (aka Texas 2)
- */
+  */
 class TxdlProfile extends XmlProfile {
   type Mapping = TxdlMapping
 
@@ -362,7 +363,7 @@ class TxdlProfile extends XmlProfile {
 }
 
 /** Smithsonian Institution
- */
+  */
 class SiProfile extends XmlProfile {
   type Mapping = SiMapping
 
@@ -370,9 +371,9 @@ class SiProfile extends XmlProfile {
   override def getMapping = new SiMapping
 }
 
-/** Digital Virginias
- * File obtained by going to the GitHub repo and downloading it as a zip
- */
+/** Digital Virginias File obtained by going to the GitHub repo and downloading
+  * it as a zip
+  */
 class VirginiasProfile extends XmlProfile {
   type Mapping = VirginiasMapping
 
@@ -381,7 +382,7 @@ class VirginiasProfile extends XmlProfile {
 }
 
 /** Vermont (Green Mountain Digital Archives)
- */
+  */
 class VtProfile extends XmlProfile {
   type Mapping = VtMapping
 
@@ -390,7 +391,7 @@ class VtProfile extends XmlProfile {
 }
 
 /** Recollection Wisconsin
- */
+  */
 class WiProfile extends XmlProfile {
   type Mapping = WiMapping
 
