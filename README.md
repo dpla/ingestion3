@@ -257,12 +257,11 @@ Some hubs have their feed endpoints behind a firewall so the harvests needs to b
 
 Internet Archive community webs will send us a SQL database which we need to open and export as a JSON file. Then convert the JSON file to JSONL
 
-- [Install SQLite DB Brower](https://sqlitebrowser.org/dl/)
-- Install `jq` if needed, `brew install jq`
+- Install `jq` and `sqlite3` if needed, `brew install jq sqlite3`
 
 **Steps**
-1. Open `.sql` file they emailed in SQLite DB Browser and export to JSON `File -> Export -> JSON`
-2. Convert JSON to JSONL `jq -c '.[]' community-web-json-export.json > community-webs-jsonl-export.jsonl`
+1. Run a command linke `sqlite3 20250124_dpla_export.db '.mode json' '.once community-webs-json-export.json' 'select * from ait'` against the database file.
+2. Convert JSON to JSONL `jq -c '.[]' community-webs-json-export.json > community-webs-jsonl-export.jsonl`
 3. Zip the JSONL file `zip cw.zip community-webs-jsonl-export.jsonl`
 4. Update the i3.conf file with the new endpoint/location of the zip file, e.g.  `./community-webs/originalRecords/20230426/`
 ### Digital Virginias
