@@ -10,11 +10,13 @@ import org.jsoup.nodes.Document.OutputSettings
 import org.jsoup.nodes.Entities.EscapeMode
 import org.jsoup.safety.Safelist
 
+import java.util.regex.Pattern
+
 /** String enrichments
   */
 object StringNormalizationUtils {
 
-  implicit class Normalizations(value: String) {
+  implicit class Normalizations(stringToBeNormalized: String) {
 
     private type SingleStringEnrichment = String
 
@@ -29,45 +31,38 @@ object StringNormalizationUtils {
       * Construction and testing of those regular expressions is dependent on
       * the user
       */
-    lazy val applyAllowFilter: Set[String] => String = allowList => {
-      // Generates a term block list by applying a block filter with the allowed terms
-      val termsToRemove = applyBlockFilter(allowList)
+    lazy val applyAllowFilter: Set[String] => String = allowList =>
+      allowList.map(Pattern.compile(_, Pattern.CASE_INSENSITIVE).matcher(stringToBeNormalized))
+        .filter(_.find())
+        .map(_ => stringToBeNormalized)
+        .mkString(" ").reduceWhitespace
 
-      // Create a new set of regular expressions from the non-allowed terms
-      // with a different base regex pattern
-      val nonAllowedTerms = Seq(termsToRemove)
-        .map(FilterRegex.Regex(_).allowListRegex)
-        .toSet
-
-      // Applies the block filter using nonAllowedTerms created from the original
-      // string to the original string.
-      // Trims leading/trailing whitespace and reduces extra interior whitespace
-      applyBlockFilter(nonAllowedTerms).reduceWhitespace
-    }
 
     /** Applies the provided set of patterns and removes all matches from the
       * original string
       */
     lazy val applyBlockFilter: Set[String] => String = termList =>
       termList
-        .foldLeft(value) { case (string, pattern) =>
-          Option(string.replaceAll(pattern, "").reduceWhitespace)
-            .getOrElse(string)
+        .foldLeft(stringToBeNormalized) { case (acc, pattern) =>
+          acc.replaceAll(pattern, "").reduceWhitespace
         }
 
     /** Find and capitalize the first character in a given string
       *
-      * 3 blind mice -> 3 blind mice
-      * three blind mice -> Three blind mice.
-      * ...vacationland... -> ...Vacationland...
-      * The first bike -> The first bike
+      * 3 blind mice -> 3 blind mice three blind mice -> Three blind mice.
+      * ...vacationland... -> ...Vacationland... The first bike -> The first
+      * bike
       */
     lazy val capitalizeFirstChar: SingleStringEnrichment = {
-      val charIndex = findFirstChar(value)
+      val charIndex = findFirstChar(stringToBeNormalized)
       if (charIndex >= 0)
-        replaceCharAt(value, charIndex, value.charAt(charIndex).toUpper)
+        replaceCharAt(
+          stringToBeNormalized,
+          charIndex,
+          stringToBeNormalized.charAt(charIndex).toUpper
+        )
       else
-        value
+        stringToBeNormalized
     }
 
     /** Removes trailing colons, semicolons, commas, slashes, hyphens and
@@ -76,13 +71,13 @@ object StringNormalizationUtils {
       */
     lazy val cleanupEndingPunctuation: SingleStringEnrichment = {
       // FIXME rewrite as a regular expression
-      val endIndex = value.lastIndexWhere(_.isLetterOrDigit)
+      val endIndex = stringToBeNormalized.lastIndexWhere(_.isLetterOrDigit)
       if (endIndex == -1) {
         // If there is nothing to clean up then return the existing string
-        value
+        stringToBeNormalized
       } else {
-        val start = value.substring(0, endIndex + 1)
-        val end = value.substring(endIndex + 1)
+        val start = stringToBeNormalized.substring(0, endIndex + 1)
+        val end = stringToBeNormalized.substring(endIndex + 1)
         val cleanEnd = end.replaceAll(beginAndEndPunctuationToRemove, "")
         start.concat(cleanEnd)
       }
@@ -91,13 +86,13 @@ object StringNormalizationUtils {
     /** Removes trailing spaces and commas
       */
     lazy val cleanupEndingCommaAndSpace: SingleStringEnrichment = {
-      val endIndex = value.lastIndexWhere(_.isLetterOrDigit)
+      val endIndex = stringToBeNormalized.lastIndexWhere(_.isLetterOrDigit)
       if (endIndex == -1) {
         // If there is nothing to clean up then return the existing string
-        value
+        stringToBeNormalized
       } else {
-        val start = value.substring(0, endIndex + 1)
-        val end = value.substring(endIndex + 1)
+        val start = stringToBeNormalized.substring(0, endIndex + 1)
+        val end = stringToBeNormalized.substring(endIndex + 1)
         val cleanEnd = end.replaceAll("""[,\s]""", "")
         start.concat(cleanEnd)
       }
@@ -108,14 +103,14 @@ object StringNormalizationUtils {
       * precede the first letter or digit
       */
     lazy val cleanupLeadingPunctuation: SingleStringEnrichment = {
-      val beginIndex = value.indexWhere(_.isLetterOrDigit)
+      val beginIndex = stringToBeNormalized.indexWhere(_.isLetterOrDigit)
       if (beginIndex == -1)
-        value
+        stringToBeNormalized
       else
-        value
+        stringToBeNormalized
           .substring(0, beginIndex)
           .replaceAll(beginAndEndPunctuationToRemove, "")
-          .concat(value.substring(beginIndex))
+          .concat(stringToBeNormalized.substring(beginIndex))
     }
 
     /** Accepts a String value and splits it around periods. Strips trailing and
@@ -126,14 +121,16 @@ object StringNormalizationUtils {
       */
     lazy val convertToSentenceCase: SingleStringEnrichment = {
       val pattern: scala.util.matching.Regex = """.*?(\.)""".r
-      val sentences = for (t <- pattern findAllIn value) yield t.trim.capitalize
+      val sentences =
+        for (t <- pattern findAllIn stringToBeNormalized)
+          yield t.trim.capitalize
       // rejoin the sentences and add back the whitespace that was trimmed off
       sentences.mkString(" ")
     }
 
     /** */
     lazy val extractExtents: SingleStringEnrichment =
-      value
+      stringToBeNormalized
         // allow things that look like extents
         .applyAllowFilter(ExtentIdentificationList.termList)
         // block exceptions
@@ -142,8 +139,9 @@ object StringNormalizationUtils {
     /** Truncates the string at the specified length
       */
     lazy val limitCharacters: Int => String = length =>
-      if (value.length > length) value.substring(0, length)
-      else value
+      if (stringToBeNormalized.length > length)
+        stringToBeNormalized.substring(0, length)
+      else stringToBeNormalized
 
     /** Reduce multiple whitespace values to a single and removes leading and
       * trailing white space
@@ -154,10 +152,10 @@ object StringNormalizationUtils {
       * whitespace character: [\n\x0B\f\r\x85\u2028\u2029]
       */
     lazy val reduceWhitespace: SingleStringEnrichment =
-      value.replaceAll("[\\h\\v]+", " ").trim
+      stringToBeNormalized.replaceAll("[\\h\\v]+", " ").trim
 
     lazy val cleanupGeocoordinates: SingleStringEnrichment =
-      value.splitAtDelimiter(",") match {
+      stringToBeNormalized.splitAtDelimiter(",") match {
         case split: Array[String] if split.length == 2 =>
           val newNorth = split(0).replaceAll("[nN]$", "")
           val newWest = split(1).replaceAll("[wW]$", "")
@@ -176,29 +174,30 @@ object StringNormalizationUtils {
     /** Splits a String value around a given delimiter.
       */
     lazy val splitAtDelimiter: String => Array[String] = delimiter => {
-      value.split(delimiter).map(_.trim).filter(_.nonEmpty)
+      stringToBeNormalized.split(delimiter).map(_.trim).filter(_.nonEmpty)
     }
 
     /** If string does not contain an opening bracket, strip all closing
       * brackets.
       */
     lazy val stripUnmatchedClosingBrackets: SingleStringEnrichment =
-      if (value.contains("[")) value
-      else value.replace("]", "")
+      if (stringToBeNormalized.contains("[")) stringToBeNormalized
+      else stringToBeNormalized.replace("]", "")
 
     /** If string does not contain a closing bracket, strip all opening
       * brackets.
       */
     lazy val stripUnmatchedOpeningBrackets: SingleStringEnrichment =
-      if (value.contains("]")) value
-      else value.replace("[", "")
+      if (stringToBeNormalized.contains("]")) stringToBeNormalized
+      else stringToBeNormalized.replace("[", "")
 
     /** Strip all double quotes from the given string
       */
-    lazy val stripDblQuotes: SingleStringEnrichment = value.replaceAll("\"", "")
+    lazy val stripDblQuotes: SingleStringEnrichment =
+      stringToBeNormalized.replaceAll("\"", "")
 
     lazy val stripHTML: SingleStringEnrichment = {
-      val unescaped = StringEscapeUtils.unescapeHtml4(value)
+      val unescaped = StringEscapeUtils.unescapeHtml4(stringToBeNormalized)
       val cleaned = Jsoup.clean(
         unescaped,
         "",
@@ -212,10 +211,10 @@ object StringNormalizationUtils {
       * trailing whitespace
       */
     lazy val stripEndingPeriod: SingleStringEnrichment =
-      if (value.matches(""".*?[^\.]\.[\n\r\s]*$"""))
-        value.replaceAll("""\.[\n\r\s\h\v]*$""", "")
+      if (stringToBeNormalized.matches(""".*?[^\.]\.[\n\r\s]*$"""))
+        stringToBeNormalized.replaceAll("""\.[\n\r\s\h\v]*$""", "")
       else
-        value
+        stringToBeNormalized
 
     /** Punctuation and whitespace characters that should be removed from
       * leading and trailing parts of string
