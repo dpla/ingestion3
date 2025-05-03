@@ -13,6 +13,9 @@ import org.json4s.jackson.JsonMethods._
 import java.time.LocalDateTime
 import scala.util.{Failure, Success}
 
+private case class Folder(id: String, url: String)
+private case class NaraWithId(id: String, json: String)
+
 object NaraFilecoin {
 
   private val logger = LogManager.getLogger(this.getClass)
@@ -55,7 +58,6 @@ object NaraFilecoin {
     implicit val oreAggregationEncoder: ExpressionEncoder[OreAggregation] =
       ExpressionEncoder[OreAggregation]
 
-    case class Folder(id: String, url: String)
     implicit val folderEncoder: ExpressionEncoder[Folder] = ExpressionEncoder[Folder]
 
     val folders = spark.read
@@ -66,7 +68,7 @@ object NaraFilecoin {
       .withColumnRenamed("Folder Name", "id")
       .as[Folder]
 
-    case class NaraWithId(id: String, json: String)
+
     implicit val naraWithIdEncoder: ExpressionEncoder[NaraWithId] =
       ExpressionEncoder[NaraWithId]
 
