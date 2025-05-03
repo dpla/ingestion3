@@ -56,6 +56,7 @@ object NaraFilecoin {
       ExpressionEncoder[OreAggregation]
 
     case class Folder(id: String, url: String)
+    implicit val folderEncoder: ExpressionEncoder[Folder] = ExpressionEncoder[Folder]
 
     val folders = spark.read
       .format("csv")
@@ -66,6 +67,8 @@ object NaraFilecoin {
       .as[Folder]
 
     case class NaraWithId(id: String, json: String)
+    implicit val naraWithIdEncoder: ExpressionEncoder[NaraWithId] =
+      ExpressionEncoder[NaraWithId]
 
     val nara = spark.read
       .format("avro")
