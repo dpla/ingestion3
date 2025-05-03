@@ -1,16 +1,33 @@
 package dpla.ingestion3.entries.utils
 
-import dpla.ingestion3.model.{ModelConverter, jsonlRecord}
+import dpla.ingestion3.dataStorage.{InputHelper, OutputHelper}
+import dpla.ingestion3.model.{OreAggregation, jsonlRecord}
+import org.apache.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
+import java.time.LocalDateTime
+import scala.util.{Failure, Success}
+
 object NaraFilecoin {
 
-  private case class Folder(id: String, url: String)
+  private val logger = LogManager.getLogger(this.getClass)
 
   def main(args: Array[String]): Unit = {
+
+    val inputDirectory =
+      if (InputHelper.isActivityPath(args(0))) args(0)
+      else
+        InputHelper
+          .mostRecent(args(0))
+          .getOrElse(throw new RuntimeException("Unable to load harvest data."))
+
+    val startDateTime: LocalDateTime = LocalDateTime.now
+    val outputHelper = new OutputHelper(args(1), "nara", "jsonl", startDateTime)
+    val outputPath = outputHelper.activityPath
 
     val baseConf = new SparkConf()
       .setAppName(s"NARA Filecoin CID Merge")
@@ -22,6 +39,11 @@ object NaraFilecoin {
       .getOrCreate()
 
     import spark.implicits._
+
+    implicit val oreAggregationEncoder: ExpressionEncoder[OreAggregation] =
+      ExpressionEncoder[OreAggregation]
+
+    case class Folder(id: String, url: String)
 
     val folders = spark.read
       .format("csv")
@@ -35,14 +57,13 @@ object NaraFilecoin {
 
     val nara = spark.read
       .format("avro")
-      .load("src/main/resources/nara/")
+      .load(inputDirectory)
+      .as[OreAggregation]
       .map(row => {
-        val model = ModelConverter.toModel(row)
-        val id = model.dplaUri.toString.split("/").last
-        val json = jsonlRecord(model)
+        val id = row.dplaUri.toString.split("/").last
+        val json = jsonlRecord(row)
         NaraWithId(id, json)
       })
-      .as[NaraWithId]
 
     val results = nara
       .join(folders, nara("id") === folders("id"))
@@ -60,6 +81,25 @@ object NaraFilecoin {
     results.write
       .mode("overwrite")
       .option("compression", "gzip")
-      .text("/Users/michael/with-ipfs-urls.jsonl")
+      .text(outputPath)
+
+    val indexCount = spark.read.text(outputPath).count()
+
+    // Create and write manifest.
+    val manifestOpts: Map[String, String] = Map(
+      "Activity" -> "JSON-L",
+      "Provider" -> "nara",
+      "Record count" -> indexCount.toString,
+      "Input" -> inputDirectory
+    )
+
+    outputHelper.writeManifest(manifestOpts) match {
+      case Success(s) => logger.info(s"Manifest written to $s")
+      case Failure(f) => logger.warn(s"Manifest failed to write: $f")
+    }
+
+    spark.stop()
+
+    logger.info("NARA Filecoin JSON-L export complete")
   }
 }
