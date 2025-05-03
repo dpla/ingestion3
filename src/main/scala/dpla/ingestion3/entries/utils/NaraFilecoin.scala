@@ -1,5 +1,6 @@
 package dpla.ingestion3.entries.utils
 
+import dpla.ingestion3.confs.CmdArgs
 import dpla.ingestion3.dataStorage.{InputHelper, OutputHelper}
 import dpla.ingestion3.model.{OreAggregation, jsonlRecord}
 import org.apache.log4j.LogManager
@@ -18,23 +19,34 @@ object NaraFilecoin {
 
   def main(args: Array[String]): Unit = {
 
+    val cmdArgs = new CmdArgs(args)
+    val baseDataOut = cmdArgs.getOutput
+    val shortName = cmdArgs.getProviderName
+    val input = cmdArgs.getInput
+    val sparkMaster: Option[String] = cmdArgs.getSparkMaster
+
     val inputDirectory =
-      if (InputHelper.isActivityPath(args(0))) args(0)
+      if (InputHelper.isActivityPath(input)) input
       else
         InputHelper
-          .mostRecent(args(0))
-          .getOrElse(throw new RuntimeException("Unable to load harvest data."))
+          .mostRecent(input)
+          .getOrElse(throw new RuntimeException("Unable to load enriched data."))
 
     val startDateTime: LocalDateTime = LocalDateTime.now
-    val outputHelper = new OutputHelper(args(1), "nara", "jsonl", startDateTime)
+    val outputHelper = new OutputHelper(baseDataOut, shortName, "jsonl", startDateTime)
     val outputPath = outputHelper.activityPath
 
     val baseConf = new SparkConf()
       .setAppName(s"NARA Filecoin CID Merge")
 
+    val sparkConf = sparkMaster match {
+      case Some(m) => baseConf.setMaster(m)
+      case None    => baseConf
+    }
+
     implicit val spark: SparkSession = SparkSession
       .builder()
-      .config(baseConf)
+      .config(sparkConf)
       .config("spark.ui.showConsoleProgress", value = false)
       .getOrCreate()
 
