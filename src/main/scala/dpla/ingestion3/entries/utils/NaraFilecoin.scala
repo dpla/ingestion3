@@ -33,10 +33,13 @@ object NaraFilecoin {
       else
         InputHelper
           .mostRecent(input)
-          .getOrElse(throw new RuntimeException("Unable to load enriched data."))
+          .getOrElse(
+            throw new RuntimeException("Unable to load enriched data.")
+          )
 
     val startDateTime: LocalDateTime = LocalDateTime.now
-    val outputHelper = new OutputHelper(baseDataOut, shortName, "jsonl", startDateTime)
+    val outputHelper =
+      new OutputHelper(baseDataOut, shortName, "jsonl", startDateTime)
     val outputPath = outputHelper.activityPath
 
     val baseConf = new SparkConf()
@@ -58,7 +61,8 @@ object NaraFilecoin {
     implicit val oreAggregationEncoder: ExpressionEncoder[OreAggregation] =
       ExpressionEncoder[OreAggregation]
 
-    implicit val folderEncoder: ExpressionEncoder[Folder] = ExpressionEncoder[Folder]
+    implicit val folderEncoder: ExpressionEncoder[Folder] =
+      ExpressionEncoder[Folder]
 
     val folders = spark.read
       .format("csv")
@@ -67,7 +71,6 @@ object NaraFilecoin {
       .drop("number of files", "file size")
       .withColumnRenamed("Folder Name", "id")
       .as[Folder]
-
 
     implicit val naraWithIdEncoder: ExpressionEncoder[NaraWithId] =
       ExpressionEncoder[NaraWithId]
@@ -83,16 +86,21 @@ object NaraFilecoin {
       })
 
     val results = nara
-      .join(folders, nara("id") === folders("id"))
+      .join(folders, nara("id") === folders("id"), "left_outer")
       .select("json", "URL")
       .filter("URL is not null")
       .map(row => {
         val json = row.getString(0)
         val url = row.getString(1)
-        val parsed = parse(json)
-        val enhanced =
-          parsed merge JObject("_source" -> JObject("ipfs" -> JString(url)))
-        compact(render(enhanced))
+        if (url == null) json
+        else
+          compact(
+            render(
+              parse(json) merge JObject(
+                "_source" -> JObject("filecoin" -> JString(url))
+              )
+            )
+          )
       })
 
     results.write
