@@ -88,7 +88,6 @@ object NaraFilecoin {
     val results = nara
       .join(folders, nara("id") === folders("id"), "left_outer")
       .select("json", "URL")
-      .filter("URL is not null")
       .map(row => {
         val json = row.getString(0)
         val url = row.getString(1)
