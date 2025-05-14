@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
+import org.apache.spark.sql.functions.{array_contains, col}
 import org.json4s.JsonAST.JValue
 
 import java.io.File
@@ -112,10 +113,8 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     // Removes records from mappingResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
     // Transformation only
-    val successResults = intermediateResults1
-      .filter(record =>
-        !record.messages.forall(_.level == IngestLogLevel.error)
-      )
+    val successResults = intermediateResults1.filter(!array_contains(col("messages.level"), "error"))
+    val validRecordCount = successResults.count
 
     // Results must be written before _LOGS.
     // Otherwise, spark interpret the `successResults' `outputPath' as
@@ -125,12 +124,6 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     intermediateResults1.unpersist(blocking = true)
     successResults.unpersist(blocking = true)
 
-    // Get counts
-    val validRecords = spark.read
-      .format("avro")
-      .load(outputPath)
-    val validRecordCount = validRecords.count
-    validRecords.unpersist(blocking = true)
 
     // Write manifest
     val manifestOpts: Map[String, String] = Map(
