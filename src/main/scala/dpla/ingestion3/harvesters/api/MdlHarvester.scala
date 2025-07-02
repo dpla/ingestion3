@@ -17,7 +17,7 @@ class MdlHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends ApiHarvester(spark, shortName, conf) {
+) extends ApiHarvester(shortName, conf) {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
 
@@ -31,7 +31,7 @@ class MdlHarvester(
 
   )
 
-  override def localHarvest(): DataFrame = {
+  override def harvest: DataFrame = {
 
     val logger = LogManager.getLogger(this.getClass)
 

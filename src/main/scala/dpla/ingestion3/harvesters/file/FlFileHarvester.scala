@@ -1,9 +1,8 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{File, FileInputStream}
-import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.zipFilter
+import dpla.ingestion3.harvesters.{FileResult, LocalHarvester, ParsedResult}
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.AVRO_MIME_JSON
 import org.apache.avro.generic.GenericData
@@ -14,12 +13,10 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
 
+import java.io.File
+import java.util.zip.ZipInputStream
 import scala.io.Source
 import scala.util.{Failure, Success, Try, Using}
-
-/** Extracts values from parsed JSON
-  */
-class FlFileExtractor extends JsonExtractor
 
 /** Entry for performing a Florida file harvest
   */
@@ -27,12 +24,10 @@ class FlFileHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends FileHarvester(spark, shortName, conf) {
+) extends LocalHarvester(shortName, conf)
+    with JsonExtractor {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
-
-  protected val extractor = new FlFileExtractor()
-
 
   /** Parses JValue to extract item local item id and renders compact full
     * record
@@ -45,8 +40,7 @@ class FlFileHarvester(
   def getJsonResult(json: JValue): Option[ParsedResult] =
     Option(
       ParsedResult(
-        extractor
-          .extractString(json \ "sourceResource" \ "identifier")
+        extractString(json \ "sourceResource" \ "identifier")
           .getOrElse(throw new RuntimeException("Missing ID")),
         compact(render(json))
       )
@@ -93,7 +87,7 @@ class FlFileHarvester(
 
   /** Executes the Florida harvest
     */
-  override def localHarvest(): DataFrame = {
+  override def harvest: DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
@@ -101,21 +95,26 @@ class FlFileHarvester(
     inFiles
       .listFiles(zipFilter)
       .foreach(inFile => {
-        val inputStream: ZipInputStream = FileHarvester.getZipInputStream(inFile)
+        val inputStream: ZipInputStream = LocalHarvester
+          .getZipInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        FileHarvester.iter(inputStream).foreach(result => {
-          handleFile(result, unixEpoch) match {
-            case Failure(exception) =>
-              LogManager.getLogger(this.getClass).error(s"Caught exception on $inFile.", exception)
-            case _ => //do nothing
-          }
-        })
+        LocalHarvester
+          .iter(inputStream)
+          .foreach(result => {
+            handleFile(result, unixEpoch) match {
+              case Failure(exception) =>
+                LogManager
+                  .getLogger(this.getClass)
+                  .error(s"Caught exception on $inFile.", exception)
+              case _ => // do nothing
+            }
+          })
         IOUtils.closeQuietly(inputStream)
       })
 
-    getAvroWriter.flush()
+    close()
 
     // Read harvested data into Spark DataFrame.
     val df = spark.read.format("avro").load(tmpOutStr)

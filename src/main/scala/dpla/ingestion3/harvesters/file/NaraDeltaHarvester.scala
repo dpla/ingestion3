@@ -2,7 +2,7 @@ package dpla.ingestion3.harvesters.file
 
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.{avroFilter, gzFilter}
-import dpla.ingestion3.harvesters.{AvroHelper, Harvester, LocalHarvester}
+import dpla.ingestion3.harvesters.{AvroHelper, FileResult, Harvester, LocalHarvester, ParsedResult}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
@@ -21,7 +21,7 @@ class NaraDeltaHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends LocalHarvester(spark, shortName, conf) {
+) extends LocalHarvester(shortName, conf) {
 
   val naraSchema: Schema =
     new Schema.Parser()
@@ -74,7 +74,6 @@ class NaraDeltaHarvester(
   def handleFile(
       tarResult: FileResult,
       unixEpoch: Long,
-      filename: String
   ): Try[Int] =
     tarResult.data match {
       case None =>
@@ -91,7 +90,7 @@ class NaraDeltaHarvester(
             itemOption <- items
             item <- itemOption // filters out the Nones
           } yield {
-            writeOutNara(unixEpoch, item, filename)
+            writeOutNara(unixEpoch, item)
             1
           }
           counts.sum
@@ -107,7 +106,7 @@ class NaraDeltaHarvester(
     * @param item
     *   Harvested record
     */
-  def writeOutNara(unixEpoch: Long, item: ParsedResult, file: String): Unit = {
+  def writeOutNara(unixEpoch: Long, item: ParsedResult): Unit = {
     val avroWriter = getAvroWriterNara
     val schema = naraSchema
 
@@ -124,7 +123,7 @@ class NaraDeltaHarvester(
 
   /** Executes the nara harvest
     */
-  def localHarvest(): DataFrame = {
+  def harvest: DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
 
@@ -171,7 +170,7 @@ class NaraDeltaHarvester(
 
   private def harvestFile(file: File, unixEpoch: Long): Unit = {
     Using(
-      FileHarvester
+      LocalHarvester
         .getTarInputStream(file)
         .getOrElse(
           throw new IllegalArgumentException(
@@ -179,10 +178,10 @@ class NaraDeltaHarvester(
           )
         )
     ) { inputStream =>
-      val recordCount = FileHarvester
+      val recordCount = LocalHarvester
         .iter(inputStream)
         .map(tarResult =>
-          handleFile(tarResult, unixEpoch, file.getName) match {
+          handleFile(tarResult, unixEpoch) match {
             case Failure(exception) =>
               val logger = LogManager.getLogger(this.getClass)
               logger

@@ -3,7 +3,9 @@ package dpla.ingestion3.harvesters.file
 import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
 import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.harvesters.{FileResult, LocalHarvester, ParsedResult}
 import dpla.ingestion3.harvesters.file.FileFilters.zipFilter
+import dpla.ingestion3.harvesters.oai.LocalOaiHarvester
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.AVRO_MIME_JSON
 import org.apache.avro.generic.GenericData
@@ -17,17 +19,14 @@ import org.json4s.{JValue, _}
 import scala.io.Source
 import scala.util.{Failure, Success, Try, Using}
 
-/** Extracts values from parsed JSON
-  */
-class NYPLFileExtractor extends JsonExtractor
-
 /** Entry for performing an NYPL file harvest
   */
 class NYPLFileHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends FileHarvester(spark, shortName, conf) {
+) extends LocalHarvester(shortName, conf)
+    with JsonExtractor {
 
   // The format of the exported data is JSON but the underlying records we will need to map is XML
   // {
@@ -35,9 +34,6 @@ class NYPLFileHarvester(
   //  "desc_xml": "<?xml version=\"1.0\" .... </xml>"
   // }
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
-
-  protected val extractor = new FlFileExtractor()
-
 
   /** @param json
     *   Full JSON item record
@@ -51,14 +47,9 @@ class NYPLFileHarvester(
     //  "desc_xml": "<?xml version=\"1.0\" .... </xml>"
     // }
 
-    extractor
-      .extractString(json \ "uuid")
-      .getOrElse(throw new RuntimeException("Missing ID"))
-
     Option(
       ParsedResult(
-        extractor
-          .extractString(json \ "uuid")
+        extractString(json \ "uuid")
           .getOrElse(throw new RuntimeException("Missing ID")),
         compact(render(json))
       )
@@ -101,7 +92,7 @@ class NYPLFileHarvester(
 
   /** Executes the NYPL harvest
     */
-  override def localHarvest(): DataFrame = {
+  override def harvest: DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
@@ -109,22 +100,26 @@ class NYPLFileHarvester(
     inFiles
       .listFiles(zipFilter)
       .foreach(inFile => {
-        val inputStream: ZipInputStream = FileHarvester.getZipInputStream(inFile)
+        val inputStream: ZipInputStream = LocalHarvester
+          .getZipInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        FileHarvester.iter(inputStream).foreach( result =>
-          handleFile(result, unixEpoch) match {
-            case Failure(exception) =>
-              LogManager.getLogger(this.getClass).error(s"Caught exception on $inFile.", exception)
-            case Success(_) => // do nothing
-          }
-        )
+        LocalHarvester
+          .iter(inputStream)
+          .foreach(result =>
+            handleFile(result, unixEpoch) match {
+              case Failure(exception) =>
+                LogManager
+                  .getLogger(this.getClass)
+                  .error(s"Caught exception on $inFile.", exception)
+              case Success(_) => // do nothing
+            }
+          )
         IOUtils.closeQuietly(inputStream)
       })
 
-    // flush buffer
-    getAvroWriter.flush()
+    close()
 
     // Read harvested data into Spark DataFrame.
     spark.read.format("avro").load(tmpOutStr)

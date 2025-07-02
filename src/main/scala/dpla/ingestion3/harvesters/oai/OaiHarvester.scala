@@ -13,7 +13,7 @@ class OaiHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends Harvester(spark, shortName, conf) {
+) extends Harvester {
 
   override def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 

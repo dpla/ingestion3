@@ -1,7 +1,7 @@
 package dpla.ingestion3.harvesters.api
 
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.{Harvester, LocalHarvester}
+import dpla.ingestion3.harvesters.{Harvester, LocalHarvester, ParsedResult}
 import org.apache.avro.generic.GenericData
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.SparkSession
@@ -14,10 +14,9 @@ import org.apache.spark.sql.SparkSession
   *   Configurations
   */
 abstract class ApiHarvester(
-    spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends LocalHarvester(spark, shortName, conf) {
+) extends LocalHarvester(shortName, conf) {
 
   // Abstract method queryParams should set base query parameters for API call.
   protected val queryParams: Map[String, String]
@@ -35,7 +34,6 @@ abstract class ApiHarvester(
 
     saveOutRecords(docs)
     saveOutErrors(errors)
-
   }
 
   /** Saves the records
@@ -44,24 +42,19 @@ abstract class ApiHarvester(
     *   \- List of ApiRecords to save out
     */
   protected def saveOutRecords(docs: List[ApiRecord]): Unit = {
+    val startTime = System.currentTimeMillis()
+    val unixEpoch = startTime / 1000L
 
-    val avroWriter = getAvroWriter
-
-    // TODO Integrate this with File harvester save out methods
     docs.foreach(doc => {
-      val startTime = System.currentTimeMillis()
-      val unixEpoch = startTime / 1000L
-
-      val genericRecord = new GenericData.Record(Harvester.schema)
-
-      genericRecord.put("id", doc.id)
-      genericRecord.put("ingestDate", unixEpoch)
-      genericRecord.put("provider", shortName)
-      genericRecord.put("document", doc.document)
-      genericRecord.put("mimetype", mimeType)
-      avroWriter.append(genericRecord)
+      writeOut(unixEpoch, ParsedResult(
+        doc.id,
+        doc.document,
+      ))
     })
   }
+
+  private val logger = LogManager.getLogger(this.getClass)
+
 
   /** Writes errors out to log file
     *
@@ -70,9 +63,7 @@ abstract class ApiHarvester(
     */
   private def saveOutErrors(errors: List[ApiError]): Unit =
     errors.foreach(error => {
-      LogManager
-        .getLogger(this.getClass)
-        .error(
+        logger.error(
           s"URL: ${error.errorSource.url.getOrElse("No url")}" +
             s"\nMessage: ${error.message} \n\n"
         )

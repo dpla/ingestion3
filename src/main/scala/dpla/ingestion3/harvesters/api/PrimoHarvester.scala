@@ -22,7 +22,7 @@ abstract class PrimoHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends ApiHarvester(spark, shortName, conf) {
+) extends ApiHarvester(shortName, conf) {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
@@ -37,7 +37,7 @@ abstract class PrimoHarvester(
     * @return
     *   DataFrame of harvested records
     */
-  override def localHarvest(): DataFrame = {
+  override def harvest: DataFrame = {
 
     val logger = LogManager.getLogger(this.getClass)
     implicit val formats: DefaultFormats.type = DefaultFormats
