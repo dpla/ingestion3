@@ -3,7 +3,8 @@ package dpla.ingestion3.harvesters.file
 import java.io.{ByteArrayInputStream, File, FileInputStream}
 import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.Harvester
+import dpla.ingestion3.harvesters.oai.LocalOaiHarvester
+import dpla.ingestion3.harvesters.{FileResult, Harvester, LocalHarvester, ParsedResult}
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
@@ -15,23 +16,18 @@ import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 import scala.xml._
 
-/** Extracts values from parsed Xml
-  */
-class OaiFileExtractor extends XmlExtractor
-
 /** Entry for harvesting XML serialized from an OAI endpoint
   */
 class OaiFileHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends FileHarvester(spark, shortName, conf) {
+) extends LocalHarvester(shortName, conf)
+    with XmlExtractor {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
   private val logger = LogManager.getLogger(this.getClass)
-
-  protected val extractor = new OaiFileExtractor()
 
   /** Main logic for handling individual entries in the zip.
     *
@@ -41,11 +37,11 @@ class OaiFileHarvester(
     *   Count of metadata items found.
     */
   def handleFile(zipResult: FileResult, unixEpoch: Long): Try[Int] = {
-    val xmlOption = if (zipResult.data.isDefined) {
-      Some(XML.load(new ByteArrayInputStream(zipResult.data.get)))
-    } else {
-      None
-    }
+    val xmlOption =
+      if (zipResult.data.isDefined)
+        Some(XML.load(new ByteArrayInputStream(zipResult.data.get)))
+      else
+        None
     xmlOption match {
       case None =>
         Success(0) // a directory, no results
@@ -89,9 +85,7 @@ class OaiFileHarvester(
           None
         } else {
           // Extract required record identifier
-          val id: Option[String] =
-            extractor.extractString(record \ "header" \ "identifier")
-
+          val id: Option[String] = extractString(record \ "header" \ "identifier")
           val outputXML = Harvester.xmlToString(record)
 
           id match {
@@ -125,7 +119,7 @@ class OaiFileHarvester(
         FileResult(entry.getName, result) #:: iter(zipInputStream)
     }
 
-  override def localHarvest(): DataFrame = {
+  override def harvest: DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
@@ -134,20 +128,24 @@ class OaiFileHarvester(
       .listFiles(FileFilters.zipFilter)
       .foreach(inFile => {
         println(inFile)
-        val inputStream = FileHarvester.getZipInputStream(inFile)
+        val inputStream = LocalHarvester
+          .getZipInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        FileHarvester.iter(inputStream).foreach(result =>
-          handleFile(result, unixEpoch) match {
-            case Failure(exception) =>
-              logger.error(s"Caught exception on $inFile.", exception)
-            case Success(_) => //do nothing
-          })
+        LocalHarvester
+          .iter(inputStream)
+          .foreach(result =>
+            handleFile(result, unixEpoch) match {
+              case Failure(exception) =>
+                logger.error(s"Caught exception on $inFile.", exception)
+              case Success(_) => // do nothing
+            }
+          )
         IOUtils.closeQuietly(inputStream)
       })
 
-    flush()
+    close()
 
     // Read harvested data into Spark DataFrame and return.
     spark.read.format("avro").load(tmpOutStr)

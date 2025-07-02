@@ -1,22 +1,18 @@
 package dpla.ingestion3.harvesters.oai
 
 import dpla.ingestion3.confs.{Ingestion3Conf, i3Conf}
-import dpla.ingestion3.harvesters.LocalHarvester
-import dpla.ingestion3.harvesters.file.ParsedResult
+import dpla.ingestion3.harvesters.{LocalHarvester, ParsedResult}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
-
-import java.nio.file.{Files, Path}
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, OffsetDateTime, ZoneId}
-import scala.util.Try
 
 class LocalOaiHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends LocalHarvester(spark, shortName, conf) {
+) extends LocalHarvester(shortName, conf) {
 
   private val readerOptions: Map[String, String] = Map(
     "verb" -> conf.harvest.verb,
@@ -31,11 +27,10 @@ class LocalOaiHarvester(
 
   private val oaiConfig = OaiConfiguration(readerOptions)
   private val oaiMethods = new OaiProtocol(oaiConfig)
-  private val avroWriter = getAvroWriter
 
   override def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
-  override def localHarvest(): DataFrame = {
+  override def harvest: DataFrame = {
 
     (oaiConfig.setlist, oaiConfig.harvestAllSets, oaiConfig.blacklist) match {
 
@@ -53,7 +48,7 @@ class LocalOaiHarvester(
         )
     }
 
-    avroWriter.flush()
+    close()
     spark.read.format("avro").load(tmpOutStr)
   }
 
@@ -141,15 +136,4 @@ class LocalOaiHarvester(
 
   private def getUnixEpoch: Long = System.currentTimeMillis() / 1000L
 
-}
-
-object LocalOaiHarvester {
-  def main(args: Array[String]): Unit = {
-    val spark = SparkSession.builder().appName("LocalOaiHarvester").master("local[6]").getOrCreate()
-    val i3Conf = new Ingestion3Conf("conf/i3.conf", Some("artstor")).load()
-    val harvester = new LocalOaiHarvester(spark, "artstor", i3Conf)
-    val results = harvester.localHarvest()
-    results.write.mode(SaveMode.Overwrite).format("json").save("artstor.jsonl")
-    Try(Files.delete(Path.of(harvester.tmpOutStr))).recover(_ => System.err.println("Failed to delete temporary output file: " + harvester.tmpOutStr))
-  }
 }

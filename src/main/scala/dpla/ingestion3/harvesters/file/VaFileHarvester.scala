@@ -1,23 +1,19 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{File, FileInputStream}
-import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.Harvester
-import dpla.ingestion3.mappers.utils.XmlExtractor
-import org.apache.commons.io.IOUtils
-import org.apache.spark.sql.{DataFrame, SparkSession}
 import dpla.ingestion3.harvesters.file.FileFilters.zipFilter
+import dpla.ingestion3.harvesters.oai.LocalOaiHarvester
+import dpla.ingestion3.harvesters.{FileResult, Harvester, LocalHarvester, ParsedResult}
+import dpla.ingestion3.mappers.utils.XmlExtractor
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
+import org.apache.commons.io.IOUtils
 import org.apache.logging.log4j.LogManager
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
+import java.io.File
 import scala.util.{Failure, Success, Try}
-import scala.xml.{MinimizeMode, Node, Utility, XML}
-
-/** Extracts values from parsed Xml
-  */
-class VaFileExtractor extends XmlExtractor
+import scala.xml.XML
 
 /** Entry for performing a Digital Virginias file harvest
   */
@@ -25,13 +21,9 @@ class VaFileHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends FileHarvester(spark, shortName, conf) {
+) extends LocalHarvester(shortName, conf) with XmlExtractor {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
-
-  protected val extractor = new VaFileExtractor()
-
-
 
   /** Main logic for handling individual entries in the zip.
     *
@@ -53,7 +45,7 @@ class VaFileHarvester(
             case Success(xml) =>
               val id: String = zipResult.entryName
               val outputXml: String = Harvester.xmlToString(xml)
-              val item: ParsedResult = ParsedResult(id, outputXml)
+              val item = ParsedResult(id, outputXml)
               writeOut(unixEpoch, item)
               1
             case _ => 0
@@ -63,7 +55,7 @@ class VaFileHarvester(
 
   /** Executes the Digital Virginias harvest
     */
-  override def localHarvest(): DataFrame = {
+  override def harvest: DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
@@ -71,11 +63,11 @@ class VaFileHarvester(
     inFiles
       .listFiles(zipFilter)
       .foreach(inFile => {
-        val inputStream = FileHarvester.getZipInputStream(inFile)
+        val inputStream = LocalHarvester.getZipInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        FileHarvester.iter(inputStream).foreach(result => {
+        LocalHarvester.iter(inputStream).foreach(result => {
           handleFile(result, unixEpoch) match {
             case Failure(exception) =>
               LogManager
@@ -88,8 +80,7 @@ class VaFileHarvester(
         IOUtils.closeQuietly(inputStream)
       })
 
-    // flush the avroWriter
-    flush()
+    close()
 
     // Read harvested data into Spark DataFrame and return.
     spark.read.format("avro").load(tmpOutStr)

@@ -1,7 +1,9 @@
 package dpla.ingestion3.harvesters.file
 
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.harvesters.{FileResult, LocalHarvester, ParsedResult}
 import dpla.ingestion3.harvesters.file.FileFilters.zipFilter
+import dpla.ingestion3.harvesters.oai.LocalOaiHarvester
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.AVRO_MIME_JSON
 import org.apache.avro.generic.GenericData
@@ -12,14 +14,10 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
 
-import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
+import java.io.File
 import java.util.zip.ZipInputStream
 import scala.io.Source
 import scala.util.{Failure, Success, Try, Using}
-
-/** Extracts values from parsed JSON
-  */
-class DplaJsonlFileExtractor extends JsonExtractor
 
 /** Entry for performing a DPLA JSONL file harvest
   */
@@ -27,11 +25,10 @@ class DplaJsonlFileHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends FileHarvester(spark, shortName, conf) {
+) extends LocalHarvester(shortName, conf)
+    with JsonExtractor {
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_JSON
-
-  protected val extractor = new DplaJsonlFileExtractor()
 
   /** Parses JValue to extract item local item id and renders compact full
     * record
@@ -44,8 +41,7 @@ class DplaJsonlFileHarvester(
   def getJsonResult(json: JValue): Option[ParsedResult] =
     Option(
       ParsedResult(
-        extractor
-          .extractString(json \ "_id")
+        extractString(json \ "_id")
           .getOrElse(throw new RuntimeException("Missing ID"))
           .split("--")
           .last,
@@ -55,7 +51,7 @@ class DplaJsonlFileHarvester(
 
   /** Parses and extracts ZipInputStream and writes parsed records out.
     *
-    * @param fileResult
+    * @param zipResult
     *   Case class representing extracted items from the zip
     * @return
     *   Count of metadata items found.
@@ -69,7 +65,6 @@ class DplaJsonlFileHarvester(
         Success(0) // a directory, no results
       case Some(data) =>
         Using(Source.fromBytes(data)) { source =>
-
           // JSONL (one record per line)
 
           for (line <- source.getLines) {
@@ -94,7 +89,7 @@ class DplaJsonlFileHarvester(
 
   /** Executes the DPLA JSON file harvest
     */
-  override def localHarvest(): DataFrame = {
+  override def harvest: DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
@@ -102,23 +97,26 @@ class DplaJsonlFileHarvester(
     inFiles
       .listFiles(zipFilter)
       .foreach(inFile => {
-        val inputStream: ZipInputStream = FileHarvester.getZipInputStream(inFile)
+        val inputStream: ZipInputStream = LocalHarvester
+          .getZipInputStream(inFile)
           .getOrElse(
             throw new IllegalArgumentException("Couldn't load ZIP files.")
           )
-        FileHarvester.iter(inputStream).foreach( result => {
-          handleFile(result, unixEpoch) match {
-            case Failure(exception) =>
-              LogManager
-                .getLogger(this.getClass)
-                .error(s"Caught exception on $inFile.", exception)
-            case _ => //do nothing
-          }
-        })
+        LocalHarvester
+          .iter(inputStream)
+          .foreach(result => {
+            handleFile(result, unixEpoch) match {
+              case Failure(exception) =>
+                LogManager
+                  .getLogger(this.getClass)
+                  .error(s"Caught exception on $inFile.", exception)
+              case _ => // do nothing
+            }
+          })
         IOUtils.closeQuietly(inputStream)
       })
 
-    getAvroWriter.flush()
+    close()
 
     // Read harvested data into Spark DataFrame.
     val df = spark.read.format("avro").load(tmpOutStr)

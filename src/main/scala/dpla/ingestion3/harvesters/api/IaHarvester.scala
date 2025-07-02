@@ -18,7 +18,7 @@ class IaHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends ApiHarvester(spark, shortName, conf) {
+) extends ApiHarvester(shortName, conf) {
 
   private val logger = LogManager.getLogger(this.getClass)
 
@@ -28,7 +28,7 @@ class IaHarvester(
     "q" -> conf.harvest.query
   ).collect { case (key, Some(value)) => key -> value } // remove None values
 
-  override def localHarvest(): DataFrame = {
+  override def harvest: DataFrame = {
     implicit val formats: DefaultFormats.type = DefaultFormats
 
     val iaCollections = conf.harvest.setlist.getOrElse("").split(",")

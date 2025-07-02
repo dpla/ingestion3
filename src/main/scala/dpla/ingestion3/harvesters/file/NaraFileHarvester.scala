@@ -4,7 +4,7 @@ import java.io.{BufferedReader, File, FileInputStream}
 import java.util.zip.GZIPInputStream
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.{avroFilter, gzFilter, xmlFilter}
-import dpla.ingestion3.harvesters.{AvroHelper, Harvester, LocalHarvester}
+import dpla.ingestion3.harvesters.{AvroHelper, FileResult, Harvester, LocalHarvester, ParsedResult}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
@@ -26,7 +26,7 @@ class NaraFileHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends LocalHarvester(spark, shortName, conf) {
+) extends LocalHarvester(shortName, conf) {
 
   lazy val naraSchema: Schema =
     new Schema.Parser()
@@ -186,7 +186,7 @@ class NaraFileHarvester(
 
   /** Executes the nara harvest
     */
-  def localHarvest(): DataFrame = {
+  override def harvest: DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
 
@@ -290,7 +290,7 @@ class NaraFileHarvester(
         )
       )
 
-    FileHarvester.iter(inputStream).foreach(tarResult =>
+    LocalHarvester.iter(inputStream).foreach(tarResult =>
       handleFile(tarResult, unixEpoch, file.getName) match {
         case Failure(exception) =>
           val logger = LogManager.getLogger(this.getClass)

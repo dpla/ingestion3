@@ -1,9 +1,15 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{File, FileFilter, FileInputStream, InputStreamReader}
+import java.io.{
+  ByteArrayInputStream,
+  File,
+  FileFilter,
+  FileInputStream,
+  InputStreamReader
+}
 import java.util.zip.GZIPInputStream
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.Harvester
+import dpla.ingestion3.harvesters.{Harvester, LocalHarvester, ParsedResult}
 import dpla.ingestion3.harvesters.file.FileFilters.gzFilter
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.Utils
@@ -23,10 +29,11 @@ class SiFileHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends FileHarvester(spark, shortName, conf) {
+) extends LocalHarvester(shortName, conf) {
+
+  private val logger = LogManager.getLogger(this.getClass)
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
-
 
   /** Takes care of parsing an xml file into a list of Nodes each representing
     * an item
@@ -36,8 +43,7 @@ class SiFileHarvester(
     * @return
     *   List of Options of id/item pairs.
     */
-  def handleXML(xml: Node): List[Option[ParsedResult]] = {
-    val logger = LogManager.getLogger(this.getClass)
+  def handleXML(xml: Node): List[Option[ParsedResult]] =
     for {
       items <- xml \\ "doc" :: Nil
       item <- items
@@ -59,7 +65,6 @@ class SiFileHarvester(
         logger.warn("Got weird result back for item path: " + item.getClass)
         None
     }
-  }
 
   /** Main logic for handling individual lines in the zipped file.
     *
@@ -108,9 +113,12 @@ class SiFileHarvester(
     inFiles
       .listFiles(FileFilters.txtFilter)
       .foreach(file => {
-        Using(Source
-          .fromFile(file)) { source =>
-          source.getLines()
+        Using(
+          Source
+            .fromFile(file)
+        ) { source =>
+          source
+            .getLines()
             .foreach(line => {
               Try {
                 val lineVals = line.split(" records = ")
@@ -118,7 +126,7 @@ class SiFileHarvester(
                 lineVals(0).replace(".xml", ".xml.gz") -> lineVals(1)
               } match {
                 case Success(row) => loadCounts += row
-                case Failure(_) => loadCounts
+                case Failure(_)   => loadCounts
               }
             })
         }
@@ -128,7 +136,7 @@ class SiFileHarvester(
 
   /** Executes the Smithsonian harvest
     */
-  override def localHarvest(): DataFrame = {
+  override def harvest: DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
     val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
@@ -141,25 +149,21 @@ class SiFileHarvester(
     inFiles
       .listFiles(gzFilter)
       .foreach(inFile => {
-        val inputStream = FileHarvester.getTarInputStream(inFile)
-          .getOrElse(
-            throw new IllegalArgumentException(
-              s"Couldn't load file, ${inFile.getAbsolutePath}"
-            )
-          )
-
-        // create lineIterator to read contents one line at a time
-        val iter = IOUtils.lineIterator(inputStream, "utf-8")
-
+        println("FILE: " + inFile.getAbsolutePath)
         var lineCount: Int = 0
-
-        while (iter.hasNext) {
-          Option(iter.nextLine) match {
-            case Some(line) => lineCount += handleLine(line, unixEpoch).get
-            case None       => 0
+        Using(
+          new GZIPInputStream(new FileInputStream(inFile))
+        ) { inputStream =>
+          val iter = IOUtils.lineIterator(inputStream, "utf-8")
+          while (iter.hasNext) {
+            Option(iter.nextLine) match {
+              case Some(line) =>
+                // Remove XML declaration and whitespace, then parse the line
+                lineCount += handleLine(line, unixEpoch).get
+              case None => 0
+            }
           }
         }
-        IOUtils.closeQuietly(inputStream)
 
         // Format the harvested and expected counts for logging
         val fromFileFloat = lineCount.toFloat
@@ -187,21 +191,10 @@ class SiFileHarvester(
           )
       })
 
-    // flush the avroWriter
-    flush()
+    close()
 
     // Read harvested data into Spark DataFrame and return.
     spark.read.format("avro").load(tmpOutStr)
   }
 
-  /** Parses and extracts ZipInputStream and writes parses records out.
-    *
-    * @param fileResult
-    *   Case class representing extracted items from a compressed file
-    * @return
-    *   Count of metadata items found.
-    */
-  override def handleFile(fileResult: FileResult, unixEpoch: Long): Try[Int] = Success(0) // this is a smell
-
 }
-

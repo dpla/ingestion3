@@ -17,7 +17,7 @@ class OaiXmllHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends Harvester(spark, shortName, conf) {
+) extends Harvester {
 
   override def harvest: DataFrame = {
     val in = conf.harvest.endpoint.getOrElse("in")
