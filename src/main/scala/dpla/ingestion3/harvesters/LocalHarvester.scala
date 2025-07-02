@@ -100,13 +100,16 @@ object LocalHarvester {
       case _ => None
     }
 
+  private def shouldSkipEntry(entryName: String, isDirectory: Boolean): Boolean =
+    isDirectory || entryName.contains("._")
+
   def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
     Option(zipInputStream.getNextEntry) match {
       case None =>
         LazyList.empty
       case Some(entry) =>
         val result =
-          if (entry.isDirectory || entry.getName.contains("._"))
+          if (shouldSkipEntry(entry.getName, entry.isDirectory))
             None
           else
             Some(IOUtils.toByteArray(zipInputStream))
@@ -125,8 +128,8 @@ object LocalHarvester {
 
         val result =
           if (
-            entry.isDirectory || filename.contains("._")
-          ) // drop OSX hidden files
+            shouldSkipEntry(filename, entry.isDirectory)
+          )
             None
           else if (filename.endsWith(".xml")) // only read xml files
             Some(IOUtils.toByteArray(tarInputStream, entry.getSize))

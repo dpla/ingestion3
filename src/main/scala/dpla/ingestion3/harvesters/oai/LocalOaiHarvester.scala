@@ -1,10 +1,11 @@
 package dpla.ingestion3.harvesters.oai
 
-import dpla.ingestion3.confs.{Ingestion3Conf, i3Conf}
+import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.{LocalHarvester, ParsedResult}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
-import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+import org.apache.spark.sql.{DataFrame, SparkSession}
+
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, OffsetDateTime, ZoneId}
 

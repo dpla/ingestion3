@@ -1,21 +1,20 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{BufferedReader, File, FileInputStream, InputStreamReader}
-import java.util.zip.ZipInputStream
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.harvesters.file.FileFilters.zipFilter
 import dpla.ingestion3.harvesters.{FileResult, LocalHarvester, ParsedResult}
 import dpla.ingestion3.mappers.utils.JsonExtractor
-import org.apache.commons.io.IOUtils
-import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions._
-import org.json4s.jackson.JsonMethods._
-import org.json4s.{JValue, _}
-import dpla.ingestion3.harvesters.file.FileFilters.zipFilter
-import dpla.ingestion3.harvesters.oai.LocalOaiHarvester
 import dpla.ingestion3.model.AVRO_MIME_JSON
 import org.apache.avro.generic.GenericData
+import org.apache.commons.io.IOUtils
 import org.apache.logging.log4j.LogManager
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.json4s.jackson.JsonMethods._
+import org.json4s.{JValue, _}
 
+import java.io.File
+import java.util.zip.ZipInputStream
 import scala.io.Source
 import scala.util.{Failure, Success, Try, Using}
 

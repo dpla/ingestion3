@@ -47,9 +47,6 @@ class NYPLFileHarvester(
     //  "desc_xml": "<?xml version=\"1.0\" .... </xml>"
     // }
 
-    extractString(json \ "uuid")
-      .getOrElse(throw new RuntimeException("Missing ID"))
-
     Option(
       ParsedResult(
         extractString(json \ "uuid")

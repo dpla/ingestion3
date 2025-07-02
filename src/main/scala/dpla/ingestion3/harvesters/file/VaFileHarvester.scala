@@ -2,8 +2,12 @@ package dpla.ingestion3.harvesters.file
 
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.file.FileFilters.zipFilter
-import dpla.ingestion3.harvesters.oai.LocalOaiHarvester
-import dpla.ingestion3.harvesters.{FileResult, Harvester, LocalHarvester, ParsedResult}
+import dpla.ingestion3.harvesters.{
+  FileResult,
+  Harvester,
+  LocalHarvester,
+  ParsedResult
+}
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
