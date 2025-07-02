@@ -20,8 +20,7 @@ import scala.util.Try
  *   2. If the output directory  already exists, delete its contents.
  *   3. Log and timestamp the beginning and end of a harvest.
  *   4. Log information about the completed harvest.
- *   5. Validate the schema final DataFrame (only for logging purposes). 6.
- *      Manage the spark session.
+ *   5. Validate the schema final DataFrame (only for logging purposes).
  *
  * @param shortName
  *   [String] Provider short name
@@ -101,7 +100,7 @@ object LocalHarvester {
     }
 
   private def shouldSkipEntry(entryName: String, isDirectory: Boolean): Boolean =
-    isDirectory || entryName.contains("._")
+    isDirectory || entryName.contains("._") // skip MacOS metadata files
 
   def iter(zipInputStream: ZipInputStream): LazyList[FileResult] =
     Option(zipInputStream.getNextEntry) match {
