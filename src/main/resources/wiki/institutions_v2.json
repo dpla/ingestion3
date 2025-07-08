@@ -32658,11 +32658,11 @@
       },
       "National Air and Space Museum" : {
         "Wikidata" : "Q752669",
-        "upload" : false
+        "upload" : true
       },
       "National Air and Space Museum Archives" : {
-        "Wikidata" : "",
-        "upload" : false
+        "Wikidata" : "Q135243486",
+        "upload" : true
       },
       "National Anthropological Archives" : {
         "Wikidata" : "Q6970373",
