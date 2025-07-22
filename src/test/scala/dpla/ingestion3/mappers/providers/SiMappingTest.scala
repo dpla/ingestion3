@@ -186,13 +186,13 @@ class SiMappingTest extends AnyFlatSpec with BeforeAndAfter {
           </media>
           <media>
             <usage>
-              <access>InC</access>
+              <access>usage conditions apply</access>
             </usage>
           </media>
         </descriptiveNonRepeating>
       </doc>
 
-    val expected = Seq()
+    val expected = Seq(URI("http://rightsstatements.org/vocab/InC/1.0/"))
     assert(extractor.edmRights(Document(xml)) === expected)
   }
 
