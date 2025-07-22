@@ -41,17 +41,19 @@ class SiMapping extends XmlMapping with XmlExtractor {
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
     mintDplaItemUri(data)
 
-  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
-    extractStrings(data \\ "objectRights") match {
-      case Seq() =>
-        rightsFromMedia(extractStrings(data \\ "media" \ "usage" \ "access"))
-
-      case x if x.length == 1 =>
-        x.flatMap(lookupRightsUriFromText)
-
-      case _ =>
-        Seq()
-    }
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
+    val objectRights = extractStrings(data \\ "objectRights")
+      .filter(_.nonEmpty)
+      .flatMap(lookupRightsUriFromText)
+    val mediaRights = rightsFromMedia(
+      extractStrings(data \\ "media" \ "usage" \ "access")
+    )
+    if (objectRights.nonEmpty)
+      objectRights
+    else if (mediaRights.nonEmpty)
+      mediaRights.toSeq
+    else Seq()
+  }
 
   private def lookupRightsUriFromText(str: String): Option[URI] =
     str.toLowerCase.trim match {
@@ -84,12 +86,17 @@ class SiMapping extends XmlMapping with XmlExtractor {
       case _ => None
     }
 
-  private def rightsFromMedia(strs: Seq[String]): ZeroToMany[URI] =
-    strs.map(_.trim.toLowerCase).distinct match {
-      case Seq("cc0") =>
-        Seq(URI("http://creativecommons.org/publicdomain/zero/1.0/"))
-      case _ => Seq()
-    }
+  private def rightsFromMedia(strs: Seq[String]): ZeroToOne[URI] = {
+    val cleaned = strs.map(_.trim.toLowerCase).filter(_.nonEmpty)
+    if (cleaned.contains("usage conditions apply"))
+      Some(URI("http://rightsstatements.org/vocab/InC/1.0/"))
+    else if (cleaned.contains("not determined"))
+      Some(URI("http://rightsstatements.org/vocab/CNE/1.0/"))
+    else if (cleaned.contains("cc0"))
+      Some(URI("http://creativecommons.org/publicdomain/zero/1.0/"))
+    else
+      None
+  }
 
   override def mediaMaster(
       data: Document[NodeSeq]
