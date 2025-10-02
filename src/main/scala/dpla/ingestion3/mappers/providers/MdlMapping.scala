@@ -4,18 +4,12 @@ import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.ExtentIdentificationList
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
-import dpla.ingestion3.model.DplaMapData.{
-  AtLeastOne,
-  ExactlyOne,
-  ZeroToMany,
-  ZeroToOne
-}
+import dpla.ingestion3.model.DplaMapData.{AtLeastOne, ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
-import dpla.ingestion3.utils.Utils
-import org.json4s
+import org.json4s.JValue
 import org.json4s.JsonDSL._
-import org.json4s._
-import org.json4s.jackson.JsonMethods.parse
+import dpla.ingestion3.utils.Utils
+import org.json4s.jackson.JsonMethods
 
 import scala.util.{Success, Try}
 
@@ -43,7 +37,7 @@ class MdlMapping
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] =
     mintDplaItemUri(data)
 
-  override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
+  override def edmRights(data: Document[JValue]): ZeroToMany[URI] =
     extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "rights")
       .filter(r =>
         Try {
@@ -63,7 +57,7 @@ class MdlMapping
         data
       ) \ "attributes" \ "metadata" \ "jsonData" \ "response" \ "document" \ "iiif_manifest_ss"
     )
-      .map(parse(_))
+      .map(JsonMethods.parse(_))
       .flatMap(json => extractString(json \ "@id"))
       .map(URI)
   }
@@ -173,8 +167,8 @@ class MdlMapping
       unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "publisher"
     ).map(nameOnlyAgent)
 
-  override def rights(data: Document[JValue]): AtLeastOne[String] =
-    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "rights")
+  override def rights(data: Document[JValue]): AtLeastOne[String] = {
+    extractStrings(unwrap(data) \ "attributes" \ "metadata" \ "rights" ++ unwrap(data) \ "attributes" \ "metadata" \ "sourceResource" \ "rights")
       .filterNot(r =>
         Try {
           new java.net.URI(r).getHost
@@ -185,6 +179,7 @@ class MdlMapping
           case _ => false
         }
       )
+  }
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings(
