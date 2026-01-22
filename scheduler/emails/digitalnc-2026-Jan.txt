@@ -1,0 +1,9 @@
+Subject: DPLA Monthly Ingest Notification - January 2026
+
+Dear NCDHC Team,
+
+This is an automated notification that DPLA will be performing a scheduled metadata ingest for NCDHC during January 2026.
+
+Schedule Details:
+- Frequency: bi-annually
+- Scheduled Months: January, July

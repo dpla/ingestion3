@@ -1,0 +1,9 @@
+Subject: DPLA Monthly Ingest Notification - January 2026
+
+Dear Michigan Service Hub Team,
+
+This is an automated notification that DPLA will be performing a scheduled metadata ingest for Michigan Service Hub during January 2026.
+
+Schedule Details:
+- Frequency: quarterly
+- Scheduled Months: October, January, April, July
