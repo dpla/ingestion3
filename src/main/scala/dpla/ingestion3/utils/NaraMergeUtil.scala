@@ -6,6 +6,7 @@ import java.io.{BufferedWriter, File, FileWriter}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.apache.spark.sql.functions.col
+import org.apache.spark.storage.StorageLevel
 
 import scala.xml.XML
 
@@ -15,13 +16,11 @@ case class MergeLogs(
     baseCount: Option[Long] = None,
     baseUniqueCount: Option[Long] = None,
     baseDuplicateCount: Option[Long] = None,
-    baseDuplicateIds: Seq[String] = Seq(),
     // delta DF
     deltaPath: Option[String] = None,
     deltaCount: Option[Long] = None,
     deltaUniqueCount: Option[Long] = None,
     deltaDuplicateCount: Option[Long] = None,
-    deltaDuplicateIds: Seq[String] = Seq(),
     // merged DF
     mergePath: Option[String] = None,
     mergeNew: Option[Long] = None,
@@ -93,23 +92,28 @@ object NaraMergeUtil {
 
     import spark.implicits._
 
-    // Read most recent harvest data file
+    // Read and cache harvest data files to avoid re-reading during multiple operations
     val baseHarvestDf: DataFrame = spark.read.format("avro").load(basePath)
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
     val deltaHarvestDf: DataFrame = spark.read.format("avro").load(deltaPath)
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // Counts for logging
     val baseCount = baseHarvestDf.count()
     val deltaCount = deltaHarvestDf.count()
 
     // Dedup harvest DataFrames
+    // Returns (duplicateCount, dedupedDataFrame) - no longer collects IDs to driver
     val baseDuplicates = dropDuplicates(baseHarvestDf, spark)
-    val baseDuplicateIds = baseDuplicates._1
+    val baseDuplicateCount = baseDuplicates._1
     val baseHarvestDedupDf = baseDuplicates._2
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
     val baseDedupCount = baseHarvestDedupDf.count() // for logging
 
     val deltaDuplicates = dropDuplicates(deltaHarvestDf, spark)
-    val deltaDuplicateIds = deltaDuplicates._1
+    val deltaDuplicateCount = deltaDuplicates._1
     val deltaHarvestDedupDf = deltaDuplicates._2
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
     val deltaDedupCount = deltaHarvestDedupDf.count() // for logging
 
     // Create temp views of DataFrames for update DF
@@ -139,27 +143,32 @@ object NaraMergeUtil {
       ) // drop records from previous harvest that exist in the update
       .union(deltaHarvestDedupDf) // add updates and new records
       .toDF()
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
     val mergeTotalCount = mergedDf.count() // for logging
 
-    // process deletes
-    // val deletes = new File(deletesPath)
-    val idsToDelete = getIdsToDelete(deletesPath)
+    // process deletes - use Spark DataFrame instead of collecting to driver memory
+    val deletesDf = getIdsToDeleteDf(deletesPath, spark)
+      .persist(StorageLevel.MEMORY_AND_DISK_SER)
+    val deleteInFileCount = deletesDf.count()
 
     mergedDf.createOrReplaceTempView("merged")
-    idsToDelete.toDF("id").createOrReplaceTempView("deletes")
+    deletesDf.createOrReplaceTempView("deletes")
 
+    // Use Spark SQL joins instead of collecting IDs to driver memory
     val validDeletes = spark.sql(
       "SELECT merged.id FROM merged JOIN deletes ON merged.id = deletes.id"
-    )
+    ).persist(StorageLevel.MEMORY_AND_DISK_SER)
     val invalidDeletes = spark.sql(
       "SELECT deletes.id FROM deletes LEFT JOIN merged ON deletes.id = merged.id WHERE merged.id IS NULL"
     )
 
-    val mergedWithDeletesDf = mergedDf.where(
-      !col("id").isin(
-        validDeletes.select("id").map(_.getString(0)).collect.toSeq: _*
-      )
-    )
+    // Use left_anti join instead of collecting delete IDs to driver memory
+    // This keeps all processing distributed and avoids OOM errors
+    val mergedWithDeletesDf = mergedDf.join(
+      validDeletes.select("id"),
+      Seq("id"),
+      "left_anti"  // Returns rows from left that have no match in right
+    ).persist(StorageLevel.MEMORY_AND_DISK_SER)
     val mergedWithDeletesCount = mergedWithDeletesDf.count()
 
     import org.apache.spark.sql.functions._
@@ -174,19 +183,21 @@ object NaraMergeUtil {
           .withColumn("operation", lit("invalid delete"))
       )
 
+    // Cache counts that are used multiple times
+    val validDeletesCount = validDeletes.count()
+    val invalidDeletesCount = invalidDeletes.count()
+
     val logs = MergeLogs(
       // base
       basePath = Some(basePath),
       baseCount = Some(baseCount),
       baseUniqueCount = Some(baseDedupCount),
-      baseDuplicateCount = Some(baseDuplicateIds.size),
-      baseDuplicateIds = baseDuplicateIds,
+      baseDuplicateCount = Some(baseDuplicateCount),
       // delta
       deltaPath = Some(deltaPath),
       deltaCount = Some(deltaCount),
       deltaUniqueCount = Some(deltaDedupCount),
-      deltaDuplicateCount = Some(deltaDuplicateIds.size),
-      deltaDuplicateIds = deltaDuplicateIds,
+      deltaDuplicateCount = Some(deltaDuplicateCount),
       // merge
       mergePath = Some(outputPath),
       mergeNew = Some(newRecordsCount),
@@ -195,10 +206,10 @@ object NaraMergeUtil {
       mergeTotalExpected = Some(newRecordsCount + baseDedupCount),
       // delete
       deletePath = Some(deletesPath),
-      deleteActual = Some(mergedDf.count() - mergedWithDeletesCount),
-      deleteInFile = Some(idsToDelete.size.toLong),
-      deleteValid = Some(validDeletes.count()),
-      deleteInvalid = Some(invalidDeletes.count()),
+      deleteActual = Some(mergeTotalCount - mergedWithDeletesCount),
+      deleteInFile = Some(deleteInFileCount),
+      deleteValid = Some(validDeletesCount),
+      deleteInvalid = Some(invalidDeletesCount),
       // final
       finalDfActual = Some(mergedWithDeletesCount),
       output = Some(outputPath),
@@ -230,9 +241,57 @@ object NaraMergeUtil {
       .mode(SaveMode.Overwrite)
       .option("header", "true")
       .csv(opsFile)
+
+    // Clean up cached DataFrames to free memory
+    baseHarvestDf.unpersist()
+    deltaHarvestDf.unpersist()
+    baseHarvestDedupDf.unpersist()
+    deltaHarvestDedupDf.unpersist()
+    mergedDf.unpersist()
+    deletesDf.unpersist()
+    validDeletes.unpersist()
+    mergedWithDeletesDf.unpersist()
+
+    spark.stop()
   }
 
-  /** Collect IDs from file(s) to be deleted from NARA harvest. This does not
+  /** Collect IDs from file(s) to be deleted from NARA harvest as a DataFrame.
+    * This distributed approach avoids OOM errors when dealing with large
+    * numbers of delete IDs.
+    *
+    * @param path
+    *   String Path to file or folder that defines which NARA IDs should be deleted
+    * @param spark
+    *   SparkSession for creating DataFrame
+    * @return
+    *   DataFrame with single "id" column containing IDs to delete
+    */
+  def getIdsToDeleteDf(path: String, spark: SparkSession): DataFrame = {
+    import spark.implicits._
+
+    val file = new File(path)
+    if (!file.exists())
+      return spark.emptyDataFrame.withColumn("id", col("id").cast("string"))
+
+    val files =
+      if (file.isDirectory) file.listFiles(FileFilters.xmlFilter).sorted
+      else Array(file)
+
+    // Parse XML files and create DataFrame - keeps processing distributed
+    val ids = files
+      .flatMap(file => {
+        val xml = XML.loadFile(file)
+        (xml \\ "naId").map(_.text)
+      })
+      .distinct
+
+    // Convert to DataFrame for distributed processing
+    ids.toSeq.toDF("id")
+  }
+
+  /** @deprecated Use getIdsToDeleteDf instead to avoid OOM errors with large delete sets
+    *
+    * Collect IDs from file(s) to be deleted from NARA harvest. This does not
     * currently support adding records back which had previously been deleted.
     *
     * @param path
@@ -241,6 +300,7 @@ object NaraMergeUtil {
     * @return
     *   Seq[String] IDs to delete
     */
+  @deprecated("Use getIdsToDeleteDf instead to avoid OOM errors", "2026.01")
   def getIdsToDelete(path: String): Seq[String] = {
     val file = new File(path)
     if (!file.exists())
@@ -257,26 +317,37 @@ object NaraMergeUtil {
       .toSeq
   }
 
+  /** Drop duplicate records from DataFrame and return the count of duplicates.
+    * This optimized version does not collect duplicate IDs to driver memory,
+    * avoiding OOM errors with large datasets.
+    *
+    * @param df
+    *   DataFrame to deduplicate
+    * @param spark
+    *   SparkSession
+    * @return
+    *   Tuple of (duplicate count, deduplicated DataFrame)
+    */
   private def dropDuplicates(
       df: DataFrame,
       spark: SparkSession
-  ): (Seq[String], DataFrame) = {
+  ): (Long, DataFrame) = {
     df.createOrReplaceTempView("duplicates")
 
-    val duplicatesDf = spark.sql(
-      "SELECT duplicates.id " +
+    // Count duplicates without collecting to driver memory
+    val duplicateCount = spark.sql(
+      "SELECT COUNT(*) as cnt FROM (" +
+        "SELECT duplicates.id " +
         "FROM duplicates " +
-        "GROUP BY duplicates.id HAVING COUNT(duplicates.id) > 1"
-    )
+        "GROUP BY duplicates.id HAVING COUNT(duplicates.id) > 1" +
+        ") as dups"
+    ).first().getLong(0)
 
-    val duplicateIds =
-      duplicatesDf.select("id").rdd.map(_.getString(0)).collect()
-
-    if (duplicateIds.nonEmpty) {
+    if (duplicateCount > 0) {
       // drop duplicate records from dataframe
-      (duplicateIds, df.dropDuplicates("id"))
+      (duplicateCount, df.dropDuplicates("id"))
     } else {
-      (duplicateIds, df)
+      (0L, df)
     }
   }
 

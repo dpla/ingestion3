@@ -1,5 +1,6 @@
 package dpla.ingestion3.utils
 
+import com.amazonaws.regions.Regions
 import com.amazonaws.services.simpleemail._
 import com.amazonaws.services.simpleemail.model._
 import dpla.ingestion3.confs.i3Conf
@@ -59,7 +60,8 @@ object Emailer {
     val emails = i3conf.email.getOrElse("tech@dp.la").split(',')
 
     val _summary = s"$mapOutput/_SUMMARY"
-    val zipped_logs = s"$mapOutput/_LOGS/logs.zip" // FIXME provider-date-mapping-logs.zip
+    val zipped_logs =
+      s"$mapOutput/_LOGS/logs.zip" // FIXME provider-date-mapping-logs.zip
 
     val body = emailBody(_summary)
 
@@ -118,7 +120,15 @@ object Emailer {
     // https://docs.aws.amazon.com/ses/latest/dg/example_ses_SendEmail_section.html
 
     try {
-      val client = AmazonSimpleEmailServiceClientBuilder.defaultClient()
+      // Get AWS region from environment variable, system property, or default to us-east-1
+      val awsRegion = Option(System.getenv("AWS_REGION"))
+        .orElse(Option(System.getProperty("aws.region")))
+        .getOrElse("us-east-1")
+
+      val client = AmazonSimpleEmailServiceClientBuilder
+        .standard()
+        .withRegion(Regions.fromName(awsRegion))
+        .build()
 
       val session = Session.getDefaultInstance(new Properties())
       val message = new MimeMessage(session)

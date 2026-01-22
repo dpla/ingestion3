@@ -84,6 +84,8 @@ object IngestRemap
       .setAppName(s"IngestRemap: $shortName")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryoserializer.buffer.max", "200")
+      // Disable vectorized parquet reader to prevent OOM with large binary/string columns
+      .set("spark.sql.parquet.enableVectorizedReader", "false")
 
     val sparkConf = sparkMaster match {
       case Some(m) => baseConf.setMaster(m)
