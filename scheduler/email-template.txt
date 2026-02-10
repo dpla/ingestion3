@@ -1,33 +1,31 @@
-Subject: DPLA Monthly Ingest Notification - {{MONTH}} {{YEAR}}
+Subject: DPLA Ingest Notification - {{HUB_NAME}} - {{MONTH}} {{YEAR}}
 
 Dear {{HUB_NAME}} Team,
 
-This is an automated notification that DPLA will be performing a scheduled metadata ingest for {{HUB_NAME}} during {{MONTH}} {{YEAR}}.
+This is a scheduled notification that DPLA will be performing a metadata ingest for {{HUB_NAME}} during the **last week of {{MONTH}} {{YEAR}}**.
 
 Schedule Details:
 - Frequency: {{FREQUENCY}}
 - Scheduled Months: {{MONTHS}}
-{{#WEEK}}
-- Week: {{WEEK}}
-{{/WEEK}}
+- Ingest Window: Last week of {{MONTH}}
 
 The ingest process will include:
 1. Harvesting metadata from your feed
-2. Mapping to DPLA metadata model
+2. Mapping to the DPLA metadata model
 3. Enrichment with additional data
-4. Export to JSON-L format
+4. Publishing to dp.la
 
 {{#NOTES}}
 Special Notes: {{NOTES}}
+
 {{/NOTES}}
+Please ensure your metadata feed is accessible and up-to-date before the ingest window begins. If you have any questions, concerns, or known issues with your feed, please contact us as soon as possible so we can address them before the ingest.
 
-If you have any questions or concerns, or if there are any issues with your feed that we should be aware of, please contact us as soon as possible.
-
-You can monitor the ingest progress and view your hub dashboard at:
+You can monitor your hub's status and view your dashboard at:
 {{DASHBOARD_URL}}
 
 Best regards,
-DPLA Ingestion Team
+DPLA Content Team
 
 ---
-This is an automated message. For questions, please contact the DPLA Content Team.
+This is a scheduled notification. For questions, please reply to this email or contact tech@dp.la.
