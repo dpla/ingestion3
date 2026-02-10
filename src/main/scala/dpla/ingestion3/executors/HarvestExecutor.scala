@@ -128,7 +128,15 @@ trait HarvestExecutor {
           case Failure(f) => logger.warn(s"Manifest failed to write.", f)
         }
 
-      case Failure(f) => logger.error(s"Harvest failure.", f)
+      case Failure(f) =>
+        logger.error(s"Harvest failure.", f)
+        // Also write to stderr so the error is visible even when log4j is
+        // misconfigured (e.g. running via java -cp instead of spark-submit).
+        System.err.println(s"HARVEST FAILURE: ${f.getMessage}")
+        f.printStackTrace(System.err)
+        harvester.cleanUp()
+        spark.stop()
+        System.exit(1)
     }
     harvester.cleanUp()
     spark.stop()

@@ -59,7 +59,8 @@ object IngestRemap
     val confFile = cmdArgs.getConfigFile
     val shortName = cmdArgs.getProviderName
     val input = cmdArgs.getInput
-    val sparkMaster: Option[String] = cmdArgs.getSparkMaster
+    // Default to local[4] when not provided so all hubs get sensible pipeline parallelism
+    val sparkMaster: Option[String] = cmdArgs.getSparkMaster.orElse(Some("local[4]"))
 
     // Outputs
 
