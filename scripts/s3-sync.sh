@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Sync hub data to S3 destination
 # Usage: ./scripts/s3-sync.sh <hub-name> [subdir]
 # Example: ./scripts/s3-sync.sh ohio enriched
@@ -6,7 +6,11 @@
 
 set -e
 
-if [ $# -lt 1 ]; then
+# Source common configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
+
+if [[ $# -lt 1 ]]; then
     echo "Usage: $0 <hub-name> [subdir]"
     echo "Example: $0 ohio enriched"
     echo "Example: $0 ohio (syncs entire hub directory)"
@@ -15,7 +19,7 @@ fi
 
 HUB=$1
 SUBDIR=${2:-""}
-SOURCE_BASE=~/dpla/data
+SOURCE_BASE="$DPLA_DATA"
 DEST_BUCKET="s3://dpla-master-dataset"
 
 # Map hub name to S3 prefix (handle special cases)
@@ -40,8 +44,7 @@ else
     DEST_PATH="${DEST_BUCKET}/${S3_PREFIX}/${SUBDIR}/"
 fi
 
-# Expand ~ to home directory
-SOURCE_PATH=$(eval echo "$SOURCE_PATH")
+# No need to expand ~ since we use $DPLA_DATA
 
 echo "Syncing ${SOURCE_PATH} to ${DEST_PATH}"
 

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # schedule.sh - Query DPLA hub ingest schedules from i3.conf
 #
@@ -9,15 +9,13 @@
 #   ./scripts/schedule.sh 2            # Show hubs scheduled for month 2
 #   ./scripts/schedule.sh virginias    # Show schedule for a specific hub
 
-# Path to i3.conf - check common locations
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-if [[ -f "$SCRIPT_DIR/../../ingestion3-conf/i3.conf" ]]; then
-    I3_CONF="$SCRIPT_DIR/../../ingestion3-conf/i3.conf"
-elif [[ -f "$HOME/dpla/code/ingestion3-conf/i3.conf" ]]; then
-    I3_CONF="$HOME/dpla/code/ingestion3-conf/i3.conf"
-else
-    echo "Error: Could not find i3.conf"
-    exit 1
+# Source common configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
+
+# Verify I3_CONF exists
+if [[ ! -f "$I3_CONF" ]]; then
+    die "Could not find i3.conf at $I3_CONF"
 fi
 
 # Convert month name/number to month number

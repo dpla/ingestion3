@@ -1,41 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # i3-ingest - Run full DPLA ingestion3 pipeline (harvest → mapping → enrichment → jsonl)
 # This is the "fire and forget" script for a complete provider ingest
 
 set -e  # Exit on any error
 
-# Java configuration
-JAVA_HOME_PATH="/Users/scott/Library/Java/JavaVirtualMachines/openjdk-19.0.2/Contents/Home"
-export JAVA_HOME="$JAVA_HOME_PATH"
-export PATH="$JAVA_HOME/bin:$PATH"
+# Source common configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
-# SBT JVM options
-export SBT_OPTS="-Xms2g -Xmx8g -XX:+UseG1GC"
-
-# Ingestion3 configuration
-I3_HOME="${I3_HOME:-/Users/scott/dpla/code/ingestion3}"
-I3_CONF="${I3_CONF:-/Users/scott/dpla/code/ingestion3-conf/i3.conf}"
-DPLA_DATA="${DPLA_DATA:-/Users/scott/dpla/data}"
-SPARK_MASTER="${SPARK_MASTER:-local[*]}"
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-print_step() {
-    echo -e "${BLUE}==>${NC} ${GREEN}$1${NC}"
-}
-
-print_error() {
-    echo -e "${RED}ERROR:${NC} $1"
-}
-
-print_info() {
-    echo -e "${YELLOW}INFO:${NC} $1"
-}
+# Setup Java environment (8g default memory)
+setup_java "8g" || die "Failed to setup Java environment"
 
 usage() {
     echo "Usage: ingest.sh <provider-name> [options]"
@@ -79,7 +53,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         *)
-            print_error "Unknown option: $1"
+            log_error "Unknown option: $1"
             usage
             ;;
     esac
@@ -109,23 +83,20 @@ cd "$I3_HOME"
 if [ "$SKIP_HARVEST" = false ]; then
     print_step "Step 1/2: Harvesting $PROVIDER..."
 
-    sbt -java-home "$JAVA_HOME_PATH" "runMain dpla.ingestion3.entries.ingest.HarvestEntry \
+    sbt -java-home "$JAVA_HOME" "runMain dpla.ingestion3.entries.ingest.HarvestEntry \
         --output=$HARVEST_DIR \
         --conf=$I3_CONF \
         --name=$PROVIDER \
         --sparkMaster=$SPARK_MASTER"
 
-    if [ $? -ne 0 ]; then
-        print_error "Harvest failed!"
-        exit 1
-    fi
-    print_info "Harvest complete"
+    # Note: set -e ensures we exit on sbt failure
+    log_info "Harvest complete"
 else
     print_step "Skipping harvest (using existing data)..."
 fi
 
 if [ "$HARVEST_ONLY" = true ]; then
-    print_info "Harvest-only mode - stopping here"
+    log_info "Harvest-only mode - stopping here"
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))
     echo ""
@@ -138,17 +109,9 @@ fi
 # Step 2: Mapping + Enrichment + JSON-L (IngestRemap)
 print_step "Step 2/2: Mapping → Enrichment → JSON-L..."
 
-sbt -java-home "$JAVA_HOME_PATH" "runMain dpla.ingestion3.entries.ingest.IngestRemap \
-    --input=$HARVEST_DIR \
-    --output=$PROVIDER_DATA \
-    --conf=$I3_CONF \
-    --name=$PROVIDER \
-    --sparkMaster=$SPARK_MASTER"
+run_ingest_remap "$HARVEST_DIR" "$PROVIDER_DATA" "$I3_CONF" "$PROVIDER"
 
-if [ $? -ne 0 ]; then
-    print_error "IngestRemap failed!"
-    exit 1
-fi
+# Note: set -e ensures we exit on sbt failure
 
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))

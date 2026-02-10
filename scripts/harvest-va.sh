@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Clone dplava GitHub repositories and package them as ZIP files for VaFileHarvester
 #
 # The dplava GitHub organization (https://github.com/dplava) contains QDC metadata
@@ -10,6 +10,10 @@
 # Requirements: gh (GitHub CLI) must be installed and authenticated
 
 set -e
+
+# Source common configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
 # Configuration
 OUTPUT_DIR="${1:-$HOME/dplava-harvest}"

@@ -1,17 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # i3-batch-ingest - Run full pipeline for multiple providers
 # Fire and forget batch processing
 
 set -e
 
-I3_HOME="${I3_HOME:-/Users/scott/dpla/code/ingestion3}"
-LOG_DIR="${LOG_DIR:-/Users/scott/dpla/logs}"
+# Source common configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+LOG_DIR="${LOG_DIR:-$HOME/dpla/logs}"
 
 usage() {
     echo "Usage: batch-ingest.sh [options] <provider1> [provider2] ..."
@@ -82,7 +79,7 @@ run_provider() {
 
     echo "Starting: $provider (log: $log_file)"
 
-    if "$I3_HOME/ingest.sh" "$provider" $SKIP_HARVEST > "$log_file" 2>&1; then
+    if "$I3_HOME/scripts/ingest.sh" "$provider" $SKIP_HARVEST > "$log_file" 2>&1; then
         echo -e "${GREEN}✓${NC} $provider completed successfully"
         echo "$provider: SUCCESS" >> "$SUMMARY_LOG"
         return 0
@@ -94,7 +91,7 @@ run_provider() {
 }
 
 export -f run_provider
-export I3_HOME SKIP_HARVEST LOG_DIR TIMESTAMP SUMMARY_LOG RED GREEN NC
+export I3_HOME SKIP_HARVEST LOG_DIR TIMESTAMP SUMMARY_LOG
 
 START_TIME=$(date +%s)
 

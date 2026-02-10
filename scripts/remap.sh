@@ -1,20 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # i3-remap - Run mapping → enrichment → jsonl on existing harvest data
 # Use this when you already have harvested data and want to re-process it
 
 set -e
 
-# Java configuration
-JAVA_HOME_PATH="/Users/scott/Library/Java/JavaVirtualMachines/openjdk-19.0.2/Contents/Home"
-export JAVA_HOME="$JAVA_HOME_PATH"
-export PATH="$JAVA_HOME/bin:$PATH"
-export SBT_OPTS="-Xms2g -Xmx8g -XX:+UseG1GC"
+# Source common configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
-# Ingestion3 configuration
-I3_HOME="${I3_HOME:-/Users/scott/dpla/code/ingestion3}"
-I3_CONF="${I3_CONF:-/Users/scott/dpla/code/ingestion3-conf/i3.conf}"
-DPLA_DATA="${DPLA_DATA:-/Users/scott/dpla/data}"
-SPARK_MASTER="${SPARK_MASTER:-local[*]}"
+# Setup Java environment (8g for remap)
+setup_java "8g" || die "Failed to setup Java environment"
 
 if [ -z "$1" ]; then
     echo "Usage: remap.sh <provider-name> [input-path]"
@@ -28,7 +23,7 @@ if [ -z "$1" ]; then
 fi
 
 PROVIDER="$1"
-INPUT="${2:-$DPLA_DATA/$PROVIDER/harvest}"
+INPUT="${2:-$(find_latest_data "$PROVIDER" "harvest" 2>/dev/null || echo "$DPLA_DATA/$PROVIDER/harvest")}"
 OUTPUT="$DPLA_DATA"
 
 echo "=============================================="
@@ -40,12 +35,7 @@ echo "Config:  $I3_CONF"
 echo "=============================================="
 echo ""
 
-cd "$I3_HOME" && sbt -java-home "$JAVA_HOME_PATH" "runMain dpla.ingestion3.entries.ingest.IngestRemap \
-    --input=$INPUT \
-    --output=$OUTPUT \
-    --conf=$I3_CONF \
-    --name=$PROVIDER \
-    --sparkMaster=$SPARK_MASTER"
+run_ingest_remap "$INPUT" "$OUTPUT" "$I3_CONF" "$PROVIDER"
 
 echo ""
 echo "=============================================="
