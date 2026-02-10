@@ -1,18 +1,26 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # nara-ingest.sh - Automated NARA Delta Ingest Pipeline
 #
-# This script automates the NARA ingest process:
-#   1. S3 Sync - Downloads base harvest from S3 if missing/outdated
-#   2. Preprocessing - Extracts ZIP, separates deletes, recompresses
-#   3. Delta Harvest - Runs NaraDeltaHarvester on new data
-#   4. Merge - Merges delta with base using NaraMergeUtil
-#   5. Pipeline - Runs mapping, enrichment, and JSON-L export
+# Automates the full NARA delta ingest process:
+#   1. Preprocessing - Extracts ZIPs by export group, separates deletes, recompresses
+#   2. S3 Sync - Downloads base harvest from S3 if missing
+#   3. Delta Harvest - Runs NaraDeltaHarvester on preprocessed data
+#   4. Merge - Merges delta with base using NaraMergeUtil (zero-persistence strategy)
+#   5. Pipeline - Runs mapping, enrichment, and JSON-L export via IngestRemap
+#   6. S3 Sync - Uploads final outputs to S3
+#
+# NARA delivers data as multiple ZIP files organized by "export group" (e.g., 17.115).
+# Each month's delivery is a directory of ZIPs at:
+#   ~/dpla/data/nara/originalRecords/YYYYMM/
+#
+# See README_NARA.md for full documentation.
 #
 # Usage:
-#   ./nara-ingest.sh /path/to/nara-export.zip
-#   ./nara-ingest.sh /path/to/nara-export.zip --force-sync
-#   ./nara-ingest.sh /path/to/nara-export.zip --base=/path/to/base.avro
-#   ./nara-ingest.sh --skip-to-pipeline  # Use existing merged harvest
+#   ./nara-ingest.sh --month=202601
+#   ./nara-ingest.sh --month=202512 --skip-pipeline
+#   ./nara-ingest.sh --month=202601 --base=/path/to/previous-merged.avro
+#   ./nara-ingest.sh --skip-to-pipeline --harvest=/path/to/merged-harvest.avro
+#   ./nara-ingest.sh --month=202512,202601   # multi-month (pipeline on last only)
 
 set -e  # Exit on any error
 
@@ -20,19 +28,8 @@ set -e  # Exit on any error
 # Configuration
 # ============================================================================
 
-# Java configuration
-JAVA_HOME_PATH="/Users/scott/Library/Java/JavaVirtualMachines/openjdk-19.0.2/Contents/Home"
-export JAVA_HOME="$JAVA_HOME_PATH"
-export PATH="$JAVA_HOME/bin:$PATH"
-
-# SBT JVM options - Optimized for large NARA dataset (~14.5M records)
-export SBT_OPTS="-Xms4g -Xmx12g -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
-
-# Ingestion3 configuration
-I3_HOME="${I3_HOME:-/Users/scott/dpla/code/ingestion3}"
-I3_CONF="${I3_CONF:-/Users/scott/dpla/code/ingestion3-conf/i3.conf}"
-DPLA_DATA="${DPLA_DATA:-/Users/scott/dpla/data}"
-SPARK_MASTER="${SPARK_MASTER:-local[*]}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
 # S3 configuration
 S3_BUCKET="s3://dpla-master-dataset"
@@ -41,28 +38,35 @@ S3_NARA_PATH="$S3_BUCKET/nara"
 # NARA-specific paths
 NARA_DATA="$DPLA_DATA/nara"
 NARA_HARVEST="$NARA_DATA/harvest"
-DATESTAMP=$(date +%Y%m%d)
-NARA_DELTA="$NARA_DATA/delta/$DATESTAMP"
+NARA_ORIGINALS="$NARA_DATA/originalRecords"
 
-# Spark configuration for large datasets
-SPARK_CONF="--conf spark.driver.memory=8g \
-  --conf spark.executor.memory=8g \
-  --conf spark.sql.shuffle.partitions=400 \
-  --conf spark.default.parallelism=200 \
-  --conf spark.memory.fraction=0.8 \
-  --conf spark.memory.storageFraction=0.3 \
-  --conf spark.sql.autoBroadcastJoinThreshold=-1"
+# Datestamp for output directories (YYYYMMDD format required by IngestRemap)
+OUTPUT_DATESTAMP=$(date +%Y%m%d)
 
 # ============================================================================
-# Colors and Output Functions
+# Memory Configuration
+#
+# CRITICAL: NARA is ~18.8M records / 34 GB of Avro. These settings are tuned
+# to avoid OOM on machines with 16-18 GB RAM. See README_NARA.md for details.
+#
+# - Merge: uses local[1] to minimize concurrent task memory. The zero-persistence
+#   strategy in NaraMergeUtil only needs ~3 GB of heap.
+# - Pipeline: uses local[4] for CPU-intensive XML mapping. Each task needs ~1-2 GB.
 # ============================================================================
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+# Per-step memory and parallelism (overridable via environment)
+HARVEST_SBT_OPTS="${HARVEST_SBT_OPTS:--Xms4g -Xmx12g -XX:+UseG1GC -XX:MaxGCPauseMillis=200}"
+HARVEST_SPARK_MASTER="${HARVEST_SPARK_MASTER:-local[1]}"
+
+MERGE_SBT_OPTS="${MERGE_SBT_OPTS:--Xms4g -Xmx12g -XX:+UseG1GC -XX:MaxGCPauseMillis=200}"
+MERGE_SPARK_MASTER="${MERGE_SPARK_MASTER:-local[1]}"
+
+PIPELINE_SBT_OPTS="${PIPELINE_SBT_OPTS:--Xms4g -Xmx14g -XX:+UseG1GC -XX:MaxGCPauseMillis=200}"
+PIPELINE_SPARK_MASTER="${PIPELINE_SPARK_MASTER:-local[4]}"
+
+# ============================================================================
+# Output Functions
+# ============================================================================
 
 print_header() {
     echo ""
@@ -72,318 +76,424 @@ print_header() {
     echo ""
 }
 
-print_step() {
-    echo -e "${BLUE}==>${NC} ${GREEN}$1${NC}"
-}
-
-print_error() {
-    echo -e "${RED}ERROR:${NC} $1" >&2
-}
-
-print_info() {
-    echo -e "${YELLOW}INFO:${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}SUCCESS:${NC} $1"
-}
+print_error() { log_error "$@"; }
+print_info() { log_info "$@"; }
+print_success() { log_success "$@"; }
 
 # ============================================================================
 # Usage
 # ============================================================================
 
 usage() {
-    echo "Usage: nara-ingest.sh <nara-export.zip> [options]"
-    echo ""
-    echo "Automated NARA delta ingest pipeline."
-    echo ""
-    echo "Arguments:"
-    echo "  <nara-export.zip>     Path to NARA export ZIP file"
-    echo ""
-    echo "Options:"
-    echo "  --force-sync          Force download of base harvest from S3"
-    echo "  --base=<path>         Use specific base harvest (skips S3 sync)"
-    echo "  --skip-to-pipeline    Skip to mapping/enrichment (use existing merged harvest)"
-    echo "  --skip-pipeline       Stop after merge (don't run mapping/enrichment)"
-    echo "  --dry-run             Show what would be done without executing"
-    echo "  --help                Show this help message"
-    echo ""
-    echo "Examples:"
-    echo "  ./nara-ingest.sh ~/downloads/nara-delta-20260115.zip"
-    echo "  ./nara-ingest.sh ~/downloads/nara-delta.zip --force-sync"
-    echo "  ./nara-ingest.sh ~/downloads/nara-delta.zip --base=~/nara/harvest/old.avro"
-    echo ""
+    cat <<'USAGE'
+Usage: nara-ingest.sh [options]
+
+Automated NARA delta ingest pipeline.
+
+Options:
+  --month=YYYYMM[,YYYYMM,...]
+                    Month(s) to process. Comma-separated for multi-month.
+                    Maps to ~/dpla/data/nara/originalRecords/YYYYMM/
+                    Multi-month runs pipeline only on the final month.
+
+  --base=<path>     Use specific base harvest Avro dir (skips S3 sync)
+  --force-sync      Force fresh download of base harvest from S3
+  --datestamp=YYYYMMDD
+                    Override output datestamp (default: today).
+                    Used for the final merged harvest directory name.
+
+  --skip-preprocess Skip preprocessing (use existing delta/ directory)
+  --skip-pipeline   Stop after merge (don't run mapping/enrichment/jsonl)
+  --skip-to-pipeline
+                    Skip directly to pipeline using existing merged harvest
+  --harvest=<path>  Specify harvest path for --skip-to-pipeline
+
+  --dry-run         Show what would be done without executing
+  --help            Show this help message
+
+Environment Variables:
+  HARVEST_SBT_OPTS       JVM opts for harvest step  (default: -Xmx12g)
+  HARVEST_SPARK_MASTER   Spark master for harvest    (default: local[1])
+  MERGE_SBT_OPTS         JVM opts for merge step     (default: -Xmx12g)
+  MERGE_SPARK_MASTER     Spark master for merge      (default: local[1])
+  PIPELINE_SBT_OPTS      JVM opts for pipeline step  (default: -Xmx14g)
+  PIPELINE_SPARK_MASTER  Spark master for pipeline   (default: local[4])
+
+Examples:
+  # Single month, full pipeline
+  ./nara-ingest.sh --month=202601
+
+  # Two months: Dec merge-only, Jan merge + pipeline
+  ./nara-ingest.sh --month=202512,202601
+
+  # Resume pipeline on existing merged harvest
+  ./nara-ingest.sh --skip-to-pipeline --harvest=~/dpla/data/nara/harvest/20260209_000000-nara-OriginalRecord.avro
+
+  # Single month, stop after merge (no mapping/enrichment)
+  ./nara-ingest.sh --month=202601 --skip-pipeline
+
+  # Use a specific base instead of S3
+  ./nara-ingest.sh --month=202601 --base=~/dpla/data/nara/harvest/202512_000000-nara-OriginalRecord.avro
+USAGE
     exit 1
 }
 
 # ============================================================================
-# Validation Functions
+# Utility Functions
+# ============================================================================
+
+setup_java_env() {
+    # Find Java 11+ (prefer 19+)
+    if [ -z "$JAVA_HOME" ]; then
+        if [ -x /usr/libexec/java_home ]; then
+            JAVA_HOME=$(/usr/libexec/java_home 2>/dev/null || true)
+        fi
+        # Fallback: scan common macOS locations
+        if [ -z "$JAVA_HOME" ] || [ ! -d "$JAVA_HOME" ]; then
+            for d in "$HOME/Library/Java/JavaVirtualMachines"/*/Contents/Home \
+                     /Library/Java/JavaVirtualMachines/*/Contents/Home; do
+                if [ -d "$d" ]; then
+                    JAVA_HOME="$d"
+                    break
+                fi
+            done
+        fi
+    fi
+    if [ -z "$JAVA_HOME" ] || [ ! -d "$JAVA_HOME" ]; then
+        print_error "JAVA_HOME not set and could not auto-detect. Set JAVA_HOME to a Java 11+ JDK."
+        exit 1
+    fi
+    export JAVA_HOME
+    print_info "Using Java: $JAVA_HOME"
+}
+
+find_latest_local_base() {
+    # Find the most recent harvest Avro directory (sorted by name, newest first)
+    ls -td "$NARA_HARVEST"/*-nara-OriginalRecord.avro 2>/dev/null | head -1
+}
+
+elapsed_since() {
+    local start=$1
+    local now=$(date +%s)
+    local dur=$((now - start))
+    printf "%dm %ds" $((dur / 60)) $((dur % 60))
+}
+
+# ============================================================================
+# Prerequisite Checks
 # ============================================================================
 
 check_prerequisites() {
     print_step "Checking prerequisites..."
-    
+
     local missing=()
-    
-    # Check for required commands
     command -v aws >/dev/null 2>&1 || missing+=("aws (AWS CLI)")
     command -v java >/dev/null 2>&1 || missing+=("java")
     command -v sbt >/dev/null 2>&1 || missing+=("sbt")
     command -v unzip >/dev/null 2>&1 || missing+=("unzip")
     command -v tar >/dev/null 2>&1 || missing+=("tar")
-    
+
     if [ ${#missing[@]} -ne 0 ]; then
         print_error "Missing required tools: ${missing[*]}"
         exit 1
     fi
-    
-    # Check Java version
+
     java -version 2>&1 | head -1
-    
-    # Check AWS credentials (if S3 sync needed)
-    if [ "$SKIP_S3_SYNC" != "true" ] && [ -z "$EXPLICIT_BASE" ]; then
-        if ! aws sts get-caller-identity >/dev/null 2>&1; then
-            print_error "AWS credentials not configured. Run 'aws configure' or set AWS_PROFILE"
-            exit 1
-        fi
-        print_info "AWS credentials verified"
-    fi
-    
-    # Check config file
+
     if [ ! -f "$I3_CONF" ]; then
         print_error "Configuration file not found: $I3_CONF"
         exit 1
     fi
-    
+
     print_success "All prerequisites satisfied"
 }
 
-validate_input_file() {
-    local input="$1"
-    
-    if [ -z "$input" ]; then
-        print_error "No input file specified"
-        usage
-    fi
-    
-    if [ ! -f "$input" ]; then
-        print_error "Input file not found: $input"
-        exit 1
-    fi
-    
-    if [[ ! "$input" == *.zip ]]; then
-        print_error "Input file must be a ZIP file: $input"
-        exit 1
-    fi
-    
-    print_info "Input file validated: $input"
-}
-
 # ============================================================================
-# S3 Sync Functions
+# S3 Sync
 # ============================================================================
 
-find_latest_local_base() {
-    # Find the most recent harvest avro directory
-    local latest=$(ls -td "$NARA_HARVEST"/*-nara-OriginalRecord.avro 2>/dev/null | head -1)
-    echo "$latest"
-}
-
-sync_from_s3() {
+sync_base_from_s3() {
     local force="${1:-false}"
-    local local_base=$(find_latest_local_base)
-    
+    local local_base
+    local_base=$(find_latest_local_base)
+
     if [ -n "$local_base" ] && [ "$force" != "true" ]; then
         print_info "Local base harvest found: $local_base"
         print_info "Skipping S3 sync (use --force-sync to override)"
         BASE_HARVEST="$local_base"
         return 0
     fi
-    
+
     print_step "Syncing NARA base harvest from S3..."
     mkdir -p "$NARA_HARVEST"
-    
-    # Sync harvest directory from S3
+
+    # Only sync Avro harvest directories (not mapping/enrichment/jsonl)
     aws s3 sync "$S3_NARA_PATH/harvest/" "$NARA_HARVEST/" \
         --exclude "*" \
-        --include "*-nara-OriginalRecord.avro/*" \
-        --no-progress
-    
-    # Find the synced base
+        --include "*-nara-OriginalRecord.avro/*"
+
     BASE_HARVEST=$(find_latest_local_base)
-    
     if [ -z "$BASE_HARVEST" ]; then
         print_error "No base harvest found after S3 sync"
         exit 1
     fi
-    
-    print_success "S3 sync complete. Base harvest: $BASE_HARVEST"
+
+    local base_size
+    base_size=$(du -sh "$BASE_HARVEST" | cut -f1)
+    print_success "S3 sync complete. Base: $BASE_HARVEST ($base_size)"
+}
+
+sync_outputs_to_s3() {
+    print_step "Syncing outputs to S3..."
+
+    local merged_dir
+    merged_dir=$(basename "$MERGED_HARVEST")
+
+    print_info "Syncing harvest..."
+    aws s3 sync "$MERGED_HARVEST" "$S3_NARA_PATH/harvest/$merged_dir/"
+
+    print_info "Syncing mapping..."
+    aws s3 sync "$NARA_DATA/mapping/" "$S3_NARA_PATH/mapping/"
+
+    print_info "Syncing enrichment..."
+    aws s3 sync "$NARA_DATA/enrichment/" "$S3_NARA_PATH/enrichment/"
+
+    print_info "Syncing jsonl..."
+    aws s3 sync "$NARA_DATA/jsonl/" "$S3_NARA_PATH/jsonl/"
+
+    print_success "S3 sync complete"
 }
 
 # ============================================================================
-# Preprocessing Functions
+# Preprocessing
+#
+# NARA delivers ZIPs organized by export group (e.g., 17.115_DESC_0001.zip).
+# Each export group may have multiple ZIPs that need to be combined into a
+# single tar.gz. Delete files (*NaidsList.xml) are separated out.
 # ============================================================================
 
-preprocess_nara_export() {
-    local input="$1"
-    local work_dir="$NARA_DELTA"
-    
-    print_step "Preprocessing NARA export..."
-    
-    # Create working directories
-    mkdir -p "$work_dir/deletes"
-    mkdir -p "$work_dir/extracted"
-    
-    # Extract ZIP file
-    print_info "Extracting ZIP file..."
-    unzip -q "$input" -d "$work_dir/extracted"
-    
-    # Count files before processing
-    local total_files=$(find "$work_dir/extracted" -type f -name "*.xml" | wc -l | tr -d ' ')
-    print_info "Found $total_files XML files in export"
-    
-    # Move and rename delete files
-    print_info "Processing delete files..."
+preprocess_month() {
+    local month="$1"
+    local src_dir="$NARA_ORIGINALS/$month"
+    local dest_dir="$NARA_DATA/delta/$month"
+
+    print_step "Preprocessing month $month..."
+
+    if [ ! -d "$src_dir" ]; then
+        print_error "Original records directory not found: $src_dir"
+        exit 1
+    fi
+
+    mkdir -p "$dest_dir/deletes"
+
+    # Step 1: Move delete files (NaidsList.xml) to deletes/
     local delete_count=0
-    while IFS= read -r -d '' file; do
-        local basename=$(basename "$file")
-        mv "$file" "$work_dir/deletes/${DATESTAMP}_${basename}"
+    for f in "$src_dir"/*_NaidsList.xml "$src_dir"/*NaidsList*.xml; do
+        [ -f "$f" ] || continue
+        cp "$f" "$dest_dir/deletes/"
         ((delete_count++)) || true
-    done < <(find "$work_dir/extracted" -name "deletes_*.xml" -print0)
-    
-    print_info "Moved $delete_count delete file(s) to $work_dir/deletes/"
-    
-    # Count remaining data files
-    local data_files=$(find "$work_dir/extracted" -type f -name "*.xml" | wc -l | tr -d ' ')
-    print_info "Remaining data files: $data_files"
-    
-    if [ "$data_files" -eq 0 ]; then
-        print_error "No data files found after removing deletes"
+    done
+    print_info "Copied $delete_count delete file(s) to $dest_dir/deletes/"
+
+    # Step 2: Identify unique export groups from ZIP filenames
+    # Naming pattern: DATE_EXPORTGROUP_DESC_SEQNUM.zip
+    # e.g., 2026-02-07_17.115_DESC_0001.zip -> export group = 17.115
+    local groups=()
+    for zip in "$src_dir"/*.zip; do
+        [ -f "$zip" ] || continue
+        local basename
+        basename=$(basename "$zip")
+        # Extract export group: second underscore-delimited field
+        # 2026-02-07_17.115_DESC_0001.zip -> 17.115
+        local group
+        group=$(echo "$basename" | sed -E 's/^[^_]+_([0-9]+\.[0-9]+)_.*/\1/')
+        if [ -n "$group" ] && [[ ! " ${groups[*]} " =~ " ${group} " ]]; then
+            groups+=("$group")
+        fi
+    done
+
+    if [ ${#groups[@]} -eq 0 ]; then
+        print_error "No ZIP files with recognized export group pattern found in $src_dir"
         exit 1
     fi
-    
-    # Create tar.gz from remaining files
-    print_info "Creating compressed archive..."
-    tar -czf "$work_dir/${DATESTAMP}_nara_delta.tar.gz" -C "$work_dir/extracted" .
-    
-    # Verify archive was created
-    if [ ! -f "$work_dir/${DATESTAMP}_nara_delta.tar.gz" ]; then
-        print_error "Failed to create tar.gz archive"
+
+    print_info "Found ${#groups[@]} export group(s): ${groups[*]}"
+
+    # Step 3: For each export group, unzip all ZIPs and create a single tar.gz
+    local total_xml=0
+    for group in "${groups[@]}"; do
+        local work_dir="$dest_dir/_work_${group}"
+        mkdir -p "$work_dir"
+
+        local zip_count=0
+        for zip in "$src_dir"/*_${group}_DESC_*.zip; do
+            [ -f "$zip" ] || continue
+            unzip -q -o "$zip" -d "$work_dir/"
+            ((zip_count++)) || true
+        done
+
+        if [ "$zip_count" -eq 0 ]; then
+            print_info "  Skipping group $group (no matching ZIPs)"
+            rm -rf "$work_dir"
+            continue
+        fi
+
+        # Remove any delete files that ended up in the work dir
+        find "$work_dir" -name "*NaidsList*" -delete 2>/dev/null || true
+
+        # Count XML data files
+        local xml_count
+        xml_count=$(find "$work_dir" -name "*.xml" -type f | wc -l | tr -d ' ')
+        total_xml=$((total_xml + xml_count))
+
+        # Create tar.gz for this export group
+        local archive="$dest_dir/${group}_nara_delta.tar.gz"
+        (cd "$work_dir" && tar -czf "$archive" *.xml 2>/dev/null) || {
+            # If *.xml glob fails, try find-based approach
+            (cd "$work_dir" && find . -name "*.xml" -print0 | tar -czf "$archive" --null -T -)
+        }
+
+        local archive_size
+        archive_size=$(du -h "$archive" | cut -f1)
+        print_info "  Group $group: $xml_count XML files -> $archive ($archive_size)"
+
+        rm -rf "$work_dir"
+    done
+
+    print_success "Preprocessing complete: $total_xml total XML files in ${#groups[@]} groups"
+
+    # Verify at least one tar.gz was created
+    local tgz_count
+    tgz_count=$(find "$dest_dir" -maxdepth 1 -name "*.tar.gz" | wc -l | tr -d ' ')
+    if [ "$tgz_count" -eq 0 ]; then
+        print_error "No tar.gz archives created. Check ZIP file naming patterns."
         exit 1
     fi
-    
-    local archive_size=$(du -h "$work_dir/${DATESTAMP}_nara_delta.tar.gz" | cut -f1)
-    print_success "Created archive: ${DATESTAMP}_nara_delta.tar.gz ($archive_size)"
-    
-    # Clean up extracted files to save space
-    rm -rf "$work_dir/extracted"
-    
-    DELTA_ARCHIVE="$work_dir/${DATESTAMP}_nara_delta.tar.gz"
-    DELETES_DIR="$work_dir/deletes"
 }
 
 # ============================================================================
-# Harvest Functions
+# Delta Harvest
 # ============================================================================
+
+update_nara_config() {
+    local delta_dir="$1"
+    print_step "Updating i3.conf for NARA delta path: $delta_dir"
+    sed_i "s|nara.harvest.delta.update = .*|nara.harvest.delta.update = \"$delta_dir/\"|" "$I3_CONF"
+    sed_i "s|nara.harvest.endpoint = .*|nara.harvest.endpoint = \"$delta_dir/\"|" "$I3_CONF"
+    print_info "Updated i3.conf nara paths -> $delta_dir/"
+}
 
 run_delta_harvest() {
-    print_step "Running NARA delta harvest..."
-    
+    local month="$1"
+    local delta_dir="$NARA_DATA/delta/$month"
+
+    print_step "Running NARA delta harvest for $month..."
+
+    # Update i3.conf to point to this month's delta directory
+    update_nara_config "$delta_dir"
+
     cd "$I3_HOME"
-    
-    # Run the delta harvester
-    # Note: This requires i3.conf to be configured with nara.harvest.delta.update path
-    sbt -java-home "$JAVA_HOME_PATH" \
+    export SBT_OPTS="$HARVEST_SBT_OPTS"
+
+    sbt -java-home "$JAVA_HOME" \
         "runMain dpla.ingestion3.entries.ingest.HarvestEntry \
-        --output=$NARA_DELTA/harvest \
+        --output=$delta_dir/harvest \
         --conf=$I3_CONF \
         --name=nara \
-        --sparkMaster=$SPARK_MASTER"
-    
-    # Find the harvested output
-    DELTA_HARVEST=$(ls -td "$NARA_DELTA/harvest"/*-nara-OriginalRecord.avro 2>/dev/null | head -1)
-    
+        --sparkMaster=$HARVEST_SPARK_MASTER"
+
+    # Find the harvested output (nested under nara/harvest/)
+    DELTA_HARVEST=$(find "$delta_dir/harvest" -type d -name "*-nara-OriginalRecord.avro" 2>/dev/null | sort | tail -1)
+
     if [ -z "$DELTA_HARVEST" ]; then
-        print_error "Delta harvest failed - no output found"
+        print_error "Delta harvest failed - no output found in $delta_dir/harvest/"
         exit 1
     fi
-    
-    local record_count=$(find "$DELTA_HARVEST" -name "*.avro" | wc -l | tr -d ' ')
-    print_success "Delta harvest complete: $DELTA_HARVEST (${record_count} part files)"
+
+    local avro_count
+    avro_count=$(find "$DELTA_HARVEST" -name "*.avro" -type f | wc -l | tr -d ' ')
+    print_success "Delta harvest complete: $DELTA_HARVEST ($avro_count part files)"
 }
 
 # ============================================================================
-# Merge Functions
+# Merge
 # ============================================================================
 
 run_merge() {
-    print_step "Running NARA merge utility..."
-    
-    local output_path="$NARA_HARVEST/${DATESTAMP}_000000-nara-OriginalRecord.avro"
-    
-    print_info "Base harvest: $BASE_HARVEST"
+    local month="$1"
+    local output_datestamp="$2"
+    local delta_dir="$NARA_DATA/delta/$month"
+
+    print_step "Running NARA merge for $month..."
+
+    local output_path="$NARA_HARVEST/${output_datestamp}_000000-nara-OriginalRecord.avro"
+
+    print_info "Base harvest:  $BASE_HARVEST"
     print_info "Delta harvest: $DELTA_HARVEST"
-    print_info "Deletes dir: $DELETES_DIR"
-    print_info "Output path: $output_path"
-    
+    print_info "Deletes dir:   $delta_dir/deletes/"
+    print_info "Output path:   $output_path"
+
     cd "$I3_HOME"
-    
-    sbt -java-home "$JAVA_HOME_PATH" \
+    export SBT_OPTS="$MERGE_SBT_OPTS"
+
+    sbt -java-home "$JAVA_HOME" \
         "runMain dpla.ingestion3.utils.NaraMergeUtil \
         $BASE_HARVEST \
         $DELTA_HARVEST \
-        $DELETES_DIR \
+        $delta_dir/deletes/ \
         $output_path \
-        $SPARK_MASTER"
-    
+        $MERGE_SPARK_MASTER"
+
     # Verify merge output
     if [ ! -d "$output_path" ]; then
         print_error "Merge failed - output not found: $output_path"
         exit 1
     fi
-    
+
     # Display merge summary
     local summary_file="$output_path/_LOGS/_SUMMARY.txt"
     if [ -f "$summary_file" ]; then
         echo ""
-        echo "=== Merge Summary ==="
+        echo "=== Merge Summary ($month) ==="
         cat "$summary_file"
-        echo "===================="
+        echo "=============================="
     fi
-    
+
     MERGED_HARVEST="$output_path"
     print_success "Merge complete: $MERGED_HARVEST"
 }
 
 # ============================================================================
-# Pipeline Functions (Mapping, Enrichment, JSON-L)
+# Pipeline (Mapping -> Enrichment -> JSON-L)
 # ============================================================================
 
 run_pipeline() {
     print_step "Running mapping, enrichment, and JSON-L pipeline..."
-    
+    print_info "Input harvest: $MERGED_HARVEST"
+    print_info "Spark master:  $PIPELINE_SPARK_MASTER"
+    print_info "SBT_OPTS:      $PIPELINE_SBT_OPTS"
+    print_info ""
+    print_info "NOTE: This step processes ~18.8M XML records and takes ~10 hours."
+    print_info "Monitor with: ps aux | grep IngestRemap"
+
     cd "$I3_HOME"
-    
-    # Use the merged harvest as input
-    local harvest_input="$MERGED_HARVEST"
-    
-    # Run IngestRemap (mapping -> enrichment -> jsonl)
-    sbt -java-home "$JAVA_HOME_PATH" \
+    export SBT_OPTS="$PIPELINE_SBT_OPTS"
+
+    sbt -java-home "$JAVA_HOME" \
         "runMain dpla.ingestion3.entries.ingest.IngestRemap \
-        --input=$harvest_input \
+        --input=$MERGED_HARVEST \
         --output=$NARA_DATA \
         --conf=$I3_CONF \
         --name=nara \
-        --sparkMaster=$SPARK_MASTER"
-    
+        --sparkMaster=$PIPELINE_SPARK_MASTER"
+
     print_success "Pipeline complete"
-    
     echo ""
-    echo "Output files:"
-    echo "  Harvest:    $harvest_input"
-    echo "  Mapping:    $NARA_DATA/mapping"
-    echo "  Enrichment: $NARA_DATA/enrichment"
-    echo "  JSON-L:     $NARA_DATA/jsonl"
+    echo "Output:"
+    echo "  Harvest:    $MERGED_HARVEST"
+    echo "  Mapping:    $NARA_DATA/mapping/"
+    echo "  Enrichment: $NARA_DATA/enrichment/"
+    echo "  JSON-L:     $NARA_DATA/jsonl/"
 }
 
 # ============================================================================
@@ -392,29 +502,47 @@ run_pipeline() {
 
 main() {
     # Parse arguments
-    INPUT_FILE=""
+    MONTHS=""
     FORCE_SYNC=false
     EXPLICIT_BASE=""
-    SKIP_TO_PIPELINE=false
+    SKIP_PREPROCESS=false
     SKIP_PIPELINE=false
+    SKIP_TO_PIPELINE=false
+    EXPLICIT_HARVEST=""
     DRY_RUN=false
-    
+
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --force-sync)
-                FORCE_SYNC=true
+            --month=*)
+                MONTHS="${1#*=}"
                 shift
                 ;;
             --base=*)
                 EXPLICIT_BASE="${1#*=}"
                 shift
                 ;;
-            --skip-to-pipeline)
-                SKIP_TO_PIPELINE=true
+            --force-sync)
+                FORCE_SYNC=true
+                shift
+                ;;
+            --datestamp=*)
+                OUTPUT_DATESTAMP="${1#*=}"
+                shift
+                ;;
+            --skip-preprocess)
+                SKIP_PREPROCESS=true
                 shift
                 ;;
             --skip-pipeline)
                 SKIP_PIPELINE=true
+                shift
+                ;;
+            --skip-to-pipeline)
+                SKIP_TO_PIPELINE=true
+                shift
+                ;;
+            --harvest=*)
+                EXPLICIT_HARVEST="${1#*=}"
                 shift
                 ;;
             --dry-run)
@@ -429,74 +557,171 @@ main() {
                 usage
                 ;;
             *)
-                INPUT_FILE="$1"
-                shift
+                print_error "Unexpected argument: $1"
+                usage
                 ;;
         esac
     done
-    
+
     print_header "NARA Delta Ingest Pipeline"
-    
-    echo "Configuration:"
-    echo "  Datestamp:    $DATESTAMP"
-    echo "  Data Dir:     $NARA_DATA"
-    echo "  Config:       $I3_CONF"
-    echo "  Spark Master: $SPARK_MASTER"
-    echo "  Java:         $JAVA_HOME"
-    echo ""
-    
-    START_TIME=$(date +%s)
-    
+
+    # Setup Java
+    setup_java_env
+
     # Check prerequisites
     check_prerequisites
-    
+
+    START_TIME=$(date +%s)
+
+    # -----------------------------------------------------------------------
+    # Mode 1: Skip to pipeline (use existing merged harvest)
+    # -----------------------------------------------------------------------
     if [ "$SKIP_TO_PIPELINE" = true ]; then
-        # Skip to pipeline using existing merged harvest
-        MERGED_HARVEST=$(find_latest_local_base)
-        if [ -z "$MERGED_HARVEST" ]; then
-            print_error "No merged harvest found for --skip-to-pipeline"
+        if [ -n "$EXPLICIT_HARVEST" ]; then
+            MERGED_HARVEST="$EXPLICIT_HARVEST"
+        else
+            MERGED_HARVEST=$(find_latest_local_base)
+        fi
+
+        if [ -z "$MERGED_HARVEST" ] || [ ! -d "$MERGED_HARVEST" ]; then
+            print_error "No merged harvest found. Use --harvest=<path>"
             exit 1
         fi
-        print_info "Using existing harvest: $MERGED_HARVEST"
+
+        print_info "Resuming pipeline with: $MERGED_HARVEST"
+        run_pipeline
+
+        END_TIME=$(date +%s)
+        print_header "NARA Pipeline Complete"
+        echo "Duration: $(elapsed_since $START_TIME)"
+        exit 0
+    fi
+
+    # -----------------------------------------------------------------------
+    # Mode 2: Full or partial ingest (requires --month)
+    # -----------------------------------------------------------------------
+    if [ -z "$MONTHS" ]; then
+        print_error "No --month specified. Use --month=YYYYMM or --skip-to-pipeline."
+        usage
+    fi
+
+    # Split comma-separated months into array
+    IFS=',' read -ra MONTH_ARRAY <<< "$MONTHS"
+
+    echo "Configuration:"
+    echo "  Month(s):        ${MONTH_ARRAY[*]}"
+    echo "  Output Datestamp: $OUTPUT_DATESTAMP"
+    echo "  Data Dir:         $NARA_DATA"
+    echo "  Config:           $I3_CONF"
+    echo "  Java:             $JAVA_HOME"
+    echo ""
+    echo "  Harvest:  SBT_OPTS=$HARVEST_SBT_OPTS  Spark=$HARVEST_SPARK_MASTER"
+    echo "  Merge:    SBT_OPTS=$MERGE_SBT_OPTS  Spark=$MERGE_SPARK_MASTER"
+    echo "  Pipeline: SBT_OPTS=$PIPELINE_SBT_OPTS  Spark=$PIPELINE_SPARK_MASTER"
+    echo ""
+
+    if [ "$DRY_RUN" = true ]; then
+        echo "[DRY RUN] Would process months: ${MONTH_ARRAY[*]}"
+        echo "[DRY RUN] Pipeline on final month only (unless --skip-pipeline)"
+        exit 0
+    fi
+
+    # Step 1: Get base harvest
+    if [ -n "$EXPLICIT_BASE" ]; then
+        if [ ! -d "$EXPLICIT_BASE" ]; then
+            print_error "Specified base harvest not found: $EXPLICIT_BASE"
+            exit 1
+        fi
+        BASE_HARVEST="$EXPLICIT_BASE"
+        print_info "Using explicit base harvest: $BASE_HARVEST"
+    else
+        sync_base_from_s3 "$FORCE_SYNC"
+    fi
+
+    # Step 2: Process each month
+    local total_months=${#MONTH_ARRAY[@]}
+    local month_idx=0
+
+    for month in "${MONTH_ARRAY[@]}"; do
+        ((month_idx++)) || true
+        local is_last_month=false
+        [ "$month_idx" -eq "$total_months" ] && is_last_month=true
+
+        print_header "Processing Month $month ($month_idx/$total_months)"
+
+        # Determine output datestamp for this month's merge
+        # For intermediate months, use YYYYMM format (6 digit)
+        # For the final month, use full YYYYMMDD format (8 digit - required by IngestRemap)
+        local merge_datestamp
+        if [ "$is_last_month" = true ]; then
+            merge_datestamp="$OUTPUT_DATESTAMP"
+        else
+            merge_datestamp="$month"
+        fi
+
+        # 2a. Preprocess
+        if [ "$SKIP_PREPROCESS" != true ]; then
+            # Check if already preprocessed (tar.gz files exist)
+            local existing_tgz
+            existing_tgz=$(find "$NARA_DATA/delta/$month" -maxdepth 1 -name "*.tar.gz" 2>/dev/null | wc -l | tr -d ' ')
+            if [ "$existing_tgz" -gt 0 ]; then
+                print_info "Month $month already preprocessed ($existing_tgz tar.gz files). Skipping."
+            else
+                preprocess_month "$month"
+            fi
+        else
+            print_info "Skipping preprocessing (--skip-preprocess)"
+        fi
+
+        # 2b. Delta Harvest
+        # Check if already harvested
+        local existing_harvest
+        existing_harvest=$(find "$NARA_DATA/delta/$month/harvest" -type d -name "*-nara-OriginalRecord.avro" 2>/dev/null | sort | tail -1)
+        if [ -n "$existing_harvest" ]; then
+            print_info "Delta harvest already exists: $existing_harvest. Skipping harvest."
+            DELTA_HARVEST="$existing_harvest"
+        else
+            run_delta_harvest "$month"
+        fi
+
+        # 2c. Merge
+        # Check if already merged
+        local existing_merge="$NARA_HARVEST/${merge_datestamp}_000000-nara-OriginalRecord.avro"
+        if [ -d "$existing_merge" ] && [ -f "$existing_merge/_LOGS/_SUMMARY.txt" ]; then
+            print_info "Merge output already exists: $existing_merge. Skipping merge."
+            MERGED_HARVEST="$existing_merge"
+        else
+            run_merge "$month" "$merge_datestamp"
+        fi
+
+        # Use this month's merged output as the base for the next month
+        BASE_HARVEST="$MERGED_HARVEST"
+
+        print_success "Month $month complete ($(elapsed_since $START_TIME) elapsed)"
+    done
+
+    # Step 3: Pipeline (only on the final month's merged output)
+    if [ "$SKIP_PIPELINE" != true ]; then
         run_pipeline
     else
-        # Full process
-        validate_input_file "$INPUT_FILE"
-        
-        # Step 1: S3 Sync (get base harvest)
-        if [ -n "$EXPLICIT_BASE" ]; then
-            if [ ! -d "$EXPLICIT_BASE" ]; then
-                print_error "Specified base harvest not found: $EXPLICIT_BASE"
-                exit 1
-            fi
-            BASE_HARVEST="$EXPLICIT_BASE"
-            print_info "Using explicit base harvest: $BASE_HARVEST"
-        else
-            sync_from_s3 "$FORCE_SYNC"
-        fi
-        
-        # Step 2: Preprocess
-        preprocess_nara_export "$INPUT_FILE"
-        
-        # Step 3: Delta Harvest
-        run_delta_harvest
-        
-        # Step 4: Merge
-        run_merge
-        
-        # Step 5: Pipeline (optional)
-        if [ "$SKIP_PIPELINE" != true ]; then
-            run_pipeline
-        else
-            print_info "Skipping pipeline (--skip-pipeline)"
-        fi
+        print_info "Skipping pipeline (--skip-pipeline)"
+        print_info "Final merged harvest: $MERGED_HARVEST"
     fi
-    
+
     END_TIME=$(date +%s)
-    DURATION=$((END_TIME - START_TIME))
-    
     print_header "NARA Ingest Complete"
-    echo "Duration: $((DURATION / 60))m $((DURATION % 60))s"
+    echo "Duration: $(elapsed_since $START_TIME)"
+    echo ""
+    echo "Final harvest:  $MERGED_HARVEST"
+    if [ "$SKIP_PIPELINE" != true ]; then
+        echo "Mapping:        $NARA_DATA/mapping/"
+        echo "Enrichment:     $NARA_DATA/enrichment/"
+        echo "JSON-L:         $NARA_DATA/jsonl/"
+    fi
+    echo ""
+    echo "Next steps:"
+    echo "  1. Inspect merge logs:  cat $MERGED_HARVEST/_LOGS/_SUMMARY.txt"
+    echo "  2. Sync to S3:         $0 --sync-s3  (or run manually)"
     echo ""
 }
 
