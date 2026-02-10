@@ -10,7 +10,10 @@ val SPARK_VERSION = "3.5.5"
 ThisBuild / Test / parallelExecution := false
 
 assembly / assemblyMergeStrategy := {
-  case "META-INF/MANIFEST.MF" => MergeStrategy.discard
+  case "META-INF/MANIFEST.MF"       => MergeStrategy.discard
+  case x if x.startsWith("META-INF/") &&
+    (x.endsWith(".SF") || x.endsWith(".DSA") || x.endsWith(".RSA")) =>
+    MergeStrategy.discard
   case x => MergeStrategy.first
 }
 

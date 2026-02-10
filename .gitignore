@@ -177,6 +177,17 @@ conf/
 .gitmodules
 
 .bsp/*
+.bloop/
 .metals/*
 .vagrant/*
 .vscode/*
+
+# Bloop / Metals build server artifacts
+project/.bloop/
+project/metals.sbt
+
+# Runtime logs
+logs/
+
+# Cursor IDE (projects folder is user-specific)
+.cursor/projects/
