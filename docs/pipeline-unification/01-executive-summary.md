@@ -1,0 +1,197 @@
+# DPLA Pipeline Unification -- Executive Summary
+
+**Audience:** Director, Community Manager, leadership at receiving organization
+**Reading time:** 15 minutes
+
+---
+
+## What Does DPLA's Data Pipeline Do?
+
+DPLA aggregates metadata from libraries, museums, and archives across the United States -- approximately 60 partner institutions (called "hubs") contributing tens of millions of records. The data pipeline is the set of software that collects those records, makes them searchable on dp.la, and uploads eligible media to Wikimedia Commons.
+
+The pipeline has three stages, each handled by a separate software project:
+
+**Stage 1 -- Ingestion.** Once a month, the system reaches out to each hub and pulls in their latest records. Some hubs provide data through a standard protocol (OAI-PMH), some through APIs, and some through files placed on Amazon S3. The system transforms each record into a common format, checks it for quality, and stores the result. This takes about a week for all 60 hubs.
+
+**Stage 2 -- Indexing.** After ingestion, the system takes all the processed records and builds a search index -- the database that powers dp.la's search. This runs on a temporary cluster of 10 servers on Amazon Web Services (AWS), takes about 2 hours, and is then shut down. When the new index is ready, a "switch" is flipped so the website starts serving the fresh data.
+
+**Stage 3 -- Wikimedia uploads.** For records with openly-licensed media (images, documents, maps), the system downloads the media from the source institution and uploads it to Wikimedia Commons, making it available on Wikipedia and other Wikimedia projects. This is a continuous process that runs for weeks or months at a time on a dedicated server.
+
+## Why Does This Matter?
+
+Today, these three stages run independently with no coordination between them. Each one:
+
+- Runs on a different computer (a laptop, a temporary cloud cluster, a dedicated server)
+- Is written in a different programming language
+- Is started manually by an engineer
+- Has no way to tell the other stages that it's done
+- Has limited or no monitoring for failures
+
+The largest risk is not that one component occasionally fails. The largest risk is that **cross-stage handoffs are weakly governed and often manually sequenced**. When a handoff goes wrong -- and detection is slow or absent -- the consequences cascade downstream.
+
+### A Real Example of What Goes Wrong
+
+In December 2025, the Minnesota media uploader encountered a network error while trying to download an image from a library's server. The server had temporarily reset the connection -- a routine, recoverable problem. But the uploader had no logic to retry or recover. It entered a sleep state and stopped making progress.
+
+For over two months, the process appeared to be running -- it was alive on the server, consuming memory -- but it was doing nothing. Nobody knew, because there was no monitoring. The only way to discover the problem was to SSH into the server (a task requiring engineering access) and manually inspect log files.
+
+This kind of silent failure is not unique. It is the dominant risk pattern across all three systems.
+
+### The Bus Factor
+
+Today, the complete pipeline is fully understood by one engineer. The knowledge of how to run the monthly cycle -- which hubs to process, in what order, what to do when something fails, how to flip the search index, how to manage the Wikimedia uploads -- lives primarily in that person's head and in scattered documentation across three separate codebases. If that engineer is unavailable, the monthly cycle stops.
+
+## What Is Being Proposed?
+
+### Orchestration, Not Replacement
+
+We are not replacing the three systems. They work, and rewriting them would be expensive and risky. Instead, we are:
+
+1. **Formalizing contracts** between the three systems -- writing down the rules for how they communicate, so changes in one don't silently break another
+2. **Adding safety gates** at every critical transition -- especially the search index switch, which is the single highest-risk moment in the monthly cycle
+3. **Installing monitoring** so that failures are detected in minutes, not months
+4. **Hardening** each system to handle failures more gracefully (crash recovery, session management, structured error logging)
+5. **Coordinating** the three stages so they can hand off work automatically, with human approval at high-stakes decision points
+6. **Enabling AI agents** to perform routine operations, reducing the need for engineer intervention
+
+### Strategic Principles
+
+Three principles guide the sequencing of this work:
+
+1. **Optimize handoff correctness before throughput.** Get the data flowing reliably between stages before trying to make it faster.
+2. **Optimize observability before deeper automation.** See what's happening before automating decisions about what to do.
+3. **Optimize restartability and rollback before autonomy.** Make sure every automated action can be undone before removing human oversight.
+
+This ordering yields faster risk reduction than broad feature expansion.
+
+### What Changes for Non-Technical Staff
+
+- **Community Manager:** You will receive a daily Slack message summarizing Wikimedia upload progress -- how many files were uploaded, which partners are active, and whether any uploads are stalled. Today this information requires SSH access to a server. After the change, it arrives in Slack every morning.
+
+- **Director:** You will have a single document suite (this one) that explains the entire pipeline. When the pipeline is handed off, the receiving organization reads these documents to understand what they are getting and how to operate it.
+
+- **Everyone:** When something fails, the system will post an alert to Slack with a clear description of what went wrong and what to do about it. Today, failures can go undetected for weeks.
+
+## Timeline and Phases
+
+The work is organized into five phases, each delivering value on its own. If a phase is delayed or cancelled, the previous phases still work. Each phase has explicit exit criteria -- completion is measured by verifiable outcomes, not by "feature shipped" status.
+
+### Phase 0: Integration Contracts (Week 1)
+
+Write down the rules for how the three systems communicate -- what file formats they expect, what names they use for hubs, where data is stored in S3. Today these rules exist only in code. Writing them down means anyone can verify that the systems are compatible.
+
+**What you'll see:** A reference document. No system changes.
+
+### Phase 1: Reliability Fixes (Weeks 1--2)
+
+Fix the most dangerous failure patterns in each system:
+- Make the ingestion system's progress tracking crash-safe
+- Make the indexer report failures instead of silently continuing
+- Give the Wikimedia uploader the ability to resume after a crash instead of starting over
+
+**What you'll see:** No visible change in normal operation. Fewer silent failures.
+
+### Phase 2: Monitoring and Observability (Weeks 2--3)
+
+Install monitoring on the Wikimedia server. Set up the daily Slack digest. Replace the current process management (manual terminal sessions) with proper service management that automatically restarts crashed processes. Add health checks across all systems.
+
+**What you'll see:** Daily Slack messages with upload progress. Alerts when something stalls. This is the most visible deliverable for non-engineering staff.
+
+### Phase 3: Controlled Indexer Automation (Weeks 3--4)
+
+Automate the search index build and the production switch-over, with mandatory safety checks. The system validates the new index (correct record count, correct fields, cluster health) before switching. If validation fails, it stops and asks a human. If the switch goes wrong, it automatically switches back.
+
+**What you'll see:** The monthly index build requires less manual work. Slack notifications for indexing progress. Explicit human approval required for the first several cycles.
+
+### Phase 4: End-to-End Coordination (Week 4+)
+
+Connect all three stages so that completing one automatically triggers the next. After ingestion finishes, indexing starts. After indexing finishes, Wikimedia uploads refresh their target lists. Human approval gates remain at high-stakes transitions.
+
+**What you'll see:** The monthly cycle runs with minimal human intervention. A single "start the monthly cycle" command kicks off the entire process.
+
+## Risk Summary
+
+| Risk | Severity | Addressed In |
+|------|----------|--------------|
+| Silent failures go undetected for weeks/months | Critical | Phases 1 and 2 |
+| Search index switch points to incomplete data | Critical | Phase 3 (safety gates) |
+| Cross-repo hub naming drift breaks data routing | Critical | Phase 0 (contracts) |
+| Single engineer dependency (bus factor) | High | This documentation suite |
+| Manual stage handoffs depend on operator memory | High | Phases 3 and 4 |
+| Wikimedia server dies with no rebuild procedure | Medium | Phase 2 (documented rebuild) |
+| Cloud server costs run higher than expected | Medium | Phase 3 (monitoring, auto-shutdown) |
+| Automation introduces new failure modes | Medium | Phased rollout with explicit gates |
+
+### Threats Introduced by Unification Itself
+
+Automating a fragile pipeline carries its own risks:
+
+- **False confidence from automating weak assumptions.** If the automation encodes today's implicit rules, it can fail in the same ways -- just faster and with less human oversight.
+- **Race conditions at stage boundaries.** Automated handoffs must handle the edge cases that humans handle intuitively (e.g., "not all hubs are done yet").
+- **Over-centralizing control logic.** If the coordination layer breaks, manual operation must remain possible as a fallback.
+
+These are manageable if the rollout is gate-driven and reversible -- which is why each phase has exit criteria and every automation has a manual override.
+
+## Cost Implications
+
+| Service | Current Cost | Notes |
+|---------|-------------|-------|
+| AWS EMR (indexing) | ~$20--60/month | 10-node cluster runs ~2 hours once per month |
+| AWS EC2 (Wikimedia) | ~$30--50/month | Persistent t3.large instance |
+| AWS S3 (data storage) | ~$50--100/month | ~2TB across multiple buckets |
+| Slack (notifications) | Free | Incoming webhooks, no paid plan required |
+| Local machine (ingestion) | $0 (engineer's laptop) | Moving to EC2 would add ~$100--150/month |
+
+The proposed changes do not significantly increase AWS costs in Phases 0--2. Phase 3 adds minor Lambda and CloudWatch costs (< $10/month). If the ingestion orchestrator is moved from a laptop to a cloud server (recommended for handoff but not required for initial implementation), that adds ~$100--150/month.
+
+## What Are "AI Agents" and Why Do They Matter Here?
+
+An AI agent, in this context, is software that can read instructions and carry out tasks -- like running a script, checking the status of a process, or posting a message to Slack -- without a human typing each command. Think of it as a very literal assistant that follows written procedures exactly.
+
+Today, DPLA already uses AI agents for the ingestion stage. An engineer can tell the agent "run the ingest for Ohio" and the agent will look up Ohio's configuration, choose the correct procedure, run the scripts in the right order, monitor for success or failure, and report the result.
+
+This works because the ingestion system has written procedures (called "skills") that the agent can follow. The indexer and Wikimedia systems do not have these yet. Part of this plan is to create them, so an agent can eventually run the entire monthly cycle.
+
+Why this matters for handoff: if the pipeline has well-written agent skills, the receiving organization does not need deep expertise in the codebase to operate it. They tell the agent what to do in plain English, and the agent follows the documented procedures. The skills serve as both executable instructions for the agent and readable documentation for humans.
+
+## Residual Risk After Implementation
+
+Even after all phases are complete, some risks cannot be eliminated -- only detected and contained:
+
+- **Source partner endpoint instability.** DPLA depends on ~60 external institutions maintaining their data feeds. When a partner's server goes down or changes format, the pipeline detects it but cannot fix it.
+- **Upstream metadata variance.** Partners change their metadata schema over time. The pipeline's mapping layer handles known variations, but novel changes require human investigation.
+- **Prolonged partial-degradation scenarios.** When a problem affects some hubs but not others, the decision to proceed with a partial index vs. wait for all hubs requires domain judgment that cannot be fully automated.
+
+The pipeline design assumes these risks exist and focuses on fast detection and clear escalation rather than automatic resolution.
+
+## Success Criteria
+
+The unification is successful when:
+
+- Monthly ingest-to-index-to-refresh can run with deterministic handoff logic
+- Every critical transition has an explicit pass/fail gate
+- Failure modes are visible quickly to operations and stakeholders
+- Manual fallback remains available for high-impact decisions
+- The pipeline can be operated by someone who did not build it
+
+## Glossary
+
+| Term | Definition |
+|------|------------|
+| **Agent (AI agent)** | Software that reads written instructions and carries out tasks automatically. Used in code editors (Cursor, Claude Code) and terminals (Warp). |
+| **Alias flip** | Switching the production search to point at a newly-built index. Atomic -- it either succeeds completely or not at all. |
+| **AWS (Amazon Web Services)** | Cloud computing platform. DPLA uses it for storage (S3), temporary compute clusters (EMR), and a dedicated server (EC2). |
+| **Contract** | A formal agreement between two systems about the format, location, and meaning of shared data. Breaking a contract breaks the pipeline. |
+| **EC2** | A virtual server rented from AWS. DPLA has one dedicated EC2 for Wikimedia uploads. |
+| **Elasticsearch** | The search database that powers dp.la. Records are stored in an "index" and queried through an API. |
+| **EMR (Elastic MapReduce)** | An AWS service that creates a temporary cluster of servers for large data processing jobs. DPLA uses it to build the search index. |
+| **Gate** | A mandatory checkpoint where the system verifies preconditions before proceeding. If the check fails, the system stops and asks for human input. |
+| **Hub** | A partner institution that contributes records to DPLA. Examples: HathiTrust, National Archives (NARA), Digital Library of Georgia. |
+| **JSONL** | A file format where each line is a separate JSON record. The standard interchange format between ingestion and indexing. |
+| **OAI-PMH** | A protocol used by libraries and archives to share their catalog records. Most DPLA hubs use OAI-PMH. |
+| **Orchestrator** | A program that coordinates other programs -- starting them in order, watching for failures, and deciding what to do next. |
+| **S3** | Amazon's cloud storage service. DPLA stores all processed records in S3 buckets (named storage containers). |
+| **Safety gate** | See "Gate." Used interchangeably in this document suite. |
+| **Skill** | A written procedure that tells an AI agent how to do a specific task. The agent reads the skill file and follows the steps. |
+| **Slack webhook** | A URL that accepts messages and posts them to a Slack channel. Programs use webhooks to send notifications automatically. |
+| **Wikimedia Commons** | A media repository used by Wikipedia and other Wikimedia projects. DPLA uploads openly-licensed images and documents there. |
