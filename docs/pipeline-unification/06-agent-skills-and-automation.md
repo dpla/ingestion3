@@ -1,27 +1,84 @@
 # DPLA Pipeline Unification -- Agent Skills and Automation
 
-**Audience:** Engineers, AI agents, operations staff at receiving organization
+**Audience:** Engineers, operations staff at receiving organization
+
 **Reading time:** 30 minutes
 
----
-
-## How AI Agents Fit Into This Pipeline
-
-This document describes how AI coding agents can operate the DPLA data pipeline with minimal human intervention. It covers what agents can do today, what new capabilities are proposed, and how skills should be implemented.
-
-### Key Concepts
-
-**Agent (AI agent):** Software that reads instructions and executes tasks. In DPLA's context, agents run inside Cursor, Claude Code, or Warp. You describe what to do in plain English, and the agent figures out the commands and runs them.
-
-**Skill:** A procedure file (`SKILL.md`) that tells an agent how to perform a specific task. Skills are both documentation that humans can read and instructions that agents can follow.
-
-**Rule:** Background context that is always active (e.g., "always use `--profile dpla` for AWS commands"). Rules are loaded automatically.
-
-**Gate:** A mandatory checkpoint in a skill where the agent must verify preconditions before proceeding. If the check fails, the agent stops and reports -- it does not attempt to work around the failure.
+**Context:** This document covers how DPLA's pipeline operations are documented as runnable procedures -- and how those procedures can be executed by either a human engineer or a coding assistant following the same steps. It describes what is available today, what is proposed, and how to implement new procedures.
 
 ---
 
-## What Agents Can Do Today
+## Contents
+
+- [Documented Procedures and the Handoff Problem](#documented-procedures-and-the-handoff-problem)
+  - [Key Terms](#key-terms)
+  - [Where Procedures Live in This Codebase](#where-procedures-live-in-this-codebase)
+- [What Can Be Done With Documented Procedures Today](#what-can-be-done-with-documented-procedures-today)
+  - [ingestion3 (8 Cursor Skills, 6 Claude Code Rules, 2 Claude Code Skills)](#ingestion3-8-cursor-skills-6-claude-code-rules-2-claude-code-skills)
+  - [sparkindexer (No Documented Procedures Yet)](#sparkindexer-no-documented-procedures-yet)
+  - [ingest-wikimedia (No Documented Procedures Yet)](#ingest-wikimedia-no-documented-procedures-yet)
+- [Proposed Procedures for sparkindexer](#proposed-procedures-for-sparkindexer)
+  - [sparkindexer-build-and-upload](#sparkindexer-build-and-upload)
+  - [sparkindexer-launch-emr](#sparkindexer-launch-emr)
+  - [sparkindexer-check-index](#sparkindexer-check-index)
+  - [sparkindexer-flip-alias](#sparkindexer-flip-alias)
+  - [sparkindexer-delete-old-indices](#sparkindexer-delete-old-indices)
+  - [sparkindexer-debug](#sparkindexer-debug)
+- [Proposed Procedures for ingest-wikimedia](#proposed-procedures-for-ingest-wikimedia)
+  - [wikimedia-check-status](#wikimedia-check-status)
+  - [wikimedia-restart-partner](#wikimedia-restart-partner)
+  - [wikimedia-refresh-ids](#wikimedia-refresh-ids)
+  - [wikimedia-download-partner / wikimedia-upload-partner](#wikimedia-download-partner--wikimedia-upload-partner)
+  - [wikimedia-daily-digest](#wikimedia-daily-digest)
+  - [wikimedia-ec2-health](#wikimedia-ec2-health)
+- [Cross-Project Procedures (Pipeline Coordinator)](#cross-project-procedures-pipeline-coordinator)
+  - [pipeline-monthly-cycle](#pipeline-monthly-cycle)
+  - [pipeline-status](#pipeline-status)
+- [End-to-End Pipeline Flow](#end-to-end-pipeline-flow)
+  - [Where Human Judgment Is Always Required](#where-human-judgment-is-always-required)
+- [Implementing Procedures: Structure and Location](#implementing-procedures-structure-and-location)
+  - [Skill File Structure](#skill-file-structure)
+  - [File Locations](#file-locations)
+  - [Testing Skills](#testing-skills)
+
+---
+
+## Documented Procedures and the Handoff Problem
+
+DPLA's pipeline is bespoke software built over many years. When it is handed off to a new team, the challenge is not that the domain is obscure -- library metadata aggregation is well understood -- it is that the specific operational knowledge of *how* to run this particular pipeline is concentrated in the people who built it.
+
+Documented procedures address this directly. A procedure file describes how to perform a specific task: what commands to run, in what order, what to check before proceeding, and what to do when something goes wrong. When that procedure is written carefully, it can be followed by a human engineer who has never seen the codebase before -- or by a coding assistant (such as Cursor or Claude Code) running in the same repository. The file is documentation and executable instructions at the same time.
+
+This is not about replacing engineers with automation. It is about reducing the knowledge transfer burden. A team member can follow the procedure for "run the monthly ingest for Ohio" without needing to memorize harvest types, configuration keys, and script ordering. A coding assistant can do the same, freeing the engineer's attention for the judgment calls that actually require it.
+
+### Key Terms
+
+**Skill:** A procedure file (`SKILL.md`) that describes how to perform a specific task. Skills are both documentation a human can read and steps a coding assistant can follow.
+
+**Rule:** Background context that is always active (e.g., "always use `--profile dpla` for AWS commands"). Rules are loaded automatically by the coding assistant when it runs in the repository.
+
+**Gate:** A mandatory checkpoint within a skill where a precondition must be verified before proceeding. If the check fails, the process stops and reports. Gates are not optional steps.
+
+### Where procedures live in this codebase
+
+Engineers can use Cursor or Claude Code in this repository; skills and rules are loaded automatically when the tool runs from the repository root. The canonical runbook (environment, scripts, notifications) is [AGENTS.md](../../AGENTS.md). Procedure files live in the following locations:
+
+| What | Where in this repo |
+|------|--------------------|
+| Runbook and environment guide | [AGENTS.md](../../AGENTS.md) |
+| Cursor skills (ingestion3) | `.cursor/skills/dpla-*` (e.g. dpla-run-ingest, dpla-orchestrator, dpla-s3-and-aws) |
+| Claude Code rules | `.claude/rules/*.md` (loaded automatically when using Claude Code) |
+| Claude Code skills | `.claude/skills/*` |
+| Rules index (which rule when) | [.claude/rules/README.md](../../.claude/rules/README.md) |
+
+**Further reading (external documentation):**
+
+- [Cursor -- Agent Skills](https://cursor.com/docs/context/skills): How Cursor discovers and uses `SKILL.md` procedure files.
+- [Claude Code -- Skills](https://code.claude.com/docs/en/skills): How to extend Claude Code with skills.
+
+---
+
+## What Can Be Done With Documented Procedures Today
 
 ### ingestion3 (8 Cursor Skills, 6 Claude Code Rules, 2 Claude Code Skills)
 
@@ -36,19 +93,19 @@ This document describes how AI coding agents can operate the DPLA data pipeline 
 | Verify ingest output | "verify the ohio ingest" | Checks `_SUCCESS` markers, reads `_MANIFEST`, compares to previous run |
 | Add or modify a script | "create a script to check harvest freshness" | Follows POSIX bash conventions, uses `common.sh`, documents in SCRIPTS.md |
 
-### sparkindexer (No Agent Infrastructure)
+### sparkindexer (No Documented Procedures Yet)
 
-No skills, no rules, no AGENTS.md. An agent must be told exactly what to do.
+sparkindexer has no skills, no rules, and no AGENTS.md. Anyone operating it -- human or coding assistant -- must be given explicit instructions each time. Part of this plan (Phase 3) is to create that documentation so sparkindexer can be operated from written procedures.
 
-### ingest-wikimedia (No Agent Infrastructure)
+### ingest-wikimedia (No Documented Procedures Yet)
 
-Same situation. An agent cannot check upload status, restart a stalled uploader, or refresh ID lists without explicit commands from a human.
+The same gap exists for ingest-wikimedia. Checking upload status, restarting a stalled uploader, and refreshing ID lists all require engineering knowledge that is not yet written down. Part of this plan (Phase 4) is to document these procedures. Without them, the Wikimedia stage is the most fragile to hand off.
 
 ---
 
-## Proposed Agent Skills for sparkindexer
+## Proposed Procedures for sparkindexer
 
-These skills are created in Phase 3 (P3-9, P3-10) of the implementation roadmap.
+These procedures are created in Phase 3 (P3-9, P3-10) of the implementation roadmap. Once in place, anyone following them can build and deploy the indexer, launch the EMR cluster, validate the new index, and flip the production alias -- without needing to understand the internals of sparkindexer.
 
 ### sparkindexer-build-and-upload
 
@@ -96,7 +153,7 @@ These skills are created in Phase 3 (P3-9, P3-10) of the implementation roadmap.
 
 **When to use:** After check-index passes all validations.
 
-**Gate (Gate B):** All preconditions from [03-integration-contracts-and-gates.md](03-integration-contracts-and-gates.md) must pass.
+**Gate (Gate B):** All preconditions from [Gate B: Pre-Flip Gate](03-integration-contracts-and-gates.md#gate-b-pre-flip-gate-critical) must pass.
 
 **Steps:**
 1. Run validation (calls check-index internally)
@@ -130,9 +187,9 @@ These skills are created in Phase 3 (P3-9, P3-10) of the implementation roadmap.
 
 ---
 
-## Proposed Agent Skills for ingest-wikimedia
+## Proposed Procedures for ingest-wikimedia
 
-These skills are created in Phase 4 (P4-8, P4-9) of the implementation roadmap.
+These procedures are created in Phase 4 (P4-8, P4-9) of the implementation roadmap. Once in place, anyone following them can check upload progress, restart stalled processes, and trigger the post-index ID refresh -- without SSH access to the server or knowledge of the process management setup.
 
 ### wikimedia-check-status
 
@@ -200,9 +257,9 @@ These skills are created in Phase 4 (P4-8, P4-9) of the implementation roadmap.
 
 ---
 
-## Cross-Project Skills (Pipeline Coordinator)
+## Cross-Project Procedures (Pipeline Coordinator)
 
-These skills live in the pipeline coordinator project (created in Phase 3).
+These procedures live in the pipeline coordinator project created in Phase 3. They are the top-level operating procedures -- the ones an engineer or coding assistant uses to run and monitor the full monthly cycle.
 
 ### pipeline-monthly-cycle
 
@@ -232,7 +289,9 @@ These skills live in the pipeline coordinator project (created in Phase 3).
 
 ---
 
-## End-to-End Agent Pipeline
+## End-to-End Pipeline Flow
+
+The diagram below shows how the monthly cycle flows when all procedures are in place. Human approval gates are shown explicitly -- these are the points where automation stops and waits for a decision.
 
 ```
 START: "Run the monthly cycle for February"
@@ -275,17 +334,19 @@ DONE: Cycle complete.
   [Slack: "February cycle complete. X hubs, Y records indexed, Z files uploaded."]
 ```
 
-### Where Human Judgment Is Still Required
+### Where Human Judgment Is Always Required
 
-1. **Hub failure triage:** When a hub fails, should the cycle continue without it?
-2. **Index validation failure:** If the new index is significantly different, a human must investigate.
-3. **Repeated wikimedia stalls:** Source institution issues require human investigation.
-4. **New partner onboarding:** Configuration changes require human judgment.
-5. **Cost anomalies:** EMR running longer than expected needs human review.
+Documented procedures and automation handle the repeatable work. The following categories require human judgment and should never be delegated to an automated process:
+
+1. **Hub failure triage:** When a hub fails, the decision to proceed without it affects what users see on dp.la. That is a judgment call about mission, not a technical check.
+2. **Index validation anomalies:** If the new index differs significantly from production in record count or content, a human must investigate before the alias is flipped.
+3. **Repeated Wikimedia stalls:** Recurring stalls usually indicate a problem with the source institution's server or media files. These require coordination with the partner, not just a restart.
+4. **New partner onboarding:** Adding a new hub involves configuration, mapping, and coordination decisions that require domain knowledge.
+5. **Cost anomalies:** An EMR cluster running longer than expected may indicate a runaway job. A human should review before incurring additional cost.
 
 ---
 
-## Implementing Skills: Structure and Location
+## Implementing Procedures: Structure and Location
 
 ### Skill File Structure
 
@@ -320,6 +381,8 @@ DONE: Cycle complete.
 | Claude Code rule | `{repo}/.claude/rules/{rule-name}.md` |
 | Claude Code skill | `{repo}/.claude/skills/{skill-name}/SKILL.md` |
 | Agent guide | `{repo}/AGENTS.md` |
+
+For in-repo examples and external documentation (Cursor, Claude Code), see [Where procedures live in this codebase](#where-procedures-live-in-this-codebase) above.
 
 ### Testing Skills
 

@@ -1,7 +1,42 @@
 # DPLA Pipeline Unification -- Integration Contracts and Safety Gates
 
 **Audience:** Engineers, architects, operations staff
+
 **Reading time:** 20 minutes
+
+**Context:** This document defines the rules that hold the pipeline together. Treat it as an operational specification: the contracts here are the boundaries between the three systems, and the gates are the checkpoints that prevent bad data from reaching production. Read this before implementing any cross-system changes.
+
+---
+
+## Contents
+
+- [Purpose](#purpose)
+- [Contract 1: Hub Identity Mapping](#contract-1-hub-identity-mapping)
+  - [Contract Rules](#contract-rules)
+  - [Current State (Before Implementation)](#current-state-before-implementation)
+  - [Target State](#target-state)
+  - [Validation Test](#validation-test)
+- [Contract 2: S3 Output Path Semantics](#contract-2-s3-output-path-semantics)
+  - [Path Format](#path-format)
+  - [Contract Rules](#contract-rules-1)
+  - [Producer](#producer)
+  - [Consumer](#consumer)
+- [Contract 3: Index Promotion (Alias Flip)](#contract-3-index-promotion-alias-flip)
+  - [Required Preconditions for Promotion](#required-preconditions-for-promotion)
+  - [Elasticsearch Index Naming](#elasticsearch-index-naming)
+- [Contract 4: Wikimedia Refresh](#contract-4-wikimedia-refresh)
+  - [Required Preconditions for Refresh](#required-preconditions-for-refresh)
+  - [institutions_v2.json Format](#institutions_v2json-format)
+- [Safety Gates](#safety-gates)
+  - [Gate A: Pre-Indexer Gate](#gate-a-pre-indexer-gate)
+  - [Gate B: Pre-Flip Gate (Critical)](#gate-b-pre-flip-gate-critical)
+  - [Gate C: Post-Flip Gate](#gate-c-post-flip-gate)
+  - [Gate D: Wikimedia Refresh Gate](#gate-d-wikimedia-refresh-gate)
+- [Observability Requirements](#observability-requirements)
+- [Ownership Model](#ownership-model)
+- [Change Management Rules](#change-management-rules)
+- [Edge Cases That Must Be Handled](#edge-cases-that-must-be-handled)
+- [Relationship to Greenfield Vision](#relationship-to-greenfield-vision)
 
 ---
 
@@ -9,7 +44,7 @@
 
 This document defines the minimum explicit contracts required for safe orchestration across `ingestion3`, `sparkindexer`, and `ingest-wikimedia`. It also defines the mandatory safety gates that must pass before high-impact transitions proceed.
 
-These contracts should be treated as operational API boundaries. Breaking a contract breaks the pipeline. Changing a contract requires the change management process defined at the end of this document.
+These contracts are operational boundaries. Breaking a contract breaks the pipeline. Changing a contract requires the change management process defined at the end of this document.
 
 ---
 
@@ -111,7 +146,7 @@ A candidate index is not considered promotable until all required validation che
 ### Required Preconditions for Promotion
 
 1. **Index exists and is queryable.** `GET /{index-name}/_stats` returns successfully.
-2. **Expected schema and field presence.** A sample query returns records with all fields listed in the API field contract (see [02-system-architecture.md](02-system-architecture.md)).
+2. **Expected schema and field presence.** A sample query returns records with all fields listed in the API field contract (see [Cross-Project DPLA API Field Contract](02-system-architecture.md#cross-project-dpla-api-field-contract)).
 3. **Document count sanity.** Count is within an acceptable threshold of the previous production index (default: 2% tolerance). Large drops require human investigation.
 4. **Cluster health.** `GET /_cluster/health` returns `green` or `yellow`. `red` blocks promotion.
 5. **All shards assigned.** No unassigned shards for the candidate index.
@@ -166,7 +201,7 @@ Wikimedia ID refresh should occur only from a confirmed current production index
 
 ## Safety Gates
 
-Safety gates are mandatory checkpoints. When a gate fails, the pipeline stops and requires human intervention. Gates are not suggestions -- they are hard blocks.
+Safety gates are mandatory checkpoints that block pipeline progression when something is wrong. When a gate fails, the pipeline stops and requires human intervention. These are not soft warnings -- they are hard blocks. The rationale for each gate is proportionate to the cost of the failure it prevents: Gate B (pre-flip) protects the single most consequential action in the monthly cycle.
 
 ### Gate A: Pre-Indexer Gate
 
@@ -230,7 +265,7 @@ Safety gates are mandatory checkpoints. When a gate fails, the pipeline stops an
 
 ## Observability Requirements
 
-Every gate decision must emit a structured record containing:
+A gate that passes or fails silently provides no operational value. Every gate decision must emit a structured record containing:
 
 | Field | Description |
 |-------|-------------|
@@ -251,6 +286,8 @@ This record should be:
 
 ## Ownership Model
 
+Today, one engineer effectively owns all of these contract areas. The table below documents intended ownership for when a team takes over -- so the receiving organization knows which role is responsible for each boundary, and who must be consulted when a change touches a shared interface.
+
 | Contract Area | Primary Owner | Secondary Owner |
 |---|---|---|
 | Hub identity mapping | ingestion3 maintainer | Wikimedia operations |
@@ -259,13 +296,11 @@ This record should be:
 | Wikimedia refresh eligibility | ingest-wikimedia maintainer | orchestration/pipeline owner |
 | API field contract | sparkindexer maintainer | ingest-wikimedia maintainer |
 
-In the current single-engineer reality, one person owns all of these. The ownership model matters for handoff: the receiving organization should know which team or role is responsible for each contract area.
-
 ---
 
 ## Change Management Rules
 
-Any contract change requires:
+A contract change that deploys to one project before the other will break the pipeline at the boundary between them. The following rules prevent that. Any contract change requires:
 
 1. **Documented compatibility impact.** What breaks if this change is deployed to one project but not the others? Which downstream consumers are affected?
 2. **Explicit version update.** Update the contract version in this document. Consumers should be able to detect they are operating against a changed contract.
@@ -279,7 +314,7 @@ Without these, automated orchestration should treat the change as a potential co
 
 ## Edge Cases That Must Be Handled
 
-These are specific scenarios that the contracts and gates must account for:
+The following scenarios are known from operational experience. Each represents a situation where the contracts or gates could receive ambiguous input. Implementing the contracts without accounting for these will produce hard-to-diagnose failures in production.
 
 - Hub with first-ever ingest (no historical baseline for anomaly comparison)
 - Hub with legitimate large record drop (true data change vs. pipeline bug)
@@ -294,11 +329,11 @@ These are specific scenarios that the contracts and gates must account for:
 
 ## Relationship to Greenfield Vision
 
-These contracts are architecture-independent. Whether the pipeline runs on the current Scala+Python+EMR stack or a future Python+Fargate+Step Functions stack (see [07-greenfield-vision.md](07-greenfield-vision.md)), the same contracts apply:
+These contracts are architecture-independent. Whether the pipeline runs on the current Scala+Python+EMR stack or a future Python+Fargate+Step Functions stack (see [Greenfield Vision](07-greenfield-vision.md)), the same contracts apply:
 
-- Hubs must be named consistently across systems
-- S3 paths must follow a documented format
-- Index promotion must be validated before execution
-- Wikimedia refresh must use a confirmed-current index
+- Hubs must be named consistently across systems.
+- S3 paths must follow a documented format.
+- Index promotion must be validated before execution.
+- Wikimedia refresh must use a confirmed-current index.
 
-Getting these contracts right now means any future architecture change preserves pipeline correctness at the boundaries.
+Getting these contracts right now means any future architecture change preserves pipeline correctness at the boundaries. The contracts are the stable core; everything else is implementation detail.

@@ -1,24 +1,104 @@
 # DPLA Pipeline Unification -- Technical Findings
 
 **Audience:** Engineers performing implementation, AI agents executing code changes
+
 **Usage:** Reference document and work queue. Each finding is an actionable item with file paths and proposed fixes.
+
+**Context:** This document is the engineering work queue for the reliability and reliability improvements described in the [Implementation Roadmap](04-implementation-roadmap.md). The findings here were identified through analysis of all three pipeline repositories in February 2026. Use this document alongside the roadmap -- the roadmap tells you what phase each finding belongs to; this document tells you exactly where in the code to make the change.
+
+---
+
+## Contents
+
+- [How to Use This Document](#how-to-use-this-document)
+- [1. ingestion3 Findings](#1-ingestion3-findings)
+  - [CRITICAL](#critical)
+    - [I3-C1: Non-Atomic State File Writes](#i3-c1-non-atomic-state-file-writes)
+    - [I3-C2: Division by Zero in Anomaly Detector](#i3-c2-division-by-zero-in-anomaly-detector)
+    - [I3-C3: Command Injection in S3 Listing](#i3-c3-command-injection-in-s3-listing)
+  - [HIGH](#high)
+    - [I3-H1: Race Condition in Parallel State Updates](#i3-h1-race-condition-in-parallel-state-updates)
+    - [I3-H2: No Post-Sync Verification](#i3-h2-no-post-sync-verification)
+    - [I3-H3: JAR Build Race Condition](#i3-h3-jar-build-race-condition)
+    - [I3-H4: Hardcoded Default Paths](#i3-h4-hardcoded-default-paths)
+  - [MEDIUM](#medium)
+    - [I3-M1: Anomaly Detection Thresholds Are Global](#i3-m1-anomaly-detection-thresholds-are-global)
+    - [I3-M2: Iterator Contract Violation in OAI Harvester](#i3-m2-iterator-contract-violation-in-oai-harvester)
+    - [I3-M3: Notification Script Timeout](#i3-m3-notification-script-timeout)
+    - [I3-M4: Missing Environment Variables in .env.example](#i3-m4-missing-environment-variables-in-envexample)
+  - [LOW](#low)
+    - [I3-L1: Java Version Detection Fragility](#i3-l1-java-version-detection-fragility)
+    - [I3-L2: Status File Write Failures Silently Swallowed](#i3-l2-status-file-write-failures-silently-swallowed)
+- [2. sparkindexer Findings](#2-sparkindexer-findings)
+  - [CRITICAL](#critical-1)
+    - [SI-C1: Silent ES Write Failures](#si-c1-silent-es-write-failures)
+    - [SI-C2: IndexerMain Always Exits 0](#si-c2-indexermain-always-exits-0)
+    - [SI-C3: Hardcoded AWS Resource IDs in EMR Script](#si-c3-hardcoded-aws-resource-ids-in-emr-script)
+  - [HIGH](#high-1)
+    - [SI-H1: Timestamp Comparison Bug in MasterDataset](#si-h1-timestamp-comparison-bug-in-masterdataset)
+    - [SI-H2: No Pre-Flight Health Checks](#si-h2-no-pre-flight-health-checks)
+    - [SI-H3: Alias Flip Script Race Condition](#si-h3-alias-flip-script-race-condition)
+    - [SI-H4: Resource Leak in Index.scala](#si-h4-resource-leak-in-indexscala)
+    - [SI-H5: ES Connection Uses HTTP, Not HTTPS](#si-h5-es-connection-uses-http-not-https)
+  - [MEDIUM](#medium-1)
+    - [SI-M1: Hardcoded ES Host in TagReportWriter](#si-m1-hardcoded-es-host-in-tagreportwriter)
+    - [SI-M2: S3 Public Read Permission in TagReportWriter](#si-m2-s3-public-read-permission-in-tagreportwriter)
+    - [SI-M3: Deprecated ES API Usage](#si-m3-deprecated-es-api-usage)
+    - [SI-M4: Unsafe Type Casts in DplaDataRelation](#si-m4-unsafe-type-casts-in-dpladatarelation)
+  - [LOW](#low-1)
+    - [SI-L1: Scala Version Mismatch with ingestion3](#si-l1-scala-version-mismatch-with-ingestion3)
+    - [SI-L2: No Test Coverage for S3 and ES Operations](#si-l2-no-test-coverage-for-s3-and-es-operations)
+- [3. ingest-wikimedia Findings](#3-ingest-wikimedia-findings)
+  - [CRITICAL](#critical-2)
+    - [WM-C1: pywikibot Session Timeout Unhandled](#wm-c1-pywikibot-session-timeout-unhandled)
+    - [WM-C2: No Checkpoint/Resume Capability](#wm-c2-no-checkpointresume-capability)
+    - [WM-C3: No Signal Handler for Graceful Shutdown](#wm-c3-no-signal-handler-for-graceful-shutdown)
+  - [HIGH](#high-2)
+    - [WM-H1: Silent Failure Pattern (Broad Exception Catching)](#wm-h1-silent-failure-pattern-broad-exception-catching)
+    - [WM-H2: In-Memory-Only Tracker](#wm-h2-in-memory-only-tracker)
+    - [WM-H3: Unbounded Log Files](#wm-h3-unbounded-log-files)
+    - [WM-H4: IIIF URL Maximization Fragility](#wm-h4-iiif-url-maximization-fragility)
+  - [MEDIUM](#medium-2)
+    - [WM-M1: Banlist Loaded Once at Startup](#wm-m1-banlist-loaded-once-at-startup)
+    - [WM-M2: NARA URL Data Quality Hack](#wm-m2-nara-url-data-quality-hack)
+    - [WM-M3: No Rate Limiting for DPLA API](#wm-m3-no-rate-limiting-for-dpla-api)
+    - [WM-M4: Config Loading Has No Error Handling](#wm-m4-config-loading-has-no-error-handling)
+  - [LOW](#low-2)
+    - [WM-L1: Python 3.13 Requirement](#wm-l1-python-313-requirement)
+    - [WM-L2: No Parallel Downloads](#wm-l2-no-parallel-downloads)
+    - [WM-L3: Tracker Not Thread-Safe](#wm-l3-tracker-not-thread-safe)
+- [4. Cross-Project Integration Findings](#4-cross-project-integration-findings)
+  - [CRITICAL](#critical-3)
+    - [XP-C1: S3 Path Format Has No Explicit Contract](#xp-c1-s3-path-format-has-no-explicit-contract)
+    - [XP-C2: Hub Name Mapping Has Three Separate Sources](#xp-c2-hub-name-mapping-has-three-separate-sources)
+  - [HIGH](#high-3)
+    - [XP-H1: institutions_v2.json Branch Mismatch](#xp-h1-institutions_v2json-branch-mismatch)
+    - [XP-H2: No DPLA API Field Versioning](#xp-h2-no-dpla-api-field-versioning)
+  - [MEDIUM](#medium-3)
+    - [XP-M1: Provider Name Matching Must Be Exact](#xp-m1-provider-name-matching-must-be-exact)
+- [Finding Summary by Severity](#finding-summary-by-severity)
+- [5. AWS Infrastructure Reference](#5-aws-infrastructure-reference)
 
 ---
 
 ## How to Use This Document
 
-This appendix lists every technical issue discovered during analysis of all three repositories. Items are organized by repository and severity. Each item includes:
+DPLA's pipeline has accumulated technical debt across three codebases over several years. The issues catalogued here are not signs of poor engineering -- they are the natural result of building incrementally under resource constraints, where shipping a working feature took precedence over hardening edge cases. The purpose of documenting them now is to address the most consequential ones systematically before adding automation on top.
+
+Each item includes:
 
 - **Severity:** CRITICAL (must fix before automation), HIGH (fix in Phase 1), MEDIUM (fix when convenient), LOW (accept or defer)
 - **File path and line numbers** (as of February 2026; may drift as code changes)
 - **What's wrong** and why it matters
 - **Proposed fix** with enough detail to implement
-- **Roadmap step** linking to the implementation plan in [04-implementation-roadmap.md](04-implementation-roadmap.md)
+- **Roadmap step** linking to the implementation plan in the [Implementation Roadmap](04-implementation-roadmap.md)
 - **Status:** OPEN, IN PROGRESS, or RESOLVED
 
 ---
 
 ## 1. ingestion3 Findings
+
+ingestion3 is the Scala/Python pipeline that harvests, maps, enriches, and exports records from ~60 hub sources monthly. It runs on an engineer's local machine, coordinated by a Python orchestrator. The findings below cover the orchestrator, the anomaly detector, and the OAI harvester.
 
 ### CRITICAL
 
@@ -178,6 +258,8 @@ Per-hub status writes swallow `OSError`. Should log at WARNING level.
 
 ## 2. sparkindexer Findings
 
+sparkindexer is the Scala/Spark application that reads JSONL from S3, builds the Elasticsearch index, and flips the production alias. It runs on AWS EMR for approximately two hours per month. The findings below include silent failure modes in the indexer itself and hardcoded AWS configuration that must be externalized before handoff.
+
 ### CRITICAL
 
 #### SI-C1: Silent ES Write Failures
@@ -334,6 +416,8 @@ No tests for MasterDataset, ElasticSearchWriter, Index, or alias management.
 
 ## 3. ingest-wikimedia Findings
 
+ingest-wikimedia is the Python application that downloads media from partner institutions and uploads it to Wikimedia Commons. It runs continuously on a dedicated EC2 instance, processing one partner at a time over weeks or months. The findings below include the session management and crash recovery issues that produced the two-month silent stall discovered in December 2025.
+
 ### CRITICAL
 
 #### WM-C1: pywikibot Session Timeout Unhandled
@@ -475,6 +559,8 @@ No impact today (single-threaded). Would need fixing for parallelization.
 
 ## 4. Cross-Project Integration Findings
 
+These findings span more than one repository. They represent the points where the three systems are coupled -- through shared data formats, naming conventions, and configuration references. Cross-project findings are the most consequential to fix before adding automation: a misalignment here can cause one system to silently process the wrong data or no data at all.
+
 ### CRITICAL
 
 #### XP-C1: S3 Path Format Has No Explicit Contract
@@ -484,7 +570,7 @@ No impact today (single-threaded). Would need fixing for parallelization.
 
 No shared definition or test verifying path format agreement.
 
-**Proposed fix:** Document contract (done in [03-integration-contracts-and-gates.md](03-integration-contracts-and-gates.md)). Add cross-project integration test.
+**Proposed fix:** Document contract (done in [Contract 2: S3 Output Path Semantics](03-integration-contracts-and-gates.md#contract-2-s3-output-path-semantics)). Add cross-project integration test.
 
 #### XP-C2: Hub Name Mapping Has Three Separate Sources
 

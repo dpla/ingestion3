@@ -1,7 +1,33 @@
 # DPLA Pipeline Unification -- System Architecture
 
 **Audience:** Technical managers, architects, engineers at receiving organization
+
 **Reading time:** 30 minutes
+
+**Context:** This document describes how the three pipeline systems are structured today, how data moves between them, and what the target architecture looks like. Read this before diving into the contracts ([Integration Contracts and Gates](03-integration-contracts-and-gates.md)) and implementation work ([Implementation Roadmap](04-implementation-roadmap.md)).
+
+---
+
+## Contents
+
+- [System Overview](#system-overview)
+- [Data Flow and Handoff Points](#data-flow-and-handoff-points)
+  - [Handoff 1: ingestion3 to sparkindexer (S3 JSONL)](#handoff-1-ingestion3-to-sparkindexer-s3-jsonl)
+  - [Handoff 2: sparkindexer to DPLA API (Elasticsearch)](#handoff-2-sparkindexer-to-dpla-api-elasticsearch)
+  - [Handoff 3: DPLA API to ingest-wikimedia (HTTP API)](#handoff-3-dpla-api-to-ingest-wikimedia-http-api)
+- [The Three Hub Naming Systems](#the-three-hub-naming-systems)
+- [The Monthly Cycle](#the-monthly-cycle)
+  - [Step-by-Step](#step-by-step)
+  - [What Can Go Wrong at Each Step](#what-can-go-wrong-at-each-step)
+- [AWS Resource Map](#aws-resource-map)
+  - [Current AWS Resources](#current-aws-resources)
+  - [Hardcoded AWS Values (Risk)](#hardcoded-aws-values-risk)
+- [Target-State Architecture](#target-state-architecture)
+  - [Architecture Constraints to Respect](#architecture-constraints-to-respect)
+  - [Recommended Deployment Approach](#recommended-deployment-approach)
+  - [Why the Conservative Path First](#why-the-conservative-path-first)
+- [Cross-Project DPLA API Field Contract](#cross-project-dpla-api-field-contract)
+- [Dependency Chain Summary](#dependency-chain-summary)
 
 ---
 
@@ -40,7 +66,7 @@ flowchart LR
 
 ## Data Flow and Handoff Points
 
-Data moves between stages through three handoff points. Each is a potential failure point if the format or location changes in one project but not the other. Formal contracts for each handoff are defined in [03-integration-contracts-and-gates.md](03-integration-contracts-and-gates.md).
+Data moves between stages through three handoff points. Each is a potential failure point when the format or location changes in one project but not the other -- and today, there is nothing that validates they stay in sync. Formal contracts for each handoff are defined in [Integration Contracts and Gates](03-integration-contracts-and-gates.md).
 
 ### Handoff 1: ingestion3 to sparkindexer (S3 JSONL)
 
@@ -68,7 +94,7 @@ DPLA API reads:
   Queries 'dpla_alias' which resolves to the current index.
 ```
 
-The alias flip is atomic (Elasticsearch guarantees this), but validation before the flip is minimal today. The pre-flip safety gate defined in [03-integration-contracts-and-gates.md](03-integration-contracts-and-gates.md) addresses this.
+The alias flip is atomic (Elasticsearch guarantees this), but validation before the flip is minimal today. The pre-flip safety gate defined in [Gate B: Pre-Flip Gate](03-integration-contracts-and-gates.md#gate-b-pre-flip-gate-critical) addresses this.
 
 ### Handoff 3: DPLA API to ingest-wikimedia (HTTP API)
 
@@ -90,7 +116,7 @@ ingest-wikimedia reads:
 
 ## The Three Hub Naming Systems
 
-One of the most fragile integration points is hub naming. Three different naming systems exist with no centralized mapping:
+Hub naming is one of the most fragile integration points in the pipeline. Three different naming systems exist across the three projects with no centralized mapping:
 
 ```mermaid
 flowchart TD
@@ -112,13 +138,13 @@ flowchart TD
 - S3 prefix to full name: `institutions_v2.json` (maintained in ingestion3, fetched by ingest-wikimedia)
 - Full name as returned by DPLA API: determined by what sparkindexer writes to `provider.name` in the ES index
 
-**Target:** A single canonical hub registry that maps all three naming systems. See Contract 1 in [03-integration-contracts-and-gates.md](03-integration-contracts-and-gates.md).
+**Target:** A single canonical hub registry that maps all three naming systems. See [Contract 1: Hub Identity Mapping](03-integration-contracts-and-gates.md#contract-1-hub-identity-mapping).
 
 ---
 
 ## The Monthly Cycle
 
-The full monthly pipeline takes approximately 1--2 weeks from start to finish.
+The full monthly pipeline takes approximately one to two weeks from start to finish. Understanding the cycle in detail -- and specifically what can go wrong at each step -- is essential context for the reliability work proposed in Phase 1.
 
 ```mermaid
 gantt
@@ -183,6 +209,8 @@ gantt
 
 ## AWS Resource Map
 
+DPLA's pipeline runs across three classes of AWS resources: persistent storage (S3), temporary compute (EMR), and a persistent server (EC2). The diagram below shows how they connect.
+
 ```mermaid
 flowchart TD
     subgraph aws ["AWS Account"]
@@ -236,13 +264,13 @@ The following AWS resource identifiers are hardcoded in `sparkindexer-emr.sh`:
 - Service role: `EMR_DefaultRole`
 - Log URI: `s3://dpla-sparkindexer/logs/`
 
-These must be extracted to configuration for handoff. See finding SI-C3 in [05-technical-findings.md](05-technical-findings.md).
+These must be extracted to configuration for handoff. See finding [SI-C3: Hardcoded AWS Resource IDs in EMR Script](05-technical-findings.md#si-c3-hardcoded-aws-resource-ids-in-emr-script).
 
 ---
 
 ## Target-State Architecture
 
-The target is a coordination control plane that orchestrates existing engines without replacing them.
+The goal is a coordination control plane that orchestrates the three existing engines without replacing them. Each engine -- ingestion3, sparkindexer, ingest-wikimedia -- continues to run as it does today. What changes is the layer connecting them: explicit gates at every handoff, automated stage transitions, and monitoring throughout.
 
 ```mermaid
 flowchart TD
@@ -297,7 +325,7 @@ The conservative path (Python + EC2) is recommended because it can be implemente
 
 ## Cross-Project DPLA API Field Contract
 
-Fields that ingest-wikimedia depends on (must exist in the ES index built by sparkindexer):
+The fields below are the ones ingest-wikimedia depends on from the Elasticsearch index that sparkindexer builds. If sparkindexer stops writing any of these fields, ingest-wikimedia breaks silently. The formal contract governing this dependency is in [Contract 4: Wikimedia Refresh](03-integration-contracts-and-gates.md#contract-4-wikimedia-refresh).
 
 | Field Path | Type | Used For |
 |------------|------|----------|
@@ -326,4 +354,4 @@ All hubs ingested     -->  Indexer can run    -->  Alias flipped     -->  Wikime
 (~60 hubs, ~1 week)       (~2 hours, EMR)         (~5 min, gated)       (continuous, weeks)
 ```
 
-Running the indexer before all hubs finish means the new index has stale data for unfinished hubs. Running wikimedia ID refresh before the alias flip means it fetches IDs from the old index and may miss new records. The alias flip is the single most critical moment in the cycle: it switches what millions of users see on dp.la. It must be validated before execution and reversible after.
+The ordering matters. Running the indexer before all hubs finish means the new index has stale data for incomplete hubs. Running Wikimedia ID refresh before the alias flip means it fetches IDs from the old index and may miss new records. The alias flip is the single most consequential moment in the monthly cycle: it determines what millions of users see on dp.la. It must be validated before execution and remain reversible after.

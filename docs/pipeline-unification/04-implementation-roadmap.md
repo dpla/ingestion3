@@ -1,7 +1,39 @@
 # DPLA Pipeline Unification -- Implementation Roadmap
 
 **Audience:** Engineers performing implementation, AI agents executing changes
+
 **Reading time:** 45 minutes
+
+**Context:** This is the work plan. Each step is discrete and independently testable. The phases correspond to maturity levels described below. Complete one phase's exit criteria before starting the next -- later phases build on assumptions established in earlier ones.
+
+---
+
+## Contents
+
+- [How to Use This Document](#how-to-use-this-document)
+- [Maturity Model](#maturity-model)
+- [Phase 0: Integration Contracts and Documentation](#phase-0-integration-contracts-and-documentation)
+  - [Steps](#steps)
+  - [Exit Criteria for Phase 0](#exit-criteria-for-phase-0)
+- [Phase 1: Foundational Reliability Fixes](#phase-1-foundational-reliability-fixes)
+  - [ingestion3 Fixes](#ingestion3-fixes)
+  - [sparkindexer Fixes](#sparkindexer-fixes)
+  - [ingest-wikimedia Fixes](#ingest-wikimedia-fixes)
+  - [Exit Criteria for Phase 1](#exit-criteria-for-phase-1)
+- [Phase 2: Monitoring and Observability](#phase-2-monitoring-and-observability)
+  - [Steps](#steps-1)
+  - [Exit Criteria for Phase 2](#exit-criteria-for-phase-2)
+- [Phase 3: Controlled Indexer Automation](#phase-3-controlled-indexer-automation)
+  - [Steps](#steps-2)
+  - [Controlled Execution Protocol](#controlled-execution-protocol)
+  - [Exit Criteria for Phase 3](#exit-criteria-for-phase-3)
+- [Phase 4: End-to-End Coordination](#phase-4-end-to-end-coordination)
+  - [Steps](#steps-3)
+  - [Exit Criteria for Phase 4](#exit-criteria-for-phase-4)
+- [Dependency Graph](#dependency-graph)
+- [For Agents: How to Work Through This Plan](#for-agents-how-to-work-through-this-plan)
+- [Effort Summary](#effort-summary)
+- [Graduation Protocol: When to Increase Automation](#graduation-protocol-when-to-increase-automation)
 
 ---
 
@@ -9,9 +41,9 @@
 
 This roadmap breaks the pipeline unification into discrete, independently testable steps organized into five phases. Each phase delivers standalone value. Each step within a phase has clear inputs, outputs, and verification criteria.
 
-**For an AI agent implementing this plan:** Work through steps in order within each phase. Verify exit criteria before moving to the next phase. Each step references specific findings in [05-technical-findings.md](05-technical-findings.md) where applicable. Do not skip phases -- later phases depend on earlier ones.
+**For a human engineer:** Use this as a work tracking document. Mark steps as done as you complete them. The phases correspond roughly to weeks of calendar time, but pace depends on resource availability.
 
-**For a human engineer:** Use this as a work tracking document. Mark steps as done as you complete them. The phases correspond roughly to weeks, but pace depends on resource availability.
+**For an AI agent implementing this plan:** Work through steps in order within each phase. Verify exit criteria before moving to the next phase. Each step references specific findings in [Technical Findings](05-technical-findings.md) where applicable. Do not skip phases -- later phases depend on earlier ones.
 
 ---
 
@@ -32,9 +64,9 @@ Each level is independently valuable. Stopping at Level 1 (observable) is far be
 
 ## Phase 0: Integration Contracts and Documentation
 
-**Goal:** Write down the rules that are currently implicit. No system changes.
+**Goal:** Write down the rules that are currently implicit. No system changes -- only documentation and configuration.
 **Duration:** ~1 week (can overlap with Phase 1 start)
-**Risk:** None. Pure documentation.
+**Risk:** None.
 
 ### Steps
 
@@ -60,9 +92,9 @@ Each level is independently valuable. Stopping at Level 1 (observable) is far be
 
 ## Phase 1: Foundational Reliability Fixes
 
-**Goal:** Fix the most dangerous silent failure patterns. No new features -- just making existing code safer.
+**Goal:** Fix the most dangerous silent failure patterns across all three systems. No new features -- only making existing code safer and more honest about failures.
 **Duration:** ~2 weeks
-**Risk:** Low. These are defensive code changes. Each can be tested independently.
+**Risk:** Low. These are defensive changes. Each can be tested independently.
 
 ### ingestion3 Fixes
 
@@ -116,9 +148,9 @@ Each level is independently valuable. Stopping at Level 1 (observable) is far be
 
 ## Phase 2: Monitoring and Observability
 
-**Goal:** See what's happening across all three systems. Detect failures in minutes, not months.
+**Goal:** Make the pipeline's state visible. Detect failures in minutes, not months. This is the phase most directly visible to non-engineering staff -- the daily Slack digest is the primary deliverable.
 **Duration:** ~1 week
-**Risk:** Low. Read-only monitoring. Slack posting is non-destructive.
+**Risk:** Low. Monitoring is read-only and non-destructive.
 
 ### Steps
 
@@ -146,9 +178,9 @@ Each level is independently valuable. Stopping at Level 1 (observable) is far be
 
 ## Phase 3: Controlled Indexer Automation
 
-**Goal:** Automate the indexer launch and alias flip with mandatory safety gates. Humans approve at critical decision points.
+**Goal:** Automate the indexer launch and alias flip with mandatory safety gates. Every high-stakes decision requires human approval. The alias flip -- which determines what millions of users see on dp.la -- must be validated before execution and reversible after.
 **Duration:** ~2 weeks
-**Risk:** Medium. The alias flip is the highest-risk automation. Mitigated by pre-flip validation, dry-run mode, and automatic rollback.
+**Risk:** Medium. Mitigated by pre-flip validation, dry-run mode, and automatic rollback.
 
 ### Steps
 
@@ -191,9 +223,9 @@ After at least two successful monthly cycles with controlled execution, the team
 
 ## Phase 4: End-to-End Coordination
 
-**Goal:** Connect all three stages into a coordinated pipeline. Humans approve only at the highest-stakes gates.
+**Goal:** Connect all three stages so that completing one automatically triggers the next. By this phase, the reliability and monitoring work of Phases 1--3 is in place -- this is the layer that ties it together. Humans retain approval authority at the highest-stakes gates.
 **Duration:** ~2 weeks
-**Risk:** Medium. Depends on all previous phases working. Each step can be tested independently.
+**Risk:** Medium. Depends on all previous phases being in place. Each step is independently testable.
 
 ### Steps
 
@@ -224,6 +256,8 @@ After at least two successful monthly cycles with controlled execution, the team
 
 ## Dependency Graph
 
+The graph below shows which steps must be complete before others can begin. Phases 1 and 2 have significant overlap -- reliability work on each system is independent of reliability work on the others, so these can run in parallel.
+
 ```
 Phase 0: Contracts
   P0-2 (hub registry) ──────────────────────────────────────────────> P4-1 (pre-indexer gate)
@@ -242,8 +276,6 @@ Phase 3: Controlled Indexer                  Phase 4: Coordination
   P3-7 (rollback) ──────────────────────────> P4-6 (monthly cycle)
 ```
 
-Phases 1 and 2 can overlap significantly. Phase 1 work on ingestion3 is independent of Phase 1 work on sparkindexer and ingest-wikimedia -- these can run in parallel. Phase 2 depends on some Phase 1 outputs (especially checkpointing for the digest) but can start before Phase 1 is fully complete.
-
 ---
 
 ## For Agents: How to Work Through This Plan
@@ -255,7 +287,7 @@ If you are an AI agent implementing this roadmap:
 2. **Within Phase 1, work by repository.** Pick one repo (e.g., ingestion3), complete all its Phase 1 steps, verify with tests, then move to the next repo. This minimizes context switching.
 
 3. **For each step:**
-   - Read the referenced finding in [05-technical-findings.md](05-technical-findings.md) for file paths and proposed fix
+   - Read the referenced finding in [Technical Findings](05-technical-findings.md) for file paths and proposed fix
    - Implement the fix
    - Write or update tests
    - Verify the step's criteria
@@ -263,7 +295,7 @@ If you are an AI agent implementing this roadmap:
 
 4. **Before moving to the next phase,** verify all exit criteria for the current phase. If any criterion is not met, address it before proceeding.
 
-5. **When making cross-project changes,** check the contracts in [03-integration-contracts-and-gates.md](03-integration-contracts-and-gates.md). If your change affects any contract item, update the contract and verify all consumers.
+5. **When making cross-project changes,** check the contracts in [Integration Contracts and Gates](03-integration-contracts-and-gates.md). If your change affects any contract item, update the contract and verify all consumers.
 
 6. **Test conservatively.** Use dry-run modes. Validate before flipping. Keep rollback options. The goal is stability over speed.
 
@@ -280,13 +312,13 @@ If you are an AI agent implementing this roadmap:
 | Phase 4: Coordination | 9 | ~25 hours | 2 weeks |
 | **Total** | **55** | **~103 hours** | **~8 weeks** |
 
-With AI assistance, calendar time can be compressed significantly (estimated 40-60% reduction for implementation tasks, less reduction for testing and validation which require real infrastructure).
+With AI assistance on implementation tasks, calendar time can be compressed significantly -- roughly 40--60% reduction for coding and configuration work. Testing and validation against real infrastructure compress less; plan the full calendar time for those steps.
 
 ---
 
 ## Graduation Protocol: When to Increase Automation
 
-Moving from one maturity level to the next should be based on evidence, not schedule. These are the graduation criteria:
+Moving from one maturity level to the next should be based on evidence, not schedule. Rushing graduation means building automation on top of uncertainty -- which is how quiet failures become large ones. These are the graduation criteria:
 
 ### Level 0 -> Level 1 (Documented -> Observable)
 
