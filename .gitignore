@@ -192,6 +192,9 @@ logs/
 # Cursor IDE (projects folder is user-specific)
 .cursor/projects/
 
+# Zensical/MkDocs build output
+site/
+
 # Hub contact/schedule data — contacts managed in private ingestion3-conf repo
 # TODO: replace with a lookup against ingestion3-conf/i3.conf at runtime
 scheduler/hub-data-raw.json
