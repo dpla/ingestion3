@@ -37,6 +37,18 @@ paused-hub.harvest.type = "oai"
 paused-hub.schedule.frequency = "monthly"
 paused-hub.schedule.months = [1, 2, 3]
 paused-hub.schedule.status = "on-hold"
+
+tn.provider = "Digital Library of Tennessee"
+tn.harvest.type = "oai"
+tn.schedule.frequency = "monthly"
+tn.schedule.months = [1]
+tn.schedule.status = "active"
+
+hathi.provider = "HathiTrust"
+hathi.harvest.type = "oai"
+hathi.schedule.frequency = "monthly"
+hathi.schedule.months = [1]
+hathi.schedule.status = "active"
 '''
     conf_file = tmp_path / "i3.conf"
     conf_file.write_text(conf_content)
@@ -65,6 +77,8 @@ class TestI3ConfParsing:
         assert "virginia" in hubs
         assert "nara" in hubs
         assert "paused-hub" in hubs
+        assert "tn" in hubs
+        assert "hathi" in hubs
 
     def test_hub_config_fields(self, config):
         """HubConfig should have correct field values."""
@@ -129,10 +143,19 @@ class TestS3Config:
         """Known S3 prefix mappings should work."""
         assert config.get_s3_prefix("hathi") == "hathitrust"
         assert config.get_s3_prefix("tn") == "tennessee"
+        # Canonical forms should pass through
+        assert config.get_s3_prefix("hathitrust") == "hathitrust"
+        assert config.get_s3_prefix("tennessee") == "tennessee"
 
     def test_s3_prefix_default(self, config):
         """Unknown hubs should use their own name as S3 prefix."""
         assert config.get_s3_prefix("maryland") == "maryland"
+
+    def test_resolve_hub_key_aliases(self, config):
+        """Canonical hub aliases should resolve to configured i3 keys."""
+        assert config.resolve_hub_key("hathitrust") == "hathi"
+        assert config.resolve_hub_key("tennessee") == "tn"
+        assert config.resolve_hub_key("maryland") == "maryland"
 
     def test_s3_dest_bucket(self, config):
         """Destination bucket should be the standard one."""

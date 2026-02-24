@@ -23,6 +23,50 @@ class Notifier:
         self.escalation_dir = config.data_dir / "escalations"
         self.escalation_dir.mkdir(parents=True, exist_ok=True)
 
+    # =========================================================================
+    # Shared formatting helpers
+    # =========================================================================
+
+    @staticmethod
+    def _format_counts_block(
+        harvest: int | None = None,
+        successful: int | None = None,
+        failed: int | None = None,
+        *,
+        inline: bool = False,
+    ) -> str:
+        """Format a Harvested / Mapped (Successful + Failed) block.
+
+        Args:
+            harvest: Harvest record count (omitted when None).
+            successful: Mapping successful count (omitted when None).
+            failed: Mapping failed count (omitted when None).
+            inline: If True, return a compact single-line version
+                    suitable for list items (e.g. run-summary hub lines).
+
+        Returns:
+            Formatted Slack mrkdwn string.
+        """
+        if inline:
+            parts = []
+            if harvest is not None:
+                parts.append(f"Harvested: `{harvest:,}`")
+            if successful is not None:
+                parts.append(f"Successful: `{successful:,}`")
+            if failed is not None:
+                parts.append(f"Failed: `{failed:,}`")
+            return " · ".join(parts) if parts else "counts unavailable"
+
+        lines: list[str] = []
+        if harvest is not None:
+            lines.append(f"Harvested: `{harvest:,}`")
+        lines.append("Mapped:")
+        if successful is not None:
+            lines.append(f"  - Successful: `{successful:,}`")
+        if failed is not None:
+            lines.append(f"  - Failed: `{failed:,}`")
+        return "\n".join(lines)
+
     def send_start_notification(
         self,
         run_id: str,
@@ -199,6 +243,155 @@ class Notifier:
             })
 
     # =========================================================================
+    # Hub-complete success notification (→ #tech with @here)
+    # =========================================================================
+
+    def send_hub_complete_success(
+        self,
+        hub: str,
+        harvest_count: int | None = None,
+        mapping_attempted: int | None = None,
+        mapping_successful: int | None = None,
+        mapping_failed: int | None = None,
+        current_run_date: str | None = None,
+        test_prefix: Optional[str] = None,
+    ):
+        """Send a consolidated success notification for a completed hub.
+
+        Posts to #tech (SLACK_TECH_WEBHOOK) with @here.  Includes current run
+        summary with deltas from previous run, then previous run counts.
+
+        Falls back to SLACK_WEBHOOK if SLACK_TECH_WEBHOOK is not set.
+        """
+        prefix = f"{test_prefix} " if test_prefix else ""
+        date_str = current_run_date or datetime.now().strftime("%m-%d-%Y")
+
+        # Fetch baseline from S3
+        baseline = self._fetch_baseline(hub)
+
+        # --- current run summary with deltas ---
+        lines = [
+            f"{prefix}<!here> :white_check_mark: *`{hub}` re-ingested* (*{date_str}*)",
+            "",
+        ]
+        lines.extend(self._format_counts_with_deltas(
+            harvest_count, mapping_successful, mapping_failed, baseline
+        ))
+
+        # --- previous run (plain counts) ---
+        if baseline:
+            prev_harvest = baseline.get("harvest_attempted")
+            lines.append("")
+            lines.append(f"vs previous run on *{baseline['date']}*")
+            lines.extend(
+                self._format_counts_block(
+                    prev_harvest, baseline.get("successful"), baseline.get("failed"),
+                ).split("\n")
+            )
+
+        text = "\n".join(lines)
+
+        # Console output
+        print(f"\n  [{hub}] Hub complete notification:")
+        for line in lines:
+            print(f"    {line}")
+
+        self._send_slack_tech({"text": text})
+
+    @staticmethod
+    def _format_delta(current: int | None, baseline: int | None) -> str:
+        """Format a delta suffix like ' (:arrow_up: `156`)'.
+
+        Returns empty string if either value is None or delta is zero.
+        """
+        if current is None or baseline is None:
+            return ""
+        d = current - baseline
+        if d == 0:
+            return ""
+        arrow = ":arrow_up:" if d > 0 else ":arrow_down:"
+        return f"  ({arrow} `{abs(d):,}`)"
+
+    def _format_counts_with_deltas(
+        self,
+        harvest: int | None,
+        successful: int | None,
+        failed: int | None,
+        baseline: dict | None,
+    ) -> list[str]:
+        """Format Harvested / Mapped block with delta annotations from baseline."""
+        lines: list[str] = []
+        b_harvest = baseline.get("harvest_attempted") if baseline else None
+        b_successful = baseline.get("successful") if baseline else None
+        b_failed = baseline.get("failed") if baseline else None
+
+        if harvest is not None:
+            lines.append(f"Harvested: `{harvest:,}`{self._format_delta(harvest, b_harvest)}")
+        lines.append("Mapped:")
+        if successful is not None:
+            lines.append(f"  - Successful: `{successful:,}`{self._format_delta(successful, b_successful)}")
+        if failed is not None:
+            lines.append(f"  - Failed: `{failed:,}`{self._format_delta(failed, b_failed)}")
+        return lines
+
+    def _fetch_baseline(self, hub: str) -> dict | None:
+        """Fetch previous S3 run counts for a hub.
+
+        Returns dict with date, successful, failed, harvest_attempted
+        or None if no baseline exists.
+        """
+        try:
+            from .anomaly_detector import AnomalyDetector
+
+            s3_prefix = self.config.resolve_s3_prefix(hub)
+
+            detector = AnomalyDetector(
+                s3_bucket=self.config.get_s3_dest_bucket(),
+                aws_profile=self.config.aws_profile,
+                data_dir=str(self.config.data_dir),
+            )
+
+            # After sync, the current run is index=0 in S3 so we need
+            # index=1 (the previous run) for comparison.
+            baseline_mapping = detector.get_baseline_from_s3(s3_prefix, stage="mapping")
+            if baseline_mapping is None:
+                return None
+
+            # Also fetch baseline harvest count
+            baseline_harvest = detector.get_baseline_from_s3(s3_prefix, stage="harvest")
+
+            return {
+                "date": baseline_mapping.date_formatted,
+                "successful": baseline_mapping.successful,
+                "failed": baseline_mapping.failed,
+                "harvest_attempted": baseline_harvest.attempted if baseline_harvest else None,
+            }
+
+        except Exception as e:
+            print(f"  Warning: Could not fetch baseline for {hub}: {e}")
+            return None
+
+    def _send_slack_tech(self, payload: dict):
+        """Send a Slack message to #tech (SLACK_TECH_WEBHOOK).
+
+        Falls back to SLACK_WEBHOOK if SLACK_TECH_WEBHOOK is not configured.
+        """
+        webhook = self.config.slack_tech_webhook or self.config.slack_webhook
+        if not webhook:
+            return
+
+        try:
+            data = json.dumps(payload).encode('utf-8')
+            req = urllib.request.Request(
+                webhook,
+                data=data,
+                headers={'Content-Type': 'application/json'}
+            )
+            urllib.request.urlopen(req, timeout=10)
+        except urllib.error.URLError as e:
+            print(f"Warning: Could not send Slack #tech notification: {e}")
+
+    # =========================================================================
     # Anomaly alerts
     # =========================================================================
 
@@ -226,28 +419,37 @@ class Notifier:
             level = "WARNING"
             action = "Sync proceeded"
 
-        # Build short anomaly summary
+        # Build short anomaly summary -- human-readable text, numbers in ticks,
+        # parenthetical delta percentages like (-4.8%) get bold arrow treatment
         anomaly_lines = []
         for a in report.anomalies[:3]:  # Limit to first 3
-            anomaly_lines.append(f"  - {a.anomaly_type.value}: {a.message[:80]}")
+            msg = a.message[:100]
+            # Replace parenthetical delta percentages first: (-4.8%) → (:arrow_down: *-4.8%*)
+            msg = re.sub(r'\((-?\d+\.?\d*)%\)', lambda m: (
+                f"(:arrow_down: *{m.group(1)}%*)" if m.group(1).startswith('-')
+                else f"(:arrow_up: *{m.group(1)}%*)"
+            ), msg)
+            # Wrap remaining inline numbers in ticks (skip numbers in bold *...%*)
+            msg = re.sub(r'(?<![.\d*])(\d[\d,]+)(?![\d.]*[%*])', r'`\1`', msg)
+            anomaly_lines.append(f"  - {msg}")
 
         if len(report.anomalies) > 3:
             anomaly_lines.append(f"  ... and {len(report.anomalies) - 3} more")
 
         message = (
-            f"{prefix}{emoji} *Unexpected change in record counts* ({level})\n"
-            f"Hub: `{hub}`\n"
-            f"Action: {action}\n"
-            f"Anomalies:\n" + "\n".join(anomaly_lines)
+            f"{prefix}{emoji} *`{hub}` — {action}* ({level})\n"
+            + "\n".join(anomaly_lines)
         )
 
         # Add counts if available
         if report.current_mapping:
             cur = report.current_mapping
-            message += f"\n\nCurrent: {cur.attempted:,} attempted, {cur.successful:,} mapped, {cur.failed:,} failed"
+            block = self._format_counts_block(cur.attempted, cur.successful, cur.failed)
+            message += f"\n\n*{cur.date_formatted}*\n{block}"
         if report.baseline_mapping:
             base = report.baseline_mapping
-            message += f"\nBaseline: {base.attempted:,} attempted, {base.successful:,} mapped"
+            block = self._format_counts_block(base.attempted, base.successful, base.failed)
+            message += f"\n\n*{base.date_formatted}* (baseline)\n{block}"
 
         # Console output
         print(f"\n{'-'*60}")
@@ -278,7 +480,7 @@ class Notifier:
                     hub_name,
                     self.config.data_dir,
                     self.config.get_s3_dest_bucket(),
-                    self.config.get_s3_prefix(hub_name),
+                    self.config.resolve_s3_prefix(hub_name),
                     aws_profile=self.config.aws_profile
                 )
                 enriched[hub_name]['s3_paths'] = s3_paths
@@ -464,9 +666,7 @@ class Notifier:
         Failures are listed FIRST to ensure they aren't truncated.
         """
         lines = [
-            f"{prefix}{status_emoji} *DPLA Ingest Complete*",
-            f"Run: `{run_id}`",
-            f"Results: {complete}/{total} successful, {failed} failed",
+            f"{prefix}{status_emoji} *DPLA Ingest Run Summary*",
             "",
         ]
 
@@ -492,8 +692,8 @@ class Notifier:
         if completed_hubs:
             lines.append("*Completed:*")
             for hub_name, info in completed_hubs:
-                line = self._format_completed_hub_line(hub_name, info)
-                lines.append(line)
+                hub_lines = self._format_completed_hub_lines(hub_name, info)
+                lines.extend(hub_lines)
             lines.append("")
 
         # Skipped hubs section (if any)
@@ -506,14 +706,9 @@ class Notifier:
             lines.append(f"*Skipped:* {', '.join(name for name, _ in skipped_hubs)}")
             lines.append("")
 
-        # Draft emails location
-        if draft_dir:
-            lines.append(f"Draft emails: `{draft_dir}`")
-
         # No-email notice
         if hubs_without_email:
-            lines.append("")
-            lines.append(f":email: *Manual notification required* - no email in config for: {', '.join(hubs_without_email)}")
+            lines.append(f":email: *Manual notification required* — no email in config for: {', '.join(hubs_without_email)}")
 
         # Join and truncate if needed
         text = "\n".join(lines)
@@ -522,48 +717,23 @@ class Notifier:
 
         return text
 
-    def _format_completed_hub_line(self, hub_name: str, info: dict) -> str:
-        """Format a single completed hub line for Slack."""
-        parts = [f"  • `{hub_name}`"]
-
-        # Record counts
+    def _format_completed_hub_lines(self, hub_name: str, info: dict) -> list[str]:
+        """Format a completed hub entry for Slack (multi-line block)."""
         harvest = info.get('harvest_count')
         mapped = info.get('mapping_successful')
-        attempted = info.get('mapping_attempted')
         failed_count = info.get('mapping_failed')
 
-        if info.get('summary_available'):
-            if harvest:
-                parts.append(f"{harvest:,} harvested")
-            if mapped is not None and attempted is not None:
-                parts.append(f"{mapped:,}/{attempted:,} mapped")
-            if failed_count and failed_count > 0:
-                parts.append(f"{failed_count:,} failed")
+        header = f"  • `{hub_name}`"
+
+        if info.get('summary_available') and mapped is not None:
+            block = self._format_counts_block(harvest, mapped, failed_count)
+            # Indent block lines under the hub bullet
+            indented = "\n".join(f"    {l}" for l in block.split("\n"))
+            return [header, indented]
+        elif mapped:
+            return [f"{header} — ~`{mapped:,}` records"]
         else:
-            # Summary unavailable
-            if mapped:
-                parts.append(f"~{mapped:,} records (summary unavailable)")
-            else:
-                parts.append("completed, summary unavailable, data staged for indexing")
-
-        # Issues summary (truncated)
-        issues = info.get('issues_summary')
-        if issues:
-            parts.append(f"({issues[:50]})")
-
-        # S3 links
-        s3_paths = info.get('s3_paths')
-        if s3_paths:
-            links = []
-            if s3_paths.summary_url:
-                links.append(f"<{s3_paths.summary_url}|Summary>")
-            # Include logs link if there are mapping errors
-            if s3_paths.logs_url and failed_count and failed_count > 0:
-                links.append(f"<{s3_paths.logs_url}|Logs>")
-            if links:
-                parts.append(" ".join(links))
-
-        return " | ".join(parts)
+            return [f"{header} — done"]
 
     def _format_failed_hub_line(self, hub_name: str, info: dict) -> str:
         """Format a single failed hub line for Slack."""
@@ -575,6 +745,47 @@ class Notifier:
             line += f": {error}"
 
         return line
+
+    def _build_draft_emails_snippet(self, draft_dir: Path) -> str | None:
+        """Build a text snippet from draft email files for Slack code block.
+
+        Reads each .draft.txt, extracts To/Subject lines, and returns a
+        compact snippet that can be copy-pasted.  Truncates to stay within
+        Slack's code-block limits (~3000 chars).
+        """
+        try:
+            drafts = sorted(draft_dir.glob("*.draft.txt"))
+            if not drafts:
+                return None
+
+            snippet_lines = []
+            for draft_file in drafts:
+                content = draft_file.read_text()
+                # Extract To and Subject lines
+                to_line = ""
+                subject_line = ""
+                for line in content.split("\n"):
+                    if line.startswith("To:"):
+                        to_line = line.strip()
+                    elif line.startswith("Subject:"):
+                        subject_line = line.strip()
+                    if to_line and subject_line:
+                        break
+                hub_name = draft_file.stem.replace(".draft", "")
+                snippet_lines.append(f"[{hub_name}]")
+                if to_line:
+                    snippet_lines.append(f"  {to_line}")
+                if subject_line:
+                    snippet_lines.append(f"  {subject_line}")
+                snippet_lines.append("")
+
+            snippet = "\n".join(snippet_lines).strip()
+            # Keep under 3000 chars for Slack code blocks
+            if len(snippet) > 3000:
+                snippet = snippet[:2950] + "\n... (truncated)"
+            return snippet
+        except Exception:
+            return None
 
     def _write_email_drafts(
         self,
@@ -775,10 +986,44 @@ class Notifier:
 
         # Send Slack alert
         if self.config.slack_webhook:
+            mention = ""
+            if getattr(self.config, 'slack_alert_user_id', None):
+                mention = f"<@{self.config.slack_alert_user_id}> "
+
+            # Build OAI context block if available in any failure
+            oai_context = ""
+            for hub_name, details in failure_report.get('failures', {}).items():
+                diag = details.get('diagnosis') or {}
+                ctx = diag.get('context') or {}
+                if ctx.get('oai_set') or ctx.get('resumption_token'):
+                    oai_context += f"\n\n*OAI debug context for `{hub_name}`*\n"
+                    if ctx.get('oai_set'):
+                        oai_context += f"• Set: `{ctx['oai_set']}`\n"
+                    if ctx.get('resumption_token'):
+                        oai_context += f"• Resumption token: `{ctx['resumption_token']}`\n"
+                    if ctx.get('cursor') is not None:
+                        cursor_str = str(ctx['cursor'])
+                        if ctx.get('complete_list_size') is not None:
+                            cursor_str += f" / {ctx['complete_list_size']}"
+                        oai_context += f"• Cursor: {cursor_str}\n"
+                    if ctx.get('url'):
+                        oai_context += f"• URL: {ctx['url']}\n"
+
+            # Include per-hub error summaries
+            error_lines = ""
+            for hub_name, details in failure_report.get('failures', {}).items():
+                error_msg = details.get('error', 'Unknown')
+                if len(error_msg) > 200:
+                    error_msg = error_msg[:200] + "..."
+                error_lines += f"\n`{hub_name}`: {error_msg}"
+
             self._send_slack({
                 "text": f"{prefix}:x: DPLA Ingest Failures\n"
+                       f"{mention}Harvest failure needs attention\n"
                        f"Run: `{run_id}`\n"
-                       f"Failed: {', '.join(failure_report['failed_hubs'])}\n"
+                       f"Failed: {', '.join(failure_report['failed_hubs'])}"
+                       f"{error_lines}"
+                       f"{oai_context}\n"
                        f"Review: `{md_file}`"
             })
 
@@ -820,7 +1065,31 @@ class Notifier:
                 "",
             ])
 
-            log_snippet = diagnosis.get('context', {}).get('log_snippet', '')
+            # OAI debug context
+            ctx = diagnosis.get('context', {})
+            if ctx.get('oai_set') or ctx.get('resumption_token'):
+                lines.extend([
+                    "**OAI Debug Context**:",
+                    "",
+                ])
+                if ctx.get('oai_set'):
+                    lines.append(f"- Set: `{ctx['oai_set']}`")
+                if ctx.get('resumption_token'):
+                    lines.append(f"- Resumption token: `{ctx['resumption_token']}`")
+                if ctx.get('cursor') is not None:
+                    cursor_str = str(ctx['cursor'])
+                    if ctx.get('complete_list_size') is not None:
+                        cursor_str += f" / {ctx['complete_list_size']}"
+                    lines.append(f"- Cursor: {cursor_str}")
+                if ctx.get('url'):
+                    lines.append(f"- URL: {ctx['url']}")
+                if ctx.get('first_id'):
+                    lines.append(f"- First ID: `{ctx['first_id']}`")
+                if ctx.get('last_id'):
+                    lines.append(f"- Last ID: `{ctx['last_id']}`")
+                lines.append("")
+
+            log_snippet = ctx.get('log_snippet', '')
             if log_snippet:
                 lines.extend([
                     "**Log Snippet**:",

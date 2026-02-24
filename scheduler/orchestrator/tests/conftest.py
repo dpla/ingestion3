@@ -21,15 +21,21 @@ def mock_config():
     config.logs_dir = Path("/tmp/dpla-test-logs")
     config.i3_home = Path("/tmp/dpla-test-home")
     config.aws_profile = "dpla"
-    config.slack_webhook = os.environ.get("SLACK_WEBHOOK")
+    config.slack_webhook = os.environ.get("SLACK_WEBHOOK") or "https://hooks.slack.com/test"
+    config.slack_tech_webhook = os.environ.get("SLACK_TECH_WEBHOOK")
+    config.slack_alert_user_id = os.environ.get("SLACK_ALERT_USER_ID")
+    config.aliases_enabled = True
     config.github_token = None
 
     # S3 methods
     config.get_s3_dest_bucket.return_value = "dpla-master-dataset"
-    config.get_s3_prefix.side_effect = lambda hub: {
+    config.resolve_s3_prefix.side_effect = lambda hub: {
         "hathi": "hathitrust",
-        "tn": "tennessee"
+        "tn": "tennessee",
+        "hathitrust": "hathitrust",
+        "tennessee": "tennessee",
     }.get(hub, hub)
+    config.get_s3_prefix.side_effect = config.resolve_s3_prefix.side_effect
 
     # Hub configs
     def get_hub_config(hub_name):

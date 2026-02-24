@@ -17,6 +17,8 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from pathlib import Path
 
+from scheduler.orchestrator.config import load_config
+
 # CC on every notification
 CC_ALWAYS = ["scott@dp.la", "tech@dp.la", "dominic@dp.la"]
 # When no hub contact, send only to these
@@ -26,17 +28,6 @@ MAX_ATTACHMENT_BYTES = 7_485_760  # ~7MB like Emailer.scala
 
 # Backlog date prefixes (mapping run dirs start with YYYYMMDD_...)
 BACKLOG_PREFIXES = ("202512", "202601", "202602")
-
-# S3 prefix -> hub name (inverse of Config.S3_PREFIX_MAP)
-S3_PREFIX_TO_HUB = {
-    "hathitrust": "hathi",
-    "tennessee": "tn",
-}
-
-
-def _s3_prefix_to_hub(s3_prefix: str) -> str:
-    """Resolve hub name from S3 top-level prefix."""
-    return S3_PREFIX_TO_HUB.get(s3_prefix, s3_prefix)
 
 
 def _mapping_dir_to_yyyy_mm(mapping_dir_name: str) -> str | None:
@@ -78,9 +69,8 @@ def _discover_via_boto3(bucket: str, aws_profile: str) -> list[dict]:
                     if yyyy_mm:
                         ingest_dates.add(yyyy_mm)
         if ingest_dates and mapping_dirs:
-            hub_name = _s3_prefix_to_hub(s3_prefix)
             result.append({
-                "hub_name": hub_name,
+                "hub_name": s3_prefix,
                 "s3_prefix": s3_prefix,
                 "ingest_dates_yyyy_mm": sorted(ingest_dates),
                 "mapping_dirs": sorted(mapping_dirs),
@@ -125,9 +115,8 @@ def _discover_via_aws_cli(bucket: str, aws_profile: str) -> list[dict]:
                 if yyyy_mm:
                     ingest_dates.add(yyyy_mm)
         if ingest_dates and mapping_dirs:
-            hub_name = _s3_prefix_to_hub(s3_prefix)
             result.append({
-                "hub_name": hub_name,
+                "hub_name": s3_prefix,
                 "s3_prefix": s3_prefix,
                 "ingest_dates_yyyy_mm": sorted(ingest_dates),
                 "mapping_dirs": sorted(mapping_dirs),
@@ -157,14 +146,9 @@ def load_config_and_attach_emails(
     rows: list[dict],
 ) -> list[dict]:
     """Load i3 config and attach email(s) and provider name for each hub."""
-    project_root = Path(__file__).resolve().parent.parent.parent
-    if project_root not in sys.path:
-        sys.path.insert(0, str(project_root))
-
-    from scheduler.orchestrator.config import load_config
-
     conf = load_config(i3_conf_path=str(i3_conf_path) if i3_conf_path else None)
     for row in rows:
+        row["hub_name"] = conf.resolve_hub_key(row["hub_name"])
         hub_config = conf.get_hub_config(row["hub_name"])
         if hub_config:
             row["emails"] = [e.strip() for e in hub_config.email.split(",") if e.strip()] if hub_config.email else []
@@ -334,9 +318,9 @@ def run_send(
 ) -> None:
     """Discover hubs, load config, and send one email per hub. Report success and failure."""
     rows = discover_backlog_hubs(bucket=bucket, aws_profile=aws_profile)
-    if hub_filter:
-        rows = [r for r in rows if r["hub_name"] == hub_filter]
     rows = load_config_and_attach_emails(i3_conf_path, rows)
+    if hub_filter:
+        rows = [r for r in rows if r["hub_name"] == hub_filter or r["s3_prefix"] == hub_filter]
 
     print("=" * 70)
     print("BACKLOG MAPPING EMAILS — SEND")
@@ -389,9 +373,9 @@ def run_dry_run(
 ) -> None:
     """Print hubs that would be contacted, their emails, and ingest dates (YYYY-MM)."""
     rows = discover_backlog_hubs(bucket=bucket, aws_profile=aws_profile)
-    if hub_filter:
-        rows = [r for r in rows if r["hub_name"] == hub_filter]
     rows = load_config_and_attach_emails(i3_conf_path, rows)
+    if hub_filter:
+        rows = [r for r in rows if r["hub_name"] == hub_filter or r["s3_prefix"] == hub_filter]
 
     # Exclude hubs with no email (still show them with a note)
     with_email = [r for r in rows if r["emails"]]

@@ -7,6 +7,26 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 
+# Legacy hub key aliases:
+# - i3.conf historically uses "hathi" and "tn"
+# - S3 prefixes and emerging canonical names use "hathitrust" and "tennessee"
+HUB_KEY_ALIASES = {
+    "hathi": "hathitrust",
+    "tn": "tennessee",
+}
+CANONICAL_TO_LEGACY_HUB_KEY = {v: k for k, v in HUB_KEY_ALIASES.items()}
+
+
+def hub_aliases_enabled() -> bool:
+    """Return True when hub alias compatibility is enabled.
+
+    Set I3_STRICT_HUB_NAMES=1/true/yes/on to disable alias fallback and require
+    exact hub keys.
+    """
+    raw = os.environ.get("I3_STRICT_HUB_NAMES", "").strip().lower()
+    return raw not in {"1", "true", "yes", "on"}
+
+
 @dataclass
 class ResourceBudget:
     """Resource allocation for a single hub when running in parallel.
@@ -92,6 +112,8 @@ class Config:
     state_file: Path
     aws_profile: str = "dpla"
     slack_webhook: Optional[str] = None
+    slack_tech_webhook: Optional[str] = None  # #tech channel (hub-complete @here)
+    slack_alert_user_id: Optional[str] = None  # Slack user ID to @mention on failures
     github_token: Optional[str] = None
     xmll_jar: Path = field(default_factory=lambda: Path.home() / "xmll-assembly-0.1.jar")
 
@@ -112,15 +134,15 @@ class Config:
     # S3 destination bucket for synced data
     S3_DEST_BUCKET = "dpla-master-dataset"
 
-    # Hub name → S3 prefix mapping (must stay in sync with scripts/s3-sync.sh)
-    S3_PREFIX_MAP = {
-        "hathi": "hathitrust",
-        "tn": "tennessee",
-    }
-
     def __post_init__(self):
         self._hub_configs: dict[str, HubConfig] = {}
+        self._aliases_enabled = hub_aliases_enabled()
         self._parse_i3_conf()
+
+    @property
+    def aliases_enabled(self) -> bool:
+        """Whether hub alias compatibility mode is enabled."""
+        return self._aliases_enabled
 
     def _parse_i3_conf(self):
         """Parse i3.conf file to extract hub configurations."""
@@ -165,7 +187,7 @@ class Config:
 
     def get_hub_config(self, hub_name: str) -> Optional[HubConfig]:
         """Get configuration for a specific hub."""
-        return self._hub_configs.get(hub_name)
+        return self._hub_configs.get(self.resolve_hub_key(hub_name))
 
     def get_all_hubs(self) -> list[str]:
         """Get all configured hub names."""
@@ -183,11 +205,42 @@ class Config:
 
     def get_s3_source_bucket(self, hub_name: str) -> Optional[str]:
         """Get S3 source bucket for file-based harvests."""
-        return self.S3_SOURCE_BUCKETS.get(hub_name)
+        return self.S3_SOURCE_BUCKETS.get(self.resolve_hub_key(hub_name))
+
+    def resolve_hub_key(self, hub_name: str) -> str:
+        """Resolve input hub name to the configured i3.conf hub key.
+
+        Supports both legacy and canonical forms while alias compatibility is
+        enabled. If no configured match is found, returns the input unchanged.
+        """
+        if hub_name in self._hub_configs:
+            return hub_name
+
+        if not self.aliases_enabled:
+            return hub_name
+
+        # legacy -> canonical (for future i3.conf key migration)
+        canonical = HUB_KEY_ALIASES.get(hub_name)
+        if canonical and canonical in self._hub_configs:
+            return canonical
+
+        # canonical -> legacy (current i3.conf compatibility)
+        legacy = CANONICAL_TO_LEGACY_HUB_KEY.get(hub_name)
+        if legacy and legacy in self._hub_configs:
+            return legacy
+
+        return hub_name
+
+    def resolve_s3_prefix(self, hub_name: str) -> str:
+        """Resolve S3 prefix for a hub using centralized alias mapping."""
+        resolved = self.resolve_hub_key(hub_name)
+        if not self.aliases_enabled:
+            return resolved
+        return HUB_KEY_ALIASES.get(resolved, resolved)
 
     def get_s3_prefix(self, hub_name: str) -> str:
-        """Get S3 prefix for a hub (mirrors scripts/s3-sync.sh mapping)."""
-        return self.S3_PREFIX_MAP.get(hub_name, hub_name)
+        """Get S3 prefix for a hub (compat wrapper)."""
+        return self.resolve_s3_prefix(hub_name)
 
     def get_s3_dest_bucket(self) -> str:
         """Get S3 destination bucket for synced data."""
@@ -241,5 +294,7 @@ def load_config(
         state_file=i3_home / "logs" / "orchestrator_state.json",
         aws_profile=os.environ.get("AWS_PROFILE", "dpla"),
         slack_webhook=os.environ.get("SLACK_WEBHOOK"),
+        slack_tech_webhook=os.environ.get("SLACK_TECH_WEBHOOK"),
+        slack_alert_user_id=os.environ.get("SLACK_ALERT_USER_ID"),
         github_token=os.environ.get("GITHUB_TOKEN"),
     )

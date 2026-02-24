@@ -12,7 +12,7 @@
 # Provided variables:
 #   PLATFORM       - "macos" or "linux" or "unknown"
 #   I3_HOME        - Ingestion3 root directory
-#   DPLA_DATA      - Data output directory  
+#   DPLA_DATA      - Data output directory
 #   I3_CONF        - Path to i3.conf configuration
 #   JAVA_HOME      - Java installation directory
 #   SBT_OPTS       - JVM options for sbt
@@ -74,9 +74,9 @@ get_script_dir() {
     else
         source="${BASH_SOURCE[0]}"
     fi
-    
+
     local dir
-    
+
     # Resolve symlinks
     while [[ -L "$source" ]]; do
         dir=$(cd -P "$(dirname "$source")" && pwd)
@@ -84,7 +84,7 @@ get_script_dir() {
         # Handle relative symlinks
         [[ "$source" != /* ]] && source="$dir/$source"
     done
-    
+
     cd -P "$(dirname "$source")" && pwd
 }
 
@@ -92,13 +92,13 @@ get_script_dir() {
 get_common_dir() {
     local source="${BASH_SOURCE[0]}"
     local dir
-    
+
     while [[ -L "$source" ]]; do
         dir=$(cd -P "$(dirname "$source")" && pwd)
         source=$(readlink "$source")
         [[ "$source" != /* ]] && source="$dir/$source"
     done
-    
+
     cd -P "$(dirname "$source")" && pwd
 }
 
@@ -124,9 +124,9 @@ detect_java_home() {
         echo "$JAVA_HOME"
         return 0
     fi
-    
+
     local java_home=""
-    
+
     if [[ "$PLATFORM" == "macos" ]]; then
         # macOS: use java_home helper
         if [[ -x /usr/libexec/java_home ]]; then
@@ -159,7 +159,7 @@ detect_java_home() {
                 break
             fi
         done
-        
+
         # Try to find from java command
         if [[ -z "$java_home" ]] && command -v java >/dev/null 2>&1; then
             local java_bin
@@ -169,28 +169,28 @@ detect_java_home() {
             fi
         fi
     fi
-    
+
     echo "$java_home"
 }
 
 # Setup Java environment variables
 setup_java() {
     local memory="${1:-8g}"
-    
+
     # Detect JAVA_HOME if not set
     if [[ -z "${JAVA_HOME:-}" ]]; then
         JAVA_HOME=$(detect_java_home)
     fi
-    
+
     if [[ -z "$JAVA_HOME" || ! -d "$JAVA_HOME" ]]; then
         log_error "Could not find Java installation"
         log_error "Please set JAVA_HOME environment variable"
         return 1
     fi
-    
+
     export JAVA_HOME
     export PATH="$JAVA_HOME/bin:$PATH"
-    
+
     # Set SBT options based on memory parameter.
     # If SBT_OPTS is already set (e.g. by the orchestrator's resource budget),
     # respect that value instead of overriding it.
@@ -199,7 +199,7 @@ setup_java() {
     else
         log_debug "SBT_OPTS already set: $SBT_OPTS (not overriding)"
     fi
-    
+
     return 0
 }
 
@@ -216,7 +216,7 @@ get_i3_home() {
         # Determine from common.sh's location (this script is in $I3_HOME/scripts/)
         local common_dir
         common_dir=$(get_common_dir 2>/dev/null || echo "")
-        
+
         if [[ -n "$common_dir" && -d "$common_dir" ]]; then
             dirname "$common_dir"
         else
@@ -232,21 +232,30 @@ init_paths() {
     # I3_HOME: Ingestion3 repository root
     I3_HOME="${I3_HOME:-$(get_i3_home)}"
     export I3_HOME
-    
+
+    # Load .env when present so SLACK_WEBHOOK, JAVA_HOME, etc. are set for
+    # pipeline scripts and harvest-failure notifications.
+    if [ -f "${I3_HOME}/.env" ] && [ -r "${I3_HOME}/.env" ]; then
+        set -a
+        # shellcheck source=/dev/null
+        source "${I3_HOME}/.env"
+        set +a
+    fi
+
     # DPLA_DATA: Where harvested/processed data is stored
     DPLA_DATA="${DPLA_DATA:-$HOME/dpla/data}"
     export DPLA_DATA
-    
+
     # I3_CONF: Configuration file location
     I3_CONF="${I3_CONF:-$HOME/dpla/code/ingestion3-conf/i3.conf}"
     export I3_CONF
-    
+
     # SPARK_MASTER: Spark execution mode for pipeline (mapping/enrichment/jsonl).
     # local[4] is a safe default for IngestRemap on typical workstations (e.g. M3 Pro 18GB);
     # override with SPARK_MASTER=local[6] for more parallelism when memory allows.
     SPARK_MASTER="${SPARK_MASTER:-local[4]}"
     export SPARK_MASTER
-    
+
     # AWS_PROFILE: AWS credentials profile
     AWS_PROFILE="${AWS_PROFILE:-dpla}"
     export AWS_PROFILE
@@ -350,6 +359,15 @@ run_entry() {
     shift
     local jar="${I3_JAR:-$I3_HOME/target/scala-2.13/ingestion3-assembly-0.0.1.jar}"
 
+    # Ensure JAR exists and is current so "harvest indiana" (and any pipeline run) uses latest code.
+    if [[ ! -f "$jar" ]]; then
+        log_info "JAR not found; building with sbt assembly..."
+        (cd "$I3_HOME" && sbt -java-home "${JAVA_HOME:-}" assembly) || die "sbt assembly failed"
+    elif [[ -d "$I3_HOME/src/main/scala" ]] && [[ -n "$(find "$I3_HOME/src/main/scala" -name "*.scala" -newer "$jar" 2>/dev/null | head -1)" ]]; then
+        log_info "Scala sources newer than JAR; rebuilding with sbt assembly..."
+        (cd "$I3_HOME" && sbt -java-home "${JAVA_HOME:-}" assembly) || die "sbt assembly failed"
+    fi
+
     if [[ -f "$jar" ]]; then
         log_info "Running $entry_class via JAR"
         # SBT_OPTS contains -Xms/-Xmx/-XX flags set by setup_java()
@@ -372,8 +390,7 @@ run_entry() {
         java $SBT_OPTS "${add_opens[@]}" \
             -cp "$jar" "$entry_class" "$@"
     else
-        log_info "Running $entry_class via sbt (no JAR found; run 'sbt assembly' to build)"
-        # sbt runMain expects all args as a single quoted string
+        log_info "Running $entry_class via sbt (JAR still missing after build)"
         local sbt_args="$*"
         (cd "$I3_HOME" && sbt -java-home "${JAVA_HOME:-}" "runMain $entry_class $sbt_args")
     fi
@@ -442,7 +459,7 @@ find_latest_data() {
 require_command() {
     local cmd="$1"
     local msg="${2:-Required command '$cmd' not found}"
-    
+
     if ! command -v "$cmd" >/dev/null 2>&1; then
         die "$msg"
     fi
@@ -452,7 +469,7 @@ require_command() {
 require_file() {
     local file="$1"
     local msg="${2:-Required file not found: $file}"
-    
+
     if [[ ! -f "$file" ]]; then
         die "$msg"
     fi
@@ -462,7 +479,7 @@ require_file() {
 require_dir() {
     local dir="$1"
     local msg="${2:-Required directory not found: $dir}"
-    
+
     if [[ ! -d "$dir" ]]; then
         die "$msg"
     fi
@@ -471,6 +488,22 @@ require_dir() {
 # =============================================================================
 # Hub/Provider Helpers
 # =============================================================================
+
+# Resolve local hub key to S3 prefix with alias compatibility.
+# Set I3_STRICT_HUB_NAMES=1 to disable aliases.
+resolve_s3_prefix() {
+    local hub="$1"
+    if [[ "${I3_STRICT_HUB_NAMES:-}" == "1" ]]; then
+        echo "$hub"
+        return
+    fi
+
+    case "$hub" in
+        hathi) echo "hathitrust" ;;
+        tn) echo "tennessee" ;;
+        *) echo "$hub" ;;
+    esac
+}
 
 # Get provider name from i3.conf
 get_provider_name() {
