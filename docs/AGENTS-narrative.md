@@ -65,7 +65,7 @@ The agent opens that runbook and follows its steps (e.g. “run ingest.sh,” �
 
 ### 4. Run scripts and verify
 
-The agent runs the scripts indicated in the runbook (e.g. `./scripts/ingest.sh maryland`, `./scripts/nara-ingest.sh --month=202601`). It then verifies outputs (e.g. _SUCCESS, record counts) and runs `./scripts/s3-sync.sh <hub>` when the runbook says so.
+The agent runs the scripts indicated in the runbook (e.g. `./scripts/ingest.sh maryland`, `./scripts/harvest/nara-ingest.sh --month=202601`). It then verifies outputs (e.g. _SUCCESS, record counts) and runs `./scripts/s3-sync.sh <hub>` when the runbook says so.
 
 ### 5. Apply notification policy
 
