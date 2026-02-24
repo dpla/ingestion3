@@ -22,7 +22,7 @@
 
 DPLA -- the Digital Public Library of America -- makes the collections of America's libraries, archives, and museums freely available to everyone. Through dp.la, anyone can search tens of millions of records spanning photographs, manuscripts, maps, audio recordings, and more, drawn from approximately 60 partner institutions (called "hubs") across the country. These hubs range from large research universities and state libraries to regional historical societies and specialized archives. DPLA does not hold these items -- it aggregates the metadata that describes them and makes that metadata searchable in one place.
 
-The data pipeline is the infrastructure that makes this possible. Once a month, it reaches out to every hub, pulls in their latest records, transforms them into a common format, and loads them into the search index that powers dp.la. It also identifies records with openly-licensed media and uploads them to Wikimedia Commons, placing them on Wikipedia and other Wikimedia projects. Without the pipeline running reliably, dp.la goes stale. Without dp.la, DPLA's collections are effectively invisible to most of the people the mission is meant to serve.
+The data pipeline is the infrastructure that makes this possible. Once a month, it reaches out to hubs, pulls in their latest records, transforms them into a common format, and loads them into the search index that powers dp.la. It also identifies records with openly-licensed media and uploads them to Wikimedia Commons, placing them on Wikipedia and other Wikimedia projects. Without the pipeline running reliably, dp.la goes stale. Without dp.la, DPLA's collections are effectively invisible to most of the people the mission is meant to serve.
 
 ---
 
@@ -45,12 +45,12 @@ The pipeline works. It has run monthly for years, and the records it produces ar
 
 Those costs are worth naming explicitly:
 
-- **Engineering time to run the monthly cycle.** Running ingestion, indexing, and Wikimedia uploads requires approximately 8--12 hours of engineering attention per month -- not because the work is complex, but because the three stages have no coordination layer. Each must be started manually, monitored manually, and handed off manually.
-- **Engineering time lost to silent failures.** When something breaks undetected, diagnosing and recovering takes far longer than it would have if an alert had fired at the moment of failure. The Minnesota Wikimedia stall (two months undetected) is the most recent example; it is not an isolated incident.
+- **Engineering time to run the monthly cycle.** Running ingestion, indexing, and Wikimedia uploads requires approximately 15--20 hours of engineering attention per month -- not because the work is complex, but because the three stages have no coordination layer. Each must be coordinated manually, started manually, monitored manually, and handed off manually.
+- **Engineering time lost to silent failures.** When something breaks undetected, diagnosing and recovering takes far longer than it would have if an alert had fired at the moment of failure.
 - **Partner coordination overhead.** DPLA sends scheduling emails, waits for replies, guesses when hubs are ready, and occasionally discovers after the fact that a hub's data was not ready -- requiring the affected ingest to be deleted and re-run. Each post-ingest revocation costs 5--8 hours of engineering time.
 - **Institutional knowledge concentration.** The complete picture of how to run the monthly cycle -- which hubs to process, in what order, what to do when something fails, how to flip the search index -- is held primarily by one engineer. That knowledge is not a failure to document; it is the predictable result of a small team building and operating sophisticated infrastructure.
 
-This document set directly addresses each of these costs.
+This document directly addresses each of these costs.
 
 ---
 

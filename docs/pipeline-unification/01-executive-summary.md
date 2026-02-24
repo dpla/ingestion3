@@ -1,6 +1,7 @@
 # DPLA Pipeline Unification -- Executive Summary
 
 **Audience:** Director, Community Manager, funders, leadership at receiving organization
+
 **Reading time:** 15 minutes
 
 ---
@@ -49,9 +50,9 @@ The data pipeline is the machinery that makes this possible. It is the infrastru
 
 The pipeline has three stages, each handled by a separate software project:
 
-**Stage 1 -- Ingestion.** Once a month, DPLA reaches out to each partner hub and pulls in their latest records. Some hubs provide data through a standard library protocol (OAI-PMH), some through APIs, and some through files placed on Amazon S3. The system transforms each record into a common format, checks it for quality, and stores the result. This takes about a week for all 60 hubs.
+**Stage 1 -- Ingestion.** Once a month, DPLA reaches out to partner hubs and pulls in their latest records. Some hubs provide data through a standard library protocol (OAI-PMH), some through APIs, and some through files placed on Amazon S3. The system transforms each record into a common format, checks it for quality, and stores the result. This takes about a week each month.
 
-**Stage 2 -- Indexing.** After ingestion, DPLA takes all processed records and builds a search index -- the database that powers dp.la's search. This runs on a temporary cluster of 10 servers on Amazon Web Services (AWS), takes about two hours, and is then shut down. When the new index is ready, a "switch" is flipped so the website starts serving the fresh data. This switch is the single most consequential moment in the monthly cycle: it determines what millions of users see on dp.la.
+**Stage 2 -- Indexing.** After ingestion, DPLA takes all processed records and builds a search index -- the database that powers dp.la's search. This runs on a temporary cluster of 10 servers on Amazon Web Services (AWS), takes about seven hours, and is then shut down. When the new index is ready, a "switch" is flipped so the website starts serving the fresh data. This switch is the single most consequential moment in the monthly cycle: it determines what millions of users see on dp.la. Older indicies need to manually deleted to preserve disk space on the seach cluster. We maintain at least one historical index at all timess.
 
 **Stage 3 -- Wikimedia uploads.** For records with openly-licensed media -- images, documents, maps -- DPLA downloads the media from the source institution and uploads it to Wikimedia Commons, making it available on Wikipedia and other Wikimedia projects. This is a continuous process that runs for weeks or months at a time on a dedicated server.
 
@@ -65,10 +66,6 @@ Today, these three stages run independently with no coordination between them. E
 
 The pipeline's largest operational risk is not that individual components fail. It is that failures go undetected. When a stage breaks down and no one knows, the consequences compound over time and become much more expensive to unwind than if the failure had been caught immediately.
 
-In December 2025, the Minnesota media uploader encountered a routine network error while downloading an image from a partner's server. The uploader had no logic to retry or recover. It entered a sleep state and stopped making progress. For over two months, the process appeared to be running -- it was alive on the server, consuming memory -- but it was doing nothing. The only way to discover the problem was to SSH into the server (a task requiring engineering access) and manually inspect log files. Diagnosing, restarting, and verifying the recovery required multiple hours of engineering work.
-
-This is not an isolated incident. It is the default outcome of a system with no centralized monitoring.
-
 ### Organizational Risk
 
 Today, the complete picture of how to run the monthly cycle -- which hubs to process, in what order, what to do when something fails, how to flip the search index, how to manage the Wikimedia uploads -- is held primarily by one engineer. If that engineer is unavailable, the monthly cycle stops.
@@ -77,7 +74,9 @@ This is not a failure of documentation or process. It is the predictable result 
 
 ### Partner Coordination Overhead
 
-Every month, DPLA sends scheduling emails to ~60 hub contacts, waits for replies, and makes judgment calls about which hubs are ready to be ingested. Because there is no structured way to confirm hub readiness, DPLA occasionally ingests data that was not ready -- and then must delete it and re-run the affected portion of the pipeline. Each of these post-ingest revocations costs 5--8 hours of engineering time. The coordination overhead of answering status questions from hub contacts ("when was our data last updated?") adds further steady drain on capacity.
+Every month, DPLA sends scheduling emails to hub contacts, waits for replies, and makes judgment calls about which hubs are ready to be ingested. Because there is no structured way to confirm hub readiness, DPLA occasionally ingests data that was not ready -- and then must delete it and re-run the affected portion of the pipeline. Each of these post-ingest revocations costs 5--8 hours of engineering time. The coordination overhead of answering status questions from hub contacts ("when was our data last updated?") adds further steady drain on capacity.
+
+In addition, a hub can request specific records to be removed from our search index. This is a two-step process, frist to delete the record from the live search index and to delete the same record from the data in S3 so it is not re-introduced when the index is rebuilt. These are manual steps for an engineer and it requires knowing to perform both steps to correctly handle a request. A final factor to consider is that these requests typically come as a list of URLs or a web query. Engineers need the DPLA IDs to perform these operations so in addition to the actual implementation engineers need to manually gather the IDs when not provided by a hub.
 
 ### The Cost Is Not the System
 
@@ -120,11 +119,11 @@ This ordering reduces risk faster than broad feature expansion.
 
 ## What External Audiences Should Know
 
-### For Funders and Board Members
+### Anmyone who will take ownership of this program
 
 The data pipeline is DPLA's core infrastructure -- the system that moves partner collections into dp.la's search index and keeps them current. Without it running reliably each month, DPLA cannot deliver on its mission. Investment in this proposal yields:
 
-- **Reduced engineering cost to operate.** The monthly cycle currently requires 8--12 hours of engineering attention. The proposed monitoring and coordination work reduces this significantly, freeing engineering capacity for higher-value work.
+- **Reduced engineering cost to operate.** The monthly cycle currently requires 15-25 hours of engineering attention. The proposed monitoring and coordination work reduces this significantly, freeing engineering capacity for higher-value work.
 - **Faster failure detection.** Failures that today go undetected for weeks will be detected in minutes, reducing the compounding cost of unresolved problems.
 - **Knowledge transfer that sticks.** The documentation suite and procedures in this proposal are designed to survive engineer turnover. The next team does not start from scratch.
 - **Infrastructure proportionate to the mission.** DPLA's aggregation role requires a pipeline that partner institutions, funders, and the public can trust. This proposal makes that trust grounded in observable, documented reliability.
@@ -133,7 +132,7 @@ The data pipeline is DPLA's core infrastructure -- the system that moves partner
 
 DPLA's pipeline aggregates records from ~60 partner institutions monthly, builds a search index serving millions of queries, and uploads media to Wikimedia Commons continuously. Operationally, this means:
 
-- **Monthly engineering cycle:** ~8--12 hours of active engineering time to run ingestion, indexing, and Wikimedia coordination, currently on a single engineer's laptop and two cloud servers.
+- **Monthly engineering cycle:** ~15--25 hours of active engineering time to run ingestion, indexing, and Wikimedia coordination, currently on a single engineer's laptop and two cloud servers.
 - **Documented handoff path:** This document set is the handoff package. The [Implementation Roadmap](04-implementation-roadmap.md) provides a phased plan; the [Technical Findings](05-technical-findings.md) are the work queue; the [Agent Skills and Automation](06-agent-skills-and-automation.md) are the operating manual.
 - **AWS cost:** Approximately $150--250/month in current state (S3 storage, EMR indexing, EC2 for Wikimedia). Moving ingestion from a laptop to a cloud server adds ~$100--150/month.
 - **Minimum viable team:** One engineer can operate the pipeline following the documented procedures. Two engineers are needed to make improvements while keeping operations running.
@@ -248,7 +247,7 @@ Even after all phases are complete, some risks cannot be eliminated -- only dete
 
 - **Source partner endpoint instability.** DPLA depends on ~60 external institutions maintaining their data feeds. When a partner's server goes down or changes format, the pipeline detects the failure but cannot fix it.
 - **Upstream metadata variance.** Partners change their metadata schemas over time. The pipeline's mapping layer handles known variations, but novel changes require human investigation.
-- **Prolonged partial-degradation scenarios.** When a problem affects some hubs but not others, the decision to proceed with a partial index vs. wait for all hubs requires domain judgment that cannot be fully automated.
+- **Prolonged partial-degradation scenarios.** When a problem affects a subset of records for a hub, the decision to proceed with a partial ingest  vs. wait for all remediations is a  judgment that cannot be fully automated and requires communication with the affected hub.
 
 The pipeline is designed with these constraints in mind. The focus is fast detection and clear escalation, not automatic resolution of problems that require human judgment.
 

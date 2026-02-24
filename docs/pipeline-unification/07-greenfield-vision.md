@@ -40,7 +40,7 @@ This vision also serves a practical handoff purpose. If another organization tak
 
 ## The Pipeline in One Paragraph
 
-DPLA's pipeline harvests records from ~60 library and museum sources monthly, transforms them into a common schema, builds a search index that serves dp.la, and uploads eligible media to Wikimedia Commons. It handles approximately 40 million records, approximately 2TB of data, and continuous media uploads that run for weeks at a time. The mission it serves -- making America's cultural heritage accessible to everyone -- requires it to run reliably every month.
+DPLA's pipeline harvests records from ~60 library and museum sources monthly, transforms them into a common schema, builds a search index that serves dp.la, and uploads eligible media to Wikimedia Commons. It handles approximately 50 million records, approximately 2TB of data, and continuous media uploads that run for weeks at a time. The mission it serves -- making America's cultural heritage accessible to everyone -- requires it to run reliably every month.
 
 ---
 

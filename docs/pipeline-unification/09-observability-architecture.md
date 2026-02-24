@@ -47,7 +47,7 @@
 
 ## Why This Document Exists
 
-Throughout the pipeline unification process, one theme has surfaced repeatedly: **the pipeline's biggest operational risk is not that things break -- it's that breakages go undetected.** The Minnesota Wikimedia incident (two months of silent failure, discovered only by SSH-ing into a server) is not an anomaly. It is the default outcome of a system with no centralized monitoring.
+Throughout the pipeline unification process, one theme has surfaced repeatedly: **the pipeline's biggest operational risk is not that things break -- it's that breakages go undetected.**. It is the default outcome of a system with no centralized monitoring.
 
 Today, the only people who can answer "is the pipeline healthy?" are the engineers who built it, and even they must manually check log files, S3 listings, and terminal sessions to assemble an answer. Hub contacts who want to know "when was my data last ingested?" must email DPLA and wait for a human to look it up. Community managers preparing board updates must ask engineering for status. There is no self-service visibility for anyone.
 

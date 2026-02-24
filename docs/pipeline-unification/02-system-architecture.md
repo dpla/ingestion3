@@ -120,17 +120,17 @@ Hub naming is one of the most fragile integration points in the pipeline. Three 
 
 ```mermaid
 flowchart TD
-    subgraph naming ["Hub Naming Systems"]
-        ShortName["Short name (i3.conf)\nhathi, tn, georgia, nara"]
-        S3Prefix["S3 prefix\nhathitrust, tennessee, georgia, nara"]
-        FullName["Provider full name (API)\nHathiTrust, Digital Library of Tennessee,\nDigital Library of Georgia, NARA"]
+        subgraph naming ["Hub Naming Systems"]
+        ShortName["Short name (i3.conf)<br>hathi, tn, georgia, nara"]
+        S3Prefix["S3 prefix<br>hathitrust, tennessee, georgia, nara"]
+        FullName["Provider full name (API)<br>HathiTrust, Digital Library of Tennessee,<br>Digital Library of Georgia, NARA"]
     end
 
-    ShortName -->|"S3_PREFIX_MAP\n(config.py)"| S3Prefix
-    S3Prefix -->|"S3 listing\n(MasterDataset.scala)"| sparkindexerNode[sparkindexer]
-    ShortName -->|"OutputHelper\n(OutputHelper.scala)"| ingestion3Node[ingestion3 JSONL path]
-    FullName -->|"institutions_v2.json\nlookup"| wikimediaNode[ingest-wikimedia]
-    ingestion3Node -->|"s3-sync.sh\nwith prefix mapping"| S3Prefix
+    ShortName -->|"S3_PREFIX_MAP<br>(config.py)"| S3Prefix
+    S3Prefix -->|"S3 listing<br>(MasterDataset.scala)"| sparkindexerNode[sparkindexer]
+    ShortName -->|"OutputHelper<br>(OutputHelper.scala)"| ingestion3Node[ingestion3 JSONL path]
+    FullName -->|"institutions_v2.json<br>lookup"| wikimediaNode[ingest-wikimedia]
+    ingestion3Node -->|"s3-sync.sh<br>with prefix mapping"| S3Prefix
 ```
 
 **Canonical sources today (fragmented):**
@@ -179,10 +179,11 @@ gantt
 
 1. Engineer builds the sparkindexer JAR and uploads to S3
 2. Launches EMR cluster via `sparkindexer-emr.sh`
-3. EMR reads all JSONL from S3, transforms records, writes to a new ES index (~2 hours)
-4. Cluster auto-terminates on completion
-5. Engineer runs alias flip script to point production at the new index
-6. Verifies the DPLA API serves fresh data
+3. EMR reads all JSONL from S3, transforms records, writes to a new ES index (~7 hours)
+4. Cluster auto-terminates on completion or failure
+5. Engineer must manually verify the EMR job completed successfully
+6. Engineer runs alias flip script to point production at the new index
+7. Verifies the DPLA API serves fresh data
 
 **Week 2+: Wikimedia Uploads (ingest-wikimedia)**
 
@@ -215,24 +216,24 @@ DPLA's pipeline runs across three classes of AWS resources: persistent storage (
 flowchart TD
     subgraph aws ["AWS Account"]
         subgraph s3 ["S3 Storage"]
-            MasterDataset["s3://dpla-master-dataset/\n~60 hub directories\nJSONL + Avro files"]
-            WikimediaBucket["s3://dpla-wikimedia/\n~12 partner directories\nDownloaded media + metadata"]
-            IndexerBucket["s3://dpla-sparkindexer/\nSparkindexer JAR"]
+            MasterDataset["s3://dpla-master-dataset/<br>~60 hub directories<br>JSONL + Avro files"]
+            WikimediaBucket["s3://dpla-wikimedia/<br>~12 partner directories<br>Downloaded media + metadata"]
+            IndexerBucket["s3://dpla-sparkindexer/<br>Sparkindexer JAR"]
         end
 
         subgraph compute ["Compute"]
-            EMR["EMR Cluster\n(temporary, monthly)\n1 master + 9 core nodes\n~2 hours runtime"]
-            EC2Wiki["EC2 Instance\n(persistent)\nt3.large, 7.6GB RAM\nWikimedia uploaders"]
+            EMR["EMR Cluster<br>(temporary, monthly)<br>1 master + 9 core nodes<br>~2 hours runtime"]
+            EC2Wiki["EC2 Instance<br>(persistent)<br>t3.large, 7.6GB RAM<br>Wikimedia uploaders"]
         end
 
         subgraph search ["Search"]
-            ES["Elasticsearch Cluster\n(managed)\ndpla_alias -> dpla-all-{timestamp}"]
-            API["DPLA API\napi.dp.la/v2/"]
+            ES["Elasticsearch Cluster<br>(managed)<br>dpla_alias -> dpla-all-{timestamp}"]
+            API["DPLA API<br>api.dp.la/v2/"]
         end
     end
 
     subgraph local ["Local Machine (Current)"]
-        Ingestion["ingestion3 orchestrator\nScala pipeline + Python orchestrator"]
+        Ingestion["ingestion3 orchestrator<br>Scala pipeline + Python orchestrator"]
     end
 
     Ingestion -->|"write JSONL"| MasterDataset
@@ -351,7 +352,7 @@ The fields below are the ones ingest-wikimedia depends on from the Elasticsearch
 
 ```
 All hubs ingested     -->  Indexer can run    -->  Alias flipped     -->  Wikimedia sees fresh data
-(~60 hubs, ~1 week)       (~2 hours, EMR)         (~5 min, gated)       (continuous, weeks)
+(~10 hubs, ~1 week)       (~7 hours, EMR)         (~5 min, gated)       (continuous, weeks)
 ```
 
 The ordering matters. Running the indexer before all hubs finish means the new index has stale data for incomplete hubs. Running Wikimedia ID refresh before the alias flip means it fetches IDs from the old index and may miss new records. The alias flip is the single most consequential moment in the monthly cycle: it determines what millions of users see on dp.la. It must be validated before execution and remain reversible after.
