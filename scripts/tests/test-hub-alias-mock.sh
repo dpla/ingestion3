@@ -45,7 +45,10 @@ chmod +x "$FAKE_BIN/aws"
 DATA_DIR="$TMPDIR/data"
 mkdir -p \
   "$DATA_DIR/hathi/jsonl/20260201_000000-hathi-MAP3_1.IndexRecord.jsonl" \
-  "$DATA_DIR/tn/jsonl/20260201_000000-tn-MAP3_1.IndexRecord.jsonl"
+  "$DATA_DIR/tn/jsonl/20260201_000000-tn-MAP3_1.IndexRecord.jsonl" \
+  "$DATA_DIR/tennessee/jsonl/20260201_000000-tennessee-MAP3_1.IndexRecord.jsonl"
+
+PYTHON_BIN="$REPO_ROOT/venv/bin/python"
 
 run_with_stubbed_aws() {
     PATH="$FAKE_BIN:$PATH" \
@@ -85,5 +88,37 @@ assert_log_contains "s3 sync $DATA_DIR/hathi/ s3://dpla-master-dataset/hathi/ --
 # 3) check-jsonl-sync uses alias for tn
 run_with_stubbed_aws "$REPO_ROOT/scripts/check-jsonl-sync.sh" --data-dir "$DATA_DIR" --profile dpla || true
 assert_log_contains "s3 ls s3://dpla-master-dataset/tennessee/jsonl/20260201_000000-tn-MAP3_1.IndexRecord.jsonl/ --profile dpla"
+
+# 4) check-jsonl-sync keeps canonical tennessee unchanged
+assert_log_contains "s3 ls s3://dpla-master-dataset/tennessee/jsonl/20260201_000000-tennessee-MAP3_1.IndexRecord.jsonl/ --profile dpla"
+
+# 5) orchestrator dry-run succeeds against canonical-key i3.conf with both
+# legacy and canonical hub arguments (no AWS writes in dry-run path)
+if [ -x "$PYTHON_BIN" ]; then
+  I3_CANONICAL_CONF="$TMPDIR/i3-canonical.conf"
+  cat > "$I3_CANONICAL_CONF" <<'EOF'
+tennessee.provider = "Digital Library of Tennessee"
+tennessee.harvest.type = "localoai"
+tennessee.schedule.frequency = "monthly"
+tennessee.schedule.months = [1]
+tennessee.schedule.status = "active"
+tennessee.s3_destination = "s3://dpla-master-dataset/tennessee/"
+
+hathitrust.provider = "HathiTrust"
+hathitrust.harvest.type = "localoai"
+hathitrust.schedule.frequency = "monthly"
+hathitrust.schedule.months = [1]
+hathitrust.schedule.status = "active"
+hathitrust.s3_destination = "s3://dpla-master-dataset/hathitrust/"
+EOF
+
+  PATH="$FAKE_BIN:$PATH" AWS_CALLS_LOG="$AWS_CALLS_LOG" \
+    "$PYTHON_BIN" -m scheduler.orchestrator.main --dry-run \
+    --config "$I3_CANONICAL_CONF" --hub=tn,hathi >/dev/null
+
+  PATH="$FAKE_BIN:$PATH" AWS_CALLS_LOG="$AWS_CALLS_LOG" \
+    "$PYTHON_BIN" -m scheduler.orchestrator.main --dry-run \
+    --config "$I3_CANONICAL_CONF" --hub=tennessee,hathitrust >/dev/null
+fi
 
 echo "PASS: mock alias tests completed without real AWS writes."
