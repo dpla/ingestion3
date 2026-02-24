@@ -11,6 +11,8 @@ Activate this skill when the user says:
 - "Check the escalation for X"
 - "Retry the X harvest"
 
+**Environment:** From repo root, run `source .env` before running any scripts (e.g. `harvest.sh`, `remap.sh`, `s3-sync.sh`) so `JAVA_HOME`, `DPLA_DATA`, `I3_CONF` are set. See [AGENTS.md](AGENTS.md) § Environment and build.
+
 ## Key Locations
 
 | Resource | Path |
@@ -150,7 +152,7 @@ cd ~/dpla/code/ingestion3 && ./scripts/s3-sync.sh <hub>
 - **Common Issue**: OutOfMemoryError on NMNHBIRDS_DPLA.xml.gz
 
 ### Florida (florida)
-- **Type**: File harvest  
+- **Type**: File harvest
 - **Source**: s3://dpla-hub-fl/
 - **Format**: JSONL files that need zipping
 

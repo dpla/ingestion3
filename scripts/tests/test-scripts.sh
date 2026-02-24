@@ -203,25 +203,30 @@ test_syntax() {
     echo "  Testing Script Syntax"
     echo "=========================================="
     
+    # Scripts in root and subfolders (relative to SCRIPTS_DIR)
     local scripts=(
         "auto-ingest.sh"
         "batch-ingest.sh"
-        "check-jsonl-sync.sh"
-        "delete-by-id.sh"
-        "delete-from-jsonl.sh"
         "enrich.sh"
-        "fix-si.sh"
-        "harvest-va.sh"
         "harvest.sh"
-        "ingest-status.sh"
         "ingest.sh"
         "jsonl.sh"
         "mapping.sh"
-        "nara-ingest.sh"
         "remap.sh"
         "s3-sync.sh"
-        "schedule.sh"
-        "send-ingest-email.sh"
+        "communication/notify-harvest-failure.sh"
+        "communication/schedule.sh"
+        "communication/send-ingest-email.sh"
+        "delete/delete-by-id.sh"
+        "delete/delete-from-jsonl.sh"
+        "harvest/community-webs-export.sh"
+        "harvest/community-webs-ingest.sh"
+        "harvest/fix-si.sh"
+        "harvest/harvest-va.sh"
+        "harvest/nara-ingest.sh"
+        "status/check-jsonl-sync.sh"
+        "status/ingest-status.sh"
+        "status/monitor-pipeline.sh"
     )
     
     for script in "${scripts[@]}"; do
@@ -251,6 +256,7 @@ test_common_sourcing() {
         return
     fi
     
+    # Root pipeline scripts and subfolder scripts that source common.sh
     local scripts=(
         "auto-ingest.sh"
         "batch-ingest.sh"
@@ -260,6 +266,16 @@ test_common_sourcing() {
         "jsonl.sh"
         "mapping.sh"
         "remap.sh"
+        "communication/send-ingest-email.sh"
+        "communication/schedule.sh"
+        "delete/delete-by-id.sh"
+        "delete/delete-from-jsonl.sh"
+        "harvest/community-webs-export.sh"
+        "harvest/community-webs-ingest.sh"
+        "harvest/fix-si.sh"
+        "harvest/harvest-va.sh"
+        "harvest/nara-ingest.sh"
+        "status/check-jsonl-sync.sh"
     )
     
     for script in "${scripts[@]}"; do
@@ -271,6 +287,7 @@ test_common_sourcing() {
             continue
         fi
         
+        # Accept source "$SCRIPTS_ROOT/common.sh" or source "$SCRIPT_DIR/../common.sh" or similar
         if grep -q 'source.*common\.sh\|\..*common\.sh' "$script_path" 2>/dev/null; then
             log_pass "Sourcing: $script sources common.sh"
         else
@@ -294,15 +311,15 @@ test_help_outputs() {
         return
     fi
     
-    # Scripts that should support --help
+    # Scripts that should support --help (paths relative to SCRIPTS_DIR)
     local scripts_with_help=(
         "auto-ingest.sh"
         "batch-ingest.sh"
-        "delete-by-id.sh"
-        "delete-from-jsonl.sh"
+        "delete/delete-by-id.sh"
+        "delete/delete-from-jsonl.sh"
         "ingest.sh"
-        "nara-ingest.sh"
-        "schedule.sh"
+        "harvest/nara-ingest.sh"
+        "communication/schedule.sh"
     )
     
     for script in "${scripts_with_help[@]}"; do
@@ -679,6 +696,51 @@ test_scripts_use_run_entry() {
 }
 
 # =============================================================================
+# Test: Referenced script paths exist (callers/docs reference these; no invocation)
+# =============================================================================
+
+test_referenced_script_paths() {
+    echo ""
+    echo "=========================================="
+    echo "  Referenced Script Paths Exist"
+    echo "=========================================="
+    
+    # Paths referenced by HarvestExecutor, orchestrator, docs, skills (relative to SCRIPTS_DIR)
+    local paths=(
+        "common.sh"
+        "ingest.sh"
+        "harvest.sh"
+        "remap.sh"
+        "mapping.sh"
+        "enrich.sh"
+        "jsonl.sh"
+        "s3-sync.sh"
+        "communication/notify-harvest-failure.sh"
+        "communication/send-harvest-failure-email.py"
+        "communication/send-ingest-email.sh"
+        "communication/schedule.sh"
+        "status/ingest-status.sh"
+        "status/check-jsonl-sync.sh"
+        "harvest/nara-ingest.sh"
+        "harvest/community-webs-ingest.sh"
+        "harvest/community-webs-export.sh"
+        "harvest/fix-si.sh"
+        "delete/delete-by-id.sh"
+        "delete/delete-from-jsonl.sh"
+    )
+    
+    for rel in "${paths[@]}"; do
+        local script_path="$SCRIPTS_DIR/$rel"
+        TESTS_RUN=$((TESTS_RUN + 1))
+        if [[ -f "$script_path" ]]; then
+            log_pass "Exists: $rel"
+        else
+            log_fail "Missing: $rel"
+        fi
+    done
+}
+
+# =============================================================================
 # Test: Deleted NARA-specific scripts no longer exist
 # =============================================================================
 
@@ -719,6 +781,7 @@ main() {
     # Run tests
     test_common_sh
     test_syntax
+    test_referenced_script_paths
     
     if [[ "$QUICK_MODE" != "true" ]]; then
         test_common_sourcing

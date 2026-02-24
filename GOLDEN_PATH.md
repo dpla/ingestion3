@@ -232,7 +232,7 @@ At the end of a run, the orchestrator writes **email draft files** for each comp
 cat logs/hub-emails-<run_id>/maryland.draft.txt
 
 # Send via the Scala Emailer (interactive — prompts for confirmation)
-./scripts/send-ingest-email.sh maryland
+./scripts/communication/send-ingest-email.sh maryland
 ```
 
 **Hubs without email:** If a hub has no email configured in `i3.conf`, it is listed in the Slack run summary under "Manual notification required" so you know to follow up.
@@ -255,22 +255,22 @@ The orchestrator writes per-hub status to `logs/status/<hub>.status` (JSON) in r
 
 ```bash
 # Table view
-./scripts/ingest-status.sh
+./scripts/status/ingest-status.sh
 
 # Auto-refreshing dashboard (every 30s)
-./scripts/ingest-status.sh --watch
+./scripts/status/ingest-status.sh --watch
 
 # Auto-refresh with custom interval
-./scripts/ingest-status.sh --watch 10
+./scripts/status/ingest-status.sh --watch 10
 
 # Specific hubs
-./scripts/ingest-status.sh wisconsin p2p
+./scripts/status/ingest-status.sh wisconsin p2p
 
 # Verbose (includes stage history with per-stage durations)
-./scripts/ingest-status.sh -v
+./scripts/status/ingest-status.sh -v
 
 # JSON output (for scripting)
-./scripts/ingest-status.sh --json
+./scripts/status/ingest-status.sh --json
 ```
 
 Example output:
@@ -372,7 +372,7 @@ Incomplete runs (directories with `_temporary` but no `_SUCCESS`) should be dele
 | `scheduler/orchestrator/hub_processor.py` | Per-hub pipeline execution |
 | `scheduler/orchestrator/state.py` | Run/hub state and per-stage timing |
 | `scheduler/orchestrator/anomaly_detector.py` | Pre-sync anomaly detection |
-| `scripts/send-ingest-email.sh` | Send ingest summary email to hub contacts (manual, interactive) |
+| `scripts/communication/send-ingest-email.sh` | Send ingest summary email to hub contacts (manual, interactive) |
 | `logs/hub-emails-<run_id>/` | Email draft files generated at run end |
 | `logs/status/<hub>.status` | Live per-hub status files (JSON) |
 | `logs/orchestrator_state.json` | Full orchestrator state across runs |

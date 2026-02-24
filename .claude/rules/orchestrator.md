@@ -32,11 +32,11 @@ Do not use system `python3`; use `./venv/bin/python`.
 ## Checking Status
 
 ```bash
-./scripts/ingest-status.sh              # Table view
-./scripts/ingest-status.sh --watch      # Auto-refresh
-./scripts/ingest-status.sh wisconsin p2p # Specific hubs
-./scripts/ingest-status.sh -v           # Verbose
-./scripts/ingest-status.sh --json       # JSON output
+./scripts/status/ingest-status.sh              # Table view
+./scripts/status/ingest-status.sh --watch      # Auto-refresh
+./scripts/status/ingest-status.sh wisconsin p2p # Specific hubs
+./scripts/status/ingest-status.sh -v           # Verbose
+./scripts/status/ingest-status.sh --json       # JSON output
 ```
 
 Per-hub status files: `logs/status/<hub>.status`.

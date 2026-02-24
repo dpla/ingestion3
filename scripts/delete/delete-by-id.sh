@@ -18,9 +18,10 @@
 
 set -e
 
-# Source common configuration
+# Source common configuration (common.sh is in scripts/ root)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+SCRIPTS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPTS_ROOT/common.sh"
 
 # Configuration - can be overridden with environment variables
 ES_HOST="${ES_HOST:-search-prod1.internal.dp.la:9200}"

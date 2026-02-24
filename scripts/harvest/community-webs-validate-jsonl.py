@@ -7,7 +7,7 @@ to the harvest step. Catches DB export issues early.
 
 Usage:
     python -m scripts.community-webs-validate-jsonl /path/to/community-webs.jsonl
-    ./scripts/community-webs-validate-jsonl.py /path/to/file.jsonl
+    ./scripts/harvest/community-webs-validate-jsonl.py /path/to/file.jsonl
 
 Exit: 0 if valid, 1 if invalid.
 """

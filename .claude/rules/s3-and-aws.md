@@ -30,7 +30,7 @@ Do not bypass with raw `aws s3 sync` unless necessary—and then still use `--pr
 ## Check JSONL Sync Status
 
 ```bash
-./scripts/check-jsonl-sync.sh
+./scripts/status/check-jsonl-sync.sh
 ```
 
 See [scripts/SCRIPTS.md](scripts/SCRIPTS.md) for options.

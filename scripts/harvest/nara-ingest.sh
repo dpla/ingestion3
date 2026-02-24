@@ -29,7 +29,8 @@ set -e  # Exit on any error
 # ============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+SCRIPTS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPTS_ROOT/common.sh"
 
 # S3 configuration
 S3_BUCKET="s3://dpla-master-dataset"

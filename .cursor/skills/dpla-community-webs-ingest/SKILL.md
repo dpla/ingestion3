@@ -21,9 +21,9 @@ Run the Community Webs ingest workflow: export SQLite DB → JSONL → ZIP → h
 
 1. **Place the DB** in `$DPLA_DATA/community-webs/originalRecords/` (or provide path via `--db=`).
 2. **Run export + harvest** (or full pipeline):
-   - Export + harvest only: `./scripts/community-webs-ingest.sh`
-   - Full pipeline (harvest + map + enrich + jsonl): `./scripts/community-webs-ingest.sh --full`
-   - Update i3.conf with output path: `./scripts/community-webs-ingest.sh --full --update-conf`
+   - Export + harvest only: `./scripts/harvest/community-webs-ingest.sh`
+   - Full pipeline (harvest + map + enrich + jsonl): `./scripts/harvest/community-webs-ingest.sh --full`
+   - Update i3.conf with output path: `./scripts/harvest/community-webs-ingest.sh --full --update-conf`
 3. **Verify** outputs: `_SUCCESS` in harvest/mapping/enrichment/jsonl dirs.
 
 ## Scripts

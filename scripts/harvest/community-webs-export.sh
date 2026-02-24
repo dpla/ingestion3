@@ -25,11 +25,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+SCRIPTS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPTS_ROOT/common.sh"
 
-# Configuration
+# Configuration (I3_HOME set by common.sh)
 CW_ORIGINALS="${DPLA_DATA}/community-webs/originalRecords"
-I3_HOME="${I3_HOME:-$(dirname "$SCRIPT_DIR")}"
 COMMON_DIR="${COMMON_DIR:-$(get_common_dir)}"
 
 # Defaults

@@ -17,7 +17,7 @@ Use this skill when the user asks to:
 
 ## How It Works
 
-The skill wraps the existing `scripts/send-ingest-email.sh` script which:
+The skill wraps the existing `scripts/communication/send-ingest-email.sh` script which:
 1. Reads hub email from `i3.conf` (e.g., `nara.email = "contact@nara.gov"`)
 2. Finds the most recent mapping output directory for the hub
 3. Extracts the `_SUMMARY` file content
@@ -30,17 +30,17 @@ The skill wraps the existing `scripts/send-ingest-email.sh` script which:
 
 **Basic usage (latest mapping):**
 ```bash
-source .env && ./scripts/send-ingest-email.sh <hub-name>
+source .env && ./scripts/communication/send-ingest-email.sh <hub-name>
 ```
 
 **Non-interactive (skip confirmation):**
 ```bash
-source .env && ./scripts/send-ingest-email.sh --yes <hub-name>
+source .env && ./scripts/communication/send-ingest-email.sh --yes <hub-name>
 ```
 
 **Specific mapping directory:**
 ```bash
-source .env && ./scripts/send-ingest-email.sh <hub-name> <mapping-dir-path>
+source .env && ./scripts/communication/send-ingest-email.sh <hub-name> <mapping-dir-path>
 ```
 
 **Options:**
@@ -65,7 +65,7 @@ User: "send email for nara"
 
 You should:
 ```bash
-source .env && ./scripts/send-ingest-email.sh --yes nara
+source .env && ./scripts/communication/send-ingest-email.sh --yes nara
 ```
 
 Note: The `--yes` flag skips the confirmation prompt. If the user wants to review first, omit it.
@@ -80,7 +80,7 @@ You should:
    ```
 2. Send email with that specific directory:
    ```bash
-   source .env && ./scripts/send-ingest-email.sh maryland /path/to/mapping/dir
+   source .env && ./scripts/communication/send-ingest-email.sh maryland /path/to/mapping/dir
    ```
 
 ### Bulk email sending
@@ -89,9 +89,9 @@ User: "send emails for wisconsin, p2p, and maryland"
 You should:
 ```bash
 source .env
-./scripts/send-ingest-email.sh --yes wisconsin
-./scripts/send-ingest-email.sh --yes p2p
-./scripts/send-ingest-email.sh --yes maryland
+./scripts/communication/send-ingest-email.sh --yes wisconsin
+./scripts/communication/send-ingest-email.sh --yes p2p
+./scripts/communication/send-ingest-email.sh --yes maryland
 ```
 
 ## Confirmation Prompt
@@ -109,7 +109,7 @@ Send email? (y/n)
 
 **When running via Claude Code:**
 - Use `--yes` flag to skip the prompt when the user has already confirmed
-- Example: `./scripts/send-ingest-email.sh --yes nara`
+- Example: `./scripts/communication/send-ingest-email.sh --yes nara`
 - Without `--yes`, the script will pause for user confirmation
 
 ## Error Handling
@@ -151,7 +151,7 @@ To send emails after an orchestrator run:
 
 ## Related
 
-- **Script source**: `scripts/send-ingest-email.sh`
+- **Script source**: `scripts/communication/send-ingest-email.sh`
 - **Scala Emailer**: `src/main/scala/dpla/ingestion3/utils/Emailer.scala`
 - **Config**: i3.conf at `$I3_CONF` (default: `~/dpla/code/ingestion3-conf/i3.conf`)
 - **Orchestrator email drafts**: `logs/hub-emails-*/`

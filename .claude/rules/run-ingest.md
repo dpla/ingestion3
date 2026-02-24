@@ -21,7 +21,7 @@ Run an ingest for a specific hub using the right runbook and scripts, then verif
    - Full pipeline: `./scripts/ingest.sh <hub>`
    - Harvest only: `./scripts/harvest.sh <hub>`
    - Remap (mapping + enrich + jsonl): `./scripts/remap.sh <hub>`
-   - NARA: `./scripts/nara-ingest.sh <nara-export.zip>`
+   - NARA: `./scripts/harvest/nara-ingest.sh <nara-export.zip>`
 5. **Verify** outputs: `_SUCCESS` in the step output dirs; `_MANIFEST` / `_SUMMARY` for counts.
 6. **S3 sync** when the runbook says so: `./scripts/s3-sync.sh <hub>`.
 7. **On failure:** Post to #tech-alerts or email tech@dp.la with hub, stage, and error or path to escalation report.

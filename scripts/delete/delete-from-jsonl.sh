@@ -18,9 +18,10 @@
 
 set -e
 
-# Source common configuration
+# Source common configuration (common.sh is in scripts/ root)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+SCRIPTS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPTS_ROOT/common.sh"
 
 # Configuration
 S3_BUCKET="${S3_BUCKET:-dpla-master-dataset}"

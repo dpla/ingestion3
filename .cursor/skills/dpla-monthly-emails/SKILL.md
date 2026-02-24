@@ -1,232 +1,88 @@
 # DPLA Monthly Hub Scheduling Emails Skill
 
 ## Purpose
-Generate and send monthly scheduling notification emails to DPLA hubs informing them that their metadata ingest will be performed during the last week of the month.
+Generate and send the **monthly pre-scheduling email** to DPLA hub contacts: one summary email listing all hubs scheduled for that month, the last calendar week date range, and asking for data readiness or skip requests.
 
 ## When to Use
 Activate this skill when the user says:
-- "Generate monthly emails"
-- "Create hub notification emails for [month]"
-- "Send scheduling emails to hubs"
-- "Prepare February hub notifications"
-- "Draft ingest notification emails"
+- "Send scheduling email"
+- "Send monthly scheduling email"
+- "Notify hubs for February"
+- "Pre-scheduling email for this month"
+- "Generate monthly emails" / "Prepare February hub notifications"
 
 ## Overview
-At the beginning of each month, DPLA sends notification emails to hubs scheduled for ingest that month. These emails inform hub contacts that:
-1. Their data will be harvested during the **last week of the month**
-2. Any feed issues should be reported in advance
-3. They can monitor progress on their dashboard
+At the beginning of each month, DPLA sends **one summary email** to all contacts of hubs scheduled for that month (from **i3.conf**). The email:
+1. States that ingests will run during the **last calendar week** of the month (with concrete date range)
+2. Lists all hubs included that month
+3. Asks contacts to have data ready or to tell DPLA if they need to be skipped or have issues
+4. CC: **ingest@dp.la**, **dominic@dp.la** on every send
+
+**Source of truth:** i3.conf. Hub inclusion is determined by `<hub>.schedule.months` (e.g. `digitalnc.schedule.months = [2, 5, 8, 11]`). Empty `schedule.months = []` means the hub is never scheduled (on-hold). Contacts come from `<hub>.email`.
+
+**Environment:** Run `source .env` from repo root when using config/paths. See [AGENTS.md](AGENTS.md) § Environment and build.
 
 ## Key Files
 
 | Resource | Path |
 |----------|------|
-| Schedule JSON | `/Users/scott/dpla/code/ingestion3/scheduler/schedule.json` |
-| Email Template | `/Users/scott/dpla/code/ingestion3/scheduler/email-template.txt` |
-| Email Script | `/Users/scott/dpla/code/ingestion3/scheduler/email-template.sh` |
-| Output Dir | `/Users/scott/dpla/code/ingestion3/scheduler/emails/` |
-| i3.conf | `/Users/scott/dpla/code/ingestion3-conf/i3.conf` |
+| Scheduling email script | `scheduler/orchestrator/scheduling_emails.py` |
+| Draft output dir | `scheduler/emails/` |
+| i3.conf | `$I3_CONF` (e.g. `~/dpla/code/ingestion3-conf/i3.conf`) |
 
-## Workflow
+## Workflow: Always Preview Before Send
 
-### Step 1: Identify Scheduled Hubs
-First, determine which hubs are scheduled for the target month.
+1. **Show preview first:** Run with `--dry-run` so the user sees:
+   - **Date range** (e.g. "February 23 – February 28, 2026")
+   - **Hubs included** (with "(no email in i3.conf)" noted where applicable)
+   - Full To/CC list and email body
+2. **After the user has seen and accepted the preview**, offer:
+   - `--draft` — write draft to `scheduler/emails/scheduling-YYYY-MM.txt` for manual review/send
+   - `--send` — send via AWS SES (CC ingest@dp.la, dominic@dp.la)
 
-```bash
-# Using the existing script
-cd /Users/scott/dpla/code/ingestion3/scheduler
-./schedule.sh
-```
+**Agent must always show the preview (date range + hubs list) before sending.**
 
-Or query the schedule.json directly:
-```bash
-# Find February (month 2) hubs
-jq '.hubs[] | select(.schedule.months[] == 2) | {name, provider_code, contacts, frequency: .schedule.frequency}' schedule.json
-```
-
-### Step 2: Generate Email Files
-Use the existing email generation script:
+## Commands
 
 ```bash
-cd /Users/scott/dpla/code/ingestion3/scheduler
-./email-template.sh
+# Preview for current month (date range, hubs, body)
+./venv/bin/python -m scheduler.orchestrator.scheduling_emails --dry-run
+
+# Preview for a specific month (e.g. February = 2)
+./venv/bin/python -m scheduler.orchestrator.scheduling_emails --month=2 --dry-run
+
+# Write draft file (after user approves preview)
+./venv/bin/python -m scheduler.orchestrator.scheduling_emails --month=2 --draft
+
+# Send via SES (after user approves preview)
+./venv/bin/python -m scheduler.orchestrator.scheduling_emails --month=2 --send
 ```
-
-This creates files in `scheduler/emails/` with format: `{provider_code}-{year}-{month}.txt`
-
-### Step 3: Review and Customize
-Review generated emails in `scheduler/emails/`. Customize as needed:
-- Add specific notes about known issues
-- Include any special instructions
-- Update dashboard URLs if changed
-
-### Step 4: Send Emails
-Emails can be sent via:
-1. Copy/paste into email client
-2. Command line (if configured)
-3. Through DPLA's email system
-
-## Email Template Format
-
-The standard template includes:
-
-```
-Subject: DPLA Monthly Ingest Notification - {{MONTH}} {{YEAR}}
-
-Dear {{HUB_NAME}} Team,
-
-This is a scheduled notification that DPLA will be performing a metadata ingest 
-for {{HUB_NAME}} during the last week of {{MONTH}} {{YEAR}}.
-
-Schedule Details:
-- Frequency: {{FREQUENCY}}
-- Scheduled Months: {{MONTHS}}
-- Ingest Window: Last week of {{MONTH}}
-
-The ingest process will include:
-1. Harvesting metadata from your feed
-2. Mapping to DPLA metadata model
-3. Enrichment with additional data
-4. Publishing to dp.la
-
-{{#NOTES}}
-Special Notes: {{NOTES}}
-{{/NOTES}}
-
-If you have any questions or need to report feed issues, please contact us 
-before the ingest window begins.
-
-Dashboard: {{DASHBOARD_URL}}
-
-Best regards,
-DPLA Content Team
-```
-
-## Hub Schedule Reference
-
-### Quarterly Hubs (4x/year)
-| Hub | Months | Notes |
-|-----|--------|-------|
-| David Rumsey | Dec, Mar, Jun, Sep | |
-| Internet Archive | Nov, Feb, May, Aug | |
-| NARA | Jan, Apr, Jul, Oct | Wikimedia Partner |
-| Smithsonian | Nov, Feb, May, Aug | File harvest, needs preprocessing |
-
-### Monthly Hubs (12x/year)
-| Hub | Notes |
-|-----|-------|
-| Harvard | OAI harvest |
-
-### Bi-Monthly Hubs (6x/year)
-| Hub | Months |
-|-----|--------|
-| Various | Every other month |
-
-## Generating Custom Emails
-
-### For a Specific Month
-```bash
-# Set the month (1-12) before running
-export TARGET_MONTH=2  # February
-./email-template.sh
-```
-
-### For a Specific Hub
-Draft a custom email:
-
-```
-Subject: DPLA Ingest Notification - [Hub Name] - [Month] [Year]
-
-Dear [Hub Name] Team,
-
-This is a reminder that DPLA will be harvesting your metadata during the 
-last week of [Month] [Year].
-
-IMPORTANT: Please ensure your OAI feed is accessible and up-to-date before 
-[Date of last week].
-
-If you have any updates, new collections, or known issues with your feed, 
-please let us know by replying to this email.
-
-Your Dashboard: [Dashboard URL]
-
-Schedule: [Frequency] - [List of scheduled months]
-
-Best regards,
-DPLA Content Team
-```
-
-## Contact Information Sources
-
-Contacts are stored in `schedule.json` under each hub's `contacts` array:
-
-```json
-{
-  "name": "Hub Name",
-  "provider_code": "hub-code",
-  "contacts": [
-    "primary@example.com",
-    "secondary@example.com"
-  ]
-}
-```
-
-To get all contacts for a month:
-```bash
-jq -r '.hubs[] | select(.schedule.months[] == 2) | "\(.name): \(.contacts | join(", "))"' schedule.json
-```
-
-## Special Considerations
-
-### File-Based Hubs
-For hubs with file-based harvests (Florida, Smithsonian, Vermont):
-- May need to request updated data export
-- Include note about expected data delivery timing
-
-### Wikimedia Partners
-Hubs marked as "Wikimedia Partner" in notes:
-- May have special requirements
-- Include Wikimedia-specific language if needed
-
-### New/Changed Feeds
-If a hub has recently changed their feed:
-- Include note about testing/verification
-- May want to schedule a pre-ingest check
 
 ## Example Agent Interaction
 
-**User**: "Generate February hub notification emails"
+**User:** "Send scheduling email for February"
 
-**Agent Actions**:
-1. Read `schedule.json` to find February hubs
-2. List the hubs: florida, getty, gpo, harvard, ia, mwdl, nypl, oklahoma, scdl, smithsonian, texas, vt
-3. Run `./email-template.sh` or generate emails directly
-4. Show the user the generated emails
-5. Offer to customize any specific emails
-6. Provide instructions for sending
+**Agent Actions:**
+1. Run: `./venv/bin/python -m scheduler.orchestrator.scheduling_emails --month=2 --dry-run`
+2. Show the user the **Preview** output: date range (e.g. February 23 – February 28, 2026), list of hubs, To/CC, and body
+3. Ask: "If this looks correct, should I write a draft to `scheduler/emails/` or send the email now?"
+4. If user says send: run with `--send`. If draft: run with `--draft`
 
-**User**: "Draft a special email for Smithsonian about their preprocessing requirements"
+## Optional: Per-Hub Drafts (schedule.json)
 
-**Agent Actions**:
-1. Create custom email noting:
-   - File-based harvest requiring data export
-   - Request for updated export by specific date
-   - Note about XML preprocessing requirements
-2. Show draft for approval
-3. Save to `scheduler/emails/smithsonian-2026-Feb.txt`
+The repo also has **schedule.json**-based tools for per-hub email drafts (different workflow):
+- `scheduler/schedule.json` — alternate schedule/contacts source
+- `scheduler/email-template.sh` + `scheduler/email-template.txt` — generate one file per hub in `scheduler/emails/`
 
-## Quick Commands
+The **canonical** monthly pre-scheduling process is the i3.conf-based summary email above. Use the schedule.json workflow only if the user explicitly asks for per-hub drafts or Confluence-derived data.
 
-```bash
-# Generate all emails for current month
-cd /Users/scott/dpla/code/ingestion3/scheduler && ./email-template.sh
+## Quick Reference
 
-# List scheduled hubs for February
-jq -r '.hubs[] | select(.schedule.months[] == 2) | .name' schedule.json
+| Task | Command |
+|------|---------|
+| Preview (current month) | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails --dry-run` |
+| Preview (February) | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails --month=2 --dry-run` |
+| Write draft | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails --month=2 --draft` |
+| Send via SES | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails --month=2 --send` |
 
-# Get contacts for a specific hub
-jq -r '.hubs[] | select(.provider_code == "harvard") | .contacts[]' schedule.json
-
-# Preview what ingests are scheduled
-cd /Users/scott/dpla/code/ingestion3/scheduler && ./schedule.sh
-```
+Documented in [scripts/SCRIPTS.md](scripts/SCRIPTS.md) under "Scheduling emails (monthly pre-scheduling notification)".

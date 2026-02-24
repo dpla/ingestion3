@@ -44,7 +44,7 @@ The script uses the correct bucket and prefix; do not bypass it with raw `aws s3
 To see how local JSONL exports compare to S3:
 
 ```bash
-./scripts/check-jsonl-sync.sh
+./scripts/status/check-jsonl-sync.sh
 ```
 
 Uses AWS profile via script env; see [scripts/SCRIPTS.md](scripts/SCRIPTS.md) for options.

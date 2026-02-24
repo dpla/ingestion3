@@ -29,7 +29,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+SCRIPTS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPTS_ROOT/common.sh"
 
 # Defaults
 SKIP_EXPORT=false
@@ -99,11 +100,11 @@ main() {
     fi
 
     print_step "Harvesting community-webs..."
-    "$SCRIPT_DIR/harvest.sh" community-webs || die "Harvest failed"
+    "$SCRIPTS_ROOT/harvest.sh" community-webs || die "Harvest failed"
 
     if [[ "$FULL_PIPELINE" == "true" ]]; then
         print_step "Running full pipeline (mapping + enrichment + jsonl)..."
-        "$SCRIPT_DIR/ingest.sh" community-webs --skip-harvest || die "Pipeline failed"
+        "$SCRIPTS_ROOT/ingest.sh" community-webs --skip-harvest || die "Pipeline failed"
         log_success "Community Webs ingest complete"
         echo ""
         echo "Output: $DPLA_DATA/community-webs/"

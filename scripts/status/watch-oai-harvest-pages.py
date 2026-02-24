@@ -8,7 +8,7 @@ Detects lines like:
   ... resumptionToken=TOKEN:MODS:OFFSET:TOTAL::  (offset/total embedded in token)
 
 Usage:
-  ./venv/bin/python scripts/watch-oai-harvest-pages.py --log=<path> --hub=<hub>
+  ./venv/bin/python scripts/status/watch-oai-harvest-pages.py --log=<path> --hub=<hub>
 """
 
 import argparse

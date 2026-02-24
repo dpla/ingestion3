@@ -16,9 +16,10 @@
 
 set -euo pipefail
 
-# Source common configuration
+# Source common configuration (common.sh is in scripts/ root)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+SCRIPTS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPTS_ROOT/common.sh"
 
 # Configuration
 DATA_PATH="${DPLA_DATA}/smithsonian/originalRecords"

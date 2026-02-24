@@ -23,9 +23,9 @@ HUB="${1:?Usage: notify-harvest-failure.sh <hub> <error> [<email_body>]}"
 ERROR_MSG="${2:-Unknown error}"
 EMAIL_BODY="${3:-}"
 
-# Repo root for venv and Python helper
+# Repo root for venv and Python helper (script lives in scripts/communication/)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-I3_HOME="${I3_HOME:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+I3_HOME="${I3_HOME:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 export I3_HOME
 
 # Truncate very long error messages for Slack
@@ -68,7 +68,7 @@ fi
 # When EMAIL_BODY is provided (from Scala), pass it as arg 3 so the Python
 # script uses it as-is. Otherwise the Python script wraps ERROR_MSG in a
 # default template.
-SEND_EMAIL_SCRIPT="$I3_HOME/scripts/send-harvest-failure-email.py"
+SEND_EMAIL_SCRIPT="$I3_HOME/scripts/communication/send-harvest-failure-email.py"
 PYTHON="${I3_HOME}/venv/bin/python"
 if [ -x "$PYTHON" ] && [ -f "$SEND_EMAIL_SCRIPT" ]; then
     if [ -n "$EMAIL_BODY" ]; then

@@ -48,19 +48,19 @@ Per-hub status is written to `logs/status/<hub>.status` (JSON). Use the status s
 
 ```bash
 # Table view
-./scripts/ingest-status.sh
+./scripts/status/ingest-status.sh
 
 # Auto-refresh (e.g. every 30s)
-./scripts/ingest-status.sh --watch
+./scripts/status/ingest-status.sh --watch
 
 # Specific hubs
-./scripts/ingest-status.sh wisconsin p2p
+./scripts/status/ingest-status.sh wisconsin p2p
 
 # Verbose (stage history, durations)
-./scripts/ingest-status.sh -v
+./scripts/status/ingest-status.sh -v
 
 # JSON (for scripting)
-./scripts/ingest-status.sh --json
+./scripts/status/ingest-status.sh --json
 ```
 
 ## Key Locations

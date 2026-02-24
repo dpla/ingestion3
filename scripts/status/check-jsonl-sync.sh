@@ -12,9 +12,10 @@
 
 # Don't use set -e as aws commands may return non-zero for missing paths
 
-# Source common configuration
+# Source common configuration (common.sh is in scripts/ root)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+SCRIPTS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPTS_ROOT/common.sh"
 
 # Default values (use DPLA_DATA from common.sh)
 DATA_DIR="${DPLA_DATA:-$HOME/dpla/data}"

@@ -9,9 +9,10 @@
 #   ./scripts/schedule.sh 2            # Show hubs scheduled for month 2
 #   ./scripts/schedule.sh virginias    # Show schedule for a specific hub
 
-# Source common configuration
+# Source common configuration (common.sh is in scripts/ root)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+SCRIPTS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPTS_ROOT/common.sh"
 
 # Verify I3_CONF exists
 if [[ ! -f "$I3_CONF" ]]; then

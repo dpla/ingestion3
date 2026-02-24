@@ -114,12 +114,12 @@ Internet Archive Community Webs sends a SQLite database. Use the automated scrip
 
 **Automated (recommended):**
 1. Place the `*.db` file in `$DPLA_DATA/community-webs/originalRecords/`
-2. Run: `./scripts/community-webs-ingest.sh --full --update-conf`
+2. Run: `./scripts/harvest/community-webs-ingest.sh --full --update-conf`
    - This exports the DB to JSONL, validates schema, zips, updates i3.conf, harvests, and runs the full pipeline (mapping + enrichment + jsonl)
 
 **Manual (if needed):**
 - Install `jq` and `sqlite3`: `brew install jq sqlite3` / `apt install jq sqlite3`
-1. Export: `./scripts/community-webs-export.sh --db=/path/to/file.db --update-conf`
+1. Export: `./scripts/harvest/community-webs-export.sh --db=/path/to/file.db --update-conf`
 2. Harvest: `./scripts/harvest.sh community-webs`
 3. Pipeline: `./scripts/ingest.sh community-webs --skip-harvest`
 

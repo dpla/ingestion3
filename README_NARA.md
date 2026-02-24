@@ -32,23 +32,23 @@ delivered quarterly as ZIP files containing XML records grouped by "export group
 
 ## Automated Script
 
-The `scripts/nara-ingest.sh` script automates the entire workflow:
+The `scripts/harvest/nara-ingest.sh` script automates the entire workflow:
 
 ```bash
 # Single month, full pipeline
-./scripts/nara-ingest.sh --month=202601
+./scripts/harvest/nara-ingest.sh --month=202601
 
 # Two months: Dec merge-only, Jan merge + full pipeline
-./scripts/nara-ingest.sh --month=202512,202601
+./scripts/harvest/nara-ingest.sh --month=202512,202601
 
 # Stop after merge (no mapping/enrichment/jsonl)
-./scripts/nara-ingest.sh --month=202601 --skip-pipeline
+./scripts/harvest/nara-ingest.sh --month=202601 --skip-pipeline
 
 # Use a specific base harvest
-./scripts/nara-ingest.sh --month=202601 --base=~/dpla/data/nara/harvest/20250429_000000-nara-OriginalRecord.avro
+./scripts/harvest/nara-ingest.sh --month=202601 --base=~/dpla/data/nara/harvest/20250429_000000-nara-OriginalRecord.avro
 
 # Resume pipeline on an existing merged harvest
-./scripts/nara-ingest.sh --skip-to-pipeline --harvest=~/dpla/data/nara/harvest/20260209_000000-nara-OriginalRecord.avro
+./scripts/harvest/nara-ingest.sh --skip-to-pipeline --harvest=~/dpla/data/nara/harvest/20260209_000000-nara-OriginalRecord.avro
 ```
 
 The script handles:
@@ -58,7 +58,7 @@ The script handles:
 - Per-step memory tuning (configurable via environment variables)
 - Multi-month chaining (merged output from month N becomes base for month N+1)
 
-See `./scripts/nara-ingest.sh --help` for all options.
+See `./scripts/harvest/nara-ingest.sh --help` for all options.
 
 ---
 

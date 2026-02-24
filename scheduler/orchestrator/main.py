@@ -197,12 +197,16 @@ class IngestOrchestrator:
                 # Send anomaly alert if anomalies were detected
                 if result.anomaly_report and result.anomaly_report.anomalies:
                     self.notifier.send_anomaly_alert(hub, result.anomaly_report)
-                # Notify: sync complete
+                # Notify: sync complete (→ #tech-alerts)
                 if result.success:
                     self.notifier.send_sync_complete(
                         run_id, hub,
                         duration_seconds=result.duration_seconds,
                     )
+                    # Notify: hub complete (→ #tech with @here)
+                    harvest_counts = processor.get_harvest_counts()
+                    mapping_counts = processor.get_mapping_counts()
+                    self._send_hub_complete(hub, processor, harvest_counts, mapping_counts)
                 return hub, result
 
             sync_tasks = [sync_hub(h) for h in completed_hubs]
@@ -315,11 +319,13 @@ class IngestOrchestrator:
                     self.notifier.send_anomaly_alert(hub, sync_result.anomaly_report)
                 if not sync_result.success:
                     raise Exception(f"S3 sync failed: {sync_result.error}")
-                # Notify: sync complete
+                # Notify: sync complete (→ #tech-alerts)
                 self.notifier.send_sync_complete(
                     run_id, hub,
                     duration_seconds=sync_result.duration_seconds,
                 )
+                # Notify: hub complete (→ #tech with @here)
+                self._send_hub_complete(hub, processor, harvest_counts, mapping_counts)
             else:
                 print(f"  [6/6] Skipping S3 sync (--skip-s3-sync)")
 
@@ -367,6 +373,29 @@ class IngestOrchestrator:
                 'diagnosis': diagnosis.to_dict(),
                 'failure_stage': failure_stage
             }
+
+    def _send_hub_complete(self, hub, processor, harvest_counts, mapping_counts):
+        """Send hub-complete success notification to #tech."""
+        from .s3_utils import get_latest_dir
+
+        # Derive current run date from the latest mapping directory timestamp
+        current_run_date = None
+        latest_mapping = get_latest_dir(processor.mapping_dir)
+        if latest_mapping:
+            ts = latest_mapping.name[:8]  # YYYYMMDD
+            try:
+                current_run_date = f"{ts[4:6]}-{ts[6:8]}-{ts[0:4]}"
+            except (IndexError, ValueError):
+                pass
+
+        self.notifier.send_hub_complete_success(
+            hub=hub,
+            harvest_count=harvest_counts.record_count,
+            mapping_attempted=mapping_counts.attempted,
+            mapping_successful=mapping_counts.successful,
+            mapping_failed=mapping_counts.failed,
+            current_run_date=current_run_date,
+        )
 
     async def retry_failed(self, run_id: str | None = None) -> dict:
         """Retry failed hubs from a previous run."""
@@ -485,6 +514,78 @@ def _run_dry_run_notify(config: Config):
         write_drafts=True
     )
 
+    # Send hub-complete success notifications (→ #tech with @here)
+    # Use real hub data when available, otherwise simulated
+    print(f"\n--- Sending hub-complete success notifications ---")
+
+    for hub_name in real_hubs[:2]:
+        # Read real counts from local data
+        hub_data_dir = config.data_dir / hub_name
+        mapping_dir = hub_data_dir / "mapping"
+        harvest_dir = hub_data_dir / "harvest"
+
+        harvest_count = None
+        mapping_attempted = None
+        mapping_successful = None
+        mapping_failed = None
+        current_run_date = None
+
+        latest_mapping = get_latest_dir(mapping_dir)
+        if latest_mapping:
+            ts = latest_mapping.name[:8]
+            try:
+                current_run_date = f"{ts[4:6]}-{ts[6:8]}-{ts[0:4]}"
+            except (IndexError, ValueError):
+                pass
+
+            summary_file = latest_mapping / "_SUMMARY"
+            if summary_file.exists():
+                import re as _re
+                content = summary_file.read_text()
+                m_a = _re.search(r'Attempted\.+([0-9,]+)', content)
+                m_s = _re.search(r'Successful\.+([0-9,]+)', content)
+                m_f = _re.search(r'Failed\.+([0-9,]+)', content)
+                if m_a:
+                    mapping_attempted = int(m_a.group(1).replace(',', ''))
+                if m_s:
+                    mapping_successful = int(m_s.group(1).replace(',', ''))
+                if m_f:
+                    mapping_failed = int(m_f.group(1).replace(',', ''))
+
+        latest_harvest = get_latest_dir(harvest_dir)
+        if latest_harvest:
+            manifest = latest_harvest / "_MANIFEST"
+            if manifest.exists():
+                import re as _re
+                content = manifest.read_text()
+                m = _re.search(r'Record count:\s*([0-9,]+)', content)
+                if m:
+                    harvest_count = int(m.group(1).replace(',', ''))
+
+        print(f"  Hub: {hub_name} (date={current_run_date}, harvest={harvest_count}, "
+              f"mapped={mapping_successful}, failed={mapping_failed})")
+
+        notifier.send_hub_complete_success(
+            hub=hub_name,
+            harvest_count=harvest_count,
+            mapping_attempted=mapping_attempted,
+            mapping_successful=mapping_successful,
+            mapping_failed=mapping_failed,
+            current_run_date=current_run_date,
+            test_prefix=test_prefix,
+        )
+
+    # Also send one with simulated data
+    notifier.send_hub_complete_success(
+        hub="simulated-hub",
+        harvest_count=125000,
+        mapping_attempted=125000,
+        mapping_successful=122500,
+        mapping_failed=85,
+        current_run_date="02-10-2026",
+        test_prefix=test_prefix,
+    )
+
     # Send sample anomaly alerts
     print(f"\n--- Sending sample anomaly alerts ---")
 
@@ -564,7 +665,8 @@ def _run_dry_run_notify(config: Config):
 
     print(f"\n" + "="*60)
     print("  DRY-RUN COMPLETE")
-    print("  Check #tech-alerts in Slack for test messages")
+    print("  Check #tech-alerts in Slack for per-stage / anomaly messages")
+    print("  Check #tech in Slack for hub-complete @here messages")
     print("="*60 + "\n")
 
 

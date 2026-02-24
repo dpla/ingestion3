@@ -155,7 +155,7 @@ trait HarvestExecutor {
           val scriptPath = sys.env.getOrElse(
             "I3_HOME",
             System.getProperty("user.dir")
-          ) + "/scripts/notify-harvest-failure.sh"
+          ) + "/scripts/communication/notify-harvest-failure.sh"
           val pb = new ProcessBuilder(
             "bash",
             scriptPath,

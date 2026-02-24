@@ -3,8 +3,8 @@
 Watch an OAI harvest log file and report set-by-set progress.
 
 Usage:
-  ./venv/bin/python scripts/watch-oai-harvest.py --log=<path> --total=<n>
-  ./venv/bin/python scripts/watch-oai-harvest.py --log=<path> --conf=<i3.conf> --hub=<hub>
+  ./venv/bin/python scripts/status/watch-oai-harvest.py --log=<path> --total=<n>
+  ./venv/bin/python scripts/status/watch-oai-harvest.py --log=<path> --conf=<i3.conf> --hub=<hub>
 
 Detects set transitions in lines like:
   ... OaiMultiPageResponseBuilder - Loading page ...?set=<setname>&...

@@ -11,8 +11,9 @@
 #   ./ingest-status.sh --watch 10        # Auto-refresh (10s)
 #
 
+# Repo root (script lives in scripts/status/)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-I3_HOME="$(dirname "$SCRIPT_DIR")"
+I3_HOME="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$I3_HOME"
 python3 -m scheduler.orchestrator.status "$@"

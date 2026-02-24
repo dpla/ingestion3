@@ -4,6 +4,10 @@
 # Usage:
 #   ./scripts/send-ingest-email.sh <hub-name>
 #   ./scripts/send-ingest-email.sh <hub-name> <mapping-dir>
+#   ./scripts/send-ingest-email.sh --yes <hub-name>
+#
+# Options:
+#   --yes, -y    Skip confirmation prompt and send immediately
 #
 # This script:
 #   1. Finds the most recent mapping output for the hub
@@ -12,18 +16,41 @@
 
 set -euo pipefail
 
-# Source common configuration
+# Source common configuration (common.sh is in scripts/ root)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+SCRIPTS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPTS_ROOT/common.sh"
 
 # Setup Java environment (4g for email)
 setup_java "4g" || die "Failed to setup Java environment"
 
+# Parse options
+SKIP_CONFIRM=false
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --yes|-y)
+            SKIP_CONFIRM=true
+            shift
+            ;;
+        -*)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
 if [[ $# -lt 1 ]]; then
-    echo "Usage: $0 <hub-name> [mapping-dir]"
+    echo "Usage: $0 [--yes] <hub-name> [mapping-dir]"
+    echo ""
+    echo "Options:"
+    echo "  --yes, -y    Skip confirmation prompt and send immediately"
     echo ""
     echo "Examples:"
     echo "  $0 maryland"
+    echo "  $0 --yes nara"
     echo "  $0 maryland /Users/scott/dpla/data/maryland/mapping/20260201_120000-maryland-MAP.avro"
     exit 1
 fi
@@ -81,11 +108,16 @@ echo "..."
 echo "---"
 echo ""
 
-read -p "Send email? (y/n) " -n 1 -r
-echo ""
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Cancelled."
-    exit 0
+# Confirmation prompt (skip if --yes)
+if [[ "$SKIP_CONFIRM" == "false" ]]; then
+    read -p "Send email? (y/n) " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Cancelled."
+        exit 0
+    fi
+else
+    echo "Sending (--yes flag provided)..."
 fi
 
 # Send email using the Scala Emailer
