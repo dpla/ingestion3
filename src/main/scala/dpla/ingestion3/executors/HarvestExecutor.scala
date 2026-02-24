@@ -1,11 +1,17 @@
 package dpla.ingestion3.executors
 
 import java.time.LocalDateTime
+import java.util.concurrent.TimeUnit
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.file.NaraDeltaHarvester
-import dpla.ingestion3.harvesters.oai.{LocalOaiHarvester, OaiHarvester}
+import dpla.ingestion3.harvesters.oai.{
+  LocalOaiHarvester,
+  OaiHarvester,
+  OaiHarvestException,
+  OaiHarvestLogger
+}
 import dpla.ingestion3.model.harvestAvroSchema
 import dpla.ingestion3.utils.{CHProviderRegistry, Utils}
 import org.apache.logging.log4j.LogManager
@@ -134,6 +140,41 @@ trait HarvestExecutor {
         // misconfigured (e.g. running via java -cp instead of spark-submit).
         System.err.println(s"HARVEST FAILURE: ${f.getMessage}")
         f.printStackTrace(System.err)
+
+        // Attempt to send a failure notification via the helper script.
+        // The email body is built here in Scala (single source of truth) and
+        // passed through to the shell/Python notification scripts unchanged.
+        try {
+          val errorMsg = f.getMessage.replace("\"", "'")
+          val emailBody = f match {
+            case oaiEx: OaiHarvestException =>
+              OaiHarvestException.buildEmailBody(shortName, oaiEx)
+            case _ =>
+              OaiHarvestException.buildGenericEmailBody(shortName, f)
+          }
+          val scriptPath = sys.env.getOrElse(
+            "I3_HOME",
+            System.getProperty("user.dir")
+          ) + "/scripts/notify-harvest-failure.sh"
+          val pb = new ProcessBuilder(
+            "bash",
+            scriptPath,
+            shortName,
+            errorMsg,
+            emailBody
+          )
+          pb.inheritIO()
+          val process = pb.start()
+          if (!process.waitFor(15, TimeUnit.SECONDS)) {
+            process.destroyForcibly()
+          }
+        } catch {
+          case _: Exception =>
+            System.err.println(
+              "Note: Could not invoke notify-harvest-failure.sh"
+            )
+        }
+
         harvester.cleanUp()
         spark.stop()
         System.exit(1)
@@ -152,7 +193,10 @@ trait HarvestExecutor {
       case "oai" =>
         new OaiHarvester(spark, shortName, conf)
       case "localoai" =>
-        new LocalOaiHarvester(spark, shortName, conf)
+        val logDir =
+          sys.env.getOrElse("I3_HOME", System.getProperty("user.dir")) + "/logs"
+        val oaiLogger = new OaiHarvestLogger(logDir, shortName)
+        new LocalOaiHarvester(spark, shortName, conf, oaiLogger)
       case "nara.file.delta" =>
         new NaraDeltaHarvester(spark, shortName, conf)
       case "api" | "file" =>

@@ -8,8 +8,8 @@ import java.net.http.HttpResponse.BodyHandlers
 import java.time.Duration
 import scala.util.{Failure, Success, Try}
 
-/** Utility object for making and working with HTTP requests. Uses the OkHttp
-  * library.
+/** Utility object for making and working with HTTP requests. Uses the JDK
+  * built-in java.net.http client (Java 11+).
   */
 object HttpUtils {
 
@@ -85,7 +85,7 @@ object HttpUtils {
     * @param fn
     *   The method to retry
     * @tparam T
-    *  Return type of the method
+    *   Return type of the method
     * @return
     */
   @annotation.tailrec

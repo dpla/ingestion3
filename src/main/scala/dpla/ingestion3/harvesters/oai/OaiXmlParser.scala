@@ -4,6 +4,9 @@ import scala.xml.{Node, XML}
 
 object OaiXmlParser {
 
+  /** Regex to extract OAI record identifiers from raw page text (best-effort). */
+  private val IdentifierPattern = """<identifier>([^<]+)</identifier>""".r
+
   def parsePageIntoXml(
       page: OaiPage
   ): Node = {
@@ -32,6 +35,39 @@ object OaiXmlParser {
   def getResumptionToken(xml: Node): Option[String] = {
     val resumptionToken = (xml \\ "resumptionToken").text
     if (resumptionToken.nonEmpty) Some(resumptionToken) else None
+  }
+
+  /** Extract the resumption token value along with optional cursor and
+    * completeListSize attributes from the parsed XML.
+    *
+    * @return Some((tokenValue, cursor, completeListSize)) or None
+    */
+  def getResumptionTokenWithAttrs(xml: Node): Option[(String, Option[Int], Option[Int])] = {
+    val tokenNodes = xml \\ "resumptionToken"
+    val tokenText = tokenNodes.text
+    if (tokenText.isEmpty) return None
+
+    val cursor = tokenNodes.headOption
+      .flatMap(n => Option(n \@ "cursor"))
+      .filter(_.nonEmpty)
+      .flatMap(s => scala.util.Try(s.toInt).toOption)
+
+    val completeListSize = tokenNodes.headOption
+      .flatMap(n => Option(n \@ "completeListSize"))
+      .filter(_.nonEmpty)
+      .flatMap(s => scala.util.Try(s.toInt).toOption)
+
+    Some((tokenText, cursor, completeListSize))
+  }
+
+  /** Best-effort extraction of first and last record identifiers from raw page
+    * text using regex. Works even when the XML is malformed.
+    *
+    * @return (firstId, lastId) — either may be None
+    */
+  def extractIdentifiers(rawPage: String): (Option[String], Option[String]) = {
+    val ids = IdentifierPattern.findAllMatchIn(rawPage).map(_.group(1)).toSeq
+    (ids.headOption, ids.lastOption)
   }
 
   private def getRecords(xml: Node, removeDeleted: Boolean, info: OaiRequestInfo): Seq[OaiRecord] =

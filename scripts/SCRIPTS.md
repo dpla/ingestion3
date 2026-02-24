@@ -15,6 +15,8 @@ Shell scripts for running the DPLA ingestion3 pipeline. All scripts are cross-pl
 | `auto-ingest.sh` | Automated monthly ingestion | `./auto-ingest.sh [--hub=<hub>]` |
 | `batch-ingest.sh` | Run pipeline for multiple hubs | `./batch-ingest.sh <hub1> <hub2>...` |
 | `nara-ingest.sh` | NARA delta ingest pipeline | `./nara-ingest.sh <nara-export.zip>` |
+| `community-webs-export.sh` | Export Community Webs SQLite DB to JSONL/ZIP | `./community-webs-export.sh [--db=PATH]` |
+| `community-webs-ingest.sh` | Community Webs ingest: export + harvest (+ optional full pipeline) | `./community-webs-ingest.sh [--full]` |
 | `schedule.sh` | Query hub ingest schedules | `./schedule.sh [month\|hub]` |
 | `s3-sync.sh` | Sync hub data to S3 | `./s3-sync.sh <hub> [subdir]` |
 | `fix-si.sh` | Preprocess Smithsonian data | `./fix-si.sh <folder>` |
@@ -22,8 +24,10 @@ Shell scripts for running the DPLA ingestion3 pipeline. All scripts are cross-pl
 | `check-jsonl-sync.sh` | Check JSONL sync status with S3 | `./check-jsonl-sync.sh` |
 | `delete-by-id.sh` | Delete records from Elasticsearch | `./delete-by-id.sh <id>...` |
 | `delete-from-jsonl.sh` | Delete records from S3 JSONL files | `./delete-from-jsonl.sh --hub <hub> <id>...` |
-| `send-ingest-email.sh` | Send ingest summary email | `./send-ingest-email.sh <hub>` |
+| `send-ingest-email.sh` | Send ingest summary email | `./send-ingest-email.sh [--yes] <hub>` |
+| *scheduling_emails* (Python) | Monthly pre-scheduling email to hub contacts | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails [--month=N] --dry-run \| --draft \| --send` |
 | `ingest-status.sh` | Check orchestrator status | `./ingest-status.sh` |
+| `notify-harvest-failure.sh` | Send Slack and email (tech@dp.la) on harvest failure | `./notify-harvest-failure.sh <hub> "<error>"` |
 
 ## Environment Variables
 
@@ -39,17 +43,18 @@ All scripts use these environment variables (with sensible defaults):
 | `AWS_PROFILE` | AWS credentials profile | `dpla` |
 | `I3_JAR` | Override path to ingestion3 fat JAR | `$I3_HOME/target/scala-2.13/ingestion3-assembly-0.0.1.jar` |
 
-All scripts automatically use the fat JAR when it exists (no flag needed). Build it once:
+All scripts use the fat JAR via `run_entry` in common.sh. **The JAR is built automatically** when it is missing or when any Scala source under `src/main/scala` is newer than the JAR, so running `./scripts/harvest.sh indiana` (or ingest.sh, remap.sh, etc.) will run `sbt assembly` first when needed and then use the JAR. You can still build once manually to avoid a build delay on the first run:
 
 ```bash
 cd "$I3_HOME" && sbt assembly
-# Now all scripts (harvest, mapping, enrich, jsonl, remap) use the JAR automatically
 ./scripts/remap.sh maryland
 ```
 
 ## Shared Configuration (common.sh)
 
 All scripts source `common.sh` which provides:
+
+- **Env file:** When `$I3_HOME/.env` exists, `common.sh` sources it during init, so `SLACK_WEBHOOK`, `JAVA_HOME`, and other vars are set for pipeline runs and harvest-failure notifications without needing to run `source .env` first.
 
 - **Platform detection**: `$PLATFORM` is set to `macos` or `linux`
 - **Portable utilities**: `sed_i`, `get_script_dir`, `get_common_dir`
@@ -58,7 +63,7 @@ All scripts source `common.sh` which provides:
 - **Validation**: `require_command`, `require_file`, `require_dir`, `die`
 - **Hub helpers**: `get_provider_name`, `get_hub_email`, `get_harvest_type`
 - **Process management**: `kill_tree <pid>` — recursively kill a process and all its descendants (prevents orphan JVMs)
-- **Entry runner**: `run_entry <EntryClass> [--arg=val ...]` — runs any Scala entry class via JAR (preferred) or sbt (fallback)
+- **Entry runner**: `run_entry <EntryClass> [--arg=val ...]` — runs any Scala entry class via JAR; builds the JAR first if missing or if Scala sources are newer than the JAR
 - **IngestRemap runner**: `run_ingest_remap <input> <output> <conf> <name>` — convenience wrapper for IngestRemap
 - **Data finder**: `find_latest_data <provider> <step>` — finds the most recent timestamped directory for a pipeline step
 
@@ -134,6 +139,34 @@ Preprocess Smithsonian XML files before harvest:
 ```bash
 ./scripts/fix-si.sh --list        # List available folders
 ./scripts/fix-si.sh 20260201      # Process specific folder
+```
+
+### community-webs-export.sh - Community Webs DB Export
+
+Export Community Webs SQLite database to JSONL and ZIP for harvest. Internet Archive sends a SQLite database; this script runs the intermediate step (sqlite3 + jq + zip) automatically.
+
+**Prerequisites:** `sqlite3`, `jq` (brew install sqlite3 jq / apt install sqlite3 jq)
+
+```bash
+./scripts/community-webs-export.sh                        # Auto-detect latest *.db
+./scripts/community-webs-export.sh --db=/path/to/file.db  # Explicit DB path
+./scripts/community-webs-export.sh --update-conf          # Also update i3.conf endpoint
+./scripts/community-webs-export.sh --skip-validate        # Skip JSONL schema validation (not recommended)
+```
+
+Output: `$DPLA_DATA/community-webs/originalRecords/<YYYYMMDD>/community-webs-<timestamp>.zip`
+
+The script validates the JSONL against the expected harvest schema (required `id` field) before zipping. Use `community-webs-ingest.sh` for the full flow.
+
+### community-webs-ingest.sh - Community Webs Ingest
+
+Orchestrates export + harvest + (optional) full pipeline:
+
+```bash
+./scripts/community-webs-ingest.sh              # Export + harvest only
+./scripts/community-webs-ingest.sh --full       # Export + harvest + mapping + enrichment + jsonl
+./scripts/community-webs-ingest.sh --skip-export  # Harvest only (endpoint must already point to ZIP)
+./scripts/community-webs-ingest.sh --db=/path/to/db --update-conf
 ```
 
 ### delete-by-id.sh - Elasticsearch Delete
@@ -229,6 +262,116 @@ python -m scheduler.orchestrator.main --status
 
 Resource budgeting is automatic: `--parallel=2` gives each hub `local[2]` and ~4g heap, `--parallel=3` gives `local[2]` and ~4g heap each. Per-hub status files are written to `logs/status/<hub>.status`.
 
+### send-ingest-email.sh - Send Summary Emails
+
+Sends ingest summary emails to hub contacts on demand. Useful for re-sending emails or sending summaries after manual ingests.
+
+**Purpose:**
+- Reads hub email from i3.conf (e.g., `nara.email = "contact@nara.gov"`)
+- Finds the most recent mapping output directory
+- Sends an email with:
+  - Mapping summary (attempted, successful, failed counts)
+  - Error/warning details from `_SUMMARY`
+  - Pre-signed S3 links to full logs (7-day expiration)
+
+**Usage:**
+```bash
+# Latest mapping for a hub
+./scripts/send-ingest-email.sh maryland
+
+# Skip confirmation prompt (for automation)
+./scripts/send-ingest-email.sh --yes nara
+
+# Specific mapping directory
+./scripts/send-ingest-email.sh maryland /path/to/mapping/20260201_120000-maryland-MAP.avro
+
+# Bulk send (with --yes to avoid multiple prompts)
+./scripts/send-ingest-email.sh --yes wisconsin
+./scripts/send-ingest-email.sh --yes p2p
+./scripts/send-ingest-email.sh --yes maryland
+```
+
+**Options:**
+- `--yes` or `-y`: Skip the confirmation prompt and send immediately
+
+**Requirements:**
+- Hub must have email configured in i3.conf:
+  ```hocon
+  hub.email = "contact@example.com"
+  # Multiple recipients supported:
+  hub.email = "person1@example.com,person2@example.com"
+  ```
+- Mapping output with `_SUMMARY` file must exist
+- Java 11+ and sbt must be available
+
+**Email Content:**
+- Subject: `DPLA Ingest Summary for [Provider] - [Month Year]`
+- Body includes:
+  - Full `_SUMMARY` content (harvest count, mapping stats, error breakdown)
+  - Pre-signed S3 links to:
+    - `_SUMMARY` file
+    - Error logs ZIP (if there are failed records)
+
+**Integration:**
+- Orchestrator creates **email drafts** at `logs/hub-emails-<run_id>/` after runs
+- Use this script to manually send emails from those drafts
+- See [.claude/skills/send-email/](../.claude/skills/send-email/) for Claude Code skill
+
+**Related:**
+- Scala Emailer: `src/main/scala/dpla/ingestion3/utils/Emailer.scala`
+- Orchestrator email drafts: `scheduler/orchestrator/notifications.py` (line 790+)
+
+### Scheduling emails (monthly pre-scheduling notification)
+
+One summary email to all contacts of hubs scheduled for a given month. Sent at the start of the month to notify hubs that ingests will run during the **last calendar week** of that month. Uses **i3.conf** for schedule (`<hub>.schedule.months`) and contacts (`<hub>.email`). CC on every send: ingest@dp.la, dominic@dp.la.
+
+**Entry point:** `./venv/bin/python -m scheduler.orchestrator.scheduling_emails`
+
+**Usage:**
+```bash
+# Preview: date range, hubs list, To/CC, and full body (no file, no send)
+./venv/bin/python -m scheduler.orchestrator.scheduling_emails --month=2 --dry-run
+
+# Write draft to scheduler/emails/scheduling-YYYY-MM.txt
+./venv/bin/python -m scheduler.orchestrator.scheduling_emails --month=2 --draft
+
+# Send via SES (after preview)
+./venv/bin/python -m scheduler.orchestrator.scheduling_emails --month=2 --send
+```
+
+**Options:**
+- `--month=N` — Target month 1–12 (default: current month).
+- `--dry-run` — Print preview (date range, hubs included, hubs with no email noted) and full email; no draft or send.
+- `--draft` — Print preview and write a single draft file to `scheduler/emails/scheduling-YYYY-MM.txt`.
+- `--send` — Print preview and send via AWS SES. Requires boto3 and `--aws-profile dpla` (or `AWS_PROFILE`).
+- `--i3-conf PATH` — Path to i3.conf (default: from env `I3_CONF`).
+- `--aws-profile NAME` — AWS profile for SES (default: dpla).
+
+**Preview:** Every run (dry-run, draft, send) prints a **Preview** block with the date range (e.g. "February 23 – February 28, 2026") and the list of hubs included; hubs without email in i3.conf are marked "(no email in i3.conf – add manually if needed)".
+
+**Skill:** See [.cursor/skills/dpla-monthly-emails/SKILL.md](../.cursor/skills/dpla-monthly-emails/SKILL.md). The agent should always show the preview (hubs + date range) before sending.
+
+### notify-harvest-failure.sh and send-harvest-failure-email.py - Harvest Failure Alerts
+
+Invoked by `HarvestExecutor` when an OAI (or other) harvest fails. Sends **both** Slack and email so tech is notified even if one channel is unavailable.
+
+**Email body is built in Scala:** `OaiHarvestException.buildEmailBody` (in `OaiResponse.scala`) produces the complete email body (hub name, human-readable error details, footer). `HarvestExecutor` passes this body as a third argument to `notify-harvest-failure.sh`, which forwards it to `send-harvest-failure-email.py`. The Python script sends the body as-is — no template wrapping. This makes Scala the single source of truth for notification content.
+
+**Slack:** If `SLACK_WEBHOOK` is set, posts to #tech-alerts with hub name and error snippet (from `OaiHarvestException.getMessage`). Optional `SLACK_ALERT_USER_ID` adds an @mention.
+
+**Email:** Always attempts to send to **tech@dp.la** via AWS SES using `scripts/send-harvest-failure-email.py` (requires project venv and boto3; uses `AWS_PROFILE`, default `dpla`). Best-effort: if email fails (e.g. no credentials), a warning is printed and the script still exits 0.
+
+**Usage:** Normally called by the JVM on harvest failure; can be run manually:
+```bash
+# With Scala-provided email body (3 args)
+./scripts/notify-harvest-failure.sh indiana "OAI Error: badArgument ..." "DPLA OAI Harvest Failure..."
+
+# Without email body (2 args, backward-compat: Python wraps error in default template)
+./scripts/notify-harvest-failure.sh indiana "OAI Error: badArgument ..."
+```
+
+**Environment:** `SLACK_WEBHOOK`, `SLACK_ALERT_USER_ID`, `AWS_PROFILE` (for email), `I3_HOME` (default: derived from script path).
+
 ## Workflow Diagrams
 
 ### Standard Ingest Pipeline
@@ -268,8 +411,8 @@ batch-ingest.sh
 
 When adding or modifying scripts:
 
-1. Update the Quick Reference table
-2. Add/update the Script Details section
-3. Update environment variables if new ones are added
-4. Run `./scripts/tests/test-scripts.sh` to verify changes
-5. Test on both macOS and Ubuntu if possible
+1. **Document:** Add any new script to the Quick Reference table and, if non-trivial, to Script Details (purpose, usage, and env vars if relevant). Update existing entries when behavior changes.
+2. **Tests:** For new or changed scripts, add or update tests in `scripts/tests/test-scripts.sh` (or under `scripts/tests/` as appropriate). Run the suite before committing:
+   - `./scripts/tests/test-scripts.sh` (full), or `./scripts/tests/test-scripts.sh --quick` for syntax/quick checks.
+3. Update environment variables in this doc if new ones are added.
+4. Test on both macOS and Ubuntu if possible.

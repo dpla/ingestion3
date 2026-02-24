@@ -28,8 +28,12 @@ cp .env.example .env
 Edit `.env` and set:
 
 ```bash
-# Slack webhook for #tech-alerts notifications
+# Slack webhook for #tech-alerts (per-stage progress, errors, anomalies)
 SLACK_WEBHOOK=https://hooks.slack.com/services/...
+
+# Slack webhook for #tech (hub-complete success with @here)
+# Optional — falls back to SLACK_WEBHOOK if not set.
+SLACK_TECH_WEBHOOK=https://hooks.slack.com/services/...
 
 # Java 11+ required. Java 19 is recommended.
 JAVA_HOME=/path/to/java-11-or-newer
@@ -141,9 +145,22 @@ If a stage fails, the orchestrator stops that hub, records the failure, and cont
 
 ## Slack Notifications
 
-All notifications are posted to **#tech-alerts** via the `SLACK_WEBHOOK` configured in `.env`.
+Notifications are split across two channels:
 
-### Per-stage notifications
+- **#tech-alerts** (`SLACK_WEBHOOK`) — per-stage progress, errors, and anomaly alerts. Useful operational noise; fine-grained so you can see exactly where a hub is in the pipeline.
+- **#tech** (`SLACK_TECH_WEBHOOK`) — hub-complete success notifications with `@here`. One message per hub summarising the ingest and diff from the previous run. This is the channel your team watches.
+
+If `SLACK_TECH_WEBHOOK` is not set, hub-complete messages fall back to `SLACK_WEBHOOK`.
+
+```bash
+# .env
+SLACK_WEBHOOK=https://hooks.slack.com/services/...        # → #tech-alerts
+SLACK_TECH_WEBHOOK=https://hooks.slack.com/services/...   # → #tech
+```
+
+### Per-stage notifications → #tech-alerts
+
+These fire as each hub moves through the pipeline (sequential or parallel).
 
 | When | Slack message | Details included |
 |------|--------------|------------------|
@@ -153,22 +170,76 @@ All notifications are posted to **#tech-alerts** via the `SLACK_WEBHOOK` configu
 | Enrichment complete | :sparkles: `hub` enrichment complete | Duration |
 | JSONL export complete | :package: `hub` JSONL export complete | Duration |
 | S3 sync complete | :cloud: `hub` data synced to S3 | Duration |
-| Run complete | :white_check_mark: or :warning: DPLA Ingest Complete | Per-hub summary, totals |
+| Run complete | :white_check_mark: or :warning: DPLA Ingest Run Summary | Per-hub results (Harvested / Mapped / Successful / Failed), failed hubs with stage and error |
 
-### Error and anomaly notifications
+### Hub-complete success → #tech
+
+After a hub's S3 sync succeeds, a single consolidated message is posted to **#tech** with `@here`:
 
 | When | Slack message | Details included |
 |------|--------------|------------------|
-| Stage failure | :x: Posted in #tech-alerts | Hub, stage, error message |
-| Anomaly warning | :warning: Anomaly alert | Record count changes, threshold exceeded |
-| Anomaly critical (sync halted) | :octagonal_sign: Sync blocked | What changed, why sync was halted |
-| Run failures | Escalation report | List of failed hubs, failure stages, report path |
+| Hub fully ingested and synced | :white_check_mark: `hub` re-ingested | Harvested count, Mapped (Successful / Failed), diff vs previous S3 run with dates and deltas |
+
+### Error and anomaly notifications → #tech-alerts
+
+| When | Slack message | Details included |
+|------|--------------|------------------|
+| Stage failure | :x: Failure alert | Hub, stage, error message |
+| Anomaly warning (sync proceeds) | :warning: `hub` — Sync proceeded | Anomaly details, current and baseline counts with dates |
+| Anomaly critical (sync halted) | :x: `hub` — Sync HALTED | Anomaly details, current and baseline counts with dates |
+| Run failures | :x: Escalation report | List of failed hubs, failure stages, report path |
 
 Escalation reports are also written to `~/dpla/data/escalations/failures-<run_id>.md`.
 
+### Notification timing in the pipeline
+
+The diagram below shows when each notification fires relative to the pipeline stages. In parallel mode, Phase 2 notifications fire per-hub as each hub completes its stage; Phase 3 notifications fire after all hubs finish processing.
+
+```
+Run started                          → #tech-alerts  :rocket:
+│
+├─ [per hub]
+│   ├─ Harvest complete              → #tech-alerts  :seedling:
+│   ├─ Mapping complete              → #tech-alerts  :world_map:
+│   ├─ Enrichment complete           → #tech-alerts  :sparkles:
+│   ├─ JSONL export complete         → #tech-alerts  :package:
+│   ├─ Anomaly detection
+│   │   ├─ (warning or critical)     → #tech-alerts  :warning: / :x:
+│   │   └─ (critical halts sync)
+│   ├─ S3 sync complete              → #tech-alerts  :cloud:
+│   └─ Hub complete (success only)   → #tech         :white_check_mark: @here
+│
+├─ Failures escalation (if any)      → #tech-alerts  :x:
+├─ Email drafts written              → logs/hub-emails-<run_id>/
+│   └─ Hubs without email listed in run summary as "Manual notification required"
+└─ Run summary                       → #tech-alerts  :white_check_mark: / :warning:
+```
+
+### Hub contact emails
+
+At the end of a run, the orchestrator writes **email draft files** for each completed hub that has a contact email configured in `i3.conf`. These are not sent automatically — they are text files you review and then send manually.
+
+**When:** Inside `send_completion_notification`, after all hubs have finished (success or failure) and after failure escalation.
+
+**Where:** `logs/hub-emails-<run_id>/<hub>.draft.txt`
+
+**What's in a draft:** Matches the Scala `Emailer` format — To, Subject, ingest summary (from `_SUMMARY`), and pre-signed S3 links to summary/logs (valid 7 days).
+
+**Sending:**
+
+```bash
+# Review the draft
+cat logs/hub-emails-<run_id>/maryland.draft.txt
+
+# Send via the Scala Emailer (interactive — prompts for confirmation)
+./scripts/send-ingest-email.sh maryland
+```
+
+**Hubs without email:** If a hub has no email configured in `i3.conf`, it is listed in the Slack run summary under "Manual notification required" so you know to follow up.
+
 ### Test notifications
 
-Send test messages with a `[TEST]` prefix to verify Slack is configured:
+Send test messages with a `[TEST]` prefix to verify both webhooks are configured:
 
 ```bash
 python3 -m scheduler.orchestrator.main --dry-run-notify
@@ -290,17 +361,19 @@ Incomplete runs (directories with `_temporary` but no `_SUCCESS`) should be dele
 
 | File | Purpose |
 |------|---------|
-| `.env` | Local environment (`JAVA_HOME`, `SLACK_WEBHOOK`) |
+| `.env` | Local environment (`JAVA_HOME`, `SLACK_WEBHOOK`, `SLACK_TECH_WEBHOOK`) |
 | `.env.example` | Template for `.env` |
 | `i3.conf` | Hub configuration (endpoints, schedules, harvest types) |
 | `AGENTS.md` | Agent guide — runbooks, notification policy, error patterns |
 | `scripts/SCRIPTS.md` | Script reference (all shell scripts with usage) |
 | `scheduler/orchestrator/main.py` | Orchestrator entry point |
 | `scheduler/orchestrator/status.py` | Status reader (file-based, no subprocesses) |
-| `scheduler/orchestrator/notifications.py` | Slack notification logic |
+| `scheduler/orchestrator/notifications.py` | Slack notifications and email draft generation |
 | `scheduler/orchestrator/hub_processor.py` | Per-hub pipeline execution |
 | `scheduler/orchestrator/state.py` | Run/hub state and per-stage timing |
 | `scheduler/orchestrator/anomaly_detector.py` | Pre-sync anomaly detection |
+| `scripts/send-ingest-email.sh` | Send ingest summary email to hub contacts (manual, interactive) |
+| `logs/hub-emails-<run_id>/` | Email draft files generated at run end |
 | `logs/status/<hub>.status` | Live per-hub status files (JSON) |
 | `logs/orchestrator_state.json` | Full orchestrator state across runs |
 | `~/dpla/data/escalations/` | Failure reports |

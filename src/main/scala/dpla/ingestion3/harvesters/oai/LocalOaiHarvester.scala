@@ -12,7 +12,8 @@ import java.time.{Instant, OffsetDateTime, ZoneId}
 class LocalOaiHarvester(
     spark: SparkSession,
     shortName: String,
-    conf: i3Conf
+    conf: i3Conf,
+    harvestLogger: OaiHarvestLogger = OaiHarvestLogger.Noop
 ) extends LocalHarvester(shortName, conf) {
 
   private val readerOptions: Map[String, String] = Map(
@@ -27,7 +28,7 @@ class LocalOaiHarvester(
   ).collect { case (key, Some(value)) => key -> value }
 
   private val oaiConfig = OaiConfiguration(readerOptions)
-  private val oaiMethods = new OaiProtocol(oaiConfig)
+  private val oaiMethods = new OaiProtocol(oaiConfig, harvestLogger)
 
   override def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
@@ -68,12 +69,24 @@ class LocalOaiHarvester(
     val dateString = formatter.format(OffsetDateTime.ofInstant(Instant.ofEpochMilli(info.timestamp), ZoneId.systemDefault()))
     val responseDate = <responseDate>{dateString}</responseDate>
 
-    val documentXml = scala.xml.XML.loadString(document)
-    val header = documentXml \ "header"
-    val metadata = documentXml \ "metadata"
-    val about = <about>{requestElement}{resumptionToken}{responseDate}</about>
-    val record = <record>{header}{metadata}{about}</record>
-    oaiRecord.copy(document = record.toString)
+    try {
+      val documentXml = scala.xml.XML.loadString(document)
+      val header = documentXml \ "header"
+      val metadata = documentXml \ "metadata"
+      val about = <about>{requestElement}{resumptionToken}{responseDate}</about>
+      val record = <record>{header}{metadata}{about}</record>
+      oaiRecord.copy(document = record.toString)
+    } catch {
+      case e: Exception =>
+        throw new OaiHarvestException(
+          requestInfo = info,
+          url = oaiConfig.endpoint,
+          stage = "record_parse",
+          firstId = Some(oaiRecord.id),
+          lastId = Some(oaiRecord.id),
+          cause = e
+        )
+    }
   }
 
   private def allowListHarvest(sets: Array[String]): Unit = {

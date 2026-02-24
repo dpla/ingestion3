@@ -1,6 +1,9 @@
 package dpla.ingestion3.harvesters.oai
 
-class OaiProtocol(oaiConfiguration: OaiConfiguration)
+import scala.util.{Failure, Success, Try}
+
+class OaiProtocol(oaiConfiguration: OaiConfiguration,
+                  harvestLogger: OaiHarvestLogger = OaiHarvestLogger.Noop)
     extends OaiMethods
     with Serializable {
 
@@ -13,7 +16,8 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration)
       "ListRecords",
       metadataPrefix,
       None,
-      oaiConfiguration.sleep
+      oaiConfiguration.sleep,
+      harvestLogger
     ).getResponse.iterator
 
   override def listAllRecordPagesForSet(
@@ -24,26 +28,54 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration)
       "ListRecords",
       metadataPrefix,
       Some(setSpec),
-      oaiConfiguration.sleep
+      oaiConfiguration.sleep,
+      harvestLogger
     ).getResponse.iterator
   }
 
   override def listAllSetPages(): IterableOnce[OaiPage] = {
-    new OaiMultiPageResponseBuilder(endpoint, "ListSets", None, None, oaiConfiguration.sleep).getResponse.iterator
+    new OaiMultiPageResponseBuilder(endpoint, "ListSets", None, None, oaiConfiguration.sleep, harvestLogger).getResponse.iterator
   }
 
   override def parsePageIntoRecords(
       page: OaiPage,
       removeDeleted: Boolean
   ): IterableOnce[OaiRecord] = {
-    OaiXmlParser
-      .parseXmlIntoRecords(OaiXmlParser.parsePageIntoXml(page), removeDeleted, page.info)
-      .iterator
+    Try {
+      OaiXmlParser
+        .parseXmlIntoRecords(OaiXmlParser.parsePageIntoXml(page), removeDeleted, page.info)
+        .iterator
+    } match {
+      case Success(records) => records
+      case Failure(e: OaiHarvestException) => throw e
+      case Failure(e) =>
+        val (firstId, lastId) = OaiXmlParser.extractIdentifiers(page.page)
+        throw new OaiHarvestException(
+          requestInfo = page.info,
+          url = endpoint,
+          stage = "page_parse",
+          firstId = firstId,
+          lastId = lastId,
+          cause = e
+        )
+    }
   }
 
   override def parsePageIntoSets(
       page: OaiPage
   ): IterableOnce[OaiSet] = {
-    OaiXmlParser.parseXmlIntoSets(OaiXmlParser.parsePageIntoXml(page), page.info).iterator
+    Try {
+      OaiXmlParser.parseXmlIntoSets(OaiXmlParser.parsePageIntoXml(page), page.info).iterator
+    } match {
+      case Success(sets) => sets
+      case Failure(e: OaiHarvestException) => throw e
+      case Failure(e) =>
+        throw new OaiHarvestException(
+          requestInfo = page.info,
+          url = endpoint,
+          stage = "set_parse",
+          cause = e
+        )
+    }
   }
 }
