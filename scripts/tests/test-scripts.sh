@@ -786,6 +786,150 @@ test_nara_scripts_deleted() {
 }
 
 # =============================================================================
+# Test: Community Webs DB export and validation
+# =============================================================================
+
+test_community_webs_export() {
+    echo ""
+    echo "=========================================="
+    echo "  Testing Community Webs Export"
+    echo "=========================================="
+
+    if [[ "$QUICK_MODE" == "true" ]]; then
+        log_skip "Community Webs export test (quick mode)"
+        return
+    fi
+
+    require_cmd() {
+        if ! command -v "$1" >/dev/null 2>&1; then
+            log_skip "Community Webs export: $1 not found"
+            return 1
+        fi
+        return 0
+    }
+
+    require_cmd sqlite3 || return
+    require_cmd jq || return
+
+    local export_script="$SCRIPTS_DIR/harvest/community-webs-export.sh"
+    if [[ ! -f "$export_script" ]]; then
+        log_skip "harvest/community-webs-export.sh not found"
+        return
+    fi
+
+    # Create temp dir for test DB and output
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    trap "rm -rf '$tmpdir'" EXIT
+
+    # Create minimal ait table with one row (schema from 20260204_dpla_export.db)
+    local test_db="$tmpdir/test.db"
+    sqlite3 "$test_db" <<'SQL'
+CREATE TABLE ait (
+    id, title, rights_statement, rights_free_text, image_data, image_mimetype,
+    data_provider, preview, type, collection, subject, description, creator,
+    date, coverage, language, relation, preview_image
+);
+INSERT INTO ait VALUES (
+    'archive-it::seed:test123', 'Test Title', '', '', NULL, NULL,
+    'Test Provider', 'https://example.com/preview', 'Archived Website', 'Test Collection',
+    'Test subject', 'Test description', 'Test Creator', '2024', 'Test coverage',
+    'English', '', 'https://example.com/image'
+);
+SQL
+
+    # Export to temp output (override DPLA_DATA for test)
+    local out_dir="$tmpdir/community-webs/originalRecords"
+    mkdir -p "$out_dir"
+
+    if ! DPLA_DATA="$tmpdir" "$export_script" --db="$test_db" --skip-validate 2>/dev/null; then
+        local exit_code=$?
+        TESTS_RUN=$((TESTS_RUN + 1))
+        log_fail "Community Webs export: command failed (exit $exit_code): DPLA_DATA=$tmpdir $export_script --db=$test_db --skip-validate"
+        return
+    fi
+
+    # Output goes to $DPLA_DATA/community-webs/originalRecords/<YYYYMMDD>/
+    local datestamp
+    datestamp=$(date +%Y%m%d)
+    local zip_dir="$out_dir/$datestamp"
+    local zip_count
+    if [[ -d "$zip_dir" ]]; then
+        zip_count=$(find "$zip_dir" -name "community-webs-*.zip" -type f 2>/dev/null | wc -l | tr -d ' ')
+    else
+        zip_count=0
+    fi
+
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if [[ "$zip_count" -ge 1 ]]; then
+        log_pass "Community Webs export produces ZIP"
+    else
+        log_fail "Community Webs export: no ZIP found in $zip_dir"
+    fi
+
+    # Verify JSONL inside ZIP
+    local zip_file
+    zip_file=""
+    if [[ -d "$zip_dir" ]]; then
+        zip_file=$(find "$zip_dir" -name "community-webs-*.zip" -type f 2>/dev/null | head -1)
+    fi
+    if [[ -n "$zip_file" ]] && unzip -l "$zip_file" 2>/dev/null | grep -q "community-webs.jsonl"; then
+        TESTS_RUN=$((TESTS_RUN + 1))
+        log_pass "Community Webs ZIP contains community-webs.jsonl"
+    else
+        TESTS_RUN=$((TESTS_RUN + 1))
+        log_fail "Community Webs ZIP missing community-webs.jsonl"
+    fi
+}
+
+# =============================================================================
+# Test: send-ingest-email.sh --yes flag
+# =============================================================================
+
+test_send_email_yes_flag() {
+    echo ""
+    echo "=========================================="
+    echo "  Testing send-ingest-email.sh --yes Flag"
+    echo "=========================================="
+
+    if [[ "$QUICK_MODE" == "true" ]]; then
+        log_skip "send-ingest-email --yes test (quick mode)"
+        return
+    fi
+
+    local script_path="$SCRIPTS_DIR/communication/send-ingest-email.sh"
+
+    if [[ ! -f "$script_path" ]]; then
+        log_skip "send-ingest-email.sh not found"
+        return
+    fi
+
+    # Test 1: --yes flag is recognized (should fail with "No email configured" not "Unknown option")
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if output=$("$script_path" --yes fakehub 2>&1); then
+        log_fail "--yes flag: should fail for fakehub"
+    elif echo "$output" | grep -q "Unknown option"; then
+        log_fail "--yes flag: flag not recognized"
+    elif echo "$output" | grep -q "No email configured\|Usage:"; then
+        log_pass "--yes flag: flag recognized (fails on missing config as expected)"
+    else
+        log_fail "--yes flag: unexpected error"
+    fi
+
+    # Test 2: -y short flag is recognized
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if output=$("$script_path" -y fakehub 2>&1); then
+        log_fail "-y flag: should fail for fakehub"
+    elif echo "$output" | grep -q "Unknown option"; then
+        log_fail "-y flag: flag not recognized"
+    elif echo "$output" | grep -q "No email configured\|Usage:"; then
+        log_pass "-y flag: flag recognized (fails on missing config as expected)"
+    else
+        log_fail "-y flag: unexpected error"
+    fi
+}
+
+# =============================================================================
 # Main
 # =============================================================================
 
@@ -814,6 +958,13 @@ main() {
         test_jsonl_lock_mechanism
         test_scripts_use_run_entry
         test_nara_scripts_deleted
+        test_community_webs_export
+        test_send_email_yes_flag
+    fi
+
+    # Run deterministic alias tests (safe in both quick/full mode).
+    if [[ -f "$TEST_DIR/test-hub-alias-mock.sh" ]]; then
+        run_test "Hub alias mock tests" "'$TEST_DIR/test-hub-alias-mock.sh'"
     fi
     
     # Summary

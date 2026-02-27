@@ -37,6 +37,18 @@ paused-hub.harvest.type = "oai"
 paused-hub.schedule.frequency = "monthly"
 paused-hub.schedule.months = [1, 2, 3]
 paused-hub.schedule.status = "on-hold"
+
+tn.provider = "Digital Library of Tennessee"
+tn.harvest.type = "oai"
+tn.schedule.frequency = "monthly"
+tn.schedule.months = [1]
+tn.schedule.status = "active"
+
+hathi.provider = "HathiTrust"
+hathi.harvest.type = "oai"
+hathi.schedule.frequency = "monthly"
+hathi.schedule.months = [1]
+hathi.schedule.status = "active"
 '''
     conf_file = tmp_path / "i3.conf"
     conf_file.write_text(conf_content)
@@ -55,6 +67,47 @@ def config(sample_i3_conf, tmp_path):
     )
 
 
+@pytest.fixture
+def canonical_i3_conf(tmp_path):
+    """Create a canonical-key i3.conf (tennessee/hathitrust) for testing."""
+    conf_content = '''
+tennessee.provider = "Digital Library of Tennessee"
+tennessee.harvest.type = "oai"
+tennessee.schedule.frequency = "monthly"
+tennessee.schedule.months = [1]
+tennessee.schedule.status = "active"
+tennessee.s3_destination = "s3://dpla-master-dataset/tennessee/"
+
+hathitrust.provider = "HathiTrust"
+hathitrust.harvest.type = "oai"
+hathitrust.schedule.frequency = "monthly"
+hathitrust.schedule.months = [1]
+hathitrust.schedule.status = "active"
+hathitrust.s3_destination = "s3://dpla-master-dataset/hathitrust/"
+
+maryland.provider = "University of Maryland"
+maryland.harvest.type = "oai"
+maryland.schedule.frequency = "monthly"
+maryland.schedule.months = [1]
+maryland.schedule.status = "active"
+'''
+    conf_file = tmp_path / "i3-canonical.conf"
+    conf_file.write_text(conf_content)
+    return conf_file
+
+
+@pytest.fixture
+def canonical_config(canonical_i3_conf, tmp_path):
+    """Create a Config instance from canonical-key i3.conf."""
+    return Config(
+        i3_conf_path=canonical_i3_conf,
+        i3_home=tmp_path / "ingestion3",
+        data_dir=tmp_path / "data",
+        logs_dir=tmp_path / "logs",
+        state_file=tmp_path / "logs" / "state.json",
+    )
+
+
 class TestI3ConfParsing:
     """Test i3.conf file parsing."""
 
@@ -65,6 +118,8 @@ class TestI3ConfParsing:
         assert "virginia" in hubs
         assert "nara" in hubs
         assert "paused-hub" in hubs
+        assert "tn" in hubs
+        assert "hathi" in hubs
 
     def test_hub_config_fields(self, config):
         """HubConfig should have correct field values."""
@@ -129,11 +184,51 @@ class TestS3Config:
         """Known S3 prefix mappings should work."""
         assert config.get_s3_prefix("hathi") == "hathitrust"
         assert config.get_s3_prefix("tn") == "tennessee"
+        # Canonical forms should pass through
+        assert config.get_s3_prefix("hathitrust") == "hathitrust"
+        assert config.get_s3_prefix("tennessee") == "tennessee"
 
     def test_s3_prefix_default(self, config):
         """Unknown hubs should use their own name as S3 prefix."""
         assert config.get_s3_prefix("maryland") == "maryland"
 
+    def test_resolve_hub_key_aliases(self, config):
+        """Canonical hub aliases should resolve to configured i3 keys."""
+        assert config.resolve_hub_key("hathitrust") == "hathi"
+        assert config.resolve_hub_key("tennessee") == "tn"
+        assert config.resolve_hub_key("maryland") == "maryland"
+
     def test_s3_dest_bucket(self, config):
         """Destination bucket should be the standard one."""
         assert config.get_s3_dest_bucket() == "dpla-master-dataset"
+
+
+class TestCanonicalI3Keys:
+    """Test behavior when i3.conf already uses canonical hub keys."""
+
+    def test_canonical_hub_names_detected(self, canonical_config):
+        hubs = canonical_config.get_all_hubs()
+        assert "tennessee" in hubs
+        assert "hathitrust" in hubs
+        assert "maryland" in hubs
+
+    def test_legacy_names_resolve_to_canonical_hub_keys(self, canonical_config):
+        assert canonical_config.resolve_hub_key("tn") == "tennessee"
+        assert canonical_config.resolve_hub_key("hathi") == "hathitrust"
+
+    def test_get_hub_config_accepts_legacy_and_canonical_names(self, canonical_config):
+        tn_cfg = canonical_config.get_hub_config("tn")
+        tennessee_cfg = canonical_config.get_hub_config("tennessee")
+        hathi_cfg = canonical_config.get_hub_config("hathi")
+        hathitrust_cfg = canonical_config.get_hub_config("hathitrust")
+
+        assert tn_cfg is not None and tn_cfg.name == "tennessee"
+        assert tennessee_cfg is not None and tennessee_cfg.name == "tennessee"
+        assert hathi_cfg is not None and hathi_cfg.name == "hathitrust"
+        assert hathitrust_cfg is not None and hathitrust_cfg.name == "hathitrust"
+
+    def test_s3_prefix_is_consistent_for_legacy_and_canonical_names(self, canonical_config):
+        assert canonical_config.get_s3_prefix("tn") == "tennessee"
+        assert canonical_config.get_s3_prefix("tennessee") == "tennessee"
+        assert canonical_config.get_s3_prefix("hathi") == "hathitrust"
+        assert canonical_config.get_s3_prefix("hathitrust") == "hathitrust"

@@ -405,6 +405,7 @@ class IngestState:
                     'error_type': run.hubs[hub_name].error_type,
                     'diagnosis': run.hubs[hub_name].diagnosis,
                     'retries': run.hubs[hub_name].retries,
+                    'failure_stage': run.hubs[hub_name].failure_stage,
                 }
                 for hub_name in failed_hubs
             },

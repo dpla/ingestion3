@@ -21,19 +21,7 @@ HUB=$1
 SUBDIR=${2:-""}
 SOURCE_BASE="$DPLA_DATA"
 DEST_BUCKET="s3://dpla-master-dataset"
-
-# Map hub name to S3 prefix (handle special cases)
-case $HUB in
-    hathi)
-        S3_PREFIX="hathitrust"
-        ;;
-    tn)
-        S3_PREFIX="tennessee"
-        ;;
-    *)
-        S3_PREFIX=$HUB
-        ;;
-esac
+S3_PREFIX=$(resolve_s3_prefix "$HUB")
 
 # Construct source and destination paths
 if [ -z "$SUBDIR" ]; then

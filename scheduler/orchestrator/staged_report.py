@@ -21,16 +21,7 @@ import urllib.error
 from datetime import datetime
 from typing import Optional
 
-
-# S3 prefix → hub name (mirrors backlog_emails.py / Config.S3_PREFIX_MAP)
-S3_PREFIX_TO_HUB = {
-    "hathitrust": "hathi",
-    "tennessee": "tn",
-}
-
-
-def _s3_prefix_to_hub(s3_prefix: str) -> str:
-    return S3_PREFIX_TO_HUB.get(s3_prefix, s3_prefix)
+from .config import CANONICAL_TO_LEGACY_HUB_KEY, hub_aliases_enabled
 
 
 def _dir_to_date(dir_name: str) -> Optional[str]:
@@ -93,7 +84,10 @@ def get_staged_hubs(
                     dates.append(date_str)
 
         if dates:
-            hub_name = _s3_prefix_to_hub(s3_prefix)
+            if hub_aliases_enabled():
+                hub_name = CANONICAL_TO_LEGACY_HUB_KEY.get(s3_prefix, s3_prefix)
+            else:
+                hub_name = s3_prefix
             results.append({
                 "hub": hub_name,
                 "s3_prefix": s3_prefix,

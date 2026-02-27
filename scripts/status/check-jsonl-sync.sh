@@ -24,10 +24,7 @@ S3_BUCKET="dpla-master-dataset"
 # Function to get S3 hub name (handles local -> S3 name mappings)
 get_s3_hub_name() {
   local hub=$1
-  case $hub in
-    tn) echo "tennessee" ;;
-    *) echo "$hub" ;;
-  esac
+  resolve_s3_prefix "$hub"
 }
 
 # Parse arguments
