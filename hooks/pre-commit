@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Pre-commit hook: auto-sync AI context when docs/ai-context/ changes.
+# If any staged file is under docs/ai-context/rules/ or docs/ai-context/skills/,
+# run sync.sh and re-stage the generated outputs.
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+SYNC="$REPO_ROOT/scripts/ai-context/sync.sh"
+
+if [[ ! -x "$SYNC" ]]; then
+  exit 0
+fi
+
+staged_ai_context=$(git diff --cached --name-only -- 'docs/ai-context/rules/' 'docs/ai-context/skills/' 'scripts/ai-context/sync.sh' || true)
+
+if [[ -z "$staged_ai_context" ]]; then
+  exit 0
+fi
+
+echo "[pre-commit] AI context sources changed — running sync..."
+"$SYNC"
+
+git add .cursor/skills/ .claude/rules/ .claude/skills/
+echo "[pre-commit] Re-staged generated .cursor/ and .claude/ files."
