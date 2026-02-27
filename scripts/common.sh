@@ -26,6 +26,7 @@
 #   kill_tree         - Recursively kill a process tree (prevents orphan JVMs)
 #   run_entry         - Run any Scala entry class via JAR or sbt
 #   run_ingest_remap  - Convenience wrapper for IngestRemap entry point
+#   write_hub_status  - Write per-hub .status file (for ingest-status.sh)
 #   find_latest_data  - Find most recent timestamped data directory
 #   require_command   - Check that a command exists, exit if not
 #
@@ -387,6 +388,17 @@ run_ingest_remap() {
     run_entry dpla.ingestion3.entries.ingest.IngestRemap \
         --input="$input" --output="$output" --conf="$conf" --name="$name" \
         --sparkMaster="$SPARK_MASTER"
+}
+
+# Write per-hub status file so ingest-status.sh can show progress for manual runs
+# Usage: write_hub_status <hub> <status> [--error=msg] [--records=N]
+write_hub_status() {
+    local hub="$1" status="$2"
+    shift 2
+    local py="${I3_HOME}/venv/bin/python"
+    [[ -x "$py" ]] || py="python3"
+    "$py" -m scheduler.orchestrator.write_status "$hub" "$status" \
+        --status-dir="$I3_HOME/logs/status" "$@" 2>/dev/null || true
 }
 
 # =============================================================================
