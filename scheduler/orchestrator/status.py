@@ -33,6 +33,9 @@ from typing import Optional
 # Default location — matches IngestState.status_dir
 DEFAULT_STATUS_DIR = Path("logs/status")
 
+# Exclude status entries that have been in same stage for this long (likely stale/abandoned)
+STALE_THRESHOLD_SECONDS = 72 * 3600  # 72 hours
+
 # Stage display names and icons
 STAGE_DISPLAY = {
     "pending": ("Pending", "⏳"),
@@ -119,28 +122,130 @@ def _recompute_time_in_stage(data: dict) -> int | None:
         return data.get("time_in_stage_seconds")
 
 
+def _read_orchestrator_run(status_dir: Path) -> tuple[str | None, dict[str, dict]]:
+    """Read the latest run from orchestrator_state.json if present.
+
+    Returns (latest_run_id, {hub_name: status_dict}). status_dict uses the
+    same shape as .status files (hub, status, started_at, etc.) so callers
+    can merge with file-based status.
+    """
+    state_file = status_dir.parent / "orchestrator_state.json"
+    if not state_file.exists():
+        return None, {}
+
+    try:
+        data = json.loads(state_file.read_text())
+    except (json.JSONDecodeError, OSError):
+        return None, {}
+
+    runs = data.get("runs", {})
+    if not runs:
+        return None, {}
+
+    latest_id = max(runs.keys())
+    run = runs[latest_id]
+    hub_states = run.get("hubs", {})
+    result = {}
+    for hub_name, hub in hub_states.items():
+        status = hub.get("status", "pending")
+        result[hub_name] = {
+            "hub": hub_name,
+            "run_id": latest_id,
+            "status": status if isinstance(status, str) else getattr(status, "value", "pending"),
+            "started_at": hub.get("started_at"),
+            "stage_started_at": hub.get("stage_started_at"),
+            "total_elapsed_seconds": hub.get("duration_seconds"),
+            "time_in_stage_seconds": None,
+            "stage_index": None,
+            "total_stages": 6,
+            "harvest_records": hub.get("harvest_records"),
+            "error": hub.get("error"),
+            "stage_history": hub.get("stage_history", []),
+        }
+    return latest_id, result
+
+
 def read_status_files(
     status_dir: Path = DEFAULT_STATUS_DIR,
     hubs: list[str] | None = None,
+    include_stale: bool = False,
 ) -> list[dict]:
-    """Read all (or selected) .status files and return parsed dicts."""
-    if not status_dir.exists():
-        return []
+    """Read status from .status files and orchestrator_state.json, merged and filtered.
 
+    - Includes all hubs from the latest orchestrator run (from RunState).
+    - Includes manual-run hubs (run_id='manual') from .status files.
+    - Excludes stale .status files from previous orchestrator runs (avoids showing
+      old p2p/wisconsin etc. as if they were active).
+    """
+    status_dir = Path(status_dir).resolve()
+    latest_run_id, orchestrator_hubs = _read_orchestrator_run(status_dir)
+
+    # Build hub set from orchestrator (current run)
+    current_hub_names = set(orchestrator_hubs.keys())
+
+    # Collect from .status files
+    file_data: dict[str, dict] = {}
+    if status_dir.exists():
+        for status_file in sorted(status_dir.glob("*.status")):
+            hub_name = status_file.stem
+            if hubs and hub_name not in hubs:
+                continue
+            try:
+                data = json.loads(status_file.read_text())
+                data["time_in_stage_seconds"] = _recompute_time_in_stage(data)
+                data["total_elapsed_seconds"] = _recompute_total_elapsed(data)
+                file_data[hub_name] = data
+            except (json.JSONDecodeError, OSError):
+                file_data[hub_name] = {"hub": hub_name, "status": "unknown", "error": "unreadable"}
+
+    # Merge: prefer file data when available and current; include orchestrator hubs
     results = []
-    for status_file in sorted(status_dir.glob("*.status")):
-        hub_name = status_file.stem
+    seen = set()
+
+    for hub_name in sorted(
+        current_hub_names | set(file_data.keys()),
+        key=lambda h: (0 if h in current_hub_names else 1, h),
+    ):
         if hubs and hub_name not in hubs:
             continue
-        try:
-            data = json.loads(status_file.read_text())
-            # Recompute live timing fields
-            data["time_in_stage_seconds"] = _recompute_time_in_stage(data)
-            # Recompute total elapsed live for active hubs
-            data["total_elapsed_seconds"] = _recompute_total_elapsed(data)
-            results.append(data)
-        except (json.JSONDecodeError, OSError):
-            results.append({"hub": hub_name, "status": "unknown", "error": "unreadable"})
+        if hub_name in seen:
+            continue
+        seen.add(hub_name)
+
+        fd = file_data.get(hub_name)
+        od = orchestrator_hubs.get(hub_name)
+
+        # Include file-based status if: (a) manual run, or (b) matches latest run, or (c) hub not in orchestrator
+        if fd:
+            run_id = fd.get("run_id", "")
+            is_manual = run_id == "manual"
+            is_current_run = run_id == latest_run_id
+            is_orchestrator_stale = (
+                latest_run_id is not None
+                and run_id != "manual"
+                and run_id != latest_run_id
+                and hub_name not in current_hub_names
+            )
+            # Exclude entries stuck in same stage for >72h (abandoned runs)
+            time_in_stage = fd.get("time_in_stage_seconds") or 0
+            stuck_too_long = (
+                not include_stale
+                and time_in_stage > STALE_THRESHOLD_SECONDS
+                and fd.get("status") in ("syncing", "complete")
+            )
+            if stuck_too_long and not is_manual:
+                continue
+            if is_manual or is_current_run or (od is None and not is_orchestrator_stale):
+                results.append(fd)
+                continue
+            if is_orchestrator_stale:
+                # Stale from previous run — exclude
+                continue
+
+        if od:
+            od["time_in_stage_seconds"] = _recompute_time_in_stage(od)
+            od["total_elapsed_seconds"] = _recompute_total_elapsed(od)
+            results.append(od)
 
     return results
 
@@ -149,13 +254,14 @@ def get_status_table(
     *hubs: str,
     status_dir: Path = DEFAULT_STATUS_DIR,
     verbose: bool = False,
+    include_stale: bool = False,
 ) -> str:
     """Return a formatted status table as a string.
 
     This is the primary interface for agents and scripts.
     """
     hub_list = list(hubs) if hubs else None
-    entries = read_status_files(status_dir, hub_list)
+    entries = read_status_files(status_dir, hub_list, include_stale=include_stale)
 
     if not entries:
         return "No status files found. Is an ingest running?"
@@ -240,10 +346,11 @@ def get_status_table(
 def get_status_json(
     *hubs: str,
     status_dir: Path = DEFAULT_STATUS_DIR,
+    include_stale: bool = False,
 ) -> list[dict]:
     """Return status data as a list of dicts (for agent consumption)."""
     hub_list = list(hubs) if hubs else None
-    return read_status_files(status_dir, hub_list)
+    return read_status_files(status_dir, hub_list, include_stale=include_stale)
 
 
 def main():
@@ -269,11 +376,14 @@ Examples:
                         help="Auto-refresh (default every 30s)")
     parser.add_argument("--status-dir", type=Path, default=DEFAULT_STATUS_DIR,
                         help="Path to status directory")
+    parser.add_argument("--all", action="store_true", dest="include_stale",
+                        help="Include stale entries (e.g. stuck >72h)")
 
     args = parser.parse_args()
 
     if args.json:
-        data = get_status_json(*args.hubs, status_dir=args.status_dir)
+        data = get_status_json(*args.hubs, status_dir=args.status_dir,
+                               include_stale=args.include_stale)
         print(json.dumps(data, indent=2))
         return
 
@@ -286,6 +396,7 @@ Examples:
                     *args.hubs,
                     status_dir=args.status_dir,
                     verbose=args.verbose,
+                    include_stale=args.include_stale,
                 ))
                 print(f"\n  (refreshing every {args.watch}s — Ctrl-C to stop)")
                 time.sleep(args.watch)
@@ -297,6 +408,7 @@ Examples:
             *args.hubs,
             status_dir=args.status_dir,
             verbose=args.verbose,
+            include_stale=args.include_stale,
         ))
 
 

@@ -79,7 +79,7 @@ while IFS='|' read -r provider_code hub_name frequency week; do
         
         if [ "$provider_code" = "nara" ]; then
             echo "# NARA requires delta ingest with ZIP file from NARA"
-            echo "# See README_NARA.md for details"
+            echo "# See docs/ingestion/README_NARA.md for details"
             echo "# ./nara-ingest.sh /path/to/nara-export.zip"
             echo "echo \"NARA requires manual delta ingest. Run: ./nara-ingest.sh /path/to/nara-export.zip\""
         else
