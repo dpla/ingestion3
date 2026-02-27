@@ -1,32 +1,31 @@
-# Claude Code Skills for DPLA Ingestion3
+# Claude Code Skills (synced from docs/ai-context/)
 
-This directory contains user-invocable skills for Claude Code. Skills provide specialized workflows and commands that can be invoked by name.
+These skills are **generated** by `./scripts/ai-context/sync.sh` from `docs/ai-context/skills/`. Do not edit directly; edit the source and re-run sync.
 
 ## Available Skills
 
 | Skill | Command | Description |
 |-------|---------|-------------|
 | send-email | `send email <hub>` | Send ingest summary email to hub contacts on demand |
-| s3-latest | `what is the latest data for <hub>` | Show latest harvest, mapping, and JSONL in S3 for a hub |
+| dpla-hub-info | `hub info <hub>` | Show key i3.conf config for a hub (harvest type/endpoint, schedule, email, setlist) |
+| dpla-staged-report | `staged report` | Report which hubs have new JSONL staged in S3 for a month (optionally post to Slack) |
+| dpla-oai-harvest-watch | `watch oai harvest <hub>` | Watch an OAI harvest log and report set-by-set progress + ETA |
+| dpla-monitor-ingest-remap | `monitor remap <hub>` | Monitor mapping/enrichment/jsonl progress via orchestrator status or `_SUCCESS` markers |
+| dpla-ingest-status | `status of the ingests` | Show all active and completed ingests in one consolidated table |
+| dpla-ingest-debug | `debug <hub>` | Debug and fix hub ingestion failures |
+| dpla-community-webs-ingest | `harvest community-webs` | Run Community Webs ingest from SQLite DB |
+| dpla-monthly-emails | `send scheduling email` | Generate/preview/send the monthly pre-scheduling email |
 
 ## Using Skills
 
-### In Claude Code
-
-Skills are automatically discovered when you run Claude Code in this repo. You can invoke them naturally:
+Skills are automatically discovered when you run Claude Code in this repo. Invoke them naturally:
 
 ```
 User: "send email for nara"
 Claude: [invokes send-email skill with argument "nara"]
 ```
 
-Or explicitly:
-
-```
-User: "/send-email nara"
-```
-
-### Skill Structure
+## Skill Structure
 
 Each skill is defined in its own directory with a `SKILL.md` file:
 
@@ -36,25 +35,6 @@ Each skill is defined in its own directory with a `SKILL.md` file:
     SKILL.md         # Skill definition with frontmatter and instructions
 ```
 
-The `SKILL.md` format:
-```markdown
----
-name: skill-name
-description: Brief description for skill discovery
----
-
-# skill-name
-
-[Detailed instructions for Claude on how to use the skill]
-```
-
-## Creating New Skills
-
-1. Create a new directory: `.claude/skills/<skill-name>/`
-2. Add `SKILL.md` with frontmatter and instructions
-3. Document the skill in this README
-4. Test by invoking in Claude Code
-
 ## Integration with Project Rules
 
 Skills complement the `.claude/rules/` files:
@@ -62,6 +42,8 @@ Skills complement the `.claude/rules/` files:
 - **Skills** (`.claude/skills/*/SKILL.md`): On-demand invocable commands
 
 Both work together to provide comprehensive Claude Code support for DPLA ingests.
+
+**Source:** `docs/ai-context/` — edit there, then run `./scripts/ai-context/sync.sh`.
 
 ## Related
 

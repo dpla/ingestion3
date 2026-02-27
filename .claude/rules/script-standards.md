@@ -1,10 +1,10 @@
-# DPLA Script Workflow
+# DPLA Script Standards
 
 When adding or modifying scripts in this repo, follow the project's conventions so scripts are documented, portable, and tested.
 
 **Apply when:** User asks to add a script, create a new script, modify a script, or write a script for a task.
 
-**Environment:** When running the test suite or any script that depends on project env, run `source .env` from repo root first.
+**Environment:** See [AGENTS.md](AGENTS.md) § Environment and build.
 
 ## Project Rules (apply to all new/changed scripts)
 

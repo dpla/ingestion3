@@ -4,7 +4,7 @@ Perform S3 and AWS data operations for the ingestion pipeline using the project'
 
 **Apply when:** User says sync to S3, check S3 sync, upload to S3, AWS bucket, or check JSONL sync.
 
-**Environment:** Source `.env` from repo root before running scripts that need `DPLA_DATA` or AWS env (e.g. `source .env`).
+**Environment:** See [AGENTS.md](AGENTS.md) § Environment and build.
 
 ## Always Use AWS Profile
 
@@ -37,18 +37,11 @@ See [scripts/SCRIPTS.md](scripts/SCRIPTS.md) for options.
 
 ## Anomaly Detection
 
-The orchestrator and s3-sync.sh run anomaly checks before syncing. If counts or failure rates change sharply, sync may be blocked (critical) or proceed with a warning. See [AGENTS.md](AGENTS.md) and [GOLDEN_PATH.md](GOLDEN_PATH.md).
+The orchestrator and s3-sync.sh run anomaly checks before syncing. See [AGENTS.md](AGENTS.md).
 
 ## Manual AWS Commands
 
-If you must run `aws` directly:
-
-```bash
-aws s3 ls s3://bucket-name/ --profile dpla
-aws s3 cp local s3://bucket/key --profile dpla
-```
-
-Never omit `--profile dpla`.
+If you must run `aws` directly, always use `--profile dpla`.
 
 ## Reference
 

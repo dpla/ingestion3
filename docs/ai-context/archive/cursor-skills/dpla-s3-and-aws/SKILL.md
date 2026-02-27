@@ -51,7 +51,7 @@ Uses AWS profile via script env; see [scripts/SCRIPTS.md](scripts/SCRIPTS.md) fo
 
 ## Anomaly Detection
 
-The orchestrator (and s3-sync.sh when used in that flow) runs anomaly checks before syncing. If counts or failure rates change sharply, sync may be blocked (critical) or proceed with a warning. Escalation and Slack alerts are sent; see [AGENTS.md](AGENTS.md) and [GOLDEN_PATH.md](GOLDEN_PATH.md).
+The orchestrator (and s3-sync.sh when used in that flow) runs anomaly checks before syncing. If counts or failure rates change sharply, sync may be blocked (critical) or proceed with a warning. Escalation and Slack alerts are sent; see [AGENTS.md](AGENTS.md) and [GOLDEN_PATH.md](../../../../ingestion/GOLDEN_PATH.md).
 
 ## Manual AWS Commands (when needed)
 
