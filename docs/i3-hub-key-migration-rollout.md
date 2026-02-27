@@ -43,4 +43,4 @@ This rollback is intentionally low-friction and avoids production S3 mutations.
 
 For post-cutover alias and monkey-patching removal, see:
 
-- [docs/i3-hub-alias-cleanup-plan.md](docs/i3-hub-alias-cleanup-plan.md)
+- [i3-hub-alias-cleanup-plan.md](i3-hub-alias-cleanup-plan.md)

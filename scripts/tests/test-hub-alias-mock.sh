@@ -86,7 +86,7 @@ I3_STRICT_HUB_NAMES=1 \
 assert_log_contains "s3 sync $DATA_DIR/hathi/ s3://dpla-master-dataset/hathi/ --profile dpla"
 
 # 3) check-jsonl-sync uses alias for tn
-run_with_stubbed_aws "$REPO_ROOT/scripts/check-jsonl-sync.sh" --data-dir "$DATA_DIR" --profile dpla || true
+run_with_stubbed_aws "$REPO_ROOT/scripts/status/check-jsonl-sync.sh" --data-dir "$DATA_DIR" --profile dpla || true
 assert_log_contains "s3 ls s3://dpla-master-dataset/tennessee/jsonl/20260201_000000-tn-MAP3_1.IndexRecord.jsonl/ --profile dpla"
 
 # 4) check-jsonl-sync keeps canonical tennessee unchanged

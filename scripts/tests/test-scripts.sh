@@ -811,9 +811,9 @@ test_community_webs_export() {
     require_cmd sqlite3 || return
     require_cmd jq || return
 
-    local export_script="$SCRIPTS_DIR/community-webs-export.sh"
+    local export_script="$SCRIPTS_DIR/harvest/community-webs-export.sh"
     if [[ ! -f "$export_script" ]]; then
-        log_skip "community-webs-export.sh not found"
+        log_skip "harvest/community-webs-export.sh not found"
         return
     fi
 
@@ -849,7 +849,11 @@ SQL
     datestamp=$(date +%Y%m%d)
     local zip_dir="$out_dir/$datestamp"
     local zip_count
-    zip_count=$(find "$zip_dir" -name "community-webs-*.zip" -type f 2>/dev/null | wc -l | tr -d ' ')
+    if [[ -d "$zip_dir" ]]; then
+        zip_count=$(find "$zip_dir" -name "community-webs-*.zip" -type f 2>/dev/null | wc -l | tr -d ' ')
+    else
+        zip_count=0
+    fi
 
     TESTS_RUN=$((TESTS_RUN + 1))
     if [[ "$zip_count" -ge 1 ]]; then
@@ -860,7 +864,10 @@ SQL
 
     # Verify JSONL inside ZIP
     local zip_file
-    zip_file=$(find "$zip_dir" -name "community-webs-*.zip" -type f 2>/dev/null | head -1)
+    zip_file=""
+    if [[ -d "$zip_dir" ]]; then
+        zip_file=$(find "$zip_dir" -name "community-webs-*.zip" -type f 2>/dev/null | head -1)
+    fi
     if [[ -n "$zip_file" ]] && unzip -l "$zip_file" 2>/dev/null | grep -q "community-webs.jsonl"; then
         TESTS_RUN=$((TESTS_RUN + 1))
         log_pass "Community Webs ZIP contains community-webs.jsonl"
@@ -885,7 +892,7 @@ test_send_email_yes_flag() {
         return
     fi
 
-    local script_path="$SCRIPTS_DIR/send-ingest-email.sh"
+    local script_path="$SCRIPTS_DIR/communication/send-ingest-email.sh"
 
     if [[ ! -f "$script_path" ]]; then
         log_skip "send-ingest-email.sh not found"

@@ -21,9 +21,9 @@ def mock_config():
     config.logs_dir = Path("/tmp/dpla-test-logs")
     config.i3_home = Path("/tmp/dpla-test-home")
     config.aws_profile = "dpla"
-    config.slack_webhook = os.environ.get("SLACK_WEBHOOK") or "https://hooks.slack.com/test"
-    config.slack_tech_webhook = os.environ.get("SLACK_TECH_WEBHOOK")
-    config.slack_alert_user_id = os.environ.get("SLACK_ALERT_USER_ID")
+    config.slack_webhook = "https://hooks.slack.com/services/TEST/FAKE/WEBHOOK"
+    config.slack_tech_webhook = "https://hooks.slack.com/services/TEST/FAKE/TECH"
+    config.slack_alert_user_id = "U0TESTFAKE01"
     config.aliases_enabled = True
     config.github_token = None
 

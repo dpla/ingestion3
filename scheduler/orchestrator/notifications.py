@@ -14,6 +14,11 @@ from .s3_utils import build_s3_paths, count_avro_records, count_jsonl_records, g
 # Maximum Slack message size (leave buffer under 40KB limit)
 MAX_SLACK_TEXT_LENGTH = 35000
 
+# Failure escalation Slack limits (keep payload under 40KB)
+MAX_FAILURE_SLACK_HUBS = 10
+MAX_ERROR_LINES_CHARS = 2500
+MAX_OAI_CONTEXT_CHARS = 2500
+
 
 class Notifier:
     """Handles notifications and failure escalation."""
@@ -730,7 +735,7 @@ class Notifier:
             # Indent block lines under the hub bullet
             indented = "\n".join(f"    {l}" for l in block.split("\n"))
             return [header, indented]
-        elif mapped:
+        elif mapped is not None:
             return [f"{header} — ~`{mapped:,}` records"]
         else:
             return [f"{header} — done"]
@@ -990,9 +995,29 @@ class Notifier:
             if getattr(self.config, 'slack_alert_user_id', None):
                 mention = f"<@{self.config.slack_alert_user_id}> "
 
-            # Build OAI context block if available in any failure
+            # Derive stage label from report (fallback to "pipeline")
+            stage_label = failure_report.get('stage')
+            if not stage_label:
+                for details in failure_report.get('failures', {}).values():
+                    if details.get('failure_stage'):
+                        stage_label = details['failure_stage']
+                        break
+            stage_label = (stage_label or "pipeline").capitalize()
+
+            # Cap hub names
+            failed_hubs = failure_report['failed_hubs']
+            if len(failed_hubs) > MAX_FAILURE_SLACK_HUBS:
+                hub_summary = ', '.join(failed_hubs[:MAX_FAILURE_SLACK_HUBS])
+                hub_summary += f" and {len(failed_hubs) - MAX_FAILURE_SLACK_HUBS} more"
+            else:
+                hub_summary = ', '.join(failed_hubs)
+
+            # Build OAI context block (truncate to safe limit)
             oai_context = ""
             for hub_name, details in failure_report.get('failures', {}).items():
+                if len(oai_context) >= MAX_OAI_CONTEXT_CHARS:
+                    oai_context = oai_context[:MAX_OAI_CONTEXT_CHARS] + "\n..."
+                    break
                 diag = details.get('diagnosis') or {}
                 ctx = diag.get('context') or {}
                 if ctx.get('oai_set') or ctx.get('resumption_token'):
@@ -1009,9 +1034,12 @@ class Notifier:
                     if ctx.get('url'):
                         oai_context += f"• URL: {ctx['url']}\n"
 
-            # Include per-hub error summaries
+            # Per-hub error summaries (truncate per-msg and total)
             error_lines = ""
             for hub_name, details in failure_report.get('failures', {}).items():
+                if len(error_lines) >= MAX_ERROR_LINES_CHARS:
+                    error_lines = error_lines[:MAX_ERROR_LINES_CHARS] + "\n..."
+                    break
                 error_msg = details.get('error', 'Unknown')
                 if len(error_msg) > 200:
                     error_msg = error_msg[:200] + "..."
@@ -1019,9 +1047,9 @@ class Notifier:
 
             self._send_slack({
                 "text": f"{prefix}:x: DPLA Ingest Failures\n"
-                       f"{mention}Harvest failure needs attention\n"
+                       f"{mention}{stage_label} failure needs attention\n"
                        f"Run: `{run_id}`\n"
-                       f"Failed: {', '.join(failure_report['failed_hubs'])}"
+                       f"Failed: {hub_summary}"
                        f"{error_lines}"
                        f"{oai_context}\n"
                        f"Review: `{md_file}`"
