@@ -1,6 +1,6 @@
 # DPLA Ingestion3 – Agent guide
 
-Use this document when you are asked to **run ingests**, **report status**, or **handle errors** for the DPLA ingestion pipeline. It ties together runbooks, scripts, and notification policy.
+Use this document when you are asked to **run ingests**, **report status**, or **handle errors** for the DPLA ingestion pipeline. This document provides shared reference (environment, notifications, error patterns). For ingest procedures, use the rules and skills linked in the Ingest workflows section.
 
 ---
 
@@ -14,30 +14,20 @@ Use this document when you are asked to **run ingests**, **report status**, or *
 - **Python:** Use `./venv/bin/python` or `source ./venv/bin/activate`; do not use system Python.
 - **AWS:** Use `--profile dpla` for all `aws` commands.
 
-**Why this checklist lives in AGENTS.md:** The full list of "before X do Y" rules is kept in one place so Cursor and Claude agents (and humans) follow the same process. A possible downside is that an agent might only read .cursorrules or CLAUDE.md and not open AGENTS.md — but for ingest-related work we already expect agents to open AGENTS.md to get runbooks and the runbook index, so putting the environment and build checklist here too does not add a new "you must open this file" requirement; it's the same document you use for runbooks.
+**Why this checklist lives in AGENTS.md:** The full list of "before X do Y" rules is kept in one place so Cursor and Claude agents (and humans) follow the same process. .cursorrules and CLAUDE.md point here for the canonical checklist.
 
 ---
 
-## Running an ingest
+## Ingest workflows
 
-1. **Start here:** Read [runbooks/README.md](runbooks/README.md) to see the runbook index and where hub configuration lives. If the runbooks directory is not yet present, use [scripts/SCRIPTS.md](scripts/SCRIPTS.md) and the harvest type mapping below.
+| Task | Where to go |
+|------|-------------|
+| Run a single-hub ingest | [.claude/rules/ingestion.md](.claude/rules/ingestion.md) / dpla-run-ingest skill |
+| Run orchestrator (parallel, scheduled) | [.claude/rules/orchestrator.md](.claude/rules/orchestrator.md) |
+| Verify and notify on failure | [.claude/rules/notifications.md](.claude/rules/notifications.md) |
+| Runbook index | [runbooks/README.md](runbooks/README.md) |
 
-2. **Identify the hub** (e.g. from the user request or schedule).
-
-3. **Determine harvest type** from i3.conf (`$I3_CONF`, default `~/dpla/code/ingestion3-conf/i3.conf`): look up `<hub>.harvest.type` for that hub. Values: `localoai`, `api`, `file`, `nara.file.delta`.
-
-4. **Follow the right runbook:**
-   - `localoai` → [runbooks/05-standard-oai-ingests.md](runbooks/05-standard-oai-ingests.md)
-   - `api` → [runbooks/06-standard-api-ingests.md](runbooks/06-standard-api-ingests.md)
-   - `file` → [runbooks/04-file-based-imports.md](runbooks/04-file-based-imports.md); for Smithsonian or NARA use their dedicated runbooks.
-   - `nara.file.delta` → [runbooks/02-nara.md](runbooks/02-nara.md)
-   - Smithsonian (file) → [runbooks/03-smithsonian.md](runbooks/03-smithsonian.md)
-
-5. **Run the scripts** indicated in that runbook (e.g. `./scripts/ingest.sh <hub>`, `./scripts/remap.sh <hub>`, or `./scripts/harvest/nara-ingest.sh` for NARA). See [scripts/SCRIPTS.md](scripts/SCRIPTS.md) for script options and usage.
-
-6. **Verify** outputs (e.g. `_SUCCESS` markers, record counts) and run `./scripts/s3-sync.sh <hub>` when the runbook says so.
-
-Do not run the standard ingest pipeline for NARA or Smithsonian without following their dedicated runbooks (NARA uses a delta merge workflow; Smithsonian requires preprocessing via `fix-si.sh`).
+> Rules and skills are synced from `docs/ai-context/`. Edit there; run `./scripts/ai-context/sync.sh`.
 
 ---
 
@@ -109,24 +99,8 @@ Ensure every failure is reflected in #tech-alerts or in an email to tech@dp.la.
 
 ---
 
-## Agent checklist for ingest runs
+## Project conventions
 
-**Before running:**
-- If the run will use the pipeline (harvest/mapping/remap/etc.), run `sbt assembly` so the fat JAR reflects the current code (or confirm no Scala changes since last build).
-- Confirm hub and harvest type; open the correct runbook (or SCRIPTS.md if runbooks are not yet available).
-- If using the orchestrator, ensure `SLACK_WEBHOOK` is set (or plan to email tech@dp.la on failure).
-
-**After a run:**
-- If any hub failed: post failure summary to #tech-alerts or email tech@dp.la; include stage and reference escalation report if present.
-- If the run completed: completion notification is sent by the orchestrator when applicable; if you ran only scripts, consider notifying status to #tech-alerts or tech@dp.la if that’s standard for your workflow.
-
-**References:**
-- Runbooks: [runbooks/README.md](runbooks/README.md)
-- Scripts: [scripts/SCRIPTS.md](scripts/SCRIPTS.md)
-- Config: i3.conf at `$I3_CONF` (default `~/dpla/code/ingestion3-conf/i3.conf`)
-- Debug ingest failures: [.cursor/skills/dpla-ingest-debug/SKILL.md](.cursor/skills/dpla-ingest-debug/SKILL.md)
-
-**Project conventions:**
 - **Environment:** Source `.env` before running the orchestrator or pipeline scripts so `JAVA_HOME`, `SLACK_WEBHOOK`, `DPLA_DATA`, and other vars are set (e.g. `source .env` from repo root).
 - **Python:** Use the virtualenv at `./venv/` when writing or running Python scripts.
 - **AWS CLI:** Use `--profile dpla` for all AWS commands.
@@ -134,18 +108,6 @@ Ensure every failure is reflected in #tech-alerts or in an email to tech@dp.la.
 - **New or changed scripts:** Document in [scripts/SCRIPTS.md](scripts/SCRIPTS.md) (Quick Reference and, if needed, Script Details). Create or update tests in `scripts/tests/` and run `./scripts/tests/test-scripts.sh` when changing scripts.
 
 For a human-readable explanation of how this document is used and how an agent moves through it, see [docs/AGENTS-narrative.md](docs/AGENTS-narrative.md).
-
----
-
-## Critical: OutputHelper path convention
-
-**All `--output` arguments to Scala entry points must be `$DPLA_DATA` (the data root)**, never `$DPLA_DATA/$PROVIDER`.
-
-`OutputHelper.scala` constructs paths as: `rootPath / shortName / activity / timestamp-shortName-schema`
-
-So `--output=$DPLA_DATA` produces `$DPLA_DATA/nara/jsonl/20260210_103600-nara-MAP3_1.IndexRecord.jsonl` (correct). But `--output=$DPLA_DATA/nara` would produce `$DPLA_DATA/nara/nara/jsonl/...` (double-nested, WRONG).
-
-This applies to all entry points: HarvestEntry, MappingEntry, EnrichEntry, JsonlEntry, IngestRemap.
 
 ---
 
@@ -172,56 +134,6 @@ All scripts use `run_entry()` from `common.sh`, which automatically uses the fat
 The JAR is preferred for all usage. Rebuild after code changes with `sbt assembly`.
 
 **Important:** The `build.sbt` assembly merge strategy must discard `.SF`/`.DSA`/`.RSA` signature files from signed dependency JARs. Without this, the fat JAR will fail at runtime with `SecurityException: Invalid signature file digest` (Java 11+) or the misleading `Could not find or load main class` (Java 8). The current `build.sbt` already handles this.
-
----
-
-## Verifying pipeline output
-
-Each pipeline step writes a `_SUCCESS` marker file when complete. Check for it:
-
-```bash
-# Verify a step completed
-ls $DPLA_DATA/<hub>/jsonl/<timestamped-dir>/_SUCCESS
-
-# The _MANIFEST file contains record counts
-cat $DPLA_DATA/<hub>/jsonl/<timestamped-dir>/_MANIFEST
-```
-
-Incomplete runs (directories with `_temporary` but no `_SUCCESS`) should be deleted before retrying.
-
----
-
-## Resuming failed steps
-
-If a pipeline fails partway through:
-
-1. Check which steps completed (look for `_SUCCESS` files in `harvest/`, `mapping/`, `enrichment/`, `jsonl/`).
-2. Re-run only the failed step and later steps. Example: if mapping succeeded but enrichment failed, run `./scripts/enrich.sh <hub>` then `./scripts/jsonl.sh <hub>`.
-3. For the full pipeline (IngestRemap), it must be re-run from scratch since it does mapping+enrichment+jsonl in one Spark application.
-
----
-
-## Parallel ingest execution
-
-Use the Python orchestrator for parallel hub processing:
-
-```bash
-# Run 3 hubs concurrently
-./venv/bin/python -m scheduler.orchestrator.main --parallel=3
-
-# Specific hubs in parallel
-./venv/bin/python -m scheduler.orchestrator.main --hub=mi,va,mn --parallel=3
-
-# Preview without running
-./venv/bin/python -m scheduler.orchestrator.main --dry-run --parallel=3
-```
-
-Resource budgeting (automatic):
-- `--parallel=1`: local[4], 8g heap (default)
-- `--parallel=2`: local[2-3], 4-6g heap each
-- `--parallel=3`: local[2], 4g heap each
-
-Per-hub status files: `logs/status/<hub>.status` (JSON, updated in real-time).
 
 ---
 

@@ -1,4 +1,4 @@
-See @README_INGESTS.md for the generialized rules of running ingests and @README_NARA.md and @README_SMITHSONIAN.md for NARA and Smithsonian ingest documentations
+See @docs/ingestion/README_INGESTS.md for the generialized rules of running ingests and @docs/ingestion/README_NARA.md and @docs/ingestion/README_SMITHSONIAN.md for NARA and Smithsonian ingest documentations
 
 # Project rules
 
@@ -10,10 +10,10 @@ See @README_INGESTS.md for the generialized rules of running ingests and @README
 
 # Ingest and script workflows (Claude Code)
 
-All markdown files in **.claude/rules/** are loaded automatically by Claude Code when you run it in this repo. User-invocable **skills** in **.claude/skills/** provide on-demand commands.
+All markdown files in **.claude/rules/** are loaded automatically by Claude Code when you run it in this repo. User-invocable **skills** in **.claude/skills/** provide on-demand commands. Rules and skills are generated from `docs/ai-context/` via `./scripts/ai-context/sync.sh`; edit there, then run sync.
 
 - **Warp → Claude Code → .claude/rules/ + .claude/skills/**
-  Run `claude` (or your Claude Code CLI) from the ingestion3 repo root. The rules in `.claude/rules/` (orchestrator, run-ingest, script-workflow, verify-and-notify, s3-and-aws) are in context so you can say "run ingest for maryland", "run the orchestrator for wisconsin and p2p", "sync hub X to S3", "add a script for ...", etc. Skills in `.claude/skills/` provide invocable commands like "send email for nara". See:
+  Run `claude` (or your Claude Code CLI) from the ingestion3 repo root. The rules in `.claude/rules/` (orchestrator, ingestion, script-standards, notifications, validation, aws-tools) are in context so you can say "run ingest for maryland", "run the orchestrator for wisconsin and p2p", "sync hub X to S3", "add a script for ...", etc. Skills in `.claude/skills/` provide invocable commands like "send email for nara". See:
   - [.claude/rules/README.md](.claude/rules/README.md) — Rule index
   - [.claude/skills/README.md](.claude/skills/README.md) — Available skills
 
