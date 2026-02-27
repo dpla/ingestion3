@@ -179,36 +179,30 @@ done
 # ============================================================
 log "Cleaning stale targets..."
 
-# Build set of expected Cursor skill dirs
-declare -A EXPECTED_CURSOR_SKILLS
-for skill in "${SHARED_SKILLS[@]}" "${CURSOR_ONLY_SKILLS[@]}"; do
-  EXPECTED_CURSOR_SKILLS["$skill"]=1
-done
+# Build newline-delimited list of expected Cursor skill names (POSIX-portable)
+EXPECTED_CURSOR="$(printf '%s\n' "${SHARED_SKILLS[@]}" "${CURSOR_ONLY_SKILLS[@]}")"
 
 # Remove unexpected Cursor skill dirs
 if [[ -d "$CURSOR_SKILLS" ]]; then
   for d in "$CURSOR_SKILLS"/*/; do
     [[ -d "$d" ]] || continue
     name="$(basename "$d")"
-    if [[ -z "${EXPECTED_CURSOR_SKILLS[$name]+x}" ]]; then
+    if ! echo "$EXPECTED_CURSOR" | grep -Fqx "$name"; then
       action "DELETE $d (no matching source skill)"
       $DRY_RUN || rm -rf "$d"
     fi
   done
 fi
 
-# Build set of expected Claude skill dirs
-declare -A EXPECTED_CLAUDE_SKILLS
-for skill in "${SHARED_SKILLS[@]}"; do
-  EXPECTED_CLAUDE_SKILLS["$skill"]=1
-done
+# Build newline-delimited list of expected Claude skill names
+EXPECTED_CLAUDE="$(printf '%s\n' "${SHARED_SKILLS[@]}")"
 
 # Remove unexpected Claude skill dirs
 if [[ -d "$CLAUDE_SKILLS" ]]; then
   for d in "$CLAUDE_SKILLS"/*/; do
     [[ -d "$d" ]] || continue
     name="$(basename "$d")"
-    if [[ -z "${EXPECTED_CLAUDE_SKILLS[$name]+x}" ]]; then
+    if ! echo "$EXPECTED_CLAUDE" | grep -Fqx "$name"; then
       action "DELETE $d (no matching source skill)"
       $DRY_RUN || rm -rf "$d"
     fi

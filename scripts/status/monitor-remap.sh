@@ -5,6 +5,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+[[ -f "$REPO_ROOT/.env" ]] && source "$REPO_ROOT/.env" || { echo "WARN: $REPO_ROOT/.env not found; DPLA_DATA may be wrong" >&2; }
 source "$SCRIPT_DIR/../common.sh"
 
 hub="${1:?Usage: monitor-remap.sh <hub>}"

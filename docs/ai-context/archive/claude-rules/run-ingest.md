@@ -8,7 +8,7 @@ Run an ingest for a specific hub using the right runbook and scripts, then verif
 
 ## Checklist
 
-0. **JAR is built automatically:** When you run `./scripts/harvest.sh` (or ingest.sh, remap.sh, etc.), `run_entry` in common.sh sources `.env` (for `JAVA_HOME`) and runs `sbt assembly` if the JAR is missing or if any Scala source is newer than the JAR. No separate build step needed.
+0. **Build the JAR:** Run `sbt assembly` from repo root before running ingests/skills so the fat JAR is current. Script wrappers (./scripts/harvest.sh, ingest.sh, remap.sh) call `run_entry` in common.sh, which uses the JAR when present or falls back to `sbt runMain` only when the JAR is missing — they do not auto-build the JAR.
 1. **Identify the hub** (e.g. from the user message).
 2. **Get harvest type** from i3.conf (`$I3_CONF`, default `~/dpla/code/ingestion3-conf/i3.conf`): `<hub>.harvest.type`. Values: `localoai`, `api`, `file`, `nara.file.delta`.
 3. **Pick the runbook:** See [runbooks/README.md](../runbooks/README.md) for harvest-type to runbook mapping.

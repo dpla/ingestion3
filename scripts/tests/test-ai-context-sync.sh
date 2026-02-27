@@ -59,7 +59,7 @@ done
 # Test 3: Dry run produces no changes (idempotence)
 # -------------------------------------------------------
 echo "Test 3: Sync is idempotent (dry-run shows no changes)"
-dry_output="$("$SYNC" --dry-run 2>&1)"
+dry_output="$("$SYNC" --dry-run 2>&1)" || true
 if echo "$dry_output" | grep -q "no changes needed"; then
   pass "dry-run reports no changes"
 else

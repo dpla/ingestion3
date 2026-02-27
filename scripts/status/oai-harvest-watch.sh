@@ -6,6 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 I3_HOME="$(cd "$SCRIPT_DIR/../.." && pwd)"
+[[ -f "$I3_HOME/.env" ]] && source "$I3_HOME/.env" || { echo "WARN: $I3_HOME/.env not found" >&2; }
 source "$SCRIPT_DIR/../common.sh"
 
 hub="${1:?Usage: oai-harvest-watch.sh <hub>}"

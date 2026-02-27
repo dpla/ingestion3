@@ -11,6 +11,7 @@ When adding or modifying scripts in this repo, follow the project's conventions 
 1. **Python:** Use the virtualenv at `./venv/` (e.g. `./venv/bin/python` or `source ./venv/bin/activate`). Never assume system Python.
 2. **AWS CLI:** Use `--profile dpla` for any AWS commands.
 3. **Shell scripts:** Write POSIX-compliant bash. Avoid macOS- or Linux-specific flags (e.g. `sed -i`, `readlink -f`). Use helpers from `scripts/common.sh`: `sed_i`, `get_script_dir`, `get_common_dir`, `log_info`, `die`, etc.
+4. **Environment and build:** Before running scripts that depend on project env or the fat JAR: run `source .env` from repo root, then `sbt assembly`. See [AGENTS.md](AGENTS.md) § Environment and build.
 
 ## Workflow Checklist
 

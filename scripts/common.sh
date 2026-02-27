@@ -398,7 +398,7 @@ write_hub_status() {
     local py="${I3_HOME}/venv/bin/python"
     [[ -x "$py" ]] || py="python3"
     "$py" -m scheduler.orchestrator.write_status "$hub" "$status" \
-        --status-dir="$I3_HOME/logs/status" "$@" 2>/dev/null || true
+        --status-dir="$I3_HOME/logs/status" "$@"
 }
 
 # =============================================================================

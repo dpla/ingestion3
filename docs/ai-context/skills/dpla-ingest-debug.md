@@ -37,9 +37,17 @@ If you have only a hub name and "it failed", the quickest approach is:
 - check `logs/status/<hub>.status` (JSON), and
 - check the newest matching log in `logs/`.
 
+## Before Re-running: Resolve harvest type and runbook
+
+Before re-running any scripts, determine the correct runbook for the hub:
+
+1. **Read harvest type** from i3.conf: `grep "^<hub>\.harvest\.type" "$I3_CONF"` (or use the dpla-hub-info skill).
+2. **Choose the matching runbook** for that harvest type: `file`, `api`, `localoai`, or special-case runbooks (Smithsonian preprocessing, NARA delta workflow). See [runbooks/README.md](../../../runbooks/README.md).
+3. **Only then** run harvest.sh, remap.sh, s3-sync.sh, or orchestrator retries — do not apply a generic rerun that's inappropriate for the hub type.
+
 ## Re-run the Minimal Steps
 
-All commands below assume you're running from repo root.
+All commands below assume you're running from repo root and that you've resolved harvest type and runbook (see above).
 
 Harvest failed:
 ```bash
@@ -70,17 +78,21 @@ Orchestrator retry (one hub):
 
 - **Timeout / unreachable feed**: retry harvest; if repeated, confirm the endpoint in i3.conf and capture the exact error line for escalation.
 - **Missing input** (mapping complains about harvest input): harvest didn't produce output → re-run harvest, then remap.
-- **sbt contention / orphan processes**: prefer using the fat JAR path via scripts (they rebuild as needed). If you must intervene, inspect before killing:
+- **sbt contention / orphan processes**: ensure the fat JAR is built (`sbt assembly`) before running pipeline scripts. If you must intervene, inspect before killing:
   - `pgrep -fl 'sbt|java.*ingestion3'`
   - then `kill <pid>` (avoid broad `pkill` patterns unless you're sure).
 - **Smithsonian / NARA special workflows**: do not improvise; follow the dedicated runbooks (Smithsonian preprocessing, NARA delta workflow).
 
 ## Verify Output
-After re-running, verify `_SUCCESS` markers and counts:
+After re-running, verify `_SUCCESS` markers and counts for all pipeline steps (harvest, mapping, enrichment, jsonl):
 ```bash
 ls "$DPLA_DATA/<hub>/harvest"/*/_SUCCESS
 ls "$DPLA_DATA/<hub>/mapping"/*/_SUCCESS
+ls "$DPLA_DATA/<hub>/enrichment"/*/_SUCCESS
 ls "$DPLA_DATA/<hub>/jsonl"/*/_SUCCESS
 
 cat "$DPLA_DATA/<hub>/mapping"/*/_SUMMARY | head
+cat "$DPLA_DATA/<hub>/enrichment"/*/_SUMMARY | head
 ```
+
+The pipeline is not successful if enrichment failed; ensure all four stages have `_SUCCESS` markers.
