@@ -115,7 +115,7 @@ Full context, proposed skills for sparkindexer and ingest-wikimedia, and how to 
 
 - [../dpla-unified-pipeline-proposal.md](../dpla-unified-pipeline-proposal.md) -- Original unification proposal
 - [../../AGENTS.md](../../AGENTS.md) -- ingestion3 agent guide (environment, runbooks, notifications)
-- [../../GOLDEN_PATH.md](../../GOLDEN_PATH.md) -- ingestion3 standard workflow
+- [../../docs/ingestion/GOLDEN_PATH.md](../../docs/ingestion/GOLDEN_PATH.md) -- ingestion3 standard workflow
 - [../../scripts/SCRIPTS.md](../../scripts/SCRIPTS.md) -- ingestion3 script reference
 
 ---

@@ -56,16 +56,16 @@ That determines which runbook applies and whether this is a standard OAI/API run
 
 Using the harvest-type → runbook mapping in AGENTS.md:
 
-- **localoai** → runbooks/05-standard-oai-ingests.md  
-- **api** → runbooks/06-standard-api-ingests.md  
-- **file** → runbooks/04-file-based-imports.md (or 03 Smithsonian / 02 NARA when that hub)  
-- **nara.file.delta** → runbooks/02-nara.md  
+- **localoai** → runbooks/05-standard-oai-ingests.md
+- **api** → runbooks/06-standard-api-ingests.md
+- **file** → runbooks/04-file-based-imports.md (or 03 Smithsonian / 02 NARA when that hub)
+- **nara.file.delta** → runbooks/02-nara.md
 
 The agent opens that runbook and follows its steps (e.g. “run ingest.sh,” “run nara-ingest.sh,” “run fix-si.sh then harvest then remap”). If the runbooks directory does not exist yet, the agent falls back to scripts/SCRIPTS.md and the harvest-type logic still applies.
 
 ### 4. Run scripts and verify
 
-The agent runs the scripts indicated in the runbook (e.g. `./scripts/ingest.sh maryland`, `./scripts/nara-ingest.sh --month=202601`). It then verifies outputs (e.g. _SUCCESS, record counts) and runs `./scripts/s3-sync.sh <hub>` when the runbook says so.
+The agent runs the scripts indicated in the runbook (e.g. `./scripts/ingest.sh maryland`, `./scripts/harvest/nara-ingest.sh --month=202601`). It then verifies outputs (e.g. _SUCCESS, record counts) and runs `./scripts/s3-sync.sh <hub>` when the runbook says so.
 
 ### 5. Apply notification policy
 

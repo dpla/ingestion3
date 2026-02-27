@@ -2,32 +2,49 @@
 
 Shell scripts for running the DPLA ingestion3 pipeline. All scripts are cross-platform compatible with macOS and Ubuntu Linux.
 
+## Script locations
+
+Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh maryland` or `./scripts/harvest/nara-ingest.sh --month=202601`).
+
+| Folder | Purpose | Scripts |
+|--------|---------|---------|
+| **scripts/** (root) | Core pipeline, batch, S3 | `ingest.sh`, `harvest.sh`, `remap.sh`, `mapping.sh`, `enrich.sh`, `jsonl.sh`, `auto-ingest.sh`, `batch-ingest.sh`, `s3-sync.sh`, `common.sh` |
+| **scripts/communication/** | Schedule, email, Slack | `schedule.sh`, `send-ingest-email.sh`, `notify-harvest-failure.sh`, `send-harvest-failure-email.py` |
+| **scripts/delete/** | Record removal | `delete-by-id.sh`, `delete-from-jsonl.sh`, `delete-from-jsonl.py` |
+| **scripts/harvest/** | Harvest helpers, NARA, Community Webs, SI, VA | `nara-ingest.sh`, `community-webs-export.sh`, `community-webs-ingest.sh`, `community-webs-validate-jsonl.py`, `fix-si.sh`, `harvest-va.sh` |
+| **scripts/status/** | Status and sync checks | `ingest-status.sh`, `check-jsonl-sync.sh`, `monitor-pipeline.sh`, `monitor-remap.sh`, `hub-info.sh`, `s3-latest.sh`, `staged-report.sh`, `oai-harvest-watch.sh`, `watch-oai-harvest.py`, `watch-oai-harvest-pages.py` |
+
 ## Quick Reference
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| `ingest.sh` | Full pipeline (harvest → map → enrich → jsonl) | `./ingest.sh <hub>` |
-| `harvest.sh` | Harvest records from OAI/API/file source | `./harvest.sh <hub>` |
-| `remap.sh` | Re-run mapping → enrichment → jsonl | `./remap.sh <hub>` |
-| `mapping.sh` | Transform harvested records to DPLA MAP | `./mapping.sh <hub>` |
-| `enrich.sh` | Enrich/normalize DPLA MAP records | `./enrich.sh <hub>` |
-| `jsonl.sh` | Export enriched records to JSON-L | `./jsonl.sh <hub>` |
-| `auto-ingest.sh` | Automated monthly ingestion | `./auto-ingest.sh [--hub=<hub>]` |
-| `batch-ingest.sh` | Run pipeline for multiple hubs | `./batch-ingest.sh <hub1> <hub2>...` |
-| `nara-ingest.sh` | NARA delta ingest pipeline | `./nara-ingest.sh <nara-export.zip>` |
-| `community-webs-export.sh` | Export Community Webs SQLite DB to JSONL/ZIP | `./community-webs-export.sh [--db=PATH]` |
-| `community-webs-ingest.sh` | Community Webs ingest: export + harvest (+ optional full pipeline) | `./community-webs-ingest.sh [--full]` |
-| `schedule.sh` | Query hub ingest schedules | `./schedule.sh [month\|hub]` |
-| `s3-sync.sh` | Sync hub data to S3 | `./s3-sync.sh <hub> [subdir]` |
-| `fix-si.sh` | Preprocess Smithsonian data | `./fix-si.sh <folder>` |
-| `harvest-va.sh` | Download Digital Virginias repos | `./harvest-va.sh [output-dir]` |
-| `check-jsonl-sync.sh` | Check JSONL sync status with S3 | `./check-jsonl-sync.sh` |
-| `delete-by-id.sh` | Delete records from Elasticsearch | `./delete-by-id.sh <id>...` |
-| `delete-from-jsonl.sh` | Delete records from S3 JSONL files | `./delete-from-jsonl.sh --hub <hub> <id>...` |
-| `send-ingest-email.sh` | Send ingest summary email | `./send-ingest-email.sh [--yes] <hub>` |
+| `ingest.sh` | Full pipeline (harvest → map → enrich → jsonl → S3 sync) | `./scripts/ingest.sh <hub>` |
+| `harvest.sh` | Harvest records from OAI/API/file source | `./scripts/harvest.sh <hub>` |
+| `remap.sh` | Re-run mapping → enrichment → jsonl | `./scripts/remap.sh <hub>` |
+| `mapping.sh` | Transform harvested records to DPLA MAP | `./scripts/mapping.sh <hub>` |
+| `enrich.sh` | Enrich/normalize DPLA MAP records | `./scripts/enrich.sh <hub>` |
+| `jsonl.sh` | Export enriched records to JSON-L | `./scripts/jsonl.sh <hub>` |
+| `auto-ingest.sh` | Automated monthly ingestion | `./scripts/auto-ingest.sh [--hub=<hub>]` |
+| `batch-ingest.sh` | Run pipeline for multiple hubs | `./scripts/batch-ingest.sh <hub1> <hub2>...` |
+| `harvest/nara-ingest.sh` | NARA delta ingest pipeline | `./scripts/harvest/nara-ingest.sh <nara-export.zip>` |
+| `harvest/community-webs-export.sh` | Export Community Webs SQLite DB to JSONL/ZIP | `./scripts/harvest/community-webs-export.sh [--db=PATH]` |
+| `harvest/community-webs-ingest.sh` | Community Webs ingest: export + harvest (+ optional full pipeline) | `./scripts/harvest/community-webs-ingest.sh [--full]` |
+| `communication/schedule.sh` | Query hub ingest schedules | `./scripts/communication/schedule.sh [month\|hub]` |
+| `s3-sync.sh` | Sync hub data to S3 | `./scripts/s3-sync.sh <hub> [subdir]` |
+| `harvest/fix-si.sh` | Preprocess Smithsonian data | `./scripts/harvest/fix-si.sh <folder>` |
+| `harvest/harvest-va.sh` | Download Digital Virginias repos | `./scripts/harvest/harvest-va.sh [output-dir]` |
+| `status/check-jsonl-sync.sh` | Check JSONL sync status with S3 | `./scripts/status/check-jsonl-sync.sh` |
+| `delete/delete-by-id.sh` | Delete records from Elasticsearch | `./scripts/delete/delete-by-id.sh <id>...` |
+| `delete/delete-from-jsonl.sh` | Delete records from S3 JSONL files | `./scripts/delete/delete-from-jsonl.sh --hub <hub> <id>...` |
+| `communication/send-ingest-email.sh` | Send ingest summary email | `./scripts/communication/send-ingest-email.sh [--yes] <hub>` |
 | *scheduling_emails* (Python) | Monthly pre-scheduling email to hub contacts | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails [--month=N] --dry-run \| --draft \| --send` |
-| `ingest-status.sh` | Check orchestrator status | `./ingest-status.sh` |
-| `notify-harvest-failure.sh` | Send Slack and email (tech@dp.la) on harvest failure | `./notify-harvest-failure.sh <hub> "<error>"` |
+| `status/ingest-status.sh` | Check ingest status (orchestrator or manual runs) | `./scripts/status/ingest-status.sh` |
+| `communication/notify-harvest-failure.sh` | Send Slack and email (tech@dp.la) on harvest failure | `./scripts/communication/notify-harvest-failure.sh <hub> "<error>"` |
+| `status/hub-info.sh` | Show hub config from i3.conf | `./scripts/status/hub-info.sh <hub>` |
+| `status/s3-latest.sh` | Show latest S3 data for a hub (harvest/mapping/jsonl) | `./scripts/status/s3-latest.sh <hub>` |
+| `status/staged-report.sh` | Report hubs with JSONL staged in S3 for a month | `./scripts/status/staged-report.sh [month]` |
+| `status/oai-harvest-watch.sh` | Run OAI harvest and watch set-by-set progress + ETA | `./scripts/status/oai-harvest-watch.sh <hub>` |
+| `status/monitor-remap.sh` | Poll mapping/enrichment/jsonl stage outputs during manual remap | `./scripts/status/monitor-remap.sh <hub>` |
 
 ## Environment Variables
 
@@ -65,6 +82,7 @@ All scripts source `common.sh` which provides:
 - **Process management**: `kill_tree <pid>` — recursively kill a process and all its descendants (prevents orphan JVMs)
 - **Entry runner**: `run_entry <EntryClass> [--arg=val ...]` — runs any Scala entry class via JAR; builds the JAR first if missing or if Scala sources are newer than the JAR
 - **IngestRemap runner**: `run_ingest_remap <input> <output> <conf> <name>` — convenience wrapper for IngestRemap
+- **Status writer**: `write_hub_status <hub> <status> [--error=msg]` — writes per-hub `.status` file for ingest-status.sh (used by ingest.sh, harvest.sh, remap.sh)
 - **Data finder**: `find_latest_data <provider> <step>` — finds the most recent timestamped directory for a pipeline step
 
 ### Example: Using common.sh in a new script
@@ -113,32 +131,32 @@ Processes hubs scheduled for the current month:
 
 ### nara-ingest.sh - NARA Delta Ingest
 
-Handles NARA's large dataset with delta updates:
+Handles NARA's large dataset with delta updates. Located in `scripts/harvest/`:
 
 ```bash
-./scripts/nara-ingest.sh /path/to/nara-export.zip
-./scripts/nara-ingest.sh /path/to/export.zip --force-sync
-./scripts/nara-ingest.sh --skip-to-pipeline   # Use existing merged harvest
+./scripts/harvest/nara-ingest.sh /path/to/nara-export.zip
+./scripts/harvest/nara-ingest.sh /path/to/export.zip --force-sync
+./scripts/harvest/nara-ingest.sh --skip-to-pipeline   # Use existing merged harvest
 ```
 
 ### schedule.sh - Query Schedules
 
-Query hub ingest schedules from i3.conf:
+Query hub ingest schedules from i3.conf. Located in `scripts/communication/`:
 
 ```bash
-./scripts/schedule.sh              # Full year schedule
-./scripts/schedule.sh feb          # February hubs
-./scripts/schedule.sh 2            # Month 2 hubs
-./scripts/schedule.sh virginias    # Single hub schedule
+./scripts/communication/schedule.sh              # Full year schedule
+./scripts/communication/schedule.sh feb          # February hubs
+./scripts/communication/schedule.sh 2            # Month 2 hubs
+./scripts/communication/schedule.sh virginias   # Single hub schedule
 ```
 
 ### fix-si.sh - Smithsonian Preprocessing
 
-Preprocess Smithsonian XML files before harvest:
+Preprocess Smithsonian XML files before harvest. Located in `scripts/harvest/`:
 
 ```bash
-./scripts/fix-si.sh --list        # List available folders
-./scripts/fix-si.sh 20260201      # Process specific folder
+./scripts/harvest/fix-si.sh --list        # List available folders
+./scripts/harvest/fix-si.sh 20260201      # Process specific folder
 ```
 
 ### community-webs-export.sh - Community Webs DB Export
@@ -148,10 +166,10 @@ Export Community Webs SQLite database to JSONL and ZIP for harvest. Internet Arc
 **Prerequisites:** `sqlite3`, `jq` (brew install sqlite3 jq / apt install sqlite3 jq)
 
 ```bash
-./scripts/community-webs-export.sh                        # Auto-detect latest *.db
-./scripts/community-webs-export.sh --db=/path/to/file.db  # Explicit DB path
-./scripts/community-webs-export.sh --update-conf          # Also update i3.conf endpoint
-./scripts/community-webs-export.sh --skip-validate        # Skip JSONL schema validation (not recommended)
+./scripts/harvest/community-webs-export.sh                        # Auto-detect latest *.db
+./scripts/harvest/community-webs-export.sh --db=/path/to/file.db  # Explicit DB path
+./scripts/harvest/community-webs-export.sh --update-conf          # Also update i3.conf endpoint
+./scripts/harvest/community-webs-export.sh --skip-validate        # Skip JSONL schema validation (not recommended)
 ```
 
 Output: `$DPLA_DATA/community-webs/originalRecords/<YYYYMMDD>/community-webs-<timestamp>.zip`
@@ -160,38 +178,38 @@ The script validates the JSONL against the expected harvest schema (required `id
 
 ### community-webs-ingest.sh - Community Webs Ingest
 
-Orchestrates export + harvest + (optional) full pipeline:
+Orchestrates export + harvest + (optional) full pipeline. Located in `scripts/harvest/`:
 
 ```bash
-./scripts/community-webs-ingest.sh              # Export + harvest only
-./scripts/community-webs-ingest.sh --full       # Export + harvest + mapping + enrichment + jsonl
-./scripts/community-webs-ingest.sh --skip-export  # Harvest only (endpoint must already point to ZIP)
-./scripts/community-webs-ingest.sh --db=/path/to/db --update-conf
+./scripts/harvest/community-webs-ingest.sh              # Export + harvest only
+./scripts/harvest/community-webs-ingest.sh --full       # Export + harvest + mapping + enrichment + jsonl
+./scripts/harvest/community-webs-ingest.sh --skip-export  # Harvest only (endpoint must already point to ZIP)
+./scripts/harvest/community-webs-ingest.sh --db=/path/to/db --update-conf
 ```
 
 ### delete-by-id.sh - Elasticsearch Delete
 
-Delete records from Elasticsearch by DPLA ID:
+Delete records from Elasticsearch by DPLA ID. Located in `scripts/delete/`:
 
 ```bash
-./scripts/delete-by-id.sh <id1> <id2> ...
-./scripts/delete-by-id.sh -f ids-to-delete.txt
-cat ids.txt | ./scripts/delete-by-id.sh -f -
+./scripts/delete/delete-by-id.sh <id1> <id2> ...
+./scripts/delete/delete-by-id.sh -f ids-to-delete.txt
+cat ids.txt | ./scripts/delete/delete-by-id.sh -f -
 
 # Preview without deleting
-DRY_RUN=true ./scripts/delete-by-id.sh -f ids.txt
+DRY_RUN=true ./scripts/delete/delete-by-id.sh -f ids.txt
 ```
 
 ### delete-from-jsonl.sh - S3 JSONL Delete
 
-Delete records from JSONL files in S3:
+Delete records from JSONL files in S3. Located in `scripts/delete/`:
 
 ```bash
-./scripts/delete-from-jsonl.sh --hub cdl -f ids-to-delete.txt
-./scripts/delete-from-jsonl.sh --hub cdl <id1> <id2> ...
+./scripts/delete/delete-from-jsonl.sh --hub cdl -f ids-to-delete.txt
+./scripts/delete/delete-from-jsonl.sh --hub cdl <id1> <id2> ...
 
 # Preview without modifying
-DRY_RUN=true ./scripts/delete-from-jsonl.sh --hub cdl -f ids.txt
+DRY_RUN=true ./scripts/delete/delete-from-jsonl.sh --hub cdl -f ids.txt
 ```
 
 > **Note**: For better performance, use `delete-from-jsonl.py` instead.
@@ -274,21 +292,21 @@ Sends ingest summary emails to hub contacts on demand. Useful for re-sending ema
   - Error/warning details from `_SUMMARY`
   - Pre-signed S3 links to full logs (7-day expiration)
 
-**Usage:**
+**Usage:** (script in `scripts/communication/`)
 ```bash
 # Latest mapping for a hub
-./scripts/send-ingest-email.sh maryland
+./scripts/communication/send-ingest-email.sh maryland
 
 # Skip confirmation prompt (for automation)
-./scripts/send-ingest-email.sh --yes nara
+./scripts/communication/send-ingest-email.sh --yes nara
 
 # Specific mapping directory
-./scripts/send-ingest-email.sh maryland /path/to/mapping/20260201_120000-maryland-MAP.avro
+./scripts/communication/send-ingest-email.sh maryland /path/to/mapping/20260201_120000-maryland-MAP.avro
 
 # Bulk send (with --yes to avoid multiple prompts)
-./scripts/send-ingest-email.sh --yes wisconsin
-./scripts/send-ingest-email.sh --yes p2p
-./scripts/send-ingest-email.sh --yes maryland
+./scripts/communication/send-ingest-email.sh --yes wisconsin
+./scripts/communication/send-ingest-email.sh --yes p2p
+./scripts/communication/send-ingest-email.sh --yes maryland
 ```
 
 **Options:**
@@ -359,15 +377,15 @@ Invoked by `HarvestExecutor` when an OAI (or other) harvest fails. Sends **both*
 
 **Slack:** If `SLACK_WEBHOOK` is set, posts to #tech-alerts with hub name and error snippet (from `OaiHarvestException.getMessage`). Optional `SLACK_ALERT_USER_ID` adds an @mention.
 
-**Email:** Always attempts to send to **tech@dp.la** via AWS SES using `scripts/send-harvest-failure-email.py` (requires project venv and boto3; uses `AWS_PROFILE`, default `dpla`). Best-effort: if email fails (e.g. no credentials), a warning is printed and the script still exits 0.
+**Email:** Always attempts to send to **tech@dp.la** via AWS SES using `scripts/communication/send-harvest-failure-email.py` (requires project venv and boto3; uses `AWS_PROFILE`, default `dpla`). Best-effort: if email fails (e.g. no credentials), a warning is printed and the script still exits 0.
 
-**Usage:** Normally called by the JVM on harvest failure; can be run manually:
+**Usage:** Normally called by the JVM on harvest failure; can be run manually (script in `scripts/communication/`):
 ```bash
 # With Scala-provided email body (3 args)
-./scripts/notify-harvest-failure.sh indiana "OAI Error: badArgument ..." "DPLA OAI Harvest Failure..."
+./scripts/communication/notify-harvest-failure.sh indiana "OAI Error: badArgument ..." "DPLA OAI Harvest Failure..."
 
 # Without email body (2 args, backward-compat: Python wraps error in default template)
-./scripts/notify-harvest-failure.sh indiana "OAI Error: badArgument ..."
+./scripts/communication/notify-harvest-failure.sh indiana "OAI Error: badArgument ..."
 ```
 
 **Environment:** `SLACK_WEBHOOK`, `SLACK_ALERT_USER_ID`, `AWS_PROFILE` (for email), `I3_HOME` (default: derived from script path).
