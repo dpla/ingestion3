@@ -604,6 +604,26 @@ test_output_path_convention() {
             log_pass "Output path: $script uses correct convention"
         fi
     done
+
+    # ingest.sh: HarvestEntry and IngestRemap must receive --output=$DPLA_DATA (not HARVEST_DIR/PROVIDER_DATA)
+    local ingest_sh="$SCRIPTS_DIR/ingest.sh"
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if [[ -f "$ingest_sh" ]]; then
+        local fail=0
+        if grep -v '^[[:space:]]*#' "$ingest_sh" | grep -q '--output=.*\$HARVEST_DIR\|--output=.*HARVEST_DIR' 2>/dev/null; then
+            log_fail "Output path: ingest.sh harvest uses --output=\$HARVEST_DIR (should be \$DPLA_DATA)"
+            fail=1
+        fi
+        if grep -v '^[[:space:]]*#' "$ingest_sh" | grep 'run_ingest_remap' | grep -q '\$PROVIDER_DATA' 2>/dev/null; then
+            log_fail "Output path: ingest.sh remap passes \$PROVIDER_DATA as output (should be \$DPLA_DATA)"
+            fail=1
+        fi
+        if [[ $fail -eq 0 ]]; then
+            log_pass "Output path: ingest.sh uses correct convention (\$DPLA_DATA for harvest and remap)"
+        fi
+    else
+        log_skip "Output path: ingest.sh (file not found)"
+    fi
 }
 
 # =============================================================================

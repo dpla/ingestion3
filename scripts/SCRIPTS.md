@@ -12,13 +12,13 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 | **scripts/communication/** | Schedule, email, Slack | `schedule.sh`, `send-ingest-email.sh`, `notify-harvest-failure.sh`, `send-harvest-failure-email.py` |
 | **scripts/delete/** | Record removal | `delete-by-id.sh`, `delete-from-jsonl.sh`, `delete-from-jsonl.py` |
 | **scripts/harvest/** | Harvest helpers, NARA, Community Webs, SI, VA | `nara-ingest.sh`, `community-webs-export.sh`, `community-webs-ingest.sh`, `community-webs-validate-jsonl.py`, `fix-si.sh`, `harvest-va.sh` |
-| **scripts/status/** | Status and sync checks | `ingest-status.sh`, `check-jsonl-sync.sh`, `monitor-pipeline.sh`, `watch-oai-harvest.py`, `watch-oai-harvest-pages.py` |
+| **scripts/status/** | Status and sync checks | `ingest-status.sh`, `check-jsonl-sync.sh`, `monitor-pipeline.sh`, `monitor-remap.sh`, `hub-info.sh`, `s3-latest.sh`, `staged-report.sh`, `oai-harvest-watch.sh`, `watch-oai-harvest.py`, `watch-oai-harvest-pages.py` |
 
 ## Quick Reference
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| `ingest.sh` | Full pipeline (harvest → map → enrich → jsonl) | `./scripts/ingest.sh <hub>` |
+| `ingest.sh` | Full pipeline (harvest → map → enrich → jsonl → S3 sync) | `./scripts/ingest.sh <hub>` |
 | `harvest.sh` | Harvest records from OAI/API/file source | `./scripts/harvest.sh <hub>` |
 | `remap.sh` | Re-run mapping → enrichment → jsonl | `./scripts/remap.sh <hub>` |
 | `mapping.sh` | Transform harvested records to DPLA MAP | `./scripts/mapping.sh <hub>` |
@@ -38,8 +38,13 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 | `delete/delete-from-jsonl.sh` | Delete records from S3 JSONL files | `./scripts/delete/delete-from-jsonl.sh --hub <hub> <id>...` |
 | `communication/send-ingest-email.sh` | Send ingest summary email | `./scripts/communication/send-ingest-email.sh [--yes] <hub>` |
 | *scheduling_emails* (Python) | Monthly pre-scheduling email to hub contacts | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails [--month=N] --dry-run \| --draft \| --send` |
-| `status/ingest-status.sh` | Check orchestrator status | `./scripts/status/ingest-status.sh` |
+| `status/ingest-status.sh` | Check ingest status (orchestrator or manual runs) | `./scripts/status/ingest-status.sh` |
 | `communication/notify-harvest-failure.sh` | Send Slack and email (tech@dp.la) on harvest failure | `./scripts/communication/notify-harvest-failure.sh <hub> "<error>"` |
+| `status/hub-info.sh` | Show hub config from i3.conf | `./scripts/status/hub-info.sh <hub>` |
+| `status/s3-latest.sh` | Show latest S3 data for a hub (harvest/mapping/jsonl) | `./scripts/status/s3-latest.sh <hub>` |
+| `status/staged-report.sh` | Report hubs with JSONL staged in S3 for a month | `./scripts/status/staged-report.sh [month]` |
+| `status/oai-harvest-watch.sh` | Run OAI harvest and watch set-by-set progress + ETA | `./scripts/status/oai-harvest-watch.sh <hub>` |
+| `status/monitor-remap.sh` | Poll mapping/enrichment/jsonl stage outputs during manual remap | `./scripts/status/monitor-remap.sh <hub>` |
 
 ## Environment Variables
 
@@ -77,6 +82,7 @@ All scripts source `common.sh` which provides:
 - **Process management**: `kill_tree <pid>` — recursively kill a process and all its descendants (prevents orphan JVMs)
 - **Entry runner**: `run_entry <EntryClass> [--arg=val ...]` — runs any Scala entry class via JAR; builds the JAR first if missing or if Scala sources are newer than the JAR
 - **IngestRemap runner**: `run_ingest_remap <input> <output> <conf> <name>` — convenience wrapper for IngestRemap
+- **Status writer**: `write_hub_status <hub> <status> [--error=msg]` — writes per-hub `.status` file for ingest-status.sh (used by ingest.sh, harvest.sh, remap.sh)
 - **Data finder**: `find_latest_data <provider> <step>` — finds the most recent timestamped directory for a pipeline step
 
 ### Example: Using common.sh in a new script
