@@ -77,4 +77,4 @@ Messages are sent with a `[TEST]` prefix.
 
 ## Reference
 
-- Full notification policy: [AGENTS.md](AGENTS.md) (sections on notifications and #tech-alerts)
+- Full notification policy: [AGENTS.md](../../../AGENTS.md) (sections on notifications and #tech-alerts)

@@ -4,7 +4,7 @@ Perform S3 and AWS data operations for the ingestion pipeline using the project'
 
 **Apply when:** User says sync to S3, check S3 sync, upload to S3, AWS bucket, check JSONL sync, latest S3 data, or when was hub last ingested.
 
-**Environment:** See [AGENTS.md](AGENTS.md) § Environment and build.
+**Environment:** See [AGENTS.md](../../AGENTS.md) § Environment and build.
 
 ## Always Use AWS Profile
 
@@ -43,11 +43,11 @@ Do not bypass with raw `aws s3 sync` unless necessary—and then still use `--pr
 ./scripts/status/check-jsonl-sync.sh
 ```
 
-See [scripts/SCRIPTS.md](scripts/SCRIPTS.md) for options.
+See [scripts/SCRIPTS.md](../../scripts/SCRIPTS.md) for options.
 
 ## Anomaly Detection
 
-The orchestrator and s3-sync.sh run anomaly checks before syncing. See [AGENTS.md](AGENTS.md).
+The orchestrator and s3-sync.sh run anomaly checks before syncing. See [AGENTS.md](../../AGENTS.md).
 
 ## Manual AWS Commands
 
@@ -55,5 +55,5 @@ If you must run `aws` directly, always use `--profile dpla`.
 
 ## Reference
 
-- [scripts/SCRIPTS.md](scripts/SCRIPTS.md) — s3-sync.sh, check-jsonl-sync.sh, s3-latest.sh
-- [AGENTS.md](AGENTS.md) — notify policy
+- [scripts/SCRIPTS.md](../../scripts/SCRIPTS.md) — s3-sync.sh, check-jsonl-sync.sh, s3-latest.sh
+- [AGENTS.md](../../AGENTS.md) — notify policy

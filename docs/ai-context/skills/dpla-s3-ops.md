@@ -58,11 +58,11 @@ To see how local JSONL exports compare to S3:
 ./scripts/status/check-jsonl-sync.sh
 ```
 
-Uses AWS profile via script env; see [scripts/SCRIPTS.md](scripts/SCRIPTS.md) for options.
+Uses AWS profile via script env; see [scripts/SCRIPTS.md](../../../scripts/SCRIPTS.md) for options.
 
 ## Anomaly Detection
 
-The orchestrator (and s3-sync.sh when used in that flow) runs anomaly checks before syncing. If counts or failure rates change sharply, sync may be blocked (critical) or proceed with a warning. Escalation and Slack alerts are sent; see [AGENTS.md](AGENTS.md) and [GOLDEN_PATH.md](../../ingestion/GOLDEN_PATH.md).
+The orchestrator (and s3-sync.sh when used in that flow) runs anomaly checks before syncing. If counts or failure rates change sharply, sync may be blocked (critical) or proceed with a warning. Escalation and Slack alerts are sent; see [AGENTS.md](../../../AGENTS.md) and [GOLDEN_PATH.md](../../../docs/ingestion/GOLDEN_PATH.md).
 
 ## Manual AWS Commands (when needed)
 
@@ -79,5 +79,5 @@ Never omit `--profile dpla`.
 
 | Resource | Path |
 |----------|------|
-| Script reference | [scripts/SCRIPTS.md](scripts/SCRIPTS.md) (s3-sync.sh, check-jsonl-sync.sh, s3-latest.sh) |
-| Agent / notify policy | [AGENTS.md](AGENTS.md) |
+| Script reference | [scripts/SCRIPTS.md](../../../scripts/SCRIPTS.md) (s3-sync.sh, check-jsonl-sync.sh, s3-latest.sh) |
+| Agent / notify policy | [AGENTS.md](../../../AGENTS.md) |

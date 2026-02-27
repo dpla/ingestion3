@@ -17,7 +17,7 @@ Run and monitor the Python orchestrator that drives the full ingestion pipeline 
 - "Retry failed hubs"
 - "What's running in the orchestrator?"
 
-**Environment:** Always run `source .env` from repo root before running the orchestrator so `JAVA_HOME`, `SLACK_WEBHOOK`, and other vars are set. Ensure the fat JAR is current: from repo root run `source .env` then `sbt assembly` before starting the orchestrator (or confirm no Scala changes since last build). Full checklist: [AGENTS.md](AGENTS.md) § Environment and build.
+**Environment:** Always run `source .env` from repo root before running the orchestrator so `JAVA_HOME`, `SLACK_WEBHOOK`, and other vars are set. Ensure the fat JAR is current: from repo root run `source .env` then `sbt assembly` before starting the orchestrator (or confirm no Scala changes since last build). Full checklist: [AGENTS.md](../../../AGENTS.md) § Environment and build.
 
 ## Always Use the Project Venv
 
@@ -87,5 +87,5 @@ Slack notifications go to #tech-alerts (and hub-complete to #tech when configure
 
 ## Reference
 
-- Full runbook: [GOLDEN_PATH.md](../../ingestion/GOLDEN_PATH.md)
-- Agent runbooks and notify policy: [AGENTS.md](AGENTS.md)
+- Full runbook: [GOLDEN_PATH.md](../../../docs/ingestion/GOLDEN_PATH.md)
+- Agent runbooks and notify policy: [AGENTS.md](../../../AGENTS.md)

@@ -15,15 +15,15 @@ Run an ingest for a specific hub using the right runbook and scripts, then verif
 - "Full pipeline for [hub]"
 - "Start harvest for [hub]"
 
-**Environment:** Scripts that source `common.sh` (harvest.sh, ingest.sh, remap.sh, etc.) automatically load `$I3_HOME/.env` when present, so `JAVA_HOME`, `DPLA_DATA`, `I3_CONF`, `SLACK_WEBHOOK`, etc. are set before the JAR is built or the pipeline runs. You do not need to run `source .env` separately. Full checklist: [AGENTS.md](AGENTS.md) § Environment and build.
+**Environment:** Scripts that source `common.sh` (harvest.sh, ingest.sh, remap.sh, etc.) automatically load `$I3_HOME/.env` when present, so `JAVA_HOME`, `DPLA_DATA`, `I3_CONF`, `SLACK_WEBHOOK`, etc. are set before the JAR is built or the pipeline runs. You do not need to run `source .env` separately. Full checklist: [AGENTS.md](../../../AGENTS.md) § Environment and build.
 
 ## Checklist
 
 0. **JAR is built automatically:** When you run `./scripts/harvest.sh` (or ingest.sh, remap.sh, etc.), `run_entry` in common.sh runs `sbt assembly` if the JAR is missing or if any Scala source is newer than the JAR. So "harvest indiana" will use current code without a separate build step. (You can still run `sbt assembly` first to avoid a build delay on the first harvest.)
 1. **Identify the hub** (e.g. from the user message).
 2. **Get harvest type** from i3.conf (`$I3_CONF`, default `~/dpla/code/ingestion3-conf/i3.conf`): `<hub>.harvest.type`. Values: `localoai`, `api`, `file`, `nara.file.delta`.
-3. **Pick the runbook:** See [runbooks/README.md](runbooks/README.md) for harvest-type to runbook mapping.
-4. **Run the scripts** from the runbook (see [scripts/SCRIPTS.md](scripts/SCRIPTS.md)). Examples:
+3. **Pick the runbook:** See [runbooks/README.md](../../../runbooks/README.md) for harvest-type to runbook mapping.
+4. **Run the scripts** from the runbook (see [scripts/SCRIPTS.md](../../../scripts/SCRIPTS.md)). Examples:
    - Full pipeline: `./scripts/ingest.sh <hub>`
    - Harvest only: `./scripts/harvest.sh <hub>`
    - Remap (mapping + enrich + jsonl): `./scripts/remap.sh <hub>`
@@ -55,7 +55,7 @@ Incomplete runs (e.g. `_temporary` but no `_SUCCESS`) should be deleted before r
 
 **Before running:**
 - If the run will use the pipeline, run `sbt assembly` so the fat JAR reflects the current code (or confirm no Scala changes since last build).
-- Confirm hub and harvest type; open the correct runbook (or [scripts/SCRIPTS.md](scripts/SCRIPTS.md) if runbooks are not yet available).
+- Confirm hub and harvest type; open the correct runbook (or [scripts/SCRIPTS.md](../../../scripts/SCRIPTS.md) if runbooks are not yet available).
 - If using the orchestrator, ensure `SLACK_WEBHOOK` is set (or plan to email tech@dp.la on failure).
 
 **After a run:**
@@ -72,7 +72,7 @@ Incomplete runs (e.g. `_temporary` but no `_SUCCESS`) should be deleted before r
 
 | Resource | Path |
 |----------|------|
-| Runbook index and mapping | [runbooks/README.md](runbooks/README.md) |
-| Script reference | [scripts/SCRIPTS.md](scripts/SCRIPTS.md) |
-| Agent guide | [AGENTS.md](AGENTS.md) |
+| Runbook index and mapping | [runbooks/README.md](../../../runbooks/README.md) |
+| Script reference | [scripts/SCRIPTS.md](../../../scripts/SCRIPTS.md) |
+| Agent guide | [AGENTS.md](../../../AGENTS.md) |
 | Config | i3.conf at $I3_CONF |

@@ -123,7 +123,7 @@ Internet Archive Community Webs sends a SQLite database. Use the automated scrip
 2. Harvest: `./scripts/harvest.sh community-webs`
 3. Pipeline: `./scripts/ingest.sh community-webs --skip-harvest`
 
-See [scripts/SCRIPTS.md](scripts/SCRIPTS.md) for `community-webs-export.sh` and `community-webs-ingest.sh` options.
+See [scripts/SCRIPTS.md](../../scripts/SCRIPTS.md) for `community-webs-export.sh` and `community-webs-ingest.sh` options.
 ### Digital Virginias
 Digital Virginias uses [multiple Github repositories](https://github.com/dplava) to publish their metadata. We need to clone these repos in order to harvest their metadata. This is a handy invocation to clone all the repositories for a Github account. 
 

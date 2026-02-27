@@ -4,7 +4,7 @@ Verify pipeline output after a run to confirm success or identify failures.
 
 **Apply when:** User asks to verify the ingest, check if it succeeded, or check pipeline output.
 
-**Environment:** See [AGENTS.md](AGENTS.md) § Environment and build.
+**Environment:** See [AGENTS.md](../../AGENTS.md) § Environment and build.
 
 ## Pipeline success markers
 
@@ -41,4 +41,4 @@ Directories with `_temporary` but no `_SUCCESS` indicate an incomplete Spark wri
 
 ## Reference
 
-- [AGENTS.md](AGENTS.md) — error patterns and fixes
+- [AGENTS.md](../../AGENTS.md) — error patterns and fixes

@@ -14,6 +14,13 @@ log="$I3_HOME/logs/harvest-${hub}-$(date +%Y%m%d_%H%M%S).log"
 
 mkdir -p "$(dirname "$log")"
 
-"$I3_HOME/scripts/harvest.sh" "$hub" 2>&1 | tee "$log"
+# Start watcher in background; it polls the log and exits when harvest completes
 "$I3_HOME/venv/bin/python" "$I3_HOME/scripts/status/watch-oai-harvest.py" \
-  --log="$log" --conf="$I3_CONF" --hub="$hub"
+  --log="$log" --conf="$I3_CONF" --hub="$hub" &
+watcher_pid=$!
+
+# Run harvest; tee writes to log and stdout
+"$I3_HOME/scripts/harvest.sh" "$hub" 2>&1 | tee "$log"
+
+# Watcher exits when it detects harvest completion; wait to avoid orphan
+wait "$watcher_pid" 2>/dev/null || true

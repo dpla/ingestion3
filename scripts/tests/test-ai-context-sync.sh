@@ -182,6 +182,37 @@ for skill_file in "$REPO_ROOT"/docs/ai-context/skills/*.md; do
 done
 
 # -------------------------------------------------------
+# Test 11: Markdown links resolve to existing files
+# -------------------------------------------------------
+echo "Test 11: Markdown links resolve correctly"
+link_broken=0
+for f in "$REPO_ROOT"/.claude/rules/*.md "$REPO_ROOT"/.claude/skills/*/SKILL.md "$REPO_ROOT"/.cursor/skills/*/SKILL.md "$REPO_ROOT"/.claude/rules/README.md; do
+  [[ -f "$f" ]] || continue
+  dir="$(dirname "$f")"
+  while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    filepath="${path%%#*}"
+    [[ -z "$filepath" ]] && continue
+    [[ "$filepath" == mailto:* ]] && continue
+    [[ "$filepath" == http:* ]] && continue
+    [[ "$filepath" == https:* ]] && continue
+    # Resolve path relative to file's directory (cd handles ../ correctly)
+    if (cd "$dir" 2>/dev/null && [ -e "$filepath" ]); then
+      pass "Link OK in $(basename "$f")"
+    else
+      fail "Broken link in $f: ]($path)"
+      link_broken=$((link_broken + 1))
+    fi
+  done < <(grep -oE '\]\([^)]+\)' "$f" 2>/dev/null | sed 's/](\(.*\))/\1/' || true)
+done 2>/dev/null || true
+
+if [[ $link_broken -eq 0 ]]; then
+  pass "All markdown links resolve"
+else
+  fail "$link_broken broken link(s) found"
+fi
+
+# -------------------------------------------------------
 # Summary
 # -------------------------------------------------------
 echo ""

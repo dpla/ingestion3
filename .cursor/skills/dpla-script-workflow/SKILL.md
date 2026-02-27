@@ -27,7 +27,7 @@ When adding or modifying scripts in this repo, follow the project's conventions 
 
 ### For new scripts
 - [ ] Implement using `scripts/common.sh` if bash (source it, use its helpers).
-- [ ] Add to **Quick Reference** table in [scripts/SCRIPTS.md](scripts/SCRIPTS.md) (script name, purpose, usage).
+- [ ] Add to **Quick Reference** table in [scripts/SCRIPTS.md](../../../scripts/SCRIPTS.md) (script name, purpose, usage).
 - [ ] If non-trivial, add a **Script Details** subsection in SCRIPTS.md (purpose, usage, env vars).
 - [ ] Add or extend tests in `scripts/tests/test-scripts.sh` (or under `scripts/tests/` as appropriate).
 - [ ] Run `./scripts/tests/test-scripts.sh` (or `--quick` for syntax) before committing.
@@ -41,7 +41,7 @@ When adding or modifying scripts in this repo, follow the project's conventions 
 
 | Resource | Path |
 |----------|------|
-| Script docs | [scripts/SCRIPTS.md](scripts/SCRIPTS.md) |
+| Script docs | [scripts/SCRIPTS.md](../../../scripts/SCRIPTS.md) |
 | Updating docs | SCRIPTS.md section "Updating This Documentation" |
 | Shared helpers | scripts/common.sh |
 | Test suite | scripts/tests/test-scripts.sh |
@@ -56,8 +56,8 @@ When adding or modifying scripts in this repo, follow the project's conventions 
 
 ## Example: Adding a new bash script
 
-1. Create script under `scripts/` with shebang `#!/usr/bin/env bash`, `set -euo pipefail`, and `source "$(get_script_dir)/common.sh"` (or equivalent via get_common_dir).
-2. Use `sed_i`, `get_script_dir`, `log_info`, `die` instead of raw `sed -i` or `readlink -f`.
+1. Create script under `scripts/` with shebang `#!/usr/bin/env bash`, `set -euo pipefail`, then source common.sh using the inline pattern (since `get_script_dir` is defined in common.sh): `SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"` and `source "$SCRIPT_DIR/common.sh"` (or `source "$SCRIPT_DIR/../common.sh"` for scripts in subdirs like `scripts/status/`).
+2. After sourcing, use `sed_i`, `get_script_dir`, `log_info`, `die` instead of raw `sed -i` or `readlink -f`.
 3. Add row to Quick Reference in SCRIPTS.md.
 4. Add a test in `scripts/tests/test-scripts.sh` (e.g. syntax check, help output, or sourcing common.sh).
 5. Run `./scripts/tests/test-scripts.sh` and fix any failures.

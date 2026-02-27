@@ -4,7 +4,7 @@ Run and monitor the Python orchestrator that drives the full ingestion pipeline 
 
 **Apply when:** User says run orchestrator, parallel ingest, ingest status, run hubs X Y Z, orchestrator dry-run, or retry failed hubs.
 
-**Environment:** See [AGENTS.md](AGENTS.md) § Environment and build.
+**Environment:** See [AGENTS.md](../../AGENTS.md) § Environment and build.
 
 ## Always Use the Project Venv
 
@@ -53,7 +53,7 @@ Per-hub status files: `logs/status/<hub>.status`.
 
 ## Long-Running Runs
 
-Use tmux or nohup so the run survives disconnection. See [AGENTS.md](AGENTS.md) § Parallel ingest execution.
+Use tmux or nohup so the run survives disconnection. See [AGENTS.md](../../AGENTS.md) § Parallel ingest execution.
 
 ## Pipeline Stages (per hub)
 
@@ -68,5 +68,5 @@ Slack → #tech-alerts (and hub-complete to #tech when configured). Failures →
 
 ## Reference
 
-- [GOLDEN_PATH.md](../../ingestion/GOLDEN_PATH.md) — full runbook
-- [AGENTS.md](AGENTS.md) — runbooks and notification policy
+- [GOLDEN_PATH.md](../../docs/ingestion/GOLDEN_PATH.md) — full runbook
+- [AGENTS.md](../../AGENTS.md) — runbooks and notification policy

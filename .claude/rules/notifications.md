@@ -4,7 +4,7 @@ Ensure the right people are notified when something fails or when status updates
 
 **Apply when:** User asks to notify about a failure, post to tech-alerts, send failure alert, or asks who to notify when ingest fails.
 
-**Environment:** See [AGENTS.md](AGENTS.md) § Environment and build.
+**Environment:** See [AGENTS.md](../../AGENTS.md) § Environment and build.
 
 ## What to Report (failures)
 
@@ -35,4 +35,4 @@ Messages are sent with a `[TEST]` prefix.
 
 ## Reference
 
-- [AGENTS.md](AGENTS.md) — full notification policy and #tech-alerts
+- [AGENTS.md](../../AGENTS.md) — full notification policy and #tech-alerts

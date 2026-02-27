@@ -59,5 +59,5 @@ Stale entries (e.g. a hub stuck in S3 Sync for >72h from a previous run) are exc
 
 ## References
 
-- [scripts/SCRIPTS.md](scripts/SCRIPTS.md) — ingest-status.sh usage
-- [AGENTS.md](AGENTS.md) — agent guide
+- [scripts/SCRIPTS.md](../../../scripts/SCRIPTS.md) — ingest-status.sh usage
+- [AGENTS.md](../../../AGENTS.md) — agent guide

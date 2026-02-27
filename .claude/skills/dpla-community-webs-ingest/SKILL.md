@@ -15,7 +15,7 @@ Run the Community Webs ingest workflow: export SQLite DB → JSONL → ZIP → h
 - "Process community webs"
 - "Ingest community-webs from database"
 
-**Environment:** Source `.env` before running so `JAVA_HOME`, `DPLA_DATA`, `I3_CONF` are set. Scripts that source `common.sh` load `$I3_HOME/.env` when present. Full checklist: [AGENTS.md](AGENTS.md) § Environment and build.
+**Environment:** Source `.env` before running so `JAVA_HOME`, `DPLA_DATA`, `I3_CONF` are set. Scripts that source `common.sh` load `$I3_HOME/.env` when present. Full checklist: [AGENTS.md](../../../AGENTS.md) § Environment and build.
 
 ## Workflow
 
@@ -71,6 +71,6 @@ Tests: `./venv/bin/python -m pytest scripts/tests/test_community_webs_validation
 
 | Resource | Path |
 |----------|------|
-| Script reference | [scripts/SCRIPTS.md](scripts/SCRIPTS.md) |
-| Ingest docs | [README_INGESTS.md](../../ingestion/README_INGESTS.md) |
-| Agent guide | [AGENTS.md](AGENTS.md) |
+| Script reference | [scripts/SCRIPTS.md](../../../scripts/SCRIPTS.md) |
+| Ingest docs | [README_INGESTS.md](../../../docs/ingestion/README_INGESTS.md) |
+| Agent guide | [AGENTS.md](../../../AGENTS.md) |

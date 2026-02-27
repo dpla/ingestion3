@@ -25,7 +25,7 @@ At the beginning of each month, DPLA sends **one summary email** to all contacts
 
 **Source of truth:** i3.conf. Hub inclusion is determined by `<hub>.schedule.months` (e.g. `digitalnc.schedule.months = [2, 5, 8, 11]`). Empty `schedule.months = []` means the hub is never scheduled (on-hold). Contacts come from `<hub>.email`.
 
-**Environment:** Run `source .env` from repo root when using config/paths. See [AGENTS.md](AGENTS.md) § Environment and build.
+**Environment:** Run `source .env` from repo root when using config/paths. See [AGENTS.md](../../../AGENTS.md) § Environment and build.
 
 ## Key Files
 
@@ -72,4 +72,4 @@ At the beginning of each month, DPLA sends **one summary email** to all contacts
 | Write draft | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails --month=2 --draft` |
 | Send via SES | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails --month=2 --send` |
 
-Documented in [scripts/SCRIPTS.md](scripts/SCRIPTS.md) under "Scheduling emails (monthly pre-scheduling notification)".
+Documented in [scripts/SCRIPTS.md](../../../scripts/SCRIPTS.md) under "Scheduling emails (monthly pre-scheduling notification)".

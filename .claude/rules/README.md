@@ -2,7 +2,7 @@
 
 These rule files are **generated** by `./scripts/ai-context/sync.sh` from `docs/ai-context/rules/`. Do not edit directly; edit the source and re-run sync.
 
-**Environment:** Before any of: building the JAR (`sbt assembly`), running the orchestrator, or running pipeline scripts — run `source .env` from repo root so `JAVA_HOME` (Java 11+), `SLACK_WEBHOOK`, `DPLA_DATA`, `I3_CONF`, etc. are set. Full checklist: [AGENTS.md](../AGENTS.md) § Environment and build.
+**Environment:** Before any of: building the JAR (`sbt assembly`), running the orchestrator, or running pipeline scripts — run `source .env` from repo root so `JAVA_HOME` (Java 11+), `SLACK_WEBHOOK`, `DPLA_DATA`, `I3_CONF`, etc. are set. Full checklist: [AGENTS.md](../../AGENTS.md) § Environment and build.
 
 | Rule file | Use when |
 |-----------|----------|
