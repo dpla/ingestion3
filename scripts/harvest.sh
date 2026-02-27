@@ -25,6 +25,9 @@ fi
 PROVIDER="$1"
 OUTPUT="$DPLA_DATA"
 
+trap 'err=$?; if [[ $err -ne 0 ]]; then write_hub_status "$PROVIDER" failed --error="Exit $err"; fi' EXIT
+write_hub_status "$PROVIDER" harvesting
+
 echo "Using Java: $JAVA_HOME"
 echo "Provider: $PROVIDER"
 echo "Output: $OUTPUT"
@@ -36,3 +39,5 @@ run_entry dpla.ingestion3.entries.ingest.HarvestEntry \
     --conf="$I3_CONF" \
     --name="$PROVIDER" \
     --sparkMaster="$SPARK_MASTER"
+
+write_hub_status "$PROVIDER" complete

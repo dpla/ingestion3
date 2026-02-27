@@ -26,6 +26,9 @@ PROVIDER="$1"
 INPUT="${2:-$(find_latest_data "$PROVIDER" "harvest" 2>/dev/null || echo "$DPLA_DATA/$PROVIDER/harvest")}"
 OUTPUT="$DPLA_DATA"
 
+trap 'err=$?; if [[ $err -ne 0 ]]; then write_hub_status "$PROVIDER" failed --error="Exit $err"; fi' EXIT
+write_hub_status "$PROVIDER" remapping
+
 echo "=============================================="
 echo "  IngestRemap: $PROVIDER"
 echo "=============================================="
@@ -36,6 +39,8 @@ echo "=============================================="
 echo ""
 
 run_ingest_remap "$INPUT" "$OUTPUT" "$I3_CONF" "$PROVIDER"
+
+write_hub_status "$PROVIDER" complete
 
 echo ""
 echo "=============================================="

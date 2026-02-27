@@ -13,7 +13,7 @@
 # Each month's delivery is a directory of ZIPs at:
 #   ~/dpla/data/nara/originalRecords/YYYYMM/
 #
-# See README_NARA.md for full documentation.
+# See docs/ingestion/README_NARA.md for full documentation.
 #
 # Usage:
 #   ./nara-ingest.sh --month=202601
@@ -48,7 +48,7 @@ OUTPUT_DATESTAMP=$(date +%Y%m%d)
 # Memory Configuration
 #
 # CRITICAL: NARA is ~18.8M records / 34 GB of Avro. These settings are tuned
-# to avoid OOM on machines with 16-18 GB RAM. See README_NARA.md for details.
+# to avoid OOM on machines with 16-18 GB RAM. See docs/ingestion/README_NARA.md for details.
 #
 # - Merge: uses local[1] to minimize concurrent task memory. The zero-persistence
 #   strategy in NaraMergeUtil only needs ~3 GB of heap.

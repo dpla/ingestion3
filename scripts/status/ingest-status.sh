@@ -12,8 +12,9 @@
 #
 
 # Repo root (script lives in scripts/status/)
+# Honor I3_HOME from env so status dir matches orchestrator/manual scripts
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-I3_HOME="$(cd "$SCRIPT_DIR/../.." && pwd)"
+I3_HOME="${I3_HOME:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 
 cd "$I3_HOME"
-python3 -m scheduler.orchestrator.status "$@"
+python3 -m scheduler.orchestrator.status --status-dir="$I3_HOME/logs/status" "$@"
