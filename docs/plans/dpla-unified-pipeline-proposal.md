@@ -407,7 +407,7 @@ A unified orchestrator must handle all three configuration systems.
 
 ### Size of lift with AI tooling
 
-This project is well-suited to AI-assisted development. The codebase has thorough documentation (AGENTS.md, GOLDEN_PATH.md, SCRIPTS.md, ROADMAP.md), structured configuration, and clear patterns. AI agents can:
+This project is well-suited to AI-assisted development. The codebase has thorough documentation (AGENTS.md, docs/ingestion/GOLDEN_PATH.md, SCRIPTS.md, ROADMAP.md), structured configuration, and clear patterns. AI agents can:
 - Generate the daily digest script by analyzing the log format and process structure (already explored via SSH)
 - Generate the EMR orchestration by translating `sparkindexer-emr.sh` to Python boto3 calls
 - Generate the alias flip validation by reading `flip-alias.sh` and `Index.scala`

@@ -1,9 +1,0 @@
-Subject: DPLA Monthly Ingest Notification - January 2026
-
-Dear Harvard Library Team,
-
-This is an automated notification that DPLA will be performing a scheduled metadata ingest for Harvard Library during January 2026.
-
-Schedule Details:
-- Frequency: monthly
-- Scheduled Months: January, February, March, April, May, June, July, August, September, October, November, December
