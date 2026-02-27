@@ -842,7 +842,12 @@ SQL
     local out_dir="$tmpdir/community-webs/originalRecords"
     mkdir -p "$out_dir"
 
-    DPLA_DATA="$tmpdir" "$export_script" --db="$test_db" --skip-validate 2>/dev/null
+    if ! DPLA_DATA="$tmpdir" "$export_script" --db="$test_db" --skip-validate 2>/dev/null; then
+        local exit_code=$?
+        TESTS_RUN=$((TESTS_RUN + 1))
+        log_fail "Community Webs export: command failed (exit $exit_code): DPLA_DATA=$tmpdir $export_script --db=$test_db --skip-validate"
+        return
+    fi
 
     # Output goes to $DPLA_DATA/community-webs/originalRecords/<YYYYMMDD>/
     local datestamp
