@@ -113,7 +113,9 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     // Removes records from mappingResults that have at least one IngestMessage
     // with a level of IngestLogLevel.error
     // Transformation only
-    val successResults = intermediateResults1.filter(!array_contains(col("messages.level"), "error"))
+    val successResults = intermediateResults1.filter(
+      !array_contains(col("messages.level"), "error")
+    )
     val validRecordCount = successResults.count
 
     // Results must be written before _LOGS.
@@ -123,7 +125,6 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
 
     intermediateResults1.unpersist(blocking = true)
     successResults.unpersist(blocking = true)
-
 
     // Write manifest
     val manifestOpts: Map[String, String] = Map(

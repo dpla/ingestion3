@@ -1,5 +1,6 @@
 package dpla.ingestion3.utils
 
+import com.amazonaws.regions.Regions
 import com.amazonaws.services.simpleemail._
 import com.amazonaws.services.simpleemail.model._
 import dpla.ingestion3.confs.i3Conf
@@ -37,6 +38,90 @@ object Emailer {
       |- <a href="about:blank">DPLA news</a>
       |""".stripMargin.split("\n")
 
+  /**
+    * Main method for CLI invocation
+    * Usage: Emailer <mapping-dir> <hub-name> [conf-file]
+    */
+  def main(args: Array[String]): Unit = {
+    if (args.length < 2) {
+      System.err.println("Usage: Emailer <mapping-dir> <hub-name> [conf-file]")
+      System.err.println("Example: Emailer /path/to/mapping/dir nara")
+      System.err.println("         Emailer /path/to/mapping/dir nara /path/to/i3.conf")
+      System.exit(1)
+    }
+
+    val mappingDir = args(0)
+    val hubName = args(1)
+
+    // Get config file path from args or environment
+    val confPath = if (args.length >= 3) {
+      args(2)
+    } else {
+      Option(System.getenv("I3_CONF"))
+        .getOrElse(s"${System.getProperty("user.home")}/dpla/code/ingestion3-conf/i3.conf")
+    }
+
+    // Load i3.conf using Ingestion3Conf
+    val ingestion3Conf = new dpla.ingestion3.confs.Ingestion3Conf(confPath, Some(hubName))
+    val conf = ingestion3Conf.load()
+
+    // Get provider name from config
+    val providerName = conf.provider.getOrElse(hubName.toUpperCase)
+
+    // Get current month for subject line
+    val currentMonth = java.time.LocalDate.now()
+      .format(java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy"))
+
+    val subject = s"DPLA Ingest Summary for $providerName - $currentMonth"
+
+    // Send email
+    emailSummaryWithSubject(mappingDir, subject, conf)
+  }
+
+  /**
+    * Extract and normalize email addresses from potentially malformed strings.
+    * Handles formats like "Name<email@domain>" by adding missing space or extracting just the email.
+    */
+  private def normalizeEmails(emailString: String): Seq[String] = {
+    emailString.split(',').map(_.trim).map { email =>
+      // If format is "Name<email@domain>" without space, extract just the email
+      val anglePattern = """.*<(.+@.+)>.*""".r
+      email match {
+        case anglePattern(extractedEmail) => extractedEmail.trim
+        case _ => email.trim
+      }
+    }
+  }
+
+  /**
+    * Send email summary with custom subject
+    */
+  def emailSummaryWithSubject(mapOutput: String, subject: String, i3conf: i3Conf): Unit = {
+    val rawEmails = i3conf.email.getOrElse("tech@dp.la")
+    val emails = normalizeEmails(rawEmails)
+
+    // Debug output
+    println(s"Raw emails from config: $rawEmails")
+    println(s"Normalized emails: ${emails.mkString(", ")}")
+
+    val _summary = s"$mapOutput/_SUMMARY"
+    val zipped_logs = s"$mapOutput/_LOGS/logs.zip"
+
+    val body = emailBody(_summary)
+
+    val attachment: Option[File] = zip(zipped_logs, mapOutput) match {
+      case Some(z) => if (z.length() < 7485760) Some(z) else None
+      case _       => None
+    }
+
+    send(
+      recipients = emails,
+      subject = subject,
+      text = body,
+      attachment = attachment
+    )
+  }
+
   private lazy val suffix =
     """
       |
@@ -59,7 +144,8 @@ object Emailer {
     val emails = i3conf.email.getOrElse("tech@dp.la").split(',')
 
     val _summary = s"$mapOutput/_SUMMARY"
-    val zipped_logs = s"$mapOutput/_LOGS/logs.zip" // FIXME provider-date-mapping-logs.zip
+    val zipped_logs =
+      s"$mapOutput/_LOGS/logs.zip" // FIXME provider-date-mapping-logs.zip
 
     val body = emailBody(_summary)
 
@@ -118,7 +204,15 @@ object Emailer {
     // https://docs.aws.amazon.com/ses/latest/dg/example_ses_SendEmail_section.html
 
     try {
-      val client = AmazonSimpleEmailServiceClientBuilder.defaultClient()
+      // Get AWS region from environment variable, system property, or default to us-east-1
+      val awsRegion = Option(System.getenv("AWS_REGION"))
+        .orElse(Option(System.getProperty("aws.region")))
+        .getOrElse("us-east-1")
+
+      val client = AmazonSimpleEmailServiceClientBuilder
+        .standard()
+        .withRegion(Regions.fromName(awsRegion))
+        .build()
 
       val session = Session.getDefaultInstance(new Properties())
       val message = new MimeMessage(session)

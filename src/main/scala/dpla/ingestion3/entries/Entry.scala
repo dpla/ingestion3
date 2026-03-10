@@ -1,7 +1,7 @@
 package dpla.ingestion3.entries
 
-import java.lang.annotation.Target
-
 object Entry {
-  def suppressUnsafeWarnings(): Unit = classOf[Target].getModule.addOpens("java.nio", classOf[org.apache.spark.unsafe.Platform].getModule)
+  // Module opens are now handled via JVM args in build.sbt
+  // This method is kept for backwards compatibility but is a no-op
+  def suppressUnsafeWarnings(): Unit = ()
 }

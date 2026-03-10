@@ -1,0 +1,15 @@
+# DPLA Ingest Orchestrator Dependencies
+
+# Core dependencies
+python-dotenv>=1.0.0      # Load .env so SLACK_WEBHOOK etc. are set without sourcing
+
+# AWS integration (for presigned URLs)
+boto3>=1.28.0             # AWS SDK for presigned S3 URLs
+
+# Testing
+pytest>=7.0.0             # Test framework
+pytest-asyncio>=0.21.0    # Async test support
+
+# Optional dependencies for enhanced features:
+# slack-sdk>=3.0.0        # For Slack notifications (not needed - using webhooks)
+# PyGithub>=1.55          # For GitHub issue creation

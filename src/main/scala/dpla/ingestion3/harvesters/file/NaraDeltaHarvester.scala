@@ -32,9 +32,10 @@ class NaraDeltaHarvester(
   val avroWriterNara: DataFileWriter[GenericRecord] =
     AvroHelper.avroWriter(shortName, naraTmp, naraSchema)
 
-  // Temporary output path.
+  // Temporary output path -- use a unique subdirectory to avoid conflict
+  // with the parent LocalHarvester's tmpOutStr which resolves to the same path.
   lazy val naraTmp: String =
-    new File(FileUtils.getTempDirectory, shortName).getAbsolutePath
+    new File(new File(FileUtils.getTempDirectory, shortName), "delta").getAbsolutePath
 
   def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
@@ -133,15 +134,16 @@ class NaraDeltaHarvester(
 
     if (deltaHarvestInFile.isDirectory)
       for (file: File <- deltaHarvestInFile.listFiles(gzFilter).sorted) {
-        val logger = LogManager.getLogger(this.getClass)
         logger.info(s"Harvesting NARA delta changes from ${file.getName}")
         harvestFile(file, unixEpoch)
       }
     else
       harvestFile(deltaHarvestInFile, unixEpoch)
 
-    // flush writes
+    // Close the avro writer to ensure the file footer and sync markers are
+    // written. Spark's avro reader requires a properly closed file.
     avroWriterNara.flush()
+    avroWriterNara.close()
 
     // Get the absolute path of the avro file written to naraTmp directory
     val naraTempFile = new File(naraTmp)
@@ -154,16 +156,20 @@ class NaraDeltaHarvester(
       )
       .getAbsolutePath
 
+    val tempFileSize = new File(naraTempFile).length()
+    logger.info(s"Reading harvested records from $naraTempFile (size: $tempFileSize bytes)")
     val localSrcPath = new Path(naraTempFile)
     val dfDeltaRecords = spark.read.format("avro").load(localSrcPath.toString)
+    val tempCount = dfDeltaRecords.count()
+    logger.info(s"Spark read $tempCount records from temp avro file")
 
     dfDeltaRecords
   }
 
   override def cleanUp(): Unit = {
     logger.info(s"Cleaning up $naraTmp directory and files")
-    avroWriterNara.flush()
-    avroWriterNara.close()
+    // Writer may already be closed by harvest() -- safe to call again
+    Try(avroWriterNara.close())
     // Delete temporary output directory and files.
     Utils.deleteRecursively(new File(naraTmp))
   }
@@ -183,7 +189,6 @@ class NaraDeltaHarvester(
         .map(tarResult =>
           handleFile(tarResult, unixEpoch) match {
             case Failure(exception) =>
-              val logger = LogManager.getLogger(this.getClass)
               logger
                 .error(
                   s"Caught exception on ${tarResult.entryName}.",
@@ -196,6 +201,10 @@ class NaraDeltaHarvester(
         )
         .sum
       logger.info(s"Harvested $recordCount records from ${file.getName}")
+    } match {
+      case Failure(exception) =>
+        logger.error(s"Failed to process file: ${file.getName}", exception)
+      case Success(_) => // ok
     }
   }
 }

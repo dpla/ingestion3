@@ -1,0 +1,6 @@
+# Development Environment
+- Environment: Source `.env` before running Python, the orchestrator, pipeline scripts, or building the JAR (`sbt assembly`) so `JAVA_HOME` (Java 11+), `SLACK_WEBHOOK`, `DPLA_DATA`, `I3_CONF`, etc. are set (e.g. `source .env` from repo root). Full checklist: AGENTS.md § Environment and build.
+- AWS CLI: Always append `--profile dpla` to all commands.
+- Python: Use the virtual environment at `./venv/`. Ensure it is sourced before execution.
+- Shell Scripts: Write POSIX-compliant bash scripts. Avoid OSX-specific or Linux-specific flags (e.g., be careful with `sed -i` or `readlink -f`).
+- Build: From repo root run `source .env` then `sbt assembly` before running the ingest pipeline or skills that invoke Scala entry points (e.g. run ingest, orchestrator), so the fat JAR reflects the current codebase and uses the correct JDK.

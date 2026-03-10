@@ -59,7 +59,8 @@ object IngestRemap
     val confFile = cmdArgs.getConfigFile
     val shortName = cmdArgs.getProviderName
     val input = cmdArgs.getInput
-    val sparkMaster: Option[String] = cmdArgs.getSparkMaster
+    // Default to local[4] when not provided so all hubs get sensible pipeline parallelism
+    val sparkMaster: Option[String] = cmdArgs.getSparkMaster.orElse(Some("local[4]"))
 
     // Outputs
 
@@ -84,6 +85,8 @@ object IngestRemap
       .setAppName(s"IngestRemap: $shortName")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryoserializer.buffer.max", "200")
+      // Disable vectorized parquet reader to prevent OOM with large binary/string columns
+      .set("spark.sql.parquet.enableVectorizedReader", "false")
 
     val sparkConf = sparkMaster match {
       case Some(m) => baseConf.setMaster(m)

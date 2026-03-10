@@ -17,8 +17,8 @@ DPLA's ingestion system is one of the core business systems and is the source of
       * Digital Commonwealth
       * Northwest Digital Heritage
       * Tennessee
-      * [NARA](README_NARA.md)
-      * [Smithsonian](README_SMITHSONIAN.md)
+      * [NARA](docs/ingestion/README_NARA.md)
+      * [Smithsonian](docs/ingestion/README_SMITHSONIAN.md)
 * [ingestion 3](#ingestion-3)
   * [Harvest](#harvest)
   * [Mapping and validation](#mapping-and-validation)
@@ -63,8 +63,8 @@ DPLA's ingestion system is one of the core business systems and is the source of
   - Digital Commonwealth
   - Northwest Digital Heritage
   - Tennessee
-  - [NARA](README_NARA.md)
-  - [Smithsonian](README_SMITHSONIAN.md)
+  - [NARA](docs/ingestion/README_NARA.md)
+  - [Smithsonian](docs/ingestion/README_SMITHSONIAN.md)
 
 ## Helpful links and tools
 * [Hub ingest schedule](https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/CT/pages/84969744/Hub+Re-ingest+Schedule)

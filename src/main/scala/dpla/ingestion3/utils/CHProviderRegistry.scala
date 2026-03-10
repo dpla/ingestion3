@@ -12,9 +12,10 @@ import scala.xml.NodeSeq
   */
 object CHProviderRegistry {
 
-  def lookupProfile(short: String): Try[CHProfile[_ >: NodeSeq with JValue]] = Try {
-    registry.getOrElse(short, noProfileException(short))
-  }
+  def lookupProfile(short: String): Try[CHProfile[_ >: NodeSeq with JValue]] =
+    Try {
+      registry.getOrElse(short, noProfileException(short))
+    }
 
   def lookupHarvesterClass(short: String): Try[Class[_ <: Harvester]] = Try {
     registry.getOrElse(short, noProfileException(short)).getHarvester
@@ -60,7 +61,7 @@ object CHProviderRegistry {
     "sd" -> new SdProfile,
     "smithsonian" -> new SiProfile,
     "texas" -> new TxProfile,
-    "tennessee" -> new TnProfile,
+    "tn" -> new TnProfile,
     "txdl" -> new TxdlProfile,
     "virginias" -> new VirginiasProfile,
     "vt" -> new VtProfile,

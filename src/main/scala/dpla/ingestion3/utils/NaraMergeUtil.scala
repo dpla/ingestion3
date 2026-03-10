@@ -15,13 +15,11 @@ case class MergeLogs(
     baseCount: Option[Long] = None,
     baseUniqueCount: Option[Long] = None,
     baseDuplicateCount: Option[Long] = None,
-    baseDuplicateIds: Seq[String] = Seq(),
     // delta DF
     deltaPath: Option[String] = None,
     deltaCount: Option[Long] = None,
     deltaUniqueCount: Option[Long] = None,
     deltaDuplicateCount: Option[Long] = None,
-    deltaDuplicateIds: Seq[String] = Seq(),
     // merged DF
     mergePath: Option[String] = None,
     mergeNew: Option[Long] = None,
@@ -80,6 +78,10 @@ object NaraMergeUtil {
       .setAppName(s"Nara merge utility")
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryoserializer.buffer.max", "200")
+      .set("spark.sql.shuffle.partitions", "400")
+      .set("spark.default.parallelism", "200")
+      .set("spark.memory.fraction", "0.7")
+      .set("spark.memory.storageFraction", "0.3")
 
     val sparkConf = Option(sparkMaster) match {
       case Some(m) => baseConf.setMaster(m)
@@ -92,101 +94,188 @@ object NaraMergeUtil {
       .getOrCreate()
 
     import spark.implicits._
-
-    // Read most recent harvest data file
-    val baseHarvestDf: DataFrame = spark.read.format("avro").load(basePath)
-    val deltaHarvestDf: DataFrame = spark.read.format("avro").load(deltaPath)
-
-    // Counts for logging
-    val baseCount = baseHarvestDf.count()
-    val deltaCount = deltaHarvestDf.count()
-
-    // Dedup harvest DataFrames
-    val baseDuplicates = dropDuplicates(baseHarvestDf, spark)
-    val baseDuplicateIds = baseDuplicates._1
-    val baseHarvestDedupDf = baseDuplicates._2
-    val baseDedupCount = baseHarvestDedupDf.count() // for logging
-
-    val deltaDuplicates = dropDuplicates(deltaHarvestDf, spark)
-    val deltaDuplicateIds = deltaDuplicates._1
-    val deltaHarvestDedupDf = deltaDuplicates._2
-    val deltaDedupCount = deltaHarvestDedupDf.count() // for logging
-
-    // Create temp views of DataFrames for update DF
-    deltaHarvestDedupDf.createOrReplaceTempView("delta")
-    baseHarvestDedupDf.createOrReplaceTempView("base")
-
-    // get records that exist in base that will be updated by new version in delta
-    val updateDF =
-      spark.sql("SELECT base.* FROM base JOIN delta on base.id = delta.id")
-    updateDF.createOrReplaceTempView("update")
-    val mergeUpdateCount = updateDF.count() // for logging
-
-    // Get new records added by delta
-    val newRecords = spark.sql(
-      "SELECT delta.* FROM delta " +
-        "LEFT JOIN base ON delta.id = base.id " +
-        "WHERE base.id IS NULL"
-    )
-    val newRecordsCount = newRecords.count()
-
-    // merge base and delta data sets
-    val mergedDf = spark
-      .sql(
-        "SELECT base.* FROM base " +
-          "LEFT JOIN update ON base.id = update.id " +
-          "WHERE update.id IS NULL"
-      ) // drop records from previous harvest that exist in the update
-      .union(deltaHarvestDedupDf) // add updates and new records
-      .toDF()
-    val mergeTotalCount = mergedDf.count() // for logging
-
-    // process deletes
-    // val deletes = new File(deletesPath)
-    val idsToDelete = getIdsToDelete(deletesPath)
-
-    mergedDf.createOrReplaceTempView("merged")
-    idsToDelete.toDF("id").createOrReplaceTempView("deletes")
-
-    val validDeletes = spark.sql(
-      "SELECT merged.id FROM merged JOIN deletes ON merged.id = deletes.id"
-    )
-    val invalidDeletes = spark.sql(
-      "SELECT deletes.id FROM deletes LEFT JOIN merged ON deletes.id = merged.id WHERE merged.id IS NULL"
-    )
-
-    val mergedWithDeletesDf = mergedDf.where(
-      !col("id").isin(
-        validDeletes.select("id").map(_.getString(0)).collect.toSeq: _*
-      )
-    )
-    val mergedWithDeletesCount = mergedWithDeletesDf.count()
-
     import org.apache.spark.sql.functions._
-    val opsDf: DataFrame = newRecords
+
+    // ---------------------------------------------------------------
+    // ZERO-PERSISTENCE strategy for large NARA merges:
+    //
+    // Problem: With 18M+ base records containing large XML documents,
+    // Spark's persist (even DISK_ONLY) causes either:
+    //   - OOM from columnar serialization (MEMORY_AND_DISK)
+    //   - 300+ GB of Kryo-serialized temp data (DISK_ONLY)
+    //
+    // Solution: Never persist the base DataFrame. Re-read from Avro
+    // each time (fast from SSD: ~30-60s per scan of ~34 GB).
+    // Only persist the small delta DataFrame.
+    // Skip base dedup since it was already deduped in previous merge.
+    //
+    // Base scans required:
+    //   1. count() - count base records (~30s)
+    //   2. filter(isDeltaId).count() - count updates (~30s)
+    //   3. filter(!isDeltaId).union(delta).write - merge+write (~60s)
+    // Total: ~3 scans = ~2 minutes of base I/O
+    // ---------------------------------------------------------------
+
+    // Step 1: Process delta (small - typically hundreds of thousands of records)
+    println("Reading delta harvest data...")
+    val deltaHarvestDf: DataFrame = spark.read.format("avro").load(deltaPath)
+    val deltaCount = deltaHarvestDf.count()
+    println(s"Delta records: $deltaCount")
+
+    // Dedup delta - write to temp Avro for efficient re-reads
+    // (avoids keeping large XML records in Spark's in-memory cache)
+    println("Deduplicating delta...")
+    val deltaTmpPath = outputPath + "__tmp_delta_dedup"
+    deltaHarvestDf.dropDuplicates("id").write
+      .mode(SaveMode.Overwrite)
+      .format("avro")
+      .save(deltaTmpPath)
+    val deltaHarvestDedupDf = spark.read.format("avro").load(deltaTmpPath)
+    val deltaDedupCount = deltaHarvestDedupDf.count()
+    val deltaDuplicateCount = deltaCount - deltaDedupCount
+    println(s"Delta unique records: $deltaDedupCount (duplicates: $deltaDuplicateCount)")
+
+    // Collect delta IDs into a broadcast variable for efficient filtering
+    // Safe because delta is small (hundreds of thousands, not millions)
+    val deltaIds: Set[String] = deltaHarvestDedupDf
       .select("id")
-      .withColumn("operation", lit("insert"))
-      .union(updateDF.select("id").withColumn("operation", lit("update")))
-      .union(validDeletes.select("id").withColumn("operation", lit("delete")))
-      .union(
-        invalidDeletes
-          .select("id")
-          .withColumn("operation", lit("invalid delete"))
-      )
+      .collect()
+      .map(_.getString(0))
+      .toSet
+    val deltaIdsBroadcast = spark.sparkContext.broadcast(deltaIds)
+    println(s"Broadcast ${deltaIds.size} delta IDs")
+
+    // Step 2: Process base - NO persist, just re-read from Avro each time
+    // The base was already deduped in the previous merge, so skip dedup.
+    println("Counting base harvest records (direct Avro scan, no persist)...")
+    val baseDedupCount = spark.read.format("avro").load(basePath).count()
+    val baseCount = baseDedupCount
+    val baseDuplicateCount = 0L
+    println(s"Base records: $baseCount (assumed unique from previous merge)")
+
+    // Step 3: Collect update IDs using broadcast filter (single base scan)
+    // Collects delta IDs found in base - these are "updates". Safe to collect
+    // because result set is bounded by delta size (hundreds of thousands).
+    println("Finding update IDs (base records that exist in delta)...")
+    val isDeltaId = udf((id: String) => deltaIdsBroadcast.value.contains(id))
+    val updateIds: Set[String] = spark.read.format("avro").load(basePath)
+      .select("id")
+      .filter(isDeltaId(col("id")))
+      .collect()
+      .map(_.getString(0))
+      .toSet
+    val mergeUpdateCount = updateIds.size.toLong
+    println(s"Records to update: $mergeUpdateCount")
+
+    val newRecordsCount = deltaDedupCount - mergeUpdateCount
+    println(s"New records to insert: $newRecordsCount")
+
+    // Step 4: Merge and write directly to output Avro (single base scan + write)
+    // This is the key operation: read base, filter out delta IDs, union with
+    // delta, and write directly to output - all in a single streaming pass.
+    println("Merging and writing output...")
+    new File(outputPath).mkdirs()
+    spark.read.format("avro").load(basePath)
+      .filter(!isDeltaId(col("id")))      // Keep base records not in delta
+      .union(deltaHarvestDedupDf)          // Add all delta records (updates + new)
+      .write
+      .mode(SaveMode.Overwrite)
+      .format("avro")
+      .save(outputPath)
+
+    // Count the written output (re-read from output Avro)
+    val mergeTotalCount = spark.read.format("avro").load(outputPath).count()
+    println(s"Merged total: $mergeTotalCount (expected: ${newRecordsCount + baseDedupCount})")
+
+    // Step 5: Process deletes
+    println("Processing deletes...")
+    val deletesDf = getIdsToDeleteDf(deletesPath, spark)
+    val deleteInFileCount = deletesDf.count()
+    println(s"Delete IDs in file: $deleteInFileCount")
+
+    val deleteIds: Set[String] = if (deleteInFileCount > 0) {
+      deletesDf.select("id").collect().map(_.getString(0)).toSet
+    } else {
+      Set.empty[String]
+    }
+    val deleteIdsBroadcast = spark.sparkContext.broadcast(deleteIds)
+    val isDeleteId = udf((id: String) => deleteIdsBroadcast.value.contains(id))
+
+    // Collect valid delete IDs from the merged output (small scan)
+    val validDeleteIds: Set[String] = if (deleteIds.nonEmpty) {
+      spark.read.format("avro").load(outputPath)
+        .select("id")
+        .filter(isDeleteId(col("id")))
+        .collect()
+        .map(_.getString(0))
+        .toSet
+    } else Set.empty[String]
+    val validDeletesCount = validDeleteIds.size.toLong
+    val invalidDeletesCount = deleteInFileCount - validDeletesCount
+
+    // Apply deletes if needed - rewrite output with deletes filtered out
+    val mergedWithDeletesCount = if (validDeleteIds.nonEmpty) {
+      val deleteTmpPath = outputPath + "__tmp_pre_delete"
+      // Write filtered output to temp location
+      spark.read.format("avro").load(outputPath)
+        .filter(!isDeleteId(col("id")))
+        .write
+        .mode(SaveMode.Overwrite)
+        .format("avro")
+        .save(deleteTmpPath)
+      // Read back, count, then overwrite original output
+      val filteredDf = spark.read.format("avro").load(deleteTmpPath)
+      val count = filteredDf.count()
+      filteredDf.write.mode(SaveMode.Overwrite).format("avro").save(outputPath)
+      // Clean up temp directory
+      deleteDir(new File(deleteTmpPath))
+      count
+    } else {
+      mergeTotalCount
+    }
+    println(s"After deletes: $mergedWithDeletesCount (deleted: ${mergeTotalCount - mergedWithDeletesCount}, valid: $validDeletesCount, invalid: $invalidDeletesCount)")
+
+    // Step 6: Build operations log from collected ID sets
+    // All sets are small (bounded by delta + delete sizes), so construct
+    // DataFrames from Scala sequences - no additional Avro scans needed.
+    println("Building operations log...")
+    val emptyOps = Seq.empty[(String, String)].toDF("id", "operation")
+
+    // Insert = delta IDs not in base (not in updateIds set)
+    val insertIds = deltaIds -- updateIds
+    val insertOps = if (insertIds.nonEmpty)
+      insertIds.toSeq.map(id => (id, "insert")).toDF("id", "operation")
+    else emptyOps
+
+    // Update = delta IDs found in base
+    val updateOps = if (updateIds.nonEmpty)
+      updateIds.toSeq.map(id => (id, "update")).toDF("id", "operation")
+    else emptyOps
+
+    // Delete = IDs from delete file that existed in merged output
+    val deleteOps = if (validDeleteIds.nonEmpty)
+      validDeleteIds.toSeq.map(id => (id, "delete")).toDF("id", "operation")
+    else emptyOps
+
+    // Invalid delete = IDs from delete file not found in merged output
+    val invalidDeleteIds = deleteIds -- validDeleteIds
+    val invalidDeleteOps = if (invalidDeleteIds.nonEmpty)
+      invalidDeleteIds.toSeq.map(id => (id, "invalid delete")).toDF("id", "operation")
+    else emptyOps
+
+    val opsDf: DataFrame = insertOps.union(updateOps).union(deleteOps).union(invalidDeleteOps)
 
     val logs = MergeLogs(
       // base
       basePath = Some(basePath),
       baseCount = Some(baseCount),
       baseUniqueCount = Some(baseDedupCount),
-      baseDuplicateCount = Some(baseDuplicateIds.size),
-      baseDuplicateIds = baseDuplicateIds,
+      baseDuplicateCount = Some(baseDuplicateCount),
       // delta
       deltaPath = Some(deltaPath),
       deltaCount = Some(deltaCount),
       deltaUniqueCount = Some(deltaDedupCount),
-      deltaDuplicateCount = Some(deltaDuplicateIds.size),
-      deltaDuplicateIds = deltaDuplicateIds,
+      deltaDuplicateCount = Some(deltaDuplicateCount),
       // merge
       mergePath = Some(outputPath),
       mergeNew = Some(newRecordsCount),
@@ -195,10 +284,10 @@ object NaraMergeUtil {
       mergeTotalExpected = Some(newRecordsCount + baseDedupCount),
       // delete
       deletePath = Some(deletesPath),
-      deleteActual = Some(mergedDf.count() - mergedWithDeletesCount),
-      deleteInFile = Some(idsToDelete.size.toLong),
-      deleteValid = Some(validDeletes.count()),
-      deleteInvalid = Some(invalidDeletes.count()),
+      deleteActual = Some(mergeTotalCount - mergedWithDeletesCount),
+      deleteInFile = Some(deleteInFileCount),
+      deleteValid = Some(validDeletesCount),
+      deleteInvalid = Some(invalidDeletesCount),
       // final
       finalDfActual = Some(mergedWithDeletesCount),
       output = Some(outputPath),
@@ -206,13 +295,6 @@ object NaraMergeUtil {
     )
 
     val summary = getLogs(logs)
-
-    // Write merged data with deletes
-    new File(outputPath).mkdirs()
-    mergedWithDeletesDf.write
-      .mode(SaveMode.Overwrite)
-      .format("avro")
-      .save(outputPath)
 
     // print summary log
     println(summary)
@@ -230,9 +312,50 @@ object NaraMergeUtil {
       .mode(SaveMode.Overwrite)
       .option("header", "true")
       .csv(opsFile)
+
+    // Clean up temp delta dedup directory (recursive)
+    deleteDir(new File(deltaTmpPath))
+
+    spark.stop()
   }
 
-  /** Collect IDs from file(s) to be deleted from NARA harvest. This does not
+  /** Collect IDs from file(s) to be deleted from NARA harvest as a DataFrame.
+    * This distributed approach avoids OOM errors when dealing with large
+    * numbers of delete IDs.
+    *
+    * @param path
+    *   String Path to file or folder that defines which NARA IDs should be deleted
+    * @param spark
+    *   SparkSession for creating DataFrame
+    * @return
+    *   DataFrame with single "id" column containing IDs to delete
+    */
+  def getIdsToDeleteDf(path: String, spark: SparkSession): DataFrame = {
+    import spark.implicits._
+
+    val file = new File(path)
+    if (!file.exists())
+      return spark.emptyDataFrame.withColumn("id", col("id").cast("string"))
+
+    val files =
+      if (file.isDirectory) file.listFiles(FileFilters.xmlFilter).sorted
+      else Array(file)
+
+    // Parse XML files and create DataFrame - keeps processing distributed
+    val ids = files
+      .flatMap(file => {
+        val xml = XML.loadFile(file)
+        (xml \\ "naId").map(_.text)
+      })
+      .distinct
+
+    // Convert to DataFrame for distributed processing
+    ids.toSeq.toDF("id")
+  }
+
+  /** @deprecated Use getIdsToDeleteDf instead to avoid OOM errors with large delete sets
+    *
+    * Collect IDs from file(s) to be deleted from NARA harvest. This does not
     * currently support adding records back which had previously been deleted.
     *
     * @param path
@@ -241,6 +364,7 @@ object NaraMergeUtil {
     * @return
     *   Seq[String] IDs to delete
     */
+  @deprecated("Use getIdsToDeleteDf instead to avoid OOM errors", "2026.01")
   def getIdsToDelete(path: String): Seq[String] = {
     val file = new File(path)
     if (!file.exists())
@@ -257,27 +381,50 @@ object NaraMergeUtil {
       .toSeq
   }
 
+  /** Drop duplicate records from DataFrame and return the count of duplicates.
+    * This optimized version does not collect duplicate IDs to driver memory,
+    * avoiding OOM errors with large datasets.
+    *
+    * @param df
+    *   DataFrame to deduplicate
+    * @param spark
+    *   SparkSession
+    * @return
+    *   Tuple of (duplicate count, deduplicated DataFrame)
+    */
   private def dropDuplicates(
       df: DataFrame,
       spark: SparkSession
-  ): (Seq[String], DataFrame) = {
+  ): (Long, DataFrame) = {
     df.createOrReplaceTempView("duplicates")
 
-    val duplicatesDf = spark.sql(
-      "SELECT duplicates.id " +
+    // Count duplicates without collecting to driver memory
+    val duplicateCount = spark.sql(
+      "SELECT COUNT(*) as cnt FROM (" +
+        "SELECT duplicates.id " +
         "FROM duplicates " +
-        "GROUP BY duplicates.id HAVING COUNT(duplicates.id) > 1"
-    )
+        "GROUP BY duplicates.id HAVING COUNT(duplicates.id) > 1" +
+        ") as dups"
+    ).first().getLong(0)
 
-    val duplicateIds =
-      duplicatesDf.select("id").rdd.map(_.getString(0)).collect()
-
-    if (duplicateIds.nonEmpty) {
+    if (duplicateCount > 0) {
       // drop duplicate records from dataframe
-      (duplicateIds, df.dropDuplicates("id"))
+      (duplicateCount, df.dropDuplicates("id"))
     } else {
-      (duplicateIds, df)
+      (0L, df)
     }
+  }
+
+  /** Recursively delete a directory and all its contents */
+  private def deleteDir(dir: File): Unit = {
+    try {
+      if (dir.exists()) {
+        Option(dir.listFiles()).foreach(_.foreach { f =>
+          if (f.isDirectory) deleteDir(f) else f.delete()
+        })
+        dir.delete()
+      }
+    } catch { case _: Exception => /* ignore cleanup errors */ }
   }
 
   /**

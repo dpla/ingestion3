@@ -110,16 +110,20 @@ Some hubs have their feed endpoints behind a firewall so the harvests needs to b
 - Indiana
 
 ### Community Webs
-Internet Archive community webs will send us a SQL database which we need to open and export as a JSON file. Then convert the JSON file to JSONL
+Internet Archive Community Webs sends a SQLite database. Use the automated scripts to export, validate, and harvest:
 
-- Install `jq` and `sqlite3` if needed, `brew install jq sqlite3` 
+**Automated (recommended):**
+1. Place the `*.db` file in `$DPLA_DATA/community-webs/originalRecords/`
+2. Run: `./scripts/harvest/community-webs-ingest.sh --full --update-conf`
+   - This exports the DB to JSONL, validates schema, zips, updates i3.conf, harvests, and runs the full pipeline (mapping + enrichment + jsonl)
 
-**Steps**
-1. Run a command like the following on the sqlite3 file:
-   > echo "select * from ait" |sqlite3 20250124_dpla_export.db --json  > 20250124_dpla_export.json
-2. Convert JSON to JSONL `jq -c '.[]' community-web-json-export.json > community-webs-jsonl-export.jsonl`
-3. Zip the JSONL file `zip cw.zip community-webs-jsonl-export.jsonl`
-4. Update the i3.conf file with the new endpoint/location of the zip file, e.g.  `./community-webs/originalRecords/20230426/`
+**Manual (if needed):**
+- Install `jq` and `sqlite3`: `brew install jq sqlite3` / `apt install jq sqlite3`
+1. Export: `./scripts/harvest/community-webs-export.sh --db=/path/to/file.db --update-conf`
+2. Harvest: `./scripts/harvest.sh community-webs`
+3. Pipeline: `./scripts/ingest.sh community-webs --skip-harvest`
+
+See [scripts/SCRIPTS.md](../../scripts/SCRIPTS.md) for `community-webs-export.sh` and `community-webs-ingest.sh` options.
 ### Digital Virginias
 Digital Virginias uses [multiple Github repositories](https://github.com/dplava) to publish their metadata. We need to clone these repos in order to harvest their metadata. This is a handy invocation to clone all the repositories for a Github account. 
 
