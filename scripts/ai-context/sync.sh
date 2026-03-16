@@ -57,6 +57,7 @@ SHARED_SKILLS=(
   dpla-monthly-emails
   dpla-community-webs-ingest
   dpla-ingest-debug
+  dpla-takedown
   send-email
 )
 
