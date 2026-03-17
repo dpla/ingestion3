@@ -1,6 +1,7 @@
 ---
 name: dpla-takedown
 description: Remove DPLA items from the live site and search index in response to takedown requests. Use when the user says take down, delete, remove item(s) from dp.la, or action a takedown request. Accepts DPLA IDs directly or criteria (hub, institution, collection) to generate an ID list. Includes mandatory pre-flight verification, search-before-delete on Elasticsearch, and post-deletion confirmation with count delta verification.
+allowed-tools: Bash
 ---
 
 # DPLA Takedown
@@ -46,9 +47,11 @@ production aggregation directly.
 Before any other step, capture a baseline. This is used in Phase 4 to verify only the expected records were removed.
 
 ```bash
-. ~/.claude/secrets/dpla.env
+export DPLA_API_KEY=$(grep '^DPLA_API_KEY=' ~/.claude/secrets/dpla.env | cut -d= -f2)
 TOTAL_BEFORE=$(curl -s "https://api.dp.la/v2/items?api_key=$DPLA_API_KEY&page_size=1" | python3 -c "import sys,json; print(json.load(sys.stdin)['count'])")
 echo "Total DPLA items before: $TOTAL_BEFORE"
+aws sts get-caller-identity --profile dpla 2>/dev/null && PROFILE="dpla" || PROFILE="default"
+echo "Using AWS profile: $PROFILE"
 ```
 
 Also capture the hub count once the hub is known (after Phase 0/1 identifies it):
@@ -84,19 +87,37 @@ Record the value of `$PYTHON` — use it verbatim in all subsequent Python invoc
 
 ### Phase 0: Determine the ID list
 
-The user provides EITHER:
+The user provides ONE OF:
 
 **A) Explicit IDs** — one or more 32-character DPLA IDs (hex strings). Proceed to Phase 1.
 
-**B) Criteria** — e.g. "all items from [institution] in [hub]", or "collection X". In this case:
+**B) A dp.la search URL** — e.g. `https://dp.la/search?partner=...&provider=...&collection=...`. In this case:
 
-1. Query the DPLA API to generate the list. Use `provider.@id` and/or `dataProvider` and/or `sourceResource.collection.title` filters with `page_size=500` and paginate to collect all matching IDs:
+1. Parse the URL query parameters to extract filter values. The relevant mappings are (from the dp.la frontend source):
+   - `partner` → `provider.name` (hub display name, e.g. "California Digital Library")
+   - `provider` → `admin.contributingInstitution` (**not** `dataProvider`)
+   - `collection` → `sourceResource.collection.title`
+   - Other filters (e.g. `subject`, `format`) → corresponding API fields
+2. URL-decode all parameter values before using them in API queries.
+3. Build the API query and proceed as in option C below (paginate, show sample, confirm).
+
+**C) Criteria** — e.g. "all items from [institution] in [hub]", or "collection X". In this case:
+
+1. Query the DPLA API to generate the list. Use `provider.name` and/or `admin.contributingInstitution` and/or `sourceResource.collection.title` filters with `page_size=500` and paginate to collect all matching IDs:
    ```bash
-   . ~/.claude/secrets/dpla.env
-   curl -s "https://api.dp.la/v2/items?provider.@id=http://dp.la/api/contributor/<hub>&dataProvider=<institution>&page_size=500&page=1&api_key=$DPLA_API_KEY"
+   export DPLA_API_KEY=$(grep '^DPLA_API_KEY=' ~/.claude/secrets/dpla.env | cut -d= -f2)
+   curl -s "https://api.dp.la/v2/items?provider.name=<hub+display+name>&admin.contributingInstitution=<institution>&page_size=500&page=1&api_key=$DPLA_API_KEY"
    ```
+   > **CRITICAL — `sourceResource.collection.title` uses tokenized full-text search, not exact matching.** A query for "Maps - Marin County" will also return records whose `collection.title` is "Maps - Marin County Plat Maps, J.C. Oglesby Collection" because the target string is a substring of that title. Those are records from an *entirely different collection* that would be wrongly deleted. Always post-filter results with a client-side exact string comparison after paginating:
+   > ```python
+   > exact = [r for r in records
+   >          if any(c.get('title') == TARGET_COLLECTION
+   >                 for c in (r['sourceResource'].get('collection') or [])
+   >                 if isinstance(c, dict))]
+   > ```
+   > The post-filtered count is the authoritative one; the raw API count may be higher due to partial matches.
 2. **STOP and show the user:**
-   - Total count of matching records
+   - Total count of matching records (after exact-match post-filter)
    - The query used
    - A sample of 5-10 records (ID, title, dataProvider, isShownAt)
    - Ask: "This will delete N records. Please confirm."
@@ -119,13 +140,64 @@ For every ID in the list:
    - `sourceResource.title` — item title (first value)
    - `isShownAt` — link to original item
 3. **Verify the item exists.** If the API returns no results, warn the user and skip that ID.
-4. **Determine S3 hub prefix.** The API slug (e.g. `orbiscascade`) may differ from the S3 prefix (e.g. `orbis-cascade`). Check the actual S3 prefix:
+4. **Verify the source record is gone (MANDATORY).** For each item, determine the correct URL to check and verify it returns 404. This confirms the item has been deleted at the source institution and will not be re-harvested.
+
+   **ContentDM (common case):** ContentDM uses a React SPA that always returns HTTP 200 for the page shell — do NOT rely on HTTP status codes from `/cdm/ref/collection/` or `/digital/collection/` URLs. Use the ContentDM REST API instead:
+
    ```bash
-   aws s3 ls s3://dpla-master-dataset/ --profile dpla | grep -i <hub-slug>
+   HOST="<contentdm-hostname>"
+   ALIAS="<collection-alias>"    # e.g. "stanleymisc"
+   ITEM_ID="<n>"                 # e.g. "0"
+
+   # Check if entire collection is unpublished (efficient for batch takedowns):
+   curl -o /dev/null -s -w "%{http_code}" "http://$HOST/digital/api/collections/$ALIAS"
+   # 404 → entire collection removed → all items confirmed deleted
+
+   # Check individual item:
+   curl -o /dev/null -s -w "%{http_code}" "http://$HOST/digital/api/collections/$ALIAS/items/$ITEM_ID"
+
+   # NOTE: Do NOT use /digital/bl/dmwebservices/index.php?q=dmGetItemInfo/<alias>/<id>/json
+   # — it returns metadata even for unpublished/restricted collections.
    ```
-5. **Group IDs by hub.** All IDs in a single S3 delete run must belong to the same hub.
-6. **Capture the hub baseline count** (see Pre-Run Snapshot above) using the hub's `provider.name`.
-7. **Present the full manifest to the user:**
+
+   **Non-ContentDM:**
+   ```bash
+   curl -o /dev/null -s -w "%{http_code}" -L --max-time 10 "<isShownAt-url>"
+   ```
+
+   - **Collection API 404 or item API 404:** confirmed deleted — proceed.
+   - **200:** still live at source — **STOP**, exclude from manifest.
+   - **Connection error:** flag to user, ask whether to proceed.
+   - Note: redirects (301/302) to a non-item page (e.g. homepage) may be treated as effectively "not found" with a note to the user.
+
+   **Calisphere / CDL ARK items:** Calisphere (`calisphere.org`) is behind AWS WAF which returns `202 + x-amzn-waf-action: challenge` to all non-browser curl requests, making HTTP status checks impossible via curl. Use the browser automation tools instead:
+
+   ```javascript
+   // Run in-browser via mcp__Claude_in_Chrome__javascript_tool (avoids WAF)
+   // First navigate to calisphere.org to establish a browser session, then:
+   const urls = ["https://calisphere.org/item/ark:/13030/<ark1>", ...];
+   window._results = null;
+   Promise.all(urls.map(url =>
+     fetch(url, {method: 'GET', redirect: 'follow'})
+       .then(r => ({url, status: r.status}))
+       .catch(e => ({url, status: 'ERROR'}))
+   )).then(r => { window._results = r; });
+   // Then retrieve: JSON.stringify(window._results)
+   ```
+
+   - Process in batches of ≤30 URLs to avoid WAF rate-limiting; wait 1-2s between batches.
+   - **404** = item confirmed deleted ✓
+   - **503** = also means item not found (same "Whoops! 404: Not Found" error page renders) ✓
+   - **200** = item still live — **STOP**, exclude from manifest ✗
+   - `isShownAt` format is `http://ark.cdlib.org/ark:/13030/<ark>` → convert to `https://calisphere.org/item/ark:/13030/<ark>`
+
+5. **Determine S3 hub prefix.** The API slug (e.g. `orbiscascade`) may differ from the S3 prefix (e.g. `orbis-cascade`). Check the actual S3 prefix:
+   ```bash
+   aws s3 ls s3://dpla-master-dataset/ --profile $PROFILE | grep -i <hub-slug>
+   ```
+6. **Group IDs by hub.** All IDs in a single S3 delete run must belong to the same hub.
+7. **Capture the hub baseline count** (see Pre-Run Snapshot above) using the hub's `provider.name`.
+8. **Present the full manifest to the user:**
 
    ```
    Takedown Manifest
@@ -151,7 +223,7 @@ For every ID in the list:
    Proceed? [y/N]
    ```
 
-8. **Wait for explicit user confirmation.** Do not proceed without it.
+9. **Wait for explicit user confirmation.** Do not proceed without it.
 
 ### Phase 2: Delete from S3 JSONL
 
@@ -204,7 +276,7 @@ cat > /tmp/ssm-resolve-alias.json << 'ENDJSON'
   "InstanceIds": ["i-00bbdfe0a6ff6cf78"],
   "DocumentName": "AWS-RunShellScript",
   "Parameters": {
-    "commands": ["IP=$(hostname -I | awk '{print $1}'); curl -s http://$IP:9200/_alias/dpla_alias | python3 -c \"import sys,json; print(list(json.load(sys.stdin).keys())[0])\""]
+    "commands": ["IP=$(hostname -I | cut -d' ' -f1); curl -s http://$IP:9200/_alias/dpla_alias | python3 -c \"import sys,json; print(list(json.load(sys.stdin).keys())[0])\""]
   }
 }
 ENDJSON
@@ -236,27 +308,30 @@ Build the query JSON locally (no escaping issues), then pass to SSM via `--cli-i
 python3 -c "
 import json
 ids = [<quoted-id-list>]
-query = {'query': {'terms': {'id': ids}}}
-print(json.dumps(query))
+print(json.dumps({'query': {'terms': {'id': ids}}}))
 " > /tmp/dpla-takedown-query.json
 
-# Validate JSON
 python3 -m json.tool /tmp/dpla-takedown-query.json > /dev/null && echo "JSON valid"
 
-# Build SSM payload for search
-python3 -c "
-import json
+# Transfer query via base64 to remote instance, then search using file reference.
+# This avoids all JSON escaping issues in the SSM shell command.
+python3 - "$INDEX_NAME" << 'PYEOF' > /tmp/ssm-search.json
+import json, base64, sys
+idx = sys.argv[1]
 with open('/tmp/dpla-takedown-query.json') as f:
-    q = f.read().strip()
-idx = '${INDEX_NAME}'
-cmd = f\"IP=\$(hostname -I | awk '{{print \$1}}'); curl -s -XPOST 'http://\$IP:9200/{idx}/_search?size=10' -H 'Content-Type: application/json' -d '{q}'\"
+    query = f.read().strip()
+b64 = base64.b64encode(query.encode()).decode()
+cmd = (f"echo {b64} | base64 -d > /tmp/dpla-q.json && "
+       f"IP=$(hostname -I | cut -d' ' -f1) && "
+       f"curl -s -XPOST \"http://$IP:9200/{idx}/_search?size=10\" "
+       f"-H 'Content-Type: application/json' -d @/tmp/dpla-q.json")
 payload = {
     'InstanceIds': ['i-00bbdfe0a6ff6cf78'],
     'DocumentName': 'AWS-RunShellScript',
     'Parameters': {'commands': [cmd]}
 }
 print(json.dumps(payload))
-" > /tmp/ssm-search.json
+PYEOF
 
 SEARCH_CMD_ID=$(aws ssm send-command \
   --cli-input-json file:///tmp/ssm-search.json \
@@ -294,26 +369,29 @@ echo "Expected: <N>  Actual: $HIT_COUNT"
 **Step 3c: Execute the delete**
 
 ```bash
-# Build SSM payload for delete_by_query
-python3 -c "
-import json
+python3 - "$INDEX_NAME" << 'PYEOF' > /tmp/ssm-delete.json
+import json, base64, sys
+idx = sys.argv[1]
 with open('/tmp/dpla-takedown-query.json') as f:
-    q = f.read().strip()
-idx = '${INDEX_NAME}'
-cmd = f\"IP=\$(hostname -I | awk '{{print \$1}}'); curl -s -XPOST 'http://\$IP:9200/{idx}/_delete_by_query?conflicts=abort' -H 'Content-Type: application/json' -d '{q}'\"
+    query = f.read().strip()
+b64 = base64.b64encode(query.encode()).decode()
+cmd = (f"echo {b64} | base64 -d > /tmp/dpla-q.json && "
+       f"IP=$(hostname -I | cut -d' ' -f1) && "
+       f"curl -s -XPOST \"http://$IP:9200/{idx}/_delete_by_query?conflicts=abort\" "
+       f"-H 'Content-Type: application/json' -d @/tmp/dpla-q.json")
 payload = {
     'InstanceIds': ['i-00bbdfe0a6ff6cf78'],
     'DocumentName': 'AWS-RunShellScript',
     'Parameters': {'commands': [cmd]}
 }
 print(json.dumps(payload))
-" > /tmp/ssm-delete.json
+PYEOF
 
 DELETE_CMD_ID=$(aws ssm send-command \
   --cli-input-json file:///tmp/ssm-delete.json \
   --query 'Command.CommandId' --output text --profile $PROFILE)
 
-sleep 10
+sleep 12
 
 DELETE_RESULT=$(aws ssm get-command-invocation \
   --command-id "$DELETE_CMD_ID" \
@@ -337,14 +415,19 @@ echo "$DELETE_RESULT"
 For each deleted ID, confirm the API returns 0 results:
 
 ```bash
-. ~/.claude/secrets/dpla.env
+export DPLA_API_KEY=$(grep '^DPLA_API_KEY=' ~/.claude/secrets/dpla.env | cut -d= -f2)
 for ID in <id1> <id2>; do
-  COUNT=$(curl -s "https://api.dp.la/v2/items/${ID}?api_key=$DPLA_API_KEY" | python3 -c "import sys,json; print(json.load(sys.stdin)['count'])")
-  echo "ID $ID: count=$COUNT (expected 0)"
+  RESP=$(curl -s "https://api.dp.la/v2/items/${ID}?api_key=$DPLA_API_KEY")
+  if echo "$RESP" | grep -q "could not be found"; then
+    echo "ID $ID: not found ✓"
+  else
+    COUNT=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('count','?'))" 2>/dev/null || echo "?")
+    echo "ID $ID: count=$COUNT ✗ STILL PRESENT"
+  fi
 done
 ```
 
-Note: There may be a brief API cache delay (up to a few minutes) before the deletion is reflected. If count > 0, wait 2 minutes and retry before declaring a failure.
+Note: There may be a brief API cache delay (up to a few minutes) before the deletion is reflected. If an ID still shows as present, wait 2 minutes and retry before declaring a failure.
 
 **Step 4b: Verify via dp.la web** (recommended for single-item takedowns)
 
@@ -402,7 +485,7 @@ rm -f /tmp/dpla-takedown-*.json /tmp/dpla-takedown-*.txt /tmp/ssm-*.json
 - **NEVER use `match_all` or any broad query.** Only `terms` queries on explicit IDs are permitted.
 - **NEVER proceed without user confirmation** at both the manifest stage (Phase 1) and the ES pre-delete verification stage (Phase 3b).
 - **Write all SSM payloads to JSON files** and pass via `--cli-input-json file://...`. Never try to pass complex commands via `--parameters` shell quoting — it breaks.
-- **ES nodes are bound to their private NIC IP, not localhost.** All ES curl commands in SSM must use `IP=$(hostname -I | awk '{print $1}')` to resolve the address dynamically.
+- **ES nodes are bound to their private NIC IP, not localhost.** All ES curl commands in SSM must use `IP=$(hostname -I | cut -d' ' -f1)` to resolve the address dynamically.
 - **The index name must match `dpla-all-*` pattern.** If alias resolution returns anything else, stop.
 - **If hit count does not exactly match ID count, stop.** Do not proceed with partial matches — investigate first.
 - **Do not batch more than 100 IDs** in a single ES `_delete_by_query` terms list. For larger lists, batch in groups of 100 with verification between each batch.
@@ -428,7 +511,7 @@ rm -f /tmp/dpla-takedown-*.json /tmp/dpla-takedown-*.txt /tmp/ssm-*.json
 - **ES nodes are in a private VPC.** All ES operations go through SSM Run Command, which adds ~10-15s per command. Use `sleep 8` after send-command before checking the result; use `sleep 10` for delete operations.
 - **Large hubs (e.g. NARA: 476 part files, 15GB)** take 30-60 minutes for the S3 step.
 - **API cache:** The DPLA API may take a few minutes to reflect ES deletions. Retry count checks after 2 minutes if needed.
-- **S3 hub prefix vs API slug may differ.** Always verify the S3 prefix with `aws s3 ls s3://dpla-master-dataset/ --profile dpla | grep -i <slug>`.
+- **S3 hub prefix vs API slug may differ.** Always verify the S3 prefix with `aws s3 ls s3://dpla-master-dataset/ --profile $PROFILE | grep -i <slug>`.
 
 ## Key References
 
