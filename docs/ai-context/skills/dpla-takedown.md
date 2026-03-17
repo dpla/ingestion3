@@ -246,7 +246,7 @@ For each hub in the manifest:
 
 3. **Run the delete-from-jsonl script** using the Python discovered in the preflight:
    ```bash
-   cd /Users/dominic/Documents/GitHub/ingestion3
+   # Run from repository root
    $PYTHON scripts/delete/delete-from-jsonl.py \
      --hub <s3-hub-prefix> \
      --profile $PROFILE \

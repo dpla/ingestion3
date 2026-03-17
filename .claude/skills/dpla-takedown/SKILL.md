@@ -249,7 +249,7 @@ For each hub in the manifest:
 
 3. **Run the delete-from-jsonl script** using the Python discovered in the preflight:
    ```bash
-   cd /Users/dominic/Documents/GitHub/ingestion3
+   # Run from repository root
    $PYTHON scripts/delete/delete-from-jsonl.py \
      --hub <s3-hub-prefix> \
      --profile $PROFILE \
@@ -325,7 +325,7 @@ with open('/tmp/dpla-takedown-query.json') as f:
     query = f.read().strip()
 b64 = base64.b64encode(query.encode()).decode()
 cmd = (f"echo {b64} | base64 -d > /tmp/dpla-q.json && "
-       f"IP=$(hostname -I | awk '{{print $1}}') && "
+       f"IP=$(hostname -I | cut -d' ' -f1) && "
        f"curl -s -XPOST \"http://$IP:9200/{idx}/_search?size=10\" "
        f"-H 'Content-Type: application/json' -d @/tmp/dpla-q.json")
 payload = {
@@ -379,7 +379,7 @@ with open('/tmp/dpla-takedown-query.json') as f:
     query = f.read().strip()
 b64 = base64.b64encode(query.encode()).decode()
 cmd = (f"echo {b64} | base64 -d > /tmp/dpla-q.json && "
-       f"IP=$(hostname -I | awk '{{print $1}}') && "
+       f"IP=$(hostname -I | cut -d' ' -f1) && "
        f"curl -s -XPOST \"http://$IP:9200/{idx}/_delete_by_query?conflicts=abort\" "
        f"-H 'Content-Type: application/json' -d @/tmp/dpla-q.json")
 payload = {
