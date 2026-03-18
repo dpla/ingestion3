@@ -641,17 +641,32 @@ There are two script templates depending on whether this is a single large hub o
 
 #### Write the script to a local temp file, then upload via base64
 
-**Always write to a local temp file first** — do NOT try to assign a multi-line heredoc to a shell variable and pipe through `echo "$VAR" | base64`, as nested quoting breaks. Instead:
+**Always generate scripts via Python and write to /tmp** — do NOT use shell heredocs (`<< SCRIPT_END`) to generate ingest scripts in zsh. They cause cascading quoting failures, especially with backticks and `$!`.
 
+Read the Slack token directly from the env file using regex (never source it and rely on env vars — they don't transfer to Python subprocess):
+
+```python
+import re, os
+
+with open(os.path.expanduser('~/.claude/secrets/dpla.env')) as f:
+    content = f.read()
+token = re.search(r"DPLA_SLACK_BOT_TOKEN='?([^'\n]+)'?", content).group(1).strip("'")
+
+hub = "<hub>"
+script = f"""#!/bin/bash -l
+set -euo pipefail
+...
+SLACK_TOKEN="{token}"
+...
+"""
+
+with open(f'/tmp/{hub}-ingest.sh', 'w') as f:
+    f.write(script)
+print("Script written.")
+```
+
+Then upload via base64:
 ```bash
-cat > /tmp/<hub>-ingest.sh << 'SCRIPT_END'
-... script contents ...
-SCRIPT_END
-
-# Inject the Slack bot token (must source dpla.env first so DPLA_SLACK_BOT_TOKEN is set)
-source ~/.claude/secrets/dpla.env
-sed -i '' "s|__SLACK_TOKEN__|${DPLA_SLACK_BOT_TOKEN}|g" /tmp/<hub>-ingest.sh
-
 SCRIPT_B64=$(base64 < /tmp/<hub>-ingest.sh)
 CMDID=$(aws ssm send-command \
   --instance-ids i-0a0def8581efef783 \
@@ -685,7 +700,7 @@ slack() {
     -d "{\"channel\":\"$CHANNEL\",\"text\":\"$1\"}" > /dev/null
 }
 log() { echo "[$(date -u +%H:%M:%SZ)] $1" >> $LOG; }
-BT='`'  # literal backtick — avoids command-substitution when embedded in unquoted heredocs
+BT=$(printf '\x60')
 
 log "=== $HUB ingest starting ==="
 slack ":arrow_forward: *$HUB ingest started* | harvest → map → enrich → jsonl → s3"
@@ -767,7 +782,7 @@ CONF=/home/ec2-user/ingestion3-conf/i3.conf
 
 slack() { curl -s -X POST "$SLACK_WEBHOOK" -H "Content-Type: application/json" -d "{\"text\":\"$1\"}" > /dev/null; }
 log()   { echo "[$(date -u +%H:%M:%SZ)] $1" >> $LOG; }
-BT='`'
+BT=$(printf '\x60')
 
 PASSED=(); FAILED=()
 cd $I3
@@ -814,7 +829,7 @@ slack "$MSG"
 
 #### Launch the script (nohup, runs in background)
 
-**Use `python3` to generate the `--parameters` JSON** to avoid "Error parsing parameter" from shell metacharacters:
+**Use `python3` to generate the `--parameters` JSON** to avoid "Error parsing parameter" from shell metacharacters (`$!`, backticks, nested quotes all cause this error):
 
 ```bash
 SCRIPT_NAME="<hub>-ingest.sh"   # or batch-ingest.sh
@@ -834,12 +849,22 @@ CMDID=$(aws ssm send-command \
 # This command returns quickly — the script runs in the background
 ```
 
-**After launching, verify it started** (don't rely on `$!` — the SSM command returns before `$!` is available):
+**Why `> /dev/null`?** The script writes its own log via `$LOG` — the outer redirect is just discarded. **Do NOT redirect to a log file in the nohup launch** (e.g. `> /home/ec2-user/data/my.log`) — SSM runs as ssm-user (root), which creates the file owned by root. The ec2-user script then can't append to it and fails immediately with `tee: permission denied`. If you need an outer redirect, pre-create the file as ec2-user first, or wrap the entire nohup inside `sudo -u ec2-user bash -lc "..."`.
+
+**Do NOT try to capture `$!`** — the SSM command returns before the background process starts, so `$!` is empty or unavailable. Including `$!` in the command string also causes "Error parsing parameter: Invalid JSON: Invalid \escape" from the AWS CLI JSON parser.
+
+**After launching, verify it started** by checking the log file after ~10 seconds:
 ```bash
-# Send a follow-up SSM command after ~10 seconds
-sudo -u ec2-user bash -lc "ps aux | grep <hub>-ingest | grep -v grep"
+PARAMS=$(python3 -c "import json; print(json.dumps({'commands': ['tail -5 /home/ec2-user/data/<hub>-ingest.log']}))")
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 30 \
+  --parameters "$PARAMS" \
+  --query 'Command.CommandId' --output text)
+# Poll after 8s — look for "=== <hub> ingest starting ===" in output
 ```
-Expected: one `bash -l /home/ec2-user/<hub>-ingest.sh` process running as `ec2-user`.
+Expected: the starting log message. If the log is empty or doesn't exist, check `ps aux | grep <hub>-ingest | grep -v grep` via SSM.
 
 ### Step B4: Monitor Progress
 
