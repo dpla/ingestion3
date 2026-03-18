@@ -93,6 +93,21 @@ aws ssm get-command-invocation \
 
 **Important**: Sleep 8–15 seconds before polling, and between retries. SSM results are not always immediately available.
 
+**When the command contains shell metacharacters** (`$!`, nested quotes, backticks), build the `--parameters` JSON with python3 to avoid "Error parsing parameter":
+```bash
+PARAMS=$(python3 -c "
+import json
+cmd = 'sudo -u ec2-user bash -lc \"<COMMAND WITH SPECIAL CHARS>\"'
+print(json.dumps({'commands': [cmd]}))
+")
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 7200 \
+  --parameters "$PARAMS" \
+  --query 'Command.CommandId' --output text)
+```
+
 ## Hub Configuration Reference
 
 Hub config lives in `i3.conf` on the EC2 at `/home/ec2-user/ingestion3-conf/i3.conf`.
@@ -465,19 +480,138 @@ Run as: `python3 hub-list.py february` (or `python3 hub-list.py 2`). Review the 
 
 ### Step B2: Choose Orchestration Mode
 
-**Short batch (≤ 5 hubs, ≤ ~4 hours):** Orchestrate directly — run the single-hub Steps 4–11 in sequence for each hub. Claude stays active and posts a Slack notification after each hub.
+**Short run (≤ ~4 hours total):** Orchestrate directly — run Steps 4–11 in sequence, Claude stays active and posts a Slack notification on completion.
 
-**Long batch (6+ hubs or overnight run):** Write a self-contained script to the EC2 and launch it in the background. Claude's job is setup and launch; the script handles the rest and posts its own Slack updates via the ingest webhook.
+**Long run (estimated > 4 hours, OR 6+ hubs):** Write a self-contained script to the EC2 and launch it in the background. Claude's job is setup and launch; the script handles the rest and posts its own Slack updates. This applies to:
+- Any single large hub (e.g. **minnesota ~1.1M records ≈ 8–9 hours**, smithsonian, ia, hathi)
+- Multi-hub batches of 6+ hubs
 
-### Step B3: Long Batch — Write and Launch Script
+**Slack channel for background scripts:**
+- **#tech-alerts** (`C02HEU2L3`): use `DPLA_SLACK_BOT_TOKEN` — embed it directly in the script (preferred for single-hub runs)
+- **#network**: use `SLACK_WEBHOOK` from the EC2's `.env` — already available without embedding tokens (convenient for multi-hub batch runs)
 
-**Write the script to EC2:**
+### Step B3: Long Run — Write and Launch Script
+
+There are two script templates depending on whether this is a single large hub or a multi-hub batch.
+
+#### Write the script to a local temp file, then upload via base64
+
+**Always write to a local temp file first** — do NOT try to assign a multi-line heredoc to a shell variable and pipe through `echo "$VAR" | base64`, as nested quoting breaks. Instead:
 
 ```bash
-# Build and base64-encode the batch script locally, then send it
-HUBS="<hub1> <hub2> <hub3> ..."   # from Step B1 output
+cat > /tmp/<hub>-ingest.sh << 'SCRIPT_END'
+... script contents ...
+SCRIPT_END
 
-SCRIPT='#!/bin/bash -l
+# Inject the Slack bot token (must source dpla.env first so DPLA_SLACK_BOT_TOKEN is set)
+source ~/.claude/secrets/dpla.env
+sed -i '' "s|__SLACK_TOKEN__|${DPLA_SLACK_BOT_TOKEN}|g" /tmp/<hub>-ingest.sh
+
+SCRIPT_B64=$(base64 < /tmp/<hub>-ingest.sh)
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 60 \
+  --parameters "{\"commands\":[\"echo '${SCRIPT_B64}' | base64 -d > /home/ec2-user/<hub>-ingest.sh && chmod +x /home/ec2-user/<hub>-ingest.sh && echo WRITE_OK\"]}" \
+  --query 'Command.CommandId' --output text)
+# Poll until Status=Success, verify output contains WRITE_OK
+```
+
+#### Single-hub script template (posts to #tech-alerts)
+
+Use this for large single hubs (minnesota, smithsonian, ia, hathi, etc.). The `__SLACK_TOKEN__` placeholder is replaced by the `sed` step in the write block above.
+
+```bash
+#!/bin/bash -l
+set -euo pipefail
+
+HUB="<hub>"
+DATA=/home/ec2-user/data
+I3=/home/ec2-user/ingestion3
+CONF=/home/ec2-user/ingestion3-conf/i3.conf
+LOG=$DATA/<hub>-ingest.log
+SLACK_TOKEN="__SLACK_TOKEN__"
+CHANNEL="C02HEU2L3"
+
+slack() {
+  curl -s -X POST "https://slack.com/api/chat.postMessage" \
+    -H "Authorization: Bearer $SLACK_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"channel\":\"$CHANNEL\",\"text\":\"$1\"}" > /dev/null
+}
+log() { echo "[$(date -u +%H:%M:%SZ)] $1" >> $LOG; }
+
+log "=== $HUB ingest starting ==="
+slack ":arrow_forward: *$HUB ingest started* | harvest → map → enrich → jsonl → s3"
+
+cd $I3
+
+# Harvest
+log "--- Harvest starting ---"
+SBT_OPTS=-Xmx15g sbt "runMain dpla.ingestion3.entries.ingest.HarvestEntry \
+  --output $DATA/ --conf $CONF --name $HUB --sparkMaster local[*]" \
+  >> $LOG 2>&1 && log "Harvest OK" || { log "Harvest FAILED"; slack ":x: *$HUB harvest FAILED* | check \`$LOG\`"; exit 1; }
+HARVEST_TS=$(ls -t $DATA/$HUB/harvest/ | head -1)
+slack ":white_check_mark: *$HUB harvest complete* | \`$HARVEST_TS\`"
+
+# Mapping
+log "--- Mapping starting ---"
+SBT_OPTS=-Xmx12g sbt "runMain dpla.ingestion3.entries.ingest.IngestRemap \
+  --output $DATA/ --conf $CONF --name $HUB \
+  --input $DATA/$HUB/harvest/$HARVEST_TS/ --sparkMaster local[*]" \
+  >> $LOG 2>&1 && log "Mapping OK" || { log "Mapping FAILED"; slack ":x: *$HUB mapping FAILED* | check \`$LOG\`"; exit 1; }
+MAP_TS=$(ls -t $DATA/$HUB/mapping/ | head -1)
+slack ":white_check_mark: *$HUB mapping complete* | \`$MAP_TS\`"
+
+# Enrichment
+log "--- Enrichment starting ---"
+SBT_OPTS=-Xmx18g sbt "runMain dpla.ingestion3.entries.ingest.EnrichEntry \
+  --output $DATA/ --conf $CONF --name $HUB \
+  --input $DATA/$HUB/mapping/$MAP_TS/ --sparkMaster local[*]" \
+  >> $LOG 2>&1 && log "Enrichment OK" || { log "Enrichment FAILED"; slack ":x: *$HUB enrichment FAILED* | check \`$LOG\`"; exit 1; }
+ENRICH_TS=$(ls -t $DATA/$HUB/enrichment/ | head -1)
+slack ":white_check_mark: *$HUB enrichment complete* | \`$ENRICH_TS\`"
+
+# JSONL
+log "--- JSONL export starting ---"
+SBT_OPTS=-Xmx12g sbt "runMain dpla.ingestion3.entries.ingest.JsonlEntry \
+  --output $DATA/ --conf $CONF --name $HUB \
+  --input $DATA/$HUB/enrichment/$ENRICH_TS/ --sparkMaster local[1]" \
+  >> $LOG 2>&1 && log "JSONL OK" || { log "JSONL FAILED"; slack ":x: *$HUB JSONL FAILED* | check \`$LOG\`"; exit 1; }
+JSONL_TS=$(ls -t $DATA/$HUB/jsonl/ | head -1)
+slack ":white_check_mark: *$HUB JSONL complete* | \`$JSONL_TS\`"
+
+# S3 sync
+log "--- S3 sync starting ---"
+aws s3 sync $DATA/$HUB/jsonl/$JSONL_TS/ s3://dpla-master-dataset/$HUB/jsonl/$JSONL_TS/ \
+  >> $LOG 2>&1 && log "S3 sync OK" || { log "S3 sync FAILED"; slack ":x: *$HUB S3 sync FAILED*"; exit 1; }
+
+# Final summary with record count delta
+PREV_SNAP=$(aws s3 ls s3://dpla-master-dataset/$HUB/jsonl/ \
+  | awk '{print $NF}' | sed 's|/||g' | sort | tail -2 | head -1)
+NEW_COUNT=$(aws s3 cp s3://dpla-master-dataset/$HUB/jsonl/${JSONL_TS}/_MANIFEST - 2>/dev/null \
+  | grep "^Record count:" | awk '{print $NF}')
+PREV_COUNT=$(aws s3 cp s3://dpla-master-dataset/$HUB/jsonl/${PREV_SNAP}/_MANIFEST - 2>/dev/null \
+  | grep "^Record count:" | awk '{print $NF}')
+TOTAL_SIZE=$(aws s3 ls --summarize --recursive s3://dpla-master-dataset/$HUB/jsonl/${JSONL_TS}/ \
+  | grep "Total Size" | awk '{print $NF}')
+DELTA_LINE=$(python3 -c "
+new, prev = ${NEW_COUNT:-0}, ${PREV_COUNT:-0}
+total_mb = ${TOTAL_SIZE:-0} / 1_048_576
+delta = new - prev
+sign = '+' if delta >= 0 else ''
+print(f'Records: {new:,} ({sign}{delta:,} vs prev) | Size: {total_mb:.1f} MB')
+")
+log "Done: $DELTA_LINE"
+slack "*$HUB ingest complete* :white_check_mark:\nNew snapshot: \`${JSONL_TS}\`\n${DELTA_LINE}\nS3: \`s3://dpla-master-dataset/$HUB/jsonl/${JSONL_TS}/\`"
+```
+
+#### Multi-hub batch script template (posts to #network via SLACK_WEBHOOK)
+
+Use this for 6+ hub batch runs. The `SLACK_WEBHOOK` is already in `/home/ec2-user/ingestion3/.env` and posts to #network.
+
+```bash
+#!/bin/bash -l
 source /home/ec2-user/ingestion3/.env
 HUBS="$*"
 LOG=/home/ec2-user/batch-ingest.log
@@ -486,40 +620,34 @@ DATA=/home/ec2-user/data
 CONF=/home/ec2-user/ingestion3-conf/i3.conf
 
 slack() { curl -s -X POST "$SLACK_WEBHOOK" -H "Content-Type: application/json" -d "{\"text\":\"$1\"}" > /dev/null; }
-log()   { echo "[$(date -u +%H:%M:%SZ)] $1" | tee -a $LOG; }
+log()   { echo "[$(date -u +%H:%M:%SZ)] $1" >> $LOG; }
 
 PASSED=(); FAILED=()
+cd $I3
 
 for HUB in $HUBS; do
   log "=== Starting $HUB ==="
 
-  cd $I3
-
-  # Harvest
   SBT_OPTS=-Xmx15g sbt "runMain dpla.ingestion3.entries.ingest.HarvestEntry \
     --output $DATA/ --conf $CONF --name $HUB --sparkMaster local[*]" \
     >> $LOG 2>&1 && log "$HUB harvest OK" || { log "$HUB harvest FAILED"; FAILED+=("$HUB/harvest"); slack ":x: *$HUB harvest FAILED*"; continue; }
   HARVEST_TS=$(ls -t $DATA/$HUB/harvest/ | head -1)
 
-  # Mapping
   SBT_OPTS=-Xmx12g sbt "runMain dpla.ingestion3.entries.ingest.IngestRemap \
     --output $DATA/ --conf $CONF --name $HUB --input $DATA/$HUB/harvest/$HARVEST_TS/ --sparkMaster local[*]" \
     >> $LOG 2>&1 && log "$HUB mapping OK" || { log "$HUB mapping FAILED"; FAILED+=("$HUB/mapping"); slack ":x: *$HUB mapping FAILED*"; continue; }
   MAP_TS=$(ls -t $DATA/$HUB/mapping/ | head -1)
 
-  # Enrichment
   SBT_OPTS=-Xmx18g sbt "runMain dpla.ingestion3.entries.ingest.EnrichEntry \
     --output $DATA/ --conf $CONF --name $HUB --input $DATA/$HUB/mapping/$MAP_TS/ --sparkMaster local[*]" \
     >> $LOG 2>&1 && log "$HUB enrichment OK" || { log "$HUB enrichment FAILED"; FAILED+=("$HUB/enrichment"); slack ":x: *$HUB enrichment FAILED*"; continue; }
   ENRICH_TS=$(ls -t $DATA/$HUB/enrichment/ | head -1)
 
-  # JSONL
   SBT_OPTS=-Xmx12g sbt "runMain dpla.ingestion3.entries.ingest.JsonlEntry \
     --output $DATA/ --conf $CONF --name $HUB --input $DATA/$HUB/enrichment/$ENRICH_TS/ --sparkMaster local[1]" \
     >> $LOG 2>&1 && log "$HUB jsonl OK" || { log "$HUB jsonl FAILED"; FAILED+=("$HUB/jsonl"); slack ":x: *$HUB JSONL FAILED*"; continue; }
   JSONL_TS=$(ls -t $DATA/$HUB/jsonl/ | head -1)
 
-  # S3 sync
   aws s3 sync $DATA/$HUB/jsonl/$JSONL_TS/ s3://dpla-master-dataset/$HUB/jsonl/$JSONL_TS/ \
     >> $LOG 2>&1 && log "$HUB S3 sync OK" || { log "$HUB S3 sync FAILED"; FAILED+=("$HUB/s3"); slack ":x: *$HUB S3 sync FAILED*"; continue; }
 
@@ -535,30 +663,36 @@ log "=== Batch done. Passed: ${#PASSED[@]}  Failed: ${#FAILED[@]} ==="
 MSG="*Batch ingest complete* :checkered_flag:\n:white_check_mark: ${#PASSED[@]} passed: $PASS_STR"
 [ ${#FAILED[@]} -gt 0 ] && MSG="$MSG\n:x: ${#FAILED[@]} failed: $FAIL_STR"
 slack "$MSG"
-'
-
-SCRIPT_B64=$(echo "$SCRIPT" | base64)
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 60 \
-  --parameters "{\"commands\":[\"echo '${SCRIPT_B64}' | base64 -d > /home/ec2-user/batch-ingest.sh && chmod +x /home/ec2-user/batch-ingest.sh && echo WRITE_OK\"]}" \
-  --query 'Command.CommandId' --output text)
-# Poll until Status=Success, verify output contains WRITE_OK
 ```
 
-**Launch the script (runs in background, posts its own Slack updates):**
+#### Launch the script (nohup, runs in background)
+
+**Use `python3` to generate the `--parameters` JSON** to avoid "Error parsing parameter" from shell metacharacters:
 
 ```bash
+SCRIPT_NAME="<hub>-ingest.sh"   # or batch-ingest.sh
+# bash expands ${SCRIPT_NAME} before python3 sees the string — no need to pass it as an argument
+LAUNCH_PARAMS=$(python3 -c "
+import json
+cmd = 'sudo -u ec2-user bash -lc \"nohup /home/ec2-user/${SCRIPT_NAME} > /dev/null 2>&1 &\"'
+print(json.dumps({'commands': [cmd]}))
+")
+
 CMDID=$(aws ssm send-command \
   --instance-ids i-0a0def8581efef783 \
   --document-name "AWS-RunShellScript" \
   --timeout-seconds 172800 \
-  --parameters "{\"commands\":[\"sudo -u ec2-user bash -lc 'nohup /home/ec2-user/batch-ingest.sh ${HUBS} > /home/ec2-user/batch-ingest.log 2>&1 &'\"]}" \
+  --parameters "$LAUNCH_PARAMS" \
   --query 'Command.CommandId' --output text)
-# This command returns quickly — the batch runs in the background
-echo "Batch launched. Monitor with: tail -f /home/ec2-user/batch-ingest.log"
+# This command returns quickly — the script runs in the background
 ```
+
+**After launching, verify it started** (don't rely on `$!` — the SSM command returns before `$!` is available):
+```bash
+# Send a follow-up SSM command after ~10 seconds
+sudo -u ec2-user bash -lc "ps aux | grep <hub>-ingest | grep -v grep"
+```
+Expected: one `bash -l /home/ec2-user/<hub>-ingest.sh` process running as `ec2-user`.
 
 ### Step B4: Monitor Progress
 
@@ -591,7 +725,11 @@ aws ec2 stop-instances --instance-ids i-0a0def8581efef783
 | Enrichment | `-Xmx18g` | `local[*]` | Highest memory step |
 | JSONL | `-Xmx12g` | `local[1]` | Single thread intentional |
 
-## Typical Run Times (SD as baseline — ~96k records)
+## Typical Run Times
+
+Scale is roughly linear with record count. Use SD as a baseline for api/MDL hubs.
+
+### SD (~96k records)
 
 | Step | Time |
 |------|------|
@@ -602,7 +740,20 @@ aws ec2 stop-instances --instance-ids i-0a0def8581efef783
 | S3 sync | ~1 min |
 | **Total** | **~47 min** |
 
-Smaller hubs (file, localoai with small collections) will be faster. Large hubs (smithsonian, ia, hathi) will be significantly longer.
+### Minnesota (~1.1M records — 11× SD)
+
+| Step | Estimated Time |
+|------|----------------|
+| Harvest (api/MDL) | ~4.5–5 hours |
+| Mapping | ~30 min |
+| Enrichment | ~1.5–2 hours |
+| JSONL | ~1–1.5 hours |
+| S3 sync | ~10–15 min |
+| **Total** | **~8–9 hours** |
+
+Minnesota is the largest MDL hub (full collection minus SD). Always use the background script for it.
+
+Smaller hubs (file, localoai with small collections) will be faster than SD. Other large hubs (smithsonian, ia, hathi) may be comparable to or larger than Minnesota.
 
 ## Error Handling
 
