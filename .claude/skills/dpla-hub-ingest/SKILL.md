@@ -122,7 +122,7 @@ Key harvest types and their network requirements:
 |------|-------|
 | `localoai` | OAI-PMH over HTTP/HTTPS. Most hubs. **CONTENTdm-hosted endpoints are blocked from EC2** (see below). |
 | `api` | REST API (e.g. MDL/SD uses `metl.lib.umn.edu`). EC2-reachable. Slow to respond — use 60s+ curl timeout. |
-| `file` | Pre-staged local file. Path in `harvest.endpoint` references `/Users/scott/...` — these were run locally by a previous operator. Requires the file to be present on the EC2 or staged to S3 first. |
+| `file` | **community-webs**: DB export pre-processing runs entirely on EC2 (see Community Webs Pre-processing section). **Other file hubs**: `harvest.endpoint` references `/Users/scott/...` paths from a previous operator — require manual staging to EC2 before harvest. |
 | `nara.file.delta` | NARA-specific delta file format. Complex — consult README_NARA.md. |
 
 ### CONTENTdm Block (Important)
@@ -140,6 +140,144 @@ For these hubs, either:
 
 Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
 
+## Community Webs Pre-processing
+
+Community Webs is a `file`-type hub — Internet Archive sends a SQLite database (`.db`) that must be exported to a JSONL ZIP on the EC2 before harvest. **Everything runs on EC2 via SSM** — no local Mac steps needed.
+
+Run these steps **after Step 3** (verify EC2 environment) and **before Step 4** (harvest), whenever hub is `community-webs`.
+
+### Step CW1: Get DB file location
+
+If not provided by the user, ask:
+
+> "Where is the Community Webs `.db` file? Provide an S3 URI (e.g. `s3://dpla-uploads/community-webs/export.db`) or a path already on the EC2 (e.g. `/home/ec2-user/data/community-webs/originalRecords/export.db`)."
+
+### Step CW2: Check prerequisites on EC2
+
+```bash
+sudo -u ec2-user bash -lc "
+  sqlite3 --version 2>&1 || sudo dnf install -y sqlite
+  jq --version 2>&1 || sudo dnf install -y jq
+  echo PREREQS_OK"
+```
+
+### Step CW3: Stage DB to EC2 (if S3 URI)
+
+If the user provided an S3 URI, download it:
+
+```bash
+sudo -u ec2-user bash -lc "
+  mkdir -p /home/ec2-user/data/community-webs/originalRecords
+  aws s3 cp <S3_URI> /home/ec2-user/data/community-webs/originalRecords/cw-export.db
+  echo STAGE_OK"
+```
+
+If already on EC2, just verify: `sudo -u ec2-user bash -lc "ls -lh <EC2_PATH>"`
+
+Save the confirmed EC2 path as `CW_DB_PATH`.
+
+### Step CW4: Export DB → JSONL → ZIP and update i3.conf
+
+Write the export script locally, upload to EC2 via base64, and run it. The script exports the `ait` table, validates all records have an `id` field, ZIPs the JSONL, and updates `i3.conf` — all in one shot.
+
+```bash
+cat > /tmp/cw-export.sh << 'SCRIPT_END'
+#!/bin/bash -l
+set -euo pipefail
+
+DB="$1"
+CONF=/home/ec2-user/ingestion3-conf/i3.conf
+ORIGINALS=/home/ec2-user/data/community-webs/originalRecords
+DATESTAMP=$(date +%Y%m%d)
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+OUT_DIR="${ORIGINALS}/${DATESTAMP}"
+mkdir -p "$OUT_DIR"
+
+echo "DB: $DB"
+echo "--- Exporting DB ---"
+sqlite3 "$DB" --json "SELECT * FROM ait" > "$OUT_DIR/tmp.json"
+RECORD_COUNT=$(jq 'length' "$OUT_DIR/tmp.json")
+echo "Exported $RECORD_COUNT records"
+
+echo "--- Converting to JSONL ---"
+jq -c '.[]' "$OUT_DIR/tmp.json" > "$OUT_DIR/community-webs.jsonl"
+
+echo "--- Validating ---"
+JSONL_PATH="$OUT_DIR/community-webs.jsonl" python3 -c "
+import json, sys, os
+errors, skipped = 0, 0
+with open(os.environ['JSONL_PATH']) as f:
+    for i, line in enumerate(f, 1):
+        line = line.strip()
+        if not line: continue
+        try:
+            rec = json.loads(line)
+            if rec.get('status') == 'deleted':
+                skipped += 1
+            elif 'id' not in rec:
+                print(f'Line {i}: missing id field')
+                errors += 1
+        except Exception as e:
+            print(f'Line {i}: {e}')
+            errors += 1
+if errors:
+    print(f'Validation FAILED: {errors} errors')
+    sys.exit(1)
+print(f'Validation passed ({skipped} deleted records skipped)')
+"
+
+echo "--- Creating ZIP ---"
+ZIP_NAME="community-webs-${TIMESTAMP}.zip"
+(cd "$OUT_DIR" && zip -j "$ZIP_NAME" community-webs.jsonl)
+rm -f "$OUT_DIR/community-webs.jsonl" "$OUT_DIR/tmp.json"
+
+echo "--- Updating i3.conf ---"
+sed -i "s|community-webs\.harvest\.endpoint.*|community-webs.harvest.endpoint = \"${OUT_DIR}/\"|" "$CONF"
+grep "community-webs.harvest.endpoint" "$CONF"
+
+echo "OUT_DIR=${OUT_DIR}"
+echo "RECORD_COUNT=${RECORD_COUNT}"
+echo "EXPORT_SUCCESS"
+SCRIPT_END
+
+SCRIPT_B64=$(base64 < /tmp/cw-export.sh)
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 60 \
+  --parameters "{\"commands\":[\"echo '${SCRIPT_B64}' | base64 -d > /home/ec2-user/cw-export.sh && chmod +x /home/ec2-user/cw-export.sh && echo WRITE_OK\"]}" \
+  --query 'Command.CommandId' --output text)
+# Poll until Status=Success, verify output contains WRITE_OK
+```
+
+Then run it — use `python3` to build the `--parameters` JSON to safely handle the path:
+
+```bash
+PARAMS=$(python3 -c "
+import json
+db = '<CW_DB_PATH>'
+cmd = 'sudo -u ec2-user bash /home/ec2-user/cw-export.sh ' + db
+print(json.dumps({'commands': [cmd]}))
+")
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 300 \
+  --parameters "$PARAMS" \
+  --query 'Command.CommandId' --output text)
+# Poll until Status=Success — export takes ~1–3 minutes depending on DB size
+```
+
+From the output, capture:
+- `OUT_DIR` — the ZIP directory (i3.conf is already updated; no further action needed)
+- `RECORD_COUNT` — sanity-check that it's in the expected range (typically 50k–250k)
+
+Verify `EXPORT_SUCCESS` is present before continuing.
+
+### Proceed to Step 4
+
+`i3.conf` is already updated. Continue with Step 4 (harvest) using `community-webs` as the hub name — harvest will read from the ZIP automatically.
+
 ## Full Procedure
 
 ### Step 0: Identify the Hub
@@ -151,6 +289,8 @@ grep "^<hub>\." /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
 ```
 
 Note the `harvest.type` and `harvest.endpoint`. For `file` harvests, check that the file path exists and confirm with the user before proceeding.
+
+If hub is `community-webs`, run the Community Webs Pre-processing steps (see above) after Step 3 and before Step 4.
 
 ### Step 1: Pre-flight — Verify Endpoint Reachability
 
@@ -467,7 +607,10 @@ for hub, info in sorted(hubs.items()):
         print(f"  WARN {hub:25s} [CONTENTdm — blocked from EC2, run locally]")
         continue
     if info["type"] == "file":
-        print(f"  WARN {hub:25s} [file harvest — verify files staged on EC2 first]")
+        if hub == "community-webs":
+            print(f"  CW   {hub:25s} [DB export pre-processing needed on EC2 — see Step CW]")
+        else:
+            print(f"  WARN {hub:25s} [file harvest — verify files staged on EC2 first]")
         runnable.append(hub)
         continue
     print(f"  OK   {hub:25s} [{info['type']}]")
