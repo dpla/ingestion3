@@ -685,6 +685,7 @@ slack() {
     -d "{\"channel\":\"$CHANNEL\",\"text\":\"$1\"}" > /dev/null
 }
 log() { echo "[$(date -u +%H:%M:%SZ)] $1" >> $LOG; }
+BT='`'  # literal backtick — avoids command-substitution when embedded in unquoted heredocs
 
 log "=== $HUB ingest starting ==="
 slack ":arrow_forward: *$HUB ingest started* | harvest → map → enrich → jsonl → s3"
@@ -695,36 +696,36 @@ cd $I3
 log "--- Harvest starting ---"
 SBT_OPTS=-Xmx15g sbt "runMain dpla.ingestion3.entries.ingest.HarvestEntry \
   --output $DATA/ --conf $CONF --name $HUB --sparkMaster local[*]" \
-  >> $LOG 2>&1 && log "Harvest OK" || { log "Harvest FAILED"; slack ":x: *$HUB harvest FAILED* | check \`$LOG\`"; exit 1; }
+  >> $LOG 2>&1 && log "Harvest OK" || { log "Harvest FAILED"; slack ":x: *$HUB harvest FAILED* | check ${BT}$LOG${BT}"; exit 1; }
 HARVEST_TS=$(ls -t $DATA/$HUB/harvest/ | head -1)
-slack ":white_check_mark: *$HUB harvest complete* | \`$HARVEST_TS\`"
+slack ":white_check_mark: *$HUB harvest complete* | ${BT}$HARVEST_TS${BT}"
 
 # Mapping
 log "--- Mapping starting ---"
 SBT_OPTS=-Xmx12g sbt "runMain dpla.ingestion3.entries.ingest.IngestRemap \
   --output $DATA/ --conf $CONF --name $HUB \
   --input $DATA/$HUB/harvest/$HARVEST_TS/ --sparkMaster local[*]" \
-  >> $LOG 2>&1 && log "Mapping OK" || { log "Mapping FAILED"; slack ":x: *$HUB mapping FAILED* | check \`$LOG\`"; exit 1; }
+  >> $LOG 2>&1 && log "Mapping OK" || { log "Mapping FAILED"; slack ":x: *$HUB mapping FAILED* | check ${BT}$LOG${BT}"; exit 1; }
 MAP_TS=$(ls -t $DATA/$HUB/mapping/ | head -1)
-slack ":white_check_mark: *$HUB mapping complete* | \`$MAP_TS\`"
+slack ":white_check_mark: *$HUB mapping complete* | ${BT}$MAP_TS${BT}"
 
 # Enrichment
 log "--- Enrichment starting ---"
 SBT_OPTS=-Xmx18g sbt "runMain dpla.ingestion3.entries.ingest.EnrichEntry \
   --output $DATA/ --conf $CONF --name $HUB \
   --input $DATA/$HUB/mapping/$MAP_TS/ --sparkMaster local[*]" \
-  >> $LOG 2>&1 && log "Enrichment OK" || { log "Enrichment FAILED"; slack ":x: *$HUB enrichment FAILED* | check \`$LOG\`"; exit 1; }
+  >> $LOG 2>&1 && log "Enrichment OK" || { log "Enrichment FAILED"; slack ":x: *$HUB enrichment FAILED* | check ${BT}$LOG${BT}"; exit 1; }
 ENRICH_TS=$(ls -t $DATA/$HUB/enrichment/ | head -1)
-slack ":white_check_mark: *$HUB enrichment complete* | \`$ENRICH_TS\`"
+slack ":white_check_mark: *$HUB enrichment complete* | ${BT}$ENRICH_TS${BT}"
 
 # JSONL
 log "--- JSONL export starting ---"
 SBT_OPTS=-Xmx12g sbt "runMain dpla.ingestion3.entries.ingest.JsonlEntry \
   --output $DATA/ --conf $CONF --name $HUB \
   --input $DATA/$HUB/enrichment/$ENRICH_TS/ --sparkMaster local[1]" \
-  >> $LOG 2>&1 && log "JSONL OK" || { log "JSONL FAILED"; slack ":x: *$HUB JSONL FAILED* | check \`$LOG\`"; exit 1; }
+  >> $LOG 2>&1 && log "JSONL OK" || { log "JSONL FAILED"; slack ":x: *$HUB JSONL FAILED* | check ${BT}$LOG${BT}"; exit 1; }
 JSONL_TS=$(ls -t $DATA/$HUB/jsonl/ | head -1)
-slack ":white_check_mark: *$HUB JSONL complete* | \`$JSONL_TS\`"
+slack ":white_check_mark: *$HUB JSONL complete* | ${BT}$JSONL_TS${BT}"
 
 # S3 sync
 log "--- S3 sync starting ---"
@@ -748,7 +749,7 @@ sign = '+' if delta >= 0 else ''
 print(f'Records: {new:,} ({sign}{delta:,} vs prev) | Size: {total_mb:.1f} MB')
 ")
 log "Done: $DELTA_LINE"
-slack "*$HUB ingest complete* :white_check_mark:\nNew snapshot: \`${JSONL_TS}\`\n${DELTA_LINE}\nS3: \`s3://dpla-master-dataset/$HUB/jsonl/${JSONL_TS}/\`"
+slack "*$HUB ingest complete* :white_check_mark:\nNew snapshot: ${BT}${JSONL_TS}${BT}\n${DELTA_LINE}\nS3: ${BT}s3://dpla-master-dataset/$HUB/jsonl/${JSONL_TS}/${BT}"
 ```
 
 #### Multi-hub batch script template (posts to #network via SLACK_WEBHOOK)
@@ -766,6 +767,7 @@ CONF=/home/ec2-user/ingestion3-conf/i3.conf
 
 slack() { curl -s -X POST "$SLACK_WEBHOOK" -H "Content-Type: application/json" -d "{\"text\":\"$1\"}" > /dev/null; }
 log()   { echo "[$(date -u +%H:%M:%SZ)] $1" >> $LOG; }
+BT='`'
 
 PASSED=(); FAILED=()
 cd $I3
@@ -799,7 +801,7 @@ for HUB in $HUBS; do
   COUNT=$(aws s3 cp s3://dpla-master-dataset/$HUB/jsonl/$JSONL_TS/_MANIFEST - 2>/dev/null | grep "^Record count:" | awk "{print \$NF}")
   log "$HUB complete — $COUNT records"
   PASSED+=("$HUB ($COUNT records)")
-  slack ":white_check_mark: *$HUB ingest complete* — ${COUNT} records | \`$JSONL_TS\`"
+  slack ":white_check_mark: *$HUB ingest complete* — ${COUNT} records | ${BT}$JSONL_TS${BT}"
 done
 
 PASS_STR=$(IFS=", "; echo "${PASSED[*]}")
