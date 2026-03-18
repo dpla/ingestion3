@@ -372,14 +372,15 @@ aws ec2 stop-instances --instance-ids i-0a0def8581efef783
 Post a completion summary to Slack #tech-alerts:
 
 ```bash
-source ~/.claude/secrets/dpla.env
+# Extract token directly — source fails due to spaces in other dpla.env values
+DPLA_SLACK_BOT_TOKEN=$(grep '^DPLA_SLACK_BOT_TOKEN=' ~/.claude/secrets/dpla.env | cut -d'=' -f2-)
 
 # Get object count and total size from the new snapshot
 SUMMARY=$(aws s3 ls --summarize --recursive \
   s3://dpla-master-dataset/<hub>/jsonl/<JSONL_TIMESTAMP>/)
 OBJ_COUNT=$(echo "$SUMMARY" | grep "Total Objects" | awk '{print $NF}')
 TOTAL_SIZE=$(echo "$SUMMARY" | grep "Total Size" | awk '{print $NF}')
-TOTAL_MB=$(python3 -c "print(f'{$TOTAL_SIZE / 1_048_576:.1f} MB')")
+TOTAL_MB=$(python3 -c "print(f'{${TOTAL_SIZE:-0} / 1_048_576:.1f} MB')")
 
 curl -s -X POST "https://slack.com/api/chat.postMessage" \
   -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
