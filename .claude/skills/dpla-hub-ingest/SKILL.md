@@ -400,6 +400,188 @@ curl -s -X POST "https://slack.com/api/chat.postMessage" \
   -d "{\"channel\":\"C02HEU2L3\",\"text\":\"*<hub> ingest complete* :white_check_mark:\nNew snapshot: \`${NEW_SNAP}\`\n${DELTA_LINE}\nS3: \`s3://dpla-master-dataset/<hub>/jsonl/${NEW_SNAP}/\`\"}"
 ```
 
+## Batch Mode
+
+Hubs **cannot run in parallel** on this instance — two enrichment steps alone would require 36 GB, exceeding the 32 GB RAM ceiling. Always run sequentially.
+
+### Step B1: Derive Hub List
+
+When the user says "run [month] ingests" (e.g. "run February ingests", "run March ingests"), use this script to derive the list from `i3.conf`. It skips on-hold hubs, flags CONTENTdm and file-type hubs, and excludes `nara` (complex delta format, manual only).
+
+```python
+#!/usr/bin/env python3
+import re, sys
+from datetime import datetime
+
+CONF = "/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf"
+CONTENTDM_HUBS = {"maryland", "bpl", "scdl", "digitalnc"}
+MONTH_NAMES = {
+    "january":1,"february":2,"march":3,"april":4,"may":5,"june":6,
+    "july":7,"august":8,"september":9,"october":10,"november":11,"december":12
+}
+
+arg = sys.argv[1].lower() if len(sys.argv) > 1 else str(datetime.now().month)
+month = int(arg) if arg.isdigit() else MONTH_NAMES.get(arg, datetime.now().month)
+
+conf = open(CONF).read()
+hubs = {}
+for line in conf.splitlines():
+    m = re.match(r'^([\w-]+)\.harvest\.type\s*=\s*"([^"]+)"', line)
+    if m:
+        hubs[m.group(1)] = {"type": m.group(2), "months": [], "status": None}
+for line in conf.splitlines():
+    m = re.match(r'^([\w-]+)\.schedule\.months\s*=\s*\[([^\]]*)\]', line)
+    if m and m.group(1) in hubs:
+        hubs[m.group(1)]["months"] = [int(x) for x in m.group(2).split(",") if x.strip()]
+    m = re.match(r'^([\w-]+)\.schedule\.status\s*=\s*"([^"]+)"', line)
+    if m and m.group(1) in hubs:
+        hubs[m.group(1)]["status"] = m.group(2)
+
+print(f"\nHubs scheduled for month {month}:\n")
+runnable = []
+for hub, info in sorted(hubs.items()):
+    if month not in info["months"]:
+        continue
+    if info["status"] and "on-hold" in info["status"]:
+        print(f"  SKIP {hub:25s} [on-hold: {info['status']}]")
+        continue
+    if info["type"] == "nara.file.delta":
+        print(f"  SKIP {hub:25s} [nara delta — manual only]")
+        continue
+    if hub in CONTENTDM_HUBS:
+        print(f"  WARN {hub:25s} [CONTENTdm — blocked from EC2, run locally]")
+        continue
+    if info["type"] == "file":
+        print(f"  WARN {hub:25s} [file harvest — verify files staged on EC2 first]")
+        runnable.append(hub)
+        continue
+    print(f"  OK   {hub:25s} [{info['type']}]")
+    runnable.append(hub)
+
+print(f"\nEC2-runnable: {' '.join(runnable)}")
+```
+
+Run as: `python3 hub-list.py february` (or `python3 hub-list.py 2`). Review the output, confirm with the user, then proceed.
+
+### Step B2: Choose Orchestration Mode
+
+**Short batch (≤ 5 hubs, ≤ ~4 hours):** Orchestrate directly — run the single-hub Steps 4–11 in sequence for each hub. Claude stays active and posts a Slack notification after each hub.
+
+**Long batch (6+ hubs or overnight run):** Write a self-contained script to the EC2 and launch it in the background. Claude's job is setup and launch; the script handles the rest and posts its own Slack updates via the ingest webhook.
+
+### Step B3: Long Batch — Write and Launch Script
+
+**Write the script to EC2:**
+
+```bash
+# Build and base64-encode the batch script locally, then send it
+HUBS="<hub1> <hub2> <hub3> ..."   # from Step B1 output
+
+SCRIPT='#!/bin/bash -l
+source /home/ec2-user/ingestion3/.env
+HUBS="$*"
+LOG=/home/ec2-user/batch-ingest.log
+I3=/home/ec2-user/ingestion3
+DATA=/home/ec2-user/data
+CONF=/home/ec2-user/ingestion3-conf/i3.conf
+
+slack() { curl -s -X POST "$SLACK_WEBHOOK" -H "Content-Type: application/json" -d "{\"text\":\"$1\"}" > /dev/null; }
+log()   { echo "[$(date -u +%H:%M:%SZ)] $1" | tee -a $LOG; }
+
+PASSED=(); FAILED=()
+
+for HUB in $HUBS; do
+  log "=== Starting $HUB ==="
+
+  cd $I3
+
+  # Harvest
+  SBT_OPTS=-Xmx15g sbt "runMain dpla.ingestion3.entries.ingest.HarvestEntry \
+    --output $DATA/ --conf $CONF --name $HUB --sparkMaster local[*]" \
+    >> $LOG 2>&1 && log "$HUB harvest OK" || { log "$HUB harvest FAILED"; FAILED+=("$HUB/harvest"); slack ":x: *$HUB harvest FAILED*"; continue; }
+  HARVEST_TS=$(ls -t $DATA/$HUB/harvest/ | head -1)
+
+  # Mapping
+  SBT_OPTS=-Xmx12g sbt "runMain dpla.ingestion3.entries.ingest.IngestRemap \
+    --output $DATA/ --conf $CONF --name $HUB --input $DATA/$HUB/harvest/$HARVEST_TS/ --sparkMaster local[*]" \
+    >> $LOG 2>&1 && log "$HUB mapping OK" || { log "$HUB mapping FAILED"; FAILED+=("$HUB/mapping"); slack ":x: *$HUB mapping FAILED*"; continue; }
+  MAP_TS=$(ls -t $DATA/$HUB/mapping/ | head -1)
+
+  # Enrichment
+  SBT_OPTS=-Xmx18g sbt "runMain dpla.ingestion3.entries.ingest.EnrichEntry \
+    --output $DATA/ --conf $CONF --name $HUB --input $DATA/$HUB/mapping/$MAP_TS/ --sparkMaster local[*]" \
+    >> $LOG 2>&1 && log "$HUB enrichment OK" || { log "$HUB enrichment FAILED"; FAILED+=("$HUB/enrichment"); slack ":x: *$HUB enrichment FAILED*"; continue; }
+  ENRICH_TS=$(ls -t $DATA/$HUB/enrichment/ | head -1)
+
+  # JSONL
+  SBT_OPTS=-Xmx12g sbt "runMain dpla.ingestion3.entries.ingest.JsonlEntry \
+    --output $DATA/ --conf $CONF --name $HUB --input $DATA/$HUB/enrichment/$ENRICH_TS/ --sparkMaster local[1]" \
+    >> $LOG 2>&1 && log "$HUB jsonl OK" || { log "$HUB jsonl FAILED"; FAILED+=("$HUB/jsonl"); slack ":x: *$HUB JSONL FAILED*"; continue; }
+  JSONL_TS=$(ls -t $DATA/$HUB/jsonl/ | head -1)
+
+  # S3 sync
+  aws s3 sync $DATA/$HUB/jsonl/$JSONL_TS/ s3://dpla-master-dataset/$HUB/jsonl/$JSONL_TS/ \
+    >> $LOG 2>&1 && log "$HUB S3 sync OK" || { log "$HUB S3 sync FAILED"; FAILED+=("$HUB/s3"); slack ":x: *$HUB S3 sync FAILED*"; continue; }
+
+  COUNT=$(aws s3 cp s3://dpla-master-dataset/$HUB/jsonl/$JSONL_TS/_MANIFEST - 2>/dev/null | grep "^Record count:" | awk "{print \$NF}")
+  log "$HUB complete — $COUNT records"
+  PASSED+=("$HUB ($COUNT records)")
+  slack ":white_check_mark: *$HUB ingest complete* — ${COUNT} records | \`$JSONL_TS\`"
+done
+
+PASS_STR=$(IFS=", "; echo "${PASSED[*]}")
+FAIL_STR=$(IFS=", "; echo "${FAILED[*]}")
+log "=== Batch done. Passed: ${#PASSED[@]}  Failed: ${#FAILED[@]} ==="
+MSG="*Batch ingest complete* :checkered_flag:\n:white_check_mark: ${#PASSED[@]} passed: $PASS_STR"
+[ ${#FAILED[@]} -gt 0 ] && MSG="$MSG\n:x: ${#FAILED[@]} failed: $FAIL_STR"
+slack "$MSG"
+'
+
+SCRIPT_B64=$(echo "$SCRIPT" | base64)
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 60 \
+  --parameters "{\"commands\":[\"echo '${SCRIPT_B64}' | base64 -d > /home/ec2-user/batch-ingest.sh && chmod +x /home/ec2-user/batch-ingest.sh && echo WRITE_OK\"]}" \
+  --query 'Command.CommandId' --output text)
+# Poll until Status=Success, verify output contains WRITE_OK
+```
+
+**Launch the script (runs in background, posts its own Slack updates):**
+
+```bash
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 172800 \
+  --parameters "{\"commands\":[\"sudo -u ec2-user bash -lc 'nohup /home/ec2-user/batch-ingest.sh ${HUBS} > /home/ec2-user/batch-ingest.log 2>&1 &'\"]}" \
+  --query 'Command.CommandId' --output text)
+# This command returns quickly — the batch runs in the background
+echo "Batch launched. Monitor with: tail -f /home/ec2-user/batch-ingest.log"
+```
+
+### Step B4: Monitor Progress
+
+At any time, check the log:
+
+```bash
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 30 \
+  --parameters '{"commands":["sudo -u ec2-user tail -30 /home/ec2-user/batch-ingest.log"]}' \
+  --query 'Command.CommandId' --output text)
+# Poll then read StandardOutputContent
+```
+
+### Step B5: Stop EC2 After Batch
+
+The batch script does **not** stop the EC2 — do that manually after the Slack summary arrives:
+
+```bash
+aws ec2 stop-instances --instance-ids i-0a0def8581efef783
+```
+
 ## SBT Memory Settings Reference
 
 | Step | SBT_OPTS | Spark Master | Notes |
