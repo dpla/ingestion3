@@ -416,14 +416,14 @@ This returns the most recent directory name (format: `YYYYMMDD_HHMMSS-<hub>-Orig
 
 ### Step 5: Run Mapping
 
-Use `IngestRemap` (not `MappingEntry`) — it runs mapping **and** sends the summary email to the partner. `MappingEntry` does mapping only with no email.
+Use `MappingEntry` — mapping only, no partner email. The partner summary email is sent separately in Step 9.5, **after** the safety check passes. Do NOT use `IngestRemap` here — it fires the partner email immediately during mapping, before S3 sync and the safety check.
 
 Use the harvest timestamp from Step 4:
 
 ```bash
 sudo -u ec2-user bash -lc "
   cd /home/ec2-user/ingestion3 &&
-  SBT_OPTS=-Xmx12g sbt \"runMain dpla.ingestion3.entries.ingest.IngestRemap \
+  SBT_OPTS=-Xmx12g sbt \"runMain dpla.ingestion3.entries.ingest.MappingEntry \
     --output /home/ec2-user/data/ \
     --conf /home/ec2-user/ingestion3-conf/i3.conf \
     --name <hub> \
@@ -541,7 +541,22 @@ else:
 "
 ```
 
-**If the check prints WARNING**: do NOT stop the EC2. Alert the user with the numbers and wait for direction.
+**If the check prints WARNING**: do NOT stop the EC2. Alert the user with the numbers and wait for direction. Do NOT proceed to Step 9.5 — the partner email must not be sent for a failed/suspect ingest.
+
+### Step 9.5: Send Partner Summary Email
+
+Only run this if the safety check in Step 9 passed (printed `OK`). This sends the mapping summary and logs to the hub contact via AWS SES, from `DPLA Bot <tech@dp.la>`.
+
+```bash
+sudo -u ec2-user bash -lc "
+  cd /home/ec2-user/ingestion3 &&
+  SBT_OPTS=-Xmx4g sbt \"runMain dpla.ingestion3.utils.Emailer \
+    /home/ec2-user/data/<hub>/mapping/<MAPPING_TIMESTAMP>/ \
+    <hub> \
+    /home/ec2-user/ingestion3-conf/i3.conf\" \
+  > /home/ec2-user/data/<hub>-email.log 2>&1 && echo EMAIL_SUCCESS || echo EMAIL_FAILED
+"
+```
 
 ### Step 10: Stop the EC2 Instance
 
@@ -744,9 +759,9 @@ SBT_OPTS=-Xmx15g sbt "runMain dpla.ingestion3.entries.ingest.HarvestEntry \
 HARVEST_TS=$(ls -t $DATA/$HUB/harvest/ | head -1)
 slack ":white_check_mark: *$HUB harvest complete* | ${BT}$HARVEST_TS${BT}"
 
-# Mapping
+# Mapping (MappingEntry only — partner email sent after safety check, not here)
 log "--- Mapping starting ---"
-SBT_OPTS=-Xmx12g sbt "runMain dpla.ingestion3.entries.ingest.IngestRemap \
+SBT_OPTS=-Xmx12g sbt "runMain dpla.ingestion3.entries.ingest.MappingEntry \
   --output $DATA/ --conf $CONF --name $HUB \
   --input $DATA/$HUB/harvest/$HARVEST_TS/ --sparkMaster local[*]" \
   >> $LOG 2>&1 && log "Mapping OK" || { log "Mapping FAILED"; slack ":x: *$HUB mapping FAILED* | check ${BT}$LOG${BT}"; exit 1; }
@@ -776,7 +791,7 @@ log "--- S3 sync starting ---"
 aws s3 sync $DATA/$HUB/jsonl/$JSONL_TS/ s3://dpla-master-dataset/$HUB/jsonl/$JSONL_TS/ \
   >> $LOG 2>&1 && log "S3 sync OK" || { log "S3 sync FAILED"; slack ":x: *$HUB S3 sync FAILED*"; exit 1; }
 
-# Final summary with record count delta
+# Safety check — compare new vs previous record count
 PREV_SNAP=$(aws s3 ls s3://dpla-master-dataset/$HUB/jsonl/ \
   | awk '{print $NF}' | sed 's|/||g' | sort | tail -2 | head -1)
 NEW_COUNT=$(aws s3 cp s3://dpla-master-dataset/$HUB/jsonl/${JSONL_TS}/_MANIFEST - 2>/dev/null \
@@ -785,14 +800,32 @@ PREV_COUNT=$(aws s3 cp s3://dpla-master-dataset/$HUB/jsonl/${PREV_SNAP}/_MANIFES
   | grep "^Record count:" | awk '{print $NF}')
 TOTAL_SIZE=$(aws s3 ls --summarize --recursive s3://dpla-master-dataset/$HUB/jsonl/${JSONL_TS}/ \
   | grep "Total Size" | awk '{print $NF}')
-DELTA_LINE=$(python3 -c "
+SAFETY=$(python3 -c "
 new, prev = ${NEW_COUNT:-0}, ${PREV_COUNT:-0}
 total_mb = ${TOTAL_SIZE:-0} / 1_048_576
 delta = new - prev
 sign = '+' if delta >= 0 else ''
+drop = (prev - new) / prev * 100 if prev else 0
 print(f'Records: {new:,} ({sign}{delta:,} vs prev) | Size: {total_mb:.1f} MB')
+print('SAFETY_FAIL' if drop > 5 else 'SAFETY_OK')
 ")
-log "Done: $DELTA_LINE"
+DELTA_LINE=$(echo "$SAFETY" | head -1)
+SAFETY_STATUS=$(echo "$SAFETY" | tail -1)
+log "$DELTA_LINE ($SAFETY_STATUS)"
+
+if [ "$SAFETY_STATUS" = "SAFETY_FAIL" ]; then
+  log "Safety check FAILED — partner email suppressed"
+  slack ":warning: *$HUB safety check FAILED* — >5% record drop\n${DELTA_LINE}\nNew snapshot: ${BT}${JSONL_TS}${BT}\nPartner email suppressed. Investigate before proceeding."
+  exit 1
+fi
+
+# Partner summary email (only after safety check passes)
+log "--- Sending partner summary email ---"
+SBT_OPTS=-Xmx4g sbt "runMain dpla.ingestion3.utils.Emailer \
+  $DATA/$HUB/mapping/$MAP_TS/ $HUB $CONF" \
+  >> $LOG 2>&1 && log "Partner email sent" || log "Partner email FAILED (non-fatal)"
+
+# Final Slack summary
 slack "*$HUB ingest complete* :white_check_mark:\nNew snapshot: ${BT}${JSONL_TS}${BT}\n${DELTA_LINE}\nS3: ${BT}s3://dpla-master-dataset/$HUB/jsonl/${JSONL_TS}/${BT}"
 ```
 
@@ -824,7 +857,8 @@ for HUB in $HUBS; do
     >> $LOG 2>&1 && log "$HUB harvest OK" || { log "$HUB harvest FAILED"; FAILED+=("$HUB/harvest"); slack ":x: *$HUB harvest FAILED*"; continue; }
   HARVEST_TS=$(ls -t $DATA/$HUB/harvest/ | head -1)
 
-  SBT_OPTS=-Xmx12g sbt "runMain dpla.ingestion3.entries.ingest.IngestRemap \
+  # Mapping (MappingEntry only — partner email sent after safety check)
+  SBT_OPTS=-Xmx12g sbt "runMain dpla.ingestion3.entries.ingest.MappingEntry \
     --output $DATA/ --conf $CONF --name $HUB --input $DATA/$HUB/harvest/$HARVEST_TS/ --sparkMaster local[*]" \
     >> $LOG 2>&1 && log "$HUB mapping OK" || { log "$HUB mapping FAILED"; FAILED+=("$HUB/mapping"); slack ":x: *$HUB mapping FAILED*"; continue; }
   MAP_TS=$(ls -t $DATA/$HUB/mapping/ | head -1)
@@ -842,10 +876,31 @@ for HUB in $HUBS; do
   aws s3 sync $DATA/$HUB/jsonl/$JSONL_TS/ s3://dpla-master-dataset/$HUB/jsonl/$JSONL_TS/ \
     >> $LOG 2>&1 && log "$HUB S3 sync OK" || { log "$HUB S3 sync FAILED"; FAILED+=("$HUB/s3"); slack ":x: *$HUB S3 sync FAILED*"; continue; }
 
-  COUNT=$(aws s3 cp s3://dpla-master-dataset/$HUB/jsonl/$JSONL_TS/_MANIFEST - 2>/dev/null | grep "^Record count:" | awk "{print \$NF}")
-  log "$HUB complete — $COUNT records"
-  PASSED+=("$HUB ($COUNT records)")
-  slack ":white_check_mark: *$HUB ingest complete* — ${COUNT} records | ${BT}$JSONL_TS${BT}"
+  # Safety check
+  PREV_SNAP=$(aws s3 ls s3://dpla-master-dataset/$HUB/jsonl/ \
+    | awk '{print $NF}' | sed 's|/||g' | sort | tail -2 | head -1)
+  NEW_COUNT=$(aws s3 cp s3://dpla-master-dataset/$HUB/jsonl/$JSONL_TS/_MANIFEST - 2>/dev/null | grep "^Record count:" | awk '{print $NF}')
+  PREV_COUNT=$(aws s3 cp s3://dpla-master-dataset/$HUB/jsonl/$PREV_SNAP/_MANIFEST - 2>/dev/null | grep "^Record count:" | awk '{print $NF}')
+  SAFETY_STATUS=$(python3 -c "
+new, prev = ${NEW_COUNT:-0}, ${PREV_COUNT:-0}
+drop = (prev - new) / prev * 100 if prev else 0
+print('SAFETY_FAIL' if drop > 5 else 'SAFETY_OK')
+")
+  if [ "$SAFETY_STATUS" = "SAFETY_FAIL" ]; then
+    log "$HUB safety check FAILED — partner email suppressed"
+    FAILED+=("$HUB/safety-check")
+    slack ":warning: *$HUB safety check FAILED* — >5% record drop. Partner email suppressed."
+    continue
+  fi
+
+  # Partner summary email (only after safety check passes)
+  SBT_OPTS=-Xmx4g sbt "runMain dpla.ingestion3.utils.Emailer \
+    $DATA/$HUB/mapping/$MAP_TS/ $HUB $CONF" \
+    >> $LOG 2>&1 && log "$HUB partner email sent" || log "$HUB partner email FAILED (non-fatal)"
+
+  log "$HUB complete — $NEW_COUNT records"
+  PASSED+=("$HUB ($NEW_COUNT records)")
+  slack ":white_check_mark: *$HUB ingest complete* — ${NEW_COUNT} records | ${BT}$JSONL_TS${BT}"
 done
 
 PASS_STR=$(IFS=", "; echo "${PASSED[*]}")
