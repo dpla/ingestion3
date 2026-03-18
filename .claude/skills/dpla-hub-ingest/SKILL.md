@@ -256,7 +256,7 @@ Then run it — use `python3` to build the `--parameters` JSON to safely handle 
 PARAMS=$(python3 -c "
 import json
 db = '<CW_DB_PATH>'
-cmd = 'sudo -u ec2-user bash /home/ec2-user/cw-export.sh ' + db
+cmd = 'sudo -u ec2-user bash -l /home/ec2-user/cw-export.sh ' + db
 print(json.dumps({'commands': [cmd]}))
 ")
 CMDID=$(aws ssm send-command \
@@ -270,7 +270,7 @@ CMDID=$(aws ssm send-command \
 
 From the output, capture:
 - `OUT_DIR` — the ZIP directory (i3.conf is already updated; no further action needed)
-- `RECORD_COUNT` — sanity-check that it's in the expected range (typically 50k–250k)
+- `RECORD_COUNT` — sanity-check that it's in the expected range (community-webs typically 8k–15k)
 
 Verify `EXPORT_SUCCESS` is present before continuing.
 
@@ -386,6 +386,8 @@ sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/harvest/ | head -1"
 This returns the most recent directory name (format: `YYYYMMDD_HHMMSS-<hub>-OriginalRecord.avro`). Save this as `HARVEST_TIMESTAMP`.
 
 ### Step 5: Run Mapping
+
+Use `IngestRemap` (not `MappingEntry`) — it runs mapping **and** sends the summary email to the partner. `MappingEntry` does mapping only with no email.
 
 Use the harvest timestamp from Step 4:
 
