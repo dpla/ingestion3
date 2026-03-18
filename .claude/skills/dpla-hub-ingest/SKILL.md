@@ -372,8 +372,7 @@ aws ec2 stop-instances --instance-ids i-0a0def8581efef783
 Post a completion summary to Slack #tech-alerts:
 
 ```bash
-# Extract token directly — source fails due to spaces in other dpla.env values
-DPLA_SLACK_BOT_TOKEN=$(grep '^DPLA_SLACK_BOT_TOKEN=' ~/.claude/secrets/dpla.env | cut -d'=' -f2-)
+source ~/.claude/secrets/dpla.env
 
 # Get object count and total size from the new snapshot
 SUMMARY=$(aws s3 ls --summarize --recursive \
