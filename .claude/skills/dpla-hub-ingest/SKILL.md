@@ -11,6 +11,7 @@ allowedTools:
   - Bash(source*)
   - Bash(nohup*)
   - Bash(CMDID=*)
+  - Bash(CMD_ID=*)
   - Bash(PARAMS=*)
   - Bash(LAUNCH_PARAMS=*)
   - Bash(SCRIPT_B64=*)
@@ -42,6 +43,8 @@ allowedTools:
   - Bash(awk *)
   - Bash(sort *)
   - Bash(wc *)
+  - Bash(wait)
+  - Bash(wait *)
 ---
 
 # DPLA Hub Ingest
