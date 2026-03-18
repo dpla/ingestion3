@@ -372,19 +372,32 @@ Post a completion summary to Slack #tech-alerts:
 ```bash
 source ~/.claude/secrets/dpla.env
 
-# Read record count and size from snapshot
-RECORD_COUNT=$(aws s3 cp \
-  s3://dpla-master-dataset/<hub>/jsonl/<JSONL_TIMESTAMP>/_MANIFEST - \
+# Read record counts from new and previous snapshots
+NEW_SNAP=<JSONL_TIMESTAMP>
+PREV_SNAP=$(aws s3 ls s3://dpla-master-dataset/<hub>/jsonl/ \
+  | awk '{print $NF}' | sed 's|/||g' | sort | tail -2 | head -1)
+
+NEW_COUNT=$(aws s3 cp s3://dpla-master-dataset/<hub>/jsonl/${NEW_SNAP}/_MANIFEST - \
   | grep "^Record count:" | awk '{print $NF}')
+PREV_COUNT=$(aws s3 cp s3://dpla-master-dataset/<hub>/jsonl/${PREV_SNAP}/_MANIFEST - \
+  | grep "^Record count:" | awk '{print $NF}')
+
 TOTAL_SIZE=$(aws s3 ls --summarize --recursive \
-  s3://dpla-master-dataset/<hub>/jsonl/<JSONL_TIMESTAMP>/ \
+  s3://dpla-master-dataset/<hub>/jsonl/${NEW_SNAP}/ \
   | grep "Total Size" | awk '{print $NF}')
-TOTAL_MB=$(python3 -c "print(f'{${TOTAL_SIZE:-0} / 1_048_576:.1f} MB')")
+
+DELTA_LINE=$(python3 -c "
+new, prev = ${NEW_COUNT:-0}, ${PREV_COUNT:-0}
+total_mb = ${TOTAL_SIZE:-0} / 1_048_576
+delta = new - prev
+sign = '+' if delta >= 0 else ''
+print(f'Records: {new:,} ({sign}{delta:,} vs prev) | Size: {total_mb:.1f} MB')
+")
 
 curl -s -X POST "https://slack.com/api/chat.postMessage" \
   -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"channel\":\"C02HEU2L3\",\"text\":\"*<hub> ingest complete* :white_check_mark:\nNew snapshot: \`<JSONL_TIMESTAMP>\`\nRecords: ${RECORD_COUNT} | Size: ${TOTAL_MB}\nS3: \`s3://dpla-master-dataset/<hub>/jsonl/<JSONL_TIMESTAMP>/\`\"}"
+  -d "{\"channel\":\"C02HEU2L3\",\"text\":\"*<hub> ingest complete* :white_check_mark:\nNew snapshot: \`${NEW_SNAP}\`\n${DELTA_LINE}\nS3: \`s3://dpla-master-dataset/<hub>/jsonl/${NEW_SNAP}/\`\"}"
 ```
 
 ## SBT Memory Settings Reference
