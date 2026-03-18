@@ -332,28 +332,26 @@ Check that the new snapshot appears in S3 and run an automated safety check:
 aws s3 ls s3://dpla-master-dataset/<hub>/jsonl/ | sort | tail -5
 ```
 
-Then get the two most recent snapshot names and run the safety check:
+Then get the two most recent snapshot names and run the safety check using record counts from `_MANIFEST`:
 
 ```bash
 NEW_SNAP=<JSONL_TIMESTAMP>
 PREV_SNAP=$(aws s3 ls s3://dpla-master-dataset/<hub>/jsonl/ \
   | awk '{print $NF}' | sed 's|/||g' | sort | tail -2 | head -1)
 
-NEW_SIZE=$(aws s3 ls --summarize --recursive \
-  s3://dpla-master-dataset/<hub>/jsonl/${NEW_SNAP}/ \
-  | grep "Total Size" | awk '{print $NF}')
-PREV_SIZE=$(aws s3 ls --summarize --recursive \
-  s3://dpla-master-dataset/<hub>/jsonl/${PREV_SNAP}/ \
-  | grep "Total Size" | awk '{print $NF}')
+NEW_COUNT=$(aws s3 cp s3://dpla-master-dataset/<hub>/jsonl/${NEW_SNAP}/_MANIFEST - \
+  | grep "^Record count:" | awk '{print $NF}')
+PREV_COUNT=$(aws s3 cp s3://dpla-master-dataset/<hub>/jsonl/${PREV_SNAP}/_MANIFEST - \
+  | grep "^Record count:" | awk '{print $NF}')
 
 python3 -c "
-new, prev = $NEW_SIZE, $PREV_SIZE
+new, prev = ${NEW_COUNT:-0}, ${PREV_COUNT:-0}
 drop = (prev - new) / prev * 100 if prev else 0
-print(f'New: {new:,} bytes | Prev: {prev:,} bytes | Change: {drop:+.1f}%')
+print(f'New: {new:,} records | Prev: {prev:,} records | Change: {drop:+.1f}%')
 if drop > 5:
-    print('WARNING: >5% size drop — STOP and investigate before proceeding.')
+    print('WARNING: >5% record drop — STOP and investigate before proceeding.')
 else:
-    print('OK: size within acceptable range.')
+    print('OK: record count within acceptable range.')
 "
 ```
 
@@ -374,17 +372,19 @@ Post a completion summary to Slack #tech-alerts:
 ```bash
 source ~/.claude/secrets/dpla.env
 
-# Get object count and total size from the new snapshot
-SUMMARY=$(aws s3 ls --summarize --recursive \
-  s3://dpla-master-dataset/<hub>/jsonl/<JSONL_TIMESTAMP>/)
-OBJ_COUNT=$(echo "$SUMMARY" | grep "Total Objects" | awk '{print $NF}')
-TOTAL_SIZE=$(echo "$SUMMARY" | grep "Total Size" | awk '{print $NF}')
+# Read record count and size from snapshot
+RECORD_COUNT=$(aws s3 cp \
+  s3://dpla-master-dataset/<hub>/jsonl/<JSONL_TIMESTAMP>/_MANIFEST - \
+  | grep "^Record count:" | awk '{print $NF}')
+TOTAL_SIZE=$(aws s3 ls --summarize --recursive \
+  s3://dpla-master-dataset/<hub>/jsonl/<JSONL_TIMESTAMP>/ \
+  | grep "Total Size" | awk '{print $NF}')
 TOTAL_MB=$(python3 -c "print(f'{${TOTAL_SIZE:-0} / 1_048_576:.1f} MB')")
 
 curl -s -X POST "https://slack.com/api/chat.postMessage" \
   -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"channel\":\"C02HEU2L3\",\"text\":\"*<hub> ingest complete* :white_check_mark:\nNew snapshot: \`<JSONL_TIMESTAMP>\`\nFiles: ${OBJ_COUNT} | Size: ${TOTAL_MB}\nS3: \`s3://dpla-master-dataset/<hub>/jsonl/<JSONL_TIMESTAMP>/\`\"}"
+  -d "{\"channel\":\"C02HEU2L3\",\"text\":\"*<hub> ingest complete* :white_check_mark:\nNew snapshot: \`<JSONL_TIMESTAMP>\`\nRecords: ${RECORD_COUNT} | Size: ${TOTAL_MB}\nS3: \`s3://dpla-master-dataset/<hub>/jsonl/<JSONL_TIMESTAMP>/\`\"}"
 ```
 
 ## SBT Memory Settings Reference
