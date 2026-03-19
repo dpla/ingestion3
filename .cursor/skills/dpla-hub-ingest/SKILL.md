@@ -419,25 +419,48 @@ Replace `<step>` with `harvest`, `mapping`, `enrichment`, `jsonl`, or `s3-sync` 
 
 ### Step 4: Run Harvest
 
+Before launching, post an "ingest started" notice to Slack:
+
 ```bash
-sudo -u ec2-user bash -lc "
-  cd /home/ec2-user/ingestion3 &&
-  SBT_OPTS=-Xmx15g sbt \"runMain dpla.ingestion3.entries.ingest.HarvestEntry \
-    --output /home/ec2-user/data/ \
-    --conf /home/ec2-user/ingestion3-conf/i3.conf \
-    --name <hub> \
-    --sparkMaster local[*]\" \
-  > /home/ec2-user/data/<hub>-harvest.log 2>&1 && echo HARVEST_SUCCESS || echo HARVEST_FAILED
-"
+source ~/.claude/secrets/dpla.env
+curl -s -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"channel":"C02HEU2L3","text":":hourglass: *<hub> ingest started* — harvest running"}'
 ```
 
-Use `--timeout-seconds 7200` on the SSM send-command (harvests can take 20–90+ minutes depending on hub size).
+Then launch the harvest. **Important**: pass `"executionTimeout":["14400"]` in `--parameters` to override the AWS-RunShellScript default of 3600s (1 hr) — harvests for large hubs take 60–90 minutes and will be killed without this.
 
-**Poll** until Status is `Success`, then check the output for `HARVEST_SUCCESS`. If `HARVEST_FAILED`: post failure notification (see above) and stop.
-
-After completion, capture the harvest output timestamp in one command:
 ```bash
-sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/harvest/ | head -1"
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 14400 \
+  --parameters '{"commands":["sudo -u ec2-user bash -lc \"cd /home/ec2-user/ingestion3 && SBT_OPTS=-Xmx15g sbt \\\"runMain dpla.ingestion3.entries.ingest.HarvestEntry --output /home/ec2-user/data/ --conf /home/ec2-user/ingestion3-conf/i3.conf --name <hub> --sparkMaster local[*]\\\" > /home/ec2-user/data/<hub>-harvest.log 2>&1 && echo HARVEST_SUCCESS || echo HARVEST_FAILED\""],"executionTimeout":["14400"]}' \
+  --query 'Command.CommandId' --output text)
+echo "Harvest Command ID: $CMDID"
+```
+
+**Poll** until Status is not `InProgress`, then check the output for `HARVEST_SUCCESS`. If `HARVEST_FAILED`: post failure notification (see above) and stop.
+
+After completion, post a step-complete notice and capture the harvest timestamp:
+
+```bash
+source ~/.claude/secrets/dpla.env
+curl -s -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"channel":"C02HEU2L3","text":":white_check_mark: *<hub> harvest complete* — starting mapping"}'
+```
+
+```bash
+HARVEST_TS=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 30 \
+  --parameters '{"commands":["sudo -u ec2-user bash -lc \"ls -t /home/ec2-user/data/<hub>/harvest/ | head -1\""]}' \
+  --query 'Command.CommandId' --output text)
+# Poll and save result as HARVEST_TIMESTAMP
 ```
 
 This returns the most recent directory name (format: `YYYYMMDD_HHMMSS-<hub>-OriginalRecord.avro`). Save this as `HARVEST_TIMESTAMP`.
@@ -463,7 +486,16 @@ sudo -u ec2-user bash -lc "
 
 If `REMAP_FAILED`: post failure notification (see above) and stop.
 
-After completion, capture the mapping output timestamp:
+After completion, post a step-complete notice and capture the mapping timestamp:
+
+```bash
+source ~/.claude/secrets/dpla.env
+curl -s -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"channel":"C02HEU2L3","text":":white_check_mark: *<hub> mapping complete* — starting enrichment"}'
+```
+
 ```bash
 sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/mapping/ | head -1"
 ```
@@ -489,7 +521,16 @@ sudo -u ec2-user bash -lc "
 
 If `ENRICH_FAILED`: post failure notification (see above) and stop.
 
-After completion, capture the enrichment output timestamp:
+After completion, post a step-complete notice and capture the enrichment timestamp:
+
+```bash
+source ~/.claude/secrets/dpla.env
+curl -s -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"channel":"C02HEU2L3","text":":white_check_mark: *<hub> enrichment complete* — starting JSONL export"}'
+```
+
 ```bash
 sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/enrichment/ | head -1"
 ```
@@ -519,7 +560,16 @@ Use `--timeout-seconds 3600` on the SSM send-command (JSONL export can take 5–
 
 If `JSONL_FAILED`: post failure notification (see above) and stop.
 
-After completion, capture the JSONL output timestamp:
+After completion, post a step-complete notice and capture the JSONL timestamp:
+
+```bash
+source ~/.claude/secrets/dpla.env
+curl -s -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"channel":"C02HEU2L3","text":":white_check_mark: *<hub> JSONL export complete* — starting S3 sync"}'
+```
+
 ```bash
 sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/jsonl/ | head -1"
 ```
