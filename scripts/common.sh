@@ -256,11 +256,20 @@ init_paths() {
     SPARK_MASTER="${SPARK_MASTER:-local[4]}"
     export SPARK_MASTER
 
+    # AWS credentials: strip anything injected by external runners (e.g. SSM
+    # agent sets AWS_SHARED_CREDENTIALS_FILE to its own creds file, which
+    # would make the AWS CLI use the SSM role instead of the EC2 instance
+    # role). Unsetting these forces the CLI to fall back to IMDS.
+    unset AWS_SHARED_CREDENTIALS_FILE AWS_ACCESS_KEY_ID \
+          AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+
     # AWS_PROFILE: only set if explicitly provided — EC2 uses an instance role
     # and does not need (or support) a named profile. Setting it to "dpla" on
     # EC2 causes all aws CLI calls to fail with "profile not found".
     if [[ -n "${AWS_PROFILE:-}" ]]; then
         export AWS_PROFILE
+    else
+        unset AWS_PROFILE
     fi
 }
 
