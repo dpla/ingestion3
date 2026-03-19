@@ -713,29 +713,29 @@ There are two script templates depending on whether this is a single large hub o
 
 #### Write the script to a local temp file, then upload via base64
 
-**Always generate scripts via Python and write to /tmp** — do NOT use shell heredocs (`<< SCRIPT_END`) to generate ingest scripts in zsh. They cause cascading quoting failures, especially with backticks and `$!`.
+**Use a quoted heredoc (`<< 'SCRIPTEOF'`) to write the script, then inject the token with `sed`.** Do NOT pass Python code through `python3 -c "..."` to generate scripts — bash processes the double-quoted argument first and strips `\"` → `"`, breaking any JSON in the script's curl calls.
 
-Read the Slack token directly from the env file using regex (never source it and rely on env vars — they don't transfer to Python subprocess):
-
-```python
-import re, os
-
-with open(os.path.expanduser('~/.claude/secrets/dpla.env')) as f:
-    content = f.read()
-token = re.search(r"DPLA_SLACK_BOT_TOKEN='?([^'\n]+)'?", content).group(1).strip("'")
-
-hub = "<hub>"
-script = f"""#!/bin/bash -l
+```bash
+cat > /tmp/<hub>-ingest.sh << 'SCRIPTEOF'
+#!/bin/bash -l
 set -euo pipefail
 ...
-SLACK_TOKEN="{token}"
+SLACK_TOKEN="__TOKEN__"
 ...
-"""
+SCRIPTEOF
 
-with open(f'/tmp/{hub}-ingest.sh', 'w') as f:
-    f.write(script)
-print("Script written.")
+TOKEN=$(python3 -c "
+import re, os
+with open(os.path.expanduser('~/.claude/secrets/dpla.env')) as f:
+    content = f.read()
+token = re.search(r\"DPLA_SLACK_BOT_TOKEN='?([^'\\n]+)'?\", content).group(1).strip(\"'\")
+print(token)
+")
+sed -i '' "s/__TOKEN__/$TOKEN/" /tmp/<hub>-ingest.sh
+echo "Script written."
 ```
+
+**Why `<< 'SCRIPTEOF'` is safe:** Single-quoting the heredoc delimiter prevents all bash expansion in the body. The prior concern about heredocs (backslash stripping) only applies to *unquoted* heredocs in zsh.
 
 Then upload via base64:
 ```bash
@@ -766,16 +766,18 @@ SLACK_TOKEN="__SLACK_TOKEN__"
 CHANNEL="C02HEU2L3"
 
 slack() {
+  local payload
+  payload=$(python3 -c "import json,sys; print(json.dumps({'channel':'$CHANNEL','text':sys.argv[1]}))" "$1")
   curl -s -X POST "https://slack.com/api/chat.postMessage" \
     -H "Authorization: Bearer $SLACK_TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"channel\":\"$CHANNEL\",\"text\":\"$1\"}" > /dev/null
+    -d "$payload" > /dev/null
 }
 log() { echo "[$(date -u +%H:%M:%SZ)] $1" >> $LOG; }
 BT=$(printf '\x60')
 
 log "=== $HUB ingest starting ==="
-slack ":arrow_forward: *$HUB ingest started* | harvest → map → enrich → jsonl → s3"
+slack ":arrow_forward: *$HUB ingest started* | harvest -> map -> enrich -> jsonl -> s3"
 
 cd $I3
 
@@ -870,7 +872,11 @@ I3=/home/ec2-user/ingestion3
 DATA=/home/ec2-user/data
 CONF=/home/ec2-user/ingestion3-conf/i3.conf
 
-slack() { curl -s -X POST "$SLACK_WEBHOOK" -H "Content-Type: application/json" -d "{\"text\":\"$1\"}" > /dev/null; }
+slack() {
+  local payload
+  payload=$(python3 -c "import json,sys; print(json.dumps({'text':sys.argv[1]}))" "$1")
+  curl -s -X POST "$SLACK_WEBHOOK" -H "Content-Type: application/json" -d "$payload" > /dev/null
+}
 log()   { echo "[$(date -u +%H:%M:%SZ)] $1" >> $LOG; }
 BT=$(printf '\x60')
 
