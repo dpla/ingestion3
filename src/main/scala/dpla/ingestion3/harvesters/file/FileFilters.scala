@@ -10,6 +10,7 @@ object FileFilters {
   val avroFilter: FileFilter = newFilter("avro")
   val gzFilter: FileFilter = newFilter("gz")
   val xmlFilter: FileFilter = newFilter("xml")
+  val jsonlFilter: FileFilter = newFilter("jsonl")
   val zipFilter: FileFilter = newFilter("zip")
   val txtFilter: FileFilter = newFilter("txt")
 }
