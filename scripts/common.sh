@@ -256,9 +256,12 @@ init_paths() {
     SPARK_MASTER="${SPARK_MASTER:-local[4]}"
     export SPARK_MASTER
 
-    # AWS_PROFILE: AWS credentials profile
-    AWS_PROFILE="${AWS_PROFILE:-dpla}"
-    export AWS_PROFILE
+    # AWS_PROFILE: only set if explicitly provided — EC2 uses an instance role
+    # and does not need (or support) a named profile. Setting it to "dpla" on
+    # EC2 causes all aws CLI calls to fail with "profile not found".
+    if [[ -n "${AWS_PROFILE:-}" ]]; then
+        export AWS_PROFILE
+    fi
 }
 
 # =============================================================================
