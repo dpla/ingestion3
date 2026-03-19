@@ -389,6 +389,20 @@ curl -s --max-time 60 "<endpoint>?<query>&rows=1" | head -2
 
 **If endpoint is unreachable from EC2 but reachable locally** → CONTENTdm block or firewall issue. Stop the instance and run the harvest locally instead.
 
+### Failure Notification Pattern (Steps 4–8)
+
+If any pipeline step returns `_FAILED`, post to Slack **before stopping**. Do NOT stop the EC2 — logs are still needed for diagnosis.
+
+```bash
+source ~/.claude/secrets/dpla.env
+curl -s -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"channel":"C02HEU2L3","text":":x: *<hub> <step> FAILED* | check `/home/ec2-user/data/<hub>-<step>.log`"}'
+```
+
+Replace `<step>` with `harvest`, `mapping`, `enrichment`, `jsonl`, or `s3-sync` as appropriate.
+
 ### Step 4: Run Harvest
 
 ```bash
@@ -405,7 +419,7 @@ sudo -u ec2-user bash -lc "
 
 Use `--timeout-seconds 7200` on the SSM send-command (harvests can take 20–90+ minutes depending on hub size).
 
-**Poll** until Status is `Success`, then check the output for `HARVEST_SUCCESS`.
+**Poll** until Status is `Success`, then check the output for `HARVEST_SUCCESS`. If `HARVEST_FAILED`: post failure notification (see above) and stop.
 
 After completion, capture the harvest output timestamp in one command:
 ```bash
@@ -433,6 +447,8 @@ sudo -u ec2-user bash -lc "
 "
 ```
 
+If `REMAP_FAILED`: post failure notification (see above) and stop.
+
 After completion, capture the mapping output timestamp:
 ```bash
 sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/mapping/ | head -1"
@@ -456,6 +472,8 @@ sudo -u ec2-user bash -lc "
   > /home/ec2-user/data/<hub>-enrich.log 2>&1 && echo ENRICH_SUCCESS || echo ENRICH_FAILED
 "
 ```
+
+If `ENRICH_FAILED`: post failure notification (see above) and stop.
 
 After completion, capture the enrichment output timestamp:
 ```bash
@@ -485,6 +503,8 @@ Note `local[1]` (single thread) — this is intentional for JSONL export.
 
 Use `--timeout-seconds 3600` on the SSM send-command (JSONL export can take 5–30 minutes).
 
+If `JSONL_FAILED`: post failure notification (see above) and stop.
+
 After completion, capture the JSONL output timestamp:
 ```bash
 sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/jsonl/ | head -1"
@@ -507,7 +527,7 @@ sudo -u ec2-user bash -lc "
 
 Use `--timeout-seconds 3600` on the SSM send-command (S3 sync is usually fast but can take 10–20 minutes for large hubs).
 
-This adds a new timestamped snapshot. It does **not** overwrite or delete any prior snapshots.
+This adds a new timestamped snapshot. It does **not** overwrite or delete any prior snapshots. If `SYNC_FAILED`: post failure notification (see above) and stop.
 
 ### Step 9: Verify Results
 
@@ -541,7 +561,15 @@ else:
 "
 ```
 
-**If the check prints WARNING**: do NOT stop the EC2. Alert the user with the numbers and wait for direction. Do NOT proceed to Step 9.5 — the partner email must not be sent for a failed/suspect ingest.
+**If the check prints WARNING**: do NOT stop the EC2. Do NOT proceed to Step 9.5 — the partner email must not be sent for a failed/suspect ingest. Post to Slack with the counts, then wait for direction from the user:
+
+```bash
+source ~/.claude/secrets/dpla.env
+curl -s -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"channel\":\"C02HEU2L3\",\"text\":\":warning: *<hub> safety check FAILED* — >5% record drop\nNew: ${NEW_COUNT} | Prev: ${PREV_COUNT}\nNew snapshot: \`${NEW_SNAP}\`\nPartner email suppressed. Investigating.\"}"
+```
 
 ### Step 9.5: Send Partner Summary Email
 
