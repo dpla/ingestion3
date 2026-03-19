@@ -37,7 +37,7 @@ fi
 echo "Syncing ${SOURCE_PATH} to ${DEST_PATH}"
 
 # Run aws s3 sync, excluding OSX system files
-aws s3 sync "${SOURCE_PATH}" "${DEST_PATH}" --profile dpla \
+aws s3 sync "${SOURCE_PATH}" "${DEST_PATH}" \
     --exclude ".DS_Store" \
     --exclude "._*" \
     --exclude ".AppleDouble" \

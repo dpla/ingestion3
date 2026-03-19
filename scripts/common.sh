@@ -256,9 +256,83 @@ init_paths() {
     SPARK_MASTER="${SPARK_MASTER:-local[4]}"
     export SPARK_MASTER
 
-    # AWS_PROFILE: AWS credentials profile
-    AWS_PROFILE="${AWS_PROFILE:-dpla}"
-    export AWS_PROFILE
+    # AWS_PROFILE: only set if explicitly provided — EC2 uses an instance role
+    # and does not need (or support) a named profile. Setting it to "dpla" on
+    # EC2 causes all aws CLI calls to fail with "profile not found".
+    if [[ -n "${AWS_PROFILE:-}" ]]; then
+        export AWS_PROFILE
+    fi
+}
+
+# =============================================================================
+# Slack Notifications
+# =============================================================================
+#
+# Send a Slack notification to #tech-alerts.
+# Reads SLACK_BOT_TOKEN and SLACK_CHANNEL from the environment (.env file).
+# Silently skips if SLACK_BOT_TOKEN is not configured.
+#
+# Usage: slack_notify "message text"
+#
+slack_notify() {
+    local msg="$1"
+    local token="${SLACK_BOT_TOKEN:-${SLACK_TOKEN:-}}"
+    local channel="${SLACK_CHANNEL:-C02HEU2L3}"
+    [[ -z "$token" ]] && return 0
+    local payload
+    payload=$(python3 -c "import json,sys; print(json.dumps({'channel':sys.argv[1],'text':sys.argv[2]}))" \
+        "$channel" "$msg") || return 0
+    curl -s -X POST "https://slack.com/api/chat.postMessage" \
+        -H "Authorization: Bearer $token" \
+        -H "Content-Type: application/json" \
+        -d "$payload" > /dev/null || true
+}
+
+# Start a background heartbeat that sends progress updates to Slack.
+# Fires once after INTERVAL seconds, then every INTERVAL seconds until stopped.
+# Tries to extract a "Fetched X of Y" or "Harvested N" progress line from the log.
+#
+# Usage: start_heartbeat <provider> <step> <log_file> [interval_seconds]
+#   Sets HEARTBEAT_PID for use by stop_heartbeat.
+#
+HEARTBEAT_PID=""
+HEARTBEAT_STEP_START=""
+
+start_heartbeat() {
+    local provider="$1"
+    local step="$2"
+    local log_file="$3"
+    local interval="${4:-10800}"  # default 3 hours
+    HEARTBEAT_STEP_START=$(date +%s)
+    (
+        sleep "$interval"
+        while true; do
+            local progress=""
+            if [[ -f "$log_file" ]]; then
+                progress=$(grep -oE "Fetched [0-9,]+ of [0-9,]+" "$log_file" 2>/dev/null | tail -1 || true)
+                [[ -z "$progress" ]] && \
+                    progress=$(grep -oE "Harvested [0-9,]+ records?" "$log_file" 2>/dev/null | tail -1 || true)
+            fi
+            local elapsed=$(( $(date +%s) - HEARTBEAT_STEP_START ))
+            local elapsed_str="$((elapsed/3600))h$((elapsed%3600/60))m elapsed"
+            if [[ -n "$progress" ]]; then
+                slack_notify ":hourglass: *$provider $step in progress* — $progress | $elapsed_str"
+            else
+                slack_notify ":hourglass: *$provider $step in progress* — $elapsed_str"
+            fi
+            sleep "$interval"
+        done
+    ) &
+    HEARTBEAT_PID=$!
+}
+
+# Stop the background heartbeat started by start_heartbeat.
+stop_heartbeat() {
+    if [[ -n "${HEARTBEAT_PID:-}" ]]; then
+        kill "$HEARTBEAT_PID" 2>/dev/null || true
+        wait "$HEARTBEAT_PID" 2>/dev/null || true
+        HEARTBEAT_PID=""
+    fi
 }
 
 # =============================================================================

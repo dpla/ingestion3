@@ -5,7 +5,7 @@
 # IMPORTANT: --output must be $DPLA_DATA (data root), not $DPLA_DATA/$PROVIDER.
 # OutputHelper builds root/shortName/activity/..., so provider subdir would double-nest.
 
-set -e  # Exit on any error
+set -eo pipefail  # Exit on any error; propagate failures through pipes
 
 # Source common configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -73,9 +73,18 @@ done
 PROVIDER_DATA="$DPLA_DATA/$PROVIDER"
 HARVEST_DIR="$PROVIDER_DATA/harvest"
 
-# Track provider for status file (ingest-status.sh); trap writes failed on error
+# Track provider for status file (ingest-status.sh); trap writes failed + notifies on error
 INGEST_PROVIDER="$PROVIDER"
-trap 'err=$?; if [[ $err -ne 0 && -n "${INGEST_PROVIDER:-}" ]]; then write_hub_status "$INGEST_PROVIDER" failed --error="Exit $err"; fi' EXIT
+trap 'err=$?
+     stop_heartbeat 2>/dev/null || true
+     if [[ $err -ne 0 && -n "${INGEST_PROVIDER:-}" ]]; then
+         write_hub_status "$INGEST_PROVIDER" failed --error="Exit $err"
+         slack_notify ":x: *$INGEST_PROVIDER ingest FAILED* (exit $err)"
+     fi' EXIT
+# Without explicit SIGTERM/SIGINT traps, bash exits immediately on those signals
+# and skips the EXIT trap above. These traps call exit() to ensure EXIT fires.
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 echo ""
 echo "=============================================="
@@ -93,21 +102,32 @@ START_TIME=$(date +%s)
 
 cd "$I3_HOME"
 
+slack_notify ":arrow_forward: *$PROVIDER ingest started* | harvest → map → enrich → jsonl → s3"
+
 # Step 1: Harvest
 if [ "$SKIP_HARVEST" = false ]; then
     write_hub_status "$PROVIDER" harvesting
-    print_step "Step 1/3: Harvesting $PROVIDER..."
+    print_step "Step 1/5: Harvesting $PROVIDER..."
 
-    sbt -java-home "$JAVA_HOME" "runMain dpla.ingestion3.entries.ingest.HarvestEntry \
-        --output=$DPLA_DATA \
-        --conf=$I3_CONF \
-        --name=$PROVIDER \
-        --sparkMaster=$SPARK_MASTER"
+    HARVEST_LOG="$I3_HOME/logs/harvest-${PROVIDER}-$(date +%Y%m%d_%H%M%S).log"
+    mkdir -p "$I3_HOME/logs"
+    start_heartbeat "$PROVIDER" "harvest" "$HARVEST_LOG"
 
-    # Note: set -e ensures we exit on sbt failure
-    log_info "Harvest complete"
+    SBT_OPTS="-Xmx15g"
+    run_entry dpla.ingestion3.entries.ingest.HarvestEntry \
+        --output="$DPLA_DATA" \
+        --conf="$I3_CONF" \
+        --name="$PROVIDER" \
+        --sparkMaster="$SPARK_MASTER" 2>&1 | tee "$HARVEST_LOG"
+
+    stop_heartbeat
+    HARVEST_TS_DIR=$(find_latest_data "$PROVIDER" harvest)
+    log_info "Harvest complete: $(basename "$HARVEST_TS_DIR")"
+    slack_notify ":white_check_mark: *$PROVIDER harvest complete* — starting mapping"
 else
     print_step "Skipping harvest (using existing data)..."
+    HARVEST_TS_DIR=$(find_latest_data "$PROVIDER" harvest) \
+        || die "No existing harvest data for $PROVIDER — run without --skip-harvest first"
 fi
 
 if [ "$HARVEST_ONLY" = true ]; then
@@ -122,22 +142,98 @@ if [ "$HARVEST_ONLY" = true ]; then
     exit 0
 fi
 
-# Step 2: Mapping + Enrichment + JSON-L (IngestRemap)
+# Step 2: Mapping
 write_hub_status "$PROVIDER" remapping
-print_step "Step 2/3: Mapping → Enrichment → JSON-L..."
+print_step "Step 2/5: Mapping $PROVIDER..."
 
-run_ingest_remap "$HARVEST_DIR" "$DPLA_DATA" "$I3_CONF" "$PROVIDER"
+SBT_OPTS="-Xmx12g"
+run_entry dpla.ingestion3.entries.ingest.MappingEntry \
+    --output="$DPLA_DATA" \
+    --conf="$I3_CONF" \
+    --name="$PROVIDER" \
+    --input="$HARVEST_TS_DIR" \
+    --sparkMaster="$SPARK_MASTER"
 
-# Note: set -e ensures we exit on sbt failure
+MAP_TS_DIR=$(find_latest_data "$PROVIDER" mapping)
+log_info "Mapping complete: $(basename "$MAP_TS_DIR")"
+slack_notify ":white_check_mark: *$PROVIDER mapping complete* — starting enrichment"
 
-# Step 3: S3 sync (unless skipped)
+# Step 3: Enrichment
+print_step "Step 3/5: Enriching $PROVIDER..."
+
+SBT_OPTS="-Xmx18g"
+run_entry dpla.ingestion3.entries.ingest.EnrichEntry \
+    --output="$DPLA_DATA" \
+    --conf="$I3_CONF" \
+    --name="$PROVIDER" \
+    --input="$MAP_TS_DIR" \
+    --sparkMaster="$SPARK_MASTER"
+
+ENRICH_TS_DIR=$(find_latest_data "$PROVIDER" enrichment)
+log_info "Enrichment complete: $(basename "$ENRICH_TS_DIR")"
+slack_notify ":white_check_mark: *$PROVIDER enrichment complete* — starting JSONL export"
+
+# Step 4: JSONL export
+print_step "Step 4/5: JSONL export for $PROVIDER..."
+
+SBT_OPTS="-Xmx12g"
+run_entry dpla.ingestion3.entries.ingest.JsonlEntry \
+    --output="$DPLA_DATA" \
+    --conf="$I3_CONF" \
+    --name="$PROVIDER" \
+    --input="$ENRICH_TS_DIR" \
+    --sparkMaster="local[1]"
+
+JSONL_TS_DIR=$(find_latest_data "$PROVIDER" jsonl)
+JSONL_TS=$(basename "$JSONL_TS_DIR")
+log_info "JSONL export complete: $JSONL_TS"
+slack_notify ":white_check_mark: *$PROVIDER JSONL export complete* — starting S3 sync"
+
+# Step 5: S3 sync (unless skipped)
 if [ "$SKIP_S3_SYNC" = false ]; then
     write_hub_status "$PROVIDER" syncing
-    print_step "Step 3/3: Syncing $PROVIDER to S3..."
-    "$SCRIPT_DIR/s3-sync.sh" "$PROVIDER"
+    print_step "Step 5/5: Syncing $PROVIDER to S3..."
+    "$SCRIPT_DIR/s3-sync.sh" "$PROVIDER" jsonl
     log_info "S3 sync complete"
+
+    # Compute record delta vs previous snapshot
+    S3_PREFIX=$(resolve_s3_prefix "$PROVIDER")
+    NEW_COUNT=$(aws s3 cp "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${JSONL_TS}/_MANIFEST" - 2>/dev/null \
+        | grep "^Record count:" | awk '{print $NF}' || echo "0")
+    PREV_SNAP=$(aws s3 ls "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/" 2>/dev/null \
+        | awk '{print $NF}' | sed 's|/||g' | sort | grep -v "^$" | tail -2 | head -1)
+    PREV_COUNT=$(aws s3 cp "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${PREV_SNAP}/_MANIFEST" - 2>/dev/null \
+        | grep "^Record count:" | awk '{print $NF}' || echo "0")
+    TOTAL_SIZE=$(aws s3 ls --summarize --recursive \
+        "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${JSONL_TS}/" 2>/dev/null \
+        | grep "Total Size" | awk '{print $NF}' || echo "0")
+    SUMMARY=$(python3 -c "
+new  = int('${NEW_COUNT}'  or 0)
+prev = int('${PREV_COUNT}' or 0)
+size_mb = int('${TOTAL_SIZE}' or 0) / 1_048_576
+delta = new - prev
+sign = '+' if delta >= 0 else ''
+print(f'Records: {new:,} ({sign}{delta:,} vs prev) | Size: {size_mb:.1f} MB')
+")
+
+    # Send partner summary email if configured
+    HUB_EMAIL=$(get_hub_email "$PROVIDER")
+    EMAIL_NOTE=""
+    if [ -n "$HUB_EMAIL" ]; then
+        SBT_OPTS="-Xmx4g"
+        if run_entry dpla.ingestion3.utils.Emailer \
+               "$MAP_TS_DIR" "$PROVIDER" "$I3_CONF" 2>/dev/null; then
+            EMAIL_NOTE="\nPartner email sent to $HUB_EMAIL"
+            log_info "Partner email sent to $HUB_EMAIL"
+        else
+            log_warn "Partner email failed (non-fatal)"
+        fi
+    fi
+
+    slack_notify "*$PROVIDER ingest complete* :white_check_mark:\nNew snapshot: \`$JSONL_TS\`\n$SUMMARY\nS3: \`s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${JSONL_TS}/\`${EMAIL_NOTE}"
 else
     print_step "Skipping S3 sync (--skip-s3-sync)"
+    slack_notify "*$PROVIDER ingest complete* :white_check_mark: _(S3 sync skipped)_\nJSONL: \`$JSONL_TS\`"
 fi
 
 write_hub_status "$PROVIDER" complete
@@ -151,11 +247,11 @@ echo "  Duration: $((DURATION / 60))m $((DURATION % 60))s"
 echo "=============================================="
 echo ""
 echo "Output files:"
-echo "  Harvest:    $HARVEST_DIR"
-echo "  Mapping:    $PROVIDER_DATA/mapping"
-echo "  Enrichment: $PROVIDER_DATA/enrichment"
-echo "  JSON-L:     $PROVIDER_DATA/jsonl"
+echo "  Harvest:    $HARVEST_TS_DIR"
+echo "  Mapping:    $MAP_TS_DIR"
+echo "  Enrichment: $ENRICH_TS_DIR"
+echo "  JSON-L:     $JSONL_TS_DIR"
 if [ "$SKIP_S3_SYNC" = false ]; then
-    echo "  S3:         synced to dpla-master-dataset/$PROVIDER"
+    echo "  S3:         synced to dpla-master-dataset/$S3_PREFIX"
 fi
 echo ""
