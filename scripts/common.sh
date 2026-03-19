@@ -273,7 +273,7 @@ init_paths() {
 #
 slack_notify() {
     local msg="$1"
-    local token="${SLACK_BOT_TOKEN:-}"
+    local token="${SLACK_BOT_TOKEN:-${SLACK_TOKEN:-}}"
     local channel="${SLACK_CHANNEL:-C02HEU2L3}"
     [[ -z "$token" ]] && return 0
     local payload
