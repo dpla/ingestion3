@@ -201,9 +201,15 @@ Environment variables:
         default=os.environ.get("DRY_RUN", "").lower() == "true",
         help="Preview without modifying S3",
     )
+    def positive_int(value: str) -> int:
+        ivalue = int(value)
+        if ivalue < 1:
+            raise argparse.ArgumentTypeError("--workers must be >= 1")
+        return ivalue
+
     parser.add_argument(
         "--workers",
-        type=int,
+        type=positive_int,
         default=MAX_WORKERS,
         help=f"Number of parallel workers (default: {MAX_WORKERS})",
     )

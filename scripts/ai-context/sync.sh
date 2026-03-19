@@ -58,6 +58,9 @@ SHARED_SKILLS=(
   dpla-community-webs-ingest
   dpla-ingest-debug
   send-email
+  dpla-takedown
+  dpla-hub-ingest
+  dpla-maryland-ingest
 )
 
 # --- Rules (Claude-only, always loaded) ---
