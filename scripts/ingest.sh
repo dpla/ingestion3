@@ -189,17 +189,24 @@ JSONL_TS=$(basename "$JSONL_TS_DIR")
 log_info "JSONL export complete: $JSONL_TS"
 slack_notify ":white_check_mark: *$PROVIDER JSONL export complete* — starting S3 sync"
 
-# Send partner summary email (based on mapping data; independent of S3 sync)
+# Read record count from JSONL manifest to guard against empty/aborted ingests
+JSONL_RECORD_COUNT=$(read_manifest_count "$JSONL_TS_DIR/_MANIFEST")
+
+# Send partner summary email only if records were actually exported
 HUB_EMAIL=$(get_hub_email "$PROVIDER")
 EMAIL_NOTE=""
 if [ -n "$HUB_EMAIL" ]; then
-    SBT_OPTS="-Xmx4g"
-    if run_entry dpla.ingestion3.utils.Emailer \
-           "$MAP_TS_DIR" "$PROVIDER" "$I3_CONF"; then
-        EMAIL_NOTE="\nPartner email sent to $HUB_EMAIL"
-        log_info "Partner email sent to $HUB_EMAIL"
+    if [ "$JSONL_RECORD_COUNT" -le 0 ]; then
+        log_warn "Skipping partner email — JSONL export has 0 records (ingest may have failed)"
     else
-        log_warn "Partner email failed (non-fatal)"
+        SBT_OPTS="-Xmx4g"
+        if run_entry dpla.ingestion3.utils.Emailer \
+               "$MAP_TS_DIR" "$PROVIDER" "$I3_CONF"; then
+            EMAIL_NOTE="\nPartner email sent to $HUB_EMAIL"
+            log_info "Partner email sent to $HUB_EMAIL"
+        else
+            log_warn "Partner email failed (non-fatal)"
+        fi
     fi
 fi
 
@@ -213,11 +220,11 @@ if [ "$SKIP_S3_SYNC" = false ]; then
     # Compute record delta vs previous snapshot
     S3_PREFIX=$(resolve_s3_prefix "$PROVIDER")
     NEW_COUNT=$(aws s3 cp "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${JSONL_TS}/_MANIFEST" - 2>/dev/null \
-        | grep "^Record count:" | awk '{print $NF}' || echo "0")
+        | read_manifest_count /dev/stdin)
     PREV_SNAP=$(aws s3 ls "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/" 2>/dev/null \
         | awk '{print $NF}' | sed 's|/||g' | sort | grep -v "^$" | tail -2 | head -1)
     PREV_COUNT=$(aws s3 cp "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${PREV_SNAP}/_MANIFEST" - 2>/dev/null \
-        | grep "^Record count:" | awk '{print $NF}' || echo "0")
+        | read_manifest_count /dev/stdin)
     TOTAL_SIZE=$(aws s3 ls --summarize --recursive \
         "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${JSONL_TS}/" 2>/dev/null \
         | grep "Total Size" | awk '{print $NF}' || echo "0")
