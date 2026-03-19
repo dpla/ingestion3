@@ -26,7 +26,6 @@ from pathlib import Path
 
 try:
     import boto3
-    from botocore.exceptions import ClientError
 except ImportError:
     print("Error: boto3 is required but not installed.", file=sys.stderr)
     print("Install it with: pip install boto3", file=sys.stderr)
@@ -43,17 +42,15 @@ def find_latest_jsonl_export(s3_client, bucket: str, hub: str) -> str:
     """Find the most recent JSONL export directory for a hub."""
     prefix = f"{hub}/jsonl/"
 
-    response = s3_client.list_objects_v2(
-        Bucket=bucket,
-        Prefix=prefix,
-        Delimiter="/"
-    )
+    response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix, Delimiter="/")
 
     if "CommonPrefixes" not in response:
         raise ValueError(f"No JSONL exports found in s3://{bucket}/{prefix}")
 
     # Get all export directories and sort by name (descending) to get most recent
-    exports = [p["Prefix"].rstrip("/").split("/")[-1] for p in response["CommonPrefixes"]]
+    exports = [
+        p["Prefix"].rstrip("/").split("/")[-1] for p in response["CommonPrefixes"]
+    ]
     exports.sort(reverse=True)
 
     if not exports:
@@ -77,11 +74,7 @@ def list_jsonl_files(s3_client, bucket: str, prefix: str) -> list[str]:
 
 
 def filter_jsonl_file(
-    s3_client,
-    bucket: str,
-    s3_key: str,
-    exclude_ids: set[str],
-    dry_run: bool = False
+    s3_client, bucket: str, s3_key: str, exclude_ids: set[str], dry_run: bool = False
 ) -> dict:
     """
     Download a JSONL file, filter out records with excluded IDs, and re-upload.
@@ -105,8 +98,10 @@ def filter_jsonl_file(
         open_read = gzip.open if is_gzipped else open
         open_write = gzip.open if is_gzipped else open
 
-        with open_read(local_path, "rt", encoding="utf-8") as infile, \
-             open_write(filtered_path, "wt", encoding="utf-8") as outfile:
+        with (
+            open_read(local_path, "rt", encoding="utf-8") as infile,
+            open_write(filtered_path, "wt", encoding="utf-8") as outfile,
+        ):
             for line in infile:
                 before_count += 1
                 line = line.rstrip("\n")
@@ -137,7 +132,7 @@ def filter_jsonl_file(
             "before": before_count,
             "after": after_count,
             "removed": removed,
-            "uploaded": uploaded
+            "uploaded": uploaded,
         }
 
 
@@ -178,50 +173,47 @@ Environment variables:
   AWS_PROFILE  AWS profile name (default: dpla)
   S3_BUCKET    S3 bucket name (default: dpla-master-dataset)
   DRY_RUN      Set to 'true' to preview without modifying S3
-        """
+        """,
     )
 
     parser.add_argument(
-        "--hub",
-        required=True,
-        help="Hub/provider short name (e.g., cdl, mdl, pa)"
+        "--hub", required=True, help="Hub/provider short name (e.g., cdl, mdl, pa)"
     )
     parser.add_argument(
-        "-f", "--file",
-        help="Read IDs from file (one per line), use '-' for stdin"
+        "-f", "--file", help="Read IDs from file (one per line), use '-' for stdin"
     )
     parser.add_argument(
-        "-y", "--yes",
-        action="store_true",
-        help="Skip confirmation prompt"
+        "-y", "--yes", action="store_true", help="Skip confirmation prompt"
     )
     parser.add_argument(
         "--bucket",
         default=os.environ.get("S3_BUCKET", DEFAULT_BUCKET),
-        help=f"S3 bucket name (default: {DEFAULT_BUCKET})"
+        help=f"S3 bucket name (default: {DEFAULT_BUCKET})",
     )
     parser.add_argument(
         "--profile",
         default=os.environ.get("AWS_PROFILE", DEFAULT_PROFILE),
-        help=f"AWS profile name (default: {DEFAULT_PROFILE})"
+        help=f"AWS profile name (default: {DEFAULT_PROFILE})",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
         default=os.environ.get("DRY_RUN", "").lower() == "true",
-        help="Preview without modifying S3"
+        help="Preview without modifying S3",
     )
+    def positive_int(value: str) -> int:
+        ivalue = int(value)
+        if ivalue < 1:
+            raise argparse.ArgumentTypeError("--workers must be >= 1")
+        return ivalue
+
     parser.add_argument(
         "--workers",
-        type=int,
+        type=positive_int,
         default=MAX_WORKERS,
-        help=f"Number of parallel workers (default: {MAX_WORKERS})"
+        help=f"Number of parallel workers (default: {MAX_WORKERS})",
     )
-    parser.add_argument(
-        "ids",
-        nargs="*",
-        help="DPLA IDs to delete"
-    )
+    parser.add_argument("ids", nargs="*", help="DPLA IDs to delete")
 
     args = parser.parse_args()
 
@@ -241,7 +233,10 @@ Environment variables:
         session = boto3.Session(profile_name=args.profile)
         s3_client = session.client("s3")
     except Exception as e:
-        print(f"Error: Could not initialize AWS session with profile '{args.profile}': {e}", file=sys.stderr)
+        print(
+            f"Error: Could not initialize AWS session with profile '{args.profile}': {e}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     # Find latest export
@@ -261,7 +256,10 @@ Environment variables:
     jsonl_files = list_jsonl_files(s3_client, args.bucket, s3_prefix)
 
     if not jsonl_files:
-        print(f"Error: No JSONL files found in s3://{args.bucket}/{s3_prefix}", file=sys.stderr)
+        print(
+            f"Error: No JSONL files found in s3://{args.bucket}/{s3_prefix}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     # Print summary
@@ -293,7 +291,9 @@ Environment variables:
 
     # Confirm
     if not args.yes:
-        response = input(f"This will modify {len(jsonl_files)} file(s) in S3. Continue? [y/N] ")
+        response = input(
+            f"This will modify {len(jsonl_files)} file(s) in S3. Continue? [y/N] "
+        )
         if response.lower() != "y":
             print("Aborted.")
             sys.exit(0)
@@ -304,6 +304,7 @@ Environment variables:
 
     total_removed = 0
     processed = 0
+    errors = 0
 
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
         futures = {
@@ -313,7 +314,7 @@ Environment variables:
                 args.bucket,
                 s3_key,
                 exclude_ids,
-                args.dry_run
+                args.dry_run,
             ): s3_key
             for s3_key in jsonl_files
         }
@@ -337,13 +338,23 @@ Environment variables:
                 print(f"[{processed}/{len(jsonl_files)}] {result['file']}: {status}")
 
             except Exception as e:
-                print(f"[{processed}/{len(jsonl_files)}] {s3_key.split('/')[-1]}: ERROR - {e}", file=sys.stderr)
+                errors += 1
+                print(
+                    f"[{processed}/{len(jsonl_files)}] {s3_key.split('/')[-1]}: ERROR - {e}",
+                    file=sys.stderr,
+                )
 
     print()
     print("=" * 40)
-    print("Complete!")
+    if errors:
+        print(f"Completed with {errors} error(s).")
+    else:
+        print("Complete!")
     print(f"Total records removed: {total_removed}")
     print(f"Files processed: {processed}")
+
+    if errors:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
