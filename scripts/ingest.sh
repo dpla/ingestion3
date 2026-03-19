@@ -81,6 +81,10 @@ trap 'err=$?
          write_hub_status "$INGEST_PROVIDER" failed --error="Exit $err"
          slack_notify ":x: *$INGEST_PROVIDER ingest FAILED* (exit $err)"
      fi' EXIT
+# Without explicit SIGTERM/SIGINT traps, bash exits immediately on those signals
+# and skips the EXIT trap above. These traps call exit() to ensure EXIT fires.
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 echo ""
 echo "=============================================="
