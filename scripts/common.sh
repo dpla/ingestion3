@@ -502,6 +502,23 @@ write_hub_status() {
 }
 
 # =============================================================================
+# Manifest Record Count Reader
+# =============================================================================
+#
+# Extract the numeric record count from a _MANIFEST file.
+# Accepts a file path, or reads from stdin when passed "-" or /dev/stdin.
+# Always returns a non-negative integer; returns 0 on any parse failure.
+#
+# Usage: read_manifest_count <path>
+# Example: read_manifest_count /path/to/jsonl/_MANIFEST
+#          aws s3 cp s3://bucket/path/_MANIFEST - | read_manifest_count /dev/stdin
+#
+read_manifest_count() {
+    local raw
+    raw=$(grep "^Record count:" "${1:--}" 2>/dev/null | awk '{print $NF}' | tr -d ',')
+    [[ "${raw}" =~ ^[0-9]+$ ]] && echo "$raw" || echo "0"
+}
+
 # Latest Data Directory Finder
 # =============================================================================
 #
