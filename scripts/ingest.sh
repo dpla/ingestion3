@@ -189,6 +189,20 @@ JSONL_TS=$(basename "$JSONL_TS_DIR")
 log_info "JSONL export complete: $JSONL_TS"
 slack_notify ":white_check_mark: *$PROVIDER JSONL export complete* — starting S3 sync"
 
+# Send partner summary email (based on mapping data; independent of S3 sync)
+HUB_EMAIL=$(get_hub_email "$PROVIDER")
+EMAIL_NOTE=""
+if [ -n "$HUB_EMAIL" ]; then
+    SBT_OPTS="-Xmx4g"
+    if run_entry dpla.ingestion3.utils.Emailer \
+           "$MAP_TS_DIR" "$PROVIDER" "$I3_CONF"; then
+        EMAIL_NOTE="\nPartner email sent to $HUB_EMAIL"
+        log_info "Partner email sent to $HUB_EMAIL"
+    else
+        log_warn "Partner email failed (non-fatal)"
+    fi
+fi
+
 # Step 5: S3 sync (unless skipped)
 if [ "$SKIP_S3_SYNC" = false ]; then
     write_hub_status "$PROVIDER" syncing
@@ -216,24 +230,10 @@ sign = '+' if delta >= 0 else ''
 print(f'Records: {new:,} ({sign}{delta:,} vs prev) | Size: {size_mb:.1f} MB')
 ")
 
-    # Send partner summary email if configured
-    HUB_EMAIL=$(get_hub_email "$PROVIDER")
-    EMAIL_NOTE=""
-    if [ -n "$HUB_EMAIL" ]; then
-        SBT_OPTS="-Xmx4g"
-        if run_entry dpla.ingestion3.utils.Emailer \
-               "$MAP_TS_DIR" "$PROVIDER" "$I3_CONF" 2>/dev/null; then
-            EMAIL_NOTE="\nPartner email sent to $HUB_EMAIL"
-            log_info "Partner email sent to $HUB_EMAIL"
-        else
-            log_warn "Partner email failed (non-fatal)"
-        fi
-    fi
-
     slack_notify "*$PROVIDER ingest complete* :white_check_mark:\nNew snapshot: \`$JSONL_TS\`\n$SUMMARY\nS3: \`s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${JSONL_TS}/\`${EMAIL_NOTE}"
 else
     print_step "Skipping S3 sync (--skip-s3-sync)"
-    slack_notify "*$PROVIDER ingest complete* :white_check_mark: _(S3 sync skipped)_\nJSONL: \`$JSONL_TS\`"
+    slack_notify "*$PROVIDER ingest complete* :white_check_mark: _(S3 sync skipped)_\nJSONL: \`$JSONL_TS\`${EMAIL_NOTE}"
 fi
 
 write_hub_status "$PROVIDER" complete
