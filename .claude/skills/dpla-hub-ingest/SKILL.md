@@ -971,7 +971,9 @@ CMDID=$(aws ssm send-command \
 
 **Do NOT try to capture `$!`** — the SSM command returns before the background process starts, so `$!` is empty or unavailable. Including `$!` in the command string also causes "Error parsing parameter: Invalid JSON: Invalid \escape" from the AWS CLI JSON parser.
 
-**After launching, verify it started** by checking the log file after ~10 seconds:
+**After launching, do TWO verification checks:**
+
+**Check 1 — immediate (10s):** Confirm the script launched and logged its start:
 ```bash
 PARAMS=$(python3 -c "import json; print(json.dumps({'commands': ['tail -5 /home/ec2-user/data/<hub>-ingest.log']}))")
 CMDID=$(aws ssm send-command \
@@ -982,7 +984,34 @@ CMDID=$(aws ssm send-command \
   --query 'Command.CommandId' --output text)
 # Poll after 8s — look for "=== <hub> ingest starting ===" in output
 ```
-Expected: the starting log message. If the log is empty or doesn't exist, check `ps aux | grep <hub>-ingest | grep -v grep` via SSM.
+Expected: the starting log message. If the log is empty or doesn't exist, the script failed to launch — alert immediately.
+
+**Check 2 — after 5 minutes:** Confirm the harvest has actually started (sbt/java are running and the log is growing). If the script died early (e.g. due to a broken slack function, missing dependency, or set -e trigger), it will have exited before logging "--- Harvest starting ---". Do NOT skip this check — a silent early exit is indistinguishable from a running harvest without it.
+
+```bash
+sleep 300
+PARAMS=$(python3 -c "import json; print(json.dumps({'commands': ['tail -10 /home/ec2-user/data/<hub>-ingest.log && ps aux | grep -E \"sbt|java\" | grep -v grep | wc -l']}))")
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 30 \
+  --parameters "$PARAMS" \
+  --query 'Command.CommandId' --output text)
+# Poll after 8s
+```
+
+Expected: log contains "--- Harvest starting ---" or later steps, AND at least one sbt/java process is running.
+
+**If the log still only shows the starting line and no java processes are running**, the script died silently (likely due to a broken slack function or other early failure). Post a fallback Slack alert locally and investigate:
+
+```bash
+source ~/.claude/secrets/dpla.env
+MSG_JSON=$(python3 -c "import json; print(json.dumps({'channel':'C02HEU2L3','text':':x: *<hub> ingest script died silently* — no harvest activity after 5 min. Check /home/ec2-user/data/<hub>-ingest.log on EC2.'}))")
+curl -s -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "$MSG_JSON"
+```
 
 ### Step B4: Monitor Progress
 
