@@ -366,6 +366,18 @@ Expected: `Online`. If not yet online, retry after 15 seconds (SSM agent takes ~
 
 ### Step 3: Verify EC2 Environment
 
+#### Step 3a: Pull latest ingestion3
+
+Always do this at the start of every ingest session. The EC2 has no auto-update mechanism and can drift behind main, which can cause failures (e.g. `Emailer.main` not found). The repo is public so HTTPS pull requires no credentials:
+
+```bash
+sudo -u ec2-user bash -lc "cd /home/ec2-user/ingestion3 && git pull https://github.com/dpla/ingestion3.git main && git log --oneline -1"
+```
+
+Expected output ends with `Already up to date.` or a list of changed files plus the latest commit. If this fails (network issue, merge conflict), investigate before proceeding — do not run an ingest on stale code.
+
+#### Step 3b: Check environment
+
 Run these checks via SSM to confirm everything is ready:
 
 ```bash
@@ -1120,18 +1132,13 @@ Use these if direct SBT invocations fail or for quick manual runs. Note that `i3
 
 ## Future Improvements
 
-The EC2 runs an older ingestion3 version without `scripts/*.sh`. Upgrading would add:
-- Status tracking and automatic Slack notifications per step
-- Better error handling with structured output
-- `./scripts/ingest.sh <hub>` as a single command for the full pipeline
-
-To upgrade: add a GitHub deploy key to the EC2, `git pull`, then update this skill to use `./scripts/ingest.sh <hub>`.
+The EC2 now has the latest ingestion3 (pulled via HTTPS from `https://github.com/dpla/ingestion3.git`), which includes `scripts/*.sh`. A potential simplification would be to replace the direct sbt invocations in this skill with `./scripts/ingest.sh <hub>` — but only after validating that script handles all the edge cases (memory flags, timestamp capture, safety check, email timing) the same way this skill does.
 
 ## Safety Rules
 
 - Always verify record counts in Step 9. A drop >5% must be flagged before stopping.
 - This ingest does **NOT** rebuild the Elasticsearch index or change what is live on dp.la.
 - Keep the EC2 running until verification is complete, then stop to save cost.
-- Do not modify `i3.conf`, `.env`, or code unless explicitly requested. Exception: for `community-webs`, Step CW4 updates `community-webs.harvest.endpoint` in `i3.conf` as part of the required ingest flow.
-- Do not `git pull` or update code unless explicitly requested.
+- Do not modify `i3.conf`, `.env`, or Scala source code unless explicitly requested. Exception: for `community-webs`, Step CW4 updates `community-webs.harvest.endpoint` in `i3.conf` as part of the required ingest flow.
+- Always `git pull` ingestion3 at the start of each session (Step 3a) — the EC2 has no auto-update and can drift behind main, causing failures (e.g. missing entry points). If a pull fails due to a merge conflict or network issue, investigate before proceeding.
 - For multi-hub batches: run all harvests/ingests first, then request index rebuild separately.
