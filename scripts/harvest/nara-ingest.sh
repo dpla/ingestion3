@@ -495,13 +495,16 @@ run_post_pipeline() {
     fi
 
     if [ "$prev_count" -gt 0 ]; then
-        local safety_result delta_line
-        read -r safety_result delta_line < <(python3 -c "
+        local safety_result delta_line _safety_out
+        _safety_out=$(python3 -c "
 new  = $new_count
 prev = $prev_count
 drop = (prev - new) / prev * 100
-print('FAIL' if drop > 5 else 'OK', f'New: {new:,} | Prev: {prev:,} | Change: {-drop:+.1f}%')
+print('FAIL' if drop > 5 else 'OK')
+print(f'New: {new:,} | Prev: {prev:,} | Change: {-drop:+.1f}%')
 ")
+        safety_result=$(echo "$_safety_out" | head -1)
+        delta_line=$(echo "$_safety_out" | tail -1)
         if [ "$safety_result" = "FAIL" ]; then
             print_error "Safety check FAILED — >5% record drop. $delta_line"
             slack_notify ":x: *nara ingest FAILED* — safety check blocked S3 sync\n$delta_line\nSnapshot \`$jsonl_ts\` was NOT synced to S3."
