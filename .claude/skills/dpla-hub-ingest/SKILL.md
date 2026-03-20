@@ -152,8 +152,30 @@ Key harvest types and their network requirements:
 |------|-------|
 | `localoai` | OAI-PMH over HTTP/HTTPS. Most hubs. **CONTENTdm-hosted endpoints are blocked from EC2** (see below). |
 | `api` | REST API (e.g. MDL/SD uses `metl.lib.umn.edu`). EC2-reachable. Slow to respond — use 60s+ curl timeout. |
-| `file` | **community-webs**: DB export pre-processing runs entirely on EC2 (see Community Webs Pre-processing section). **Other file hubs**: `harvest.endpoint` references `/Users/scott/...` paths from a previous operator — require manual staging to EC2 before harvest. |
+| `file` | **community-webs**: DB export pre-processing runs entirely on EC2 (see Community Webs Pre-processing section). **smithsonian / florida / nypl**: harvest from S3 — see S3 File Harvest Buckets section below. **Other file hubs**: `harvest.endpoint` references `/Users/scott/...` paths from a previous operator — require manual staging to EC2 before harvest. |
 | `nara.file.delta` | NARA-specific delta file format. Complex — consult README_NARA.md. |
+
+### S3 File Harvest Buckets
+
+Some hubs deliver data via S3 buckets rather than live endpoints. Before running, check the bucket for the latest drop and update `harvest.endpoint` in i3.conf on the EC2 to point at it.
+
+| Hub | S3 Bucket | Format | How to find latest |
+|-----|-----------|--------|--------------------|
+| `smithsonian` | `s3://dpla-hub-si/` | `.xml.gz` per Smithsonian unit | `aws s3 ls s3://dpla-hub-si/ \| tail -5` — pick the newest dated folder (e.g. `2026-03-03/`) |
+| `florida` | `s3://dpla-hub-fl/` | `.zip` or `.jsonl` | `aws s3 ls s3://dpla-hub-fl/ \| tail -5` — pick the newest dated folder |
+| `nypl` | `s3://dpla-hub-nypl/` | `.zip` (one file per drop, named `nypl-YYYYMMDD.zip`) | `aws s3 ls s3://dpla-hub-nypl/ \| tail -5` — pick the newest file |
+
+Update `i3.conf` on EC2 before harvesting:
+```bash
+# Example for Smithsonian — replace date with actual latest drop
+sed -i 's|smithsonian.harvest.endpoint = .*|smithsonian.harvest.endpoint = "s3://dpla-hub-si/2026-03-03/"|' \
+    /home/ec2-user/ingestion3-conf/i3.conf
+
+# Example for NYPL — replace filename with actual latest drop
+sed -i 's|nypl.harvest.endpoint = .*|nypl.harvest.endpoint = "s3://dpla-hub-nypl/nypl-20260209.zip"|' \
+    /home/ec2-user/ingestion3-conf/i3.conf
+```
+Then commit the updated endpoint to the ingestion3-conf repo after a successful ingest.
 
 ### CONTENTdm Block (Important)
 
