@@ -13,6 +13,7 @@ import org.apache.commons.io.FileUtils
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
+import scala.io.Source
 import scala.util.{Try, Using}
 import scala.xml.{Node, Utility, XML}
 
