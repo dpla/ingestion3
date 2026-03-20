@@ -153,7 +153,71 @@ Key harvest types and their network requirements:
 | `localoai` | OAI-PMH over HTTP/HTTPS. Most hubs. **CONTENTdm-hosted endpoints are blocked from EC2** (see below). |
 | `api` | REST API (e.g. MDL/SD uses `metl.lib.umn.edu`). EC2-reachable. Slow to respond — use 60s+ curl timeout. |
 | `file` | **community-webs**: DB export pre-processing runs entirely on EC2 (see Community Webs Pre-processing section). **smithsonian / florida / nypl**: harvest from S3 — see S3 File Harvest Buckets section below. **Other file hubs**: `harvest.endpoint` references `/Users/scott/...` paths from a previous operator — require manual staging to EC2 before harvest. |
-| `nara.file.delta` | NARA-specific delta file format. Complex — consult README_NARA.md. |
+| `nara.file.delta` | NARA-specific delta file format. **Use `nara-ingest.sh` only — never `ingest.sh`.** See NARA section below. |
+
+### NARA Delta Ingest
+
+NARA is fundamentally different from other hubs. It uses a quarterly delta export (~300K new/changed records) that must be **merged with the previous full dataset (~18M records)** before mapping. `ingest.sh` is blocked for NARA and will exit with an error if you try to use it.
+
+**Script:** `scripts/harvest/nara-ingest.sh`
+**EC2 data dir:** `/home/ec2-user/data/nara/`
+**Base harvest (S3):** `s3://dpla-master-dataset/nara/harvest/` — the full merged Avro from the previous ingest cycle
+
+#### Normal invocation (first run on a fresh EC2)
+```bash
+# For the February 2026 quarterly export:
+nohup ./scripts/harvest/nara-ingest.sh \
+    --month=202602 \
+    > ~/data/nara-rerun.log 2>&1 &
+```
+On a fresh EC2, this will: download and preprocess the NARA ZIP files (requires `[nara]` AWS profile — keys in 1Password: "ingest@dp.la NARA keys"), pull the base harvest from S3, run the delta harvest, merge, map, enrich, JSONL, and sync to S3.
+
+#### Flags
+
+| Flag | Effect |
+|------|--------|
+| `--skip-preprocess` | Skip ZIP extraction — use when `delta/YYYYMM/` already has `.tar.gz` files |
+| `--force-sync` | Force re-download of base harvest from S3, ignoring any local Avro files in `data/nara/harvest/` |
+
+#### How the script resumes a partial run
+
+The script checks for existing work before each step:
+- **Delta harvest**: looks for `data/nara/delta/YYYYMM/harvest/*-nara-OriginalRecord.avro` — if found, skips re-harvest
+- **Merge**: looks for `data/nara/harvest/YYYYMMDD_000000-nara-OriginalRecord.avro/_LOGS/_SUMMARY.txt` — if found (with summary), skips re-merge
+- **Base harvest**: `find_latest_local_base` picks the newest `*-nara-OriginalRecord.avro` in `data/nara/harvest/` by modification time
+
+**Critical**: the base harvest directory (`data/nara/harvest/`) and delta harvest directory (`data/nara/delta/YYYYMM/harvest/`) are **separate**. Stale or misplaced Avro files in `data/nara/harvest/` will be incorrectly treated as the base harvest.
+
+#### Recovery after a failed mid-run
+
+If the script fails partway through and you need to retry:
+
+1. **Check what's in `data/nara/harvest/`** — anything there will be treated as the base harvest by `find_latest_local_base`. If there are leftover files from a failed run (bad merge output, a delta Avro that ended up there), clean them up.
+
+2. **Check `data/nara/delta/YYYYMM/harvest/`** — if the delta harvest already completed successfully (e.g., from a previous attempt), the Avro should be here and the script will skip re-harvesting.
+
+3. **Use `--force-sync`** — whenever you're not certain the local `data/nara/harvest/` contains the correct full base, use `--force-sync` to pull the real base from S3. This is safe to use; it just costs ~30 minutes of S3 download time.
+
+Typical recovery invocation after a failed run:
+```bash
+nohup ./scripts/harvest/nara-ingest.sh \
+    --month=202602 \
+    --skip-preprocess \
+    --force-sync \
+    >> ~/data/nara-rerun.log 2>&1 &
+```
+
+#### EC2 filesystem layout
+```
+/home/ec2-user/data/nara/
+├── harvest/                              ← base/merged Avro lives here
+│   └── YYYYMMDD_HHMMSS-nara-OriginalRecord.avro/
+└── delta/
+    └── 202602/                           ← one dir per month
+        ├── *.tar.gz                      ← preprocessed delta ZIPs
+        └── harvest/
+            └── YYYYMMDD_HHMMSS-nara-OriginalRecord.avro/  ← delta harvest output
+```
 
 ### S3 File Harvest Buckets
 
