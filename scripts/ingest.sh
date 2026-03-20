@@ -81,6 +81,9 @@ fi
 PROVIDER_DATA="$DPLA_DATA/$PROVIDER"
 HARVEST_DIR="$PROVIDER_DATA/harvest"
 INGEST_LOG="$DPLA_DATA/${PROVIDER}-ingest.log"
+# Truncate at run start so heartbeat reads don't pick up stale harvest progress
+# from previous ingest runs of the same provider.
+> "$INGEST_LOG"
 
 # Track provider for status file (ingest-status.sh); trap writes failed + notifies on error
 INGEST_PROVIDER="$PROVIDER"
