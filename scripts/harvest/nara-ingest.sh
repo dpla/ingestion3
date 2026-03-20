@@ -468,6 +468,56 @@ run_merge() {
 # Pipeline (Mapping -> Enrichment -> JSON-L)
 # ============================================================================
 
+# Run safety check against previous S3 snapshot and sync JSONL to S3 if it passes.
+# NARA's JSONL output is a full merged dataset (~18.8M records), so the same
+# >5% drop check used for full providers is valid here.
+run_post_pipeline() {
+    local jsonl_dir
+    jsonl_dir=$(find "$NARA_DATA/jsonl" -maxdepth 1 -type d -name "*-nara-*.IndexRecord.jsonl" | sort | tail -1)
+    if [ -z "$jsonl_dir" ]; then
+        print_error "No JSONL output found under $NARA_DATA/jsonl/"
+        exit 1
+    fi
+    local jsonl_ts
+    jsonl_ts=$(basename "$jsonl_dir")
+    local new_count
+    new_count=$(read_manifest_count "$jsonl_dir/_MANIFEST")
+
+    local s3_prefix
+    s3_prefix=$(resolve_s3_prefix "nara")
+    local prev_snap
+    prev_snap=$(aws s3 ls "s3://dpla-master-dataset/${s3_prefix}/jsonl/" 2>/dev/null \
+        | awk '{print $NF}' | sed 's|/||g' | sort | grep -v "^$" | tail -1)
+    local prev_count=0
+    if [ -n "$prev_snap" ]; then
+        prev_count=$(aws s3 cp "s3://dpla-master-dataset/${s3_prefix}/jsonl/${prev_snap}/_MANIFEST" - 2>/dev/null \
+            | read_manifest_count /dev/stdin)
+    fi
+
+    if [ "$prev_count" -gt 0 ]; then
+        local safety_result delta_line
+        read -r safety_result delta_line < <(python3 -c "
+new  = $new_count
+prev = $prev_count
+drop = (prev - new) / prev * 100
+print('FAIL' if drop > 5 else 'OK', f'New: {new:,} | Prev: {prev:,} | Change: {-drop:+.1f}%')
+")
+        if [ "$safety_result" = "FAIL" ]; then
+            print_error "Safety check FAILED — >5% record drop. $delta_line"
+            slack_notify ":x: *nara ingest FAILED* — safety check blocked S3 sync\n$delta_line\nSnapshot \`$jsonl_ts\` was NOT synced to S3."
+            write_hub_status "nara" failed
+            exit 1
+        fi
+        print_success "Safety check passed: $delta_line"
+    fi
+
+    print_step "Syncing JSONL to S3..."
+    aws s3 sync "$jsonl_dir/" "s3://dpla-master-dataset/${s3_prefix}/jsonl/${jsonl_ts}/"
+    print_success "S3 sync complete: s3://dpla-master-dataset/${s3_prefix}/jsonl/${jsonl_ts}/"
+    slack_notify ":white_check_mark: *nara ingest complete*\nNew snapshot: \`$jsonl_ts\`\nRecords: ${new_count}\nS3: \`s3://dpla-master-dataset/${s3_prefix}/jsonl/${jsonl_ts}/\`"
+    write_hub_status "nara" complete
+}
+
 run_pipeline() {
     print_step "Running mapping, enrichment, and JSON-L pipeline..."
     print_info "Input harvest: $MERGED_HARVEST"
@@ -591,6 +641,7 @@ main() {
 
         print_info "Resuming pipeline with: $MERGED_HARVEST"
         run_pipeline
+        run_post_pipeline
 
         END_TIME=$(date +%s)
         print_header "NARA Pipeline Complete"
@@ -704,6 +755,7 @@ main() {
     # Step 3: Pipeline (only on the final month's merged output)
     if [ "$SKIP_PIPELINE" != true ]; then
         run_pipeline
+        run_post_pipeline
     else
         print_info "Skipping pipeline (--skip-pipeline)"
         print_info "Final merged harvest: $MERGED_HARVEST"
@@ -722,7 +774,6 @@ main() {
     echo ""
     echo "Next steps:"
     echo "  1. Inspect merge logs:  cat $MERGED_HARVEST/_LOGS/_SUMMARY.txt"
-    echo "  2. Sync to S3:         $0 --sync-s3  (or run manually)"
     echo ""
 }
 
