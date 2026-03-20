@@ -134,10 +134,16 @@ Processes hubs scheduled for the current month:
 Handles NARA's large dataset with delta updates. Located in `scripts/harvest/`:
 
 ```bash
-./scripts/harvest/nara-ingest.sh /path/to/nara-export.zip
-./scripts/harvest/nara-ingest.sh /path/to/export.zip --force-sync
-./scripts/harvest/nara-ingest.sh --skip-to-pipeline   # Use existing merged harvest
+./scripts/harvest/nara-ingest.sh --month=202602
+./scripts/harvest/nara-ingest.sh --month=202602 --skip-preprocess  # delta dir already exists
+./scripts/harvest/nara-ingest.sh --month=202602 --force-sync       # re-download base from S3
+./scripts/harvest/nara-ingest.sh --skip-to-pipeline --harvest=/path/to/merged.avro
+./scripts/harvest/nara-ingest.sh --month=202512,202602             # multi-month
 ```
+
+`--force-sync` downloads only the **single latest** merged base harvest from S3
+(~34 GB) rather than the full historical prefix. Only the most recent base is
+needed since each merged harvest is a complete snapshot of all NARA records.
 
 ### schedule.sh - Query Schedules
 
