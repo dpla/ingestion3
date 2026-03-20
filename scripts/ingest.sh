@@ -69,6 +69,14 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Block delta providers — they require a dedicated script that runs a merge step
+# before mapping. Running ingest.sh on a delta harvest produces only the delta
+# records, not the full merged dataset.
+HARVEST_TYPE=$(get_harvest_type "$PROVIDER")
+if [[ "$HARVEST_TYPE" == *"delta"* ]]; then
+    die "Provider '$PROVIDER' uses delta harvesting ($HARVEST_TYPE) and cannot be run with ingest.sh. Use the dedicated script instead (e.g. scripts/harvest/nara-ingest.sh)."
+fi
+
 # Setup paths
 PROVIDER_DATA="$DPLA_DATA/$PROVIDER"
 HARVEST_DIR="$PROVIDER_DATA/harvest"
