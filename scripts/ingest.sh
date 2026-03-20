@@ -146,7 +146,7 @@ fi
 write_hub_status "$PROVIDER" remapping
 print_step "Step 2/5: Mapping $PROVIDER..."
 
-SBT_OPTS="-Xmx15g -Dspark.sql.parquet.columnarReaderBatchSize=512"
+SBT_OPTS="-Xmx15g -Dspark.sql.parquet.enableVectorizedReader=false"
 run_entry dpla.ingestion3.entries.ingest.MappingEntry \
     --output="$DPLA_DATA" \
     --conf="$I3_CONF" \
