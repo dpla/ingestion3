@@ -225,23 +225,36 @@ sync_base_from_s3() {
         return 0
     fi
 
-    print_step "Syncing NARA base harvest from S3..."
+    print_step "Downloading latest NARA base harvest from S3..."
     mkdir -p "$NARA_HARVEST"
 
-    # Only sync Avro harvest directories (not mapping/enrichment/jsonl)
-    aws s3 sync "$S3_NARA_PATH/harvest/" "$NARA_HARVEST/" \
-        --exclude "*" \
-        --include "*-nara-OriginalRecord.avro/*"
+    # Find the single latest merged harvest on S3 rather than syncing the entire
+    # prefix. The prefix accumulates all historical harvests (400+ GB going back
+    # to 2017); only the most recent one is needed as the base for the merge.
+    # Note: aws s3 ls returns at most 1000 keys per call; NARA has ~40 historical
+    # entries so this is well within limits, but worth knowing if entries grow.
+    local latest_s3_key
+    latest_s3_key=$(aws s3 ls "$S3_NARA_PATH/harvest/" \
+        | awk '{print $NF}' \
+        | grep -E '^[0-9]{8}_[0-9]{6}-nara-OriginalRecord\.avro/$' \
+        | sort \
+        | tail -1 \
+        | sed 's|/$||')
 
-    BASE_HARVEST=$(find_latest_local_base)
-    if [ -z "$BASE_HARVEST" ]; then
-        print_error "No base harvest found after S3 sync"
+    if [ -z "$latest_s3_key" ]; then
+        print_error "No base harvest found on S3 at $S3_NARA_PATH/harvest/"
         exit 1
     fi
 
+    print_info "Latest S3 base: $latest_s3_key"
+    aws s3 sync "$S3_NARA_PATH/harvest/$latest_s3_key/" "$NARA_HARVEST/$latest_s3_key/"
+
+    # We already know the local path from the key; no need to re-scan the directory.
+    BASE_HARVEST="$NARA_HARVEST/$latest_s3_key"
+
     local base_size
     base_size=$(du -sh "$BASE_HARVEST" | cut -f1)
-    print_success "S3 sync complete. Base: $BASE_HARVEST ($base_size)"
+    print_success "Download complete. Base: $BASE_HARVEST ($base_size)"
 }
 
 sync_outputs_to_s3() {
