@@ -1,27 +1,21 @@
 package dpla.ingestion3.harvesters.file
 
-import java.io.{
-  ByteArrayInputStream,
-  File,
-  FileFilter,
-  FileInputStream,
-  InputStreamReader
-}
+import java.io.{File, FileInputStream}
 import java.util.zip.GZIPInputStream
+import javax.xml.stream.{XMLInputFactory, XMLStreamConstants}
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.{Harvester, LocalHarvester, ParsedResult}
 import dpla.ingestion3.harvesters.file.FileFilters.gzFilter
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.Utils
 import org.apache.avro.generic.GenericData
-import org.apache.commons.io.IOUtils
-import org.apache.log4j.Logger
+import org.apache.commons.io.FileUtils
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.io.Source
-import scala.util.{Failure, Success, Try, Using}
-import scala.xml.{MinimizeMode, Node, Utility, XML}
+import scala.util.{Try, Using}
+import scala.xml.{Node, Utility, XML}
 
 /** Entry for performing Smithsonian file harvest
   */
@@ -66,35 +60,6 @@ class SiFileHarvester(
         None
     }
 
-  /** Main logic for handling individual lines in the zipped file.
-    *
-    * @param line
-    *   String line from file
-    * @return
-    *   Count of metadata items found.
-    */
-  private def handleLine(line: String, unixEpoch: Long): Try[Int] =
-    Option(line) match {
-      case None =>
-        Success(0) // a directory, no results
-
-      case Some(data) =>
-        Try {
-          val dataString = new String(data).replaceAll("<\\?xml.*\\?>", "")
-          val xml = XML.loadString(dataString)
-          val items = handleXML(xml)
-
-          val counts = for {
-            itemOption <- items
-            item <- itemOption // filters out the Nones
-          } yield {
-            writeOut(unixEpoch, item)
-            1
-          }
-          counts.sum
-        }
-    }
-
   /** Get the expected record counts for each provided file from a text file
     * provided along side metadata. Contents of file are expected to match this
     * format:
@@ -110,8 +75,8 @@ class SiFileHarvester(
     */
   private def getExpectedFileCounts(inFiles: File): Map[String, String] = {
     var loadCounts = Map[String, String]()
-    inFiles
-      .listFiles(FileFilters.txtFilter)
+    Option(inFiles.listFiles(FileFilters.txtFilter))
+      .getOrElse(Array.empty)
       .foreach(file => {
         Using(
           Source
@@ -125,8 +90,8 @@ class SiFileHarvester(
                 // rename .xml to .xml.gz to match filename processed by harvester
                 lineVals(0).replace(".xml", ".xml.gz") -> lineVals(1)
               } match {
-                case Success(row) => loadCounts += row
-                case Failure(_)   => loadCounts
+                case scala.util.Success(row) => loadCounts += row
+                case scala.util.Failure(_)   => loadCounts
               }
             })
         }
@@ -134,62 +99,117 @@ class SiFileHarvester(
     loadCounts
   }
 
+  private def resolveToLocalDir(endpoint: String, harvestTime: Long): File = {
+    if (endpoint.startsWith("s3://"))
+      logger.info(s"Syncing SI source from S3: $endpoint")
+    LocalHarvester.resolveToLocalDir(endpoint, harvestTime, "si-s3", conf.harvest.awsProfile)
+  }
+
+  /** Collects a complete &lt;doc&gt;…&lt;/doc&gt; element from a streaming XML
+    * reader as a String. The reader must be positioned at the START_ELEMENT
+    * event for "doc".
+    */
+  private def collectDocXml(reader: javax.xml.stream.XMLStreamReader): String = {
+    val sb = new StringBuilder("<doc")
+    for (i <- 0 until reader.getAttributeCount) {
+      sb.append(s""" ${reader.getAttributeLocalName(i)}="${Utility.escape(reader.getAttributeValue(i))}"""")
+    }
+    sb.append(">")
+
+    var depth = 1
+    while (depth > 0) {
+      reader.next()
+      reader.getEventType match {
+        case XMLStreamConstants.START_ELEMENT =>
+          depth += 1
+          sb.append(s"<${reader.getLocalName}")
+          for (i <- 0 until reader.getAttributeCount) {
+            sb.append(
+              s""" ${reader.getAttributeLocalName(i)}="${Utility.escape(reader.getAttributeValue(i))}""""
+            )
+          }
+          sb.append(">")
+        case XMLStreamConstants.END_ELEMENT =>
+          depth -= 1
+          if (depth > 0) sb.append(s"</${reader.getLocalName}>")
+        case XMLStreamConstants.CHARACTERS | XMLStreamConstants.SPACE =>
+          sb.append(Utility.escape(reader.getText))
+        case XMLStreamConstants.CDATA =>
+          sb.append(s"<![CDATA[${reader.getText}]]>")
+        case _ => // skip comments, PIs, etc.
+      }
+    }
+    sb.append("</doc>")
+    sb.toString()
+  }
+
   /** Executes the Smithsonian harvest
     */
   override def harvest: DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
-    val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
+    val endpoint = conf.harvest.endpoint.getOrElse("in")
+    val isTempDir = endpoint.startsWith("s3://")
+    val inFiles = resolveToLocalDir(endpoint, harvestTime)
 
-    // Smithsonian now provides expected harvest counts in a .txt file alongside the compressed metadata, get those
-    // file names and counts for comparison to harvested data. Should help narrow down any issues with harvest mismatch
-    // counts
     val expectedFileCounts = getExpectedFileCounts(inFiles)
 
-    inFiles
-      .listFiles(gzFilter)
-      .foreach(inFile => {
-        println("FILE: " + inFile.getAbsolutePath)
-        var lineCount: Int = 0
-        Using(
-          new GZIPInputStream(new FileInputStream(inFile))
-        ) { inputStream =>
-          val iter = IOUtils.lineIterator(inputStream, "utf-8")
-          while (iter.hasNext) {
-            Option(iter.nextLine) match {
-              case Some(line) =>
-                // Remove XML declaration and whitespace, then parse the line
-                lineCount += handleLine(line, unixEpoch).get
-              case None => 0
+    // SI XML uses no namespace prefixes on elements or attributes inside <doc>,
+    // so IS_NAMESPACE_AWARE=false is safe and avoids the overhead of namespace processing.
+    // DTD and external entity resolution are disabled to prevent XXE attacks.
+    val xmlInputFactory = XMLInputFactory.newInstance()
+    xmlInputFactory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, false)
+    xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, true)
+    xmlInputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, false)
+    xmlInputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false)
+
+    try {
+      Option(inFiles.listFiles(gzFilter)).getOrElse(Array.empty).foreach { inFile =>
+        var lineCount = 0
+
+        Using(new GZIPInputStream(new FileInputStream(inFile))) { gzStream =>
+          val reader = xmlInputFactory.createXMLStreamReader(gzStream)
+          try {
+            while (reader.hasNext) {
+              reader.next()
+              if (
+                reader.getEventType == XMLStreamConstants.START_ELEMENT &&
+                reader.getLocalName == "doc"
+              ) {
+                Try(XML.loadString(collectDocXml(reader))) match {
+                  case scala.util.Success(node) =>
+                    handleXML(node).foreach {
+                      case Some(item) => writeOut(unixEpoch, item); lineCount += 1
+                      case None       =>
+                    }
+                  case scala.util.Failure(e) =>
+                    logger.error(s"Failed to parse <doc> in ${inFile.getName}", e)
+                }
+              }
             }
+          } finally {
+            reader.close()
           }
-        }
+        }.recover { case e => logger.error(s"Failed to process ${inFile.getName}", e) }
 
-        // Format the harvested and expected counts for logging
-        val fromFileFloat = lineCount.toFloat
-        val fromFilePretty = Utils.formatNumber(fromFileFloat.toLong)
-        val getFilenameKey = (filename: String) =>
-          filename.substring(0, inFile.getName.indexOf("."))
-        val expectedPretty =
-          expectedFileCounts.getOrElse(getFilenameKey(inFile.getName), "0")
+        // Log a summary of the file. expectedFileCounts keys match the full filename (e.g. "AAADCD_DPLA.xml.gz").
+        val fromFilePretty = Utils.formatNumber(lineCount.toLong)
+        val expectedPretty = expectedFileCounts.getOrElse(inFile.getName, "0")
         val expectedFloat =
-          expectedPretty
-            .replaceAll(",", "")
-            .trim
-            .toFloat // remove commas from string and make float
-        val percentage = (fromFileFloat / expectedFloat) * 100.0f match {
-          case x if x.isNaN      => 0.0f // account for NaN
-          case x if x.isInfinity => fromFileFloat // account for infinity
-          case x if !x.isNaN     => x.intValue()
+          Try(expectedPretty.replaceAll(",", "").trim.toFloat).getOrElse(0f)
+        val percentage = (lineCount.toFloat / expectedFloat) * 100.0f match {
+          case x if x.isNaN      => 0.0f
+          case x if x.isInfinity => lineCount.toFloat
+          case x                 => x.intValue()
         }
 
-        // Log a summary of the file
-        LogManager
-          .getLogger(this.getClass)
-          .info(
-            s"Harvested $percentage% ($fromFilePretty / $expectedPretty) of records from ${inFile.getName}"
-          )
-      })
+        logger.info(
+          s"Harvested $percentage% ($fromFilePretty / $expectedPretty) of records from ${inFile.getName}"
+        )
+      }
+    } finally {
+      if (isTempDir) FileUtils.deleteQuietly(inFiles)
+    }
 
     close()
 

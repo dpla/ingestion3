@@ -146,7 +146,7 @@ fi
 write_hub_status "$PROVIDER" remapping
 print_step "Step 2/5: Mapping $PROVIDER..."
 
-SBT_OPTS="-Xmx12g"
+SBT_OPTS="-Xmx15g -Dspark.sql.parquet.enableVectorizedReader=false"
 run_entry dpla.ingestion3.entries.ingest.MappingEntry \
     --output="$DPLA_DATA" \
     --conf="$I3_CONF" \
@@ -189,15 +189,45 @@ JSONL_TS=$(basename "$JSONL_TS_DIR")
 log_info "JSONL export complete: $JSONL_TS"
 slack_notify ":white_check_mark: *$PROVIDER JSONL export complete* — starting S3 sync"
 
-# Read record count from JSONL manifest to guard against empty/aborted ingests
+# Read record count from JSONL manifest
 JSONL_RECORD_COUNT=$(read_manifest_count "$JSONL_TS_DIR/_MANIFEST")
 
-# Send partner summary email only if records were actually exported
+# Safety check: flag any ingest where the new record count has dropped >5% vs the
+# last S3 snapshot. This catches bad harvests (empty results, partial pulls, etc.)
+# before the partner email goes out. Skipped on first-ever ingest (no prev snapshot).
+S3_PREFIX=$(resolve_s3_prefix "$PROVIDER")
+PREV_SNAP=$(aws s3 ls "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/" 2>/dev/null \
+    | awk '{print $NF}' | sed 's|/||g' | sort | grep -v "^$" | tail -1)
+PREV_COUNT=0
+if [ -n "$PREV_SNAP" ]; then
+    PREV_COUNT=$(aws s3 cp "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${PREV_SNAP}/_MANIFEST" - 2>/dev/null \
+        | read_manifest_count /dev/stdin)
+fi
+
+SAFETY_OK=true
+if [ "$PREV_COUNT" -gt 0 ]; then
+    _SAFETY_OUT=$(python3 -c "
+new  = $JSONL_RECORD_COUNT
+prev = $PREV_COUNT
+drop = (prev - new) / prev * 100
+print('FAIL' if drop > 5 else 'OK')
+print(f'New: {new:,} | Prev: {prev:,} | Change: {drop:+.1f}%')
+")
+    SAFETY_RESULT=$(echo "$_SAFETY_OUT" | head -1)
+    DELTA_LINE=$(echo "$_SAFETY_OUT" | tail -1)
+    if [ "$SAFETY_RESULT" = "FAIL" ]; then
+        SAFETY_OK=false
+        log_warn "Safety check FAILED — >5% record drop. $DELTA_LINE"
+        slack_notify ":warning: *$PROVIDER safety check FAILED* — >5% record drop\n$DELTA_LINE\nNew snapshot: \`$JSONL_TS\`\nPartner email suppressed."
+    fi
+fi
+
+# Send partner summary email only if safety check passed
 HUB_EMAIL=$(get_hub_email "$PROVIDER")
 EMAIL_NOTE=""
 if [ -n "$HUB_EMAIL" ]; then
-    if [ "$JSONL_RECORD_COUNT" -le 0 ]; then
-        log_warn "Skipping partner email — JSONL export has 0 records (ingest may have failed)"
+    if [ "$SAFETY_OK" = false ]; then
+        log_warn "Skipping partner email — safety check failed (>5% record drop)"
     else
         SBT_OPTS="-Xmx4g"
         if run_entry dpla.ingestion3.utils.Emailer \
@@ -217,14 +247,8 @@ if [ "$SKIP_S3_SYNC" = false ]; then
     "$SCRIPT_DIR/s3-sync.sh" "$PROVIDER" jsonl
     log_info "S3 sync complete"
 
-    # Compute record delta vs previous snapshot
-    S3_PREFIX=$(resolve_s3_prefix "$PROVIDER")
-    NEW_COUNT=$(aws s3 cp "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${JSONL_TS}/_MANIFEST" - 2>/dev/null \
-        | read_manifest_count /dev/stdin)
-    PREV_SNAP=$(aws s3 ls "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/" 2>/dev/null \
-        | awk '{print $NF}' | sed 's|/||g' | sort | grep -v "^$" | tail -2 | head -1)
-    PREV_COUNT=$(aws s3 cp "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${PREV_SNAP}/_MANIFEST" - 2>/dev/null \
-        | read_manifest_count /dev/stdin)
+    # Compute summary stats (S3_PREFIX, PREV_COUNT, and record count already resolved above)
+    NEW_COUNT="$JSONL_RECORD_COUNT"
     TOTAL_SIZE=$(aws s3 ls --summarize --recursive \
         "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${JSONL_TS}/" 2>/dev/null \
         | grep "Total Size" | awk '{print $NF}' || echo "0")

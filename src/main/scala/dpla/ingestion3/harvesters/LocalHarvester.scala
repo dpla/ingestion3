@@ -75,6 +75,50 @@ case class ParsedResult(id: String, item: String)
 
 object LocalHarvester {
 
+  /** Resolves an endpoint to a local directory. If the endpoint is an S3 URI,
+    * syncs or copies its contents to a fresh temp directory and returns that.
+    * Otherwise returns the endpoint path as-is.
+    *
+    * @param endpoint
+    *   Local path or s3:// URI
+    * @param harvestTime
+    *   Timestamp used to make the temp directory name unique
+    * @param prefix
+    *   Label used to name the temp directory (e.g. "nara-s3")
+    * @param awsProfile
+    *   Optional AWS named profile for cross-account access
+    * @param s3SubCmd
+    *   S3 subcommand: "sync" for a directory, "cp" for a single file
+    * @return
+    *   Local File directory ready for harvesting
+    */
+  def resolveToLocalDir(
+      endpoint: String,
+      harvestTime: Long,
+      prefix: String,
+      awsProfile: Option[String],
+      s3SubCmd: String = "sync"
+  ): File =
+    if (!endpoint.startsWith("s3://")) new File(endpoint)
+    else {
+      val tmpDir = new File(FileUtils.getTempDirectory, s"$prefix-$harvestTime")
+      if (!tmpDir.mkdirs() && !tmpDir.exists())
+        throw new RuntimeException(
+          s"Failed to create temp directory: ${tmpDir.getAbsolutePath}"
+        )
+      val profileArgs = awsProfile.toList.flatMap(p => List("--profile", p))
+      val dest = if (s3SubCmd == "cp") tmpDir.getAbsolutePath + "/" else tmpDir.getAbsolutePath
+      val cmd = List("aws", "s3", s3SubCmd, "--no-progress") ++ profileArgs ++ List(endpoint, dest)
+      val proc = new ProcessBuilder(cmd: _*).redirectErrorStream(true).start()
+      val output = IOUtils.toString(proc.getInputStream, "UTF-8")
+      val exitCode = proc.waitFor()
+      if (exitCode != 0)
+        throw new RuntimeException(
+          s"Failed to $s3SubCmd S3 source (exit $exitCode): $endpoint\n$output"
+        )
+      tmpDir
+    }
+
   /** Loads .tar.gz files
    *
    * @param file

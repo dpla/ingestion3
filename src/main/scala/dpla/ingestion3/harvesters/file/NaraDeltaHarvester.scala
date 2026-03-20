@@ -1,7 +1,7 @@
 package dpla.ingestion3.harvesters.file
 
 import dpla.ingestion3.confs.i3Conf
-import dpla.ingestion3.harvesters.file.FileFilters.{avroFilter, gzFilter}
+import dpla.ingestion3.harvesters.file.FileFilters.{avroFilter, gzFilter, zipFilter}
 import dpla.ingestion3.harvesters.{AvroHelper, FileResult, Harvester, LocalHarvester, ParsedResult}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import dpla.ingestion3.utils.{FlatFileIO, Utils}
@@ -13,7 +13,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.logging.log4j.{LogManager, Logger}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-import java.io.File
+import java.io.{File, FileFilter}
 import scala.util.{Failure, Success, Try, Using}
 import scala.xml._
 
@@ -122,27 +122,50 @@ class NaraDeltaHarvester(
 
   }
 
+  /** Combined file filter matching both .gz and .zip files */
+  private val gzOrZipFilter: FileFilter = f => gzFilter.accept(f) || zipFilter.accept(f)
+
+  /** If the path is an S3 URI, syncs the prefix to a local temp directory and
+    * returns that directory. Otherwise returns the path as a local File.
+    *
+    * @param path
+    *   Local path or s3:// URI
+    * @param harvestTime
+    *   Timestamp used to make the temp directory name unique
+    * @return
+    *   Local directory containing the downloaded files
+    */
+  private def resolveToLocalDir(path: String, harvestTime: Long): File = {
+    if (path.startsWith("s3://"))
+      logger.info(s"Syncing NARA source from S3: $path")
+    LocalHarvester.resolveToLocalDir(path, harvestTime, "nara-s3", conf.harvest.awsProfile)
+  }
+
   /** Executes the nara harvest
     */
   def harvest: DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
 
-    // Path to the incremental update file [*.tar.gz without deletes]
+    // Path to the incremental update files (local directory or S3 prefix)
     val deltaIn = conf.harvest.update.getOrElse("in")
-    val deltaHarvestInFile = new File(deltaIn)
+    val isTempDir = deltaIn.startsWith("s3://")
+    val deltaHarvestInFile = resolveToLocalDir(deltaIn, harvestTime)
 
-    if (deltaHarvestInFile.isDirectory)
-      for (file: File <- deltaHarvestInFile.listFiles(gzFilter).sorted) {
-        logger.info(s"Harvesting NARA delta changes from ${file.getName}")
-        harvestFile(file, unixEpoch)
-      }
-    else
-      harvestFile(deltaHarvestInFile, unixEpoch)
+    try {
+      if (deltaHarvestInFile.isDirectory)
+        for (file: File <- Option(deltaHarvestInFile.listFiles(gzOrZipFilter)).getOrElse(Array.empty).sorted) {
+          logger.info(s"Harvesting NARA delta changes from ${file.getName}")
+          harvestFile(file, unixEpoch)
+        }
+      else
+        harvestFile(deltaHarvestInFile, unixEpoch)
+    } finally {
+      if (isTempDir) FileUtils.deleteQuietly(deltaHarvestInFile)
+    }
 
     // Close the avro writer to ensure the file footer and sync markers are
     // written. Spark's avro reader requires a properly closed file.
-    avroWriterNara.flush()
     avroWriterNara.close()
 
     // Get the absolute path of the avro file written to naraTmp directory
@@ -174,37 +197,41 @@ class NaraDeltaHarvester(
     Utils.deleteRecursively(new File(naraTmp))
   }
 
+  private def processEntries(entries: LazyList[FileResult], unixEpoch: Long): Int =
+    entries.map(result =>
+      handleFile(result, unixEpoch) match {
+        case Failure(exception) =>
+          logger.error(s"Caught exception on ${result.entryName}.", exception)
+          0
+        case Success(count) => count
+      }
+    ).sum
+
   private def harvestFile(file: File, unixEpoch: Long): Unit = {
-    Using(
-      LocalHarvester
-        .getTarInputStream(file)
-        .getOrElse(
-          throw new IllegalArgumentException(
-            s"Couldn't load tar file: ${file.getAbsolutePath}"
+    val result =
+      if (file.getName.endsWith(".zip")) {
+        Using(
+          LocalHarvester.getZipInputStream(file).getOrElse(
+            throw new IllegalArgumentException(s"Couldn't load ZIP: ${file.getAbsolutePath}")
           )
-        )
-    ) { inputStream =>
-      val recordCount = LocalHarvester
-        .iter(inputStream)
-        .map(tarResult =>
-          handleFile(tarResult, unixEpoch) match {
-            case Failure(exception) =>
-              logger
-                .error(
-                  s"Caught exception on ${tarResult.entryName}.",
-                  exception
-                )
-              0
-            case Success(count) =>
-              count
-          }
-        )
-        .sum
-      logger.info(s"Harvested $recordCount records from ${file.getName}")
-    } match {
+        ) { inputStream =>
+          processEntries(LocalHarvester.iter(inputStream), unixEpoch)
+        }
+      } else {
+        Using(
+          LocalHarvester.getTarInputStream(file).getOrElse(
+            throw new IllegalArgumentException(s"Couldn't load tar file: ${file.getAbsolutePath}")
+          )
+        ) { inputStream =>
+          processEntries(LocalHarvester.iter(inputStream), unixEpoch)
+        }
+      }
+
+    result match {
       case Failure(exception) =>
         logger.error(s"Failed to process file: ${file.getName}", exception)
-      case Success(_) => // ok
+      case Success(count) =>
+        logger.info(s"Harvested $count records from ${file.getName}")
     }
   }
 }

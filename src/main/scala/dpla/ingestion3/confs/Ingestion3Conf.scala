@@ -59,7 +59,8 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None)
         update = getProp(providerConf, "harvest.delta.update"),
         previous = getProp(providerConf, "harvest.delta.previous"),
         deletes = getProp(providerConf, "harvest.delta.deletes"),
-        sleep = getProp(providerConf, "harvest.sleep")
+        sleep = getProp(providerConf, "harvest.sleep"),
+        awsProfile = getProp(providerConf, "harvest.aws.profile")
       ),
       i3Spark(
         // FIXME these should be removed
@@ -178,7 +179,8 @@ case class Harvest(
     update: Option[String] = None, // Path to delta update records
     previous: Option[String] = None, // Path to previously harvested records
     deletes: Option[String] = None, // Path to deletes
-    sleep: Option[String] = None
+    sleep: Option[String] = None,
+    awsProfile: Option[String] = None // Named AWS profile for cross-account S3 access
 )
 
 case class i3Conf(
