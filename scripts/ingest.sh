@@ -211,32 +211,36 @@ new  = $JSONL_RECORD_COUNT
 prev = $PREV_COUNT
 drop = (prev - new) / prev * 100
 print('FAIL' if drop > 5 else 'OK')
-print(f'New: {new:,} | Prev: {prev:,} | Change: {drop:+.1f}%')
+print(f'New: {new:,} | Prev: {prev:,} | Change: {-drop:+.1f}%')
 ")
     SAFETY_RESULT=$(echo "$_SAFETY_OUT" | head -1)
     DELTA_LINE=$(echo "$_SAFETY_OUT" | tail -1)
     if [ "$SAFETY_RESULT" = "FAIL" ]; then
         SAFETY_OK=false
         log_warn "Safety check FAILED — >5% record drop. $DELTA_LINE"
-        slack_notify ":warning: *$PROVIDER safety check FAILED* — >5% record drop\n$DELTA_LINE\nNew snapshot: \`$JSONL_TS\`\nPartner email suppressed."
+        slack_notify ":warning: *$PROVIDER safety check FAILED* — >5% record drop\n$DELTA_LINE\nNew snapshot: \`$JSONL_TS\`\nPartner email and S3 sync suppressed."
     fi
+fi
+
+# Abort before S3 sync if safety check failed — do not replace the previous
+# snapshot with a potentially bad dataset.
+if [ "$SAFETY_OK" = false ]; then
+    slack_notify ":x: *$PROVIDER ingest FAILED* — safety check blocked S3 sync\n$DELTA_LINE\nSnapshot \`$JSONL_TS\` was NOT synced to S3."
+    write_hub_status "$PROVIDER" failed
+    exit 0  # EXIT trap skips duplicate notification on clean exit
 fi
 
 # Send partner summary email only if safety check passed
 HUB_EMAIL=$(get_hub_email "$PROVIDER")
 EMAIL_NOTE=""
 if [ -n "$HUB_EMAIL" ]; then
-    if [ "$SAFETY_OK" = false ]; then
-        log_warn "Skipping partner email — safety check failed (>5% record drop)"
+    SBT_OPTS="-Xmx4g"
+    if run_entry dpla.ingestion3.utils.Emailer \
+           "$MAP_TS_DIR" "$PROVIDER" "$I3_CONF"; then
+        EMAIL_NOTE="\nPartner email sent to $HUB_EMAIL"
+        log_info "Partner email sent to $HUB_EMAIL"
     else
-        SBT_OPTS="-Xmx4g"
-        if run_entry dpla.ingestion3.utils.Emailer \
-               "$MAP_TS_DIR" "$PROVIDER" "$I3_CONF"; then
-            EMAIL_NOTE="\nPartner email sent to $HUB_EMAIL"
-            log_info "Partner email sent to $HUB_EMAIL"
-        else
-            log_warn "Partner email failed (non-fatal)"
-        fi
+        log_warn "Partner email failed (non-fatal)"
     fi
 fi
 
