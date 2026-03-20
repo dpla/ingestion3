@@ -13,7 +13,6 @@ import org.apache.commons.io.FileUtils
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-import scala.io.Source
 import scala.util.{Try, Using}
 import scala.xml.{Node, Utility, XML}
 
@@ -156,9 +155,12 @@ class SiFileHarvester(
 
     // SI XML uses no namespace prefixes on elements or attributes inside <doc>,
     // so IS_NAMESPACE_AWARE=false is safe and avoids the overhead of namespace processing.
+    // DTD and external entity resolution are disabled to prevent XXE attacks.
     val xmlInputFactory = XMLInputFactory.newInstance()
     xmlInputFactory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, false)
     xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, true)
+    xmlInputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, false)
+    xmlInputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false)
 
     try {
       Option(inFiles.listFiles(gzFilter)).getOrElse(Array.empty).foreach { inFile =>
@@ -173,11 +175,14 @@ class SiFileHarvester(
                 reader.getEventType == XMLStreamConstants.START_ELEMENT &&
                 reader.getLocalName == "doc"
               ) {
-                Try(XML.loadString(collectDocXml(reader))).foreach { node =>
-                  handleXML(node).foreach {
-                    case Some(item) => writeOut(unixEpoch, item); lineCount += 1
-                    case None       =>
-                  }
+                Try(XML.loadString(collectDocXml(reader))) match {
+                  case scala.util.Success(node) =>
+                    handleXML(node).foreach {
+                      case Some(item) => writeOut(unixEpoch, item); lineCount += 1
+                      case None       =>
+                    }
+                  case scala.util.Failure(e) =>
+                    logger.error(s"Failed to parse <doc> in ${inFile.getName}", e)
                 }
               }
             }
