@@ -100,32 +100,11 @@ class NYPLFileHarvester(
     * @return
     *   Local File directory containing the ZIP file(s) to harvest
     */
-  private def resolveEndpoint(endpoint: String, harvestTime: Long): File =
-    if (!endpoint.startsWith("s3://")) {
-      new File(endpoint)
-    } else {
-      val tmpDir = new File(FileUtils.getTempDirectory, s"nypl-s3-$harvestTime")
-      if (!tmpDir.mkdirs() && !tmpDir.exists())
-        throw new RuntimeException(
-          s"Failed to create temp directory: ${tmpDir.getAbsolutePath}"
-        )
-
-      logger.info(s"Downloading NYPL source from S3: $endpoint -> ${tmpDir.getAbsolutePath}")
-
-      val proc = new ProcessBuilder(
-        "aws", "s3", "cp", "--no-progress", endpoint, tmpDir.getAbsolutePath + "/"
-      ).redirectErrorStream(true).start()
-      val output = IOUtils.toString(proc.getInputStream, "UTF-8")
-      val exitCode = proc.waitFor()
-
-      if (exitCode != 0)
-        throw new RuntimeException(
-          s"Failed to download NYPL source from S3 (exit $exitCode): $endpoint\n$output"
-        )
-
-      logger.info(s"S3 download complete: $endpoint")
-      tmpDir
-    }
+  private def resolveEndpoint(endpoint: String, harvestTime: Long): File = {
+    if (endpoint.startsWith("s3://"))
+      logger.info(s"Downloading NYPL source from S3: $endpoint")
+    LocalHarvester.resolveToLocalDir(endpoint, harvestTime, "nypl-s3", conf.harvest.awsProfile, s3SubCmd = "cp")
+  }
 
   /** Executes the NYPL harvest
     */

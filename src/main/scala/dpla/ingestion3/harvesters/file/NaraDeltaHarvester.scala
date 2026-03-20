@@ -8,7 +8,7 @@ import dpla.ingestion3.utils.{FlatFileIO, Utils}
 import org.apache.avro.Schema
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.{GenericData, GenericRecord}
-import org.apache.commons.io.{FileUtils, IOUtils}
+import org.apache.commons.io.FileUtils
 import org.apache.hadoop.fs.Path
 import org.apache.logging.log4j.{LogManager, Logger}
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -135,32 +135,11 @@ class NaraDeltaHarvester(
     * @return
     *   Local directory containing the downloaded files
     */
-  private def resolveToLocalDir(path: String, harvestTime: Long): File =
-    if (!path.startsWith("s3://")) {
-      new File(path)
-    } else {
-      val tmpDir = new File(FileUtils.getTempDirectory, s"nara-s3-$harvestTime")
-      if (!tmpDir.mkdirs() && !tmpDir.exists())
-        throw new RuntimeException(
-          s"Failed to create temp directory: ${tmpDir.getAbsolutePath}"
-        )
-
-      logger.info(s"Syncing NARA source from S3: $path -> ${tmpDir.getAbsolutePath}")
-
-      val profileArgs = conf.harvest.awsProfile.toList.flatMap(p => List("--profile", p))
-      val cmd = List("aws", "s3", "sync", "--no-progress") ++ profileArgs ++ List(path, tmpDir.getAbsolutePath)
-      val proc = new ProcessBuilder(cmd: _*).redirectErrorStream(true).start()
-      val output = IOUtils.toString(proc.getInputStream, "UTF-8")
-      val exitCode = proc.waitFor()
-
-      if (exitCode != 0)
-        throw new RuntimeException(
-          s"Failed to sync NARA source from S3 (exit $exitCode): $path\n$output"
-        )
-
-      logger.info(s"S3 sync complete: $path")
-      tmpDir
-    }
+  private def resolveToLocalDir(path: String, harvestTime: Long): File = {
+    if (path.startsWith("s3://"))
+      logger.info(s"Syncing NARA source from S3: $path")
+    LocalHarvester.resolveToLocalDir(path, harvestTime, "nara-s3", conf.harvest.awsProfile)
+  }
 
   /** Executes the nara harvest
     */

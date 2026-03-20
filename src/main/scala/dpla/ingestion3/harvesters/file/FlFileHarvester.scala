@@ -103,16 +103,19 @@ class FlFileHarvester(
         .getOrElse(
           throw new IllegalArgumentException(s"Couldn't open ZIP: $inFile")
         )
-      LocalHarvester
-        .iter(inputStream)
-        .foreach(result => {
-          handleFile(result, unixEpoch) match {
-            case Failure(exception) =>
-              logger.error(s"Caught exception on $inFile.", exception)
-            case _ => // do nothing
-          }
-        })
-      IOUtils.closeQuietly(inputStream)
+      try {
+        LocalHarvester
+          .iter(inputStream)
+          .foreach(result => {
+            handleFile(result, unixEpoch) match {
+              case Failure(exception) =>
+                logger.error(s"Caught exception on $inFile.", exception)
+              case _ => // do nothing
+            }
+          })
+      } finally {
+        IOUtils.closeQuietly(inputStream)
+      }
     })
 
     Option(inFiles.listFiles(jsonlFilter)).getOrElse(Array.empty).foreach(inFile => {
