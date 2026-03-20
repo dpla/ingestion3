@@ -164,6 +164,7 @@ Some hubs deliver data via S3 buckets rather than live endpoints. Before running
 | `smithsonian` | `s3://dpla-hub-si/` | `.xml.gz` per Smithsonian unit | `aws s3 ls s3://dpla-hub-si/ \| tail -5` — pick the newest dated folder (e.g. `2026-03-03/`) |
 | `florida` | `s3://dpla-hub-fl/` | `.zip` or `.jsonl` | `aws s3 ls s3://dpla-hub-fl/ \| tail -5` — pick the newest dated folder |
 | `nypl` | `s3://dpla-hub-nypl/` | `.zip` (one file per drop, named `nypl-YYYYMMDD.zip`) | `aws s3 ls s3://dpla-hub-nypl/ \| tail -5` — pick the newest file |
+| `nara` | `s3://ngc-storage01/dpla-bimonthly-report/` | Multiple `.zip` files per drop, in `YYYY/MMM/` subfolders | `aws s3 ls --profile nara s3://ngc-storage01/dpla-bimonthly-report/` — pick the newest year/month folder. **Requires `[nara]` AWS profile** — keys in 1Password: "ingest@dp.la NARA keys" |
 
 Update `i3.conf` on EC2 before harvesting:
 ```bash
