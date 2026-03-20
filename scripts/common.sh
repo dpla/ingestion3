@@ -284,7 +284,9 @@ init_paths() {
 # Usage: slack_notify "message text"
 #
 slack_notify() {
-    local msg="$1"
+    # Interpret \n escape sequences so callers can use "\n" for line breaks.
+    local msg
+    msg=$(printf '%b' "$1")
     local token="${SLACK_BOT_TOKEN:-${SLACK_TOKEN:-}}"
     local channel="${SLACK_CHANNEL:-C02HEU2L3}"
     [[ -z "$token" ]] && return 0
