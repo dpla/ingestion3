@@ -80,6 +80,10 @@ fi
 # Setup paths
 PROVIDER_DATA="$DPLA_DATA/$PROVIDER"
 HARVEST_DIR="$PROVIDER_DATA/harvest"
+INGEST_LOG="$DPLA_DATA/${PROVIDER}-ingest.log"
+# Truncate at run start so heartbeat reads don't pick up stale harvest progress
+# from previous ingest runs of the same provider.
+> "$INGEST_LOG"
 
 # Track provider for status file (ingest-status.sh); trap writes failed + notifies on error
 INGEST_PROVIDER="$PROVIDER"
@@ -154,6 +158,7 @@ fi
 write_hub_status "$PROVIDER" remapping
 print_step "Step 2/5: Mapping $PROVIDER..."
 
+start_heartbeat "$PROVIDER" "mapping" "$INGEST_LOG" 3600
 SBT_OPTS="-Xmx15g -Dspark.sql.parquet.enableVectorizedReader=false"
 run_entry dpla.ingestion3.entries.ingest.MappingEntry \
     --output="$DPLA_DATA" \
@@ -161,6 +166,7 @@ run_entry dpla.ingestion3.entries.ingest.MappingEntry \
     --name="$PROVIDER" \
     --input="$HARVEST_TS_DIR" \
     --sparkMaster="$SPARK_MASTER"
+stop_heartbeat
 
 MAP_TS_DIR=$(find_latest_data "$PROVIDER" mapping)
 log_info "Mapping complete: $(basename "$MAP_TS_DIR")"
@@ -169,6 +175,7 @@ slack_notify ":white_check_mark: *$PROVIDER mapping complete* — starting enric
 # Step 3: Enrichment
 print_step "Step 3/5: Enriching $PROVIDER..."
 
+start_heartbeat "$PROVIDER" "enrichment" "$INGEST_LOG" 3600
 SBT_OPTS="-Xmx18g"
 run_entry dpla.ingestion3.entries.ingest.EnrichEntry \
     --output="$DPLA_DATA" \
@@ -176,6 +183,7 @@ run_entry dpla.ingestion3.entries.ingest.EnrichEntry \
     --name="$PROVIDER" \
     --input="$MAP_TS_DIR" \
     --sparkMaster="$SPARK_MASTER"
+stop_heartbeat
 
 ENRICH_TS_DIR=$(find_latest_data "$PROVIDER" enrichment)
 log_info "Enrichment complete: $(basename "$ENRICH_TS_DIR")"
@@ -184,6 +192,7 @@ slack_notify ":white_check_mark: *$PROVIDER enrichment complete* — starting JS
 # Step 4: JSONL export
 print_step "Step 4/5: JSONL export for $PROVIDER..."
 
+start_heartbeat "$PROVIDER" "jsonl export" "$INGEST_LOG" 3600
 SBT_OPTS="-Xmx12g"
 run_entry dpla.ingestion3.entries.ingest.JsonlEntry \
     --output="$DPLA_DATA" \
@@ -191,6 +200,7 @@ run_entry dpla.ingestion3.entries.ingest.JsonlEntry \
     --name="$PROVIDER" \
     --input="$ENRICH_TS_DIR" \
     --sparkMaster="local[1]"
+stop_heartbeat
 
 JSONL_TS_DIR=$(find_latest_data "$PROVIDER" jsonl)
 JSONL_TS=$(basename "$JSONL_TS_DIR")
