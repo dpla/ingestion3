@@ -129,6 +129,15 @@ trait IngestMessageTemplates {
       value = value
     )
 
+  def droppedTypeMsg(id: String, value: String): IngestMessage =
+    IngestMessage(
+      message = "Type value not recognized, dropped",
+      level = IngestLogLevel.warn,
+      id = id,
+      field = "type",
+      value = value
+    )
+
   def missingRecommendedFieldMsg(id: String, field: String): IngestMessage =
     IngestMessage(
       message = s"Missing recommended field",

@@ -1,5 +1,6 @@
 package dpla.ingestion3.reports
 
+import dpla.ingestion3.enrichments.TypeEnrichment
 import dpla.ingestion3.messages.{
   IngestMessage,
   IngestMessageTemplates,
@@ -17,6 +18,8 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Dataset, Row}
 
 object PrepareEnrichmentReport extends IngestMessageTemplates {
+
+  private val typeEnrichment = new TypeEnrichment
 
   def generateFieldReport(ds: Dataset[Row], field: String): String = {
     val queryResult = ds
@@ -209,32 +212,20 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
      """.stripMargin.split("\n").filter(_.nonEmpty).mkString("\n")
   }
 
-  private def prepareType(original: OreAggregation, enriched: OreAggregation)
-                         (implicit msgs: MessageCollector[IngestMessage]): Unit = {
-    val enrichTypeValues = enriched.sourceResource.`type`
-    val originalTypeValues = original.sourceResource.`type`
-
-    val typeTuples = enrichTypeValues zip originalTypeValues
-
-    typeTuples.map({
-      case (e: String, o: String) =>
-        if (e != o)
-          msgs.add(
-            enrichedValue(
-              (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString,
-              "type",
-              o,
-              e
-            )
-          )
-        else
-          msgs.add(
-            originalValue(
-              (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString,
-              "type",
-              o
-            )
-          )
-    })
+  private def prepareType(original: OreAggregation, enriched: OreAggregation)(implicit
+      msgs: MessageCollector[IngestMessage]
+  ): Unit = {
+    val id = (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString
+    original.sourceResource.`type`.foreach { origValue =>
+      typeEnrichment.enrich(origValue) match {
+        case Some(enrichedVal) =>
+          if (enrichedVal != origValue)
+            msgs.add(enrichedValue(id, "type", origValue, enrichedVal))
+          else
+            msgs.add(originalValue(id, "type", origValue))
+        case None =>
+          msgs.add(droppedTypeMsg(id, origValue))
+      }
+    }
   }
 }

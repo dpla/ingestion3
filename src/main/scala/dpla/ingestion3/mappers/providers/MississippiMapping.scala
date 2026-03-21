@@ -122,6 +122,22 @@ class MississippiMapping
 
   override def `type`(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "type")
+      .map {
+        case "text_resource"         => "text"
+        case "image"                 => "image"
+        case "video"                 => "video"
+        case "audio"                 => "audio"
+        case "map"                   => "map"
+        case "score"                 => "notated music"
+        case "book"                  => "book"
+        case "journal"               => "journal"
+        case "newspaper"             => "periodical"
+        case "database"              => "dataset"
+        case "dissertation"          => "text"
+        case "conference_proceeding" => "text"
+        case "reference_entry"       => "text"
+        case other                   => other
+      }
 
   private def rightsValues(data: Document[JValue]): Seq[String] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "rights")
