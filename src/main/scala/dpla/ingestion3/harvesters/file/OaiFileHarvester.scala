@@ -111,14 +111,9 @@ class OaiFileHarvester(
     val isTempDir = endpoint.startsWith("s3://")
     val inFiles = LocalHarvester.resolveToLocalDir(endpoint, harvestTime, "oai-file-s3", conf.harvest.awsProfile)
 
-    System.err.println(s"[OAI DEBUG] endpoint=$endpoint isTempDir=$isTempDir inFiles=${inFiles.getAbsolutePath} exists=${inFiles.exists} isDir=${inFiles.isDirectory}")
-    val gzFiles = Option(inFiles.listFiles(FileFilters.gzFilter)).getOrElse(Array.empty)
-    val zipFiles = Option(inFiles.listFiles(FileFilters.zipFilter)).getOrElse(Array.empty)
-    System.err.println(s"[OAI DEBUG] found ${gzFiles.length} gz files, ${zipFiles.length} zip files")
-
     try {
       // Handle zip archives (each zip may contain multiple XML entries)
-      zipFiles.foreach(inFile => {
+      Option(inFiles.listFiles(FileFilters.zipFilter)).getOrElse(Array.empty).foreach(inFile => {
         val inputStream = LocalHarvester
           .getZipInputStream(inFile)
           .getOrElse(
@@ -137,7 +132,7 @@ class OaiFileHarvester(
       })
 
       // Handle gzipped XML files (each .gz contains a single OAI-PMH XML document)
-      gzFiles.foreach(inFile => {
+      Option(inFiles.listFiles(FileFilters.gzFilter)).getOrElse(Array.empty).foreach(inFile => {
         val gzStream = new GZIPInputStream(new FileInputStream(inFile))
         val result = FileResult(inFile.getName, Some(IOUtils.toByteArray(gzStream)))
         IOUtils.closeQuietly(gzStream)
