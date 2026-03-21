@@ -40,14 +40,7 @@ class MississippiMapping
     mintDplaItemUri(data)
 
   override def edmRights(data: Document[JValue]): ZeroToMany[URI] =
-    rightsValues(data)
-      .filter(v =>
-        v.startsWith("http://rightsstatements.org") ||
-          v.startsWith("https://rightsstatements.org") ||
-          v.startsWith("http://creativecommons.org") ||
-          v.startsWith("https://creativecommons.org")
-      )
-      .map(URI)
+    rightsValues(data).filter(isRightsUri).map(URI)
 
   override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \ "delivery" \ "availabilityLinksUrl")
@@ -105,8 +98,8 @@ class MississippiMapping
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
-  override def rights(data: Document[JValue]): AtLeastOne[String] =
-    rightsValues(data)
+  override def rights(data: Document[JValue]): ZeroToMany[String] =
+    rightsValues(data).filterNot(isRightsUri)
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "subject")
@@ -147,6 +140,12 @@ class MississippiMapping
     } else
       stringOnlyTimeSpan(raw)
   }
+
+  private def isRightsUri(v: String): Boolean =
+    v.startsWith("http://rightsstatements.org") ||
+      v.startsWith("https://rightsstatements.org") ||
+      v.startsWith("http://creativecommons.org") ||
+      v.startsWith("https://creativecommons.org")
 
   private def rightsValues(data: Document[JValue]): Seq[String] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "rights")

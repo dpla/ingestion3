@@ -441,11 +441,12 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
       enforce: Boolean
   )(implicit collector: MessageCollector[IngestMessage]): Unit = {
     (rights.isEmpty, edmRights.isEmpty) match {
-      // If both dc:rights and edmRights are not provided in the original record and the validation should be enforced
-      // then this will log an error message, otherwise it will be logged as a warning
-      case (true, true)   => collector.add(missingRights(providerId, enforce))
-      case (false, false) => collector.add(duplicateRights(providerId))
-      case (_, _)         => // do nothing
+      // Neither rights nor edmRights — reject the record (error) or warn if not enforced
+      case (true, true)  => collector.add(missingRights(providerId, enforce))
+      // Rights text present but no edmRights URI — acceptable but warn
+      case (false, true) => collector.add(missingEdmRights(providerId))
+      // Only edmRights, or both present — both are acceptable, no message
+      case _             => // do nothing
     }
   }
 
