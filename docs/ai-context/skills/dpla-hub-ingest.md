@@ -122,11 +122,11 @@ aws ssm get-command-invocation \
 
 **Important**: Sleep 8–15 seconds before polling, and between retries. SSM results are not always immediately available.
 
-**When the command contains shell metacharacters** (`$!`, nested quotes, backticks), build the `--parameters` JSON with python3 to avoid "Error parsing parameter":
+**Always build `--parameters` JSON with python3** — never use inline `'{"commands":[...]}'`. Inline quoting silently breaks when the command contains single quotes (e.g. `grep '^hub\.'`), `$!`, backticks, or nested double quotes, producing misleading "Error parsing parameter" or empty grep results. python3 handles all escaping correctly:
 ```bash
 PARAMS=$(python3 -c "
 import json
-cmd = 'sudo -u ec2-user bash -lc \"<COMMAND WITH SPECIAL CHARS>\"'
+cmd = 'sudo -u ec2-user bash -lc \"<COMMAND>\"'
 print(json.dumps({'commands': [cmd]}))
 ")
 CMDID=$(aws ssm send-command \
@@ -135,6 +135,25 @@ CMDID=$(aws ssm send-command \
   --timeout-seconds 7200 \
   --parameters "$PARAMS" \
   --query 'Command.CommandId' --output text)
+```
+
+**Polling loop** — use POSIX `[ ]` not `[[ ]]`; `[[ != ]]` triggers a zsh parse error on the local Mac:
+```bash
+sleep 15
+while true; do
+  STATUS=$(aws ssm get-command-invocation \
+    --command-id "$CMDID" --instance-id i-0a0def8581efef783 \
+    --query 'Status' --output text 2>/dev/null)
+  echo "$(date '+%H:%M:%S') — $STATUS"
+  if [ "$STATUS" != "InProgress" ] && [ "$STATUS" != "Pending" ]; then
+    aws ssm get-command-invocation \
+      --command-id "$CMDID" --instance-id i-0a0def8581efef783 \
+      --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}' \
+      --output json
+    break
+  fi
+  sleep 30
+done
 ```
 
 ## Hub Configuration Reference
@@ -323,6 +342,54 @@ Note the `harvest.type` and `harvest.endpoint`. For `file` harvests, check that 
 
 If hub is `community-webs`, run the Community Webs Pre-processing steps (see above) after Step 3 and before Step 4.
 
+#### New Hub or First S3 File Harvest — Pre-flight Checklist
+
+Run this checklist before Step 2 whenever:
+- The hub has never been ingested before, OR
+- The hub's `harvest.endpoint` has changed (new S3 bucket, new path), OR
+- The hub's `harvest.type` is `file` with an S3 endpoint
+
+**1. Verify S3 bucket access from your local machine:**
+```bash
+aws s3 ls s3://<bucket>/<path>/ | head -10
+```
+Confirm you can see the expected files. If access is denied, the EC2 role may also lack permissions — check the S3 bucket policy.
+
+**2. Inspect the actual file formats in the bucket:**
+```bash
+aws s3 ls s3://<bucket>/<path>/ | awk '{print $NF}' | sed 's/.*\.//' | sort | uniq -c | sort -rn
+```
+This shows the file extensions present (e.g. `xml.gz`, `zip`, `jsonl`). Confirm the harvester supports them:
+
+| File Extension | Harvester | Supported? |
+|---|---|---|
+| `.zip` (OAI-PMH XML inside) | `OaiFileHarvester` | ✅ |
+| `.xml.gz` (OAI-PMH XML, gzipped) | `OaiFileHarvester` | ✅ |
+| `.zip` (JSONL inside) | `JsonFileHarvester` | ✅ |
+| `.jsonl` | `JsonFileHarvester` | ✅ |
+
+If unsure which harvester the hub uses, grep the Scala source: `grep -r "<hub>" src/main/scala/dpla/ingestion3/executors/` or check the mapper for the hub.
+
+**3. Confirm the i3.conf endpoint path:**
+```bash
+grep "<hub>\.harvest" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+```
+The endpoint must point to the **folder containing the files** (e.g. `s3://dpla-hub-ohio/2026-03-20/`), not a parent bucket root. If it needs updating, use python3 to avoid quoting issues:
+```bash
+python3 -c "
+content = open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf').read()
+content = content.replace('<hub>.harvest.endpoint = \"<old>\"', '<hub>.harvest.endpoint = \"<new>\"')
+open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf', 'w').write(content)
+print('Updated:', content[content.find('<hub>.harvest.endpoint'):content.find('<hub>.harvest.endpoint')+60])
+"
+```
+
+**4. Count the files:**
+```bash
+aws s3 ls s3://<bucket>/<path>/ | wc -l
+```
+Sanity-check this matches what the hub contact said. For Ohio-style `.xml.gz` feeds, each file typically contains thousands of records — 434 files × ~1,800 records = ~780K total.
+
 ### Step 1: Pre-flight — Verify Endpoint Reachability
 
 For `localoai` hubs, test the OAI endpoint **locally first**:
@@ -368,27 +435,51 @@ Expected: `Online`. If not yet online, retry after 15 seconds (SSM agent takes ~
 
 #### Step 3a: Pull latest ingestion3
 
-Always do this at the start of every ingest session. The EC2 has no auto-update mechanism and can drift behind main, which can cause failures (e.g. `Emailer.main` not found). The repo is public so HTTPS pull requires no credentials:
+Always do this at the start of every ingest session. The EC2 has no auto-update mechanism and can drift behind main, which can cause failures (e.g. `Emailer.main` not found). Use `git fetch + reset --hard` — **not** `git pull`. The EC2 repo can accumulate local commits (debug changes, temp fixes) that cause `git pull` to fail with "divergent branches":
 
 ```bash
-sudo -u ec2-user bash -lc "cd /home/ec2-user/ingestion3 && git pull https://github.com/dpla/ingestion3.git main && git log --oneline -1"
+PARAMS=$(python3 -c "
+import json
+cmd = 'sudo -u ec2-user bash -lc \"cd /home/ec2-user/ingestion3 && git fetch https://github.com/dpla/ingestion3.git main && git reset --hard FETCH_HEAD && git log --oneline -1\"'
+print(json.dumps({'commands': [cmd]}))
+")
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 60 \
+  --parameters "$PARAMS" \
+  --query 'Command.CommandId' --output text)
 ```
 
-Expected output ends with `Already up to date.` or a list of changed files plus the latest commit. If this fails (network issue, merge conflict), investigate before proceeding — do not run an ingest on stale code.
+Expected output: the latest commit hash and message. If this fails (network issue), investigate before proceeding — do not run an ingest on stale code.
 
 #### Step 3b: Check environment
 
-Run these checks via SSM to confirm everything is ready:
+Run two SSM commands (splitting avoids single-quote escaping issues with grep patterns in python3 JSON):
 
 ```bash
-# All in one SSM command — check Java, SBT, config, S3, disk
-sudo -u ec2-user bash -lc "
-  echo '=== Java ===' && java -version 2>&1
-  echo '=== SBT ===' && sbt --version 2>&1 | tail -2
-  echo '=== Hub config ===' && grep '^<hub>\.' /home/ec2-user/ingestion3-conf/i3.conf
-  echo '=== Disk ===' && df -h / | tail -1
-  echo '=== Prior S3 ingests ===' && aws s3 ls s3://dpla-master-dataset/<hub>/jsonl/ | tail -3
-"
+# Command 1: Java, SBT, disk
+PARAMS=$(python3 -c "
+import json
+cmd = 'sudo -u ec2-user bash -lc \"echo === Java === && java -version 2>&1 && echo === SBT === && sbt --version 2>&1 | tail -2 && echo === Disk === && df -h / | tail -1\"'
+print(json.dumps({'commands': [cmd]}))
+")
+CMDID=$(aws ssm send-command --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" --timeout-seconds 60 \
+  --parameters "$PARAMS" --query 'Command.CommandId' --output text)
+# Poll (use loop from SSM Command Pattern above)
+
+# Command 2: hub config + prior S3 snapshots
+PARAMS=$(python3 -c "
+import json
+hub = '<hub>'
+cmd = f'sudo -u ec2-user bash -lc \"grep {hub}\\\\. /home/ec2-user/ingestion3-conf/i3.conf && aws s3 ls s3://dpla-master-dataset/{hub}/jsonl/ | tail -3\"'
+print(json.dumps({'commands': [cmd]}))
+")
+CMDID=$(aws ssm send-command --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" --timeout-seconds 30 \
+  --parameters "$PARAMS" --query 'Command.CommandId' --output text)
+# Poll
 ```
 
 For `localoai` hubs, also test the endpoint from EC2:
@@ -403,21 +494,95 @@ curl -s --max-time 60 "<endpoint>?<query>&rows=1" | head -2
 
 **If endpoint is unreachable from EC2 but reachable locally** → CONTENTdm block or firewall issue. Stop the instance and run the harvest locally instead.
 
-### Failure Notification Pattern (Steps 4–8)
+### Step 4: Launch ingest.sh
 
-If any pipeline step returns `_FAILED`, post to Slack **before stopping**. Do NOT stop the EC2 — logs are still needed for diagnosis.
+**Always use `ingest.sh` — never run individual SBT steps manually.** The script handles the full pipeline (harvest → mapping → enrichment → JSONL → S3 sync) with Slack notifications at every step, hub status tracking, 0-record abort, and safety checks. Running steps manually bypasses all of this.
+
+Launch it as a background process so SSM doesn't time out on long ingests:
+
+```bash
+PARAMS=$(python3 -c "
+import json
+hub = '<hub>'
+cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub} > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &\"'
+print(json.dumps({'commands': [cmd]}))
+")
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 30 \
+  --parameters "$PARAMS" \
+  --query 'Command.CommandId' --output text)
+```
+
+After SSM returns Success (just confirming the launch), verify the process is running:
+
+```bash
+PARAMS=$(python3 -c "
+import json
+cmd = 'sudo -u ec2-user bash -lc \"ps aux | grep ingest.sh | grep -v grep\"'
+print(json.dumps({'commands': [cmd]}))
+")
+CMDID=$(aws ssm send-command --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" --timeout-seconds 15 \
+  --parameters "$PARAMS" --query 'Command.CommandId' --output text)
+```
+
+**Monitor via Slack** — `ingest.sh` posts to #tech-alerts at each milestone (started → harvest complete → mapping complete → enrichment complete → JSONL complete → complete or failed). You can also tail the log:
+
+```bash
+PARAMS=$(python3 -c "
+import json
+hub = '<hub>'
+cmd = f'sudo -u ec2-user bash -lc \"tail -30 /home/ec2-user/data/{hub}-ingest.log\"'
+print(json.dumps({'commands': [cmd]}))
+")
+CMDID=$(aws ssm send-command --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" --timeout-seconds 15 \
+  --parameters "$PARAMS" --query 'Command.CommandId' --output text)
+```
+
+**To resume from a failed step** (e.g. if mapping failed and harvest data is intact):
+```bash
+PARAMS=$(python3 -c "
+import json
+hub = '<hub>'
+cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub} --resume-from mapping > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &\"'
+print(json.dumps({'commands': [cmd]}))
+")
+```
+
+Valid `--resume-from` values: `mapping`, `enrichment`, `jsonl`, `s3-sync`.
+
+### Step 5: Stop EC2 and Verify
+
+Wait for the Slack `:white_check_mark: *<hub> ingest complete*` notification. Then stop the instance:
+
+```bash
+aws ec2 stop-instances --instance-ids i-0a0def8581efef783
+```
+
+`ingest.sh` handles result verification, safety checks, partner email, and the final Slack notification internally — no additional steps needed.
+
+---
+
+### Manual Pipeline Steps (Fallback / Debugging Only)
+
+Use these only if `ingest.sh` is unavailable or you need to re-run a single step in isolation.
+
+#### Failure Notification Pattern
+
+If any step fails, post to Slack **before stopping**. Do NOT stop the EC2 — logs are still needed.
 
 ```bash
 source ~/.claude/secrets/dpla.env
 curl -s -X POST "https://slack.com/api/chat.postMessage" \
   -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"channel":"C02HEU2L3","text":":x: *<hub> <step> FAILED* | check `/home/ec2-user/data/<hub>-<step>.log`"}'
+  -d "{\"channel\":\"C02HEU2L3\",\"text\":\":x: *<hub> <step> FAILED* | check \`/home/ec2-user/data/<hub>-<step>.log\`\"}"
 ```
 
-Replace `<step>` with `harvest`, `mapping`, `enrichment`, `jsonl`, or `s3-sync` as appropriate.
-
-### Step 4: Run Harvest
+#### Run Harvest (Manual)
 
 ```bash
 sudo -u ec2-user bash -lc "
@@ -442,7 +607,7 @@ sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/harvest/ | head -1"
 
 This returns the most recent directory name (format: `YYYYMMDD_HHMMSS-<hub>-OriginalRecord.avro`). Save this as `HARVEST_TIMESTAMP`.
 
-### Step 5: Run Mapping
+#### Run Mapping (Manual)
 
 Use `MappingEntry` — mapping only, no partner email. The partner summary email is sent separately in Step 9.5, **after** the safety check passes. Do NOT use `IngestRemap` here — it fires the partner email immediately during mapping, before S3 sync and the safety check.
 
@@ -470,7 +635,7 @@ sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/mapping/ | head -1"
 
 Save this as `MAPPING_TIMESTAMP`.
 
-### Step 6: Run Enrichment
+#### Run Enrichment (Manual)
 
 Use the mapping timestamp from Step 5:
 
@@ -496,7 +661,7 @@ sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/enrichment/ | head -1
 
 Save this as `ENRICH_TIMESTAMP`.
 
-### Step 7: Run JSONL Export
+#### Run JSONL Export (Manual)
 
 Use the enrichment timestamp from Step 6:
 
@@ -526,7 +691,7 @@ sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/jsonl/ | head -1"
 
 Save this as `JSONL_TIMESTAMP`.
 
-### Step 8: Sync to S3
+#### Sync to S3 (Manual)
 
 Use the JSONL timestamp from Step 7:
 
@@ -543,7 +708,7 @@ Use `--timeout-seconds 3600` on the SSM send-command (S3 sync is usually fast bu
 
 This adds a new timestamped snapshot. It does **not** overwrite or delete any prior snapshots. If `SYNC_FAILED`: post failure notification (see above) and stop.
 
-### Step 9: Verify Results
+#### Verify Results (Manual)
 
 Check that the new snapshot appears in S3 and run an automated safety check:
 
@@ -585,7 +750,7 @@ curl -s -X POST "https://slack.com/api/chat.postMessage" \
   -d "{\"channel\":\"C02HEU2L3\",\"text\":\":warning: *<hub> safety check FAILED* — >5% record drop\nNew: ${NEW_COUNT} | Prev: ${PREV_COUNT}\nNew snapshot: \`${NEW_SNAP}\`\nPartner email suppressed. Investigating.\"}"
 ```
 
-### Step 9.5: Send Partner Summary Email
+#### Send Partner Summary Email (Manual)
 
 Only run this if the safety check in Step 9 passed (printed `OK`). This sends the mapping summary and logs to the hub contact via AWS SES, from `DPLA Bot <tech@dp.la>`.
 
@@ -600,7 +765,7 @@ sudo -u ec2-user bash -lc "
 "
 ```
 
-### Step 10: Stop the EC2 Instance
+#### Stop EC2 (Manual)
 
 Only after verification is complete and results look good:
 
@@ -608,7 +773,7 @@ Only after verification is complete and results look good:
 aws ec2 stop-instances --instance-ids i-0a0def8581efef783
 ```
 
-### Step 11: Notify via Slack
+#### Notify via Slack (Manual)
 
 Post a completion summary to Slack #tech-alerts:
 

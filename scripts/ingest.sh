@@ -165,7 +165,15 @@ if [ "$SKIP_HARVEST" = false ]; then
     stop_heartbeat
     HARVEST_TS_DIR=$(find_latest_data "$PROVIDER" harvest)
     log_info "Harvest complete: $(basename "$HARVEST_TS_DIR")"
-    slack_notify ":white_check_mark: *$PROVIDER harvest complete* — starting mapping"
+
+    HARVEST_RECORD_COUNT=$(read_manifest_count "$HARVEST_TS_DIR/_MANIFEST")
+    if [[ "$HARVEST_RECORD_COUNT" -eq 0 ]]; then
+        slack_notify ":x: *$PROVIDER ingest FAILED* — harvest produced 0 records. Check harvester config and source data."
+        write_hub_status "$PROVIDER" failed --error="Harvest produced 0 records"
+        exit 0
+    fi
+
+    slack_notify ":white_check_mark: *$PROVIDER harvest complete* (${HARVEST_RECORD_COUNT} records) — starting mapping"
 else
     print_step "Skipping harvest (using existing data)..."
     HARVEST_TS_DIR=$(find_latest_data "$PROVIDER" harvest) \

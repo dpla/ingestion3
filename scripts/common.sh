@@ -562,16 +562,16 @@ find_latest_data() {
         return 1
     fi
 
-    # Find the most recent timestamped directory (sorted lexicographically, latest first)
-    local latest
-    latest=$(ls -1d "$data_dir"/*/ 2>/dev/null | sort -r | head -1)
-    # Remove trailing slash
-    latest="${latest%/}"
+    # Walk candidates newest-first, returning the first one with a _MANIFEST.
+    # This skips dirs left by failed runs (which produce no manifest).
+    while IFS= read -r candidate; do
+        candidate="${candidate%/}"
+        if [[ -f "$candidate/_MANIFEST" ]]; then
+            echo "$candidate"
+            return 0
+        fi
+    done < <(ls -1d "$data_dir"/*/ 2>/dev/null | sort -r)
 
-    if [[ -n "$latest" && -d "$latest" ]]; then
-        echo "$latest"
-        return 0
-    fi
     return 1
 }
 
