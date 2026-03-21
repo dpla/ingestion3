@@ -102,4 +102,9 @@ class MississippiMappingTest extends AnyFlatSpec with BeforeAndAfter {
     assert(extractor.publisher(json) === expected)
   }
 
+  it should "extract the correct dataProvider" in {
+    val expected = Seq("Mississippi State University Libraries.").map(nameOnlyAgent)
+    assert(extractor.dataProvider(json) === expected)
+  }
+
 }

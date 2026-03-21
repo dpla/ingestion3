@@ -31,9 +31,9 @@ class MississippiMapping
     extractString(unwrap(data) \ "@id")
 
   // OreAggregation
-  // TODO we need a code -> label lookup for these values to be provided by the hub
-  //  override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
-  //    extractStrings(unwrap(data) \ "dataProvider").map(nameOnlyAgent)
+  override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "ispartof")
+      .map(nameOnlyAgent)
 
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] =
     mintDplaItemUri(data)
