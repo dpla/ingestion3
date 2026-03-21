@@ -410,6 +410,54 @@ Note the `harvest.type` and `harvest.endpoint`. For `file` harvests, check that 
 
 If hub is `community-webs`, run the Community Webs Pre-processing steps (see above) after Step 3 and before Step 4.
 
+#### New Hub or First S3 File Harvest — Pre-flight Checklist
+
+Run this checklist before Step 2 whenever:
+- The hub has never been ingested before, OR
+- The hub's `harvest.endpoint` has changed (new S3 bucket, new path), OR
+- The hub's `harvest.type` is `file` with an S3 endpoint
+
+**1. Verify S3 bucket access from your local machine:**
+```bash
+aws s3 ls s3://<bucket>/<path>/ | head -10
+```
+Confirm you can see the expected files. If access is denied, the EC2 role may also lack permissions — check the S3 bucket policy.
+
+**2. Inspect the actual file formats in the bucket:**
+```bash
+aws s3 ls s3://<bucket>/<path>/ | awk '{print $NF}' | sed 's/.*\.//' | sort | uniq -c | sort -rn
+```
+This shows the file extensions present (e.g. `xml.gz`, `zip`, `jsonl`). Confirm the harvester supports them:
+
+| File Extension | Harvester | Supported? |
+|---|---|---|
+| `.zip` (OAI-PMH XML inside) | `OaiFileHarvester` | ✅ |
+| `.xml.gz` (OAI-PMH XML, gzipped) | `OaiFileHarvester` | ✅ |
+| `.zip` (JSONL inside) | `JsonFileHarvester` | ✅ |
+| `.jsonl` | `JsonFileHarvester` | ✅ |
+
+If unsure which harvester the hub uses, grep the Scala source: `grep -r "<hub>" src/main/scala/dpla/ingestion3/executors/` or check the mapper for the hub.
+
+**3. Confirm the i3.conf endpoint path:**
+```bash
+grep "<hub>\.harvest" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+```
+The endpoint must point to the **folder containing the files** (e.g. `s3://dpla-hub-ohio/2026-03-20/`), not a parent bucket root. If it needs updating, use python3 to avoid quoting issues:
+```bash
+python3 -c "
+content = open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf').read()
+content = content.replace('<hub>.harvest.endpoint = \"<old>\"', '<hub>.harvest.endpoint = \"<new>\"')
+open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf', 'w').write(content)
+print('Updated:', content[content.find('<hub>.harvest.endpoint'):content.find('<hub>.harvest.endpoint')+60])
+"
+```
+
+**4. Count the files:**
+```bash
+aws s3 ls s3://<bucket>/<path>/ | wc -l
+```
+Sanity-check this matches what the hub contact said. For Ohio-style `.xml.gz` feeds, each file typically contains thousands of records — 434 files × ~1,800 records = ~780K total.
+
 ### Step 1: Pre-flight — Verify Endpoint Reachability
 
 For `localoai` hubs, test the OAI endpoint **locally first**:
