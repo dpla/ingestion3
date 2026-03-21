@@ -77,6 +77,10 @@ class MississippiMapping
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
+  // TODO ask provider to move the LSTA funding note out of contributor — all
+  // Madison County records have "Digitization of the collection is being
+  // partially funded by the LSTA grant..." as a contributor value, which is
+  // a funding statement, not a contributing agent.
   override def contributor(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "contributor")
       .flatMap(_.splitAtDelimiter(";"))
@@ -85,7 +89,6 @@ class MississippiMapping
   override def description(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "description")
 
-  // TODO examine format block list values
   override def format(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "format")
 
@@ -99,9 +102,16 @@ class MississippiMapping
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "language")
       .map(nameOnlyConcept)
 
-  override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
-    extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds14")
-      .map(nameOnlyPlace)
+  override def place(data: Document[JValue]): ZeroToMany[DplaPlace] = {
+    val fromLds14 = extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds14")
+    // coverage mixes temporal values (e.g. "1940s (1940-1949)") and geographic
+    // values (e.g. "Canton (Miss.)"). Geographic values are identified by a
+    // state abbreviation pattern: word(s) followed by (Abbrev.)
+    val fromCoverage = extractStrings(unwrap(data) \ "pnx" \ "display" \ "coverage")
+      .flatMap(_.splitAtDelimiter(";"))
+      .filter(_.matches(".*\\([A-Z][a-z]+\\.\\)"))
+    (fromLds14 ++ fromCoverage).distinct.map(nameOnlyPlace)
+  }
 
   override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "publisher")
