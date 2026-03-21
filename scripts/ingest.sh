@@ -217,7 +217,16 @@ else
 
     MAP_TS_DIR=$(find_latest_data "$PROVIDER" mapping)
     log_info "Mapping complete: $(basename "$MAP_TS_DIR")"
-    slack_notify ":white_check_mark: *$PROVIDER mapping complete* — starting enrichment"
+
+    MAP_RECORD_COUNT=$(read_manifest_count "$MAP_TS_DIR/_MANIFEST")
+    if [[ "$MAP_RECORD_COUNT" -eq 0 ]]; then
+        slack_notify ":x: *$PROVIDER ingest FAILED* — mapping produced 0 records. Check mapper and source data."
+        write_hub_status "$PROVIDER" failed --error="Mapping produced 0 records"
+        TRAP_HANDLED=true
+        exit 1
+    fi
+
+    slack_notify ":white_check_mark: *$PROVIDER mapping complete* (${MAP_RECORD_COUNT} records) — starting enrichment"
 fi
 
 # Step 3: Enrichment
@@ -242,7 +251,16 @@ else
 
     ENRICH_TS_DIR=$(find_latest_data "$PROVIDER" enrichment)
     log_info "Enrichment complete: $(basename "$ENRICH_TS_DIR")"
-    slack_notify ":white_check_mark: *$PROVIDER enrichment complete* — starting JSONL export"
+
+    ENRICH_RECORD_COUNT=$(read_manifest_count "$ENRICH_TS_DIR/_MANIFEST")
+    if [[ "$ENRICH_RECORD_COUNT" -eq 0 ]]; then
+        slack_notify ":x: *$PROVIDER ingest FAILED* — enrichment produced 0 records."
+        write_hub_status "$PROVIDER" failed --error="Enrichment produced 0 records"
+        TRAP_HANDLED=true
+        exit 1
+    fi
+
+    slack_notify ":white_check_mark: *$PROVIDER enrichment complete* (${ENRICH_RECORD_COUNT} records) — starting JSONL export"
 fi
 
 # Step 4: JSONL export

@@ -169,26 +169,12 @@ Key harvest types and their network requirements:
 
 | Type | Notes |
 |------|-------|
-| `localoai` | OAI-PMH over HTTP/HTTPS. Most hubs. **CONTENTdm-hosted endpoints are blocked from EC2** (see below). |
+| `localoai` | OAI-PMH over HTTP/HTTPS. Most hubs. |
 | `api` | REST API (e.g. MDL/SD uses `metl.lib.umn.edu`). EC2-reachable. Slow to respond — use 60s+ curl timeout. |
 | `file` | **community-webs**: DB export pre-processing runs entirely on EC2 (see Community Webs Pre-processing section). **Other file hubs**: `harvest.endpoint` references `/Users/scott/...` paths from a previous operator — require manual staging to EC2 before harvest. |
 | `nara.file.delta` | NARA-specific delta file format. Complex — consult README_NARA.md. |
 
-### CONTENTdm Block (Important)
-
-
-OCLC's CONTENTdm hosting infrastructure (`132.174.3.1`) **blocks connections from AWS IP ranges**. Affected hubs whose endpoints resolve to this IP cannot be harvested from the EC2:
-
-- **maryland** (`collections.digitalmaryland.org`)
-- **bpl** — verify before running
-- **scdl** — verify before running
-- **digitalnc** — verify before running
-
-For these hubs, either:
-1. Run the harvest locally on your Mac (2–3GB disk, 16GB+ RAM needed)
-2. Contact the hub's IT team to allowlist DPLA's NAT IP: `52.2.32.179`
-
-Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
+**Note:** **maryland** (`collections.digitalmaryland.org`) has a known IP block on EC2 — harvest locally on your Mac (2–3GB disk, 16GB+ RAM) or ask their IT to allowlist `52.2.32.179`. Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
 
 ## Community Webs Pre-processing
 
@@ -492,7 +478,7 @@ For `api` hubs, use a 60-second timeout:
 curl -s --max-time 60 "<endpoint>?<query>&rows=1" | head -2
 ```
 
-**If endpoint is unreachable from EC2 but reachable locally** → CONTENTdm block or firewall issue. Stop the instance and run the harvest locally instead.
+**If endpoint is unreachable from EC2 but reachable locally** → firewall or IP block issue. Stop the instance and run the harvest locally instead (see maryland note above).
 
 ### Step 4: Launch ingest.sh
 
@@ -814,7 +800,7 @@ Hubs **cannot run in parallel** on this instance — two enrichment steps alone 
 
 ### Step B1: Derive Hub List
 
-When the user says "run [month] ingests" (e.g. "run February ingests", "run March ingests"), use this script to derive the list from `i3.conf`. It skips on-hold hubs, flags CONTENTdm and file-type hubs, and excludes `nara` (complex delta format, manual only).
+When the user says "run [month] ingests" (e.g. "run February ingests", "run March ingests"), use this script to derive the list from `i3.conf`. It skips on-hold hubs, flags maryland and file-type hubs, and excludes `nara` (complex delta format, manual only).
 
 ```python
 #!/usr/bin/env python3
@@ -822,7 +808,7 @@ import os, re, sys
 from datetime import datetime
 
 CONF = os.environ.get("I3_CONF", "/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf")
-CONTENTDM_HUBS = {"maryland", "bpl", "scdl", "digitalnc"}
+EC2_BLOCKED_HUBS = {"maryland"}
 MONTH_NAMES = {
     "january":1,"february":2,"march":3,"april":4,"may":5,"june":6,
     "july":7,"august":8,"september":9,"october":10,"november":11,"december":12
@@ -856,8 +842,8 @@ for hub, info in sorted(hubs.items()):
     if info["type"] == "nara.file.delta":
         print(f"  SKIP {hub:25s} [nara delta — manual only]")
         continue
-    if hub in CONTENTDM_HUBS:
-        print(f"  WARN {hub:25s} [CONTENTdm — blocked from EC2, run locally]")
+    if hub in EC2_BLOCKED_HUBS:
+        print(f"  WARN {hub:25s} [blocked from EC2 — run locally]")
         continue
     if info["type"] == "file":
         if hub == "community-webs":
@@ -1259,7 +1245,7 @@ Smaller hubs (file, localoai with small collections) will be faster than SD. Oth
 1. Check the log: `tail -30 /home/ec2-user/data/<hub>-harvest.log`
 2. For `localoai`: verify OAI endpoint is up and reachable from EC2
 3. For `api`: verify the API endpoint with a longer curl timeout (60s+)
-4. For CONTENTdm endpoints: if blocked from EC2, run harvest locally instead
+4. For maryland: EC2 harvest is blocked — run harvest locally instead
 5. **Do NOT stop the EC2 instance** until investigated
 
 ### Mapping / Enrichment / JSONL Failure
