@@ -153,10 +153,7 @@ class MississippiMapping
     val isContinuousRange =
       years.length > 1 &&
         years.length == parts.length &&
-        sortedDistinct.sliding(2).forall {
-          case Seq(a, b) => b - a == 1
-          case _         => true
-        }
+        sortedDistinct.last - sortedDistinct.head + 1 == sortedDistinct.length
     if (isContinuousRange)
       stringOnlyTimeSpan(s"${sortedDistinct.head}-${sortedDistinct.last}")
     else
