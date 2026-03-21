@@ -16,7 +16,7 @@ class TxMappingTest extends AnyFlatSpec with BeforeAndAfter {
   val shortName = "texas"
   val xmlString: String = new FlatFileIO().readFileAsString("/tx.xml")
   val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))
-  val extractor = new TxMapping
+  val extractor = new TxMapping(Map("UNT" -> "UNT Libraries"))
 
   it should "use the provider shortname in minting IDs " in
     assert(extractor.useProviderName)

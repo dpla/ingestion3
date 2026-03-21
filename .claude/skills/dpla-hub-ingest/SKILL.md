@@ -473,10 +473,12 @@ sudo -u ec2-user bash -lc "
   echo '=== Java ===' && java -version 2>&1
   echo '=== SBT ===' && sbt --version 2>&1 | tail -2
   echo '=== Hub config ===' && grep '^<hub>\.' /home/ec2-user/ingestion3-conf/i3.conf
-  echo '=== Disk ===' && df -h / | tail -1
+  echo '=== Disk ===' && df -h /home/ec2-user/data | tail -1
   echo '=== Prior S3 ingests ===' && aws s3 ls s3://dpla-master-dataset/<hub>/jsonl/ | tail -3
 "
 ```
+
+**Disk space**: `ingest.sh` checks free space automatically before each step (20 GB minimum for harvest/mapping/JSONL, 30 GB for enrichment) and aborts with an error if the threshold is not met. If you see a disk-related abort, free space on `/home/ec2-user/data` before resuming — old harvest/mapping/enrichment dirs from previous runs are safe to delete once the JSONL has synced to S3. Large hubs (smithsonian, ia, hathi) can use 50–100 GB at peak.
 
 For `localoai` hubs, also test the endpoint from EC2:
 ```bash
@@ -974,6 +976,63 @@ curl -s -X POST "https://slack.com/api/chat.postMessage" \
   -d "{\"channel\":\"C02HEU2L3\",\"text\":\":x: *<hub> ingest killed* — stopped manually at <step>\"}"
 ```
 
+#### Resuming a Failed ingest.sh Run
+
+If `ingest.sh` dies mid-run, use `--resume-from <step>` to restart from the point of failure without re-running earlier steps. This avoids wasting hours re-running steps that already completed.
+
+**First, confirm which steps completed successfully.** A step is complete if its output directory contains a `_MANIFEST` file:
+
+```bash
+PARAMS=$(python3 -c "
+import json
+hub = '<hub>'
+cmds = [
+    f'ls /home/ec2-user/data/{hub}/harvest/ 2>/dev/null | tail -1',
+    f'cat /home/ec2-user/data/{hub}/harvest/\$(ls -t /home/ec2-user/data/{hub}/harvest/ 2>/dev/null | head -1)/_MANIFEST 2>/dev/null | grep -E \"Record count|Activity\"',
+    f'ls /home/ec2-user/data/{hub}/mapping/ 2>/dev/null | tail -1',
+    f'cat /home/ec2-user/data/{hub}/mapping/\$(ls -t /home/ec2-user/data/{hub}/mapping/ 2>/dev/null | head -1)/_MANIFEST 2>/dev/null | grep -E \"Record count|Activity\"',
+    f'ls /home/ec2-user/data/{hub}/enrichment/ 2>/dev/null | tail -1',
+    f'cat /home/ec2-user/data/{hub}/enrichment/\$(ls -t /home/ec2-user/data/{hub}/enrichment/ 2>/dev/null | head -1)/_MANIFEST 2>/dev/null | grep -E \"Record count|Activity\"',
+]
+print(json.dumps({'commands': cmds}))
+")
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 30 \
+  --parameters "$PARAMS" \
+  --query 'Command.CommandId' --output text)
+```
+
+A directory with only a `_temporary/` folder (no `_MANIFEST`) means the step **crashed mid-run** and the output is incomplete. Only directories with `_MANIFEST` files are safe to reuse.
+
+**Then resume from the appropriate step:**
+
+| Last step with `_MANIFEST` | Resume command |
+|---|---|
+| Harvest complete | `ingest.sh <hub> --resume-from mapping` |
+| Mapping complete | `ingest.sh <hub> --resume-from enrichment` |
+| Enrichment complete | `ingest.sh <hub> --resume-from jsonl` |
+
+Launch via the same nohup pattern as Step B3:
+```bash
+PARAMS=$(python3 -c "
+import json
+hub = '<hub>'
+step = '<mapping|enrichment|jsonl>'
+cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub} --resume-from {step} > /dev/null 2>&1 &\"'
+print(json.dumps({'commands': [cmd]}))
+")
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 172800 \
+  --parameters "$PARAMS" \
+  --query 'Command.CommandId' --output text)
+```
+
+**Note on silent crashes**: Java/Spark processes can be killed by the OS with no output in the application log — the only evidence is a `_temporary/` directory where the completed output should be, and no running java processes. This is most common during enrichment on large hubs (smithsonian, ia, hathi) and is usually caused by low disk space (now caught by the pre-step disk check) or an OOM kill. Check `dmesg | grep -i oom` on the EC2 to confirm OOM.
+
 #### Single-hub script template (legacy — prefer ingest.sh instead)
 
 Only use this if `ingest.sh` is unavailable or broken. The `__SLACK_TOKEN__` placeholder is replaced by the `sed` step below.
@@ -1343,7 +1402,7 @@ Use these if direct SBT invocations fail or for quick manual runs. Note that `i3
 
 ## Future Improvements
 
-The EC2 now has the latest ingestion3 (pulled via HTTPS from `https://github.com/dpla/ingestion3.git`), which includes `scripts/*.sh`. A potential simplification would be to replace the direct sbt invocations in this skill with `./scripts/ingest.sh <hub>` — but only after validating that script handles all the edge cases (memory flags, timestamp capture, safety check, email timing) the same way this skill does.
+The skill's single-hub and batch script templates (legacy) can be simplified further now that `ingest.sh` handles all pipeline stages, disk checks, heartbeats, safety check, email timing, and Slack notifications natively. The legacy templates remain for reference but `ingest.sh` is the preferred approach for all new runs.
 
 ## Safety Rules
 

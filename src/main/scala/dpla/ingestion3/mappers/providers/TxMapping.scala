@@ -17,8 +17,9 @@ import org.json4s.jackson.JsonMethods._
 
 import scala.xml.{NodeSeq, Text}
 
-class TxMapping
-    extends XmlMapping
+class TxMapping(
+    private val labelMap: Map[String, String] = TxMapping.dataproviderTermLabel
+) extends XmlMapping
     with XmlExtractor
     with IngestMessageTemplates {
 
@@ -35,7 +36,7 @@ class TxMapping
     val dataProviders = extractStrings(data \ "header" \ "setSpec")
       .filter(_.startsWith("partner"))
       .map(setSpec =>
-        TxMapping.dataproviderTermLabel.getOrElse(setSpec.split(":").last, "")
+        labelMap.getOrElse(setSpec.split(":").last, "")
       )
       .filter(_.nonEmpty)
 
@@ -270,7 +271,7 @@ object TxMapping {
     HttpUtils.makeGetRequest(new URL(endpoint), None)
   private lazy val json = parse(jsonString)
 
-  private val dataproviderTermLabel: Map[String, String] = (for {
+  private[providers] lazy val dataproviderTermLabel: Map[String, String] = (for {
     JArray(terms) <- json \ "terms"
     JObject(term) <- terms
     JField("name", JString(name)) <- term
