@@ -72,7 +72,14 @@ class MississippiMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
   it should "extract the correct identifiers" in {
     val expected = Seq(
-      "011491515-1910;32278011491515;Box 85; Folder 1; Piece 7;digital_TIF_archive\\Templeton_master\\Folder_85-1;http://cdm16631.contentdm.oclc.org/cdm/ref/collection/p16631coll10/id/3729;oai:cdm16631.contentdm.oclc.org:p16631coll10/3729"
+      "011491515-1910",
+      "32278011491515",
+      "Box 85",
+      "Folder 1",
+      "Piece 7",
+      "digital_TIF_archive\\Templeton_master\\Folder_85-1",
+      "http://cdm16631.contentdm.oclc.org/cdm/ref/collection/p16631coll10/id/3729",
+      "oai:cdm16631.contentdm.oclc.org:p16631coll10/3729"
     )
     assert(extractor.identifier(json) === expected)
   }
@@ -87,11 +94,10 @@ class MississippiMappingTest extends AnyFlatSpec with BeforeAndAfter {
     assert(extractor.creator(json) === expected)
   }
 
-  it should "extract the correct contributor" in {
-    val expected = Seq(
-      "Starmer, William A. (William Austin), b. 1872; Starmer, Frederick S., b. 1879"
-    ).map(nameOnlyAgent)
-    assert(extractor.contributor(json) === expected)
+  it should "return no contributors" in {
+    // contributor is intentionally unmapped: all values in this harvest are
+    // LSTA digitization funding statements, not contributing agents
+    assert(extractor.contributor(json) === Seq())
   }
 
   it should "extract the correct publisher" in {
