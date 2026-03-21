@@ -55,7 +55,9 @@ OUTPUT_DATESTAMP=$(date +%Y%m%d)
 # - Pipeline: uses local[4] for CPU-intensive XML mapping. Each task needs ~1-2 GB.
 # ============================================================================
 
-# Per-step memory and parallelism (overridable via environment)
+# Per-step Spark parallelism (overridable via environment)
+# NOTE: *_SBT_OPTS apply to the sbt launcher JVM only, not the forked IngestRemap/NaraMergeUtil
+# process. Heap and Spark settings for those processes are in build.sbt (javaOptions).
 HARVEST_SBT_OPTS="${HARVEST_SBT_OPTS:--Xms4g -Xmx12g -XX:+UseG1GC -XX:MaxGCPauseMillis=200}"
 HARVEST_SPARK_MASTER="${HARVEST_SPARK_MASTER:-local[1]}"
 
@@ -113,12 +115,13 @@ Options:
   --help            Show this help message
 
 Environment Variables:
-  HARVEST_SBT_OPTS       JVM opts for harvest step  (default: -Xmx12g)
-  HARVEST_SPARK_MASTER   Spark master for harvest    (default: local[1])
-  MERGE_SBT_OPTS         JVM opts for merge step     (default: -Xmx12g)
-  MERGE_SPARK_MASTER     Spark master for merge      (default: local[1])
-  PIPELINE_SBT_OPTS      JVM opts for pipeline step  (default: -Xmx14g)
-  PIPELINE_SPARK_MASTER  Spark master for pipeline   (default: local[4])
+  HARVEST_SBT_OPTS       sbt launcher JVM opts for harvest step  (default: -Xmx12g)
+  HARVEST_SPARK_MASTER   Spark master for harvest                (default: local[1])
+  MERGE_SBT_OPTS         sbt launcher JVM opts for merge step    (default: -Xmx12g)
+  MERGE_SPARK_MASTER     Spark master for merge                  (default: local[1])
+  PIPELINE_SBT_OPTS      sbt launcher JVM opts for pipeline step (default: -Xmx14g)
+  PIPELINE_SPARK_MASTER  Spark master for pipeline               (default: local[4])
+  Note: forked IngestRemap/NaraMergeUtil heap is set in build.sbt javaOptions, not here.
 
 Examples:
   # Single month, full pipeline
