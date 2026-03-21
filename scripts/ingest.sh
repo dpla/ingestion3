@@ -112,9 +112,10 @@ fi
 
 # Track provider for status file (ingest-status.sh); trap writes failed + notifies on error
 INGEST_PROVIDER="$PROVIDER"
+TRAP_HANDLED=false  # set to true when we handle notification+status explicitly before exit
 trap 'err=$?
      stop_heartbeat 2>/dev/null || true
-     if [[ $err -ne 0 && -n "${INGEST_PROVIDER:-}" ]]; then
+     if [[ $err -ne 0 && -n "${INGEST_PROVIDER:-}" && "$TRAP_HANDLED" != "true" ]]; then
          write_hub_status "$INGEST_PROVIDER" failed --error="Exit $err"
          slack_notify ":x: *$INGEST_PROVIDER ingest FAILED* (exit $err)"
      fi' EXIT
@@ -170,7 +171,8 @@ if [ "$SKIP_HARVEST" = false ]; then
     if [[ "$HARVEST_RECORD_COUNT" -eq 0 ]]; then
         slack_notify ":x: *$PROVIDER ingest FAILED* — harvest produced 0 records. Check harvester config and source data."
         write_hub_status "$PROVIDER" failed --error="Harvest produced 0 records"
-        exit 0
+        TRAP_HANDLED=true
+        exit 1
     fi
 
     slack_notify ":white_check_mark: *$PROVIDER harvest complete* (${HARVEST_RECORD_COUNT} records) — starting mapping"
@@ -300,7 +302,8 @@ fi
 if [ "$SAFETY_OK" = false ]; then
     slack_notify ":x: *$PROVIDER ingest FAILED* — safety check blocked S3 sync\n$DELTA_LINE\nSnapshot \`$JSONL_TS\` was NOT synced to S3."
     write_hub_status "$PROVIDER" failed
-    exit 0  # EXIT trap skips duplicate notification on clean exit
+    TRAP_HANDLED=true
+    exit 1
 fi
 
 # Send partner summary email only if safety check passed
