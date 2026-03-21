@@ -547,7 +547,7 @@ CMDID=$(aws ssm send-command --instance-ids i-0a0def8581efef783 \
 PARAMS=$(python3 -c "
 import json
 hub = '<hub>'
-cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub} --resume-from=mapping > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &\"'
+cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub} --resume-from mapping > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &\"'
 print(json.dumps({'commands': [cmd]}))
 ")
 ```
