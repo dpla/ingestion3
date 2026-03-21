@@ -77,14 +77,9 @@ class MississippiMapping
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
-  // TODO ask provider to move the LSTA funding note out of contributor — all
-  // Madison County records have "Digitization of the collection is being
-  // partially funded by the LSTA grant..." as a contributor value, which is
-  // a funding statement, not a contributing agent.
-  override def contributor(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data) \ "pnx" \ "display" \ "contributor")
-      .flatMap(_.splitAtDelimiter(";"))
-      .map(nameOnlyAgent)
+  // contributor intentionally unmapped: all values in this harvest are LSTA
+  // digitization funding statements, not contributing agents. TODO: ask the
+  // provider to remove this from their Primo export.
 
   override def description(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "description")
