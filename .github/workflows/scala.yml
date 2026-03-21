@@ -2,6 +2,8 @@ name: Scala CI
 on:
   push:
   pull_request:
+permissions:
+  contents: read
 jobs:
   build:
     runs-on: ubuntu-22.04 #temporary not latest because 24 is broken
