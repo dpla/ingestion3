@@ -478,7 +478,7 @@ For `api` hubs, use a 60-second timeout:
 curl -s --max-time 60 "<endpoint>?<query>&rows=1" | head -2
 ```
 
-**If endpoint is unreachable from EC2 but reachable locally** → firewall or IP block issue. Stop the instance and run the harvest locally instead (see maryland note above).
+**If endpoint is unreachable from EC2 but reachable locally** → firewall or IP block issue. Stop the instance and run the harvest locally instead (see EC2-blocked hubs note above).
 
 ### Step 4: Launch ingest.sh
 
@@ -1245,7 +1245,7 @@ Smaller hubs (file, localoai with small collections) will be faster than SD. Oth
 1. Check the log: `tail -30 /home/ec2-user/data/<hub>-harvest.log`
 2. For `localoai`: verify OAI endpoint is up and reachable from EC2
 3. For `api`: verify the API endpoint with a longer curl timeout (60s+)
-4. For maryland: EC2 harvest is blocked — run harvest locally instead
+4. For maryland and getty: EC2 harvest is blocked — run harvest locally instead
 5. **Do NOT stop the EC2 instance** until investigated
 
 ### Mapping / Enrichment / JSONL Failure
