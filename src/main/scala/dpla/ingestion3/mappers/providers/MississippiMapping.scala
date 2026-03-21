@@ -149,10 +149,17 @@ class MississippiMapping
   private def collapseYearRange(raw: String): EdmTimeSpan = {
     val parts = raw.split(";").map(_.trim).filter(_.nonEmpty)
     val years = parts.collect { case p if p.matches("[0-9]{4}") => p.toInt }
-    if (years.length > 1 && years.length == parts.length) {
-      val sorted = years.sorted
-      stringOnlyTimeSpan(s"${sorted.head}-${sorted.last}")
-    } else
+    val sortedDistinct = years.distinct.sorted
+    val isContinuousRange =
+      years.length > 1 &&
+        years.length == parts.length &&
+        sortedDistinct.sliding(2).forall {
+          case Seq(a, b) => b - a == 1
+          case _         => true
+        }
+    if (isContinuousRange)
+      stringOnlyTimeSpan(s"${sortedDistinct.head}-${sortedDistinct.last}")
+    else
       stringOnlyTimeSpan(raw)
   }
 
