@@ -116,8 +116,8 @@ TRAP_HANDLED=false  # set to true when we handle notification+status explicitly 
 trap 'err=$?
      stop_heartbeat 2>/dev/null || true
      if [[ $err -ne 0 && -n "${INGEST_PROVIDER:-}" && "$TRAP_HANDLED" != "true" ]]; then
-         write_hub_status "$INGEST_PROVIDER" failed --error="Exit $err"
          slack_notify ":x: *$INGEST_PROVIDER ingest FAILED* (exit $err)"
+         write_hub_status "$INGEST_PROVIDER" failed --error="Exit $err" || true
      fi' EXIT
 # Without explicit SIGTERM/SIGINT traps, bash exits immediately on those signals
 # and skips the EXIT trap above. These traps call exit() to ensure EXIT fires.
