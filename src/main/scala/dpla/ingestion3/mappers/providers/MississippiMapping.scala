@@ -38,11 +38,9 @@ class MississippiMapping
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds02")
       .map(nameOnlyAgent)
 
-  // TODO confirm with provider whether ispartof represents a collection name
-  // or a higher-level institutional grouping
-  override def collection(data: Document[JValue]): ZeroToMany[DcmiTypeCollection] =
-    extractStrings(unwrap(data) \ "pnx" \ "display" \ "ispartof")
-      .map(nameOnlyCollection)
+  // TODO ask provider to include collection name (e.g. "Canton Data Photographic
+  // Collection") in their Primo export — it is displayed on their CDM item pages
+  // but does not appear in the harvested PNX data. Map to collection once available.
 
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] =
     mintDplaItemUri(data)
