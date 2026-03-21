@@ -335,10 +335,11 @@ object NaraMergeUtil {
 
     val file = new File(path)
     if (!file.exists())
-      return spark.emptyDataFrame.withColumn("id", col("id").cast("string"))
+      return Seq.empty[String].toDF("id")
 
     val files =
-      if (file.isDirectory) file.listFiles(FileFilters.xmlFilter).sorted
+      if (file.isDirectory)
+        Option(file.listFiles(FileFilters.xmlFilter)).getOrElse(Array.empty[File]).sorted
       else Array(file)
 
     // Parse XML files and create DataFrame - keeps processing distributed
@@ -370,7 +371,8 @@ object NaraMergeUtil {
     if (!file.exists())
       return Seq() // if deletes do not exist do nothing
     val files =
-      if (file.isDirectory) file.listFiles(FileFilters.xmlFilter).sorted
+      if (file.isDirectory)
+        Option(file.listFiles(FileFilters.xmlFilter)).getOrElse(Array.empty[File]).sorted
       else Array(file)
     files
       .flatMap(file => {

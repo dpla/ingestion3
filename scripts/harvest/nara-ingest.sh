@@ -165,6 +165,7 @@ setup_java_env() {
         exit 1
     fi
     export JAVA_HOME
+    export PATH="$JAVA_HOME/bin:$PATH"
     print_info "Using Java: $JAVA_HOME"
 }
 
