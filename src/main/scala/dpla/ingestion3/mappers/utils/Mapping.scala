@@ -75,6 +75,8 @@ trait Mapping[T] {
   val enforceDplaUri: Boolean = true
   val enforceEdmRights: Boolean =
     false // Do not currently enforce the edmRights validation. WARN only
+  val warnMissingEdmRights: Boolean =
+    false // Warn when rights text is present but no edmRights URI is mapped
   val enforceIsShownAt: Boolean = true
   val enforceObject: Boolean =
     false // Do not enforce. Warn only if more than one object URL provided in source

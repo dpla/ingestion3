@@ -129,6 +129,15 @@ trait IngestMessageTemplates {
       value = value
     )
 
+  def droppedTypeMsg(id: String, value: String): IngestMessage =
+    IngestMessage(
+      message = "Type value not recognized, dropped",
+      level = IngestLogLevel.warn,
+      id = id,
+      field = "type",
+      value = value
+    )
+
   def missingRecommendedFieldMsg(id: String, field: String): IngestMessage =
     IngestMessage(
       message = s"Missing recommended field",
@@ -158,13 +167,13 @@ trait IngestMessageTemplates {
       enforce
     )
 
-  def duplicateRights(id: String): IngestMessage =
+  def missingEdmRights(id: String): IngestMessage =
     IngestMessage(
-      message = s"Duplicate",
+      message = "Missing recommended field",
       level = IngestLogLevel.warn,
       id = id,
-      field = "rights and edmRights",
-      value = "both rights and edmRights are defined"
+      field = "edmRights",
+      value = "MISSING"
     )
 
   def duplicateOriginalId(id: String, enforce: Boolean): IngestMessage =
