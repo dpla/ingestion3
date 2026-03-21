@@ -165,6 +165,7 @@ setup_java_env() {
         exit 1
     fi
     export JAVA_HOME
+    export PATH="$JAVA_HOME/bin:$PATH"
     print_info "Using Java: $JAVA_HOME"
 }
 
@@ -178,6 +179,19 @@ elapsed_since() {
     local now=$(date +%s)
     local dur=$((now - start))
     printf "%dm %ds" $((dur / 60)) $((dur % 60))
+}
+
+# Install an ERR trap that sends a Slack failure notification for any unhandled
+# exit. Set TRAP_HANDLED=true before any explicit exit that already sends its
+# own notification to prevent double-posting.
+_setup_error_trap() {
+    set -E  # Propagate ERR trap into functions
+    TRAP_HANDLED=false
+    trap '
+        if [ "$TRAP_HANDLED" = false ]; then
+            slack_notify ":x: *nara ingest FAILED* (unexpected error — check log)"
+        fi
+    ' ERR
 }
 
 # ============================================================================
@@ -247,6 +261,7 @@ sync_base_from_s3() {
     fi
 
     print_info "Latest S3 base: $latest_s3_key"
+    slack_notify ":arrow_down: *nara S3 base download starting* — \`$latest_s3_key\`"
     aws s3 sync "$S3_NARA_PATH/harvest/$latest_s3_key/" "$NARA_HARVEST/$latest_s3_key/"
 
     # We already know the local path from the key; no need to re-scan the directory.
@@ -255,6 +270,7 @@ sync_base_from_s3() {
     local base_size
     base_size=$(du -sh "$BASE_HARVEST" | cut -f1)
     print_success "Download complete. Base: $BASE_HARVEST ($base_size)"
+    slack_notify ":white_check_mark: *nara S3 base download complete* — \`$latest_s3_key\` ($base_size)"
 }
 
 sync_outputs_to_s3() {
@@ -427,6 +443,7 @@ run_delta_harvest() {
     local avro_count
     avro_count=$(find "$DELTA_HARVEST" -name "*.avro" -type f | wc -l | tr -d ' ')
     print_success "Delta harvest complete: $DELTA_HARVEST ($avro_count part files)"
+    slack_notify ":white_check_mark: *nara delta harvest complete* ($avro_count part files) — starting merge"
 }
 
 # ============================================================================
@@ -446,6 +463,8 @@ run_merge() {
     print_info "Delta harvest: $DELTA_HARVEST"
     print_info "Deletes dir:   $delta_dir/deletes/"
     print_info "Output path:   $output_path"
+
+    slack_notify ":hourglass: *nara merge starting* — delta into \`$(basename "$BASE_HARVEST")\`"
 
     cd "$I3_HOME"
     export SBT_OPTS="$MERGE_SBT_OPTS"
@@ -475,6 +494,11 @@ run_merge() {
 
     MERGED_HARVEST="$output_path"
     print_success "Merge complete: $MERGED_HARVEST"
+    if [ "${SKIP_PIPELINE:-false}" = true ]; then
+        slack_notify ":white_check_mark: *nara merge complete* — \`$(basename "$MERGED_HARVEST")\`"
+    else
+        slack_notify ":white_check_mark: *nara merge complete* — \`$(basename "$MERGED_HARVEST")\` — starting pipeline"
+    fi
 }
 
 # ============================================================================
@@ -495,6 +519,7 @@ run_post_pipeline() {
     jsonl_ts=$(basename "$jsonl_dir")
     local new_count
     new_count=$(read_manifest_count "$jsonl_dir/_MANIFEST")
+    slack_notify ":white_check_mark: *nara JSONL export complete* (${new_count} records) — running safety check"
 
     local s3_prefix
     s3_prefix=$(resolve_s3_prefix "nara")
@@ -507,20 +532,30 @@ run_post_pipeline() {
             | read_manifest_count /dev/stdin)
     fi
 
+    # delta_line is used both in the safety-check failure message and the final
+    # completion notification. Declare it here so the completion message can reuse
+    # it without a second python3 call. Falls back to a simple count when there is
+    # no previous snapshot (first-ever ingest).
+    local delta_line
+    delta_line="Records: ${new_count}"
+
     if [ "$prev_count" -gt 0 ]; then
-        local safety_result delta_line _safety_out
+        local safety_result _safety_out
         _safety_out=$(python3 -c "
 new  = $new_count
 prev = $prev_count
 drop = (prev - new) / prev * 100
+delta = new - prev
+sign = '+' if delta >= 0 else ''
 print('FAIL' if drop > 5 else 'OK')
-print(f'New: {new:,} | Prev: {prev:,} | Change: {-drop:+.1f}%')
+print(f'New: {new:,} ({sign}{delta:,} vs prev) | Change: {-drop:+.1f}%')
 ")
         safety_result=$(echo "$_safety_out" | head -1)
         delta_line=$(echo "$_safety_out" | tail -1)
         if [ "$safety_result" = "FAIL" ]; then
             print_error "Safety check FAILED — >5% record drop. $delta_line"
             slack_notify ":x: *nara ingest FAILED* — safety check blocked S3 sync\n$delta_line\nSnapshot \`$jsonl_ts\` was NOT synced to S3."
+            TRAP_HANDLED=true
             write_hub_status "nara" failed
             exit 1
         fi
@@ -530,8 +565,10 @@ print(f'New: {new:,} | Prev: {prev:,} | Change: {-drop:+.1f}%')
     print_step "Syncing JSONL to S3..."
     aws s3 sync "$jsonl_dir/" "s3://dpla-master-dataset/${s3_prefix}/jsonl/${jsonl_ts}/"
     print_success "S3 sync complete: s3://dpla-master-dataset/${s3_prefix}/jsonl/${jsonl_ts}/"
-    slack_notify ":white_check_mark: *nara ingest complete*\nNew snapshot: \`$jsonl_ts\`\nRecords: ${new_count}\nS3: \`s3://dpla-master-dataset/${s3_prefix}/jsonl/${jsonl_ts}/\`"
+
+    slack_notify ":white_check_mark: *nara ingest complete*\nNew snapshot: \`$jsonl_ts\`\n${delta_line}\nS3: \`s3://dpla-master-dataset/${s3_prefix}/jsonl/${jsonl_ts}/\`"
     write_hub_status "nara" complete
+    TRAP_HANDLED=true
 }
 
 run_pipeline() {
@@ -542,6 +579,7 @@ run_pipeline() {
     print_info ""
     print_info "NOTE: This step processes ~18.8M XML records and takes ~10 hours."
     print_info "Monitor with: ps aux | grep IngestRemap"
+    slack_notify ":hourglass: *nara pipeline starting* — mapping → enrichment → jsonl (~10 hours)"
 
     cd "$I3_HOME"
     export SBT_OPTS="$PIPELINE_SBT_OPTS"
@@ -655,7 +693,10 @@ main() {
             exit 1
         fi
 
+        _setup_error_trap
+
         print_info "Resuming pipeline with: $MERGED_HARVEST"
+        slack_notify ":arrow_forward: *nara ingest resuming* — pipeline from \`$(basename "$MERGED_HARVEST")\`"
         run_pipeline
         run_post_pipeline
 
@@ -692,6 +733,14 @@ main() {
         echo "[DRY RUN] Would process months: ${MONTH_ARRAY[*]}"
         echo "[DRY RUN] Pipeline on final month only (unless --skip-pipeline)"
         exit 0
+    fi
+
+    _setup_error_trap
+
+    if [ "$SKIP_PIPELINE" = true ]; then
+        slack_notify ":arrow_forward: *nara ingest started* | months: ${MONTH_ARRAY[*]} | delta harvest → merge (--skip-pipeline)"
+    else
+        slack_notify ":arrow_forward: *nara ingest started* | months: ${MONTH_ARRAY[*]} | delta harvest → merge → pipeline → s3"
     fi
 
     # Step 1: Get base harvest
