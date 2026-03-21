@@ -115,7 +115,7 @@ class MississippiMapping
 
   override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "creationdate")
-      .map(stringOnlyTimeSpan)
+      .map(collapseYearRange)
 
   override def title(data: Document[JValue]): AtLeastOne[String] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "title")
@@ -124,13 +124,7 @@ class MississippiMapping
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "type")
       .map {
         case "text_resource"         => "text"
-        case "image"                 => "image"
-        case "video"                 => "video"
-        case "audio"                 => "audio"
-        case "map"                   => "map"
         case "score"                 => "notated music"
-        case "book"                  => "book"
-        case "journal"               => "journal"
         case "newspaper"             => "periodical"
         case "database"              => "dataset"
         case "dissertation"          => "text"
@@ -138,6 +132,21 @@ class MississippiMapping
         case "reference_entry"       => "text"
         case other                   => other
       }
+
+  /** Collapses a semicolon-delimited list of individual years (as Primo
+    * sometimes expands date ranges) into a single "begin-end" string.
+    * If the parts are not all 4-digit years, returns the original string
+    * unchanged.
+    */
+  private def collapseYearRange(raw: String): EdmTimeSpan = {
+    val parts = raw.split(";").map(_.trim).filter(_.nonEmpty)
+    val years = parts.collect { case p if p.matches("[0-9]{4}") => p.toInt }
+    if (years.length > 1 && years.length == parts.length) {
+      val sorted = years.sorted
+      stringOnlyTimeSpan(s"${sorted.head}-${sorted.last}")
+    } else
+      stringOnlyTimeSpan(raw)
+  }
 
   private def rightsValues(data: Document[JValue]): Seq[String] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "rights")

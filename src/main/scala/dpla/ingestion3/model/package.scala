@@ -195,11 +195,12 @@ package object model {
               record.sourceResource.language.map { lang =>
                 // If lang was enriched then the concept property has been set and it should be mapped to the name
                 // property in ElasticSearch. If the lang value could not be enriched then use the original provided
-                // value. Always map the enriched concept label to the iso639_3 field.
+                // value. Map the original providedLabel to iso639_3 so that ISO codes (e.g. "eng") are preserved
+                // rather than being replaced by the enriched display label (e.g. "English").
                 ("name" -> lang.concept.getOrElse(
                   lang.providedLabel.getOrElse("")
                 )) ~
-                  ("iso639_3" -> lang.concept)
+                  ("iso639_3" -> lang.providedLabel)
               }) ~
             ("publisher" -> record.sourceResource.publisher.map { p =>
               p.name
