@@ -14,7 +14,8 @@ import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-import java.io.{ByteArrayInputStream, File}
+import java.io.{ByteArrayInputStream, File, FileInputStream}
+import java.util.zip.GZIPInputStream
 import scala.util.{Failure, Success, Try}
 import scala.xml._
 
@@ -111,6 +112,7 @@ class OaiFileHarvester(
     val inFiles = LocalHarvester.resolveToLocalDir(endpoint, harvestTime, "oai-file-s3", conf.harvest.awsProfile)
 
     try {
+      // Handle zip archives (each zip may contain multiple XML entries)
       Option(inFiles.listFiles(FileFilters.zipFilter)).getOrElse(Array.empty).foreach(inFile => {
         val inputStream = LocalHarvester
           .getZipInputStream(inFile)
@@ -127,6 +129,17 @@ class OaiFileHarvester(
             }
           )
         IOUtils.closeQuietly(inputStream)
+      })
+
+      // Handle gzipped XML files (each .gz contains a single OAI-PMH XML document)
+      Option(inFiles.listFiles(FileFilters.gzFilter)).getOrElse(Array.empty).foreach(inFile => {
+        val gzStream = new GZIPInputStream(new FileInputStream(inFile))
+        val result = FileResult(inFile.getName, Some(IOUtils.toByteArray(gzStream)))
+        IOUtils.closeQuietly(gzStream)
+        handleFile(result, unixEpoch) match {
+          case Failure(exception) => logger.error(s"Caught exception on $inFile.", exception)
+          case Success(_)         => // do nothing
+        }
       })
     } finally {
       if (isTempDir) FileUtils.deleteQuietly(inFiles)
