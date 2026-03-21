@@ -22,6 +22,8 @@ class MississippiMapping
 
   val formatBlockList: Set[String] = ExtentIdentificationList.termList
 
+  override val warnMissingEdmRights: Boolean = true
+
   // ID minting functions
   override def useProviderName: Boolean = true
 

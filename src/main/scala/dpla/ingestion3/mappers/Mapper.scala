@@ -438,15 +438,17 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
       rights: ZeroToMany[String],
       edmRights: ZeroToOne[URI],
       providerId: String,
-      enforce: Boolean
+      enforce: Boolean,
+      warnMissingEdmRights: Boolean = false
   )(implicit collector: MessageCollector[IngestMessage]): Unit = {
     (rights.isEmpty, edmRights.isEmpty) match {
       // Neither rights nor edmRights — reject the record (error) or warn if not enforced
       case (true, true)  => collector.add(missingRights(providerId, enforce))
-      // Rights text present but no edmRights URI — acceptable but warn
-      case (false, true) => collector.add(missingEdmRights(providerId))
-      // Only edmRights, or both present — both are acceptable, no message
-      case _             => // do nothing
+      // Rights text present but no edmRights URI — warn if the provider opts in
+      case (false, true) if warnMissingEdmRights =>
+        collector.add(missingEdmRights(providerId))
+      // Only edmRights, or both present, or rights-only without opt-in — acceptable, no message
+      case _ => // do nothing
     }
   }
 
@@ -655,7 +657,8 @@ class XmlMapper extends Mapper[NodeSeq, XmlMapping] {
         mapping.rights(document),
         validatedEdmRights,
         providerId,
-        mapping.enforceRights
+        mapping.enforceRights,
+        mapping.warnMissingEdmRights
       )
     } catch {
       case _: MappingException => // do nothing, error will be logged when entire record mapping is attempted, below
@@ -838,7 +841,8 @@ class JsonMapper extends Mapper[JValue, JsonMapping] {
         mapping.rights(document),
         validatedEdmRights,
         providerId,
-        mapping.enforceRights
+        mapping.enforceRights,
+        mapping.warnMissingEdmRights
       )
     } catch {
       case _: MappingException => // do nothing, error will be logged when entire record mapping is attempted, below
