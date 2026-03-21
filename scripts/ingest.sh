@@ -290,7 +290,7 @@ JSONL_RECORD_COUNT=$(read_manifest_count "$JSONL_TS_DIR/_MANIFEST")
 # before the partner email goes out. Skipped on first-ever ingest (no prev snapshot).
 S3_PREFIX=$(resolve_s3_prefix "$PROVIDER")
 PREV_SNAP=$(aws s3 ls "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/" 2>/dev/null \
-    | awk '{print $NF}' | sed 's|/||g' | sort | tail -1)
+    | awk '{print $NF}' | sed 's|/||g' | sort | tail -1) || true
 PREV_COUNT=0
 if [ -n "$PREV_SNAP" ]; then
     PREV_COUNT=$(aws s3 cp "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${PREV_SNAP}/_MANIFEST" - 2>/dev/null \
