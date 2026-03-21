@@ -137,6 +137,7 @@ class TxMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct dataProvider" in {
+    // Uses stub labelMap: "UNT" -> "UNT Libraries" (see extractor definition above)
     val expected = Seq("UNT Libraries").map(nameOnlyAgent)
     assert(extractor.dataProvider(xml) === expected)
   }
