@@ -54,7 +54,7 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
   ): OreAggregation = {
     // Get messages for each field
     prepareLanguage(enriched)
-    prepareType(original, enriched)
+    prepareType(original)
     preparePlace(enriched)
     prepareDate(original, enriched)
     prepareDataProvider(enriched)
@@ -212,10 +212,10 @@ object PrepareEnrichmentReport extends IngestMessageTemplates {
      """.stripMargin.split("\n").filter(_.nonEmpty).mkString("\n")
   }
 
-  private def prepareType(original: OreAggregation, enriched: OreAggregation)(implicit
+  private def prepareType(original: OreAggregation)(implicit
       msgs: MessageCollector[IngestMessage]
   ): Unit = {
-    val id = (fromJsonString(enriched.sidecar) \\ "dplaId").values.toString
+    val id = (fromJsonString(original.sidecar) \\ "dplaId").values.toString
     original.sourceResource.`type`.foreach { origValue =>
       typeEnrichment.enrich(origValue) match {
         case Some(enrichedVal) =>

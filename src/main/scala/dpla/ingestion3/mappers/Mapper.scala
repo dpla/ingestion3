@@ -417,9 +417,9 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
     values
   }
 
-  /** Compares rights and edmRights and logs a message if neither is set. Also
-    * checks if both fields contain a value and logs a message indicating
-    * duplication of rights information
+  /** Validates that at least one of rights or edmRights is present, and
+    * optionally warns when rights text is present but no edmRights URI is
+    * mapped (controlled by the warnMissingEdmRights flag).
     *
     * @param rights
     *   Seq[String] Values returned from dc:rights mapping
@@ -428,9 +428,11 @@ trait Mapper[T, +E] extends IngestMessageTemplates {
     * @param providerId
     *   String The provider's local identifier
     * @param enforce
-    *   Boolean True Enforce this validation and fails records that do not pass
-    *   with an error message False Enforces validation but logs warnings which
-    *   will not fail a record.
+    *   Boolean True Enforce this validation and fail records that do not pass
+    *   with an error message; False log warnings which will not fail a record.
+    * @param warnMissingEdmRights
+    *   Boolean True Emit a warning when rights text is present but no edmRights
+    *   URI is mapped; False no warning is emitted in this case (default).
     * @param collector
     *   Message collector Ingest message collector
     */
