@@ -402,6 +402,27 @@ die() {
     exit 1
 }
 
+# Abort if free disk space on the data partition is below a threshold.
+# Catches the most common cause of silent Java/Spark crashes mid-step.
+#
+# Usage: check_disk_space <min_gb>
+#   Exits with an error if available space is below min_gb.
+#   Falls back silently if df output cannot be parsed (non-fatal).
+#
+check_disk_space() {
+    local min_gb="${1:-20}"
+    local data_dir="${DPLA_DATA:-/home/ec2-user/data}"
+    local available_gb
+    available_gb=$(df -BG "$data_dir" 2>/dev/null | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
+    if [[ -z "$available_gb" || ! "$available_gb" =~ ^[0-9]+$ ]]; then
+        return 0  # Can't parse — skip check rather than fail
+    fi
+    if (( available_gb < min_gb )); then
+        die "Insufficient disk space: ${available_gb}GB free on $data_dir (need ${min_gb}GB). Free up space before continuing."
+    fi
+    log_info "Disk check: ${available_gb}GB free (need ${min_gb}GB) ✓"
+}
+
 # =============================================================================
 # Process Management
 # =============================================================================

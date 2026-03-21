@@ -18,16 +18,23 @@ usage() {
     echo "Usage: ingest.sh <provider-name> [options]"
     echo ""
     echo "Options:"
-    echo "  --skip-harvest    Skip harvest step (use existing harvest data)"
-    echo "  --harvest-only    Only run harvest step"
-    echo "  --skip-s3-sync    Skip S3 sync step (pipeline stops at JSONL)"
-    echo "  --help            Show this help message"
+    echo "  --skip-harvest          Skip harvest step (use existing harvest data)"
+    echo "  --harvest-only          Only run harvest step"
+    echo "  --skip-s3-sync          Skip S3 sync step (pipeline stops at JSONL)"
+    echo "  --resume-from <step>    Resume from a specific step, reusing existing outputs"
+    echo "                          for all preceding steps. Valid steps: mapping,"
+    echo "                          enrichment, jsonl. Implies --skip-harvest."
+    echo "  --help                  Show this help message"
     echo ""
     echo "Examples:"
-    echo "  ./ingest.sh maryland              # Full pipeline (harvest + remap + S3 sync)"
-    echo "  ./ingest.sh maryland --skip-harvest  # Use existing harvest"
-    echo "  ./ingest.sh maryland --harvest-only  # Only harvest"
-    echo "  ./ingest.sh maryland --skip-s3-sync  # Skip S3 upload"
+    echo "  ./ingest.sh maryland                          # Full pipeline"
+    echo "  ./ingest.sh maryland --skip-harvest           # Use existing harvest"
+    echo "  ./ingest.sh maryland --harvest-only           # Only harvest"
+    echo "  ./ingest.sh maryland --skip-s3-sync           # Skip S3 upload"
+    echo "  ./ingest.sh maryland --resume-from enrichment # Skip harvest+mapping, reuse"
+    echo "                                                #   existing mapping output"
+    echo "  ./ingest.sh maryland --resume-from jsonl      # Skip to JSONL, reuse existing"
+    echo "                                                #   enrichment output"
     echo ""
     echo "Available providers: artstor, bhl, community-webs, ct, florida, georgia,"
     echo "  getty, gpo, harvard, hathi, heartland, ia, il, indiana, jhn, lc,"
@@ -47,6 +54,12 @@ shift
 SKIP_HARVEST=false
 HARVEST_ONLY=false
 SKIP_S3_SYNC=false
+RESUME_FROM=""
+
+# Minimum free disk space (GB) required before starting each step.
+# Enrichment needs more headroom — it expands enriched Avro alongside the mapping input.
+DISK_MIN_GB=20
+DISK_MIN_ENRICHMENT_GB=30
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -61,6 +74,15 @@ while [[ $# -gt 0 ]]; do
         --skip-s3-sync)
             SKIP_S3_SYNC=true
             shift
+            ;;
+        --resume-from)
+            RESUME_FROM="${2:-}"
+            if [[ ! "$RESUME_FROM" =~ ^(mapping|enrichment|jsonl)$ ]]; then
+                log_error "--resume-from requires a step: mapping, enrichment, or jsonl"
+                usage
+            fi
+            SKIP_HARVEST=true
+            shift 2
             ;;
         *)
             log_error "Unknown option: $1"
@@ -82,8 +104,11 @@ PROVIDER_DATA="$DPLA_DATA/$PROVIDER"
 HARVEST_DIR="$PROVIDER_DATA/harvest"
 INGEST_LOG="$DPLA_DATA/${PROVIDER}-ingest.log"
 # Truncate at run start so heartbeat reads don't pick up stale harvest progress
-# from previous ingest runs of the same provider.
-> "$INGEST_LOG"
+# from previous ingest runs of the same provider. Skip truncation when resuming
+# mid-pipeline so the existing log context is preserved.
+if [[ -z "$RESUME_FROM" && "$SKIP_HARVEST" = false ]]; then
+    > "$INGEST_LOG"
+fi
 
 # Track provider for status file (ingest-status.sh); trap writes failed + notifies on error
 INGEST_PROVIDER="$PROVIDER"
@@ -114,10 +139,15 @@ START_TIME=$(date +%s)
 
 cd "$I3_HOME"
 
-slack_notify ":arrow_forward: *$PROVIDER ingest started* | harvest → map → enrich → jsonl → s3"
+if [[ -n "$RESUME_FROM" ]]; then
+    slack_notify ":arrow_forward: *$PROVIDER ingest resuming from $RESUME_FROM*"
+else
+    slack_notify ":arrow_forward: *$PROVIDER ingest started* | harvest → map → enrich → jsonl → s3"
+fi
 
 # Step 1: Harvest
 if [ "$SKIP_HARVEST" = false ]; then
+    check_disk_space $DISK_MIN_GB
     write_hub_status "$PROVIDER" harvesting
     print_step "Step 1/5: Harvesting $PROVIDER..."
 
@@ -155,41 +185,58 @@ if [ "$HARVEST_ONLY" = true ]; then
 fi
 
 # Step 2: Mapping
-write_hub_status "$PROVIDER" remapping
-print_step "Step 2/5: Mapping $PROVIDER..."
+if [[ "$RESUME_FROM" =~ ^(enrichment|jsonl)$ ]]; then
+    print_step "Skipping mapping (--resume-from $RESUME_FROM)..."
+    MAP_TS_DIR=$(find_latest_data "$PROVIDER" mapping) \
+        || die "No existing mapping data for $PROVIDER — cannot resume from $RESUME_FROM"
+    log_info "Reusing mapping: $(basename "$MAP_TS_DIR")"
+else
+    check_disk_space $DISK_MIN_GB
+    write_hub_status "$PROVIDER" remapping
+    print_step "Step 2/5: Mapping $PROVIDER..."
 
-start_heartbeat "$PROVIDER" "mapping" "$INGEST_LOG" 3600
-SBT_OPTS="-Xmx15g -Dspark.sql.parquet.enableVectorizedReader=false"
-run_entry dpla.ingestion3.entries.ingest.MappingEntry \
-    --output="$DPLA_DATA" \
-    --conf="$I3_CONF" \
-    --name="$PROVIDER" \
-    --input="$HARVEST_TS_DIR" \
-    --sparkMaster="$SPARK_MASTER"
-stop_heartbeat
+    start_heartbeat "$PROVIDER" "mapping" "$INGEST_LOG" 3600
+    SBT_OPTS="-Xmx15g -Dspark.sql.parquet.enableVectorizedReader=false"
+    run_entry dpla.ingestion3.entries.ingest.MappingEntry \
+        --output="$DPLA_DATA" \
+        --conf="$I3_CONF" \
+        --name="$PROVIDER" \
+        --input="$HARVEST_TS_DIR" \
+        --sparkMaster="$SPARK_MASTER"
+    stop_heartbeat
 
-MAP_TS_DIR=$(find_latest_data "$PROVIDER" mapping)
-log_info "Mapping complete: $(basename "$MAP_TS_DIR")"
-slack_notify ":white_check_mark: *$PROVIDER mapping complete* — starting enrichment"
+    MAP_TS_DIR=$(find_latest_data "$PROVIDER" mapping)
+    log_info "Mapping complete: $(basename "$MAP_TS_DIR")"
+    slack_notify ":white_check_mark: *$PROVIDER mapping complete* — starting enrichment"
+fi
 
 # Step 3: Enrichment
-print_step "Step 3/5: Enriching $PROVIDER..."
+if [[ "$RESUME_FROM" == "jsonl" ]]; then
+    print_step "Skipping enrichment (--resume-from jsonl)..."
+    ENRICH_TS_DIR=$(find_latest_data "$PROVIDER" enrichment) \
+        || die "No existing enrichment data for $PROVIDER — cannot resume from jsonl"
+    log_info "Reusing enrichment: $(basename "$ENRICH_TS_DIR")"
+else
+    check_disk_space $DISK_MIN_ENRICHMENT_GB
+    print_step "Step 3/5: Enriching $PROVIDER..."
 
-start_heartbeat "$PROVIDER" "enrichment" "$INGEST_LOG" 3600
-SBT_OPTS="-Xmx18g"
-run_entry dpla.ingestion3.entries.ingest.EnrichEntry \
-    --output="$DPLA_DATA" \
-    --conf="$I3_CONF" \
-    --name="$PROVIDER" \
-    --input="$MAP_TS_DIR" \
-    --sparkMaster="$SPARK_MASTER"
-stop_heartbeat
+    start_heartbeat "$PROVIDER" "enrichment" "$INGEST_LOG" 3600
+    SBT_OPTS="-Xmx18g"
+    run_entry dpla.ingestion3.entries.ingest.EnrichEntry \
+        --output="$DPLA_DATA" \
+        --conf="$I3_CONF" \
+        --name="$PROVIDER" \
+        --input="$MAP_TS_DIR" \
+        --sparkMaster="$SPARK_MASTER"
+    stop_heartbeat
 
-ENRICH_TS_DIR=$(find_latest_data "$PROVIDER" enrichment)
-log_info "Enrichment complete: $(basename "$ENRICH_TS_DIR")"
-slack_notify ":white_check_mark: *$PROVIDER enrichment complete* — starting JSONL export"
+    ENRICH_TS_DIR=$(find_latest_data "$PROVIDER" enrichment)
+    log_info "Enrichment complete: $(basename "$ENRICH_TS_DIR")"
+    slack_notify ":white_check_mark: *$PROVIDER enrichment complete* — starting JSONL export"
+fi
 
 # Step 4: JSONL export
+check_disk_space $DISK_MIN_GB
 print_step "Step 4/5: JSONL export for $PROVIDER..."
 
 start_heartbeat "$PROVIDER" "jsonl export" "$INGEST_LOG" 3600
