@@ -185,6 +185,7 @@ elapsed_since() {
 # exit. Set TRAP_HANDLED=true before any explicit exit that already sends its
 # own notification to prevent double-posting.
 _setup_error_trap() {
+    set -E  # Propagate ERR trap into functions
     TRAP_HANDLED=false
     trap '
         if [ "$TRAP_HANDLED" = false ]; then
@@ -566,8 +567,8 @@ print(f'New: {new:,} ({sign}{delta:,} vs prev) | Change: {-drop:+.1f}%')
     print_success "S3 sync complete: s3://dpla-master-dataset/${s3_prefix}/jsonl/${jsonl_ts}/"
 
     slack_notify ":white_check_mark: *nara ingest complete*\nNew snapshot: \`$jsonl_ts\`\n${delta_line}\nS3: \`s3://dpla-master-dataset/${s3_prefix}/jsonl/${jsonl_ts}/\`"
-    TRAP_HANDLED=true
     write_hub_status "nara" complete
+    TRAP_HANDLED=true
 }
 
 run_pipeline() {
