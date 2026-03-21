@@ -59,11 +59,14 @@ libraryDependencies ++= Seq(
 resolvers += "SparkPackages" at "https://repos.spark-packages.org/"
 
 // Required JVM options for Java 9+ module system (Spark compatibility)
-// Memory settings for the forked JVM (SBT_OPTS only affects sbt itself, not forked processes)
+// Memory settings for the forked JVM (SBT_OPTS only affects sbt itself, not forked processes;
+// to change IngestRemap/NaraMergeUtil heap, change -Xmx here, not in the shell script)
 Compile / run / javaOptions ++= Seq(
-  "-Xms2g",
-  "-Xmx8g",
+  "-Xms4g",
+  "-Xmx14g",
   "-XX:+UseG1GC",
+  "-XX:MaxGCPauseMillis=200",
+  "-Dspark.sql.parquet.enableVectorizedReader=false",
   "--add-opens=java.base/java.nio=ALL-UNNAMED",
   "--add-opens=java.base/java.lang=ALL-UNNAMED",
   "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
