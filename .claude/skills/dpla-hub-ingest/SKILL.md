@@ -552,7 +552,7 @@ print(json.dumps({'commands': [cmd]}))
 ")
 ```
 
-Valid `--resume-from` values: `mapping`, `enrichment`, `jsonl`, `s3-sync`.
+Valid `--resume-from` values: `mapping`, `enrichment`, `jsonl`.
 
 ### Step 5: Stop EC2 and Verify
 
@@ -1305,5 +1305,5 @@ The EC2 now has the latest ingestion3 (pulled via HTTPS from `https://github.com
 - This ingest does **NOT** rebuild the Elasticsearch index or change what is live on dp.la.
 - Keep the EC2 running until verification is complete, then stop to save cost.
 - Do not modify `i3.conf`, `.env`, or Scala source code unless explicitly requested. Exception: for `community-webs`, Step CW4 updates `community-webs.harvest.endpoint` in `i3.conf` as part of the required ingest flow.
-- Always `git pull` ingestion3 at the start of each session (Step 3a) — the EC2 has no auto-update and can drift behind main, causing failures (e.g. missing entry points). If a pull fails due to a merge conflict or network issue, investigate before proceeding.
+- Always refresh ingestion3 at the start of each session (Step 3a) using `git fetch + reset --hard` — the EC2 has no auto-update and can drift behind main, causing failures (e.g. missing entry points). Never use `git pull`; local commits can accumulate and cause divergent-branch failures.
 - For multi-hub batches: run all harvests/ingests first, then request index rebuild separately.
