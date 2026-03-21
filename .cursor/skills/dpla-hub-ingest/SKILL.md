@@ -86,7 +86,7 @@ All paths under `/home/ec2-user/`:
 |------|----------|
 | `ingestion3/` | Repo (main branch), Java/SBT via `mise` |
 | `ingestion3-conf/` | Hub configuration (`i3.conf`) |
-| `ingestion3/.env` | DPLA_DATA, I3_CONF, SLACK_WEBHOOK, JAVA_HOME |
+| `ingestion3/.env` | DPLA_DATA, I3_CONF, SLACK_WEBHOOK, **SLACK_BOT_TOKEN**, JAVA_HOME |
 | `data/` | `$DPLA_DATA` — all pipeline output |
 | `data/<hub>/harvest/` | Raw harvested records (Avro) |
 | `data/<hub>/mapping/` | Mapped records (Avro) |
@@ -584,25 +584,48 @@ curl -s -X POST "https://slack.com/api/chat.postMessage" \
 
 #### Run Harvest (Manual)
 
+Before launching, post an "ingest started" notice to Slack:
+
 ```bash
-sudo -u ec2-user bash -lc "
-  cd /home/ec2-user/ingestion3 &&
-  SBT_OPTS=-Xmx15g sbt \"runMain dpla.ingestion3.entries.ingest.HarvestEntry \
-    --output /home/ec2-user/data/ \
-    --conf /home/ec2-user/ingestion3-conf/i3.conf \
-    --name <hub> \
-    --sparkMaster local[*]\" \
-  > /home/ec2-user/data/<hub>-harvest.log 2>&1 && echo HARVEST_SUCCESS || echo HARVEST_FAILED
-"
+source ~/.claude/secrets/dpla.env
+curl -s -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"channel":"C02HEU2L3","text":":hourglass: *<hub> ingest started* — harvest running"}'
 ```
 
-Use `--timeout-seconds 7200` on the SSM send-command (harvests can take 20–90+ minutes depending on hub size).
+Then launch the harvest. **Important**: pass `"executionTimeout":["14400"]` in `--parameters` to override the AWS-RunShellScript default of 3600s (1 hr) — harvests for large hubs take 60–90 minutes and will be killed without this.
 
-**Poll** until Status is `Success`, then check the output for `HARVEST_SUCCESS`. If `HARVEST_FAILED`: post failure notification (see above) and stop.
-
-After completion, capture the harvest output timestamp in one command:
 ```bash
-sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/harvest/ | head -1"
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 14400 \
+  --parameters '{"commands":["sudo -u ec2-user bash -lc \"cd /home/ec2-user/ingestion3 && SBT_OPTS=-Xmx15g sbt \\\"runMain dpla.ingestion3.entries.ingest.HarvestEntry --output /home/ec2-user/data/ --conf /home/ec2-user/ingestion3-conf/i3.conf --name <hub> --sparkMaster local[*]\\\" > /home/ec2-user/data/<hub>-harvest.log 2>&1 && echo HARVEST_SUCCESS || echo HARVEST_FAILED\""],"executionTimeout":["14400"]}' \
+  --query 'Command.CommandId' --output text)
+echo "Harvest Command ID: $CMDID"
+```
+
+**Poll** until Status is not `InProgress`, then check the output for `HARVEST_SUCCESS`. If `HARVEST_FAILED`: post failure notification (see above) and stop.
+
+After completion, post a step-complete notice and capture the harvest timestamp:
+
+```bash
+source ~/.claude/secrets/dpla.env
+curl -s -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"channel":"C02HEU2L3","text":":white_check_mark: *<hub> harvest complete* — starting mapping"}'
+```
+
+```bash
+HARVEST_TS=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 30 \
+  --parameters '{"commands":["sudo -u ec2-user bash -lc \"ls -t /home/ec2-user/data/<hub>/harvest/ | head -1\""]}' \
+  --query 'Command.CommandId' --output text)
+# Poll and save result as HARVEST_TIMESTAMP
 ```
 
 This returns the most recent directory name (format: `YYYYMMDD_HHMMSS-<hub>-OriginalRecord.avro`). Save this as `HARVEST_TIMESTAMP`.
@@ -628,7 +651,16 @@ sudo -u ec2-user bash -lc "
 
 If `REMAP_FAILED`: post failure notification (see above) and stop.
 
-After completion, capture the mapping output timestamp:
+After completion, post a step-complete notice and capture the mapping timestamp:
+
+```bash
+source ~/.claude/secrets/dpla.env
+curl -s -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"channel":"C02HEU2L3","text":":white_check_mark: *<hub> mapping complete* — starting enrichment"}'
+```
+
 ```bash
 sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/mapping/ | head -1"
 ```
@@ -654,7 +686,16 @@ sudo -u ec2-user bash -lc "
 
 If `ENRICH_FAILED`: post failure notification (see above) and stop.
 
-After completion, capture the enrichment output timestamp:
+After completion, post a step-complete notice and capture the enrichment timestamp:
+
+```bash
+source ~/.claude/secrets/dpla.env
+curl -s -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"channel":"C02HEU2L3","text":":white_check_mark: *<hub> enrichment complete* — starting JSONL export"}'
+```
+
 ```bash
 sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/enrichment/ | head -1"
 ```
@@ -684,7 +725,16 @@ Use `--timeout-seconds 3600` on the SSM send-command (JSONL export can take 5–
 
 If `JSONL_FAILED`: post failure notification (see above) and stop.
 
-After completion, capture the JSONL output timestamp:
+After completion, post a step-complete notice and capture the JSONL timestamp:
+
+```bash
+source ~/.claude/secrets/dpla.env
+curl -s -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"channel":"C02HEU2L3","text":":white_check_mark: *<hub> JSONL export complete* — starting S3 sync"}'
+```
+
 ```bash
 sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/jsonl/ | head -1"
 ```
@@ -888,49 +938,123 @@ Run as: `python3 hub-list.py february` (or `python3 hub-list.py 2`). Review the 
 
 ### Step B3: Long Run — Write and Launch Script
 
-There are two script templates depending on whether this is a single large hub or a multi-hub batch.
+**Always use `ingest.sh` — do NOT write custom per-hub pipeline scripts.** `ingest.sh` handles all five stages (harvest → mapping → enrichment → JSONL → S3 sync) and sends per-step Slack notifications automatically via `SLACK_BOT_TOKEN` in `.env`. Custom scripts duplicate this logic and are harder to maintain.
 
-#### Write the script to a local temp file, then upload via base64
+#### Preferred approach: write a wrapper and launch via nohup
 
-**Use a quoted heredoc (`<< 'SCRIPTEOF'`) to write the script, then inject the token with `sed`.** Do NOT pass Python code through `python3 -c "..."` to generate scripts — bash processes the double-quoted argument first and strips `\"` → `"`, breaking any JSON in the script's curl calls.
+**Never try to launch nohup processes inline in an SSM `--parameters` string** — nested quoting always breaks. Instead: write the script to EC2 first (via python3 to avoid heredoc quoting issues), then launch it in a separate SSM command.
 
+**Step 1 — Write the wrapper script to EC2:**
 ```bash
-cat > /tmp/<hub>-ingest.sh << 'SCRIPTEOF'
-#!/bin/bash -l
-set -euo pipefail
-...
-SLACK_TOKEN="__TOKEN__"
-...
-SCRIPTEOF
-
-TOKEN=$(python3 -c "
-import re, os
-with open(os.path.expanduser('~/.claude/secrets/dpla.env')) as f:
-    content = f.read()
-token = re.search(r\"DPLA_SLACK_BOT_TOKEN='?([^'\\n]+)'?\", content).group(1).strip(\"'\")
-print(token)
+PARAMS=$(python3 -c "
+import json
+hub = '<hub>'
+lines = [
+    '#!/usr/bin/env bash',
+    'exec /home/ec2-user/ingestion3/scripts/ingest.sh ' + hub,
+]
+script = '\n'.join(lines)
+cmds = [
+    \"python3 -c \\\"open('/home/ec2-user/\" + hub + \"-pipeline.sh','w').write('''\" + script + \"''')\\\"\" ,
+    'chmod +x /home/ec2-user/' + hub + '-pipeline.sh',
+    'echo WRITE_OK',
+]
+print(json.dumps({'commands': cmds}))
 ")
-sed -i '' "s/__TOKEN__/$TOKEN/" /tmp/<hub>-ingest.sh
-echo "Script written."
-```
-
-**Why `<< 'SCRIPTEOF'` is safe:** Single-quoting the heredoc delimiter prevents all bash expansion in the body. The prior concern about heredocs (backslash stripping) only applies to *unquoted* heredocs in zsh.
-
-Then upload via base64:
-```bash
-SCRIPT_B64=$(base64 < /tmp/<hub>-ingest.sh)
 CMDID=$(aws ssm send-command \
   --instance-ids i-0a0def8581efef783 \
   --document-name "AWS-RunShellScript" \
-  --timeout-seconds 60 \
-  --parameters "{\"commands\":[\"echo '${SCRIPT_B64}' | base64 -d > /home/ec2-user/<hub>-ingest.sh && chmod +x /home/ec2-user/<hub>-ingest.sh && echo WRITE_OK\"]}" \
+  --timeout-seconds 30 \
+  --parameters "$PARAMS" \
   --query 'Command.CommandId' --output text)
-# Poll until Status=Success, verify output contains WRITE_OK
+# Poll until Status=Success, verify WRITE_OK
 ```
 
-#### Single-hub script template (posts to #tech-alerts)
+**Step 2 — Launch it as a background nohup process:**
+```bash
+PARAMS=$(python3 -c "
+import json
+hub = '<hub>'
+cmd = 'sudo -u ec2-user bash -l -c \"nohup bash -l /home/ec2-user/' + hub + '-pipeline.sh > /home/ec2-user/data/' + hub + '-pipeline.log 2>&1 &\"'
+print(json.dumps({'commands': [cmd, 'sleep 3', 'pgrep -fa ingest.sh']}))
+")
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 30 \
+  --parameters "$PARAMS" \
+  --query 'Command.CommandId' --output text)
+# Poll — output should show the ingest.sh process running
+```
 
-Use this for large single hubs (minnesota, smithsonian, ia, hathi, etc.). The `__SLACK_TOKEN__` placeholder is replaced by the `sed` step in the write block above.
+**Step 3 — Monitor progress:**
+```bash
+# Check the pipeline log
+sudo -u ec2-user bash -lc "tail -20 /home/ec2-user/data/<hub>-pipeline.log | grep -v StatusLogger"
+# Slack will notify at each step — nothing further needed unless debugging
+```
+
+#### Chaining multiple hubs sequentially
+
+Write a wrapper that calls `ingest.sh` for each hub in sequence:
+```bash
+PARAMS=$(python3 -c "
+import json
+hubs = ['<hub1>', '<hub2>', '<hub3>']
+lines = ['#!/usr/bin/env bash', 'set -euo pipefail']
+for h in hubs:
+    lines.append('bash /home/ec2-user/ingestion3/scripts/ingest.sh ' + h)
+script = '\n'.join(lines)
+cmds = [
+    \"python3 -c \\\"open('/home/ec2-user/batch-pipeline.sh','w').write('''\" + script + \"''')\\\"\" ,
+    'chmod +x /home/ec2-user/batch-pipeline.sh',
+    'echo WRITE_OK',
+]
+print(json.dumps({'commands': cmds}))
+")
+# ... send-command, poll for WRITE_OK, then launch with nohup
+```
+
+#### Killing a running ingest
+
+To safely stop an ingest mid-run:
+
+```bash
+# Find and kill the processes
+PARAMS=$(python3 -c "
+import json
+cmds = [
+    'pgrep -fa ingest.sh',
+    'pkill -f ingest.sh || true',
+    'sleep 2',
+    'pkill -9 -f \"HarvestEntry|MappingEntry|EnrichEntry|JsonlEntry\" || true',
+    'sleep 2',
+    'pgrep -fa ingest.sh && echo STILL_RUNNING || echo ALL_STOPPED',
+]
+print(json.dumps({'commands': cmds}))
+")
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 30 \
+  --parameters "$PARAMS" \
+  --query 'Command.CommandId' --output text)
+# Poll for ALL_STOPPED
+```
+
+Then immediately send a Slack failure notification (the EXIT trap in `ingest.sh` fires on SIGTERM, but may not fire on SIGKILL — send it manually to be safe):
+
+```bash
+source ~/.claude/secrets/dpla.env
+curl -s -X POST "https://slack.com/api/chat.postMessage" \
+  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"channel\":\"C02HEU2L3\",\"text\":\":x: *<hub> ingest killed* — stopped manually at <step>\"}"
+```
+
+#### Single-hub script template (legacy — prefer ingest.sh instead)
+
+Only use this if `ingest.sh` is unavailable or broken. The `__SLACK_TOKEN__` placeholder is replaced by the `sed` step below.
 
 ```bash
 #!/bin/bash -l
