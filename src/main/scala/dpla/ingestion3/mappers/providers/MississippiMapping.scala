@@ -95,6 +95,10 @@ class MississippiMapping
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "language")
       .map(nameOnlyConcept)
 
+  override def place(data: Document[JValue]): ZeroToMany[DplaPlace] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds14")
+      .map(nameOnlyPlace)
+
   override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "publisher")
       .flatMap(_.splitAtDelimiter(";"))
