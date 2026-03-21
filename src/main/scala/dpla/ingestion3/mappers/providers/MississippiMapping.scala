@@ -1,5 +1,6 @@
 package dpla.ingestion3.mappers.providers
 
+import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.enrichments.normalizations.filters.ExtentIdentificationList
 import dpla.ingestion3.mappers.utils._
 import dpla.ingestion3.messages.IngestMessageTemplates
@@ -38,9 +39,15 @@ class MississippiMapping
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] =
     mintDplaItemUri(data)
 
-  // TODO confirm no edm rights
-  //  override def edmRights(data: Document[json4s.JValue]): ZeroToMany[URI] =
-  //    extractStrings(unwrap(data) \ "rights").map(URI)
+  override def edmRights(data: Document[JValue]): ZeroToMany[URI] =
+    rightsValues(data)
+      .filter(v =>
+        v.startsWith("http://rightsstatements.org") ||
+          v.startsWith("https://rightsstatements.org") ||
+          v.startsWith("http://creativecommons.org") ||
+          v.startsWith("https://creativecommons.org")
+      )
+      .map(URI)
 
   override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(unwrap(data) \ "delivery" \ "availabilityLinksUrl")
@@ -68,10 +75,12 @@ class MississippiMapping
   // SourceResource
   override def creator(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "creator")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
   override def contributor(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "contributor")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
   override def description(data: Document[JValue]): ZeroToMany[String] =
@@ -83,6 +92,9 @@ class MississippiMapping
 
   override def identifier(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "identifier")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(_.replaceAll("\\$\\$C[^$]+\\$\\$V", "").trim)
+      .filter(_.nonEmpty)
 
   override def language(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "language")
@@ -90,13 +102,15 @@ class MississippiMapping
 
   override def publisher(data: Document[JValue]): ZeroToMany[EdmAgent] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "publisher")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
   override def rights(data: Document[JValue]): AtLeastOne[String] =
-    extractStrings(unwrap(data) \ "pnx" \ "display" \ "rights")
+    rightsValues(data)
 
   override def subject(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "subject")
+      .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyConcept)
 
   override def date(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
@@ -108,6 +122,10 @@ class MississippiMapping
 
   override def `type`(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "type")
+
+  private def rightsValues(data: Document[JValue]): Seq[String] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "rights")
+      .flatMap(_.splitAtDelimiter(";"))
 
   def agent: EdmAgent = EdmAgent(
     name = Some("Mississippi Digital Library"),
