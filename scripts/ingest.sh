@@ -169,7 +169,7 @@ if [ "$SKIP_HARVEST" = false ]; then
     HARVEST_RECORD_COUNT=$(read_manifest_count "$HARVEST_TS_DIR/_MANIFEST")
     if [[ "$HARVEST_RECORD_COUNT" -eq 0 ]]; then
         slack_notify ":x: *$PROVIDER ingest FAILED* — harvest produced 0 records. Check harvester config and source data."
-        write_hub_status "$PROVIDER" failed
+        write_hub_status "$PROVIDER" failed --error="Harvest produced 0 records"
         exit 0
     fi
 

@@ -86,7 +86,7 @@ All paths under `/home/ec2-user/`:
 |------|----------|
 | `ingestion3/` | Repo (main branch), Java/SBT via `mise` |
 | `ingestion3-conf/` | Hub configuration (`i3.conf`) |
-| `ingestion3/.env` | DPLA_DATA, I3_CONF, SLACK_WEBHOOK, **SLACK_BOT_TOKEN**, JAVA_HOME |
+| `ingestion3/.env` | DPLA_DATA, I3_CONF, SLACK_WEBHOOK, JAVA_HOME |
 | `data/` | `$DPLA_DATA` — all pipeline output |
 | `data/<hub>/harvest/` | Raw harvested records (Avro) |
 | `data/<hub>/mapping/` | Mapped records (Avro) |
@@ -152,95 +152,8 @@ Key harvest types and their network requirements:
 |------|-------|
 | `localoai` | OAI-PMH over HTTP/HTTPS. Most hubs. **CONTENTdm-hosted endpoints are blocked from EC2** (see below). |
 | `api` | REST API (e.g. MDL/SD uses `metl.lib.umn.edu`). EC2-reachable. Slow to respond — use 60s+ curl timeout. |
-| `file` | **community-webs**: DB export pre-processing runs entirely on EC2 (see Community Webs Pre-processing section). **smithsonian / florida / nypl**: harvest from S3 — see S3 File Harvest Buckets section below. **Other file hubs**: `harvest.endpoint` references `/Users/scott/...` paths from a previous operator — require manual staging to EC2 before harvest. |
-| `nara.file.delta` | NARA-specific delta file format. **Use `nara-ingest.sh` only — never `ingest.sh`.** See NARA section below. |
-
-### NARA Delta Ingest
-
-NARA is fundamentally different from other hubs. It uses a quarterly delta export (~300K new/changed records) that must be **merged with the previous full dataset (~18M records)** before mapping. `ingest.sh` is blocked for NARA and will exit with an error if you try to use it.
-
-**Script:** `scripts/harvest/nara-ingest.sh`
-**EC2 data dir:** `/home/ec2-user/data/nara/`
-**Base harvest (S3):** `s3://dpla-master-dataset/nara/harvest/` — the full merged Avro from the previous ingest cycle
-
-#### Normal invocation (first run on a fresh EC2)
-```bash
-# For the February 2026 quarterly export:
-nohup ./scripts/harvest/nara-ingest.sh \
-    --month=202602 \
-    > ~/data/nara-rerun.log 2>&1 &
-```
-On a fresh EC2, this will: download and preprocess the NARA ZIP files (requires `[nara]` AWS profile — keys in 1Password: "ingest@dp.la NARA keys"), pull the base harvest from S3, run the delta harvest, merge, map, enrich, JSONL, and sync to S3.
-
-#### Flags
-
-| Flag | Effect |
-|------|--------|
-| `--skip-preprocess` | Skip ZIP extraction — use when `delta/YYYYMM/` already has `.tar.gz` files |
-| `--force-sync` | Force re-download of base harvest from S3, ignoring any local Avro files in `data/nara/harvest/` |
-
-#### How the script resumes a partial run
-
-The script checks for existing work before each step:
-- **Delta harvest**: looks for `data/nara/delta/YYYYMM/harvest/*-nara-OriginalRecord.avro` — if found, skips re-harvest
-- **Merge**: looks for `data/nara/harvest/YYYYMMDD_000000-nara-OriginalRecord.avro/_LOGS/_SUMMARY.txt` — if found (with summary), skips re-merge
-- **Base harvest**: `find_latest_local_base` picks the newest `*-nara-OriginalRecord.avro` in `data/nara/harvest/` by modification time
-
-**Critical**: the base harvest directory (`data/nara/harvest/`) and delta harvest directory (`data/nara/delta/YYYYMM/harvest/`) are **separate**. Stale or misplaced Avro files in `data/nara/harvest/` will be incorrectly treated as the base harvest.
-
-#### Recovery after a failed mid-run
-
-If the script fails partway through and you need to retry:
-
-1. **Check what's in `data/nara/harvest/`** — anything there will be treated as the base harvest by `find_latest_local_base`. If there are leftover files from a failed run (bad merge output, a delta Avro that ended up there), clean them up.
-
-2. **Check `data/nara/delta/YYYYMM/harvest/`** — if the delta harvest already completed successfully (e.g., from a previous attempt), the Avro should be here and the script will skip re-harvesting.
-
-3. **Use `--force-sync`** — whenever you're not certain the local `data/nara/harvest/` contains the correct full base, use `--force-sync` to pull the real base from S3. This is safe to use; it just costs ~30 minutes of S3 download time.
-
-Typical recovery invocation after a failed run:
-```bash
-nohup ./scripts/harvest/nara-ingest.sh \
-    --month=202602 \
-    --skip-preprocess \
-    --force-sync \
-    >> ~/data/nara-rerun.log 2>&1 &
-```
-
-#### EC2 filesystem layout
-```
-/home/ec2-user/data/nara/
-├── harvest/                              ← base/merged Avro lives here
-│   └── YYYYMMDD_HHMMSS-nara-OriginalRecord.avro/
-└── delta/
-    └── 202602/                           ← one dir per month
-        ├── *.tar.gz                      ← preprocessed delta ZIPs
-        └── harvest/
-            └── YYYYMMDD_HHMMSS-nara-OriginalRecord.avro/  ← delta harvest output
-```
-
-### S3 File Harvest Buckets
-
-Some hubs deliver data via S3 buckets rather than live endpoints. Before running, check the bucket for the latest drop and update `harvest.endpoint` in i3.conf on the EC2 to point at it.
-
-| Hub | S3 Bucket | Format | How to find latest |
-|-----|-----------|--------|--------------------|
-| `smithsonian` | `s3://dpla-hub-si/` | `.xml.gz` per Smithsonian unit | `aws s3 ls s3://dpla-hub-si/ \| tail -5` — pick the newest dated folder (e.g. `2026-03-03/`) |
-| `florida` | `s3://dpla-hub-fl/` | `.zip` or `.jsonl` | `aws s3 ls s3://dpla-hub-fl/ \| tail -5` — pick the newest dated folder |
-| `nypl` | `s3://dpla-hub-nypl/` | `.zip` (one file per drop, named `nypl-YYYYMMDD.zip`) | `aws s3 ls s3://dpla-hub-nypl/ \| tail -5` — pick the newest file |
-| `nara` | `s3://ngc-storage01/dpla-bimonthly-report/` | Multiple `.zip` files per drop, in `YYYY/MMM/` subfolders | `aws s3 ls --profile nara s3://ngc-storage01/dpla-bimonthly-report/` — pick the newest year/month folder. **Requires `[nara]` AWS profile** — keys in 1Password: "ingest@dp.la NARA keys" |
-
-Update `i3.conf` on EC2 before harvesting:
-```bash
-# Example for Smithsonian — replace date with actual latest drop
-sed -i 's|smithsonian.harvest.endpoint = .*|smithsonian.harvest.endpoint = "s3://dpla-hub-si/2026-03-03/"|' \
-    /home/ec2-user/ingestion3-conf/i3.conf
-
-# Example for NYPL — replace filename with actual latest drop
-sed -i 's|nypl.harvest.endpoint = .*|nypl.harvest.endpoint = "s3://dpla-hub-nypl/nypl-20260209.zip"|' \
-    /home/ec2-user/ingestion3-conf/i3.conf
-```
-Then commit the updated endpoint to the ingestion3-conf repo after a successful ingest.
+| `file` | **community-webs**: DB export pre-processing runs entirely on EC2 (see Community Webs Pre-processing section). **Other file hubs**: `harvest.endpoint` references `/Users/scott/...` paths from a previous operator — require manual staging to EC2 before harvest. |
+| `nara.file.delta` | NARA-specific delta file format. Complex — consult README_NARA.md. |
 
 ### CONTENTdm Block (Important)
 
@@ -521,12 +434,10 @@ sudo -u ec2-user bash -lc "
   echo '=== Java ===' && java -version 2>&1
   echo '=== SBT ===' && sbt --version 2>&1 | tail -2
   echo '=== Hub config ===' && grep '^<hub>\.' /home/ec2-user/ingestion3-conf/i3.conf
-  echo '=== Disk ===' && df -h /home/ec2-user/data | tail -1
+  echo '=== Disk ===' && df -h / | tail -1
   echo '=== Prior S3 ingests ===' && aws s3 ls s3://dpla-master-dataset/<hub>/jsonl/ | tail -3
 "
 ```
-
-**Disk space**: `ingest.sh` checks free space automatically before each step (20 GB minimum for harvest/mapping/JSONL, 30 GB for enrichment) and aborts with an error if the threshold is not met. If you see a disk-related abort, free space on `/home/ec2-user/data` before resuming — old harvest/mapping/enrichment dirs from previous runs are safe to delete once the JSONL has synced to S3. Large hubs (smithsonian, ia, hathi) can use 50–100 GB at peak.
 
 For `localoai` hubs, also test the endpoint from EC2:
 ```bash
@@ -556,48 +467,25 @@ Replace `<step>` with `harvest`, `mapping`, `enrichment`, `jsonl`, or `s3-sync` 
 
 ### Step 4: Run Harvest
 
-Before launching, post an "ingest started" notice to Slack:
-
 ```bash
-source ~/.claude/secrets/dpla.env
-curl -s -X POST "https://slack.com/api/chat.postMessage" \
-  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"channel":"C02HEU2L3","text":":hourglass: *<hub> ingest started* — harvest running"}'
+sudo -u ec2-user bash -lc "
+  cd /home/ec2-user/ingestion3 &&
+  SBT_OPTS=-Xmx15g sbt \"runMain dpla.ingestion3.entries.ingest.HarvestEntry \
+    --output /home/ec2-user/data/ \
+    --conf /home/ec2-user/ingestion3-conf/i3.conf \
+    --name <hub> \
+    --sparkMaster local[*]\" \
+  > /home/ec2-user/data/<hub>-harvest.log 2>&1 && echo HARVEST_SUCCESS || echo HARVEST_FAILED
+"
 ```
 
-Then launch the harvest. **Important**: pass `"executionTimeout":["14400"]` in `--parameters` to override the AWS-RunShellScript default of 3600s (1 hr) — harvests for large hubs take 60–90 minutes and will be killed without this.
+Use `--timeout-seconds 7200` on the SSM send-command (harvests can take 20–90+ minutes depending on hub size).
 
+**Poll** until Status is `Success`, then check the output for `HARVEST_SUCCESS`. If `HARVEST_FAILED`: post failure notification (see above) and stop.
+
+After completion, capture the harvest output timestamp in one command:
 ```bash
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 14400 \
-  --parameters '{"commands":["sudo -u ec2-user bash -lc \"cd /home/ec2-user/ingestion3 && SBT_OPTS=-Xmx15g sbt \\\"runMain dpla.ingestion3.entries.ingest.HarvestEntry --output /home/ec2-user/data/ --conf /home/ec2-user/ingestion3-conf/i3.conf --name <hub> --sparkMaster local[*]\\\" > /home/ec2-user/data/<hub>-harvest.log 2>&1 && echo HARVEST_SUCCESS || echo HARVEST_FAILED\""],"executionTimeout":["14400"]}' \
-  --query 'Command.CommandId' --output text)
-echo "Harvest Command ID: $CMDID"
-```
-
-**Poll** until Status is not `InProgress`, then check the output for `HARVEST_SUCCESS`. If `HARVEST_FAILED`: post failure notification (see above) and stop.
-
-After completion, post a step-complete notice and capture the harvest timestamp:
-
-```bash
-source ~/.claude/secrets/dpla.env
-curl -s -X POST "https://slack.com/api/chat.postMessage" \
-  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"channel":"C02HEU2L3","text":":white_check_mark: *<hub> harvest complete* — starting mapping"}'
-```
-
-```bash
-HARVEST_TS=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 30 \
-  --parameters '{"commands":["sudo -u ec2-user bash -lc \"ls -t /home/ec2-user/data/<hub>/harvest/ | head -1\""]}' \
-  --query 'Command.CommandId' --output text)
-# Poll and save result as HARVEST_TIMESTAMP
+sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/harvest/ | head -1"
 ```
 
 This returns the most recent directory name (format: `YYYYMMDD_HHMMSS-<hub>-OriginalRecord.avro`). Save this as `HARVEST_TIMESTAMP`.
@@ -623,16 +511,7 @@ sudo -u ec2-user bash -lc "
 
 If `REMAP_FAILED`: post failure notification (see above) and stop.
 
-After completion, post a step-complete notice and capture the mapping timestamp:
-
-```bash
-source ~/.claude/secrets/dpla.env
-curl -s -X POST "https://slack.com/api/chat.postMessage" \
-  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"channel":"C02HEU2L3","text":":white_check_mark: *<hub> mapping complete* — starting enrichment"}'
-```
-
+After completion, capture the mapping output timestamp:
 ```bash
 sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/mapping/ | head -1"
 ```
@@ -658,16 +537,7 @@ sudo -u ec2-user bash -lc "
 
 If `ENRICH_FAILED`: post failure notification (see above) and stop.
 
-After completion, post a step-complete notice and capture the enrichment timestamp:
-
-```bash
-source ~/.claude/secrets/dpla.env
-curl -s -X POST "https://slack.com/api/chat.postMessage" \
-  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"channel":"C02HEU2L3","text":":white_check_mark: *<hub> enrichment complete* — starting JSONL export"}'
-```
-
+After completion, capture the enrichment output timestamp:
 ```bash
 sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/enrichment/ | head -1"
 ```
@@ -697,16 +567,7 @@ Use `--timeout-seconds 3600` on the SSM send-command (JSONL export can take 5–
 
 If `JSONL_FAILED`: post failure notification (see above) and stop.
 
-After completion, post a step-complete notice and capture the JSONL timestamp:
-
-```bash
-source ~/.claude/secrets/dpla.env
-curl -s -X POST "https://slack.com/api/chat.postMessage" \
-  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"channel":"C02HEU2L3","text":":white_check_mark: *<hub> JSONL export complete* — starting S3 sync"}'
-```
-
+After completion, capture the JSONL output timestamp:
 ```bash
 sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/jsonl/ | head -1"
 ```
@@ -910,180 +771,49 @@ Run as: `python3 hub-list.py february` (or `python3 hub-list.py 2`). Review the 
 
 ### Step B3: Long Run — Write and Launch Script
 
-**Always use `ingest.sh` — do NOT write custom per-hub pipeline scripts.** `ingest.sh` handles all five stages (harvest → mapping → enrichment → JSONL → S3 sync) and sends per-step Slack notifications automatically via `SLACK_BOT_TOKEN` in `.env`. Custom scripts duplicate this logic and are harder to maintain.
+There are two script templates depending on whether this is a single large hub or a multi-hub batch.
 
-#### Preferred approach: write a wrapper and launch via nohup
+#### Write the script to a local temp file, then upload via base64
 
-**Never try to launch nohup processes inline in an SSM `--parameters` string** — nested quoting always breaks. Instead: write the script to EC2 first (via python3 to avoid heredoc quoting issues), then launch it in a separate SSM command.
+**Use a quoted heredoc (`<< 'SCRIPTEOF'`) to write the script, then inject the token with `sed`.** Do NOT pass Python code through `python3 -c "..."` to generate scripts — bash processes the double-quoted argument first and strips `\"` → `"`, breaking any JSON in the script's curl calls.
 
-**Step 1 — Write the wrapper script to EC2:**
 ```bash
-PARAMS=$(python3 -c "
-import json
-hub = '<hub>'
-lines = [
-    '#!/usr/bin/env bash',
-    'exec /home/ec2-user/ingestion3/scripts/ingest.sh ' + hub,
-]
-script = '\n'.join(lines)
-cmds = [
-    \"python3 -c \\\"open('/home/ec2-user/\" + hub + \"-pipeline.sh','w').write('''\" + script + \"''')\\\"\" ,
-    'chmod +x /home/ec2-user/' + hub + '-pipeline.sh',
-    'echo WRITE_OK',
-]
-print(json.dumps({'commands': cmds}))
+cat > /tmp/<hub>-ingest.sh << 'SCRIPTEOF'
+#!/bin/bash -l
+set -euo pipefail
+...
+SLACK_TOKEN="__TOKEN__"
+...
+SCRIPTEOF
+
+TOKEN=$(python3 -c "
+import re, os
+with open(os.path.expanduser('~/.claude/secrets/dpla.env')) as f:
+    content = f.read()
+token = re.search(r\"DPLA_SLACK_BOT_TOKEN='?([^'\\n]+)'?\", content).group(1).strip(\"'\")
+print(token)
 ")
+sed -i '' "s/__TOKEN__/$TOKEN/" /tmp/<hub>-ingest.sh
+echo "Script written."
+```
+
+**Why `<< 'SCRIPTEOF'` is safe:** Single-quoting the heredoc delimiter prevents all bash expansion in the body. The prior concern about heredocs (backslash stripping) only applies to *unquoted* heredocs in zsh.
+
+Then upload via base64:
+```bash
+SCRIPT_B64=$(base64 < /tmp/<hub>-ingest.sh)
 CMDID=$(aws ssm send-command \
   --instance-ids i-0a0def8581efef783 \
   --document-name "AWS-RunShellScript" \
-  --timeout-seconds 30 \
-  --parameters "$PARAMS" \
+  --timeout-seconds 60 \
+  --parameters "{\"commands\":[\"echo '${SCRIPT_B64}' | base64 -d > /home/ec2-user/<hub>-ingest.sh && chmod +x /home/ec2-user/<hub>-ingest.sh && echo WRITE_OK\"]}" \
   --query 'Command.CommandId' --output text)
-# Poll until Status=Success, verify WRITE_OK
+# Poll until Status=Success, verify output contains WRITE_OK
 ```
 
-**Step 2 — Launch it as a background nohup process:**
-```bash
-PARAMS=$(python3 -c "
-import json
-hub = '<hub>'
-cmd = 'sudo -u ec2-user bash -l -c \"nohup bash -l /home/ec2-user/' + hub + '-pipeline.sh > /home/ec2-user/data/' + hub + '-pipeline.log 2>&1 &\"'
-print(json.dumps({'commands': [cmd, 'sleep 3', 'pgrep -fa ingest.sh']}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 30 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
-# Poll — output should show the ingest.sh process running
-```
+#### Single-hub script template (posts to #tech-alerts)
 
-**Step 3 — Monitor progress:**
-```bash
-# Check the pipeline log
-sudo -u ec2-user bash -lc "tail -20 /home/ec2-user/data/<hub>-pipeline.log | grep -v StatusLogger"
-# Slack will notify at each step — nothing further needed unless debugging
-```
-
-#### Chaining multiple hubs sequentially
-
-Write a wrapper that calls `ingest.sh` for each hub in sequence:
-```bash
-PARAMS=$(python3 -c "
-import json
-hubs = ['<hub1>', '<hub2>', '<hub3>']
-lines = ['#!/usr/bin/env bash', 'set -euo pipefail']
-for h in hubs:
-    lines.append('bash /home/ec2-user/ingestion3/scripts/ingest.sh ' + h)
-script = '\n'.join(lines)
-cmds = [
-    \"python3 -c \\\"open('/home/ec2-user/batch-pipeline.sh','w').write('''\" + script + \"''')\\\"\" ,
-    'chmod +x /home/ec2-user/batch-pipeline.sh',
-    'echo WRITE_OK',
-]
-print(json.dumps({'commands': cmds}))
-")
-# ... send-command, poll for WRITE_OK, then launch with nohup
-```
-
-#### Killing a running ingest
-
-To safely stop an ingest mid-run:
-
-```bash
-# Find and kill the processes
-PARAMS=$(python3 -c "
-import json
-cmds = [
-    'pgrep -fa ingest.sh',
-    'pkill -f ingest.sh || true',
-    'sleep 2',
-    'pkill -9 -f \"HarvestEntry|MappingEntry|EnrichEntry|JsonlEntry\" || true',
-    'sleep 2',
-    'pgrep -fa ingest.sh && echo STILL_RUNNING || echo ALL_STOPPED',
-]
-print(json.dumps({'commands': cmds}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 30 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
-# Poll for ALL_STOPPED
-```
-
-Then immediately send a Slack failure notification (the EXIT trap in `ingest.sh` fires on SIGTERM, but may not fire on SIGKILL — send it manually to be safe):
-
-```bash
-source ~/.claude/secrets/dpla.env
-curl -s -X POST "https://slack.com/api/chat.postMessage" \
-  -H "Authorization: Bearer $DPLA_SLACK_BOT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{\"channel\":\"C02HEU2L3\",\"text\":\":x: *<hub> ingest killed* — stopped manually at <step>\"}"
-```
-
-#### Resuming a Failed ingest.sh Run
-
-If `ingest.sh` dies mid-run, use `--resume-from <step>` to restart from the point of failure without re-running earlier steps. This avoids wasting hours re-running steps that already completed.
-
-**First, confirm which steps completed successfully.** A step is complete if its output directory contains a `_MANIFEST` file:
-
-```bash
-PARAMS=$(python3 -c "
-import json
-hub = '<hub>'
-cmds = [
-    f'ls /home/ec2-user/data/{hub}/harvest/ 2>/dev/null | tail -1',
-    f'cat /home/ec2-user/data/{hub}/harvest/\$(ls -t /home/ec2-user/data/{hub}/harvest/ 2>/dev/null | head -1)/_MANIFEST 2>/dev/null | grep -E \"Record count|Activity\"',
-    f'ls /home/ec2-user/data/{hub}/mapping/ 2>/dev/null | tail -1',
-    f'cat /home/ec2-user/data/{hub}/mapping/\$(ls -t /home/ec2-user/data/{hub}/mapping/ 2>/dev/null | head -1)/_MANIFEST 2>/dev/null | grep -E \"Record count|Activity\"',
-    f'ls /home/ec2-user/data/{hub}/enrichment/ 2>/dev/null | tail -1',
-    f'cat /home/ec2-user/data/{hub}/enrichment/\$(ls -t /home/ec2-user/data/{hub}/enrichment/ 2>/dev/null | head -1)/_MANIFEST 2>/dev/null | grep -E \"Record count|Activity\"',
-]
-print(json.dumps({'commands': cmds}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 30 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
-```
-
-A directory with only a `_temporary/` folder (no `_MANIFEST`) means the step **crashed mid-run** and the output is incomplete. Only directories with `_MANIFEST` files are safe to reuse.
-
-**Then resume from the appropriate step:**
-
-| Last step with `_MANIFEST` | Resume command |
-|---|---|
-| Harvest complete | `ingest.sh <hub> --resume-from mapping` |
-| Mapping complete | `ingest.sh <hub> --resume-from enrichment` |
-| Enrichment complete | `ingest.sh <hub> --resume-from jsonl` |
-
-Launch via the same nohup pattern as Step B3:
-```bash
-PARAMS=$(python3 -c "
-import json
-hub = '<hub>'
-step = '<mapping|enrichment|jsonl>'
-cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub} --resume-from {step} > /dev/null 2>&1 &\"'
-print(json.dumps({'commands': [cmd]}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 172800 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
-```
-
-**Note on silent crashes**: Java/Spark processes can be killed by the OS with no output in the application log — the only evidence is a `_temporary/` directory where the completed output should be, and no running java processes. This is most common during enrichment on large hubs (smithsonian, ia, hathi) and is usually caused by low disk space (now caught by the pre-step disk check) or an OOM kill. Check `dmesg | grep -i oom` on the EC2 to confirm OOM.
-
-#### Single-hub script template (legacy — prefer ingest.sh instead)
-
-Only use this if `ingest.sh` is unavailable or broken. The `__SLACK_TOKEN__` placeholder is replaced by the `sed` step below.
+Use this for large single hubs (minnesota, smithsonian, ia, hathi, etc.). The `__SLACK_TOKEN__` placeholder is replaced by the `sed` step in the write block above.
 
 ```bash
 #!/bin/bash -l
@@ -1450,7 +1180,7 @@ Use these if direct SBT invocations fail or for quick manual runs. Note that `i3
 
 ## Future Improvements
 
-The skill's single-hub and batch script templates (legacy) can be simplified further now that `ingest.sh` handles all pipeline stages, disk checks, heartbeats, safety check, email timing, and Slack notifications natively. The legacy templates remain for reference but `ingest.sh` is the preferred approach for all new runs.
+The EC2 now has the latest ingestion3 (pulled via HTTPS from `https://github.com/dpla/ingestion3.git`), which includes `scripts/*.sh`. A potential simplification would be to replace the direct sbt invocations in this skill with `./scripts/ingest.sh <hub>` — but only after validating that script handles all the edge cases (memory flags, timestamp capture, safety check, email timing) the same way this skill does.
 
 ## Safety Rules
 
