@@ -174,7 +174,7 @@ Key harvest types and their network requirements:
 | `file` | **community-webs**: DB export pre-processing runs entirely on EC2 (see Community Webs Pre-processing section). **Other file hubs**: `harvest.endpoint` references `/Users/scott/...` paths from a previous operator — require manual staging to EC2 before harvest. |
 | `nara.file.delta` | NARA-specific delta file format. Complex — consult README_NARA.md. |
 
-**Note:** **maryland** (`collections.digitalmaryland.org`) has a known IP block on EC2 — harvest locally on your Mac (2–3GB disk, 16GB+ RAM) or ask their IT to allowlist `52.2.32.179`. Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
+**Note:** **maryland** and **getty** have known IP blocks on EC2 — harvest locally on your Mac (2–3GB disk, 16GB+ RAM) or ask their IT to allowlist `52.2.32.179`. Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
 
 ## Community Webs Pre-processing
 
@@ -808,7 +808,7 @@ import os, re, sys
 from datetime import datetime
 
 CONF = os.environ.get("I3_CONF", "/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf")
-EC2_BLOCKED_HUBS = {"maryland"}
+EC2_BLOCKED_HUBS = {"maryland", "getty"}
 MONTH_NAMES = {
     "january":1,"february":2,"march":3,"april":4,"may":5,"june":6,
     "july":7,"august":8,"september":9,"october":10,"november":11,"december":12
