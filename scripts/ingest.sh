@@ -107,7 +107,7 @@ INGEST_LOG="$DPLA_DATA/${PROVIDER}-ingest.log"
 # from previous ingest runs of the same provider. Skip truncation when resuming
 # mid-pipeline so the existing log context is preserved.
 if [[ -z "$RESUME_FROM" && "$SKIP_HARVEST" = false ]]; then
-    > "$INGEST_LOG"
+    : > "$INGEST_LOG"
 fi
 
 # Track provider for status file (ingest-status.sh); trap writes failed + notifies on error

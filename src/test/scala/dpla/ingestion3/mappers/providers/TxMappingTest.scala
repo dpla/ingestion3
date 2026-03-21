@@ -137,8 +137,32 @@ class TxMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct dataProvider" in {
+    // Uses stub labelMap: "UNT" -> "UNT Libraries" (see extractor definition above)
     val expected = Seq("UNT Libraries").map(nameOnlyAgent)
     assert(extractor.dataProvider(xml) === expected)
+  }
+
+  it should "return empty Seq when setSpec suffix is not in labelMap" in {
+    val xml =
+      <record>
+        <header>
+          <setSpec>partner:UNKNOWN</setSpec>
+        </header>
+      </record>
+    assert(extractor.dataProvider(Document(xml)) === Seq())
+  }
+
+  it should "return the last partner setSpec when multiple are present" in {
+    val multiExtractor = new TxMapping(Map("A" -> "Hub A", "B" -> "Hub B"))
+    val xml =
+      <record>
+        <header>
+          <setSpec>partner:A</setSpec>
+          <setSpec>partner:B</setSpec>
+        </header>
+      </record>
+    val expected = Seq("Hub B").map(nameOnlyAgent)
+    assert(multiExtractor.dataProvider(Document(xml)) === expected)
   }
 
   it should "extract the correct RS.org value to edmRights" in {

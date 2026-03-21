@@ -10,11 +10,12 @@ import dpla.ingestion3.harvesters.{
 import dpla.ingestion3.mappers.utils.XmlExtractor
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
-import org.apache.commons.io.IOUtils
+import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-import java.io.{ByteArrayInputStream, File}
+import java.io.{ByteArrayInputStream, File, FileInputStream}
+import java.util.zip.GZIPInputStream
 import scala.util.{Failure, Success, Try}
 import scala.xml._
 
@@ -106,11 +107,13 @@ class OaiFileHarvester(
   override def harvest: DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
-    val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
+    val endpoint = conf.harvest.endpoint.getOrElse("in")
+    val isTempDir = endpoint.startsWith("s3://")
+    val inFiles = LocalHarvester.resolveToLocalDir(endpoint, harvestTime, "oai-file-s3", conf.harvest.awsProfile)
 
-    inFiles
-      .listFiles(FileFilters.zipFilter)
-      .foreach(inFile => {
+    try {
+      // Handle zip archives (each zip may contain multiple XML entries)
+      Option(inFiles.listFiles(FileFilters.zipFilter)).getOrElse(Array.empty).foreach(inFile => {
         val inputStream = LocalHarvester
           .getZipInputStream(inFile)
           .getOrElse(
@@ -127,6 +130,20 @@ class OaiFileHarvester(
           )
         IOUtils.closeQuietly(inputStream)
       })
+
+      // Handle gzipped XML files (each .gz contains a single OAI-PMH XML document)
+      Option(inFiles.listFiles(FileFilters.gzFilter)).getOrElse(Array.empty).foreach(inFile => {
+        val gzStream = new GZIPInputStream(new FileInputStream(inFile))
+        val result = FileResult(inFile.getName, Some(IOUtils.toByteArray(gzStream)))
+        IOUtils.closeQuietly(gzStream)
+        handleFile(result, unixEpoch) match {
+          case Failure(exception) => logger.error(s"Caught exception on $inFile.", exception)
+          case Success(_)         => // do nothing
+        }
+      })
+    } finally {
+      if (isTempDir) FileUtils.deleteQuietly(inFiles)
+    }
 
     close()
 
