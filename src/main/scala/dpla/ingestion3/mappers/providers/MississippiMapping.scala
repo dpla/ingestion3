@@ -35,8 +35,14 @@ class MississippiMapping
 
   // OreAggregation
   override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data) \ "pnx" \ "display" \ "ispartof")
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds02")
       .map(nameOnlyAgent)
+
+  // TODO confirm with provider whether ispartof represents a collection name
+  // or a higher-level institutional grouping
+  override def collection(data: Document[JValue]): ZeroToMany[DcmiTypeCollection] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "ispartof")
+      .map(nameOnlyCollection)
 
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] =
     mintDplaItemUri(data)
