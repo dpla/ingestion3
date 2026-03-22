@@ -110,7 +110,8 @@ abstract class PrimoHarvester(
                    |  Response (first 600): $xmlSnippet""".stripMargin
               )
               logger.warn(
-                s"Empty page at indx=$indx (TOTALHITS=$totalRecords) — " +
+                s"Empty page at indx=$indx " +
+                  s"(TOTALHITS=${if (totalRecords.isEmpty) "(not in response)" else totalRecords}) — " +
                   s"stopping harvest at pagination limit"
               )
               continueHarvest = false
