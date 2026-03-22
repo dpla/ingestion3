@@ -115,15 +115,24 @@ abstract class PrimoHarvester(
               )
               continueHarvest = false
             } else {
+              val totalRecordsLong = scala.util.Try(totalRecords.toLong).toOption
               logger.info(
                 s"Fetched ${Utils.formatNumber(nextIndx.toLong - 1)} " +
-                  s"of ${Utils.formatNumber(totalRecords.toLong)} " +
+                  s"of ${totalRecordsLong.map(Utils.formatNumber).getOrElse("?")} " +
                   s"from ${src.url.getOrElse("(url not available)")}"
               )
 
-              if (indxInt.toLong >= totalRecords.toLong) {
-                continueHarvest = false
-              } else indx = nextIndx
+              totalRecordsLong match {
+                case Some(total) if indxInt.toLong >= total => continueHarvest = false
+                case None =>
+                  // TOTALHITS missing from response — stop safely rather than
+                  // risk looping forever without a termination condition
+                  System.err.println(
+                    s"$shortName: TOTALHITS missing from response at indx=$indx — stopping harvest"
+                  )
+                  continueHarvest = false
+                case _ => indx = nextIndx
+              }
             }
           case _ =>
             logger.error(
