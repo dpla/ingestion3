@@ -35,10 +35,18 @@ class JhnMapping
       .flatMap(node => getAttributeValue(node, s"rdf:resource"))
       .map(URI)
 
-  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    (metadataRoot(data) \ "Aggregation" \ "isShownAt")
+  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
+    // Many CJH-member sets (LBI, AJHS_text, YIVO, etc.) omit edm:isShownAt but
+    // provide edm:aggregatedCHO, which resolves to the public item page via the
+    // CJH link resolver (http://digital.cjh.org/<id> → linkresolver.cjh.org).
+    // Fall back to aggregatedCHO so these records are not lost.
+    val aggregation = metadataRoot(data) \ "Aggregation"
+    val explicit = (aggregation \ "isShownAt")
       .flatMap(node => getAttributeValue(node, "rdf:resource"))
-      .map(stringOnlyWebResource)
+    lazy val fallback = (aggregation \ "aggregatedCHO")
+      .flatMap(node => getAttributeValue(node, "rdf:resource"))
+    (if (explicit.nonEmpty) explicit else fallback).map(stringOnlyWebResource)
+  }
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
