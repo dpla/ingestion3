@@ -78,23 +78,39 @@ abstract class PrimoHarvester(
             saveOutRecords(primoRecords)
 
             // Loop control
-            val nextIndx = (primoRecords.size + indx.toInt).toString
+            val indxInt = indx.toInt
+            val nextIndx = (primoRecords.size + indxInt).toString
             // Only extract total records once
             totalRecords =
               if (totalRecords.isEmpty)
                 (xml \\ "SEGMENTS" \ "JAGROOT" \ "RESULT" \ "DOCSET" \ "@TOTALHITS").text
               else totalRecords
 
-            // Fetched 8,300 of 991,692 from http://mwdl.com/PrimoWebServices/xservice/search/brief?indx=8201?...
-            logger.info(
-              s"Fetched ${Utils.formatNumber(nextIndx.toLong - 1)} " +
-                s"of ${Utils.formatNumber(totalRecords.toLong)} " +
-                s"from ${src.url.getOrElse("No url")}"
-            )
-
-            if (indx.toInt >= totalRecords.toInt) {
+            if (primoRecords.isEmpty) {
+              // Empty page means the API has no more results at this offset
+              // (Primo has a deep pagination limit below TOTALHITS). Stop here
+              // rather than looping forever on the same offset.
+              logger.warn(
+                s"Empty page at indx=$indx (TOTALHITS=$totalRecords) — " +
+                  s"stopping harvest at pagination limit"
+              )
+              System.err.println(
+                s"$shortName harvest stopping: empty page at indx=$indx, " +
+                  s"fetched ${indxInt - 1} of $totalRecords records"
+              )
               continueHarvest = false
-            } else indx = nextIndx
+            } else {
+              // Fetched 8,300 of 991,692 from http://mwdl.com/PrimoWebServices/xservice/search/brief?indx=8201?...
+              logger.info(
+                s"Fetched ${Utils.formatNumber(nextIndx.toLong - 1)} " +
+                  s"of ${Utils.formatNumber(totalRecords.toLong)} " +
+                  s"from ${src.url.getOrElse("No url")}"
+              )
+
+              if (indxInt.toLong >= totalRecords.toLong) {
+                continueHarvest = false
+              } else indx = nextIndx
+            }
           case _ =>
             logger.error(
               s"Response body is empty.\n" +
