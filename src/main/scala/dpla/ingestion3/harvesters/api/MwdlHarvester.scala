@@ -59,7 +59,7 @@ class MwdlHarvester(
         "facet_local1,exact,Westminster College Institutional Repository"
       )
       .addParameter(
-        "query_exec",
+        "query_exc",
         "facet_local4,exact,Salt Lake Community College Digital Archives"
       )
       .build()

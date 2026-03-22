@@ -86,25 +86,39 @@ abstract class PrimoHarvester(
                 (xml \\ "SEGMENTS" \ "JAGROOT" \ "RESULT" \ "DOCSET" \ "@TOTALHITS").text
               else totalRecords
 
+            // Log endpoint + TOTALHITS on first page unconditionally (stderr
+            // bypasses broken log4j2 config so this is always visible).
+            if (indxInt == 1)
+              System.err.println(
+                s"$shortName: harvest starting — " +
+                  s"TOTALHITS=${if (totalRecords.isEmpty) "(not in response)" else totalRecords}, " +
+                  s"endpoint=${src.url.getOrElse("(url not available)")}"
+              )
+
             if (primoRecords.isEmpty) {
               // Empty page means the API has no more results at this offset
               // (Primo has a deep pagination limit below TOTALHITS). Stop here
               // rather than looping forever on the same offset.
+              val recordsFetched = indxInt - 1
+              val xmlSnippet = docs.take(600).replaceAll("\\s+", " ").trim
+              System.err.println(
+                s"""$shortName: PAGINATION LIMIT HIT — harvest stopping early
+                   |  Offset (indx):        $indx
+                   |  TOTALHITS (reported): ${if (totalRecords.isEmpty) "(not in response)" else totalRecords}
+                   |  Records fetched:      $recordsFetched
+                   |  Failing request URL:  ${src.url.getOrElse("(url not available)")}
+                   |  Response (first 600): $xmlSnippet""".stripMargin
+              )
               logger.warn(
                 s"Empty page at indx=$indx (TOTALHITS=$totalRecords) — " +
                   s"stopping harvest at pagination limit"
               )
-              System.err.println(
-                s"$shortName harvest stopping: empty page at indx=$indx, " +
-                  s"fetched ${indxInt - 1} of $totalRecords records"
-              )
               continueHarvest = false
             } else {
-              // Fetched 8,300 of 991,692 from http://mwdl.com/PrimoWebServices/xservice/search/brief?indx=8201?...
               logger.info(
                 s"Fetched ${Utils.formatNumber(nextIndx.toLong - 1)} " +
                   s"of ${Utils.formatNumber(totalRecords.toLong)} " +
-                  s"from ${src.url.getOrElse("No url")}"
+                  s"from ${src.url.getOrElse("(url not available)")}"
               )
 
               if (indxInt.toLong >= totalRecords.toLong) {
