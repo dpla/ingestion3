@@ -1,7 +1,7 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
+import dpla.ingestion3.mappers.utils.{Document, MappingException, XmlExtractor, XmlMapping}
 import dpla.ingestion3.messages.IngestMessageTemplates
 import dpla.ingestion3.model.DplaMapData._
 import dpla.ingestion3.model._
@@ -56,10 +56,14 @@ class JhnMapping
       val name = extractString(agent \ "prefLabel")
       val note = extractString(agent \ "note")
       val uri = getAttributeValue(agent, "rdf:about").map(URI)
+      val sameAs = (agent \ "sameAs")
+        .flatMap(node => getAttributeValue(node, "rdf:resource"))
+        .map(URI)
       EdmAgent(
         name = name,
         note = note,
-        uri = uri
+        uri = uri,
+        exactMatch = sameAs
       )
     })
 
@@ -100,6 +104,22 @@ class JhnMapping
     (metadataRoot(data) \ "Aggregation" \ "isShownBy")
       .flatMap(node => getAttributeValue(node, "rdf:resource"))
       .map(stringOnlyWebResource)
+
+  override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+    extractStrings(metadataRoot(data) \ "ProvidedCHO" \ "publisher")
+      .map(nameOnlyAgent)
+
+  // Fail records that contain Mojibake (UTF-8 bytes misread as CP1252).
+  // JHN does not provide rights text — the throw path is the only effect
+  // for affected records; clean records return an empty Seq as expected.
+  override def rights(data: Document[NodeSeq]): ZeroToMany[String] = {
+    if (JhnMapping.MojibakePattern.findFirstIn(data.get.text).isDefined)
+      throw MappingException(
+        "Mojibake encoding detected: UTF-8 bytes were misread as CP1252. " +
+          "Please re-encode source records as UTF-8 and re-harvest."
+      )
+    Seq()
+  }
 
   override def place(data: Document[NodeSeq]): ZeroToMany[DplaPlace] = {
     val placeConcepts = (metadataRoot(data) \ "Place").map(node => {
@@ -171,4 +191,10 @@ class JhnMapping
 
   private def metadataRoot(data: Document[NodeSeq]): NodeSeq =
     data \ "metadata" \ "RDF"
+}
+
+object JhnMapping {
+  // Compiled once at class load, not per record.
+  // Matches the two-byte lead sequence produced when UTF-8 is misread as CP1252.
+  val MojibakePattern = "[\\u00c0-\\u00c3][\\u0080-\\u00bf]".r
 }
