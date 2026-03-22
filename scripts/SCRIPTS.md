@@ -8,7 +8,7 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 
 | Folder | Purpose | Scripts |
 |--------|---------|---------|
-| **scripts/** (root) | Core pipeline, batch, S3 | `ingest.sh`, `harvest.sh`, `remap.sh`, `mapping.sh`, `enrich.sh`, `jsonl.sh`, `auto-ingest.sh`, `batch-ingest.sh`, `s3-sync.sh`, `common.sh` |
+| **scripts/** (root) | Core pipeline, batch, S3, monitoring | `ingest.sh`, `harvest.sh`, `remap.sh`, `mapping.sh`, `enrich.sh`, `jsonl.sh`, `auto-ingest.sh`, `batch-ingest.sh`, `s3-sync.sh`, `common.sh`, `ingest-watchdog.sh` |
 | **scripts/communication/** | Schedule, email, Slack | `schedule.sh`, `send-ingest-email.sh`, `notify-harvest-failure.sh`, `send-harvest-failure-email.py` |
 | **scripts/delete/** | Record removal | `delete-by-id.sh`, `delete-from-jsonl.sh`, `delete-from-jsonl.py` |
 | **scripts/harvest/** | Harvest helpers, NARA, Community Webs, SI, VA | `nara-ingest.sh`, `community-webs-export.sh`, `community-webs-ingest.sh`, `community-webs-validate-jsonl.py`, `fix-si.sh`, `harvest-va.sh` |
@@ -19,6 +19,7 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 | Script | Purpose | Usage |
 |--------|---------|-------|
 | `ingest.sh` | Full pipeline (harvest → map → enrich → jsonl → S3 sync) | `./scripts/ingest.sh <hub>` |
+| `ingest-watchdog.sh` | Cron watchdog: detects ingests killed by SIGKILL and alerts Slack | `*/5 * * * * /home/ec2-user/ingestion3/scripts/ingest-watchdog.sh` (via crontab) |
 | `harvest.sh` | Harvest records from OAI/API/file source | `./scripts/harvest.sh <hub>` |
 | `remap.sh` | Re-run mapping → enrichment → jsonl | `./scripts/remap.sh <hub>` |
 | `mapping.sh` | Transform harvested records to DPLA MAP | `./scripts/mapping.sh <hub>` |
@@ -104,6 +105,40 @@ log_info "Platform is: $PLATFORM"
 ```
 
 ## Script Details
+
+### ingest-watchdog.sh - SIGKILL Watchdog
+
+Runs every 5 minutes via cron. Detects ingests that were killed with SIGKILL
+(e.g. cgroup eviction), which bypasses bash EXIT traps and leaves no failure
+notification. When a dead ingest is found, sends a Slack alert to `#tech-alerts`
+via `SLACK_BOT_TOKEN`.
+
+**Install** (ec2-user crontab):
+```
+*/5 * * * * /home/ec2-user/ingestion3/scripts/ingest-watchdog.sh
+```
+
+**How it works:**
+1. Scans `$I3_HOME/logs/status/*.status` for in-progress statuses (`harvesting`,
+   `remapping`, `enriching`, `jsonl`, `syncing`).
+2. Skips status files updated within the last 5 minutes (buffer for the gap
+   between pipeline steps).
+3. Skips hubs where an `ingest.sh <hub>` process is still running.
+4. Alerts Slack and touches `$STATUS_DIR/<hub>.watchdog-alerted` (sentinel file).
+
+**Deduplication via sentinel file:**
+Once alerted, the sentinel file's mtime is compared to the status file's mtime on
+every subsequent run. If the sentinel is newer, the alert is suppressed — the
+death event has already been reported. When a new ingest starts, `write_hub_status`
+updates the status file's mtime, making the sentinel stale and re-arming the
+watchdog automatically.
+
+**Required env vars** (loaded from `$I3_HOME/.env`):
+
+| Variable | Description |
+|----------|-------------|
+| `SLACK_BOT_TOKEN` | Bot token for Slack `chat.postMessage` API |
+| `SLACK_CHANNEL` | Channel ID to post to (default: `C02HEU2L3` = `#tech-alerts`) |
 
 ### ingest.sh - Full Pipeline
 
