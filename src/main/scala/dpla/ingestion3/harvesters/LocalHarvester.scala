@@ -9,6 +9,7 @@ import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.tools.tar.TarInputStream
 
+import java.nio.file.Files
 import java.util.zip.{GZIPInputStream, ZipInputStream}
 import scala.util.Try
 
@@ -37,22 +38,27 @@ abstract class LocalHarvester(
   // Instead, they are written to this temp path,
   //   then loaded into a spark DataFrame,
   //   then written to their final destination.
-  // Each run gets a unique directory (shortName-millis) so leftover files
-  // from a previously killed run — which may be owned by a different OS
-  // user — can never block a new harvest from starting.
+  // Each run gets a unique directory so leftover files from a previously
+  // killed run — which may be owned by a different OS user — can never
+  // block a new harvest from starting.  Files.createTempDirectory delegates
+  // to the OS for guaranteed uniqueness (no millisecond-collision risk).
   private val tmpDir: File = FileUtils.getTempDirectory
-  private val tmpDirName: String = s"$shortName-${System.currentTimeMillis()}"
-  val tmpOutStr: String = new File(tmpDir, tmpDirName).getAbsolutePath
+  private val runTmpDir: File =
+    Files.createTempDirectory(tmpDir.toPath, s"$shortName-").toFile
+  private val tmpDirName: String = runTmpDir.getName
+  val tmpOutStr: String = runTmpDir.getAbsolutePath
 
   // Best-effort cleanup of temp dirs left by prior killed runs.
-  // Failures are logged but do not abort startup.
+  // Failures are logged (including the cause) but do not abort startup.
   private val stalePrefix = s"$shortName-"
   Option(tmpDir.listFiles())
     .getOrElse(Array.empty[File])
     .filter(f => f.isDirectory && f.getName.startsWith(stalePrefix) && f.getName != tmpDirName)
     .foreach { dir =>
-      Try(Utils.deleteRecursively(dir)).failed.foreach { _ =>
-        System.err.println(s"[WARN] LocalHarvester: could not remove stale temp dir: ${dir.getAbsolutePath}")
+      Try(Utils.deleteRecursively(dir)).failed.foreach { ex =>
+        System.err.println(
+          s"[WARN] LocalHarvester: could not remove stale temp dir ${dir.getAbsolutePath}: ${ex.getMessage}"
+        )
       }
     }
 
