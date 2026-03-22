@@ -8,7 +8,7 @@
 #
 # On detecting a dead ingest:
 #   - Sends a Slack alert to #tech-alerts via SLACK_BOT_TOKEN
-#   - Marks the status as "killed" to prevent repeat alerts on subsequent runs
+#   - Touches a sentinel file to prevent repeat alerts on subsequent runs
 #
 # Usage: add to ec2-user's crontab:
 #   */5 * * * * /home/ec2-user/ingestion3/scripts/ingest-watchdog.sh
@@ -52,15 +52,11 @@ print(json.dumps({'channel': sys.argv[1], 'text': sys.argv[2]}))" \
 for status_file in "$STATUS_DIR"/*.status; do
     [[ -f "$status_file" ]] || continue
 
-    hub=$(python3 -c "
+    read -r hub status < <(python3 -c "
 import json, sys
 d = json.load(open(sys.argv[1]))
-print(d.get('hub', ''))" "$status_file" 2>/dev/null) || continue
-
-    status=$(python3 -c "
-import json, sys
-d = json.load(open(sys.argv[1]))
-print(d.get('status', ''))" "$status_file" 2>/dev/null) || continue
+print(d.get('hub', ''), d.get('status', ''))" "$status_file" 2>/dev/null) || continue
+    [[ -n "$hub" && -n "$status" ]] || continue
 
     # Skip terminal statuses (complete, failed, killed, etc.)
     is_active=false
@@ -80,21 +76,20 @@ print(d.get('status', ''))" "$status_file" 2>/dev/null) || continue
         continue
     fi
 
+    # Deduplicate alerts using a sentinel file.  The sentinel is touched after
+    # the first alert for a given death event.  A new ingest updates the status
+    # file's mtime, making the sentinel older → watchdog re-arms automatically.
+    sentinel="$STATUS_DIR/$hub.watchdog-alerted"
+    if [[ -f "$sentinel" ]]; then
+        sentinel_mtime=$(stat -c '%Y' "$sentinel" 2>/dev/null) || sentinel_mtime=0
+        (( sentinel_mtime >= file_mtime )) && continue
+    fi
+
     # In-progress status with no running process and stale timestamp — alert.
     age_min=$(( age / 60 ))
     slack_alert ":skull: *$hub ingest process was killed* | stage: \`$status\` | last updated: ${age_min}m ago\nNo ingest.sh process found — likely SIGKILL. Manual restart required."
 
-    # Mark as killed so subsequent cron runs don't re-alert for this ingest.
-    python3 - "$status_file" << 'PYEOF'
-import json, sys, datetime
-path = sys.argv[1]
-with open(path) as f:
-    d = json.load(f)
-d['status'] = 'killed'
-d['updated_at'] = datetime.datetime.utcnow().isoformat()
-d['error'] = 'Process killed without clean exit (watchdog detected)'
-with open(path, 'w') as f:
-    json.dump(d, f, indent=2)
-PYEOF
+    # Touch sentinel so subsequent cron runs skip this death event.
+    touch "$sentinel"
 
 done
