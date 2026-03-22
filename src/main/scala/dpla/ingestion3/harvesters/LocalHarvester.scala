@@ -9,6 +9,7 @@ import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.commons.io.{FileUtils, IOUtils}
 import org.apache.tools.tar.TarInputStream
 
+import java.nio.file.Files
 import java.util.zip.{GZIPInputStream, ZipInputStream}
 import scala.util.Try
 
@@ -37,11 +38,29 @@ abstract class LocalHarvester(
   // Instead, they are written to this temp path,
   //   then loaded into a spark DataFrame,
   //   then written to their final destination.
-  // TODO: make tmp path configurable rather than hard-coded
-  val tmpOutStr: String = new File(FileUtils.getTempDirectory, shortName).getAbsolutePath
+  // Each run gets a unique directory so leftover files from a previously
+  // killed run — which may be owned by a different OS user — can never
+  // block a new harvest from starting.  Files.createTempDirectory delegates
+  // to the OS for guaranteed uniqueness (no millisecond-collision risk).
+  private val tmpDir: File = FileUtils.getTempDirectory
+  private val runTmpDir: File =
+    Files.createTempDirectory(tmpDir.toPath, s"$shortName-").toFile
+  private val tmpDirName: String = runTmpDir.getName
+  val tmpOutStr: String = runTmpDir.getAbsolutePath
 
-  // Delete temporary output directory and files if they already exist.
-  Utils.deleteRecursively(new File(tmpOutStr))
+  // Best-effort cleanup of temp dirs left by prior killed runs.
+  // Failures are logged (including the cause) but do not abort startup.
+  private val stalePrefix = s"$shortName-"
+  Option(tmpDir.listFiles())
+    .getOrElse(Array.empty[File])
+    .filter(f => f.isDirectory && f.getName.startsWith(stalePrefix) && f.getName != tmpDirName)
+    .foreach { dir =>
+      Try(Utils.deleteRecursively(dir)).failed.foreach { ex =>
+        System.err.println(
+          s"[WARN] LocalHarvester: could not remove stale temp dir ${dir.getAbsolutePath}: ${ex.getMessage}"
+        )
+      }
+    }
 
   private val avroWriter: DataFileWriter[GenericRecord] =
     AvroHelper.avroWriter(shortName, tmpOutStr, Harvester.schema)
