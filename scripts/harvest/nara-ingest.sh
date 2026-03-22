@@ -580,20 +580,23 @@ print(f'New: {new:,} ({sign}{delta:,} vs prev) | Change: {-drop:+.1f}%')
 # Watches for mapping and enrichment stage completion in the background and posts
 # Slack notifications when each _SUCCESS file appears. Exits once both are notified.
 # Args: $1 = NARA_OUTPUT directory (e.g. $NARA_DATA/nara)
+#       $2 = start marker file — only _SUCCESS files newer than this are considered,
+#            preventing notifications from a prior run's stale outputs
 _watch_pipeline_stages() {
     local output_dir="$1"
+    local start_marker="$2"
     local interval=120
     local mapping_notified=false
 
     while true; do
         if [ "$mapping_notified" = false ] \
-            && [ -n "$(find "$output_dir/mapping" -name "_SUCCESS" -print -quit 2>/dev/null)" ]; then
+            && [ -n "$(find "$output_dir/mapping" -name "_SUCCESS" -newer "$start_marker" -print -quit 2>/dev/null)" ]; then
             slack_notify ":white_check_mark: *nara mapping complete* — enrichment starting"
             mapping_notified=true
         fi
 
         if [ "$mapping_notified" = true ] \
-            && [ -n "$(find "$output_dir/enrichment" -name "_SUCCESS" -print -quit 2>/dev/null)" ]; then
+            && [ -n "$(find "$output_dir/enrichment" -name "_SUCCESS" -newer "$start_marker" -print -quit 2>/dev/null)" ]; then
             slack_notify ":white_check_mark: *nara enrichment complete* — JSONL export starting"
             break
         fi
@@ -615,7 +618,9 @@ run_pipeline() {
     cd "$I3_HOME"
     export SBT_OPTS="$PIPELINE_SBT_OPTS"
 
-    _watch_pipeline_stages "$NARA_OUTPUT" &
+    local _start_marker
+    _start_marker=$(mktemp)
+    _watch_pipeline_stages "$NARA_OUTPUT" "$_start_marker" &
     local _watcher_pid=$!
 
     sbt -java-home "$JAVA_HOME" \
@@ -626,8 +631,18 @@ run_pipeline() {
         --name=nara \
         --sparkMaster=$PIPELINE_SPARK_MASTER"
 
+    # Give the watcher up to one poll interval to finish naturally — it exits on its
+    # own once enrichment is confirmed, so this only blocks if a stage completed in
+    # the last polling window before sbt returned.
+    if kill -0 "$_watcher_pid" 2>/dev/null; then
+        local _deadline=$(( $(date +%s) + 130 ))
+        while kill -0 "$_watcher_pid" 2>/dev/null && [ "$(date +%s)" -lt "$_deadline" ]; do
+            sleep 5
+        done
+    fi
     kill "$_watcher_pid" 2>/dev/null || true
     wait "$_watcher_pid" 2>/dev/null || true
+    rm -f "$_start_marker"
 
     print_success "Pipeline complete"
     echo ""
