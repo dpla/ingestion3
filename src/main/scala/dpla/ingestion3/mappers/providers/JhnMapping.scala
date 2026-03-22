@@ -40,9 +40,10 @@ class JhnMapping
     // provide edm:aggregatedCHO, which resolves to the public item page via the
     // CJH link resolver (http://digital.cjh.org/<id> → linkresolver.cjh.org).
     // Fall back to aggregatedCHO so these records are not lost.
-    val explicit = (metadataRoot(data) \ "Aggregation" \ "isShownAt")
+    val aggregation = metadataRoot(data) \ "Aggregation"
+    val explicit = (aggregation \ "isShownAt")
       .flatMap(node => getAttributeValue(node, "rdf:resource"))
-    lazy val fallback = (metadataRoot(data) \ "Aggregation" \ "aggregatedCHO")
+    lazy val fallback = (aggregation \ "aggregatedCHO")
       .flatMap(node => getAttributeValue(node, "rdf:resource"))
     (if (explicit.nonEmpty) explicit else fallback).map(stringOnlyWebResource)
   }
