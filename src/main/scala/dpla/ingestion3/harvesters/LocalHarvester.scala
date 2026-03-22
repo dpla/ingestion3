@@ -37,11 +37,24 @@ abstract class LocalHarvester(
   // Instead, they are written to this temp path,
   //   then loaded into a spark DataFrame,
   //   then written to their final destination.
-  // TODO: make tmp path configurable rather than hard-coded
-  val tmpOutStr: String = new File(FileUtils.getTempDirectory, shortName).getAbsolutePath
+  // Each run gets a unique directory (shortName-millis) so leftover files
+  // from a previously killed run — which may be owned by a different OS
+  // user — can never block a new harvest from starting.
+  private val tmpDir: File = FileUtils.getTempDirectory
+  private val tmpDirName: String = s"$shortName-${System.currentTimeMillis()}"
+  val tmpOutStr: String = new File(tmpDir, tmpDirName).getAbsolutePath
 
-  // Delete temporary output directory and files if they already exist.
-  Utils.deleteRecursively(new File(tmpOutStr))
+  // Best-effort cleanup of temp dirs left by prior killed runs.
+  // Failures are logged but do not abort startup.
+  private val stalePrefix = s"$shortName-"
+  Option(tmpDir.listFiles())
+    .getOrElse(Array.empty[File])
+    .filter(f => f.isDirectory && f.getName.startsWith(stalePrefix) && f.getName != tmpDirName)
+    .foreach { dir =>
+      Try(Utils.deleteRecursively(dir)).failed.foreach { _ =>
+        System.err.println(s"[WARN] LocalHarvester: could not remove stale temp dir: ${dir.getAbsolutePath}")
+      }
+    }
 
   private val avroWriter: DataFileWriter[GenericRecord] =
     AvroHelper.avroWriter(shortName, tmpOutStr, Harvester.schema)
