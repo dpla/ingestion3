@@ -101,7 +101,10 @@ class JhnMapping
       .map(nameOnlyConcept)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    isShownByUrls(data).map(url => stringOnlyWebResource(url + "?width=400"))
+    isShownByUrls(data).map { url =>
+      val sep = if (url.contains("?")) "&" else "?"
+      stringOnlyWebResource(url + sep + "width=400")
+    }
 
   override def mediaMaster(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     isShownByUrls(data).map(stringOnlyWebResource)
