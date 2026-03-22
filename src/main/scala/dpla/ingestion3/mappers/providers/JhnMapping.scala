@@ -101,9 +101,13 @@ class JhnMapping
       .map(nameOnlyConcept)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    (metadataRoot(data) \ "Aggregation" \ "isShownBy")
-      .flatMap(node => getAttributeValue(node, "rdf:resource"))
-      .map(stringOnlyWebResource)
+    isShownByUrls(data).map { url =>
+      val sep = if (url.contains("?")) "&" else "?"
+      stringOnlyWebResource(url + sep + "width=400")
+    }
+
+  override def mediaMaster(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    isShownByUrls(data).map(stringOnlyWebResource)
 
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     extractStrings(metadataRoot(data) \ "ProvidedCHO" \ "publisher")
@@ -188,6 +192,10 @@ class JhnMapping
     name = Some("Jewish Heritage Network"),
     uri = Some(URI("http://dp.la/api/contributor/jhn"))
   )
+
+  private def isShownByUrls(data: Document[NodeSeq]): ZeroToMany[String] =
+    (metadataRoot(data) \ "Aggregation" \ "isShownBy")
+      .flatMap(node => getAttributeValue(node, "rdf:resource"))
 
   private def metadataRoot(data: Document[NodeSeq]): NodeSeq =
     data \ "metadata" \ "RDF"
