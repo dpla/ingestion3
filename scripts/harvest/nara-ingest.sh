@@ -40,6 +40,9 @@ S3_NARA_PATH="$S3_BUCKET/nara"
 NARA_DATA="$DPLA_DATA/nara"
 NARA_HARVEST="$NARA_DATA/harvest"
 NARA_ORIGINALS="$NARA_DATA/originalRecords"
+# IngestRemap appends --name (nara) as a subdirectory under --output, so pipeline
+# outputs land at $NARA_DATA/nara/{mapping,enrichment,jsonl}/
+NARA_OUTPUT="$NARA_DATA/nara"
 
 # Datestamp for output directories (YYYYMMDD format required by IngestRemap)
 OUTPUT_DATESTAMP=$(date +%Y%m%d)
@@ -286,13 +289,13 @@ sync_outputs_to_s3() {
     aws s3 sync "$MERGED_HARVEST" "$S3_NARA_PATH/harvest/$merged_dir/"
 
     print_info "Syncing mapping..."
-    aws s3 sync "$NARA_DATA/mapping/" "$S3_NARA_PATH/mapping/"
+    aws s3 sync "$NARA_OUTPUT/mapping/" "$S3_NARA_PATH/mapping/"
 
     print_info "Syncing enrichment..."
-    aws s3 sync "$NARA_DATA/enrichment/" "$S3_NARA_PATH/enrichment/"
+    aws s3 sync "$NARA_OUTPUT/enrichment/" "$S3_NARA_PATH/enrichment/"
 
     print_info "Syncing jsonl..."
-    aws s3 sync "$NARA_DATA/jsonl/" "$S3_NARA_PATH/jsonl/"
+    aws s3 sync "$NARA_OUTPUT/jsonl/" "$S3_NARA_PATH/jsonl/"
 
     print_success "S3 sync complete"
 }
@@ -513,9 +516,9 @@ run_merge() {
 # >5% drop check used for full providers is valid here.
 run_post_pipeline() {
     local jsonl_dir
-    jsonl_dir=$(find "$NARA_DATA/jsonl" -maxdepth 1 -type d -name "*-nara-*.IndexRecord.jsonl" | sort | tail -1)
+    jsonl_dir=$(find "$NARA_OUTPUT/jsonl" -maxdepth 1 -type d -name "*-nara-*.IndexRecord.jsonl" | sort | tail -1)
     if [ -z "$jsonl_dir" ]; then
-        print_error "No JSONL output found under $NARA_DATA/jsonl/"
+        print_error "No JSONL output found under $NARA_OUTPUT/jsonl/"
         exit 1
     fi
     local jsonl_ts
@@ -574,6 +577,34 @@ print(f'New: {new:,} ({sign}{delta:,} vs prev) | Change: {-drop:+.1f}%')
     TRAP_HANDLED=true
 }
 
+# Watches for mapping and enrichment stage completion in the background and posts
+# Slack notifications when each _SUCCESS file appears. Exits once both are notified.
+# Args: $1 = NARA_OUTPUT directory (e.g. $NARA_DATA/nara)
+#       $2 = start marker file — only _SUCCESS files newer than this are considered,
+#            preventing notifications from a prior run's stale outputs
+_watch_pipeline_stages() {
+    local output_dir="$1"
+    local start_marker="$2"
+    local interval=120
+    local mapping_notified=false
+
+    while true; do
+        if [ "$mapping_notified" = false ] \
+            && [ -n "$(find "$output_dir/mapping" -name "_SUCCESS" -newer "$start_marker" -print -quit 2>/dev/null)" ]; then
+            slack_notify ":white_check_mark: *nara mapping complete* — enrichment starting"
+            mapping_notified=true
+        fi
+
+        if [ "$mapping_notified" = true ] \
+            && [ -n "$(find "$output_dir/enrichment" -name "_SUCCESS" -newer "$start_marker" -print -quit 2>/dev/null)" ]; then
+            slack_notify ":white_check_mark: *nara enrichment complete* — JSONL export starting"
+            break
+        fi
+
+        sleep "$interval"
+    done
+}
+
 run_pipeline() {
     print_step "Running mapping, enrichment, and JSON-L pipeline..."
     print_info "Input harvest: $MERGED_HARVEST"
@@ -587,6 +618,11 @@ run_pipeline() {
     cd "$I3_HOME"
     export SBT_OPTS="$PIPELINE_SBT_OPTS"
 
+    local _start_marker
+    _start_marker=$(mktemp)
+    _watch_pipeline_stages "$NARA_OUTPUT" "$_start_marker" &
+    local _watcher_pid=$!
+
     sbt -java-home "$JAVA_HOME" \
         "runMain dpla.ingestion3.entries.ingest.IngestRemap \
         --input=$MERGED_HARVEST \
@@ -595,13 +631,26 @@ run_pipeline() {
         --name=nara \
         --sparkMaster=$PIPELINE_SPARK_MASTER"
 
+    # Give the watcher up to one poll interval to finish naturally — it exits on its
+    # own once enrichment is confirmed, so this only blocks if a stage completed in
+    # the last polling window before sbt returned.
+    if kill -0 "$_watcher_pid" 2>/dev/null; then
+        local _deadline=$(( $(date +%s) + 130 ))
+        while kill -0 "$_watcher_pid" 2>/dev/null && [ "$(date +%s)" -lt "$_deadline" ]; do
+            sleep 5
+        done
+    fi
+    kill "$_watcher_pid" 2>/dev/null || true
+    wait "$_watcher_pid" 2>/dev/null || true
+    rm -f "$_start_marker"
+
     print_success "Pipeline complete"
     echo ""
     echo "Output:"
     echo "  Harvest:    $MERGED_HARVEST"
-    echo "  Mapping:    $NARA_DATA/mapping/"
-    echo "  Enrichment: $NARA_DATA/enrichment/"
-    echo "  JSON-L:     $NARA_DATA/jsonl/"
+    echo "  Mapping:    $NARA_OUTPUT/mapping/"
+    echo "  Enrichment: $NARA_OUTPUT/enrichment/"
+    echo "  JSON-L:     $NARA_OUTPUT/jsonl/"
 }
 
 # ============================================================================
@@ -835,9 +884,9 @@ main() {
     echo ""
     echo "Final harvest:  $MERGED_HARVEST"
     if [ "$SKIP_PIPELINE" != true ]; then
-        echo "Mapping:        $NARA_DATA/mapping/"
-        echo "Enrichment:     $NARA_DATA/enrichment/"
-        echo "JSON-L:         $NARA_DATA/jsonl/"
+        echo "Mapping:        $NARA_OUTPUT/mapping/"
+        echo "Enrichment:     $NARA_OUTPUT/enrichment/"
+        echo "JSON-L:         $NARA_OUTPUT/jsonl/"
     fi
     echo ""
     echo "Next steps:"
