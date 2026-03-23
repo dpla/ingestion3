@@ -236,9 +236,7 @@ echo "PID: $!"
 
 `caffeinate -i` holds an idle-sleep assertion for the lifetime of the harvest process and releases automatically when it finishes.
 
-**If the laptop is closed and reopened before the OAI token expires:** the process was merely suspended — it resumes automatically on wake, no action needed.
-
-**If the process was killed** (closed too long, or manually stopped): restart the full harvest command above from scratch. OAI-PMH has no client-side checkpoint; partial progress cannot be resumed.
+**Do not close the laptop during a local harvest.** Even a brief sleep breaks Spark's internal RPC networking (the local executor loses its endpoint IP on wake), causing the harvester to stall silently with `RpcEndpointNotFoundException`. OAI-PMH also has no client-side checkpoint, so partial progress cannot be resumed. If the process stalls or is killed, kill it (`kill <PID>`) and restart the full harvest command from scratch.
 
 Monitor progress via the OAI harvest log (written by the harvester alongside the main log):
 ```bash
