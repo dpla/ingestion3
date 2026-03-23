@@ -110,16 +110,16 @@ class DlgFileHarvester(
     // Handle raw JSONL files
     Option(inFiles.listFiles(FileFilters.jsonlFilter))
       .getOrElse(Array.empty[File])
-      .foreach(inFile => {
-        val data = Files.readAllBytes(inFile.toPath)
-        handleFile(FileResult(inFile.getName, Some(data)), unixEpoch) match {
+      .foreach { inFile =>
+        Try(Files.readAllBytes(inFile.toPath))
+          .flatMap(data => handleFile(FileResult(inFile.getName, Some(data)), unixEpoch)) match {
           case Failure(exception) =>
             LogManager
               .getLogger(this.getClass)
               .error(s"Caught exception on $inFile.", exception)
           case _ => // do nothing
         }
-      })
+      }
 
     // Handle ZIP files
     Option(inFiles.listFiles(zipFilter))

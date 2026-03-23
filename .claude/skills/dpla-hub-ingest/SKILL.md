@@ -1367,7 +1367,7 @@ Smaller hubs (file, localoai with small collections) will be faster than SD. Oth
 1. Check the log: `tail -30 /home/ec2-user/data/<hub>-harvest.log`
 2. For `localoai`: verify OAI endpoint is up and reachable from EC2
 3. For `api`: verify the API endpoint with a longer curl timeout (60s+)
-4. For maryland and getty: EC2 harvest is blocked — run harvest locally instead
+4. For maryland, getty, and hathi: EC2 harvest is blocked — run harvest locally instead
 5. **Do NOT stop the EC2 instance** until investigated
 
 ### Mapping / Enrichment / JSONL Failure

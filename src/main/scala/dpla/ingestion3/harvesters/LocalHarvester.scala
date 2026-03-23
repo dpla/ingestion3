@@ -49,11 +49,19 @@ abstract class LocalHarvester(
   val tmpOutStr: String = runTmpDir.getAbsolutePath
 
   // Best-effort cleanup of temp dirs left by prior killed runs.
-  // Failures are logged (including the cause) but do not abort startup.
+  // Only removes dirs that haven't been modified in the last 2 hours so that
+  // a concurrent harvest of the same hub (or its S3 staging dir) is never
+  // deleted mid-run.  Failures are logged but do not abort startup.
   private val stalePrefix = s"$shortName-"
+  private val staleCutoffMs = 2L * 60 * 60 * 1000
   Option(tmpDir.listFiles())
     .getOrElse(Array.empty[File])
-    .filter(f => f.isDirectory && f.getName.startsWith(stalePrefix) && f.getName != tmpDirName)
+    .filter(f =>
+      f.isDirectory &&
+      f.getName.startsWith(stalePrefix) &&
+      f.getName != tmpDirName &&
+      (System.currentTimeMillis() - f.lastModified()) > staleCutoffMs
+    )
     .foreach { dir =>
       Try(Utils.deleteRecursively(dir)).failed.foreach { ex =>
         System.err.println(
