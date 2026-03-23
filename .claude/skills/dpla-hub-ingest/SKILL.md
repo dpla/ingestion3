@@ -191,7 +191,7 @@ This covers: running the harvest locally on the Mac, staging the Avro output to 
 | Repo | `/Users/dominic/Documents/GitHub/ingestion3` |
 | i3.conf | `/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf` (set in `.env` as `I3_CONF`) |
 | Output dir | `~/dpla/data` (default `DPLA_DATA`) |
-| Disk | ~15GB free — enough for maryland (~3GB). The `ingest.sh` disk check uses `df -BG` (Linux-only) and silently skips on macOS. |
+| Disk | Harvests are small: maryland ~65 MB (364K records), getty ~124 MB (100K records, as of 2021). The `ingest.sh` disk check uses `df -BG` (Linux-only) and silently skips on macOS. |
 
 ### Step LH1: Verify endpoint is reachable locally
 
