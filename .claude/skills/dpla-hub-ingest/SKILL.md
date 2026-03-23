@@ -174,7 +174,157 @@ Key harvest types and their network requirements:
 | `file` | **community-webs**: DB export pre-processing runs entirely on EC2 (see Community Webs Pre-processing section). **Other file hubs**: `harvest.endpoint` references `/Users/scott/...` paths from a previous operator — require manual staging to EC2 before harvest. |
 | `nara.file.delta` | NARA-specific delta file format. Complex — consult README_NARA.md. |
 
-**Note:** **maryland**, **getty**, and **hathi** have known IP blocks on EC2 — harvest locally on your Mac (2–3GB disk, 16GB+ RAM) or ask their IT to allowlist `52.2.32.179`. HathiTrust returns 403 instantly from EC2 (`quod.lib.umich.edu`). Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
+**Note:** **maryland**, **getty**, and **hathi** have known IP blocks on EC2 — harvest locally on your Mac using the procedure in the **Local Harvest (EC2-Blocked Hubs)** section below, then stage the output to EC2 and resume from mapping. Alternatively, ask their IT to allowlist `52.2.32.179`. HathiTrust returns 403 instantly from EC2 (`quod.lib.umich.edu`). Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
+
+## Local Harvest (EC2-Blocked Hubs)
+
+Use this procedure when a hub's OAI endpoint is unreachable from EC2 (TCP timeout or 403) but reachable from your Mac. Covers: running the harvest locally, staging the Avro output to S3, pulling it onto the EC2, and resuming the pipeline from mapping.
+
+### Prerequisites (verified 2026-03-23)
+
+| Item | Status |
+|------|--------|
+| Java | **Java 20 (Homebrew)** — already configured in `ingestion3/.env` as `JAVA_HOME`. `ingest.sh` auto-loads `.env`. |
+| SBT | `~/.sdkman/candidates/sbt/current/bin/sbt` (v1.10.3) — on PATH. |
+| Repo | `/Users/dominic/Documents/GitHub/ingestion3` |
+| i3.conf | `/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf` (set in `.env` as `I3_CONF`) |
+| Output dir | `~/dpla/data` (default `DPLA_DATA`) |
+| Disk | ~15GB free — enough for maryland (~3GB). The `ingest.sh` disk check uses `df -BG` (Linux-only) and silently skips on macOS. |
+
+### Step LH1: Verify endpoint is reachable locally
+
+```bash
+curl -s --max-time 15 "http://cdm17340.contentdm.oclc.org/oai/oai.php?verb=Identify" | head -5
+```
+
+Expected: XML response with `<Identify>`. If this times out, the issue isn't just the EC2 — the endpoint itself is down.
+
+### Step LH2: Update i3.conf with the correct endpoint (if needed)
+
+Before harvesting, confirm `i3.conf` has the current endpoint for the hub:
+```bash
+grep "^maryland\.harvest" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+```
+
+If the endpoint needs updating:
+```bash
+python3 -c "
+content = open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf').read()
+content = content.replace(
+    'maryland.harvest.endpoint = \"http://collections.digitalmaryland.org/oai/oai.php\"',
+    'maryland.harvest.endpoint = \"http://cdm17340.contentdm.oclc.org/oai/oai.php\"'
+)
+open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf', 'w').write(content)
+print('Updated.')
+"
+```
+
+Commit and push to ingestion3-conf after verifying.
+
+### Step LH3: Run harvest locally
+
+`ingest.sh` auto-loads `.env` (Java 20, I3_CONF) and defaults `DPLA_DATA` to `~/dpla/data`:
+
+```bash
+mkdir -p ~/dpla/data
+cd /Users/dominic/Documents/GitHub/ingestion3
+bash scripts/ingest.sh maryland --harvest-only 2>&1 | tee /tmp/maryland-harvest.log
+```
+
+This takes 30–60 minutes for maryland. Monitor progress:
+```bash
+tail -f /tmp/maryland-harvest.log
+```
+
+When complete, the script prints `Harvest completed in Xm Ys` and exits 0. Capture the harvest timestamp:
+```bash
+HARVEST_TS=$(ls -t ~/dpla/data/maryland/harvest/ | head -1)
+echo "Harvest timestamp: $HARVEST_TS"
+```
+
+Verify the record count from the manifest:
+```bash
+cat ~/dpla/data/maryland/harvest/$HARVEST_TS/_MANIFEST 2>/dev/null || \
+  ls ~/dpla/data/maryland/harvest/$HARVEST_TS/ | head -5
+```
+
+### Step LH4: Stage harvest output to S3
+
+Upload the local Avro output to a temporary S3 prefix:
+```bash
+aws s3 sync ~/dpla/data/maryland/harvest/ \
+  s3://dpla-master-dataset/tmp/maryland-harvest/ \
+  --no-progress
+```
+
+Verify:
+```bash
+aws s3 ls s3://dpla-master-dataset/tmp/maryland-harvest/ | head -5
+```
+
+### Step LH5: Pull harvest onto EC2
+
+Start the EC2 if not already running (see Step 2 of the main procedure), then:
+
+```bash
+PARAMS=$(python3 -c "
+import json
+cmd = 'sudo -u ec2-user bash -lc \"mkdir -p /home/ec2-user/data/maryland/harvest && aws s3 sync s3://dpla-master-dataset/tmp/maryland-harvest/ /home/ec2-user/data/maryland/harvest/ --no-progress && echo STAGE_OK\"'
+print(json.dumps({'commands': [cmd]}))
+")
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 300 \
+  --parameters "$PARAMS" \
+  --query 'Command.CommandId' --output text)
+echo "Command ID: $CMDID"
+```
+
+Poll until Status=Success (use standard polling loop), then verify `STAGE_OK` in output and check the harvest directory:
+
+```bash
+PARAMS=$(python3 -c "
+import json
+cmd = 'sudo -u ec2-user bash -lc \"ls -lh /home/ec2-user/data/maryland/harvest/\"'
+print(json.dumps({'commands': [cmd]}))
+")
+CMDID=$(aws ssm send-command --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" --timeout-seconds 15 \
+  --parameters "$PARAMS" --query 'Command.CommandId' --output text)
+```
+
+### Step LH6: Resume pipeline on EC2 from mapping
+
+Pull the latest ingestion3 (Step 3a), then resume from mapping:
+
+```bash
+PARAMS=$(python3 -c "
+import json
+cmd = 'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh maryland --resume-from mapping > /home/ec2-user/data/maryland-ingest.log 2>&1 </dev/null &\"'
+print(json.dumps({'commands': [cmd]}))
+")
+CMDID=$(aws ssm send-command \
+  --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" \
+  --timeout-seconds 30 \
+  --parameters "$PARAMS" \
+  --query 'Command.CommandId' --output text)
+```
+
+Monitor via Slack (#tech-alerts) and the log. Continue with Step 5 (Stop EC2 and Verify) after the ingest completes.
+
+### Step LH7: Clean up S3 staging prefix
+
+After the ingest completes successfully:
+```bash
+aws s3 rm s3://dpla-master-dataset/tmp/maryland-harvest/ --recursive
+```
+
+Also clean up local harvest data if disk space is needed:
+```bash
+rm -rf ~/dpla/data/maryland/harvest/
+```
 
 ## Community Webs Pre-processing
 
@@ -1367,7 +1517,7 @@ Smaller hubs (file, localoai with small collections) will be faster than SD. Oth
 1. Check the log: `tail -30 /home/ec2-user/data/<hub>-harvest.log`
 2. For `localoai`: verify OAI endpoint is up and reachable from EC2
 3. For `api`: verify the API endpoint with a longer curl timeout (60s+)
-4. For maryland, getty, and hathi: EC2 harvest is blocked — run harvest locally instead
+4. For maryland, getty, and hathi: EC2 harvest is blocked — use the **Local Harvest (EC2-Blocked Hubs)** procedure above
 5. **Do NOT stop the EC2 instance** until investigated
 
 ### Mapping / Enrichment / JSONL Failure
