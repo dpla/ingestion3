@@ -15,6 +15,7 @@ import org.json4s.jackson.JsonMethods._
 import org.json4s.{JValue, _}
 
 import java.io.File
+import java.nio.file.Files
 import java.util.zip.ZipInputStream
 import scala.io.Source
 import scala.util.{Failure, Success, Try, Using}
@@ -99,10 +100,30 @@ class DlgFileHarvester(
   override def harvest: DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
-    val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
+    val inFiles = LocalHarvester.resolveToLocalDir(
+      conf.harvest.endpoint.getOrElse("in"),
+      harvestTime,
+      shortName,
+      None
+    )
 
-    inFiles
-      .listFiles(zipFilter)
+    // Handle raw JSONL files
+    Option(inFiles.listFiles(FileFilters.jsonlFilter))
+      .getOrElse(Array.empty[File])
+      .foreach { inFile =>
+        Try(Files.readAllBytes(inFile.toPath))
+          .flatMap(data => handleFile(FileResult(inFile.getName, Some(data)), unixEpoch)) match {
+          case Failure(exception) =>
+            LogManager
+              .getLogger(this.getClass)
+              .error(s"Caught exception on $inFile.", exception)
+          case _ => // do nothing
+        }
+      }
+
+    // Handle ZIP files
+    Option(inFiles.listFiles(zipFilter))
+      .getOrElse(Array.empty[File])
       .foreach(inFile => {
         val inputStream: ZipInputStream = LocalHarvester.getZipInputStream(inFile)
           .getOrElse(
@@ -114,7 +135,7 @@ class DlgFileHarvester(
               LogManager
                 .getLogger(this.getClass)
                 .error(s"Caught exception on $inFile.", exception)
-            case _ => //do nothing
+            case _ => // do nothing
           }
         })
         IOUtils.closeQuietly(inputStream)
@@ -124,7 +145,6 @@ class DlgFileHarvester(
 
     // Read harvested data into Spark DataFrame.
     val df = spark.read.format("avro").load(tmpOutStr)
-
 
     // Filter out records with "status":"deleted"
     df.where(!col("document").like("%\"status\":\"deleted\"%"))
