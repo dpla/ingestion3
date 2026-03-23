@@ -191,7 +191,7 @@ This covers: running the harvest locally on the Mac, staging the Avro output to 
 | Repo | `/Users/dominic/Documents/GitHub/ingestion3` |
 | i3.conf | `/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf` (set in `.env` as `I3_CONF`) |
 | Output dir | `/Users/dominic/Documents/dpla/data` (set as `DPLA_DATA` in `.env`) |
-| Disk | Harvests are small: maryland ~65 MB (364K records), getty ~124 MB (100K records, as of 2021). The `ingest.sh` disk check uses `df -BG` (Linux-only) and silently skips on macOS. |
+| Disk | Harvests are small: maryland ~65 MB (364K records, ~4 hrs at ~8s/page), getty ~124 MB (100K records as of 2021). The `ingest.sh` disk check uses `df -BG` (Linux-only) and silently skips on macOS. |
 
 ### Step LH1: Verify endpoint is reachable locally
 
@@ -225,17 +225,24 @@ Commit and push to ingestion3-conf after verifying.
 
 ### Step LH3: Run harvest locally
 
-`ingest.sh` auto-loads `.env` (Java 20, I3_CONF) and defaults `DPLA_DATA` to `~/dpla/data`:
+`ingest.sh` auto-loads `.env` (Java 20, I3_CONF) and defaults `DPLA_DATA` to `~/dpla/data`. Wrap with `caffeinate` to prevent the Mac from sleeping mid-harvest and expiring the OAI resumption token:
 
 ```bash
 mkdir -p /Users/dominic/Documents/dpla/data
-cd /Users/dominic/Documents/GitHub/ingestion3
-bash scripts/ingest.sh maryland --harvest-only 2>&1 | tee /tmp/maryland-harvest.log
+caffeinate -i nohup bash /Users/dominic/Documents/GitHub/ingestion3/scripts/ingest.sh <hub> --harvest-only \
+  > /tmp/<hub>-harvest.log 2>&1 &
+echo "PID: $!"
 ```
 
-This takes 30–60 minutes for maryland. Monitor progress:
+`caffeinate -i` holds an idle-sleep assertion for the lifetime of the harvest process and releases automatically when it finishes.
+
+**If the laptop is closed and reopened before the OAI token expires:** the process was merely suspended — it resumes automatically on wake, no action needed.
+
+**If the process was killed** (closed too long, or manually stopped): restart the full harvest command above from scratch. OAI-PMH has no client-side checkpoint; partial progress cannot be resumed.
+
+Monitor progress via the OAI harvest log (written by the harvester alongside the main log):
 ```bash
-tail -f /tmp/maryland-harvest.log
+tail -f /Users/dominic/Documents/GitHub/ingestion3/logs/oai-harvest-<hub>-*.log
 ```
 
 When complete, the script prints `Harvest completed in Xm Ys` and exits 0. Capture the harvest timestamp:
