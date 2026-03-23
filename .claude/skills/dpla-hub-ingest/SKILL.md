@@ -174,11 +174,13 @@ Key harvest types and their network requirements:
 | `file` | **community-webs**: DB export pre-processing runs entirely on EC2 (see Community Webs Pre-processing section). **Other file hubs**: `harvest.endpoint` references `/Users/scott/...` paths from a previous operator — require manual staging to EC2 before harvest. |
 | `nara.file.delta` | NARA-specific delta file format. Complex — consult README_NARA.md. |
 
-**Note:** **maryland**, **getty**, and **hathi** have known IP blocks on EC2 — harvest locally on your Mac using the procedure in the **Local Harvest (EC2-Blocked Hubs)** section below, then stage the output to EC2 and resume from mapping. Alternatively, ask their IT to allowlist `52.2.32.179`. HathiTrust returns 403 instantly from EC2 (`quod.lib.umich.edu`). Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
+**Note:** **maryland**, **getty**, and **hathi** have known IP blocks on EC2 — the endpoint will time out or return 403 from `52.2.32.179`. When this happens, **stop and ask the user** how to proceed: either ask the partner to allowlist `52.2.32.179`, or run the harvest locally on the Mac (see **Local Harvest (EC2-Blocked Hubs)** section below). Do not default to local harvest without the user's direction. Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
 
 ## Local Harvest (EC2-Blocked Hubs)
 
-Use this procedure when a hub's OAI endpoint is unreachable from EC2 (TCP timeout or 403) but reachable from your Mac. Covers: running the harvest locally, staging the Avro output to S3, pulling it onto the EC2, and resuming the pipeline from mapping.
+**Only use this procedure when the user explicitly requests a local harvest.** Do not invoke it automatically when an EC2 endpoint block is detected — ask the user first (see the EC2-blocked hubs note in Hub Configuration Reference).
+
+This covers: running the harvest locally on the Mac, staging the Avro output to S3, pulling it onto the EC2, and resuming the pipeline from mapping. Before starting, verify the endpoint is reachable from your Mac (Step LH1) — it may not be (e.g. HathiTrust uses Cloudflare bot protection that also blocks curl).
 
 ### Prerequisites (verified 2026-03-23)
 
@@ -628,7 +630,7 @@ For `api` hubs, use a 60-second timeout:
 curl -s --max-time 60 "<endpoint>?<query>&rows=1" | head -2
 ```
 
-**If endpoint is unreachable from EC2 but reachable locally** → firewall or IP block issue. Stop the instance and run the harvest locally instead (see EC2-blocked hubs note above).
+**If endpoint is unreachable from EC2** → likely a firewall or IP block. Stop the instance, inform the user, and ask how to proceed: ask the partner to allowlist `52.2.32.179`, or run the harvest locally (see **Local Harvest (EC2-Blocked Hubs)** section). Do not proceed without the user's direction.
 
 ### Step 4: Launch ingest.sh
 
@@ -1517,7 +1519,7 @@ Smaller hubs (file, localoai with small collections) will be faster than SD. Oth
 1. Check the log: `tail -30 /home/ec2-user/data/<hub>-harvest.log`
 2. For `localoai`: verify OAI endpoint is up and reachable from EC2
 3. For `api`: verify the API endpoint with a longer curl timeout (60s+)
-4. For maryland, getty, and hathi: EC2 harvest is blocked — use the **Local Harvest (EC2-Blocked Hubs)** procedure above
+4. For maryland, getty, and hathi: EC2 harvest is blocked — stop, inform the user, and ask whether to request an IP allowlist or run the harvest locally (see **Local Harvest (EC2-Blocked Hubs)** section)
 5. **Do NOT stop the EC2 instance** until investigated
 
 ### Mapping / Enrichment / JSONL Failure
