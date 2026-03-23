@@ -190,7 +190,7 @@ This covers: running the harvest locally on the Mac, staging the Avro output to 
 | SBT | `~/.sdkman/candidates/sbt/current/bin/sbt` (v1.10.3) — on PATH. |
 | Repo | `/Users/dominic/Documents/GitHub/ingestion3` |
 | i3.conf | `/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf` (set in `.env` as `I3_CONF`) |
-| Output dir | `~/dpla/data` (default `DPLA_DATA`) |
+| Output dir | `/Users/dominic/Documents/dpla/data` (set as `DPLA_DATA` in `.env`) |
 | Disk | Harvests are small: maryland ~65 MB (364K records), getty ~124 MB (100K records, as of 2021). The `ingest.sh` disk check uses `df -BG` (Linux-only) and silently skips on macOS. |
 
 ### Step LH1: Verify endpoint is reachable locally
@@ -228,7 +228,7 @@ Commit and push to ingestion3-conf after verifying.
 `ingest.sh` auto-loads `.env` (Java 20, I3_CONF) and defaults `DPLA_DATA` to `~/dpla/data`:
 
 ```bash
-mkdir -p ~/dpla/data
+mkdir -p /Users/dominic/Documents/dpla/data
 cd /Users/dominic/Documents/GitHub/ingestion3
 bash scripts/ingest.sh maryland --harvest-only 2>&1 | tee /tmp/maryland-harvest.log
 ```
@@ -240,21 +240,21 @@ tail -f /tmp/maryland-harvest.log
 
 When complete, the script prints `Harvest completed in Xm Ys` and exits 0. Capture the harvest timestamp:
 ```bash
-HARVEST_TS=$(ls -t ~/dpla/data/maryland/harvest/ | head -1)
+HARVEST_TS=$(ls -t /Users/dominic/Documents/dpla/data/maryland/harvest/ | head -1)
 echo "Harvest timestamp: $HARVEST_TS"
 ```
 
 Verify the record count from the manifest:
 ```bash
-cat ~/dpla/data/maryland/harvest/$HARVEST_TS/_MANIFEST 2>/dev/null || \
-  ls ~/dpla/data/maryland/harvest/$HARVEST_TS/ | head -5
+cat /Users/dominic/Documents/dpla/data/maryland/harvest/$HARVEST_TS/_MANIFEST 2>/dev/null || \
+  ls /Users/dominic/Documents/dpla/data/maryland/harvest/$HARVEST_TS/ | head -5
 ```
 
 ### Step LH4: Stage harvest output to S3
 
 Upload the local Avro output to a temporary S3 prefix:
 ```bash
-aws s3 sync ~/dpla/data/maryland/harvest/ \
+aws s3 sync /Users/dominic/Documents/dpla/data/maryland/harvest/ \
   s3://dpla-master-dataset/tmp/maryland-harvest/ \
   --no-progress
 ```
@@ -325,7 +325,7 @@ aws s3 rm s3://dpla-master-dataset/tmp/maryland-harvest/ --recursive
 
 Also clean up local harvest data if disk space is needed:
 ```bash
-rm -rf ~/dpla/data/maryland/harvest/
+rm -rf /Users/dominic/Documents/dpla/data/maryland/harvest/
 ```
 
 ## Community Webs Pre-processing
