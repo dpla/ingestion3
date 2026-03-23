@@ -34,6 +34,19 @@ fi
 
 # No need to expand ~ since we use $DPLA_DATA
 
+# When syncing the jsonl subdir, warn if the latest local snapshot has 0 records.
+# This is a warning only — the hard block lives in ingest.sh. Direct callers of
+# s3-sync.sh should ensure their data is valid before invoking this script.
+if [[ "$SUBDIR" == "jsonl" ]]; then
+    LATEST_LOCAL=$(ls -1d "${SOURCE_PATH}"*/ 2>/dev/null | sort | tail -1)
+    if [[ -n "$LATEST_LOCAL" && -f "${LATEST_LOCAL}_MANIFEST" ]]; then
+        SNAP_COUNT=$(read_manifest_count "${LATEST_LOCAL}_MANIFEST")
+        if [[ "$SNAP_COUNT" -eq 0 ]]; then
+            log_warn "Latest local JSONL snapshot has 0 records per _MANIFEST — verify data before syncing"
+        fi
+    fi
+fi
+
 echo "Syncing ${SOURCE_PATH} to ${DEST_PATH}"
 
 # Run aws s3 sync, excluding OSX system files

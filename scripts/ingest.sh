@@ -235,6 +235,13 @@ if [[ "$RESUME_FROM" == "jsonl" ]]; then
     ENRICH_TS_DIR=$(find_latest_data "$PROVIDER" enrichment) \
         || die "No existing enrichment data for $PROVIDER — cannot resume from jsonl"
     log_info "Reusing enrichment: $(basename "$ENRICH_TS_DIR")"
+    ENRICH_RECORD_COUNT=$(read_manifest_count "$ENRICH_TS_DIR/_MANIFEST")
+    if [[ "$ENRICH_RECORD_COUNT" -eq 0 ]]; then
+        slack_notify ":x: *$PROVIDER ingest FAILED* — existing enrichment data has 0 records. Cannot resume from jsonl safely. Check the enrichment output at \`$(basename "$ENRICH_TS_DIR")\`."
+        write_hub_status "$PROVIDER" failed --error="Enrichment has 0 records"
+        TRAP_HANDLED=true
+        exit 1
+    fi
 else
     check_disk_space $DISK_MIN_ENRICHMENT_GB
     print_step "Step 3/5: Enriching $PROVIDER..."
@@ -285,16 +292,29 @@ slack_notify ":white_check_mark: *$PROVIDER JSONL export complete* — starting 
 # Read record count from JSONL manifest
 JSONL_RECORD_COUNT=$(read_manifest_count "$JSONL_TS_DIR/_MANIFEST")
 
+# Absolute zero check — catch complete failures regardless of prior snapshot state.
+# This fires even when no previous S3 snapshot exists (new hubs, first run).
+if [[ "$JSONL_RECORD_COUNT" -eq 0 ]]; then
+    slack_notify ":x: *$PROVIDER ingest FAILED* — JSONL export produced 0 records. Snapshot \`$JSONL_TS\` was NOT synced to S3."
+    write_hub_status "$PROVIDER" failed --error="JSONL produced 0 records"
+    TRAP_HANDLED=true
+    exit 1
+fi
+
 # Safety check: flag any ingest where the new record count has dropped >5% vs the
 # last S3 snapshot. This catches bad harvests (empty results, partial pulls, etc.)
 # before the partner email goes out. Skipped on first-ever ingest (no prev snapshot).
 S3_PREFIX=$(resolve_s3_prefix "$PROVIDER")
-PREV_SNAP=$(aws s3 ls "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/" 2>/dev/null \
-    | awk '{print $NF}' | sed 's|/||g' | sort | tail -1) || true
 PREV_COUNT=0
-if [ -n "$PREV_SNAP" ]; then
-    PREV_COUNT=$(aws s3 cp "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${PREV_SNAP}/_MANIFEST" - 2>/dev/null \
-        | read_manifest_count /dev/stdin)
+if _S3_LS=$(aws s3 ls "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/" 2>&1); then
+    PREV_SNAP=$(echo "$_S3_LS" | awk '{print $NF}' | sed 's|/||g' | sort | tail -1)
+    if [ -n "$PREV_SNAP" ]; then
+        PREV_COUNT=$(aws s3 cp "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${PREV_SNAP}/_MANIFEST" - 2>/dev/null \
+            | read_manifest_count /dev/stdin)
+    fi
+else
+    log_warn "Could not list S3 snapshots for $PROVIDER (aws s3 ls failed) — relative safety check will be skipped"
+    log_warn "$_S3_LS"
 fi
 
 SAFETY_OK=true
