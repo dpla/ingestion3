@@ -413,8 +413,10 @@ check_disk_space() {
     local min_gb="${1:-20}"
     local data_dir="${DPLA_DATA:-/home/ec2-user/data}"
     local available_gb
-    # df -BG is GNU/Linux-only (EC2); macOS df lacks the -B flag
-    available_gb=$(df -BG "$data_dir" 2>/dev/null | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
+    # df -BG is GNU/Linux-only (EC2); macOS df lacks the -B flag and exits non-zero.
+    # Use || true so the non-zero exit doesn't propagate through the command substitution
+    # under set -eo pipefail — the empty result is caught by the [[ -z ]] check below.
+    available_gb=$(df -BG "$data_dir" 2>/dev/null | awk 'NR==2 {gsub(/G/,"",$4); print $4}') || true
     if [[ -z "$available_gb" || ! "$available_gb" =~ ^[0-9]+$ ]]; then
         return 0  # Can't parse — skip check rather than fail
     fi
