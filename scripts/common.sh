@@ -27,8 +27,9 @@
 #   run_entry         - Run any Scala entry class via JAR or sbt
 #   run_ingest_remap  - Convenience wrapper for IngestRemap entry point
 #   write_hub_status  - Write per-hub .status file (for ingest-status.sh)
-#   find_latest_data  - Find most recent timestamped data directory
-#   require_command   - Check that a command exists, exit if not
+#   check_id_uniqueness - Sample JSONL output and check ID uniqueness ratio
+#   find_latest_data    - Find most recent timestamped data directory
+#   require_command     - Check that a command exists, exit if not
 #
 
 # Prevent double-sourcing
@@ -543,6 +544,70 @@ read_manifest_count() {
     local raw
     raw=$(grep "^Record count:" "${1:--}" 2>/dev/null | awk '{print $NF}' | tr -d ',')
     [[ "${raw}" =~ ^[0-9]+$ ]] && echo "$raw" || echo "0"
+}
+
+# =============================================================================
+# JSONL ID Uniqueness Check
+# =============================================================================
+#
+# Samples up to 10,000 records from the JSONL output directory and checks
+# whether the unique-ID ratio is above 90%.  A low ratio indicates a
+# harvester pagination bug (the same page fetched repeatedly).
+#
+# Prints a two-line result to stdout:
+#   Line 1: PASS | FAIL | SKIP
+#   Line 2: detail string (counts and ratio)
+#
+# SKIP is returned when the sample is too small (<100 records) to be
+# meaningful (e.g. a legitimately tiny hub).
+#
+# Usage: check_id_uniqueness <jsonl_dir>
+# Example: check_id_uniqueness /data/mississippi/jsonl/20260324_120000-mississippi-MAP4_0.jsonl
+#
+check_id_uniqueness() {
+    local jsonl_dir="$1"
+    python3 - "$jsonl_dir" <<'PYEOF'
+import gzip, json, glob, os, sys
+
+jsonl_dir = sys.argv[1]
+max_sample = 10_000
+unique_ids = set()
+total_read = 0
+
+for gz_file in glob.glob(os.path.join(jsonl_dir, 'part-*.txt.gz')):
+    try:
+        with gzip.open(gz_file, 'rt', errors='replace') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                total_read += 1
+                try:
+                    r = json.loads(line)
+                    src = r.get('_source') or r
+                    rid = src.get('id')
+                    if rid:
+                        unique_ids.add(rid)
+                except (json.JSONDecodeError, AttributeError):
+                    pass
+                if total_read >= max_sample:
+                    break
+    except OSError:
+        pass
+    if total_read >= max_sample:
+        break  # Exit file loop once we have enough samples across all part files
+
+unique = len(unique_ids)
+ratio = unique / total_read if total_read > 0 else 1.0
+detail = f"{unique:,} unique IDs in {total_read:,} sampled records (ratio: {ratio:.4f})"
+
+if total_read < 100:
+    print(f"SKIP\n{detail}")
+elif ratio < 0.9:
+    print(f"FAIL\n{detail}")
+else:
+    print(f"PASS\n{detail}")
+PYEOF
 }
 
 # Latest Data Directory Finder
