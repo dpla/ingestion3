@@ -637,6 +637,49 @@ curl -s --max-time 60 "<endpoint>?<query>&rows=1" | head -2
 
 **If endpoint is unreachable from EC2** → likely a firewall or IP block. Stop the instance, inform the user, and ask how to proceed: ask the partner to allowlist `52.2.32.179`, or run the harvest locally (see **Local Harvest (EC2-Blocked Hubs)** section). Do not proceed without the user's direction.
 
+#### Step 3c: Verify JAR is up to date — rebuild if stale
+
+Compare the JAR's modification time against the latest git commit. If the JAR is older than the latest commit (or missing), rebuild before proceeding. A stale JAR means the ingest runs old code regardless of what was pulled in Step 3a.
+
+```bash
+PARAMS=$(python3 -c "
+import json
+cmd = (
+    'sudo -u ec2-user bash -lc \"'
+    'JAR=/home/ec2-user/ingestion3/target/scala-2.13/ingestion3-assembly-0.0.1.jar; '
+    'COMMIT_TS=\$(git -C /home/ec2-user/ingestion3 log -1 --format=%ct); '
+    'if [ ! -f \"\$JAR\" ]; then '
+    '  echo MISSING; '
+    'elif [ \$(stat -c %Y \"\$JAR\") -lt \"\$COMMIT_TS\" ]; then '
+    '  echo STALE jar=\$(date -d @\$(stat -c %Y \"\$JAR\") +%Y-%m-%dT%H:%M:%S) commit=\$(date -d @\"\$COMMIT_TS\" +%Y-%m-%dT%H:%M:%S); '
+    'else '
+    '  echo OK jar=\$(date -d @\$(stat -c %Y \"\$JAR\") +%Y-%m-%dT%H:%M:%S) commit=\$(date -d @\"\$COMMIT_TS\" +%Y-%m-%dT%H:%M:%S); '
+    'fi\"'
+)
+print(json.dumps({'commands': [cmd]}))
+")
+CMDID=$(aws ssm send-command --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" --timeout-seconds 30 \
+  --parameters "$PARAMS" --query 'Command.CommandId' --output text)
+# Poll
+```
+
+- **OK** → proceed to Step 4.
+- **STALE** or **MISSING** → rebuild the JAR before proceeding:
+
+```bash
+PARAMS=$(python3 -c "
+import json
+cmd = 'sudo -u ec2-user bash -lc \"cd /home/ec2-user/ingestion3 && nohup sbt assembly > /tmp/sbt-assembly.log 2>&1 &\necho SBT_PID:\$!\"'
+print(json.dumps({'commands': [cmd]}))
+")
+CMDID=$(aws ssm send-command --instance-ids i-0a0def8581efef783 \
+  --document-name "AWS-RunShellScript" --timeout-seconds 30 \
+  --parameters "$PARAMS" --query 'Command.CommandId' --output text)
+```
+
+Monitor build progress (takes ~5–10 min); tail `/tmp/sbt-assembly.log`. When complete, re-run the freshness check above to confirm the JAR timestamp is now newer than the latest commit.
+
 ### Step 4: Launch ingest.sh
 
 **Always use `ingest.sh` — never run individual SBT steps manually.** The script handles the full pipeline (harvest → mapping → enrichment → JSONL → S3 sync) with Slack notifications at every step, hub status tracking, 0-record abort, and safety checks. Running steps manually bypasses all of this.
@@ -1571,4 +1614,5 @@ The EC2 now has the latest ingestion3 (pulled via HTTPS from `https://github.com
 - Keep the EC2 running until verification is complete, then stop to save cost.
 - Do not modify `i3.conf`, `.env`, or Scala source code unless explicitly requested. Exception: for `community-webs`, Step CW4 updates `community-webs.harvest.endpoint` in `i3.conf` as part of the required ingest flow.
 - Always refresh ingestion3 at the start of each session (Step 3a) using `git fetch + reset --hard` — the EC2 has no auto-update and can drift behind main, causing failures (e.g. missing entry points). Never use `git pull`; local commits can accumulate and cause divergent-branch failures.
+- Always run Step 3c (JAR freshness check) after pulling. A `git reset --hard` updates the source but not the compiled JAR — running an ingest on stale code is silent and dangerous (wrong behavior, no error).
 - For multi-hub batches: run all harvests/ingests first, then request index rebuild separately.
