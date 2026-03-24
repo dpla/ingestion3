@@ -13,7 +13,7 @@ import scala.util.{Failure, Success, Try}
   */
 object HttpUtils {
 
-  private val TIMEOUT = 20
+  private val CONNECT_TIMEOUT = 20
   private val REQUEST_TIMEOUT = 60
   private val RETRIES = 5
   private val INITIAL_SLEEP = 1000
@@ -21,7 +21,7 @@ object HttpUtils {
   private val httpClient = HttpClient
     .newBuilder()
     .followRedirects(Redirect.NORMAL)
-    .connectTimeout(Duration.ofSeconds(TIMEOUT))
+    .connectTimeout(Duration.ofSeconds(CONNECT_TIMEOUT))
     .build()
 
   private val logger = LogManager.getLogger(getClass)
