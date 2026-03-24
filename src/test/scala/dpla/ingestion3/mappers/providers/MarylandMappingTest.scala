@@ -17,6 +17,36 @@ class MarylandMappingTest extends AnyFlatSpec with BeforeAndAfter {
   val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))
   val extractor = new MarylandMapping
 
+  // Record with only a URL identifier (no local ID prefix) — tests isShownAt URL filter
+  val xmlSingleIdentifier: Document[NodeSeq] = Document(XML.loadString(
+    """<record xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.openarchives.org/OAI/2.0/">
+      |  <header><identifier>oai:collections.digitalmaryland.org:acfp/11016</identifier></header>
+      |  <metadata>
+      |    <oai_qdc:qualifieddc xmlns:oai_qdc="http://worldcat.org/xmlschemas/qdc-1.0/"
+      |        xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/">
+      |      <dc:title>Cover</dc:title>
+      |      <dc:source>Enoch Pratt Free Library</dc:source>
+      |      <dc:rights>https://rightsstatements.org/vocab/CNE/1.0/</dc:rights>
+      |      <dc:identifier>http://collections.digitalmaryland.org/cdm/ref/collection/acfp/id/11016</dc:identifier>
+      |    </oai_qdc:qualifieddc>
+      |  </metadata>
+      |</record>""".stripMargin))
+
+  // Record with no dc:rights but dcterms:accessRights containing CC BY-ND 3.0 text
+  val xmlAccessRightsOnly: Document[NodeSeq] = Document(XML.loadString(
+    """<record xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.openarchives.org/OAI/2.0/">
+      |  <header><identifier>oai:collections.digitalmaryland.org:msa/1</identifier></header>
+      |  <metadata>
+      |    <oai_qdc:qualifieddc xmlns:oai_qdc="http://worldcat.org/xmlschemas/qdc-1.0/"
+      |        xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/">
+      |      <dc:title>Test Item</dc:title>
+      |      <dc:identifier>msa_local_001</dc:identifier>
+      |      <dc:identifier>http://collections.digitalmaryland.org/cdm/ref/collection/msa/id/1</dc:identifier>
+      |      <dcterms:accessRights>This work is licensed under a Creative Commons Attribution-NoDerivs 3.0 Unported License. When this material is used, proper citation must be attributed to the Maryland State Archives.</dcterms:accessRights>
+      |    </oai_qdc:qualifieddc>
+      |  </metadata>
+      |</record>""".stripMargin))
+
   it should "use the provider shortname in minting IDs " in
     assert(extractor.useProviderName)
 
@@ -105,5 +135,28 @@ class MarylandMappingTest extends AnyFlatSpec with BeforeAndAfter {
   it should "create the correct DPLA URI" in {
     val expected = Some(URI("http://dp.la/api/items/5db1d7b6c61b021fadcffdca899a4d69"))
     assert(extractor.dplaUri(xml) === expected)
+  }
+
+  it should "extract rights text from dcterms:accessRights" in {
+    val expected = Seq("This work is licensed under a Creative Commons Attribution-NoDerivs 3.0 Unported License. When this material is used, in whole or in part, proper citation and credit must be attributed to the Maryland State Archives. For more information go to http://histpics.msa.maryland.gov/pages/Search.aspx ")
+    assert(extractor.rights(xml) === expected)
+  }
+
+  // isShownAt: single URL identifier (no local ID prefix)
+  it should "extract isShownAt when only a URL identifier is present" in {
+    val expected = Seq(stringOnlyWebResource("http://collections.digitalmaryland.org/cdm/ref/collection/acfp/id/11016"))
+    assert(extractor.isShownAt(xmlSingleIdentifier) === expected)
+  }
+
+  // edmRights: falls back to CC URI detected from accessRights text when dc:rights is absent
+  it should "extract edmRights CC URI from dcterms:accessRights when dc:rights is absent" in {
+    val expected = Seq(URI("https://creativecommons.org/licenses/by-nd/3.0/"))
+    assert(extractor.edmRights(xmlAccessRightsOnly) === expected)
+  }
+
+  // rights: falls back to accessRights text when dc:rights is absent
+  it should "extract rights text from dcterms:accessRights when dc:rights is absent" in {
+    val expected = Seq("This work is licensed under a Creative Commons Attribution-NoDerivs 3.0 Unported License. When this material is used, proper citation must be attributed to the Maryland State Archives.")
+    assert(extractor.rights(xmlAccessRightsOnly) === expected)
   }
 }
