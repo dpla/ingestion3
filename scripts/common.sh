@@ -37,6 +37,17 @@
 _COMMON_SH_LOADED=1
 
 # =============================================================================
+# Tool Path Setup
+# =============================================================================
+# Version managers like mise install tools (sbt, java, etc.) via shims that are
+# only added to PATH in login shells. When scripts are launched from SSM, cron,
+# or other non-login contexts, those shims are missing. Add them explicitly so
+# run_entry can find sbt regardless of how the script was invoked.
+if [[ -d "${HOME}/.local/share/mise/shims" ]]; then
+    export PATH="${HOME}/.local/share/mise/shims:${PATH}"
+fi
+
+# =============================================================================
 # Platform Detection
 # =============================================================================
 
