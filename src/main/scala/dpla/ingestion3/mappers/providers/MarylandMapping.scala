@@ -10,7 +10,20 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
+object MarylandMapping {
+  // Matches a CC or RightsStatements URI in free text
+  val rightsUriPattern =
+    """https?://(?:creativecommons\.org/licenses/[^\s<>"]+|rightsstatements\.org/vocab/[^\s<>"]+)""".r
+
+  // CC BY-ND 3.0 is described by name in Maryland accessRights text, not by URI
+  val ccByNd30Patterns = Seq("attribution-noderivs 3.0", "attribution-noderivatives 3.0")
+
+  val ccByNd30Uri = "https://creativecommons.org/licenses/by-nd/3.0/"
+}
+
 class MarylandMapping extends XmlMapping with XmlExtractor {
+
+  import MarylandMapping._
 
   // ID minting functions
   override def useProviderName: Boolean = true
@@ -82,21 +95,39 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyAgent)
       .slice(0, 1) // get first instance
 
-  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
-    extractStrings(data \ "metadata" \\ "rights")
-      .map(URI)
+  private def rightsUriFromText(text: String): Option[String] =
+    rightsUriPattern.findFirstIn(text).orElse {
+      val lower = text.toLowerCase
+      if (ccByNd30Patterns.exists(lower.contains)) Some(ccByNd30Uri)
+      else None
+    }
+
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
+    val fromRights = extractStrings(data \ "metadata" \\ "rights").map(URI)
+    if (fromRights.nonEmpty) fromRights
+    else
+      extractStrings(data \ "metadata" \\ "accessRights")
+        .flatMap(rightsUriFromText)
+        .map(URI)
+        .slice(0, 1)
+  }
+
+  override def rights(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings(data \ "metadata" \\ "accessRights")
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
     extractStrings(data \ "metadata" \\ "identifier")
+      .filter(Utils.isUrl)
       .map(stringOnlyWebResource)
-      .slice(1, 2) // get second instance
+      .slice(0, 1)
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
     val url: Option[String] = extractStrings(data \ "metadata" \\ "identifier")
-      .lift(1) // get second instance
+      .filter(Utils.isUrl)
+      .headOption
 
     val parts: Seq[String] = url.getOrElse("").stripSuffix("/").split("/")
 
