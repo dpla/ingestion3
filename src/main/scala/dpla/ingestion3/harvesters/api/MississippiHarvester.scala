@@ -29,7 +29,7 @@ class MississippiHarvester(
       .setHost("api-na.hosted.exlibrisgroup.com")
       .setPath("/primo/v1/search")
       .setParameter("offset", params.getOrElse("offset", "1")) // record offset
-      .setParameter("limit", "500")
+      .setParameter("limit", params.getOrElse("limit", "100"))
       .setParameter("vid", "01USM_INST:MDL")
       .setParameter("tab", "MDL")
       .setParameter("scope", "MDL")
