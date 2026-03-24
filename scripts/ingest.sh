@@ -301,6 +301,23 @@ if [[ "$JSONL_RECORD_COUNT" -eq 0 ]]; then
     exit 1
 fi
 
+# Uniqueness check: catch harvester pagination bugs where the same page is fetched
+# repeatedly (e.g. wrong offset key), producing a large file full of duplicate records.
+_UNIQ_OUT=$(check_id_uniqueness "$JSONL_TS_DIR")
+UNIQ_RESULT=$(echo "$_UNIQ_OUT" | head -1)
+UNIQ_DETAIL=$(echo "$_UNIQ_OUT" | tail -1)
+if [ "$UNIQ_RESULT" = "FAIL" ]; then
+    log_warn "Uniqueness check FAILED — $UNIQ_DETAIL"
+    slack_notify ":x: *$PROVIDER ingest FAILED* — JSONL uniqueness check failed\n$UNIQ_DETAIL\nLikely cause: harvester pagination bug (same page fetched repeatedly).\nSnapshot \`$JSONL_TS\` was NOT synced to S3."
+    write_hub_status "$PROVIDER" failed --error="Uniqueness check: $UNIQ_DETAIL"
+    TRAP_HANDLED=true
+    exit 1
+elif [ "$UNIQ_RESULT" = "SKIP" ]; then
+    log_warn "Uniqueness check SKIPPED — sample too small to be meaningful ($UNIQ_DETAIL)"
+else
+    log_info "Uniqueness check PASSED — $UNIQ_DETAIL"
+fi
+
 # Safety check: flag any ingest where the new record count has dropped >5% vs the
 # last S3 snapshot. This catches bad harvests (empty results, partial pulls, etc.)
 # before the partner email goes out. Skipped on first-ever ingest (no prev snapshot).
