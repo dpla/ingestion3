@@ -33,7 +33,13 @@ assembly / assemblyMergeStrategy := {
   // Service-provider files must be concatenated so all implementations
   // are registered (e.g. Hadoop's LocalFileSystem + GCS FileSystem).
   case x if x.startsWith("META-INF/services/") => MergeStrategy.concat
-  case x                                       => MergeStrategy.first
+  // Merge log4j2 plugin caches from all JARs so the full converter registry
+  // is available. Without this, MergeStrategy.first silently discards caches
+  // from other JARs, breaking log4j2's pattern converters (%d, %t, %level…)
+  // and causing Spark to fall back to its default logging configuration.
+  case "META-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat" =>
+    MergeStrategy.filterDistinctLines
+  case x => MergeStrategy.first
 }
 
 libraryDependencies ++= Seq(

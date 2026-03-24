@@ -14,6 +14,7 @@ import scala.util.{Failure, Success, Try}
 object HttpUtils {
 
   private val TIMEOUT = 20
+  private val REQUEST_TIMEOUT = 60
   private val RETRIES = 5
   private val INITIAL_SLEEP = 1000
 
@@ -119,6 +120,7 @@ object HttpUtils {
     val request = HttpRequest
       .newBuilder()
       .uri(url.toURI)
+      .timeout(Duration.ofSeconds(REQUEST_TIMEOUT))
 
     headers match {
       case Some(h) =>
