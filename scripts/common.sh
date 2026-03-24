@@ -473,7 +473,7 @@ run_entry() {
     if [[ ! -f "$jar" ]]; then
         log_info "JAR not found; building with sbt assembly..."
         (cd "$I3_HOME" && sbt -java-home "${JAVA_HOME:-}" assembly) || die "sbt assembly failed"
-    elif [[ -d "$I3_HOME/src/main/scala" ]] && [[ -n "$(find "$I3_HOME/src/main/scala" -name "*.scala" -newer "$jar" 2>/dev/null | head -1)" ]]; then
+    elif [[ -n "$(find "$I3_HOME/src/main/scala" "$I3_HOME/src/main/resources" -newer "$jar" 2>/dev/null | head -1)" ]]; then
         log_info "Scala sources newer than JAR; rebuilding with sbt assembly..."
         (cd "$I3_HOME" && sbt -java-home "${JAVA_HOME:-}" assembly) || die "sbt assembly failed"
     fi
@@ -498,6 +498,8 @@ run_entry() {
         fi
         # shellcheck disable=SC2086
         java $SBT_OPTS "${add_opens[@]}" \
+            -Dlog4j2.configurationFile=classpath:log4j2.properties \
+            -Dspark.log.structuredLogging.enabled=false \
             -cp "$jar" "$entry_class" "$@"
     else
         log_info "Running $entry_class via sbt (JAR still missing after build)"
