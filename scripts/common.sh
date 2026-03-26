@@ -537,7 +537,8 @@ write_hub_status() {
     shift 2
     local py="${I3_HOME}/venv/bin/python"
     [[ -x "$py" ]] || py="python3"
-    "$py" -m scheduler.orchestrator.write_status "$hub" "$status" \
+    PYTHONPATH="${I3_HOME}${PYTHONPATH:+:$PYTHONPATH}" "$py" \
+        -m scheduler.orchestrator.write_status "$hub" "$status" \
         --status-dir="$I3_HOME/logs/status" "$@"
 }
 
