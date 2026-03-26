@@ -316,7 +316,9 @@ Verify `EXPORT_SUCCESS` is present before continuing.
 
 ## Full Procedure
 
-### Step 0: Identify the Hub
+### Step 0: Identify the Hub and Check Memory
+
+**First**, read `~/.claude/memory/hub-ingest-memory.md` and surface any content under the hub's section. If persistent notes exist, state them clearly before proceeding — they may affect how this ingest should be run. If no entry exists yet for this hub, proceed normally; one may be created after the run.
 
 Confirm the hub key (e.g. `sd`, `maryland`, `indiana`) and check its config:
 
@@ -549,6 +551,24 @@ aws ec2 stop-instances --instance-ids i-0a0def8581efef783
 ```
 
 `ingest.sh` handles result verification, safety checks, partner email, and the final Slack notification internally — no additional steps needed.
+
+### Step 6: Update Ingest Memory
+
+After the ingest completes (whether fully successful, partially recovered, or abandoned after investigation):
+
+1. Review everything that happened during this run.
+2. Identify anything **new or worth preserving** — for example:
+   - A changed endpoint, new S3 path, or updated file format that had to be determined
+   - An API performance issue, rate limiting, or connectivity problem encountered and resolved
+   - A mapping error, anomaly, or unexpected record count — and how it was handled
+   - A TODO or open question to raise with the partner in future
+   - Any special circumstance that should be remembered to run this hub correctly next time
+3. If anything notable occurred, draft a brief summary and **ask the user to confirm** it is accurate or if they want to add or change anything.
+4. Once confirmed, append to `~/.claude/memory/hub-ingest-memory.md` under the hub's section (create the section if it doesn't exist):
+   - **Persistent Notes** — for things to always surface next run (config, quirks, endpoint paths, partner context)
+   - **Run Log** — for timestamped noteworthy events (use today's date)
+
+**Do not create a memory entry for routine runs where nothing new happened.**
 
 ---
 
