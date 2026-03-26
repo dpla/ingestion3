@@ -211,11 +211,15 @@ class JhnMapping
 
 object JhnMapping {
   // Compiled once at class load, not per record.
-  // First class: CP1252 representations of UTF-8 first bytes 0xC0–0xC3 (À–Ã).
+  // First class: CP1252 representations of UTF-8 first bytes for the scripts
+  //   carried by JHN:
+  //   - 0xC0–0xC3 (À–Ã): Latin extended (U+0000–U+00FF)
+  //   - 0xD0–0xD3 (Ð–Ó): Cyrillic (U+0400–U+04FF)
+  //   - 0xD7      (×):   Hebrew   (U+05D0–U+05FF)
   // Second class: CP1252 representations of UTF-8 continuation bytes 0x80–0xBF:
   //   - 0xA0–0xBF decode to U+00A0–U+00BF (identical to Latin-1)
   //   - 0x80–0x9F decode to scattered Unicode points (€, Ÿ, –, „, etc.),
   //     NOT to U+0080–U+009F, so those 27 code points are listed explicitly.
   val MojibakePattern =
-    "[\\u00c0-\\u00c3][\\u00a0-\\u00bf\\u0152\\u0153\\u0160\\u0161\\u0178\\u017d\\u017e\\u0192\\u02c6\\u02dc\\u2013\\u2014\\u2018\\u2019\\u201a\\u201c\\u201d\\u201e\\u2020\\u2021\\u2022\\u2026\\u2030\\u2039\\u203a\\u20ac\\u2122]".r
+    "[\\u00c0-\\u00c3\\u00d0-\\u00d3\\u00d7][\\u00a0-\\u00bf\\u0152\\u0153\\u0160\\u0161\\u0178\\u017d\\u017e\\u0192\\u02c6\\u02dc\\u2013\\u2014\\u2018\\u2019\\u201a\\u201c\\u201d\\u201e\\u2020\\u2021\\u2022\\u2026\\u2030\\u2039\\u203a\\u20ac\\u2122]".r
 }
