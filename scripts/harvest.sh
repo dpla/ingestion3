@@ -25,13 +25,21 @@ fi
 PROVIDER="$1"
 OUTPUT="$DPLA_DATA"
 
-trap 'err=$?; if [[ $err -ne 0 ]]; then write_hub_status "$PROVIDER" failed --error="Exit $err"; fi' EXIT
+trap 'err=$?
+    if [[ $err -ne 0 ]]; then
+        write_hub_status "$PROVIDER" failed --error="Exit $err" || true
+    fi' EXIT
+# Without explicit SIGTERM/SIGINT traps, bash exits immediately on those signals
+# and skips the EXIT trap above. These traps call exit() to ensure EXIT fires.
+trap 'exit 130' INT
+trap 'exit 143' TERM
 write_hub_status "$PROVIDER" harvesting
 
 echo "Using Java: $JAVA_HOME"
 echo "Provider: $PROVIDER"
 echo "Output: $OUTPUT"
 echo "Config: $I3_CONF"
+echo "OAI log:  $I3_HOME/logs/oai-harvest-$PROVIDER-<timestamp>.log"
 echo ""
 
 run_entry dpla.ingestion3.entries.ingest.HarvestEntry \
