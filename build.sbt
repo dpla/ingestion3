@@ -33,12 +33,29 @@ assembly / assemblyMergeStrategy := {
   // Service-provider files must be concatenated so all implementations
   // are registered (e.g. Hadoop's LocalFileSystem + GCS FileSystem).
   case x if x.startsWith("META-INF/services/") => MergeStrategy.concat
-  // Merge log4j2 plugin caches from all JARs so the full converter registry
-  // is available. Without this, MergeStrategy.first silently discards caches
-  // from other JARs, breaking log4j2's pattern converters (%d, %t, %level…)
-  // and causing Spark to fall back to its default logging configuration.
+  // Properly merge binary Log4j2Plugins.dat plugin caches from all JARs using
+  // PluginCache, so every converter registration (%d, %t, %level, %logger…)
+  // is preserved. filterDistinctLines and first both corrupt or discard the
+  // binary format; this is the correct approach per sbt/sbt-assembly#501.
+  // log4j-core must be on the build classpath (see project/plugins.sbt).
   case "META-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat" =>
-    MergeStrategy.filterDistinctLines
+    new sbtassembly.MergeStrategy {
+      val name = "log4j2PluginCache"
+      def apply(tempDir: java.io.File, path: String, files: Seq[java.io.File]): Either[String, Seq[(java.io.File, String)]] = {
+        import org.apache.logging.log4j.core.config.plugins.processor.PluginCache
+        import java.util.Collections
+        val merged = new PluginCache
+        files.foreach { f =>
+          merged.loadCacheFiles(
+            Collections.enumeration(java.util.Arrays.asList(f.toURI.toURL))
+          )
+        }
+        val out = java.io.File.createTempFile("Log4j2Plugins", ".dat", tempDir)
+        val os  = new java.io.FileOutputStream(out)
+        try { merged.writeCache(os) } finally { os.close() }
+        Right(Seq(out -> path))
+      }
+    }
   case x => MergeStrategy.first
 }
 
