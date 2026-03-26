@@ -12,7 +12,7 @@ When a proposed hub is under evaluation, all related code and configuration shou
 
 Add a `status` key to the hub's config block in `ingestion3-conf/i3.conf`:
 
-```ini
+```
 nga.status = test
 nga.harvest.type = file
 nga.harvest.endpoint = "s3://dpla-hub-nga/..."
@@ -27,7 +27,7 @@ The `status = test` flag is the authoritative marker. The hub ingest skill reads
 
 Test hub mapper and harvester classes live in the `experimental` subpackage:
 
-```text
+```
 src/main/scala/dpla/ingestion3/mappers/providers/experimental/
 ```
 

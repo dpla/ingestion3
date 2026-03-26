@@ -9,4 +9,4 @@
  */
 package dpla.ingestion3.mappers.providers
 
-package object experimental {}
+package object experimental
