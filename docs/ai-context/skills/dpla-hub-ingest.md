@@ -316,7 +316,11 @@ Verify `EXPORT_SUCCESS` is present before continuing.
 
 ## Full Procedure
 
-### Step 0: Identify the Hub
+### Step 0: Identify the Hub and Check Memory
+
+**First**, read `~/.claude/memory/hub-ingest-memory.md` and surface any content under the hub's section. If persistent notes exist, state them clearly before proceeding — they may affect how this ingest should be run. If no entry exists yet for this hub, proceed normally; one may be created after the run.
+
+The memory file uses `## hub-name` markdown sections to organize per-hub content. If the file or directory doesn't exist yet, proceed normally — it will be created when the first memory entry is written in Step 6. If the file cannot be read, log a warning and continue without persistent notes.
 
 Confirm the hub key (e.g. `sd`, `maryland`, `indiana`) and check its config:
 
@@ -549,6 +553,38 @@ aws ec2 stop-instances --instance-ids i-0a0def8581efef783
 ```
 
 `ingest.sh` handles result verification, safety checks, partner email, and the final Slack notification internally — no additional steps needed.
+
+### Step 6: Update Ingest Memory
+
+After the ingest completes (whether fully successful, partially recovered, or abandoned after investigation):
+
+1. Review everything that happened during this run.
+2. Identify anything **new or worth preserving** — for example:
+   - A changed endpoint, new S3 path, or updated file format that had to be determined
+   - An API performance issue, rate limiting, or connectivity problem encountered and resolved
+   - A mapping error, anomaly, or unexpected record count — and how it was handled
+   - A TODO or open question to raise with the partner in future
+   - Any special circumstance that should be remembered to run this hub correctly next time
+3. If anything notable occurred, draft a brief summary and **ask the user to confirm** it is accurate or if they want to add or change anything.
+4. Once confirmed, append to `~/.claude/memory/hub-ingest-memory.md` under the hub's section (create the section if it doesn't exist):
+   - **Persistent Notes** — for things to always surface next run (config, quirks, endpoint paths, partner context)
+   - **Run Log** — for timestamped noteworthy events (use today's date)
+
+**Memory file format:**
+```markdown
+## hub-name
+
+### Persistent Notes
+- Endpoint changed to `s3://new-bucket/path/` as of 2026-03
+- API rate-limits at ~100 req/min; harvest takes ~45 min
+- Partner prefers notifications to alternate-contact@example.org
+
+### Run Log
+- **2026-03-26**: First successful S3 file harvest. Confirmed OaiFileHarvester supports .xml.gz format.
+- **2026-02-15**: Mapping error in subject field resolved by updating mapper to handle nested arrays.
+```
+
+**Do not create a memory entry for routine runs where nothing new happened.**
 
 ---
 
@@ -1293,3 +1329,4 @@ The EC2 now has the latest ingestion3 (pulled via HTTPS from `https://github.com
 - Do not modify `i3.conf`, `.env`, or Scala source code unless explicitly requested. Exception: for `community-webs`, Step CW4 updates `community-webs.harvest.endpoint` in `i3.conf` as part of the required ingest flow.
 - Always refresh ingestion3 at the start of each session (Step 3a) using `git fetch + reset --hard` — the EC2 has no auto-update and can drift behind main, causing failures (e.g. missing entry points). Never use `git pull`; local commits can accumulate and cause divergent-branch failures.
 - For multi-hub batches: run all harvests/ingests first, then request index rebuild separately.
+- Memory system (Steps 0 and 6): Persistent notes are stored in `~/.claude/memory/hub-ingest-memory.md` outside the repository. Always review hub notes at Step 0 before proceeding — they may affect how the ingest should be run. Update the file after any notable run in Step 6. Do not create entries for routine successful runs.
