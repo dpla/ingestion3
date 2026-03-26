@@ -330,6 +330,26 @@ grep "^<hub>\." /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
 
 Note the `harvest.type` and `harvest.endpoint`. For `file` harvests, check that the file path exists and confirm with the user before proceeding.
 
+**Check for test hub status:**
+```bash
+grep "^<hub>\.status" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+```
+
+If the result is `<hub>.status = test`, this is a **test hub**. Announce this clearly and set `IS_TEST_HUB=true` to carry through the remaining steps:
+
+> "⚠️ **`<hub>` is a test hub** (`status = test` in i3.conf). This ingest will:
+> - Run the full harvest → mapping → enrichment → JSONL pipeline normally
+> - **Skip S3 sync** — data stays on EC2 only and cannot be picked up by sparkindexer
+> - **Skip the partner summary email**
+> - Still generate all summaries and logs for manual review
+>
+> See `docs/ingestion/README_TEST_HUBS.md` for full conventions."
+
+For test hubs, also check for the mapper in the experimental subpackage:
+```bash
+ls /Users/dominic/Documents/GitHub/ingestion3/src/main/scala/dpla/ingestion3/mappers/providers/experimental/
+```
+
 If hub is `community-webs`, run the Community Webs Pre-processing steps (see above) after Step 3 and before Step 4.
 
 #### New Hub or First S3 File Harvest — Pre-flight Checklist
@@ -488,13 +508,24 @@ curl -s --max-time 60 "<endpoint>?<query>&rows=1" | head -2
 
 **Always use `ingest.sh` — never run individual SBT steps manually.** The script handles the full pipeline (harvest → mapping → enrichment → JSONL → S3 sync) with Slack notifications at every step, hub status tracking, 0-record abort, and safety checks. Running steps manually bypasses all of this.
 
-Launch it as a background process so SSM doesn't time out on long ingests:
+Launch it as a background process so SSM doesn't time out on long ingests.
+
+**For test hubs** (`IS_TEST_HUB=true`), append `--skip-s3-sync` to prevent output from ever reaching S3:
 
 ```bash
+# Production hub:
 PARAMS=$(python3 -c "
 import json
 hub = '<hub>'
 cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub} > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &\"'
+print(json.dumps({'commands': [cmd]}))
+")
+
+# Test hub (add --skip-s3-sync):
+PARAMS=$(python3 -c "
+import json
+hub = '<hub>'
+cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub} --skip-s3-sync > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &\"'
 print(json.dumps({'commands': [cmd]}))
 ")
 CMDID=$(aws ssm send-command \
@@ -553,6 +584,12 @@ aws ec2 stop-instances --instance-ids i-0a0def8581efef783
 ```
 
 `ingest.sh` handles result verification, safety checks, partner email, and the final Slack notification internally — no additional steps needed.
+
+**Test hubs:** `ingest.sh` will skip S3 sync (due to `--skip-s3-sync`). After the Slack completion notification, also confirm the JSONL output is present on EC2:
+```bash
+ls -lh /home/ec2-user/data/<hub>/jsonl/
+```
+Do **not** send the partner summary email. The mapping summary and logs are available on EC2 for manual review. If you want to share results with the partner contact, retrieve the summary manually and send it yourself.
 
 ### Step 6: Update Ingest Memory
 
