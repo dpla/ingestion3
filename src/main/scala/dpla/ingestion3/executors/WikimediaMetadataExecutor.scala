@@ -77,12 +77,15 @@ trait WikimediaMetadataExecutor extends Serializable with WikiMapper {
           (dplaId, markup, iiif, media, title)
         }
 
-    wikiRecords.write.parquet(outputPath)
+    val cachedRecords = wikiRecords.cache()
+    cachedRecords.write.parquet(outputPath)
+    val recordCount = cachedRecords.count()
+    cachedRecords.unpersist()
 
     val manifestOpts: Map[String, String] = Map(
       "Activity"     -> "Wiki",
       "Provider"     -> shortName,
-      "Record count" -> s"${wikiRecords.count}",
+      "Record count" -> recordCount.toString,
       "Input"        -> dataIn
     )
 

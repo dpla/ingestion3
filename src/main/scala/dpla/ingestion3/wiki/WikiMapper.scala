@@ -9,7 +9,6 @@ import dpla.ingestion3.utils.FlatFileIO
 import org.json4s.jackson.JsonMethods.parse
 
 import scala.io.Source
-import scala.util.{Failure, Success, Try}
 
 case class WikiCriteria(dataProvider: Boolean, asset: Boolean, rights: Boolean, id: Boolean)
 
@@ -34,6 +33,7 @@ trait WikiMapper extends JsonExtractor {
     */
   protected val wikiEligibleRightsUris = Seq(
     "http://rightsstatements.org/vocab/NoC-US/",
+    "http://rightsstatements.org/vocab/NKC/",
     "http://creativecommons.org/publicdomain/mark/",
     "http://creativecommons.org/publicdomain/zero/",
     "http://creativecommons.org/licenses/by/",
@@ -72,19 +72,15 @@ trait WikiMapper extends JsonExtractor {
     val contentDMre = "(.*)(.*\\/cdm\\/.*collection\\/)(.*)(\\/id\\/)(.*$)"
     val uri = isShownAt.uri.toString
 
-    val pattern = Pattern.compile(contentDMre)
-    val matcher = pattern.matcher(uri)
-    matcher.matches()
-
-    Try {
-        val domain: String = matcher.group(1)
-        val collection: String = matcher.group(3)
-        val id: String = matcher.group(5)
-        Some(URI(s"$domain/iiif/info/$collection/$id/manifest.json"))
-      } match {
-        case Success(s: Option[URI]) => s
-        case Failure(_) => None
-      }
+    val matcher = Pattern.compile(contentDMre).matcher(uri)
+    if (matcher.matches()) {
+      val domain: String = matcher.group(1)
+      val collection: String = matcher.group(3)
+      val id: String = matcher.group(5)
+      Some(URI(s"$domain/iiif/info/$collection/$id/manifest.json"))
+    } else {
+      None
+    }
   }
 
   /**
@@ -97,19 +93,23 @@ trait WikiMapper extends JsonExtractor {
       val json = parse(fileContentString)
 
       extractKeys(json).flatMap(partner => {
-        val partnerWikiId = extractString(json \ partner \ "Wikidata").get
-        val partnerEligible = extractString(json \ partner \ "upload").get.toBoolean
-        extractKeys(json \ partner \ "institutions")
-          .map(dataProvider => {
-            val dataProviderWikiId = extractString(json \ partner \ "institutions" \ dataProvider \ "Wikidata").get
-            val dataProviderEligible = extractString(json \ partner \ "institutions" \ dataProvider \ "upload").get.toBoolean
-            Eligibility(
-              partnerWiki = s"${WikiUri.baseWikiUri}$partnerWikiId",
-              partnerEligible = partnerEligible,
-              dataProviderWiki = s"${WikiUri.baseWikiUri}$dataProviderWikiId",
-              dataProviderEligible = dataProviderEligible
+        val maybeEligibilities = for {
+          partnerWikiId      <- extractString(json \ partner \ "Wikidata")
+          partnerEligibleStr <- extractString(json \ partner \ "upload")
+        } yield {
+          extractKeys(json \ partner \ "institutions").flatMap(dataProvider => {
+            for {
+              dataProviderWikiId      <- extractString(json \ partner \ "institutions" \ dataProvider \ "Wikidata")
+              dataProviderEligibleStr <- extractString(json \ partner \ "institutions" \ dataProvider \ "upload")
+            } yield Eligibility(
+              partnerWiki          = s"${WikiUri.baseWikiUri}$partnerWikiId",
+              partnerEligible      = partnerEligibleStr.toBoolean,
+              dataProviderWiki     = s"${WikiUri.baseWikiUri}$dataProviderWikiId",
+              dataProviderEligible = dataProviderEligibleStr.toBoolean
             )
-        })
+          })
+        }
+        maybeEligibilities.getOrElse(Seq.empty)
       })
     })
   }

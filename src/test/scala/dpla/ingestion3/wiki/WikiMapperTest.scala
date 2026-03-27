@@ -98,4 +98,13 @@ class WikiMapperTest extends AnyFlatSpec {
       id = true)
     )
   }
+
+  "isIdEligible" should "return true for an ID not in the block list" in {
+    assert(wiki.isIdEligible("not-a-blocked-id") == true)
+  }
+
+  it should "return false for an ID in the block list" in {
+    // 100297392 is present in /wiki/ignore-nara.txt
+    assert(wiki.isIdEligible("100297392") == false)
+  }
 }
