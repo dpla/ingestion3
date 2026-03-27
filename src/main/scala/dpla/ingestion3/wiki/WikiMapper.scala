@@ -26,6 +26,7 @@ trait WikiMapper extends JsonExtractor {
   /**
     * Standardized rightsstatment and creative commons URIs eligible for Wikimedia upload
     *  NoC-US   http://rightsstatements.org/vocab/NoC-US
+    *  NKC      http://rightsstatements.org/vocab/NKC
     *  PDM      http://creativecommons.org/publicdomain/mark
     *  CC0      http://creativecommons.org/publicdomain/zero
     *  CC-BY    http://creativecommons.org/licenses/by
@@ -53,6 +54,11 @@ trait WikiMapper extends JsonExtractor {
 
   lazy val wikiEntityEligibility: Seq[Eligibility] = getWikiEntityEligibility
 
+  // TODO Do contentDM instances all have /cdm/ in their path?
+  // Compiled once at trait-init time; reused per record to avoid per-call overhead.
+  private val contentDMPattern: Pattern =
+    Pattern.compile("(.*)(.*\\/cdm\\/.*collection\\/)(.*)(\\/id\\/)(.*$)")
+
   /**
     *
     * @param isShownAt
@@ -68,11 +74,8 @@ trait WikiMapper extends JsonExtractor {
 //    The first match group should catch only through the TLD, not the /cdm/ref/ or
 //    whatever is that in between part of the URL before /collection/ (which should be discarded).
 
-    // TODO Do contentDM instances all have /cdm/ in their path?
-    val contentDMre = "(.*)(.*\\/cdm\\/.*collection\\/)(.*)(\\/id\\/)(.*$)"
     val uri = isShownAt.uri.toString
-
-    val matcher = Pattern.compile(contentDMre).matcher(uri)
+    val matcher = contentDMPattern.matcher(uri)
     if (matcher.matches()) {
       val domain: String = matcher.group(1)
       val collection: String = matcher.group(3)
@@ -89,7 +92,8 @@ trait WikiMapper extends JsonExtractor {
     */
   private def getWikiEntityEligibility: Seq[Eligibility] = {
     wikiFileList.flatMap(file => {
-      val fileContentString = Source.fromInputStream(getClass.getResourceAsStream(file)).getLines().mkString
+      val source = Source.fromInputStream(getClass.getResourceAsStream(file))
+      val fileContentString = try source.getLines().mkString finally source.close()
       val json = parse(fileContentString)
 
       extractKeys(json).flatMap(partner => {
@@ -103,9 +107,9 @@ trait WikiMapper extends JsonExtractor {
               dataProviderEligibleStr <- extractString(json \ partner \ "institutions" \ dataProvider \ "upload")
             } yield Eligibility(
               partnerWiki          = s"${WikiUri.baseWikiUri}$partnerWikiId",
-              partnerEligible      = partnerEligibleStr.toBoolean,
+              partnerEligible      = partnerEligibleStr.equalsIgnoreCase("true"),
               dataProviderWiki     = s"${WikiUri.baseWikiUri}$dataProviderWikiId",
-              dataProviderEligible = dataProviderEligibleStr.toBoolean
+              dataProviderEligible = dataProviderEligibleStr.equalsIgnoreCase("true")
             )
           })
         }
@@ -167,7 +171,7 @@ trait WikiMapper extends JsonExtractor {
   def isAssetEligible(iiif: Option[URI], mediaMasters: Seq[EdmWebResource]): Boolean =
     (iiif, mediaMasters.nonEmpty) match {
       case(None, false) => false // Neither IIIF manifest nor media masters exist
-      case(_, _) => true // either IIIF manifest or exactly one media exist
+      case(_, _) => true // at least one of IIIF manifest or media master exists
     }
 
   /**
