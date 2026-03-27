@@ -92,7 +92,9 @@ trait WikiMapper extends JsonExtractor {
     */
   private def getWikiEntityEligibility: Seq[Eligibility] = {
     wikiFileList.flatMap(file => {
-      val source = Source.fromInputStream(getClass.getResourceAsStream(file))
+      val stream = getClass.getResourceAsStream(file)
+      if (stream == null) throw new IllegalStateException(s"Required wiki resource file not found: $file")
+      val source = Source.fromInputStream(stream)
       val fileContentString = try source.getLines().mkString finally source.close()
       val json = parse(fileContentString)
 
