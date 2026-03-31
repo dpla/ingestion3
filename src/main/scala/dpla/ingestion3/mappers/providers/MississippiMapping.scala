@@ -48,9 +48,16 @@ class MississippiMapping
   override def edmRights(data: Document[JValue]): ZeroToMany[URI] =
     rightsValues(data).filter(isRightsUri).map(URI)
 
-  override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] =
-    extractStrings(unwrap(data) \ "delivery" \ "availabilityLinksUrl")
-      .map(stringOnlyWebResource)
+  // Some eGrove records have an empty availabilityLinksUrl; fall back to the
+  // URL embedded in pnx.display.identifier ($$Cdcidentifier$$V<url> format).
+  override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
+    val fromDelivery = extractStrings(unwrap(data) \ "delivery" \ "availabilityLinksUrl")
+      .filter(_.nonEmpty)
+    if (fromDelivery.nonEmpty)
+      fromDelivery.map(stringOnlyWebResource)
+    else
+      parsedIdentifiers(data).filter(_.startsWith("http")).map(stringOnlyWebResource)
+  }
 
   override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
     (unwrap(data) \ "delivery" \ "link")
@@ -88,10 +95,7 @@ class MississippiMapping
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "format")
 
   override def identifier(data: Document[JValue]): ZeroToMany[String] =
-    extractStrings(unwrap(data) \ "pnx" \ "display" \ "identifier")
-      .flatMap(_.splitAtDelimiter(";"))
-      .map(_.replaceAll("\\$\\$C[^$]+\\$\\$V", "").trim)
-      .filter(_.nonEmpty)
+    parsedIdentifiers(data)
 
   override def language(data: Document[JValue]): ZeroToMany[SkosConcept] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "language")
@@ -159,6 +163,14 @@ class MississippiMapping
     else
       stringOnlyTimeSpan(raw)
   }
+
+  private val primoIdentifierRegex = "\\$\\$C[^$]+\\$\\$V".r
+
+  private def parsedIdentifiers(data: Document[JValue]): Seq[String] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "identifier")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(primoIdentifierRegex.replaceAllIn(_, "").trim)
+      .filter(_.nonEmpty)
 
   private def isRightsUri(v: String): Boolean =
     v.startsWith("http://rightsstatements.org") ||
