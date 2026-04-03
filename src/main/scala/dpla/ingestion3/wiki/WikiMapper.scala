@@ -1,13 +1,11 @@
 package dpla.ingestion3.wiki
 
-import java.net.URL
 import java.util.regex.Pattern
 
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToOne}
 import dpla.ingestion3.model.{EdmWebResource, OreAggregation, URI}
-import dpla.ingestion3.utils.{FlatFileIO, HttpUtils}
-import org.json4s.jackson.JsonMethods.parse
+import dpla.ingestion3.utils.FlatFileIO
 
 case class WikiCriteria(dataProvider: Boolean, asset: Boolean, rights: Boolean, id: Boolean)
 
@@ -45,9 +43,6 @@ trait WikiMapper extends JsonExtractor {
   private val blockedIdsFileList = Seq(
     "/wiki/ignore-nara.txt"
   )
-
-  private val INSTITUTIONS_URL =
-    "https://raw.githubusercontent.com/dpla/ingestion3/refs/heads/main/src/main/resources/wiki/institutions_v2.json"
 
   lazy val wikiEntityEligibility: Seq[Eligibility] = getWikiEntityEligibility
 
@@ -88,8 +83,7 @@ trait WikiMapper extends JsonExtractor {
     * @return
     */
   private def getWikiEntityEligibility: Seq[Eligibility] = {
-    val fileContentString = HttpUtils.makeGetRequest(new URL(INSTITUTIONS_URL))
-    val json = parse(fileContentString)
+    val json = InstitutionsLoader.institutions
 
     extractKeys(json).flatMap(partner => {
       val maybeEligibilities = for {
