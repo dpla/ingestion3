@@ -68,7 +68,12 @@ class WikiEntityEnrichment
       }
     }
 
-    dataProviderKeys ++ institutionKeys
+    val vocab = dataProviderKeys ++ institutionKeys
+    if (vocab.isEmpty)
+      throw new IllegalStateException(
+        "Fetched institutions_v2.json but extracted no Wikidata mappings; schema may have changed"
+      )
+    vocab
   }
   // Load the vocab
   loadVocab
