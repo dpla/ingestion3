@@ -54,13 +54,14 @@ class WikiEntityEnrichment
 
   private def getInstitutionVocab: Seq[(String, String)] = {
     val json = InstitutionsLoader.institutions
+    val providers = extractKeys(json)
 
-    val dataProviderKeys = extractKeys(json).flatMap { dataProvider =>
+    val dataProviderKeys = providers.flatMap { dataProvider =>
       extractString(json \ dataProvider \ "Wikidata")
         .map(wikidata => dataProvider -> wikidata)
     }
 
-    val institutionKeys = extractKeys(json).flatMap { dataProvider =>
+    val institutionKeys = providers.flatMap { dataProvider =>
       extractKeys(json \ dataProvider \ "institutions").flatMap { institution =>
         extractString(json \ dataProvider \ "institutions" \ institution \ "Wikidata")
           .map(wikidata => s"$dataProvider$institution" -> wikidata)
