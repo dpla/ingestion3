@@ -1,18 +1,13 @@
 package dpla.ingestion3.enrichments
 
-import java.net.URL
-
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.{EdmAgent, URI, nameOnlyAgent}
-import dpla.ingestion3.utils.HttpUtils
+import dpla.ingestion3.wiki.InstitutionsLoader
 import org.json4s.jackson.JsonMethods._
 
 class WikiEntityEnrichment
     extends VocabEnrichment[EdmAgent]
     with JsonExtractor {
-
-  private val INSTITUTIONS_URL =
-    "https://raw.githubusercontent.com/dpla/ingestion3/refs/heads/main/src/main/resources/wiki/institutions_v2.json"
 
   // performs term lookup
   private val lookup = new VocabLookup[EdmAgent]((term: EdmAgent) =>
@@ -58,28 +53,19 @@ class WikiEntityEnrichment
     }
 
   private def getInstitutionVocab: Seq[(String, String)] = {
-    val fileContentString = HttpUtils.makeGetRequest(new URL(INSTITUTIONS_URL))
+    val json = InstitutionsLoader.institutions
 
-    val json = parse(fileContentString)
+    val dataProviderKeys = extractKeys(json).flatMap { dataProvider =>
+      extractString(json \ dataProvider \ "Wikidata")
+        .map(wikidata => dataProvider -> wikidata)
+    }
 
-    val dataProviderKeys = extractKeys(json)
-      .map(dataProvider =>
-        s"$dataProvider" -> extractString(
-          json \ dataProvider \ "Wikidata"
-        ).get
-      )
-
-    val institutionKeys = extractKeys(json) // get dataProvider keys
-      .flatMap(dataProvider => {
-        extractKeys(
-          json \ dataProvider \ "institutions"
-        ) // get institutions keys
-          .map(institution => {
-            s"$dataProvider$institution" -> extractString(
-              json \ dataProvider \ "institutions" \ institution \ "Wikidata"
-            ).get
-          })
-      })
+    val institutionKeys = extractKeys(json).flatMap { dataProvider =>
+      extractKeys(json \ dataProvider \ "institutions").flatMap { institution =>
+        extractString(json \ dataProvider \ "institutions" \ institution \ "Wikidata")
+          .map(wikidata => s"$dataProvider$institution" -> wikidata)
+      }
+    }
 
     dataProviderKeys ++ institutionKeys
   }
