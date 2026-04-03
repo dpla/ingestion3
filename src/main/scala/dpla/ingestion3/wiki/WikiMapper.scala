@@ -1,14 +1,13 @@
 package dpla.ingestion3.wiki
 
+import java.net.URL
 import java.util.regex.Pattern
 
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToOne}
 import dpla.ingestion3.model.{EdmWebResource, OreAggregation, URI}
-import dpla.ingestion3.utils.FlatFileIO
+import dpla.ingestion3.utils.{FlatFileIO, HttpUtils}
 import org.json4s.jackson.JsonMethods.parse
-
-import scala.io.Source
 
 case class WikiCriteria(dataProvider: Boolean, asset: Boolean, rights: Boolean, id: Boolean)
 
@@ -47,10 +46,8 @@ trait WikiMapper extends JsonExtractor {
     "/wiki/ignore-nara.txt"
   )
 
-  // Files to source from
-  private val wikiFileList = Seq(
-    "/wiki/institutions_v2.json"
-  )
+  private val INSTITUTIONS_URL =
+    "https://raw.githubusercontent.com/dpla/ingestion3/refs/heads/main/src/main/resources/wiki/institutions_v2.json"
 
   lazy val wikiEntityEligibility: Seq[Eligibility] = getWikiEntityEligibility
 
@@ -91,32 +88,27 @@ trait WikiMapper extends JsonExtractor {
     * @return
     */
   private def getWikiEntityEligibility: Seq[Eligibility] = {
-    wikiFileList.flatMap(file => {
-      val stream = getClass.getResourceAsStream(file)
-      if (stream == null) throw new IllegalStateException(s"Required wiki resource file not found: $file")
-      val source = Source.fromInputStream(stream)
-      val fileContentString = try source.getLines().mkString finally source.close()
-      val json = parse(fileContentString)
+    val fileContentString = HttpUtils.makeGetRequest(new URL(INSTITUTIONS_URL))
+    val json = parse(fileContentString)
 
-      extractKeys(json).flatMap(partner => {
-        val maybeEligibilities = for {
-          partnerWikiId      <- extractString(json \ partner \ "Wikidata")
-          partnerEligibleStr <- extractString(json \ partner \ "upload")
-        } yield {
-          extractKeys(json \ partner \ "institutions").flatMap(dataProvider => {
-            for {
-              dataProviderWikiId      <- extractString(json \ partner \ "institutions" \ dataProvider \ "Wikidata")
-              dataProviderEligibleStr <- extractString(json \ partner \ "institutions" \ dataProvider \ "upload")
-            } yield Eligibility(
-              partnerWiki          = s"${WikiUri.baseWikiUri}$partnerWikiId",
-              partnerEligible      = partnerEligibleStr.equalsIgnoreCase("true"),
-              dataProviderWiki     = s"${WikiUri.baseWikiUri}$dataProviderWikiId",
-              dataProviderEligible = dataProviderEligibleStr.equalsIgnoreCase("true")
-            )
-          })
-        }
-        maybeEligibilities.getOrElse(Seq.empty)
-      })
+    extractKeys(json).flatMap(partner => {
+      val maybeEligibilities = for {
+        partnerWikiId      <- extractString(json \ partner \ "Wikidata")
+        partnerEligibleStr <- extractString(json \ partner \ "upload")
+      } yield {
+        extractKeys(json \ partner \ "institutions").flatMap(dataProvider => {
+          for {
+            dataProviderWikiId      <- extractString(json \ partner \ "institutions" \ dataProvider \ "Wikidata")
+            dataProviderEligibleStr <- extractString(json \ partner \ "institutions" \ dataProvider \ "upload")
+          } yield Eligibility(
+            partnerWiki          = s"${WikiUri.baseWikiUri}$partnerWikiId",
+            partnerEligible      = partnerEligibleStr.equalsIgnoreCase("true"),
+            dataProviderWiki     = s"${WikiUri.baseWikiUri}$dataProviderWikiId",
+            dataProviderEligible = dataProviderEligibleStr.equalsIgnoreCase("true")
+          )
+        })
+      }
+      maybeEligibilities.getOrElse(Seq.empty)
     })
   }
 
