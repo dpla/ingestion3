@@ -2,20 +2,12 @@ package dpla.ingestion3.enrichments
 
 import dpla.ingestion3.mappers.utils.JsonExtractor
 import dpla.ingestion3.model.{EdmAgent, URI, nameOnlyAgent}
-import dpla.ingestion3.utils.FileLoader
-
+import dpla.ingestion3.wiki.InstitutionsLoader
 import org.json4s.jackson.JsonMethods._
 
-import scala.io.Source
-
 class WikiEntityEnrichment
-    extends FileLoader
-    with VocabEnrichment[EdmAgent]
+    extends VocabEnrichment[EdmAgent]
     with JsonExtractor {
-
-  private val fileList = Seq(
-    "/wiki/institutions_v2.json"
-  )
 
   // performs term lookup
   private val lookup = new VocabLookup[EdmAgent]((term: EdmAgent) =>
@@ -56,40 +48,33 @@ class WikiEntityEnrichment
     */
   // noinspection TypeAnnotation,UnitMethodIsParameterless
   private def loadVocab: Unit =
-    getInstitutionVocab(files).foreach { case (key: String, value: String) =>
+    getInstitutionVocab.foreach { case (key: String, value: String) =>
       if (value.nonEmpty) addEntity(key, value)
     }
 
-  private def getInstitutionVocab(files: Seq[String]): Seq[(String, String)] =
-    files.flatMap(file => {
-      val fileContentString = Source
-        .fromInputStream(getClass.getResourceAsStream(file))
-        .getLines()
-        .mkString
+  private def getInstitutionVocab: Seq[(String, String)] = {
+    val json = InstitutionsLoader.institutions
+    val providers = extractKeys(json)
 
-      val json = parse(fileContentString)
+    val dataProviderKeys = providers.flatMap { dataProvider =>
+      extractString(json \ dataProvider \ "Wikidata")
+        .map(wikidata => dataProvider -> wikidata)
+    }
 
-      val dataProviderKeys = extractKeys(json)
-        .map(dataProvider =>
-          s"$dataProvider" -> extractString(
-            json \ dataProvider \ "Wikidata"
-          ).get
-        )
+    val institutionKeys = providers.flatMap { dataProvider =>
+      extractKeys(json \ dataProvider \ "institutions").flatMap { institution =>
+        extractString(json \ dataProvider \ "institutions" \ institution \ "Wikidata")
+          .map(wikidata => s"$dataProvider$institution" -> wikidata)
+      }
+    }
 
-      val institutionKeys = extractKeys(json) // get dataProvider keys
-        .flatMap(dataProvider => {
-          extractKeys(
-            json \ dataProvider \ "institutions"
-          ) // get institutions keys
-            .map(institution => {
-              s"$dataProvider$institution" -> extractString(
-                json \ dataProvider \ "institutions" \ institution \ "Wikidata"
-              ).get
-            })
-        })
-
-      dataProviderKeys ++ institutionKeys
-    })
+    val vocab = dataProviderKeys ++ institutionKeys
+    if (vocab.isEmpty)
+      throw new IllegalStateException(
+        "Fetched institutions_v2.json but extracted no Wikidata mappings; schema may have changed"
+      )
+    vocab
+  }
   // Load the vocab
   loadVocab
 
@@ -110,9 +95,6 @@ class WikiEntityEnrichment
       )
     )
   }
-
-  // FileLoader
-  override def files: Seq[String] = fileList
 
   /** Get enriched form of the given entity by mapping entity name to entity
     * name (case-insensitive) Example: 'university of pennsylvania' ->
