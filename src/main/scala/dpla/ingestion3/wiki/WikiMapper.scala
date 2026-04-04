@@ -85,7 +85,7 @@ trait WikiMapper extends JsonExtractor {
   private def getWikiEntityEligibility: Seq[Eligibility] = {
     val json = InstitutionsLoader.institutions
 
-    extractKeys(json).flatMap(partner => {
+    val eligibility = extractKeys(json).flatMap(partner => {
       val maybeEligibilities = for {
         partnerWikiId      <- extractString(json \ partner \ "Wikidata")
         partnerEligibleStr <- extractString(json \ partner \ "upload")
@@ -104,6 +104,11 @@ trait WikiMapper extends JsonExtractor {
       }
       maybeEligibilities.getOrElse(Seq.empty)
     })
+    if (eligibility.isEmpty)
+      throw new IllegalStateException(
+        "Fetched institutions_v2.json but extracted no eligibility mappings; schema may have changed"
+      )
+    eligibility
   }
 
   /**
