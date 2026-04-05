@@ -147,7 +147,7 @@ else
 fi
 
 # Step 1: Harvest
-if [ "$SKIP_HARVEST" = false ]; then
+if [ "$SKIP_HARVEST" = false ] && [[ -z "$RESUME_FROM" ]]; then
     check_disk_space $DISK_MIN_GB
     write_hub_status "$PROVIDER" harvesting
     print_step "Step 1/5: Harvesting $PROVIDER..."
