@@ -114,7 +114,7 @@ class Jh3MappingTest extends AnyFlatSpec with BeforeAndAfter {
          |      <ore:Aggregation rdf:about="test:1#agg">
          |        <edm:dataProvider>Test</edm:dataProvider>
          |        <edm:isShownAt rdf:resource="http://example.org/1"/>
-         |        <edm:provider>Jewish Heritage Network</edm:provider>
+         |        <edm:provider>Jewish Heritage and History Hub</edm:provider>
          |        <edm:rights rdf:resource="http://rightsstatements.org/vocab/InC/1.0/"/>
          |      </ore:Aggregation>
          |    </rdf:RDF>
