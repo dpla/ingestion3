@@ -39,7 +39,7 @@ object CHProviderRegistry {
     "ia" -> new IaProfile,
     "il" -> new IlProfile,
     "indiana" -> new InProfile,
-    "jhn" -> new JhnProfile,
+    "jh3" -> new Jh3Profile,
     "lc" -> new LocProfile,
     "maryland" -> new MarylandProfile,
     "mi" -> new MiProfile,
