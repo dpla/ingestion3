@@ -104,7 +104,7 @@ class MaMapping
     val date = extractString(
       (node \ "namePart").filter(p => filterAttribute(p, "type", "date"))
     )
-    // val uri = extractStrings() FIXME when jhn is merged in with attribute namespace mapping functionality
+
 
     (name.isEmpty, date) match {
       case (false, Some(d)) => Some(s"$name, $d")

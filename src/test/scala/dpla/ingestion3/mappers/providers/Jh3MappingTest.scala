@@ -8,12 +8,12 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.xml.{NodeSeq, XML}
 
-class JhnMappingTest extends AnyFlatSpec with BeforeAndAfter {
+class Jh3MappingTest extends AnyFlatSpec with BeforeAndAfter {
 
-  val shortName = "jhn"
-  val xmlString: String = new FlatFileIO().readFileAsString("/jhn.xml")
+  val shortName = "jh3"
+  val xmlString: String = new FlatFileIO().readFileAsString("/jh3.xml")
   val xml: Document[NodeSeq] = Document(XML.loadString(xmlString))
-  val extractor = new JhnMapping
+  val extractor = new Jh3Mapping
 
   it should "extract the correct originalId" in {
     val expected = Some("blavatnik_postcards:10131")
@@ -98,7 +98,7 @@ class JhnMappingTest extends AnyFlatSpec with BeforeAndAfter {
                 <skos:note>Siege of Leningrad, 1941-1944, 1941 - 1942</skos:note>
             </skos:Concept>
 
-  // Helper: minimal JHN record wrapper with Mojibake in a title element
+  // Helper: minimal JH3 record wrapper with Mojibake in a title element
   private def mojibakeDoc(titleText: String): Document[NodeSeq] = Document(
     XML.loadString(
       s"""<record xmlns="http://www.openarchives.org/OAI/2.0/">
@@ -114,7 +114,7 @@ class JhnMappingTest extends AnyFlatSpec with BeforeAndAfter {
          |      <ore:Aggregation rdf:about="test:1#agg">
          |        <edm:dataProvider>Test</edm:dataProvider>
          |        <edm:isShownAt rdf:resource="http://example.org/1"/>
-         |        <edm:provider>Jewish Heritage Network</edm:provider>
+         |        <edm:provider>Jewish Heritage and History Hub</edm:provider>
          |        <edm:rights rdf:resource="http://rightsstatements.org/vocab/InC/1.0/"/>
          |      </ore:Aggregation>
          |    </rdf:RDF>

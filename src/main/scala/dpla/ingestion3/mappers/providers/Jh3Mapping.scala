@@ -11,14 +11,14 @@ import org.json4s.JsonDSL._
 
 import scala.xml._
 
-class JhnMapping
+class Jh3Mapping
     extends XmlMapping
     with XmlExtractor
     with IngestMessageTemplates {
 
   override def useProviderName: Boolean = true
 
-  override def getProviderName: Option[String] = Some("jhn")
+  override def getProviderName: Option[String] = Some("jh3")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
     extractString(data \ "header" \ "identifier")
@@ -122,10 +122,10 @@ class JhnMapping
       .map(nameOnlyAgent)
 
   // Fail records that contain Mojibake (UTF-8 bytes misread as CP1252).
-  // JHN does not provide rights text — the throw path is the only effect
+  // JH3 does not provide rights text — the throw path is the only effect
   // for affected records; clean records return an empty Seq as expected.
   override def rights(data: Document[NodeSeq]): ZeroToMany[String] = {
-    if (JhnMapping.MojibakePattern.findFirstIn(data.get.text).isDefined)
+    if (Jh3Mapping.MojibakePattern.findFirstIn(data.get.text).isDefined)
       throw MappingException(
         "Mojibake encoding detected: UTF-8 bytes were misread as CP1252. " +
           "Please re-encode source records as UTF-8 and re-harvest."
@@ -197,8 +197,8 @@ class JhnMapping
     ))
 
   private def agent = EdmAgent(
-    name = Some("Jewish Heritage Network"),
-    uri = Some(URI("http://dp.la/api/contributor/jhn"))
+    name = Some("Jewish Heritage and History Hub"),
+    uri = Some(URI("http://dp.la/api/contributor/jh3"))
   )
 
   private def isShownByUrls(data: Document[NodeSeq]): ZeroToMany[String] =
@@ -209,10 +209,10 @@ class JhnMapping
     data \ "metadata" \ "RDF"
 }
 
-object JhnMapping {
+object Jh3Mapping {
   // Compiled once at class load, not per record.
   // First class: CP1252 representations of UTF-8 first bytes for the scripts
-  //   carried by JHN:
+  //   carried by JH3:
   //   - 0xC0–0xC3 (À–Ã): Latin extended (U+0000–U+00FF)
   //   - 0xD0–0xD3 (Ð–Ó): Cyrillic (U+0400–U+04FF)
   //   - 0xD7      (×):   Hebrew   (U+05D0–U+05FF)

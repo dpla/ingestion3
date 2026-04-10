@@ -15,7 +15,7 @@ if [ -z "$1" ]; then
     echo "Example: ./harvest.sh harvard"
     echo ""
     echo "Available providers: artstor, bhl, community-webs, ct, florida, georgia,"
-    echo "  getty, gpo, harvard, hathi, heartland, ia, il, indiana, jhn, lc,"
+    echo "  getty, gpo, harvard, hathi, heartland, ia, il, indiana, jh3, lc,"
     echo "  maryland, mi, minnesota, mississippi, mt, mwdl, nara, digitalnc,"
     echo "  njde, northwest-heritage, nypl, ohio, oklahoma, p2p, pa, david-rumsey,"
     echo "  scdl, sd, smithsonian, texas, tennessee, txdl, virginias, vt, wisconsin"

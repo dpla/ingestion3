@@ -125,11 +125,11 @@ class InProfile extends XmlProfile {
   override def getMapping = new InMapping
 }
 
-/** Jewish Heritage Network
+/** Jewish Heritage and History Hub
   */
-class JhnProfile extends XmlProfile {
+class Jh3Profile extends XmlProfile {
   override def getHarvester: Class[_ <: Harvester] = classOf[OaiXmllHarvester]
-  override def getMapping = new JhnMapping
+  override def getMapping = new Jh3Mapping
 }
 
 /** Internet Archive
