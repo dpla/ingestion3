@@ -11,7 +11,7 @@ then one per-hub query for contributor counts. A single nested aggregation
 across all hubs exceeds ES's search.max_buckets limit.
 
 Usage:
-    python3 scripts/generate_hub_stats.py
+    ./venv/bin/python scripts/generate_hub_stats.py
 
 Environment:
     ES_HOST  - Elasticsearch hostname (default: search-prod1.internal.dp.la)
@@ -53,7 +53,13 @@ def hub_totals(bws: bool = False) -> dict:
     if bws:
         query["query"] = {"term": {"tags": "blackwomensuffrage"}}
     result = es_query(query)
-    return {b["key"]: b["doc_count"] for b in result["aggregations"]["hubs"]["buckets"]}
+    hubs_agg = result["aggregations"]["hubs"]
+    if hubs_agg.get("sum_other_doc_count", 0) > 0:
+        raise RuntimeError(
+            f"Hub aggregation truncated (sum_other_doc_count="
+            f"{hubs_agg['sum_other_doc_count']}); increase size."
+        )
+    return {b["key"]: b["doc_count"] for b in hubs_agg["buckets"]}
 
 
 def contributor_counts(hub_name: str, bws: bool = False) -> dict:
@@ -77,10 +83,14 @@ def contributor_counts(hub_name: str, bws: bool = False) -> dict:
             }
         }
     result = es_query(query)
-    return {
-        b["key"]: b["doc_count"]
-        for b in result["aggregations"]["contributors"]["buckets"]
-    }
+    contributors_agg = result["aggregations"]["contributors"]
+    if contributors_agg.get("sum_other_doc_count", 0) > 0:
+        raise RuntimeError(
+            f"Contributor aggregation truncated for hub '{hub_name}' "
+            f"(sum_other_doc_count={contributors_agg['sum_other_doc_count']}); "
+            f"increase size."
+        )
+    return {b["key"]: b["doc_count"] for b in contributors_agg["buckets"]}
 
 
 def build_stats(bws: bool = False) -> dict:
