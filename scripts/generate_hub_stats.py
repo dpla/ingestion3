@@ -6,6 +6,10 @@ and upload to s3://dashboard-analytics/hub-stats/.
 Run on the ingest EC2 after each monthly index rebuild completes,
 before final verification. Requires boto3 and network access to ES.
 
+Uses two passes per stats file: first a hub-level totals aggregation,
+then one per-hub query for contributor counts. A single nested aggregation
+across all hubs exceeds ES's search.max_buckets limit.
+
 Usage:
     python3 scripts/generate_hub_stats.py
 
@@ -34,43 +38,57 @@ def es_query(query: dict) -> dict:
     req = urllib.request.Request(
         url, data=data, headers={"Content-Type": "application/json"}
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:
+    with urllib.request.urlopen(req, timeout=30) as resp:
         return json.loads(resp.read())
 
 
-def build_stats(bws: bool = False) -> dict:
+def hub_totals(bws: bool = False) -> dict:
+    """Return {hub_name: item_count} for all hubs (or BWS-filtered hubs)."""
     query: dict = {
         "size": 0,
         "aggs": {
-            "hubs": {
-                "terms": {"field": "provider.name.not_analyzed", "size": 200},
-                "aggs": {
-                    "contributors": {
-                        "terms": {
-                            "field": "dataProvider.name.not_analyzed",
-                            "size": 2000,
-                        }
-                    }
-                },
-            }
+            "hubs": {"terms": {"field": "provider.name.not_analyzed", "size": 200}}
         },
     }
     if bws:
         query["query"] = {"term": {"tags": "blackwomensuffrage"}}
-
     result = es_query(query)
+    return {b["key"]: b["doc_count"] for b in result["aggregations"]["hubs"]["buckets"]}
 
+
+def contributor_counts(hub_name: str, bws: bool = False) -> dict:
+    """Return {contributor_name: item_count} for all contributors in a hub."""
+    query: dict = {
+        "size": 0,
+        "query": {"term": {"provider.name.not_analyzed": hub_name}},
+        "aggs": {
+            "contributors": {
+                "terms": {"field": "dataProvider.name.not_analyzed", "size": 2000}
+            }
+        },
+    }
+    if bws:
+        query["query"] = {
+            "bool": {
+                "filter": [
+                    {"term": {"provider.name.not_analyzed": hub_name}},
+                    {"term": {"tags": "blackwomensuffrage"}},
+                ]
+            }
+        }
+    result = es_query(query)
+    return {
+        b["key"]: b["doc_count"]
+        for b in result["aggregations"]["contributors"]["buckets"]
+    }
+
+
+def build_stats(bws: bool = False) -> dict:
+    totals = hub_totals(bws)
     hubs = {}
-    for hub_bucket in result["aggregations"]["hubs"]["buckets"]:
-        hub_name = hub_bucket["key"]
-        contributors = {
-            c["key"]: c["doc_count"] for c in hub_bucket["contributors"]["buckets"]
-        }
-        hubs[hub_name] = {
-            "item_count": hub_bucket["doc_count"],
-            "contributors": contributors,
-        }
-
+    for hub_name, item_count in totals.items():
+        contributors = contributor_counts(hub_name, bws)
+        hubs[hub_name] = {"item_count": item_count, "contributors": contributors}
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "hubs": hubs,
