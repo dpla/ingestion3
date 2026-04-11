@@ -39,7 +39,13 @@ def es_query(query: dict) -> dict:
         url, data=data, headers={"Content-Type": "application/json"}
     )
     with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read())
+        data = json.loads(resp.read())
+    if data.get("timed_out"):
+        raise RuntimeError(f"Elasticsearch query timed out: {query}")
+    shards = data.get("_shards", {})
+    if shards.get("failed", 0) > 0:
+        raise RuntimeError(f"Elasticsearch shard failures: {shards}")
+    return data
 
 
 def hub_totals(bws: bool = False) -> dict:
