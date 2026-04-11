@@ -106,7 +106,10 @@ def build_stats(bws: bool = False) -> dict:
 
 
 def upload(data: dict, key: str) -> None:
-    boto3.client("s3", region_name="us-east-1").put_object(
+    # Use AWS_PROFILE if set (local dev); on EC2 profile_name=None falls back
+    # to the instance metadata credential chain.
+    session = boto3.Session(profile_name=os.environ.get("AWS_PROFILE"))
+    session.client("s3", region_name="us-east-1").put_object(
         Bucket=BUCKET,
         Key=key,
         Body=json.dumps(data, indent=2).encode(),
