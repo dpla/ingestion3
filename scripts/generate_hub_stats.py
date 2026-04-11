@@ -123,7 +123,7 @@ def main() -> None:
     print(f"  {hub_count} hubs", flush=True)
 
     bws_stats = build_stats(bws=True)
-    bws_hub_count = sum(1 for h in bws_stats["hubs"].values() if h["item_count"] > 0)
+    bws_hub_count = len(bws_stats["hubs"])
     print(f"  {bws_hub_count} hubs with BWS items", flush=True)
 
     upload(hub_stats, HUB_KEY)
