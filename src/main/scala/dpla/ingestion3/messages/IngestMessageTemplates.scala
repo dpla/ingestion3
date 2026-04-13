@@ -210,6 +210,20 @@ trait IngestMessageTemplates {
       enrichedValue = "Not enriched"
     )
 
+  def bareIpUrlMsg(
+      id: String,
+      field: String,
+      value: String,
+      enforce: Boolean
+  ): IngestMessage =
+    IngestMessage(
+      message = "URL host is a bare IP address, not a domain name",
+      level = if (enforce) IngestLogLevel.error else IngestLogLevel.warn,
+      id = id,
+      field = field,
+      value = value
+    )
+
   def exception(id: String, exception: Throwable): IngestMessage =
     IngestMessage(
       message = s"Exception (see value column)",
