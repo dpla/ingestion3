@@ -510,22 +510,16 @@ curl -s --max-time 60 "<endpoint>?<query>&rows=1" | head -2
 
 Launch it as a background process so SSM doesn't time out on long ingests.
 
-**For test hubs** (`IS_TEST_HUB=true`), append `--skip-s3-sync` to prevent output from ever reaching S3:
+The snippet below reads `IS_TEST_HUB` (set earlier if this is a test hub) and automatically appends `--skip-s3-sync` when true, preventing output from ever reaching S3:
 
 ```bash
-# Production hub:
+IS_TEST_HUB=${IS_TEST_HUB:-false}
 PARAMS=$(python3 -c "
 import json
 hub = '<hub>'
-cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub} > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &\"'
-print(json.dumps({'commands': [cmd]}))
-")
-
-# Test hub (add --skip-s3-sync):
-PARAMS=$(python3 -c "
-import json
-hub = '<hub>'
-cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub} --skip-s3-sync > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &\"'
+is_test = "${IS_TEST_HUB}".lower() == 'true'
+extra = ' --skip-s3-sync' if is_test else ''
+cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub}{extra} > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &\"'
 print(json.dumps({'commands': [cmd]}))
 ")
 CMDID=$(aws ssm send-command \
