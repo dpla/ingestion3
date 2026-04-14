@@ -559,10 +559,13 @@ CMDID=$(aws ssm send-command --instance-ids i-0a0def8581efef783 \
 
 **To resume from a failed step** (e.g. if mapping failed and harvest data is intact):
 ```bash
+IS_TEST_HUB=${IS_TEST_HUB:-false}
 PARAMS=$(python3 -c "
 import json
 hub = '<hub>'
-cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub} --resume-from mapping > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &\"'
+is_test = "${IS_TEST_HUB}".lower() == 'true'
+extra = ' --skip-s3-sync' if is_test else ''
+cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub}{extra} --resume-from mapping > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &\"'
 print(json.dumps({'commands': [cmd]}))
 ")
 ```
