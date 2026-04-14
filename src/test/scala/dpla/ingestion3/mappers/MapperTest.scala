@@ -24,6 +24,97 @@ class MapperTest extends AnyFlatSpec with BeforeAndAfter with IngestMessageTempl
   val dataProviders: Seq[EdmAgent] = Seq("Person A", "Person B").map(nameOnlyAgent)
   val id = "123"
 
+  // Helpers
+  def webResourceFor(url: String): EdmWebResource =
+    EdmWebResource(uri = URI(url))
+
+  // URI.hasBareIpHost tests
+  it should "detect a bare IPv4 address as a bare-IP host" in {
+    assert(URI("http://67.111.179.146/foo?bar=1").hasBareIpHost)
+  }
+
+  it should "detect a bare IPv6 address as a bare-IP host" in {
+    assert(URI("http://[::1]/foo").hasBareIpHost)
+  }
+
+  it should "not flag a normal domain name as a bare-IP host" in {
+    assert(!URI("https://digital.cjh.org/webclient/foo").hasBareIpHost)
+  }
+
+  it should "not flag an invalid URI as a bare-IP host" in {
+    assert(!URI("not a url").hasBareIpHost)
+  }
+
+  // validateIsShownAt bare-IP tests
+  it should "log an ERROR when isShownAt has a bare-IP URL" in {
+    msgCollector.deleteAll()
+    val url = "http://67.111.179.146/item/123"
+    val values = Seq(webResourceFor(url))
+    val expected = bareIpUrlMsg(id, "isShownAt", url, enforce = true)
+
+    mapTest.validateIsShownAt(values, id, enforce = true)
+
+    assert(msgCollector.getAll.contains(expected))
+  }
+
+  it should "still return the resource when isShownAt has a bare-IP URL" in {
+    msgCollector.deleteAll()
+    val url = "http://67.111.179.146/item/123"
+    val values = Seq(webResourceFor(url))
+    val result = mapTest.validateIsShownAt(values, id, enforce = true)
+    assert(result.uri.value === url)
+  }
+
+  // validateObject bare-IP tests
+  it should "log a WARN and return None when object has a bare-IP URL" in {
+    msgCollector.deleteAll()
+    val url = "http://67.111.179.146/thumb/123"
+    val values = Seq(webResourceFor(url))
+    val expected = bareIpUrlMsg(id, "object", url, enforce = false)
+
+    val result = mapTest.validateObject(values, id, enforce = false)
+
+    assert(msgCollector.getAll.contains(expected))
+    assert(result === None)
+  }
+
+  it should "return the resource when object has a valid domain URL" in {
+    msgCollector.deleteAll()
+    val url = "https://digital.cjh.org/thumb/123"
+    val values = Seq(webResourceFor(url))
+    val result = mapTest.validateObject(values, id, enforce = false)
+    assert(result.isDefined)
+    assert(result.get.uri.value === url)
+  }
+
+  // validatePreview bare-IP tests
+  it should "log a WARN and return None when preview has a bare-IP URL" in {
+    msgCollector.deleteAll()
+    val url = "http://10.0.0.1/preview/123"
+    val values = Seq(webResourceFor(url))
+    val expected = bareIpUrlMsg(id, "preview", url, enforce = false)
+
+    val result = mapTest.validatePreview(values, id, enforce = false)
+
+    assert(msgCollector.getAll.contains(expected))
+    assert(result === None)
+  }
+
+  // validateHasView bare-IP tests
+  it should "filter out bare-IP entries from hasView and log a WARN for each" in {
+    msgCollector.deleteAll()
+    val badUrl = "http://67.111.179.146/view/123"
+    val goodUrl = "https://digital.cjh.org/view/456"
+    val values = Seq(webResourceFor(badUrl), webResourceFor(goodUrl))
+    val expected = bareIpUrlMsg(id, "hasView", badUrl, enforce = false)
+
+    val result = mapTest.validateHasView(values, id)
+
+    assert(msgCollector.getAll.contains(expected))
+    assert(result.size === 1)
+    assert(result.head.uri.value === goodUrl)
+  }
+
   it should "add an info warning if more than two dataProvider are given and return the first value" in {
     msgCollector.deleteAll()
     val message = moreThanOneValueMsg(id, "dataProvider", "Person A | Person B", enforce)

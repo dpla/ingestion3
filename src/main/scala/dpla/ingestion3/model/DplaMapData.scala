@@ -132,10 +132,36 @@ case class EdmTimeSpan(
     end: ZeroToOne[String] = None
 )
 
+object URI {
+  // Matches bare IPv4 addresses (e.g. "67.111.179.146").
+  private val ipv4Pattern = """^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$""".r
+}
+
 case class URI(value: String) {
   def validate: Boolean = Try { new java.net.URI(value) }.isSuccess
 
   def isValidEdmRightsUri: Boolean = validEdmRightsValues.contains(value)
+
+  /** Returns true if this URI's host is a bare IP address (IPv4 or IPv6)
+    * rather than a domain name. Bare-IP URLs are always a provider
+    * misconfiguration: the IP can change without notice, breaking all
+    * downstream links and thumbnail fetches.
+    *
+    * Note: java.net.URI.getHost returns IPv6 addresses with enclosing
+    * brackets (e.g. "[::1]"), so we strip them before matching.
+    */
+  def hasBareIpHost: Boolean = {
+    // Fast pre-check: scheme separator must be present for any URL we care about.
+    if (!value.contains("://")) return false
+    Try(new java.net.URI(value)).toOption match {
+      case Some(uri) =>
+        Option(uri.getHost).exists { host =>
+          val h = host.stripPrefix("[").stripSuffix("]")
+          URI.ipv4Pattern.matches(h) || h.contains(":")
+        }
+      case None => false
+    }
+  }
 
   /** toString is overridden so that when URI values are extracted the type is
     * dropped. Otherwise, calling URI("http://abc.com").toString() will return
