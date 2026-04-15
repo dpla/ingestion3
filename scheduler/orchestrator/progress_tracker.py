@@ -10,11 +10,11 @@ Provides real-time status monitoring including:
 import subprocess
 import json
 import re
-import os
+import shlex
 from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Optional, Literal
+from typing import Optional
 from enum import Enum
 
 
@@ -203,12 +203,12 @@ class ProgressTracker:
                 try:
                     if f.suffix == '.gz' or '.gz' in f.name:
                         result = subprocess.run(
-                            f"zcat '{f}' | wc -l",
+                            f"zcat {shlex.quote(str(f))} | wc -l",
                             capture_output=True, text=True, shell=True
                         )
                     else:
                         result = subprocess.run(
-                            f"wc -l < '{f}'",
+                            f"wc -l < {shlex.quote(str(f))}",
                             capture_output=True, text=True, shell=True
                         )
                     if result.returncode == 0:
@@ -234,12 +234,12 @@ class ProgressTracker:
             try:
                 if f.suffix == '.gz' or '.gz' in f.name:
                     result = subprocess.run(
-                        f"zcat '{f}' | wc -l",
+                        f"zcat {shlex.quote(str(f))} | wc -l",
                         capture_output=True, text=True, shell=True
                     )
                 else:
                     result = subprocess.run(
-                        f"wc -l < '{f}'",
+                        f"wc -l < {shlex.quote(str(f))}",
                         capture_output=True, text=True, shell=True
                     )
                 if result.returncode == 0:
@@ -409,7 +409,7 @@ class ProgressTracker:
             print("\n⏸️  No ingest processes currently running")
         
         # Hub status details
-        print(f"\n📊 HUB STATUS:")
+        print("\n📊 HUB STATUS:")
         print("-" * 50)
         
         progress_list = self.get_all_progress(hubs)

@@ -13,7 +13,6 @@ Thresholds (global defaults):
 import subprocess
 import re
 import json
-from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional
@@ -238,8 +237,8 @@ class AnomalyDetector:
     
     def list_s3_directories(self, hub: str, stage: str) -> list[str]:
         """List all directories in S3 for a hub/stage, sorted by date descending."""
-        cmd = f"aws s3 ls s3://{self.s3_bucket}/{hub}/{stage}/ --profile {self.aws_profile}"
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        cmd = ["aws", "s3", "ls", f"s3://{self.s3_bucket}/{hub}/{stage}/", "--profile", self.aws_profile]
+        result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode != 0:
             return []
@@ -284,8 +283,8 @@ class AnomalyDetector:
         
         # Download and parse
         s3_path = f"s3://{self.s3_bucket}/{hub}/{stage}/{target_dir}/{meta_file}"
-        cmd = f"aws s3 cp {s3_path} - --profile {self.aws_profile}"
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        cmd = ["aws", "s3", "cp", s3_path, "-", "--profile", self.aws_profile]
+        result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode != 0:
             return None
@@ -560,10 +559,10 @@ class AnomalyDetector:
             # Print anomaly status at TOP
             if report.anomalies:
                 if report.should_halt:
-                    print(f"\n  ⛔ HARD STOP - Critical anomalies detected")
-                    print(f"     Use --force to override")
+                    print("\n  ⛔ HARD STOP - Critical anomalies detected")
+                    print("     Use --force to override")
                 else:
-                    print(f"\n  ⚠️  WARNING - Anomalies detected")
+                    print("\n  ⚠️  WARNING - Anomalies detected")
                 
                 print(f"\n  🚨 ANOMALIES ({len(report.anomalies)})")
                 print(f"  {'-' * 40}")
@@ -573,7 +572,7 @@ class AnomalyDetector:
                     print(f"      {a.message}")
                     print(f"      Change: {a.percent_change:+.1f}% (threshold: ±{a.threshold:.0%})")
             else:
-                print(f"\n  ✅ No anomalies")
+                print("\n  ✅ No anomalies")
             
             # Harvest section
             harvest_change = None
@@ -581,7 +580,7 @@ class AnomalyDetector:
                 harvest_change = ((current_harvest.attempted - baseline_harvest.attempted) 
                                  / baseline_harvest.attempted * 100)
             
-            print(f"\n  📥 Harvest")
+            print("\n  📥 Harvest")
             if harvest_change is not None:
                 arrow = "📈" if harvest_change >= 0 else "📉"
                 print(f"  Change: {arrow} {harvest_change:+.1f}%")
@@ -604,7 +603,7 @@ class AnomalyDetector:
                 mapping_change = ((current_mapping.successful - baseline_mapping.successful) 
                                  / baseline_mapping.successful * 100)
             
-            print(f"\n  🗺️  Mapping")
+            print("\n  🗺️  Mapping")
             if mapping_change is not None:
                 arrow = "📈" if mapping_change >= 0 else "📉"
                 print(f"  Change: {arrow} {mapping_change:+.1f}%")

@@ -122,6 +122,12 @@ object UpdateInstitutions {
     val response = HttpUtils.execute(request)
     val hubsJson = parse(response)
 
+    if ((hubsJson \ "timed_out").extractOpt[Boolean].contains(true))
+      throw new RuntimeException("ES hub-names query timed out — results may be incomplete")
+    (hubsJson \ "_shards" \ "failed").extractOpt[Int].foreach { n =>
+      if (n > 0) throw new RuntimeException(s"ES hub-names query had $n failed shard(s)")
+    }
+
     val hubsNames =
       for (
         JString(term) <-
@@ -141,6 +147,13 @@ object UpdateInstitutions {
     val request = buildPostRequest(query)
     val response = HttpUtils.execute(request)
     val contributorJson = parse(response)
+
+    if ((contributorJson \ "timed_out").extractOpt[Boolean].contains(true))
+      throw new RuntimeException(s"ES contributor-names query timed out for $hubName — results may be incomplete")
+    (contributorJson \ "_shards" \ "failed").extractOpt[Int].foreach { n =>
+      if (n > 0) throw new RuntimeException(s"ES contributor-names query for $hubName had $n failed shard(s)")
+    }
+
     val contributorNames = for {
       JString(term) <-
         contributorJson \ "aggregations" \ "dataProvider.name" \ "buckets" \ "key"
@@ -220,13 +233,13 @@ object UpdateInstitutions {
         if (
           !newHub.institutions.contains(
             institutionName
-          ) && oldContributingInstitution.Wikidata.isDefined && oldContributingInstitution.Wikidata.get.nonEmpty
+          ) && oldContributingInstitution.Wikidata.exists(_.nonEmpty)
         )
           throw new RuntimeException(
             f"Missing institution: $institutionName in hub: $hubName"
           )
         if (
-          oldContributingInstitution.Wikidata.isDefined && oldContributingInstitution.Wikidata.get.nonEmpty
+          oldContributingInstitution.Wikidata.exists(_.nonEmpty)
         ) {
           val newContributingInstitution = newHub.institutions(institutionName)
           if (

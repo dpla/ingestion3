@@ -3,15 +3,15 @@
 import asyncio
 import os
 import re
-import subprocess
+import shlex
 import time
 from pathlib import Path
 from typing import Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
-from .config import Config, HubConfig, ResourceBudget
+from .config import Config, ResourceBudget
 from .state import IngestState, HubStatus
-from .diagnostics import ErrorClassifier, Diagnosis
+from .diagnostics import ErrorClassifier
 from .anomaly_detector import AnomalyDetector, AnomalyReport
 from .s3_utils import get_latest_dir
 
@@ -113,7 +113,7 @@ class HubProcessor:
 
         # Download S3 data
         result = await self._run_command(
-            f"aws s3 ls s3://{source_bucket}/ --profile {self.config.aws_profile}"
+            f"aws s3 ls s3://{shlex.quote(source_bucket)}/ --profile {shlex.quote(self.config.aws_profile)}"
         )
 
         if not result.success:
@@ -123,9 +123,9 @@ class HubProcessor:
         # Find latest data and download
         # This is simplified - the actual download logic is in the bash script
         download_script = f"""
-        cd {self.config.i3_home}/scripts && \
+        cd {shlex.quote(self.config.i3_home)}/scripts && \
         source ./auto-ingest.sh && \
-        download_s3_data {self.hub_name}
+        download_s3_data {shlex.quote(self.hub_name)}
         """
 
         result = await self._run_command(download_script, shell=True)
@@ -201,14 +201,14 @@ class HubProcessor:
             self._log(f"Harvest attempt {attempt}/{max_retries}")
 
             result = await self._run_command(
-                f"cd {self.config.i3_home} && ./scripts/harvest.sh {self.hub_name}"
+                f"cd {shlex.quote(self.config.i3_home)} && ./scripts/harvest.sh {shlex.quote(self.hub_name)}"
             )
 
             # Check for actual output (more reliable than exit code)
             has_output = self._verify_harvest_output()
 
             if has_output:
-                self._log(f"Harvest successful (verified output exists)")
+                self._log("Harvest successful (verified output exists)")
                 self.state.update_hub(
                     self.run_id, self.hub_name, HubStatus.HARVESTING,
                     retries=attempt
@@ -259,7 +259,7 @@ class HubProcessor:
         self._log("Running mapping (harvest → DPLA MAP)...")
 
         result = await self._run_command(
-            f"cd {self.config.i3_home} && ./scripts/mapping.sh {self.hub_name}"
+            f"cd {shlex.quote(self.config.i3_home)} && ./scripts/mapping.sh {shlex.quote(self.hub_name)}"
         )
 
         has_output = self._verify_step_output(self.mapping_dir)
@@ -289,7 +289,7 @@ class HubProcessor:
         self._log("Running enrichment...")
 
         result = await self._run_command(
-            f"cd {self.config.i3_home} && ./scripts/enrich.sh {self.hub_name}"
+            f"cd {shlex.quote(self.config.i3_home)} && ./scripts/enrich.sh {shlex.quote(self.hub_name)}"
         )
 
         has_output = self._verify_step_output(self.enrichment_dir)
@@ -319,7 +319,7 @@ class HubProcessor:
         self._log("Running JSONL export...")
 
         result = await self._run_command(
-            f"cd {self.config.i3_home} && ./scripts/jsonl.sh {self.hub_name}"
+            f"cd {shlex.quote(self.config.i3_home)} && ./scripts/jsonl.sh {shlex.quote(self.hub_name)}"
         )
 
         has_output = self._verify_step_output(self.jsonl_dir)
@@ -353,7 +353,7 @@ class HubProcessor:
         self._log("Running remap (mapping → enrichment → jsonl)...")
 
         result = await self._run_command(
-            f"cd {self.config.i3_home} && ./scripts/remap.sh {self.hub_name}"
+            f"cd {shlex.quote(self.config.i3_home)} && ./scripts/remap.sh {shlex.quote(self.hub_name)}"
         )
 
         # Check for jsonl output
@@ -436,7 +436,7 @@ class HubProcessor:
         self._log("Syncing to S3...")
 
         result = await self._run_command(
-            f"cd {self.config.i3_home} && ./scripts/s3-sync.sh {self.hub_name}"
+            f"cd {shlex.quote(self.config.i3_home)} && ./scripts/s3-sync.sh {shlex.quote(self.hub_name)}"
         )
 
         if result.exit_code == 0:
@@ -600,7 +600,6 @@ class HubProcessor:
             )
 
             pid = process.pid
-            last_health_log = start_time
 
             async def _read_output():
                 """Read output line-by-line so the pipe doesn't block."""
@@ -648,7 +647,6 @@ class HubProcessor:
                         f"last output {output_age}s ago"
                     )
 
-                last_health_log = now
 
             await process.wait()
             if not reader_task.done():
