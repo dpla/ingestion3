@@ -3,15 +3,15 @@
 import asyncio
 import os
 import re
-import subprocess
+import shlex
 import time
 from pathlib import Path
 from typing import Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
-from .config import Config, HubConfig, ResourceBudget
+from .config import Config, ResourceBudget
 from .state import IngestState, HubStatus
-from .diagnostics import ErrorClassifier, Diagnosis
+from .diagnostics import ErrorClassifier
 from .anomaly_detector import AnomalyDetector, AnomalyReport
 from .s3_utils import get_latest_dir
 
@@ -19,24 +19,29 @@ from .s3_utils import get_latest_dir
 @dataclass
 class ProcessResult:
     """Result of a process execution."""
+
     success: bool
     exit_code: int
     output: str
     duration_seconds: int
     error: Optional[str] = None
     anomaly_report: Optional[AnomalyReport] = None
-    failure_stage: Optional[str] = None  # harvest, mapping, enrichment, jsonl, sync, anomaly
+    failure_stage: Optional[str] = (
+        None  # harvest, mapping, enrichment, jsonl, sync, anomaly
+    )
 
 
 @dataclass
 class HarvestCounts:
     """Counts extracted from a harvest _MANIFEST."""
+
     record_count: Optional[int] = None
 
 
 @dataclass
 class MappingCounts:
     """Counts extracted from a mapping _SUMMARY."""
+
     attempted: Optional[int] = None
     successful: Optional[int] = None
     failed: Optional[int] = None
@@ -113,7 +118,7 @@ class HubProcessor:
 
         # Download S3 data
         result = await self._run_command(
-            f"aws s3 ls s3://{source_bucket}/ --profile {self.config.aws_profile}"
+            f"aws s3 ls s3://{shlex.quote(source_bucket)}/ --profile dpla"
         )
 
         if not result.success:
@@ -122,13 +127,13 @@ class HubProcessor:
 
         # Find latest data and download
         # This is simplified - the actual download logic is in the bash script
-        download_script = f"""
-        cd {self.config.i3_home}/scripts && \
-        source ./auto-ingest.sh && \
-        download_s3_data {self.hub_name}
-        """
+        download_script = (
+            f'bash -c "cd {shlex.quote(self.config.i3_home)}/scripts'
+            f" && source ./auto-ingest.sh"
+            f' && download_s3_data {shlex.quote(self.hub_name)}"'
+        )
 
-        result = await self._run_command(download_script, shell=True)
+        result = await self._run_command(download_script)
 
         if not result.success:
             self._log(f"S3 download failed: {result.error}")
@@ -151,7 +156,11 @@ class HubProcessor:
         original_dir = self.data_dir / "originalRecords"
 
         # Find the latest data directory
-        subdirs = [d for d in original_dir.iterdir() if d.is_dir() and d.name not in ('fixed', 'xmll')]
+        subdirs = [
+            d
+            for d in original_dir.iterdir()
+            if d.is_dir() and d.name not in ("fixed", "xmll")
+        ]
         if not subdirs:
             self._log("No Smithsonian data directories found")
             return False
@@ -201,23 +210,22 @@ class HubProcessor:
             self._log(f"Harvest attempt {attempt}/{max_retries}")
 
             result = await self._run_command(
-                f"cd {self.config.i3_home} && ./scripts/harvest.sh {self.hub_name}"
+                f"cd {shlex.quote(self.config.i3_home)} && ./scripts/harvest.sh {shlex.quote(self.hub_name)}"
             )
 
             # Check for actual output (more reliable than exit code)
             has_output = self._verify_harvest_output()
 
             if has_output:
-                self._log(f"Harvest successful (verified output exists)")
+                self._log("Harvest successful (verified output exists)")
                 self.state.update_hub(
-                    self.run_id, self.hub_name, HubStatus.HARVESTING,
-                    retries=attempt
+                    self.run_id, self.hub_name, HubStatus.HARVESTING, retries=attempt
                 )
                 return ProcessResult(
                     success=True,
                     exit_code=result.exit_code,
                     output=result.output,
-                    duration_seconds=result.duration_seconds
+                    duration_seconds=result.duration_seconds,
                 )
 
             # Classify the failure
@@ -241,7 +249,7 @@ class HubProcessor:
                 output=result.output,
                 duration_seconds=result.duration_seconds,
                 error=diagnosis.description if diagnosis else "Unknown error",
-                failure_stage="harvest"
+                failure_stage="harvest",
             )
 
         return ProcessResult(
@@ -250,7 +258,7 @@ class HubProcessor:
             output=self.get_logs(),
             duration_seconds=0,
             error=f"Failed after {max_retries} attempts",
-            failure_stage="harvest"
+            failure_stage="harvest",
         )
 
     async def mapping(self) -> ProcessResult:
@@ -259,7 +267,7 @@ class HubProcessor:
         self._log("Running mapping (harvest → DPLA MAP)...")
 
         result = await self._run_command(
-            f"cd {self.config.i3_home} && ./scripts/mapping.sh {self.hub_name}"
+            f"cd {shlex.quote(self.config.i3_home)} && ./scripts/mapping.sh {shlex.quote(self.hub_name)}"
         )
 
         has_output = self._verify_step_output(self.mapping_dir)
@@ -270,7 +278,7 @@ class HubProcessor:
                 success=True,
                 exit_code=result.exit_code,
                 output=result.output,
-                duration_seconds=result.duration_seconds
+                duration_seconds=result.duration_seconds,
             )
 
         self._log(f"Mapping failed (exit code: {result.exit_code})")
@@ -280,7 +288,7 @@ class HubProcessor:
             output=result.output,
             duration_seconds=result.duration_seconds,
             error="Mapping did not produce output",
-            failure_stage="mapping"
+            failure_stage="mapping",
         )
 
     async def enrich(self) -> ProcessResult:
@@ -289,7 +297,7 @@ class HubProcessor:
         self._log("Running enrichment...")
 
         result = await self._run_command(
-            f"cd {self.config.i3_home} && ./scripts/enrich.sh {self.hub_name}"
+            f"cd {shlex.quote(self.config.i3_home)} && ./scripts/enrich.sh {shlex.quote(self.hub_name)}"
         )
 
         has_output = self._verify_step_output(self.enrichment_dir)
@@ -300,7 +308,7 @@ class HubProcessor:
                 success=True,
                 exit_code=result.exit_code,
                 output=result.output,
-                duration_seconds=result.duration_seconds
+                duration_seconds=result.duration_seconds,
             )
 
         self._log(f"Enrichment failed (exit code: {result.exit_code})")
@@ -310,7 +318,7 @@ class HubProcessor:
             output=result.output,
             duration_seconds=result.duration_seconds,
             error="Enrichment did not produce output",
-            failure_stage="enrichment"
+            failure_stage="enrichment",
         )
 
     async def jsonl(self) -> ProcessResult:
@@ -319,7 +327,7 @@ class HubProcessor:
         self._log("Running JSONL export...")
 
         result = await self._run_command(
-            f"cd {self.config.i3_home} && ./scripts/jsonl.sh {self.hub_name}"
+            f"cd {shlex.quote(self.config.i3_home)} && ./scripts/jsonl.sh {shlex.quote(self.hub_name)}"
         )
 
         has_output = self._verify_step_output(self.jsonl_dir)
@@ -330,7 +338,7 @@ class HubProcessor:
                 success=True,
                 exit_code=result.exit_code,
                 output=result.output,
-                duration_seconds=result.duration_seconds
+                duration_seconds=result.duration_seconds,
             )
 
         self._log(f"JSONL export failed (exit code: {result.exit_code})")
@@ -340,7 +348,7 @@ class HubProcessor:
             output=result.output,
             duration_seconds=result.duration_seconds,
             error="JSONL export did not produce output",
-            failure_stage="jsonl"
+            failure_stage="jsonl",
         )
 
     async def remap(self) -> ProcessResult:
@@ -353,7 +361,7 @@ class HubProcessor:
         self._log("Running remap (mapping → enrichment → jsonl)...")
 
         result = await self._run_command(
-            f"cd {self.config.i3_home} && ./scripts/remap.sh {self.hub_name}"
+            f"cd {shlex.quote(self.config.i3_home)} && ./scripts/remap.sh {shlex.quote(self.hub_name)}"
         )
 
         # Check for jsonl output
@@ -365,7 +373,7 @@ class HubProcessor:
                 success=True,
                 exit_code=result.exit_code,
                 output=result.output,
-                duration_seconds=result.duration_seconds
+                duration_seconds=result.duration_seconds,
             )
 
         self._log(f"Remap failed (exit code: {result.exit_code})")
@@ -375,7 +383,7 @@ class HubProcessor:
             output=result.output,
             duration_seconds=result.duration_seconds,
             error="Remap did not produce jsonl output",
-            failure_stage="mapping"
+            failure_stage="mapping",
         )
 
     def check_anomalies(self, force: bool = False) -> tuple[bool, AnomalyReport]:
@@ -388,8 +396,7 @@ class HubProcessor:
         self._log("Checking for anomalies against S3 baseline...")
 
         detector = AnomalyDetector(
-            data_dir=str(self.config.data_dir),
-            aws_profile=self.config.aws_profile
+            data_dir=str(self.config.data_dir), aws_profile=self.config.aws_profile
         )
 
         report = detector.check_hub(self.hub_name, verbose=False)
@@ -429,14 +436,14 @@ class HubProcessor:
                 duration_seconds=0,
                 error="Anomaly detection halted sync",
                 anomaly_report=anomaly_report,
-                failure_stage="anomaly"
+                failure_stage="anomaly",
             )
 
         self.state.update_hub(self.run_id, self.hub_name, HubStatus.SYNCING)
         self._log("Syncing to S3...")
 
         result = await self._run_command(
-            f"cd {self.config.i3_home} && ./scripts/s3-sync.sh {self.hub_name}"
+            f"cd {shlex.quote(self.config.i3_home)} && ./scripts/s3-sync.sh {shlex.quote(self.hub_name)}"
         )
 
         if result.exit_code == 0:
@@ -471,9 +478,9 @@ class HubProcessor:
         if manifest.exists():
             try:
                 content = manifest.read_text()
-                match = re.search(r'Record count:\s*([0-9,]+)', content)
+                match = re.search(r"Record count:\s*([0-9,]+)", content)
                 if match:
-                    counts.record_count = int(match.group(1).replace(',', ''))
+                    counts.record_count = int(match.group(1).replace(",", ""))
             except Exception:
                 pass
 
@@ -494,25 +501,24 @@ class HubProcessor:
         try:
             content = summary.read_text()
 
-            attempted = re.search(r'Attempted\.+([0-9,]+)', content)
-            successful = re.search(r'Successful\.+([0-9,]+)', content)
-            failed = re.search(r'Failed\.+([0-9,]+)', content)
+            attempted = re.search(r"Attempted\.+([0-9,]+)", content)
+            successful = re.search(r"Successful\.+([0-9,]+)", content)
+            failed = re.search(r"Failed\.+([0-9,]+)", content)
 
             if attempted:
-                counts.attempted = int(attempted.group(1).replace(',', ''))
+                counts.attempted = int(attempted.group(1).replace(",", ""))
             if successful:
-                counts.successful = int(successful.group(1).replace(',', ''))
+                counts.successful = int(successful.group(1).replace(",", ""))
             if failed:
-                counts.failed = int(failed.group(1).replace(',', ''))
+                counts.failed = int(failed.group(1).replace(",", ""))
 
             # Issues summary
             records_section = re.search(
-                r'Records\n-\s*Errors\.+([0-9,]+)\n-\s*Warnings\.+([0-9,]+)',
-                content
+                r"Records\n-\s*Errors\.+([0-9,]+)\n-\s*Warnings\.+([0-9,]+)", content
             )
             if records_section:
-                errors_val = int(records_section.group(1).replace(',', ''))
-                warnings_val = int(records_section.group(2).replace(',', ''))
+                errors_val = int(records_section.group(1).replace(",", ""))
+                warnings_val = int(records_section.group(2).replace(",", ""))
                 parts = []
                 if errors_val > 0:
                     parts.append(f"{errors_val:,} errors")
@@ -568,7 +574,6 @@ class HubProcessor:
     async def _run_command(
         self,
         command: str,
-        shell: bool = True,
         health_check_interval: int = 300,
     ) -> ProcessResult:
         """Run a shell command with resource-budgeted env, streaming output
@@ -582,7 +587,6 @@ class HubProcessor:
 
         Args:
             command: Shell command to execute.
-            shell: Use shell execution (default True).
             health_check_interval: Seconds between health-check log lines
                 (default 5 min).
         """
@@ -600,7 +604,6 @@ class HubProcessor:
             )
 
             pid = process.pid
-            last_health_log = start_time
 
             async def _read_output():
                 """Read output line-by-line so the pipe doesn't block."""
@@ -610,7 +613,7 @@ class HubProcessor:
                     line = await process.stdout.readline()
                     if not line:
                         break
-                    decoded = line.decode('utf-8', errors='replace')
+                    decoded = line.decode("utf-8", errors="replace")
                     output_chunks.append(decoded)
                     last_output_time = time.time()
                     # Keep buffer bounded (last ~200KB)
@@ -648,8 +651,6 @@ class HubProcessor:
                         f"last output {output_age}s ago"
                     )
 
-                last_health_log = now
-
             await process.wait()
             if not reader_task.done():
                 await reader_task
@@ -663,7 +664,7 @@ class HubProcessor:
                 success=(process.returncode == 0),
                 exit_code=process.returncode or 0,
                 output=output,
-                duration_seconds=duration
+                duration_seconds=duration,
             )
 
         except Exception as e:
@@ -673,7 +674,7 @@ class HubProcessor:
                 exit_code=1,
                 output=str(e),
                 duration_seconds=duration,
-                error=str(e)
+                error=str(e),
             )
 
     # =========================================================================
@@ -684,10 +685,12 @@ class HubProcessor:
     def _find_java_child(parent_pid: int) -> int | None:
         """Find a child java process of the given parent."""
         import subprocess as _sp
+
         try:
             out = _sp.check_output(
                 ["pgrep", "-P", str(parent_pid), "-f", "java"],
-                text=True, stderr=_sp.DEVNULL,
+                text=True,
+                stderr=_sp.DEVNULL,
             )
             pids = out.strip().split()
             return int(pids[0]) if pids else None
@@ -698,10 +701,12 @@ class HubProcessor:
     def _get_rss_mb(pid: int) -> int:
         """Return resident memory in MB for a process."""
         import subprocess as _sp
+
         try:
             out = _sp.check_output(
                 ["ps", "-o", "rss=", "-p", str(pid)],
-                text=True, stderr=_sp.DEVNULL,
+                text=True,
+                stderr=_sp.DEVNULL,
             )
             return int(out.strip()) // 1024
         except Exception:
