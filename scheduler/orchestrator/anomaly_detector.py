@@ -266,9 +266,9 @@ class AnomalyDetector:
             "ls",
             f"s3://{self.s3_bucket}/{hub}/{stage}/",
             "--profile",
-            "dpla",
+            self.aws_profile,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
         if result.returncode != 0:
             return []
@@ -313,8 +313,8 @@ class AnomalyDetector:
 
         # Download and parse
         s3_path = f"s3://{self.s3_bucket}/{hub}/{stage}/{target_dir}/{meta_file}"
-        cmd = ["aws", "s3", "cp", s3_path, "-", "--profile", "dpla"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        cmd = ["aws", "s3", "cp", s3_path, "-", "--profile", self.aws_profile]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
 
         if result.returncode != 0:
             return None

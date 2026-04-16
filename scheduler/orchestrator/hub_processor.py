@@ -133,7 +133,7 @@ class HubProcessor:
             f' && download_s3_data {shlex.quote(self.hub_name)}"'
         )
 
-        result = await self._run_command(download_script, shell=True)
+        result = await self._run_command(download_script)
 
         if not result.success:
             self._log(f"S3 download failed: {result.error}")
@@ -574,7 +574,6 @@ class HubProcessor:
     async def _run_command(
         self,
         command: str,
-        shell: bool = True,
         health_check_interval: int = 300,
     ) -> ProcessResult:
         """Run a shell command with resource-budgeted env, streaming output
@@ -588,7 +587,6 @@ class HubProcessor:
 
         Args:
             command: Shell command to execute.
-            shell: Use shell execution (default True).
             health_check_interval: Seconds between health-check log lines
                 (default 5 min).
         """
