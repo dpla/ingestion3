@@ -6,16 +6,28 @@ Runs the usual before-every-ingest checks against the EC2 box and prints
 a clean summary. Exits 0 if everything is GOOD, 1 otherwise.
 
 Usage:
-    python3 prechecks.py
+    python3 prechecks.py                                # base checks only (no hub)
+    python3 prechecks.py --hub illinois                 # auto-looks up endpoint from i3.conf
+    python3 prechecks.py --hub illinois \\
+        --endpoint https://illinois.example.org/oai     # override endpoint manually
+    python3 prechecks.py --hub x --endpoint https://... --api   # API-style endpoint (60s)
+
+Both --hub and --endpoint are optional. With no --hub, the endpoint check is
+skipped and you just get the base box-state checks (instance, repo, JAR,
+ownership, disk).
 
 Requirements:
     - aws CLI installed and authenticated (aws sts get-caller-identity should work)
     - IAM permissions for ec2:DescribeInstances, ec2:StartInstances,
       ssm:SendCommand, ssm:GetCommandInvocation on the target instance
+    - curl in PATH (for the endpoint check)
 """
 
+import argparse
 import base64
 import json
+import os
+import re
 import subprocess
 import sys
 import time
@@ -25,6 +37,14 @@ INSTANCE_ID = "i-0a0def8581efef783"
 REPO_PATH = "/home/ec2-user/ingestion3"
 REMOTE_URL = "https://github.com/dpla/ingestion3.git"
 REMOTE_BRANCH = "main"
+
+# Where the HOCON hub config lives on the local machine.
+# Defaults to ~/repos/ingestion3-conf/i3.conf (the conventional checkout),
+# but the I3_CONF env var wins if set — matches the convention used in the
+# ingestion3 .env file (see §7 of the onboarding doc).
+CONF_PATH = os.environ.get("I3_CONF") or os.path.expanduser(
+    "~/repos/ingestion3-conf/i3.conf"
+)
 
 # ---------- tiny output helpers ----------
 def header(title):
@@ -269,10 +289,191 @@ fi
     bad("Not enough disk — clean up /home/ec2-user/data/ before ingesting.")
     return False
 
+def lookup_hub_in_conf(hub, conf_path=CONF_PATH):
+    """
+    Parse i3.conf (HOCON) and return (endpoint, harvest_type) for the hub.
+    Returns (None, None) if not found. harvest_type may be 'oai', 'api', 'pss',
+    'resourceSync', 'file', etc. — or None if not detected.
+
+    This is a regex-based HOCON reader, not a full parser. It handles the two
+    common shapes in the DPLA conf:
+        illinois {
+          harvest {
+            type = "oai"
+            endpoint = "https://..."
+          }
+        }
+    and the flattened dotted-key form:
+        illinois.harvest.type = "oai"
+        illinois.harvest.endpoint = "https://..."
+    """
+    if not os.path.exists(conf_path):
+        return None, None
+
+    with open(conf_path, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    # Strip comments (# ... or // ...) to simplify matching.
+    text = re.sub(r"(?m)^\s*(#|//).*$", "", text)
+    text = re.sub(r"(?<!:)//[^\n]*", "", text)  # trailing //-style comments
+
+    endpoint = None
+    harvest_type = None
+
+    # --- shape 1: a block `hub { ... }`
+    # Find `hub {` and then grab everything up to the matching brace.
+    block_match = re.search(
+        rf"(?ms)^\s*{re.escape(hub)}\s*(?:=|:)?\s*\{{(.*)",
+        text,
+    )
+    if block_match:
+        # Walk forward counting braces to find the matching close.
+        depth = 1
+        start = block_match.start(1)
+        i = start
+        while i < len(text) and depth > 0:
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+            i += 1
+        block = text[start:i - 1] if depth == 0 else text[start:]
+
+        ep_match = re.search(r"""endpoint\s*[=:]\s*["']([^"']+)["']""", block)
+        if ep_match:
+            endpoint = ep_match.group(1)
+        type_match = re.search(r"""type\s*[=:]\s*["']?([A-Za-z]+)["']?""", block)
+        if type_match:
+            harvest_type = type_match.group(1).lower()
+
+    # --- shape 2: dotted keys `hub.harvest.endpoint = "..."`
+    if endpoint is None:
+        ep_match = re.search(
+            rf"""{re.escape(hub)}\.harvest\.endpoint\s*[=:]\s*["']([^"']+)["']""",
+            text,
+        )
+        if ep_match:
+            endpoint = ep_match.group(1)
+    if harvest_type is None:
+        type_match = re.search(
+            rf"""{re.escape(hub)}\.harvest\.type\s*[=:]\s*["']?([A-Za-z]+)["']?""",
+            text,
+        )
+        if type_match:
+            harvest_type = type_match.group(1).lower()
+
+    return endpoint, harvest_type
+
+
+def check_endpoint(endpoint, is_api=False):
+    header("6. Endpoint reachability")
+    if not endpoint:
+        warn("No endpoint to check (pass --hub or --endpoint to enable this check).")
+        return True  # non-blocking
+
+    timeout = 60 if is_api else 15
+    test_url = endpoint if is_api else f"{endpoint}?verb=Identify"
+    kind = "API" if is_api else "OAI"
+
+    info(f"URL:     {test_url}")
+    info(f"Timeout: {timeout}s ({kind})")
+
+    try:
+        result = subprocess.run(
+            ["curl", "-sS", "--max-time", str(timeout), test_url],
+            capture_output=True, text=True, timeout=timeout + 10,
+        )
+    except subprocess.TimeoutExpired:
+        bad(f"curl timed out after {timeout}s — endpoint likely down.")
+        return False
+    except FileNotFoundError:
+        bad("curl not found in PATH. Install curl or skip this check.")
+        return False
+
+    if result.returncode != 0:
+        err = result.stderr.strip() or f"curl exit code {result.returncode}"
+        bad(f"curl failed: {err}")
+        return False
+
+    body = result.stdout
+    if not body.strip():
+        bad("Empty response — endpoint reachable but returned nothing.")
+        return False
+
+    info("--- first 5 lines of response ---")
+    for line in body.splitlines()[:5]:
+        info(line[:200])
+    info("---")
+
+    if is_api:
+        ok("Endpoint returned a non-empty response.")
+        return True
+
+    # OAI-specific sanity check
+    lower = body.lower()
+    if "<oai-pmh" in lower or "<identify" in lower:
+        ok("OAI endpoint responded with valid-looking XML.")
+        return True
+    if "<error" in lower:
+        bad("OAI endpoint returned an <error> element. Review output above.")
+        return False
+    warn("OAI endpoint responded, but no <OAI-PMH>/<Identify> tags found.")
+    return False
+
+
 # ---------- main ----------
 def main():
+    parser = argparse.ArgumentParser(description="DPLA ingestion pre-flight checks")
+    parser.add_argument(
+        "--hub",
+        help="Hub name, e.g. 'illinois'. Used to look up the endpoint from i3.conf. Optional.",
+    )
+    parser.add_argument(
+        "--endpoint",
+        help="Override the endpoint URL (skips the conf lookup). Optional.",
+    )
+    parser.add_argument(
+        "--api", action="store_true",
+        help="Force API-style check (60s timeout, no ?verb=Identify). Auto-detected from conf when --hub is used.",
+    )
+    args = parser.parse_args()
+
+    # If no --hub was passed, prompt for one. Empty input = skip endpoint check.
+    hub = args.hub
+    if hub is None and args.endpoint is None:
+        try:
+            entered = input("Hub to check (leave blank to skip endpoint check): ").strip().lower()
+        except EOFError:
+            entered = ""
+        if entered:
+            if not re.match(r"^[a-z0-9_-]+$", entered):
+                sys.exit(f"Invalid hub name: {entered!r} (use letters, digits, hyphens, underscores)")
+            hub = entered
+
     print("\nDPLA INGESTION PRE-FLIGHT CHECKS")
-    print(f"Instance: {INSTANCE_ID}\n")
+    print(f"Instance: {INSTANCE_ID}")
+    print(f"Conf:     {CONF_PATH}")
+    if hub:
+        print(f"Hub:      {hub}")
+
+    # Resolve endpoint + mode.
+    endpoint = args.endpoint
+    is_api = args.api
+    if hub and not endpoint:
+        looked_up_endpoint, harvest_type = lookup_hub_in_conf(hub)
+        if looked_up_endpoint:
+            endpoint = looked_up_endpoint
+            # Auto-detect API vs OAI unless user forced it with --api.
+            if not is_api and harvest_type and harvest_type != "oai":
+                is_api = True
+            print(f"Endpoint: {endpoint}  (from conf, type={harvest_type or 'unknown'})")
+        else:
+            print(f"Endpoint: (not found in {CONF_PATH} for hub '{hub}')")
+    elif endpoint:
+        print(f"Endpoint: {endpoint}  (from --endpoint)")
+    else:
+        print("Endpoint: (none — endpoint check will be skipped)")
+    print()
 
     results = []
     try:
@@ -281,6 +482,7 @@ def main():
         results.append(("jar",       check_jar_freshness()))
         results.append(("ownership", check_target_ownership()))
         results.append(("disk",      check_disk_space()))
+        results.append(("endpoint",  check_endpoint(endpoint, is_api=is_api)))
     except RuntimeError as e:
         print()
         bad(f"Check aborted: {e}")
