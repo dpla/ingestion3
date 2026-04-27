@@ -6,16 +6,9 @@ Runs the usual before-every-ingest checks against the EC2 box and prints
 a clean summary. Exits 0 if everything is GOOD, 1 otherwise.
 
 Usage:
-    python3 prechecks.py                                # base checks only (no hub)
-    python3 prechecks.py --hub illinois                 # auto-looks up endpoint from i3.conf
-    python3 prechecks.py --hub illinois \\
-        --endpoint https://illinois.example.org/oai     # override endpoint manually
-    python3 prechecks.py --hub x --endpoint https://... --api   # API-style endpoint (60s)
-
-Both --hub and --endpoint are optional. With no --hub, the endpoint check is
-skipped and you just get the base box-state checks (instance, repo, JAR,
-ownership, disk).
-
+    python3 run/prechecks.py                                # base checks only (no hub)
+    python3 run/prechecks.py --hub illinois                 # auto-looks up endpoint from i3.conf
+    
 Requirements:
     - aws CLI installed and authenticated (aws sts get-caller-identity should work)
     - IAM permissions for ec2:DescribeInstances, ec2:StartInstances,

@@ -2,9 +2,9 @@
 """Launch a DPLA hub ingest on the ingest EC2 via SSM.
 
 Usage:
-    python3 launch_ingest.py            # prompts for hub
-    python3 launch_ingest.py bpl        # runs bpl
-    python3 launch_ingest.py bpl --resume-from mapping
+    python3 run/launch_ingest.py            # prompts for hub
+    python3 run/launch_ingest.py bpl        # runs bpl
+    python3 run/launch_ingest.py bpl --resume-from mapping
 """
 import argparse
 import json
