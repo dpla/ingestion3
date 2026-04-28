@@ -324,13 +324,24 @@ fi
 S3_PREFIX=$(resolve_s3_prefix "$PROVIDER")
 PREV_COUNT=0
 if _S3_LS=$(aws s3 ls "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/" 2>&1); then
-    PREV_SNAP=$(echo "$_S3_LS" | awk '{print $NF}' | sed 's|/||g' | sort | tail -1)
+    # Filtering by pattern ensures stale non-snapshot objects (e.g. takedown CSVs,
+    # editor backups) never get picked as the "previous snapshot" and cause the
+    # _MANIFEST fetch to fail.
+    PREV_SNAP=$(echo "$_S3_LS" \
+        | awk '{print $NF}' | sed 's|/||g' \
+        | grep -E '^[0-9]{8}_[0-9]{6}-' \
+        | sort | tail -1)
     if [ -n "$PREV_SNAP" ]; then
-        PREV_COUNT=$(aws s3 cp "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${PREV_SNAP}/_MANIFEST" - 2>/dev/null \
-            | read_manifest_count /dev/stdin)
+        if _MANIFEST_CONTENT=$(aws s3 cp \
+                "s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${PREV_SNAP}/_MANIFEST" - \
+                2>/dev/null); then
+            PREV_COUNT=$(echo "$_MANIFEST_CONTENT" | read_manifest_count /dev/stdin)
+        else
+            log_warn "Could not fetch _MANIFEST for previous snapshot '${PREV_SNAP}' — relative safety check will be skipped"
+        fi
     fi
 else
-    log_warn "Could not list S3 snapshots for $PROVIDER (aws s3 ls failed) — relative safety check will be skipped"
+    log_warn "Could not list S3 snapshots for ${PROVIDER} (aws s3 ls failed) — relative safety check will be skipped"
     log_warn "$_S3_LS"
 fi
 
