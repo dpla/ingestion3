@@ -12,18 +12,19 @@ Reports the things that actually matter while you're waiting on a long ingest:
       - current pacing (records/sec)
       - ETA to end of the stage
 
-Stage detection uses log content, not directory existence — Spark stages only
-materialize their output dir when they finish, so the directory-existence
-heuristic in the previous version reported "not started" for in-flight stages.
+Handles multiple harvest types:
+  - oai            — OAI-PMH with offset encoded in resumption token
+                     (e.g. BPL via Digital Commonwealth: ...t(1485939):838750)
+  - localoai       — OAI-PMH with offset as separate fields in OaiRequestInfo
+                     (e.g. p2p: ...Some(502000),Some(1211330)))
+  - api            — REST API harvests (progress not derivable from log)
+  - file / nara    — file-based harvests (progress not meaningful)
 
 Usage:
-    python3 run/check_ingest.py                  # prompts for hub
-    python3 run/check_ingest.py bpl              # one-shot
-    python3 run/check_ingest.py bpl --watch      # refresh every 30s
-    python3 run/check_ingest.py bpl --watch 60   # custom interval
-
-Requirements: aws CLI authenticated, IAM perms for ssm:SendCommand and
-ssm:GetCommandInvocation against the ingest EC2.
+    python3 check_ingest.py                  # prompts for hub
+    python3 check_ingest.py p2p              # one-shot
+    python3 check_ingest.py p2p --watch      # refresh every 30s
+    python3 check_ingest.py p2p --watch 60   # custom interval
 """
 
 import argparse
@@ -34,30 +35,36 @@ import re
 import subprocess
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # ---------- config ----------
 INSTANCE_ID = "i-0a0def8581efef783"
 DATA_ROOT = "/home/ec2-user/data"
 STAGES = ("harvest", "mapping", "enrichment", "jsonl")
 HUB_RE = re.compile(r"^[a-z0-9_-]+$")
-LOG_TAIL_LINES = 400  # how many recent log lines to pull back for analysis
 
 CONF_PATH = os.environ.get("I3_CONF") or os.path.expanduser(
-    "~/repos/ingestion3-conf/i3.conf"
+    "~/Documents/Repos/ingestion3-conf/i3.conf"
 )
 
-# Stage indicators — first matching keyword in a log line wins.
-# Ordered most-specific first (jsonl/enrichment before mapping before harvest)
-# so "MappingEntry" doesn't accidentally claim a line that's about JsonlEntry.
+# Stage indicators — first matching keyword wins. Ordered most-specific first
+# (jsonl/enrichment before mapping before harvest) so e.g. "MappingEntry"
+# doesn't accidentally claim a line that's about JsonlEntry.
 STAGE_KEYWORDS = {
     "jsonl":      ["JsonlEntry", "jsonl complete", ":white_check_mark: jsonl"],
     "enrichment": ["EnrichEntry", "enrichment complete", ":white_check_mark: enrichment"],
     "mapping":    ["MappingEntry", "IngestRemap", "mapping complete", ":white_check_mark: mapping"],
-    "harvest":    ["OaiMultiPageResponseBuilder", "HarvestEntry",
+    "harvest":    ["OaiMultiPageResponseBuilder", "OaiRequestInfo", "HarvestEntry",
                    "OaiHarvester", "ApiHarvester", "FileHarvester",
                    "harvest complete", ":white_check_mark: harvest"],
 }
+# Flat regex used by bash grep — covers all stages.
+ALL_STAGE_REGEX = (
+    "OaiMultiPageResponseBuilder|OaiRequestInfo|HarvestEntry|"
+    "OaiHarvester|ApiHarvester|FileHarvester|"
+    "MappingEntry|IngestRemap|EnrichEntry|JsonlEntry|"
+    "harvest complete|mapping complete|enrichment complete|jsonl complete"
+)
 
 # ---------- AWS / SSM helpers ----------
 def aws(args):
@@ -113,7 +120,7 @@ def ssm_run(shell_cmd, timeout_seconds=60, poll_seconds=4):
     return output
 
 
-# ---------- HOCON conf lookup (copied from prechecks.py) ----------
+# ---------- HOCON conf lookup ----------
 def lookup_hub_in_conf(hub, conf_path=CONF_PATH):
     if not os.path.exists(conf_path):
         return None, None
@@ -137,20 +144,22 @@ def lookup_hub_in_conf(hub, conf_path=CONF_PATH):
         block = text[start:i - 1] if depth == 0 else text[start:]
         ep_match = re.search(r"""endpoint\s*[=:]\s*["']([^"']+)["']""", block)
         if ep_match: endpoint = ep_match.group(1)
-        type_match = re.search(r"""type\s*[=:]\s*["']?([A-Za-z]+)["']?""", block)
+        type_match = re.search(r"""type\s*[=:]\s*["']?([A-Za-z._]+)["']?""", block)
         if type_match: harvest_type = type_match.group(1).lower()
 
     if endpoint is None:
         ep_match = re.search(rf"""{re.escape(hub)}\.harvest\.endpoint\s*[=:]\s*["']([^"']+)["']""", text)
         if ep_match: endpoint = ep_match.group(1)
     if harvest_type is None:
-        type_match = re.search(rf"""{re.escape(hub)}\.harvest\.type\s*[=:]\s*["']?([A-Za-z]+)["']?""", text)
+        type_match = re.search(rf"""{re.escape(hub)}\.harvest\.type\s*[=:]\s*["']?([A-Za-z._]+)["']?""", text)
         if type_match: harvest_type = type_match.group(1).lower()
     return endpoint, harvest_type
 
 
 # ---------- bash payload ----------
 def build_status_script(hub: str) -> str:
+    """Compact bash payload — sends only the targeted lines we need.
+    Designed to stay well under SSM's 24KB output limit."""
     return f"""
 HUB="{hub}"
 LOG="{DATA_ROOT}/${{HUB}}-ingest.log"
@@ -160,10 +169,7 @@ PIDS=$(pgrep -f "ingest.sh ${{HUB}}" || true)
 if [ -z "$PIDS" ]; then
   echo "(none)"
 else
-  # The main ingest.sh has the smallest etime-relative-to-the-others; just dump them all.
-  for p in $PIDS; do
-    ps -o pid=,etime=,cmd= -p $p
-  done
+  for p in $PIDS; do ps -o pid=,etime=,cmd= -p $p; done
 fi
 
 echo "===LOGINFO==="
@@ -176,20 +182,28 @@ else
 fi
 
 echo "===STAGE_FIRST==="
-# First-occurrence timestamps for each stage, used to compute stage runtime.
+# First matching log line for each stage (whole line — Python extracts timestamp).
 if [ -f "$LOG" ]; then
-  for kw in "OaiMultiPageResponseBuilder|HarvestEntry|OaiHarvester|ApiHarvester|FileHarvester" \\
-            "MappingEntry|IngestRemap" \\
-            "EnrichEntry" \\
-            "JsonlEntry"; do
-    grep -m1 -E "$kw" "$LOG" 2>/dev/null | grep -oE '^[0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}' | head -1
-    echo "---"
+  for kw in "OaiMultiPageResponseBuilder|OaiRequestInfo|HarvestEntry|OaiHarvester|ApiHarvester|FileHarvester|harvest started|:arrow_forward: .* harvest" \\
+            "MappingEntry|IngestRemap|mapping started|:arrow_forward: .* mapping" \\
+            "EnrichEntry|enrichment started|:arrow_forward: .* enrichment" \\
+            "JsonlEntry|jsonl started|:arrow_forward: .* jsonl"; do
+    grep -m1 -E "$kw" "$LOG" 2>/dev/null
+    echo "---ENDFIRSTSTAGE---"
   done
 fi
 
-echo "===LOGTAIL==="
+echo "===STAGE_RECENT==="
+# Last 10 lines containing any stage indicator — used to detect current stage.
 if [ -f "$LOG" ]; then
-  tail -{LOG_TAIL_LINES} "$LOG"
+  tail -200 "$LOG" 2>/dev/null | grep -E "{ALL_STAGE_REGEX}" | tail -10
+fi
+
+echo "===PROGRESS_LINES==="
+# Last 30 OAI request lines — used for progress + pacing parsing.
+# These contain the offsets/totals (whether in resumption token or as Some() fields).
+if [ -f "$LOG" ]; then
+  tail -300 "$LOG" 2>/dev/null | grep -E "OaiRequestInfo|Loading page" | tail -30
 fi
 
 echo "===STAGES_DONE==="
@@ -208,7 +222,7 @@ done
 """.strip()
 
 
-# ---------- parsers / analyzers ----------
+# ---------- parsers ----------
 def parse_sections(out: str) -> dict:
     sections = {}
     current = None
@@ -227,9 +241,10 @@ def parse_sections(out: str) -> dict:
     return sections
 
 
-def detect_current_stage(log_tail: str) -> str | None:
-    """Walk log lines from newest to oldest; first matching keyword wins."""
-    for line in reversed(log_tail.splitlines()):
+def detect_current_stage(stage_recent: str) -> str | None:
+    """Walk the recent stage-indicator lines from newest to oldest;
+    first matching keyword wins."""
+    for line in reversed(stage_recent.splitlines()):
         for stage, keywords in STAGE_KEYWORDS.items():
             for kw in keywords:
                 if kw in line:
@@ -238,19 +253,24 @@ def detect_current_stage(log_tail: str) -> str | None:
 
 
 def parse_first_stage_timestamps(stage_first: str) -> dict:
-    """STAGE_FIRST section is 4 entries (harvest, mapping, enrichment, jsonl)
-    each followed by '---'. Each entry may be empty if the stage hasn't started."""
+    """STAGE_FIRST has 4 entries (harvest, mapping, enrichment, jsonl)
+    separated by '---ENDFIRSTSTAGE---'. Each entry is a full log line;
+    we extract the first HH:MM:SS we find anywhere on that line."""
     timestamps = {}
-    chunks = stage_first.split("---")
+    chunks = stage_first.split("---ENDFIRSTSTAGE---")
+    ts_re = re.compile(r"\b(\d{2}:\d{2}:\d{2})\b")
     for stage, chunk in zip(STAGES, chunks):
         chunk = chunk.strip()
-        if chunk and re.match(r"^\d{2}:\d{2}:\d{2}$", chunk):
-            timestamps[stage] = chunk
+        if not chunk:
+            continue
+        m = ts_re.search(chunk)
+        if m:
+            timestamps[stage] = m.group(1)
     return timestamps
 
 
 def extract_log_timestamp(line: str) -> str | None:
-    m = re.match(r"^(\d{2}:\d{2}:\d{2})", line)
+    m = re.search(r"\b(\d{2}:\d{2}:\d{2})\b", line)
     return m.group(1) if m else None
 
 
@@ -259,7 +279,7 @@ def hms_to_seconds(hms: str) -> int:
     return h * 3600 + m * 60 + s
 
 
-def fmt_duration(seconds: float) -> str:
+def fmt_duration(seconds) -> str:
     if seconds is None or seconds < 0:
         return "?"
     seconds = int(seconds)
@@ -270,17 +290,13 @@ def fmt_duration(seconds: float) -> str:
     return f"{s}s"
 
 
-def stage_runtime_seconds(stage_first_ts: str, log_mtime: str) -> int | None:
-    """Both are HH:MM:SS strings (stage_first_ts) and 'YYYY-MM-DD HH:MM:SS' (log_mtime).
-    Compute (log_mtime - first_ts), handling day-rollover."""
+def stage_runtime_seconds(stage_first_ts, log_mtime):
     if not stage_first_ts or not log_mtime:
         return None
     try:
-        # log_mtime: "2026-04-27 18:56:40"
         log_dt = datetime.strptime(log_mtime, "%Y-%m-%d %H:%M:%S")
     except ValueError:
         return None
-    # stage_first_ts is just HH:MM:SS — assume same day as log_mtime.
     try:
         stage_t = datetime.strptime(stage_first_ts, "%H:%M:%S").time()
     except ValueError:
@@ -288,33 +304,52 @@ def stage_runtime_seconds(stage_first_ts: str, log_mtime: str) -> int | None:
     stage_dt = datetime.combine(log_dt.date(), stage_t)
     delta = (log_dt - stage_dt).total_seconds()
     if delta < 0:
-        # Stage started yesterday relative to log mtime.
         delta += 86400
     return int(delta)
 
 
-# --- harvest progress + pacing (OAI-style resumption tokens) ---
-TOKEN_RE = re.compile(r"t\((\d+)\):(\d+)")
+# ---- progress + pacing — handles multiple OAI log shapes ----
+# Shape A (BPL via Digital Commonwealth): the resumption token contains the
+# offset, and the OaiRequestInfo trailing field is just the total.
+#   ...Some(mods.f(...).t(1485939):838750)...Some(1485939))
+#
+# Shape B (p2p via Plains2Peaks): the resumption token is opaque, and the
+# OaiRequestInfo trailing fields are Some(<current>),Some(<total>).
+#   ...Some(opaque-uuid)...Some(502000),Some(1211330))
 
-def parse_harvest_progress(log_tail: str):
-    """Return (current_offset, total_records) from the most recent OAI resumption token.
-    Returns (None, None) if no token found (e.g., non-OAI harvest)."""
-    for line in reversed(log_tail.splitlines()):
-        m = TOKEN_RE.search(line)
-        if m:
-            return int(m.group(2)), int(m.group(1))
+PROGRESS_TRAILING_PAIR_RE = re.compile(r"Some\((\d+)\)\s*,\s*Some\((\d+)\)\s*\)\s*$")
+PROGRESS_TOKEN_RE = re.compile(r"t\((\d+)\):(\d+)")
+
+
+def parse_oai_progress_from_line(line: str):
+    """Return (current, total) from a single OaiRequestInfo line.
+    Tries p2p-style trailing pair first, falls back to BPL-style token."""
+    m = PROGRESS_TRAILING_PAIR_RE.search(line)
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    m = PROGRESS_TOKEN_RE.search(line)
+    if m:
+        return int(m.group(2)), int(m.group(1))  # offset, total
     return None, None
 
 
-def parse_harvest_pacing(log_tail: str, n_points: int = 30):
-    """Compute records/sec from the last N log lines that contain both a timestamp
-    and a resumption token offset. Returns records-per-second (float) or None."""
+def parse_harvest_progress(progress_lines: str):
+    """Return (current, total) from the most recent line that has progress info."""
+    for line in reversed(progress_lines.splitlines()):
+        c, t = parse_oai_progress_from_line(line)
+        if c is not None and t is not None:
+            return c, t
+    return None, None
+
+
+def parse_harvest_pacing(progress_lines: str, n_points: int = 30):
+    """Compute records/sec from progression of offsets across recent lines."""
     points = []
-    for line in log_tail.splitlines():
+    for line in progress_lines.splitlines():
         ts = extract_log_timestamp(line)
-        m = TOKEN_RE.search(line)
-        if ts and m:
-            points.append((hms_to_seconds(ts), int(m.group(2))))
+        c, _ = parse_oai_progress_from_line(line)
+        if ts and c is not None:
+            points.append((hms_to_seconds(ts), c))
     if len(points) < 2:
         return None
     points = points[-n_points:]
@@ -328,7 +363,22 @@ def parse_harvest_pacing(log_tail: str, n_points: int = 30):
     return (o1 - o0) / dt
 
 
-# ---------- color helpers ----------
+def earliest_timestamp_in_lines(lines: str):
+    """Return the earliest HH:MM:SS-shaped timestamp found across all lines.
+    Used as a fallback for stage_start when STAGE_FIRST didn't find anything."""
+    earliest = None
+    earliest_secs = None
+    for line in lines.splitlines():
+        ts = extract_log_timestamp(line)
+        if ts:
+            secs = hms_to_seconds(ts)
+            if earliest_secs is None or secs < earliest_secs:
+                earliest = ts
+                earliest_secs = secs
+    return earliest
+
+
+# ---------- color ----------
 GREEN = "\033[32m"; YELLOW = "\033[33m"; RED = "\033[31m"; DIM = "\033[2m"; BOLD = "\033[1m"; RESET = "\033[0m"
 USE_COLOR = sys.stdout.isatty()
 def c(color, text): return f"{color}{text}{RESET}" if USE_COLOR else text
@@ -374,8 +424,9 @@ def render(hub, harvest_type, endpoint, sections):
             else:
                 lines.append(f"  {ln}")
 
-    # CURRENT STAGE — only meaningful if process is running.
-    log_tail = sections.get("LOGTAIL", "")
+    # CURRENT STAGE
+    progress_lines = sections.get("PROGRESS_LINES", "")
+    stage_recent = sections.get("STAGE_RECENT", "")
     stage_first_ts = parse_first_stage_timestamps(sections.get("STAGE_FIRST", ""))
     log_mtime = next(
         (ln.split("=", 1)[1] for ln in sections.get("LOGINFO", "").splitlines() if ln.startswith("mtime=")),
@@ -387,68 +438,88 @@ def render(hub, harvest_type, endpoint, sections):
     if not is_running:
         lines.append(c(DIM, "  (no process running — see SUMMARY)"))
     else:
-        current_stage = detect_current_stage(log_tail)
+        current_stage = detect_current_stage(stage_recent)
         if not current_stage:
             lines.append(c(YELLOW, "  Could not infer current stage from log."))
         else:
             stage_start = stage_first_ts.get(current_stage)
+            # Fallback for when STAGE_FIRST didn't find a marker: use the earliest
+            # timestamp present in PROGRESS_LINES. Less accurate (it's the start
+            # of the recent window, not the actual stage start) but still useful.
+            stage_start_was_inferred = False
+            if not stage_start:
+                stage_start = earliest_timestamp_in_lines(progress_lines)
+                if stage_start:
+                    stage_start_was_inferred = True
+
             runtime_s = stage_runtime_seconds(stage_start, log_mtime)
             lines.append(f"  Stage:     {c(YELLOW, current_stage)}")
             if stage_start:
-                lines.append(f"  Started:   {stage_start}   (running for {fmt_duration(runtime_s)})")
+                suffix = " (approx — based on recent log window)" if stage_start_was_inferred else ""
+                lines.append(f"  Started:   {stage_start}   (running for {fmt_duration(runtime_s)}){suffix}")
             else:
-                lines.append(f"  Started:   (no clear stage-start marker in log)")
+                lines.append("  Started:   (no clear stage-start marker in log)")
 
-            # Progress + pacing — currently only computable for OAI harvests.
+            # Progress + pacing — derivable for OAI variants. Other types: graceful note.
             if current_stage == "harvest":
-                current, total = parse_harvest_progress(log_tail)
-                pacing_rps = parse_harvest_pacing(log_tail)
-                if current is not None and total:
-                    pct = (current / total) * 100
-                    lines.append(
-                        f"  Progress:  {current:,} / {total:,} records "
-                        f"({c(BOLD, f'{pct:.1f}%')})"
-                    )
-                else:
-                    lines.append("  Progress:  (no resumption token in recent log — non-OAI or just started)")
-                if pacing_rps:
-                    rph = pacing_rps * 3600
-                    lines.append(f"  Pacing:    ~{pacing_rps:.1f} records/sec  (~{rph:,.0f}/hour)")
+                ht = (harvest_type or "").lower()
+                if ht in ("oai", "localoai") or ht == "" or "oai" in ht:
+                    current, total = parse_harvest_progress(progress_lines)
+                    pacing_rps = parse_harvest_pacing(progress_lines)
                     if current is not None and total:
-                        remaining = total - current
-                        eta_s = remaining / pacing_rps if pacing_rps > 0 else None
-                        lines.append(f"  ETA:       ~{fmt_duration(eta_s)} remaining for this stage")
+                        pct = (current / total) * 100
+                        lines.append(
+                            f"  Progress:  {current:,} / {total:,} records "
+                            f"({c(BOLD, f'{pct:.1f}%')})"
+                        )
+                    else:
+                        lines.append("  Progress:  (no offset/total in recent log lines)")
+                    if pacing_rps:
+                        rph = pacing_rps * 3600
+                        lines.append(f"  Pacing:    ~{pacing_rps:.1f} records/sec  (~{rph:,.0f}/hour)")
+                        if current is not None and total:
+                            remaining = total - current
+                            eta_s = remaining / pacing_rps if pacing_rps > 0 else None
+                            lines.append(f"  ETA:       ~{fmt_duration(eta_s)} remaining for this stage")
+                    else:
+                        lines.append("  Pacing:    (insufficient log data to compute)")
+                elif ht == "api":
+                    lines.append(c(DIM, "  Progress:  (API harvest — progress not derivable from log)"))
+                elif ht.startswith("file") or "nara" in ht:
+                    lines.append(c(DIM, "  Progress:  (file-based harvest — progress not meaningful)"))
                 else:
-                    lines.append("  Pacing:    (insufficient log data to compute)")
+                    lines.append(c(DIM, f"  Progress:  (harvest type '{ht}' — no progress parser)"))
             else:
-                # mapping / enrichment / jsonl: Spark progress isn't easily parsed from
-                # the high-level log. We could grep for "X tasks completed" but it's noisy.
                 lines.append(c(DIM, "  Progress:  (not derivable for Spark stages from the log alone)"))
 
     # SUMMARY
     lines.append("")
-    lines.append("SUMMARY: " + derive_summary(is_running, sections, log_tail))
+    lines.append("SUMMARY: " + derive_summary(is_running, sections, harvest_type))
     lines.append("")
     return "\n".join(lines)
 
 
-def derive_summary(is_running, sections, log_tail):
+def derive_summary(is_running, sections, harvest_type):
     done_count = len([ln for ln in sections.get("STAGES_DONE", "").splitlines() if ln.strip()])
+    progress_lines = sections.get("PROGRESS_LINES", "")
+    stage_recent = sections.get("STAGE_RECENT", "")
+
     if is_running:
-        stage = detect_current_stage(log_tail)
+        stage = detect_current_stage(stage_recent)
         if stage == "harvest":
-            current, total = parse_harvest_progress(log_tail)
-            pacing = parse_harvest_pacing(log_tail)
-            if current and total and pacing:
-                pct = (current / total) * 100
-                eta = fmt_duration((total - current) / pacing)
-                return c(YELLOW, f"running — harvest at {pct:.1f}%, ETA ~{eta}")
+            ht = (harvest_type or "").lower()
+            if ht in ("oai", "localoai") or "oai" in ht or ht == "":
+                current, total = parse_harvest_progress(progress_lines)
+                pacing = parse_harvest_pacing(progress_lines)
+                if current and total and pacing:
+                    pct = (current / total) * 100
+                    eta = fmt_duration((total - current) / pacing)
+                    return c(YELLOW, f"running — harvest at {pct:.1f}%, ETA ~{eta}")
             return c(YELLOW, f"running — currently in {stage}")
         if stage:
             return c(YELLOW, f"running — currently in {stage}")
         return c(YELLOW, "running — stage unclear")
 
-    # Not running.
     if done_count == len(STAGES):
         return c(GREEN, "complete — all stages DONE")
     return c(RED, f"process is gone, only {done_count}/{len(STAGES)} stages complete — likely failed")
@@ -457,7 +528,7 @@ def derive_summary(is_running, sections, log_tail):
 # ---------- main ----------
 def main():
     parser = argparse.ArgumentParser(description="Check on a DPLA hub ingest.")
-    parser.add_argument("hub", nargs="?", help="Hub name (e.g. bpl). Prompts if omitted.")
+    parser.add_argument("hub", nargs="?", help="Hub name (e.g. p2p). Prompts if omitted.")
     parser.add_argument(
         "--watch", nargs="?", const=30, type=int, default=None,
         help="Re-run every N seconds (default 30 if --watch is given without a value).",
@@ -473,10 +544,7 @@ def main():
     if not HUB_RE.match(hub):
         sys.exit(f"Invalid hub name: {hub!r}")
 
-    harvest_type, endpoint = None, None
-    looked_up_endpoint, looked_up_type = lookup_hub_in_conf(hub)
-    if looked_up_endpoint or looked_up_type:
-        endpoint, harvest_type = looked_up_endpoint, looked_up_type
+    endpoint, harvest_type = lookup_hub_in_conf(hub)
 
     script = build_status_script(hub)
 

@@ -6,9 +6,16 @@ Runs the usual before-every-ingest checks against the EC2 box and prints
 a clean summary. Exits 0 if everything is GOOD, 1 otherwise.
 
 Usage:
-    python3 run/prechecks.py                                # base checks only (no hub)
-    python3 run/prechecks.py --hub illinois                 # auto-looks up endpoint from i3.conf
-    
+    python3 prechecks.py                # base checks only — prompts for hub
+    python3 prechecks.py --hub njde     # also looks up endpoint from i3.conf
+
+The endpoint is ALWAYS read from i3.conf for the given hub — there is no
+manual endpoint override. If you need to test a different URL, edit i3.conf
+or point I3_CONF at a different file.
+
+With no --hub (and an empty prompt), the endpoint check is skipped and you
+just get the base box-state checks (instance, repo, JAR, ownership, disk).
+
 Requirements:
     - aws CLI installed and authenticated (aws sts get-caller-identity should work)
     - IAM permissions for ec2:DescribeInstances, ec2:StartInstances,
@@ -32,11 +39,11 @@ REMOTE_URL = "https://github.com/dpla/ingestion3.git"
 REMOTE_BRANCH = "main"
 
 # Where the HOCON hub config lives on the local machine.
-# Defaults to ~/repos/ingestion3-conf/i3.conf (the conventional checkout),
+# Defaults to Zoe's checkout at ~/Documents/Repos/ingestion3-conf/i3.conf,
 # but the I3_CONF env var wins if set — matches the convention used in the
 # ingestion3 .env file (see §7 of the onboarding doc).
 CONF_PATH = os.environ.get("I3_CONF") or os.path.expanduser(
-    "~/repos/ingestion3-conf/i3.conf"
+    "~/Documents/Repos/ingestion3-conf/i3.conf"
 )
 
 # ---------- tiny output helpers ----------
@@ -361,8 +368,17 @@ def lookup_hub_in_conf(hub, conf_path=CONF_PATH):
 def check_endpoint(endpoint, is_api=False):
     header("6. Endpoint reachability")
     if not endpoint:
-        warn("No endpoint to check (pass --hub or --endpoint to enable this check).")
+        warn("No endpoint to check (pass --hub or enter one at the prompt).")
         return True  # non-blocking
+
+    # File-based hubs (nara, smithsonian, file-export) have a filesystem
+    # path or s3:// URI in the endpoint field, not an HTTP URL. There's
+    # nothing to curl — flag it and skip the check.
+    if not re.match(r"^https?://", endpoint):
+        warn(f"Endpoint is not an HTTP URL — looks like a file/path-based hub: {endpoint}")
+        info("This is normal for nara, smithsonian, and file-export hubs (§14).")
+        info("ingest.sh handles these via the dedicated harvest type, not curl.")
+        return True  # non-blocking — special-case hubs aren't an error
 
     timeout = 60 if is_api else 15
     test_url = endpoint if is_api else f"{endpoint}?verb=Identify"
@@ -419,11 +435,7 @@ def main():
     parser = argparse.ArgumentParser(description="DPLA ingestion pre-flight checks")
     parser.add_argument(
         "--hub",
-        help="Hub name, e.g. 'illinois'. Used to look up the endpoint from i3.conf. Optional.",
-    )
-    parser.add_argument(
-        "--endpoint",
-        help="Override the endpoint URL (skips the conf lookup). Optional.",
+        help="Hub name, e.g. 'njde'. Used to look up the endpoint from i3.conf. Optional.",
     )
     parser.add_argument(
         "--api", action="store_true",
@@ -433,7 +445,7 @@ def main():
 
     # If no --hub was passed, prompt for one. Empty input = skip endpoint check.
     hub = args.hub
-    if hub is None and args.endpoint is None:
+    if hub is None:
         try:
             entered = input("Hub to check (leave blank to skip endpoint check): ").strip().lower()
         except EOFError:
@@ -449,21 +461,23 @@ def main():
     if hub:
         print(f"Hub:      {hub}")
 
-    # Resolve endpoint + mode.
-    endpoint = args.endpoint
+    # Resolve endpoint + mode strictly from i3.conf.
+    endpoint = None
     is_api = args.api
-    if hub and not endpoint:
+    # Harvest types that should be tested as OAI-PMH (with ?verb=Identify
+    # and validated by looking for <OAI-PMH>/<Identify> in the response).
+    OAI_TYPES = ("oai", "localoai")
+    if hub:
         looked_up_endpoint, harvest_type = lookup_hub_in_conf(hub)
         if looked_up_endpoint:
             endpoint = looked_up_endpoint
             # Auto-detect API vs OAI unless user forced it with --api.
-            if not is_api and harvest_type and harvest_type != "oai":
+            # Anything that's not in OAI_TYPES and not file-based gets API treatment.
+            if not is_api and harvest_type and harvest_type not in OAI_TYPES:
                 is_api = True
             print(f"Endpoint: {endpoint}  (from conf, type={harvest_type or 'unknown'})")
         else:
             print(f"Endpoint: (not found in {CONF_PATH} for hub '{hub}')")
-    elif endpoint:
-        print(f"Endpoint: {endpoint}  (from --endpoint)")
     else:
         print("Endpoint: (none — endpoint check will be skipped)")
     print()
