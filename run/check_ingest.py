@@ -165,7 +165,11 @@ HUB="{hub}"
 LOG="{DATA_ROOT}/${{HUB}}-ingest.log"
 
 echo "===PROCESS==="
-PIDS=$(pgrep -f "ingest.sh ${{HUB}}" || true)
+# Match any of the launcher script naming conventions in use:
+#   ingest.sh <hub>               — standard launcher
+#   <hub>-ingest.sh               — hub-specific (community-webs, etc.)
+#   <hub>.*ingest                 — fallback for other naming variants
+PIDS=$(pgrep -f "ingest\\.sh ${{HUB}}|${{HUB}}-ingest\\.sh|${{HUB}}.*ingest" || true)
 if [ -z "$PIDS" ]; then
   echo "(none)"
 else
