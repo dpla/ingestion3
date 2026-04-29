@@ -35,6 +35,7 @@ import shlex
 import subprocess
 import sys
 import time
+from datetime import datetime
 
 # ---------- config ----------
 INSTANCE_ID = "i-0a0def8581efef783"
@@ -346,6 +347,126 @@ fi
     bad("Not enough disk — clean up /home/ec2-user/data/ before ingesting.")
     return False
 
+# Known special-case hubs that need extra steps beyond the standard
+# launch_ingest.py flow. Annotations get printed alongside the --todo list
+# so the operator knows at a glance which hubs are quick wins vs. multi-hour
+# projects.
+SPECIAL_CASE_NOTES = {
+    "nara":           "delta merge required (use NaraMergeUtil, not ingest.sh)",
+    "smithsonian":    "preprocessing required (download from S3 + fix-si.sh)",
+    "si":             "preprocessing required (download from S3 + fix-si.sh)",
+    "community-webs": "preprocessing required (SQLite -> JSONL/ZIP)",
+    "maryland":       "EC2 IP blocked, run locally",
+    "getty":          "EC2 IP blocked, run locally",
+    "hathitrust":     "EC2 IP blocked, run locally",
+    "illinois":       "VPN required, run locally",
+    "indiana":        "VPN required, run locally",
+    "mwdl":           "VPN required, run locally",
+    "ct":             "file-export, check S3 for fresh export first",
+    "fl":             "file-export, check S3 for fresh export first",
+    "ohio":           "file-export, check S3 for fresh export first",
+    "nypl":           "file-export, check S3 for fresh export first",
+    "vt":             "file-export, check S3 for fresh export first",
+    "txdl":           "file-export, check S3 for fresh export first",
+    "txd":            "file-export, check S3 for fresh export first",
+    "virginias":      "multi-repo assembly (clone dplava org repos first)",
+}
+
+MONTH_NAMES = ("", "January", "February", "March", "April", "May", "June",
+               "July", "August", "September", "October", "November", "December")
+
+
+def list_scheduled_hubs(month=None, conf_path=CONF_PATH):
+    """Parse i3.conf and return the list of hubs scheduled for the given month.
+
+    Returns a list of dicts with keys: hub, months, status, harvest_type.
+    `status` defaults to 'active' if not in the conf.
+
+    Handles dotted-key entries (the dominant style in i3.conf):
+        wisconsin.schedule.months = [1, 4, 7, 10]
+        wisconsin.schedule.status = "active"
+        wisconsin.harvest.type    = "localoai"
+
+    Falls back to None if the conf file isn't readable.
+    """
+    if month is None:
+        month = datetime.now().month
+    if not os.path.exists(conf_path):
+        return None
+    with open(conf_path, "r", encoding="utf-8") as f:
+        text = f.read()
+    text = re.sub(r"(?m)^\s*(#|//).*$", "", text)
+
+    hubs = {}
+    months_re = re.compile(
+        r"^\s*([a-z0-9_-]+)\.schedule\.months\s*[=:]\s*\[([0-9,\s]+)\]",
+        re.MULTILINE | re.IGNORECASE,
+    )
+    status_re = re.compile(
+        r"""^\s*([a-z0-9_-]+)\.schedule\.status\s*[=:]\s*["']([^"']+)["']""",
+        re.MULTILINE | re.IGNORECASE,
+    )
+    type_re = re.compile(
+        r"""^\s*([a-z0-9_-]+)\.harvest\.type\s*[=:]\s*["']?([A-Za-z._]+)["']?""",
+        re.MULTILINE | re.IGNORECASE,
+    )
+
+    for m in months_re.finditer(text):
+        name = m.group(1).lower()
+        months = [int(x.strip()) for x in m.group(2).split(",") if x.strip().isdigit()]
+        hubs.setdefault(name, {})["months"] = months
+    for m in status_re.finditer(text):
+        hubs.setdefault(m.group(1).lower(), {})["status"] = m.group(2)
+    for m in type_re.finditer(text):
+        hubs.setdefault(m.group(1).lower(), {})["harvest_type"] = m.group(2).lower()
+
+    matching = []
+    for name, data in sorted(hubs.items()):
+        if "months" not in data:
+            continue
+        if month not in data["months"]:
+            continue
+        matching.append({
+            "hub": name,
+            "months": data["months"],
+            "status": data.get("status", "active"),
+            "harvest_type": data.get("harvest_type", "?"),
+        })
+    return matching
+
+
+def print_todo_list(month):
+    """Pretty-print the list of hubs scheduled for the given month."""
+    hubs = list_scheduled_hubs(month)
+    if hubs is None:
+        sys.exit(f"Could not read conf at {CONF_PATH}")
+
+    label = f"{MONTH_NAMES[month]} (month {month})"
+    print(f"\nHubs scheduled for {label}:  {len(hubs)} total")
+    print(f"Conf: {CONF_PATH}\n")
+
+    if not hubs:
+        print("  (no hubs scheduled this month)\n")
+        return
+
+    active = [h for h in hubs if (h["status"] or "active").lower() == "active"]
+    on_hold = [h for h in hubs if h not in active]
+
+    if active:
+        print(f"  ACTIVE ({len(active)})")
+        for h in active:
+            note = SPECIAL_CASE_NOTES.get(h["hub"], "")
+            note_str = f"   ⚠ {note}" if note else ""
+            print(f"    {h['hub']:<20} {h['harvest_type']:<10}{note_str}")
+        print()
+
+    if on_hold:
+        print(f"  ON-HOLD ({len(on_hold)})")
+        for h in on_hold:
+            print(f"    {h['hub']:<20} {h['harvest_type']:<10}   {h['status']}")
+        print()
+
+
 def lookup_hub_in_conf(hub, conf_path=CONF_PATH):
     """
     Parse i3.conf (HOCON) and return (endpoint, harvest_type) for the hub.
@@ -618,7 +739,21 @@ def main():
         "--no-pull", action="store_true",
         help="Never pull, even if behind. Just warn — useful for non-interactive runs.",
     )
+    parser.add_argument(
+        "--todo", nargs="?", const=0, type=int, default=None, metavar="MONTH",
+        help="List hubs scheduled for a given month (1-12). With no value, "
+             "uses the current month. Skips all box-state and endpoint checks.",
+    )
     args = parser.parse_args()
+
+    # --todo is a standalone listing mode; it short-circuits the rest of main().
+    if args.todo is not None:
+        target_month = args.todo if args.todo else datetime.now().month
+        if not (1 <= target_month <= 12):
+            sys.exit(f"Invalid month: {target_month}. Use 1-12.")
+        print_todo_list(target_month)
+        sys.exit(0)
+
     if args.endpoint_only and args.skip_endpoint:
         sys.exit("--endpoint-only and --skip-endpoint are mutually exclusive.")
     if args.auto_pull and args.no_pull:
