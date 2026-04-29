@@ -6,8 +6,11 @@ Runs the usual before-every-ingest checks against the EC2 box and prints
 a clean summary. Exits 0 if everything is GOOD, 1 otherwise.
 
 Usage:
-    python3 prechecks.py                # base checks only — prompts for hub
-    python3 prechecks.py --hub njde     # also looks up endpoint from i3.conf
+    python3 prechecks.py                            # full checks — prompts for hub
+    python3 prechecks.py --hub njde                 # full checks for a specific hub
+    python3 prechecks.py --hub njde --endpoint-only # skip box-state checks; just verify the endpoint
+    python3 prechecks.py --hub njde --skip-endpoint # opposite: skip the endpoint check
+    python3 prechecks.py --no-start                 # don't auto-start the EC2 if it's stopped
 
 The endpoint is ALWAYS read from i3.conf for the given hub — there is no
 manual endpoint override. If you need to test a different URL, edit i3.conf
@@ -28,15 +31,36 @@ import base64
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
 
 # ---------- config ----------
 INSTANCE_ID = "i-0a0def8581efef783"
-REPO_PATH = "/home/ec2-user/ingestion3"
+
+# Two repos that have to be in sync on the box for ingests to work correctly:
+#   - ingestion3      → Scala/Spark pipeline code; lives on `main`.
+#   - ingestion3-conf → HOCON hub config (i3.conf); lives on `master`.
+# Both are checked because either being stale silently breaks ingests in
+# different ways (stale code → wrong behavior; stale conf → harvester reads
+# wrong endpoint, may NPE, may use deleted directories, etc.).
+INGEST_REPO = {
+    "path":   "/home/ec2-user/ingestion3",
+    "branch": "main",
+    "label":  "ingestion3 (code)",
+}
+CONF_REPO = {
+    "path":   "/home/ec2-user/ingestion3-conf",
+    "branch": "master",
+    "label":  "ingestion3-conf (i3.conf)",
+}
+
+# Kept for backwards compatibility with any external callers — points at the
+# code repo, since that's what the original constants targeted.
+REPO_PATH = INGEST_REPO["path"]
 REMOTE_URL = "https://github.com/dpla/ingestion3.git"
-REMOTE_BRANCH = "main"
+REMOTE_BRANCH = INGEST_REPO["branch"]
 
 # Where the HOCON hub config lives on the local machine.
 # Defaults to Zoe's checkout at ~/Documents/Repos/ingestion3-conf/i3.conf,
@@ -141,7 +165,7 @@ def ssm_run(shell_cmd, timeout_seconds=120, poll_seconds=5):
     return output
 
 # ---------- the actual checks ----------
-def check_instance_state():
+def check_instance_state(auto_start=True):
     header("1. EC2 instance state")
     raw = aws([
         "ec2", "describe-instances",
@@ -159,6 +183,9 @@ def check_instance_state():
         ok("Instance already running.")
         return True
     if state in ("stopped", "stopping"):
+        if not auto_start:
+            warn("Instance is stopped and --no-start was set. Skipping startup.")
+            return False
         info("Starting instance...")
         aws(["ec2", "start-instances", "--instance-ids", INSTANCE_ID])
         aws(["ec2", "wait", "instance-running", "--instance-ids", INSTANCE_ID])
@@ -169,14 +196,21 @@ def check_instance_state():
     bad(f"Instance in unexpected state '{state}'. Fix manually.")
     return False
 
-def check_repo_sync(auto_reset=False):
-    header("2. Repo is on the latest commit")
+def check_repo_sync(repo, header_num="2", auto_reset=False):
+    """Check if a repo on the box is in sync with origin/<branch>.
+
+    `repo` is a dict with keys: path, branch, label.
+    Uses the box's existing `origin` remote (already authenticated for both
+    code and conf repos as of the deploy-key fix), so no remote URL needs to
+    be passed.
+    """
+    header(f"{header_num}. Repo sync: {repo['label']}")
     cmd = (
-        f"cd {REPO_PATH} && "
-        f"git fetch {REMOTE_URL} {REMOTE_BRANCH} 2>/dev/null && "
+        f"cd {repo['path']} && "
+        f"git fetch origin {repo['branch']} 2>/dev/null && "
         "echo '--- LOCAL ---' && git log --oneline -1 HEAD && "
-        "echo '--- REMOTE ---' && git log --oneline -1 FETCH_HEAD && "
-        "echo '--- DIFF ---' && git rev-list --left-right --count HEAD...FETCH_HEAD"
+        f"echo '--- REMOTE ---' && git log --oneline -1 origin/{repo['branch']} && "
+        f"echo '--- DIFF ---' && git rev-list --left-right --count HEAD...origin/{repo['branch']}"
     )
     out = ssm_run(cmd)
     print(out.rstrip())
@@ -189,23 +223,24 @@ def check_repo_sync(auto_reset=False):
             ahead, behind = int(parts[0]), int(parts[1])
             break
 
+    branch = repo["branch"]
     if ahead == 0 and behind == 0:
-        ok("Local is in sync with origin/main.")
+        ok(f"{repo['label']}: in sync with origin/{branch}.")
         return True
 
     if behind > 0:
-        info(f"Local is behind origin/main by {behind} commits.")
+        info(f"{repo['label']}: behind origin/{branch} by {behind} commits.")
         if auto_reset:
-            info("Auto-reset enabled: running git reset --hard FETCH_HEAD...")
-            reset_cmd = f"cd {REPO_PATH} && git reset --hard FETCH_HEAD && git log --oneline -1"
+            info("Auto-reset enabled: running git reset --hard origin/<branch>...")
+            reset_cmd = f"cd {repo['path']} && git reset --hard origin/{branch} && git log --oneline -1"
             print(ssm_run(reset_cmd).rstrip())
-            ok("Reset complete.")
+            ok(f"{repo['label']}: reset complete.")
             return True
-        warn("Behind origin — consider running: git reset --hard FETCH_HEAD on the box.")
+        warn(f"{repo['label']}: behind origin — run git reset --hard origin/{branch} on the box.")
         return False
 
     # ahead > 0, behind == 0
-    warn(f"Local is {ahead} commits ahead of origin/main (unpushed changes on the box).")
+    warn(f"{repo['label']}: {ahead} commits ahead of origin/{branch} (unpushed changes on the box).")
     info("Probably safe if your hub isn't affected by those commits. Flag it to your team.")
     return True  # non-blocking
 
@@ -365,20 +400,120 @@ def lookup_hub_in_conf(hub, conf_path=CONF_PATH):
     return endpoint, harvest_type
 
 
+def _check_local_path_endpoint(path):
+    """For file-type harvests with a local path on EC2: verify the path
+    exists, is a directory (or file), and is non-empty. Catches the
+    'CommunityWebsHarvester NPE' class of bug where the conf endpoint
+    points at a stale or missing directory."""
+    info(f"Endpoint: {path}")
+    info("Type:     file-based (local path on EC2)")
+
+    # Catch dev paths leaking into production conf — saves an SSM round-trip
+    # and gives a much clearer error than "path does not exist on the box".
+    # Real cases we've hit: /Users/scott/... (someone's Mac path committed),
+    # /var/folders/... (Mac temp dir from local testing).
+    dev_path_patterns = [
+        (r"^/Users/",       "macOS user dir — almost certainly a developer's local path"),
+        (r"^/var/folders/", "macOS temp dir — leftover from someone's local testing run"),
+        (r"^/home/(?!ec2-user(/|$))", "Linux home dir for a non-ec2-user account"),
+        (r"^[A-Za-z]:[\\/]", "Windows path — definitely not the EC2 box"),
+        (r"^~",             "tilde-prefixed path that wasn't expanded by the conf reader"),
+    ]
+    for pattern, reason in dev_path_patterns:
+        if re.match(pattern, path):
+            bad("Endpoint looks like a developer's local path, not an EC2 path.")
+            info(f"Reason: {reason}")
+            info("Likely cause: conf was committed from someone's local dev environment")
+            info("and never updated for production.")
+            info("Fix: update <hub>.harvest.endpoint in i3.conf to the actual location")
+            info("on the box (typically /home/ec2-user/data/<hub>/originalRecords/<DATE>/),")
+            info("then push the conf change and pull on the box.")
+            return False
+
+    quoted = shlex.quote(path)
+    cmd = f"""
+if [ ! -e {quoted} ]; then
+  echo "VERDICT: NOT GOOD -- path does not exist on the box."
+  echo "Likely fix: re-run preprocessing for this hub (per onboarding doc §14)"
+  echo "and update <hub>.harvest.endpoint in i3.conf to the new dated directory."
+  exit 0
+fi
+if [ -d {quoted} ]; then
+  echo "Path exists as a directory."
+  echo "Top of listing:"
+  ls -la {quoted} 2>&1 | head -10
+  COUNT=$(find {quoted} -maxdepth 3 -type f 2>/dev/null | wc -l)
+  echo "Files (up to 3 levels deep): $COUNT"
+  if [ "$COUNT" -eq 0 ]; then
+    echo "VERDICT: NOT GOOD -- directory is empty."
+    echo "The harvester will trip on dir.listFiles() and throw NPE."
+    echo "Fix: place the expected file (zip / xml / db) inside this directory."
+  else
+    echo "VERDICT: GOOD -- directory exists and contains $COUNT files."
+  fi
+elif [ -f {quoted} ]; then
+  echo "Path exists as a regular file."
+  ls -la {quoted} 2>&1
+  echo "VERDICT: GOOD -- file exists."
+else
+  echo "VERDICT: NOT GOOD -- path exists but is neither file nor directory."
+fi
+""".strip()
+    try:
+        out = ssm_run(cmd)
+    except RuntimeError as e:
+        bad(f"SSM check failed: {e}")
+        return False
+    print(out.rstrip())
+    if "VERDICT: GOOD" in out:
+        ok("File endpoint is valid.")
+        return True
+    bad("File endpoint missing or empty — fix before running the ingest.")
+    return False
+
+
+def _check_s3_endpoint(s3_path):
+    """For file-type harvests with an s3:// endpoint (e.g. dpla-hub-* buckets):
+    verify the path exists and has at least one object."""
+    info(f"Endpoint: {s3_path}")
+    info("Type:     file-based (S3)")
+    try:
+        result = subprocess.run(
+            ["aws", "s3", "ls", s3_path],
+            capture_output=True, text=True, timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        bad("aws s3 ls timed out after 30s.")
+        return False
+    if result.returncode != 0:
+        bad(f"aws s3 ls failed: {result.stderr.strip() or 'exit ' + str(result.returncode)}")
+        return False
+    listing = result.stdout.strip()
+    if not listing:
+        bad(f"S3 path is empty: {s3_path}")
+        info("Fix: ensure the hub has uploaded a fresh export to this prefix,")
+        info("or update the endpoint in i3.conf to the correct dated subfolder.")
+        return False
+    info("--- first 5 entries ---")
+    for line in listing.splitlines()[:5]:
+        info(line)
+    ok("S3 endpoint exists and has objects.")
+    return True
+
+
 def check_endpoint(endpoint, is_api=False):
     header("6. Endpoint reachability")
     if not endpoint:
         warn("No endpoint to check (pass --hub or enter one at the prompt).")
         return True  # non-blocking
 
-    # File-based hubs (nara, smithsonian, file-export) have a filesystem
-    # path or s3:// URI in the endpoint field, not an HTTP URL. There's
-    # nothing to curl — flag it and skip the check.
+    # Dispatch based on the endpoint scheme. File-type harvests get a real
+    # existence/contents check on the box (or in S3); HTTP/S endpoints get
+    # the curl-based reachability check below.
+    if endpoint.startswith("s3://"):
+        return _check_s3_endpoint(endpoint)
     if not re.match(r"^https?://", endpoint):
-        warn(f"Endpoint is not an HTTP URL — looks like a file/path-based hub: {endpoint}")
-        info("This is normal for nara, smithsonian, and file-export hubs (§14).")
-        info("ingest.sh handles these via the dedicated harvest type, not curl.")
-        return True  # non-blocking — special-case hubs aren't an error
+        return _check_local_path_endpoint(endpoint)
 
     timeout = 60 if is_api else 15
     test_url = endpoint if is_api else f"{endpoint}?verb=Identify"
@@ -441,7 +576,21 @@ def main():
         "--api", action="store_true",
         help="Force API-style check (60s timeout, no ?verb=Identify). Auto-detected from conf when --hub is used.",
     )
+    parser.add_argument(
+        "--endpoint-only", action="store_true",
+        help="Skip the box-state checks (instance, repo, JAR, ownership, disk) and only run the endpoint check.",
+    )
+    parser.add_argument(
+        "--skip-endpoint", action="store_true",
+        help="Run all the box-state checks but skip the endpoint check.",
+    )
+    parser.add_argument(
+        "--no-start", action="store_true",
+        help="Don't auto-start the EC2 instance if it's stopped (useful with --endpoint-only for HTTP endpoints).",
+    )
     args = parser.parse_args()
+    if args.endpoint_only and args.skip_endpoint:
+        sys.exit("--endpoint-only and --skip-endpoint are mutually exclusive.")
 
     # If no --hub was passed, prompt for one. Empty input = skip endpoint check.
     hub = args.hub
@@ -482,14 +631,32 @@ def main():
         print("Endpoint: (none — endpoint check will be skipped)")
     print()
 
+    # Decide which checks to run based on the flags.
+    auto_start = not args.no_start
+    run_box_checks = not args.endpoint_only
+    run_endpoint_check = not args.skip_endpoint
+    # File-type endpoints need SSM (the box must be up); HTTP/S endpoints don't.
+    needs_box_for_endpoint = (
+        run_endpoint_check
+        and endpoint
+        and not endpoint.startswith("s3://")
+        and not re.match(r"^https?://", endpoint)
+    )
+
     results = []
     try:
-        results.append(("instance",  check_instance_state()))
-        results.append(("repo",      check_repo_sync(auto_reset=False)))
-        results.append(("jar",       check_jar_freshness()))
-        results.append(("ownership", check_target_ownership()))
-        results.append(("disk",      check_disk_space()))
-        results.append(("endpoint",  check_endpoint(endpoint, is_api=is_api)))
+        # Always run the instance check if we need the box for ANY check
+        # (file endpoint or any of the box-state checks).
+        if run_box_checks or needs_box_for_endpoint:
+            results.append(("instance", check_instance_state(auto_start=auto_start)))
+        if run_box_checks:
+            results.append(("ingestion3 repo",      check_repo_sync(INGEST_REPO, header_num="2a")))
+            results.append(("ingestion3-conf repo", check_repo_sync(CONF_REPO,   header_num="2b")))
+            results.append(("jar",                  check_jar_freshness()))
+            results.append(("ownership",            check_target_ownership()))
+            results.append(("disk",                 check_disk_space()))
+        if run_endpoint_check:
+            results.append(("endpoint", check_endpoint(endpoint, is_api=is_api)))
     except RuntimeError as e:
         print()
         bad(f"Check aborted: {e}")

@@ -2,9 +2,15 @@
 """Launch a DPLA hub ingest on the ingest EC2 via SSM.
 
 Usage:
-    python3 run/launch_ingest.py            # prompts for hub
-    python3 run/launch_ingest.py bpl        # runs bpl
+    python3 run/launch_ingest.py                      # prompts for hub
+    python3 run/launch_ingest.py bpl                  # runs bpl with ingest.sh
+    python3 run/launch_ingest.py community-webs       # runs community-webs-ingest.sh
     python3 run/launch_ingest.py bpl --resume-from mapping
+
+Most hubs run through ingest.sh with the hub name as a positional argument.
+A few hubs have dedicated launcher scripts (community-webs is one) — those
+are handled automatically based on the HUB_SCRIPTS mapping below. Add a new
+entry there if another hub needs a custom script.
 """
 import argparse
 import json
@@ -17,6 +23,16 @@ INSTANCE_ID = "i-0a0def8581efef783"
 AWS_PROFILE = os.environ.get("AWS_PROFILE", "dpla")
 HUB_RE = re.compile(r"^[a-z0-9_-]+$")
 VALID_RESUME_STEPS = ("mapping", "enrichment", "jsonl")
+
+# Hubs that use a dedicated launcher script instead of the standard ingest.sh.
+# Per-hub scripts are typically hardcoded to the hub they handle (no positional
+# hub argument), so we omit the hub from the invocation. Add new entries here
+# as more special-case hubs come up (e.g. nara, smithsonian).
+HUB_SCRIPTS = {
+    "community-webs": "community-webs-ingest.sh",
+}
+DEFAULT_SCRIPT = "ingest.sh"
+SCRIPTS_DIR = "/home/ec2-user/ingestion3/scripts"
 
 
 def main() -> None:
@@ -35,13 +51,22 @@ def main() -> None:
 
     extra = f" --resume-from {args.resume_from}" if args.resume_from else ""
 
-    # Build the remote command. ingest.sh handles the full pipeline + Slack
-    # notifications + safety checks + partner email. We background it because
-    # ingests can outlast the SSM timeout.
+    # Pick the script. Hub-specific scripts (e.g. community-webs-ingest.sh) are
+    # dedicated to a single hub and don't take a hub positional argument.
+    if hub in HUB_SCRIPTS:
+        script = HUB_SCRIPTS[hub]
+        invocation = f"bash {SCRIPTS_DIR}/{script}{extra}"
+        script_label = f"{script} (hub-specific)"
+    else:
+        invocation = f"bash {SCRIPTS_DIR}/{DEFAULT_SCRIPT} {hub}{extra}"
+        script_label = f"{DEFAULT_SCRIPT} {hub}"
+
+    # Build the remote command. The chosen script handles the full pipeline +
+    # Slack notifications + safety checks + partner email. We background it
+    # because ingests can outlast the SSM timeout.
     inner = (
         'sudo -u ec2-user bash -lc "'
-        f"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub}{extra} "
-        f"> /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &"
+        f"nohup {invocation} > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &"
         '"'
     )
     params = json.dumps({"commands": [inner]})
@@ -64,8 +89,9 @@ def main() -> None:
     cmdid = result.stdout.strip()
     label = f"{hub}{extra}".strip()
     print(f"Launched: {label}")
+    print(f"  Script:         {script_label}")
     print(f"  SSM command id: {cmdid}")
-    print(f"  Log on EC2:    /home/ec2-user/data/{hub}-ingest.log")
+    print(f"  Log on EC2:     /home/ec2-user/data/{hub}-ingest.log")
     print()
     print("Watch #tech-alerts for milestone messages.")
 
