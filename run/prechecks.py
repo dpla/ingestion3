@@ -196,13 +196,18 @@ def check_instance_state(auto_start=True):
     bad(f"Instance in unexpected state '{state}'. Fix manually.")
     return False
 
-def check_repo_sync(repo, header_num="2", auto_reset=False):
+def check_repo_sync(repo, header_num="2", auto_reset=False, interactive=True):
     """Check if a repo on the box is in sync with origin/<branch>.
 
     `repo` is a dict with keys: path, branch, label.
     Uses the box's existing `origin` remote (already authenticated for both
     code and conf repos as of the deploy-key fix), so no remote URL needs to
     be passed.
+
+    Behavior when the box is behind origin:
+      - auto_reset=True   → pull immediately without prompting
+      - interactive=True  → prompt the user "Pull N commits? [y/N]"
+      - both False        → warn and return False (operator must reset manually)
     """
     header(f"{header_num}. Repo sync: {repo['label']}")
     cmd = (
@@ -230,13 +235,30 @@ def check_repo_sync(repo, header_num="2", auto_reset=False):
 
     if behind > 0:
         info(f"{repo['label']}: behind origin/{branch} by {behind} commits.")
-        if auto_reset:
-            info("Auto-reset enabled: running git reset --hard origin/<branch>...")
-            reset_cmd = f"cd {repo['path']} && git reset --hard origin/{branch} && git log --oneline -1"
+
+        do_pull = auto_reset
+        if not do_pull and interactive:
+            try:
+                answer = input(
+                    f"  Pull {behind} commit(s) from origin/{branch} into "
+                    f"{repo['path']} on the box? [y/N] "
+                ).strip().lower()
+                do_pull = answer in ("y", "yes")
+            except EOFError:
+                do_pull = False
+
+        if do_pull:
+            info(f"Pulling: git reset --hard origin/{branch} on the box...")
+            reset_cmd = (
+                f"cd {repo['path']} && "
+                f"git reset --hard origin/{branch} && "
+                "git log --oneline -1"
+            )
             print(ssm_run(reset_cmd).rstrip())
             ok(f"{repo['label']}: reset complete.")
             return True
-        warn(f"{repo['label']}: behind origin — run git reset --hard origin/{branch} on the box.")
+
+        warn(f"{repo['label']}: behind origin — left as-is. Run git reset --hard origin/{branch} on the box when ready.")
         return False
 
     # ahead > 0, behind == 0
@@ -588,9 +610,19 @@ def main():
         "--no-start", action="store_true",
         help="Don't auto-start the EC2 instance if it's stopped (useful with --endpoint-only for HTTP endpoints).",
     )
+    parser.add_argument(
+        "--auto-pull", action="store_true",
+        help="Pull both repos automatically if they're behind origin (no prompt).",
+    )
+    parser.add_argument(
+        "--no-pull", action="store_true",
+        help="Never pull, even if behind. Just warn — useful for non-interactive runs.",
+    )
     args = parser.parse_args()
     if args.endpoint_only and args.skip_endpoint:
         sys.exit("--endpoint-only and --skip-endpoint are mutually exclusive.")
+    if args.auto_pull and args.no_pull:
+        sys.exit("--auto-pull and --no-pull are mutually exclusive.")
 
     # If no --hub was passed, prompt for one. Empty input = skip endpoint check.
     hub = args.hub
@@ -650,8 +682,9 @@ def main():
         if run_box_checks or needs_box_for_endpoint:
             results.append(("instance", check_instance_state(auto_start=auto_start)))
         if run_box_checks:
-            results.append(("ingestion3 repo",      check_repo_sync(INGEST_REPO, header_num="2a")))
-            results.append(("ingestion3-conf repo", check_repo_sync(CONF_REPO,   header_num="2b")))
+            interactive_pull = not args.no_pull
+            results.append(("ingestion3 repo",      check_repo_sync(INGEST_REPO, header_num="2a", auto_reset=args.auto_pull, interactive=interactive_pull)))
+            results.append(("ingestion3-conf repo", check_repo_sync(CONF_REPO,   header_num="2b", auto_reset=args.auto_pull, interactive=interactive_pull)))
             results.append(("jar",                  check_jar_freshness()))
             results.append(("ownership",            check_target_ownership()))
             results.append(("disk",                 check_disk_space()))

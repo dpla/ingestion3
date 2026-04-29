@@ -29,7 +29,7 @@ VALID_RESUME_STEPS = ("mapping", "enrichment", "jsonl")
 # hub argument), so we omit the hub from the invocation. Add new entries here
 # as more special-case hubs come up (e.g. nara, smithsonian).
 HUB_SCRIPTS = {
-    "community-webs": "community-webs-ingest.sh",
+    "community-webs": "harvest/community-webs-ingest.sh",
 }
 DEFAULT_SCRIPT = "ingest.sh"
 SCRIPTS_DIR = "/home/ec2-user/ingestion3/scripts"

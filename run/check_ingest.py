@@ -165,10 +165,6 @@ HUB="{hub}"
 LOG="{DATA_ROOT}/${{HUB}}-ingest.log"
 
 echo "===PROCESS==="
-# Match any of the launcher script naming conventions in use:
-#   ingest.sh <hub>               — standard launcher
-#   <hub>-ingest.sh               — hub-specific (community-webs, etc.)
-#   <hub>.*ingest                 — fallback for other naming variants
 PIDS=$(pgrep -f "ingest\\.sh ${{HUB}}|${{HUB}}-ingest\\.sh|${{HUB}}.*ingest" || true)
 if [ -z "$PIDS" ]; then
   echo "(none)"
@@ -382,6 +378,33 @@ def earliest_timestamp_in_lines(lines: str):
     return earliest
 
 
+def parse_process_lines(proc_text: str):
+    """Parse 'ps -o pid=,etime=,cmd= -p $p' output. Returns a list of dicts
+    with keys: pid, etime, cmd, script (the bare script filename + args).
+    Skips empty/header lines."""
+    rows = []
+    for ln in proc_text.splitlines():
+        ln = ln.strip()
+        if not ln or ln == "(none)":
+            continue
+        m = re.match(r"^\s*(\d+)\s+(\S+)\s+(.*)$", ln)
+        if not m:
+            continue
+        pid, etime, cmd = m.group(1), m.group(2), m.group(3)
+        # Pull out the .sh script name and anything that follows it on the cmdline.
+        # e.g. "bash /home/ec2-user/.../ingest.sh bpl --resume-from mapping"
+        # → script = "ingest.sh bpl --resume-from mapping"
+        script_match = re.search(r"/([^/\s]+\.sh)(\s+.*)?$", cmd)
+        if script_match:
+            name = script_match.group(1)
+            tail = (script_match.group(2) or "").strip()
+            script = f"{name} {tail}".strip()
+        else:
+            script = cmd
+        rows.append({"pid": pid, "etime": etime, "cmd": cmd, "script": script})
+    return rows
+
+
 # ---------- color ----------
 GREEN = "\033[32m"; YELLOW = "\033[33m"; RED = "\033[31m"; DIM = "\033[2m"; BOLD = "\033[1m"; RESET = "\033[0m"
 USE_COLOR = sys.stdout.isatty()
@@ -408,10 +431,19 @@ def render(hub, harvest_type, endpoint, sections):
     lines.append("")
     lines.append("PROCESS")
     if not is_running:
-        lines.append("  " + c(YELLOW, "(no ingest.sh process running for this hub)"))
+        lines.append("  " + c(YELLOW, "(no ingest process running for this hub)"))
     else:
-        for ln in proc.splitlines():
-            lines.append("  " + c(GREEN, ln.strip()))
+        rows = parse_process_lines(proc)
+        if rows:
+            primary = rows[0]
+            lines.append(f"  Script:  {c(GREEN, primary['script'])}")
+            lines.append(f"  PID:     {primary['pid']}   (running for {primary['etime']})")
+            if len(rows) > 1:
+                lines.append(c(DIM, f"  + {len(rows) - 1} subprocess(es)"))
+        else:
+            # Fallback if the ps output couldn't be parsed.
+            for ln in proc.splitlines():
+                lines.append("  " + c(GREEN, ln.strip()))
 
     # COMPLETED STAGES
     lines.append("")
