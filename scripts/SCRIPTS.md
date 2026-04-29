@@ -412,11 +412,9 @@ One summary email to all contacts of hubs scheduled for a given month. Sent at t
 
 ### notify-harvest-failure.sh and send-harvest-failure-email.py - Harvest Failure Alerts
 
-Invoked by `HarvestExecutor` when an OAI (or other) harvest fails. Sends **both** Slack and email so tech is notified even if one channel is unavailable.
+Invoked by `HarvestExecutor` when an OAI (or other) harvest fails. Sends email to tech@dp.la. Slack alerts are handled separately by the Tech Reports bot.
 
 **Email body is built in Scala:** `OaiHarvestException.buildEmailBody` (in `OaiResponse.scala`) produces the complete email body (hub name, human-readable error details, footer). `HarvestExecutor` passes this body as a third argument to `notify-harvest-failure.sh`, which forwards it to `send-harvest-failure-email.py`. The Python script sends the body as-is — no template wrapping. This makes Scala the single source of truth for notification content.
-
-**Slack:** If `SLACK_WEBHOOK` is set, posts to #tech-alerts with hub name and error snippet (from `OaiHarvestException.getMessage`). Optional `SLACK_ALERT_USER_ID` adds an @mention.
 
 **Email:** Always attempts to send to **tech@dp.la** via AWS SES using `scripts/communication/send-harvest-failure-email.py` (requires project venv and boto3; uses `AWS_PROFILE`, default `dpla`). Best-effort: if email fails (e.g. no credentials), a warning is printed and the script still exits 0.
 
@@ -429,7 +427,7 @@ Invoked by `HarvestExecutor` when an OAI (or other) harvest fails. Sends **both*
 ./scripts/communication/notify-harvest-failure.sh indiana "OAI Error: badArgument ..."
 ```
 
-**Environment:** `SLACK_WEBHOOK`, `SLACK_ALERT_USER_ID`, `AWS_PROFILE` (for email), `I3_HOME` (default: derived from script path).
+**Environment:** `AWS_PROFILE` (for email, default `dpla`), `I3_HOME` (default: derived from script path).
 
 ## Workflow Diagrams
 
