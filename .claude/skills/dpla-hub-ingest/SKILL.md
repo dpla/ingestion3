@@ -162,7 +162,7 @@ Hub config lives in `i3.conf` on the EC2 at `/home/ec2-user/ingestion3-conf/i3.c
 
 Before running, check the hub's harvest type:
 ```bash
-grep "^<hub>\.harvest\.type" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "^<hub>\.harvest\.type" /Users/dominic/github/ingestion3-conf/i3.conf
 ```
 
 Key harvest types and their network requirements:
@@ -174,164 +174,7 @@ Key harvest types and their network requirements:
 | `file` | **community-webs**: DB export pre-processing runs entirely on EC2 (see Community Webs Pre-processing section). **Other file hubs**: `harvest.endpoint` references `/Users/scott/...` paths from a previous operator — require manual staging to EC2 before harvest. |
 | `nara.file.delta` | NARA-specific delta file format. Complex — consult README_NARA.md. |
 
-**Note:** **maryland**, **getty**, and **hathi** have known IP blocks on EC2 — the endpoint will time out or return 403 from `52.2.32.179`. When this happens, **stop and ask the user** how to proceed: either ask the partner to allowlist `52.2.32.179`, or run the harvest locally on the Mac (see **Local Harvest (EC2-Blocked Hubs)** section below). Do not default to local harvest without the user's direction. Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
-
-## Local Harvest (EC2-Blocked Hubs)
-
-**Only use this procedure when the user explicitly requests a local harvest.** Do not invoke it automatically when an EC2 endpoint block is detected — ask the user first (see the EC2-blocked hubs note in Hub Configuration Reference).
-
-This covers: running the harvest locally on the Mac, staging the Avro output to S3, pulling it onto the EC2, and resuming the pipeline from mapping. Before starting, verify the endpoint is reachable from your Mac (Step LH1) — it may not be (e.g. HathiTrust uses Cloudflare bot protection that also blocks curl).
-
-### Prerequisites (verified 2026-03-23)
-
-| Item | Status |
-|------|--------|
-| Java | **Java 20 (Homebrew)** — already configured in `ingestion3/.env` as `JAVA_HOME`. `ingest.sh` auto-loads `.env`. |
-| SBT | `~/.sdkman/candidates/sbt/current/bin/sbt` (v1.10.3) — on PATH. |
-| Repo | `/Users/dominic/Documents/GitHub/ingestion3` |
-| i3.conf | `/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf` (set in `.env` as `I3_CONF`) |
-| Output dir | `/Users/dominic/Documents/dpla/data` (set as `DPLA_DATA` in `.env`) |
-| Disk | Harvests are small: maryland ~65 MB (364K records, ~4 hrs at ~8s/page), getty ~124 MB (100K records as of 2021). The `ingest.sh` disk check uses `df -BG` (Linux-only) and silently skips on macOS. |
-
-### Step LH1: Verify endpoint is reachable locally
-
-```bash
-curl -s --max-time 15 "http://cdm17340.contentdm.oclc.org/oai/oai.php?verb=Identify" | head -5
-```
-
-Expected: XML response with `<Identify>`. If this times out, the issue isn't just the EC2 — the endpoint itself is down.
-
-### Step LH2: Update i3.conf with the correct endpoint (if needed)
-
-Before harvesting, confirm `i3.conf` has the current endpoint for the hub:
-```bash
-grep "^maryland\.harvest" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
-```
-
-If the endpoint needs updating:
-```bash
-python3 -c "
-content = open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf').read()
-content = content.replace(
-    'maryland.harvest.endpoint = \"http://collections.digitalmaryland.org/oai/oai.php\"',
-    'maryland.harvest.endpoint = \"http://cdm17340.contentdm.oclc.org/oai/oai.php\"'
-)
-open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf', 'w').write(content)
-print('Updated.')
-"
-```
-
-Commit and push to ingestion3-conf after verifying.
-
-### Step LH3: Run harvest locally
-
-`ingest.sh` auto-loads `.env` (Java 20, I3_CONF) and defaults `DPLA_DATA` to `~/dpla/data`. Wrap with `caffeinate` to prevent the Mac from sleeping mid-harvest and expiring the OAI resumption token:
-
-```bash
-mkdir -p /Users/dominic/Documents/dpla/data
-caffeinate -i nohup bash /Users/dominic/Documents/GitHub/ingestion3/scripts/ingest.sh <hub> --harvest-only \
-  > /tmp/<hub>-harvest.log 2>&1 &
-echo "PID: $!"
-```
-
-`caffeinate -i` holds an idle-sleep assertion for the lifetime of the harvest process and releases automatically when it finishes.
-
-**Do not close the laptop during a local harvest.** Even a brief sleep breaks Spark's internal RPC networking (the local executor loses its endpoint IP on wake), causing the harvester to stall silently with `RpcEndpointNotFoundException`. OAI-PMH also has no client-side checkpoint, so partial progress cannot be resumed. If the process stalls or is killed, kill it (`kill <PID>`) and restart the full harvest command from scratch.
-
-Monitor progress via the OAI harvest log (written by the harvester alongside the main log):
-```bash
-tail -f /Users/dominic/Documents/GitHub/ingestion3/logs/oai-harvest-<hub>-*.log
-```
-
-When complete, the script prints `Harvest completed in Xm Ys` and exits 0. Capture the harvest timestamp:
-```bash
-HARVEST_TS=$(ls -t /Users/dominic/Documents/dpla/data/maryland/harvest/ | head -1)
-echo "Harvest timestamp: $HARVEST_TS"
-```
-
-Verify the record count from the manifest:
-```bash
-cat /Users/dominic/Documents/dpla/data/maryland/harvest/$HARVEST_TS/_MANIFEST 2>/dev/null || \
-  ls /Users/dominic/Documents/dpla/data/maryland/harvest/$HARVEST_TS/ | head -5
-```
-
-### Step LH4: Stage harvest output to S3
-
-Upload the local Avro output to a temporary S3 prefix:
-```bash
-aws s3 sync /Users/dominic/Documents/dpla/data/maryland/harvest/ \
-  s3://dpla-master-dataset/tmp/maryland-harvest/ \
-  --no-progress
-```
-
-Verify:
-```bash
-aws s3 ls s3://dpla-master-dataset/tmp/maryland-harvest/ | head -5
-```
-
-### Step LH5: Pull harvest onto EC2
-
-Start the EC2 if not already running (see Step 2 of the main procedure), then:
-
-```bash
-PARAMS=$(python3 -c "
-import json
-cmd = 'sudo -u ec2-user bash -lc \"mkdir -p /home/ec2-user/data/maryland/harvest && aws s3 sync s3://dpla-master-dataset/tmp/maryland-harvest/ /home/ec2-user/data/maryland/harvest/ --no-progress && echo STAGE_OK\"'
-print(json.dumps({'commands': [cmd]}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 300 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
-echo "Command ID: $CMDID"
-```
-
-Poll until Status=Success (use standard polling loop), then verify `STAGE_OK` in output and check the harvest directory:
-
-```bash
-PARAMS=$(python3 -c "
-import json
-cmd = 'sudo -u ec2-user bash -lc \"ls -lh /home/ec2-user/data/maryland/harvest/\"'
-print(json.dumps({'commands': [cmd]}))
-")
-CMDID=$(aws ssm send-command --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" --timeout-seconds 15 \
-  --parameters "$PARAMS" --query 'Command.CommandId' --output text)
-```
-
-### Step LH6: Resume pipeline on EC2 from mapping
-
-Pull the latest ingestion3 (Step 3a), then resume from mapping:
-
-```bash
-PARAMS=$(python3 -c "
-import json
-cmd = 'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh maryland --resume-from mapping > /home/ec2-user/data/maryland-ingest.log 2>&1 </dev/null &\"'
-print(json.dumps({'commands': [cmd]}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 30 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
-```
-
-Monitor via Slack (#tech-alerts) and the log. Continue with Step 5 (Stop EC2 and Verify) after the ingest completes.
-
-### Step LH7: Clean up S3 staging prefix
-
-After the ingest completes successfully:
-```bash
-aws s3 rm s3://dpla-master-dataset/tmp/maryland-harvest/ --recursive
-```
-
-Also clean up local harvest data if disk space is needed:
-```bash
-rm -rf /Users/dominic/Documents/dpla/data/maryland/harvest/
-```
+**Note:** **maryland** and **getty** have known IP blocks on EC2 — harvest locally on your Mac (2–3GB disk, 16GB+ RAM) or ask their IT to allowlist `52.2.32.179`. Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
 
 ## Community Webs Pre-processing
 
@@ -473,15 +316,39 @@ Verify `EXPORT_SUCCESS` is present before continuing.
 
 ## Full Procedure
 
-### Step 0: Identify the Hub
+### Step 0: Identify the Hub and Check Memory
+
+**First**, read `~/.claude/memory/hub-ingest-memory.md` and surface any content under the hub's section. If persistent notes exist, state them clearly before proceeding — they may affect how this ingest should be run. If no entry exists yet for this hub, proceed normally; one may be created after the run.
+
+The memory file uses `## hub-name` markdown sections to organize per-hub content. If the file or directory doesn't exist yet, proceed normally — it will be created when the first memory entry is written in Step 6. If the file cannot be read, log a warning and continue without persistent notes.
 
 Confirm the hub key (e.g. `sd`, `maryland`, `indiana`) and check its config:
 
 ```bash
-grep "^<hub>\." /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "^<hub>\." /Users/dominic/github/ingestion3-conf/i3.conf
 ```
 
 Note the `harvest.type` and `harvest.endpoint`. For `file` harvests, check that the file path exists and confirm with the user before proceeding.
+
+**Check for test hub status:**
+```bash
+grep "^<hub>\.status" /Users/dominic/github/ingestion3-conf/i3.conf
+```
+
+If the result is `<hub>.status = test`, this is a **test hub**. Announce this clearly and set `IS_TEST_HUB=true` to carry through the remaining steps:
+
+> "⚠️ **`<hub>` is a test hub** (`status = test` in i3.conf). This ingest will:
+> - Run the full harvest → mapping → enrichment → JSONL pipeline normally
+> - **Skip S3 sync** — data stays on EC2 only and cannot be picked up by sparkindexer
+> - **Skip the partner summary email**
+> - Still generate all summaries and logs for manual review
+>
+> See `docs/ingestion/README_TEST_HUBS.md` for full conventions."
+
+For test hubs, also check for the mapper in the experimental subpackage:
+```bash
+ls /Users/dominic/github/ingestion3/src/main/scala/dpla/ingestion3/mappers/providers/experimental/
+```
 
 If hub is `community-webs`, run the Community Webs Pre-processing steps (see above) after Step 3 and before Step 4.
 
@@ -515,14 +382,14 @@ If unsure which harvester the hub uses, grep the Scala source: `grep -r "<hub>" 
 
 **3. Confirm the i3.conf endpoint path:**
 ```bash
-grep "<hub>\.harvest" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "<hub>\.harvest" /Users/dominic/github/ingestion3-conf/i3.conf
 ```
 The endpoint must point to the **folder containing the files** (e.g. `s3://dpla-hub-ohio/2026-03-20/`), not a parent bucket root. If it needs updating, use python3 to avoid quoting issues:
 ```bash
 python3 -c "
-content = open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf').read()
+content = open('/Users/dominic/github/ingestion3-conf/i3.conf').read()
 content = content.replace('<hub>.harvest.endpoint = \"<old>\"', '<hub>.harvest.endpoint = \"<new>\"')
-open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf', 'w').write(content)
+open('/Users/dominic/github/ingestion3-conf/i3.conf', 'w').write(content)
 print('Updated:', content[content.find('<hub>.harvest.endpoint'):content.find('<hub>.harvest.endpoint')+60])
 "
 ```
@@ -635,62 +502,24 @@ For `api` hubs, use a 60-second timeout:
 curl -s --max-time 60 "<endpoint>?<query>&rows=1" | head -2
 ```
 
-**If endpoint is unreachable from EC2** → likely a firewall or IP block. Stop the instance, inform the user, and ask how to proceed: ask the partner to allowlist `52.2.32.179`, or run the harvest locally (see **Local Harvest (EC2-Blocked Hubs)** section). Do not proceed without the user's direction.
-
-#### Step 3c: Verify JAR is up to date — rebuild if stale
-
-Compare the JAR's modification time against the latest git commit. If the JAR is older than the latest commit (or missing), rebuild before proceeding. A stale JAR means the ingest runs old code regardless of what was pulled in Step 3a.
-
-```bash
-PARAMS=$(python3 -c "
-import json
-cmd = (
-    'sudo -u ec2-user bash -lc \"'
-    'JAR=/home/ec2-user/ingestion3/target/scala-2.13/ingestion3-assembly-0.0.1.jar; '
-    'COMMIT_TS=\$(git -C /home/ec2-user/ingestion3 log -1 --format=%ct); '
-    'if [ ! -f \"\$JAR\" ]; then '
-    '  echo MISSING; '
-    'elif [ \$(stat -c %Y \"\$JAR\") -lt \"\$COMMIT_TS\" ]; then '
-    '  echo STALE jar=\$(date -d @\$(stat -c %Y \"\$JAR\") +%Y-%m-%dT%H:%M:%S) commit=\$(date -d @\"\$COMMIT_TS\" +%Y-%m-%dT%H:%M:%S); '
-    'else '
-    '  echo OK jar=\$(date -d @\$(stat -c %Y \"\$JAR\") +%Y-%m-%dT%H:%M:%S) commit=\$(date -d @\"\$COMMIT_TS\" +%Y-%m-%dT%H:%M:%S); '
-    'fi\"'
-)
-print(json.dumps({'commands': [cmd]}))
-")
-CMDID=$(aws ssm send-command --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" --timeout-seconds 30 \
-  --parameters "$PARAMS" --query 'Command.CommandId' --output text)
-# Poll
-```
-
-- **OK** → proceed to Step 4.
-- **STALE** or **MISSING** → rebuild the JAR before proceeding:
-
-```bash
-PARAMS=$(python3 -c "
-import json
-cmd = 'sudo -u ec2-user bash -lc \"cd /home/ec2-user/ingestion3 && nohup sbt assembly > /tmp/sbt-assembly.log 2>&1 &\necho SBT_PID:\$!\"'
-print(json.dumps({'commands': [cmd]}))
-")
-CMDID=$(aws ssm send-command --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" --timeout-seconds 30 \
-  --parameters "$PARAMS" --query 'Command.CommandId' --output text)
-```
-
-Monitor build progress (takes ~5–10 min); tail `/tmp/sbt-assembly.log`. When complete, re-run the freshness check above to confirm the JAR timestamp is now newer than the latest commit.
+**If endpoint is unreachable from EC2 but reachable locally** → firewall or IP block issue. Stop the instance and run the harvest locally instead (see EC2-blocked hubs note above).
 
 ### Step 4: Launch ingest.sh
 
 **Always use `ingest.sh` — never run individual SBT steps manually.** The script handles the full pipeline (harvest → mapping → enrichment → JSONL → S3 sync) with Slack notifications at every step, hub status tracking, 0-record abort, and safety checks. Running steps manually bypasses all of this.
 
-Launch it as a background process so SSM doesn't time out on long ingests:
+Launch it as a background process so SSM doesn't time out on long ingests.
+
+The snippet below reads `IS_TEST_HUB` (set earlier if this is a test hub) and automatically appends `--skip-s3-sync` when true, preventing output from ever reaching S3:
 
 ```bash
+IS_TEST_HUB=${IS_TEST_HUB:-false}
 PARAMS=$(python3 -c "
 import json
 hub = '<hub>'
-cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub} > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &\"'
+is_test = "${IS_TEST_HUB}".lower() == 'true'
+extra = ' --skip-s3-sync' if is_test else ''
+cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub}{extra} > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &\"'
 print(json.dumps({'commands': [cmd]}))
 ")
 CMDID=$(aws ssm send-command \
@@ -706,8 +535,7 @@ After SSM returns Success (just confirming the launch), verify the process is ru
 ```bash
 PARAMS=$(python3 -c "
 import json
-hub = '<hub>'
-cmd = f'sudo -u ec2-user bash -lc \"ps aux | grep \'ingest.sh {hub}\' | grep -v grep\"'
+cmd = 'sudo -u ec2-user bash -lc \"ps aux | grep ingest.sh | grep -v grep\"'
 print(json.dumps({'commands': [cmd]}))
 ")
 CMDID=$(aws ssm send-command --instance-ids i-0a0def8581efef783 \
@@ -731,28 +559,18 @@ CMDID=$(aws ssm send-command --instance-ids i-0a0def8581efef783 \
 
 **To resume from a failed step** (e.g. if mapping failed and harvest data is intact):
 ```bash
+IS_TEST_HUB=${IS_TEST_HUB:-false}
 PARAMS=$(python3 -c "
 import json
 hub = '<hub>'
-cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub} --resume-from mapping > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &\"'
+is_test = "${IS_TEST_HUB}".lower() == 'true'
+extra = ' --skip-s3-sync' if is_test else ''
+cmd = f'sudo -u ec2-user bash -lc \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh {hub}{extra} --resume-from mapping > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &\"'
 print(json.dumps({'commands': [cmd]}))
 ")
 ```
 
 Valid `--resume-from` values: `mapping`, `enrichment`, `jsonl`.
-
-**Before resuming — fix target/ ownership if the prior run executed as root:**
-
-If the previous run was launched via SSM without `sudo -u ec2-user` (i.e. ran as root), compiled `.class` files in `target/` will be owned by root. The resumed run will fail immediately with `AccessDeniedException` when sbt tries to recompile. Fix it first:
-
-```bash
-PARAMS=$(python3 -c "import json; print(json.dumps({'commands': ['chown -R ec2-user:ec2-user /home/ec2-user/ingestion3/target/']}))")
-CMDID=$(aws ssm send-command --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
-```
-
-This is safe to run even if ownership is already correct.
 
 ### Step 5: Stop EC2 and Verify
 
@@ -763,6 +581,44 @@ aws ec2 stop-instances --instance-ids i-0a0def8581efef783
 ```
 
 `ingest.sh` handles result verification, safety checks, partner email, and the final Slack notification internally — no additional steps needed.
+
+**Test hubs:** `ingest.sh` will skip S3 sync (due to `--skip-s3-sync`). After the Slack completion notification, also confirm the JSONL output is present on EC2:
+```bash
+ls -lh /home/ec2-user/data/<hub>/jsonl/
+```
+Do **not** send the partner summary email. The mapping summary and logs are available on EC2 for manual review. If you want to share results with the partner contact, retrieve the summary manually and send it yourself.
+
+### Step 6: Update Ingest Memory
+
+After the ingest completes (whether fully successful, partially recovered, or abandoned after investigation):
+
+1. Review everything that happened during this run.
+2. Identify anything **new or worth preserving** — for example:
+   - A changed endpoint, new S3 path, or updated file format that had to be determined
+   - An API performance issue, rate limiting, or connectivity problem encountered and resolved
+   - A mapping error, anomaly, or unexpected record count — and how it was handled
+   - A TODO or open question to raise with the partner in future
+   - Any special circumstance that should be remembered to run this hub correctly next time
+3. If anything notable occurred, draft a brief summary and **ask the user to confirm** it is accurate or if they want to add or change anything.
+4. Once confirmed, append to `~/.claude/memory/hub-ingest-memory.md` under the hub's section (create the section if it doesn't exist):
+   - **Persistent Notes** — for things to always surface next run (config, quirks, endpoint paths, partner context)
+   - **Run Log** — for timestamped noteworthy events (use today's date)
+
+**Memory file format:**
+```markdown
+## hub-name
+
+### Persistent Notes
+- Endpoint changed to `s3://new-bucket/path/` as of 2026-03
+- API rate-limits at ~100 req/min; harvest takes ~45 min
+- Partner prefers notifications to alternate-contact@example.org
+
+### Run Log
+- **2026-03-26**: First successful S3 file harvest. Confirmed OaiFileHarvester supports .xml.gz format.
+- **2026-02-15**: Mapping error in subject field resolved by updating mapper to handle nested arrays.
+```
+
+**Do not create a memory entry for routine runs where nothing new happened.**
 
 ---
 
@@ -785,43 +641,24 @@ curl -s -X POST "https://slack.com/api/chat.postMessage" \
 #### Run Harvest (Manual)
 
 ```bash
-PARAMS=$(python3 -c "
-import json
-hub = '<hub>'
-cmd = (
-    f'sudo -u ec2-user bash -lc \"cd /home/ec2-user/ingestion3 && '
-    f'SBT_OPTS=-Xmx15g sbt \\\\\"runMain dpla.ingestion3.entries.ingest.HarvestEntry '
-    f'--output /home/ec2-user/data/ --conf /home/ec2-user/ingestion3-conf/i3.conf '
-    f'--name {hub} --sparkMaster local[*]\\\\\" '
-    f'> /home/ec2-user/data/{hub}-harvest.log 2>&1 && echo HARVEST_SUCCESS || echo HARVEST_FAILED\"'
-)
-print(json.dumps({'commands': [cmd], 'executionTimeout': ['14400']}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 14400 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
-# Poll until Status=Success; check output for HARVEST_SUCCESS
+sudo -u ec2-user bash -lc "
+  cd /home/ec2-user/ingestion3 &&
+  SBT_OPTS=-Xmx15g sbt \"runMain dpla.ingestion3.entries.ingest.HarvestEntry \
+    --output /home/ec2-user/data/ \
+    --conf /home/ec2-user/ingestion3-conf/i3.conf \
+    --name <hub> \
+    --sparkMaster local[*]\" \
+  > /home/ec2-user/data/<hub>-harvest.log 2>&1 && echo HARVEST_SUCCESS || echo HARVEST_FAILED
+"
 ```
+
+Use `--timeout-seconds 7200` on the SSM send-command (harvests can take 20–90+ minutes depending on hub size).
 
 **Poll** until Status is `Success`, then check the output for `HARVEST_SUCCESS`. If `HARVEST_FAILED`: post failure notification (see above) and stop.
 
-After completion, capture the harvest output timestamp:
+After completion, capture the harvest output timestamp in one command:
 ```bash
-PARAMS=$(python3 -c "
-import json
-hub = '<hub>'
-cmd = f'sudo -u ec2-user bash -lc \"ls -t /home/ec2-user/data/{hub}/harvest/ | head -1\"'
-print(json.dumps({'commands': [cmd]}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 30 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
+sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/harvest/ | head -1"
 ```
 
 This returns the most recent directory name (format: `YYYYMMDD_HHMMSS-<hub>-OriginalRecord.avro`). Save this as `HARVEST_TIMESTAMP`.
@@ -833,45 +670,23 @@ Use `MappingEntry` — mapping only, no partner email. The partner summary email
 Use the harvest timestamp from Step 4:
 
 ```bash
-PARAMS=$(python3 -c "
-import json
-hub = '<hub>'
-harvest_ts = '<HARVEST_TIMESTAMP>'
-cmd = (
-    f'sudo -u ec2-user bash -lc \"cd /home/ec2-user/ingestion3 && '
-    f'SBT_OPTS=-Xmx12g sbt \\\\\"runMain dpla.ingestion3.entries.ingest.MappingEntry '
-    f'--output /home/ec2-user/data/ --conf /home/ec2-user/ingestion3-conf/i3.conf '
-    f'--name {hub} --input /home/ec2-user/data/{hub}/harvest/{harvest_ts}/ '
-    f'--sparkMaster local[*]\\\\\" '
-    f'> /home/ec2-user/data/{hub}-remap.log 2>&1 && echo REMAP_SUCCESS || echo REMAP_FAILED\"'
-)
-print(json.dumps({'commands': [cmd], 'executionTimeout': ['3600']}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 3600 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
-# Poll until Status=Success; check output for REMAP_SUCCESS
+sudo -u ec2-user bash -lc "
+  cd /home/ec2-user/ingestion3 &&
+  SBT_OPTS=-Xmx12g sbt \"runMain dpla.ingestion3.entries.ingest.MappingEntry \
+    --output /home/ec2-user/data/ \
+    --conf /home/ec2-user/ingestion3-conf/i3.conf \
+    --name <hub> \
+    --input /home/ec2-user/data/<hub>/harvest/<HARVEST_TIMESTAMP>/ \
+    --sparkMaster local[*]\" \
+  > /home/ec2-user/data/<hub>-remap.log 2>&1 && echo REMAP_SUCCESS || echo REMAP_FAILED
+"
 ```
 
 If `REMAP_FAILED`: post failure notification (see above) and stop.
 
 After completion, capture the mapping output timestamp:
 ```bash
-PARAMS=$(python3 -c "
-import json
-hub = '<hub>'
-cmd = f'sudo -u ec2-user bash -lc \"ls -t /home/ec2-user/data/{hub}/mapping/ | head -1\"'
-print(json.dumps({'commands': [cmd]}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 30 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
+sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/mapping/ | head -1"
 ```
 
 Save this as `MAPPING_TIMESTAMP`.
@@ -881,45 +696,23 @@ Save this as `MAPPING_TIMESTAMP`.
 Use the mapping timestamp from Step 5:
 
 ```bash
-PARAMS=$(python3 -c "
-import json
-hub = '<hub>'
-mapping_ts = '<MAPPING_TIMESTAMP>'
-cmd = (
-    f'sudo -u ec2-user bash -lc \"cd /home/ec2-user/ingestion3 && '
-    f'SBT_OPTS=-Xmx18g sbt \\\\\"runMain dpla.ingestion3.entries.ingest.EnrichEntry '
-    f'--output /home/ec2-user/data/ --conf /home/ec2-user/ingestion3-conf/i3.conf '
-    f'--name {hub} --input /home/ec2-user/data/{hub}/mapping/{mapping_ts}/ '
-    f'--sparkMaster local[*]\\\\\" '
-    f'> /home/ec2-user/data/{hub}-enrich.log 2>&1 && echo ENRICH_SUCCESS || echo ENRICH_FAILED\"'
-)
-print(json.dumps({'commands': [cmd], 'executionTimeout': ['7200']}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 7200 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
-# Poll until Status=Success; check output for ENRICH_SUCCESS
+sudo -u ec2-user bash -lc "
+  cd /home/ec2-user/ingestion3 &&
+  SBT_OPTS=-Xmx18g sbt \"runMain dpla.ingestion3.entries.ingest.EnrichEntry \
+    --output /home/ec2-user/data/ \
+    --conf /home/ec2-user/ingestion3-conf/i3.conf \
+    --name <hub> \
+    --input /home/ec2-user/data/<hub>/mapping/<MAPPING_TIMESTAMP>/ \
+    --sparkMaster local[*]\" \
+  > /home/ec2-user/data/<hub>-enrich.log 2>&1 && echo ENRICH_SUCCESS || echo ENRICH_FAILED
+"
 ```
 
 If `ENRICH_FAILED`: post failure notification (see above) and stop.
 
 After completion, capture the enrichment output timestamp:
 ```bash
-PARAMS=$(python3 -c "
-import json
-hub = '<hub>'
-cmd = f'sudo -u ec2-user bash -lc \"ls -t /home/ec2-user/data/{hub}/enrichment/ | head -1\"'
-print(json.dumps({'commands': [cmd]}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 30 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
+sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/enrichment/ | head -1"
 ```
 
 Save this as `ENRICH_TIMESTAMP`.
@@ -929,47 +722,27 @@ Save this as `ENRICH_TIMESTAMP`.
 Use the enrichment timestamp from Step 6:
 
 ```bash
-PARAMS=$(python3 -c "
-import json
-hub = '<hub>'
-enrich_ts = '<ENRICH_TIMESTAMP>'
-cmd = (
-    f'sudo -u ec2-user bash -lc \"cd /home/ec2-user/ingestion3 && '
-    f'SBT_OPTS=-Xmx12g sbt \\\\\"runMain dpla.ingestion3.entries.ingest.JsonlEntry '
-    f'--output /home/ec2-user/data/ --conf /home/ec2-user/ingestion3-conf/i3.conf '
-    f'--name {hub} --input /home/ec2-user/data/{hub}/enrichment/{enrich_ts}/ '
-    f'--sparkMaster local[1]\\\\\" '
-    f'> /home/ec2-user/data/{hub}-jsonl.log 2>&1 && echo JSONL_SUCCESS || echo JSONL_FAILED\"'
-)
-print(json.dumps({'commands': [cmd], 'executionTimeout': ['3600']}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 3600 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
-# Poll until Status=Success; check output for JSONL_SUCCESS
+sudo -u ec2-user bash -lc "
+  cd /home/ec2-user/ingestion3 &&
+  SBT_OPTS=-Xmx12g sbt \"runMain dpla.ingestion3.entries.ingest.JsonlEntry \
+    --output /home/ec2-user/data/ \
+    --conf /home/ec2-user/ingestion3-conf/i3.conf \
+    --name <hub> \
+    --input /home/ec2-user/data/<hub>/enrichment/<ENRICH_TIMESTAMP>/ \
+    --sparkMaster local[1]\" \
+  > /home/ec2-user/data/<hub>-jsonl.log 2>&1 && echo JSONL_SUCCESS || echo JSONL_FAILED
+"
 ```
 
 Note `local[1]` (single thread) — this is intentional for JSONL export.
+
+Use `--timeout-seconds 3600` on the SSM send-command (JSONL export can take 5–30 minutes).
 
 If `JSONL_FAILED`: post failure notification (see above) and stop.
 
 After completion, capture the JSONL output timestamp:
 ```bash
-PARAMS=$(python3 -c "
-import json
-hub = '<hub>'
-cmd = f'sudo -u ec2-user bash -lc \"ls -t /home/ec2-user/data/{hub}/jsonl/ | head -1\"'
-print(json.dumps({'commands': [cmd]}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 30 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
+sudo -u ec2-user bash -lc "ls -t /home/ec2-user/data/<hub>/jsonl/ | head -1"
 ```
 
 Save this as `JSONL_TIMESTAMP`.
@@ -979,28 +752,15 @@ Save this as `JSONL_TIMESTAMP`.
 Use the JSONL timestamp from Step 7:
 
 ```bash
-PARAMS=$(python3 -c "
-import json
-hub = '<hub>'
-jsonl_ts = '<JSONL_TIMESTAMP>'
-cmd = (
-    f'sudo -u ec2-user bash -lc \"'
-    f'aws s3 sync /home/ec2-user/data/{hub}/jsonl/{jsonl_ts}/ '
-    f's3://dpla-master-dataset/{hub}/jsonl/{jsonl_ts}/ '
-    f'&& echo SYNC_SUCCESS || echo SYNC_FAILED\"'
-)
-print(json.dumps({'commands': [cmd], 'executionTimeout': ['3600']}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 3600 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
-# Poll until Status=Success; check output for SYNC_SUCCESS
+sudo -u ec2-user bash -lc "
+  aws s3 sync \
+    /home/ec2-user/data/<hub>/jsonl/<JSONL_TIMESTAMP>/ \
+    s3://dpla-master-dataset/<hub>/jsonl/<JSONL_TIMESTAMP>/ \
+  && echo SYNC_SUCCESS || echo SYNC_FAILED
+"
 ```
 
-S3 sync is usually fast but can take 10–20 minutes for large hubs.
+Use `--timeout-seconds 3600` on the SSM send-command (S3 sync is usually fast but can take 10–20 minutes for large hubs).
 
 This adds a new timestamped snapshot. It does **not** overwrite or delete any prior snapshots. If `SYNC_FAILED`: post failure notification (see above) and stop.
 
@@ -1051,26 +811,14 @@ curl -s -X POST "https://slack.com/api/chat.postMessage" \
 Only run this if the safety check in Step 9 passed (printed `OK`). This sends the mapping summary and logs to the hub contact via AWS SES, from `DPLA Bot <tech@dp.la>`.
 
 ```bash
-PARAMS=$(python3 -c "
-import json
-hub = '<hub>'
-mapping_ts = '<MAPPING_TIMESTAMP>'
-cmd = (
-    f'sudo -u ec2-user bash -lc \"cd /home/ec2-user/ingestion3 && '
-    f'SBT_OPTS=-Xmx4g sbt \\\\\"runMain dpla.ingestion3.utils.Emailer '
-    f'/home/ec2-user/data/{hub}/mapping/{mapping_ts}/ {hub} '
-    f'/home/ec2-user/ingestion3-conf/i3.conf\\\\\" '
-    f'> /home/ec2-user/data/{hub}-email.log 2>&1 && echo EMAIL_SUCCESS || echo EMAIL_FAILED\"'
-)
-print(json.dumps({'commands': [cmd], 'executionTimeout': ['600']}))
-")
-CMDID=$(aws ssm send-command \
-  --instance-ids i-0a0def8581efef783 \
-  --document-name "AWS-RunShellScript" \
-  --timeout-seconds 600 \
-  --parameters "$PARAMS" \
-  --query 'Command.CommandId' --output text)
-# Poll until Status=Success; check output for EMAIL_SUCCESS
+sudo -u ec2-user bash -lc "
+  cd /home/ec2-user/ingestion3 &&
+  SBT_OPTS=-Xmx4g sbt \"runMain dpla.ingestion3.utils.Emailer \
+    /home/ec2-user/data/<hub>/mapping/<MAPPING_TIMESTAMP>/ \
+    <hub> \
+    /home/ec2-user/ingestion3-conf/i3.conf\" \
+  > /home/ec2-user/data/<hub>-email.log 2>&1 && echo EMAIL_SUCCESS || echo EMAIL_FAILED
+"
 ```
 
 #### Stop EC2 (Manual)
@@ -1129,8 +877,8 @@ When the user says "run [month] ingests" (e.g. "run February ingests", "run Marc
 import os, re, sys
 from datetime import datetime
 
-CONF = os.environ.get("I3_CONF", "/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf")
-EC2_BLOCKED_HUBS = {"maryland", "getty", "hathi"}
+CONF = os.environ.get("I3_CONF", "/Users/dominic/github/ingestion3-conf/i3.conf")
+EC2_BLOCKED_HUBS = {"maryland", "getty"}
 MONTH_NAMES = {
     "january":1,"february":2,"march":3,"april":4,"may":5,"june":6,
     "july":7,"august":8,"september":9,"october":10,"november":11,"december":12
@@ -1567,7 +1315,7 @@ Smaller hubs (file, localoai with small collections) will be faster than SD. Oth
 1. Check the log: `tail -30 /home/ec2-user/data/<hub>-harvest.log`
 2. For `localoai`: verify OAI endpoint is up and reachable from EC2
 3. For `api`: verify the API endpoint with a longer curl timeout (60s+)
-4. For maryland, getty, and hathi: EC2 harvest is blocked — stop, inform the user, and ask whether to request an IP allowlist or run the harvest locally (see **Local Harvest (EC2-Blocked Hubs)** section)
+4. For maryland and getty: EC2 harvest is blocked — run harvest locally instead
 5. **Do NOT stop the EC2 instance** until investigated
 
 ### Mapping / Enrichment / JSONL Failure
@@ -1614,5 +1362,5 @@ The EC2 now has the latest ingestion3 (pulled via HTTPS from `https://github.com
 - Keep the EC2 running until verification is complete, then stop to save cost.
 - Do not modify `i3.conf`, `.env`, or Scala source code unless explicitly requested. Exception: for `community-webs`, Step CW4 updates `community-webs.harvest.endpoint` in `i3.conf` as part of the required ingest flow.
 - Always refresh ingestion3 at the start of each session (Step 3a) using `git fetch + reset --hard` — the EC2 has no auto-update and can drift behind main, causing failures (e.g. missing entry points). Never use `git pull`; local commits can accumulate and cause divergent-branch failures.
-- Always run Step 3c (JAR freshness check) after pulling. A `git reset --hard` updates the source but not the compiled JAR — running an ingest on stale code is silent and dangerous (wrong behavior, no error).
 - For multi-hub batches: run all harvests/ingests first, then request index rebuild separately.
+- Memory system (Steps 0 and 6): Persistent notes are stored in `~/.claude/memory/hub-ingest-memory.md` outside the repository. Always review hub notes at Step 0 before proceeding — they may affect how the ingest should be run. Update the file after any notable run in Step 6. Do not create entries for routine successful runs.
