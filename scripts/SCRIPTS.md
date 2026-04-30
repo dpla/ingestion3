@@ -150,6 +150,23 @@ Runs the complete ingestion pipeline for a hub:
 ./scripts/ingest.sh maryland --harvest-only   # Only harvest
 ```
 
+#### IP-restricted hubs (TAILSCALE_EXIT_NODE)
+
+Some partners whitelist specific source IPs on their OAI endpoints. For those hubs, `ingest.sh` automatically routes harvest traffic through a Tailscale exit node that holds the whitelisted IP. The exit node is set before the harvest step and cleared (and tailscaled stopped) immediately after, so downstream steps (mapping, enrichment, S3 sync) use normal routing.
+
+The exit node is configured per-provider in a `case` block near the top of `ingest.sh`:
+
+```bash
+case "$PROVIDER" in
+    njde) TAILSCALE_EXIT_NODE="100.82.233.38" ;;  # main-vpc; IP whitelisted by Rutgers
+esac
+```
+
+**Prerequisites** for IP-restricted hubs:
+- Tailscale must be installed on the EC2 (`tailscale` command on PATH)
+- The exit node machine (e.g. `main-vpc` at `100.82.233.38`) must have exit node routes advertised and approved in the Tailscale admin console
+- `ec2-user` must have passwordless sudo for `systemctl` (standard on the ingest EC2)
+
 ### auto-ingest.sh - Automated Monthly Ingestion
 
 Processes hubs scheduled for the current month:

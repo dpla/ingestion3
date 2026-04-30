@@ -123,8 +123,9 @@ fi
 INGEST_PROVIDER="$PROVIDER"
 TRAP_HANDLED=false  # set to true when we handle notification+status explicitly before exit
 trap 'err=$?
-     stop_heartbeat 2>/dev/null || true
      [ -n "${TAILSCALE_EXIT_NODE:-}" ] && tailscale set --exit-node= 2>/dev/null || true
+     [ -n "${TAILSCALE_EXIT_NODE:-}" ] && sudo systemctl stop tailscaled 2>/dev/null || true
+     stop_heartbeat 2>/dev/null || true
      if [[ $err -ne 0 && -n "${INGEST_PROVIDER:-}" && "$TRAP_HANDLED" != "true" ]]; then
          slack_notify ":x: *$INGEST_PROVIDER ingest FAILED* (exit $err)"
          write_hub_status "$INGEST_PROVIDER" failed --error="Exit $err" || true
@@ -168,6 +169,13 @@ if [ "$SKIP_HARVEST" = false ] && [[ -z "$RESUME_FROM" ]]; then
 
     if [ -n "$TAILSCALE_EXIT_NODE" ]; then
         require_command tailscale "Tailscale is required for $PROVIDER (endpoint is IP-restricted) but not installed"
+        log_info "Starting tailscaled for $PROVIDER harvest"
+        sudo systemctl start tailscaled \
+            || die "Failed to start tailscaled — required for $PROVIDER endpoint routing"
+        # Wait up to 30s for Tailscale to connect before setting exit node
+        for _i in $(seq 1 30); do tailscale status &>/dev/null && break; sleep 1; done
+        tailscale status &>/dev/null \
+            || die "Tailscale failed to connect within 30s"
         log_info "Setting Tailscale exit node $TAILSCALE_EXIT_NODE for $PROVIDER harvest"
         tailscale set --exit-node="$TAILSCALE_EXIT_NODE" \
             || die "Failed to set Tailscale exit node — $PROVIDER endpoint requires whitelisted IP"
@@ -180,11 +188,12 @@ if [ "$SKIP_HARVEST" = false ] && [[ -z "$RESUME_FROM" ]]; then
         --name="$PROVIDER" \
         --sparkMaster="$SPARK_MASTER" 2>&1 | tee "$HARVEST_LOG"
 
-    stop_heartbeat
     if [ -n "$TAILSCALE_EXIT_NODE" ]; then
-        log_info "Clearing Tailscale exit node after $PROVIDER harvest"
+        log_info "Clearing Tailscale exit node and stopping tailscaled after $PROVIDER harvest"
         tailscale set --exit-node= || log_warn "Failed to clear Tailscale exit node"
+        sudo systemctl stop tailscaled || log_warn "Failed to stop tailscaled"
     fi
+    stop_heartbeat
 
     HARVEST_TS_DIR=$(find_latest_data "$PROVIDER" harvest)
     log_info "Harvest complete: $(basename "$HARVEST_TS_DIR")"
