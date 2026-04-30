@@ -38,7 +38,7 @@ S3_DELIVERY_BUCKET = "dpla-hub-si"
 DATA_ROOT          = "/home/ec2-user/data/smithsonian"
 INGEST_DIR         = "/home/ec2-user/ingestion3"
 HARVEST_LOG        = "/home/ec2-user/data/si-harvest.log"
-PIPELINE_LOG       = "/home/ec2-user/data/si-pipeline.log"
+PIPELINE_LOG       = "/home/ec2-user/data/smithsonian-ingest.log"
 
 DOWNLOAD_TIMEOUT_S  = 1800   # 30 min — 5 GB at reasonable speed
 PREPROCESS_TIMEOUT_S = 1200  # 20 min — NMNHBOTANY ~6 min, total ~10–15 min
@@ -102,9 +102,15 @@ def ssm_bg(shell_cmd):
     """
     Launch a long-running command on the EC2 box in the background via nohup.
     Returns immediately — the process outlives the SSM session.
+
+    Base64-encodes the inner command to avoid quoting issues (same approach as
+    ssm_run). The outer nohup wrapper decodes and execs it in a login shell.
     """
-    # Wrap the command in nohup so it survives the SSM shell exit.
-    bg_wrapper = f"nohup bash -lc {repr(shell_cmd)} </dev/null >/dev/null 2>&1 & disown; echo launched"
+    inner_b64 = base64.b64encode(shell_cmd.encode("utf-8")).decode("ascii")
+    bg_wrapper = (
+        f"nohup bash -lc 'echo {inner_b64} | base64 -d | bash -l' "
+        f"</dev/null >/dev/null 2>&1 & disown; echo launched"
+    )
     result = ssm_run(bg_wrapper, timeout_seconds=20)
     if "launched" not in result:
         raise RuntimeError(f"Background launch may have failed. SSM output: {result!r}")
