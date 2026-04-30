@@ -2,23 +2,26 @@
 """
 Smithsonian ingest orchestrator.
 
-Runs the full Smithsonian ingest pipeline end-to-end with human review
-checkpoints after preprocessing and harvest.
+Runs the full Smithsonian ingest pipeline end-to-end with optional human
+review checkpoints after preprocessing, harvest, mapping, and pipeline.
 
 Stages:
     1  download    aws s3 sync from dpla-hub-si
-    2  preprocess  fix-si.sh                             → HUMAN CHECKPOINT
-    3  harvest     harvest.sh smithsonian                → HUMAN CHECKPOINT
-    4  pipeline    ingest.sh smithsonian --skip-harvest  → HUMAN CHECKPOINT
+    2  preprocess  fix-si.sh                             → CHECKPOINT (if not --auto)
+    3  harvest     harvest.sh smithsonian                → CHECKPOINT (if not --auto)
+    4  mapping     ingest.sh smithsonian --mapping-only  → CHECKPOINT (if not --auto)
+    5  pipeline    ingest.sh smithsonian --resume-from enrichment
 
 Stages already complete are skipped automatically. Use --start-at to resume
 from a specific stage after a failure.
 
 Usage:
-    python3 run_smithsonian.py
-    python3 run_smithsonian.py --date 2026-04-03
-    python3 run_smithsonian.py --start-at harvest
-    python3 run_smithsonian.py --start-at pipeline
+    python3 launch_smithsonian.py                        # human checkpoints (default)
+    python3 launch_smithsonian.py --auto                 # no checkpoints, full run
+    python3 launch_smithsonian.py --date 2026-04-03
+    python3 launch_smithsonian.py --start-at harvest
+    python3 launch_smithsonian.py --start-at mapping
+    python3 launch_smithsonian.py --start-at pipeline
 """
 
 import argparse
@@ -40,12 +43,13 @@ INGEST_DIR         = "/home/ec2-user/ingestion3"
 HARVEST_LOG        = "/home/ec2-user/data/si-harvest.log"
 PIPELINE_LOG       = "/home/ec2-user/data/smithsonian-ingest.log"
 
-DOWNLOAD_TIMEOUT_S  = 1800   # 30 min — 5 GB at reasonable speed
-PREPROCESS_TIMEOUT_S = 1200  # 20 min — NMNHBOTANY ~6 min, total ~10–15 min
-POLL_INTERVAL_S     = 30     # seconds between status polls for harvest/pipeline
-LOG_TAIL_LINES      = 20
+DOWNLOAD_TIMEOUT_S   = 1800   # 30 min
+PREPROCESS_TIMEOUT_S = 1200   # 20 min
+MAPPING_TIMEOUT_S    = 3600   # 60 min — 7.8M records takes ~35–40 min
+POLL_INTERVAL_S      = 30
+LOG_TAIL_LINES       = 20
 
-STAGE_ORDER = ["download", "preprocess", "harvest", "pipeline"]
+STAGE_ORDER = ["download", "preprocess", "harvest", "mapping", "pipeline"]
 
 S3_DATE_RE = re.compile(r"PRE\s+(\d{4}-\d{2}-\d{2})/")
 
@@ -59,7 +63,6 @@ def _aws(args):
 
 
 def ssm_run(shell_cmd, timeout_seconds=30, poll_seconds=4):
-    """Run a shell command on the EC2 box via SSM; block until it completes."""
     encoded = base64.b64encode(shell_cmd.encode("utf-8")).decode("ascii")
     wrapped = f"sudo -u ec2-user bash -lc 'echo {encoded} | base64 -d | bash -l'"
     params  = json.dumps({"commands": [wrapped]})
@@ -99,13 +102,6 @@ def ssm_run(shell_cmd, timeout_seconds=30, poll_seconds=4):
 
 
 def ssm_bg(shell_cmd):
-    """
-    Launch a long-running command on the EC2 box in the background via nohup.
-    Returns immediately — the process outlives the SSM session.
-
-    Base64-encodes the inner command to avoid quoting issues (same approach as
-    ssm_run). The outer nohup wrapper decodes and execs it in a login shell.
-    """
     inner_b64 = base64.b64encode(shell_cmd.encode("utf-8")).decode("ascii")
     bg_wrapper = (
         f"nohup bash -lc 'echo {inner_b64} | base64 -d | bash -l' "
@@ -137,17 +133,17 @@ def find_latest_delivery():
 def banner(msg):
     print(f"\n{'─' * 64}\n  {msg}\n{'─' * 64}")
 
-
 def info(msg=""):
     print(f"  {msg}")
-
 
 def err(msg):
     print(f"\n  [ERROR] {msg}", file=sys.stderr)
 
-
-def checkpoint_prompt(label):
-    """Block until the operator types y/yes or n/no."""
+def checkpoint_prompt(label, auto=False):
+    """Block until the operator types y/yes or n/no. Skipped in --auto mode."""
+    if auto:
+        print(f"\n  [AUTO] Checkpoint '{label}' — continuing automatically.")
+        return True
     print(f"\n{'═' * 64}")
     print(f"  ✋  HUMAN CHECKPOINT — {label}")
     print(f"{'═' * 64}")
@@ -167,17 +163,12 @@ def checkpoint_prompt(label):
 
 # ── polling loop ──────────────────────────────────────────────────────────────
 def poll_until_done(check_fn, log_fn, interval=POLL_INTERVAL_S):
-    """
-    Call check_fn() every `interval` seconds.
-    check_fn() returns None while running, or a result string when done.
-    log_fn() returns a string snippet to show in the spinner line.
-    """
     spin = ["|", "/", "─", "\\"]
     i    = 0
     while True:
         result = check_fn()
         if result is not None:
-            print()  # end spinner line
+            print()
             return result
         snippet = (log_fn() or "").strip().splitlines()
         last    = snippet[-1] if snippet else ""
@@ -188,7 +179,7 @@ def poll_until_done(check_fn, log_fn, interval=POLL_INTERVAL_S):
 
 # ── Stage 1: Download ─────────────────────────────────────────────────────────
 def run_download(date):
-    banner(f"Stage 1/4 — Download  s3://{S3_DELIVERY_BUCKET}/{date}/")
+    banner(f"Stage 1/5 — Download  s3://{S3_DELIVERY_BUCKET}/{date}/")
     dest = f"{DATA_ROOT}/originalRecords/{date}"
 
     count_str = ssm_run(
@@ -201,12 +192,10 @@ def run_download(date):
 
     info(f"Syncing s3://{S3_DELIVERY_BUCKET}/{date}/ → {dest}/")
     info(f"(timeout {DOWNLOAD_TIMEOUT_S // 60} min)")
-    cmd = (
-        f"aws s3 sync s3://{S3_DELIVERY_BUCKET}/{date}/ {dest}/ "
-        f"--profile {AWS_PROFILE}"
+    ssm_run(
+        f"aws s3 sync s3://{S3_DELIVERY_BUCKET}/{date}/ {dest}/ --profile {AWS_PROFILE}",
+        timeout_seconds=DOWNLOAD_TIMEOUT_S, poll_seconds=15,
     )
-    ssm_run(cmd, timeout_seconds=DOWNLOAD_TIMEOUT_S, poll_seconds=15)
-
     count_str = ssm_run(
         f'find "{dest}" -maxdepth 1 -name "*.xml.gz" -type f 2>/dev/null | wc -l'
     ).strip()
@@ -216,7 +205,7 @@ def run_download(date):
 
 # ── Stage 2: Preprocess ───────────────────────────────────────────────────────
 def run_preprocess(date):
-    banner("Stage 2/4 — Preprocess  (fix-si.sh)")
+    banner("Stage 2/5 — Preprocess  (fix-si.sh)")
     dest   = f"{DATA_ROOT}/originalRecords/{date}"
     backup = f"{dest}/original_backup"
 
@@ -229,9 +218,10 @@ def run_preprocess(date):
         return
 
     info("Running fix-si.sh inline (this takes ~10–15 min) …")
-    cmd = f"cd {INGEST_DIR} && ./scripts/harvest/fix-si.sh {dest}"
-    ssm_run(cmd, timeout_seconds=PREPROCESS_TIMEOUT_S, poll_seconds=15)
-
+    ssm_run(
+        f"cd {INGEST_DIR} && ./scripts/harvest/fix-si.sh {dest}",
+        timeout_seconds=PREPROCESS_TIMEOUT_S, poll_seconds=15,
+    )
     count = ssm_run(
         f'find "{backup}" -maxdepth 1 -name "*.xml.gz" -type f 2>/dev/null | wc -l'
     ).strip()
@@ -264,9 +254,8 @@ def preprocess_checkpoint(date):
 
 # ── Stage 3: Harvest ──────────────────────────────────────────────────────────
 def run_harvest():
-    banner("Stage 3/4 — Harvest  (harvest.sh smithsonian)")
+    banner("Stage 3/5 — Harvest  (harvest.sh smithsonian)")
 
-    # If _SUCCESS already exists, skip.
     check = ssm_run(
         f'LATEST=$(ls -1dt {DATA_ROOT}/harvest/*/ 2>/dev/null | head -1 | sed "s:/$::")\n'
         f'[ -f "$LATEST/_SUCCESS" ] && echo "done:$LATEST" || echo pending'
@@ -279,32 +268,22 @@ def run_harvest():
     info(f"Log: {HARVEST_LOG}")
     info(f"Polling every {POLL_INTERVAL_S}s. Typically 3–4 hours.\n")
 
-    cmd = f"cd {INGEST_DIR} && ./scripts/harvest.sh smithsonian > {HARVEST_LOG} 2>&1"
-    ssm_bg(cmd)
+    ssm_bg(f"cd {INGEST_DIR} && ./scripts/harvest.sh smithsonian > {HARVEST_LOG} 2>&1")
 
     def check_fn():
         out = ssm_run(
             f'LATEST=$(ls -1dt {DATA_ROOT}/harvest/*/ 2>/dev/null | head -1 | sed "s:/$::")\n'
             f'RUNNING=$(pgrep -af "harvest.sh smithsonian" || true)\n'
-            f'if [ -f "$LATEST/_SUCCESS" ]; then\n'
-            f'  echo "done:$LATEST"\n'
-            f'elif [ -z "$RUNNING" ] && [ -n "$LATEST" ]; then\n'
-            f'  echo "failed:$LATEST"\n'
-            f'else\n'
-            f'  echo "running"\n'
-            f'fi'
+            f'if [ -f "$LATEST/_SUCCESS" ]; then echo "done:$LATEST"\n'
+            f'elif [ -z "$RUNNING" ] && [ -n "$LATEST" ]; then echo "failed:$LATEST"\n'
+            f'else echo "running"; fi'
         ).strip()
-        if out.startswith("done:") or out.startswith("failed:"):
-            return out
-        return None
+        return out if out.startswith("done:") or out.startswith("failed:") else None
 
-    def log_fn():
-        return ssm_run(f'tail -2 {HARVEST_LOG} 2>/dev/null || true')
-
-    result = poll_until_done(check_fn, log_fn)
+    result = poll_until_done(check_fn, lambda: ssm_run(f'tail -2 {HARVEST_LOG} 2>/dev/null || true'))
     if result.startswith("failed:"):
-        err(f"Harvest process exited without _SUCCESS at: {result[7:]}")
-        err(f"Check {HARVEST_LOG} for details. Re-run with --start-at harvest to retry.")
+        err(f"Harvest exited without _SUCCESS at: {result[7:]}")
+        err(f"Check {HARVEST_LOG}. Re-run with --start-at harvest to retry.")
         sys.exit(1)
 
 
@@ -333,43 +312,86 @@ def harvest_checkpoint():
     info("  • No ERROR / exception lines in the log tail above")
 
 
-# ── Stage 4: Pipeline ─────────────────────────────────────────────────────────
-def run_pipeline():
-    banner("Stage 4/4 — Pipeline  (ingest.sh smithsonian --skip-harvest)")
+# ── Stage 4: Mapping ──────────────────────────────────────────────────────────
+def run_mapping():
+    banner("Stage 4/5 — Mapping  (ingest.sh smithsonian --mapping-only)")
 
-    info("Launching ingest.sh smithsonian --skip-harvest in background …")
+    check = ssm_run(
+        f'LATEST=$(ls -1dt {DATA_ROOT}/mapping/*/ 2>/dev/null | head -1 | sed "s:/$::")\n'
+        f'[ -f "$LATEST/_MANIFEST" ] && echo "done:$LATEST" || echo pending'
+    ).strip()
+    if check.startswith("done:"):
+        info(f"Mapping already complete (_MANIFEST found): {check[5:]}. Skipping.")
+        return
+
+    info("Running ingest.sh smithsonian --mapping-only (blocks until complete) …")
+    info(f"Log: {PIPELINE_LOG}")
+    info("Typically ~35–40 min for 7.8M records.\n")
+
+    ssm_run(
+        f"cd {INGEST_DIR} && ./scripts/ingest.sh smithsonian --mapping-only > {PIPELINE_LOG} 2>&1",
+        timeout_seconds=MAPPING_TIMEOUT_S, poll_seconds=30,
+    )
+
+    check = ssm_run(
+        f'LATEST=$(ls -1dt {DATA_ROOT}/mapping/*/ 2>/dev/null | head -1 | sed "s:/$::")\n'
+        f'[ -f "$LATEST/_MANIFEST" ] && echo "done:$LATEST" || echo failed'
+    ).strip()
+    if not check.startswith("done:"):
+        err(f"Mapping did not produce _MANIFEST. Check {PIPELINE_LOG}.")
+        err("Re-run with --start-at mapping to retry.")
+        sys.exit(1)
+
+
+def mapping_checkpoint():
+    out = ssm_run(
+        f'LATEST=$(ls -1dt {DATA_ROOT}/mapping/*/ 2>/dev/null | head -1 | sed "s:/$::")\n'
+        f'echo "path=$LATEST"\n'
+        f'[ -f "$LATEST/_MANIFEST" ] && grep -i "record count" "$LATEST/_MANIFEST" | head -1 || true'
+    ).strip()
+    log = ssm_run(f'tail -{LOG_TAIL_LINES} {PIPELINE_LOG} 2>/dev/null || echo "(no log)"')
+
+    info()
+    info("Mapping summary:")
+    for line in out.splitlines():
+        info(f"  {line}")
+    info()
+    info(f"Log tail (last {LOG_TAIL_LINES} lines of {PIPELINE_LOG}):")
+    for line in log.strip().splitlines():
+        info(f"  {line}")
+    info()
+    info("Things to verify before continuing:")
+    info("  • Record count matches harvest count (should be 1:1)")
+    info("  • No ERROR lines in the log tail above")
+
+
+# ── Stage 5: Pipeline ─────────────────────────────────────────────────────────
+def run_pipeline():
+    banner("Stage 5/5 — Pipeline  (ingest.sh smithsonian --resume-from enrichment)")
+
+    info("Launching ingest.sh smithsonian --resume-from enrichment in background …")
     info(f"Log: {PIPELINE_LOG}")
     info(f"Polling every {POLL_INTERVAL_S}s. Typically 1–2 hours.\n")
 
-    cmd = (
+    ssm_bg(
         f"cd {INGEST_DIR} && "
-        f"./scripts/ingest.sh smithsonian --skip-harvest > {PIPELINE_LOG} 2>&1"
+        f"./scripts/ingest.sh smithsonian --resume-from enrichment > {PIPELINE_LOG} 2>&1"
     )
-    ssm_bg(cmd)
 
     def check_fn():
         out = ssm_run(
             f'LATEST=$(ls -1dt {DATA_ROOT}/jsonl/*/ 2>/dev/null | head -1 | sed "s:/$::")\n'
             f'RUNNING=$(pgrep -af "ingest.sh smithsonian" || true)\n'
-            f'if [ -f "$LATEST/_SUCCESS" ]; then\n'
-            f'  echo "done:$LATEST"\n'
-            f'elif [ -z "$RUNNING" ]; then\n'
-            f'  echo "failed"\n'
-            f'else\n'
-            f'  echo "running"\n'
-            f'fi'
+            f'if [ -f "$LATEST/_SUCCESS" ]; then echo "done:$LATEST"\n'
+            f'elif [ -z "$RUNNING" ]; then echo "failed"\n'
+            f'else echo "running"; fi'
         ).strip()
-        if out.startswith("done:") or out == "failed":
-            return out
-        return None
+        return out if out.startswith("done:") or out == "failed" else None
 
-    def log_fn():
-        return ssm_run(f'tail -2 {PIPELINE_LOG} 2>/dev/null || true')
-
-    result = poll_until_done(check_fn, log_fn)
+    result = poll_until_done(check_fn, lambda: ssm_run(f'tail -2 {PIPELINE_LOG} 2>/dev/null || true'))
     if result == "failed":
-        err("Pipeline process exited without jsonl/_SUCCESS.")
-        err(f"Check {PIPELINE_LOG} for details. Re-run with --start-at pipeline to retry.")
+        err("Pipeline exited without jsonl/_SUCCESS.")
+        err(f"Check {PIPELINE_LOG}. Re-run with --start-at pipeline to retry.")
         sys.exit(1)
 
 
@@ -400,18 +422,20 @@ def pipeline_checkpoint():
 # ── main ──────────────────────────────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(
-        description="Smithsonian ingest orchestrator — fully automated with human checkpoints."
+        description="Smithsonian ingest orchestrator — automated with optional human checkpoints."
     )
-    parser.add_argument(
-        "--date",
-        help="Delivery date YYYY-MM-DD (default: latest in s3://dpla-hub-si/)",
-    )
+    parser.add_argument("--date", help="Delivery date YYYY-MM-DD (default: latest in s3://dpla-hub-si/)")
     parser.add_argument(
         "--start-at",
         choices=STAGE_ORDER,
         default="download",
         metavar="STAGE",
         help=f"Resume from this stage. Choices: {', '.join(STAGE_ORDER)}. Default: download",
+    )
+    parser.add_argument(
+        "--auto",
+        action="store_true",
+        help="Skip all human checkpoints and run straight through.",
     )
     args = parser.parse_args()
 
@@ -425,34 +449,38 @@ def main():
         sys.exit(f"Invalid --date {date!r}. Use YYYY-MM-DD.")
 
     start_idx = STAGE_ORDER.index(args.start_at)
+    mode = "automatic (no checkpoints)" if args.auto else "interactive (human checkpoints)"
 
     print(f"\n  Smithsonian Ingest Orchestrator")
     print(f"  Delivery : {date}")
     print(f"  Start at : {args.start_at}")
+    print(f"  Mode     : {mode}")
 
-    # ── 1. Download ───────────────────────────────────────────────────────────
     if start_idx <= STAGE_ORDER.index("download"):
         run_download(date)
 
-    # ── 2. Preprocess + checkpoint ────────────────────────────────────────────
     if start_idx <= STAGE_ORDER.index("preprocess"):
         run_preprocess(date)
         preprocess_checkpoint(date)
-        if not checkpoint_prompt("after preprocessing — verify file counts and conf endpoint"):
+        if not checkpoint_prompt("after preprocessing — verify file counts and conf endpoint", auto=args.auto):
             sys.exit(0)
 
-    # ── 3. Harvest + checkpoint ───────────────────────────────────────────────
     if start_idx <= STAGE_ORDER.index("harvest"):
         run_harvest()
         harvest_checkpoint()
-        if not checkpoint_prompt("after harvest — verify record count and log"):
+        if not checkpoint_prompt("after harvest — verify record count and log", auto=args.auto):
             sys.exit(0)
 
-    # ── 4. Pipeline + checkpoint ──────────────────────────────────────────────
+    if start_idx <= STAGE_ORDER.index("mapping"):
+        run_mapping()
+        mapping_checkpoint()
+        if not checkpoint_prompt("after mapping — verify 1:1 record count with harvest", auto=args.auto):
+            sys.exit(0)
+
     if start_idx <= STAGE_ORDER.index("pipeline"):
         run_pipeline()
         pipeline_checkpoint()
-        if not checkpoint_prompt("after pipeline — verify jsonl output and S3 sync"):
+        if not checkpoint_prompt("after pipeline — verify jsonl output and S3 sync", auto=args.auto):
             sys.exit(0)
 
     print("\n  ✅  All stages complete. Smithsonian ingest done.\n")
