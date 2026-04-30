@@ -195,6 +195,7 @@ if [ -n "$LATEST" ]; then
   echo "path=$LATEST"
   echo "success=$([ -f "$LATEST/_SUCCESS" ] && echo yes || echo no)"
   echo "mtime=$(stat -c '%y' "$LATEST" 2>/dev/null | cut -d'.' -f1)"
+  [ -f "$LATEST/_MANIFEST" ] && echo "manifest=$(grep -i 'record count' "$LATEST/_MANIFEST" 2>/dev/null | head -1 | tr -d '\\n')"
 else
   echo "exists=no"
 fi
@@ -205,6 +206,7 @@ if [ -n "$LATEST" ]; then
   echo "path=$LATEST"
   echo "success=$([ -f "$LATEST/_SUCCESS" ] && echo yes || echo no)"
   echo "mtime=$(stat -c '%y' "$LATEST" 2>/dev/null | cut -d'.' -f1)"
+  [ -f "$LATEST/_MANIFEST" ] && echo "manifest=$(grep -i 'record count' "$LATEST/_MANIFEST" 2>/dev/null | head -1 | tr -d '\\n')"
 else
   echo "exists=no"
 fi
@@ -369,16 +371,36 @@ def analyze(date, sections):
     sub_done_total = sum(1 for x in (mapping, enrichment, jsonl) if x.get("success") == "yes")
     sub_stale = sub_done_total - sub_done_current
 
+    # Build a per-substage record count string for any completed sub-stages,
+    # e.g. "mapping: 7,845,472 | enrichment: 7,845,201 | jsonl: pending"
+    def substage_counts():
+        parts = []
+        for label, stage_dict in (("mapping", mapping), ("enrichment", enrichment), ("jsonl", jsonl)):
+            if stage_belongs_to_current_run(stage_dict):
+                count = parse_record_count(stage_dict.get("manifest", ""))
+                parts.append(f"{label}: {count:,}" if count else f"{label}: done (no manifest)")
+            elif running_pipeline:
+                parts.append(f"{label}: in progress" if not parts else f"{label}: pending")
+        return " | ".join(parts) if parts else ""
+
     if running_pipeline:
         s = RUNNING
-        d = f"ingest.sh smithsonian --skip-harvest in flight ({sub_done_current}/3 substages from current run)"
+        counts = substage_counts()
+        d = f"in flight ({sub_done_current}/3 substages done)"
+        if counts:
+            d += f" — {counts}"
     elif sub_done_current == 3:
         s = DONE
-        records = jsonl.get("manifest", "")
-        d = f"all 3 substages complete{' — ' + records if records else ''}"
+        counts = substage_counts()
+        d = f"all 3 substages complete"
+        if counts:
+            d += f" — {counts}"
     elif sub_done_current > 0:
         s = WARN
+        counts = substage_counts()
         d = f"only {sub_done_current}/3 substages from current run done"
+        if counts:
+            d += f" — {counts}"
     elif sub_stale > 0:
         # All "done" sub-stages are from a previous run — for THIS delivery,
         # the pipeline hasn't started yet.
