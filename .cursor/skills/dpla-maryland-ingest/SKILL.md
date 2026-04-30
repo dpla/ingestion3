@@ -135,7 +135,6 @@ If .env is missing, create it:
 DPLA_DATA=/home/ec2-user/data/
 I3_CONF=/home/ec2-user/ingestion3-conf/i3.conf
 SLACK_WEBHOOK=<webhook from local ~/.claude/secrets or ingestion3/.env>
-SLACK_ALERT_USER_ID=UQYFCAVEC
 JAVA_HOME=/home/ec2-user/.local/share/mise/installs/java/temurin-11.0.29+7
 ```
 
