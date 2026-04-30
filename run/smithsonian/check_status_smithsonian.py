@@ -42,7 +42,7 @@ HUB_S3_NAME = "smithsonian"
 
 DATA_ROOT = "/home/ec2-user/data/smithsonian"
 HARVEST_LOG = "/home/ec2-user/data/si-harvest.log"
-PIPELINE_LOG = "/home/ec2-user/data/si-pipeline.log"
+PIPELINE_LOG = "/home/ec2-user/data/smithsonian-ingest.log"
 CONF_PATH_BOX = "/home/ec2-user/ingestion3-conf/i3.conf"
 
 S3_DATE_RE = re.compile(r"PRE\s+(\d{4}-\d{2}-\d{2})/")
