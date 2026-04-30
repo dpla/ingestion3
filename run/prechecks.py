@@ -347,6 +347,20 @@ fi
     bad("Not enough disk — clean up /home/ec2-user/data/ before ingesting.")
     return False
 
+# Hubs that need a non-standard workflow THIS CYCLE. When prechecks runs against
+# one of these, it prints a banner up front saying "the standard checks don't
+# fully apply — see the runbook." The standard checks still run for box state,
+# but the operator is warned that their pass/fail may not be the whole story.
+#
+# Edit this set as the month's special-case list changes.
+CURRENT_SPECIAL_HUBS = {
+    "nara",
+    "smithsonian",
+    "si",                # smithsonian's conf-side name
+    "community-webs",
+    "illinois",
+}
+
 # Known special-case hubs that need extra steps beyond the standard
 # launch_ingest.py flow. Annotations get printed alongside the --todo list
 # so the operator knows at a glance which hubs are quick wins vs. multi-hour
@@ -465,6 +479,33 @@ def print_todo_list(month):
         for h in on_hold:
             print(f"    {h['hub']:<20} {h['harvest_type']:<10}   {h['status']}")
         print()
+
+
+def print_special_case_banner(hub):
+    """If `hub` is in CURRENT_SPECIAL_HUBS, print a banner up front warning
+    the operator that the standard prechecks don't fully apply. Returns True
+    if a banner was printed, False otherwise."""
+    if hub not in CURRENT_SPECIAL_HUBS:
+        return False
+    note = SPECIAL_CASE_NOTES.get(hub, "non-standard workflow required")
+    print()
+    print("=" * 70)
+    print(f"  ⚠  SPECIAL-CASE HUB: {hub}")
+    print("=" * 70)
+    print(f"  {note}")
+    print()
+    print("  Standard prechecks may show endpoint or repo-state results that")
+    print("  look wrong (e.g., dev-path endpoints, missing local data). That's")
+    print("  expected — this hub uses a custom workflow, not the standard")
+    print("  launch_ingest.py flow.")
+    print()
+    print("  Refer to the hub-specific runbook before launching:")
+    print("    - nara           → NARA delta-merge workflow (NaraMergeUtil)")
+    print("    - smithsonian/si → multi-step preprocessing (fix-si.sh)")
+    print("    - community-webs → SQLite -> JSONL/ZIP via community-webs-ingest.sh")
+    print("    - illinois       → VPN required, harvest runs locally on Mac")
+    print()
+    return True
 
 
 def lookup_hub_in_conf(hub, conf_path=CONF_PATH):
@@ -615,14 +656,92 @@ fi
     return False
 
 
+def _check_local_path_endpoint_current_month(path):
+    """For harvest.type='file' hubs: confirm the endpoint dir exists, has data,
+    AND has at least one file dated within the current YYYY-MM. Catches
+    'pointed at last month's preprocessed data, never updated' bugs."""
+    info(f"Endpoint: {path}")
+    info("Type:     file — checking for current-month data")
+
+    # Reject obvious dev paths first (Mac homedirs, /var/folders, etc.).
+    dev_path_patterns = [
+        (r"^/Users/",       "macOS user dir — almost certainly a developer's local path"),
+        (r"^/var/folders/", "macOS temp dir — leftover from someone's local testing run"),
+        (r"^/home/(?!ec2-user(/|$))", "Linux home dir for a non-ec2-user account"),
+        (r"^[A-Za-z]:[\\/]", "Windows path — definitely not the EC2 box"),
+        (r"^~",             "tilde-prefixed path that wasn't expanded by the conf reader"),
+    ]
+    for pattern, reason in dev_path_patterns:
+        if re.match(pattern, path):
+            bad("Endpoint looks like a developer's local path, not an EC2 path.")
+            info(f"Reason: {reason}")
+            return False
+
+    quoted = shlex.quote(path)
+    current_yyyy_mm = datetime.now().strftime("%Y-%m")
+    cmd = f"""
+if [ ! -d {quoted} ]; then
+  echo "VERDICT: NOT GOOD -- directory does not exist on the box"
+  exit 0
+fi
+
+CURRENT_MONTH={current_yyyy_mm}
+echo "Current month: $CURRENT_MONTH"
+
+# Look for files whose mtime is within the current YYYY-MM.
+NEWEST_FILE=$(find {quoted} -maxdepth 4 -type f -printf '%T@ %T+ %p\\n' 2>/dev/null | sort -rn | head -1)
+if [ -z "$NEWEST_FILE" ]; then
+  echo "VERDICT: NOT GOOD -- directory exists but has no files"
+  exit 0
+fi
+echo "Newest file: $NEWEST_FILE"
+
+NEWEST_YYYY_MM=$(echo "$NEWEST_FILE" | awk '{{print $2}}' | cut -c1-7)
+echo "Newest file YYYY-MM: $NEWEST_YYYY_MM"
+
+# Path-based check too: many file-export hubs name their dirs with the date.
+if echo {quoted} | grep -qE "$CURRENT_MONTH|$(echo $CURRENT_MONTH | tr -d '-')"; then
+  PATH_HAS_CURRENT_MONTH=yes
+else
+  PATH_HAS_CURRENT_MONTH=no
+fi
+echo "Path contains current month: $PATH_HAS_CURRENT_MONTH"
+
+if [ "$NEWEST_YYYY_MM" = "$CURRENT_MONTH" ] || [ "$PATH_HAS_CURRENT_MONTH" = "yes" ]; then
+  echo "VERDICT: GOOD -- current-month data present"
+else
+  echo "VERDICT: STALE -- newest file/path is from $NEWEST_YYYY_MM, not current month"
+fi
+""".strip()
+
+    try:
+        out = ssm_run(cmd)
+    except RuntimeError as e:
+        bad(f"SSM check failed: {e}")
+        return False
+    print(out.rstrip())
+    if "VERDICT: GOOD" in out:
+        ok("Endpoint has current-month data.")
+        return True
+    if "VERDICT: STALE" in out:
+        warn("Endpoint exists but data is stale (not current-month).")
+        info("Likely fix: re-run preprocessing for this month, then update i3.conf endpoint.")
+        return False
+    bad("Endpoint missing or empty.")
+    return False
+
+
 def _check_s3_endpoint(s3_path):
     """For file-type harvests with an s3:// endpoint (e.g. dpla-hub-* buckets):
-    verify the path exists and has at least one object."""
+    list the bucket/prefix, verify there's at least one object, AND flag if
+    the latest entry is from the current YYYY-MM. Driven entirely by the conf
+    endpoint — no hardcoded mapping."""
     info(f"Endpoint: {s3_path}")
-    info("Type:     file-based (S3)")
+    info("Type:     file-based (S3) — checking for current-month delivery")
     try:
         result = subprocess.run(
-            ["aws", "s3", "ls", s3_path],
+            ["aws", "s3", "ls", s3_path,
+             "--profile", os.environ.get("AWS_PROFILE", "dpla")],
             capture_output=True, text=True, timeout=30,
         )
     except subprocess.TimeoutExpired:
@@ -630,29 +749,71 @@ def _check_s3_endpoint(s3_path):
         return False
     if result.returncode != 0:
         bad(f"aws s3 ls failed: {result.stderr.strip() or 'exit ' + str(result.returncode)}")
+        info("Common causes: AWS_PROFILE wrong, no read access, bucket doesn't exist.")
         return False
-    listing = result.stdout.strip()
+
+    listing = [ln for ln in result.stdout.splitlines() if ln.strip()]
     if not listing:
         bad(f"S3 path is empty: {s3_path}")
         info("Fix: ensure the hub has uploaded a fresh export to this prefix,")
         info("or update the endpoint in i3.conf to the correct dated subfolder.")
         return False
-    info("--- first 5 entries ---")
-    for line in listing.splitlines()[:5]:
-        info(line)
-    ok("S3 endpoint exists and has objects.")
-    return True
+
+    info(f"Total entries: {len(listing)}")
+    info("Latest 5 entries (most recent at the bottom):")
+    for line in listing[-5:]:
+        info(f"  {line.rstrip()}")
+
+    # Look for current-month markers in the listing — both YYYY-MM (e.g. 2026-04)
+    # for hyphenated date folders and YYYYMM (e.g. 202604) for run-together dates.
+    current_yyyy_mm = datetime.now().strftime("%Y-%m")
+    current_yyyymm = datetime.now().strftime("%Y%m")
+    pattern = re.compile(rf"({re.escape(current_yyyy_mm)}|{re.escape(current_yyyymm)})")
+    matches = [ln for ln in listing if pattern.search(ln)]
+
+    if matches:
+        ok(f"Found {len(matches)} entries dated in the current month ({current_yyyy_mm}).")
+        return True
+    warn(f"No entries from current month ({current_yyyy_mm}) — latest delivery may be stale.")
+    info("If the partner hasn't uploaded yet, this is fine. If they have but you don't see it,")
+    info("check the endpoint URL or AWS profile.")
+    return False
 
 
-def check_endpoint(endpoint, is_api=False):
+def check_endpoint(endpoint, is_api=False, harvest_type=None):
     header("6. Endpoint reachability")
     if not endpoint:
         warn("No endpoint to check (pass --hub or enter one at the prompt).")
         return True  # non-blocking
 
-    # Dispatch based on the endpoint scheme. File-type harvests get a real
-    # existence/contents check on the box (or in S3); HTTP/S endpoints get
-    # the curl-based reachability check below.
+    ht = (harvest_type or "").lower()
+    OAI_TYPES = ("oai", "localoai")
+    API_TYPES = ("api",)
+    FILE_TYPES = ("file",)
+
+    # For harvest.type='file', the endpoint should be a directory (or s3://
+    # prefix) holding the current month's data. Different check entirely from
+    # OAI/API reachability.
+    if ht in FILE_TYPES:
+        if endpoint.startswith("s3://"):
+            return _check_s3_endpoint(endpoint)
+        return _check_local_path_endpoint_current_month(endpoint)
+
+    # For anything that isn't OAI / localoai / API (e.g. nara.file.delta,
+    # custom types, or unset), skip the endpoint check entirely. These hubs
+    # have custom workflows where "endpoint reachability" via curl/ls isn't
+    # meaningful.
+    if ht not in OAI_TYPES + API_TYPES:
+        info(f"Endpoint: {endpoint}")
+        info(f"Type:     {ht or 'unknown'}")
+        warn(f"Skipping endpoint check — harvest.type '{ht or 'unknown'}' isn't OAI/API/file.")
+        info("Hubs with custom workflows (NARA delta, etc.) don't have a generic endpoint test.")
+        info("See the hub-specific runbook for the right verification steps.")
+        return True  # non-blocking — special-case hubs aren't a precheck failure
+
+    # Below here: standard HTTP reachability check for OAI/API hubs.
+    # (s3:// and non-HTTP local paths shouldn't normally appear for these
+    # types, but handle them gracefully if they do.)
     if endpoint.startswith("s3://"):
         return _check_s3_endpoint(endpoint)
     if not re.match(r"^https?://", endpoint):
@@ -763,7 +924,7 @@ def main():
     hub = args.hub
     if hub is None:
         try:
-            entered = input("Hub to check (leave blank to skip endpoint check): ").strip().lower()
+            entered = input("Hub to check (can be left blank): ").strip().lower()
         except EOFError:
             entered = ""
         if entered:
@@ -777,8 +938,13 @@ def main():
     if hub:
         print(f"Hub:      {hub}")
 
+    # Special-case hubs: print a banner up top before any other output.
+    if hub:
+        print_special_case_banner(hub)
+
     # Resolve endpoint + mode strictly from i3.conf.
     endpoint = None
+    harvest_type = None
     is_api = args.api
     # Harvest types that should be tested as OAI-PMH (with ?verb=Identify
     # and validated by looking for <OAI-PMH>/<Identify> in the response).
@@ -789,7 +955,7 @@ def main():
             endpoint = looked_up_endpoint
             # Auto-detect API vs OAI unless user forced it with --api.
             # Anything that's not in OAI_TYPES and not file-based gets API treatment.
-            if not is_api and harvest_type and harvest_type not in OAI_TYPES:
+            if not is_api and harvest_type and harvest_type not in OAI_TYPES and harvest_type != "file":
                 is_api = True
             print(f"Endpoint: {endpoint}  (from conf, type={harvest_type or 'unknown'})")
         else:
@@ -824,7 +990,7 @@ def main():
             results.append(("ownership",            check_target_ownership()))
             results.append(("disk",                 check_disk_space()))
         if run_endpoint_check:
-            results.append(("endpoint", check_endpoint(endpoint, is_api=is_api)))
+            results.append(("endpoint", check_endpoint(endpoint, is_api=is_api, harvest_type=harvest_type)))
     except RuntimeError as e:
         print()
         bad(f"Check aborted: {e}")
@@ -834,11 +1000,19 @@ def main():
     for name, passed in results:
         (ok if passed else bad)(name)
 
-    if all(passed for _, passed in results):
-        print("\nAll checks passed. Safe to kick off the ingest.\n")
+    all_passed = all(passed for _, passed in results)
+    if all_passed:
+        if hub and hub in CURRENT_SPECIAL_HUBS:
+            print(f"\nAll standard checks passed — but {hub} is a special-case hub.")
+            print("Don't run launch_ingest.py for this one; follow the hub-specific runbook.\n")
+        else:
+            print("\nAll checks passed. Safe to kick off the ingest.\n")
         sys.exit(0)
     else:
         print("\nOne or more checks failed. Fix the issues above before ingesting.\n")
+        if hub and hub in CURRENT_SPECIAL_HUBS:
+            print(f"(Reminder: {hub} is a special-case hub — some failures may be expected. "
+                  "See the runbook.)\n")
         sys.exit(1)
 
 if __name__ == "__main__":
