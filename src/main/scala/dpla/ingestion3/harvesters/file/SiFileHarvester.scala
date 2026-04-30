@@ -3,7 +3,6 @@ package dpla.ingestion3.harvesters.file
 import java.io.{File, FileInputStream}
 import java.util.zip.GZIPInputStream
 import javax.xml.stream.{XMLInputFactory, XMLStreamConstants}
-import org.apache.hadoop.shaded.com.ctc.wstx.api.WstxInputProperties   
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.{Harvester, LocalHarvester, ParsedResult}
 import dpla.ingestion3.harvesters.file.FileFilters.gzFilter
@@ -159,14 +158,10 @@ class SiFileHarvester(
     // so IS_NAMESPACE_AWARE=false is safe and avoids the overhead of namespace processing.
     // DTD and external entity resolution are disabled to prevent XXE attacks.
     val xmlInputFactory = XMLInputFactory.newInstance()
-        xmlInputFactory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, false)
-        xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, true)
-        xmlInputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, false)
-        xmlInputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false)
-        xmlInputFactory.setProperty(                                                  
-            WstxInputProperties.P_INPUT_PARSING_MODE,                                   
-            WstxInputProperties.PARSING_MODE_DOCUMENTS                                  
-            )                                                                               
+    xmlInputFactory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, false)
+    xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, true)
+    xmlInputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, false)
+    xmlInputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false)
 
     try {
       Option(inFiles.listFiles(gzFilter)).getOrElse(Array.empty).foreach { inFile =>
