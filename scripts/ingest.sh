@@ -194,6 +194,7 @@ fi
 
 if [ "$HARVEST_ONLY" = true ]; then
     write_hub_status "$PROVIDER" complete
+    slack_notify ":white_check_mark: *$PROVIDER harvest complete* (${HARVEST_RECORD_COUNT} records)"
     log_info "Harvest-only mode - stopping here"
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))
@@ -201,6 +202,7 @@ if [ "$HARVEST_ONLY" = true ]; then
     echo "=============================================="
     echo "  Harvest completed in $((DURATION / 60))m $((DURATION % 60))s"
     echo "=============================================="
+    TRAP_HANDLED=true
     exit 0
 fi
 
@@ -236,10 +238,9 @@ else
         exit 1
     fi
 
-    slack_notify ":white_check_mark: *$PROVIDER mapping complete* (${MAP_RECORD_COUNT} records) — starting enrichment"
-
     if [ "$MAPPING_ONLY" = true ]; then
         write_hub_status "$PROVIDER" complete
+        slack_notify ":white_check_mark: *$PROVIDER mapping complete* (${MAP_RECORD_COUNT} records)"
         log_info "Mapping-only mode - stopping here"
         END_TIME=$(date +%s)
         DURATION=$((END_TIME - START_TIME))
@@ -251,6 +252,8 @@ else
         TRAP_HANDLED=true
         exit 0
     fi
+
+    slack_notify ":white_check_mark: *$PROVIDER mapping complete* (${MAP_RECORD_COUNT} records) — starting enrichment"
 fi
 
 # Step 3: Enrichment
