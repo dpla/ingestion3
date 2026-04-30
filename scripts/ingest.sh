@@ -99,6 +99,15 @@ if [[ "$HARVEST_TYPE" == *"delta"* ]]; then
     die "Provider '$PROVIDER' uses delta harvesting ($HARVEST_TYPE) and cannot be run with ingest.sh. Use the dedicated script instead (e.g. scripts/harvest/nara-ingest.sh)."
 fi
 
+# Some partners whitelist specific source IPs on their OAI endpoints. For those
+# hubs, we route harvest traffic through a Tailscale exit node that holds the
+# whitelisted IP. The exit node is cleared after harvest so downstream pipeline
+# steps (mapping, enrichment, S3 sync) use normal routing.
+TAILSCALE_EXIT_NODE=""
+case "$PROVIDER" in
+    njde) TAILSCALE_EXIT_NODE="100.82.233.38" ;;  # main-vpc; IP whitelisted by Rutgers
+esac
+
 # Setup paths
 PROVIDER_DATA="$DPLA_DATA/$PROVIDER"
 HARVEST_DIR="$PROVIDER_DATA/harvest"
@@ -115,6 +124,7 @@ INGEST_PROVIDER="$PROVIDER"
 TRAP_HANDLED=false  # set to true when we handle notification+status explicitly before exit
 trap 'err=$?
      stop_heartbeat 2>/dev/null || true
+     [ -n "${TAILSCALE_EXIT_NODE:-}" ] && tailscale set --exit-node= 2>/dev/null || true
      if [[ $err -ne 0 && -n "${INGEST_PROVIDER:-}" && "$TRAP_HANDLED" != "true" ]]; then
          slack_notify ":x: *$INGEST_PROVIDER ingest FAILED* (exit $err)"
          write_hub_status "$INGEST_PROVIDER" failed --error="Exit $err" || true
@@ -156,6 +166,13 @@ if [ "$SKIP_HARVEST" = false ] && [[ -z "$RESUME_FROM" ]]; then
     mkdir -p "$I3_HOME/logs"
     start_heartbeat "$PROVIDER" "harvest" "$HARVEST_LOG"
 
+    if [ -n "$TAILSCALE_EXIT_NODE" ]; then
+        require_command tailscale "Tailscale is required for $PROVIDER (endpoint is IP-restricted) but not installed"
+        log_info "Setting Tailscale exit node $TAILSCALE_EXIT_NODE for $PROVIDER harvest"
+        tailscale set --exit-node="$TAILSCALE_EXIT_NODE" \
+            || die "Failed to set Tailscale exit node — $PROVIDER endpoint requires whitelisted IP"
+    fi
+
     SBT_OPTS="-Xmx15g"
     run_entry dpla.ingestion3.entries.ingest.HarvestEntry \
         --output="$DPLA_DATA" \
@@ -164,6 +181,11 @@ if [ "$SKIP_HARVEST" = false ] && [[ -z "$RESUME_FROM" ]]; then
         --sparkMaster="$SPARK_MASTER" 2>&1 | tee "$HARVEST_LOG"
 
     stop_heartbeat
+    if [ -n "$TAILSCALE_EXIT_NODE" ]; then
+        log_info "Clearing Tailscale exit node after $PROVIDER harvest"
+        tailscale set --exit-node= || log_warn "Failed to clear Tailscale exit node"
+    fi
+
     HARVEST_TS_DIR=$(find_latest_data "$PROVIDER" harvest)
     log_info "Harvest complete: $(basename "$HARVEST_TS_DIR")"
 
