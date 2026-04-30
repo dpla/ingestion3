@@ -20,6 +20,7 @@ usage() {
     echo "Options:"
     echo "  --skip-harvest          Skip harvest step (use existing harvest data)"
     echo "  --harvest-only          Only run harvest step"
+    echo "  --mapping-only          Only run mapping step (implies --skip-harvest)"
     echo "  --skip-s3-sync          Skip S3 sync step (pipeline stops at JSONL)"
     echo "  --resume-from <step>    Resume from a specific step, reusing existing outputs"
     echo "                          for all preceding steps. Valid steps: mapping,"
@@ -30,6 +31,7 @@ usage() {
     echo "  ./ingest.sh maryland                          # Full pipeline"
     echo "  ./ingest.sh maryland --skip-harvest           # Use existing harvest"
     echo "  ./ingest.sh maryland --harvest-only           # Only harvest"
+    echo "  ./ingest.sh maryland --mapping-only           # Only mapping (verify count)"
     echo "  ./ingest.sh maryland --skip-s3-sync           # Skip S3 upload"
     echo "  ./ingest.sh maryland --resume-from enrichment # Skip harvest+mapping, reuse"
     echo "                                                #   existing mapping output"
@@ -53,6 +55,7 @@ shift
 
 SKIP_HARVEST=false
 HARVEST_ONLY=false
+MAPPING_ONLY=false
 SKIP_S3_SYNC=false
 RESUME_FROM=""
 
@@ -69,6 +72,11 @@ while [[ $# -gt 0 ]]; do
             ;;
         --harvest-only)
             HARVEST_ONLY=true
+            shift
+            ;;
+        --mapping-only)
+            MAPPING_ONLY=true
+            SKIP_HARVEST=true
             shift
             ;;
         --skip-s3-sync)
@@ -142,6 +150,8 @@ cd "$I3_HOME"
 
 if [[ -n "$RESUME_FROM" ]]; then
     slack_notify ":arrow_forward: *$PROVIDER ingest resuming from $RESUME_FROM*"
+elif [[ "$MAPPING_ONLY" = true ]]; then
+    slack_notify ":arrow_forward: *$PROVIDER mapping-only run started*"
 else
     slack_notify ":arrow_forward: *$PROVIDER ingest started* | harvest → map → enrich → jsonl → s3"
 fi
@@ -227,6 +237,20 @@ else
     fi
 
     slack_notify ":white_check_mark: *$PROVIDER mapping complete* (${MAP_RECORD_COUNT} records) — starting enrichment"
+
+    if [ "$MAPPING_ONLY" = true ]; then
+        write_hub_status "$PROVIDER" complete
+        log_info "Mapping-only mode - stopping here"
+        END_TIME=$(date +%s)
+        DURATION=$((END_TIME - START_TIME))
+        echo ""
+        echo "=============================================="
+        echo "  Mapping completed in $((DURATION / 60))m $((DURATION % 60))s"
+        echo "  Records: $MAP_RECORD_COUNT"
+        echo "=============================================="
+        TRAP_HANDLED=true
+        exit 0
+    fi
 fi
 
 # Step 3: Enrichment
