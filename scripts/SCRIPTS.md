@@ -152,7 +152,7 @@ Runs the complete ingestion pipeline for a hub:
 
 #### IP-restricted hubs (TAILSCALE_EXIT_NODE)
 
-Some partners whitelist specific source IPs on their OAI endpoints. For those hubs, `ingest.sh` automatically routes harvest traffic through a Tailscale exit node that holds the whitelisted IP. The exit node is set before the harvest step and cleared (and tailscaled stopped) immediately after, so downstream steps (mapping, enrichment, S3 sync) use normal routing.
+Some partners whitelist specific source IPs on their OAI endpoints. For those hubs, `ingest.sh` automatically routes harvest traffic through a Tailscale exit node that holds the whitelisted IP. The exit node is set before the harvest step and cleared (and tailscaled stopped) immediately after, so downstream steps (mapping, enrichment, S3 sync) use normal routing. On failure, the same cleanup runs best-effort via an EXIT trap — it attempts to clear the exit node and stop `tailscaled` even when the harvest fails.
 
 The exit node is configured per-provider in a `case` block near the top of `ingest.sh`:
 

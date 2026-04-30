@@ -265,7 +265,7 @@ Some hubs restrict access to their OAI-PMH endpoint by IP address or VPN members
 
 Some partner endpoints are not publicly accessible — they whitelist a specific IP for OAI-PMH access. Rather than whitelisting the EC2's dynamic public IP (which changes on stop/start), we use a [Tailscale](https://tailscale.com) exit node to route harvest traffic through a stable whitelisted IP.
 
-`ingest.sh` handles the full lifecycle automatically when `tailscaleExitNode` is set in `i3.conf` for a hub: it starts `tailscaled`, waits for the daemon to connect, sets the exit node, runs the harvest, then clears the exit node and stops `tailscaled`. No manual Tailscale steps are needed to run these ingests.
+`ingest.sh` handles the full lifecycle automatically for hubs that require it (determined by a `TAILSCALE_EXIT_NODE` case block in `ingest.sh`): it starts `tailscaled`, waits for the daemon to connect, sets the exit node, runs the harvest, then clears the exit node and stops `tailscaled`. Only the **harvest step** is routed through the exit node — mapping, enrichment, JSONL export, and S3 sync use normal routing. No manual Tailscale steps are needed to run these ingests.
 
 **Tailscale auth on the EC2 is per-machine**, stored in `/var/lib/tailscale/` on EBS. It persists across stop/start cycles and is not tied to any individual operator — anyone with EC2 access can run these ingests.
 
@@ -278,7 +278,7 @@ Some partner endpoints are not publicly accessible — they whitelist a specific
 | Partner | Rutgers University / New Jersey State Library |
 | Endpoint | IP-whitelisted OAI-PMH |
 | Whitelisted IP | `100.82.233.38` (main-vpc Tailscale node) |
-| i3.conf key | `njde.harvest.tailscaleExitNode = "main-vpc"` |
+| Configured in | `scripts/ingest.sh` (`TAILSCALE_EXIT_NODE` case block) |
 | Handled by | `ingest.sh` automatically |
 
 Run exactly like any other hub — `ingest.sh njde` — no extra steps needed.
