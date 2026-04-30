@@ -158,7 +158,7 @@ The exit node is configured per-provider in a `case` block near the top of `inge
 
 ```bash
 case "$PROVIDER" in
-    njde) TAILSCALE_EXIT_NODE="100.82.233.38" ;;  # main-vpc; IP whitelisted by Rutgers
+    getty|njde) TAILSCALE_EXIT_NODE="100.82.233.38" ;;  # main-vpc; whitelisted by Getty and Rutgers
 esac
 ```
 

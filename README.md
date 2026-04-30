@@ -13,6 +13,7 @@ DPLA's ingestion system is one of the core business systems and is the source of
     * [Hub specific instructions](#exceptions-and-unusual-ingests)
       * [Firewalled endpoints](#firewalled-endpoints)
       * [IP-whitelisted endpoints (Tailscale exit node)](#ip-whitelisted-endpoints-tailscale-exit-node)
+        * [J. Paul Getty Trust (getty)](#j-paul-getty-trust-getty)
         * [NJ Digital Library (njde)](#nj-digital-library-njde)
       * [Internet Archive - Community Webs](#community-webs)
       * [Digital Virginias](#digital-virginias)
