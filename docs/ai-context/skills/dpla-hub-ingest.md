@@ -198,7 +198,7 @@ Some hubs whitelist a specific IP address for OAI-PMH access. Rather than whitel
 
 Tailscale node keys expire approximately every 180 days. When the EC2's key expires, `ingest.sh` detects it immediately and fails with a clear, actionable error before the harvest begins:
 
-```
+```text
 ERROR: Tailscale node key has expired on this EC2. Re-authenticate with:
   sudo tailscale up --auth-key=<key>
 Generate a reusable key at tailscale.com/admin → Settings → Keys, then re-run the ingest.
@@ -387,7 +387,7 @@ If the result is `<hub>.status = test`, this is a **test hub**. Announce this cl
 
 For test hubs, also check for the mapper in the experimental subpackage:
 ```bash
-ls src/main/scala/dpla/ingestion3/mappers/providers/experimental/
+ls "$I3_HOME/src/main/scala/dpla/ingestion3/mappers/providers/experimental/"
 ```
 
 If hub is `community-webs`, run the Community Webs Pre-processing steps (see above) after Step 3 and before Step 4.
@@ -418,7 +418,7 @@ This shows the file extensions present (e.g. `xml.gz`, `zip`, `jsonl`). Confirm 
 | `.zip` (JSONL inside) | `JsonFileHarvester` | ✅ |
 | `.jsonl` | `JsonFileHarvester` | ✅ |
 
-If unsure which harvester the hub uses, grep the Scala source: `grep -r "<hub>" src/main/scala/dpla/ingestion3/executors/` or check the mapper for the hub.
+If unsure which harvester the hub uses, grep the Scala source: `grep -r "<hub>" "$I3_HOME/src/main/scala/dpla/ingestion3/executors/"` or check the mapper for the hub.
 
 **3. Confirm the i3.conf endpoint path:**
 ```bash
