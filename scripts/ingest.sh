@@ -172,10 +172,24 @@ if [ "$SKIP_HARVEST" = false ] && [[ -z "$RESUME_FROM" ]]; then
         log_info "Starting tailscaled for $PROVIDER harvest"
         sudo systemctl start tailscaled \
             || die "Failed to start tailscaled — required for $PROVIDER endpoint routing"
-        # Wait up to 30s for Tailscale to connect before setting exit node
-        for _i in $(seq 1 30); do tailscale status &>/dev/null && break; sleep 1; done
-        tailscale status &>/dev/null \
-            || die "Tailscale failed to connect within 30s"
+        # Wait up to 30s for Tailscale to connect; break early if key expired
+        for _i in $(seq 1 30); do
+            _ts_state=$(tailscale status --json 2>/dev/null \
+                | python3 -c "import json,sys; print(json.load(sys.stdin).get('BackendState',''))" 2>/dev/null || true)
+            [ "$_ts_state" = "Running" ] && break
+            [ "$_ts_state" = "NeedsLogin" ] && break
+            sleep 1
+        done
+        _ts_state=$(tailscale status --json 2>/dev/null \
+            | python3 -c "import json,sys; print(json.load(sys.stdin).get('BackendState',''))" 2>/dev/null || true)
+        if [ "$_ts_state" = "NeedsLogin" ]; then
+            die "Tailscale node key has expired on this EC2. Re-authenticate with:
+  sudo tailscale up --auth-key=<key>
+Generate a reusable key at tailscale.com/admin → Settings → Keys, then re-run the ingest.
+Node keys rotate every ~180 days; see scripts/SCRIPTS.md for details."
+        elif [ "$_ts_state" != "Running" ]; then
+            die "Tailscale failed to connect within 30s (state: ${_ts_state:-unknown})"
+        fi
         log_info "Setting Tailscale exit node $TAILSCALE_EXIT_NODE for $PROVIDER harvest"
         tailscale set --exit-node="$TAILSCALE_EXIT_NODE" \
             || die "Failed to set Tailscale exit node — $PROVIDER endpoint requires whitelisted IP"
