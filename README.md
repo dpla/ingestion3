@@ -271,6 +271,18 @@ Some partner endpoints are not publicly accessible — they whitelist a specific
 
 **⚠️ Node key rotation:** Tailscale node keys expire approximately every 180 days. When the key expires, `ingest.sh` detects it immediately at harvest time and prints a clear error with re-authentication instructions. See `scripts/SCRIPTS.md` for the full recovery procedure.
 
+#### J. Paul Getty Trust (getty)
+
+| Field | Value |
+|-------|-------|
+| Partner | J. Paul Getty Trust |
+| Endpoint | IP-whitelisted ExLibris Primo REST API |
+| Whitelisted IP | `100.82.233.38` (main-vpc Tailscale node) |
+| Configured in | `scripts/ingest.sh` (`TAILSCALE_EXIT_NODE` case block) |
+| Handled by | `ingest.sh` automatically |
+
+Run exactly like any other hub — `ingest.sh getty` — no extra steps needed.
+
 #### NJ Digital Library (njde)
 
 | Field | Value |

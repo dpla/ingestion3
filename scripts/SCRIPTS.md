@@ -166,6 +166,7 @@ esac
 
 | Hub | Partner | Whitelisted IP | Tailscale exit node |
 |-----|---------|---------------|---------------------|
+| `getty` | J. Paul Getty Trust (ExLibris Primo API) | `100.82.233.38` | `main-vpc` |
 | `njde` | Rutgers (NJ Digital Library) | `100.82.233.38` | `main-vpc` |
 
 **Prerequisites** for IP-restricted hubs:

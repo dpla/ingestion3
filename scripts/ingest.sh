@@ -105,7 +105,7 @@ fi
 # steps (mapping, enrichment, S3 sync) use normal routing.
 TAILSCALE_EXIT_NODE=""
 case "$PROVIDER" in
-    njde) TAILSCALE_EXIT_NODE="100.82.233.38" ;;  # main-vpc; IP whitelisted by Rutgers
+    getty|njde) TAILSCALE_EXIT_NODE="100.82.233.38" ;;  # main-vpc; whitelisted by Getty and Rutgers
 esac
 
 # Setup paths
@@ -123,7 +123,7 @@ fi
 INGEST_PROVIDER="$PROVIDER"
 TRAP_HANDLED=false  # set to true when we handle notification+status explicitly before exit
 trap 'err=$?
-     [ -n "${TAILSCALE_EXIT_NODE:-}" ] && tailscale set --exit-node= 2>/dev/null || true
+     [ -n "${TAILSCALE_EXIT_NODE:-}" ] && sudo tailscale set --exit-node= 2>/dev/null || true
      [ -n "${TAILSCALE_EXIT_NODE:-}" ] && sudo systemctl stop tailscaled 2>/dev/null || true
      stop_heartbeat 2>/dev/null || true
      if [[ $err -ne 0 && -n "${INGEST_PROVIDER:-}" && "$TRAP_HANDLED" != "true" ]]; then
@@ -191,7 +191,7 @@ Node keys rotate every ~180 days; see scripts/SCRIPTS.md for details."
             die "Tailscale failed to connect within 30s (state: ${_ts_state:-unknown})"
         fi
         log_info "Setting Tailscale exit node $TAILSCALE_EXIT_NODE for $PROVIDER harvest"
-        tailscale set --exit-node="$TAILSCALE_EXIT_NODE" \
+        sudo tailscale set --exit-node="$TAILSCALE_EXIT_NODE" \
             || die "Failed to set Tailscale exit node — $PROVIDER endpoint requires whitelisted IP"
     fi
 
@@ -204,7 +204,7 @@ Node keys rotate every ~180 days; see scripts/SCRIPTS.md for details."
 
     if [ -n "$TAILSCALE_EXIT_NODE" ]; then
         log_info "Clearing Tailscale exit node and stopping tailscaled after $PROVIDER harvest"
-        tailscale set --exit-node= || log_warn "Failed to clear Tailscale exit node"
+        sudo tailscale set --exit-node= || log_warn "Failed to clear Tailscale exit node"
         sudo systemctl stop tailscaled || log_warn "Failed to stop tailscaled"
     fi
     stop_heartbeat
