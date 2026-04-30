@@ -176,6 +176,46 @@ Key harvest types and their network requirements:
 
 **Note:** **maryland**, **getty**, and **hathi** have known IP blocks on EC2 — the endpoint will time out or return 403 from `52.2.32.179`. When this happens, **stop and ask the user** how to proceed: either ask the partner to allowlist `52.2.32.179`, or run the harvest locally on the Mac (see **Local Harvest (EC2-Blocked Hubs)** section below). Do not default to local harvest without the user's direction. Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
 
+## IP-Restricted Hubs (Tailscale Exit Node)
+
+Some hubs whitelist a specific IP address for OAI-PMH access. Rather than whitelisting the EC2's dynamic public IP, these partners whitelist the **main-vpc Tailscale node** (`100.82.233.38`). The ingest routes harvest traffic through that node via a Tailscale exit node, so the partner sees a stable whitelisted IP.
+
+**This is handled automatically by `ingest.sh`** — no manual Tailscale steps required. When `TAILSCALE_EXIT_NODE` is set in `i3.conf` for a hub, the script:
+1. Starts `tailscaled` (kept stopped between ingests — see SSM note below)
+2. Waits for the daemon to connect and detects key expiration early
+3. Sets the exit node for the duration of the harvest
+4. Clears the exit node and stops `tailscaled` immediately after harvest completes
+
+**Current IP-restricted hubs:**
+
+| Hub | Partner | Whitelisted IP | Tailscale exit node | i3.conf key |
+|-----|---------|---------------|---------------------|-------------|
+| `njde` | Rutgers (NJ Digital Library) | `100.82.233.38` | `main-vpc` | `njde.harvest.tailscaleExitNode = "main-vpc"` |
+
+**Operator independence:** Tailscale auth on the EC2 is stored per-machine in `/var/lib/tailscale/` on EBS. It persists across stop/start cycles and is **not** tied to any individual operator — anyone with SSM access can run the njde ingest without personal Tailscale credentials or the Tailscale CLI installed locally.
+
+**⚠️ Node key rotation — ~180-day maintenance task:**
+
+Tailscale node keys expire approximately every 180 days. When the EC2's key expires, `ingest.sh` detects it immediately and fails with a clear, actionable error before the harvest begins:
+
+```
+ERROR: Tailscale node key has expired on this EC2. Re-authenticate with:
+  sudo tailscale up --auth-key=<key>
+Generate a reusable key at tailscale.com/admin → Settings → Keys, then re-run the ingest.
+Node keys rotate every ~180 days; see scripts/SCRIPTS.md for details.
+```
+
+To re-authenticate (run via SSM):
+1. Go to [tailscale.com/admin → Settings → Keys](https://login.tailscale.com/admin/settings/keys)
+2. Generate a new **reusable** auth key (check "Reusable", set a multi-year expiry)
+3. Start tailscaled temporarily: `sudo systemctl start tailscaled`
+4. Re-authenticate: `sudo tailscale up --auth-key=<your-reusable-key>`
+5. Verify: `tailscale status --json | python3 -c "import json,sys; print(json.load(sys.stdin).get('BackendState',''))"` — should print `Running`
+6. Stop tailscaled again: `sudo systemctl stop tailscaled`
+7. Re-run the njde ingest — `ingest.sh` will start/stop tailscaled automatically
+
+**tailscaled and SSM compatibility:** Starting `tailscaled` during an active SSM session breaks SSM's document worker IPC (nftables rules interfere with SSM's internal socket communication). To avoid this, `tailscaled` is kept stopped between ingests. A User Data boot script on the EC2 ensures it is stopped on every boot. `ingest.sh` launches as a background `nohup` process, so it manages tailscaled independently of the SSM session that launched it — SSM connectivity is unaffected during the ingest.
+
 ## Local Harvest (EC2-Blocked Hubs)
 
 **Only use this procedure when the user explicitly requests a local harvest.** Do not invoke it automatically when an EC2 endpoint block is detected — ask the user first (see the EC2-blocked hubs note in Hub Configuration Reference).
