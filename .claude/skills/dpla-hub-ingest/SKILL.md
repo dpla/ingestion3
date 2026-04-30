@@ -211,12 +211,13 @@ grep "^maryland\.harvest" "$I3_CONF"
 If the endpoint needs updating:
 ```bash
 python3 -c "
-content = open(os.environ["I3_CONF"]).read()
+import os
+content = open(os.environ['I3_CONF']).read()
 content = content.replace(
     'maryland.harvest.endpoint = \"http://collections.digitalmaryland.org/oai/oai.php\"',
     'maryland.harvest.endpoint = \"http://cdm17340.contentdm.oclc.org/oai/oai.php\"'
 )
-open(os.environ["I3_CONF"], 'w').write(content)
+open(os.environ['I3_CONF'], 'w').write(content)
 print('Updated.')
 "
 ```
@@ -228,8 +229,8 @@ Commit and push to ingestion3-conf after verifying.
 `ingest.sh` auto-loads `.env` (Java 20, I3_CONF) and defaults `DPLA_DATA` to `~/dpla/data`. Wrap with `caffeinate` to prevent the Mac from sleeping mid-harvest and expiring the OAI resumption token:
 
 ```bash
-mkdir -p $DPLA_DATA
-caffeinate -i nohup bash $I3_HOME/scripts/ingest.sh <hub> --harvest-only \
+mkdir -p "$DPLA_DATA"
+caffeinate -i nohup bash "$I3_HOME/scripts/ingest.sh" <hub> --harvest-only \
   > /tmp/<hub>-harvest.log 2>&1 &
 echo "PID: $!"
 ```
@@ -240,26 +241,26 @@ echo "PID: $!"
 
 Monitor progress via the OAI harvest log (written by the harvester alongside the main log):
 ```bash
-tail -f $I3_HOME/logs/oai-harvest-<hub>-*.log
+tail -f "$I3_HOME/logs/oai-harvest-<hub>-*.log"
 ```
 
 When complete, the script prints `Harvest completed in Xm Ys` and exits 0. Capture the harvest timestamp:
 ```bash
-HARVEST_TS=$(ls -t $DPLA_DATA/maryland/harvest/ | head -1)
+HARVEST_TS=$(ls -t "$DPLA_DATA/maryland/harvest/" | head -1)
 echo "Harvest timestamp: $HARVEST_TS"
 ```
 
 Verify the record count from the manifest:
 ```bash
-cat $DPLA_DATA/maryland/harvest/$HARVEST_TS/_MANIFEST 2>/dev/null || \
-  ls $DPLA_DATA/maryland/harvest/$HARVEST_TS/ | head -5
+cat "$DPLA_DATA/maryland/harvest/$HARVEST_TS/_MANIFEST" 2>/dev/null || \
+  ls "$DPLA_DATA/maryland/harvest/$HARVEST_TS/" | head -5
 ```
 
 ### Step LH4: Stage harvest output to S3
 
 Upload the local Avro output to a temporary S3 prefix:
 ```bash
-aws s3 sync $DPLA_DATA/maryland/harvest/ \
+aws s3 sync "$DPLA_DATA/maryland/harvest/" \
   s3://dpla-master-dataset/tmp/maryland-harvest/ \
   --no-progress
 ```
@@ -330,7 +331,7 @@ aws s3 rm s3://dpla-master-dataset/tmp/maryland-harvest/ --recursive
 
 Also clean up local harvest data if disk space is needed:
 ```bash
-rm -rf $DPLA_DATA/maryland/harvest/
+rm -rf "$DPLA_DATA/maryland/harvest/"
 ```
 
 ## Community Webs Pre-processing
@@ -520,9 +521,10 @@ grep "<hub>\.harvest" "$I3_CONF"
 The endpoint must point to the **folder containing the files** (e.g. `s3://dpla-hub-ohio/2026-03-20/`), not a parent bucket root. If it needs updating, use python3 to avoid quoting issues:
 ```bash
 python3 -c "
-content = open(os.environ["I3_CONF"]).read()
+import os
+content = open(os.environ['I3_CONF']).read()
 content = content.replace('<hub>.harvest.endpoint = \"<old>\"', '<hub>.harvest.endpoint = \"<new>\"')
-open(os.environ["I3_CONF"], 'w').write(content)
+open(os.environ['I3_CONF'], 'w').write(content)
 print('Updated:', content[content.find('<hub>.harvest.endpoint'):content.find('<hub>.harvest.endpoint')+60])
 "
 ```

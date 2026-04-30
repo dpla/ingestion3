@@ -387,9 +387,10 @@ grep "<hub>\.harvest" "$I3_CONF"
 The endpoint must point to the **folder containing the files** (e.g. `s3://dpla-hub-ohio/2026-03-20/`), not a parent bucket root. If it needs updating, use python3 to avoid quoting issues:
 ```bash
 python3 -c "
-content = open(os.environ["I3_CONF"]).read()
+import os
+content = open(os.environ['I3_CONF']).read()
 content = content.replace('<hub>.harvest.endpoint = \"<old>\"', '<hub>.harvest.endpoint = \"<new>\"')
-open(os.environ["I3_CONF"], 'w').write(content)
+open(os.environ['I3_CONF'], 'w').write(content)
 print('Updated:', content[content.find('<hub>.harvest.endpoint'):content.find('<hub>.harvest.endpoint')+60])
 "
 ```
