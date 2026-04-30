@@ -162,7 +162,7 @@ Hub config lives in `i3.conf` on the EC2 at `/home/ec2-user/ingestion3-conf/i3.c
 
 Before running, check the hub's harvest type:
 ```bash
-grep "^<hub>\.harvest\.type" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "^<hub>\.harvest\.type" "$I3_CONF"
 ```
 
 Key harvest types and their network requirements:
@@ -325,14 +325,14 @@ The memory file uses `## hub-name` markdown sections to organize per-hub content
 Confirm the hub key (e.g. `sd`, `maryland`, `indiana`) and check its config:
 
 ```bash
-grep "^<hub>\." /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "^<hub>\." "$I3_CONF"
 ```
 
 Note the `harvest.type` and `harvest.endpoint`. For `file` harvests, check that the file path exists and confirm with the user before proceeding.
 
 **Check for test hub status:**
 ```bash
-grep "^<hub>\.status" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "^<hub>\.status" "$I3_CONF"
 ```
 
 If the result is `<hub>.status = test`, this is a **test hub**. Announce this clearly and set `IS_TEST_HUB=true` to carry through the remaining steps:
@@ -347,7 +347,7 @@ If the result is `<hub>.status = test`, this is a **test hub**. Announce this cl
 
 For test hubs, also check for the mapper in the experimental subpackage:
 ```bash
-ls /Users/dominic/Documents/GitHub/ingestion3/src/main/scala/dpla/ingestion3/mappers/providers/experimental/
+ls src/main/scala/dpla/ingestion3/mappers/providers/experimental/
 ```
 
 If hub is `community-webs`, run the Community Webs Pre-processing steps (see above) after Step 3 and before Step 4.
@@ -382,14 +382,14 @@ If unsure which harvester the hub uses, grep the Scala source: `grep -r "<hub>" 
 
 **3. Confirm the i3.conf endpoint path:**
 ```bash
-grep "<hub>\.harvest" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "<hub>\.harvest" "$I3_CONF"
 ```
 The endpoint must point to the **folder containing the files** (e.g. `s3://dpla-hub-ohio/2026-03-20/`), not a parent bucket root. If it needs updating, use python3 to avoid quoting issues:
 ```bash
 python3 -c "
-content = open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf').read()
+content = open(os.environ["I3_CONF"]).read()
 content = content.replace('<hub>.harvest.endpoint = \"<old>\"', '<hub>.harvest.endpoint = \"<new>\"')
-open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf', 'w').write(content)
+open(os.environ["I3_CONF"], 'w').write(content)
 print('Updated:', content[content.find('<hub>.harvest.endpoint'):content.find('<hub>.harvest.endpoint')+60])
 "
 ```
@@ -877,7 +877,7 @@ When the user says "run [month] ingests" (e.g. "run February ingests", "run Marc
 import os, re, sys
 from datetime import datetime
 
-CONF = os.environ.get("I3_CONF", "/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf")
+CONF = os.environ["I3_CONF"]
 EC2_BLOCKED_HUBS = {"maryland", "getty"}
 MONTH_NAMES = {
     "january":1,"february":2,"march":3,"april":4,"may":5,"june":6,

@@ -162,7 +162,7 @@ Hub config lives in `i3.conf` on the EC2 at `/home/ec2-user/ingestion3-conf/i3.c
 
 Before running, check the hub's harvest type:
 ```bash
-grep "^<hub>\.harvest\.type" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "^<hub>\.harvest\.type" "$I3_CONF"
 ```
 
 Key harvest types and their network requirements:
@@ -335,7 +335,7 @@ Verify `EXPORT_SUCCESS` is present before continuing.
 Confirm the hub key (e.g. `sd`, `maryland`, `indiana`) and check its config:
 
 ```bash
-grep "^<hub>\." /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "^<hub>\." "$I3_CONF"
 ```
 
 Note the `harvest.type` and `harvest.endpoint`. For `file` harvests, check that the file path exists and confirm with the user before proceeding.
@@ -372,14 +372,14 @@ If unsure which harvester the hub uses, grep the Scala source: `grep -r "<hub>" 
 
 **3. Confirm the i3.conf endpoint path:**
 ```bash
-grep "<hub>\.harvest" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "<hub>\.harvest" "$I3_CONF"
 ```
 The endpoint must point to the **folder containing the files** (e.g. `s3://dpla-hub-ohio/2026-03-20/`), not a parent bucket root. If it needs updating, use python3 to avoid quoting issues:
 ```bash
 python3 -c "
-content = open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf').read()
+content = open(os.environ["I3_CONF"]).read()
 content = content.replace('<hub>.harvest.endpoint = \"<old>\"', '<hub>.harvest.endpoint = \"<new>\"')
-open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf', 'w').write(content)
+open(os.environ["I3_CONF"], 'w').write(content)
 print('Updated:', content[content.find('<hub>.harvest.endpoint'):content.find('<hub>.harvest.endpoint')+60])
 "
 ```
@@ -930,7 +930,7 @@ When the user says "run [month] ingests" (e.g. "run February ingests", "run Marc
 import os, re, sys
 from datetime import datetime
 
-CONF = os.environ.get("I3_CONF", "/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf")
+CONF = os.environ["I3_CONF"]
 CONTENTDM_HUBS = {"maryland", "bpl", "scdl", "digitalnc"}
 MONTH_NAMES = {
     "january":1,"february":2,"march":3,"april":4,"may":5,"june":6,

@@ -162,7 +162,7 @@ Hub config lives in `i3.conf` on the EC2 at `/home/ec2-user/ingestion3-conf/i3.c
 
 Before running, check the hub's harvest type:
 ```bash
-grep "^<hub>\.harvest\.type" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "^<hub>\.harvest\.type" "$I3_CONF"
 ```
 
 Key harvest types and their network requirements:
@@ -188,9 +188,9 @@ This covers: running the harvest locally on the Mac, staging the Avro output to 
 |------|--------|
 | Java | **Java 20 (Homebrew)** — already configured in `ingestion3/.env` as `JAVA_HOME`. `ingest.sh` auto-loads `.env`. |
 | SBT | `~/.sdkman/candidates/sbt/current/bin/sbt` (v1.10.3) — on PATH. |
-| Repo | `/Users/dominic/Documents/GitHub/ingestion3` |
-| i3.conf | `/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf` (set in `.env` as `I3_CONF`) |
-| Output dir | `/Users/dominic/Documents/dpla/data` (set as `DPLA_DATA` in `.env`) |
+| Repo | `$I3_HOME` |
+| i3.conf | `$I3_CONF` (set in `.env` as `I3_CONF`) |
+| Output dir | `$DPLA_DATA` (set as `DPLA_DATA` in `.env`) |
 | Disk | Harvests are small: maryland ~65 MB (364K records, ~4 hrs at ~8s/page), getty ~124 MB (100K records as of 2021). The `ingest.sh` disk check uses `df -BG` (Linux-only) and silently skips on macOS. |
 
 ### Step LH1: Verify endpoint is reachable locally
@@ -205,18 +205,18 @@ Expected: XML response with `<Identify>`. If this times out, the issue isn't jus
 
 Before harvesting, confirm `i3.conf` has the current endpoint for the hub:
 ```bash
-grep "^maryland\.harvest" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "^maryland\.harvest" "$I3_CONF"
 ```
 
 If the endpoint needs updating:
 ```bash
 python3 -c "
-content = open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf').read()
+content = open(os.environ["I3_CONF"]).read()
 content = content.replace(
     'maryland.harvest.endpoint = \"http://collections.digitalmaryland.org/oai/oai.php\"',
     'maryland.harvest.endpoint = \"http://cdm17340.contentdm.oclc.org/oai/oai.php\"'
 )
-open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf', 'w').write(content)
+open(os.environ["I3_CONF"], 'w').write(content)
 print('Updated.')
 "
 ```
@@ -228,8 +228,8 @@ Commit and push to ingestion3-conf after verifying.
 `ingest.sh` auto-loads `.env` (Java 20, I3_CONF) and defaults `DPLA_DATA` to `~/dpla/data`. Wrap with `caffeinate` to prevent the Mac from sleeping mid-harvest and expiring the OAI resumption token:
 
 ```bash
-mkdir -p /Users/dominic/Documents/dpla/data
-caffeinate -i nohup bash /Users/dominic/Documents/GitHub/ingestion3/scripts/ingest.sh <hub> --harvest-only \
+mkdir -p $DPLA_DATA
+caffeinate -i nohup bash $I3_HOME/scripts/ingest.sh <hub> --harvest-only \
   > /tmp/<hub>-harvest.log 2>&1 &
 echo "PID: $!"
 ```
@@ -240,26 +240,26 @@ echo "PID: $!"
 
 Monitor progress via the OAI harvest log (written by the harvester alongside the main log):
 ```bash
-tail -f /Users/dominic/Documents/GitHub/ingestion3/logs/oai-harvest-<hub>-*.log
+tail -f $I3_HOME/logs/oai-harvest-<hub>-*.log
 ```
 
 When complete, the script prints `Harvest completed in Xm Ys` and exits 0. Capture the harvest timestamp:
 ```bash
-HARVEST_TS=$(ls -t /Users/dominic/Documents/dpla/data/maryland/harvest/ | head -1)
+HARVEST_TS=$(ls -t $DPLA_DATA/maryland/harvest/ | head -1)
 echo "Harvest timestamp: $HARVEST_TS"
 ```
 
 Verify the record count from the manifest:
 ```bash
-cat /Users/dominic/Documents/dpla/data/maryland/harvest/$HARVEST_TS/_MANIFEST 2>/dev/null || \
-  ls /Users/dominic/Documents/dpla/data/maryland/harvest/$HARVEST_TS/ | head -5
+cat $DPLA_DATA/maryland/harvest/$HARVEST_TS/_MANIFEST 2>/dev/null || \
+  ls $DPLA_DATA/maryland/harvest/$HARVEST_TS/ | head -5
 ```
 
 ### Step LH4: Stage harvest output to S3
 
 Upload the local Avro output to a temporary S3 prefix:
 ```bash
-aws s3 sync /Users/dominic/Documents/dpla/data/maryland/harvest/ \
+aws s3 sync $DPLA_DATA/maryland/harvest/ \
   s3://dpla-master-dataset/tmp/maryland-harvest/ \
   --no-progress
 ```
@@ -330,7 +330,7 @@ aws s3 rm s3://dpla-master-dataset/tmp/maryland-harvest/ --recursive
 
 Also clean up local harvest data if disk space is needed:
 ```bash
-rm -rf /Users/dominic/Documents/dpla/data/maryland/harvest/
+rm -rf $DPLA_DATA/maryland/harvest/
 ```
 
 ## Community Webs Pre-processing
@@ -478,7 +478,7 @@ Verify `EXPORT_SUCCESS` is present before continuing.
 Confirm the hub key (e.g. `sd`, `maryland`, `indiana`) and check its config:
 
 ```bash
-grep "^<hub>\." /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "^<hub>\." "$I3_CONF"
 ```
 
 Note the `harvest.type` and `harvest.endpoint`. For `file` harvests, check that the file path exists and confirm with the user before proceeding.
@@ -515,14 +515,14 @@ If unsure which harvester the hub uses, grep the Scala source: `grep -r "<hub>" 
 
 **3. Confirm the i3.conf endpoint path:**
 ```bash
-grep "<hub>\.harvest" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "<hub>\.harvest" "$I3_CONF"
 ```
 The endpoint must point to the **folder containing the files** (e.g. `s3://dpla-hub-ohio/2026-03-20/`), not a parent bucket root. If it needs updating, use python3 to avoid quoting issues:
 ```bash
 python3 -c "
-content = open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf').read()
+content = open(os.environ["I3_CONF"]).read()
 content = content.replace('<hub>.harvest.endpoint = \"<old>\"', '<hub>.harvest.endpoint = \"<new>\"')
-open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf', 'w').write(content)
+open(os.environ["I3_CONF"], 'w').write(content)
 print('Updated:', content[content.find('<hub>.harvest.endpoint'):content.find('<hub>.harvest.endpoint')+60])
 "
 ```
@@ -1129,7 +1129,7 @@ When the user says "run [month] ingests" (e.g. "run February ingests", "run Marc
 import os, re, sys
 from datetime import datetime
 
-CONF = os.environ.get("I3_CONF", "/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf")
+CONF = os.environ["I3_CONF"]
 EC2_BLOCKED_HUBS = {"maryland", "getty", "hathi"}
 MONTH_NAMES = {
     "january":1,"february":2,"march":3,"april":4,"may":5,"june":6,
