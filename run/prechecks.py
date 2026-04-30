@@ -214,6 +214,7 @@ def check_repo_sync(repo, header_num="2", auto_reset=False, interactive=True):
     cmd = (
         f"cd {repo['path']} && "
         f"git fetch origin {repo['branch']} 2>/dev/null && "
+        "echo '--- BRANCH ---' && git rev-parse --abbrev-ref HEAD && "
         "echo '--- LOCAL ---' && git log --oneline -1 HEAD && "
         f"echo '--- REMOTE ---' && git log --oneline -1 origin/{repo['branch']} && "
         f"echo '--- DIFF ---' && git rev-list --left-right --count HEAD...origin/{repo['branch']}"
@@ -221,9 +222,21 @@ def check_repo_sync(repo, header_num="2", auto_reset=False, interactive=True):
     out = ssm_run(cmd)
     print(out.rstrip())
 
+    # Check current branch name — fail immediately if wrong branch.
+    current_branch = None
+    lines = out.splitlines()
+    for i, line in enumerate(lines):
+        if line.strip() == "--- BRANCH ---" and i + 1 < len(lines):
+            current_branch = lines[i + 1].strip()
+            break
+    if current_branch and current_branch != repo["branch"]:
+        bad(f"{repo['label']}: on branch '{current_branch}', expected '{repo['branch']}'.")
+        info(f"Switch back before ingesting:  git checkout {repo['branch']}  (on the box)")
+        return False
+
     # Parse the ahead/behind counts.
     ahead, behind = 0, 0
-    for line in out.splitlines():
+    for line in lines:
         parts = line.strip().split()
         if len(parts) == 2 and all(p.isdigit() for p in parts):
             ahead, behind = int(parts[0]), int(parts[1])
