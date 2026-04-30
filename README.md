@@ -13,6 +13,7 @@ DPLA's ingestion system is one of the core business systems and is the source of
     * [Hub specific instructions](#exceptions-and-unusual-ingests)
       * [Firewalled endpoints](#firewalled-endpoints)
       * [IP-whitelisted endpoints (Tailscale exit node)](#ip-whitelisted-endpoints-tailscale-exit-node)
+        * [J. Paul Getty Trust (getty)](#j-paul-getty-trust-getty)
         * [NJ Digital Library (njde)](#nj-digital-library-njde)
       * [Internet Archive - Community Webs](#community-webs)
       * [Digital Virginias](#digital-virginias)
@@ -270,6 +271,18 @@ Some partner endpoints are not publicly accessible — they whitelist a specific
 **Tailscale auth on the EC2 is per-machine**, stored in `/var/lib/tailscale/` on EBS. It persists across stop/start cycles and is not tied to any individual operator — anyone with EC2 access can run these ingests.
 
 **⚠️ Node key rotation:** Tailscale node keys expire approximately every 180 days. When the key expires, `ingest.sh` detects it immediately at harvest time and prints a clear error with re-authentication instructions. See `scripts/SCRIPTS.md` for the full recovery procedure.
+
+#### J. Paul Getty Trust (getty)
+
+| Field | Value |
+|-------|-------|
+| Partner | J. Paul Getty Trust |
+| Endpoint | IP-whitelisted ExLibris Primo REST API |
+| Whitelisted IP | `100.82.233.38` (main-vpc Tailscale node) |
+| Configured in | `scripts/ingest.sh` (`TAILSCALE_EXIT_NODE` case block) |
+| Handled by | `ingest.sh` automatically |
+
+Run exactly like any other hub — `ingest.sh getty` — no extra steps needed.
 
 #### NJ Digital Library (njde)
 

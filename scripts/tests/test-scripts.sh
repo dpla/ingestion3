@@ -957,6 +957,14 @@ test_tailscale_exit_node() {
         log_fail "Tailscale: njde exit node mapping not found in ingest.sh"
     fi
 
+    # Test 2: getty maps to the expected Tailscale exit node IP
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if grep -q 'getty.*TAILSCALE_EXIT_NODE.*100\.82\.233\.38' <<< "$content"; then
+        log_pass "Tailscale: getty maps to exit node 100.82.233.38"
+    else
+        log_fail "Tailscale: getty exit node mapping not found in ingest.sh"
+    fi
+
     # Test 2: require_command tailscale is called (install guard present)
     TESTS_RUN=$((TESTS_RUN + 1))
     if grep -q 'require_command tailscale' <<< "$content"; then
@@ -1000,6 +1008,17 @@ test_tailscale_exit_node() {
         log_pass "Tailscale: exit node cleared in both EXIT trap and post-harvest block"
     else
         log_fail "Tailscale: expected ≥2 exit node clear calls (trap + post-harvest), found $clear_count"
+    fi
+
+    # Test 6: All tailscale set calls use sudo (required — ec2-user lacks operator privilege)
+    TESTS_RUN=$((TESTS_RUN + 1))
+    local ts_set_total ts_set_with_sudo
+    ts_set_total=$(grep -c 'tailscale set' <<< "$content" || echo 0)
+    ts_set_with_sudo=$(grep -c 'sudo tailscale set' <<< "$content" || echo 0)
+    if [[ "$ts_set_total" -gt 0 && "$ts_set_total" -eq "$ts_set_with_sudo" ]]; then
+        log_pass "Tailscale: all tailscale set calls use sudo ($ts_set_with_sudo/$ts_set_total)"
+    else
+        log_fail "Tailscale: $((ts_set_total - ts_set_with_sudo)) of $ts_set_total tailscale set calls missing sudo"
     fi
 }
 
