@@ -14,12 +14,24 @@ source "$SCRIPT_DIR/common.sh"
 # Setup Java environment (8g default memory)
 setup_java "8g" || die "Failed to setup Java environment"
 
+# slack_notify_resilient — wraps slack_notify with one retry after 15s.
+# slack_notify (defined in common.sh) may swallow errors and always return 0,
+# so we always send twice with a gap for critical stage-checkpoint messages.
+# The brief duplicate on a healthy connection is intentional — a missed
+# "harvest complete" is worse than an occasional double-post.
+slack_notify_resilient() {
+    slack_notify "$@" || true
+    sleep 15
+    slack_notify "$@" || log_warn "Slack notify failed on retry (message: ${1:-})"
+}
+
 usage() {
     echo "Usage: ingest.sh <provider-name> [options]"
     echo ""
     echo "Options:"
     echo "  --skip-harvest          Skip harvest step (use existing harvest data)"
     echo "  --harvest-only          Only run harvest step"
+    echo "  --mapping-only          Only run mapping step (implies --skip-harvest)"
     echo "  --skip-s3-sync          Skip S3 sync step (pipeline stops at JSONL)"
     echo "  --resume-from <step>    Resume from a specific step, reusing existing outputs"
     echo "                          for all preceding steps. Valid steps: mapping,"
@@ -30,6 +42,7 @@ usage() {
     echo "  ./ingest.sh maryland                          # Full pipeline"
     echo "  ./ingest.sh maryland --skip-harvest           # Use existing harvest"
     echo "  ./ingest.sh maryland --harvest-only           # Only harvest"
+    echo "  ./ingest.sh maryland --mapping-only           # Only mapping (verify count)"
     echo "  ./ingest.sh maryland --skip-s3-sync           # Skip S3 upload"
     echo "  ./ingest.sh maryland --resume-from enrichment # Skip harvest+mapping, reuse"
     echo "                                                #   existing mapping output"
@@ -53,6 +66,7 @@ shift
 
 SKIP_HARVEST=false
 HARVEST_ONLY=false
+MAPPING_ONLY=false
 SKIP_S3_SYNC=false
 RESUME_FROM=""
 
@@ -69,6 +83,11 @@ while [[ $# -gt 0 ]]; do
             ;;
         --harvest-only)
             HARVEST_ONLY=true
+            shift
+            ;;
+        --mapping-only)
+            MAPPING_ONLY=true
+            SKIP_HARVEST=true
             shift
             ;;
         --skip-s3-sync)
@@ -142,6 +161,8 @@ cd "$I3_HOME"
 
 if [[ -n "$RESUME_FROM" ]]; then
     slack_notify ":arrow_forward: *$PROVIDER ingest resuming from $RESUME_FROM*"
+elif [[ "$MAPPING_ONLY" = true ]]; then
+    slack_notify ":arrow_forward: *$PROVIDER mapping-only run started*"
 else
     slack_notify ":arrow_forward: *$PROVIDER ingest started* | harvest → map → enrich → jsonl → s3"
 fi
@@ -175,7 +196,7 @@ if [ "$SKIP_HARVEST" = false ] && [[ -z "$RESUME_FROM" ]]; then
         exit 1
     fi
 
-    slack_notify ":white_check_mark: *$PROVIDER harvest complete* (${HARVEST_RECORD_COUNT} records) — starting mapping"
+    slack_notify_resilient ":white_check_mark: *$PROVIDER harvest complete* (${HARVEST_RECORD_COUNT} records) — starting mapping"
 else
     print_step "Skipping harvest (using existing data)..."
     HARVEST_TS_DIR=$(find_latest_data "$PROVIDER" harvest) \
@@ -184,6 +205,7 @@ fi
 
 if [ "$HARVEST_ONLY" = true ]; then
     write_hub_status "$PROVIDER" complete
+    slack_notify ":white_check_mark: *$PROVIDER harvest complete* (${HARVEST_RECORD_COUNT} records)"
     log_info "Harvest-only mode - stopping here"
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))
@@ -191,6 +213,7 @@ if [ "$HARVEST_ONLY" = true ]; then
     echo "=============================================="
     echo "  Harvest completed in $((DURATION / 60))m $((DURATION % 60))s"
     echo "=============================================="
+    TRAP_HANDLED=true
     exit 0
 fi
 
@@ -226,7 +249,22 @@ else
         exit 1
     fi
 
-    slack_notify ":white_check_mark: *$PROVIDER mapping complete* (${MAP_RECORD_COUNT} records) — starting enrichment"
+    if [ "$MAPPING_ONLY" = true ]; then
+        write_hub_status "$PROVIDER" complete
+        slack_notify ":white_check_mark: *$PROVIDER mapping complete* (${MAP_RECORD_COUNT} records)"
+        log_info "Mapping-only mode - stopping here"
+        END_TIME=$(date +%s)
+        DURATION=$((END_TIME - START_TIME))
+        echo ""
+        echo "=============================================="
+        echo "  Mapping completed in $((DURATION / 60))m $((DURATION % 60))s"
+        echo "  Records: $MAP_RECORD_COUNT"
+        echo "=============================================="
+        TRAP_HANDLED=true
+        exit 0
+    fi
+
+    slack_notify_resilient ":white_check_mark: *$PROVIDER mapping complete* (${MAP_RECORD_COUNT} records) — starting enrichment"
 fi
 
 # Step 3: Enrichment
@@ -267,7 +305,7 @@ else
         exit 1
     fi
 
-    slack_notify ":white_check_mark: *$PROVIDER enrichment complete* (${ENRICH_RECORD_COUNT} records) — starting JSONL export"
+    slack_notify_resilient ":white_check_mark: *$PROVIDER enrichment complete* (${ENRICH_RECORD_COUNT} records) — starting JSONL export"
 fi
 
 # Step 4: JSONL export
@@ -287,7 +325,7 @@ stop_heartbeat
 JSONL_TS_DIR=$(find_latest_data "$PROVIDER" jsonl)
 JSONL_TS=$(basename "$JSONL_TS_DIR")
 log_info "JSONL export complete: $JSONL_TS"
-slack_notify ":white_check_mark: *$PROVIDER JSONL export complete* — starting S3 sync"
+slack_notify_resilient ":white_check_mark: *$PROVIDER JSONL export complete* — starting S3 sync"
 
 # Read record count from JSONL manifest
 JSONL_RECORD_COUNT=$(read_manifest_count "$JSONL_TS_DIR/_MANIFEST")
@@ -396,10 +434,10 @@ sign = '+' if delta >= 0 else ''
 print(f'Records: {new:,} ({sign}{delta:,} vs prev) | Size: {size_mb:.1f} MB')
 ")
 
-    slack_notify "*$PROVIDER ingest complete* :white_check_mark:\nNew snapshot: \`$JSONL_TS\`\n$SUMMARY\nS3: \`s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${JSONL_TS}/\`${EMAIL_NOTE}"
+    slack_notify_resilient "*$PROVIDER ingest complete* :white_check_mark:\nNew snapshot: \`$JSONL_TS\`\n$SUMMARY\nS3: \`s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${JSONL_TS}/\`${EMAIL_NOTE}"
 else
     print_step "Skipping S3 sync (--skip-s3-sync)"
-    slack_notify "*$PROVIDER ingest complete* :white_check_mark: _(S3 sync skipped)_\nJSONL: \`$JSONL_TS\`${EMAIL_NOTE}"
+    slack_notify_resilient "*$PROVIDER ingest complete* :white_check_mark: _(S3 sync skipped)_\nJSONL: \`$JSONL_TS\`${EMAIL_NOTE}"
 fi
 
 write_hub_status "$PROVIDER" complete

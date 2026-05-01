@@ -201,16 +201,48 @@ fi
 
 echo "===PROGRESS_LINES==="
 # Last 30 OAI request lines — used for progress + pacing parsing.
-# These contain the offsets/totals (whether in resumption token or as Some() fields).
 if [ -f "$LOG" ]; then
   tail -300 "$LOG" 2>/dev/null | grep -E "OaiRequestInfo|Loading page" | tail -30
 fi
 
 echo "===STAGES_DONE==="
+# Determine current run start epoch so we can filter out output dirs from
+# previous runs. Strategy (in priority order):
+#   1. ps -o lstart on the running ingest process — exact and reliable.
+#   2. Earliest YYYYMMDD_HHMMSS dir name across all stage output dirs — works
+#      after the process exits (e.g. run just finished, checking results).
+RUN_START_EPOCH=0
+INGEST_PID=$(pgrep -f "ingest\\.sh ${{HUB}}" | head -1 || true)
+if [ -n "$INGEST_PID" ]; then
+  LSTART=$(ps -o lstart= -p "$INGEST_PID" 2>/dev/null | xargs || true)
+  if [ -n "$LSTART" ]; then
+    RUN_START_EPOCH=$(date -d "$LSTART" +%s 2>/dev/null || echo 0)
+  fi
+fi
+if [ "$RUN_START_EPOCH" -eq 0 ]; then
+  # Process is gone — find the earliest completed stage dir from this run by
+  # looking at the most recent dir across all stages and taking the minimum.
+  for stage in {' '.join(STAGES)}; do
+    LATEST=$(ls -1dt {DATA_ROOT}/${{HUB}}/${{stage}}/*/ 2>/dev/null | head -1 | sed 's:/$::')
+    if [ -n "$LATEST" ] && [ -f "$LATEST/_SUCCESS" ]; then
+      DNAME=$(basename "$LATEST")
+      DTS=$(echo "$DNAME" | grep -oE '^[0-9]{{8}}_[0-9]{{6}}' | head -1)
+      if [ -n "$DTS" ]; then
+        PARSED=$(date -d "${{DTS:0:8}} ${{DTS:9:2}}:${{DTS:11:2}}:${{DTS:13:2}}" +%s 2>/dev/null || echo 0)
+        if [ "$PARSED" -gt 0 ] && ([ "$RUN_START_EPOCH" -eq 0 ] || [ "$PARSED" -lt "$RUN_START_EPOCH" ]); then
+          RUN_START_EPOCH=$PARSED
+        fi
+      fi
+    fi
+  done
+fi
 for stage in {' '.join(STAGES)}; do
   STAGE_DIR="{DATA_ROOT}/${{HUB}}/${{stage}}"
   LATEST=$(ls -1dt ${{STAGE_DIR}}/*/ 2>/dev/null | head -1 | sed 's:/$::')
   if [ -n "$LATEST" ] && [ -f "$LATEST/_SUCCESS" ]; then
+    SUCCESS_EPOCH=$(stat -c '%Y' "$LATEST/_SUCCESS" 2>/dev/null || echo 0)
+    # Skip if this _SUCCESS predates the current run's log start.
+    if [ "$RUN_START_EPOCH" -gt 0 ] && [ "$SUCCESS_EPOCH" -lt "$RUN_START_EPOCH" ]; then continue; fi
     MTIME=$(stat -c '%y' "$LATEST/_SUCCESS" 2>/dev/null | cut -d'.' -f1)
     MANIFEST=""
     if [ -f "$LATEST/_MANIFEST" ]; then
@@ -309,27 +341,18 @@ def stage_runtime_seconds(stage_first_ts, log_mtime):
 
 
 # ---- progress + pacing — handles multiple OAI log shapes ----
-# Shape A (BPL via Digital Commonwealth): the resumption token contains the
-# offset, and the OaiRequestInfo trailing field is just the total.
-#   ...Some(mods.f(...).t(1485939):838750)...Some(1485939))
-#
-# Shape B (p2p via Plains2Peaks): the resumption token is opaque, and the
-# OaiRequestInfo trailing fields are Some(<current>),Some(<total>).
-#   ...Some(opaque-uuid)...Some(502000),Some(1211330))
-
 PROGRESS_TRAILING_PAIR_RE = re.compile(r"Some\((\d+)\)\s*,\s*Some\((\d+)\)\s*\)\s*$")
 PROGRESS_TOKEN_RE = re.compile(r"t\((\d+)\):(\d+)")
 
 
 def parse_oai_progress_from_line(line: str):
-    """Return (current, total) from a single OaiRequestInfo line.
-    Tries p2p-style trailing pair first, falls back to BPL-style token."""
+    """Return (current, total) from a single OaiRequestInfo line."""
     m = PROGRESS_TRAILING_PAIR_RE.search(line)
     if m:
         return int(m.group(1)), int(m.group(2))
     m = PROGRESS_TOKEN_RE.search(line)
     if m:
-        return int(m.group(2)), int(m.group(1))  # offset, total
+        return int(m.group(2)), int(m.group(1))
     return None, None
 
 
@@ -357,15 +380,13 @@ def parse_harvest_pacing(progress_lines: str, n_points: int = 30):
     t1, o1 = points[-1]
     dt = t1 - t0
     if dt < 0:
-        dt += 86400  # day rollover
+        dt += 86400
     if dt <= 0:
         return None
     return (o1 - o0) / dt
 
 
 def earliest_timestamp_in_lines(lines: str):
-    """Return the earliest HH:MM:SS-shaped timestamp found across all lines.
-    Used as a fallback for stage_start when STAGE_FIRST didn't find anything."""
     earliest = None
     earliest_secs = None
     for line in lines.splitlines():
@@ -379,9 +400,6 @@ def earliest_timestamp_in_lines(lines: str):
 
 
 def parse_process_lines(proc_text: str):
-    """Parse 'ps -o pid=,etime=,cmd= -p $p' output. Returns a list of dicts
-    with keys: pid, etime, cmd, script (the bare script filename + args).
-    Skips empty/header lines."""
     rows = []
     for ln in proc_text.splitlines():
         ln = ln.strip()
@@ -391,9 +409,6 @@ def parse_process_lines(proc_text: str):
         if not m:
             continue
         pid, etime, cmd = m.group(1), m.group(2), m.group(3)
-        # Pull out the .sh script name and anything that follows it on the cmdline.
-        # e.g. "bash /home/ec2-user/.../ingest.sh bpl --resume-from mapping"
-        # → script = "ingest.sh bpl --resume-from mapping"
         script_match = re.search(r"/([^/\s]+\.sh)(\s+.*)?$", cmd)
         if script_match:
             name = script_match.group(1)
@@ -441,16 +456,15 @@ def render(hub, harvest_type, endpoint, sections):
             if len(rows) > 1:
                 lines.append(c(DIM, f"  + {len(rows) - 1} subprocess(es)"))
         else:
-            # Fallback if the ps output couldn't be parsed.
             for ln in proc.splitlines():
                 lines.append("  " + c(GREEN, ln.strip()))
 
     # COMPLETED STAGES
     lines.append("")
-    lines.append("COMPLETED STAGES")
+    lines.append("COMPLETED STAGES (this run)")
     done_lines = [ln for ln in sections.get("STAGES_DONE", "").splitlines() if ln.strip()]
     if not done_lines:
-        lines.append(c(DIM, "  (none yet)"))
+        lines.append(c(DIM, "  (none yet this run)"))
     else:
         for ln in done_lines:
             parts = ln.split("|", 2)
@@ -479,9 +493,6 @@ def render(hub, harvest_type, endpoint, sections):
             lines.append(c(YELLOW, "  Could not infer current stage from log."))
         else:
             stage_start = stage_first_ts.get(current_stage)
-            # Fallback for when STAGE_FIRST didn't find a marker: use the earliest
-            # timestamp present in PROGRESS_LINES. Less accurate (it's the start
-            # of the recent window, not the actual stage start) but still useful.
             stage_start_was_inferred = False
             if not stage_start:
                 stage_start = earliest_timestamp_in_lines(progress_lines)
@@ -496,7 +507,6 @@ def render(hub, harvest_type, endpoint, sections):
             else:
                 lines.append("  Started:   (no clear stage-start marker in log)")
 
-            # Progress + pacing — derivable for OAI variants. Other types: graceful note.
             if current_stage == "harvest":
                 ht = (harvest_type or "").lower()
                 if ht in ("oai", "localoai") or ht == "" or "oai" in ht:
@@ -557,8 +567,8 @@ def derive_summary(is_running, sections, harvest_type):
         return c(YELLOW, "running — stage unclear")
 
     if done_count == len(STAGES):
-        return c(GREEN, "complete — all stages DONE")
-    return c(RED, f"process is gone, only {done_count}/{len(STAGES)} stages complete — likely failed")
+        return c(GREEN, "complete — all stages DONE today")
+    return c(RED, f"process is gone, only {done_count}/{len(STAGES)} stages complete today — likely failed")
 
 
 # ---------- main ----------
@@ -581,7 +591,6 @@ def main():
         sys.exit(f"Invalid hub name: {hub!r}")
 
     endpoint, harvest_type = lookup_hub_in_conf(hub)
-
     script = build_status_script(hub)
 
     def one_pass():
