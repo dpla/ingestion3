@@ -313,26 +313,82 @@ fi
 
     bad("JAR is stale or missing.")
     try:
-        answer = input("  Rebuild fat JAR now? (sbt assembly — takes ~10 min) [y/N] ").strip().lower()
+        answer = input("  Rebuild fat JAR now? (sbt clean assembly — takes ~10 min) [y/N] ").strip().lower()
     except EOFError:
         answer = ""
     if answer not in ("y", "yes"):
-        info("Skipping rebuild. Run `sbt assembly` on the box before ingesting.")
+        info("Skipping rebuild. Run `sbt clean assembly` on the box before ingesting.")
         return False
 
-    info("Running sbt assembly on the box — this will take a while...")
-    try:
-        result = ssm_run(
-            f"cd {REPO_PATH} && sbt assembly",
-            timeout_seconds=1800,  # 30 min ceiling
-            poll_seconds=20,
-        )
-        print(result.rstrip())
-        ok("sbt assembly complete — JAR rebuilt.")
+    return _run_sbt_assembly()
+
+
+def _run_sbt_assembly():
+    """Launch sbt clean assembly as a background nohup job on the EC2 box,
+    then tail the log every 30s until the build exits. Returns True if the
+    JAR ends up fresh, False otherwise."""
+    LOG_PATH = "/home/ec2-user/sbt-assembly.log"
+
+    # Wipe any stale log so we don't read old output.
+    ssm_run(f"rm -f {LOG_PATH}", timeout_seconds=30)
+
+    info("Launching sbt clean assembly in the background on the EC2 box...")
+    info(f"Log: {LOG_PATH}")
+
+    launch_cmd = (
+        f"nohup bash -c 'cd {REPO_PATH} && sbt \"clean; assembly\"' "
+        f"> {LOG_PATH} 2>&1 & echo \"sbt PID=$!\""
+    )
+    out = ssm_run(launch_cmd, timeout_seconds=30)
+    info(out.strip())
+    info("Tailing log every 30s — this will take ~10 min...\n")
+
+    while True:
+        time.sleep(30)
+
+        # Is sbt still running?
+        still_running = ssm_run(
+            "pgrep -f 'sbt' | head -1 || echo ''",
+            timeout_seconds=30,
+        ).strip()
+
+        # Print the last 20 lines of the log.
+        log_tail = ssm_run(
+            f"[ -f {LOG_PATH} ] && tail -20 {LOG_PATH} || echo '(log not found)'",
+            timeout_seconds=30,
+        ).rstrip()
+        print("\n" + "─" * 60)
+        print(log_tail)
+
+        if not still_running:
+            info("\nsbt process has exited.")
+            break
+
+    # Verify the JAR was actually written — sbt can exit 0 without updating it
+    # if incremental compilation short-circuits. Check mtime vs latest commit.
+    verify = ssm_run(
+        f"cd {REPO_PATH} && "
+        f"JAR=$(ls -1 target/scala-*/ingestion3-assembly-*.jar 2>/dev/null | head -1) && "
+        f"[ -z \"$JAR\" ] && echo NOJAR && exit 0; "
+        f"JAR_EPOCH=$(stat -c %Y \"$JAR\") && "
+        f"COMMIT_EPOCH=$(git log -1 --format=%ct) && "
+        f"JAR_DATE=$(date -d @$JAR_EPOCH '+%Y-%m-%d %H:%M:%S') && "
+        f"COMMIT_DATE=$(date -d @$COMMIT_EPOCH '+%Y-%m-%d %H:%M:%S') && "
+        f"echo \"JAR:    $JAR_DATE\" && "
+        f"echo \"COMMIT: $COMMIT_DATE\" && "
+        f"[ $JAR_EPOCH -ge $COMMIT_EPOCH ] && echo FRESH || echo STALE",
+        timeout_seconds=30,
+    ).strip()
+    print()
+    print(verify)
+    if "FRESH" in verify:
+        ok("sbt assembly complete — JAR rebuilt and verified fresh.")
         return True
-    except RuntimeError as e:
-        bad(f"sbt assembly failed: {e}")
+    if "NOJAR" in verify:
+        bad("Build finished but no JAR was found — check the log above for errors.")
         return False
+    bad("sbt ran but JAR is still older than the latest commit — check the log above for errors.")
+    return False
 
 def check_target_ownership():
     header("4. target/ ownership")
@@ -899,8 +955,18 @@ def check_endpoint(endpoint, is_api=False, harvest_type=None):
     if "<error" in lower:
         bad("OAI endpoint returned an <error> element. Review output above.")
         return False
+    # Detect HTML error pages (403, 404, 502, etc.) — curl exits 0 but the
+    # response is an nginx/Apache error page, not OAI XML. Non-blocking caution
+    # since some endpoints block the precheck IP but still allow the harvester.
+    http_error = re.search(r"<title>\s*(\d{3})[^<]*</title>", body, re.IGNORECASE)
+    if http_error:
+        code = http_error.group(1)
+        warn(f"Endpoint returned an HTTP {code} error page — EC2 IP may be blocked.")
+        info("The harvester might still work if Rutgers/the provider whitelists by User-Agent")
+        info("or if the block only applies to the ?verb=Identify path. Try the ingest and see.")
+        return True  # non-blocking — let the operator try
     warn("OAI endpoint responded, but no <OAI-PMH>/<Identify> tags found.")
-    return False
+    return True  # non-blocking
 
 
 # ---------- main ----------
