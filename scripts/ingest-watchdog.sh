@@ -4,7 +4,7 @@
 # Run every 5 minutes via crontab (as ec2-user). Detects ingests that were
 # killed without a clean exit (e.g. SIGKILL of the whole process group, which
 # bypasses bash EXIT traps) by checking for in-progress status files with no
-# corresponding running ingest.sh process.
+# corresponding running ingest process.
 #
 # On detecting a dead ingest:
 #   - Sends a Slack alert to #tech-alerts via SLACK_BOT_TOKEN
@@ -27,6 +27,14 @@ ACTIVE_STATUSES=(harvesting remapping enriching jsonl syncing)
 # for the brief gap between one JVM step completing and the next starting.
 MIN_AGE_SECS=300  # 5 minutes
 
+# Hubs that should get periodic "still running" progress updates while in an
+# active stage. These tend to be multi-hour jobs (smithsonian harvest is 3-4h)
+# where the operator benefits from a heartbeat rather than radio silence.
+HEARTBEAT_HUBS=(smithsonian)
+
+# How often to send a heartbeat for HEARTBEAT_HUBS while the ingest is alive.
+HEARTBEAT_INTERVAL_SECS=$((60 * 60))  # 1 hour
+
 [[ -d "$STATUS_DIR" ]] || exit 0
 
 # Load credentials (provides SLACK_BOT_TOKEN, SLACK_CHANNEL)
@@ -47,6 +55,40 @@ print(json.dumps({'channel': sys.argv[1], 'text': sys.argv[2]}))" \
         -H "Authorization: Bearer $token" \
         -H "Content-Type: application/json" \
         -d "$payload" > /dev/null || true
+}
+
+is_heartbeat_hub() {
+    local hub="$1"
+    for h in "${HEARTBEAT_HUBS[@]}"; do
+        [[ "$hub" == "$h" ]] && return 0
+    done
+    return 1
+}
+
+# Pull the most recent "Harvested X% (N / total) of records from FILE" line
+# from any of the candidate log files for this hub. Returns empty if no
+# progress line is found yet (e.g., harvest just started).
+latest_progress_line() {
+    local hub="$1"
+    local candidates=(
+        "$I3_HOME/data/${hub}-ingest.log"
+        "$I3_HOME/data/${hub}-harvest.log"
+        "$I3_HOME/data/si-harvest.log"          # smithsonian's bare-harvest log
+        "$I3_HOME/data/si-pipeline.log"
+    )
+    for log in "${candidates[@]}"; do
+        if [[ -f "$log" ]]; then
+            # Most recent "Harvested" line, stripped of timestamp+log noise.
+            local line
+            line=$(grep -E "Harvested [0-9]" "$log" 2>/dev/null \
+                   | tail -1 \
+                   | sed -E 's/^[0-9]{2}:[0-9]{2}:[0-9]{2} *INFO *\[[^]]*\] *//')
+            if [[ -n "$line" ]]; then
+                echo "$line"
+                return 0
+            fi
+        fi
+    done
 }
 
 for status_file in "$STATUS_DIR"/*.status; do
@@ -71,8 +113,34 @@ print(d.get('hub', ''), d.get('status', ''))" "$status_file" 2>/dev/null) || con
     age=$(( $(date +%s) - file_mtime ))
     (( age >= MIN_AGE_SECS )) || continue
 
-    # Skip if the ingest process is still running for this hub
-    if pgrep -f "ingest.sh $hub" > /dev/null 2>&1; then
+    # Skip if any process for this hub is still running. Different hubs use
+    # different launcher conventions:
+    #   - ingest.sh <hub>             — standard launcher
+    #   - <hub>-ingest.sh             — hub-specific scripts (community-webs)
+    #   - harvest.sh <hub>            — bare harvest invocations (smithsonian)
+    #   - java ... --name=<hub>       — the actual JVM, most reliable signal
+    proc_pattern="ingest\.sh $hub|${hub}-ingest\.sh|harvest\.sh $hub|java.*--name=$hub"
+    if pgrep -f "$proc_pattern" > /dev/null 2>&1; then
+        # Process is alive. For heartbeat-eligible hubs (long-running like
+        # smithsonian), send a periodic Slack progress update so the operator
+        # knows things are still moving instead of waiting hours in silence.
+        if is_heartbeat_hub "$hub"; then
+            heartbeat_sentinel="$STATUS_DIR/$hub.heartbeat"
+            last_heartbeat=0
+            [[ -f "$heartbeat_sentinel" ]] && \
+                last_heartbeat=$(stat -c '%Y' "$heartbeat_sentinel" 2>/dev/null || echo 0)
+            now=$(date +%s)
+            if (( now - last_heartbeat >= HEARTBEAT_INTERVAL_SECS )); then
+                progress=$(latest_progress_line "$hub" || true)
+                age_min=$(( age / 60 ))
+                msg=":hourglass: *$hub still running* — stage \`$status\`, last status update ${age_min}m ago"
+                if [[ -n "$progress" ]]; then
+                    msg+="\nLatest progress: $progress"
+                fi
+                slack_alert "$msg"
+                touch "$heartbeat_sentinel"
+            fi
+        fi
         continue
     fi
 
@@ -87,7 +155,7 @@ print(d.get('hub', ''), d.get('status', ''))" "$status_file" 2>/dev/null) || con
 
     # In-progress status with no running process and stale timestamp — alert.
     age_min=$(( age / 60 ))
-    slack_alert ":skull: *$hub ingest process was killed* | stage: \`$status\` | last updated: ${age_min}m ago\nNo ingest.sh process found — likely SIGKILL. Manual restart required."
+    slack_alert ":skull: *$hub ingest process was killed* | stage: \`$status\` | last updated: ${age_min}m ago\nNo ingest process found — likely SIGKILL. Manual restart required."
 
     # Touch sentinel so subsequent cron runs skip this death event.
     touch "$sentinel"
