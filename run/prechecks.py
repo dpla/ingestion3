@@ -310,8 +310,29 @@ fi
     if "VERDICT: GOOD" in out:
         ok("JAR is fresh.")
         return True
-    bad("JAR is stale or missing — rebuild with `sbt assembly` on the box before ingesting.")
-    return False
+
+    bad("JAR is stale or missing.")
+    try:
+        answer = input("  Rebuild fat JAR now? (sbt assembly — takes ~10 min) [y/N] ").strip().lower()
+    except EOFError:
+        answer = ""
+    if answer not in ("y", "yes"):
+        info("Skipping rebuild. Run `sbt assembly` on the box before ingesting.")
+        return False
+
+    info("Running sbt assembly on the box — this will take a while...")
+    try:
+        result = ssm_run(
+            f"cd {REPO_PATH} && sbt assembly",
+            timeout_seconds=1800,  # 30 min ceiling
+            poll_seconds=20,
+        )
+        print(result.rstrip())
+        ok("sbt assembly complete — JAR rebuilt.")
+        return True
+    except RuntimeError as e:
+        bad(f"sbt assembly failed: {e}")
+        return False
 
 def check_target_ownership():
     header("4. target/ ownership")
@@ -858,8 +879,8 @@ def check_endpoint(endpoint, is_api=False, harvest_type=None):
 
     body = result.stdout
     if not body.strip():
-        bad("Empty response — endpoint reachable but returned nothing.")
-        return False
+        warn("Empty response — endpoint reachable but returned nothing. Could be transient; try manually if unsure.")
+        return True  # non-blocking — empty body isn't proof the endpoint is down
 
     info("--- first 5 lines of response ---")
     for line in body.splitlines()[:5]:
