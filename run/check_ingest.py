@@ -470,7 +470,14 @@ def render(hub, harvest_type, endpoint, sections):
             parts = ln.split("|", 2)
             if len(parts) == 3:
                 stage, mtime, manifest = parts
-                lines.append(f"  {c(GREEN, stage):<22} done {mtime}   {manifest.strip()}")
+                # Normalize record count to always have commas.
+                manifest = re.sub(
+                    r"(\d[\d,]*)",
+                    lambda m: f"{int(m.group(1).replace(',', '')):,}",
+                    manifest.strip(),
+                    count=1,
+                )
+                lines.append(f"  {c(GREEN, stage):<22} done {mtime}   {manifest}")
             else:
                 lines.append(f"  {ln}")
 
