@@ -45,7 +45,7 @@ PIPELINE_LOG       = "/home/ec2-user/data/smithsonian-ingest.log"
 
 DOWNLOAD_TIMEOUT_S   = 1800   # 30 min
 PREPROCESS_TIMEOUT_S = 1200   # 20 min
-MAPPING_TIMEOUT_S    = 3600   # 60 min — 7.8M records takes ~35–40 min
+MAPPING_TIMEOUT_S    = 5400   # 90 min — 7.8M records takes ~35–40 min; buffer for variance
 POLL_INTERVAL_S      = 30
 LOG_TAIL_LINES       = 20
 
