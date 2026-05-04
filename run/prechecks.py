@@ -961,6 +961,10 @@ def check_endpoint(endpoint, is_api=False, harvest_type=None):
     http_error = re.search(r"<title>\s*(\d{3})[^<]*</title>", body, re.IGNORECASE)
     if http_error:
         code = http_error.group(1)
+        if code == "404":
+            bad(f"Endpoint returned a 404 — the URL is likely wrong or the provider moved it.")
+            info("Check the hub's OAI endpoint with your browser, update i3.conf, and re-run.")
+            return False
         warn(f"Endpoint returned an HTTP {code} error page — EC2 IP may be blocked.")
         info("The harvester might still work if Rutgers/the provider whitelists by User-Agent")
         info("or if the block only applies to the ?verb=Identify path. Try the ingest and see.")
