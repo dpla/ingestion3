@@ -23,6 +23,8 @@ object MarylandMapping {
 
 class MarylandMapping extends XmlMapping with XmlExtractor {
 
+  private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
+
   import MarylandMapping._
 
   // ID minting functions
@@ -129,21 +131,18 @@ class MarylandMapping extends XmlMapping with XmlExtractor {
       .filter(Utils.isUrl)
       .headOption
 
-    val parts: Seq[String] = url.getOrElse("").stripSuffix("/").split("/")
-
-    val collection: Option[String] =
-      parts.reverse.lift(2) // get third to last element
-    val item: Option[String] = parts.lastOption // get last element
-
-    if (collection.isDefined && item.isDefined) {
-      val url: String =
-        "http://webconfig.digitalmaryland.org/utils/getthumbnail/collection/" +
-          collection.get +
-          "/id/" +
-          item.get
-
-      Seq(stringOnlyWebResource(url))
-    } else Seq()
+    url.flatMap { u =>
+      val uri = new java.net.URI(u)
+      val base = s"${uri.getScheme}://${uri.getHost}"
+      val thumbnailPath = uri.getPath
+        .replaceFirst("/cdm/ref/collection/", "/utils/getthumbnail/collection/")
+      if (thumbnailPath.contains("getthumbnail"))
+        Some(stringOnlyWebResource(base + thumbnailPath))
+      else {
+        logger.warn(s"MarylandMapping.preview: identifier URL did not match expected CONTENTdm path pattern, no thumbnail generated. URL: $u")
+        None
+      }
+    }.toSeq
   }
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
