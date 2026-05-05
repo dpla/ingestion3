@@ -1,6 +1,5 @@
 package dpla.ingestion3.mappers.providers
 
-import com.typesafe.scalalogging.LazyLogging
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.model.DplaMapData._
@@ -22,7 +21,9 @@ object MarylandMapping {
   val ccByNd30Uri = "https://creativecommons.org/licenses/by-nd/3.0/"
 }
 
-class MarylandMapping extends XmlMapping with XmlExtractor with LazyLogging {
+class MarylandMapping extends XmlMapping with XmlExtractor {
+
+  private val logger = org.slf4j.LoggerFactory.getLogger(getClass)
 
   import MarylandMapping._
 
