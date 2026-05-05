@@ -43,6 +43,7 @@ usage() {
     echo "  ./ingest.sh maryland --skip-harvest           # Use existing harvest"
     echo "  ./ingest.sh maryland --harvest-only           # Only harvest"
     echo "  ./ingest.sh maryland --mapping-only           # Only mapping (verify count)"
+    echo "  ./ingest.sh maryland --mapping-only           # Only mapping (verify count)"
     echo "  ./ingest.sh maryland --skip-s3-sync           # Skip S3 upload"
     echo "  ./ingest.sh maryland --resume-from enrichment # Skip harvest+mapping, reuse"
     echo "                                                #   existing mapping output"
@@ -67,6 +68,7 @@ shift
 SKIP_HARVEST=false
 HARVEST_ONLY=false
 MAPPING_ONLY=false
+MAPPING_ONLY=false
 SKIP_S3_SYNC=false
 RESUME_FROM=""
 
@@ -83,6 +85,11 @@ while [[ $# -gt 0 ]]; do
             ;;
         --harvest-only)
             HARVEST_ONLY=true
+            shift
+            ;;
+        --mapping-only)
+            MAPPING_ONLY=true
+            SKIP_HARVEST=true
             shift
             ;;
         --mapping-only)
@@ -118,6 +125,15 @@ if [[ "$HARVEST_TYPE" == *"delta"* ]]; then
     die "Provider '$PROVIDER' uses delta harvesting ($HARVEST_TYPE) and cannot be run with ingest.sh. Use the dedicated script instead (e.g. scripts/harvest/nara-ingest.sh)."
 fi
 
+# Some partners whitelist specific source IPs on their OAI endpoints. For those
+# hubs, we route harvest traffic through a Tailscale exit node that holds the
+# whitelisted IP. The exit node is cleared after harvest so downstream pipeline
+# steps (mapping, enrichment, S3 sync) use normal routing.
+TAILSCALE_EXIT_NODE=""
+case "$PROVIDER" in
+    getty|njde) TAILSCALE_EXIT_NODE="100.82.233.38" ;;  # main-vpc; whitelisted by Getty and Rutgers
+esac
+
 # Setup paths
 PROVIDER_DATA="$DPLA_DATA/$PROVIDER"
 HARVEST_DIR="$PROVIDER_DATA/harvest"
@@ -133,6 +149,8 @@ fi
 INGEST_PROVIDER="$PROVIDER"
 TRAP_HANDLED=false  # set to true when we handle notification+status explicitly before exit
 trap 'err=$?
+     [ -n "${TAILSCALE_EXIT_NODE:-}" ] && sudo tailscale set --exit-node= 2>/dev/null || true
+     [ -n "${TAILSCALE_EXIT_NODE:-}" ] && sudo systemctl stop tailscaled 2>/dev/null || true
      stop_heartbeat 2>/dev/null || true
      if [[ $err -ne 0 && -n "${INGEST_PROVIDER:-}" && "$TRAP_HANDLED" != "true" ]]; then
          slack_notify ":x: *$INGEST_PROVIDER ingest FAILED* (exit $err)"
@@ -163,6 +181,8 @@ if [[ -n "$RESUME_FROM" ]]; then
     slack_notify ":arrow_forward: *$PROVIDER ingest resuming from $RESUME_FROM*"
 elif [[ "$MAPPING_ONLY" = true ]]; then
     slack_notify ":arrow_forward: *$PROVIDER mapping-only run started*"
+elif [[ "$MAPPING_ONLY" = true ]]; then
+    slack_notify ":arrow_forward: *$PROVIDER mapping-only run started*"
 else
     slack_notify ":arrow_forward: *$PROVIDER ingest started* | harvest → map → enrich → jsonl → s3"
 fi
@@ -177,6 +197,34 @@ if [ "$SKIP_HARVEST" = false ] && [[ -z "$RESUME_FROM" ]]; then
     mkdir -p "$I3_HOME/logs"
     start_heartbeat "$PROVIDER" "harvest" "$HARVEST_LOG"
 
+    if [ -n "$TAILSCALE_EXIT_NODE" ]; then
+        require_command tailscale "Tailscale is required for $PROVIDER (endpoint is IP-restricted) but not installed"
+        log_info "Starting tailscaled for $PROVIDER harvest"
+        sudo systemctl start tailscaled \
+            || die "Failed to start tailscaled — required for $PROVIDER endpoint routing"
+        # Wait up to 30s for Tailscale to connect; break early if key expired
+        for _i in $(seq 1 30); do
+            _ts_state=$(tailscale status --json 2>/dev/null \
+                | python3 -c "import json,sys; print(json.load(sys.stdin).get('BackendState',''))" 2>/dev/null || true)
+            [ "$_ts_state" = "Running" ] && break
+            [ "$_ts_state" = "NeedsLogin" ] && break
+            sleep 1
+        done
+        _ts_state=$(tailscale status --json 2>/dev/null \
+            | python3 -c "import json,sys; print(json.load(sys.stdin).get('BackendState',''))" 2>/dev/null || true)
+        if [ "$_ts_state" = "NeedsLogin" ]; then
+            die "Tailscale node key has expired on this EC2. Re-authenticate with:
+  sudo tailscale up --auth-key=<key>
+Generate a reusable key at tailscale.com/admin → Settings → Keys, then re-run the ingest.
+Node keys rotate every ~180 days; see scripts/SCRIPTS.md for details."
+        elif [ "$_ts_state" != "Running" ]; then
+            die "Tailscale failed to connect within 30s (state: ${_ts_state:-unknown})"
+        fi
+        log_info "Setting Tailscale exit node $TAILSCALE_EXIT_NODE for $PROVIDER harvest"
+        sudo tailscale set --exit-node="$TAILSCALE_EXIT_NODE" \
+            || die "Failed to set Tailscale exit node — $PROVIDER endpoint requires whitelisted IP"
+    fi
+
     SBT_OPTS="-Xmx15g"
     run_entry dpla.ingestion3.entries.ingest.HarvestEntry \
         --output="$DPLA_DATA" \
@@ -184,7 +232,13 @@ if [ "$SKIP_HARVEST" = false ] && [[ -z "$RESUME_FROM" ]]; then
         --name="$PROVIDER" \
         --sparkMaster="$SPARK_MASTER" 2>&1 | tee "$HARVEST_LOG"
 
+    if [ -n "$TAILSCALE_EXIT_NODE" ]; then
+        log_info "Clearing Tailscale exit node and stopping tailscaled after $PROVIDER harvest"
+        sudo tailscale set --exit-node= || log_warn "Failed to clear Tailscale exit node"
+        sudo systemctl stop tailscaled || log_warn "Failed to stop tailscaled"
+    fi
     stop_heartbeat
+
     HARVEST_TS_DIR=$(find_latest_data "$PROVIDER" harvest)
     log_info "Harvest complete: $(basename "$HARVEST_TS_DIR")"
 
@@ -206,6 +260,7 @@ fi
 if [ "$HARVEST_ONLY" = true ]; then
     write_hub_status "$PROVIDER" complete
     slack_notify ":white_check_mark: *$PROVIDER harvest complete* (${HARVEST_RECORD_COUNT} records)"
+    slack_notify ":white_check_mark: *$PROVIDER harvest complete* (${HARVEST_RECORD_COUNT} records)"
     log_info "Harvest-only mode - stopping here"
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))
@@ -213,6 +268,7 @@ if [ "$HARVEST_ONLY" = true ]; then
     echo "=============================================="
     echo "  Harvest completed in $((DURATION / 60))m $((DURATION % 60))s"
     echo "=============================================="
+    TRAP_HANDLED=true
     TRAP_HANDLED=true
     exit 0
 fi

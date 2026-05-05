@@ -162,7 +162,7 @@ Hub config lives in `i3.conf` on the EC2 at `/home/ec2-user/ingestion3-conf/i3.c
 
 Before running, check the hub's harvest type:
 ```bash
-grep "^<hub>\.harvest\.type" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "^<hub>\.harvest\.type" "$I3_CONF"
 ```
 
 Key harvest types and their network requirements:
@@ -189,6 +189,46 @@ For these hubs, either:
 2. Contact the hub's IT team to allowlist DPLA's NAT IP: `52.2.32.179`
 
 Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
+
+## IP-Restricted Hubs (Tailscale Exit Node)
+
+Some hubs whitelist a specific IP address for OAI-PMH access. Rather than whitelisting the EC2's dynamic public IP, these partners whitelist the **main-vpc Tailscale node** (`100.82.233.38`). The ingest routes harvest traffic through that node via a Tailscale exit node, so the partner sees a stable whitelisted IP.
+
+**This is handled automatically by `ingest.sh`** — no manual Tailscale steps required. When `TAILSCALE_EXIT_NODE` is set in `i3.conf` for a hub, the script:
+1. Starts `tailscaled` (kept stopped between ingests — see SSM note below)
+2. Waits for the daemon to connect and detects key expiration early
+3. Sets the exit node for the duration of the harvest
+4. Clears the exit node and stops `tailscaled` immediately after harvest completes
+
+**Current IP-restricted hubs:**
+
+| Hub | Partner | Whitelisted IP | Tailscale exit node | i3.conf key |
+|-----|---------|---------------|---------------------|-------------|
+| `njde` | Rutgers (NJ Digital Library) | `100.82.233.38` | `main-vpc` | `njde.harvest.tailscaleExitNode = "main-vpc"` |
+
+**Operator independence:** Tailscale auth on the EC2 is stored per-machine in `/var/lib/tailscale/` on EBS. It persists across stop/start cycles and is **not** tied to any individual operator — anyone with SSM access can run the njde ingest without personal Tailscale credentials or the Tailscale CLI installed locally.
+
+**⚠️ Node key rotation — ~180-day maintenance task:**
+
+Tailscale node keys expire approximately every 180 days. When the EC2's key expires, `ingest.sh` detects it immediately and fails with a clear, actionable error before the harvest begins:
+
+```text
+ERROR: Tailscale node key has expired on this EC2. Re-authenticate with:
+  sudo tailscale up --auth-key=<key>
+Generate a reusable key at tailscale.com/admin → Settings → Keys, then re-run the ingest.
+Node keys rotate every ~180 days; see scripts/SCRIPTS.md for details.
+```
+
+To re-authenticate (run via SSM):
+1. Go to [tailscale.com/admin → Settings → Keys](https://login.tailscale.com/admin/settings/keys)
+2. Generate a new **reusable** auth key (check "Reusable", set a multi-year expiry)
+3. Start tailscaled temporarily: `sudo systemctl start tailscaled`
+4. Re-authenticate: `sudo tailscale up --auth-key=<your-reusable-key>`
+5. Verify: `tailscale status --json | python3 -c "import json,sys; print(json.load(sys.stdin).get('BackendState',''))"` — should print `Running`
+6. Stop tailscaled again: `sudo systemctl stop tailscaled`
+7. Re-run the njde ingest — `ingest.sh` will start/stop tailscaled automatically
+
+**tailscaled and SSM compatibility:** Starting `tailscaled` during an active SSM session breaks SSM's document worker IPC (nftables rules interfere with SSM's internal socket communication). To avoid this, `tailscaled` is kept stopped between ingests. A User Data boot script on the EC2 ensures it is stopped on every boot. `ingest.sh` launches as a background `nohup` process, so it manages tailscaled independently of the SSM session that launched it — SSM connectivity is unaffected during the ingest.
 
 ## Community Webs Pre-processing
 
@@ -335,7 +375,7 @@ Verify `EXPORT_SUCCESS` is present before continuing.
 Confirm the hub key (e.g. `sd`, `maryland`, `indiana`) and check its config:
 
 ```bash
-grep "^<hub>\." /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "^<hub>\." "$I3_CONF"
 ```
 
 Note the `harvest.type` and `harvest.endpoint`. For `file` harvests, check that the file path exists and confirm with the user before proceeding.
@@ -368,18 +408,19 @@ This shows the file extensions present (e.g. `xml.gz`, `zip`, `jsonl`). Confirm 
 | `.zip` (JSONL inside) | `JsonFileHarvester` | ✅ |
 | `.jsonl` | `JsonFileHarvester` | ✅ |
 
-If unsure which harvester the hub uses, grep the Scala source: `grep -r "<hub>" src/main/scala/dpla/ingestion3/executors/` or check the mapper for the hub.
+If unsure which harvester the hub uses, grep the Scala source: `grep -r "<hub>" "$I3_HOME/src/main/scala/dpla/ingestion3/executors/"` or check the mapper for the hub.
 
 **3. Confirm the i3.conf endpoint path:**
 ```bash
-grep "<hub>\.harvest" /Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf
+grep "<hub>\.harvest" "$I3_CONF"
 ```
 The endpoint must point to the **folder containing the files** (e.g. `s3://dpla-hub-ohio/2026-03-20/`), not a parent bucket root. If it needs updating, use python3 to avoid quoting issues:
 ```bash
 python3 -c "
-content = open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf').read()
+import os
+content = open(os.environ['I3_CONF']).read()
 content = content.replace('<hub>.harvest.endpoint = \"<old>\"', '<hub>.harvest.endpoint = \"<new>\"')
-open('/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf', 'w').write(content)
+open(os.environ['I3_CONF'], 'w').write(content)
 print('Updated:', content[content.find('<hub>.harvest.endpoint'):content.find('<hub>.harvest.endpoint')+60])
 "
 ```
@@ -930,7 +971,7 @@ When the user says "run [month] ingests" (e.g. "run February ingests", "run Marc
 import os, re, sys
 from datetime import datetime
 
-CONF = os.environ.get("I3_CONF", "/Users/dominic/Documents/GitHub/ingestion3-conf/i3.conf")
+CONF = os.environ["I3_CONF"]
 CONTENTDM_HUBS = {"maryland", "bpl", "scdl", "digitalnc"}
 MONTH_NAMES = {
     "january":1,"february":2,"march":3,"april":4,"may":5,"june":6,

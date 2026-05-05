@@ -150,6 +150,48 @@ Runs the complete ingestion pipeline for a hub:
 ./scripts/ingest.sh maryland --harvest-only   # Only harvest
 ```
 
+#### IP-restricted hubs (TAILSCALE_EXIT_NODE)
+
+Some partners whitelist specific source IPs on their OAI endpoints. For those hubs, `ingest.sh` automatically routes harvest traffic through a Tailscale exit node that holds the whitelisted IP. The exit node is set before the harvest step and cleared (and tailscaled stopped) immediately after, so downstream steps (mapping, enrichment, S3 sync) use normal routing. On failure, the same cleanup runs best-effort via an EXIT trap — it attempts to clear the exit node and stop `tailscaled` even when the harvest fails.
+
+The exit node is configured per-provider in a `case` block near the top of `ingest.sh`:
+
+```bash
+case "$PROVIDER" in
+    getty|njde) TAILSCALE_EXIT_NODE="100.82.233.38" ;;  # main-vpc; whitelisted by Getty and Rutgers
+esac
+```
+
+**Current IP-restricted hubs:**
+
+| Hub | Partner | Whitelisted IP | Tailscale exit node |
+|-----|---------|---------------|---------------------|
+| `getty` | J. Paul Getty Trust (ExLibris Primo API) | `100.82.233.38` | `main-vpc` |
+| `njde` | Rutgers (NJ Digital Library) | `100.82.233.38` | `main-vpc` |
+
+**Prerequisites** for IP-restricted hubs:
+- Tailscale must be installed on the EC2 (`tailscale` command on PATH)
+- The exit node machine (`main-vpc` at `100.82.233.38`) must have exit node routes advertised (`tailscale set --advertise-exit-node` on main-vpc) and approved in the Tailscale admin console (tailscale.com/admin → Machines → main-vpc → Edit route settings)
+- `ec2-user` must have passwordless sudo for `systemctl` (standard on the ingest EC2)
+- Tailscale authentication is per-machine (stored in `/var/lib/tailscale/` on the EC2 EBS volume) — no per-operator credentials needed
+
+**Node key rotation (important — ~180 day maintenance task):**
+
+Tailscale node keys expire approximately every 180 days. When the ingest EC2's key expires, the njde harvest will fail immediately with a clear error message:
+
+```
+Tailscale node key has expired on this EC2. Re-authenticate with:
+  sudo tailscale up --auth-key=<key>
+```
+
+To fix: generate a reusable pre-auth key at tailscale.com/admin → Settings → Keys, then SSH or SSM into the EC2 and run:
+
+```bash
+sudo tailscale up --auth-key=<your-reusable-key>
+```
+
+This is a one-time re-authentication of the EC2 machine — not tied to any individual operator. After re-authenticating, re-run the njde ingest normally.
+
 ### auto-ingest.sh - Automated Monthly Ingestion
 
 Processes hubs scheduled for the current month:

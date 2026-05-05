@@ -11,7 +11,10 @@ DPLA's ingestion system is one of the core business systems and is the source of
     * [EC2 ingest instance](#ec2-ingest-box)
     * [Locally](#running-ingests-locally)
     * [Hub specific instructions](#exceptions-and-unusual-ingests)
-      * [Firewalled endpoints](#firewalled-endpoints) 
+      * [Firewalled endpoints](#firewalled-endpoints)
+      * [IP-whitelisted endpoints (Tailscale exit node)](#ip-whitelisted-endpoints-tailscale-exit-node)
+        * [J. Paul Getty Trust (getty)](#j-paul-getty-trust-getty)
+        * [NJ Digital Library (njde)](#nj-digital-library-njde)
       * [Internet Archive - Community Webs](#community-webs)
       * [Digital Virginias](#digital-virginias)
       * Digital Commonwealth
@@ -57,7 +60,8 @@ DPLA's ingestion system is one of the core business systems and is the source of
 - [Running ingests locally](#running-ingests-locally)
 - [Exceptions / Usual ingests](#exceptions-and-unusual-ingests)
       
-  - [Firewalled endpoints](#firewalled-endpoints) 
+  - [Firewalled endpoints](#firewalled-endpoints)
+  - [IP-whitelisted endpoints (Tailscale exit node)](#ip-whitelisted-endpoints-tailscale-exit-node)
   - [Internet Archive - Community Webs](#community-webs)
   - [Digital Virginias](#digital-virginias)
   - Digital Commonwealth
@@ -247,11 +251,50 @@ Bringing up the ingest EC2 instance is not always required. You can run a lot of
 Not all ingests are fire and forget, some require a bit of massaging before we can successfully harvest their data.
 
 ### Firewalled endpoints
-Some hubs have their feed endpoints behind a firewall so the harvests needs to be run while behind out VPN. I've been meaning to try and get the EC2 instance behind the VPN but that work is not a high priority right now because we have a workaround (run locally behind the VPN). Hubs that need to be harvested while connected to the VPN:
+
+Some hubs restrict access to their OAI-PMH endpoint by IP address or VPN membership. There are two patterns:
+
+**Run locally (VPN required):** The partner's firewall only allows connections from inside a specific institution's network. These must be harvested on a machine connected to that VPN — the EC2 instance cannot be placed behind an external institution's VPN.
 
 - Illinois
 - Indiana
 - MWDL
+
+**Tailscale exit node (automated):** The partner has whitelisted a specific stable IP address. Rather than exposing the EC2's dynamic public IP, we route harvest traffic through the `main-vpc` Tailscale node (`100.82.233.38`). `ingest.sh` handles this automatically — see [IP-whitelisted endpoints (Tailscale exit node)](#ip-whitelisted-endpoints-tailscale-exit-node) below.
+
+### IP-whitelisted endpoints (Tailscale exit node)
+
+Some partner endpoints are not publicly accessible — they whitelist a specific IP for OAI-PMH access. Rather than whitelisting the EC2's dynamic public IP (which changes on stop/start), we use a [Tailscale](https://tailscale.com) exit node to route harvest traffic through a stable whitelisted IP.
+
+`ingest.sh` handles the full lifecycle automatically for hubs that require it (determined by a `TAILSCALE_EXIT_NODE` case block in `ingest.sh`): it starts `tailscaled`, waits for the daemon to connect, sets the exit node, runs the harvest, then clears the exit node and stops `tailscaled`. Only the **harvest step** is routed through the exit node — mapping, enrichment, JSONL export, and S3 sync use normal routing. No manual Tailscale steps are needed to run these ingests.
+
+**Tailscale auth on the EC2 is per-machine**, stored in `/var/lib/tailscale/` on EBS. It persists across stop/start cycles and is not tied to any individual operator — anyone with EC2 access can run these ingests.
+
+**⚠️ Node key rotation:** Tailscale node keys expire approximately every 180 days. When the key expires, `ingest.sh` detects it immediately at harvest time and prints a clear error with re-authentication instructions. See `scripts/SCRIPTS.md` for the full recovery procedure.
+
+#### J. Paul Getty Trust (getty)
+
+| Field | Value |
+|-------|-------|
+| Partner | J. Paul Getty Trust |
+| Endpoint | IP-whitelisted ExLibris Primo REST API |
+| Whitelisted IP | `100.82.233.38` (main-vpc Tailscale node) |
+| Configured in | `scripts/ingest.sh` (`TAILSCALE_EXIT_NODE` case block) |
+| Handled by | `ingest.sh` automatically |
+
+Run exactly like any other hub — `ingest.sh getty` — no extra steps needed.
+
+#### NJ Digital Library (njde)
+
+| Field | Value |
+|-------|-------|
+| Partner | Rutgers University / New Jersey State Library |
+| Endpoint | IP-whitelisted OAI-PMH |
+| Whitelisted IP | `100.82.233.38` (main-vpc Tailscale node) |
+| Configured in | `scripts/ingest.sh` (`TAILSCALE_EXIT_NODE` case block) |
+| Handled by | `ingest.sh` automatically |
+
+Run exactly like any other hub — `ingest.sh njde` — no extra steps needed.
 
 ### Community Webs
 

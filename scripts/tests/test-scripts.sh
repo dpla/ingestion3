@@ -930,6 +930,99 @@ test_send_email_yes_flag() {
 }
 
 # =============================================================================
+# Test: Tailscale exit node configuration (static inspection of ingest.sh)
+# =============================================================================
+
+test_tailscale_exit_node() {
+    echo ""
+    echo "=========================================="
+    echo "  Testing Tailscale Exit Node Configuration"
+    echo "=========================================="
+
+    local ingest_sh="$SCRIPTS_DIR/ingest.sh"
+
+    if [[ ! -f "$ingest_sh" ]]; then
+        log_skip "ingest.sh not found - skipping Tailscale tests"
+        return
+    fi
+
+    local content
+    content=$(< "$ingest_sh")
+
+    # Test 1: njde maps to the expected Tailscale exit node IP
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if grep -q 'njde.*TAILSCALE_EXIT_NODE.*100\.82\.233\.38' <<< "$content"; then
+        log_pass "Tailscale: njde maps to exit node 100.82.233.38"
+    else
+        log_fail "Tailscale: njde exit node mapping not found in ingest.sh"
+    fi
+
+    # Test 2: getty maps to the expected Tailscale exit node IP
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if grep -q 'getty.*TAILSCALE_EXIT_NODE.*100\.82\.233\.38' <<< "$content"; then
+        log_pass "Tailscale: getty maps to exit node 100.82.233.38"
+    else
+        log_fail "Tailscale: getty exit node mapping not found in ingest.sh"
+    fi
+
+    # Test 2: require_command tailscale is called (install guard present)
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if grep -q 'require_command tailscale' <<< "$content"; then
+        log_pass "Tailscale: require_command guard present"
+    else
+        log_fail "Tailscale: require_command tailscale not found — missing install check"
+    fi
+
+    # Test 3: EXIT trap clears the exit node before stop_heartbeat
+    # Verify ordering within the trap body: Tailscale cleanup must precede stop_heartbeat.
+    TESTS_RUN=$((TESTS_RUN + 1))
+    local trap_block
+    trap_block=$(awk "/^trap '/{found=1} found{print} /EXIT$/{found=0}" <<< "$content")
+    if [[ -z "$trap_block" ]]; then
+        log_fail "Tailscale: could not extract EXIT trap body from ingest.sh"
+    else
+        local ts_line hb_line
+        ts_line=$(grep -n 'tailscale set --exit-node=' <<< "$trap_block" | head -1 | cut -d: -f1)
+        hb_line=$(grep -n 'stop_heartbeat' <<< "$trap_block" | head -1 | cut -d: -f1)
+        if [[ -n "$ts_line" && -n "$hb_line" && "$ts_line" -lt "$hb_line" ]]; then
+            log_pass "Tailscale: EXIT trap clears exit node before stop_heartbeat"
+        else
+            log_fail "Tailscale: EXIT trap ordering wrong — Tailscale cleanup should precede stop_heartbeat (ts_line=$ts_line, hb_line=$hb_line)"
+        fi
+    fi
+
+    # Test 4: NeedsLogin state triggers a die with re-auth instructions
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if grep -q 'NeedsLogin' <<< "$content" && grep -q 'tailscale up --auth-key' <<< "$content"; then
+        log_pass "Tailscale: NeedsLogin detection and re-auth instructions present"
+    else
+        log_fail "Tailscale: NeedsLogin handling or re-auth instructions missing"
+    fi
+
+    # Test 5: Post-harvest cleanup block clears exit node (not just the EXIT trap)
+    TESTS_RUN=$((TESTS_RUN + 1))
+    # Count occurrences of exit-node clear — trap + post-harvest = at least 2
+    local clear_count
+    clear_count=$(grep -c 'tailscale set --exit-node=' <<< "$content" || echo 0)
+    if [[ "$clear_count" -ge 2 ]]; then
+        log_pass "Tailscale: exit node cleared in both EXIT trap and post-harvest block"
+    else
+        log_fail "Tailscale: expected ≥2 exit node clear calls (trap + post-harvest), found $clear_count"
+    fi
+
+    # Test 6: All tailscale set calls use sudo (required — ec2-user lacks operator privilege)
+    TESTS_RUN=$((TESTS_RUN + 1))
+    local ts_set_total ts_set_with_sudo
+    ts_set_total=$(grep -c 'tailscale set' <<< "$content" || echo 0)
+    ts_set_with_sudo=$(grep -c 'sudo tailscale set' <<< "$content" || echo 0)
+    if [[ "$ts_set_total" -gt 0 && "$ts_set_total" -eq "$ts_set_with_sudo" ]]; then
+        log_pass "Tailscale: all tailscale set calls use sudo ($ts_set_with_sudo/$ts_set_total)"
+    else
+        log_fail "Tailscale: $((ts_set_total - ts_set_with_sudo)) of $ts_set_total tailscale set calls missing sudo"
+    fi
+}
+
+# =============================================================================
 # Main
 # =============================================================================
 
@@ -960,6 +1053,7 @@ main() {
         test_nara_scripts_deleted
         test_community_webs_export
         test_send_email_yes_flag
+        test_tailscale_exit_node
     fi
 
     # Run deterministic alias tests (safe in both quick/full mode).
