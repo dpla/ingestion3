@@ -128,8 +128,7 @@ class MarylandMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct preview" in {
-    val expected = Seq(stringOnlyWebResource("http://webconfig.digitalmaryland.org/utils/getthumbnail/collection/mamo/id/29817"))
-    assert(extractor.preview(xml) === expected)
+    val expected = Seq(stringOnlyWebResource("http://collections.digitalmaryland.org/utils/getthumbnail/collection/mamo/id/29817"))    assert(extractor.preview(xml) === expected)
   }
 
   it should "create the correct DPLA URI" in {
