@@ -915,25 +915,20 @@ def check_endpoint(endpoint, is_api=False, harvest_type=None):
 
     info(f"URL:     {test_url}")
     info(f"Timeout: {timeout}s ({kind})")
+    info("Running curl from EC2...")
 
     try:
-        result = subprocess.run(
-            ["curl", "-sS", "--max-time", str(timeout), test_url],
-            capture_output=True, text=True, timeout=timeout + 10,
+        body = ssm_run(
+            f"curl -sS --max-time {timeout} {shlex.quote(test_url)} 2>&1 || echo 'CURL_FAILED'",
+            timeout_seconds=timeout + 30,
         )
-    except subprocess.TimeoutExpired:
-        bad(f"curl timed out after {timeout}s — endpoint likely down.")
-        return False
-    except FileNotFoundError:
-        bad("curl not found in PATH. Install curl or skip this check.")
+    except RuntimeError as e:
+        bad(f"curl failed: {e}")
         return False
 
-    if result.returncode != 0:
-        err = result.stderr.strip() or f"curl exit code {result.returncode}"
-        bad(f"curl failed: {err}")
+    if "CURL_FAILED" in body or not body.strip():
+        bad(f"curl failed or timed out after {timeout}s — endpoint likely down or unreachable from EC2.")
         return False
-
-    body = result.stdout
     if not body.strip():
         warn("Empty response — endpoint reachable but returned nothing. Could be transient; try manually if unsure.")
         return True  # non-blocking — empty body isn't proof the endpoint is down

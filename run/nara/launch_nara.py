@@ -186,7 +186,7 @@ def stage_copy_to_ec2(month):
 
 def stage_ingest(month, extra_flags=""):
     step(2, f"Run nara-ingest.sh --month={month}")
-    cmd = f"bash {NARA_SCRIPT} --month={month} {extra_flags}".strip()
+    cmd = f"DPLA_DATA=/home/ec2-user/dpla/data bash {NARA_SCRIPT} --month={month} {extra_flags}".strip()
     print(f"  Command: {cmd}")
     print(f"  Log:     {INGEST_LOG}")
 
