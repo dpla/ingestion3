@@ -48,7 +48,7 @@ NARA_S3_BUCKET = "s3://dpla-hub-nara/raw_ingest_files"
 # Path where nara-ingest.sh expects original ZIP files.
 # Matches $DPLA_DATA/nara/originalRecords in common.sh — verify this matches
 # the value of DPLA_DATA on the EC2 box if the script ever can't find its input.
-NARA_ORIGINALS = "/home/ec2-user/dpla/data/nara/originalRecords"
+NARA_ORIGINALS = "/home/ec2-user/data/nara/originalRecords"
 
 INGEST_LOG     = "/tmp/nara-ingest.log"
 INGEST_TIMEOUT = 43200   # 12 hours (NARA pipeline ~10 hours per the script)
