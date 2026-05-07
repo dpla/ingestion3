@@ -3,23 +3,27 @@
 NARA delta ingest orchestrator.
 
 NARA uses a delta format — each delivery is one or more ZIPs organized by
-export group. This script:
-  1. Uploads local ZIP(s) to s3://dpla-scratch/nara/<YYYYMM>/ via presigned URL
-     (EC2's ingestion3-spark role generates the URL; your Mac curls it up)
-  2. Downloads ZIP(s) from S3 to ~/dpla/data/nara/originalRecords/<YYYYMM>/ on EC2
+export group. ZIPs are stored in s3://dpla-hub-nara/raw_ingest_files/<YYYYMM>/
+and synced there by the NARA team each delivery cycle.
+
+This script:
+  1. Auto-detects the latest YYYYMM subfolder in s3://dpla-hub-nara/raw_ingest_files/
+     (or uses --month to target a specific delivery)
+  2. Copies ZIP(s) from dpla-hub-nara to ~/dpla/data/nara/originalRecords/<YYYYMM>/ on EC2
   3. Runs nara-ingest.sh --month=<YYYYMM> as a background job and tails the log
 
 nara-ingest.sh handles preprocessing, harvest, merge, and pipeline internally.
 Never use ingest.sh for NARA.
 
 Usage:
-    python3 launch_nara.py --month 202604 --zips ~/Downloads/nara-202604-*.zip
+    python3 launch_nara.py                  # auto-detect latest delivery
+    python3 launch_nara.py --month 202604   # target a specific delivery
 
 Skip flags (for resuming a failed run):
-    --skip-upload       ZIPs already in s3://dpla-scratch/nara/<month>/
     --skip-copy         ZIPs already on EC2 at ~/dpla/data/nara/originalRecords/<month>/
     --skip-to-pipeline  Skip straight to pipeline on existing merged harvest
     --harvest           EC2 path to merged harvest (use with --skip-to-pipeline)
+    --skip-pipeline     Stop after merge step
 
 Prerequisites:
     - AWS CLI installed and authenticated locally
@@ -28,9 +32,9 @@ Prerequisites:
 
 import argparse
 import base64
-import glob
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -39,7 +43,7 @@ import time
 INSTANCE_ID    = "i-0a0def8581efef783"
 REPO_PATH      = "/home/ec2-user/ingestion3"
 NARA_SCRIPT    = f"{REPO_PATH}/scripts/nara-ingest.sh"
-S3_STAGING     = "s3://dpla-scratch/nara"
+NARA_S3_BUCKET = "s3://dpla-hub-nara/raw_ingest_files"
 
 # Path where nara-ingest.sh expects original ZIP files.
 # Matches $DPLA_DATA/nara/originalRecords in common.sh — verify this matches
@@ -140,78 +144,48 @@ def confirm(msg, default_yes=True):
 
 # ---------- stages ----------
 
-def get_presigned_put_url(s3_key):
-    """Have EC2 generate a presigned PUT URL for dpla-scratch using its IAM role."""
-    script = (
-        f"import boto3; "
-        f"s3=boto3.client('s3', region_name='us-east-1'); "
-        f"print(s3.generate_presigned_url('put_object', "
-        f"Params={{'Bucket':'dpla-scratch','Key':'{s3_key}'}}, ExpiresIn=3600))"
-    )
-    # Write to temp file to avoid quoting hell
-    ssm_run(
-        f"echo {base64.b64encode(script.encode()).decode()} | base64 -d > /tmp/_presign.py",
-        timeout_seconds=30,
-    )
-    out = ssm_run("python3 /tmp/_presign.py", timeout_seconds=30)
-    url = next((ln.strip() for ln in out.splitlines() if ln.strip().startswith("https://")), None)
-    if not url:
-        raise RuntimeError(f"Could not extract presigned URL from output:\n{out}")
-    return url
+def detect_latest_month():
+    """List subfolders in s3://dpla-hub-nara/raw_ingest_files/ and return the latest YYYYMM."""
+    print(f"  Scanning {NARA_S3_BUCKET}/ for latest delivery...")
+    output = aws(["s3", "ls", f"{NARA_S3_BUCKET}/"])
+    folders = []
+    for line in output.splitlines():
+        parts = line.strip().split()
+        if parts:
+            name = parts[-1].rstrip("/")
+            if re.match(r"^\d{6}$", name):
+                folders.append(name)
+    if not folders:
+        sys.exit(f"No YYYYMM subfolders found in {NARA_S3_BUCKET}/")
+    latest = sorted(folders)[-1]
+    print(f"  Latest delivery: {latest}")
+    return latest
 
 
-def stage_upload(month, zip_paths):
-    step(1, "Upload ZIP(s) to S3 via EC2 presigned URL")
-    s3_keys = []
-    for zip_path in zip_paths:
-        fname   = os.path.basename(zip_path)
-        s3_key  = f"nara/{month}/{fname}"
-        s3_dest = f"s3://dpla-scratch/{s3_key}"
-        size_mb = os.path.getsize(zip_path) / 1024 / 1024
-        print(f"\n  {fname}  ({size_mb:.1f} MB)  →  {s3_dest}")
-
-    confirm(f"Upload {len(zip_paths)} ZIP(s) to dpla-scratch/nara/{month}/?")
-
-    for zip_path in zip_paths:
-        fname  = os.path.basename(zip_path)
-        s3_key = f"nara/{month}/{fname}"
-        print(f"\n  Generating presigned URL for {fname}...")
-        url = get_presigned_put_url(s3_key)
-        print(f"  Uploading...")
-        result = subprocess.run(
-            ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
-             "-X", "PUT", "--upload-file", zip_path, "--header", "Expect:", url],
-            capture_output=False, text=True,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(f"curl upload failed for {fname}")
-        print(f"  ✓ {fname} uploaded")
-
-    s3_keys = [f"nara/{month}/{os.path.basename(z)}" for z in zip_paths]
-    return s3_keys
-
-
-def stage_copy_to_ec2(month, s3_keys):
-    step(2, f"Copy ZIP(s) from S3 to EC2 originalRecords/{month}/")
+def stage_copy_to_ec2(month):
+    step(1, f"Copy ZIP(s) from s3://dpla-hub-nara/raw_ingest_files/{month}/ to EC2")
+    s3_src   = f"{NARA_S3_BUCKET}/{month}/"
     dest_dir = f"{NARA_ORIGINALS}/{month}"
+    print(f"  Source:      {s3_src}")
     print(f"  Destination: {dest_dir}")
+
     ssm_run(f"mkdir -p {dest_dir}", timeout_seconds=30)
 
-    for key in s3_keys:
-        fname = os.path.basename(key)
-        print(f"  Downloading {fname}...")
-        ssm_run(
-            f"aws s3 cp s3://dpla-scratch/{key} {dest_dir}/{fname}",
-            timeout_seconds=600,
-        )
+    print(f"  Syncing ZIPs to EC2 (this may take a few minutes)...")
+    ssm_run(
+        f"aws s3 sync {s3_src} {dest_dir}/",
+        timeout_seconds=1800,  # 30 min for large deliveries
+    )
 
-    listing = ssm_run(f"ls -lh {dest_dir}/", timeout_seconds=30)
+    listing = ssm_run(f"ls -lh {dest_dir}/ | head -20", timeout_seconds=30)
+    count   = ssm_run(f"ls {dest_dir}/*.zip 2>/dev/null | wc -l", timeout_seconds=30).strip()
     print(f"\n{listing.rstrip()}")
+    print(f"\n  {count} ZIP(s) on EC2.")
     confirm("Files look right on EC2? Continue to ingest?")
 
 
 def stage_ingest(month, extra_flags=""):
-    step(3, f"Run nara-ingest.sh --month={month}")
+    step(2, f"Run nara-ingest.sh --month={month}")
     cmd = f"bash {NARA_SCRIPT} --month={month} {extra_flags}".strip()
     print(f"  Command: {cmd}")
     print(f"  Log:     {INGEST_LOG}")
@@ -233,12 +207,8 @@ def stage_ingest(month, extra_flags=""):
 # ---------- main ----------
 def main():
     parser = argparse.ArgumentParser(description="NARA delta ingest orchestrator")
-    parser.add_argument("--month", required=True,
-                        help="Delivery month YYYYMM, e.g. 202604")
-    parser.add_argument("--zips", nargs="+", metavar="ZIP",
-                        help="Path(s) to local NARA delta ZIP file(s)")
-    parser.add_argument("--skip-upload", action="store_true",
-                        help="Skip upload (ZIPs already in s3://dpla-scratch/nara/<month>/)")
+    parser.add_argument("--month",
+                        help="Delivery month YYYYMM (default: auto-detect latest in s3://dpla-hub-nara/raw_ingest_files/)")
     parser.add_argument("--skip-copy", action="store_true",
                         help="Skip S3→EC2 copy (ZIPs already in originalRecords/<month>/ on EC2)")
     parser.add_argument("--skip-to-pipeline", action="store_true",
@@ -249,23 +219,16 @@ def main():
                         help="Pass --skip-pipeline to nara-ingest.sh (stop after merge)")
     args = parser.parse_args()
 
-    import re
-    if not re.match(r"^\d{6}$", args.month):
+    if args.month and not re.match(r"^\d{6}$", args.month):
         sys.exit(f"--month must be YYYYMM (6 digits), got: {args.month!r}")
 
-    # Expand globs in zip paths
-    zip_paths = []
-    if args.zips:
-        for pattern in args.zips:
-            expanded = glob.glob(os.path.expanduser(pattern))
-            if not expanded:
-                sys.exit(f"No files matched: {pattern}")
-            zip_paths.extend(sorted(expanded))
-
-    if not args.skip_upload and not args.skip_copy and not args.skip_to_pipeline and not zip_paths:
-        sys.exit("Provide --zips, or use --skip-upload/--skip-copy/--skip-to-pipeline to resume.")
-
-    month = args.month
+    # Auto-detect month if not provided
+    if args.month:
+        month = args.month
+    elif args.skip_to_pipeline or args.skip_copy:
+        sys.exit("--month is required when using --skip-copy or --skip-to-pipeline")
+    else:
+        month = detect_latest_month()
 
     # Build extra flags to pass through to nara-ingest.sh
     extra_flags = []
@@ -279,25 +242,16 @@ def main():
     print(f"\nNARA INGEST — {month}")
     print(f"Instance:  {INSTANCE_ID}")
     print(f"Script:    {NARA_SCRIPT}")
-    if zip_paths:
-        print(f"ZIPs:      {', '.join(os.path.basename(z) for z in zip_paths)}")
+    print(f"Source:    {NARA_S3_BUCKET}/{month}/")
     print()
 
-    # Skip-to-pipeline goes straight to ingest with no upload/copy
     if args.skip_to_pipeline:
         stage_ingest(month, " ".join(extra_flags))
     else:
-        s3_keys = [f"nara/{month}/{os.path.basename(z)}" for z in zip_paths]
-
-        if not args.skip_upload:
-            stage_upload(month, zip_paths)
-        else:
-            print("Step 1: Upload — skipped.")
-
         if not args.skip_copy:
-            stage_copy_to_ec2(month, s3_keys)
+            stage_copy_to_ec2(month)
         else:
-            print("Step 2: S3→EC2 copy — skipped.")
+            print("Step 1: S3→EC2 copy — skipped.")
 
         stage_ingest(month, " ".join(extra_flags))
 
