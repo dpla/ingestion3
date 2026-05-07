@@ -42,7 +42,7 @@ import time
 # ---------- config ----------
 INSTANCE_ID    = "i-0a0def8581efef783"
 REPO_PATH      = "/home/ec2-user/ingestion3"
-NARA_SCRIPT    = f"{REPO_PATH}/scripts/nara-ingest.sh"
+NARA_SCRIPT    = f"{REPO_PATH}/scripts/harvest/nara-ingest.sh"
 NARA_S3_BUCKET = "s3://dpla-hub-nara/raw_ingest_files"
 
 # Path where nara-ingest.sh expects original ZIP files.
