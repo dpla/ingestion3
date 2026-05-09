@@ -31,7 +31,8 @@ INGEST_INSTANCE_ID = "i-0a0def8581efef783"
 
 BATCH_JAR_BUCKET   = "s3://dpla-monthly-batch/"
 BATCH_JAR_NAME     = "batch-process-dpla-index-assembly.jar"
-BATCH_JAR_S3       = f"{BATCH_JAR_BUCKET}{BATCH_JAR_NAME}"
+BATCH_JAR_S3       = f"s3://dpla-monthly-batch/{BATCH_JAR_NAME}"
+BATCH_JAR_EMR      = BATCH_JAR_S3  # same for EMR step args
 BATCH_REPO_DIR     = "/Users/zoe/Documents/Repos/batch-process-dpla-index"
 BATCH_LOCAL_JAR    = f"{BATCH_REPO_DIR}/target/scala-2.12/{BATCH_JAR_NAME}"
 
@@ -208,90 +209,114 @@ def check_jar_freshness():
 def launch_cluster():
     step(2, "Launch monthlybatch EMR cluster")
     info("Steps: parquet → jsonl → mq → sitemap")
+    info("Cluster launched from EC2 via SSM (instance role has required IAM permissions).")
     confirm("Launch the batch cluster now?")
 
-    cluster_id = aws([
-        "emr", "create-cluster",
-        "--no-auto-terminate",
-        "--auto-scaling-role", "EMR_AutoScaling_DefaultRole",
-        "--applications", "Name=Hadoop", "Name=Hive", "Name=Spark",
-        "--ebs-root-volume-size", "100",
-        "--configurations", json.dumps([{
-            "Classification": "spark",
-            "Properties": {"maximizeResourceAllocation": "true"},
-        }]),
-        "--ec2-attributes", json.dumps({
-            "EmrManagedMasterSecurityGroup": "sg-08459c75",
-            "EmrManagedSlaveSecurityGroup":  "sg-0a459c77",
-            "InstanceProfile": "sparkindexer-s3",
-            "KeyName": "general",
-            "ServiceAccessSecurityGroup": "sg-07459c7a",
-            "SubnetId": "subnet-90afd9ba",
-        }),
-        "--service-role", "EMR_Default_Role_v2",
-        "--enable-debugging",
-        "--release-label", "emr-7.10.0",
-        "--log-uri", "s3n://aws-logs-283408157088-us-east-1/elasticmapreduce/",
-        "--tags", "for-use-with-amazon-emr-managed-policies=true",
-        "--steps", json.dumps([
-            {
-                "Args": ["spark-submit", "--deploy-mode", "cluster",
-                         "--class", "dpla.batch_process_dpla_index.processes.ParquetDump",
-                         BATCH_JAR_S3, MASTER_DATASET, PARQUET_OUT],
-                "Type": "CUSTOM_JAR", "ActionOnFailure": "CANCEL_AND_WAIT",
-                "Jar": "command-runner.jar", "Properties": "", "Name": "parquet",
-            },
-            {
-                "Args": ["spark-submit", "--deploy-mode", "cluster",
-                         "--class", "dpla.batch_process_dpla_index.processes.JsonlDump",
-                         BATCH_JAR_S3, MASTER_DATASET, JSONL_OUT],
-                "Type": "CUSTOM_JAR", "ActionOnFailure": "CANCEL_AND_WAIT",
-                "Jar": "command-runner.jar", "Properties": "", "Name": "jsonl",
-            },
-            {
-                "Args": ["spark-submit", "--deploy-mode", "cluster",
-                         "--class", "dpla.batch_process_dpla_index.processes.MqReports",
-                         BATCH_JAR_S3, PARQUET_OUT, MQ_OUT],
-                "Type": "CUSTOM_JAR", "ActionOnFailure": "CANCEL_AND_WAIT",
-                "Jar": "command-runner.jar", "Properties": "", "Name": "mq",
-            },
-            {
-                "Args": ["spark-submit", "--deploy-mode", "cluster",
-                         "--class", "dpla.batch_process_dpla_index.processes.Sitemap",
-                         BATCH_JAR_S3, PARQUET_OUT, SITEMAP_OUT, SITEMAP_ROOT],
-                "Type": "CUSTOM_JAR", "ActionOnFailure": "CANCEL_AND_WAIT",
-                "Jar": "command-runner.jar", "Properties": "", "Name": "sitemap",
-            },
-        ]),
-        "--name", "monthlybatch",
-        "--instance-groups", json.dumps([
-            {
-                "InstanceCount": 8,
-                "EbsConfiguration": {"EbsBlockDeviceConfigs": [{"VolumeSpecification": {"SizeInGB": 250, "VolumeType": "gp3"}, "VolumesPerInstance": 2}]},
-                "InstanceGroupType": "CORE",
-                "InstanceType": "r8g.xlarge",
-                "Name": "Core - 2",
-            },
-            {
-                "InstanceCount": 1,
-                "EbsConfiguration": {"EbsBlockDeviceConfigs": [{"VolumeSpecification": {"SizeInGB": 32, "VolumeType": "gp3"}, "VolumesPerInstance": 2}]},
-                "InstanceGroupType": "MASTER",
-                "InstanceType": "m8g.xlarge",
-                "Name": "Master - 1",
-            },
-        ]),
-        "--scale-down-behavior", "TERMINATE_AT_TASK_COMPLETION",
-        "--region", REGION,
-        "--query", "ClusterId",
-        "--output", "text",
+    # Build steps and cluster config as JSON, then pass to aws emr create-cluster
+    # via SSM so it runs under the EC2 instance role (avoids iam:PassRole issues for local user)
+    emr_steps = json.dumps([
+        {
+            "Args": ["spark-submit", "--deploy-mode", "cluster",
+                     "--class", "dpla.batch_process_dpla_index.processes.ParquetDump",
+                     BATCH_JAR_S3, MASTER_DATASET, PARQUET_OUT],
+            "Type": "CUSTOM_JAR", "ActionOnFailure": "CANCEL_AND_WAIT",
+            "Jar": "command-runner.jar", "Properties": "", "Name": "parquet",
+        },
+        {
+            "Args": ["spark-submit", "--deploy-mode", "cluster",
+                     "--class", "dpla.batch_process_dpla_index.processes.JsonlDump",
+                     BATCH_JAR_S3, MASTER_DATASET, JSONL_OUT],
+            "Type": "CUSTOM_JAR", "ActionOnFailure": "CANCEL_AND_WAIT",
+            "Jar": "command-runner.jar", "Properties": "", "Name": "jsonl",
+        },
+        {
+            "Args": ["spark-submit", "--deploy-mode", "cluster",
+                     "--class", "dpla.batch_process_dpla_index.processes.MqReports",
+                     BATCH_JAR_S3, PARQUET_OUT, MQ_OUT],
+            "Type": "CUSTOM_JAR", "ActionOnFailure": "CANCEL_AND_WAIT",
+            "Jar": "command-runner.jar", "Properties": "", "Name": "mq",
+        },
+        {
+            "Args": ["spark-submit", "--deploy-mode", "cluster",
+                     "--class", "dpla.batch_process_dpla_index.processes.Sitemap",
+                     BATCH_JAR_S3, PARQUET_OUT, SITEMAP_OUT, SITEMAP_ROOT],
+            "Type": "CUSTOM_JAR", "ActionOnFailure": "CANCEL_AND_WAIT",
+            "Jar": "command-runner.jar", "Properties": "", "Name": "sitemap",
+        },
     ])
+    ec2_attrs = json.dumps({
+        "EmrManagedMasterSecurityGroup": "sg-08459c75",
+        "EmrManagedSlaveSecurityGroup":  "sg-0a459c77",
+        "InstanceProfile": "sparkindexer-s3",
+        "KeyName": "general",
+        "ServiceAccessSecurityGroup": "sg-07459c7a",
+        "SubnetId": "subnet-90afd9ba",
+    })
+    instance_groups = json.dumps([
+        {
+            "InstanceCount": 8,
+            "EbsConfiguration": {"EbsBlockDeviceConfigs": [{"VolumeSpecification": {"SizeInGB": 250, "VolumeType": "gp3"}, "VolumesPerInstance": 2}]},
+            "InstanceGroupType": "CORE", "InstanceType": "r8g.xlarge", "Name": "Core - 2",
+        },
+        {
+            "InstanceCount": 1,
+            "EbsConfiguration": {"EbsBlockDeviceConfigs": [{"VolumeSpecification": {"SizeInGB": 32, "VolumeType": "gp3"}, "VolumesPerInstance": 2}]},
+            "InstanceGroupType": "MASTER", "InstanceType": "m8g.xlarge", "Name": "Master - 1",
+        },
+    ])
+    configurations = json.dumps([{"Classification": "spark", "Properties": {"maximizeResourceAllocation": "true"}}])
+
+    # Write JSON args to temp files on EC2 to avoid shell quoting nightmares
+    script = f"""
+set -e
+STEPS_FILE=$(mktemp)
+EC2_FILE=$(mktemp)
+IG_FILE=$(mktemp)
+CONF_FILE=$(mktemp)
+echo '{emr_steps}' > $STEPS_FILE
+echo '{ec2_attrs}' > $EC2_FILE
+echo '{instance_groups}' > $IG_FILE
+echo '{configurations}' > $CONF_FILE
+
+aws emr create-cluster \\
+  --no-auto-terminate \\
+  --auto-scaling-role EMR_AutoScaling_DefaultRole \\
+  --applications Name=Hadoop Name=Hive Name=Spark \\
+  --ebs-root-volume-size 100 \\
+  --configurations file://$CONF_FILE \\
+  --ec2-attributes file://$EC2_FILE \\
+  --service-role EMR_Default_Role_v2 \\
+  --enable-debugging \\
+  --release-label emr-7.10.0 \\
+  --log-uri s3://aws-logs-283408157088-us-east-1/elasticmapreduce/ \\
+  --tags for-use-with-amazon-emr-managed-policies=true \\
+  --steps file://$STEPS_FILE \\
+  --name monthlybatch \\
+  --instance-groups file://$IG_FILE \\
+  --scale-down-behavior TERMINATE_AT_TASK_COMPLETION \\
+  --region {REGION} \\
+  --query ClusterId \\
+  --output text
+
+rm -f $STEPS_FILE $EC2_FILE $IG_FILE $CONF_FILE
+"""
+    encoded = base64.b64encode(script.encode()).decode()
+    cluster_id = ssm_run(
+        INGEST_INSTANCE_ID,
+        f"sudo -u ec2-user bash -lc 'echo {encoded} | base64 -d | bash'",
+        timeout_seconds=60,
+        poll_seconds=3,
+    ).strip()
+
+    if not cluster_id.startswith("j-"):
+        raise RuntimeError(f"Unexpected cluster ID output: {cluster_id}")
 
     print(f"\n  Cluster ID: {cluster_id}")
     print(f"  Logs: s3://aws-logs-283408157088-us-east-1/elasticmapreduce/{cluster_id}/")
-    slack_notify(
-        f":rocket: *monthlybatch cluster launched* — `{cluster_id}`\n"
-        f"Steps: parquet → jsonl → mq → sitemap. Polling every {POLL_SECONDS // 60} min."
-    )
+    # slack_notify(
+    #     f":rocket: *monthlybatch cluster launched* — `{cluster_id}`\n"
+    #     f"Steps: parquet → jsonl → mq → sitemap. Polling every {POLL_SECONDS // 60} min."
+    # )
     return cluster_id
 
 
