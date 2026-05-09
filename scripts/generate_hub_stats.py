@@ -75,7 +75,7 @@ def contributor_counts(hub_name: str, bws: bool = False) -> dict:
         "query": {"term": {"provider.name.not_analyzed": hub_name}},
         "aggs": {
             "contributors": {
-                "terms": {"field": "dataProvider.name.not_analyzed", "size": 2000}
+                "terms": {"field": "dataProvider.name.not_analyzed", "size": 10000}
             }
         },
     }
