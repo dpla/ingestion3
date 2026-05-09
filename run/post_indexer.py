@@ -22,8 +22,9 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 
 # ---------- config ----------
 REGION             = "us-east-1"
@@ -143,7 +144,7 @@ def rebuild_jar():
     slack_notify(":hammer: *batch JAR rebuild started* — running `sbt assembly` locally.")
 
     result = subprocess.run(
-        ["sbt", "assembly"],
+        ["sbt", "clean", "assembly"],
         cwd=BATCH_REPO_DIR,
         text=True,
         capture_output=False,  # stream output live to terminal
@@ -179,7 +180,7 @@ def check_jar_freshness():
     parts = out.strip().split()
     try:
         jar_date = datetime.strptime(f"{parts[0]} {parts[1]}", "%Y-%m-%d %H:%M:%S")
-        age_days = (datetime.utcnow() - jar_date).days
+        age_days = (datetime.now() - jar_date).days
         info(f"JAR last modified: {parts[0]} ({age_days} days ago)")
         if age_days > STALE_JAR_DAYS:
             warn(f"JAR is {age_days} days old — may be stale.")
@@ -266,57 +267,58 @@ def launch_cluster():
     ])
     configurations = json.dumps([{"Classification": "spark", "Properties": {"maximizeResourceAllocation": "true"}}])
 
-    # Write JSON args to temp files on EC2 to avoid shell quoting nightmares
-    script = f"""
-set -e
-STEPS_FILE=$(mktemp)
-EC2_FILE=$(mktemp)
-IG_FILE=$(mktemp)
-CONF_FILE=$(mktemp)
-echo '{emr_steps}' > $STEPS_FILE
-echo '{ec2_attrs}' > $EC2_FILE
-echo '{instance_groups}' > $IG_FILE
-echo '{configurations}' > $CONF_FILE
+    # Write JSON args to local temp files to avoid subprocess quoting issues
+    tmp_files = []
+    def write_tmp(content):
+        f = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
+        f.write(content)
+        f.close()
+        tmp_files.append(f.name)
+        return f.name
 
-aws emr create-cluster \\
-  --no-auto-terminate \\
-  --auto-scaling-role EMR_AutoScaling_DefaultRole \\
-  --applications Name=Hadoop Name=Hive Name=Spark \\
-  --ebs-root-volume-size 100 \\
-  --configurations file://$CONF_FILE \\
-  --ec2-attributes file://$EC2_FILE \\
-  --service-role EMR_Default_Role_v2 \\
-  --enable-debugging \\
-  --release-label emr-7.10.0 \\
-  --log-uri s3://aws-logs-283408157088-us-east-1/elasticmapreduce/ \\
-  --tags for-use-with-amazon-emr-managed-policies=true \\
-  --steps file://$STEPS_FILE \\
-  --name monthlybatch \\
-  --instance-groups file://$IG_FILE \\
-  --scale-down-behavior TERMINATE_AT_TASK_COMPLETION \\
-  --region {REGION} \\
-  --query ClusterId \\
-  --output text
+    steps_f  = write_tmp(emr_steps)
+    ec2_f    = write_tmp(ec2_attrs)
+    ig_f     = write_tmp(instance_groups)
+    conf_f   = write_tmp(configurations)
 
-rm -f $STEPS_FILE $EC2_FILE $IG_FILE $CONF_FILE
-"""
-    encoded = base64.b64encode(script.encode()).decode()
-    cluster_id = ssm_run(
-        INGEST_INSTANCE_ID,
-        f"sudo -u ec2-user bash -lc 'echo {encoded} | base64 -d | bash'",
-        timeout_seconds=60,
-        poll_seconds=3,
-    ).strip()
+    try:
+        cluster_id = aws([
+            "emr", "create-cluster",
+            "--no-auto-terminate",
+            "--auto-scaling-role", "EMR_AutoScaling_DefaultRole",
+            "--applications", "Name=Hadoop", "Name=Hive", "Name=Spark",
+            "--ebs-root-volume-size", "100",
+            "--configurations", f"file://{conf_f}",
+            "--ec2-attributes", f"file://{ec2_f}",
+            "--service-role", "EMR_Default_Role_v2",
+            "--enable-debugging",
+            "--release-label", "emr-7.10.0",
+            "--log-uri", "s3://aws-logs-283408157088-us-east-1/elasticmapreduce/",
+            "--tags", "for-use-with-amazon-emr-managed-policies=true",
+            "--steps", f"file://{steps_f}",
+            "--name", "monthlybatch",
+            "--instance-groups", f"file://{ig_f}",
+            "--scale-down-behavior", "TERMINATE_AT_TASK_COMPLETION",
+            "--region", REGION,
+            "--query", "ClusterId",
+            "--output", "text",
+        ]).strip()
+    finally:
+        for f in tmp_files:
+            try:
+                os.unlink(f)
+            except OSError:
+                pass
 
     if not cluster_id.startswith("j-"):
         raise RuntimeError(f"Unexpected cluster ID output: {cluster_id}")
 
     print(f"\n  Cluster ID: {cluster_id}")
     print(f"  Logs: s3://aws-logs-283408157088-us-east-1/elasticmapreduce/{cluster_id}/")
-    # slack_notify(
-    #     f":rocket: *monthlybatch cluster launched* — `{cluster_id}`\n"
-    #     f"Steps: parquet → jsonl → mq → sitemap. Polling every {POLL_SECONDS // 60} min."
-    # )
+    slack_notify(
+        f":rocket: *monthlybatch cluster launched* — `{cluster_id}`\n"
+        f"Steps: parquet → jsonl → mq → sitemap. Polling every {POLL_SECONDS // 60} min."
+    )
     return cluster_id
 
 
@@ -441,14 +443,27 @@ def terminate_cluster(cluster_id):
 
 def run_hub_stats():
     step(4, "Run hub stats")
+    info("Updating ingestion3 on EC2 (fetch + reset --hard)...")
+    try:
+        ssm_run(
+            INGEST_INSTANCE_ID,
+            "sudo -u ec2-user bash -lc 'cd /home/ec2-user/ingestion3 && git fetch origin && git reset --hard origin/main'",
+            timeout_seconds=60,
+            poll_seconds=5,
+        )
+        ok("ingestion3 updated on EC2.")
+    except RuntimeError as e:
+        warn(f"git fetch/reset failed (proceeding anyway):\n{e}")
+
     info("Running generate_hub_stats.py on ingest EC2 (up to 3 min)...")
     try:
         out = ssm_run(
             INGEST_INSTANCE_ID,
             (
-                "env -i HOME=/root "
-                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin "
-                "python3 /home/ec2-user/ingestion3/scripts/generate_hub_stats.py 2>&1"
+                "sudo -u ec2-user bash -lc '"
+                "cd /home/ec2-user/ingestion3 && "
+                "python3 scripts/generate_hub_stats.py"
+                "' 2>&1"
             ),
             timeout_seconds=180,
             poll_seconds=10,
@@ -465,9 +480,11 @@ def run_hub_stats():
 
 def trigger_sitemaps():
     step(5, "Trigger hub sitemaps GitHub workflow")
-    info("Running: gh workflow run generate-hub-sitemaps.yml --repo dpla/dpla-frontend --ref main")
+    import shutil
+    gh = shutil.which("gh") or "/opt/homebrew/bin/gh"
+    info(f"Running: {gh} workflow run generate-hub-sitemaps.yml --repo dpla/dpla-frontend --ref main")
     result = subprocess.run(
-        ["gh", "workflow", "run", "generate-hub-sitemaps.yml",
+        [gh, "workflow", "run", "generate-hub-sitemaps.yml",
          "--repo", "dpla/dpla-frontend", "--ref", "main"],
         capture_output=True, text=True,
     )
@@ -482,31 +499,60 @@ def trigger_sitemaps():
 
 # ---------- Step 6: verify outputs ----------
 
+def check_s3_file_today(s3_path, label):
+    """Check that a specific S3 file exists and was modified today. Returns True/False."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    ls = aws(["s3", "ls", s3_path, "--region", REGION], check=False)
+    if not ls.strip():
+        bad(f"{label}: NOT FOUND at {s3_path}")
+        return False
+    # Date is first field: "2026-05-09 15:11:55  573082 hub_stats.json"
+    file_date = ls.strip().split()[0]
+    if file_date == today:
+        ok(f"{label}: {file_date} ✓")
+        return True
+    else:
+        bad(f"{label}: found but last modified {file_date} (expected {today})")
+        return False
+
+
 def verify_outputs():
     step(6, "Verify S3 batch outputs")
     now   = datetime.now()
+    today = now.strftime("%Y-%m-%d")
     year  = now.year
     month = f"{now.month:02d}"
 
-    checks = [
-        (f"s3://dpla-provider-export/{year}/{month}/", "Provider export"),
-        ("s3://sitemaps.dp.la/sitemap/",               "Sitemaps"),
-        ("s3://dashboard-analytics/hub-stats/",         "Hub stats"),
-    ]
-
     all_good = True
-    for path, label in checks:
-        ls = aws(["s3", "ls", path, "--region", REGION], check=False)
-        if ls.strip():
-            ok(f"{label}: found at {path}")
-        else:
-            bad(f"{label}: EMPTY at {path}")
-            all_good = False
+
+    # Provider export — check year/month prefix exists
+    export_path = f"s3://dpla-provider-export/{year}/{month}/"
+    ls = aws(["s3", "ls", export_path, "--region", REGION], check=False)
+    if ls.strip():
+        ok(f"Provider export: found at {export_path} ✓")
+    else:
+        bad(f"Provider export: EMPTY at {export_path}")
+        all_good = False
+
+    # Sitemaps — check _MANIFEST is from today
+    if not check_s3_file_today("s3://sitemaps.dp.la/sitemap/_MANIFEST", "Sitemap _MANIFEST"):
+        all_good = False
+
+    # Hub stats — check both files are from today
+    if not check_s3_file_today("s3://dashboard-analytics/hub-stats/hub_stats.json", "hub_stats.json"):
+        all_good = False
+    if not check_s3_file_today("s3://dashboard-analytics/hub-stats/hub_stats_bws.json", "hub_stats_bws.json"):
+        all_good = False
 
     if all_good:
-        slack_notify(":tada: *post-indexer complete* — all batch outputs verified on S3 :white_check_mark:")
+        slack_notify(
+            f":tada: *post-indexer complete* — all outputs verified for {today} :white_check_mark:\n"
+            f"• Provider export: `{export_path}`\n"
+            f"• Sitemaps: fresh\n"
+            f"• Hub stats: fresh"
+        )
     else:
-        slack_notify(":warning: *post-indexer done but some S3 outputs are missing* — check manually.")
+        slack_notify(":warning: *post-indexer done but some S3 outputs are missing or stale* — check manually.")
 
 
 # ---------- main ----------
@@ -516,11 +562,16 @@ def main():
     parser = argparse.ArgumentParser(description="DPLA post-indexer batch jobs")
     parser.add_argument("--cluster-id",     help="Resume monitoring an existing monthlybatch cluster")
     parser.add_argument("--skip-preflight", action="store_true", help="Skip JAR freshness check")
+    parser.add_argument("--verify-only",    action="store_true", help="Just run S3 output verification")
     args = parser.parse_args()
 
     print("\nDPLA POST-INDEXER")
     print(f"Region: {REGION}")
     print(f"Time:   {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+    if args.verify_only:
+        verify_outputs()
+        return
 
     if args.cluster_id:
         print(f"\nResuming monitoring for cluster: {args.cluster_id}")
