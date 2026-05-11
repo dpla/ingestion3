@@ -36,9 +36,9 @@ INSTANCE_ID    = "i-0a0def8581efef783"
 
 NARA_SCRIPT    = "/home/ec2-user/ingestion3/scripts/harvest/nara-ingest.sh"
 
-# EC2 paths — DPLA_DATA matches common.sh default: ${DPLA_DATA:-$HOME/dpla/data}
-DPLA_DATA      = "/home/ec2-user/dpla/data"
-NARA_DATA      = f"{DPLA_DATA}/nara"
+# EC2 paths — nara-ingest.sh uses ~/data/ (not ~/dpla/data/)
+DATA_ROOT      = "/home/ec2-user/data"
+NARA_DATA      = f"{DATA_ROOT}/nara"
 NARA_ORIGINALS = f"{NARA_DATA}/originalRecords"
 
 LOG_DIR        = "/home/ec2-user"

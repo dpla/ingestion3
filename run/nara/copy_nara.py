@@ -37,7 +37,7 @@ import time
 INSTANCE_ID       = "i-0a0def8581efef783"
 NARA_DST          = "s3://dpla-hub-nara/raw_ingest_files"
 NARA_PROFILE      = "nara"
-NARA_ORIGINALS_EC2 = "/home/ec2-user/dpla/data/nara/originalRecords"
+NARA_ORIGINALS_EC2 = "/home/ec2-user/data/nara/originalRecords"
 
 
 # ---------- AWS / SSM helpers ----------
