@@ -2,15 +2,19 @@
 """
 NARA delivery copy script.
 
-Copies a NARA delta delivery from NARA's S3 bucket (ngc-storage01) to DPLA's
-S3 bucket (dpla-hub-nara/raw_ingest_files/<YYYYMM>/) via EC2 as a middleman.
+Copies a NARA delta delivery from NARA's S3 bucket (ngc-storage01) to both
+DPLA's S3 bucket (dpla-hub-nara) and the ingest EC2, ready for nara-ingest.sh.
 
 Why the middleman? The NARA credentials (profile: nara) only have read access
 to ngc-storage01. EC2's default IAM role has write access to dpla-hub-nara.
 A direct cross-account sync isn't possible with a single credential set, so we:
   1. Download ZIPs from ngc-storage01 → /tmp/nara-<YYYYMM>/ on EC2 (using nara profile)
   2. Upload ZIPs from EC2 → s3://dpla-hub-nara/raw_ingest_files/<YYYYMM>/ (using EC2 role)
-  3. Delete the temp files from EC2 disk
+  3. Move ZIPs from /tmp/nara-<YYYYMM>/ → ~/dpla/data/nara/originalRecords/<YYYYMM>/
+     (ready for nara-ingest.sh — no second download needed)
+
+After this script completes, run:
+    python3 nara/launch_nara.py --month <YYYYMM>
 
 Usage:
     python3 copy_nara.py --month 202604
@@ -30,9 +34,10 @@ import sys
 import time
 
 # ---------- config ----------
-INSTANCE_ID  = "i-0a0def8581efef783"
-NARA_DST     = "s3://dpla-hub-nara/raw_ingest_files"
-NARA_PROFILE = "nara"
+INSTANCE_ID       = "i-0a0def8581efef783"
+NARA_DST          = "s3://dpla-hub-nara/raw_ingest_files"
+NARA_PROFILE      = "nara"
+NARA_ORIGINALS_EC2 = "/home/ec2-user/dpla/data/nara/originalRecords"
 
 
 # ---------- AWS / SSM helpers ----------
@@ -153,20 +158,21 @@ def main():
             if not re.match(r"^\d{6}$", month):
                 sys.exit(f"--month must be YYYYMM (6 digits), got: {month!r}")
 
-    dst      = f"{NARA_DST}/{month}/"
-    tmp_dir  = f"/tmp/nara-{month}"
-    log_path = f"/tmp/nara-copy-{month}.log"
+    dst           = f"{NARA_DST}/{month}/"
+    tmp_dir       = f"/tmp/nara-{month}"
+    ec2_ingest_dir = f"{NARA_ORIGINALS_EC2}/{month}"
+    log_path      = f"/tmp/nara-copy-{month}.log"
 
     print(f"\nNARA COPY — {month}")
     print(f"Instance:  {INSTANCE_ID}")
     print(f"Source:    {src}")
-    print(f"Dest:      {dst}")
-    print(f"Temp dir:  {tmp_dir} (deleted after upload)")
+    print(f"S3 dest:   {dst}")
+    print(f"EC2 dest:  {ec2_ingest_dir}")
+    print(f"Temp dir:  {tmp_dir} (removed after move)")
     print()
 
     # Check if destination already has files
     step(1, f"Verify source files in {src}")
-    existing = aws(["s3", "ls", dst]).strip() if True else ""
     try:
         existing = aws(["s3", "ls", dst])
         existing_count = len([l for l in existing.splitlines() if l.strip()])
@@ -192,13 +198,15 @@ def main():
 
     sync_cmd = (
         f"set -e && "
-        f"echo 'Step 1/3: Creating temp dir...' && "
+        f"echo 'Step 1/4: Creating temp dir...' && "
         f"mkdir -p {tmp_dir} && "
-        f"echo 'Step 2/3: Downloading from ngc-storage01...' && "
+        f"echo 'Step 2/4: Downloading from ngc-storage01...' && "
         f"aws s3 sync {src} {tmp_dir}/ --profile {NARA_PROFILE} && "
-        f"echo 'Step 3/3: Uploading to dpla-hub-nara...' && "
+        f"echo 'Step 3/4: Uploading to dpla-hub-nara...' && "
         f"aws s3 sync {tmp_dir}/ {dst} && "
-        f"echo 'Cleaning up temp files...' && "
+        f"echo 'Step 4/4: Moving files to EC2 ingest dir...' && "
+        f"mkdir -p {ec2_ingest_dir} && "
+        f"mv {tmp_dir}/* {ec2_ingest_dir}/ && "
         f"rm -rf {tmp_dir} && "
         f"echo 'DONE'"
     )
@@ -208,16 +216,21 @@ def main():
     wait_for_pid(pid, log_path, poll_seconds=30, timeout_seconds=7200)
 
     # Verify destination
-    step(3, "Verify destination")
-    dst_count = aws(["s3", "ls", dst, "--recursive", "--profile", "default"]).count("\n") + 1
-    print(f"  Files in {dst}: checking...")
-    final_count = ssm_run(
+    step(3, "Verify")
+    print(f"  Checking S3: {dst}")
+    s3_count = ssm_run(
         f"aws s3 ls {dst} | wc -l",
         timeout_seconds=30,
     ).strip()
-    print(f"  {final_count} file(s) in {dst}")
+    print(f"  {s3_count} file(s) in {dst}")
 
-    # Confirm temp dir is gone
+    print(f"  Checking EC2: {ec2_ingest_dir}")
+    ec2_count = ssm_run(
+        f"ls {ec2_ingest_dir} 2>/dev/null | wc -l || echo 0",
+        timeout_seconds=30,
+    ).strip()
+    print(f"  {ec2_count} file(s) in {ec2_ingest_dir}")
+
     tmp_gone = ssm_run(
         f"[ -d {tmp_dir} ] && echo EXISTS || echo GONE",
         timeout_seconds=30,
@@ -227,7 +240,8 @@ def main():
     print()
     print("=" * 70)
     print(f"  NARA copy complete — {month}!")
-    print(f"  Files ready at {dst}")
+    print(f"  S3:  {dst}")
+    print(f"  EC2: {ec2_ingest_dir}")
     print(f"  Run: python3 launch_nara.py --month {month}")
     print("=" * 70)
     print()
