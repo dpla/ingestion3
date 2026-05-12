@@ -93,11 +93,6 @@ while [[ $# -gt 0 ]]; do
             SKIP_HARVEST=true
             shift
             ;;
-        --mapping-only)
-            MAPPING_ONLY=true
-            SKIP_HARVEST=true
-            shift
-            ;;
         --skip-s3-sync)
             SKIP_S3_SYNC=true
             shift
