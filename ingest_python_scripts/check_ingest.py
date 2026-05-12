@@ -43,9 +43,24 @@ DATA_ROOT = "/home/ec2-user/data"
 STAGES = ("harvest", "mapping", "enrichment", "jsonl")
 HUB_RE = re.compile(r"^[a-z0-9_-]+$")
 
-CONF_PATH = os.environ.get("I3_CONF") or os.path.expanduser(
-    "~/Documents/Repos/ingestion3-conf/i3.conf"
-)
+def _load_dotenv():
+    cfg = {}
+    env_file = os.path.normpath(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+    )
+    if os.path.exists(env_file):
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    cfg[k.strip()] = os.path.expanduser(v.strip().strip('"').strip("'"))
+    return cfg
+
+_env = _load_dotenv()
+_conf_repo = _env.get("INGESTION3_CONF_REPO",
+                       os.path.expanduser("~/Documents/Repos/ingestion3-conf"))
+CONF_PATH = os.environ.get("I3_CONF") or os.path.join(_conf_repo, "i3.conf")
 
 # Stage indicators — first matching keyword wins. Ordered most-specific first
 # (jsonl/enrichment before mapping before harvest) so e.g. "MappingEntry"

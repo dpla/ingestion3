@@ -63,13 +63,24 @@ REPO_PATH = INGEST_REPO["path"]
 REMOTE_URL = "https://github.com/dpla/ingestion3.git"
 REMOTE_BRANCH = INGEST_REPO["branch"]
 
-# Where the HOCON hub config lives on the local machine.
-# Defaults to Zoe's checkout at ~/Documents/Repos/ingestion3-conf/i3.conf,
-# but the I3_CONF env var wins if set — matches the convention used in the
-# ingestion3 .env file (see §7 of the onboarding doc).
-CONF_PATH = os.environ.get("I3_CONF") or os.path.expanduser(
-    "~/Documents/Repos/ingestion3-conf/i3.conf"
-)
+def _load_dotenv():
+    cfg = {}
+    env_file = os.path.normpath(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+    )
+    if os.path.exists(env_file):
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    cfg[k.strip()] = os.path.expanduser(v.strip().strip('"').strip("'"))
+    return cfg
+
+_env = _load_dotenv()
+_conf_repo = _env.get("INGESTION3_CONF_REPO",
+                       os.path.expanduser("~/Documents/Repos/ingestion3-conf"))
+CONF_PATH = os.environ.get("I3_CONF") or os.path.join(_conf_repo, "i3.conf")
 
 # ---------- tiny output helpers ----------
 def header(title):
