@@ -34,6 +34,9 @@ S3_EXPORT     = "dpla-provider-export"
 S3_ANALYTICS  = "dashboard-analytics"
 S3_SITEMAPS   = "sitemaps.dp.la"
 DEFAULT_STALE_DAYS = 45
+CONF_PATH = os.environ.get("I3_CONF") or os.path.expanduser(
+    "~/Documents/Repos/ingestion3-conf/i3.conf"
+)
 
 # S3 prefix aliases (hub name → S3 prefix, matching common.sh's resolve_s3_prefix)
 S3_ALIASES = {
@@ -98,23 +101,35 @@ def latest_jsonl_snapshot(hub):
     Return (snapshot_dir, date_str, records) for the most recent JSONL snapshot
     for a hub in s3://dpla-master-dataset/<hub>/jsonl/.
     Returns (None, None, None) if none found.
+
+    aws s3 ls of a prefix returns lines like:
+      "                       PRE 20260502_120000-hub-MAP4_0.jsonl/"
+    There is no date column on PRE lines, so we parse the date from the
+    directory name itself (YYYYMMDD_HHMMSS prefix).
     """
     s3_prefix = S3_ALIASES.get(hub, hub)
     ls = s3_ls(f"s3://{S3_DATASET}/{s3_prefix}/jsonl/")
     if not ls.strip():
         return None, None, None
 
-    lines = [l for l in ls.splitlines() if l.strip()]
-    # Lines are: "2026-05-02 12:00:00       PRE 20260502_120000-hub-MAP4_0.jsonl/"
-    # or just dates for the snapshot dirs; pick the most recent by sorting
-    latest_line = sorted(lines)[-1]
-    date_str = latest_line.strip().split()[0]  # "2026-05-02"
+    snapshot_dirs = []
+    for line in ls.splitlines():
+        parts = line.strip().split()
+        if not parts:
+            continue
+        dir_name = parts[-1].rstrip("/")
+        m = re.match(r"^(\d{4})(\d{2})(\d{2})_\d{6}", dir_name)
+        if m:
+            date_str = f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+            snapshot_dirs.append((date_str, dir_name))
 
-    # Get directory name (last token, strip trailing /)
-    dir_name = latest_line.strip().split()[-1].rstrip("/")
-    snapshot_path = f"s3://{S3_DATASET}/{s3_prefix}/jsonl/{dir_name}/_MANIFEST"
+    if not snapshot_dirs:
+        return None, None, None
 
-    manifest = s3_read(snapshot_path)
+    snapshot_dirs.sort(reverse=True)
+    date_str, dir_name = snapshot_dirs[0]
+
+    manifest = s3_read(f"s3://{S3_DATASET}/{s3_prefix}/jsonl/{dir_name}/_MANIFEST")
     records = parse_manifest_count(manifest) if manifest else None
 
     return dir_name, date_str, records
@@ -141,6 +156,49 @@ def classify_age(date_str, now, stale_days):
             return "stale", age_days
     except ValueError:
         return "unknown", None
+
+
+# ---------- hub list from conf ----------
+def get_hubs_from_conf(month_number, conf_path=CONF_PATH):
+    """
+    Parse i3.conf for hubs scheduled to run in month_number (1–12).
+
+    Rules:
+      - Include hub only if month_number is in schedule.months = [...]
+      - Skip hubs with schedule.status containing "on-hold"
+      - Skip hubs with empty schedule.months = [] (as-needed / inactive)
+      - Hubs with no schedule.months entry at all are excluded
+    """
+    if not os.path.exists(conf_path):
+        return []
+    with open(conf_path, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    # Build months map: hub → [int, ...]
+    months_map = {}
+    for m in re.finditer(r"^([a-z0-9_-]+)\.schedule\.months\s*=\s*\[([^\]]*)\]",
+                         text, re.MULTILINE):
+        hub  = m.group(1)
+        nums = [int(x.strip()) for x in m.group(2).split(",") if x.strip().isdigit()]
+        months_map[hub] = nums
+
+    # Build status map: hub → status string
+    status_map = {}
+    for m in re.finditer(r"^([a-z0-9_-]+)\.schedule\.status\s*=\s*[\"']?([^\"'\n]+)[\"']?",
+                         text, re.MULTILINE):
+        status_map[m.group(1)] = m.group(2).strip()
+
+    hubs = []
+    for hub, months in months_map.items():
+        if not months:                                    # empty list → skip
+            continue
+        if month_number not in months:                    # not scheduled this month
+            continue
+        if "on-hold" in status_map.get(hub, "").lower(): # explicitly paused
+            continue
+        hubs.append(hub)
+
+    return sorted(hubs)
 
 
 # ---------- post-indexer helpers ----------
@@ -189,14 +247,17 @@ def fetch_api_count(api_key):
 
 
 # ---------- render ----------
-def render(hub_results, now, month_str, stale_days, check_api):
+def render(hub_results, today, check_dt, month_str, stale_days, check_api):
+    """
+    today     — actual current date (for age calculations)
+    check_dt  — month being checked (for post-indexer S3 paths)
+    """
     lines = []
-    today_str = now.strftime("%Y-%m-%d")
-    year, month = now.year, f"{now.month:02d}"
+    year, month = check_dt.year, f"{check_dt.month:02d}"
 
     lines.append("")
     lines.append(c(DIM, "=" * 70))
-    lines.append(f"  DPLA Pipeline Status — {c(BOLD, month_str)}")
+    lines.append(f"  DPLA Postchecks — {c(BOLD, month_str)}")
     lines.append(c(DIM, "=" * 70))
 
     # ── INGEST STATUS ────────────────────────────────────────────────────────
@@ -211,7 +272,7 @@ def render(hub_results, now, month_str, stale_days, check_api):
     missing_count = 0
 
     for hub, (snapshot, date_str, records) in sorted(hub_results.items()):
-        age_class, age_days = classify_age(date_str, now, stale_days)
+        age_class, age_days = classify_age(date_str, today, stale_days)
 
         rec_str  = f"{records:>12,}" if records is not None else f"{'—':>12}"
         date_col = date_str or "—"
@@ -257,17 +318,16 @@ def render(hub_results, now, month_str, stale_days, check_api):
     else:
         lines.append(f"  {c(RED, '✗')} Provider export    {c(DIM, export_path + ' — NOT FOUND')}")
 
-    # Hub stats
+    # Hub stats + sitemaps — just show last-modified date
     for label, s3_path in [
-        ("Hub stats",   f"s3://{S3_ANALYTICS}/hub-stats/hub_stats.json"),
-        ("Hub stats bw",f"s3://{S3_ANALYTICS}/hub-stats/hub_stats_bws.json"),
-        ("Sitemaps",    f"s3://{S3_SITEMAPS}/sitemap/_MANIFEST"),
+        ("Hub stats",    f"s3://{S3_ANALYTICS}/hub-stats/hub_stats.json"),
+        ("Hub stats bw", f"s3://{S3_ANALYTICS}/hub-stats/hub_stats_bws.json"),
+        ("Sitemaps",     f"s3://{S3_SITEMAPS}/sitemap/_MANIFEST"),
     ]:
-        freshness, file_date = check_s3_file_freshness(s3_path, today_str)
-        if freshness == "fresh":
+        ls = s3_ls(s3_path)
+        if ls.strip():
+            file_date = ls.strip().split()[0]
             lines.append(f"  {c(GREEN, '✓')} {label:<18} {c(DIM, file_date)}")
-        elif freshness == "stale":
-            lines.append(f"  {c(YELLOW, '⚠')} {label:<18} last modified {file_date} (not today)")
         else:
             lines.append(f"  {c(RED, '✗')} {label:<18} NOT FOUND")
 
@@ -310,29 +370,27 @@ def main():
                         help=f"Days before a snapshot is considered stale (default: {DEFAULT_STALE_DAYS})")
     args = parser.parse_args()
 
-    now = datetime.now(timezone.utc)
+    today = datetime.now(timezone.utc)       # real today — used for age calculations
     if args.month:
         if not re.match(r"^\d{6}$", args.month):
             sys.exit("--month must be YYYYMM (6 digits)")
-        now = datetime(int(args.month[:4]), int(args.month[4:]), 1, tzinfo=timezone.utc)
+        check_dt = datetime(int(args.month[:4]), int(args.month[4:]), 1, tzinfo=timezone.utc)
+    else:
+        check_dt = today
 
-    month_str = now.strftime("%B %Y")  # "May 2026"
+    month_str = check_dt.strftime("%B %Y")  # "May 2026"
 
-    print(c(DIM, f"\n  Loading hub list from s3://{S3_DATASET}/ ..."), end="\r", flush=True)
+    print(c(DIM, f"\n  Loading hub list from i3.conf ({check_dt.strftime('%B')} schedule)..."),
+          end="\r", flush=True)
 
-    # Discover hubs from S3
-    try:
-        ls = s3_ls(f"s3://{S3_DATASET}/", check=True)
-    except RuntimeError as e:
-        sys.exit(f"\n  [ERROR] Could not list s3://{S3_DATASET}/:\n  {e}")
-
-    hubs = [
-        line.strip().rstrip("/").split()[-1]
-        for line in ls.splitlines()
-        if line.strip().endswith("/")
-    ]
+    # Discover hubs scheduled for this month from i3.conf
+    hubs = get_hubs_from_conf(check_dt.month)
     if not hubs:
-        sys.exit(f"\n  [ERROR] No hubs found in s3://{S3_DATASET}/")
+        sys.exit(
+            f"\n  [ERROR] No hubs found for month {check_dt.month} in i3.conf.\n"
+            f"  Conf path: {CONF_PATH}\n"
+            f"  Set I3_CONF=/path/to/i3.conf if it lives elsewhere."
+        )
 
     print(c(DIM, f"  Checking {len(hubs)} hubs in parallel...      "), end="\r", flush=True)
 
@@ -352,7 +410,7 @@ def main():
             print(c(DIM, f"  Checking hubs... {done}/{len(hubs)}          "), end="\r", flush=True)
 
     print(" " * 50, end="\r", flush=True)  # clear progress line
-    print(render(hub_results, now, month_str, args.stale_days, not args.no_api))
+    print(render(hub_results, today, check_dt, month_str, args.stale_days, not args.no_api))
 
 
 if __name__ == "__main__":
