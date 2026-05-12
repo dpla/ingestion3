@@ -43,8 +43,6 @@ usage() {
     echo "  ./ingest.sh maryland --skip-harvest           # Use existing harvest"
     echo "  ./ingest.sh maryland --harvest-only           # Only harvest"
     echo "  ./ingest.sh maryland --mapping-only           # Only mapping (verify count)"
-    echo "  ./ingest.sh maryland --mapping-only           # Only mapping (verify count)"
-    echo "  ./ingest.sh maryland --skip-s3-sync           # Skip S3 upload"
     echo "  ./ingest.sh maryland --skip-s3-sync           # Skip S3 upload"
     echo "  ./ingest.sh maryland --resume-from enrichment # Skip harvest+mapping, reuse"
     echo "                                                #   existing mapping output"
@@ -68,7 +66,6 @@ shift
 
 SKIP_HARVEST=false
 HARVEST_ONLY=false
-MAPPING_ONLY=false
 MAPPING_ONLY=false
 SKIP_S3_SYNC=false
 RESUME_FROM=""
@@ -177,8 +174,6 @@ if [[ -n "$RESUME_FROM" ]]; then
     slack_notify ":arrow_forward: *$PROVIDER ingest resuming from $RESUME_FROM*"
 elif [[ "$MAPPING_ONLY" = true ]]; then
     slack_notify ":arrow_forward: *$PROVIDER mapping-only run started*"
-elif [[ "$MAPPING_ONLY" = true ]]; then
-    slack_notify ":arrow_forward: *$PROVIDER mapping-only run started*"
 else
     slack_notify ":arrow_forward: *$PROVIDER ingest started* | harvest → map → enrich → jsonl → s3"
 fi
@@ -256,7 +251,6 @@ fi
 if [ "$HARVEST_ONLY" = true ]; then
     write_hub_status "$PROVIDER" complete
     slack_notify ":white_check_mark: *$PROVIDER harvest complete* (${HARVEST_RECORD_COUNT} records)"
-    slack_notify ":white_check_mark: *$PROVIDER harvest complete* (${HARVEST_RECORD_COUNT} records)"
     log_info "Harvest-only mode - stopping here"
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))
@@ -264,7 +258,6 @@ if [ "$HARVEST_ONLY" = true ]; then
     echo "=============================================="
     echo "  Harvest completed in $((DURATION / 60))m $((DURATION % 60))s"
     echo "=============================================="
-    TRAP_HANDLED=true
     TRAP_HANDLED=true
     exit 0
 fi
