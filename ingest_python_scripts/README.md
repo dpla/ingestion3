@@ -20,7 +20,7 @@ Re-run at any time. Use `--update` to change saved paths.
 
 - Python 3.9+
 - AWS CLI installed and authenticated (`~/.aws/credentials`)
-- `[nara]` profile in `~/.aws/credentials` (keys in 1Password: "ingest@dp.la NARA keys")
+- `[nara]` profile in `~/.aws/credentials` (obtain credentials from Dominic)
 - `sbt` installed locally for batch JAR builds (`brew install sbt`)
 - `~/.dpla-secrets.env` locally with `DPLA_API_KEY`
 - `~/.dpla-secrets.env` on the ingest EC2 with `SLACK_BOT_TOKEN` and `SLACK_CHANNEL`
