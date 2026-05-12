@@ -33,7 +33,7 @@ S3_DATASET    = "dpla-master-dataset"
 S3_EXPORT     = "dpla-provider-export"
 S3_ANALYTICS  = "dashboard-analytics"
 S3_SITEMAPS   = "sitemaps.dp.la"
-DEFAULT_STALE_DAYS = 45
+DEFAULT_STALE_DAYS = 30
 CONF_PATH = os.environ.get("I3_CONF") or os.path.expanduser(
     "~/Documents/Repos/ingestion3-conf/i3.conf"
 )
