@@ -34,7 +34,23 @@ BATCH_JAR_BUCKET   = "s3://dpla-monthly-batch/"
 BATCH_JAR_NAME     = "batch-process-dpla-index-assembly.jar"
 BATCH_JAR_S3       = f"s3://dpla-monthly-batch/{BATCH_JAR_NAME}"
 BATCH_JAR_EMR      = BATCH_JAR_S3  # same for EMR step args
-BATCH_REPO_DIR     = "/Users/zoe/Documents/Repos/batch-process-dpla-index"
+def _load_dotenv():
+    cfg = {}
+    env_file = os.path.normpath(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+    )
+    if os.path.exists(env_file):
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    cfg[k.strip()] = os.path.expanduser(v.strip().strip('"').strip("'"))
+    return cfg
+
+_env = _load_dotenv()
+BATCH_REPO_DIR     = _env.get("BATCH_REPO_DIR",
+                               os.path.expanduser("~/Documents/Repos/batch-process-dpla-index"))
 BATCH_LOCAL_JAR    = f"{BATCH_REPO_DIR}/target/scala-2.12/{BATCH_JAR_NAME}"
 
 MASTER_DATASET     = "dpla-master-dataset"

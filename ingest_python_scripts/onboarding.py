@@ -41,6 +41,7 @@ CONFIG_FILE = os.path.normpath(os.path.join(SCRIPT_DIR, "..", ".env"))
 # Defaults shown in prompts
 DEFAULT_INGESTION3      = os.path.expanduser("~/Documents/Repos/ingestion3")
 DEFAULT_INGESTION3_CONF = os.path.expanduser("~/Documents/Repos/ingestion3-conf")
+DEFAULT_BATCH_REPO      = os.path.expanduser("~/Documents/Repos/batch-process-dpla-index")
 
 
 # ---------- color ----------
@@ -135,8 +136,9 @@ def prompt_config(existing):
         return val if val else current
 
     config = dict(existing)
-    config["INGESTION3_REPO"]      = ask("Path to ingestion3 repo:",      "INGESTION3_REPO",      DEFAULT_INGESTION3)
-    config["INGESTION3_CONF_REPO"] = ask("Path to ingestion3-conf repo:", "INGESTION3_CONF_REPO", DEFAULT_INGESTION3_CONF)
+    config["INGESTION3_REPO"]      = ask("Path to ingestion3 repo:",                "INGESTION3_REPO",      DEFAULT_INGESTION3)
+    config["INGESTION3_CONF_REPO"] = ask("Path to ingestion3-conf repo:",           "INGESTION3_CONF_REPO", DEFAULT_INGESTION3_CONF)
+    config["BATCH_REPO_DIR"]       = ask("Path to batch-process-dpla-index repo:",  "BATCH_REPO_DIR",       DEFAULT_BATCH_REPO)
     return config
 
 
@@ -206,8 +208,9 @@ def check_repos(config):
     changed = False
 
     for label, key, default in [
-        ("ingestion3",      "INGESTION3_REPO",      DEFAULT_INGESTION3),
-        ("ingestion3-conf", "INGESTION3_CONF_REPO",  DEFAULT_INGESTION3_CONF),
+        ("ingestion3",               "INGESTION3_REPO",      DEFAULT_INGESTION3),
+        ("ingestion3-conf",          "INGESTION3_CONF_REPO", DEFAULT_INGESTION3_CONF),
+        ("batch-process-dpla-index", "BATCH_REPO_DIR",       DEFAULT_BATCH_REPO),
     ]:
         path = config.get(key, "")
         while not path or not os.path.isdir(path):
