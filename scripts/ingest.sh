@@ -45,6 +45,7 @@ usage() {
     echo "  ./ingest.sh maryland --mapping-only           # Only mapping (verify count)"
     echo "  ./ingest.sh maryland --mapping-only           # Only mapping (verify count)"
     echo "  ./ingest.sh maryland --skip-s3-sync           # Skip S3 upload"
+    echo "  ./ingest.sh maryland --skip-s3-sync           # Skip S3 upload"
     echo "  ./ingest.sh maryland --resume-from enrichment # Skip harvest+mapping, reuse"
     echo "                                                #   existing mapping output"
     echo "  ./ingest.sh maryland --resume-from jsonl      # Skip to JSONL, reuse existing"
