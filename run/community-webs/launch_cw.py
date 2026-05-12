@@ -4,19 +4,20 @@ Community Webs (Internet Archive) ingest orchestrator.
 
 Internet Archive delivers a SQLite .db file. This script:
   1. Uploads your local .db file to s3://dpla-scratch/community-webs/
-  2. Downloads it on EC2
-  3. Exports SQLite → JSONL → ZIP
-  4. Places the ZIP in the standard harvest directory
-  5. Prompts you to update i3.conf endpoint
-  6. Runs the full ingest pipeline via ingest.sh
+  2. Downloads it to EC2 at a temp path
+  3. Runs community-webs-ingest.sh --db=<path> on EC2
+     (handles export → harvest, and optionally full pipeline)
+
+After this script completes, run check_cw.py to monitor progress.
 
 Usage:
     python3 launch_cw.py --db ~/Downloads/community-webs.db
+    python3 launch_cw.py --db ~/Downloads/community-webs.db --full
+    python3 launch_cw.py --db ~/Downloads/community-webs.db --full --update-conf
 
 Skip flags (for resuming a failed run):
-    --skip-upload       .db already in s3://dpla-scratch/community-webs/
-    --skip-preprocess   ZIP already on EC2 (requires --zip-dir)
-    --zip-dir           EC2 path to dir containing the ZIP (use with --skip-preprocess)
+    --skip-upload     .db already in s3://dpla-scratch/community-webs/
+    --skip-export     ZIP already on EC2 (community-webs-ingest.sh --skip-export)
 
 Prerequisites:
     - AWS CLI installed and authenticated locally
@@ -28,21 +29,19 @@ import argparse
 import base64
 import json
 import os
-import re
 import subprocess
 import sys
 import time
 from datetime import datetime
 
 # ---------- config ----------
-INSTANCE_ID        = "i-0a0def8581efef783"
-REPO_PATH          = "/home/ec2-user/ingestion3"
-INGEST_SCRIPT      = f"{REPO_PATH}/scripts/ingest.sh"
-HUB                = "community-webs"
-S3_STAGING         = "s3://dpla-scratch/community-webs"
-HARVEST_BASE       = "/home/ec2-user/data/community-webs/originalRecords"
-
-PIPELINE_TIMEOUT_S = 10800  # 3 hours
+INSTANCE_ID   = "i-0a0def8581efef783"
+REGION        = "us-east-1"
+REPO_PATH     = "/home/ec2-user/ingestion3"
+CW_SCRIPT     = f"{REPO_PATH}/scripts/community-webs-ingest.sh"
+S3_STAGING    = "s3://dpla-scratch/community-webs"
+DATA_ROOT     = "/home/ec2-user/data"
+INGEST_LOG    = f"{DATA_ROOT}/community-webs-ingest.log"
 
 
 # ---------- AWS / SSM helpers ----------
@@ -63,6 +62,7 @@ def ssm_run(shell_cmd, timeout_seconds=120, poll_seconds=5):
         "--document-name", "AWS-RunShellScript",
         "--timeout-seconds", str(timeout_seconds),
         "--parameters", params,
+        "--region", REGION,
         "--query", "Command.CommandId",
         "--output", "text",
     ])
@@ -71,15 +71,18 @@ def ssm_run(shell_cmd, timeout_seconds=120, poll_seconds=5):
         time.sleep(poll_seconds)
         status = aws(["ssm", "get-command-invocation",
                       "--command-id", cmd_id, "--instance-id", INSTANCE_ID,
+                      "--region", REGION,
                       "--query", "Status", "--output", "text"])
         if status not in ("Pending", "InProgress", "Delayed"):
             break
         if time.time() > deadline:
             raise RuntimeError(f"SSM timed out after {timeout_seconds}s")
     out = aws(["ssm", "get-command-invocation", "--command-id", cmd_id,
-               "--instance-id", INSTANCE_ID, "--query", "StandardOutputContent", "--output", "text"])
+               "--instance-id", INSTANCE_ID, "--region", REGION,
+               "--query", "StandardOutputContent", "--output", "text"])
     err = aws(["ssm", "get-command-invocation", "--command-id", cmd_id,
-               "--instance-id", INSTANCE_ID, "--query", "StandardErrorContent", "--output", "text"])
+               "--instance-id", INSTANCE_ID, "--region", REGION,
+               "--query", "StandardErrorContent", "--output", "text"])
     if status != "Success":
         raise RuntimeError(f"SSM status={status}\nSTDOUT:\n{out}\nSTDERR:\n{err}")
     return out
@@ -90,27 +93,6 @@ def ssm_bg(shell_cmd, log_path):
     launch = f"nohup bash -c {json.dumps(shell_cmd)} > {log_path} 2>&1 & echo $!"
     out = ssm_run(launch, timeout_seconds=60)
     return out.strip().split()[-1]
-
-
-def wait_for_pid(pid, log_path, poll_seconds=30, timeout_seconds=None):
-    """Poll until process exits, tailing the log each cycle."""
-    start = time.time()
-    while True:
-        time.sleep(poll_seconds)
-        alive = ssm_run(
-            f"ps -p {pid} -o pid= 2>/dev/null || echo dead",
-            timeout_seconds=30,
-        ).strip()
-        log_tail = ssm_run(
-            f"[ -f {log_path} ] && tail -20 {log_path} || echo '(no log yet)'",
-            timeout_seconds=30,
-        ).rstrip()
-        print("\n" + "─" * 60)
-        print(log_tail)
-        if alive in ("dead", ""):
-            break
-        if timeout_seconds and (time.time() - start) > timeout_seconds:
-            raise RuntimeError(f"Process {pid} timed out after {timeout_seconds}s")
 
 
 # ---------- UI helpers ----------
@@ -151,127 +133,111 @@ def stage_upload(db_path, timestamp):
     return s3_dest
 
 
-def stage_preprocess(s3_db, timestamp):
-    step(2, "Download .db & export to JSONL → ZIP on EC2")
-    work_dir = f"{HARVEST_BASE}/{timestamp}"
-    db_path  = f"{work_dir}/community-webs.db"
-    zip_name = f"community-webs-{timestamp}.zip"
-    zip_path = f"{work_dir}/{zip_name}"
-    log_path = f"{work_dir}/preprocess.log"
-
-    print(f"  Work dir: {work_dir}")
-    ssm_run(f"mkdir -p {work_dir}", timeout_seconds=30)
-
-    print(f"  Downloading .db from S3...")
-    ssm_run(f"aws s3 cp {s3_db} {db_path}", timeout_seconds=600)
-
-    # Run the export as a background job — sqlite3 + jq can take a while on large DBs
-    print(f"  Exporting SQLite → JSONL → ZIP (background)...")
-    print(f"  Log: {log_path}")
-    export_cmd = (
-        f"cd {work_dir} && "
-        f"echo 'Exporting SQLite...' && "
-        f"sqlite3 {db_path} --json 'SELECT * FROM ait' > tmp.json && "
-        f"echo 'Flattening with jq...' && "
-        f"jq -c '.[]' tmp.json > community-webs.jsonl && "
-        f"RECORD_COUNT=$(wc -l < community-webs.jsonl) && "
-        f"echo \"Records: $RECORD_COUNT\" && "
-        f"echo 'Zipping...' && "
-        f"zip -j {zip_name} community-webs.jsonl && "
-        f"echo 'Cleaning up tmp files...' && "
-        f"rm -f tmp.json community-webs.jsonl && "
-        f"echo 'Done. ZIP: {zip_path}'"
-    )
-    pid = ssm_bg(export_cmd, log_path)
-    print(f"  PID: {pid} — tailing every 30s...")
-    wait_for_pid(pid, log_path, poll_seconds=30, timeout_seconds=3600)
-
-    # Show results
-    result = ssm_run(
-        f"echo '--- work dir ---' && ls -lh {work_dir}/ && "
-        f"echo '--- record count ---' && grep 'Records:' {log_path} || echo '(not found in log)'",
-        timeout_seconds=30,
-    )
-    print(f"\n{result.rstrip()}")
-
-    confirm("Export looks good? Continue?")
-    return work_dir, zip_path
+def stage_download(s3_db, timestamp):
+    step(2, "Download .db to EC2")
+    ec2_db = f"/tmp/community-webs-{timestamp}.db"
+    print(f"  S3:  {s3_db}")
+    print(f"  EC2: {ec2_db}")
+    ssm_run(f"aws s3 cp {s3_db} {ec2_db} --region {REGION}", timeout_seconds=600)
+    print(f"  ✓ Downloaded → {ec2_db}")
+    return ec2_db
 
 
-def stage_conf_update(work_dir):
-    step(3, "Update i3.conf endpoint")
-    print(f"  The ZIP is at: {work_dir}/")
+def stage_ingest(ec2_db, timestamp, full_pipeline, update_conf, skip_export):
+    step(3, "Run community-webs-ingest.sh on EC2")
+
+    script_args = [f"--db={ec2_db}"]
+    if skip_export:
+        script_args.append("--skip-export")
+    if update_conf:
+        script_args.append("--update-conf")
+    if full_pipeline:
+        script_args.append("--full")
+
+    cmd = f"bash {CW_SCRIPT} {' '.join(script_args)}"
+    print(f"  Command: {cmd}")
+    print(f"  Log:     {INGEST_LOG}")
     print()
-    print(f"  Update community-webs.harvest.endpoint in i3.conf to:")
-    print(f"    \"{work_dir}\"")
-    print()
-    print("  Then push to origin/master and pull on the box:")
-    print("    git add i3.conf && git commit -m 'Update community-webs endpoint' && git push")
-    print("    (prechecks.py will pull it if you run it with --auto-pull)")
-    print()
-    confirm("i3.conf updated, pushed, and pulled on EC2?")
+    if full_pipeline:
+        print("  This will run: export → harvest → mapping → enrichment → jsonl → S3")
+    else:
+        print("  This will run: export → harvest only")
+        print("  Re-run with --full to continue to mapping/enrichment/jsonl.")
+    confirm("Launch Community Webs ingest now?")
 
-
-def stage_pipeline(timestamp):
-    step(4, "Full ingest pipeline — harvest → mapping → enrichment → JSONL → S3")
-    log_path = "/tmp/cw-ingest.log"
-    cmd = f"bash {INGEST_SCRIPT} {HUB}"
-
-    print(f"  Log: {log_path}")
-    pid = ssm_bg(cmd, log_path)
-    print(f"  PID: {pid} — tailing every 30s...")
-    wait_for_pid(pid, log_path, poll_seconds=30, timeout_seconds=PIPELINE_TIMEOUT_S)
-    print("\n  Pipeline complete.")
+    pid = ssm_bg(cmd, INGEST_LOG)
+    print(f"  PID: {pid}")
+    print(f"\n  Monitor with: python3 check_cw.py --watch")
+    print(f"  Or tail log:  python3 launch_cw.py --resume")
 
 
 # ---------- main ----------
 def main():
     parser = argparse.ArgumentParser(description="Community Webs ingest orchestrator")
-    parser.add_argument("--db", required=True,
+    parser.add_argument("--db",
                         help="Path to local community-webs .db file from Internet Archive")
-    parser.add_argument("--timestamp",
-                        help="Override timestamp (YYYYMMDD_HHMMSS). Auto-generated if omitted.")
+    parser.add_argument("--full", action="store_true",
+                        help="Run full pipeline (export + harvest + mapping + enrichment + jsonl + S3)")
+    parser.add_argument("--update-conf", action="store_true",
+                        help="Pass --update-conf to community-webs-ingest.sh")
     parser.add_argument("--skip-upload", action="store_true",
                         help="Skip S3 upload (.db already at s3://dpla-scratch/community-webs/)")
-    parser.add_argument("--skip-preprocess", action="store_true",
-                        help="Skip export/zip (already done — requires --zip-dir)")
-    parser.add_argument("--zip-dir",
-                        help="EC2 path to directory containing the ZIP (use with --skip-preprocess)")
+    parser.add_argument("--skip-export", action="store_true",
+                        help="Pass --skip-export to community-webs-ingest.sh (ZIP already on EC2)")
+    parser.add_argument("--timestamp",
+                        help="Override timestamp (YYYYMMDD_HHMMSS). Auto-generated if omitted.")
+    parser.add_argument("--resume", action="store_true",
+                        help="Re-attach to an existing running ingest log")
     args = parser.parse_args()
 
-    db_path = os.path.expanduser(args.db)
-    if not args.skip_upload and not os.path.isfile(db_path):
-        sys.exit(f".db file not found: {db_path}")
-    if args.skip_preprocess and not args.zip_dir:
-        sys.exit("--skip-preprocess requires --zip-dir")
+    # Resume mode — just tail the log
+    if args.resume:
+        print(f"\n  Tailing {INGEST_LOG} (Ctrl+C to stop)...")
+        pid_out = ssm_run(
+            "pgrep -f 'community-webs-ingest.sh\\|ingest.sh community-webs\\|harvest.sh community-webs' || echo ''",
+            timeout_seconds=30,
+        ).strip()
+        if pid_out:
+            print(f"  Running process(es): PID {pid_out}")
+        else:
+            print("  No running ingest process found — showing final log output.")
+        out = ssm_run(f"tail -50 {INGEST_LOG}", timeout_seconds=30)
+        print(out)
+        return
 
     timestamp = args.timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
     s3_db     = f"{S3_STAGING}/{timestamp}-community-webs.db"
 
+    if not args.skip_upload and not args.skip_export:
+        if not args.db:
+            sys.exit("--db is required unless --skip-upload or --skip-export is set.")
+        db_path = os.path.expanduser(args.db)
+        if not os.path.isfile(db_path):
+            sys.exit(f".db file not found: {db_path}")
+
     print(f"\nCOMMUNITY WEBS INGEST — {timestamp}")
-    print(f"Instance:  {INSTANCE_ID}")
-    print(f"Local .db: {db_path}")
-    print(f"S3 stage:  {s3_db}\n")
+    print(f"Instance: {INSTANCE_ID}")
+    if not args.skip_upload and not args.skip_export:
+        print(f"Local .db: {os.path.expanduser(args.db)}")
+    print(f"S3 stage: {s3_db}")
+    print(f"Log:      {INGEST_LOG}")
 
-    if not args.skip_upload:
-        stage_upload(db_path, timestamp)
-    else:
-        print("Step 1: Upload — skipped.")
+    ec2_db = None
 
-    if not args.skip_preprocess:
-        work_dir, zip_path = stage_preprocess(s3_db, timestamp)
-    else:
-        work_dir = args.zip_dir
-        print(f"Step 2: Preprocess — skipped. Using: {work_dir}")
+    if not args.skip_upload and not args.skip_export:
+        stage_upload(os.path.expanduser(args.db), timestamp)
+        ec2_db = stage_download(s3_db, timestamp)
+    elif args.skip_upload and not args.skip_export:
+        ec2_db = stage_download(s3_db, timestamp)
+    # if skip_export, ec2_db doesn't matter (community-webs-ingest.sh ignores --db)
 
-    stage_conf_update(work_dir)
-    stage_pipeline(timestamp)
-
-    print()
-    print("=" * 70)
-    print(f"  Community Webs ingest complete — {timestamp}!")
-    print("=" * 70)
-    print()
+    stage_ingest(
+        ec2_db or "",
+        timestamp,
+        full_pipeline=args.full,
+        update_conf=args.update_conf,
+        skip_export=args.skip_export,
+    )
 
 
 if __name__ == "__main__":
