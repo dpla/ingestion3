@@ -583,7 +583,7 @@ def verify_api(old_count=None):
 
     except Exception as e:
         warn(f"Could not verify API: {e}")
-        info(f"Check manually: curl 'https://api.dp.la/v2/items?api_key={api_key}&page_size=0'")
+        info("Check manually: curl 'https://api.dp.la/v2/items?api_key=YOUR_KEY&page_size=0'")
 
 
 # ---------- main ----------
