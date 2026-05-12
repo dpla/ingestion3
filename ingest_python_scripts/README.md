@@ -158,7 +158,7 @@ python3 nara/copy_nara.py --month 202604
 
 Runs on EC2 via SSM. Downloads ZIPs from `ngc-storage01` using the `[nara]` AWS profile, uploads them to `s3://dpla-hub-nara/raw_ingest_files/<YYYYMM>/`, then moves them to the EC2 ingest directory so `nara-ingest.sh` doesn't need to re-download them.
 
-> NARA credentials live in `~/.aws/credentials` on EC2 under `[nara]`. Keys are in 1Password: **"ingest@dp.la NARA keys"**. If they're expired, request new ones from NARA.
+> NARA credentials live in `~/.aws/credentials` on EC2 under `[nara]`. If they're expired, obtain new ones from Dominic.
 
 **Step 2 — Launch**
 
@@ -255,7 +255,7 @@ python3 community-webs/check_cw.py --watch
 | Provider export bucket | `s3://dpla-provider-export/` |
 | Sparkindexer JAR | `s3://dpla-sparkindexer/sparkindexer-assembly.jar` |
 | Batch JAR | `s3://dpla-monthly-batch/batch-process-dpla-index-assembly.jar` |
-| EMR logs | `s3://aws-logs-283408157088-us-east-1/elasticmapreduce/` |
+| EMR logs | `s3://aws-logs-<account-id>-us-east-1/elasticmapreduce/` |
 | Sitemaps | `s3://sitemaps.dp.la/sitemap/` |
 | Dashboard analytics | `s3://dashboard-analytics/` |
 | NARA raw files | `s3://dpla-hub-nara/raw_ingest_files/` |

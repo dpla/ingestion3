@@ -28,12 +28,7 @@ from datetime import datetime
 
 # ---------- config ----------
 REGION             = "us-east-1"
-INGEST_INSTANCE_ID = "i-0a0def8581efef783"
 
-BATCH_JAR_BUCKET   = "s3://dpla-monthly-batch/"
-BATCH_JAR_NAME     = "batch-process-dpla-index-assembly.jar"
-BATCH_JAR_S3       = f"s3://dpla-monthly-batch/{BATCH_JAR_NAME}"
-BATCH_JAR_EMR      = BATCH_JAR_S3  # same for EMR step args
 def _load_dotenv():
     cfg = {}
     env_file = os.path.normpath(
@@ -46,9 +41,20 @@ def _load_dotenv():
                 if line and not line.startswith("#") and "=" in line:
                     k, v = line.split("=", 1)
                     cfg[k.strip()] = os.path.expanduser(v.strip().strip('"').strip("'"))
+    creds = cfg.get("AWS_SHARED_CREDENTIALS_FILE")
+    if creds:
+        os.environ.setdefault("AWS_SHARED_CREDENTIALS_FILE", creds)
     return cfg
 
 _env = _load_dotenv()
+INGEST_INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
+AWS_ACCOUNT_ID     = _env.get("AWS_ACCOUNT_ID", "")
+EMR_LOG_URI        = f"s3://aws-logs-{AWS_ACCOUNT_ID}-us-east-1/elasticmapreduce/"
+
+BATCH_JAR_BUCKET   = "s3://dpla-monthly-batch/"
+BATCH_JAR_NAME     = "batch-process-dpla-index-assembly.jar"
+BATCH_JAR_S3       = f"s3://dpla-monthly-batch/{BATCH_JAR_NAME}"
+BATCH_JAR_EMR      = BATCH_JAR_S3  # same for EMR step args
 BATCH_REPO_DIR     = _env.get("BATCH_REPO_DIR",
                                os.path.expanduser("~/Documents/Repos/batch-process-dpla-index"))
 BATCH_LOCAL_JAR    = f"{BATCH_REPO_DIR}/target/scala-2.12/{BATCH_JAR_NAME}"
@@ -309,7 +315,7 @@ def launch_cluster():
             "--service-role", "EMR_Default_Role_v2",
             "--enable-debugging",
             "--release-label", "emr-7.10.0",
-            "--log-uri", "s3://aws-logs-283408157088-us-east-1/elasticmapreduce/",
+            "--log-uri", EMR_LOG_URI,
             "--tags", "for-use-with-amazon-emr-managed-policies=true",
             "--steps", f"file://{steps_f}",
             "--name", "monthlybatch",
@@ -330,7 +336,7 @@ def launch_cluster():
         raise RuntimeError(f"Unexpected cluster ID output: {cluster_id}")
 
     print(f"\n  Cluster ID: {cluster_id}")
-    print(f"  Logs: s3://aws-logs-283408157088-us-east-1/elasticmapreduce/{cluster_id}/")
+    print(f"  Logs: {EMR_LOG_URI}{cluster_id}/")
     slack_notify(
         f":rocket: *monthlybatch cluster launched* — `{cluster_id}`\n"
         f"Steps: parquet → jsonl → mq → sitemap. Polling every {POLL_SECONDS // 60} min."
@@ -407,7 +413,7 @@ def monitor_cluster(cluster_id):
                     slack_notify(
                         f":x: *monthlybatch steps FAILED* — `{cluster_id}`\n"
                         f"Failed: {', '.join(failed)}\n"
-                        f"Logs: `s3://aws-logs-283408157088-us-east-1/elasticmapreduce/{cluster_id}/`"
+                        f"Logs: `{EMR_LOG_URI}{cluster_id}/`"
                     )
                     terminate_cluster(cluster_id)
                     return False

@@ -32,7 +32,25 @@ from datetime import datetime
 
 # ---------- config ----------
 REGION         = "us-east-1"
-INSTANCE_ID    = "i-0a0def8581efef783"
+def _load_dotenv():
+    cfg = {}
+    env_file = os.path.normpath(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../..", ".env")
+    )
+    if os.path.exists(env_file):
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    cfg[k.strip()] = os.path.expanduser(v.strip().strip('"').strip("'"))
+    creds = cfg.get("AWS_SHARED_CREDENTIALS_FILE")
+    if creds:
+        os.environ.setdefault("AWS_SHARED_CREDENTIALS_FILE", creds)
+    return cfg
+
+_env = _load_dotenv()
+INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
 
 NARA_SCRIPT    = "/home/ec2-user/ingestion3/scripts/harvest/nara-ingest.sh"
 

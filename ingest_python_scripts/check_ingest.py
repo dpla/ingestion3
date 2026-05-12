@@ -38,7 +38,7 @@ import time
 from datetime import datetime
 
 # ---------- config ----------
-INSTANCE_ID = "i-0a0def8581efef783"
+INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
 DATA_ROOT = "/home/ec2-user/data"
 STAGES = ("harvest", "mapping", "enrichment", "jsonl")
 HUB_RE = re.compile(r"^[a-z0-9_-]+$")
@@ -55,6 +55,9 @@ def _load_dotenv():
                 if line and not line.startswith("#") and "=" in line:
                     k, v = line.split("=", 1)
                     cfg[k.strip()] = os.path.expanduser(v.strip().strip('"').strip("'"))
+    creds = cfg.get("AWS_SHARED_CREDENTIALS_FILE")
+    if creds:
+        os.environ.setdefault("AWS_SHARED_CREDENTIALS_FILE", creds)
     return cfg
 
 _env = _load_dotenv()

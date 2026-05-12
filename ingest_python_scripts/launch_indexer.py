@@ -34,10 +34,36 @@ import time
 from datetime import datetime, timezone
 
 # ---------- config ----------
-REGION            = "us-east-1"
-ES_INSTANCE_ID    = "i-00bbdfe0a6ff6cf78"   # search-prod1
-INGEST_INSTANCE_ID = "i-0a0def8581efef783"  # ingest EC2 — where sparkindexer is built
-ES_HOST           = "http://search-prod1.internal.dp.la:9200"
+def _load_dotenv():
+    cfg = {}
+    env_file = os.path.normpath(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+    )
+    if os.path.exists(env_file):
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    cfg[k.strip()] = os.path.expanduser(v.strip().strip('"').strip("'"))
+    creds = cfg.get("AWS_SHARED_CREDENTIALS_FILE")
+    if creds:
+        os.environ.setdefault("AWS_SHARED_CREDENTIALS_FILE", creds)
+    return cfg
+
+_env = _load_dotenv()
+
+REGION             = "us-east-1"
+ES_INSTANCE_ID     = _env.get("ES_INSTANCE_ID", "")
+INGEST_INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
+ES_HOST            = _env.get("ES_HOST", "")
+AWS_ACCOUNT_ID     = _env.get("AWS_ACCOUNT_ID", "")
+EMR_LOG_URI        = f"s3://aws-logs-{AWS_ACCOUNT_ID}-us-east-1/elasticmapreduce/"
+# Parse hostname and port from ES_HOST for sparkindexer step args
+_es_stripped = ES_HOST.replace("https://", "").replace("http://", "").rstrip("/")
+_es_parts    = _es_stripped.rsplit(":", 1)
+ES_HOST_NAME = _es_parts[0]
+ES_PORT      = _es_parts[1] if len(_es_parts) > 1 else "9200"
 S3_DATASET        = "dpla-master-dataset"
 S3_BATCH_BASE     = "dpla-provider-export"
 SPARKINDEXER_JAR  = "s3://dpla-sparkindexer/sparkindexer-assembly.jar"
@@ -326,7 +352,7 @@ def launch_cluster():
         "--service-role", "EMR_Default_Role_v2",
         "--enable-debugging",
         "--release-label", "emr-7.10.0",
-        "--log-uri", "s3://aws-logs-283408157088-us-east-1/elasticmapreduce/",
+        "--log-uri", EMR_LOG_URI,
         "--tags", "for-use-with-amazon-emr-managed-policies=true",
         "--steps", json.dumps([{
             "Args": [
@@ -337,7 +363,7 @@ def launch_cluster():
                 "--executor-cores", "2",
                 "--class", "dpla.ingestion3.indexer.IndexerMain",
                 SPARKINDEXER_JAR,
-                "search-prod1.internal.dp.la", "9200", "dpla-all", "all", "now",
+                ES_HOST_NAME, ES_PORT, "dpla-all", "all", "now",
                 "3", "1", "dpla-master-dataset", "tech@dp.la",
             ],
             "Type": "CUSTOM_JAR",
@@ -370,7 +396,7 @@ def launch_cluster():
     ])
 
     print(f"\n  Cluster ID: {cluster_id}")
-    print(f"  Logs: s3://aws-logs-283408157088-us-east-1/elasticmapreduce/{cluster_id}/")
+    print(f"  Logs: {EMR_LOG_URI}{cluster_id}/")
     slack_notify(f":rocket: *sparkindexer cluster launched* — `{cluster_id}`\nMonitoring every {POLL_SECONDS // 60} min. spark-indexer step takes ~6–9 hours.")
     return cluster_id
 
@@ -430,14 +456,14 @@ def monitor_cluster(cluster_id):
                     return True
                 else:
                     bad(f"Cluster terminated with reason: {out2.strip()}")
-                    info(f"Check logs: s3://aws-logs-283408157088-us-east-1/elasticmapreduce/{cluster_id}/")
-                    slack_notify(f":x: *sparkindexer FAILED* — `{cluster_id}`\nReason: {out2.strip()}\nLogs: `s3://aws-logs-283408157088-us-east-1/elasticmapreduce/{cluster_id}/`")
+                    info(f"Check logs: {EMR_LOG_URI}{cluster_id}/")
+                    slack_notify(f":x: *sparkindexer FAILED* — `{cluster_id}`\nReason: {out2.strip()}\nLogs: `{EMR_LOG_URI}{cluster_id}/`")
                     return False
 
             if state in ("TERMINATING", "TERMINATED_WITH_ERRORS"):
                 bad(f"Cluster {state}: {detail}")
-                info(f"Check logs: s3://aws-logs-283408157088-us-east-1/elasticmapreduce/{cluster_id}/")
-                slack_notify(f":x: *sparkindexer {state}* — `{cluster_id}`\n{detail}\nLogs: `s3://aws-logs-283408157088-us-east-1/elasticmapreduce/{cluster_id}/`")
+                info(f"Check logs: {EMR_LOG_URI}{cluster_id}/")
+                slack_notify(f":x: *sparkindexer {state}* — `{cluster_id}`\n{detail}\nLogs: `{EMR_LOG_URI}{cluster_id}/`")
                 return False
 
             time.sleep(POLL_SECONDS)
