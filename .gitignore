@@ -206,3 +206,7 @@ scheduler/emails/
 
 # Accidental file (e.g. from "echo > echo")
 /echo
+
+# Email text files and images from the "pre-emails"
+pre-emails/txt_emails/
+pre_emails/images/
