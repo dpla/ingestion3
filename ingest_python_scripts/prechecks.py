@@ -355,14 +355,21 @@ def _run_sbt_assembly():
     )
     out = ssm_run(launch_cmd, timeout_seconds=30)
     info(out.strip())
+
+    pid_match = re.search(r"PID=(\d+)", out)
+    if not pid_match:
+        bad("Could not parse sbt PID from launch output — aborting.")
+        return False
+    sbt_pid = pid_match.group(1)
+    info(f"Tracking PID {sbt_pid}")
     info("Tailing log every 30s — this will take ~10 min...\n")
 
     while True:
         time.sleep(30)
 
-        # Is sbt still running?
+        # Is the specific sbt PID still running?
         still_running = ssm_run(
-            "pgrep -f 'sbt' | head -1 || echo ''",
+            f"ps -p {sbt_pid} -o pid= 2>/dev/null || echo ''",
             timeout_seconds=30,
         ).strip()
 
@@ -971,7 +978,7 @@ def check_endpoint(endpoint, is_api=False, harvest_type=None):
     if http_error:
         code = http_error.group(1)
         if code == "404":
-            bad(f"Endpoint returned a 404 — the URL is likely wrong or the provider moved it.")
+            bad("Endpoint returned a 404 — the URL is likely wrong or the provider moved it.")
             info("Check the hub's OAI endpoint with your browser, update i3.conf, and re-run.")
             return False
         warn(f"Endpoint returned an HTTP {code} error page — EC2 IP may be blocked.")
