@@ -72,6 +72,7 @@ def ssm_run(shell_cmd: str) -> str:
         time.sleep(3)
         status = subprocess.run(
             ["aws", "ssm", "get-command-invocation",
+             "--profile", AWS_PROFILE,
              "--command-id", cmd_id,
              "--instance-id", INSTANCE_ID,
              "--query", "Status", "--output", "text"],
@@ -81,6 +82,7 @@ def ssm_run(shell_cmd: str) -> str:
             break
     return subprocess.run(
         ["aws", "ssm", "get-command-invocation",
+         "--profile", AWS_PROFILE,
          "--command-id", cmd_id,
          "--instance-id", INSTANCE_ID,
          "--query", "StandardOutputContent", "--output", "text"],
