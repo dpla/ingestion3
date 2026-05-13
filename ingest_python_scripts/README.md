@@ -1,6 +1,17 @@
 # DPLA Ingest Pipeline — Runbook
 
-Python scripts for running the DPLA monthly ingest and indexing pipeline from your local machine via AWS SSM. All scripts communicate with the ingest EC2 instance — you never need to SSH in directly.
+Python scripts for running the DPLA monthly ingest and indexing pipeline from a local machine via AWS SSM. All scripts communicate with the ingest EC2 instance — you never need to SSH in directly.
+
+---
+
+## Prerequisites
+
+- Python 3.9+
+- AWS CLI installed and authenticated (`~/.aws/credentials`)
+- `[nara]` profile in `~/.aws/credentials` (obtain credentials from Dominic)
+- `sbt` installed locally for batch JAR builds (`brew install sbt`)
+- `~/.dpla-secrets.env` locally with `DPLA_API_KEY`
+- `~/.dpla-secrets.env` on the ingest EC2 with `SLACK_BOT_TOKEN` and `SLACK_CHANNEL`
 
 ---
 
@@ -16,17 +27,6 @@ Re-run at any time. Use `--update` to change saved paths.
 
 ---
 
-## Prerequisites
-
-- Python 3.9+
-- AWS CLI installed and authenticated (`~/.aws/credentials`)
-- `[nara]` profile in `~/.aws/credentials` (obtain credentials from Dominic)
-- `sbt` installed locally for batch JAR builds (`brew install sbt`)
-- `~/.dpla-secrets.env` locally with `DPLA_API_KEY`
-- `~/.dpla-secrets.env` on the ingest EC2 with `SLACK_BOT_TOKEN` and `SLACK_CHANNEL`
-
----
-
 ## Monthly Workflow
 
 Each month runs in roughly this order. Special-case hubs (Smithsonian, NARA, Community Webs) run their own scripts but fit into the same overall sequence.
@@ -34,9 +34,7 @@ Each month runs in roughly this order. Special-case hubs (Smithsonian, NARA, Com
 ```
 1. Pre-flight checks    →  prechecks.py          (per hub, before each ingest)
 2. Provider ingests     →  launch_ingest.py       (all standard hubs)
-3. Smithsonian          →  smithsonian/launch_smithsonian.py
-4. Community Webs       →  community-webs/launch_cw.py
-5. NARA                 →  nara/copy_nara.py  →  nara/launch_nara.py
+3. Special Cases        →  <hub_name>/launch_hub.py
 6. Index rebuild        →  launch_indexer.py
 7. Post-index batch     →  post_indexer.py
 8. Verify               →  postchecks.py
@@ -49,21 +47,17 @@ Each month runs in roughly this order. Special-case hubs (Smithsonian, NARA, Com
 ### Step 1 — Pre-flight checks
 
 ```bash
-python3 prechecks.py --hub <hub>
+python3 prechecks.py 
 ```
 
-Checks the EC2 instance state, repo freshness on EC2 (`ingestion3` + `ingestion3-conf`), JAR freshness, disk space, and reachability of the hub's harvest endpoint. Starts the instance automatically if it's stopped.
+Prompts the user for the hub endpoint to check, Checks the EC2 instance state, repo freshness on EC2 (`ingestion3` + `ingestion3-conf`), JAR freshness, disk space, and reachability of the hub's harvest endpoint. Starts the instance automatically if it's stopped.
 
-Run for every hub before launching. Without a hub argument, just checks box state:
-
-```bash
-python3 prechecks.py
-```
+Run for every hub before launching.
 
 Flag options:
 ```bash
-python3 prechecks.py --hub njde --endpoint-only   # just check the endpoint
-python3 prechecks.py --hub njde --skip-endpoint   # skip the endpoint check
+python3 prechecks.py --endpoint-only   # just check the endpoint
+python3 prechecks.py --skip-endpoint   # skip the endpoint check
 python3 prechecks.py --no-start                   # don't auto-start EC2 if stopped
 ```
 
@@ -72,10 +66,10 @@ python3 prechecks.py --no-start                   # don't auto-start EC2 if stop
 ### Step 2 — Launch ingest
 
 ```bash
-python3 launch_ingest.py <hub>
+python3 launch_ingest.py
 ```
 
-Runs `ingest.sh <hub>` on EC2 in the background via SSM. For `file`-type hubs (Ohio, Georgia, Florida, etc.) it lists available S3 deliveries and asks you to confirm the endpoint before launching.
+Prompts the user for the hub to run. Runs `ingest.sh <hub>` on EC2 in the background via SSM. For `file`-type hubs (Ohio, Georgia, Florida, etc.) it lists available S3 deliveries and asks you to confirm the endpoint before launching.
 
 To resume a failed run partway through:
 
@@ -88,9 +82,9 @@ python3 launch_ingest.py <hub> --resume-from mapping     # or enrichment / jsonl
 ### Step 3 — Monitor
 
 ```bash
-python3 check_ingest.py --hub <hub>
-python3 check_ingest.py --hub <hub> --watch    # auto-refresh every 30s
-python3 check_ingest.py --hub <hub> --watch 60 # custom interval
+python3 check_ingest.py 
+python3 check_ingest.py --watch    # auto-refresh every 30s
+python3 check_ingest.py --watch 60 # custom interval
 ```
 
 Shows process status, completed stages with record counts, current stage, disk usage, and recent log lines.
@@ -158,9 +152,9 @@ python3 nara/copy_nara.py --month 202604
 
 Runs on EC2 via SSM. Downloads ZIPs from `ngc-storage01` using the `[nara]` AWS profile, uploads them to `s3://dpla-hub-nara/raw_ingest_files/<YYYYMM>/`, then moves them to the EC2 ingest directory so `nara-ingest.sh` doesn't need to re-download them.
 
-> NARA credentials live in `~/.aws/credentials` on EC2 under `[nara]`. If they're expired, obtain new ones from Dominic.
+> NARA credentials live in `~/.aws/credentials` on EC2 under `[nara]`. If they're expired, email tech@dp.la.
 
-**Step 2 — Launch**
+**Step 2 — Full Pipeline**
 
 ```bash
 python3 nara/launch_nara.py --month 202604
@@ -212,7 +206,7 @@ python3 smithsonian/check_status_smithsonian.py --watch
 
 ### Community Webs
 
-Internet Archive delivers a SQLite `.db` file directly (not via S3). You receive the file and pass it to the script.
+Internet Archive delivers a SQLite `.db` file directly (not via S3). File recieved to tech@dp.la and downloaded to local machine.
 
 ```bash
 python3 community-webs/launch_cw.py --db ~/Downloads/community-webs.db --full
@@ -242,30 +236,11 @@ Monitor with:
 python3 community-webs/check_cw.py
 python3 community-webs/check_cw.py --watch
 ```
-
----
-
-## Key AWS Resources
-
-| Resource | Value |
-|---|---|
-| Ingest EC2 | `i-0a0def8581efef783` |
-| Search EC2 (search-prod1) | `i-00bbdfe0a6ff6cf78` |
-| Master dataset bucket | `s3://dpla-master-dataset/` |
-| Provider export bucket | `s3://dpla-provider-export/` |
-| Sparkindexer JAR | `s3://dpla-sparkindexer/sparkindexer-assembly.jar` |
-| Batch JAR | `s3://dpla-monthly-batch/batch-process-dpla-index-assembly.jar` |
-| EMR logs | `s3://aws-logs-<account-id>-us-east-1/elasticmapreduce/` |
-| Sitemaps | `s3://sitemaps.dp.la/sitemap/` |
-| Dashboard analytics | `s3://dashboard-analytics/` |
-| NARA raw files | `s3://dpla-hub-nara/raw_ingest_files/` |
-| CW staging | `s3://dpla-scratch/community-webs/` |
-
 ---
 
 ## Slack Notifications
 
-Scripts send notifications to `#tech-alerts` (failures) and `#tech` (completions) via the ingest EC2. Configure webhooks in `.env`:
+Scripts send notifications to `#tech-alerts` via the ingest EC2. Configure webhooks in `.env`:
 
 ```
 SLACK_WEBHOOK=           # #tech-alerts
@@ -294,7 +269,7 @@ Your IAM user needs EMR read permissions. Resume with `--cluster-id j-XXXXX` onc
 Verify `~/.dpla-secrets.env` exists on the ingest EC2 with `SLACK_BOT_TOKEN` and `SLACK_CHANNEL` set.
 
 **`sbt assembly` fails**
-Make sure `sbt` is installed (`brew install sbt`) and `batch-process-dpla-index` is cloned at the path saved in your `.env`.
+Make sure `sbt` is installed (`brew install sbt` on Mac) and `batch-process-dpla-index` is cloned at the path saved in your `.env`.
 
 **NARA credentials expired**
 The `[nara]` profile in `~/.aws/credentials` on EC2 uses time-limited keys. Request new ones from NARA and update the profile.
