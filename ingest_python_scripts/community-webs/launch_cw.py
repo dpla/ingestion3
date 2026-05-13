@@ -143,7 +143,9 @@ def stage_upload(db_path, timestamp):
     print(f"  S3:     {s3_dest}")
     confirm(f"Upload {size_mb:.1f} MB to S3?")
     result = subprocess.run(
-        ["aws", "s3", "cp", db_path, s3_dest, "--no-progress"], text=True
+        ["aws", "s3", "cp", db_path, s3_dest, "--no-progress",
+         "--profile", "dpla"],
+        capture_output=True, text=True,
     )
     if result.returncode != 0:
         raise RuntimeError(f"S3 upload failed: {result.stderr.strip()}")
