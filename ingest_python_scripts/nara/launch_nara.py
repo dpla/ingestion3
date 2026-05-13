@@ -110,8 +110,18 @@ def ssm_run(shell_cmd, timeout_seconds=120, poll_seconds=5):
 
 
 def ssm_bg(shell_cmd, log_path):
-    """Launch a long-running command as a background nohup job. Returns PID."""
-    launch = f"nohup bash -c {json.dumps(shell_cmd)} > {log_path} 2>&1 & echo $!"
+    """Launch a long-running command as a background nohup job. Returns PID.
+
+    On completion the process writes its exit code to <log_path>.exitcode so
+    tail_log can detect failures even when monitoring resumes after the process
+    has already died.
+    """
+    exit_file = f"{log_path}.exitcode"
+    wrapper = (
+        f"bash -c {json.dumps(shell_cmd)} > {log_path} 2>&1; "
+        f"echo $? > {exit_file}"
+    )
+    launch = f"nohup bash -c {json.dumps(wrapper)} </dev/null >/dev/null 2>&1 & echo $!"
     out    = ssm_run(launch, timeout_seconds=60)
     return out.strip().split()[-1]
 
@@ -227,8 +237,24 @@ def tail_log(pid, log_path):
 
             if alive in ("dead", ""):
                 print()
-                ok("Process exited. Final log:")
                 print(ssm_run(f"tail -40 {log_path}", timeout_seconds=30).strip())
+                # Read sidecar exit code written by ssm_bg wrapper
+                exit_file  = f"{log_path}.exitcode"
+                exit_raw   = ssm_run(
+                    f"cat {exit_file} 2>/dev/null || echo missing",
+                    timeout_seconds=30,
+                ).strip()
+                if exit_raw == "missing":
+                    bad("Exit code sidecar not found — process may have been killed or sidecar write failed.")
+                    raise RuntimeError("NARA ingest exit code unknown; check the log manually.")
+                try:
+                    exit_code = int(exit_raw)
+                except ValueError:
+                    exit_code = 1
+                if exit_code != 0:
+                    bad(f"NARA ingest FAILED (exit {exit_code}). See log: {log_path}")
+                    raise RuntimeError(f"nara-ingest.sh exited {exit_code}")
+                ok(f"Process exited cleanly (exit 0).")
                 return
 
             time.sleep(POLL_SECONDS)

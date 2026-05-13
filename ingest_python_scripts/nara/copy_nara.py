@@ -29,6 +29,7 @@ import argparse
 import base64
 import json
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -100,14 +101,29 @@ def ssm_run(shell_cmd, timeout_seconds=120, poll_seconds=5):
 
 
 def ssm_bg(shell_cmd, log_path):
-    """Fire a long-running command as a background nohup job. Returns PID."""
-    launch = f"nohup bash -c {json.dumps(shell_cmd)} > {log_path} 2>&1 & echo $!"
+    """Fire a long-running command as a background nohup job. Returns (pid, exit_file).
+
+    The wrapper writes the command's exit code to <log_path>.exitcode on
+    completion so wait_for_pid can detect failures even when monitoring
+    resumes after the process has already died.
+    """
+    exit_file = f"{log_path}.exitcode"
+    wrapper = (
+        f"bash -c {json.dumps(shell_cmd)} > {log_path} 2>&1; "
+        f"echo $? > {exit_file}"
+    )
+    launch = f"nohup bash -c {json.dumps(wrapper)} </dev/null >/dev/null 2>&1 & echo $!"
     out = ssm_run(launch, timeout_seconds=60)
-    return out.strip().split()[-1]
+    pid = out.strip().split()[-1]
+    return pid, exit_file
 
 
-def wait_for_pid(pid, log_path, poll_seconds=30, timeout_seconds=None):
-    """Poll until the process exits, tailing the log each cycle."""
+def wait_for_pid(pid, log_path, exit_file, poll_seconds=30, timeout_seconds=None):
+    """Poll until the process exits, tailing the log each cycle.
+
+    After the process disappears, reads exit_file to detect failures.
+    Raises RuntimeError if the exit code is non-zero or the file is missing.
+    """
     start = time.time()
     while True:
         time.sleep(poll_seconds)
@@ -125,6 +141,20 @@ def wait_for_pid(pid, log_path, poll_seconds=30, timeout_seconds=None):
             break
         if timeout_seconds and (time.time() - start) > timeout_seconds:
             raise RuntimeError(f"Process {pid} timed out after {timeout_seconds}s")
+
+    # Process is gone — check sidecar exit code
+    exit_raw = ssm_run(
+        f"cat {exit_file} 2>/dev/null || echo missing",
+        timeout_seconds=30,
+    ).strip()
+    if exit_raw == "missing":
+        raise RuntimeError(f"Exit code sidecar not found ({exit_file}) — process may have been killed.")
+    try:
+        exit_code = int(exit_raw)
+    except ValueError:
+        exit_code = 1
+    if exit_code != 0:
+        raise RuntimeError(f"Command failed (exit {exit_code}). See log: {log_path}")
 
 
 # ---------- UI helpers ----------
@@ -159,6 +189,9 @@ def main():
 
     if not src.startswith("s3://"):
         sys.exit(f"Expected an S3 URL (s3://...), got: {src!r}")
+    if not re.fullmatch(r"s3://[a-zA-Z0-9._/-]+", src):
+        sys.exit(f"S3 URL contains invalid characters: {src!r}")
+    src_quoted = shlex.quote(src)
 
     # Derive month (YYYYMM) from the URL — expects a segment like 2026/M04 or /202604/
     month_match = re.search(r"(\d{4})/M(\d{1,2})", src)
@@ -202,7 +235,7 @@ def main():
         confirm(f"Files already exist in {dst}. Overwrite/re-sync anyway?", default_yes=False)
 
     count = ssm_run(
-        f"aws s3 ls {src} --profile {NARA_PROFILE} | wc -l",
+        f"aws s3 ls {src_quoted} --profile {NARA_PROFILE} | wc -l",
         timeout_seconds=30,
     ).strip()
     print(f"  Found {count} file(s) in {src}")
@@ -219,7 +252,7 @@ def main():
         f"echo 'Step 1/4: Creating temp dir...' && "
         f"mkdir -p {tmp_dir} && "
         f"echo 'Step 2/4: Downloading from ngc-storage01...' && "
-        f"aws s3 sync {src} {tmp_dir}/ --profile {NARA_PROFILE} && "
+        f"aws s3 sync {src_quoted} {tmp_dir}/ --profile {NARA_PROFILE} && "
         f"echo 'Step 3/4: Uploading to dpla-hub-nara...' && "
         f"aws s3 sync {tmp_dir}/ {dst} && "
         f"echo 'Step 4/4: Moving files to EC2 ingest dir...' && "
@@ -229,9 +262,9 @@ def main():
         f"echo 'DONE'"
     )
 
-    pid = ssm_bg(sync_cmd, log_path)
+    pid, exit_file = ssm_bg(sync_cmd, log_path)
     print(f"  PID: {pid} — tailing every 30s...")
-    wait_for_pid(pid, log_path, poll_seconds=30, timeout_seconds=7200)
+    wait_for_pid(pid, log_path, exit_file, poll_seconds=30, timeout_seconds=7200)
 
     # Verify destination
     step(3, "Verify")
