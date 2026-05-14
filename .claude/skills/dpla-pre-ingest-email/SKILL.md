@@ -140,7 +140,7 @@ Always confirm with the user before flipping to production.
 ## Troubleshooting
 
 **`AccessDenied` on send:**
-The `zoe` IAM user needs `ses:SendRawEmail` on
+The `[user]` IAM user needs `ses:SendRawEmail` on
 `arn:aws:ses:us-east-1:283408157088:identity/dp.la`.
 This is an IAM permission — ask Dominic to add it if it's missing.
 
