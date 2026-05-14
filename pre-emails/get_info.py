@@ -140,7 +140,13 @@ def fetch_image(url: str) -> str:
             local_path.write_bytes(resp.read())
         return str(local_path)
     except Exception as e:
-        print(f"Warning: could not download image: {e}", file=sys.stderr)
+        print(f"\n⚠️  Could not auto-download cover image: {e}", file=sys.stderr)
+        print(f"\nTo add it manually:", file=sys.stderr)
+        print(f"  1. Download the image from:\n     {url}", file=sys.stderr)
+        print(f"  2. Save it to:\n     {local_path}", file=sys.stderr)
+        print(f"  3. Then add this line to the txt file under COVER IMAGE:", file=sys.stderr)
+        print(f"       Local:   {local_path}", file=sys.stderr)
+        print(f"\nThe email will send without the cover image until you do this.\n", file=sys.stderr)
         return ""
 
 
