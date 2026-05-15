@@ -129,7 +129,13 @@ def _esc(t: str) -> str:
 
 
 def _linkify(t: str) -> str:
-    """Turn email addresses and bare URLs into hyperlinks."""
+    """Turn markdown links, email addresses, and bare URLs into hyperlinks."""
+    # markdown-style links: [text](url)
+    t = re.sub(
+        r'\[([^\]]+)\]\((https?://[^\)]+)\)',
+        rf'<a href="\2" style="color:{LINK_COLOR}">\1</a>',
+        t,
+    )
     # email addresses
     t = re.sub(
         r'([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})',
@@ -416,7 +422,8 @@ def build_message(subject: str, plain_body: str, to_addrs: list[str],
 # ── Send ──────────────────────────────────────────────────────────────────────
 
 def send(subject: str, body: str, aws_profile: str, conf_path: str,
-         cover_img_path: str = "", cover_caption: str = "") -> bool:
+         cover_img_path: str = "", cover_caption: str = "",
+         override_to: str = "") -> bool:
     try:
         import boto3
     except ImportError:
@@ -424,7 +431,11 @@ def send(subject: str, body: str, aws_profile: str, conf_path: str,
               file=sys.stderr)
         return False
 
-    if TEST_MODE:
+    if override_to:
+        to_addrs  = [override_to]
+        bcc_addrs = []
+        print(f"  DIRECT SEND — To: {override_to} (no BCC)")
+    elif TEST_MODE:
         to_addrs  = [TEST_EMAIL]
         bcc_addrs = []
         print(f"  TEST MODE — sending only to {TEST_EMAIL}")
@@ -464,6 +475,8 @@ def main():
                         help=f"Path to i3.conf for BCC list (default: {DEFAULT_CONF_PATH})")
     parser.add_argument("--aws-profile", default="dpla",
                         help="AWS profile for SES (default: dpla)")
+    parser.add_argument("--to",          default="",
+                        help="Send directly to this address only (no BCC, overrides TEST_MODE)")
     parser.add_argument("--dry-run",     action="store_true",
                         help="Write rendered HTML to stdout instead of sending")
     args = parser.parse_args()
@@ -495,7 +508,7 @@ def main():
         print(html)
         return
 
-    ok = send(subject, body, args.aws_profile, conf_path, cover_img_path, caption)
+    ok = send(subject, body, args.aws_profile, conf_path, cover_img_path, caption, args.to)
     sys.exit(0 if ok else 1)
 
 
