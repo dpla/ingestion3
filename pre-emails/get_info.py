@@ -238,18 +238,18 @@ The following hubs are scheduled for ingest in {month_name} {year}:
 --- IMPORTANT NOTES ---
 
 We have documentation for our ingestion system to provide a high level overview
-of how we map, normalize, validate and enrich your metadata, available at our
-GitHub repo. After an ingest is complete, you should receive a report in your
-inbox. This documentation also unpacks some of those warnings and error messages
-you will see in your ingest report. You can view your hub's ingest schedule and
-contacts at our Confluence wiki page.
+of how we map, normalize, validate and enrich your metadata, available at
+[our GitHub repo](https://github.com/dpla/ingestion3?tab=readme-ov-file#dpla-ingestion-3).
+After an ingest is complete, you should receive a report in your inbox. This
+documentation also unpacks some of those warnings and error messages you will
+see in your ingest report. You can view your hub's ingest schedule and contacts
+at [our Confluence wiki page](https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/CT/pages/84969744/Hub+Re-ingest+Schedule).
 
-As you probably know, DPLA is going through a transition currently, and we
-experienced some hiccups in December & January. Often, we have found that if
-something is amiss, the partners will be the first to notice. If at any time
-you experience any issues, such as an ingest behind schedule, no ingest report
-emailed to you, or if you need to make updates to any of the information found
-there, please contact us right away so we can investigate.
+Often, we have found that if something is amiss, the partners will be the first
+to notice. If at any time you experience any issues, such as an ingest behind
+schedule, no ingest report emailed to you, or if you need to make updates to
+any of the information found there, please contact us right away so we can
+investigate.
 
 --- CONTACT ---
 
