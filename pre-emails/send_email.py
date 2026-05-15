@@ -130,22 +130,23 @@ def _esc(t: str) -> str:
 
 def _linkify(t: str) -> str:
     """Turn markdown links, email addresses, and bare URLs into hyperlinks."""
+    link_style = f'color:{LINK_COLOR};text-decoration:underline'
     # markdown-style links: [text](url)
     t = re.sub(
         r'\[([^\]]+)\]\((https?://[^\)]+)\)',
-        rf'<a href="\2" style="color:{LINK_COLOR}">\1</a>',
+        rf'<a href="\2" style="{link_style}" target="_blank">\1</a>',
         t,
     )
     # email addresses
     t = re.sub(
         r'([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})',
-        rf'<a href="mailto:\1" style="color:{LINK_COLOR}">\1</a>',
+        rf'<a href="mailto:\1" style="{link_style}">\1</a>',
         t,
     )
     # bare https:// URLs not already in an href
     t = re.sub(
         r'(?<!href=")(https?://[^\s<>"]+)',
-        rf'<a href="\1" style="color:{LINK_COLOR}">\1</a>',
+        rf'<a href="\1" style="{link_style}" target="_blank">\1</a>',
         t,
     )
     return t
