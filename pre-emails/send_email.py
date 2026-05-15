@@ -97,6 +97,26 @@ def parse_txt(txt_path: Path) -> tuple[str, str]:
     return subject, body
 
 
+def parse_month(txt_path: Path) -> int:
+    """Extract the target month (1–12) from the txt filename or header."""
+    # Fastest: filename always contains pre-ingest-YYYY-MM
+    fm = re.search(r'pre-ingest-\d{4}-(\d{2})', txt_path.name)
+    if fm:
+        return int(fm.group(1))
+    # Fallback: parse "MONTH: May 2026" from header
+    month_names = ["january","february","march","april","may","june",
+                   "july","august","september","october","november","december"]
+    try:
+        content = txt_path.read_text(encoding="utf-8").split("EMAIL BODY", 1)[0]
+        mm = re.search(r'^MONTH:\s+(\w+)', content, re.MULTILINE)
+        if mm:
+            return month_names.index(mm.group(1).lower()) + 1
+    except (OSError, ValueError):
+        pass
+    from datetime import date
+    return date.today().month
+
+
 def parse_cover_image(txt_path: Path) -> tuple[str, str]:
     """Extract cover image local path and caption from txt header. Returns (path, caption)."""
     content  = txt_path.read_text(encoding="utf-8")
@@ -111,14 +131,40 @@ def parse_cover_image(txt_path: Path) -> tuple[str, str]:
 
 # ── BCC list from i3.conf ─────────────────────────────────────────────────────
 
-def get_hub_emails(conf_path: str) -> list[str]:
-    text   = Path(conf_path).read_text(encoding="utf-8")
-    emails = set()
-    for m in re.finditer(r'^[a-z0-9_-]+\.email\s*=\s*"([^"]+)"', text, re.MULTILINE):
-        for addr in m.group(1).split(","):
-            addr = addr.strip()
-            if addr:
+def get_hub_emails(conf_path: str, month: int) -> list[str]:
+    """Return bare email addresses for hubs scheduled in `month` (skips on-hold)."""
+    text     = Path(conf_path).read_text(encoding="utf-8")
+    hub_keys = set(re.findall(r'^([a-z0-9_-]+)\.provider\s*=', text, re.MULTILINE))
+    emails   = set()
+
+    for hub in hub_keys:
+        def get_val(key, _hub=hub):
+            m = re.search(rf'^{re.escape(_hub)}\.{re.escape(key)}\s*=\s*"([^"]*)"',
+                          text, re.MULTILINE)
+            return m.group(1).strip() if m else ""
+
+        def get_months(_hub=hub):
+            m = re.search(rf'^{re.escape(_hub)}\.schedule\.months\s*=\s*\[([^\]]*)\]',
+                          text, re.MULTILINE)
+            if not m:
+                return []
+            return [int(x.strip()) for x in m.group(1).split(",") if x.strip().isdigit()]
+
+        if month not in get_months():
+            continue
+        if "on-hold" in get_val("schedule.status").lower():
+            continue
+
+        for part in get_val("email").split(","):
+            part = part.strip()
+            if not part:
+                continue
+            # Strip display names: "First Last<addr@example.com>" → "addr@example.com"
+            addr_m = re.search(r'<([^>]+)>', part)
+            addr   = addr_m.group(1).strip() if addr_m else part
+            if "@" in addr:
                 emails.add(addr)
+
     return sorted(emails)
 
 
@@ -424,7 +470,7 @@ def build_message(subject: str, plain_body: str, to_addrs: list[str],
 
 def send(subject: str, body: str, aws_profile: str, conf_path: str,
          cover_img_path: str = "", cover_caption: str = "",
-         override_to: str = "") -> bool:
+         override_to: str = "", month: int = 0) -> bool:
     try:
         import boto3
     except ImportError:
@@ -443,8 +489,15 @@ def send(subject: str, body: str, aws_profile: str, conf_path: str,
         print(f"  (flip TEST_MODE = False in send_email.py to send for real)")
     else:
         to_addrs  = [PROD_TO]
-        bcc_addrs = get_hub_emails(conf_path)
-        print(f"  PRODUCTION — To: {PROD_TO}, BCC: {len(bcc_addrs)} hub contacts")
+        bcc_addrs = get_hub_emails(conf_path, month)
+        print(f"  PRODUCTION — To: {PROD_TO}, BCC: {len(bcc_addrs)} hub contacts (month {month})")
+        for addr in bcc_addrs:
+            print(f"    {addr}")
+        print()
+        confirm = input("Send? [y/N]: ").strip().lower()
+        if confirm != "y":
+            print("Aborted.")
+            return False
 
     msg          = build_message(subject, body, to_addrs, cover_img_path, cover_caption)
     destinations = to_addrs + bcc_addrs
@@ -493,7 +546,7 @@ def main():
         print(f"Error: file not found: {txt_path}", file=sys.stderr)
         sys.exit(1)
 
-    subject, body          = parse_txt(txt_path)
+    subject, body           = parse_txt(txt_path)
     cover_img_path, caption = parse_cover_image(txt_path)
     conf_path = args.i3_conf or os.environ.get("I3_CONF") or DEFAULT_CONF_PATH
 
@@ -509,7 +562,8 @@ def main():
         print(html)
         return
 
-    ok = send(subject, body, args.aws_profile, conf_path, cover_img_path, caption, args.to)
+    month = parse_month(txt_path)
+    ok = send(subject, body, args.aws_profile, conf_path, cover_img_path, caption, args.to, month)
     sys.exit(0 if ok else 1)
 
 
