@@ -153,6 +153,7 @@ def fetch_image(url: str) -> str:
         print(f"\nThe email will send without the cover image until you do this.\n", file=sys.stderr)
 
     try:
+        images_dir.mkdir(parents=True, exist_ok=True)
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=15) as resp:
             local_path.write_bytes(resp.read())
@@ -329,6 +330,7 @@ def main():
     out_dir = Path(__file__).resolve().parent / "txt_emails"
     timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
     out_path = args.out or str(out_dir / f"pre-ingest-{year}-{month:02d}_{timestamp}.txt")
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     Path(out_path).write_text(output, encoding="utf-8")
     print(f"Written: {out_path}")
     print(f"  Month:       {month_name} {year}")
