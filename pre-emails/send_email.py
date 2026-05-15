@@ -26,7 +26,7 @@ from email.mime.text import MIMEText
 from pathlib import Path
 
 # ── Mode toggle ───────────────────────────────────────────────────────────────
-TEST_MODE  = True
+TEST_MODE  = False
 TEST_EMAIL = "spieges124@gmail.com"
 
 SENDER   = "ingest@dp.la"
