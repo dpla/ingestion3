@@ -107,14 +107,15 @@ MONTH_NAMES = [
 
 
 def last_full_work_week(year: int, month: int) -> tuple[date, date]:
+    from datetime import timedelta
     last_day = calendar.monthrange(year, month)[1]
     friday = date(year, month, last_day)
     while friday.weekday() != 4:
-        friday = friday.replace(day=friday.day - 1)
-    monday = friday.replace(day=friday.day - 4)
+        friday -= timedelta(days=1)
+    monday = friday - timedelta(days=4)
     if monday.month != month:
-        friday = friday.replace(day=friday.day - 7)
-        monday = friday.replace(day=friday.day - 4)
+        friday -= timedelta(days=7)
+        monday = friday - timedelta(days=4)
     return monday, friday
 
 
@@ -128,26 +129,43 @@ def format_week_range(monday: date, friday: date) -> str:
 
 def fetch_image(url: str) -> str:
     """Download image to pre-emails/images/ and return the local path."""
+    import urllib.parse
+    import urllib.error
+
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        print(f"\n⚠️  Could not auto-download cover image: unsupported URL scheme '{parsed.scheme}'", file=sys.stderr)
+        return ""
+
     images_dir = Path(__file__).resolve().parent / "images"
     url_path = url.split("?")[0].rstrip("/")
     ext = Path(url_path).suffix or ".jpg"
     filename = Path(url_path).name or f"cover{ext}"
     local_path = images_dir / filename
 
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            local_path.write_bytes(resp.read())
-        return str(local_path)
-    except Exception as e:
-        print(f"\n⚠️  Could not auto-download cover image: {e}", file=sys.stderr)
+    def _print_manual_steps(reason: str) -> None:
+        print(f"\n⚠️  Could not auto-download cover image: {reason}", file=sys.stderr)
         print(f"\nTo add it manually:", file=sys.stderr)
         print(f"  1. Download the image from:\n     {url}", file=sys.stderr)
         print(f"  2. Save it to:\n     {local_path}", file=sys.stderr)
         print(f"  3. Then add this line to the txt file under COVER IMAGE:", file=sys.stderr)
         print(f"       Local:   {local_path}", file=sys.stderr)
         print(f"\nThe email will send without the cover image until you do this.\n", file=sys.stderr)
-        return ""
+
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            local_path.write_bytes(resp.read())
+        return str(local_path)
+    except urllib.error.HTTPError as e:
+        _print_manual_steps(f"HTTP {e.code} {e.reason}")
+    except urllib.error.URLError as e:
+        _print_manual_steps(str(e.reason))
+    except ValueError as e:
+        _print_manual_steps(f"invalid URL — {e}")
+    except Exception as e:
+        _print_manual_steps(f"unexpected error — {e}")
+    return ""
 
 
 # ── Output builder ────────────────────────────────────────────────────────────

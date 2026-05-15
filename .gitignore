@@ -209,4 +209,4 @@ scheduler/emails/
 
 # Email text files and images from the "pre-emails"
 pre-emails/txt_emails/
-pre_emails/images/
+pre-emails/images/
