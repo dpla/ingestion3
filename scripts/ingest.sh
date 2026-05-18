@@ -14,6 +14,17 @@ source "$SCRIPT_DIR/common.sh"
 # Setup Java environment (8g default memory)
 setup_java "8g" || die "Failed to setup Java environment"
 
+# slack_notify_resilient — wraps slack_notify with one retry after 15s.
+# slack_notify (defined in common.sh) may swallow errors and always return 0,
+# so we always send twice with a gap for critical stage-checkpoint messages.
+# The brief duplicate on a healthy connection is intentional — a missed
+# "harvest complete" is worse than an occasional double-post.
+slack_notify_resilient() {
+    slack_notify "$@" || true
+    sleep 15
+    slack_notify "$@" || log_warn "Slack notify failed on retry (message: ${1:-})"
+}
+
 usage() {
     echo "Usage: ingest.sh <provider-name> [options]"
     echo ""
@@ -230,7 +241,7 @@ Node keys rotate every ~180 days; see scripts/SCRIPTS.md for details."
         exit 1
     fi
 
-    slack_notify ":white_check_mark: *$PROVIDER harvest complete* (${HARVEST_RECORD_COUNT} records) — starting mapping"
+    slack_notify_resilient ":white_check_mark: *$PROVIDER harvest complete* (${HARVEST_RECORD_COUNT} records) — starting mapping"
 else
     print_step "Skipping harvest (using existing data)..."
     HARVEST_TS_DIR=$(find_latest_data "$PROVIDER" harvest) \
@@ -298,7 +309,7 @@ else
         exit 0
     fi
 
-    slack_notify ":white_check_mark: *$PROVIDER mapping complete* (${MAP_RECORD_COUNT} records) — starting enrichment"
+    slack_notify_resilient ":white_check_mark: *$PROVIDER mapping complete* (${MAP_RECORD_COUNT} records) — starting enrichment"
 fi
 
 # Step 3: Enrichment
@@ -339,7 +350,7 @@ else
         exit 1
     fi
 
-    slack_notify ":white_check_mark: *$PROVIDER enrichment complete* (${ENRICH_RECORD_COUNT} records) — starting JSONL export"
+    slack_notify_resilient ":white_check_mark: *$PROVIDER enrichment complete* (${ENRICH_RECORD_COUNT} records) — starting JSONL export"
 fi
 
 # Step 4: JSONL export
@@ -359,7 +370,7 @@ stop_heartbeat
 JSONL_TS_DIR=$(find_latest_data "$PROVIDER" jsonl)
 JSONL_TS=$(basename "$JSONL_TS_DIR")
 log_info "JSONL export complete: $JSONL_TS"
-slack_notify ":white_check_mark: *$PROVIDER JSONL export complete* — starting S3 sync"
+slack_notify_resilient ":white_check_mark: *$PROVIDER JSONL export complete* — starting S3 sync"
 
 # Read record count from JSONL manifest
 JSONL_RECORD_COUNT=$(read_manifest_count "$JSONL_TS_DIR/_MANIFEST")
@@ -479,11 +490,10 @@ sign = '+' if delta >= 0 else ''
 print(f'Records: {new:,} ({sign}{delta:,} vs prev) | Size: {size_mb:.1f} MB')
 ")
 
-    slack_notify "*$PROVIDER ingest complete* :white_check_mark:\nNew snapshot: \`$JSONL_TS\`\n$SUMMARY\nS3: \`s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${JSONL_TS}/\`${EMAIL_NOTE}"
-
+    slack_notify_resilient "*$PROVIDER ingest complete* :white_check_mark:\nNew snapshot: \`$JSONL_TS\`\n$SUMMARY\nS3: \`s3://dpla-master-dataset/${S3_PREFIX}/jsonl/${JSONL_TS}/\`${EMAIL_NOTE}"
 else
     print_step "Skipping S3 sync (--skip-s3-sync)"
-    slack_notify "*$PROVIDER ingest complete* :white_check_mark: _(S3 sync skipped)_\nJSONL: \`$JSONL_TS\`${EMAIL_NOTE}"
+    slack_notify_resilient "*$PROVIDER ingest complete* :white_check_mark: _(S3 sync skipped)_\nJSONL: \`$JSONL_TS\`${EMAIL_NOTE}"
 fi
 
 write_hub_status "$PROVIDER" complete
