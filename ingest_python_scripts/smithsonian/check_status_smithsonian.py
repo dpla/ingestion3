@@ -69,7 +69,8 @@ S3_FOLDER_DATE_RE = re.compile(r"PRE\s+(\d{8})[-_]")
 
 # ---------- AWS / SSM ----------
 def aws(args):
-    result = subprocess.run(["aws"] + args, capture_output=True, text=True)
+    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    result = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"aws {' '.join(args)} failed:\n{result.stderr.strip()}")
     return result.stdout.strip()
@@ -211,7 +212,7 @@ echo "===MAPPING==="
 LATEST=$(ls -1dt {DATA_ROOT}/mapping/*/ 2>/dev/null | head -1 | sed 's:/$::')
 if [ -n "$LATEST" ]; then
   echo "path=$LATEST"
-  echo "success=$([ -f "$LATEST/_SUCCESS" ] && echo yes || echo no)"
+  echo "success=$({{ [ -f "$LATEST/_SUCCESS" ] || [ -f "$LATEST/_MANIFEST" ]; }} && echo yes || echo no)"
   echo "mtime=$(stat -c '%y' "$LATEST" 2>/dev/null | cut -d'.' -f1)"
   [ -f "$LATEST/_MANIFEST" ] && echo "manifest=$(grep -i 'record count' "$LATEST/_MANIFEST" 2>/dev/null | head -1 | tr -d '\\n')"
 else

@@ -38,7 +38,6 @@ import time
 from datetime import datetime
 
 # ---------- config ----------
-INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
 DATA_ROOT = "/home/ec2-user/data"
 STAGES = ("harvest", "mapping", "enrichment", "jsonl")
 HUB_RE = re.compile(r"^[a-z0-9_-]+$")
@@ -61,6 +60,7 @@ def _load_dotenv():
     return cfg
 
 _env = _load_dotenv()
+INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
 _conf_repo = _env.get("INGESTION3_CONF_REPO",
                        os.path.expanduser("~/Documents/Repos/ingestion3-conf"))
 CONF_PATH = os.environ.get("I3_CONF") or os.path.join(_conf_repo, "i3.conf")
@@ -86,7 +86,8 @@ ALL_STAGE_REGEX = (
 
 # ---------- AWS / SSM helpers ----------
 def aws(args):
-    result = subprocess.run(["aws"] + args, capture_output=True, text=True)
+    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    result = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"aws {' '.join(args)} failed:\n{result.stderr.strip()}")
     return result.stdout.strip()

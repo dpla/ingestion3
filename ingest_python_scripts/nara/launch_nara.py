@@ -24,6 +24,7 @@ Usage:
 import argparse
 import base64
 import json
+import os
 import re
 import subprocess
 import sys
@@ -66,7 +67,8 @@ POLL_SECONDS   = 60   # log tail interval
 # ---------- AWS / SSM helpers ----------
 
 def aws(args, check=True):
-    result = subprocess.run(["aws"] + args, capture_output=True, text=True)
+    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    result = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
     if check and result.returncode != 0:
         raise RuntimeError(f"aws {' '.join(args[:3])} failed:\n{result.stderr.strip()}")
     return result.stdout.strip()

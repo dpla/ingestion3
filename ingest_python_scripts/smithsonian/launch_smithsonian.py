@@ -74,7 +74,8 @@ S3_DATE_RE = re.compile(r"PRE\s+(\d{4}-\d{2}-\d{2})/")
 
 # ── AWS / SSM helpers ─────────────────────────────────────────────────────────
 def _aws(args):
-    r = subprocess.run(["aws"] + args, capture_output=True, text=True)
+    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    r = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(f"aws {' '.join(args)} failed:\n{r.stderr.strip()}")
     return r.stdout.strip()
@@ -271,12 +272,14 @@ def preprocess_checkpoint(date):
 
 
 # ── Stage 3: Harvest ──────────────────────────────────────────────────────────
-def run_harvest():
+def run_harvest(date):
     banner("Stage 3/5 — Harvest  (harvest.sh smithsonian)")
 
+    orig = f"{DATA_ROOT}/originalRecords/{date}"
     check = ssm_run(
+        f'ORIG="{orig}"\n'
         f'LATEST=$(ls -1dt {DATA_ROOT}/harvest/*/ 2>/dev/null | head -1 | sed "s:/$::")\n'
-        f'[ -f "$LATEST/_SUCCESS" ] && echo "done:$LATEST" || echo pending'
+        f'[ -n "$LATEST" ] && [ -f "$LATEST/_SUCCESS" ] && [ "$LATEST" -nt "$ORIG" ] && echo "done:$LATEST" || echo pending'
     ).strip()
     if check.startswith("done:"):
         info(f"Harvest already complete (_SUCCESS found): {check[5:]}. Skipping.")
@@ -290,9 +293,10 @@ def run_harvest():
 
     def check_fn():
         out = ssm_run(
+            f'ORIG="{orig}"\n'
             f'LATEST=$(ls -1dt {DATA_ROOT}/harvest/*/ 2>/dev/null | head -1 | sed "s:/$::")\n'
             f'RUNNING=$(pgrep -af "harvest.sh smithsonian" || true)\n'
-            f'if [ -f "$LATEST/_SUCCESS" ]; then echo "done:$LATEST"\n'
+            f'if [ -n "$LATEST" ] && [ -f "$LATEST/_SUCCESS" ] && [ "$LATEST" -nt "$ORIG" ]; then echo "done:$LATEST"\n'
             f'elif [ -z "$RUNNING" ] && [ -n "$LATEST" ]; then echo "failed:$LATEST"\n'
             f'else echo "running"; fi'
         ).strip()
@@ -331,13 +335,23 @@ def harvest_checkpoint():
 
 
 # ── Stage 4: Mapping ──────────────────────────────────────────────────────────
-def run_mapping():
+def run_mapping(date):
     banner("Stage 4/5 — Mapping  (ingest.sh smithsonian --mapping-only)")
 
-    check = ssm_run(
-        f'LATEST=$(ls -1dt {DATA_ROOT}/mapping/*/ 2>/dev/null | head -1 | sed "s:/$::")\n'
-        f'[ -f "$LATEST/_MANIFEST" ] && echo "done:$LATEST" || echo pending'
-    ).strip()
+    orig = f"{DATA_ROOT}/originalRecords/{date}"
+    # Mapping is delivery-specific if the harvest dir is newer than originalRecords/{date}
+    # and the mapping dir is newer than that harvest dir.
+    def _mapping_done_check(sentinel):
+        return (
+            f'ORIG="{orig}"\n'
+            f'HLAT=$(ls -1dt {DATA_ROOT}/harvest/*/ 2>/dev/null | head -1 | sed "s:/$::")\n'
+            f'LATEST=$(ls -1dt {DATA_ROOT}/mapping/*/ 2>/dev/null | head -1 | sed "s:/$::")\n'
+            f'[ -n "$HLAT" ] && [ "$HLAT" -nt "$ORIG" ] && [ -n "$LATEST" ] && '
+            f'[ -f "$LATEST/_MANIFEST" ] && [ "$LATEST" -nt "$HLAT" ] && '
+            f'echo "done:$LATEST" || echo {sentinel}'
+        )
+
+    check = ssm_run(_mapping_done_check("pending")).strip()
     if check.startswith("done:"):
         info(f"Mapping already complete (_MANIFEST found): {check[5:]}. Skipping.")
         return
@@ -351,10 +365,7 @@ def run_mapping():
         timeout_seconds=MAPPING_TIMEOUT_S, poll_seconds=30,
     )
 
-    check = ssm_run(
-        f'LATEST=$(ls -1dt {DATA_ROOT}/mapping/*/ 2>/dev/null | head -1 | sed "s:/$::")\n'
-        f'[ -f "$LATEST/_MANIFEST" ] && echo "done:$LATEST" || echo failed'
-    ).strip()
+    check = ssm_run(_mapping_done_check("failed")).strip()
     if not check.startswith("done:"):
         err(f"Mapping did not produce _MANIFEST. Check {PIPELINE_LOG}.")
         err("Re-run with --start-at mapping to retry.")
@@ -384,7 +395,7 @@ def mapping_checkpoint():
 
 
 # ── Stage 5: Pipeline ─────────────────────────────────────────────────────────
-def run_pipeline():
+def run_pipeline(date):
     banner("Stage 5/5 — Pipeline  (ingest.sh smithsonian --resume-from enrichment)")
 
     info("Launching ingest.sh smithsonian --resume-from enrichment in background …")
@@ -396,11 +407,17 @@ def run_pipeline():
         f"./scripts/ingest.sh smithsonian --resume-from enrichment > {PIPELINE_LOG} 2>&1"
     )
 
+    orig = f"{DATA_ROOT}/originalRecords/{date}"
+
     def check_fn():
         out = ssm_run(
+            f'ORIG="{orig}"\n'
+            f'HLAT=$(ls -1dt {DATA_ROOT}/harvest/*/ 2>/dev/null | head -1 | sed "s:/$::")\n'
+            f'MLAT=$(ls -1dt {DATA_ROOT}/mapping/*/ 2>/dev/null | head -1 | sed "s:/$::")\n'
             f'LATEST=$(ls -1dt {DATA_ROOT}/jsonl/*/ 2>/dev/null | head -1 | sed "s:/$::")\n'
             f'RUNNING=$(pgrep -af "ingest.sh smithsonian" || true)\n'
-            f'if [ -f "$LATEST/_SUCCESS" ]; then echo "done:$LATEST"\n'
+            f'if [ -n "$HLAT" ] && [ "$HLAT" -nt "$ORIG" ] && [ -n "$MLAT" ] && [ "$MLAT" -nt "$HLAT" ] '
+            f'&& [ -f "$LATEST/_SUCCESS" ] && [ "$LATEST" -nt "$MLAT" ]; then echo "done:$LATEST"\n'
             f'elif [ -z "$RUNNING" ]; then echo "failed"\n'
             f'else echo "running"; fi'
         ).strip()
@@ -484,19 +501,19 @@ def main():
             sys.exit(0)
 
     if start_idx <= STAGE_ORDER.index("harvest"):
-        run_harvest()
+        run_harvest(date)
         harvest_checkpoint()
         if not checkpoint_prompt("after harvest — verify record count and log", auto=args.auto):
             sys.exit(0)
 
     if start_idx <= STAGE_ORDER.index("mapping"):
-        run_mapping()
+        run_mapping(date)
         mapping_checkpoint()
         if not checkpoint_prompt("after mapping — verify 1:1 record count with harvest", auto=args.auto):
             sys.exit(0)
 
     if start_idx <= STAGE_ORDER.index("pipeline"):
-        run_pipeline()
+        run_pipeline(date)
         pipeline_checkpoint()
         if not checkpoint_prompt("after pipeline — verify jsonl output and S3 sync", auto=args.auto):
             sys.exit(0)

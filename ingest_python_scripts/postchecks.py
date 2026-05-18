@@ -64,7 +64,8 @@ S3_ALIASES = {
 
 # ---------- AWS helpers ----------
 def aws(args, check=True):
-    result = subprocess.run(["aws"] + args, capture_output=True, text=True)
+    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    result = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
     if check and result.returncode != 0:
         raise RuntimeError(f"aws {' '.join(args[:3])} failed:\n{result.stderr.strip()}")
     return result.stdout.strip()
@@ -253,11 +254,13 @@ def load_api_key():
 
 def fetch_api_count(api_key):
     try:
-        result = subprocess.run(
-            ["curl", "-s", f"https://api.dp.la/v2/items?api_key={api_key}&page_size=0"],
-            capture_output=True, text=True, timeout=15,
+        import urllib.request
+        req = urllib.request.Request(
+            "https://api.dp.la/v2/items?page_size=0",
+            headers={"Authorization": f"Bearer {api_key}"},
         )
-        data = json.loads(result.stdout)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode())
         return data.get("count")
     except Exception:
         return None

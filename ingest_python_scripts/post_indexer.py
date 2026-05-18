@@ -92,7 +92,8 @@ def slack_notify(msg):
 
 # ---------- AWS helpers ----------
 def aws(args, check=True):
-    result = subprocess.run(["aws"] + args, capture_output=True, text=True)
+    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    result = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
     if check and result.returncode != 0:
         raise RuntimeError(f"aws {' '.join(args[:3])} failed:\n{result.stderr.strip()}")
     return result.stdout.strip()
@@ -388,9 +389,10 @@ def monitor_cluster(cluster_id):
             if state != last_state or steps_str != last_steps_str:
                 ts = datetime.now().strftime("%H:%M:%S")
                 print(f"  [{ts}] {state}  |  {steps_str}")
+                prev_state     = last_state
                 last_state     = state
                 last_steps_str = steps_str
-                if state == "RUNNING" and last_state != "RUNNING":
+                if state == "RUNNING" and prev_state != "RUNNING":
                     slack_notify(f":large_green_circle: *monthlybatch RUNNING* — `{cluster_id}`")
 
             # Hourly heartbeat

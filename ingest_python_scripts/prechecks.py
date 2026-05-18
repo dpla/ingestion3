@@ -38,7 +38,6 @@ import time
 from datetime import datetime
 
 # ---------- config ----------
-INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
 
 # Two repos that have to be in sync on the box for ingests to work correctly:
 #   - ingestion3      → Scala/Spark pipeline code; lives on `main`.
@@ -81,6 +80,7 @@ def _load_dotenv():
     return cfg
 
 _env = _load_dotenv()
+INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
 _conf_repo = _env.get("INGESTION3_CONF_REPO",
                        os.path.expanduser("~/Documents/Repos/ingestion3-conf"))
 CONF_PATH = os.environ.get("I3_CONF") or os.path.join(_conf_repo, "i3.conf")
@@ -107,8 +107,9 @@ def info(msg):
 # ---------- AWS CLI wrappers ----------
 def aws(args, capture=True):
     """Run an aws CLI command. Returns stdout text (stripped) on success."""
+    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
     result = subprocess.run(
-        ["aws"] + args,
+        ["aws"] + profile + args,
         capture_output=capture,
         text=True,
     )
@@ -1088,6 +1089,13 @@ def main():
     auto_start = not args.no_start
     run_box_checks = not args.endpoint_only
     run_endpoint_check = not args.skip_endpoint
+
+    # Fail fast: if a hub was named but has no endpoint in conf, don't let
+    # check_endpoint(None, ...) silently pass.
+    if hub and run_endpoint_check and endpoint is None:
+        bad(f"Hub '{hub}' has no endpoint in {CONF_PATH} — cannot run endpoint check.")
+        sys.exit(1)
+
     # File-type endpoints need SSM (the box must be up); HTTP/S endpoints don't.
     needs_box_for_endpoint = (
         run_endpoint_check
