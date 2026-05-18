@@ -179,12 +179,10 @@ def rebuild_jar():
     ok("sbt assembly succeeded.")
 
     info(f"Uploading to {BATCH_JAR_S3} ...")
-    result = subprocess.run(
-        ["aws", "s3", "cp", BATCH_LOCAL_JAR, BATCH_JAR_S3],
-        capture_output=True, text=True,
-    )
-    if result.returncode != 0:
-        bad(f"S3 upload failed:\n{result.stderr.strip()}")
+    try:
+        aws(["s3", "cp", BATCH_LOCAL_JAR, BATCH_JAR_S3])
+    except RuntimeError as e:
+        bad(f"S3 upload failed:\n{e}")
         sys.exit(1)
 
     ok("Batch JAR uploaded to S3.")
