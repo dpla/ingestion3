@@ -32,7 +32,8 @@ Re-run at any time. Use `--update` to change saved paths.
 Each month runs in roughly this order. Special-case hubs (Smithsonian, NARA, Community Webs) run their own scripts but fit into the same overall sequence.
 
 ```
-1. Pre-flight checks    →  prechecks.py          (per hub, before each ingest)
+0. Monthly hub list     →  pre_ingest_check.py   (list all hubs for the month)
+1. Pre-flight checks    →  hub_preflight.py       (per hub, before each ingest)
 2. Provider ingests     →  launch_ingest.py       (all standard hubs)
 3. Special Cases        →  <hub_name>/launch_hub.py
 6. Index rebuild        →  launch_indexer.py
@@ -44,21 +45,32 @@ Each month runs in roughly this order. Special-case hubs (Smithsonian, NARA, Com
 
 ## Standard Hub Ingest
 
+### Step 0 — Monthly hub list
+
+```bash
+python3 pre_ingest_check.py              # current month
+python3 pre_ingest_check.py --month 5    # specific month
+```
+
+Lists all hubs scheduled for the month from `i3.conf`, with harvest types, special-case notes, and on-hold status. Run this at the start of each ingest month to plan the run order.
+
+---
+
 ### Step 1 — Pre-flight checks
 
 ```bash
-python3 prechecks.py 
+python3 hub_preflight.py
 ```
 
-Prompts the user for the hub endpoint to check, Checks the EC2 instance state, repo freshness on EC2 (`ingestion3` + `ingestion3-conf`), JAR freshness, disk space, and reachability of the hub's harvest endpoint. Starts the instance automatically if it's stopped.
+Prompts the user for the hub endpoint to check. Checks the EC2 instance state, repo freshness on EC2 (`ingestion3` + `ingestion3-conf`), JAR freshness, disk space, and reachability of the hub's harvest endpoint. Starts the instance automatically if it's stopped.
 
 Run for every hub before launching.
 
 Flag options:
 ```bash
-python3 prechecks.py --endpoint-only   # just check the endpoint
-python3 prechecks.py --skip-endpoint   # skip the endpoint check
-python3 prechecks.py --no-start                   # don't auto-start EC2 if stopped
+python3 hub_preflight.py --endpoint-only   # just check the endpoint
+python3 hub_preflight.py --skip-endpoint   # skip the endpoint check
+python3 hub_preflight.py --no-start        # don't auto-start EC2 if stopped
 ```
 
 ---

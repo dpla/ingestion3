@@ -6,11 +6,11 @@ Runs the usual before-every-ingest checks against the EC2 box and prints
 a clean summary. Exits 0 if everything is GOOD, 1 otherwise.
 
 Usage:
-    python3 prechecks.py                            # full checks — prompts for hub
-    python3 prechecks.py --hub njde                 # full checks for a specific hub
-    python3 prechecks.py --hub njde --endpoint-only # skip box-state checks; just verify the endpoint
-    python3 prechecks.py --hub njde --skip-endpoint # opposite: skip the endpoint check
-    python3 prechecks.py --no-start                 # don't auto-start the EC2 if it's stopped
+    python3 hub_preflight.py                            # full checks — prompts for hub
+    python3 hub_preflight.py --hub njde                 # full checks for a specific hub
+    python3 hub_preflight.py --hub njde --endpoint-only # skip box-state checks; just verify the endpoint
+    python3 hub_preflight.py --hub njde --skip-endpoint # opposite: skip the endpoint check
+    python3 hub_preflight.py --no-start                 # don't auto-start the EC2 if it's stopped
 
 The endpoint is ALWAYS read from i3.conf for the given hub — there is no
 manual endpoint override. If you need to test a different URL, edit i3.conf

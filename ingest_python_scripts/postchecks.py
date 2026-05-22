@@ -27,6 +27,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
+from hub_preflight import list_scheduled_hubs
+
 # ---------- config ----------
 REGION        = "us-east-1"
 S3_DATASET    = "dpla-master-dataset"
@@ -179,44 +181,16 @@ def classify_age(date_str, now, stale_days):
 # ---------- hub list from conf ----------
 def get_hubs_from_conf(month_number, conf_path=CONF_PATH):
     """
-    Parse i3.conf for hubs scheduled to run in month_number (1–12).
-
-    Rules:
-      - Include hub only if month_number is in schedule.months = [...]
-      - Skip hubs with schedule.status containing "on-hold"
-      - Skip hubs with empty schedule.months = [] (as-needed / inactive)
-      - Hubs with no schedule.months entry at all are excluded
+    Return sorted list of active hub names scheduled for month_number (1–12).
+    Delegates to hub_preflight.list_scheduled_hubs() — single source of truth.
     """
-    if not os.path.exists(conf_path):
+    hubs = list_scheduled_hubs(month_number, conf_path)
+    if hubs is None:
         return []
-    with open(conf_path, "r", encoding="utf-8") as f:
-        text = f.read()
-
-    # Build months map: hub → [int, ...]
-    months_map = {}
-    for m in re.finditer(r"^([a-z0-9_-]+)\.schedule\.months\s*=\s*\[([^\]]*)\]",
-                         text, re.MULTILINE):
-        hub  = m.group(1)
-        nums = [int(x.strip()) for x in m.group(2).split(",") if x.strip().isdigit()]
-        months_map[hub] = nums
-
-    # Build status map: hub → status string
-    status_map = {}
-    for m in re.finditer(r"^([a-z0-9_-]+)\.schedule\.status\s*=\s*[\"']?([^\"'\n]+)[\"']?",
-                         text, re.MULTILINE):
-        status_map[m.group(1)] = m.group(2).strip()
-
-    hubs = []
-    for hub, months in months_map.items():
-        if not months:                                    # empty list → skip
-            continue
-        if month_number not in months:                    # not scheduled this month
-            continue
-        if "on-hold" in status_map.get(hub, "").lower(): # explicitly paused
-            continue
-        hubs.append(hub)
-
-    return sorted(hubs)
+    return sorted(
+        h["hub"] for h in hubs
+        if (h["status"] or "active").lower() == "active"
+    )
 
 
 # ---------- post-indexer helpers ----------
