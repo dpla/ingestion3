@@ -214,7 +214,14 @@ def main() -> None:
             sys.exit("Aborted.")
 
     if harvest_type == "file":
-        bucket = args.bucket or f"dpla-hub-{hub}"
+        # Derive bucket from the conf endpoint (e.g. "s3://dpla-hub-fl/" → "dpla-hub-fl").
+        # Fall back to dpla-hub-<hub> only if the conf has no s3:// endpoint.
+        if args.bucket:
+            bucket = args.bucket
+        else:
+            conf_endpoint, _ = lookup_hub_in_conf(hub)
+            s3_match = re.match(r"s3://([^/]+)", conf_endpoint or "")
+            bucket = s3_match.group(1) if s3_match else f"dpla-hub-{hub}"
         file_hub_preflight(hub, bucket)
 
     # Launch.
