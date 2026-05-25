@@ -21,6 +21,8 @@ import subprocess
 import sys
 import time
 
+from hub_preflight import lookup_hub_in_conf
+
 def _load_dotenv():
     cfg = {}
     env_file = os.path.normpath(
@@ -103,9 +105,25 @@ def aws_s3_ls(s3_path: str) -> str:
 
 # ── i3.conf helpers ───────────────────────────────────────────────────────────
 def get_harvest_type(hub: str) -> str:
-    out = ssm_run(f"grep '^{hub}\\.harvest\\.type' {CONF_PATH} 2>/dev/null || echo ''")
-    m = re.search(r'=\s*"?([^"\s]+)"?', out)
-    return m.group(1) if m else ""
+    """Return harvest.type for hub, reading from EC2 conf via SSM.
+
+    Falls back to the local i3.conf (via hub_preflight.lookup_hub_in_conf) if
+    the SSM grep returns empty — e.g. because the box's conf repo is stale or
+    the SSM call fails quietly.
+    """
+    try:
+        out = ssm_run(f"grep '^{hub}\\.harvest\\.type' {CONF_PATH} 2>/dev/null || echo ''")
+        m = re.search(r'=\s*"?([^"\s]+)"?', out)
+        if m:
+            return m.group(1)
+    except Exception:
+        pass
+
+    # SSM returned nothing — fall back to local conf.
+    _, harvest_type = lookup_hub_in_conf(hub)
+    if harvest_type:
+        print(f"  (harvest.type read from local conf — EC2 conf may be stale)")
+    return harvest_type or ""
 
 
 def get_current_endpoint(hub: str) -> str:
@@ -182,6 +200,18 @@ def main() -> None:
     print(f"Checking harvest type for {hub} …")
     harvest_type = get_harvest_type(hub)
     print(f"  harvest.type = {harvest_type or '(not found)'}")
+
+    if not harvest_type:
+        try:
+            ans = input(
+                f"  Could not determine harvest.type for '{hub}'. "
+                "If this is a file-export hub, Ctrl-C now and check i3.conf. "
+                "Continue anyway? [y/N] "
+            ).strip().lower()
+        except EOFError:
+            ans = ""
+        if ans not in ("y", "yes"):
+            sys.exit("Aborted.")
 
     if harvest_type == "file":
         bucket = args.bucket or f"dpla-hub-{hub}"
