@@ -127,20 +127,55 @@ def get_harvest_type(hub: str) -> str:
 
 
 def get_current_endpoint(hub: str) -> str:
-    return ssm_run(
-        f"grep '^{hub}\\.harvest\\.endpoint' {CONF_PATH} 2>/dev/null || echo '(not found)'"
-    )
+    """Return the current harvest.endpoint for hub from i3.conf.
+
+    Reads from the EC2 box first via SSM; falls back to the local conf if the
+    box's conf is stale or the SSM call returns nothing.
+    """
+    try:
+        out = ssm_run(
+            f"grep '^{hub}\\.harvest\\.endpoint' {CONF_PATH} 2>/dev/null || echo ''"
+        ).strip()
+        if out and "(not found)" not in out:
+            return out
+    except Exception:
+        pass
+    endpoint, _ = lookup_hub_in_conf(hub)
+    if endpoint:
+        return f'{hub}.harvest.endpoint = "{endpoint}"  (from local conf — EC2 may be stale)'
+    return "(not found)"
 
 
 # ── S3 delivery helpers ───────────────────────────────────────────────────────
 def list_deliveries(bucket: str) -> list[str]:
+    """Return all top-level entries (folders and files) in the bucket, sorted newest-first.
+
+    Handles both subdirectory deliveries (PRE entries) and flat file deliveries
+    (e.g. s3://dpla-hub-fl/SSDN-2026-05-24.jsonl dropped directly in the bucket).
+    """
     out = aws_s3_ls(f"s3://{bucket}/")
-    folders = []
+    dated = []    # entries that contain a YYYY-MM-DD date — sorted newest-first
+    other = []    # entries like "archive/" with no embedded date — shown at the end
+
     for line in out.splitlines():
-        m = re.search(r"PRE\s+(\d{4}-?\d{2}-?\d{2})/", line)
+        # Subdirectory: "                           PRE some-folder/"
+        m = re.search(r"PRE\s+(.+?)/\s*$", line)
         if m:
-            folders.append(m.group(1))
-    return sorted(folders, reverse=True)
+            entry = m.group(1) + "/"
+        else:
+            # File: "2026-05-24 12:34:56      123456 SSDN-2026-05-24.jsonl"
+            m = re.search(r"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s+\d+\s+(\S+)\s*$", line)
+            if not m:
+                continue
+            entry = m.group(1)
+
+        # Bucket entries that contain an ISO date (YYYY-MM-DD) are actual deliveries.
+        if re.search(r"\d{4}-\d{2}-\d{2}", entry):
+            dated.append(entry)
+        else:
+            other.append(entry)
+
+    return sorted(dated, reverse=True) + sorted(other)
 
 
 # ── file-hub pre-flight ───────────────────────────────────────────────────────
@@ -149,7 +184,7 @@ def file_hub_preflight(hub: str, bucket: str) -> None:
     print(f"\nChecking s3://{bucket}/ for deliveries …")
     deliveries = list_deliveries(bucket)
     if not deliveries:
-        print(f"  No dated delivery folders found in s3://{bucket}/")
+        print(f"  No delivery folders found in s3://{bucket}/")
         print("  Check the bucket name or whether a delivery has arrived yet.")
         sys.exit(1)
 
@@ -162,10 +197,13 @@ def file_hub_preflight(hub: str, bucket: str) -> None:
     print(f"\nCurrent i3.conf endpoint for {hub}:")
     print(f"  {get_current_endpoint(hub)}")
 
+    # Suggest the most recent dated delivery (always first after list_deliveries sort).
+    latest = deliveries[0]
+    suggested = f"s3://{bucket}/{latest}"
     print(f"""
 ⚠️  Before continuing, make sure i3.conf is pointing at the right delivery:
 
-    {hub}.harvest.endpoint = "s3://{bucket}/{deliveries[0]}/"
+    {hub}.harvest.endpoint = "{suggested}"
 
 If it needs updating:
     1. Edit ingestion3-conf/i3.conf locally
