@@ -87,13 +87,21 @@ class FlFileHarvester(
 
   /** Executes the Florida harvest.
     *
-    * Accepts both ZIP archives and plain JSONL files in the endpoint directory.
-    * ZIP files are unpacked entry-by-entry; plain JSONL files are read directly.
+    * Accepts both ZIP archives and plain JSONL files in the endpoint directory
+    * or as a single S3 object. If the endpoint is an s3:// URI pointing at a
+    * single file (e.g. s3://dpla-hub-fl/SSDN-2026-05-24.jsonl), it is copied
+    * to a temp directory first via `aws s3 cp`. If it is an s3:// prefix
+    * (directory), it is synced. Local paths are used as-is.
     */
   override def harvest: DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
-    val inFiles = new File(conf.harvest.endpoint.getOrElse("in"))
+    val endpoint = conf.harvest.endpoint.getOrElse("in")
+    val lowerEndpoint = endpoint.toLowerCase
+    val isS3Object =
+      endpoint.startsWith("s3://") && (lowerEndpoint.endsWith(".jsonl") || lowerEndpoint.endsWith(".zip"))
+    val s3SubCmd = if (isS3Object) "cp" else "sync"
+    val inFiles = LocalHarvester.resolveToLocalDir(endpoint, harvestTime, "fl-s3", conf.harvest.awsProfile, s3SubCmd)
 
     val logger = LogManager.getLogger(this.getClass)
 
