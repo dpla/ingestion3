@@ -97,7 +97,10 @@ class FlFileHarvester(
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
     val endpoint = conf.harvest.endpoint.getOrElse("in")
-    val s3SubCmd = if (endpoint.startsWith("s3://") && !endpoint.endsWith("/")) "cp" else "sync"
+    val lowerEndpoint = endpoint.toLowerCase
+    val isS3Object =
+      endpoint.startsWith("s3://") && (lowerEndpoint.endsWith(".jsonl") || lowerEndpoint.endsWith(".zip"))
+    val s3SubCmd = if (isS3Object) "cp" else "sync"
     val inFiles = LocalHarvester.resolveToLocalDir(endpoint, harvestTime, "fl-s3", conf.harvest.awsProfile, s3SubCmd)
 
     val logger = LogManager.getLogger(this.getClass)
