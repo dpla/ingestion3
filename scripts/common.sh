@@ -306,7 +306,8 @@ slack_notify() {
     payload=$(python3 -c "import json,sys; print(json.dumps({'channel':sys.argv[1],'text':sys.argv[2]}))" \
         "$channel" "$msg") || return 0
     local response
-    response=$(curl -s -X POST "https://slack.com/api/chat.postMessage" \
+    response=$(curl -s --connect-timeout 10 --max-time 30 \
+        -X POST "https://slack.com/api/chat.postMessage" \
         -H "Authorization: Bearer $token" \
         -H "Content-Type: application/json" \
         -d "$payload") || return 1
