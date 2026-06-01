@@ -1092,9 +1092,15 @@ def main():
 
     # Fail fast: if a hub was named but has no endpoint in conf, don't let
     # check_endpoint(None, ...) silently pass.
+    # Exception: api-type hubs (e.g. mwdl, ia) may have their endpoint
+    # hardcoded in the harvester class — skip the check rather than failing.
     if hub and run_endpoint_check and endpoint is None:
-        bad(f"Hub '{hub}' has no endpoint in {CONF_PATH} — cannot run endpoint check.")
-        sys.exit(1)
+        if harvest_type == "api":
+            info(f"Hub '{hub}' has no endpoint in i3.conf — endpoint is hardcoded in the harvester. Skipping endpoint check.")
+            run_endpoint_check = False
+        else:
+            bad(f"Hub '{hub}' has no endpoint in {CONF_PATH} — cannot run endpoint check.")
+            sys.exit(1)
 
     # File-type endpoints need SSM (the box must be up); HTTP/S endpoints don't.
     needs_box_for_endpoint = (
