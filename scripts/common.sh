@@ -305,10 +305,14 @@ slack_notify() {
     local payload
     payload=$(python3 -c "import json,sys; print(json.dumps({'channel':sys.argv[1],'text':sys.argv[2]}))" \
         "$channel" "$msg") || return 0
-    curl -s -X POST "https://slack.com/api/chat.postMessage" \
+    local response
+    response=$(curl -s --connect-timeout 10 --max-time 30 \
+        -X POST "https://slack.com/api/chat.postMessage" \
         -H "Authorization: Bearer $token" \
         -H "Content-Type: application/json" \
-        -d "$payload" > /dev/null || true
+        -d "$payload") || return 1
+    python3 -c "import json,sys; d=json.loads(sys.argv[1]); sys.exit(0 if d.get('ok') else 1)" \
+        "$response" 2>/dev/null
 }
 
 # Start a background heartbeat that sends progress updates to Slack.
