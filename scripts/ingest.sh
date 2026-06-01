@@ -14,15 +14,15 @@ source "$SCRIPT_DIR/common.sh"
 # Setup Java environment (8g default memory)
 setup_java "8g" || die "Failed to setup Java environment"
 
-# slack_notify_resilient — wraps slack_notify with one retry after 15s.
-# slack_notify (defined in common.sh) may swallow errors and always return 0,
-# so we always send twice with a gap for critical stage-checkpoint messages.
-# The brief duplicate on a healthy connection is intentional — a missed
-# "harvest complete" is worse than an occasional double-post.
+# slack_notify_resilient — sends a Slack notification with one retry on failure.
+# slack_notify now returns 0 on API success (ok:true) and 1 on failure.
+# The retry only fires if the first attempt failed, so no duplicate posts
+# on a healthy connection.
 slack_notify_resilient() {
-    slack_notify "$@" || true
-    sleep 15
-    slack_notify "$@" || log_warn "Slack notify failed on retry (message: ${1:-})"
+    if ! slack_notify "$@"; then
+        sleep 15
+        slack_notify "$@" || log_warn "Slack notify failed on retry (message: ${1:-})"
+    fi
 }
 
 usage() {
