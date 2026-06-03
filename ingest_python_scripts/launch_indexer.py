@@ -409,8 +409,21 @@ def monitor_cluster(cluster_id):
     info("Polling every 5 minutes. spark-indexer step takes ~6-9 hours once RUNNING.")
     info("Press Ctrl+C to stop monitoring (cluster keeps running).\n")
 
-    last_state = None
-    start_time = time.time()
+    # Seed last_state with the current cluster state so that resuming an
+    # already-running cluster doesn't re-fire the RUNNING Slack notification.
+    _seed = aws(["emr", "describe-cluster", "--cluster-id", cluster_id,
+                 "--query", "Cluster.Status.State", "--output", "text",
+                 "--region", REGION], check=False).strip()
+    last_state = _seed if _seed else None
+    # Use the cluster's actual ready time so elapsed % is correct when resuming.
+    _ready = aws(["emr", "describe-cluster", "--cluster-id", cluster_id,
+                  "--query", "Cluster.Status.Timeline.ReadyDateTime",
+                  "--output", "text", "--region", REGION], check=False).strip()
+    try:
+        from datetime import timezone
+        start_time = datetime.fromisoformat(_ready).astimezone(timezone.utc).timestamp() if _ready and _ready != "None" else time.time()
+    except (ValueError, TypeError):
+        start_time = time.time()
     last_heartbeat = time.time()
     HEARTBEAT_INTERVAL = 3600  # 1 hour
     try:
@@ -426,20 +439,29 @@ def monitor_cluster(cluster_id):
             state = data.get("State", "UNKNOWN")
             detail = data.get("StateDetail") or ""
 
+            elapsed_s  = time.time() - start_time
+            elapsed_h  = elapsed_s / 3600
+            EXPECTED_H = 7.5  # midpoint of 6-9h window
+            pct        = min(int(elapsed_s / (EXPECTED_H * 3600) * 100), 99) if state == "RUNNING" else 0
+            bar_fill   = int(pct / 5)
+            bar        = "█" * bar_fill + "░" * (20 - bar_fill)
+            ts         = datetime.now().strftime("%H:%M:%S")
+
             if state != last_state:
-                ts = datetime.now().strftime("%H:%M:%S")
                 print(f"  [{ts}] {state}  {detail}")
                 last_state = state
-                # Notify on meaningful state transitions
                 if state == "RUNNING":
                     slack_notify(f":large_green_circle: *sparkindexer RUNNING* — `{cluster_id}`\nspark-indexer step now executing (~6–9 hours).")
                 elif state == "TERMINATING":
                     slack_notify(f":hourglass: *sparkindexer TERMINATING* — `{cluster_id}`\n{detail or 'wrapping up...'}")
 
+            if state == "RUNNING":
+                print(f"\r  [{ts}] {state}  [{bar}] ~{pct}%  ({elapsed_h:.1f}h elapsed)", end="", flush=True)
+
             # Hourly heartbeat while RUNNING
             if state == "RUNNING" and time.time() - last_heartbeat >= HEARTBEAT_INTERVAL:
-                elapsed_h = (time.time() - start_time) / 3600
-                slack_notify(f":beating_heart: *sparkindexer still running* — `{cluster_id}`\nElapsed: {elapsed_h:.1f}h — still indexing, hang tight.")
+                print()
+                slack_notify(f":beating_heart: *sparkindexer still running* — `{cluster_id}`\nElapsed: {elapsed_h:.1f}h (~{pct}% through expected window)")
                 last_heartbeat = time.time()
 
             if state == "TERMINATED":
