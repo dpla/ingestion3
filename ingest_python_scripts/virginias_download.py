@@ -27,7 +27,7 @@ REGION      = "us-east-1"
 
 REPOS = [
     ("uva",      "master"),
-    ("vt",       "dpla-harvest"),
+    ("vt",       "master"),
     ("wvu",      "master"),
     ("wm",       "master"),
     ("gmu",      "master"),
