@@ -30,6 +30,7 @@ import json
 import os
 import urllib.request
 from datetime import datetime, timezone
+from typing import Optional
 
 import boto3
 import botocore.exceptions
@@ -113,7 +114,7 @@ def contributor_counts(hub_name: str, bws: bool = False) -> dict:
     return {b["key"]: b["doc_count"] for b in contributors_agg["buckets"]}
 
 
-def build_stats(bws: bool = False, generated_at: str | None = None) -> dict:
+def build_stats(bws: bool = False, generated_at: Optional[str] = None) -> dict:
     if generated_at is None:
         generated_at = datetime.now(timezone.utc).isoformat()
     totals = hub_totals(bws)
