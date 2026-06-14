@@ -272,14 +272,23 @@ class HathiMapping extends MarcXmlMapping {
     mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
-    // <datafield> tag = 974 <subfield> code = u
-    marcFields(data, Seq("974"), Seq("u"))
+    // <datafield> tag = 974 <subfield> code = u (file harvest)
+    val from974 = marcFields(data, Seq("974"), Seq("u"))
       .flatMap(extractStrings)
-      .flatMap(
-        _.splitAtDelimiter("\\.").slice(0, 1)
-      ) // split at "." and take first value
+      .flatMap(_.splitAtDelimiter("\\.").slice(0, 1))
       .flatMap(key => Try { dataProviderMapping(key) }.toOption)
       .map(nameOnlyAgent)
+
+    if (from974.nonEmpty) from974
+    else
+      // OAI harvest: 035 field contains "sdr-{code}.{barcode}" e.g. "sdr-miu.990000000400106381"
+      marcFields(data, Seq("035"), Seq("a"))
+        .flatMap(extractStrings)
+        .find(_.startsWith("sdr-"))
+        .flatMap(_.stripPrefix("sdr-").split("\\.").headOption)
+        .flatMap(key => Try { dataProviderMapping(key) }.toOption)
+        .map(nameOnlyAgent)
+        .toSeq
   }
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
@@ -413,6 +422,7 @@ class HathiMapping extends MarcXmlMapping {
     "loc" -> "Library of Congress",
     "mdl" -> "Minnesota Digital Library",
     "mdp" -> "University of Michigan",
+    "miu" -> "University of Michigan",
     "miua" -> "University of Michigan",
     "miun" -> "University of Michigan",
     "nc01" -> "University of North Carolina",
