@@ -27,10 +27,18 @@ class HathiMapping extends MarcXmlMapping {
   override def getProviderName: Option[String] = Some("hathitrust")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
-    // <controlfield> tag = 001
+    // <controlfield> tag = 001 (file harvest); fall back to OAI <identifier> (OAI harvest)
     controlfield(data, Seq("001"))
       .flatMap(extractStrings)
       .headOption
+      .orElse {
+        // OAI identifier looks like "oai:hathitrust.org:000000040" — take the last segment
+        (data \\ "identifier")
+          .headOption
+          .map(_.text.trim)
+          .map(_.split(":").last)
+          .filter(_.nonEmpty)
+      }
 
   // SourceResource mapping
 
@@ -190,17 +198,26 @@ class HathiMapping extends MarcXmlMapping {
       .map(_.mkString(". "))
       .map(eitherStringOrUri)
 
-  override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
-    // <datafield> tag = 506 or 540
-    // <datafield> tag = 974          <subfield> code = r
-    (marcFields(data, Seq("974"), Seq("r")) ++ marcFields(
-      data,
-      Seq("506", "540")
-    ))
+  override def rights(data: Document[NodeSeq]): AtLeastOne[String] = {
+    // <datafield> tag = 974 <subfield> code = r (file harvest)
+    // <datafield> tag = 506 or 540 (fallback)
+    val from974 = (marcFields(data, Seq("974"), Seq("r")) ++ marcFields(data, Seq("506", "540")))
       .flatMap(extractStrings)
       .slice(0, 1)
       .flatMap(key => Try { rightsMapping(key) }.toOption)
       .map(_ + ". Learn more at http://www.hathitrust.org/access_use")
+
+    if (from974.nonEmpty) from974
+    else
+      // OAI harvest: derive from <setSpec> e.g. "hathitrust:pdus" → "pdus"
+      (data \\ "setSpec")
+        .map(_.text.trim)
+        .filter(s => s.startsWith("hathitrust:") && s != "hathitrust")
+        .map(_.split(":").last)
+        .flatMap(key => Try { rightsMapping(key) }.toOption)
+        .map(_ + ". Learn more at http://www.hathitrust.org/access_use")
+        .slice(0, 1)
+  }
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     // <datafield> tag = any from subjectTags <subfield> where code is a letter (not a number)
@@ -255,22 +272,40 @@ class HathiMapping extends MarcXmlMapping {
     mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
-    // <datafield> tag = 974 <subfield> code = u
-    marcFields(data, Seq("974"), Seq("u"))
+    // <datafield> tag = 974 <subfield> code = u (file harvest)
+    val from974 = marcFields(data, Seq("974"), Seq("u"))
       .flatMap(extractStrings)
-      .flatMap(
-        _.splitAtDelimiter("\\.").slice(0, 1)
-      ) // split at "." and take first value
+      .flatMap(_.splitAtDelimiter("\\.").slice(0, 1))
       .flatMap(key => Try { dataProviderMapping(key) }.toOption)
       .map(nameOnlyAgent)
+
+    if (from974.nonEmpty) from974
+    else
+      // OAI harvest: 035 field contains "sdr-{code}.{barcode}" e.g. "sdr-miu.990000000400106381"
+      // Some records omit the dot and embed the barcode directly, e.g. "sdr-miu000000075"
+      // or include uppercase barcodes, e.g. "sdr-nrlfGLAD50600249-B".
+      // Strategy: try exact code first; if no match, strip trailing barcode noise
+      // (first digit or uppercase letter onward, then any trailing dash).
+      marcFields(data, Seq("035"), Seq("a"))
+        .flatMap(extractStrings)
+        .find(_.startsWith("sdr-"))
+        .flatMap { sdr =>
+          val raw = sdr.stripPrefix("sdr-").split("\\.").head
+          Try { dataProviderMapping(raw) }.toOption.orElse {
+            val base = raw.replaceAll("[A-Z0-9].*$", "").stripSuffix("-")
+            Try { dataProviderMapping(base) }.toOption
+          }
+        }
+        .map(nameOnlyAgent)
+        .toSeq
   }
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    // <controlfield> tag = 001
-    controlfield(data, Seq("001"))
-      .flatMap(extractStrings)
+    // Reuses originalId so it works for both file and OAI harvests
+    originalId(data)
       .map(IS_SHOWN_AT_PREFIX + _)
       .map(stringOnlyWebResource)
+      .toSeq
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
@@ -390,31 +425,51 @@ class HathiMapping extends MarcXmlMapping {
     "coo" -> "Cornell University",
     "dul1" -> "Duke University",
     "gri" -> "Getty Research Institute",
+    "gu" -> "Georgetown University",
     "hvd" -> "Harvard University",
     "ien" -> "Northwestern University",
     "inu" -> "Indiana University",
     "loc" -> "Library of Congress",
     "mdl" -> "Minnesota Digital Library",
     "mdp" -> "University of Michigan",
+    "miu" -> "University of Michigan",
     "miua" -> "University of Michigan",
     "miun" -> "University of Michigan",
+    "msu" -> "Michigan State University",
     "nc01" -> "University of North Carolina",
     "ncs1" -> "North Carolina State University",
     "njp" -> "Princeton University",
+    "njr" -> "Rutgers University",
     "nnc1" -> "Columbia University",
     "nnc2" -> "Columbia University",
+    "nrlf" -> "Northern Regional Library Facility",
+    "nwu" -> "Northwestern University",
     "nyp" -> "New York Public Library",
+    "osu" -> "Ohio State University",
     "psia" -> "Penn State University",
     "pst" -> "Penn State University",
+    "pur" -> "Purdue University",
     "pur1" -> "Purdue University",
     "pur2" -> "Purdue University",
+    "txu" -> "University of Texas",
     "uc1" -> "University of California",
     "uc2" -> "University of California",
+    "ucbk" -> "University of California",
+    "ucd" -> "University of California",
+    "uci" -> "University of California",
+    "ucla" -> "University of California",
     "ucm" -> "Universidad Complutense de Madrid",
+    "ucr" -> "University of California",
+    "ucsc" -> "University of California",
+    "ucsd" -> "University of California",
     "ufl1" -> "University of Florida",
+    "ufdc" -> "University of Florida",
+    "uiowa" -> "University of Iowa",
+    "uiuc" -> "University of Illinois",
     "uiug" -> "University of Illinois",
     "uiuo" -> "University of Illinois",
     "umn" -> "University of Minnesota",
+    "unc" -> "University of North Carolina",
     "usu" -> "Utah State University Press",
     "uva" -> "University of Virginia",
     "wu" -> "University of Wisconsin",
