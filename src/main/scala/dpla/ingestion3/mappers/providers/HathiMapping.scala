@@ -282,11 +282,20 @@ class HathiMapping extends MarcXmlMapping {
     if (from974.nonEmpty) from974
     else
       // OAI harvest: 035 field contains "sdr-{code}.{barcode}" e.g. "sdr-miu.990000000400106381"
+      // Some records omit the dot and embed the barcode directly, e.g. "sdr-miu000000075"
+      // or include uppercase barcodes, e.g. "sdr-nrlfGLAD50600249-B".
+      // Strategy: try exact code first; if no match, strip trailing barcode noise
+      // (first digit or uppercase letter onward, then any trailing dash).
       marcFields(data, Seq("035"), Seq("a"))
         .flatMap(extractStrings)
         .find(_.startsWith("sdr-"))
-        .flatMap(_.stripPrefix("sdr-").split("\\.").headOption)
-        .flatMap(key => Try { dataProviderMapping(key) }.toOption)
+        .flatMap { sdr =>
+          val raw = sdr.stripPrefix("sdr-").split("\\.").head
+          Try { dataProviderMapping(raw) }.toOption.orElse {
+            val base = raw.replaceAll("[A-Z0-9].*$", "").stripSuffix("-")
+            Try { dataProviderMapping(base) }.toOption
+          }
+        }
         .map(nameOnlyAgent)
         .toSeq
   }
@@ -416,6 +425,7 @@ class HathiMapping extends MarcXmlMapping {
     "coo" -> "Cornell University",
     "dul1" -> "Duke University",
     "gri" -> "Getty Research Institute",
+    "gu" -> "Georgetown University",
     "hvd" -> "Harvard University",
     "ien" -> "Northwestern University",
     "inu" -> "Indiana University",
@@ -425,23 +435,41 @@ class HathiMapping extends MarcXmlMapping {
     "miu" -> "University of Michigan",
     "miua" -> "University of Michigan",
     "miun" -> "University of Michigan",
+    "msu" -> "Michigan State University",
     "nc01" -> "University of North Carolina",
     "ncs1" -> "North Carolina State University",
     "njp" -> "Princeton University",
+    "njr" -> "Rutgers University",
     "nnc1" -> "Columbia University",
     "nnc2" -> "Columbia University",
+    "nrlf" -> "Northern Regional Library Facility",
+    "nwu" -> "Northwestern University",
     "nyp" -> "New York Public Library",
+    "osu" -> "Ohio State University",
     "psia" -> "Penn State University",
     "pst" -> "Penn State University",
+    "pur" -> "Purdue University",
     "pur1" -> "Purdue University",
     "pur2" -> "Purdue University",
+    "txu" -> "University of Texas",
     "uc1" -> "University of California",
     "uc2" -> "University of California",
+    "ucbk" -> "University of California",
+    "ucd" -> "University of California",
+    "uci" -> "University of California",
+    "ucla" -> "University of California",
     "ucm" -> "Universidad Complutense de Madrid",
+    "ucr" -> "University of California",
+    "ucsc" -> "University of California",
+    "ucsd" -> "University of California",
     "ufl1" -> "University of Florida",
+    "ufdc" -> "University of Florida",
+    "uiowa" -> "University of Iowa",
+    "uiuc" -> "University of Illinois",
     "uiug" -> "University of Illinois",
     "uiuo" -> "University of Illinois",
     "umn" -> "University of Minnesota",
+    "unc" -> "University of North Carolina",
     "usu" -> "Utah State University Press",
     "uva" -> "University of Virginia",
     "wu" -> "University of Wisconsin",
