@@ -27,10 +27,18 @@ class HathiMapping extends MarcXmlMapping {
   override def getProviderName: Option[String] = Some("hathitrust")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
-    // <controlfield> tag = 001
+    // <controlfield> tag = 001 (file harvest); fall back to OAI <identifier> (OAI harvest)
     controlfield(data, Seq("001"))
       .flatMap(extractStrings)
       .headOption
+      .orElse {
+        // OAI identifier looks like "oai:hathitrust.org:000000040" — take the last segment
+        (data \\ "identifier")
+          .headOption
+          .map(_.text.trim)
+          .map(_.split(":").last)
+          .filter(_.nonEmpty)
+      }
 
   // SourceResource mapping
 
@@ -190,17 +198,26 @@ class HathiMapping extends MarcXmlMapping {
       .map(_.mkString(". "))
       .map(eitherStringOrUri)
 
-  override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
-    // <datafield> tag = 506 or 540
-    // <datafield> tag = 974          <subfield> code = r
-    (marcFields(data, Seq("974"), Seq("r")) ++ marcFields(
-      data,
-      Seq("506", "540")
-    ))
+  override def rights(data: Document[NodeSeq]): AtLeastOne[String] = {
+    // <datafield> tag = 974 <subfield> code = r (file harvest)
+    // <datafield> tag = 506 or 540 (fallback)
+    val from974 = (marcFields(data, Seq("974"), Seq("r")) ++ marcFields(data, Seq("506", "540")))
       .flatMap(extractStrings)
       .slice(0, 1)
       .flatMap(key => Try { rightsMapping(key) }.toOption)
       .map(_ + ". Learn more at http://www.hathitrust.org/access_use")
+
+    if (from974.nonEmpty) from974
+    else
+      // OAI harvest: derive from <setSpec> e.g. "hathitrust:pdus" → "pdus"
+      (data \\ "setSpec")
+        .map(_.text.trim)
+        .filter(s => s.startsWith("hathitrust:") && s != "hathitrust")
+        .map(_.split(":").last)
+        .flatMap(key => Try { rightsMapping(key) }.toOption)
+        .map(_ + ". Learn more at http://www.hathitrust.org/access_use")
+        .slice(0, 1)
+  }
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     // <datafield> tag = any from subjectTags <subfield> where code is a letter (not a number)
@@ -266,11 +283,11 @@ class HathiMapping extends MarcXmlMapping {
   }
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    // <controlfield> tag = 001
-    controlfield(data, Seq("001"))
-      .flatMap(extractStrings)
+    // Reuses originalId so it works for both file and OAI harvests
+    originalId(data)
       .map(IS_SHOWN_AT_PREFIX + _)
       .map(stringOnlyWebResource)
+      .toSeq
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
