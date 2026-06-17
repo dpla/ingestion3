@@ -9,7 +9,7 @@ Orchestrates the NARA monthly delta ingest:
 Prerequisites:
   - copy_nara.py must have already run for this month:
       • ZIPs copied to s3://dpla-hub-nara/raw_ingest_files/<YYYYMM>/
-      • ZIPs staged at ~/dpla/data/nara/originalRecords/<YYYYMM>/ on EC2
+      • ZIPs staged at ~/data/nara/originalRecords/<YYYYMM>/ on EC2
   - AWS CLI authenticated locally with SSM access
 
 Usage:
@@ -19,6 +19,17 @@ Usage:
     python3 nara/launch_nara.py --skip-to-pipeline --harvest /path/to/harvest.avro
     python3 nara/launch_nara.py --resume --month 202605            # re-attach to existing log
     python3 nara/launch_nara.py --resume --log /home/ec2-user/nara-ingest-202605.log
+
+Zero-delete gate:
+    After the merge, nara-ingest.sh checks whether any records were actually
+    deleted. If 0 valid deletes are found, it halts (non-interactively) and sends
+    a Slack notification. This script detects that halt and prompts you here:
+
+        Y = I've verified 0 deletes is expected — continue to pipeline
+        N = Abort so I can investigate before re-running
+
+    To bypass the gate upfront (if you already know this delivery has no deletes):
+        python3 nara/launch_nara.py --month 202605 --skip-delete-check
 """
 
 import argparse
@@ -193,10 +204,14 @@ def launch_ingest(month, log_path, extra_args=""):
     return pid
 
 
-def launch_skip_to_pipeline(harvest_path, log_path):
+def launch_skip_to_pipeline(harvest_path, log_path, skip_delete_check=False):
     step(2, "Launch nara-ingest.sh --skip-to-pipeline on EC2")
-    arg = f"--harvest={harvest_path}" if harvest_path else ""
-    cmd = f"bash {NARA_SCRIPT} --skip-to-pipeline {arg}".strip()
+    flags = ["--skip-to-pipeline"]
+    if harvest_path:
+        flags.append(f"--harvest={harvest_path}")
+    if skip_delete_check:
+        flags.append("--skip-delete-check")
+    cmd = f"bash {NARA_SCRIPT} {' '.join(flags)}"
     info(f"Command: {cmd}")
     info(f"Log:     {log_path}")
     print()
@@ -206,6 +221,65 @@ def launch_skip_to_pipeline(harvest_path, log_path):
     pid = ssm_bg(cmd, log_path)
     ok(f"Launched. PID: {pid}")
     return pid
+
+
+# ---------- Zero-delete gate ----------
+
+def extract_harvest_from_log(log_path):
+    """Pull the merged harvest path from the log's gate-halt message."""
+    try:
+        out = ssm_run(
+            f"grep -oE -- '--harvest=[^ ]+' {log_path} | tail -1 || true",
+            timeout_seconds=30,
+        ).strip()
+        if out.startswith("--harvest="):
+            return out[len("--harvest="):]
+    except Exception:
+        pass
+    # Fallback: scan for any OriginalRecord.avro path in the log
+    try:
+        out = ssm_run(
+            f"grep -oE '/[^ ]+OriginalRecord\\.avro' {log_path} | tail -1 || true",
+            timeout_seconds=30,
+        ).strip()
+        return out or None
+    except Exception:
+        return None
+
+
+def handle_delete_gate_halt(log_path):
+    """Called when tail_log detects the script halted at the zero-delete gate.
+
+    Shows a summary, prompts the operator to continue or abort, and if they
+    confirm, relaunches with --skip-to-pipeline --skip-delete-check.
+    """
+    print()
+    warn("=" * 66)
+    warn("  ZERO-DELETE GATE — nara-ingest.sh halted after merge")
+    warn("=" * 66)
+    print()
+    warn("The merge completed but 0 records were actually deleted.")
+    warn("A Slack notification was sent. Review before continuing:")
+    print()
+    info("  • Was a delete file (NAC_DESC_Deletes_*.xml) present in the delivery?")
+    info("  • Check: cat <merged-harvest>/_LOGS/_SUMMARY.txt")
+    info("  • If no deletes are expected for this delivery, continue.")
+    print()
+
+    harvest_path = extract_harvest_from_log(log_path)
+    if harvest_path:
+        info(f"  Merged harvest: {harvest_path}")
+    else:
+        warn("  Could not detect merged harvest path from log — you'll need to set --harvest manually.")
+
+    print()
+    confirm("Continue to pipeline despite 0 deletes? (confirm you've verified this)", default_yes=False)
+
+    # Relaunch as a new background job
+    label    = datetime.now().strftime("%Y%m%d-%H%M%S")
+    new_log  = f"{LOG_DIR}/nara-ingest-resume-{label}.log"
+    pid      = launch_skip_to_pipeline(harvest_path, new_log, skip_delete_check=True)
+    tail_log(pid, new_log)
 
 
 # ---------- Step 3: tail log ----------
@@ -239,7 +313,9 @@ def tail_log(pid, log_path):
 
             if alive in ("dead", ""):
                 print()
-                print(ssm_run(f"tail -40 {log_path}", timeout_seconds=30).strip())
+                log_tail = ssm_run(f"tail -40 {log_path}", timeout_seconds=30).strip()
+                print(log_tail)
+
                 # Read sidecar exit code written by ssm_bg wrapper
                 exit_file  = f"{log_path}.exitcode"
                 exit_raw   = ssm_run(
@@ -253,9 +329,15 @@ def tail_log(pid, log_path):
                     exit_code = int(exit_raw)
                 except ValueError:
                     exit_code = 1
+
                 if exit_code != 0:
+                    # Check if this was a zero-delete gate halt before raising
+                    if "zero-delete gate" in log_tail.lower():
+                        handle_delete_gate_halt(log_path)
+                        return
                     bad(f"NARA ingest FAILED (exit {exit_code}). See log: {log_path}")
                     raise RuntimeError(f"nara-ingest.sh exited {exit_code}")
+
                 ok(f"Process exited cleanly (exit 0).")
                 return
 
@@ -302,6 +384,8 @@ def main():
                         help="Explicit base harvest avro path")
     parser.add_argument("--force-sync",       action="store_true",
                         help="Force fresh S3 download of base harvest on EC2")
+    parser.add_argument("--skip-delete-check", action="store_true",
+                        help="Bypass the zero-delete gate (use when 0 deletes is expected)")
     parser.add_argument("--resume",           action="store_true",
                         help="Re-attach to an existing running ingest log")
     parser.add_argument("--log",
@@ -326,7 +410,10 @@ def main():
     if args.skip_to_pipeline:
         label    = args.month or datetime.now().strftime("%Y%m%d-%H%M%S")
         log_path = f"{LOG_DIR}/nara-ingest-{label}.log"
-        pid      = launch_skip_to_pipeline(args.harvest, log_path)
+        pid      = launch_skip_to_pipeline(
+            args.harvest, log_path,
+            skip_delete_check=args.skip_delete_check,
+        )
         tail_log(pid, log_path)
         return
 
@@ -356,6 +443,8 @@ def main():
         extra.append(f"--base={args.base}")
     if args.force_sync:
         extra.append("--force-sync")
+    if args.skip_delete_check:
+        extra.append("--skip-delete-check")
 
     pid = launch_ingest(month, log_path, extra_args=" ".join(extra))
 

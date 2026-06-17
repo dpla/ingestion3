@@ -108,14 +108,33 @@ Options:
                     Override output datestamp (default: today).
                     Used for the final merged harvest directory name.
 
+  --s3-source=<s3://...>
+                    S3 prefix to sync from NARA's bucket before preprocessing.
+                    Uses the [nara] AWS profile. Files are downloaded to
+                    ~/dpla/data/nara/originalRecords/YYYYMM/ before the normal
+                    preprocess step runs.
+                    Example: --s3-source=s3://ngc-storage01/dpla-bimonthly-report/2026/M04/
+
   --skip-preprocess Skip preprocessing (use existing delta/ directory)
   --skip-pipeline   Stop after merge (don't run mapping/enrichment/jsonl)
   --skip-to-pipeline
                     Skip directly to pipeline using existing merged harvest
   --harvest=<path>  Specify harvest path for --skip-to-pipeline
 
+  --skip-delete-check
+                    Bypass the zero-delete gate (see below). Use this when
+                    you've confirmed that 0 deletes is expected for this delivery.
+
   --dry-run         Show what would be done without executing
   --help            Show this help message
+
+Zero-Delete Gate:
+  After each merge, the script checks whether any records were actually deleted.
+  If the merge reports 0 valid deletes and delete files were present, the script
+  sends a Slack warning and pauses:
+    - Interactive (TTY): prompts to confirm or halt (30s timeout → halt)
+    - Non-interactive (EC2/cron): halts immediately with resume instructions
+  To resume after a halt: re-run with --skip-to-pipeline --harvest=<path> --skip-delete-check
 
 Environment Variables:
   HARVEST_SBT_OPTS       sbt launcher JVM opts for harvest step  (default: -Xmx12g)
@@ -141,6 +160,12 @@ Examples:
 
   # Use a specific base instead of S3
   ./nara-ingest.sh --month=202601 --base=~/dpla/data/nara/harvest/202512_000000-nara-OriginalRecord.avro
+
+  # Download April 2026 delivery from NARA's S3, then run full ingest
+  ./nara-ingest.sh --month=202604 --s3-source=s3://ngc-storage01/dpla-bimonthly-report/2026/M04/
+
+  # Skip the zero-delete gate (confirmed no deletes in this delivery)
+  ./nara-ingest.sh --month=202604 --skip-delete-check
 USAGE
     exit 1
 }
@@ -301,11 +326,36 @@ sync_outputs_to_s3() {
 }
 
 # ============================================================================
+# NARA S3 Source Sync
+#
+# Downloads a delivery from NARA's bucket (ngc-storage01) to the local
+# originalRecords directory using the [nara] AWS profile.
+# ============================================================================
+
+sync_from_nara_s3() {
+    local s3_prefix="$1"
+    local month="$2"
+    local dest="$NARA_ORIGINALS/$month"
+
+    print_step "Syncing NARA delivery from $s3_prefix ..."
+    mkdir -p "$dest"
+
+    aws s3 sync "$s3_prefix" "$dest/" --profile nara
+
+    local file_count
+    file_count=$(find "$dest" -type f | wc -l | tr -d ' ')
+    print_success "Downloaded $file_count file(s) to $dest"
+    slack_notify ":arrow_down: *nara S3 source sync complete* — $file_count file(s) from \`$s3_prefix\`"
+}
+
+# ============================================================================
 # Preprocessing
 #
 # NARA delivers ZIPs organized by export group (e.g., 17.115_DESC_0001.zip).
 # Each export group may have multiple ZIPs that need to be combined into a
-# single tar.gz. Delete files (*NaidsList.xml) are separated out.
+# single tar.gz. Real delete files (NAC_DESC_Deletes_*.xml) are separated out.
+# NaidsList files (DATE_GROUP_NaidsList.xml) are export group rosters — not
+# delete lists — and are discarded.
 # ============================================================================
 
 preprocess_month() {
@@ -322,14 +372,16 @@ preprocess_month() {
 
     mkdir -p "$dest_dir/deletes"
 
-    # Step 1: Move delete files (NaidsList.xml) to deletes/
+    # Step 1: Copy real delete files (NAC_DESC_Deletes_*.xml) to deletes/.
+    # NaidsList files are export-group rosters used for reconciliation, not
+    # delete lists — they are intentionally ignored here.
     local delete_count=0
-    for f in "$src_dir"/*_NaidsList.xml "$src_dir"/*NaidsList*.xml; do
+    for f in "$src_dir"/NAC_DESC_Deletes_*.xml; do
         [ -f "$f" ] || continue
         cp "$f" "$dest_dir/deletes/"
         ((delete_count++)) || true
     done
-    print_info "Copied $delete_count delete file(s) to $dest_dir/deletes/"
+    print_info "Copied $delete_count top-level delete file(s) to $dest_dir/deletes/"
 
     # Step 2: Identify unique export groups from ZIP filenames
     # Naming pattern: DATE_EXPORTGROUP_DESC_SEQNUM.zip
@@ -374,7 +426,14 @@ preprocess_month() {
             continue
         fi
 
-        # Remove any delete files that ended up in the work dir
+        # Extract any delete files that came out of the ZIPs into deletes/,
+        # then remove both delete and NaidsList files so they are not bundled
+        # into the data tar.gz.
+        find "$work_dir" -name "NAC_DESC_Deletes_*.xml" | while IFS= read -r f; do
+            cp "$f" "$dest_dir/deletes/"
+            ((delete_count++)) || true
+        done
+        find "$work_dir" -name "NAC_DESC_Deletes_*.xml" -delete 2>/dev/null || true
         find "$work_dir" -name "*NaidsList*" -delete 2>/dev/null || true
 
         # Count XML data files
@@ -404,6 +463,18 @@ preprocess_month() {
     if [ "$tgz_count" -eq 0 ]; then
         print_error "No tar.gz archives created. Check ZIP file naming patterns."
         exit 1
+    fi
+
+    # Sanity check: report delete file count. Zero is not an error (some deliveries
+    # genuinely contain no deletes) but is worth logging prominently so it doesn't
+    # silently go unnoticed.
+    local actual_deletes
+    actual_deletes=$(find "$dest_dir/deletes" -name "*.xml" -type f | wc -l | tr -d ' ')
+    if [ "$actual_deletes" -eq 0 ]; then
+        print_info "⚠️  No delete files found for $month — verify this is expected for this delivery"
+        slack_notify_resilient ":warning: *nara preprocess $month* — 0 delete files found (expected for some deliveries; verify)"
+    else
+        print_info "Delete files: $actual_deletes file(s) in $dest_dir/deletes/"
     fi
 }
 
@@ -504,6 +575,100 @@ run_merge() {
         slack_notify ":white_check_mark: *nara merge complete* — \`$(basename "$MERGED_HARVEST")\`"
     else
         slack_notify ":white_check_mark: *nara merge complete* — \`$(basename "$MERGED_HARVEST")\` — starting pipeline"
+    fi
+}
+
+# ============================================================================
+# Zero-Delete Gate
+#
+# After a merge, checks whether any records were actually deleted. If the
+# merge reports 0 valid deletes and delete files were present in the deletes/
+# dir, this is suspicious (could be a naming-pattern bug or a bad delivery).
+#
+# Behavior:
+#   - Interactive (TTY attached): prompts operator to confirm or halt.
+#     30-second timeout defaults to halt for safety.
+#   - Non-interactive (EC2/cron/no-TTY): halts with Slack notice and
+#     instructions to resume via --skip-to-pipeline --skip-delete-check.
+#   - --skip-delete-check flag: bypasses gate entirely (use when you've
+#     confirmed that 0 deletes is expected for this specific delivery).
+# ============================================================================
+
+check_delete_gate() {
+    local month="$1"
+    local merged_harvest="$2"
+
+    if [ "${SKIP_DELETE_CHECK:-false}" = true ]; then
+        print_info "Zero-delete gate bypassed (--skip-delete-check)"
+        return 0
+    fi
+
+    local summary_file="$merged_harvest/_LOGS/_SUMMARY.txt"
+    if [ ! -f "$summary_file" ]; then
+        print_info "No _SUMMARY.txt found — skipping delete gate check"
+        return 0
+    fi
+
+    # Parse valid delete count from the "Delete: N in file, M valid, K invalid" line
+    local valid_deletes
+    valid_deletes=$(grep -iE "^[[:space:]]*Delete:" "$summary_file" \
+        | grep -oE '[0-9]+ valid' | grep -oE '^[0-9]+' || true)
+    valid_deletes="${valid_deletes:-0}"
+
+    if [ "$valid_deletes" -gt 0 ]; then
+        print_info "Delete gate: $valid_deletes record(s) deleted — OK"
+        return 0
+    fi
+
+    # 0 valid deletes — check whether delete files were actually present
+    local delta_dir="$NARA_DATA/delta/$month"
+    local delete_file_count
+    delete_file_count=$(find "$delta_dir/deletes" -name "*.xml" -type f 2>/dev/null \
+        | wc -l | tr -d ' ')
+
+    local context_msg
+    local severity=":warning:"
+    if [ "$delete_file_count" -gt 0 ]; then
+        context_msg="${delete_file_count} delete file(s) were in \`$delta_dir/deletes/\` but *0 records were actually deleted*. This may indicate a file naming mismatch — check that delete files are named \`NAC_DESC_Deletes_*.xml\` and not \`*NaidsList*.xml\`."
+        severity=":rotating_light:"
+    else
+        context_msg="No delete files were found during preprocessing. 0 deletes may be expected for this delivery — verify with NARA."
+    fi
+
+    print_info ""
+    print_info "⚠️  Zero-delete gate triggered for $month"
+    print_info "   $context_msg"
+    print_info "   Summary: $summary_file"
+    print_info ""
+
+    slack_notify "${severity} *nara merge: 0 valid deletes* (\`$month\`)\n${context_msg}\nSummary: \`$(basename "$merged_harvest")/_LOGS/_SUMMARY.txt\`"
+
+    local resume_cmd="./nara-ingest.sh --skip-to-pipeline --harvest=$merged_harvest --skip-delete-check"
+
+    if [ -t 0 ]; then
+        # Interactive — give operator a chance to confirm or halt
+        echo ""
+        print_info "Continue to pipeline despite 0 deletes? [y/N]  (30s timeout → halt)"
+        local answer=""
+        if read -r -t 30 answer 2>/dev/null && [[ "$answer" =~ ^[Yy]$ ]]; then
+            print_info "Continuing to pipeline (manual confirmation)"
+            slack_notify ":arrow_forward: *nara: continuing pipeline* despite 0 deletes — operator confirmed"
+            return 0
+        else
+            print_error "Halted at zero-delete gate."
+            print_error "To resume:  $resume_cmd"
+            slack_notify ":x: *nara ingest halted* — 0 deletes not confirmed by operator.\nTo resume: \`$resume_cmd\`"
+            TRAP_HANDLED=true
+            exit 1
+        fi
+    else
+        # Non-interactive (EC2, cron, tmux without stdin) — halt and explain
+        print_error "Non-interactive mode: halting at zero-delete gate."
+        print_error "Confirm the delivery has no deletes, then resume with:"
+        print_error "  $resume_cmd"
+        slack_notify ":x: *nara ingest halted* (non-interactive) — 0 deletes not confirmed.\nTo resume after verifying: \`$resume_cmd\`"
+        TRAP_HANDLED=true
+        exit 1
     fi
 }
 
@@ -666,6 +831,8 @@ main() {
     SKIP_PIPELINE=false
     SKIP_TO_PIPELINE=false
     EXPLICIT_HARVEST=""
+    S3_SOURCE=""
+    SKIP_DELETE_CHECK=false
     DRY_RUN=false
 
     while [[ $# -gt 0 ]]; do
@@ -686,6 +853,10 @@ main() {
                 OUTPUT_DATESTAMP="${1#*=}"
                 shift
                 ;;
+            --s3-source=*)
+                S3_SOURCE="${1#*=}"
+                shift
+                ;;
             --skip-preprocess)
                 SKIP_PREPROCESS=true
                 shift
@@ -700,6 +871,10 @@ main() {
                 ;;
             --harvest=*)
                 EXPLICIT_HARVEST="${1#*=}"
+                shift
+                ;;
+            --skip-delete-check)
+                SKIP_DELETE_CHECK=true
                 shift
                 ;;
             --dry-run)
@@ -749,6 +924,15 @@ main() {
 
         print_info "Resuming pipeline with: $MERGED_HARVEST"
         slack_notify ":arrow_forward: *nara ingest resuming* — pipeline from \`$(basename "$MERGED_HARVEST")\`"
+
+        # Infer the month from the harvest path for the delete gate check.
+        # The deletes/ dir may not exist if this is a cross-session resume, so
+        # check_delete_gate handles a missing directory gracefully (count = 0 →
+        # "no delete files" branch). Pass a synthesized month from the datestamp.
+        local _resume_month
+        _resume_month=$(basename "$MERGED_HARVEST" | grep -oE '^[0-9]{6}' || echo "unknown")
+        check_delete_gate "$_resume_month" "$MERGED_HARVEST"
+
         run_pipeline
         run_post_pipeline
 
@@ -828,7 +1012,14 @@ main() {
             merge_datestamp="$month"
         fi
 
-        # 2a. Preprocess
+        # 2a. (Optional) Download delivery from NARA's S3 bucket.
+        # Always run sync even when files already exist — aws s3 sync is
+        # idempotent and will resume any partial or interrupted download.
+        if [ -n "$S3_SOURCE" ]; then
+            sync_from_nara_s3 "$S3_SOURCE" "$month"
+        fi
+
+        # 2b. Preprocess
         if [ "$SKIP_PREPROCESS" != true ]; then
             # Check if already preprocessed (tar.gz files exist)
             local existing_tgz
@@ -842,7 +1033,7 @@ main() {
             print_info "Skipping preprocessing (--skip-preprocess)"
         fi
 
-        # 2b. Delta Harvest
+        # 2c. Delta Harvest
         # Check if already harvested
         local existing_harvest
         existing_harvest=$(find "$NARA_DATA/delta/$month/harvest" -type d -name "*-nara-OriginalRecord.avro" 2>/dev/null | sort | tail -1)
@@ -853,7 +1044,7 @@ main() {
             run_delta_harvest "$month"
         fi
 
-        # 2c. Merge
+        # 2d. Merge
         # Check if already merged
         local existing_merge="$NARA_HARVEST/${merge_datestamp}_000000-nara-OriginalRecord.avro"
         if [ -d "$existing_merge" ] && [ -f "$existing_merge/_LOGS/_SUMMARY.txt" ]; then
@@ -862,6 +1053,11 @@ main() {
         else
             run_merge "$month" "$merge_datestamp"
         fi
+
+        # Gate: warn + pause if 0 records were actually deleted
+        # (Only meaningful before the pipeline runs — skip for intermediate months
+        # where --skip-pipeline was not set but we still want to gate the final run)
+        check_delete_gate "$month" "$MERGED_HARVEST"
 
         # Use this month's merged output as the base for the next month
         BASE_HARVEST="$MERGED_HARVEST"

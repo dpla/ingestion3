@@ -10,7 +10,7 @@ to ngc-storage01. EC2's default IAM role has write access to dpla-hub-nara.
 A direct cross-account sync isn't possible with a single credential set, so we:
   1. Download ZIPs from ngc-storage01 → /tmp/nara-<YYYYMM>/ on EC2 (using nara profile)
   2. Upload ZIPs from EC2 → s3://dpla-hub-nara/raw_ingest_files/<YYYYMM>/ (using EC2 role)
-  3. Move ZIPs from /tmp/nara-<YYYYMM>/ → ~/dpla/data/nara/originalRecords/<YYYYMM>/
+  3. Move ZIPs from /tmp/nara-<YYYYMM>/ → ~/data/nara/originalRecords/<YYYYMM>/
      (ready for nara-ingest.sh — no second download needed)
 
 After this script completes, run:

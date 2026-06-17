@@ -44,6 +44,9 @@ The `scripts/harvest/nara-ingest.sh` script automates the entire workflow:
 # Stop after merge (no mapping/enrichment/jsonl)
 ./scripts/harvest/nara-ingest.sh --month=202601 --skip-pipeline
 
+# Download the month's originalRecords from NARA's S3 bucket before preprocessing
+./scripts/harvest/nara-ingest.sh --month=202601 --s3-source=s3://nara-deliveries/2026/01/
+
 # Use a specific base harvest
 ./scripts/harvest/nara-ingest.sh --month=202601 --base=~/dpla/data/nara/harvest/20250429_000000-nara-OriginalRecord.avro
 
@@ -127,18 +130,24 @@ export JAVA_HOME=/Users/$USER/Library/Java/JavaVirtualMachines/openjdk-19.0.2/Co
 NARA delivers quarterly delta exports as sets of ZIP files organized by **export group**
 (a numeric code like `17.115`, `09.113`, etc.). Each month's delivery may contain:
 
-- **Multiple export groups**, each with one or more ZIP files
+- **Data ZIPs** — one or more ZIPs per export group, each containing XML record files
   - `2026-02-07_17.115_DESC_0001.zip` through `..._0010.zip`
-- **Delete files** (XML) listing NARA IDs to remove
+- **Delete XMLs** — files listing NARA IDs to be removed from the dataset
+  - `NAC_DESC_Deletes_001.xml`, `NAC_DESC_Deletes_002.xml`, etc.
+  - These may be at the top level of the delivery or inside a ZIP
+- **NaidsList roster XMLs** — files listing all NAIDs in an export group
   - `2026-02-07_14.041_DESC_NaidsList.xml`
+  - ⚠️ **These are NOT delete files.** They are membership rosters for each export group and
+    should be discarded during preprocessing. Do not place them in the `deletes/` directory.
 
-The ZIPs are located at: `~/dpla/data/nara/originalRecords/YYYYMM/`
+The ZIPs and loose XML files are located at: `~/dpla/data/nara/originalRecords/YYYYMM/`
 
 ### Naming Convention
 
 ```
-DATE_EXPORTGROUP_DESC_SEQNUM.zip     # data ZIP
-DATE_EXPORTGROUP_DESC_NaidsList.xml  # deletes file
+DATE_EXPORTGROUP_DESC_SEQNUM.zip      # data ZIP (unzip and repackage as tar.gz)
+NAC_DESC_Deletes_NNN.xml              # delete file (copy to deletes/)
+DATE_EXPORTGROUP_DESC_NaidsList.xml   # roster file (discard — NOT a delete file)
 ```
 
 ---
@@ -173,9 +182,22 @@ rm -rf $DEST/work
 **Move delete files separately:**
 
 ```bash
-# Copy delete XMLs (NaidsList files) to the deletes directory
-cp $SRC/*_DESC_NaidsList.xml $DEST/deletes/
+# Copy actual delete XMLs (NAC_DESC_Deletes_*.xml) to the deletes directory
+# These may be at the top level or inside ZIPs — check both locations
+cp $SRC/NAC_DESC_Deletes_*.xml $DEST/deletes/ 2>/dev/null || true
+
+# IMPORTANT: Do NOT copy NaidsList files to deletes/
+# NaidsList files (DATE_EXPORTGROUP_DESC_NaidsList.xml) are roster files — they
+# list all NAIDs in an export group and are NOT instructions to delete records.
+# Discard them:
+rm -f $SRC/*_DESC_NaidsList.xml
 ```
+
+> **Tip**: After preprocessing, verify that at least one delete file was found:
+> ```bash
+> find $DEST/deletes -name "*.xml" | wc -l
+> ```
+> A count of 0 is unusual and should be confirmed with NARA before proceeding.
 
 **Result structure:**
 
@@ -186,14 +208,15 @@ cp $SRC/*_DESC_NaidsList.xml $DEST/deletes/
   17.115_nara_delta.tar.gz
   ...
   deletes/
-    2026-02-07_14.041_DESC_NaidsList.xml
-    2026-02-08_09.019_DESC_NaidsList.xml
+    NAC_DESC_Deletes_001.xml    # actual delete files only
+    NAC_DESC_Deletes_002.xml
     ...
 ```
 
 > **Important**: The harvester reads ALL `.tar.gz` files in the delta directory.
 > Each tar.gz should contain only the XML data files for its export group.
-> Delete XML files must be in the `deletes/` subdirectory, not alongside the tar.gz files.
+> Delete XML files (`NAC_DESC_Deletes_*.xml`) must be in the `deletes/` subdirectory.
+> NaidsList roster files must NOT be placed in `deletes/`.
 
 ### Step 2: Sync Base Harvest from S3
 
@@ -262,7 +285,7 @@ sbt -java-home "$JAVA_HOME" \
 
 1. Path to base harvest (Avro directory)
 2. Path to delta harvest (Avro directory)
-3. Path to deletes directory (folder with `*NaidsList.xml` files)
+3. Path to deletes directory (folder with `NAC_DESC_Deletes_*.xml` files)
 4. Path for merged output (will be created)
 5. Spark master (`local[1]` recommended - see Performance section)
 
@@ -345,7 +368,7 @@ sbt ... "runMain ...HarvestEntry --output=~/dpla/data/nara/delta/202512/harvest 
 sbt ... "runMain ...NaraMergeUtil \
   ~/dpla/data/nara/harvest/20250429_000000-nara-OriginalRecord.avro \
   ~/dpla/data/nara/delta/202512/harvest/.../DELTA.avro \
-  ~/dpla/data/nara/delta/202512/deletes/ \
+  ~/dpla/data/nara/delta/202512/deletes/ \     # must contain NAC_DESC_Deletes_*.xml
   ~/dpla/data/nara/harvest/202512_000000-nara-OriginalRecord.avro \
   local[1]"
 
@@ -382,27 +405,52 @@ After each merge, check `_LOGS/_SUMMARY.txt` for:
 - **New + Update == Delta unique**: All delta records classified correctly
 - **Delete valid vs invalid**: Invalid deletes are IDs in the delete file not found in the dataset
 
+```bash
+cat ~/dpla/data/nara/harvest/OUTPUT/_LOGS/_SUMMARY.txt
+```
+
 ### Example Summary (Jan 2026)
 
 ```
  Base:   18,696,139 records (0 duplicates)
  Delta:  298,459 records (1,315 duplicates) -> 297,144 unique
  Merged: 18,789,995 = 18,696,139 + 93,856 new
-         203,288 updates, 93,856 inserts
- Delete: 2 in file, 0 valid, 2 invalid
+         203,288 updates, 5 deletes
+ Delete: 5 in file, 5 valid, 0 invalid
  Final:  18,789,995
 ```
 
-### Operations CSV
+> **If Delete count is 0:** Check that the `NAC_DESC_Deletes_*.xml` files were correctly
+> identified and placed in the `deletes/` directory during preprocessing. A zero delete
+> count when delete files are present indicates the preprocessing glob is wrong.
 
-The merge also writes a CSV of every operation at `_LOGS/ops/`:
+### Operations CSV (Ops Log Review)
+
+The merge writes a detailed CSV of every operation at `_LOGS/ops/`. Review this after
+every merge to confirm the pipeline processed what was expected:
+
+```bash
+# Quick summary of operations by type
+awk -F',' 'NR>1 {counts[$2]++} END {for (op in counts) print counts[op], op}' \
+  ~/dpla/data/nara/harvest/OUTPUT/_LOGS/ops/part-*.csv | sort -rn
+```
+
+Expected operations after a healthy merge:
+- `insert` — new NAIDs not previously in the dataset
+- `update` — NAIDs in both base and delta (delta version wins)
+- `delete` — NAIDs found in both the base and the delete files (removed)
+- `invalid delete` — NAIDs in the delete file but not in the base (logged, no action)
 
 ```csv
 id,operation
 580001954,insert
 17426465,update
+9991234,delete
 1311955,invalid delete
 ```
+
+If you see **only** `invalid delete` and no `delete` operations despite having delete files,
+the delete XMLs were not processed correctly — re-check preprocessing.
 
 ### Pipeline Validation
 
@@ -537,7 +585,7 @@ du -sh /private/var/folders/*/T/blockmgr-* 2>/dev/null
       10.018_nara_delta.tar.gz        # one tar.gz per export group
       21.018_nara_delta.tar.gz
       deletes/                        # delete XMLs
-        2025-11-29_10.008_DESC_NaidsList.xml
+        NAC_DESC_Deletes_001.xml
       harvest/                        # delta harvest output
         nara/harvest/
           20260209_HHMMSS-nara-OriginalRecord.avro
@@ -547,7 +595,8 @@ du -sh /private/var/folders/*/T/blockmgr-* 2>/dev/null
       17.115_nara_delta.tar.gz
       ...
       deletes/
-        2026-02-07_14.041_DESC_NaidsList.xml
+        NAC_DESC_Deletes_001.xml
+        NAC_DESC_Deletes_002.xml
         ...
       harvest/
         nara/harvest/
@@ -576,11 +625,18 @@ du -sh /private/var/folders/*/T/blockmgr-* 2>/dev/null
 
 ## History
 
-| Date | Base | Delta | New | Updates | Deletes | Final |
-|------|------|-------|-----|---------|---------|-------|
-| 2025-04-29 | -- | -- | -- | -- | -- | 18,687,707 |
-| 2025-12 | 18,687,707 | 9,247 | 8,432 | 815 | 0 | 18,696,139 |
-| 2026-01 | 18,696,139 | 298,459 (297,144 unique) | 93,856 | 203,288 | 0 | 18,789,995 |
+| Date | Base | Delta | New | Updates | Deletes | Final | Notes |
+|------|------|-------|-----|---------|---------|-------|-------|
+| 2025-04-29 | -- | -- | -- | -- | -- | 18,687,707 | |
+| 2025-12 | 18,687,707 | 9,247 | 8,432 | 815 | 0 ⚠️ | 18,696,139 | Delete bug: NaidsList used instead of NAC_DESC_Deletes files |
+| 2026-01 | 18,696,139 | 298,459 (297,144 unique) | 93,856 | 203,288 | 0 ⚠️ | 18,789,995 | Delete bug: NaidsList used instead of NAC_DESC_Deletes files |
+
+> ⚠️ **Delete bug (fixed June 2026)**: Prior to the nara-ingest.sh fix in June 2026, the
+> preprocessing step copied `*NaidsList.xml` files to the `deletes/` directory instead of
+> the correct `NAC_DESC_Deletes_*.xml` files. NaidsList files use `<Naid>` tags while the
+> merge looks for `<naId>` tags, so no deletes were ever executed — they all appeared as
+> "invalid." Any records NARA instructed us to delete between April 2025 and June 2026 may
+> still be in the dataset. Retroactive reprocessing is a decision for the team.
 
 ---
 
