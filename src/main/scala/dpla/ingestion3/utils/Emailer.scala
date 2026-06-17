@@ -64,12 +64,19 @@ object Emailer {
       if (idx >= 0 && idx + 1 < argList.length) Some(argList(idx + 1)) else None
     }
 
-    // Strip the flag and its value to get clean positional args
+    // Pull out --email-override <address>
+    val emailOverride: Option[String] = {
+      val idx = argList.indexOf("--email-override")
+      if (idx >= 0 && idx + 1 < argList.length) Some(argList(idx + 1)) else None
+    }
+
+    // Strip named flags and their values to get clean positional args
+    val namedFlags = Set("--merge-summary", "--email-override")
     val positionalArgs: List[String] = {
       var skipNext = false
       argList.filter { a =>
         if (skipNext) { skipNext = false; false }
-        else if (a == "--merge-summary") { skipNext = true; false }
+        else if (namedFlags.contains(a)) { skipNext = true; false }
         else true
       }
     }
@@ -98,8 +105,12 @@ object Emailer {
 
     val subject = s"DPLA Ingest Summary for $providerName - $currentMonth"
 
+    emailOverride.foreach(addr =>
+      println(s"⚠️  EMAIL OVERRIDE ACTIVE — sending to $addr instead of configured contacts")
+    )
+
     // Send email
-    emailSummaryWithSubject(mappingDir, subject, conf, mergeSummaryPath)
+    emailSummaryWithSubject(mappingDir, subject, conf, mergeSummaryPath, emailOverride)
   }
 
   /**
@@ -131,9 +142,10 @@ object Emailer {
       mapOutput: String,
       subject: String,
       i3conf: i3Conf,
-      mergeSummaryPath: Option[String] = None
+      mergeSummaryPath: Option[String] = None,
+      emailOverride: Option[String] = None
   ): Unit = {
-    val rawEmails = i3conf.email.getOrElse("tech@dp.la")
+    val rawEmails = emailOverride.getOrElse(i3conf.email.getOrElse("tech@dp.la"))
     val emails = normalizeEmails(rawEmails)
 
     // Debug output

@@ -5,14 +5,18 @@
 #   ./scripts/send-ingest-email.sh <hub-name>
 #   ./scripts/send-ingest-email.sh <hub-name> <mapping-dir>
 #   ./scripts/send-ingest-email.sh --yes <hub-name>
+#   ./scripts/send-ingest-email.sh --email-override test@example.com <hub-name>
 #
 # Options:
-#   --yes, -y    Skip confirmation prompt and send immediately
+#   --yes, -y                   Skip confirmation prompt and send immediately
+#   --email-override <address>  Send to this address instead of the hub's configured
+#                               contacts. Useful for testing before sending to the
+#                               real hub. (e.g. --email-override ingest@dp.la)
 #
 # This script:
 #   1. Finds the most recent mapping output for the hub
 #   2. Reads the _SUMMARY file
-#   3. Sends an email to the hub's configured contacts
+#   3. Sends an email to the hub's configured contacts (or override address)
 
 set -euo pipefail
 
@@ -26,11 +30,16 @@ setup_java "4g" || die "Failed to setup Java environment"
 
 # Parse options
 SKIP_CONFIRM=false
+EMAIL_OVERRIDE=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --yes|-y)
             SKIP_CONFIRM=true
             shift
+            ;;
+        --email-override)
+            EMAIL_OVERRIDE="$2"
+            shift 2
             ;;
         -*)
             echo "Unknown option: $1"
@@ -43,14 +52,16 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ $# -lt 1 ]]; then
-    echo "Usage: $0 [--yes] <hub-name> [mapping-dir]"
+    echo "Usage: $0 [--yes] [--email-override <address>] <hub-name> [mapping-dir]"
     echo ""
     echo "Options:"
-    echo "  --yes, -y    Skip confirmation prompt and send immediately"
+    echo "  --yes, -y                   Skip confirmation prompt"
+    echo "  --email-override <address>  Override recipient (for testing)"
     echo ""
     echo "Examples:"
     echo "  $0 maryland"
     echo "  $0 --yes nara"
+    echo "  $0 --email-override ingest@dp.la --yes nara   # test run"
     echo "  $0 maryland /Users/scott/dpla/data/maryland/mapping/20260201_120000-maryland-MAP.avro"
     exit 1
 fi
@@ -63,10 +74,16 @@ MERGE_SUMMARY_PATH=""
 PROVIDER_NAME=$(get_provider_name "$HUB")
 EMAIL=$(get_hub_email "$HUB")
 
-if [[ -z "$EMAIL" ]]; then
+if [[ -z "$EMAIL" ]] && [[ -z "$EMAIL_OVERRIDE" ]]; then
     echo "ERROR: No email configured for hub '$HUB' in i3.conf"
     echo "Add: ${HUB}.email = \"contact@example.com\""
     exit 1
+fi
+
+# Apply override if set — replaces the hub's configured address entirely
+if [[ -n "$EMAIL_OVERRIDE" ]]; then
+    echo "⚠️  EMAIL OVERRIDE ACTIVE — sending to $EMAIL_OVERRIDE instead of configured contacts"
+    EMAIL="$EMAIL_OVERRIDE"
 fi
 
 # Find mapping directory if not specified
@@ -148,6 +165,9 @@ cd "$I3_HOME"
 EMAILER_ARGS="$MAPPING_DIR $HUB"
 if [[ -n "$MERGE_SUMMARY_PATH" ]]; then
     EMAILER_ARGS="$EMAILER_ARGS --merge-summary $MERGE_SUMMARY_PATH"
+fi
+if [[ -n "$EMAIL_OVERRIDE" ]]; then
+    EMAILER_ARGS="$EMAILER_ARGS --email-override $EMAIL_OVERRIDE"
 fi
 
 sbt -java-home "$JAVA_HOME" "runMain dpla.ingestion3.utils.Emailer $EMAILER_ARGS"
