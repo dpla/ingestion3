@@ -6,11 +6,11 @@ Runs the usual before-every-ingest checks against the EC2 box and prints
 a clean summary. Exits 0 if everything is GOOD, 1 otherwise.
 
 Usage:
-    python3 prechecks.py                            # full checks — prompts for hub
-    python3 prechecks.py --hub njde                 # full checks for a specific hub
-    python3 prechecks.py --hub njde --endpoint-only # skip box-state checks; just verify the endpoint
-    python3 prechecks.py --hub njde --skip-endpoint # opposite: skip the endpoint check
-    python3 prechecks.py --no-start                 # don't auto-start the EC2 if it's stopped
+    python3 hub_preflight.py                            # full checks — prompts for hub
+    python3 hub_preflight.py --hub njde                 # full checks for a specific hub
+    python3 hub_preflight.py --hub njde --endpoint-only # skip box-state checks; just verify the endpoint
+    python3 hub_preflight.py --hub njde --skip-endpoint # opposite: skip the endpoint check
+    python3 hub_preflight.py --no-start                 # don't auto-start the EC2 if it's stopped
 
 The endpoint is ALWAYS read from i3.conf for the given hub — there is no
 manual endpoint override. If you need to test a different URL, edit i3.conf
@@ -680,14 +680,14 @@ def lookup_hub_in_conf(hub, conf_path=CONF_PATH):
     # --- shape 2: dotted keys `hub.harvest.endpoint = "..."`
     if endpoint is None:
         ep_match = re.search(
-            rf"""{re.escape(hub)}\.harvest\.endpoint\s*[=:]\s*["']([^"']+)["']""",
+            rf"""(?m)^\s*{re.escape(hub)}\.harvest\.endpoint\s*[=:]\s*["']([^"']+)["']""",
             text,
         )
         if ep_match:
             endpoint = ep_match.group(1)
     if harvest_type is None:
         type_match = re.search(
-            rf"""{re.escape(hub)}\.harvest\.type\s*[=:]\s*["']?([A-Za-z]+)["']?""",
+            rf"""(?m)^\s*{re.escape(hub)}\.harvest\.type\s*[=:]\s*["']?([A-Za-z]+)["']?""",
             text,
         )
         if type_match:
@@ -1092,9 +1092,15 @@ def main():
 
     # Fail fast: if a hub was named but has no endpoint in conf, don't let
     # check_endpoint(None, ...) silently pass.
+    # Exception: api-type hubs (e.g. mwdl, ia) may have their endpoint
+    # hardcoded in the harvester class — skip the check rather than failing.
     if hub and run_endpoint_check and endpoint is None:
-        bad(f"Hub '{hub}' has no endpoint in {CONF_PATH} — cannot run endpoint check.")
-        sys.exit(1)
+        if harvest_type == "api":
+            info(f"Hub '{hub}' has no endpoint in i3.conf — endpoint is hardcoded in the harvester. Skipping endpoint check.")
+            run_endpoint_check = False
+        else:
+            bad(f"Hub '{hub}' has no endpoint in {CONF_PATH} — cannot run endpoint check.")
+            sys.exit(1)
 
     # File-type endpoints need SSM (the box must be up); HTTP/S endpoints don't.
     needs_box_for_endpoint = (

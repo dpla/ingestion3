@@ -21,6 +21,8 @@ import subprocess
 import sys
 import time
 
+from hub_preflight import lookup_hub_in_conf
+
 def _load_dotenv():
     cfg = {}
     env_file = os.path.normpath(
@@ -103,26 +105,75 @@ def aws_s3_ls(s3_path: str) -> str:
 
 # ── i3.conf helpers ───────────────────────────────────────────────────────────
 def get_harvest_type(hub: str) -> str:
-    out = ssm_run(f"grep '^{hub}\\.harvest\\.type' {CONF_PATH} 2>/dev/null || echo ''")
-    m = re.search(r'=\s*"?([^"\s]+)"?', out)
-    return m.group(1) if m else ""
+    """Return harvest.type for hub, reading from EC2 conf via SSM.
+
+    Falls back to the local i3.conf (via hub_preflight.lookup_hub_in_conf) if
+    the SSM grep returns empty — e.g. because the box's conf repo is stale or
+    the SSM call fails quietly.
+    """
+    try:
+        out = ssm_run(f"grep '^{hub}\\.harvest\\.type' {CONF_PATH} 2>/dev/null || echo ''")
+        m = re.search(r'=\s*"?([^"\s]+)"?', out)
+        if m:
+            return m.group(1)
+    except Exception:
+        pass
+
+    # SSM returned nothing — fall back to local conf.
+    _, harvest_type = lookup_hub_in_conf(hub)
+    if harvest_type:
+        print(f"  (harvest.type read from local conf — EC2 conf may be stale)")
+    return harvest_type or ""
 
 
 def get_current_endpoint(hub: str) -> str:
-    return ssm_run(
-        f"grep '^{hub}\\.harvest\\.endpoint' {CONF_PATH} 2>/dev/null || echo '(not found)'"
-    )
+    """Return the current harvest.endpoint for hub from i3.conf.
+
+    Reads from the EC2 box first via SSM; falls back to the local conf if the
+    box's conf is stale or the SSM call returns nothing.
+    """
+    try:
+        out = ssm_run(
+            f"grep '^{hub}\\.harvest\\.endpoint' {CONF_PATH} 2>/dev/null || echo ''"
+        ).strip()
+        if out and "(not found)" not in out:
+            return out
+    except Exception:
+        pass
+    endpoint, _ = lookup_hub_in_conf(hub)
+    if endpoint:
+        return f'{hub}.harvest.endpoint = "{endpoint}"  (from local conf — EC2 may be stale)'
+    return "(not found)"
 
 
 # ── S3 delivery helpers ───────────────────────────────────────────────────────
 def list_deliveries(bucket: str) -> list[str]:
+    """Return all top-level entries (folders and files) in the bucket, sorted newest-first.
+
+    Handles both subdirectory deliveries (PRE entries) and flat file deliveries
+    (e.g. s3://dpla-hub-fl/SSDN-2026-05-24.jsonl dropped directly in the bucket).
+    """
     out = aws_s3_ls(f"s3://{bucket}/")
-    folders = []
+    dated = []    # entries that contain a YYYY-MM-DD date — sorted newest-first
+
     for line in out.splitlines():
-        m = re.search(r"PRE\s+(\d{4}-?\d{2}-?\d{2})/", line)
+        # Subdirectory: "                           PRE some-folder/"
+        m = re.search(r"PRE\s+(.+?)/\s*$", line)
         if m:
-            folders.append(m.group(1))
-    return sorted(folders, reverse=True)
+            entry = m.group(1) + "/"
+        else:
+            # File: "2026-05-24 12:34:56      123456 SSDN-2026-05-24.jsonl"
+            m = re.search(r"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s+\d+\s+(\S+)\s*$", line)
+            if not m:
+                continue
+            entry = m.group(1)
+
+        # Only keep entries that contain an ISO date (YYYY-MM-DD); non-dated
+        # entries like "archive/" are not valid delivery candidates.
+        if re.search(r"\d{4}-\d{2}-\d{2}", entry):
+            dated.append(entry)
+
+    return sorted(dated, reverse=True)
 
 
 # ── file-hub pre-flight ───────────────────────────────────────────────────────
@@ -131,7 +182,7 @@ def file_hub_preflight(hub: str, bucket: str) -> None:
     print(f"\nChecking s3://{bucket}/ for deliveries …")
     deliveries = list_deliveries(bucket)
     if not deliveries:
-        print(f"  No dated delivery folders found in s3://{bucket}/")
+        print(f"  No delivery folders found in s3://{bucket}/")
         print("  Check the bucket name or whether a delivery has arrived yet.")
         sys.exit(1)
 
@@ -144,10 +195,13 @@ def file_hub_preflight(hub: str, bucket: str) -> None:
     print(f"\nCurrent i3.conf endpoint for {hub}:")
     print(f"  {get_current_endpoint(hub)}")
 
+    # Suggest the most recent dated delivery (always first after list_deliveries sort).
+    latest = deliveries[0]
+    suggested = f"s3://{bucket}/{latest}"
     print(f"""
 ⚠️  Before continuing, make sure i3.conf is pointing at the right delivery:
 
-    {hub}.harvest.endpoint = "s3://{bucket}/{deliveries[0]}/"
+    {hub}.harvest.endpoint = "{suggested}"
 
 If it needs updating:
     1. Edit ingestion3-conf/i3.conf locally
@@ -183,9 +237,30 @@ def main() -> None:
     harvest_type = get_harvest_type(hub)
     print(f"  harvest.type = {harvest_type or '(not found)'}")
 
+    if not harvest_type:
+        try:
+            ans = input(
+                f"  Could not determine harvest.type for '{hub}'. "
+                "If this is a file-export hub, Ctrl-C now and check i3.conf. "
+                "Continue anyway? [y/N] "
+            ).strip().lower()
+        except EOFError:
+            ans = ""
+        if ans not in ("y", "yes"):
+            sys.exit("Aborted.")
+
     if harvest_type == "file":
-        bucket = args.bucket or f"dpla-hub-{hub}"
-        file_hub_preflight(hub, bucket)
+        conf_endpoint, _ = lookup_hub_in_conf(hub)
+        endpoint_is_local = bool(conf_endpoint) and not conf_endpoint.startswith("s3://")
+        if endpoint_is_local:
+            print(f"  Endpoint is a local path ({conf_endpoint}) — skipping S3 preflight.")
+        else:
+            if args.bucket:
+                bucket = args.bucket
+            else:
+                s3_match = re.match(r"s3://([^/]+)", conf_endpoint or "")
+                bucket = s3_match.group(1) if s3_match else f"dpla-hub-{hub}"
+            file_hub_preflight(hub, bucket)
 
     # Launch.
     extra = f" --resume-from {args.resume_from}" if args.resume_from else ""

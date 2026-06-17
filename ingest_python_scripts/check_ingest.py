@@ -225,43 +225,15 @@ if [ -f "$LOG" ]; then
 fi
 
 echo "===STAGES_DONE==="
-# Determine current run start epoch so we can filter out output dirs from
-# previous runs. Strategy (in priority order):
-#   1. ps -o lstart on the running ingest process — exact and reliable.
-#   2. Earliest YYYYMMDD_HHMMSS dir name across all stage output dirs — works
-#      after the process exits (e.g. run just finished, checking results).
-RUN_START_EPOCH=0
-INGEST_PID=$(pgrep -f "ingest\\.sh ${{HUB}}" | head -1 || true)
-if [ -n "$INGEST_PID" ]; then
-  LSTART=$(ps -o lstart= -p "$INGEST_PID" 2>/dev/null | xargs || true)
-  if [ -n "$LSTART" ]; then
-    RUN_START_EPOCH=$(date -d "$LSTART" +%s 2>/dev/null || echo 0)
-  fi
-fi
-if [ "$RUN_START_EPOCH" -eq 0 ]; then
-  # Process is gone — find the earliest completed stage dir from this run by
-  # looking at the most recent dir across all stages and taking the minimum.
-  for stage in {' '.join(STAGES)}; do
-    LATEST=$(ls -1dt {DATA_ROOT}/${{HUB}}/${{stage}}/*/ 2>/dev/null | head -1 | sed 's:/$::')
-    if [ -n "$LATEST" ] && [ -f "$LATEST/_SUCCESS" ]; then
-      DNAME=$(basename "$LATEST")
-      DTS=$(echo "$DNAME" | grep -oE '^[0-9]{{8}}_[0-9]{{6}}' | head -1)
-      if [ -n "$DTS" ]; then
-        PARSED=$(date -d "${{DTS:0:8}} ${{DTS:9:2}}:${{DTS:11:2}}:${{DTS:13:2}}" +%s 2>/dev/null || echo 0)
-        if [ "$PARSED" -gt 0 ] && ([ "$RUN_START_EPOCH" -eq 0 ] || [ "$PARSED" -lt "$RUN_START_EPOCH" ]); then
-          RUN_START_EPOCH=$PARSED
-        fi
-      fi
-    fi
-  done
-fi
+# Only report stages whose _SUCCESS file was written in the last 48 hours
+# (today or yesterday). This prevents old runs from showing up as "complete".
+CUTOFF=$(date -d '48 hours ago' +%s)
 for stage in {' '.join(STAGES)}; do
   STAGE_DIR="{DATA_ROOT}/${{HUB}}/${{stage}}"
   LATEST=$(ls -1dt ${{STAGE_DIR}}/*/ 2>/dev/null | head -1 | sed 's:/$::')
   if [ -n "$LATEST" ] && [ -f "$LATEST/_SUCCESS" ]; then
     SUCCESS_EPOCH=$(stat -c '%Y' "$LATEST/_SUCCESS" 2>/dev/null || echo 0)
-    # Skip if this _SUCCESS predates the current run's log start.
-    if [ "$RUN_START_EPOCH" -gt 0 ] && [ "$SUCCESS_EPOCH" -lt "$RUN_START_EPOCH" ]; then continue; fi
+    if [ "$SUCCESS_EPOCH" -lt "$CUTOFF" ]; then continue; fi
     MTIME=$(stat -c '%y' "$LATEST/_SUCCESS" 2>/dev/null | cut -d'.' -f1)
     MANIFEST=""
     if [ -f "$LATEST/_MANIFEST" ]; then
@@ -593,8 +565,8 @@ def derive_summary(is_running, sections, harvest_type):
         return c(YELLOW, "running — stage unclear")
 
     if done_count == len(STAGES):
-        return c(GREEN, "complete — all stages DONE today")
-    return c(RED, f"process is gone, only {done_count}/{len(STAGES)} stages complete today — likely failed")
+        return c(GREEN, "complete — all stages DONE")
+    return c(RED, f"process is gone, only {done_count}/{len(STAGES)} stages complete in last 48h — likely failed")
 
 
 # ---------- main ----------
