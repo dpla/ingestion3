@@ -415,7 +415,7 @@ cat ~/dpla/data/nara/harvest/OUTPUT/_LOGS/_SUMMARY.txt
  Base:   18,696,139 records (0 duplicates)
  Delta:  298,459 records (1,315 duplicates) -> 297,144 unique
  Merged: 18,789,995 = 18,696,139 + 93,856 new
-         203,288 updates, 93,288 updates
+         203,288 updates, 5 deletes
  Delete: 5 in file, 5 valid, 0 invalid
  Final:  18,789,995
 ```

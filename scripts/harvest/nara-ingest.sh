@@ -1012,15 +1012,11 @@ main() {
             merge_datestamp="$month"
         fi
 
-        # 2a. (Optional) Download delivery from NARA's S3 bucket
+        # 2a. (Optional) Download delivery from NARA's S3 bucket.
+        # Always run sync even when files already exist — aws s3 sync is
+        # idempotent and will resume any partial or interrupted download.
         if [ -n "$S3_SOURCE" ]; then
-            local existing_files
-            existing_files=$(find "$NARA_ORIGINALS/$month" -type f 2>/dev/null | wc -l | tr -d ' ')
-            if [ "$existing_files" -gt 0 ]; then
-                print_info "Source files already present in $NARA_ORIGINALS/$month ($existing_files files). Skipping S3 source sync."
-            else
-                sync_from_nara_s3 "$S3_SOURCE" "$month"
-            fi
+            sync_from_nara_s3 "$S3_SOURCE" "$month"
         fi
 
         # 2b. Preprocess
