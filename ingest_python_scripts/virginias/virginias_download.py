@@ -78,6 +78,11 @@ def ssm_run(shell_cmd: str, poll_seconds: int = 300) -> tuple[str, str]:
         if status not in ("Pending", "InProgress", "Delayed"):
             break
 
+    if status != "Success":
+        raise RuntimeError(
+            f"SSM command {cmd_id} did not succeed (final status: {status!r})"
+        )
+
     out = subprocess.run(
         ["aws", "ssm", "get-command-invocation",
          "--profile", AWS_PROFILE, "--region", REGION,
@@ -99,7 +104,7 @@ def ssm_run(shell_cmd: str, poll_seconds: int = 300) -> tuple[str, str]:
 
 def clone_repos():
     clone_cmds = " && ".join(
-        f"git clone --depth 1 --branch {branch} https://github.com/dplava/{repo}.git {DEST}/{repo} 2>&1 || echo 'WARN: {repo} clone failed'"
+        f"git clone --depth 1 --branch {branch} https://github.com/dplava/{repo}.git {DEST}/{repo} 2>&1"
         for repo, branch in REPOS
     )
     shell_cmd = f"mkdir -p {DEST} && {clone_cmds} && echo DONE && ls {DEST}/"

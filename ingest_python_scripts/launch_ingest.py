@@ -155,7 +155,6 @@ def list_deliveries(bucket: str) -> list[str]:
     """
     out = aws_s3_ls(f"s3://{bucket}/")
     dated = []    # entries that contain a YYYY-MM-DD date — sorted newest-first
-    other = []    # entries like "archive/" with no embedded date — shown at the end
 
     for line in out.splitlines():
         # Subdirectory: "                           PRE some-folder/"
@@ -169,13 +168,12 @@ def list_deliveries(bucket: str) -> list[str]:
                 continue
             entry = m.group(1)
 
-        # Bucket entries that contain an ISO date (YYYY-MM-DD) are actual deliveries.
+        # Only keep entries that contain an ISO date (YYYY-MM-DD); non-dated
+        # entries like "archive/" are not valid delivery candidates.
         if re.search(r"\d{4}-\d{2}-\d{2}", entry):
             dated.append(entry)
-        else:
-            other.append(entry)
 
-    return sorted(dated, reverse=True) + sorted(other)
+    return sorted(dated, reverse=True)
 
 
 # ── file-hub pre-flight ───────────────────────────────────────────────────────

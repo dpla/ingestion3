@@ -680,14 +680,14 @@ def lookup_hub_in_conf(hub, conf_path=CONF_PATH):
     # --- shape 2: dotted keys `hub.harvest.endpoint = "..."`
     if endpoint is None:
         ep_match = re.search(
-            rf"""(?m)^{re.escape(hub)}\.harvest\.endpoint\s*[=:]\s*["']([^"']+)["']""",
+            rf"""(?m)^\s*{re.escape(hub)}\.harvest\.endpoint\s*[=:]\s*["']([^"']+)["']""",
             text,
         )
         if ep_match:
             endpoint = ep_match.group(1)
     if harvest_type is None:
         type_match = re.search(
-            rf"""(?m)^{re.escape(hub)}\.harvest\.type\s*[=:]\s*["']?([A-Za-z]+)["']?""",
+            rf"""(?m)^\s*{re.escape(hub)}\.harvest\.type\s*[=:]\s*["']?([A-Za-z]+)["']?""",
             text,
         )
         if type_match:
