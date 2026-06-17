@@ -52,11 +52,12 @@ DATA_ROOT   = "/home/ec2-user/data"
 NARA_DATA   = f"{DATA_ROOT}/nara"
 
 STAGE_KEYWORDS = {
-    "jsonl":      ["JsonlEntry", "jsonl complete", ":white_check_mark: jsonl"],
-    "enrichment": ["EnrichEntry", "enrichment complete", ":white_check_mark: enrichment"],
-    "mapping":    ["MappingEntry", "IngestRemap", "mapping complete", ":white_check_mark: mapping"],
-    "merge":      ["NaraMergeUtil", "Merge complete", "merge complete"],
-    "harvest":    ["HarvestEntry", "FileHarvester", "harvest complete", "Preprocessing"],
+    "jsonl":        ["JsonlEntry", "jsonl complete", ":white_check_mark: jsonl"],
+    "enrichment":   ["EnrichEntry", "enrichment complete", ":white_check_mark: enrichment"],
+    "mapping":      ["MappingEntry", "IngestRemap", "mapping complete", ":white_check_mark: mapping"],
+    "merge":        ["NaraMergeUtil", "Merge complete", "merge complete"],
+    "harvest":      ["HarvestEntry", "FileHarvester", "harvest complete", "Preprocessing"],
+    "delete-gate":  ["zero-delete gate", "halted at zero-delete gate", "Zero-delete gate triggered"],
 }
 
 ALL_STAGE_REGEX = (
@@ -64,7 +65,8 @@ ALL_STAGE_REGEX = (
     "HarvestEntry|FileHarvester|Preprocessing|"
     "MappingEntry|IngestRemap|"
     "EnrichEntry|JsonlEntry|"
-    "harvest complete|merge complete|mapping complete|enrichment complete|jsonl complete"
+    "harvest complete|merge complete|mapping complete|enrichment complete|jsonl complete|"
+    "zero-delete gate|halted at zero-delete gate"
 )
 
 
@@ -346,19 +348,39 @@ def render(sections):
         lines.append(c(DIM, "  (no log file found)"))
 
     # SUMMARY
+    summary_text = derive_summary(is_running, current_stage, sections)
     lines.append("")
-    lines.append("SUMMARY: " + derive_summary(is_running, current_stage, sections))
+    lines.append("SUMMARY: " + summary_text)
+
+    # If the process halted at the zero-delete gate, show resume instructions
+    log_tail = sections.get("LOG_TAIL", "")
+    if not is_running and re.search(r"zero-delete gate|halted at zero-delete gate", log_tail, re.IGNORECASE):
+        lines.append("")
+        lines.append(c(YELLOW, "  ZERO-DELETE GATE — action required:"))
+        lines.append("  1. Review the merge summary above for valid/invalid delete counts.")
+        lines.append("  2. Check the delivery: were NAC_DESC_Deletes_*.xml files present?")
+        lines.append("  3. If 0 deletes is expected for this delivery, resume with:")
+        lines.append(c(DIM, "       python3 nara/launch_nara.py --skip-to-pipeline --skip-delete-check"))
+        lines.append("  4. Otherwise, investigate before re-running.")
+
     lines.append("")
     return "\n".join(lines)
 
 
 def derive_summary(is_running, current_stage, sections):
     if is_running:
+        if current_stage == "delete-gate":
+            return c(YELLOW, "running — waiting at zero-delete gate (operator action needed)")
         if current_stage:
             return c(YELLOW, f"running — currently in {current_stage}")
         return c(YELLOW, "running — stage unclear")
 
     log_tail = sections.get("LOG_TAIL", "")
+
+    # Zero-delete gate halt: process exited non-zero after the gate fired
+    if re.search(r"zero-delete gate|halted at zero-delete gate", log_tail, re.IGNORECASE):
+        return c(YELLOW, "HALTED — zero-delete gate (see below for resume instructions)")
+
     if re.search(r"\[SUCCESS\].*jsonl|jsonl complete|:white_check_mark: jsonl", log_tail, re.IGNORECASE):
         return c(GREEN, "complete — all stages done")
     merge_text = sections.get("MERGE_SUMMARY", "").strip()

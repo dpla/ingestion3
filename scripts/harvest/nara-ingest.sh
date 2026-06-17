@@ -121,8 +121,20 @@ Options:
                     Skip directly to pipeline using existing merged harvest
   --harvest=<path>  Specify harvest path for --skip-to-pipeline
 
+  --skip-delete-check
+                    Bypass the zero-delete gate (see below). Use this when
+                    you've confirmed that 0 deletes is expected for this delivery.
+
   --dry-run         Show what would be done without executing
   --help            Show this help message
+
+Zero-Delete Gate:
+  After each merge, the script checks whether any records were actually deleted.
+  If the merge reports 0 valid deletes and delete files were present, the script
+  sends a Slack warning and pauses:
+    - Interactive (TTY): prompts to confirm or halt (30s timeout → halt)
+    - Non-interactive (EC2/cron): halts immediately with resume instructions
+  To resume after a halt: re-run with --skip-to-pipeline --harvest=<path> --skip-delete-check
 
 Environment Variables:
   HARVEST_SBT_OPTS       sbt launcher JVM opts for harvest step  (default: -Xmx12g)
@@ -151,6 +163,9 @@ Examples:
 
   # Download April 2026 delivery from NARA's S3, then run full ingest
   ./nara-ingest.sh --month=202604 --s3-source=s3://ngc-storage01/dpla-bimonthly-report/2026/M04/
+
+  # Skip the zero-delete gate (confirmed no deletes in this delivery)
+  ./nara-ingest.sh --month=202604 --skip-delete-check
 USAGE
     exit 1
 }
@@ -564,6 +579,100 @@ run_merge() {
 }
 
 # ============================================================================
+# Zero-Delete Gate
+#
+# After a merge, checks whether any records were actually deleted. If the
+# merge reports 0 valid deletes and delete files were present in the deletes/
+# dir, this is suspicious (could be a naming-pattern bug or a bad delivery).
+#
+# Behavior:
+#   - Interactive (TTY attached): prompts operator to confirm or halt.
+#     30-second timeout defaults to halt for safety.
+#   - Non-interactive (EC2/cron/no-TTY): halts with Slack notice and
+#     instructions to resume via --skip-to-pipeline --skip-delete-check.
+#   - --skip-delete-check flag: bypasses gate entirely (use when you've
+#     confirmed that 0 deletes is expected for this specific delivery).
+# ============================================================================
+
+check_delete_gate() {
+    local month="$1"
+    local merged_harvest="$2"
+
+    if [ "${SKIP_DELETE_CHECK:-false}" = true ]; then
+        print_info "Zero-delete gate bypassed (--skip-delete-check)"
+        return 0
+    fi
+
+    local summary_file="$merged_harvest/_LOGS/_SUMMARY.txt"
+    if [ ! -f "$summary_file" ]; then
+        print_info "No _SUMMARY.txt found — skipping delete gate check"
+        return 0
+    fi
+
+    # Parse valid delete count from the "Delete: N in file, M valid, K invalid" line
+    local valid_deletes
+    valid_deletes=$(grep -iE "^[[:space:]]*Delete:" "$summary_file" \
+        | grep -oE '[0-9]+ valid' | grep -oE '^[0-9]+' || true)
+    valid_deletes="${valid_deletes:-0}"
+
+    if [ "$valid_deletes" -gt 0 ]; then
+        print_info "Delete gate: $valid_deletes record(s) deleted — OK"
+        return 0
+    fi
+
+    # 0 valid deletes — check whether delete files were actually present
+    local delta_dir="$NARA_DATA/delta/$month"
+    local delete_file_count
+    delete_file_count=$(find "$delta_dir/deletes" -name "*.xml" -type f 2>/dev/null \
+        | wc -l | tr -d ' ')
+
+    local context_msg
+    local severity=":warning:"
+    if [ "$delete_file_count" -gt 0 ]; then
+        context_msg="${delete_file_count} delete file(s) were in \`$delta_dir/deletes/\` but *0 records were actually deleted*. This may indicate a file naming mismatch — check that delete files are named \`NAC_DESC_Deletes_*.xml\` and not \`*NaidsList*.xml\`."
+        severity=":rotating_light:"
+    else
+        context_msg="No delete files were found during preprocessing. 0 deletes may be expected for this delivery — verify with NARA."
+    fi
+
+    print_info ""
+    print_info "⚠️  Zero-delete gate triggered for $month"
+    print_info "   $context_msg"
+    print_info "   Summary: $summary_file"
+    print_info ""
+
+    slack_notify "${severity} *nara merge: 0 valid deletes* (\`$month\`)\n${context_msg}\nSummary: \`$(basename "$merged_harvest")/_LOGS/_SUMMARY.txt\`"
+
+    local resume_cmd="./nara-ingest.sh --skip-to-pipeline --harvest=$merged_harvest --skip-delete-check"
+
+    if [ -t 0 ]; then
+        # Interactive — give operator a chance to confirm or halt
+        echo ""
+        print_info "Continue to pipeline despite 0 deletes? [y/N]  (30s timeout → halt)"
+        local answer=""
+        if read -r -t 30 answer 2>/dev/null && [[ "$answer" =~ ^[Yy]$ ]]; then
+            print_info "Continuing to pipeline (manual confirmation)"
+            slack_notify ":arrow_forward: *nara: continuing pipeline* despite 0 deletes — operator confirmed"
+            return 0
+        else
+            print_error "Halted at zero-delete gate."
+            print_error "To resume:  $resume_cmd"
+            slack_notify ":x: *nara ingest halted* — 0 deletes not confirmed by operator.\nTo resume: \`$resume_cmd\`"
+            TRAP_HANDLED=true
+            exit 1
+        fi
+    else
+        # Non-interactive (EC2, cron, tmux without stdin) — halt and explain
+        print_error "Non-interactive mode: halting at zero-delete gate."
+        print_error "Confirm the delivery has no deletes, then resume with:"
+        print_error "  $resume_cmd"
+        slack_notify ":x: *nara ingest halted* (non-interactive) — 0 deletes not confirmed.\nTo resume after verifying: \`$resume_cmd\`"
+        TRAP_HANDLED=true
+        exit 1
+    fi
+}
+
+# ============================================================================
 # Pipeline (Mapping -> Enrichment -> JSON-L)
 # ============================================================================
 
@@ -723,6 +832,7 @@ main() {
     SKIP_TO_PIPELINE=false
     EXPLICIT_HARVEST=""
     S3_SOURCE=""
+    SKIP_DELETE_CHECK=false
     DRY_RUN=false
 
     while [[ $# -gt 0 ]]; do
@@ -761,6 +871,10 @@ main() {
                 ;;
             --harvest=*)
                 EXPLICIT_HARVEST="${1#*=}"
+                shift
+                ;;
+            --skip-delete-check)
+                SKIP_DELETE_CHECK=true
                 shift
                 ;;
             --dry-run)
@@ -810,6 +924,15 @@ main() {
 
         print_info "Resuming pipeline with: $MERGED_HARVEST"
         slack_notify ":arrow_forward: *nara ingest resuming* — pipeline from \`$(basename "$MERGED_HARVEST")\`"
+
+        # Infer the month from the harvest path for the delete gate check.
+        # The deletes/ dir may not exist if this is a cross-session resume, so
+        # check_delete_gate handles a missing directory gracefully (count = 0 →
+        # "no delete files" branch). Pass a synthesized month from the datestamp.
+        local _resume_month
+        _resume_month=$(basename "$MERGED_HARVEST" | grep -oE '^[0-9]{6}' || echo "unknown")
+        check_delete_gate "$_resume_month" "$MERGED_HARVEST"
+
         run_pipeline
         run_post_pipeline
 
@@ -934,6 +1057,11 @@ main() {
         else
             run_merge "$month" "$merge_datestamp"
         fi
+
+        # Gate: warn + pause if 0 records were actually deleted
+        # (Only meaningful before the pipeline runs — skip for intermediate months
+        # where --skip-pipeline was not set but we still want to gate the final run)
+        check_delete_gate "$month" "$MERGED_HARVEST"
 
         # Use this month's merged output as the base for the next month
         BASE_HARVEST="$MERGED_HARVEST"
