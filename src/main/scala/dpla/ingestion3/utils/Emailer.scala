@@ -175,13 +175,8 @@ object Emailer {
   }
 
   /**
-    * Parse a NaraMergeUtil _SUMMARY.txt and return a formatted HTML block
-    * suitable for inclusion in the ingest summary email.
-    *
-    * The summary file has labelled lines like:
-    *   " record count 18,696,139"
-    *   " valid deletes (IDs in merged dataset): 5"
-    * We extract the values we care about and render them in a clean table.
+    * Parse a NaraMergeUtil _SUMMARY.txt and return a short plain-text section
+    * reporting rows removed this cycle. Appended to the normal email body.
     */
   private def formatMergeStats(summaryPath: String): String = {
     val source = Source.fromFile(summaryPath)
@@ -190,54 +185,25 @@ object Emailer {
     def extract(pattern: scala.util.matching.Regex): String =
       pattern.findFirstMatchIn(text).map(_.group(1).trim).getOrElse("—")
 
-    // Base
-    val baseLines   = text.split("\n").dropWhile(!_.contains("Base")).take(10).mkString("\n")
-    val baseTotal   = extract("""\|\s*record count\s+([\d,]+)""".r.unanchored)
+    val newRecs    = extract("""\|\s*new:\s+([\d,]+)""".r.unanchored)
+    val updated    = extract("""\|\s*update:\s+([\d,]+)""".r.unanchored)
+    val delValid   = extract("""\|\s*valid deletes \(IDs in merged dataset\):\s+([\d,]+)""".r.unanchored)
+    val delInvalid = extract("""\|\s*invalid deletes \(IDs not in merged dataset\):\s+([\d,]+)""".r.unanchored)
+    val delInFile  = extract("""\|\s*ids to delete specified at path:\s+([\d,]+)""".r.unanchored)
 
-    // Delta
-    val deltaTotal  = extract("""\|\s*record count:\s+([\d,]+)""".r.unanchored)
-    val deltaDups   = extract("""\|\s*duplicate count:\s+([\d,]+)""".r.unanchored)
-    val deltaUnique = extract("""\|\s*unique count:\s+([\d,]+)""".r.unanchored)
+    val warning = if (delValid == "0" || delValid == "—")
+      "\n⚠️  Note: 0 rows were removed this cycle. If deletes were expected in this delivery, please contact us at tech@dp.la.\n"
+    else ""
 
-    // Merged
-    val mergeNew    = extract("""\|\s*new:\s+([\d,]+)""".r.unanchored)
-    val mergeUpdate = extract("""\|\s*update:\s+([\d,]+)""".r.unanchored)
-    val mergeActual = extract("""\|\s*total \[actual\]:\s+([\d,]+)""".r.unanchored)
-
-    // Delete
-    val delInFile   = extract("""\|\s*ids to delete specified at path:\s+([\d,]+)""".r.unanchored)
-    val delValid    = extract("""\|\s*valid deletes \(IDs in merged dataset\):\s+([\d,]+)""".r.unanchored)
-    val delInvalid  = extract("""\|\s*invalid deletes \(IDs not in merged dataset\):\s+([\d,]+)""".r.unanchored)
-    val delActual   = extract("""\|\s*actual removed.*?:\s+([\d,]+)""".r.unanchored)
-
-    // Final
-    val finalTotal  = extract("""\|\s*total \[actual\]:\s+([\d,]+) = """.r.unanchored)
-
-    val zeroDeleteWarning =
-      if (delValid == "0" || delValid == "—")
-        "\n<b>⚠️  Note: 0 records were deleted this cycle.</b> " +
-        "If delete files were expected in this delivery, please contact DPLA at tech@dp.la.\n"
-      else ""
-
-    s"""<b>NARA Merge Statistics</b>
-       |$zeroDeleteWarning
-       |<table style="border-collapse:collapse;font-family:monospace;font-size:13px">
-       |<tr><td colspan="2" style="padding:4px 8px;background:#f0f0f0"><b>Base</b></td></tr>
-       |<tr><td style="padding:2px 8px 2px 16px">Records in base</td><td style="padding:2px 8px">$baseTotal</td></tr>
-       |<tr><td colspan="2" style="padding:4px 8px;background:#f0f0f0"><b>Delta (this delivery)</b></td></tr>
-       |<tr><td style="padding:2px 8px 2px 16px">Total records in delivery</td><td style="padding:2px 8px">$deltaTotal</td></tr>
-       |<tr><td style="padding:2px 8px 2px 16px">Duplicates removed</td><td style="padding:2px 8px">$deltaDups</td></tr>
-       |<tr><td style="padding:2px 8px 2px 16px">Unique records processed</td><td style="padding:2px 8px">$deltaUnique</td></tr>
-       |<tr><td colspan="2" style="padding:4px 8px;background:#f0f0f0"><b>Changes applied</b></td></tr>
-       |<tr><td style="padding:2px 8px 2px 16px">New records added</td><td style="padding:2px 8px">$mergeNew</td></tr>
-       |<tr><td style="padding:2px 8px 2px 16px">Existing records updated</td><td style="padding:2px 8px">$mergeUpdate</td></tr>
-       |<tr><td style="padding:2px 8px 2px 16px">Records deleted (valid)</td><td style="padding:2px 8px">$delValid</td></tr>
-       |<tr><td style="padding:2px 8px 2px 16px">Delete IDs not found (invalid)</td><td style="padding:2px 8px">$delInvalid</td></tr>
-       |<tr><td style="padding:2px 8px 2px 16px">Delete IDs in file</td><td style="padding:2px 8px">$delInFile</td></tr>
-       |<tr><td colspan="2" style="padding:4px 8px;background:#f0f0f0"><b>Final</b></td></tr>
-       |<tr><td style="padding:2px 8px 2px 16px"><b>Total records in DPLA</b></td><td style="padding:2px 8px"><b>$mergeActual</b></td></tr>
-       |</table>
-       |<br>""".stripMargin
+    s"""
+       |Merge Statistics
+       |----------------
+       |New records added:         $newRecs
+       |Records updated:           $updated
+       |Records deleted:           $delValid
+       |Invalid delete IDs:        $delInvalid (in delete file but not in dataset)
+       |Total IDs in delete file:  $delInFile
+       |$warning""".stripMargin
   }
 
   private lazy val suffix =
@@ -290,23 +256,24 @@ object Emailer {
       } finally {
         source.close
       }
-    // Create body of email. Merge stats (if present) are inserted between the
-    // boilerplate prefix and the mapping summary so recipients see record/delete
-    // counts before the per-record error breakdown.
     // The last five lines of the mapping _SUMMARY reference local log file paths
     // that are meaningless to external recipients, so we drop them.
+    // The merge delete stats section (NARA only) is appended after the mapping
+    // summary so the normal output comes first, with the extra stats at the end.
     val mergePart = mergeSection.map(s => List(s)).getOrElse(Nil)
     List
-      .concat(List("<pre>"), prefix, mergePart, lines.dropRight(5), suffix, List("</pre>"))
+      .concat(List("<pre>"), prefix, lines.dropRight(5), mergePart, suffix, List("</pre>"))
       .mkString("\n")
   }
 
   private def zip(zippedLogs: String, mapOutput: String): Option[File] = {
-    // Build the zip file contents
-    val zipOut = new ZipFile(zippedLogs)
     val errors = new File(s"$mapOutput/_LOGS/errors/")
-
-    if (errors.exists()) {
+    // Only create the zip if there are actual CSV error files — an empty errors
+    // directory (or no directory at all) means there's nothing worth attaching.
+    val csvFiles = Option(errors.listFiles()).getOrElse(Array.empty)
+      .filter(f => f.isFile && f.getName.endsWith(".csv"))
+    if (csvFiles.nonEmpty) {
+      val zipOut = new ZipFile(zippedLogs)
       zipOut.addFolder(errors, zipParameters)
       zipOut.close()
       Some(new File(zippedLogs))
