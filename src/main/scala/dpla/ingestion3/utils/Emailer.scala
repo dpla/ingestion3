@@ -40,22 +40,46 @@ object Emailer {
 
   /**
     * Main method for CLI invocation
-    * Usage: Emailer <mapping-dir> <hub-name> [conf-file]
+    *
+    * Usage:
+    *   Emailer <mapping-dir> <hub-name> [conf-file] [--merge-summary <path>]
+    *
+    * --merge-summary <path>
+    *   Path to a NaraMergeUtil _SUMMARY.txt file. When provided, a "NARA Merge
+    *   Statistics" section (record counts, delete stats) is prepended to the
+    *   mapping summary in the email body. Intended for the nara hub only.
     */
   def main(args: Array[String]): Unit = {
     if (args.length < 2) {
-      System.err.println("Usage: Emailer <mapping-dir> <hub-name> [conf-file]")
+      System.err.println("Usage: Emailer <mapping-dir> <hub-name> [conf-file] [--merge-summary <path>]")
       System.err.println("Example: Emailer /path/to/mapping/dir nara")
-      System.err.println("         Emailer /path/to/mapping/dir nara /path/to/i3.conf")
+      System.err.println("         Emailer /path/to/mapping/dir nara /path/to/i3.conf --merge-summary /path/to/harvest/_LOGS/_SUMMARY.txt")
       System.exit(1)
     }
 
-    val mappingDir = args(0)
-    val hubName = args(1)
+    // Pull out --merge-summary <path> before processing positional args
+    val argList = args.toList
+    val mergeSummaryPath: Option[String] = {
+      val idx = argList.indexOf("--merge-summary")
+      if (idx >= 0 && idx + 1 < argList.length) Some(argList(idx + 1)) else None
+    }
+
+    // Strip the flag and its value to get clean positional args
+    val positionalArgs: List[String] = {
+      var skipNext = false
+      argList.filter { a =>
+        if (skipNext) { skipNext = false; false }
+        else if (a == "--merge-summary") { skipNext = true; false }
+        else true
+      }
+    }
+
+    val mappingDir = positionalArgs(0)
+    val hubName    = positionalArgs(1)
 
     // Get config file path from args or environment
-    val confPath = if (args.length >= 3) {
-      args(2)
+    val confPath = if (positionalArgs.length >= 3) {
+      positionalArgs(2)
     } else {
       Option(System.getenv("I3_CONF"))
         .getOrElse(s"${System.getProperty("user.home")}/dpla/code/ingestion3-conf/i3.conf")
@@ -75,7 +99,7 @@ object Emailer {
     val subject = s"DPLA Ingest Summary for $providerName - $currentMonth"
 
     // Send email
-    emailSummaryWithSubject(mappingDir, subject, conf)
+    emailSummaryWithSubject(mappingDir, subject, conf, mergeSummaryPath)
   }
 
   /**
@@ -94,9 +118,21 @@ object Emailer {
   }
 
   /**
-    * Send email summary with custom subject
+    * Send email summary with custom subject.
+    *
+    * @param mapOutput        Path to the mapping output directory (contains _SUMMARY)
+    * @param subject          Email subject line
+    * @param i3conf           Loaded i3.conf
+    * @param mergeSummaryPath Optional path to NaraMergeUtil's _SUMMARY.txt. When
+    *                         supplied, a "NARA Merge Statistics" section is prepended
+    *                         to the mapping summary in the email body.
     */
-  def emailSummaryWithSubject(mapOutput: String, subject: String, i3conf: i3Conf): Unit = {
+  def emailSummaryWithSubject(
+      mapOutput: String,
+      subject: String,
+      i3conf: i3Conf,
+      mergeSummaryPath: Option[String] = None
+  ): Unit = {
     val rawEmails = i3conf.email.getOrElse("tech@dp.la")
     val emails = normalizeEmails(rawEmails)
 
@@ -104,10 +140,14 @@ object Emailer {
     println(s"Raw emails from config: $rawEmails")
     println(s"Normalized emails: ${emails.mkString(", ")}")
 
-    val _summary = s"$mapOutput/_SUMMARY"
+    val _summary    = s"$mapOutput/_SUMMARY"
     val zipped_logs = s"$mapOutput/_LOGS/logs.zip"
 
-    val body = emailBody(_summary)
+    val mergeSection = mergeSummaryPath
+      .filter(p => new File(p).exists())
+      .map(formatMergeStats)
+
+    val body = emailBody(_summary, mergeSection)
 
     val attachment: Option[File] = zip(zipped_logs, mapOutput) match {
       case Some(z) => if (z.length() < 7485760) Some(z) else None
@@ -116,10 +156,76 @@ object Emailer {
 
     send(
       recipients = emails,
-      subject = subject,
-      text = body,
+      subject    = subject,
+      text       = body,
       attachment = attachment
     )
+  }
+
+  /**
+    * Parse a NaraMergeUtil _SUMMARY.txt and return a formatted HTML block
+    * suitable for inclusion in the ingest summary email.
+    *
+    * The summary file has labelled lines like:
+    *   " record count 18,696,139"
+    *   " valid deletes (IDs in merged dataset): 5"
+    * We extract the values we care about and render them in a clean table.
+    */
+  private def formatMergeStats(summaryPath: String): String = {
+    val source = Source.fromFile(summaryPath)
+    val text = try source.mkString finally source.close()
+
+    def extract(pattern: scala.util.matching.Regex): String =
+      pattern.findFirstMatchIn(text).map(_.group(1).trim).getOrElse("—")
+
+    // Base
+    val baseLines   = text.split("\n").dropWhile(!_.contains("Base")).take(10).mkString("\n")
+    val baseTotal   = extract("""\|\s*record count\s+([\d,]+)""".r.unanchored)
+
+    // Delta
+    val deltaTotal  = extract("""\|\s*record count:\s+([\d,]+)""".r.unanchored)
+    val deltaDups   = extract("""\|\s*duplicate count:\s+([\d,]+)""".r.unanchored)
+    val deltaUnique = extract("""\|\s*unique count:\s+([\d,]+)""".r.unanchored)
+
+    // Merged
+    val mergeNew    = extract("""\|\s*new:\s+([\d,]+)""".r.unanchored)
+    val mergeUpdate = extract("""\|\s*update:\s+([\d,]+)""".r.unanchored)
+    val mergeActual = extract("""\|\s*total \[actual\]:\s+([\d,]+)""".r.unanchored)
+
+    // Delete
+    val delInFile   = extract("""\|\s*ids to delete specified at path:\s+([\d,]+)""".r.unanchored)
+    val delValid    = extract("""\|\s*valid deletes \(IDs in merged dataset\):\s+([\d,]+)""".r.unanchored)
+    val delInvalid  = extract("""\|\s*invalid deletes \(IDs not in merged dataset\):\s+([\d,]+)""".r.unanchored)
+    val delActual   = extract("""\|\s*actual removed.*?:\s+([\d,]+)""".r.unanchored)
+
+    // Final
+    val finalTotal  = extract("""\|\s*total \[actual\]:\s+([\d,]+) = """.r.unanchored)
+
+    val zeroDeleteWarning =
+      if (delValid == "0" || delValid == "—")
+        "\n<b>⚠️  Note: 0 records were deleted this cycle.</b> " +
+        "If delete files were expected in this delivery, please contact DPLA at tech@dp.la.\n"
+      else ""
+
+    s"""<b>NARA Merge Statistics</b>
+       |$zeroDeleteWarning
+       |<table style="border-collapse:collapse;font-family:monospace;font-size:13px">
+       |<tr><td colspan="2" style="padding:4px 8px;background:#f0f0f0"><b>Base</b></td></tr>
+       |<tr><td style="padding:2px 8px 2px 16px">Records in base</td><td style="padding:2px 8px">$baseTotal</td></tr>
+       |<tr><td colspan="2" style="padding:4px 8px;background:#f0f0f0"><b>Delta (this delivery)</b></td></tr>
+       |<tr><td style="padding:2px 8px 2px 16px">Total records in delivery</td><td style="padding:2px 8px">$deltaTotal</td></tr>
+       |<tr><td style="padding:2px 8px 2px 16px">Duplicates removed</td><td style="padding:2px 8px">$deltaDups</td></tr>
+       |<tr><td style="padding:2px 8px 2px 16px">Unique records processed</td><td style="padding:2px 8px">$deltaUnique</td></tr>
+       |<tr><td colspan="2" style="padding:4px 8px;background:#f0f0f0"><b>Changes applied</b></td></tr>
+       |<tr><td style="padding:2px 8px 2px 16px">New records added</td><td style="padding:2px 8px">$mergeNew</td></tr>
+       |<tr><td style="padding:2px 8px 2px 16px">Existing records updated</td><td style="padding:2px 8px">$mergeUpdate</td></tr>
+       |<tr><td style="padding:2px 8px 2px 16px">Records deleted (valid)</td><td style="padding:2px 8px">$delValid</td></tr>
+       |<tr><td style="padding:2px 8px 2px 16px">Delete IDs not found (invalid)</td><td style="padding:2px 8px">$delInvalid</td></tr>
+       |<tr><td style="padding:2px 8px 2px 16px">Delete IDs in file</td><td style="padding:2px 8px">$delInFile</td></tr>
+       |<tr><td colspan="2" style="padding:4px 8px;background:#f0f0f0"><b>Final</b></td></tr>
+       |<tr><td style="padding:2px 8px 2px 16px"><b>Total records in DPLA</b></td><td style="padding:2px 8px"><b>$mergeActual</b></td></tr>
+       |</table>
+       |<br>""".stripMargin
   }
 
   private lazy val suffix =
@@ -163,7 +269,7 @@ object Emailer {
     )
   }
 
-  private def emailBody(summaryFile: String): String = {
+  private def emailBody(summaryFile: String, mergeSection: Option[String] = None): String = {
     // READ in _SUMMARY file
     val source: BufferedSource = Source.fromFile(summaryFile)
     val lines =
@@ -172,10 +278,14 @@ object Emailer {
       } finally {
         source.close
       }
-    // Create body of email by wrapping text in <pre> tags and dropping the last five line (which reference local
-    // log files)
+    // Create body of email. Merge stats (if present) are inserted between the
+    // boilerplate prefix and the mapping summary so recipients see record/delete
+    // counts before the per-record error breakdown.
+    // The last five lines of the mapping _SUMMARY reference local log file paths
+    // that are meaningless to external recipients, so we drop them.
+    val mergePart = mergeSection.map(s => List(s)).getOrElse(Nil)
     List
-      .concat(List("<pre>"), prefix, lines.dropRight(5), suffix, List("</pre>"))
+      .concat(List("<pre>"), prefix, mergePart, lines.dropRight(5), suffix, List("</pre>"))
       .mkString("\n")
   }
 

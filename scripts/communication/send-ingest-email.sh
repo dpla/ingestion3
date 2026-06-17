@@ -57,6 +57,7 @@ fi
 
 HUB="$1"
 MAPPING_DIR="${2:-}"
+MERGE_SUMMARY_PATH=""
 
 # Get hub info using common.sh functions
 PROVIDER_NAME=$(get_provider_name "$HUB")
@@ -97,6 +98,9 @@ echo "Provider:     $PROVIDER_NAME"
 echo "Recipients:   $EMAIL"
 echo "Mapping:      $MAPPING_DIR"
 echo "Summary:      $SUMMARY_FILE"
+if [[ "$HUB" == "nara" ]]; then
+echo "(NARA merge stats will be auto-detected and included)"
+fi
 echo "=============================================="
 echo ""
 
@@ -120,15 +124,33 @@ else
     echo "Sending (--yes flag provided)..."
 fi
 
+# For NARA: find the most recent merge _SUMMARY.txt and include delete stats
+if [[ "$HUB" == "nara" ]]; then
+    NARA_HARVEST_DIR="${DPLA_DATA}/nara/harvest"
+    if [[ -d "$NARA_HARVEST_DIR" ]]; then
+        LATEST_HARVEST=$(ls -td "${NARA_HARVEST_DIR}"/*-nara-OriginalRecord.avro 2>/dev/null | head -1)
+        if [[ -n "$LATEST_HARVEST" && -f "$LATEST_HARVEST/_LOGS/_SUMMARY.txt" ]]; then
+            MERGE_SUMMARY_PATH="$LATEST_HARVEST/_LOGS/_SUMMARY.txt"
+            echo "Merge summary:  $MERGE_SUMMARY_PATH"
+        else
+            echo "WARNING: No merge _SUMMARY.txt found under $NARA_HARVEST_DIR — delete stats will be omitted from email."
+        fi
+    fi
+fi
+echo ""
+
 # Send email using the Scala Emailer
 echo "Sending email..."
 
 cd "$I3_HOME"
 
-# Use sbt to invoke the Emailer
-sbt -java-home "$JAVA_HOME" "runMain dpla.ingestion3.utils.Emailer \
-    $MAPPING_DIR \
-    $HUB"
+# Build the sbt command. For NARA, pass --merge-summary so delete stats appear in the email.
+EMAILER_ARGS="$MAPPING_DIR $HUB"
+if [[ -n "$MERGE_SUMMARY_PATH" ]]; then
+    EMAILER_ARGS="$EMAILER_ARGS --merge-summary $MERGE_SUMMARY_PATH"
+fi
+
+sbt -java-home "$JAVA_HOME" "runMain dpla.ingestion3.utils.Emailer $EMAILER_ARGS"
 
 if [[ $? -eq 0 ]]; then
     echo ""
