@@ -108,6 +108,13 @@ Options:
                     Override output datestamp (default: today).
                     Used for the final merged harvest directory name.
 
+  --s3-source=<s3://...>
+                    S3 prefix to sync from NARA's bucket before preprocessing.
+                    Uses the [nara] AWS profile. Files are downloaded to
+                    ~/dpla/data/nara/originalRecords/YYYYMM/ before the normal
+                    preprocess step runs.
+                    Example: --s3-source=s3://ngc-storage01/dpla-bimonthly-report/2026/M04/
+
   --skip-preprocess Skip preprocessing (use existing delta/ directory)
   --skip-pipeline   Stop after merge (don't run mapping/enrichment/jsonl)
   --skip-to-pipeline
@@ -141,6 +148,9 @@ Examples:
 
   # Use a specific base instead of S3
   ./nara-ingest.sh --month=202601 --base=~/dpla/data/nara/harvest/202512_000000-nara-OriginalRecord.avro
+
+  # Download April 2026 delivery from NARA's S3, then run full ingest
+  ./nara-ingest.sh --month=202604 --s3-source=s3://ngc-storage01/dpla-bimonthly-report/2026/M04/
 USAGE
     exit 1
 }
@@ -301,11 +311,36 @@ sync_outputs_to_s3() {
 }
 
 # ============================================================================
+# NARA S3 Source Sync
+#
+# Downloads a delivery from NARA's bucket (ngc-storage01) to the local
+# originalRecords directory using the [nara] AWS profile.
+# ============================================================================
+
+sync_from_nara_s3() {
+    local s3_prefix="$1"
+    local month="$2"
+    local dest="$NARA_ORIGINALS/$month"
+
+    print_step "Syncing NARA delivery from $s3_prefix ..."
+    mkdir -p "$dest"
+
+    aws s3 sync "$s3_prefix" "$dest/" --profile nara
+
+    local file_count
+    file_count=$(find "$dest" -type f | wc -l | tr -d ' ')
+    print_success "Downloaded $file_count file(s) to $dest"
+    slack_notify ":arrow_down: *nara S3 source sync complete* — $file_count file(s) from \`$s3_prefix\`"
+}
+
+# ============================================================================
 # Preprocessing
 #
 # NARA delivers ZIPs organized by export group (e.g., 17.115_DESC_0001.zip).
 # Each export group may have multiple ZIPs that need to be combined into a
-# single tar.gz. Delete files (*NaidsList.xml) are separated out.
+# single tar.gz. Real delete files (NAC_DESC_Deletes_*.xml) are separated out.
+# NaidsList files (DATE_GROUP_NaidsList.xml) are export group rosters — not
+# delete lists — and are discarded.
 # ============================================================================
 
 preprocess_month() {
@@ -322,14 +357,16 @@ preprocess_month() {
 
     mkdir -p "$dest_dir/deletes"
 
-    # Step 1: Move delete files (NaidsList.xml) to deletes/
+    # Step 1: Copy real delete files (NAC_DESC_Deletes_*.xml) to deletes/.
+    # NaidsList files are export-group rosters used for reconciliation, not
+    # delete lists — they are intentionally ignored here.
     local delete_count=0
-    for f in "$src_dir"/*_NaidsList.xml "$src_dir"/*NaidsList*.xml; do
+    for f in "$src_dir"/NAC_DESC_Deletes_*.xml; do
         [ -f "$f" ] || continue
         cp "$f" "$dest_dir/deletes/"
         ((delete_count++)) || true
     done
-    print_info "Copied $delete_count delete file(s) to $dest_dir/deletes/"
+    print_info "Copied $delete_count top-level delete file(s) to $dest_dir/deletes/"
 
     # Step 2: Identify unique export groups from ZIP filenames
     # Naming pattern: DATE_EXPORTGROUP_DESC_SEQNUM.zip
@@ -374,7 +411,14 @@ preprocess_month() {
             continue
         fi
 
-        # Remove any delete files that ended up in the work dir
+        # Extract any delete files that came out of the ZIPs into deletes/,
+        # then remove both delete and NaidsList files so they are not bundled
+        # into the data tar.gz.
+        find "$work_dir" -name "NAC_DESC_Deletes_*.xml" | while IFS= read -r f; do
+            cp "$f" "$dest_dir/deletes/"
+            ((delete_count++)) || true
+        done
+        find "$work_dir" -name "NAC_DESC_Deletes_*.xml" -delete 2>/dev/null || true
         find "$work_dir" -name "*NaidsList*" -delete 2>/dev/null || true
 
         # Count XML data files
@@ -404,6 +448,18 @@ preprocess_month() {
     if [ "$tgz_count" -eq 0 ]; then
         print_error "No tar.gz archives created. Check ZIP file naming patterns."
         exit 1
+    fi
+
+    # Sanity check: report delete file count. Zero is not an error (some deliveries
+    # genuinely contain no deletes) but is worth logging prominently so it doesn't
+    # silently go unnoticed.
+    local actual_deletes
+    actual_deletes=$(find "$dest_dir/deletes" -name "*.xml" -type f | wc -l | tr -d ' ')
+    if [ "$actual_deletes" -eq 0 ]; then
+        print_info "⚠️  No delete files found for $month — verify this is expected for this delivery"
+        slack_notify_resilient ":warning: *nara preprocess $month* — 0 delete files found (expected for some deliveries; verify)"
+    else
+        print_info "Delete files: $actual_deletes file(s) in $dest_dir/deletes/"
     fi
 }
 
@@ -666,6 +722,7 @@ main() {
     SKIP_PIPELINE=false
     SKIP_TO_PIPELINE=false
     EXPLICIT_HARVEST=""
+    S3_SOURCE=""
     DRY_RUN=false
 
     while [[ $# -gt 0 ]]; do
@@ -684,6 +741,10 @@ main() {
                 ;;
             --datestamp=*)
                 OUTPUT_DATESTAMP="${1#*=}"
+                shift
+                ;;
+            --s3-source=*)
+                S3_SOURCE="${1#*=}"
                 shift
                 ;;
             --skip-preprocess)
@@ -828,7 +889,18 @@ main() {
             merge_datestamp="$month"
         fi
 
-        # 2a. Preprocess
+        # 2a. (Optional) Download delivery from NARA's S3 bucket
+        if [ -n "$S3_SOURCE" ]; then
+            local existing_files
+            existing_files=$(find "$NARA_ORIGINALS/$month" -type f 2>/dev/null | wc -l | tr -d ' ')
+            if [ "$existing_files" -gt 0 ]; then
+                print_info "Source files already present in $NARA_ORIGINALS/$month ($existing_files files). Skipping S3 source sync."
+            else
+                sync_from_nara_s3 "$S3_SOURCE" "$month"
+            fi
+        fi
+
+        # 2b. Preprocess
         if [ "$SKIP_PREPROCESS" != true ]; then
             # Check if already preprocessed (tar.gz files exist)
             local existing_tgz
@@ -842,7 +914,7 @@ main() {
             print_info "Skipping preprocessing (--skip-preprocess)"
         fi
 
-        # 2b. Delta Harvest
+        # 2c. Delta Harvest
         # Check if already harvested
         local existing_harvest
         existing_harvest=$(find "$NARA_DATA/delta/$month/harvest" -type d -name "*-nara-OriginalRecord.avro" 2>/dev/null | sort | tail -1)
@@ -853,7 +925,7 @@ main() {
             run_delta_harvest "$month"
         fi
 
-        # 2c. Merge
+        # 2d. Merge
         # Check if already merged
         local existing_merge="$NARA_HARVEST/${merge_datestamp}_000000-nara-OriginalRecord.avro"
         if [ -d "$existing_merge" ] && [ -f "$existing_merge/_LOGS/_SUMMARY.txt" ]; then
