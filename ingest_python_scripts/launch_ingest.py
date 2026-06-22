@@ -147,6 +147,27 @@ def get_current_endpoint(hub: str) -> str:
 
 
 # ── S3 delivery helpers ───────────────────────────────────────────────────────
+def _sortable_date(entry: str) -> str:
+    """Return a YYYYMMDD string for sorting delivery entry names newest-first.
+
+    Handles three formats found in hub buckets:
+      YYYY-MM-DD  (ISO, with dashes)   → strip dashes
+      YYYYMMDD    (8 digits, year first) → keep as-is
+      MMDDYYYY    (8 digits, month first, e.g. Georgia) → reorder to YYYYMMDD
+    """
+    m = re.search(r"(\d{4})-(\d{2})-(\d{2})", entry)
+    if m:
+        return m.group(1) + m.group(2) + m.group(3)
+    m = re.search(r"(\d{8})", entry)
+    if m:
+        s = m.group(1)
+        # If the first 4 digits are a plausible year, it's YYYYMMDD; else MMDDYYYY.
+        if 1900 <= int(s[:4]) <= 2099:
+            return s
+        return s[4:] + s[:4]  # MMDDYYYY → YYYYMMDD
+    return entry
+
+
 def list_deliveries(bucket: str) -> list[str]:
     """Return all top-level entries (folders and files) in the bucket, sorted newest-first.
 
@@ -174,7 +195,7 @@ def list_deliveries(bucket: str) -> list[str]:
         if re.search(r"\d{4}-\d{2}-\d{2}|\d{8}", entry):
             dated.append(entry)
 
-    return sorted(dated, reverse=True)
+    return sorted(dated, key=_sortable_date, reverse=True)
 
 
 # ── file-hub pre-flight ───────────────────────────────────────────────────────
