@@ -168,9 +168,10 @@ def list_deliveries(bucket: str) -> list[str]:
                 continue
             entry = m.group(1)
 
-        # Only keep entries that contain an ISO date (YYYY-MM-DD); non-dated
-        # entries like "archive/" are not valid delivery candidates.
-        if re.search(r"\d{4}-\d{2}-\d{2}", entry):
+        # Only keep entries that look like a date delivery — either ISO format
+        # (YYYY-MM-DD) or a plain 8-digit date string (MMDDYYYY / YYYYMMDD).
+        # Non-dated entries like "archive/" are skipped.
+        if re.search(r"\d{4}-\d{2}-\d{2}|\d{8}", entry):
             dated.append(entry)
 
     return sorted(dated, reverse=True)
