@@ -214,14 +214,14 @@ def file_hub_preflight(hub: str, bucket: str) -> None:
     if len(deliveries) > 5:
         print(f"    … and {len(deliveries) - 5} older")
 
-    print(f"\nCurrent i3.conf endpoint for {hub}:")
+    print(f"\nCurrent i3.conf delivery path for {hub}:")
     print(f"  {get_current_endpoint(hub)}")
 
     # Suggest the most recent dated delivery (always first after list_deliveries sort).
     latest = deliveries[0]
     suggested = f"s3://{bucket}/{latest}"
     print(f"""
-⚠️  Before continuing, make sure i3.conf is pointing at the right delivery:
+⚠️  Before continuing, make sure i3.conf is pointing at the right delivery path:
 
     {hub}.harvest.endpoint = "{suggested}"
 
