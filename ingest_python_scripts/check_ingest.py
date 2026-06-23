@@ -405,6 +405,22 @@ def parse_harvest_pacing(progress_lines: str, n_points: int = 30):
     return (o1 - o0) / dt
 
 
+def get_progress_lines(sections: dict) -> str:
+    """Return the best available OAI progress lines from parsed SSM sections.
+
+    Prefers PROGRESS_LINES (Spark log OaiRequestInfo entries). Falls back to
+    OAI_HARVEST_LOG (OaiHarvestLogger file) when PROGRESS_LINES is empty —
+    this is the common case for localoai hubs where the Spark log doesn't
+    carry cursor/total info.
+    """
+    progress = sections.get("PROGRESS_LINES", "")
+    if not progress.strip():
+        oai = sections.get("OAI_HARVEST_LOG", "")
+        if oai:
+            return oai
+    return progress
+
+
 def earliest_timestamp_in_lines(lines: str):
     earliest = None
     earliest_secs = None
@@ -501,12 +517,7 @@ def render(hub, harvest_type, endpoint, sections):
                 lines.append(f"  {ln}")
 
     # CURRENT STAGE
-    progress_lines = sections.get("PROGRESS_LINES", "")
-    # For localoai hubs, supplement with the dedicated OaiHarvestLogger file which
-    # has structured cursor=/total= fields even when the Spark log doesn't.
-    oai_harvest_lines = sections.get("OAI_HARVEST_LOG", "")
-    if oai_harvest_lines and not progress_lines.strip():
-        progress_lines = oai_harvest_lines
+    progress_lines = get_progress_lines(sections)
     stage_recent = sections.get("STAGE_RECENT", "")
     stage_first_ts = parse_first_stage_timestamps(sections.get("STAGE_FIRST", ""))
     loginfo_lines = sections.get("LOGINFO", "").splitlines()
@@ -579,7 +590,7 @@ def render(hub, harvest_type, endpoint, sections):
 
 def derive_summary(is_running, sections, harvest_type):
     done_count = len([ln for ln in sections.get("STAGES_DONE", "").splitlines() if ln.strip()])
-    progress_lines = sections.get("PROGRESS_LINES", "")
+    progress_lines = get_progress_lines(sections)
     stage_recent = sections.get("STAGE_RECENT", "")
 
     if is_running:

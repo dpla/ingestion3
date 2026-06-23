@@ -158,7 +158,9 @@ def _sortable_date(entry: str) -> str:
     m = re.search(r"(\d{4})-(\d{2})-(\d{2})", entry)
     if m:
         return m.group(1) + m.group(2) + m.group(3)
-    m = re.search(r"(\d{8})", entry)
+    # Require a plausible 4-digit year (19xx or 20xx) in either the YYYYMMDD
+    # or MMDDYYYY position to avoid treating arbitrary 8-digit numbers as dates.
+    m = re.search(r"((?:19|20)\d{6}|\d{4}(?:19|20)\d{2})", entry)
     if m:
         s = m.group(1)
         # If the first 4 digits are a plausible year, it's YYYYMMDD; else MMDDYYYY.
@@ -192,7 +194,7 @@ def list_deliveries(bucket: str) -> list[str]:
         # Only keep entries that look like a date delivery — either ISO format
         # (YYYY-MM-DD) or a plain 8-digit date string (MMDDYYYY / YYYYMMDD).
         # Non-dated entries like "archive/" are skipped.
-        if re.search(r"\d{4}-\d{2}-\d{2}|\d{8}", entry):
+        if re.search(r"\d{4}-\d{2}-\d{2}|(?:19|20)\d{6}|\d{4}(?:19|20)\d{2}", entry):
             dated.append(entry)
 
     return sorted(dated, key=_sortable_date, reverse=True)
