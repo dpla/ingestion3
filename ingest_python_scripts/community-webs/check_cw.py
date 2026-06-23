@@ -24,6 +24,7 @@ import re
 import subprocess
 import sys
 import time
+from datetime import datetime
 
 # ---------- config ----------
 REGION      = "us-east-1"
@@ -154,6 +155,19 @@ if [ -f "{INGEST_LOG}" ]; then
 else
   echo "(no log)"
 fi
+echo "ec2_now=$(date '+%H:%M:%S')"
+
+echo "===STAGE_FIRST==="
+if [ -f "{INGEST_LOG}" ]; then
+  grep -m1 -E "HarvestEntry|FileHarvester|harvest started" "{INGEST_LOG}" 2>/dev/null | grep -oE '[0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}' | head -1
+  echo "---"
+  grep -m1 -E "MappingEntry|IngestRemap|mapping started" "{INGEST_LOG}" 2>/dev/null | grep -oE '[0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}' | head -1
+  echo "---"
+  grep -m1 -E "EnrichEntry|enrichment started" "{INGEST_LOG}" 2>/dev/null | grep -oE '[0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}' | head -1
+  echo "---"
+  grep -m1 -E "JsonlEntry|jsonl started" "{INGEST_LOG}" 2>/dev/null | grep -oE '[0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}' | head -1
+  echo "---"
+fi
 
 echo "===STAGE_RECENT==="
 if [ -f "{INGEST_LOG}" ]; then
@@ -228,6 +242,51 @@ def detect_current_stage(stage_recent):
                 if kw in line:
                     return stage
     return None
+
+
+def parse_first_stage_timestamps(stage_first: str) -> dict:
+    timestamps = {}
+    chunks = stage_first.split("---")
+    ts_re = re.compile(r"^\d{2}:\d{2}:\d{2}$")
+    for stage, chunk in zip(STAGES, chunks):
+        ts = chunk.strip()
+        if ts_re.match(ts):
+            timestamps[stage] = ts
+    return timestamps
+
+
+def hms_to_seconds(hms: str) -> int:
+    h, m, s = (int(x) for x in hms.split(":"))
+    return h * 3600 + m * 60 + s
+
+
+def fmt_duration(seconds) -> str:
+    if seconds is None or seconds < 0:
+        return "?"
+    seconds = int(seconds)
+    h, rem = divmod(seconds, 3600)
+    m, s = divmod(rem, 60)
+    if h: return f"{h}h {m}m"
+    if m: return f"{m}m {s}s"
+    return f"{s}s"
+
+
+def stage_runtime_seconds(stage_first_ts, now_ref):
+    if not stage_first_ts or not now_ref:
+        return None
+    try:
+        ref_dt = datetime.strptime(now_ref, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return None
+    try:
+        stage_t = datetime.strptime(stage_first_ts, "%H:%M:%S").time()
+    except ValueError:
+        return None
+    stage_dt = datetime.combine(ref_dt.date(), stage_t)
+    delta = (ref_dt - stage_dt).total_seconds()
+    if delta < 0:
+        delta += 86400
+    return int(delta)
 
 
 def parse_process_lines(proc_text):
@@ -330,6 +389,12 @@ def render(sections):
     # CURRENT STAGE
     stage_recent = sections.get("STAGE_RECENT", "")
     current_stage = detect_current_stage(stage_recent)
+    stage_first_ts = parse_first_stage_timestamps(sections.get("STAGE_FIRST", ""))
+    loginfo_lines = sections.get("LOGINFO", "").splitlines()
+    log_mtime = next((ln.split("=", 1)[1] for ln in loginfo_lines if ln.startswith("mtime=")), None)
+    ec2_now   = next((ln.split("=", 1)[1] for ln in loginfo_lines if ln.startswith("ec2_now=")), None)
+    now_ref   = f"2000-01-01 {ec2_now}" if ec2_now else log_mtime
+
     lines.append("")
     lines.append("CURRENT STAGE")
     if not is_running:
@@ -337,11 +402,17 @@ def render(sections):
     elif not current_stage:
         lines.append(c(YELLOW, "  Could not infer current stage from log."))
     else:
-        lines.append(f"  Stage:    {c(YELLOW, current_stage)}")
-        if current_stage == "harvest":
-            lines.append(c(DIM, "  Progress: (file-based harvest — no offset to parse)"))
+        stage_start = stage_first_ts.get(current_stage)
+        runtime_s = stage_runtime_seconds(stage_start, now_ref)
+        lines.append(f"  Stage:     {c(YELLOW, current_stage)}")
+        if stage_start:
+            lines.append(f"  Started:   {stage_start}   (running for {fmt_duration(runtime_s)})")
         else:
-            lines.append(c(DIM, "  Progress: (not derivable for Spark stages from log alone)"))
+            lines.append("  Started:   (no stage-start marker found in log)")
+        if current_stage == "harvest":
+            lines.append(c(DIM, "  Progress:  (file-based harvest — no offset to parse)"))
+        else:
+            lines.append(c(DIM, "  Progress:  (not derivable for Spark stages from log alone)"))
 
     # DISK USAGE
     disk_text = sections.get("DISK", "").strip()
