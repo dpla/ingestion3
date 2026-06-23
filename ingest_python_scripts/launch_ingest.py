@@ -250,6 +250,11 @@ def main() -> None:
         choices=VALID_RESUME_STEPS,
         help="Resume from a specific step instead of running the full pipeline.",
     )
+    parser.add_argument(
+        "--harvest-only",
+        action="store_true",
+        help="Only run the harvest step (skip mapping/enrichment/jsonl/S3 sync).",
+    )
     args = parser.parse_args()
 
     hub = (args.hub or input("Hub: ")).strip().lower()
@@ -287,7 +292,14 @@ def main() -> None:
             file_hub_preflight(hub, bucket)
 
     # Launch.
-    extra = f" --resume-from {args.resume_from}" if args.resume_from else ""
+    if args.harvest_only and args.resume_from:
+        sys.exit("--harvest-only and --resume-from are mutually exclusive.")
+    if args.harvest_only:
+        extra = " --harvest-only"
+    elif args.resume_from:
+        extra = f" --resume-from {args.resume_from}"
+    else:
+        extra = ""
     invocation = f"bash {SCRIPTS_DIR}/ingest.sh {hub}{extra}"
     inner = (
         'sudo -u ec2-user bash -lc "'

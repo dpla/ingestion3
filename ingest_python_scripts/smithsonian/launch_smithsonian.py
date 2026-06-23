@@ -124,7 +124,7 @@ def ssm_run(shell_cmd, timeout_seconds=30, poll_seconds=4):
                 "--query", "StandardErrorContent",
                 "--output", "text",
             ])
-        except Exception:
+        except RuntimeError:
             stderr = "(could not fetch stderr)"
         raise RuntimeError(
             f"SSM ended with status {status}.\nStdout:\n{output}\nStderr:\n{stderr}"
