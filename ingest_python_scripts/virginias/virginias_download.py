@@ -112,10 +112,21 @@ def clone_repos():
     # (VaFileHarvester expects .zip files in the endpoint directory, not subdirs).
     zip_cmds = (
         f"cd {DEST} && "
+        f"failed=() && "
         f"for repo in {repos_list}; do "
-        f"  [ -d \"$repo\" ] && find \"$repo\" -name '*.xml' | zip \"${{repo}}.zip\" -@ "
-        f"  && echo \"zipped $repo\" && rm -rf \"$repo\" || true; "
-        f"done"
+        f"  if [ -d \"$repo\" ]; then "
+        f"    if find \"$repo\" -name '*.xml' | zip \"${{repo}}.zip\" -@; then "
+        f"      echo \"zipped $repo\" && rm -rf \"$repo\"; "
+        f"    else "
+        f"      echo \"ERROR: failed to zip $repo\" >&2 && failed+=(\"$repo\"); "
+        f"    fi; "
+        f"  else "
+        f"    echo \"ERROR: missing repo dir: $repo\" >&2 && failed+=(\"$repo\"); "
+        f"  fi; "
+        f"done && "
+        f"if [ ${{#failed[@]}} -gt 0 ]; then "
+        f"  echo \"Zipping failed for: ${{failed[*]}}\" >&2 && exit 1; "
+        f"fi"
     )
     shell_cmd = f"rm -rf {DEST} && mkdir -p {DEST} && {clone_cmds} && {zip_cmds} && echo DONE && ls -lh {DEST}/*.zip"
 
