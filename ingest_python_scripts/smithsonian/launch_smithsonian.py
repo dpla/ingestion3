@@ -250,7 +250,7 @@ def run_preprocess(date):
 
     info("Running fix-si.sh inline (this takes ~10–15 min) …")
     ssm_run(
-        f"cd {INGEST_DIR} && ./scripts/harvest/fix-si.sh {dest}",
+        f"bash {INGEST_DIR}/scripts/harvest/fix-si.sh {dest}",
         timeout_seconds=PREPROCESS_TIMEOUT_S, poll_seconds=15,
     )
     count = ssm_run(
@@ -301,7 +301,7 @@ def run_harvest(date):
     info(f"Log: {HARVEST_LOG}")
     info(f"Polling every {POLL_INTERVAL_S}s. Typically 3–4 hours.\n")
 
-    ssm_bg(f"cd {INGEST_DIR} && ./scripts/harvest.sh smithsonian > {HARVEST_LOG} 2>&1")
+    ssm_bg(f"bash {INGEST_DIR}/scripts/harvest.sh smithsonian > {HARVEST_LOG} 2>&1")
 
     def check_fn():
         out = ssm_run(
@@ -373,7 +373,7 @@ def run_mapping(date):
     info("Typically ~35–40 min for 7.8M records.\n")
 
     ssm_run(
-        f"cd {INGEST_DIR} && ./scripts/ingest.sh smithsonian --mapping-only > {PIPELINE_LOG} 2>&1",
+        f"bash {INGEST_DIR}/scripts/ingest.sh smithsonian --mapping-only > {PIPELINE_LOG} 2>&1",
         timeout_seconds=MAPPING_TIMEOUT_S, poll_seconds=30,
     )
 
@@ -415,8 +415,7 @@ def run_pipeline(date):
     info(f"Polling every {POLL_INTERVAL_S}s. Typically 1–2 hours.\n")
 
     ssm_bg(
-        f"cd {INGEST_DIR} && "
-        f"./scripts/ingest.sh smithsonian --resume-from enrichment > {PIPELINE_LOG} 2>&1"
+        f"bash {INGEST_DIR}/scripts/ingest.sh smithsonian --resume-from enrichment > {PIPELINE_LOG} 2>&1"
     )
 
     orig = f"{DATA_ROOT}/originalRecords/{date}"
