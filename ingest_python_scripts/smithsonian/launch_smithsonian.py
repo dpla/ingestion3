@@ -324,11 +324,12 @@ def run_harvest(date):
             f'RUNNING=$(pgrep -af "harvest.sh smithsonian" || true)\n'
             f'if [ -n "$LATEST" ] && [ -f "$LATEST/_SUCCESS" ] && [ "$LATEST" -nt "$ORIG" ]; then echo "done:$LATEST"\n'
             f'elif [ -z "$RUNNING" ] && [ -n "$LATEST" ]; then echo "failed:$LATEST"\n'
-            f'else echo "running"; fi'
+            f'else echo "running"; fi',
+            timeout_seconds=60,
         ).strip()
         return out if out.startswith("done:") or out.startswith("failed:") else None
 
-    result = poll_until_done(check_fn, lambda: ssm_run(f'tail -2 {HARVEST_LOG} 2>/dev/null || true'))
+    result = poll_until_done(check_fn, lambda: ssm_run(f'tail -2 {HARVEST_LOG} 2>/dev/null || true', timeout_seconds=60))
     if result.startswith("failed:"):
         slack_notify(f":x: *Smithsonian harvest FAILED* — `{result[7:]}`\nCheck `{HARVEST_LOG}`")
         err(f"Harvest exited without _SUCCESS at: {result[7:]}")
@@ -448,11 +449,12 @@ def run_pipeline(date):
             f'if [ -n "$HLAT" ] && [ "$HLAT" -nt "$ORIG" ] && [ -n "$MLAT" ] && [ "$MLAT" -nt "$HLAT" ] '
             f'&& [ -f "$LATEST/_SUCCESS" ] && [ "$LATEST" -nt "$MLAT" ]; then echo "done:$LATEST"\n'
             f'elif [ -z "$RUNNING" ]; then echo "failed"\n'
-            f'else echo "running"; fi'
+            f'else echo "running"; fi',
+            timeout_seconds=60,
         ).strip()
         return out if out.startswith("done:") or out == "failed" else None
 
-    result = poll_until_done(check_fn, lambda: ssm_run(f'tail -2 {PIPELINE_LOG} 2>/dev/null || true'))
+    result = poll_until_done(check_fn, lambda: ssm_run(f'tail -2 {PIPELINE_LOG} 2>/dev/null || true', timeout_seconds=60))
     if result == "failed":
         slack_notify(f":x: *Smithsonian pipeline FAILED* — no jsonl `_SUCCESS`\nCheck `{PIPELINE_LOG}`")
         err("Pipeline exited without jsonl/_SUCCESS.")
