@@ -116,7 +116,19 @@ def ssm_run(shell_cmd, timeout_seconds=30, poll_seconds=4):
         "--output", "text",
     ])
     if status != "Success":
-        raise RuntimeError(f"SSM ended with status {status}.\nOutput:\n{output}")
+        try:
+            stderr = _aws([
+                "ssm", "get-command-invocation",
+                "--command-id", cmd_id,
+                "--instance-id", INSTANCE_ID,
+                "--query", "StandardErrorContent",
+                "--output", "text",
+            ])
+        except Exception:
+            stderr = "(could not fetch stderr)"
+        raise RuntimeError(
+            f"SSM ended with status {status}.\nStdout:\n{output}\nStderr:\n{stderr}"
+        )
     return output
 
 
@@ -212,7 +224,7 @@ def run_download(date):
     info(f"Syncing s3://{S3_DELIVERY_BUCKET}/{date}/ → {dest}/")
     info(f"(timeout {DOWNLOAD_TIMEOUT_S // 60} min)")
     ssm_run(
-        f"aws s3 sync s3://{S3_DELIVERY_BUCKET}/{date}/ {dest}/ --profile {AWS_PROFILE}",
+        f"aws s3 sync s3://{S3_DELIVERY_BUCKET}/{date}/ {dest}/",
         timeout_seconds=DOWNLOAD_TIMEOUT_S, poll_seconds=15,
     )
     count_str = ssm_run(
