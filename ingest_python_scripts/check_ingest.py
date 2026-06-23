@@ -39,6 +39,8 @@ from datetime import datetime
 
 # ---------- config ----------
 DATA_ROOT = "/home/ec2-user/data"
+I3_HOME   = "/home/ec2-user/ingestion3"
+OAI_LOGS  = f"{I3_HOME}/logs"
 STAGES = ("harvest", "mapping", "enrichment", "jsonl")
 HUB_RE = re.compile(r"^[a-z0-9_-]+$")
 
@@ -199,17 +201,20 @@ if [ -f "$LOG" ]; then
 else
   echo "(no log file)"
 fi
+echo "ec2_now=$(date '+%H:%M:%S')"
 
 echo "===STAGE_FIRST==="
-# First matching log line for each stage (whole line — Python extracts timestamp).
+# Output one HH:MM:SS timestamp per stage (or blank line if stage not started).
+# Timestamps are extracted in bash with grep -oE so Python just gets clean strings.
 if [ -f "$LOG" ]; then
-  for kw in "OaiMultiPageResponseBuilder|OaiRequestInfo|HarvestEntry|OaiHarvester|ApiHarvester|FileHarvester|harvest started|:arrow_forward: .* harvest" \\
-            "MappingEntry|IngestRemap|mapping started|:arrow_forward: .* mapping" \\
-            "EnrichEntry|enrichment started|:arrow_forward: .* enrichment" \\
-            "JsonlEntry|jsonl started|:arrow_forward: .* jsonl"; do
-    grep -m1 -E "$kw" "$LOG" 2>/dev/null
-    echo "---ENDFIRSTSTAGE---"
-  done
+  grep -m1 -E "OaiMultiPageResponseBuilder|OaiRequestInfo|HarvestEntry|OaiHarvester|ApiHarvester|FileHarvester|LocalOaiHarvester|harvest started" "$LOG" 2>/dev/null | grep -oE '[0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}' | head -1
+  echo "---"
+  grep -m1 -E "MappingEntry|IngestRemap|mapping started" "$LOG" 2>/dev/null | grep -oE '[0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}' | head -1
+  echo "---"
+  grep -m1 -E "EnrichEntry|enrichment started" "$LOG" 2>/dev/null | grep -oE '[0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}' | head -1
+  echo "---"
+  grep -m1 -E "JsonlEntry|jsonl started" "$LOG" 2>/dev/null | grep -oE '[0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}' | head -1
+  echo "---"
 fi
 
 echo "===STAGE_RECENT==="
@@ -220,8 +225,14 @@ fi
 
 echo "===PROGRESS_LINES==="
 # Last 30 OAI request lines — used for progress + pacing parsing.
+# Check both the main Spark log and the OaiHarvestLogger file (localoai hubs).
 if [ -f "$LOG" ]; then
   tail -300 "$LOG" 2>/dev/null | grep -E "OaiRequestInfo|Loading page" | tail -30
+fi
+OAI_LOG=$(ls -t {OAI_LOGS}/oai-harvest-{hub}-*.log 2>/dev/null | head -1)
+if [ -n "$OAI_LOG" ]; then
+  echo "===OAI_HARVEST_LOG==="
+  tail -30 "$OAI_LOG" 2>/dev/null
 fi
 
 echo "===STAGES_DONE==="
@@ -277,22 +288,28 @@ def detect_current_stage(stage_recent: str) -> str | None:
 
 def parse_first_stage_timestamps(stage_first: str) -> dict:
     """STAGE_FIRST has 4 entries (harvest, mapping, enrichment, jsonl)
-    separated by '---ENDFIRSTSTAGE---'. Each entry is a full log line;
-    we extract the first HH:MM:SS we find anywhere on that line."""
+    separated by '---'. Each entry is a bare HH:MM:SS extracted by bash
+    grep -oE, or an empty line if that stage hasn't started yet."""
     timestamps = {}
-    chunks = stage_first.split("---ENDFIRSTSTAGE---")
-    ts_re = re.compile(r"\b(\d{2}:\d{2}:\d{2})\b")
+    chunks = stage_first.split("---")
+    ts_re = re.compile(r"^\d{2}:\d{2}:\d{2}$")
     for stage, chunk in zip(STAGES, chunks):
-        chunk = chunk.strip()
-        if not chunk:
-            continue
-        m = ts_re.search(chunk)
-        if m:
-            timestamps[stage] = m.group(1)
+        ts = chunk.strip()
+        if ts_re.match(ts):
+            timestamps[stage] = ts
     return timestamps
 
 
 def extract_log_timestamp(line: str) -> str | None:
+    """Extract HH:MM:SS from a log line.
+
+    Handles both the Spark log format (HH:MM:SS at start of line) and the
+    OaiHarvestLogger ISO format (yyyy-MM-ddTHH:MM:SS).
+    """
+    # ISO datetime: 2026-06-23T13:52:30 — extract the time part after 'T'
+    m = re.search(r"\d{4}-\d{2}-\d{2}T(\d{2}:\d{2}:\d{2})", line)
+    if m:
+        return m.group(1)
     m = re.search(r"\b(\d{2}:\d{2}:\d{2})\b", line)
     return m.group(1) if m else None
 
@@ -332,12 +349,23 @@ def stage_runtime_seconds(stage_first_ts, log_mtime):
 
 
 # ---- progress + pacing — handles multiple OAI log shapes ----
+# Shape 1: Spark log   "OaiRequestInfo(...,Some(cursor),Some(total))"
 PROGRESS_TRAILING_PAIR_RE = re.compile(r"Some\((\d+)\)\s*,\s*Some\((\d+)\)\s*\)\s*$")
+# Shape 2: older Spark "t(total):cursor"
 PROGRESS_TOKEN_RE = re.compile(r"t\((\d+)\):(\d+)")
+# Shape 3: OaiHarvestLogger file  "... | cursor=N | total=N | ..."
+OAI_LOGGER_RE = re.compile(r"cursor=(\d+).*\btotal=(\d+)")
 
 
 def parse_oai_progress_from_line(line: str):
-    """Return (current, total) from a single OaiRequestInfo line."""
+    """Return (current, total) from a single OAI log line.
+
+    Handles both the Spark log format (OaiRequestInfo toString) and the
+    structured OaiHarvestLogger format (cursor=N | total=N).
+    """
+    m = OAI_LOGGER_RE.search(line)
+    if m:
+        return int(m.group(1)), int(m.group(2))
     m = PROGRESS_TRAILING_PAIR_RE.search(line)
     if m:
         return int(m.group(1)), int(m.group(2))
@@ -375,6 +403,22 @@ def parse_harvest_pacing(progress_lines: str, n_points: int = 30):
     if dt <= 0:
         return None
     return (o1 - o0) / dt
+
+
+def get_progress_lines(sections: dict) -> str:
+    """Return the best available OAI progress lines from parsed SSM sections.
+
+    Prefers PROGRESS_LINES (Spark log OaiRequestInfo entries). Falls back to
+    OAI_HARVEST_LOG (OaiHarvestLogger file) when PROGRESS_LINES is empty —
+    this is the common case for localoai hubs where the Spark log doesn't
+    carry cursor/total info.
+    """
+    progress = sections.get("PROGRESS_LINES", "")
+    if not progress.strip():
+        oai = sections.get("OAI_HARVEST_LOG", "")
+        if oai:
+            return oai
+    return progress
 
 
 def earliest_timestamp_in_lines(lines: str):
@@ -473,13 +517,12 @@ def render(hub, harvest_type, endpoint, sections):
                 lines.append(f"  {ln}")
 
     # CURRENT STAGE
-    progress_lines = sections.get("PROGRESS_LINES", "")
+    progress_lines = get_progress_lines(sections)
     stage_recent = sections.get("STAGE_RECENT", "")
     stage_first_ts = parse_first_stage_timestamps(sections.get("STAGE_FIRST", ""))
-    log_mtime = next(
-        (ln.split("=", 1)[1] for ln in sections.get("LOGINFO", "").splitlines() if ln.startswith("mtime=")),
-        None,
-    )
+    loginfo_lines = sections.get("LOGINFO", "").splitlines()
+    log_mtime = next((ln.split("=", 1)[1] for ln in loginfo_lines if ln.startswith("mtime=")), None)
+    ec2_now   = next((ln.split("=", 1)[1] for ln in loginfo_lines if ln.startswith("ec2_now=")), None)
 
     lines.append("")
     lines.append("CURRENT STAGE")
@@ -497,7 +540,9 @@ def render(hub, harvest_type, endpoint, sections):
                 if stage_start:
                     stage_start_was_inferred = True
 
-            runtime_s = stage_runtime_seconds(stage_start, log_mtime)
+            # Prefer EC2 current time for "running for" — more accurate than log mtime.
+            now_ref = f"2000-01-01 {ec2_now}" if ec2_now else log_mtime
+            runtime_s = stage_runtime_seconds(stage_start, now_ref)
             lines.append(f"  Stage:     {c(YELLOW, current_stage)}")
             if stage_start:
                 suffix = " (approx — based on recent log window)" if stage_start_was_inferred else ""
@@ -545,7 +590,7 @@ def render(hub, harvest_type, endpoint, sections):
 
 def derive_summary(is_running, sections, harvest_type):
     done_count = len([ln for ln in sections.get("STAGES_DONE", "").splitlines() if ln.strip()])
-    progress_lines = sections.get("PROGRESS_LINES", "")
+    progress_lines = get_progress_lines(sections)
     stage_recent = sections.get("STAGE_RECENT", "")
 
     if is_running:

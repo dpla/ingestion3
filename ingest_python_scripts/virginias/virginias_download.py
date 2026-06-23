@@ -107,9 +107,30 @@ def clone_repos():
         f"git clone --depth 1 --branch {branch} https://github.com/dplava/{repo}.git {DEST}/{repo} 2>&1"
         for repo, branch in REPOS
     )
-    shell_cmd = f"mkdir -p {DEST} && {clone_cmds} && echo DONE && ls {DEST}/"
+    repos_list = " ".join(repo for repo, _ in REPOS)
+    # After cloning, zip each repo's XML files into a single zip per institution
+    # (VaFileHarvester expects .zip files in the endpoint directory, not subdirs).
+    zip_cmds = (
+        f"cd {DEST} && "
+        f"failed=() && "
+        f"for repo in {repos_list}; do "
+        f"  if [ -d \"$repo\" ]; then "
+        f"    if find \"$repo\" -name '*.xml' | zip \"${{repo}}.zip\" -@; then "
+        f"      echo \"zipped $repo\" && rm -rf \"$repo\"; "
+        f"    else "
+        f"      echo \"ERROR: failed to zip $repo\" >&2 && failed+=(\"$repo\"); "
+        f"    fi; "
+        f"  else "
+        f"    echo \"ERROR: missing repo dir: $repo\" >&2 && failed+=(\"$repo\"); "
+        f"  fi; "
+        f"done && "
+        f"if [ ${{#failed[@]}} -gt 0 ]; then "
+        f"  echo \"Zipping failed for: ${{failed[*]}}\" >&2 && exit 1; "
+        f"fi"
+    )
+    shell_cmd = f"rm -rf {DEST} && mkdir -p {DEST} && {clone_cmds} && {zip_cmds} && echo DONE && ls -lh {DEST}/*.zip"
 
-    print(f"\nCloning {len(REPOS)} dplava repos to EC2:{DEST} ...")
+    print(f"\nCloning {len(REPOS)} dplava repos to EC2:{DEST} and zipping XML files ...")
     out, err = ssm_run(shell_cmd, poll_seconds=600)
     if out:
         print(out)

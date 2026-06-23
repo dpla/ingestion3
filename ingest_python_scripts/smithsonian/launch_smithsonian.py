@@ -116,7 +116,19 @@ def ssm_run(shell_cmd, timeout_seconds=30, poll_seconds=4):
         "--output", "text",
     ])
     if status != "Success":
-        raise RuntimeError(f"SSM ended with status {status}.\nOutput:\n{output}")
+        try:
+            stderr = _aws([
+                "ssm", "get-command-invocation",
+                "--command-id", cmd_id,
+                "--instance-id", INSTANCE_ID,
+                "--query", "StandardErrorContent",
+                "--output", "text",
+            ])
+        except RuntimeError:
+            stderr = "(could not fetch stderr)"
+        raise RuntimeError(
+            f"SSM ended with status {status}.\nStdout:\n{output}\nStderr:\n{stderr}"
+        )
     return output
 
 
@@ -126,9 +138,22 @@ def ssm_bg(shell_cmd):
         f"nohup bash -lc 'echo {inner_b64} | base64 -d | bash -l' "
         f"</dev/null >/dev/null 2>&1 & disown; echo launched"
     )
-    result = ssm_run(bg_wrapper, timeout_seconds=20)
+    result = ssm_run(bg_wrapper, timeout_seconds=30)
     if "launched" not in result:
         raise RuntimeError(f"Background launch may have failed. SSM output: {result!r}")
+
+
+def slack_notify(msg):
+    """Post to #tech-alerts via EC2 common.sh — same channel as ingest.sh milestones."""
+    encoded = base64.b64encode(msg.encode()).decode()
+    script = (
+        f"source {INGEST_DIR}/scripts/common.sh\n"
+        f"slack_notify \"$(echo {encoded} | base64 -d)\""
+    )
+    try:
+        ssm_run(script, timeout_seconds=30, poll_seconds=3)
+    except Exception:
+        pass  # Slack failure is never fatal
 
 
 def aws_s3_ls(s3_path):
@@ -212,7 +237,7 @@ def run_download(date):
     info(f"Syncing s3://{S3_DELIVERY_BUCKET}/{date}/ → {dest}/")
     info(f"(timeout {DOWNLOAD_TIMEOUT_S // 60} min)")
     ssm_run(
-        f"aws s3 sync s3://{S3_DELIVERY_BUCKET}/{date}/ {dest}/ --profile {AWS_PROFILE}",
+        f"aws s3 sync s3://{S3_DELIVERY_BUCKET}/{date}/ {dest}/",
         timeout_seconds=DOWNLOAD_TIMEOUT_S, poll_seconds=15,
     )
     count_str = ssm_run(
@@ -238,7 +263,7 @@ def run_preprocess(date):
 
     info("Running fix-si.sh inline (this takes ~10–15 min) …")
     ssm_run(
-        f"cd {INGEST_DIR} && ./scripts/harvest/fix-si.sh {dest}",
+        f"bash {INGEST_DIR}/scripts/harvest/fix-si.sh {date}",
         timeout_seconds=PREPROCESS_TIMEOUT_S, poll_seconds=15,
     )
     count = ssm_run(
@@ -289,7 +314,8 @@ def run_harvest(date):
     info(f"Log: {HARVEST_LOG}")
     info(f"Polling every {POLL_INTERVAL_S}s. Typically 3–4 hours.\n")
 
-    ssm_bg(f"cd {INGEST_DIR} && ./scripts/harvest.sh smithsonian > {HARVEST_LOG} 2>&1")
+    ssm_bg(f"bash {INGEST_DIR}/scripts/harvest.sh smithsonian > {HARVEST_LOG} 2>&1")
+    slack_notify(f":rocket: *Smithsonian harvest launched* — delivery `{date}`\nLog: `{HARVEST_LOG}`")
 
     def check_fn():
         out = ssm_run(
@@ -298,15 +324,18 @@ def run_harvest(date):
             f'RUNNING=$(pgrep -af "harvest.sh smithsonian" || true)\n'
             f'if [ -n "$LATEST" ] && [ -f "$LATEST/_SUCCESS" ] && [ "$LATEST" -nt "$ORIG" ]; then echo "done:$LATEST"\n'
             f'elif [ -z "$RUNNING" ] && [ -n "$LATEST" ]; then echo "failed:$LATEST"\n'
-            f'else echo "running"; fi'
+            f'else echo "running"; fi',
+            timeout_seconds=90,
         ).strip()
         return out if out.startswith("done:") or out.startswith("failed:") else None
 
-    result = poll_until_done(check_fn, lambda: ssm_run(f'tail -2 {HARVEST_LOG} 2>/dev/null || true'))
+    result = poll_until_done(check_fn, lambda: ssm_run(f'tail -2 {HARVEST_LOG} 2>/dev/null || true', timeout_seconds=90))
     if result.startswith("failed:"):
+        slack_notify(f":x: *Smithsonian harvest FAILED* — `{result[7:]}`\nCheck `{HARVEST_LOG}`")
         err(f"Harvest exited without _SUCCESS at: {result[7:]}")
         err(f"Check {HARVEST_LOG}. Re-run with --start-at harvest to retry.")
         sys.exit(1)
+    slack_notify(f":white_check_mark: *Smithsonian harvest complete* — `{result[5:]}`")
 
 
 def harvest_checkpoint():
@@ -361,15 +390,17 @@ def run_mapping(date):
     info("Typically ~35–40 min for 7.8M records.\n")
 
     ssm_run(
-        f"cd {INGEST_DIR} && ./scripts/ingest.sh smithsonian --mapping-only > {PIPELINE_LOG} 2>&1",
+        f"bash {INGEST_DIR}/scripts/ingest.sh smithsonian --mapping-only > {PIPELINE_LOG} 2>&1",
         timeout_seconds=MAPPING_TIMEOUT_S, poll_seconds=30,
     )
 
     check = ssm_run(_mapping_done_check("failed")).strip()
     if not check.startswith("done:"):
+        slack_notify(f":x: *Smithsonian mapping FAILED* — no `_MANIFEST`\nCheck `{PIPELINE_LOG}`")
         err(f"Mapping did not produce _MANIFEST. Check {PIPELINE_LOG}.")
         err("Re-run with --start-at mapping to retry.")
         sys.exit(1)
+    slack_notify(f":white_check_mark: *Smithsonian mapping complete* — `{check[5:]}`")
 
 
 def mapping_checkpoint():
@@ -403,8 +434,7 @@ def run_pipeline(date):
     info(f"Polling every {POLL_INTERVAL_S}s. Typically 1–2 hours.\n")
 
     ssm_bg(
-        f"cd {INGEST_DIR} && "
-        f"./scripts/ingest.sh smithsonian --resume-from enrichment > {PIPELINE_LOG} 2>&1"
+        f"bash {INGEST_DIR}/scripts/ingest.sh smithsonian --resume-from enrichment > {PIPELINE_LOG} 2>&1"
     )
 
     orig = f"{DATA_ROOT}/originalRecords/{date}"
@@ -419,15 +449,18 @@ def run_pipeline(date):
             f'if [ -n "$HLAT" ] && [ "$HLAT" -nt "$ORIG" ] && [ -n "$MLAT" ] && [ "$MLAT" -nt "$HLAT" ] '
             f'&& [ -f "$LATEST/_SUCCESS" ] && [ "$LATEST" -nt "$MLAT" ]; then echo "done:$LATEST"\n'
             f'elif [ -z "$RUNNING" ]; then echo "failed"\n'
-            f'else echo "running"; fi'
+            f'else echo "running"; fi',
+            timeout_seconds=90,
         ).strip()
         return out if out.startswith("done:") or out == "failed" else None
 
-    result = poll_until_done(check_fn, lambda: ssm_run(f'tail -2 {PIPELINE_LOG} 2>/dev/null || true'))
+    result = poll_until_done(check_fn, lambda: ssm_run(f'tail -2 {PIPELINE_LOG} 2>/dev/null || true', timeout_seconds=90))
     if result == "failed":
+        slack_notify(f":x: *Smithsonian pipeline FAILED* — no jsonl `_SUCCESS`\nCheck `{PIPELINE_LOG}`")
         err("Pipeline exited without jsonl/_SUCCESS.")
         err(f"Check {PIPELINE_LOG}. Re-run with --start-at pipeline to retry.")
         sys.exit(1)
+    slack_notify(f":tada: *Smithsonian pipeline complete* — `{result[5:]}`\nReady for post-indexer.")
 
 
 def pipeline_checkpoint():

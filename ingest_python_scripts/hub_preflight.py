@@ -701,8 +701,8 @@ def _check_local_path_endpoint(path):
     exists, is a directory (or file), and is non-empty. Catches the
     'CommunityWebsHarvester NPE' class of bug where the conf endpoint
     points at a stale or missing directory."""
-    info(f"Endpoint: {path}")
-    info("Type:     file-based (local path on EC2)")
+    info(f"Delivery path: {path}")
+    info("Type:          file-based (local path on EC2)")
 
     # Catch dev paths leaking into production conf — saves an SSM round-trip
     # and gives a much clearer error than "path does not exist on the box".
@@ -772,8 +772,8 @@ def _check_local_path_endpoint_current_month(path):
     """For harvest.type='file' hubs: confirm the endpoint dir exists, has data,
     AND has at least one file dated within the current YYYY-MM. Catches
     'pointed at last month's preprocessed data, never updated' bugs."""
-    info(f"Endpoint: {path}")
-    info("Type:     file — checking for current-month data")
+    info(f"Delivery path: {path}")
+    info("Type:          file — checking for current-month data")
 
     # Reject obvious dev paths first (Mac homedirs, /var/folders, etc.).
     dev_path_patterns = [
@@ -848,8 +848,8 @@ def _check_s3_endpoint(s3_path):
     list the bucket/prefix, verify there's at least one object, AND flag if
     the latest entry is from the current YYYY-MM. Driven entirely by the conf
     endpoint — no hardcoded mapping."""
-    info(f"Endpoint: {s3_path}")
-    info("Type:     file-based (S3) — checking for current-month delivery")
+    info(f"Delivery path: {s3_path}")
+    info("Type:          file-based (S3) — checking for current-month delivery")
     try:
         result = subprocess.run(
             ["aws", "s3", "ls", s3_path,
@@ -893,12 +893,12 @@ def _check_s3_endpoint(s3_path):
 
 
 def check_endpoint(endpoint, is_api=False, harvest_type=None):
-    header("6. Endpoint reachability")
+    ht = (harvest_type or "").lower()
+    section_title = "6. Delivery path check" if ht == "file" else "6. Endpoint reachability"
+    header(section_title)
     if not endpoint:
         warn("No endpoint to check (pass --hub or enter one at the prompt).")
         return True  # non-blocking
-
-    ht = (harvest_type or "").lower()
     OAI_TYPES = ("oai", "localoai")
     API_TYPES = ("api",)
     FILE_TYPES = ("file",)
@@ -1078,7 +1078,8 @@ def main():
             # Anything that's not in OAI_TYPES and not file-based gets API treatment.
             if not is_api and harvest_type and harvest_type not in OAI_TYPES and harvest_type != "file":
                 is_api = True
-            print(f"Endpoint: {endpoint}  (from conf, type={harvest_type or 'unknown'})")
+            label = "Delivery path" if harvest_type == "file" else "Endpoint"
+            print(f"{label}: {endpoint}  (from conf, type={harvest_type or 'unknown'})")
         else:
             print(f"Endpoint: (not found in {CONF_PATH} for hub '{hub}')")
     else:

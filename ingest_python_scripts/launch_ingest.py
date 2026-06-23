@@ -147,6 +147,29 @@ def get_current_endpoint(hub: str) -> str:
 
 
 # ── S3 delivery helpers ───────────────────────────────────────────────────────
+def _sortable_date(entry: str) -> str:
+    """Return a YYYYMMDD string for sorting delivery entry names newest-first.
+
+    Handles three formats found in hub buckets:
+      YYYY-MM-DD  (ISO, with dashes)   → strip dashes
+      YYYYMMDD    (8 digits, year first) → keep as-is
+      MMDDYYYY    (8 digits, month first, e.g. Georgia) → reorder to YYYYMMDD
+    """
+    m = re.search(r"(\d{4})-(\d{2})-(\d{2})", entry)
+    if m:
+        return m.group(1) + m.group(2) + m.group(3)
+    # Require a plausible 4-digit year (19xx or 20xx) in either the YYYYMMDD
+    # or MMDDYYYY position to avoid treating arbitrary 8-digit numbers as dates.
+    m = re.search(r"((?:19|20)\d{6}|\d{4}(?:19|20)\d{2})", entry)
+    if m:
+        s = m.group(1)
+        # If the first 4 digits are a plausible year, it's YYYYMMDD; else MMDDYYYY.
+        if 1900 <= int(s[:4]) <= 2099:
+            return s
+        return s[4:] + s[:4]  # MMDDYYYY → YYYYMMDD
+    return entry
+
+
 def list_deliveries(bucket: str) -> list[str]:
     """Return all top-level entries (folders and files) in the bucket, sorted newest-first.
 
@@ -171,10 +194,10 @@ def list_deliveries(bucket: str) -> list[str]:
         # Only keep entries that look like a date delivery — either ISO format
         # (YYYY-MM-DD) or a plain 8-digit date string (MMDDYYYY / YYYYMMDD).
         # Non-dated entries like "archive/" are skipped.
-        if re.search(r"\d{4}-\d{2}-\d{2}|\d{8}", entry):
+        if re.search(r"\d{4}-\d{2}-\d{2}|(?:19|20)\d{6}|\d{4}(?:19|20)\d{2}", entry):
             dated.append(entry)
 
-    return sorted(dated, reverse=True)
+    return sorted(dated, key=_sortable_date, reverse=True)
 
 
 # ── file-hub pre-flight ───────────────────────────────────────────────────────
@@ -193,14 +216,14 @@ def file_hub_preflight(hub: str, bucket: str) -> None:
     if len(deliveries) > 5:
         print(f"    … and {len(deliveries) - 5} older")
 
-    print(f"\nCurrent i3.conf endpoint for {hub}:")
+    print(f"\nCurrent i3.conf delivery path for {hub}:")
     print(f"  {get_current_endpoint(hub)}")
 
     # Suggest the most recent dated delivery (always first after list_deliveries sort).
     latest = deliveries[0]
     suggested = f"s3://{bucket}/{latest}"
     print(f"""
-⚠️  Before continuing, make sure i3.conf is pointing at the right delivery:
+⚠️  Before continuing, make sure i3.conf is pointing at the right delivery path:
 
     {hub}.harvest.endpoint = "{suggested}"
 
@@ -226,6 +249,11 @@ def main() -> None:
         "--resume-from",
         choices=VALID_RESUME_STEPS,
         help="Resume from a specific step instead of running the full pipeline.",
+    )
+    parser.add_argument(
+        "--harvest-only",
+        action="store_true",
+        help="Only run the harvest step (skip mapping/enrichment/jsonl/S3 sync).",
     )
     args = parser.parse_args()
 
@@ -264,7 +292,14 @@ def main() -> None:
             file_hub_preflight(hub, bucket)
 
     # Launch.
-    extra = f" --resume-from {args.resume_from}" if args.resume_from else ""
+    if args.harvest_only and args.resume_from:
+        sys.exit("--harvest-only and --resume-from are mutually exclusive.")
+    if args.harvest_only:
+        extra = " --harvest-only"
+    elif args.resume_from:
+        extra = f" --resume-from {args.resume_from}"
+    else:
+        extra = ""
     invocation = f"bash {SCRIPTS_DIR}/ingest.sh {hub}{extra}"
     inner = (
         'sudo -u ec2-user bash -lc "'
