@@ -138,9 +138,22 @@ def ssm_bg(shell_cmd):
         f"nohup bash -lc 'echo {inner_b64} | base64 -d | bash -l' "
         f"</dev/null >/dev/null 2>&1 & disown; echo launched"
     )
-    result = ssm_run(bg_wrapper, timeout_seconds=20)
+    result = ssm_run(bg_wrapper, timeout_seconds=30)
     if "launched" not in result:
         raise RuntimeError(f"Background launch may have failed. SSM output: {result!r}")
+
+
+def slack_notify(msg):
+    """Post to #tech-alerts via EC2 common.sh — same channel as ingest.sh milestones."""
+    encoded = base64.b64encode(msg.encode()).decode()
+    script = (
+        f"source {INGEST_DIR}/scripts/common.sh\n"
+        f"slack_notify \"$(echo {encoded} | base64 -d)\""
+    )
+    try:
+        ssm_run(script, timeout_seconds=30, poll_seconds=3)
+    except Exception:
+        pass  # Slack failure is never fatal
 
 
 def aws_s3_ls(s3_path):
@@ -250,7 +263,7 @@ def run_preprocess(date):
 
     info("Running fix-si.sh inline (this takes ~10–15 min) …")
     ssm_run(
-        f"bash {INGEST_DIR}/scripts/harvest/fix-si.sh {dest}",
+        f"bash {INGEST_DIR}/scripts/harvest/fix-si.sh {date}",
         timeout_seconds=PREPROCESS_TIMEOUT_S, poll_seconds=15,
     )
     count = ssm_run(
@@ -302,6 +315,7 @@ def run_harvest(date):
     info(f"Polling every {POLL_INTERVAL_S}s. Typically 3–4 hours.\n")
 
     ssm_bg(f"bash {INGEST_DIR}/scripts/harvest.sh smithsonian > {HARVEST_LOG} 2>&1")
+    slack_notify(f":rocket: *Smithsonian harvest launched* — delivery `{date}`\nLog: `{HARVEST_LOG}`")
 
     def check_fn():
         out = ssm_run(
@@ -316,9 +330,11 @@ def run_harvest(date):
 
     result = poll_until_done(check_fn, lambda: ssm_run(f'tail -2 {HARVEST_LOG} 2>/dev/null || true'))
     if result.startswith("failed:"):
+        slack_notify(f":x: *Smithsonian harvest FAILED* — `{result[7:]}`\nCheck `{HARVEST_LOG}`")
         err(f"Harvest exited without _SUCCESS at: {result[7:]}")
         err(f"Check {HARVEST_LOG}. Re-run with --start-at harvest to retry.")
         sys.exit(1)
+    slack_notify(f":white_check_mark: *Smithsonian harvest complete* — `{result[5:]}`")
 
 
 def harvest_checkpoint():
@@ -379,9 +395,11 @@ def run_mapping(date):
 
     check = ssm_run(_mapping_done_check("failed")).strip()
     if not check.startswith("done:"):
+        slack_notify(f":x: *Smithsonian mapping FAILED* — no `_MANIFEST`\nCheck `{PIPELINE_LOG}`")
         err(f"Mapping did not produce _MANIFEST. Check {PIPELINE_LOG}.")
         err("Re-run with --start-at mapping to retry.")
         sys.exit(1)
+    slack_notify(f":white_check_mark: *Smithsonian mapping complete* — `{check[5:]}`")
 
 
 def mapping_checkpoint():
@@ -436,9 +454,11 @@ def run_pipeline(date):
 
     result = poll_until_done(check_fn, lambda: ssm_run(f'tail -2 {PIPELINE_LOG} 2>/dev/null || true'))
     if result == "failed":
+        slack_notify(f":x: *Smithsonian pipeline FAILED* — no jsonl `_SUCCESS`\nCheck `{PIPELINE_LOG}`")
         err("Pipeline exited without jsonl/_SUCCESS.")
         err(f"Check {PIPELINE_LOG}. Re-run with --start-at pipeline to retry.")
         sys.exit(1)
+    slack_notify(f":tada: *Smithsonian pipeline complete* — `{result[5:]}`\nReady for post-indexer.")
 
 
 def pipeline_checkpoint():
