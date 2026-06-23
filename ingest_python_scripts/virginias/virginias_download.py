@@ -107,9 +107,19 @@ def clone_repos():
         f"git clone --depth 1 --branch {branch} https://github.com/dplava/{repo}.git {DEST}/{repo} 2>&1"
         for repo, branch in REPOS
     )
-    shell_cmd = f"mkdir -p {DEST} && {clone_cmds} && echo DONE && ls {DEST}/"
+    repos_list = " ".join(repo for repo, _ in REPOS)
+    # After cloning, zip each repo's XML files into a single zip per institution
+    # (VaFileHarvester expects .zip files in the endpoint directory, not subdirs).
+    zip_cmds = (
+        f"cd {DEST} && "
+        f"for repo in {repos_list}; do "
+        f"  [ -d \"$repo\" ] && find \"$repo\" -name '*.xml' | zip \"${{repo}}.zip\" -@ "
+        f"  && echo \"zipped $repo\" && rm -rf \"$repo\" || true; "
+        f"done"
+    )
+    shell_cmd = f"rm -rf {DEST} && mkdir -p {DEST} && {clone_cmds} && {zip_cmds} && echo DONE && ls -lh {DEST}/*.zip"
 
-    print(f"\nCloning {len(REPOS)} dplava repos to EC2:{DEST} ...")
+    print(f"\nCloning {len(REPOS)} dplava repos to EC2:{DEST} and zipping XML files ...")
     out, err = ssm_run(shell_cmd, poll_seconds=600)
     if out:
         print(out)
