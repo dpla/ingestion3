@@ -237,7 +237,7 @@ def main():
         confirm(f"Files already exist in {dst}. Overwrite/re-sync anyway?", default_yes=False)
 
     count = ssm_run(
-        f"aws s3 ls {src_quoted} --profile {NARA_PROFILE} | wc -l",
+        f"AWS_SHARED_CREDENTIALS_FILE=/home/ec2-user/.aws/credentials && export AWS_SHARED_CREDENTIALS_FILE &&aws s3 ls {src_quoted} --profile {NARA_PROFILE} | wc -l",
         timeout_seconds=30,
     ).strip()
     print(f"  Found {count} file(s) in {src}")
@@ -251,6 +251,7 @@ def main():
 
     sync_cmd = (
         f"set -e && "
+        f"AWS_SHARED_CREDENTIALS_FILE=/home/ec2-user/.aws/credentials && export AWS_SHARED_CREDENTIALS_FILE &&"  # SSM overrides this; restore default ~/.aws/credentials
         f"echo 'Step 1/4: Creating temp dir...' && "
         f"mkdir -p {tmp_dir} && "
         f"echo 'Step 2/4: Downloading from ngc-storage01...' && "
