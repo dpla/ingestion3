@@ -66,7 +66,8 @@ class HathiMappingTest extends AnyFlatSpec with BeforeAndAfter {
 
   it should "extract the correct description" in {
     val expected =
-      Seq("From the Proceedings of The academy of natural science of Philadelphia, 1893.", "A second description.")
+      Seq("From the Proceedings of The academy of natural science of Philadelphia, 1893.", "A second description.",
+        "by J. B. Ellis and and B. M. Everhart.")
     assert(extractor.description(xml) == expected)
   }
 
