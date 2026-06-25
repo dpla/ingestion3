@@ -239,7 +239,7 @@ class HathiMapping extends MarcXmlMapping {
       // Prefer "pd" (CC PDM, globally public domain) over "pdus" (NoC-US, US-only)
       // when both are present, as pd is the stronger statement.
       val edmRightsPreferenceOrder = Seq("pd", "pdus", "cc-zero", "cc-by", "cc-by-sa",
-        "cc-by-nd", "cc-by-nc", "cc-by-nc-sa", "cc-by-nc-nd", "ic-world", "und-world")
+        "cc-by-nd", "cc-by-nc", "cc-by-nc-sa", "cc-by-nc-nd")
       val codes = (data \\ "setSpec")
         .map(_.text.trim)
         .filter(s => s.startsWith("hathitrust:") && s != "hathitrust")
