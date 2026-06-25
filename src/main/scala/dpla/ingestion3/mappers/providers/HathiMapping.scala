@@ -234,15 +234,23 @@ class HathiMapping extends MarcXmlMapping {
       .map(URI(_))
 
     if (from974.nonEmpty) from974
-    else
+    else {
       // OAI harvest: derive from <setSpec> e.g. "hathitrust:pdus" → "pdus"
-      (data \\ "setSpec")
+      // Prefer "pd" (CC PDM, globally public domain) over "pdus" (NoC-US, US-only)
+      // when both are present, as pd is the stronger statement.
+      val edmRightsPreferenceOrder = Seq("pd", "pdus", "cc-zero", "cc-by", "cc-by-sa",
+        "cc-by-nd", "cc-by-nc", "cc-by-nc-sa", "cc-by-nc-nd", "ic-world", "und-world")
+      val codes = (data \\ "setSpec")
         .map(_.text.trim)
         .filter(s => s.startsWith("hathitrust:") && s != "hathitrust")
         .map(_.split(":").last)
+        .toSet
+      edmRightsPreferenceOrder
+        .filter(codes.contains)
         .flatMap(key => Try { edmRightsMapping(key) }.toOption)
         .map(URI(_))
         .slice(0, 1)
+    }
   }
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
@@ -531,7 +539,7 @@ class HathiMapping extends MarcXmlMapping {
   // Standardized rights URIs for edmRights field
   // pd / pdus are the only codes present in current OAI harvests
   private val edmRightsMapping: Map[String, String] = Map(
-    "pd"           -> "https://creativecommons.org/publicdomain/mark/1.0/",
+    "pd"           -> "http://creativecommons.org/publicdomain/mark/1.0/",
     "pdus"         -> "http://rightsstatements.org/vocab/NoC-US/1.0/",
     "cc-by"        -> "https://creativecommons.org/licenses/by/4.0/",
     "cc-by-nd"     -> "https://creativecommons.org/licenses/by-nd/4.0/",
