@@ -80,8 +80,14 @@ class HathiMapping extends MarcXmlMapping {
 
   override def description(data: Document[NodeSeq]): ZeroToMany[String] =
     // <datafield> tag = any number in the 500s except 538
+    // <datafield> tag = 245 <subfield> code = c (statement of responsibility)
+    // 245$c is a fallback since Hathi's OAI export omits 5xx notes fields entirely
     marcFields(data, descriptionTags)
+      .flatMap(extractStrings) ++
+    marcFields(data, Seq("245"), Seq("c"))
       .flatMap(extractStrings)
+      .map(_.trim)
+      .filter(_.nonEmpty)
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     // <datafield> tag = 300 <subfield> code = a or c
@@ -216,6 +222,26 @@ class HathiMapping extends MarcXmlMapping {
         .map(_.split(":").last)
         .flatMap(key => Try { rightsMapping(key) }.toOption)
         .map(_ + ". Learn more at http://www.hathitrust.org/access_use")
+        .slice(0, 1)
+  }
+
+  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] = {
+    // <datafield> tag = 974 <subfield> code = r (file harvest)
+    val from974 = marcFields(data, Seq("974"), Seq("r"))
+      .flatMap(extractStrings)
+      .slice(0, 1)
+      .flatMap(key => Try { edmRightsMapping(key) }.toOption)
+      .map(URI(_))
+
+    if (from974.nonEmpty) from974
+    else
+      // OAI harvest: derive from <setSpec> e.g. "hathitrust:pdus" → "pdus"
+      (data \\ "setSpec")
+        .map(_.text.trim)
+        .filter(s => s.startsWith("hathitrust:") && s != "hathitrust")
+        .map(_.split(":").last)
+        .flatMap(key => Try { edmRightsMapping(key) }.toOption)
+        .map(URI(_))
         .slice(0, 1)
   }
 
@@ -423,10 +449,16 @@ class HathiMapping extends MarcXmlMapping {
     "bc" -> "Boston College",
     "chi" -> "University of Chicago",
     "coo" -> "Cornell University",
+    "cou" -> "University of Colorado",
     "dul1" -> "Duke University",
     "gri" -> "Getty Research Institute",
     "gu" -> "Georgetown University",
     "hvd" -> "Harvard University",
+    "ia-bc" -> "Boston College",
+    "ia-duke" -> "Duke University",
+    "ia-loc" -> "Library of Congress",
+    "ia-ncsu" -> "North Carolina State University",
+    "ia-tu" -> "Tulane University",
     "ien" -> "Northwestern University",
     "inu" -> "Indiana University",
     "loc" -> "Library of Congress",
@@ -439,10 +471,13 @@ class HathiMapping extends MarcXmlMapping {
     "nc01" -> "University of North Carolina",
     "ncs1" -> "North Carolina State University",
     "njp" -> "Princeton University",
+    "njpt" -> "Princeton Theological Seminary",
     "njr" -> "Rutgers University",
+    "nnc" -> "Columbia University",
     "nnc1" -> "Columbia University",
     "nnc2" -> "Columbia University",
     "nrlf" -> "Northern Regional Library Facility",
+    "nrlf-ucsf" -> "University of California San Francisco",
     "nwu" -> "Northwestern University",
     "nyp" -> "New York Public Library",
     "osu" -> "Ohio State University",
@@ -451,6 +486,7 @@ class HathiMapping extends MarcXmlMapping {
     "pur" -> "Purdue University",
     "pur1" -> "Purdue University",
     "pur2" -> "Purdue University",
+    "srlf" -> "Southern Regional Library Facility",
     "txu" -> "University of Texas",
     "uc1" -> "University of California",
     "uc2" -> "University of California",
@@ -460,6 +496,7 @@ class HathiMapping extends MarcXmlMapping {
     "ucla" -> "University of California",
     "ucm" -> "Universidad Complutense de Madrid",
     "ucr" -> "University of California",
+    "ucsb" -> "University of California",
     "ucsc" -> "University of California",
     "ucsd" -> "University of California",
     "ufl1" -> "University of Florida",
@@ -468,6 +505,7 @@ class HathiMapping extends MarcXmlMapping {
     "uiuc" -> "University of Illinois",
     "uiug" -> "University of Illinois",
     "uiuo" -> "University of Illinois",
+    "ukoxu" -> "University of Oxford",
     "umn" -> "University of Minnesota",
     "unc" -> "University of North Carolina",
     "usu" -> "Utah State University Press",
@@ -488,6 +526,20 @@ class HathiMapping extends MarcXmlMapping {
     "cc-by-sa" -> "Creative Commons Attribution-ShareAlike license",
     "cc-zero" -> "Creative Commons Zero license (implies pd)",
     "und-world" -> "undetermined copyright status and permitted as world viewable by the depositor"
+  )
+
+  // Standardized rights URIs for edmRights field
+  // pd / pdus are the only codes present in current OAI harvests
+  private val edmRightsMapping: Map[String, String] = Map(
+    "pd"           -> "https://creativecommons.org/publicdomain/mark/1.0/",
+    "pdus"         -> "http://rightsstatements.org/vocab/NoC-US/1.0/",
+    "cc-by"        -> "https://creativecommons.org/licenses/by/4.0/",
+    "cc-by-nd"     -> "https://creativecommons.org/licenses/by-nd/4.0/",
+    "cc-by-nc-nd"  -> "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+    "cc-by-nc"     -> "https://creativecommons.org/licenses/by-nc/4.0/",
+    "cc-by-nc-sa"  -> "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+    "cc-by-sa"     -> "https://creativecommons.org/licenses/by-sa/4.0/",
+    "cc-zero"      -> "https://creativecommons.org/publicdomain/zero/1.0/"
   )
 
   private val googlePrefixMapping: Map[String, String] = Map(

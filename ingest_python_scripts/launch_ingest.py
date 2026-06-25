@@ -255,6 +255,11 @@ def main() -> None:
         action="store_true",
         help="Only run the harvest step (skip mapping/enrichment/jsonl/S3 sync).",
     )
+    parser.add_argument(
+        "--mapping-only",
+        action="store_true",
+        help="Only run the mapping step (skip harvest, enrichment, jsonl, S3 sync).",
+    )
     args = parser.parse_args()
 
     hub = (args.hub or input("Hub: ")).strip().lower()
@@ -292,10 +297,13 @@ def main() -> None:
             file_hub_preflight(hub, bucket)
 
     # Launch.
-    if args.harvest_only and args.resume_from:
-        sys.exit("--harvest-only and --resume-from are mutually exclusive.")
+    flags = [args.harvest_only, args.mapping_only, bool(args.resume_from)]
+    if sum(flags) > 1:
+        sys.exit("--harvest-only, --mapping-only, and --resume-from are mutually exclusive.")
     if args.harvest_only:
         extra = " --harvest-only"
+    elif args.mapping_only:
+        extra = " --mapping-only"
     elif args.resume_from:
         extra = f" --resume-from {args.resume_from}"
     else:
