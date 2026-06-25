@@ -532,7 +532,7 @@ class HathiMapping extends MarcXmlMapping {
   // pd / pdus are the only codes present in current OAI harvests
   private val edmRightsMapping: Map[String, String] = Map(
     "pd"           -> "https://creativecommons.org/publicdomain/mark/1.0/",
-    "pdus"         -> "http://rightsstatements.org/vocab/NoC-CR/1.0/",
+    "pdus"         -> "http://rightsstatements.org/vocab/NoC-US/1.0/",
     "cc-by"        -> "https://creativecommons.org/licenses/by/4.0/",
     "cc-by-nd"     -> "https://creativecommons.org/licenses/by-nd/4.0/",
     "cc-by-nc-nd"  -> "https://creativecommons.org/licenses/by-nc-nd/4.0/",
