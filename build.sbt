@@ -86,7 +86,7 @@ resolvers += "SparkPackages" at "https://repos.spark-packages.org/"
 // to change IngestRemap/NaraMergeUtil heap, change -Xmx here, not in the shell script)
 Compile / run / javaOptions ++= Seq(
   "-Xms4g",
-  "-Xmx14g",
+  "-Xmx22g",
   "-XX:+UseG1GC",
   "-XX:MaxGCPauseMillis=200",
   "-Dspark.sql.parquet.enableVectorizedReader=false",
