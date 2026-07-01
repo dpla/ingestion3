@@ -13,7 +13,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.logging.log4j.{LogManager, Logger}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-import java.io.{File, FileFilter}
+import java.io.{ByteArrayInputStream, File, FileFilter}
 import scala.util.{Failure, Success, Try, Using}
 import scala.xml._
 
@@ -82,8 +82,11 @@ class NaraDeltaHarvester(
 
       case Some(data) =>
         Try {
-          val dataString = new String(data).replaceAll("<\\?xml.*\\?>", "").trim
-          val xml = XML.loadString(dataString)
+          // Use ByteArrayInputStream to avoid allocating a full UTF-16 String copy
+          // of the raw bytes before XML parsing (avoids doubling memory usage for
+          // large NARA XML files). The XML parser handles the <?xml?> declaration
+          // natively when reading from a stream.
+          val xml = XML.load(new ByteArrayInputStream(data))
 
           val items = handleXML(xml)
 
