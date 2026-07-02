@@ -126,6 +126,32 @@ we can expect in our harvest.
 
 ## Running ingests
 
+### Python ingest scripts
+
+The preferred way to run ingests is via the Python scripts in [`ingest_python_scripts/`](ingest_python_scripts/README.md). These handle EC2 lifecycle, SSM, monitoring, and the full indexing pipeline from a local machine — no SSH required.
+
+| Script | Purpose |
+|--------|---------|
+| `pre_ingest_check.py` | List all hubs scheduled for the month |
+| `hub_preflight.py` | Per-hub pre-flight (EC2 state, repos, JAR, endpoint) |
+| `launch_ingest.py` | Launch a standard hub ingest |
+| `check_ingest.py` | Monitor a running ingest (progress, ETA, record counts) |
+| `launch_indexer.py` | Launch sparkindexer EMR cluster + ES alias swap |
+| `post_indexer.py` | Post-index batch jobs (parquet, JSONL dump, sitemaps) |
+| `postchecks.py` | Verify all hubs ingested and indexed for the month |
+| `nara/launch_nara.py` | NARA delta ingest (copy → pipeline → monitor) |
+| `smithsonian/launch_smithsonian.py` | Smithsonian ingest with preprocessing checkpoints |
+| `community-webs/launch_cw.py` | Community Webs SQLite → harvest → pipeline |
+| `virginias/virginias_download.py` | Clone Digital Virginias repos and stage for harvest |
+
+See [`ingest_python_scripts/README.md`](ingest_python_scripts/README.md) for the full monthly workflow and usage details.
+
+---
+
+The sections below document the manual approach, which is useful for one-off operations, local ingests, and understanding the underlying pipeline steps.
+
+---
+
 Aggregation data is laid out in the following way
 
 ```text
@@ -169,7 +195,7 @@ NYPL                    s3://dpla-hub-nypl/
 Ohio                    s3://dpla-hub-ohio/
 Smithsonian             s3://dpla-hub-si/
 Texas Digital Library   s3://dpla-hub-tdl/
-Vermont                 s3://dpla-hub-vt
+Vermont                 s3://dpla-hub-vt/
 ```
 
 ### EC2 Ingest box

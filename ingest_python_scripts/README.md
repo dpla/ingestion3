@@ -32,13 +32,16 @@ Re-run at any time. Use `--update` to change saved paths.
 Each month runs in roughly this order. Special-case hubs (Smithsonian, NARA, Community Webs) run their own scripts but fit into the same overall sequence.
 
 ```
-0. Monthly hub list     →  pre_ingest_check.py   (list all hubs for the month)
-1. Pre-flight checks    →  hub_preflight.py       (per hub, before each ingest)
-2. Provider ingests     →  launch_ingest.py       (all standard hubs)
-3. Special Cases        →  <hub_name>/launch_hub.py
-6. Index rebuild        →  launch_indexer.py
-7. Post-index batch     →  post_indexer.py
-8. Verify               →  postchecks.py
+0. Monthly hub list     →  pre_ingest_check.py          (list all hubs for the month)
+1. Pre-flight checks    →  hub_preflight.py              (per hub, before each ingest)
+2. Provider ingests     →  launch_ingest.py              (standard hubs)
+               OR          nara/launch_nara.py           (NARA)
+               OR          smithsonian/launch_smithsonian.py  (Smithsonian)
+               OR          community-webs/launch_cw.py   (Community Webs)
+3. Monitor              →  check_ingest.py               (all hubs)
+4. Index rebuild        →  launch_indexer.py
+5. Post-index batch     →  post_indexer.py
+6. Verify               →  postchecks.py
 ```
 
 ---
@@ -68,9 +71,9 @@ Run for every hub before launching.
 
 Flag options:
 ```bash
-python3 hub_preflight.py --endpoint-only   # just check the endpoint
-python3 hub_preflight.py --skip-endpoint   # skip the endpoint check
-python3 hub_preflight.py --no-start        # don't auto-start EC2 if stopped
+python3 hub_preflight.py --hub <hub> --endpoint-only   # just check the endpoint
+python3 hub_preflight.py --hub <hub> --skip-endpoint   # skip the endpoint check
+python3 hub_preflight.py --no-start                    # don't auto-start EC2 if stopped
 ```
 
 ---
@@ -218,7 +221,7 @@ python3 smithsonian/check_status_smithsonian.py --watch
 
 ### Community Webs
 
-Internet Archive delivers a SQLite `.db` file directly (not via S3). File recieved to tech@dp.la and downloaded to local machine.
+Internet Archive delivers a SQLite `.db` file directly (not via S3). File received to tech@dp.la and downloaded to local machine.
 
 ```bash
 python3 community-webs/launch_cw.py --db ~/Downloads/community-webs.db --full
@@ -248,6 +251,22 @@ Monitor with:
 python3 community-webs/check_cw.py
 python3 community-webs/check_cw.py --watch
 ```
+---
+
+### Digital Virginias
+
+Digital Virginias publishes metadata across [multiple GitHub repositories](https://github.com/dplava). This script clones all repos, zips the output, and stages it on EC2 ready for harvest.
+
+```bash
+python3 virginias/virginias_download.py
+```
+
+After it completes, run the standard ingest:
+
+```bash
+python3 launch_ingest.py virginias
+```
+
 ---
 
 ## Slack Notifications
