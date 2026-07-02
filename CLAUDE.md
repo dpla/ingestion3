@@ -1,25 +1,54 @@
-See @docs/ingestion/README_INGESTS.md for the generialized rules of running ingests and @docs/ingestion/README_NARA.md and @docs/ingestion/README_SMITHSONIAN.md for NARA and Smithsonian ingest documentations
+# DPLA Ingestion 3 — Claude Guide
 
-# Project rules
+This repo is DPLA's data pipeline. It pulls in metadata from cultural heritage partners across the US, cleans and standardizes it, and loads it into the DPLA search index at dp.la.
 
-1. **Environment:** Source `.env` before running any process that needs project env (including building the JAR: run `source .env` then `sbt assembly` from repo root so the correct Java 11+ JDK is used). From repo root: `source .env`. Full checklist: [AGENTS.md](AGENTS.md) § Environment and build.
-2. **Python:** Use the virtualenv at `./venv/` (e.g. `./venv/bin/python` or `source ./venv/bin/activate`) for any new or existing Python scripts.
-3. **AWS CLI:** Use `--profile dpla` for all AWS commands.
-4. **Shell scripts:** Write POSIX-compliant bash; avoid macOS- or Linux-specific flags (e.g. `sed -i`, `readlink -f` — use helpers from `scripts/common.sh` where applicable).
-5. **Build:** Before running ingests or skills that use the Scala pipeline, run `sbt assembly` from repo root so the fat JAR is current; scripts use the JAR when present.
+---
 
-# Ingest and script workflows (Claude Code)
+## What this repo does
 
-All markdown files in **.claude/rules/** are loaded automatically by Claude Code when you run it in this repo. User-invocable **skills** in **.claude/skills/** provide on-demand commands. Rules and skills are generated from `docs/ai-context/` via `./scripts/ai-context/sync.sh`; edit there, then run sync.
+1. **Harvest** — pulls records from partner systems (OAI-PMH feeds, APIs, or file exports)
+2. **Map** — converts partner metadata into DPLA's standard format
+3. **Enrich** — normalizes dates, languages, types, and rights statements
+4. **Export** — writes records to JSONL files and syncs to S3
+5. **Index** — loads the JSONL into Elasticsearch so records appear on dp.la
 
-- **Warp → Claude Code → .claude/rules/ + .claude/skills/**
-  Run `claude` (or your Claude Code CLI) from the ingestion3 repo root. The rules in `.claude/rules/` (orchestrator, ingestion, script-standards, notifications, validation, aws-tools) are in context so you can say "run ingest for maryland", "run the orchestrator for wisconsin and p2p", "sync hub X to S3", "add a script for ...", etc. Skills in `.claude/skills/` provide invocable commands like "send email for nara". See:
-  - [.claude/rules/README.md](.claude/rules/README.md) — Rule index
-  - [.claude/skills/README.md](.claude/skills/README.md) — Available skills
+---
 
-# Environment Commands
-- Source project env: `source .env` (from repo root; sets JAVA_HOME, SLACK_WEBHOOK, DPLA_DATA, I3_CONF, etc.)
-- Build: run `source .env` then `sbt assembly` from repo root (required so sbt uses Java 11+)
-- Python Source: `source ./venv/bin/activate`
-- Build Command: `sbt assembly` (pipeline scripts use the assembly JAR when present)
-- AWS Alias: Use `--profile dpla`
+## How ingests are run
+
+The day-to-day workflow is managed through the Python scripts in `ingest_python_scripts/`. These run everything remotely via AWS — you don't need to SSH into any servers.
+
+See [`ingest_python_scripts/README.md`](ingest_python_scripts/README.md) for the full monthly workflow.
+
+The underlying shell scripts that do the actual pipeline work live in `scripts/`. See [`scripts/SCRIPTS.md`](scripts/SCRIPTS.md) for details on those.
+
+---
+
+## Before running anything
+
+A few things need to be in place:
+
+- **`.env` file** — the project config (Java path, data directory, Slack webhook, etc.). Run `source .env` from the repo root before using any pipeline scripts. The file is gitignored; ask a teammate for a copy if you don't have one.
+- **Java 11+** — required to build and run the Scala pipeline. Set `JAVA_HOME` in `.env`.
+- **Python virtualenv** — use `./venv/bin/python` or `source ./venv/bin/activate` for any Python scripts.
+- **AWS profile** — use `--profile dpla` for all AWS commands.
+
+---
+
+## Key files and folders
+
+| Path | What it is |
+|------|-----------|
+| `ingest_python_scripts/` | Python scripts for running the monthly ingest workflow |
+| `scripts/` | Shell scripts that run the actual pipeline steps on EC2 |
+| `src/main/scala/` | Scala source code for harvest, mapping, enrichment, and JSONL export |
+| `ingestion3-conf/` (separate repo) | Hub configuration — endpoints, emails, schedules (`i3.conf`) |
+| `scheduler/orchestrator/` | Python orchestrator for running multiple hubs in parallel |
+
+---
+
+## If something goes wrong
+
+- Pipeline errors go to **Slack #tech-alerts** (if `SLACK_WEBHOOK` is configured) or **tech@dp.la**
+- See [`AGENTS.md`](AGENTS.md) for a full list of error patterns and what causes them
+- Log files land in `~/data/<hub>/<stage>/<timestamp>/_LOGS/` on the ingest EC2

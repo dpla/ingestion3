@@ -49,6 +49,14 @@ VALID_RESUME_STEPS = ("mapping", "enrichment", "jsonl")
 SCRIPTS_DIR = "/home/ec2-user/ingestion3/scripts"
 CONF_PATH   = "/home/ec2-user/ingestion3-conf/i3.conf"
 
+# Hubs that have their own launch scripts and must NOT be run via launch_ingest.py.
+SPECIAL_CASE_HUBS: dict[str, str] = {
+    "nara":          "nara/launch_nara.py",
+    "smithsonian":   "smithsonian/launch_smithsonian.py",
+    "community-webs": "community-webs/launch_cw.py",
+    "cw":            "community-webs/launch_cw.py",
+}
+
 
 # ── SSM helpers ───────────────────────────────────────────────────────────────
 def ssm_run(shell_cmd: str) -> str:
@@ -265,6 +273,15 @@ def main() -> None:
     hub = (args.hub or input("Hub: ")).strip().lower()
     if not HUB_RE.match(hub):
         sys.exit(f"Invalid hub name: {hub!r}")
+
+    if hub in SPECIAL_CASE_HUBS:
+        script = SPECIAL_CASE_HUBS[hub]
+        sys.exit(
+            f"\nError: '{hub}' is a special-case hub and cannot be run with launch_ingest.py.\n"
+            f"Use the dedicated script instead:\n\n"
+            f"    python3 {script}\n\n"
+            f"See ingest_python_scripts/README.md Step 2 for details."
+        )
 
     # Check harvest type and run file-hub pre-flight if needed.
     print(f"Checking harvest type for {hub} …")

@@ -8,6 +8,7 @@ DPLA's ingestion system is one of the core business systems and is the source of
   * [Helpful links and tools](#helpful-links-and-tools)
   * [Monthly scheduling communications](#scheduling-email)
   * [Running ingests](#running-ingests)
+    * [Python ingest scripts](#python-ingest-scripts)
     * [EC2 ingest instance](#ec2-ingest-box)
     * [Locally](#running-ingests-locally)
     * [Hub specific instructions](#exceptions-and-unusual-ingests)
@@ -136,9 +137,9 @@ The preferred way to run ingests is via the Python scripts in [`ingest_python_sc
 | `hub_preflight.py` | Per-hub pre-flight (EC2 state, repos, JAR, endpoint) |
 | `launch_ingest.py` | Launch a standard hub ingest |
 | `check_ingest.py` | Monitor a running ingest (progress, ETA, record counts) |
-| `launch_indexer.py` | Launch sparkindexer EMR cluster + ES alias swap |
+| `postchecks.py` | Verify all hubs ingested before indexing (**run before launch_indexer.py**) |
+| `launch_indexer.py` | Launch sparkindexer EMR cluster + ES alias swap (**run after postchecks passes**) |
 | `post_indexer.py` | Post-index batch jobs (parquet, JSONL dump, sitemaps) |
-| `postchecks.py` | Verify all hubs ingested and indexed for the month |
 | `nara/launch_nara.py` | NARA delta ingest (copy → pipeline → monitor) |
 | `smithsonian/launch_smithsonian.py` | Smithsonian ingest with preprocessing checkpoints |
 | `community-webs/launch_cw.py` | Community Webs SQLite → harvest → pipeline |
