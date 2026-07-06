@@ -26,18 +26,16 @@ class EnrichmentDriver extends Serializable {
     * @return
     */
   private def createDataProviderUri(name: ZeroToOne[String]): ZeroToOne[URI] =
-    name match {
-      case Some(dataProvider) =>
-        val providerLabel = dataProvider.toLowerCase // lowercase
-          .trim // remove leading and trailing whitespace
-          .replaceAll("( )+", "-") // replace 1-n whitespace with single -
-          .replaceAll("[^a-z0-9s-]", "") // remove non-alphanumeric chars
-        Some(URI(s"$dplaContributorUri$providerLabel"))
-      case None =>
-        throw new RuntimeException(
-          "Missing required field Data Provider name when minting URI"
-        )
+    name.map { dataProvider =>
+      val providerLabel = dataProvider.toLowerCase // lowercase
+        .trim // remove leading and trailing whitespace
+        .replaceAll("( )+", "-") // replace 1-n whitespace with single -
+        .replaceAll("[^a-z0-9s-]", "") // remove non-alphanumeric chars
+      URI(s"$dplaContributorUri$providerLabel")
     }
+    // Returns None (instead of throwing) when name is None.
+    // Records with no recognized dataProvider code will have no dataProvider URI
+    // rather than being silently dropped during enrichment.
 
   private def enrichDataProvider(record: OreAggregation): EdmAgent = {
     val enrichedWithWikiEntity: EdmAgent = wikiEntityEnrichment.enrichEntity(
@@ -60,7 +58,7 @@ class EnrichmentDriver extends Serializable {
 
     val enriched = record.deDuplicate.standardStringEnrichments
 
-    enriched.copy(
+    val result = enriched.copy(
       provider = wikiEntityEnrichment.enrichEntity(enriched.provider),
       dataProvider = enrichDataProvider(enriched),
       sourceResource = enriched.sourceResource.copy(
@@ -74,6 +72,16 @@ class EnrichmentDriver extends Serializable {
           enriched.sourceResource.`type`.flatMap(typeEnrichment.enrich).distinct
       )
     )
+
+    // Drop records with no resolved dataProvider URI — unrecognized institution
+    // codes produce no name, which produces no URI. require() throws inside Try,
+    // so EnrichExecutor's flatMap(_.toOption) silently discards these records.
+    require(
+      result.dataProvider.uri.isDefined,
+      s"No dataProvider URI for record: dataProvider.name=${result.dataProvider.name.getOrElse("unknown")}"
+    )
+
+    result
   }
 
 }
