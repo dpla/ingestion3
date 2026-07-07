@@ -333,9 +333,11 @@ class HathiMapping extends MarcXmlMapping {
               .replaceAll("imp$", "")        // strip Michigan imposter suffix: "nypimp" → "nyp"
               .replaceAll("ocm$", "")        // strip OCM OCLC prefix suffix: "uiucocm" → "uiuc"
               .replaceAll("ocn$", "")        // strip OCN OCLC prefix suffix: "tamocn" → "tam"
-              .replaceAll("b$", "")          // strip trailing 'b' (NRLF-style barcode prefix)
               .stripSuffix("-")
+            // Try base before stripping trailing 'b', so codes like "ucb" match correctly.
+            // Only fall through to b-strip for NRLF-style codes (e.g. "nrlfb..." → "nrlf").
             Try { dataProviderMapping(base) }.toOption
+              .orElse(Try { dataProviderMapping(base.replaceAll("b$", "")) }.toOption)
           }
         }
         .map(nameOnlyAgent)
