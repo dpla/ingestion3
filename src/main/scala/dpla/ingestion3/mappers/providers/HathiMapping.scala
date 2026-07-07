@@ -318,16 +318,26 @@ class HathiMapping extends MarcXmlMapping {
       // OAI harvest: 035 field contains "sdr-{code}.{barcode}" e.g. "sdr-miu.990000000400106381"
       // Some records omit the dot and embed the barcode directly, e.g. "sdr-miu000000075"
       // or include uppercase barcodes, e.g. "sdr-nrlfGLAD50600249-B".
+      // Some NRLF records use a lowercase 'b' barcode prefix, e.g. "sdr-nrlfb168192287".
       // Strategy: try exact code first; if no match, strip trailing barcode noise
-      // (first digit or uppercase letter onward, then any trailing dash).
+      // (first digit or uppercase letter onward, then any trailing dash, then trailing 'b').
       marcFields(data, Seq("035"), Seq("a"))
         .flatMap(extractStrings)
         .find(_.startsWith("sdr-"))
         .flatMap { sdr =>
           val raw = sdr.stripPrefix("sdr-").split("\\.").head
           Try { dataProviderMapping(raw) }.toOption.orElse {
-            val base = raw.replaceAll("[A-Z0-9].*$", "").stripSuffix("-")
+            val base = raw
+              .replaceAll("[A-Z0-9].*$", "") // strip from first uppercase letter or digit
+              .replaceAll("[(]$", "")        // strip dangling ( from OCoLC-style barcodes: "osu(" → "osu"
+              .replaceAll("imp$", "")        // strip Michigan imposter suffix: "nypimp" → "nyp"
+              .replaceAll("ocm$", "")        // strip OCM OCLC prefix suffix: "uiucocm" → "uiuc"
+              .replaceAll("ocn$", "")        // strip OCN OCLC prefix suffix: "tamocn" → "tam"
+              .stripSuffix("-")
+            // Try base before stripping trailing 'b', so codes like "ucb" match correctly.
+            // Only fall through to b-strip for NRLF-style codes (e.g. "nrlfb..." → "nrlf").
             Try { dataProviderMapping(base) }.toOption
+              .orElse(Try { dataProviderMapping(base.replaceAll("b$", "")) }.toOption)
           }
         }
         .map(nameOnlyAgent)
@@ -466,7 +476,7 @@ class HathiMapping extends MarcXmlMapping {
     "ia-duke" -> "Duke University",
     "ia-loc" -> "Library of Congress",
     "ia-ncsu" -> "North Carolina State University",
-    "ia-tu" -> "Tulane University",
+    "ia-tu" -> "Tufts University",
     "ien" -> "Northwestern University",
     "inu" -> "Indiana University",
     "loc" -> "Library of Congress",
@@ -519,7 +529,47 @@ class HathiMapping extends MarcXmlMapping {
     "usu" -> "Utah State University Press",
     "uva" -> "University of Virginia",
     "wu" -> "University of Wisconsin",
-    "yale" -> "Yale University"
+    "yale" -> "Yale University",
+    // Partners added/corrected using cdlib/hathitrust-contrib-configs as source of truth
+    "cul"      -> "Columbia University Libraries",
+    "dcu"      -> "Catholic University",
+    "emu"      -> "Emory University",
+    "fmu"      -> "University of Miami",
+    "ia-aeu"   -> "University of Alberta",
+    "ia-cmalg" -> "Getty Research Institute",
+    "ia-mwica" -> "Clark Art Institute",
+    "ia-nrlf"  -> "Northern Regional Library Facility",
+    "ia-qmm"   -> "McGill University",
+    "ia-ucw"   -> "University of Connecticut",
+    "ia-uma"   -> "University of Massachusetts",
+    "innd"     -> "University of Notre Dame",
+    "keio"     -> "Keio University",
+    "lebau"    -> "American University of Beirut",
+    "mdu-loc"  -> "University of Maryland, College Park",
+    "mou-loc"  -> "University of Missouri - Columbia",
+    "nbuu"     -> "University at Buffalo",
+    "nnu"      -> "New York University",
+    "oclw"     -> "Case Western Reserve",
+    "ohm"      -> "McMaster University",
+    "oks"      -> "Oklahoma State University",
+    "oktu"     -> "University of Tulsa",
+    "ppt"      -> "Temple University",
+    "pu"       -> "University of Pennsylvania",
+    "scu"      -> "University of South Carolina",
+    "tam"      -> "Texas A&M",
+    "tama"     -> "Texas A&M",
+    "txsu"     -> "Texas State University",
+    "ucb"      -> "University of California",
+    "ucsf"     -> "University of California San Francisco",
+    "udel"     -> "University of Delaware",
+    "ukloku"   -> "Knowledge Unlatched",
+    "nbu"      -> "University of Nebraska-Lincoln",
+    "ncwsw"    -> "Wake Forest University",
+    "nncin"    -> "Columbia University",
+    "nwu-loc"  -> "Northwestern University",
+    "phc"      -> "Haverford College",
+    "uql"      -> "University of Queensland",
+    "wau"      -> "University of Washington"
   )
 
   private val rightsMapping: Map[String, String] = Map(
