@@ -87,26 +87,28 @@ def _es(method: str, path: str, body=None, timeout: int = 60, retries: int = 5) 
                 last_exc = RuntimeError(
                     f"ES {method} {path} → HTTP {exc.code}: {body_text[:200]}"
                 )
-                wait = 5 * (attempt + 1)
+                wait = 5 * (2 ** attempt)
                 print(
                     f"  Warning: ES {method} {path} → HTTP {exc.code} "
                     f"(attempt {attempt + 1}/{retries}), retrying in {wait}s…",
                     file=sys.stderr,
                 )
-                time.sleep(wait)
+                if attempt < retries - 1:
+                    time.sleep(wait)
                 continue
             raise RuntimeError(
                 f"ES {method} {path} → HTTP {exc.code}: {body_text[:400]}"
             ) from exc
         except urllib.error.URLError as exc:
             last_exc = exc
-            wait = 5 * (attempt + 1)
+            wait = 5 * (2 ** attempt)
             print(
                 f"  Warning: ES {method} {path} → network error: {exc.reason} "
                 f"(attempt {attempt + 1}/{retries}), retrying in {wait}s…",
                 file=sys.stderr,
             )
-            time.sleep(wait)
+            if attempt < retries - 1:
+                time.sleep(wait)
             continue
 
     raise RuntimeError(
