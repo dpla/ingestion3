@@ -32,6 +32,7 @@ import gzip
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -60,23 +61,57 @@ TAG_HUBS = {
 
 # ── Elasticsearch helpers ─────────────────────────────────────────────────────
 
-def _es(method: str, path: str, body=None, timeout: int = 60) -> dict:
-    """Make a raw HTTP request to ES and return parsed JSON."""
+def _es(method: str, path: str, body=None, timeout: int = 60, retries: int = 5) -> dict:
+    """Make a raw HTTP request to ES and return parsed JSON.
+
+    Retries up to `retries` times on transient errors (HTTP 429/5xx, network
+    timeouts) with exponential backoff.  Non-retryable HTTP errors raise
+    immediately.
+    """
     url  = f"http://{ES_HOST}:{ES_PORT}{path}"
     data = json.dumps(body).encode() if body is not None else None
-    req  = urllib.request.Request(
-        url, data=data,
-        headers={"Content-Type": "application/json"},
-        method=method,
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read())
-    except urllib.error.HTTPError as exc:
-        body_text = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(
-            f"ES {method} {path} → HTTP {exc.code}: {body_text[:400]}"
-        ) from exc
+
+    last_exc = None
+    for attempt in range(retries):
+        req = urllib.request.Request(
+            url, data=data,
+            headers={"Content-Type": "application/json"},
+            method=method,
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as exc:
+            body_text = exc.read().decode("utf-8", errors="replace")
+            if exc.code in (429, 500, 502, 503, 504):
+                last_exc = RuntimeError(
+                    f"ES {method} {path} → HTTP {exc.code}: {body_text[:200]}"
+                )
+                wait = 5 * (attempt + 1)
+                print(
+                    f"  Warning: ES {method} {path} → HTTP {exc.code} "
+                    f"(attempt {attempt + 1}/{retries}), retrying in {wait}s…",
+                    file=sys.stderr,
+                )
+                time.sleep(wait)
+                continue
+            raise RuntimeError(
+                f"ES {method} {path} → HTTP {exc.code}: {body_text[:400]}"
+            ) from exc
+        except urllib.error.URLError as exc:
+            last_exc = exc
+            wait = 5 * (attempt + 1)
+            print(
+                f"  Warning: ES {method} {path} → network error: {exc.reason} "
+                f"(attempt {attempt + 1}/{retries}), retrying in {wait}s…",
+                file=sys.stderr,
+            )
+            time.sleep(wait)
+            continue
+
+    raise RuntimeError(
+        f"ES {method} {path} failed after {retries} attempts"
+    ) from last_exc
 
 
 def iter_ids_via_pit(tag_value: str):
