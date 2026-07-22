@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mods:mods xmlns:mods="http://www.loc.gov/mods/v3"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:drb="http://www.dartmouth.edu/~library/catmet/"
+           xmlns:xlink="http://www.w3.org/1999/xlink"
+           xmlns:cmd="http://www.cdlib.org/inside/diglib/copyrightMD"
+           xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-6.xsd                                 http://www.cdlib.org/inside/diglib/copyrightMD http://www.cdlib.org/groups/rmg/docs/copyrightMD.xsd"
+           version="3.6">
+   <mods:titleInfo>
+      <mods:title>Barbary Coast Jazz Ensemble with Slide Hampton, images, 1982 February 13</mods:title>
+   </mods:titleInfo>
+   <mods:name type="personal" authority="naf" valueURI="http://id.loc.gov/authorities/names/n78017705">
+      <mods:namePart>Hampton, Slide</mods:namePart>
+   </mods:name>
+   <mods:name type="personal" authority="naf" valueURI="http://id.loc.gov/authorities/names/nr92020433">
+      <mods:namePart>Houston, Clint</mods:namePart>
+   </mods:name>
+   <mods:name type="personal" authority="naf" valueURI="http://id.loc.gov/authorities/names/n80062613">
+      <mods:namePart>Tucker, Mickey</mods:namePart>
+   </mods:name>
+   <mods:name type="personal" authority="naf" valueURI="http://id.loc.gov/authorities/names/no2002092225">
+      <mods:namePart>Dawson, Alan, 1929-1996</mods:namePart>
+   </mods:name>
+   <mods:name type="corporate" authority="naf" valueURI="http://id.loc.gov/authorities/names/no2009174718">
+      <mods:namePart>Barbary Coast Jazz Ensemble</mods:namePart>
+   </mods:name>
+   <mods:name type="corporate" authority="naf" valueURI="http://id.loc.gov/authorities/names/no2017050148">
+      <mods:namePart>Digital by Dartmouth Library</mods:namePart>
+      <mods:role>
+         <mods:roleTerm type="text" authority="marcrelator">repository</mods:roleTerm>
+      </mods:role>
+   </mods:name>
+   <mods:typeOfResource>still image</mods:typeOfResource>
+   <mods:genre type="content" authority="rdacontent">still image</mods:genre>
+   <mods:originInfo eventType="publication">
+      <mods:publisher>Trustees of Dartmouth College</mods:publisher>
+      <mods:place>
+         <mods:placeTerm type="text">Hanover, N.H.</mods:placeTerm>
+         <mods:placeTerm type="code" authority="marccountry">nhu</mods:placeTerm>
+      </mods:place>
+      <mods:dateIssued encoding="w3cdtf" keyDate="yes">2025</mods:dateIssued>
+   </mods:originInfo>
+   <mods:language>
+      <mods:languageTerm type="text">English</mods:languageTerm>
+      <mods:languageTerm type="code" authority="iso639-2b">eng</mods:languageTerm>
+   </mods:language>
+   <mods:physicalDescription>
+      <mods:form type="media" authority="rdamedia">computer</mods:form>
+      <mods:form type="carrier" authority="rdacarrier">online resource</mods:form>
+      <mods:internetMediaType>image/jpeg</mods:internetMediaType>
+      <mods:extent>1 online resource (4 images)</mods:extent>
+      <mods:digitalOrigin>reformatted digital</mods:digitalOrigin>
+   </mods:physicalDescription>
+   <mods:abstract displayLabel="Summary">Associated images of cassette containing live concert recording of the Barbary Coast Jazz Ensemble with Slide Hampton, Clint Houston, Mickey Tucker, and Alan Dawson.</mods:abstract>
+   <mods:abstract shareable="no">Part 1 of 4</mods:abstract>
+   <mods:relatedItem type="host">
+      <mods:titleInfo>
+         <mods:title>Black Creative Music at Dartmouth</mods:title>
+      </mods:titleInfo>
+      <mods:typeOfResource collection="yes">sound recording-musical</mods:typeOfResource>
+      <mods:recordInfo>
+         <mods:recordIdentifier source="DRB">black-creative-music</mods:recordIdentifier>
+      </mods:recordInfo>
+   </mods:relatedItem>
+   <mods:relatedItem type="otherFormat">
+      <mods:titleInfo>
+         <mods:title>Slide Hampton &amp; the Barbary Coast: Live at Dartmouth College</mods:title>
+      </mods:titleInfo>
+      <mods:originInfo eventType="production">
+         <mods:dateCreated encoding="w3cdtf">1982-02-13</mods:dateCreated>
+         <mods:dateCreated encoding="fast">Twentieth century</mods:dateCreated>
+      </mods:originInfo>
+   </mods:relatedItem>
+   <mods:location>
+      <mods:url usage="primary" access="object in context">https://collections.dartmouth.edu/archive/object/black-creative-music/BCM-19820213-hampton-images</mods:url>
+   </mods:location>
+   <mods:location>
+      <mods:url note="Digitized recording">https://n2t.net/ark:/83024/d4r49gh31</mods:url>
+   </mods:location>
+   <mods:accessCondition type="use and reproduction">Made available by the Trustees of Dartmouth College under a Creative Commons Attribution-NonCommercial License.</mods:accessCondition>
+   <mods:accessCondition type="use and reproduction" displayLabel="Standardized rights statement" xlink:href="https://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial License</mods:accessCondition>
+   <mods:accessCondition>
+      <cmd:copyright copyright.status="copyrighted" publication.status="published">
+         <cmd:rights.holder>
+            <cmd:name>Trustees of Dartmouth College</cmd:name>
+         </cmd:rights.holder>
+      </cmd:copyright>
+   </mods:accessCondition>
+   <mods:extension>
+      <drb:flag type="program" value="ddlp"/>
+      <drb:filename type="master">BCM-19820213-hampton-001.tif</drb:filename>
+      <drb:filename type="master">BCM-19820213-hampton-002.tif</drb:filename>
+      <drb:filename type="master">BCM-19820213-hampton-003.tif</drb:filename>
+      <drb:filename type="master">BCM-19820213-hampton-004.tif</drb:filename>
+   </mods:extension>
+   <mods:identifier type="ark" displayLabel="Electronic image">https://n2t.net/ark:/83024/d4mc8rp8s</mods:identifier>
+   <mods:recordInfo>
+      <mods:descriptionStandard authority="marcdescription">dacs</mods:descriptionStandard>
+      <mods:recordContentSource authority="oclcorg">DRB</mods:recordContentSource>
+      <mods:recordCreationDate encoding="w3cdtf">2025-06-11</mods:recordCreationDate>
+      <mods:recordChangeDate encoding="w3cdtf">2025-10-01</mods:recordChangeDate>
+      <mods:recordIdentifier source="DRB">BCM-19820213-hampton-images</mods:recordIdentifier>
+      <mods:languageOfCataloging>
+         <mods:languageTerm type="text">English</mods:languageTerm>
+         <mods:languageTerm type="code" authority="iso639-2b">eng</mods:languageTerm>
+      </mods:languageOfCataloging>
+   </mods:recordInfo>
+</mods:mods>

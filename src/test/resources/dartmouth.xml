@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mods:mods xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:mods="http://www.loc.gov/mods/v3"
+           xsi:schemaLocation="http://www.loc.gov/mods/v3 http://www.loc.gov/standards/mods/v3/mods-3-6.xsd"
+           version="3.6"
+           xmlns:drb="http://www.dartmouth.edu/~library/catmet/">
+   <mods:titleInfo supplied="yes">
+      <mods:title>Daniel Bull, letter, to Eleazar Wheelock, 1765 January 22</mods:title>
+   </mods:titleInfo>
+   <mods:name type="personal" usage="primary">
+      <mods:namePart type="family">Bull</mods:namePart>
+      <mods:namePart type="given">Daniel</mods:namePart>
+      <mods:role>
+         <mods:roleTerm type="text" authority="marcrelator">author</mods:roleTerm>
+      </mods:role>
+      <mods:nameIdentifier type="local">pers0007.ocp</mods:nameIdentifier>
+   </mods:name>
+   <mods:name type="personal">
+      <mods:namePart type="family">Wheelock</mods:namePart>
+      <mods:namePart type="given">Eleazar</mods:namePart>
+      <mods:role>
+         <mods:roleTerm type="text" authority="marcrelator">addressee</mods:roleTerm>
+      </mods:role>
+      <mods:nameIdentifier type="local">pers0036.ocp</mods:nameIdentifier>
+   </mods:name>
+   <mods:name authority="naf" type="corporate" valueURI="http://id.loc.gov/authorities/names/no2017050148">
+      <mods:namePart>Digital by Dartmouth Library</mods:namePart>
+      <mods:role>
+         <mods:roleTerm authority="marcrelator" type="text">repository</mods:roleTerm>
+      </mods:role>
+   </mods:name>
+   <mods:typeOfResource manuscript="yes">text</mods:typeOfResource>
+   <mods:genre type="content" authority="rdacontent">text</mods:genre>
+   <mods:genre authority="local">letter</mods:genre>
+   <mods:genre authority="aat" valueURI="http://vocab.getty.edu/aat/300026879">letters (correspondence)</mods:genre>
+   <mods:originInfo eventType="publication">
+      <mods:edition>The Occom Circle: A digital edition</mods:edition>
+      <mods:publisher>Trustees of Dartmouth College</mods:publisher>
+      <mods:place>
+         <mods:placeTerm type="text">Hanover, NH</mods:placeTerm>
+         <mods:placeTerm type="code" authority="marccountry">nhu</mods:placeTerm>
+      </mods:place>
+      <mods:dateIssued encoding="w3cdtf" keyDate="yes">2015</mods:dateIssued>
+   </mods:originInfo>
+   <mods:language usage="primary">
+      <mods:languageTerm type="code" authority="iso639-2b">eng</mods:languageTerm>
+      <mods:languageTerm type="text">English</mods:languageTerm>
+   </mods:language>
+   <mods:physicalDescription>
+      <mods:form type="media" authority="rdamedia">computer</mods:form>
+      <mods:form type="carrier" authority="rdacarrier">online resource</mods:form>
+      <mods:internetMediaType>text/html</mods:internetMediaType>
+      <mods:internetMediaType>image/tiff</mods:internetMediaType>
+      <mods:extent>1 online resource (2 pages)</mods:extent>
+      <mods:digitalOrigin>reformatted digital</mods:digitalOrigin>
+      <mods:note type="technique" displayLabel="Original">manuscript</mods:note>
+   </mods:physicalDescription>
+   <mods:abstract>Bull writes that the Indian girl, whom Wheelock had committed to his care, has arrived.</mods:abstract>
+   <mods:note type="additional physical form">Also available in print.</mods:note>
+   <mods:note>Conversion to TEI P5 encoding by the Text Markup Unit, Dartmouth College Library.</mods:note>
+   <mods:note>Transcribed from the original manuscript by the Occom Circle Project.</mods:note>
+   <mods:note>Handwriting: Handwriting is clear and legible.</mods:note>
+   <mods:note>Paper: Small single sheet is in good condition, with light staining, creasing and wear.</mods:note>
+   <mods:note>Ink: Brown.</mods:note>
+   <mods:note>Noteworthy: The identity of the Indian girl mentioned by Bull is uncertain, and so she has been left untagged. The identity of the brother-in-law mentioned by Bull is uncertain, and so he has been left untagged. The name "Eleze" in Bull's signature is uncertain -- it may be an abbreviated middle name, or a reference to Elizabeth, Bull's wife.</mods:note>
+   <mods:relatedItem type="otherFormat" displayLabel="Print version:">
+      <mods:titleInfo>
+         <mods:title>Daniel Bull, letter, to Eleazar Wheelock, 1765 January 22</mods:title>
+      </mods:titleInfo>
+      <mods:originInfo eventType="production">
+         <mods:dateCreated encoding="fast">Eighteenth century</mods:dateCreated>
+         <mods:dateCreated encoding="w3cdtf">1765-01-22</mods:dateCreated>
+      </mods:originInfo>
+      <mods:location>
+         <mods:holdingSimple>
+            <mods:copyInformation>
+               <mods:subLocation>Rauner Special Collections Library, 6065 Webster Hall, Hanover, NH 03755, USA</mods:subLocation>
+               <mods:shelfLocator>Rauner Manuscript 765122</mods:shelfLocator>
+            </mods:copyInformation>
+         </mods:holdingSimple>
+      </mods:location>
+   </mods:relatedItem>
+   <mods:relatedItem type="host">
+      <mods:titleInfo>
+         <mods:nonSort>The </mods:nonSort>
+         <mods:title>Occom Circle</mods:title>
+      </mods:titleInfo>
+      <mods:typeOfResource collection="yes">text</mods:typeOfResource>
+      <mods:location>
+         <mods:url usage="primary" access="object in context">https://www.dartmouth.edu/~occom/</mods:url>
+      </mods:location>
+   </mods:relatedItem>
+   <mods:identifier type="doi" displayLabel="Digital text">https://doi.org/10.1349/ddlp.794</mods:identifier>
+   <mods:identifier type="ms-number">765122</mods:identifier>
+   <mods:location>
+      <mods:url usage="primary" access="object in context">https://collections.dartmouth.edu/occom/html/diplomatic/765122-diplomatic.html</mods:url>
+   </mods:location>
+   <mods:accessCondition type="use and reproduction">Copyright 2015 Trustees of Dartmouth College. Publicly accessible for non-commercial use: these pages may be freely searched and displayed, but permission must be received for subsequent distribution in print or electronically. Please see http://www.dartmouth.edu/~library/schcomm/copyright/rights.html for more information.</mods:accessCondition>
+   <mods:extension>
+      <drb:filename type="master">765122_001.tif</drb:filename>
+      <drb:filename type="master">765122_002.tif</drb:filename>
+   </mods:extension>
+   <mods:recordInfo>
+      <mods:descriptionStandard authority="marcdescription">dacs</mods:descriptionStandard>
+      <mods:descriptionStandard authority="marcdescription">rda</mods:descriptionStandard>
+      <mods:recordContentSource authority="oclcorg">DRB</mods:recordContentSource>
+      <mods:recordCreationDate encoding="w3cdtf">2017-01-23</mods:recordCreationDate>
+      <mods:recordChangeDate encoding="w3cdtf">2023-08-24</mods:recordChangeDate>
+      <mods:recordChangeDate encoding="iso8601">20170127161534.3</mods:recordChangeDate>
+      <mods:recordInfoNote type="date entered as MARC">170125</mods:recordInfoNote>
+      <mods:recordIdentifier source="DRB">occom-765122</mods:recordIdentifier>
+      <mods:recordIdentifier source="OCoLC">ocn969996117</mods:recordIdentifier>
+      <mods:recordOrigin>Record has been transformed into MODS from a TEI-encoded XML document using a stylesheet. TEI encoding conforms to "TEI in Libraries: Guidelines for Best Practices," level 4. Data in the sourceDesc follows DACS rules.</mods:recordOrigin>
+      <mods:languageOfCataloging>
+         <mods:languageTerm type="text">English</mods:languageTerm>
+         <mods:languageTerm type="code" authority="iso639-2b">eng</mods:languageTerm>
+      </mods:languageOfCataloging>
+   </mods:recordInfo>
+</mods:mods>

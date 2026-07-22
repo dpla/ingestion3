@@ -5,6 +5,7 @@ import dpla.ingestion3.harvesters.api._
 import dpla.ingestion3.harvesters.file._
 import dpla.ingestion3.harvesters.oai.LocalOaiHarvester
 import dpla.ingestion3.mappers.providers._
+import dpla.ingestion3.mappers.providers.experimental.DartmouthMapping
 
 class IthakaProfile extends XmlProfile {
   type Mapping = IthakaMapping
@@ -158,6 +159,19 @@ class MaProfile extends XmlProfile {
 
   override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new MaMapping
+}
+
+/** Dartmouth Libraries — TEST HUB (not approved for production).
+  *
+  * MODS records. Harvest method is not yet finalized (OAI vs. file delivery);
+  * `getHarvester` is a placeholder for the localoai path and only takes effect
+  * for `api`/`file` harvest types. See docs/ingestion/README_TEST_HUBS.md.
+  */
+class DartmouthProfile extends XmlProfile {
+  type Mapping = DartmouthMapping
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
+  override def getMapping = new DartmouthMapping
 }
 
 /** Digital Maryland
