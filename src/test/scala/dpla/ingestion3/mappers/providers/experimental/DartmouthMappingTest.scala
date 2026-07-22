@@ -109,6 +109,45 @@ class DartmouthMappingTest extends AnyFlatSpec {
         Seq(URI("https://creativecommons.org/licenses/by-nc/4.0/"))
     )
 
+  it should "capture creator exactMatch (@valueURI) and scheme (@authorityURI)" in {
+    val agentXml: Document[NodeSeq] = Document(
+      <mods>
+        <name valueURI="http://id.loc.gov/authorities/names/n79021164"
+              authorityURI="http://id.loc.gov/authorities/names">
+          <namePart>Whitman, Walt</namePart>
+        </name>
+      </mods>
+    )
+    assert(
+      extractor.creator(agentXml) === Seq(
+        EdmAgent(
+          name = Some("Whitman, Walt"),
+          exactMatch = Seq(URI("http://id.loc.gov/authorities/names/n79021164")),
+          scheme = Some(URI("http://id.loc.gov/authorities/names"))
+        )
+      )
+    )
+  }
+
+  it should "capture place exactMatch for http valueURIs but ignore FAST (OCoLC) codes" in {
+    val placeXml: Document[NodeSeq] = Document(
+      <mods>
+        <subject valueURI="http://vocab.getty.edu/tgn/7013445">
+          <geographic>Boston</geographic>
+        </subject>
+        <subject authority="fast" valueURI="(OCoLC)fst01204155">
+          <geographic>United States</geographic>
+        </subject>
+      </mods>
+    )
+    assert(
+      extractor.place(placeXml) === Seq(
+        DplaPlace(name = Some("Boston"), exactMatch = Seq(URI("http://vocab.getty.edu/tgn/7013445"))),
+        DplaPlace(name = Some("United States"))
+      )
+    )
+  }
+
   it should "construct the IIIF manifest URL from the DRB recordIdentifiers" in
     assert(
       extractor.iiifManifest(xmlImages) === Seq(

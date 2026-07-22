@@ -152,14 +152,33 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyConcept)
 
   override def place(data: Document[NodeSeq]): Seq[DplaPlace] = {
-    // <mods:originInfo><mods:place><mods:placeTerm type="text"> and <mods:subject><mods:geographic>
     val root = getModsRoot(data)
-    (byAttribute(root \ "originInfo" \ "place" \ "placeTerm", "type", "text")
-      .flatMap(extractStrings) ++
-      extractStrings(root \ "subject" \ "geographic"))
-      .map(_.trim)
-      .filter(_.nonEmpty)
-      .map(nameOnlyPlace)
+
+    // <mods:originInfo><mods:place><mods:placeTerm type="text"> — plain-text place.
+    val originPlaces =
+      byAttribute(root \ "originInfo" \ "place" \ "placeTerm", "type", "text")
+        .flatMap(extractStrings)
+        .map(_.trim)
+        .filter(_.nonEmpty)
+        .map(nameOnlyPlace)
+
+    // <mods:subject><mods:geographic>. An http(s) valueURI on the subject (or the
+    // geographic node) is captured as exactMatch. FAST "(OCoLC)fst..." style values
+    // are not URIs and are ignored. TODO: capture FAST authority IDs if the partner
+    // provides them (or we convert them) in http form (id.worldcat.org/fast/...).
+    val subjectPlaces = (root \ "subject").flatMap { subject =>
+      val uri = (getAttributeValue(subject, "valueURI").toSeq ++
+        (subject \ "geographic").flatMap(g => getAttributeValue(g, "valueURI")))
+        .filter(isHttpUri)
+        .map(URI)
+      (subject \ "geographic")
+        .flatMap(extractStrings)
+        .map(_.trim)
+        .filter(_.nonEmpty)
+        .map(name => DplaPlace(name = Some(name), exactMatch = uri))
+    }
+
+    originPlaces ++ subjectPlaces
   }
 
   override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
@@ -344,9 +363,15 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
   }
 
   private def edmAgentHelper(node: Node): EdmAgent = {
-    val uri = getAttributeValue(node, "valueURI").filter(_.nonEmpty).map(URI).toSeq
-    EdmAgent(name = nameConstructor(node), exactMatch = uri)
+    // @valueURI -> exactMatch (the entity URI, e.g. an LC name authority);
+    // @authorityURI -> scheme (the authority base). Only http(s) values are kept.
+    val uri = getAttributeValue(node, "valueURI").filter(isHttpUri).map(URI).toSeq
+    val scheme = getAttributeValue(node, "authorityURI").filter(isHttpUri).map(URI)
+    EdmAgent(name = nameConstructor(node), exactMatch = uri, scheme = scheme)
   }
+
+  private def isHttpUri(value: String): Boolean =
+    value.startsWith("http://") || value.startsWith("https://")
 
   private def skosConceptUriHelper(node: Node): SkosConcept = {
     val uri = getAttributeValue(node, "valueURI").map(URI).toSeq
