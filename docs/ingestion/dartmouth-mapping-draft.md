@@ -5,13 +5,22 @@ See [README_TEST_HUBS.md](README_TEST_HUBS.md).
 
 - **Provider (hub):** Dartmouth Libraries (Dartmouth College)
 - **Metadata format:** MODS 3.6 (with a Dartmouth `drb:` extension namespace)
-- **Mapper:** `src/main/scala/dpla/ingestion3/mappers/providers/experimental/DartmouthMapping.scala`
+- **Mapper:** [`DartmouthMapping.scala`](../../src/main/scala/dpla/ingestion3/mappers/providers/experimental/DartmouthMapping.scala)
+- **Tests:** [`DartmouthMappingTest.scala`](../../src/test/scala/dpla/ingestion3/mappers/providers/experimental/DartmouthMappingTest.scala)
 - **Basis:** 23 sample records across 5 collections — `black-creative-music` (BCM),
   `granite-state-maps` (NH), `winter-carnival-posters` (dwcposters), `occom`
   (The Occom Circle), `Press_Translations_Japanese`. The first three are
   image/map objects; occom and Press are TEI **text**.
 - **Harvest method:** not yet finalized (OAI vs. file delivery). Records are raw
   `<mods:mods>` documents, one per file.
+- **DPLA model & serialization:** field types in
+  [`DplaMapData.scala`](../../src/main/scala/dpla/ingestion3/model/DplaMapData.scala);
+  base field defaults and required/optional validation flags in the
+  [`Mapping`](../../src/main/scala/dpla/ingestion3/mappers/utils/Mapping.scala) trait;
+  the JSON-L index serializer in
+  [`model/package.scala`](../../src/main/scala/dpla/ingestion3/model/package.scala).
+  Registered via [`CHProviderProfiles.scala`](../../src/main/scala/dpla/ingestion3/profiles/CHProviderProfiles.scala)
+  and [`CHProviderRegistry.scala`](../../src/main/scala/dpla/ingestion3/utils/CHProviderRegistry.scala).
 
 Notes on notation: `\` = direct child, `\\` = descendant. `@x` = attribute. The
 mapper anchors to the record's root MODS element via `getModsRoot`, so paths below
@@ -62,8 +71,9 @@ are relative to `<mods:mods>`.
 **Config:** `useProviderName = true`, `getProviderName = "dartmouth"`.
 
 **On authority URIs:** creator/contributor `exactMatch`/`scheme` and place/subject
-`exactMatch` **are** populated in the DPLA MAP model. Note the shared index/API
-serializer flattens `creator`/`contributor`/`publisher`/`place` to display strings
+`exactMatch` **are** populated in the DPLA MAP model. Note the shared
+[index/API serializer](../../src/main/scala/dpla/ingestion3/model/package.scala)
+flattens `creator`/`contributor`/`publisher`/`place` to display strings
 (only `subject` exposes its URI downstream); the creator URIs are still consumed by
 the Wikimedia/Wikidata entity-linking step. Capturing them is correct regardless of
 current index exposure.
