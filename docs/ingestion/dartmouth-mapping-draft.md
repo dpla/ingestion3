@@ -33,7 +33,8 @@ are relative to `<mods:mods>`.
 | `iiifManifest` | *(constructed)* | `https://collections.dartmouth.edu/archive/iiif/{collection}/{item}-mods.json` where `{collection}` = host `relatedItem` DRB `recordIdentifier`, `{item}` = own DRB `recordIdentifier`. **Skipped when `typeOfResource = "text"`** (occom/Press have no manifest — verified 200 for image/map, 404 for text). |
 | `preview` | `location/url[@access="preview"]` | **No such URL in any sample → currently empty.** See §4. |
 | `edmRights` | `accessCondition[@type="use and reproduction"]/@xlink:href` | Standardized rights URI (e.g. a CC license). Present on BCM; absent on occom. |
-| `rights` | `accessCondition` (free text) | All direct `accessCondition` text values. |
+| `rights` | `accessCondition` (**direct text only**) | Direct text of each `accessCondition`; a condition whose content is a nested `cmd:copyright` block contributes no rights text (its holder → `rightsHolder`). |
+| `rightsHolder` | `accessCondition/cmd:copyright/cmd:rights.holder/cmd:name` | → `EdmAgent` (e.g. "Trustees of Dartmouth College"). |
 | `originalRecord` | *(whole record)* | Full MODS XML, `Utils.formatXml`. |
 | `sidecar` | *(minted)* | `prehashId` + `dplaId`. |
 
@@ -49,7 +50,7 @@ are relative to `<mods:mods>`.
 | `date` | `originInfo/dateCreated` or `relatedItem[@type="otherFormat"]/originInfo/dateCreated` (`@encoding="w3cdtf"`) | Prefers `dateCreated` (the analog original's date); falls back to `dateIssued`/`dateOther`/`copyrightDate`. → `EdmTimeSpan(displayDate)`. |
 | `temporal` | `subject/temporal` | → `EdmTimeSpan`. |
 | `subject` | `subject/{topic,temporal,titleInfo,name,genre}` | → `SkosConcept(providedLabel)` **+ `exactMatch`/`scheme`** from the child's `@valueURI`/`@authorityURI`. |
-| `description` | `abstract` (direct child only) | **Abstract only** — `note` values deliberately excluded (see §4). |
+| `description` | `abstract` (direct child; excludes `@shareable="no"`) | **Abstract only.** `note` values excluded; `abstract[@shareable="no"]` (e.g. "Part 1 of 4") excluded as non-descriptive. |
 | `extent` | `physicalDescription/extent` | |
 | `format` | `genre` | With the digital-surrogate / format-type block filters. **`@valueURI` (Getty AAT) is dropped** — `format` is a plain string (see §3/§4). |
 | `type` | `typeOfResource` | Direct child (record's own). |
@@ -75,7 +76,7 @@ Dropped because there is no DPLA equivalent, or the value is administrative/tech
 
 - **`genre/@valueURI` (Getty AAT URIs)** — `format` is a plain string with no URI slot. *(But see §3: the DPLA `genre` field could hold these.)*
 - **`mods:note` (all)** — TEI-conversion, Handwriting, Paper, Ink, Noteworthy, "additional physical form". Deliberately excluded from `description`.
-- **`abstract[@shareable="no"]`** — e.g. "Part 1 of 4". Currently **still captured** in `description` (should likely be excluded — see §4).
+- **`abstract[@shareable="no"]`** — e.g. "Part 1 of 4"; excluded from `description` as non-descriptive.
 - **`name/nameIdentifier`** (local person IDs, e.g. `pers0007.ocp`), **`name/@authority`** code (`naf`), **`role/roleTerm`** relator label/URI (roles are used only to classify creator vs. contributor; the role itself is not retained).
 - **`originInfo/edition`** (e.g. "The Occom Circle: A digital edition").
 - **`originInfo/place/placeTerm[@type="code"]`** (marccountry `nhu`), **`originInfo/@eventType`**.
@@ -84,7 +85,7 @@ Dropped because there is no DPLA equivalent, or the value is administrative/tech
 - **`recordInfo/*`** except `recordIdentifier` — `descriptionStandard`, `recordContentSource`, `recordCreationDate`, `recordChangeDate`, `recordInfoNote`, `recordOrigin`, `languageOfCataloging`.
 - **`relatedItem[@type="otherFormat"]`** — everything except `originInfo/dateCreated` (→ `date`) and `//subLocation` (→ `dataProvider`); e.g. `holdingSimple/shelfLocator`, its `titleInfo`.
 - **`relatedItem[@type="host"]`** — everything except `titleInfo/title` (→ `collection`) and `recordInfo/recordIdentifier` (→ `iiifManifest`); e.g. its `location/url`, `typeOfResource[@collection]`.
-- **`accessCondition` nested `cmd:copyright` / `cmd:rights.holder`** (copyrightMD) — not mapped as such (and currently leaks text into `rights` — see §4).
+- **`accessCondition` nested `cmd:copyright`** (copyrightMD) — `cmd:rights.holder/cmd:name` → `rightsHolder`; the other attributes (`copyright.status`, `publication.status`) are dropped.
 - **`subject/cartographics/coordinates`, `subject/hierarchicalGeographic`** — not mapped (relevant if the map collection carries coordinates).
 - **`subject/@authority` and FAST `valueURI` codes** in `(OCoLC)fst…` form — ignored as non-URIs.
 - **`typeOfResource` attributes** (`@manuscript`, `@collection`), **`titleInfo/@supplied`**.
@@ -111,7 +112,6 @@ The hard-required DPLA fields (a record is rejected without them) are all mapped
 | DPLA field | Opportunity |
 |---|---|
 | `genre` (`SkosConcept`, **supports `exactMatch`/`scheme`**) | Map `mods:genre` here (in addition to `format`) to **preserve the Getty AAT URIs** currently dropped. |
-| `rightsHolder` (`EdmAgent`) | The copyright holder is available in `accessCondition/cmd:copyright/cmd:rights.holder/cmd:name` (e.g. "Trustees of Dartmouth College"). |
 | `mediaMaster` | Not mapped by design — `iiifManifest` gives the Wikimedia pipeline its media path. Revisit only if a direct full-res asset URL is needed. |
 
 ### Unmapped, no obvious source (informational)
@@ -147,11 +147,6 @@ no clear equivalent in the Dartmouth MODS.
   (`www.dartmouth.edu/~occom/`), not the item. *Decision point:* whether/how to
   ingest text-only collections, and whether occom's `isShownAt` is item-specific
   enough.
-- **`rights` leak (bug).** `rights` reads all `accessCondition` text, which pulls the
-  copyright holder name out of the nested `cmd:copyright` block (e.g. "Trustees of
-  Dartmouth College" appears as a standalone rights value on BCM). *Recommendation:*
-  restrict `rights` to direct `accessCondition` text and route the holder to
-  `rightsHolder`.
 - **`edmRights` coverage is uneven.** BCM carries a CC URI; occom has only free-text
   rights (no standardized URI). *Recommendation:* ask Dartmouth to supply
   `rightsstatements.org`/CC URIs across collections.

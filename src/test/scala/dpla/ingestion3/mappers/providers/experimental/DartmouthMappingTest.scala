@@ -68,6 +68,27 @@ class DartmouthMappingTest extends AnyFlatSpec {
       extractor.dataProvider(xmlImages) === Seq(nameOnlyAgent("Digital by Dartmouth Library"))
     )
 
+  it should "exclude shareable=no abstracts from description" in {
+    val d = extractor.description(xmlImages)
+    assert(d.contains(
+      "Associated images of cassette containing live concert recording of the " +
+        "Barbary Coast Jazz Ensemble with Slide Hampton, Clint Houston, " +
+        "Mickey Tucker, and Alan Dawson."
+    ))
+    assert(!d.contains("Part 1 of 4"))
+  }
+
+  it should "not leak the copyright holder into rights" in {
+    val r = extractor.rights(xmlImages)
+    assert(!r.contains("Trustees of Dartmouth College"))
+    assert(r.contains("Creative Commons Attribution-NonCommercial License"))
+  }
+
+  it should "map the copyright holder to rightsHolder" in
+    assert(
+      extractor.rightsHolder(xmlImages) === Seq(nameOnlyAgent("Trustees of Dartmouth College"))
+    )
+
   it should "prefer the analog dateCreated over the digitization dateIssued" in
     assert(extractor.date(xml) === Seq(stringOnlyTimeSpan("1765-01-22")))
 

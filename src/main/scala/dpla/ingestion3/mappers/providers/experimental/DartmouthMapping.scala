@@ -126,12 +126,15 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
   }
 
   override def description(data: Document[NodeSeq]): Seq[String] =
-    // <mods:abstract> only (direct child — relatedItem abstracts excluded).
+    // <mods:abstract> only (direct child — relatedItem abstracts excluded), and
+    // excluding abstract[@shareable="no"] (e.g. "Part 1 of 4", not descriptive).
     // NOTE: <mods:note> values are potentially mappable to description as well,
     // but the Dartmouth samples mix content notes with administrative/technical
     // ones (TEI conversion, Handwriting, Paper, Ink). Left out for now; revisit
     // with the partner if some note types should be included.
-    extractStrings(getModsRoot(data) \ "abstract")
+    (getModsRoot(data) \ "abstract")
+      .filterNot(n => filterAttribute(n, "shareable", "no"))
+      .flatMap(extractStrings)
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(getModsRoot(data) \ "physicalDescription" \ "extent")
@@ -186,11 +189,20 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyAgent)
 
   override def rights(data: Document[NodeSeq]): Seq[String] =
-    // <mods:accessCondition> free-text (nested cmd:copyright-only conditions filtered out)
+    // Direct text of each <mods:accessCondition> only. Using direct text (not
+    // descendant text) drops conditions whose content is a nested copyrightMD
+    // block (cmd:copyright); its holder is mapped to rightsHolder instead.
     (getModsRoot(data) \ "accessCondition")
+      .map(directText)
+      .filter(_.nonEmpty)
+
+  override def rightsHolder(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+    // <mods:accessCondition><cmd:copyright><cmd:rights.holder><cmd:name>
+    (getModsRoot(data) \ "accessCondition" \ "copyright" \ "rights.holder" \ "name")
       .flatMap(extractStrings)
       .map(_.trim)
       .filter(_.nonEmpty)
+      .map(nameOnlyAgent)
 
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] = {
     val root = getModsRoot(data)
@@ -372,6 +384,11 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
 
   private def isHttpUri(value: String): Boolean =
     value.startsWith("http://") || value.startsWith("https://")
+
+  // Concatenates only a node's direct text children (ignoring nested elements
+  // such as copyrightMD blocks), with whitespace collapsed.
+  private def directText(node: Node): String =
+    node.child.collect { case t: Text => t.text }.mkString(" ").reduceWhitespace
 
   private def skosConceptUriHelper(node: Node): SkosConcept = {
     val uri = getAttributeValue(node, "valueURI").map(URI).toSeq
