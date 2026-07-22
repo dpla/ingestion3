@@ -109,6 +109,16 @@ class DartmouthMappingTest extends AnyFlatSpec {
         Seq(URI("https://creativecommons.org/licenses/by-nc/4.0/"))
     )
 
+  it should "construct the IIIF manifest URL from the DRB recordIdentifiers" in
+    assert(
+      extractor.iiifManifest(xmlImages) === Seq(
+        URI("https://collections.dartmouth.edu/archive/iiif/black-creative-music/BCM-19820213-hampton-images-mods.json")
+      )
+    )
+
+  it should "not construct an IIIF manifest for text records" in
+    assert(extractor.iiifManifest(xml).isEmpty)
+
   it should "map all un-roled names as creators on the images record" in {
     val creators = extractor.creator(xmlImages).flatMap(_.name)
     assert(creators.contains("Hampton, Slide"))

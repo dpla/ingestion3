@@ -268,6 +268,36 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
       .flatMap(extractStrings)
       .map(stringOnlyWebResource)
 
+  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] = {
+    // Archive (image/map) objects have a IIIF Presentation 3.0 manifest at
+    //   https://collections.dartmouth.edu/archive/iiif/{collection}/{item}-mods.json
+    // where {collection} is the host relatedItem's DRB recordIdentifier and {item}
+    // is the record's own DRB recordIdentifier. Text collections (occom, teitexts)
+    // have no such manifest, so we skip typeOfResource = "text".
+    //
+    // TODO: this hardcodes the collections.dartmouth.edu IIIF URL template. Ideally
+    //  Dartmouth would emit the manifest URL explicitly in the MODS (e.g.
+    //  <mods:location><mods:url note="iiifManifest">), as several DPLA hubs do.
+    val root = getModsRoot(data)
+    val isText = extractStrings(root \ "typeOfResource").exists(_.equalsIgnoreCase("text"))
+
+    val collection = byAttribute(
+      byAttribute(root \ "relatedItem", "type", "host") \ "recordInfo" \ "recordIdentifier",
+      "source", "DRB"
+    ).flatMap(extractStrings).headOption
+
+    val item = byAttribute(root \ "recordInfo" \ "recordIdentifier", "source", "DRB")
+      .flatMap(extractStrings)
+      .headOption
+
+    (for {
+      c <- collection if !isText
+      i <- item
+    } yield URI(
+      s"https://collections.dartmouth.edu/archive/iiif/$c/$i-mods.json"
+    )).toSeq
+  }
+
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
   override def sidecar(data: Document[NodeSeq]): JValue =
