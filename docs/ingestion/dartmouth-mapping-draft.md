@@ -37,7 +37,7 @@ are relative to `<mods:mods>`.
 | `dplaUri` | *(minted)* | `mintDplaItemUri` — hash of the salted `originalId`. |
 | *(originalId — for ID minting & sidecar)* | `recordInfo/recordIdentifier[@source="DRB"]` | Fallback: any `recordIdentifier`, then an OAI `header/identifier`. Salted with provider name `dartmouth`. |
 | `provider` | *(constant)* | `EdmAgent("Dartmouth Libraries", uri=http://dp.la/api/contributor/dartmouth)`. |
-| `dataProvider` | `relatedItem[@type="otherFormat"]//subLocation` | Text **before the first comma** (institution name; address dropped). Fallbacks: `name[role="repository"]` → literal `"Dartmouth College Library"`. |
+| `dataProvider` | *(constant)* | **Per Dartmouth (2026):** hardcoded `nameOnlyAgent("Dartmouth Libraries")` — same as `provider`. (Previously derived from the analog original's `subLocation`; dropped at Dartmouth's request.) |
 | `isShownAt` | `location/url[@usage="primary"][@access="object in context"]` | Landing page. Absent on the map records in the sample set. |
 | `iiifManifest` | *(constructed)* | `https://collections.dartmouth.edu/archive/iiif/{collection}/{item}-mods.json` where `{collection}` = host `relatedItem` DRB `recordIdentifier`, `{item}` = own DRB `recordIdentifier`. **Skipped when `typeOfResource = "text"`** (occom/Press have no manifest — verified 200 for image/map, 404 for text). |
 | `preview` | `location/url[@access="preview"]` | **No such URL in any sample → currently empty.** See §4. |
@@ -53,8 +53,8 @@ are relative to `<mods:mods>`.
 |---|---|---|
 | `title` | `titleInfo` (not `@type` alternative/translated/uniform) | `nonSort` + `title` + `subTitle`, whitespace-collapsed. |
 | `alternateTitle` | `titleInfo[@type="alternative"|"translated"|"uniform"]/title` | |
-| `creator` | `name` with no role, or role in a creator set (author, artist, photographer, …); **excludes** `role="repository"` | Name from `namePart` (`family, given [, date]`, or plain). **+ `exactMatch`** from `@valueURI` (http only) **+ `scheme`** from `@authorityURI`. |
-| `contributor` | `name` with a role that is not a creator role and not `repository` | Same construction + URIs. |
+| `creator` | `name[@usage="primary"]` (any type/role) | **Per Dartmouth (2026):** all names with `usage="primary"`, and **only** those — records with no primary name have no creator. Name from `namePart` (`family, given [, date]`, or plain). **+ `exactMatch`** from `@valueURI` (http only) **+ `scheme`** from `@authorityURI`. |
+| `contributor` | *(not mapped)* | Intentionally unmapped — the treatment of non-primary names is an open question for Dartmouth (see §4). |
 | `publisher` | `originInfo/publisher` | Name only. |
 | `date` | `originInfo/dateCreated` or `relatedItem[@type="otherFormat"]/originInfo/dateCreated` (`@encoding="w3cdtf"`) | Prefers `dateCreated` (the analog original's date); falls back to `dateIssued`/`dateOther`/`copyrightDate`. → `EdmTimeSpan(displayDate)`. |
 | `temporal` | `subject/temporal` | → `EdmTimeSpan`. |
@@ -70,10 +70,10 @@ are relative to `<mods:mods>`.
 
 **Config:** `useProviderName = true`, `getProviderName = "dartmouth"`.
 
-**On authority URIs:** creator/contributor `exactMatch`/`scheme` and place/subject
+**On authority URIs:** creator `exactMatch`/`scheme` and place/subject
 `exactMatch` **are** populated in the DPLA MAP model. Note the shared
 [index/API serializer](../../src/main/scala/dpla/ingestion3/model/package.scala)
-flattens `creator`/`contributor`/`publisher`/`place` to display strings
+flattens `creator`/`publisher`/`place` to display strings
 (only `subject` exposes its URI downstream); the creator URIs are still consumed by
 the Wikimedia/Wikidata entity-linking step. Capturing them is correct regardless of
 current index exposure.
@@ -87,13 +87,14 @@ Dropped because there is no DPLA equivalent, or the value is administrative/tech
 - **`genre/@valueURI` (Getty AAT URIs)** — `format` is a plain string with no URI slot. *(But see §3: the DPLA `genre` field could hold these.)*
 - **`mods:note` (all)** — TEI-conversion, Handwriting, Paper, Ink, Noteworthy, "additional physical form". Deliberately excluded from `description`.
 - **`abstract[@shareable="no"]`** — e.g. "Part 1 of 4"; excluded from `description` as non-descriptive.
-- **`name/nameIdentifier`** (local person IDs, e.g. `pers0007.ocp`), **`name/@authority`** code (`naf`), **`role/roleTerm`** relator label/URI (roles are used only to classify creator vs. contributor; the role itself is not retained).
+- **Names without `@usage="primary"`** (e.g. the addressee "Wheelock", the un-marked BCM performers, the "repository" name) — currently dropped, since only `usage="primary"` names map to `creator` and `contributor` is unmapped. *(Open question — see §4.)*
+- **`name/nameIdentifier`** (local person IDs, e.g. `pers0007.ocp`), **`name/@authority`** code (`naf`), **`role/roleTerm`** — roles are no longer used (creator is selected by `@usage="primary"`); relator label/URI not retained.
 - **`originInfo/edition`** (e.g. "The Occom Circle: A digital edition").
 - **`originInfo/place/placeTerm[@type="code"]`** (marccountry `nhu`), **`originInfo/@eventType`**.
 - **`physicalDescription/form`, `internetMediaType`, `digitalOrigin`, `note[@type="technique"]`** (only `extent` is kept).
 - **`extension/drb:filename`** (master TIFF/WAV filenames) and **`drb:flag`** — no file-server/derivative URL exists in the metadata; media is reached via `iiifManifest` instead.
 - **`recordInfo/*`** except `recordIdentifier` — `descriptionStandard`, `recordContentSource`, `recordCreationDate`, `recordChangeDate`, `recordInfoNote`, `recordOrigin`, `languageOfCataloging`.
-- **`relatedItem[@type="otherFormat"]`** — everything except `originInfo/dateCreated` (→ `date`) and `//subLocation` (→ `dataProvider`); e.g. `holdingSimple/shelfLocator`, its `titleInfo`.
+- **`relatedItem[@type="otherFormat"]`** — everything except `originInfo/dateCreated` (→ `date`); e.g. `holdingSimple/subLocation` and `shelfLocator` (subLocation was previously used for `dataProvider`, now hardcoded), and its `titleInfo`.
 - **`relatedItem[@type="host"]`** — everything except `titleInfo/title` (→ `collection`) and `recordInfo/recordIdentifier` (→ `iiifManifest`); e.g. its `location/url`, `typeOfResource[@collection]`.
 - **`accessCondition` nested `cmd:copyright`** (copyrightMD) — `cmd:rights.holder/cmd:name` → `rightsHolder`; the other attributes (`copyright.status`, `publication.status`) are dropped.
 - **`subject/cartographics/coordinates`, `subject/hierarchicalGeographic`** — not mapped (relevant if the map collection carries coordinates).
@@ -144,10 +145,6 @@ no clear equivalent in the Dartmouth MODS.
 
 ### Carried over from code TODOs
 
-- **`dataProvider` comma-split is brittle.** We take the institution name as the
-  text before the first comma of `subLocation`. This breaks if an institution name
-  contains a comma. *Recommendation:* ask Dartmouth to subfield the institution
-  name and address as distinct MODS elements.
 - **`preview`/thumbnail source unknown.** No thumbnail URL in the samples.
   *Recommendation:* confirm the IIIF Image API base (or a `location/url` thumbnail)
   so `preview` (the thumbnail, exposed as the API `object` field) can be populated.
@@ -160,6 +157,13 @@ no clear equivalent in the Dartmouth MODS.
 
 ### Additional assessment (opportunities & risks)
 
+- **Contributor / non-primary names (OPEN QUESTION for Dartmouth).** Per Dartmouth,
+  `creator` now maps only `name[@usage="primary"]`, and `contributor` is not mapped.
+  This means every non-primary name — an addressee, a performer, the "repository"
+  name, etc. — is currently **dropped**. Dartmouth should decide whether any of those
+  names should be preserved (e.g. as `contributor`), and if so, by what rule (all
+  non-primary names, or only those with certain roles). Until then, only primary
+  names appear, and some records have no agent at all.
 - **Text vs. image collections.** occom and Press are TEI **text** — no IIIF
   manifest, no thumbnail, no `object`. These records would be thin (text metadata +
   a landing page) and, for occom, `isShownAt` is a generic project homepage

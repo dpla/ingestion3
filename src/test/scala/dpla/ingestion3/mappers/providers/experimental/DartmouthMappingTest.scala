@@ -40,15 +40,15 @@ class DartmouthMappingTest extends AnyFlatSpec {
         Seq("Daniel Bull, letter, to Eleazar Wheelock, 1765 January 22")
     )
 
-  it should "extract the correct creator (author role)" in
+  it should "map only names with usage=primary as creator" in
     assert(extractor.creator(xml) === Seq(nameOnlyAgent("Bull, Daniel")))
 
-  it should "extract the correct contributor (non-creator role)" in
-    assert(extractor.contributor(xml) === Seq(nameOnlyAgent("Wheelock, Eleazar")))
+  it should "not map contributor (dropped; open question for Dartmouth)" in
+    assert(extractor.contributor(xml).isEmpty)
 
-  it should "exclude the repository name from creator and contributor" in {
-    val names =
-      (extractor.creator(xml) ++ extractor.contributor(xml)).flatMap(_.name)
+  it should "exclude non-primary names (addressee, repository) from creator" in {
+    val names = extractor.creator(xml).flatMap(_.name)
+    assert(!names.contains("Wheelock, Eleazar"))
     assert(!names.contains("Digital by Dartmouth Library"))
   }
 
@@ -58,15 +58,10 @@ class DartmouthMappingTest extends AnyFlatSpec {
         Seq("Bull writes that the Indian girl, whom Wheelock had committed to his care, has arrived.")
     )
 
-  it should "map dataProvider to the subLocation institution name (before the address)" in
-    assert(
-      extractor.dataProvider(xml) === Seq(nameOnlyAgent("Rauner Special Collections Library"))
-    )
-
-  it should "fall back to the repository name for dataProvider when no subLocation is present" in
-    assert(
-      extractor.dataProvider(xmlImages) === Seq(nameOnlyAgent("Digital by Dartmouth Library"))
-    )
+  it should "hardcode dataProvider to Dartmouth Libraries" in {
+    assert(extractor.dataProvider(xml) === Seq(nameOnlyAgent("Dartmouth Libraries")))
+    assert(extractor.dataProvider(xmlImages) === Seq(nameOnlyAgent("Dartmouth Libraries")))
+  }
 
   it should "exclude shareable=no abstracts from description" in {
     val d = extractor.description(xmlImages)
@@ -133,7 +128,8 @@ class DartmouthMappingTest extends AnyFlatSpec {
   it should "capture creator exactMatch (@valueURI) and scheme (@authorityURI)" in {
     val agentXml: Document[NodeSeq] = Document(
       <mods>
-        <name valueURI="http://id.loc.gov/authorities/names/n79021164"
+        <name usage="primary"
+              valueURI="http://id.loc.gov/authorities/names/n79021164"
               authorityURI="http://id.loc.gov/authorities/names">
           <namePart>Whitman, Walt</namePart>
         </name>
@@ -179,9 +175,6 @@ class DartmouthMappingTest extends AnyFlatSpec {
   it should "not construct an IIIF manifest for text records" in
     assert(extractor.iiifManifest(xml).isEmpty)
 
-  it should "map all un-roled names as creators on the images record" in {
-    val creators = extractor.creator(xmlImages).flatMap(_.name)
-    assert(creators.contains("Hampton, Slide"))
-    assert(!creators.contains("Digital by Dartmouth Library"))
-  }
+  it should "have no creator when no name has usage=primary (images record)" in
+    assert(extractor.creator(xmlImages).isEmpty)
 }

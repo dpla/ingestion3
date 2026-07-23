@@ -36,14 +36,6 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
     DigitalSurrogateBlockList.termList ++
       FormatTypeValuesBlockList.termList
 
-  // Roles (mods:name/mods:role/mods:roleTerm) that should be treated as creators.
-  // Anything else with a role becomes a contributor; the "repository" role is the
-  // dataProvider and is excluded from both. Names with no role default to creator.
-  private val creatorRoles: Set[String] = Set(
-    "creator", "author", "artist", "photographer", "composer",
-    "cartographer", "engraver", "illustrator", "sculptor"
-  )
-
   // titleInfo @type values that are NOT the primary title.
   private val alternateTitleTypes: Seq[String] =
     Seq("alternative", "translated", "uniform")
@@ -79,23 +71,14 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
       .flatMap(c => extractStrings(c \ "titleInfo" \ "title"))
       .map(nameOnlyCollection)
 
-  override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    (getModsRoot(data) \ "name")
-      .filter(n => {
-        val roles = roleTerms(n)
-        roles.nonEmpty &&
-        !roles.contains("repository") &&
-        !roles.exists(creatorRoles.contains)
-      })
-      .map(edmAgentHelper)
-
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] =
+    // Per Dartmouth (2026): map all names with usage="primary", regardless of type
+    // or role — and only those. Records with no primary name have no creator.
+    // NOTE: contributor is intentionally NOT mapped — the treatment of non-primary
+    // names is an open question for Dartmouth (see
+    // docs/ingestion/dartmouth-mapping-draft.md).
     (getModsRoot(data) \ "name")
-      .filter(n => {
-        val roles = roleTerms(n)
-        !roles.contains("repository") &&
-        (roles.isEmpty || roles.exists(creatorRoles.contains))
-      })
+      .filter(n => filterAttribute(n, "usage", "primary"))
       .map(edmAgentHelper)
 
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] = {
@@ -239,37 +222,10 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
     mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
-    // Preferred: the holding institution from the analog original's
-    // <mods:subLocation>, e.g.
-    //   "Rauner Special Collections Library, 6065 Webster Hall, Hanover, NH 03755, USA"
-    // We take the text before the first comma as the institution name and drop the
-    // trailing street address.
-    //
-    // TODO: ask Dartmouth to subfield the institution name and address separately
-    //  in the MODS (distinct elements) so we don't have to split on commas — the
-    //  split is brittle if an institution name itself contains a comma.
-    //
-    // Fall back to the repository name (mods:name role="repository", e.g. "Digital
-    // by Dartmouth Library"), then a generic default, for records with no
-    // subLocation (e.g. the BCM images set).
-    val root = getModsRoot(data)
-
-    val fromSubLocation = (root \ "relatedItem" \\ "subLocation")
-      .flatMap(extractStrings)
-      .map(_.split(",").head.trim)
-      .filter(_.nonEmpty)
-
-    val fromRepository = (root \ "name")
-      .filter(n => roleTerms(n).contains("repository"))
-      .flatMap(nameConstructor)
-
-    val name = fromSubLocation.headOption
-      .orElse(fromRepository.headOption)
-      .getOrElse("Dartmouth College Library")
-
-    Seq(nameOnlyAgent(name))
-  }
+  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+    // Per Dartmouth (2026): hardcoded, same as provider. (Previously derived from
+    // the analog original's subLocation; dropped at Dartmouth's request.)
+    Seq(nameOnlyAgent("Dartmouth Libraries"))
 
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
     // <mods:accessCondition type="use and reproduction" xlink:href="...">
@@ -354,9 +310,6 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
   // Filters a NodeSeq to the elements whose `attr` equals `value`.
   private def byAttribute(nodes: NodeSeq, attr: String, value: String): NodeSeq =
     nodes.flatMap(n => getByAttribute(n.asInstanceOf[Elem], attr, value))
-
-  private def roleTerms(node: Node): Seq[String] =
-    extractStrings(node \ "role" \ "roleTerm").map(_.trim.toLowerCase)
 
   private def nameConstructor(node: Node): Option[String] = {
     val family = extractString((node \ "namePart").filter(p => filterAttribute(p, "type", "family")))
