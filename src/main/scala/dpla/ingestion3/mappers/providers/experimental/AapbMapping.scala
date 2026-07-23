@@ -58,9 +58,8 @@ class AapbMapping extends XmlMapping with XmlExtractor {
       .filter(_.nonEmpty)
 
   override def collection(data: Document[NodeSeq]): ZeroToMany[DcmiTypeCollection] =
-    // The PBCore "Series" title is the closest analog to a DPLA collection.
-    // TODO: confirm with AAPB whether Series or the "special_collections"
-    //  annotation (a slug, e.g. "vision-maker-media") is the better collection.
+    // The PBCore "Series" title is the DPLA collection. (The "special_collections"
+    // annotation is a site-grouping slug, not the collection.)
     titlesOfType(data, "Series").map(nameOnlyCollection)
 
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
@@ -184,7 +183,6 @@ class AapbMapping extends XmlMapping with XmlExtractor {
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] = {
     // The contributing/holding organization is recorded as a top-level
     // <pbcoreAnnotation annotationType="organization">. Fall back to AAPB.
-    // TODO: confirm the dataProvider convention with AAPB.
     val orgs = (pbcoreRoot(data) \ "pbcoreAnnotation")
       .filter(n => filterAttribute(n, "annotationType", "organization"))
       .flatMap(extractStrings)

@@ -51,7 +51,7 @@ The full PBCore → Dublin Core crosswalk this mapping follows is published at
 | `dplaUri` | *(minted)* | `mintDplaItemUri` — hash of the salted `originalId`. |
 | *(originalId — for ID minting & sidecar)* | `pbcoreIdentifier[@source="http://americanarchiveinventory.org"]` | The canonical AACIP id, e.g. `cpb-aacip/513-000000145w`. Fallback: first `pbcoreIdentifier`, then an OAI `header/identifier`. Salted with provider name `aapb`. |
 | `provider` | *(constant)* | `EdmAgent("American Archive of Public Broadcasting", uri=http://dp.la/api/contributor/aapb)`. |
-| `dataProvider` | `pbcoreAnnotation[@annotationType="organization"]` (top-level) | The contributing/holding organization (e.g. "University of Houston", "GBH", "Vision Maker Media"). Falls back to `"American Archive of Public Broadcasting"` if none. **Open question — see §4.** |
+| `dataProvider` | `pbcoreAnnotation[@annotationType="organization"]` (top-level) | The contributing/holding organization (e.g. "University of Houston", "GBH", "Vision Maker Media"). Falls back to `"American Archive of Public Broadcasting"` if none. |
 | `isShownAt` | *(constructed)* | `https://americanarchive.org/catalog/{id}` where `{id}` is the AACIP id normalized to the **underscore** form (`cpb-aacip_513-000000145w`). The id arrives with `/`, `-`, or `_` after `cpb-aacip`; all are normalized to `_`. |
 | `preview` (thumbnail) | *(constructed, gated)* | `https://s3.amazonaws.com/americanarchive.org/thumbnail/{id}.jpg` where `{id}` is the **all-hyphen** form (`cpb-aacip-513-000000145w`). **Only emitted when the record is flagged `Level of User Access = "Online Reading Room"`** — non-online assets resolve to a `*_NOT_AVAIL.png` placeholder, so no preview is emitted for them. Serialized to the API as the field literally named `object`. |
 | `edmRights` | `pbcoreRightsSummary\rightsLink` | Standardized rights URI (rightsstatements.org / CC), http only. Absent in the current samples; present on some AAPB records. |
@@ -77,7 +77,7 @@ The full PBCore → Dublin Core crosswalk this mapping follows is published at
 | `language` | `instantiationLanguage` + `essenceTrack\essenceTrackLanguage` | ISO 639 codes / names (e.g. "eng"); enriched. → `SkosConcept`. |
 | `place` | `pbcoreCoverage\coverage` where sibling `coverageType="Spatial"` | → `DplaPlace(name)` **+ `exactMatch`** from `coverage/@ref` (http, e.g. a Wikidata URI). |
 | `temporal` | `pbcoreCoverage\coverage` where sibling `coverageType="Temporal"` | → `EdmTimeSpan`. |
-| `collection` | `pbcoreTitle[@titleType="Series"]` | → `DcmiTypeCollection`. **Open question — see §4.** |
+| `collection` | `pbcoreTitle[@titleType="Series"]` | → `DcmiTypeCollection`. |
 | `identifier` | `pbcoreIdentifier` (all `@source`) | All identifier values verbatim (noisy — see §4). |
 
 **Config:** `useProviderName = true`, `getProviderName = "aapb"`.
@@ -173,18 +173,14 @@ no clear equivalent in the AAPB PBCore.
 
 ## 4. Notes, disclaimers, and recommendations
 
-### Carried over from code TODOs
+### Settled decisions
 
-- **`dataProvider` convention (OPEN QUESTION for AAPB).** We derive it from the
-  top-level `pbcoreAnnotation[@annotationType="organization"]` (the contributing
-  station/producer, e.g. "University of Houston", "GBH"), falling back to "American
-  Archive of Public Broadcasting". Confirm with AAPB whether `dataProvider` should be
-  the contributing organization (current behavior), AAPB itself, or AAPB as
-  `dataProvider` with the station as `intermediateProvider`.
-- **`collection` source (OPEN QUESTION).** We map the `Series` title to `collection`.
-  AAPB also carries a `special_collections` annotation (a slug, e.g.
-  `vision-maker-media`, `net-catalog`) that may be the intended collection grouping.
-  Confirm which AAPB prefers.
+- **`dataProvider`** = the top-level `pbcoreAnnotation[@annotationType="organization"]`
+  (the contributing station/producer, e.g. "University of Houston", "GBH"), falling
+  back to "American Archive of Public Broadcasting". This is the correct mapping.
+- **`collection`** = the PBCore `Series` title. The `special_collections` annotation
+  (a slug, e.g. `vision-maker-media`, `net-catalog`) is a site-grouping label, not the
+  DPLA collection; the `Series` title is correct.
 
 ### Additional assessment (opportunities & risks)
 
@@ -220,14 +216,12 @@ no clear equivalent in the AAPB PBCore.
   facets matter for AV content, this is worth a platform decision.
 - **Everything here is DRAFT.** The hub is `status = test`; output is not synced to S3
   and cannot reach the index. Field decisions above should be reviewed with AAPB
-  (especially `dataProvider`, `collection`, the harvest method/scope, and rights
-  coverage) before any production consideration.
+  (especially the harvest method/scope and rights coverage) before any production
+  consideration.
 
 ### Open questions for the partner (AAPB)
 
-1. `dataProvider`: contributing organization, AAPB, or AAPB + station-as-`intermediateProvider`?
-2. `collection`: the `Series` title, or the `special_collections` grouping?
-3. Rights: can `rightsLink` (standardized rights URIs) be populated across the feed?
-4. Harvest: preferred delivery — the Solr API, a PBCore bulk file, or a revived OAI feed?
-5. Scope: confirm DPLA should ingest only Online Reading Room items.
-6. Duplication: how to reconcile with AAPB content already in DPLA via Digital Commonwealth.
+1. Rights: can `rightsLink` (standardized rights URIs) be populated across the feed?
+2. Harvest: preferred delivery — the Solr API, a PBCore bulk file, or a revived OAI feed?
+3. Scope: confirm DPLA should ingest only Online Reading Room items.
+4. Duplication: how to reconcile with AAPB content already in DPLA via Digital Commonwealth.
