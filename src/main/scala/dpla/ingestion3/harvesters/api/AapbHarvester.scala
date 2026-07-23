@@ -112,6 +112,11 @@ class AapbHarvester(
       case _ => throw new RuntimeException("Unexpected ApiResponse type")
     }
 
+    // Flush + finalize the Avro file BEFORE reading it back. The DataFileWriter
+    // only auto-syncs complete blocks (~16KB), so without close() the final
+    // partial block — or, for a tiny harvest, every record — is never persisted
+    // and the read returns too few rows. (The sibling API harvesters omit this.)
+    close()
     spark.read.format("avro").load(tmpOutStr)
   }
 
