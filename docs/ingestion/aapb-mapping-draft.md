@@ -17,12 +17,16 @@ See [README_TEST_HUBS.md](README_TEST_HUBS.md).
   (`The Great American Footrace`; `Prospects of Mankind with Eleanor Roosevelt`).
   All four were run end-to-end (map → enrich → JSON-L) and produce valid DPLA
   records (see §4 on the one that fails required-field validation).
-- **Harvest method:** **not yet finalized.** AAPB's OAI-PMH endpoint
-  (`americanarchive.org/oai.xml`) currently returns HTTP 500. The recommended path
-  is AAPB's Solr API (`https://americanarchive.org/api.json?...&fl=id,xml`, which
-  embeds per-record PBCore), filtered to `access_types:online`, or a bulk file
-  delivery of PBCore. Per-record PBCore is also at
-  `…/catalog/{id}.pbcore` and `…/api/{id}.xml`. See §4.
+- **Harvest method:** AAPB's Solr API via
+  [`AapbHarvester`](../../src/main/scala/dpla/ingestion3/harvesters/api/AapbHarvester.scala)
+  (`harvest.type = "api"`). AAPB's OAI-PMH endpoint (`americanarchive.org/oai.xml`)
+  returns HTTP 500, so the harvester pages `https://americanarchive.org/api.json`
+  with Solr **`cursorMark`** (cap-free deep enumeration; `sort=id asc`) and pulls the
+  full PBCore per record inline via `fl=id,xml` — one pass, no per-record `.pbcore`
+  fetch. **Scope** is set by `aapb.harvest.setlist` (comma-separated `access_types`,
+  OR'd into an `fq`); default = the digitized ∪ online ∪ on-location superset
+  (~348,689 records). See §4 for the scope options and rationale. (Per-record PBCore
+  is also at `…/catalog/{id}.pbcore` and `…/api/{id}.xml`.)
 - **DPLA model & serialization:** field types in
   [`DplaMapData.scala`](../../src/main/scala/dpla/ingestion3/model/DplaMapData.scala);
   base field defaults and required/optional validation flags in the
@@ -191,17 +195,27 @@ no clear equivalent in the AAPB PBCore.
 
 ### Additional assessment (opportunities & risks)
 
-- **Harvest method is unresolved.** OAI-PMH is down (HTTP 500). The Solr `/api.json`
-  route (embedded PBCore, `fq=access_types:online`) is the most reliable programmatic
-  source and already scopes to the ~187k online records. A harvester class does not
-  yet exist for this hub — `AapbProfile.getHarvester` is a placeholder. Decide between
-  a small API harvester and a negotiated bulk PBCore file delivery before any real run.
-- **Scope: online vs. on-location.** AAPB has ~400k+ catalog records but only ~187k are
-  "Online Reading Room". On-location records are metadata-only (no viewable media, no
-  real thumbnail). **Recommend harvesting only `access_types:online`** — otherwise DPLA
-  ingests hundreds of thousands of items whose `isShownAt` leads to a page with no
-  playable media. The `preview` gate already reflects this, but the harvest filter is
-  the real control.
+- **Harvest method (implemented).** OAI-PMH is down (HTTP 500), so `AapbHarvester`
+  pages the Solr API with **`cursorMark`** — verified live: it advances cleanly
+  (no offset cap; `start` deep-paging is risky above Solr's `maxWindowSize`), and
+  `fl=id,xml` returns the full PBCore inline (~6.2 KB/record). At `rows=500` the
+  superset (~348,689) is ~700 requests / ~2 GB — a single pass in roughly 5–20 min
+  with `HttpUtils` retry/backoff. **Not yet run through the full EC2 pipeline** (per
+  project rule, real harvests run on EC2, not locally). A negotiated bulk PBCore file
+  delivery remains a fine alternative if AAPB prefers.
+- **Scope: `access_types` options.** `access_types` is a multi-valued Solr facet;
+  every record also carries a literal `all` token (so `q=*` = the whole 2,693,053-doc
+  index). The buckets (verified via faceting): `online` **186,716** (streamable +
+  thumbnail; ORR), `on-location` **161,959** (viewable only in LOC/GBH reading rooms —
+  metadata public, no online media, placeholder thumbnail; mutually exclusive with
+  `online`), `digitized` **323,406** (has a digital file; overlaps the other two
+  inconsistently — not a clean axis on its own), `private` 3, and **2,344,364
+  inventory-only** records with no digital object. Scope choices: (1) `online` only
+  (~187k); (2) **the digitized ∪ online ∪ on-location superset (~348,689) — current
+  default**; (3) `all` (2.7M) — rejected, mostly object-less stubs. The superset
+  includes on-location items whose `isShownAt` is a real page but with no in-browser
+  media/thumbnail; the `preview` gate already emits no thumbnail for those. Change the
+  scope with `aapb.harvest.setlist`.
 - **Possible duplication with Digital Commonwealth.** AAPB content already reaches DPLA
   indirectly as a data provider to the Digital Commonwealth hub. Adding AAPB as a
   standalone feed risks duplicate items — reconcile before production.
@@ -248,6 +262,7 @@ no clear equivalent in the AAPB PBCore.
 ### Open questions for the partner (AAPB)
 
 1. Rights: can `rightsLink` (standardized rights URIs) be populated across the feed?
-2. Harvest: preferred delivery — the Solr API, a PBCore bulk file, or a revived OAI feed?
+2. Harvest: is pulling from the public Solr API (`api.json`, cursorMark) acceptable and
+   sustainable long-term, or would AAPB prefer to provide a bulk PBCore file / revive OAI?
 3. Scope: confirm DPLA should ingest only Online Reading Room items.
 4. Duplication: how to reconcile with AAPB content already in DPLA via Digital Commonwealth.

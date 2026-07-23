@@ -17,17 +17,14 @@ class IthakaProfile extends XmlProfile {
 /** American Archive of Public Broadcasting (AAPB) — TEST HUB (not approved for
   * production).
   *
-  * PBCore 2.x records. Harvest method is not yet finalized: AAPB's OAI-PMH
-  * endpoint is currently non-functional, so the intended path is the Solr
-  * `/api.json` API (embedded PBCore, filtered to `access_types:online`) or file
-  * delivery of PBCore. `getHarvester` is a placeholder for the localoai path and
-  * only takes effect for `api`/`file` harvest types.
+  * PBCore 2.x records harvested from AAPB's Solr API via cursorMark paging (AAPB's
+  * OAI-PMH endpoint is non-functional). Set `aapb.harvest.type = "api"` in i3.conf.
   * See docs/ingestion/README_TEST_HUBS.md and docs/ingestion/aapb-mapping-draft.md.
   */
 class AapbProfile extends XmlProfile {
   type Mapping = AapbMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[AapbHarvester]
   override def getMapping = new AapbMapping
 }
 
