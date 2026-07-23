@@ -114,15 +114,24 @@ The hard-required DPLA fields (a record is rejected without them) are all mapped
 
 | DPLA field | Status | Opportunity |
 |---|---|---|
-| `preview` (thumbnail) | **Empty** (warn-only, but important for display on dp.la) | Derive from the IIIF manifest (a IIIF Image API thumbnail) or ask Dartmouth to expose a thumbnail URL / `location/url[@access="preview"]`. **Biggest gap.** |
-| `object` (full-size image) | Not mapped | Same source as preview — derivable from IIIF once the image-service base is known. |
+| `preview` (thumbnail) | **Empty** (warn-only, but important for display on dp.la) | The thumbnail. Serialized to the API as the `object` field (see media-field note). Derive from the IIIF manifest (a IIIF Image API thumbnail) or ask Dartmouth to expose a thumbnail URL / `location/url[@access="preview"]`. **The one real media gap.** |
+
+> **Media-field note.** DPLA's media fields are easy to confuse. There are three
+> live roles: `isShownAt` (the provider landing page), **`preview`** (the thumbnail),
+> and **`mediaMaster`** (the full-resolution master file(s), consumed by the Wikimedia
+> upload). In the JSON-L/index projection the API field literally named `object` is
+> populated from the model's `preview` — i.e. **`object` = thumbnail** (a DPLA MAP v3
+> legacy). The model's own `object` field ("full size image") is a vestigial artifact
+> that is **not serialized** — do not map it. See
+> [`model/package.scala`](../../src/main/scala/dpla/ingestion3/model/package.scala)
+> (~lines 150-156).
 
 ### Other unmapped fields with a plausible source
 
 | DPLA field | Opportunity |
 |---|---|
 | `genre` (`SkosConcept`, **supports `exactMatch`/`scheme`**) | Map `mods:genre` here (in addition to `format`) to **preserve the Getty AAT URIs** currently dropped. |
-| `mediaMaster` | Not mapped by design — `iiifManifest` gives the Wikimedia pipeline its media path. Revisit only if a direct full-res asset URL is needed. |
+| `mediaMaster` | Full-resolution master file(s) for the Wikimedia upload. Not mapped by design — `iiifManifest` already gives the pipeline both full images and thumbnails, so it is redundant here. Revisit only if a direct full-res asset URL is needed outside IIIF. |
 
 ### Unmapped, no obvious source (informational)
 
@@ -141,7 +150,7 @@ no clear equivalent in the Dartmouth MODS.
   name and address as distinct MODS elements.
 - **`preview`/thumbnail source unknown.** No thumbnail URL in the samples.
   *Recommendation:* confirm the IIIF Image API base (or a `location/url` thumbnail)
-  so `preview`/`object` can be populated.
+  so `preview` (the thumbnail, exposed as the API `object` field) can be populated.
 - **`iiifManifest` URL is a hardcoded template** (`collections.dartmouth.edu/archive/iiif/…`).
   Ideally Dartmouth would emit the manifest URL explicitly in the MODS (e.g.
   `location/url[@note="iiifManifest"]`), as several DPLA hubs do.
