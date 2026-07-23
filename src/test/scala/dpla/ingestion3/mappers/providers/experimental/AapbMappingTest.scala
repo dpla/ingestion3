@@ -34,6 +34,7 @@ class AapbMappingTest extends AnyFlatSpec {
   val notOnline: Document[NodeSeq] = doc("/aapb-notonline.xml")
   val footrace: Document[NodeSeq] = doc("/aapb-footrace.xml")
   val episode: Document[NodeSeq] = doc("/aapb-episode.xml")
+  val wgbh: Document[NodeSeq] = doc("/aapb-wgbh.xml") // structured WGBH rights blob
 
   it should "use the provider shortname in minting IDs" in
     assert(extractor.useProviderName)
@@ -96,6 +97,48 @@ class AapbMappingTest extends AnyFlatSpec {
 
   it should "have no rights when the record carries no rightsSummary" in
     assert(extractor.rights(footrace).isEmpty)
+
+  it should "extract the Rights Holder from a structured WGBH rights blob" in
+    assert(extractor.rightsHolder(wgbh) === Seq(nameOnlyAgent("WGBH Educational Foundation")))
+
+  it should "use the Rights Note as rights text for a structured blob (not the raw blob)" in {
+    val r = extractor.rights(wgbh)
+    // The record has two structured rightsSummary blocks; each contributes its Note.
+    assert(r.contains(
+      "It is the responsibility of a production to investigate and re-clear all " +
+        "rights before re-use in any project."
+    ))
+    assert(r.contains("Media not to be released to Open Vault."))
+    // The raw "Rights Note:...,Rights Holder:..." blob must NOT leak into rights.
+    assert(!r.exists(_.contains("Rights Holder:")))
+  }
+
+  it should "have no rightsHolder for plain-text rights" in
+    assert(extractor.rightsHolder(rawFootage).isEmpty)
+
+  it should "parse a structured rights blob whose Rights Note contains commas and colons" in {
+    val xml: Document[NodeSeq] = Document(
+      <pbcoreDescriptionDocument>
+        <pbcoreRightsSummary>
+          <rightsSummary>Rights Note:1) No re-use without contract. 2) Re-clear all rights.,Rights:,Rights Credit:WGBH Educational Foundation,Rights Type:,Rights Holder:WGBH Educational Foundation</rightsSummary>
+        </pbcoreRightsSummary>
+      </pbcoreDescriptionDocument>
+    )
+    assert(extractor.rights(xml) === Seq("1) No re-use without contract. 2) Re-clear all rights."))
+    assert(extractor.rightsHolder(xml) === Seq(nameOnlyAgent("WGBH Educational Foundation")))
+  }
+
+  it should "yield a holder but no rights text when the blob's Rights Note is empty" in {
+    val xml: Document[NodeSeq] = Document(
+      <pbcoreDescriptionDocument>
+        <pbcoreRightsSummary>
+          <rightsSummary>Rights Note:,Rights Credit:WGBH Educational Foundation,Rights Type:All,Rights Holder:WGBH Educational Foundation</rightsSummary>
+        </pbcoreRightsSummary>
+      </pbcoreDescriptionDocument>
+    )
+    assert(extractor.rights(xml).isEmpty)
+    assert(extractor.rightsHolder(xml) === Seq(nameOnlyAgent("WGBH Educational Foundation")))
+  }
 
   it should "map rightsLink URI to edmRights" in {
     val xml: Document[NodeSeq] = Document(

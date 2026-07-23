@@ -1,0 +1,230 @@
+<?xml version='1.0' encoding='UTF-8'?> 
+<pbcoreDescriptionDocument xmlns='http://www.pbcore.org/PBCore/PBCoreNamespace.html' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:schemaLocation='http://www.pbcore.org/PBCore/PBCoreNamespace.html http://www.pbcore.org/xsd/pbcore-2.1.xsd'>
+  <pbcoreAssetDate dateType='Date'>1976-04-11</pbcoreAssetDate>
+  <pbcoreIdentifier source='Sony Ci'>85c5a7eec5f343878c33554efed2bb98</pbcoreIdentifier>
+  <pbcoreIdentifier source='Local Identifier'>a62f3f93df76d5f705920f8e3c82ecbbe0131d67</pbcoreIdentifier>
+  <pbcoreIdentifier source='Local Identifier'>165730.0</pbcoreIdentifier>
+  <pbcoreIdentifier source='http://americanarchiveinventory.org'>cpb-aacip-15-9nc5sc3d</pbcoreIdentifier>
+  <pbcoreTitle titleType='Series'>Say Brother</pbcoreTitle>
+  <pbcoreTitle titleType='Program'>Black Women and the ERA</pbcoreTitle>
+  <pbcoreTitle titleType='Episode Number'>611</pbcoreTitle>
+  <pbcoreSubject>Discrimination</pbcoreSubject>
+  <pbcoreSubject>African Americans Massachusetts</pbcoreSubject>
+  <pbcoreSubject>African Americans Legal status, laws, etc.</pbcoreSubject>
+  <pbcoreSubject>Affirmative action programs</pbcoreSubject>
+  <pbcoreSubject>CONSTITUTIONAL AMENDMENTS</pbcoreSubject>
+  <pbcoreDescription descriptionType='Episode'>
+     Program focuses on the proposed Equal Rights Amendment in the state of
+    Massachusetts that will make discrimination regardless of sex, race, creed
+    or religion, illegal. Host Leah Fletcher focuses on the amendment as it
+    relates to minority women via five interview sessions: the first with Gracia
+    Hillman (administrative aide to the legislature's Black caucus) and Ted
+    Landsmark (Executive Director of the Contractor's Association of Boston);
+    the second with Flo Kennedy (lawyer, feminist, and founder of the National
+    Feminist Party in New York); the third with activists Kay Gibbs, Marcella
+    Hubbard, and Thelma Watson; the fourth with Frieda Garcia (activist in the
+    Spanish-speaking community in Boston); and the fifth with select individuals
+    from previous segments (Gibbs, Kennedy, Watson, and Hubbard). All discuss
+    whether the combined effects of affirmative action and the amendment bring
+    about a competition between minority women and white men, how the ERA will
+    benefit minority women, how the ERA will affect family law (alimony, child
+    custody, etc.), racism in the feminist movement, the need for a meaningful
+    examination of oppression, priorities, and objectives in the feminist
+    community, the input minority women have had in the feminist movement and in
+    legislation, and the impact of the amendment, should it pass, on Hispanic
+    women. Program includes the "Community Calendar." 
+  </pbcoreDescription>
+  <pbcoreGenre source='AAPB Topical Genre' annotation='topic'>Public Affairs</pbcoreGenre>
+  <pbcoreCoverage>
+    <coverage>04/11/1976</coverage>
+    <coverageType>Temporal</coverageType>
+  </pbcoreCoverage>
+  <pbcoreRightsSummary>
+    <rightsSummary>
+      <![CDATA[Rights Note:It is the responsibility of a production to investigate and re-clear all rights before re-use in any project.,Rights Type:All,Rights Credit:WGBH Educational Foundation,Rights Holder:WGBH Educational Foundation]]>
+    </rightsSummary>
+  </pbcoreRightsSummary>
+  <pbcoreRightsSummary>
+    <rightsSummary>
+      <![CDATA[Rights Note:Media not to be released to Open Vault.,Rights Type:Web,Rights Credit:,Rights Holder:]]>
+    </rightsSummary>
+  </pbcoreRightsSummary>
+  <pbcoreInstantiation>
+    <instantiationIdentifier source='unknown'>cpb-aacip-0dd799446a1</instantiationIdentifier>
+    <instantiationIdentifier source='unknown'>cpb-aacip-15-9nc5sc3d__318318_.mov</instantiationIdentifier>
+    <instantiationDate>2009-12-01</instantiationDate>
+    <instantiationDimensions unitsOfMeasure=''>[]</instantiationDimensions>
+    <instantiationDigital>video/quicktime</instantiationDigital>
+    <instantiationStandard>QuickTime</instantiationStandard>
+    <instantiationLocation>N/A</instantiationLocation>
+    <instantiationMediaType>Moving Image</instantiationMediaType>
+    <instantiationFileSize>74</instantiationFileSize>
+    <instantiationTracks>1 video, 8 audio</instantiationTracks>
+    <instantiationChannelConfiguration>1 channel</instantiationChannelConfiguration>
+    <instantiationEssenceTrack>
+      <essenceTrackType>video</essenceTrackType>
+      <essenceTrackIdentifier>19</essenceTrackIdentifier>
+      <essenceTrackStandard>NTSC</essenceTrackStandard>
+      <essenceTrackEncoding>2vuy</essenceTrackEncoding>
+      <essenceTrackDataRate unitsOfMeasure='kb/s'>168</essenceTrackDataRate>
+      <essenceTrackFrameRate>29.970</essenceTrackFrameRate>
+      <essenceTrackFrameSize>["704"] x ["480"]</essenceTrackFrameSize>
+      <essenceTrackAspectRatio>4:3</essenceTrackAspectRatio>
+      <essenceTrackDuration>00:59:40</essenceTrackDuration>
+      <essenceTrackAnnotation>YUV</essenceTrackAnnotation>
+      <essenceTrackAnnotation>4:2:2</essenceTrackAnnotation>
+    </instantiationEssenceTrack>
+    <instantiationEssenceTrack>
+      <essenceTrackType>audio</essenceTrackType>
+      <essenceTrackIdentifier>10</essenceTrackIdentifier>
+      <essenceTrackEncoding>PCM</essenceTrackEncoding>
+      <essenceTrackDataRate unitsOfMeasure='kb/s'>1152</essenceTrackDataRate>
+      <essenceTrackSamplingRate>48.0 KHz</essenceTrackSamplingRate>
+      <essenceTrackBitDepth>24</essenceTrackBitDepth>
+      <essenceTrackDuration>00:59:40</essenceTrackDuration>
+    </instantiationEssenceTrack>
+    <instantiationEssenceTrack>
+      <essenceTrackType>audio</essenceTrackType>
+      <essenceTrackIdentifier>11</essenceTrackIdentifier>
+      <essenceTrackEncoding>PCM</essenceTrackEncoding>
+      <essenceTrackDataRate unitsOfMeasure='kb/s'>1152</essenceTrackDataRate>
+      <essenceTrackSamplingRate>48.0 KHz</essenceTrackSamplingRate>
+      <essenceTrackBitDepth>24</essenceTrackBitDepth>
+      <essenceTrackDuration>00:59:40</essenceTrackDuration>
+    </instantiationEssenceTrack>
+    <instantiationEssenceTrack>
+      <essenceTrackType>audio</essenceTrackType>
+      <essenceTrackIdentifier>15</essenceTrackIdentifier>
+      <essenceTrackEncoding>PCM</essenceTrackEncoding>
+      <essenceTrackDataRate unitsOfMeasure='kb/s'>1152</essenceTrackDataRate>
+      <essenceTrackSamplingRate>48.0 KHz</essenceTrackSamplingRate>
+      <essenceTrackBitDepth>24</essenceTrackBitDepth>
+      <essenceTrackDuration>00:59:40</essenceTrackDuration>
+    </instantiationEssenceTrack>
+    <instantiationEssenceTrack>
+      <essenceTrackType>audio</essenceTrackType>
+      <essenceTrackIdentifier>12</essenceTrackIdentifier>
+      <essenceTrackEncoding>PCM</essenceTrackEncoding>
+      <essenceTrackDataRate unitsOfMeasure='kb/s'>1152</essenceTrackDataRate>
+      <essenceTrackSamplingRate>48.0 KHz</essenceTrackSamplingRate>
+      <essenceTrackBitDepth>24</essenceTrackBitDepth>
+      <essenceTrackDuration>00:59:40</essenceTrackDuration>
+    </instantiationEssenceTrack>
+    <instantiationEssenceTrack>
+      <essenceTrackType>audio</essenceTrackType>
+      <essenceTrackIdentifier>13</essenceTrackIdentifier>
+      <essenceTrackEncoding>PCM</essenceTrackEncoding>
+      <essenceTrackDataRate unitsOfMeasure='kb/s'>1152</essenceTrackDataRate>
+      <essenceTrackSamplingRate>48.0 KHz</essenceTrackSamplingRate>
+      <essenceTrackBitDepth>24</essenceTrackBitDepth>
+      <essenceTrackDuration>00:59:40</essenceTrackDuration>
+    </instantiationEssenceTrack>
+    <instantiationEssenceTrack>
+      <essenceTrackType>audio</essenceTrackType>
+      <essenceTrackIdentifier>16</essenceTrackIdentifier>
+      <essenceTrackEncoding>PCM</essenceTrackEncoding>
+      <essenceTrackDataRate unitsOfMeasure='kb/s'>1152</essenceTrackDataRate>
+      <essenceTrackSamplingRate>48.0 KHz</essenceTrackSamplingRate>
+      <essenceTrackBitDepth>24</essenceTrackBitDepth>
+      <essenceTrackDuration>00:59:40</essenceTrackDuration>
+    </instantiationEssenceTrack>
+    <instantiationEssenceTrack>
+      <essenceTrackType>audio</essenceTrackType>
+      <essenceTrackIdentifier>17</essenceTrackIdentifier>
+      <essenceTrackEncoding>PCM</essenceTrackEncoding>
+      <essenceTrackDataRate unitsOfMeasure='kb/s'>1152</essenceTrackDataRate>
+      <essenceTrackSamplingRate>48.0 KHz</essenceTrackSamplingRate>
+      <essenceTrackBitDepth>24</essenceTrackBitDepth>
+      <essenceTrackDuration>00:59:40</essenceTrackDuration>
+    </instantiationEssenceTrack>
+    <instantiationEssenceTrack>
+      <essenceTrackType>audio</essenceTrackType>
+      <essenceTrackIdentifier>14</essenceTrackIdentifier>
+      <essenceTrackEncoding>PCM</essenceTrackEncoding>
+      <essenceTrackDataRate unitsOfMeasure='kb/s'>1152</essenceTrackDataRate>
+      <essenceTrackSamplingRate>48.0 KHz</essenceTrackSamplingRate>
+      <essenceTrackBitDepth>24</essenceTrackBitDepth>
+      <essenceTrackDuration>00:59:40</essenceTrackDuration>
+    </instantiationEssenceTrack>
+    <instantiationEssenceTrack>
+      <essenceTrackType>other</essenceTrackType>
+      <essenceTrackIdentifier>18</essenceTrackIdentifier>
+      <essenceTrackEncoding>QuickTime TC</essenceTrackEncoding>
+      <essenceTrackDuration>00:59:40</essenceTrackDuration>
+    </instantiationEssenceTrack>
+    <instantiationAnnotation><![CDATA[Apple QuickTime]]></instantiationAnnotation>
+    <instantiationAnnotation annotationType='organization'>American Archive of Public Broadcasting</instantiationAnnotation>
+  </pbcoreInstantiation>
+  <pbcoreInstantiation>
+    <instantiationIdentifier source='unknown'>cpb-aacip-8a76b4fa969</instantiationIdentifier>
+    <instantiationIdentifier source='unknown'>cpb-aacip-15-9nc5sc3d__318318_.h264.mov</instantiationIdentifier>
+    <instantiationDate>2014-02-17</instantiationDate>
+    <instantiationDimensions unitsOfMeasure=''>[]</instantiationDimensions>
+    <instantiationDigital>video/mp4</instantiationDigital>
+    <instantiationStandard>QuickTime</instantiationStandard>
+    <instantiationLocation>N/A</instantiationLocation>
+    <instantiationMediaType>Moving Image</instantiationMediaType>
+    <instantiationGenerations>Proxy</instantiationGenerations>
+    <instantiationFileSize>347</instantiationFileSize>
+    <instantiationTracks>1 video, 1 audio</instantiationTracks>
+    <instantiationChannelConfiguration>2 channel</instantiationChannelConfiguration>
+    <instantiationEssenceTrack>
+      <essenceTrackType>video</essenceTrackType>
+      <essenceTrackIdentifier>19</essenceTrackIdentifier>
+      <essenceTrackStandard>NTSC</essenceTrackStandard>
+      <essenceTrackEncoding>2vuy</essenceTrackEncoding>
+      <essenceTrackDataRate unitsOfMeasure='kb/s'>168</essenceTrackDataRate>
+      <essenceTrackFrameRate>29.970</essenceTrackFrameRate>
+      <essenceTrackFrameSize>["704"] x ["480"]</essenceTrackFrameSize>
+      <essenceTrackAspectRatio>4:3</essenceTrackAspectRatio>
+      <essenceTrackDuration>00:59:40</essenceTrackDuration>
+      <essenceTrackAnnotation>YUV</essenceTrackAnnotation>
+      <essenceTrackAnnotation>4:2:2</essenceTrackAnnotation>
+    </instantiationEssenceTrack>
+    <instantiationEssenceTrack>
+      <essenceTrackType>audio</essenceTrackType>
+      <essenceTrackIdentifier>10</essenceTrackIdentifier>
+      <essenceTrackEncoding>PCM</essenceTrackEncoding>
+      <essenceTrackDataRate unitsOfMeasure='kb/s'>1152</essenceTrackDataRate>
+      <essenceTrackSamplingRate>48.0 KHz</essenceTrackSamplingRate>
+      <essenceTrackBitDepth>24</essenceTrackBitDepth>
+      <essenceTrackDuration>00:59:40</essenceTrackDuration>
+    </instantiationEssenceTrack>
+    <instantiationEssenceTrack>
+      <essenceTrackType>audio</essenceTrackType>
+      <essenceTrackIdentifier>11</essenceTrackIdentifier>
+      <essenceTrackEncoding>PCM</essenceTrackEncoding>
+      <essenceTrackDataRate unitsOfMeasure='kb/s'>1152</essenceTrackDataRate>
+      <essenceTrackSamplingRate>48.0 KHz</essenceTrackSamplingRate>
+      <essenceTrackBitDepth>24</essenceTrackBitDepth>
+      <essenceTrackDuration>00:59:40</essenceTrackDuration>
+    </instantiationEssenceTrack>
+    <instantiationAnnotation><![CDATA[Apple QuickTime]]></instantiationAnnotation>
+    <instantiationAnnotation annotationType='organization'>American Archive of Public Broadcasting</instantiationAnnotation>
+  </pbcoreInstantiation>
+  <pbcoreInstantiation>
+    <instantiationIdentifier source='unknown'>cpb-aacip-d59d215d8a5</instantiationIdentifier>
+    <instantiationIdentifier source='unknown'>a62f3f93df76d5f705920f8e3c82ecbbe0131d67</instantiationIdentifier>
+    <instantiationIdentifier source='unknown'>barcode318318.mov</instantiationIdentifier>
+    <instantiationDimensions unitsOfMeasure=''>["720 x 486"]</instantiationDimensions>
+    <instantiationDigital>video/quicktime</instantiationDigital>
+    <instantiationStandard>NTSC</instantiationStandard>
+    <instantiationLocation>Archives (department)</instantiationLocation>
+    <instantiationMediaType>Moving Image</instantiationMediaType>
+    <instantiationTimeStart>01:00:01;21</instantiationTimeStart>
+    <instantiationDuration>01:00:02;08</instantiationDuration>
+    <instantiationColors>Color</instantiationColors>
+    <instantiationAnnotation><![CDATA[Original For:Digital betacam]]></instantiationAnnotation>
+    <instantiationAnnotation annotationType='organization'>WGBH</instantiationAnnotation>
+  </pbcoreInstantiation>
+  <pbcoreAnnotation annotationType='Transcript URL'>
+    https://s3.amazonaws.com/americanarchive.org/transcripts/cpb-aacip-15-9nc5sc3d/cpb-aacip-15-9nc5sc3d-transcript.json
+  </pbcoreAnnotation>
+  <pbcoreAnnotation ref='' source='' annotation='' version='' annotationType='Level of User Access'>Online Reading Room</pbcoreAnnotation>
+  <pbcoreAnnotation ref='' source='' annotation='' version='' annotationType='Transcript Status'>Correct</pbcoreAnnotation>
+  <pbcoreAnnotation ref='' source='' annotation='' version='' annotationType='Transcript Source'>Pop Up Archive</pbcoreAnnotation>
+  <pbcoreAnnotation ref='' source='' annotation='' version='' annotationType='last_modified'>2014-01-13 12:19:03</pbcoreAnnotation>
+  <pbcoreAnnotation ref='' source='' annotation='' version='' annotationType='organization'>WGBH</pbcoreAnnotation>
+  <pbcoreAnnotation ref='' source='' annotation='' version='' annotationType='special_collections'>say-brother</pbcoreAnnotation>
+  <pbcoreAnnotation ref='' source='' annotation='' version='' annotationType='special_collections'>open-vault</pbcoreAnnotation>
+</pbcoreDescriptionDocument>

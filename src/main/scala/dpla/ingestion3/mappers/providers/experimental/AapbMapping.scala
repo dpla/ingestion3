@@ -131,12 +131,27 @@ class AapbMapping extends XmlMapping with XmlExtractor {
     (pbcoreRoot(data) \ "pbcorePublisher" \ "publisher").map(edmAgentHelper)
 
   override def rights(data: Document[NodeSeq]): ZeroToMany[String] =
-    // <pbcoreRightsSummary><rightsSummary> free text. See §4 of the mapping doc:
-    // some AAPB records carry no rights statement, which fails DPLA's required
-    // `rights`/`edmRights` validation — an open question for the partner.
-    extractStrings(pbcoreRoot(data) \ "pbcoreRightsSummary" \ "rightsSummary")
-      .map(_.reduceWhitespace)
+    // <pbcoreRightsSummary><rightsSummary>. Some AAPB records (WGBH-style) carry a
+    // structured "Rights Note:...,Rights Holder:..." blob rather than a sentence;
+    // for those, the human-facing statement is the "Rights Note" field (the holder
+    // goes to rightsHolder). Plain-text rightsSummary values pass through as-is.
+    // See §4: some records carry no rights statement at all, which fails DPLA's
+    // required `rights` validation — an open question for the partner.
+    rightsSummaries(data).flatMap { v =>
+      structuredRights(v) match {
+        case Some(fields) => fields.get("Rights Note").filter(_.nonEmpty)
+        case None         => Some(v)
+      }
+    }
+
+  override def rightsHolder(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+    // The "Rights Holder" field of a structured WGBH-style rightsSummary blob.
+    rightsSummaries(data)
+      .flatMap(v => structuredRights(v).flatMap(_.get("Rights Holder")))
+      .map(_.trim)
       .filter(_.nonEmpty)
+      .distinct
+      .map(nameOnlyAgent)
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = {
     val root = pbcoreRoot(data)
@@ -266,6 +281,32 @@ class AapbMapping extends XmlMapping with XmlExtractor {
       .filter(n => filterAttribute(n, "annotationType", "Level of User Access"))
       .flatMap(extractStrings)
       .exists(_.equalsIgnoreCase("Online Reading Room"))
+
+  private def rightsSummaries(data: Document[NodeSeq]): Seq[String] =
+    extractStrings(pbcoreRoot(data) \ "pbcoreRightsSummary" \ "rightsSummary")
+      .map(_.reduceWhitespace)
+      .filter(_.nonEmpty)
+
+  // Some AAPB rightsSummary values flatten a structured record into one string:
+  //   "Rights Note:...,Rights Credit:...,Rights Type:...,Rights Holder:..."
+  // Field values may themselves contain commas/colons, so split only before a
+  // known "Rights <Key>:" boundary. Returns the field map, or None for plain text.
+  private val rightsFieldKeys =
+    Seq("Rights Note", "Rights Credit", "Rights Type", "Rights Coverage", "Rights Holder", "Rights")
+
+  private def structuredRights(value: String): Option[Map[String, String]] =
+    if (value.contains("Rights Holder:") || value.startsWith("Rights Note:")) {
+      val boundary = s",(?=(?:${rightsFieldKeys.mkString("|")}):)"
+      Some(
+        value
+          .split(boundary)
+          .flatMap(_.split(":", 2) match {
+            case Array(k, v) if rightsFieldKeys.contains(k.trim) => Some(k.trim -> v.trim)
+            case _                                               => None
+          })
+          .toMap
+      )
+    } else None
 
   private def splitSubject(node: Node): Seq[SkosConcept] =
     // A subject with an http @ref is kept whole (the URI applies to the whole

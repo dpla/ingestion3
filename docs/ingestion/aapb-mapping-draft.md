@@ -55,6 +55,8 @@ The full PBCore → Dublin Core crosswalk this mapping follows is published at
 | `isShownAt` | *(constructed)* | `https://americanarchive.org/catalog/{id}` where `{id}` is the AACIP id normalized to the **underscore** form (`cpb-aacip_513-000000145w`). The id arrives with `/`, `-`, or `_` after `cpb-aacip`; all are normalized to `_`. |
 | `preview` (thumbnail) | *(constructed, gated)* | `https://s3.amazonaws.com/americanarchive.org/thumbnail/{id}.jpg` where `{id}` is the **all-hyphen** form (`cpb-aacip-513-000000145w`). **Only emitted when the record is flagged `Level of User Access = "Online Reading Room"`** — non-online assets resolve to a `*_NOT_AVAIL.png` placeholder, so no preview is emitted for them. Serialized to the API as the field literally named `object`. |
 | `edmRights` | `pbcoreRightsSummary\rightsLink` | Standardized rights URI (rightsstatements.org / CC), http only. Absent in the current samples; present on some AAPB records. |
+| `rights` | `pbcoreRightsSummary\rightsSummary` | Free-text rights statement. AAPB uses two shapes: a plain sentence (used verbatim, e.g. "In Copyright"), or a WGBH-internal **structured blob** `Rights Note:…,Rights Type:…,Rights Credit:…,Rights Holder:…` (a WGBH convention packed into the free-text element — *not* PBCore; see §4). For the blob, the `Rights Note` field is used as the statement (the raw `Key:Value` string is not surfaced). Empty when a record has no `rightsSummary` (see §3). |
+| `rightsHolder` | `pbcoreRightsSummary\rightsSummary` → `Rights Holder` | The `Rights Holder` field parsed out of a structured WGBH rights blob (e.g. "WGBH Educational Foundation"). Empty for plain-text rights. **NB:** captured in the MAP model but, like `genre`, the JSON-L index serializer does not project `rightsHolder` (see §3). |
 | `originalRecord` | *(whole record)* | Full PBCore XML, `Utils.formatXml`. |
 | `sidecar` | *(minted)* | `prehashId` + `dplaId`. |
 
@@ -123,6 +125,11 @@ Dropped because there is no DPLA equivalent, or the value is administrative/tech
 - **`rightsSummary` when it is only an inquiry/contact note** is still mapped to
   `rights` verbatim (e.g. "Inquiries may be submitted to archives@iowapbs.org.") —
   see §4 on rights quality.
+- **Structured WGBH rights-blob sub-fields other than `Rights Note` and `Rights
+  Holder`** — `Rights Type` (e.g. "All", "Web"), `Rights Coverage`, and `Rights
+  Credit` are parsed out but dropped. `Rights Type`/`Coverage` describe internal
+  rights-clearance scope (not a public rights status — see §4); `Rights Credit` is
+  an attribution that largely duplicates `Rights Holder`.
 
 ---
 
@@ -166,7 +173,7 @@ The hard-required DPLA fields (a record is rejected without them) are:
 
 ### Unmapped, no obvious source (informational)
 
-`hasView`, `intermediateProvider`, `tags`, `rightsHolder`, `replacedBy`, `replaces` —
+`hasView`, `intermediateProvider`, `tags`, `replacedBy`, `replaces` —
 no clear equivalent in the AAPB PBCore.
 
 ---
@@ -202,6 +209,20 @@ no clear equivalent in the AAPB PBCore.
   ("In Copyright") to a contact note ("Inquiries may be submitted to …"). The older
   pbcore.org samples have no rights at all. *Recommendation:* confirm rights coverage
   across the live feed and push for `rightsLink` URIs (`edmRights`).
+- **The WGBH structured rights blob is not PBCore, and `Rights Type` is not usable as
+  a rights status.** Some records pack a structured record into the free-text
+  `rightsSummary`: `Rights Note:…,Rights Type:…,Rights Credit:…,Rights Holder:…`.
+  PBCore itself defines **no** rights controlled vocabulary — `rightsSummary` is
+  explicitly a free-text element — so `Rights Type` values (`All`, `Web`, or empty in
+  our 24-record sample) are **not** PBCore terms; they are a WGBH cataloging convention
+  (from WGBH's MediaLog/Open Vault rights records, which AAPB inherited) with no public
+  lookup table. They appear to encode the **scope of rights that were cleared / the
+  intended distribution** ("All" = all uses/media, "Web" = web/online use), i.e.
+  clearance-scope metadata — *not* a copyright **status** — so they cannot be mapped to
+  a `rightsstatements.org` / CC `edmRights` URI. We therefore use `Rights Note` for
+  `rights` and `Rights Holder` for `rightsHolder`, and drop `Rights Type`/`Coverage`/
+  `Credit`. *Open item:* confirm the exact `Rights Type` semantics with AAPB/GBH if we
+  ever want to derive access/edmRights from them.
 - **`identifier` is noisy.** Every `pbcoreIdentifier` is captured, including internal
   system ids (Sony Ci GUIDs, MARS/NOLA codes, barcodes). *Recommendation:* consider
   keeping only meaningful ids (AACIP id, ARK) and dropping opaque system GUIDs.
@@ -212,8 +233,13 @@ no clear equivalent in the AAPB PBCore.
 - **Subjects mix topics and places.** AAPB `pbcoreSubject` values include place names
   ("Houston, Texas") with no `@subjectType`, so they land in `subject`, not `place`.
   Only clean `pbcoreCoverage[Spatial]` values become `place`. Acceptable, but noted.
-- **`genre` is captured but not indexed** (serializer limitation — see §3). If genre
-  facets matter for AV content, this is worth a platform decision.
+- **`genre` and `rightsHolder` are captured but not indexed.** Both are populated in
+  the DPLA MAP model but the JSON-L index serializer projects neither (it projects
+  `rights` and `edmRights`, but not `rightsHolder`; and not `genre`). They are correct
+  to capture (available in the MAP model and to downstream consumers like Wikimedia),
+  but will not appear in the item API via this projection without a platform-wide
+  serializer change. If genre facets or an explicit rights holder matter on dp.la,
+  that is the decision point.
 - **Everything here is DRAFT.** The hub is `status = test`; output is not synced to S3
   and cannot reach the index. Field decisions above should be reviewed with AAPB
   (especially the harvest method/scope and rights coverage) before any production
