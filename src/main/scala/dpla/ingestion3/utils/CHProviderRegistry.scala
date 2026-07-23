@@ -22,6 +22,7 @@ object CHProviderRegistry {
   }
 
   private val registry = Map(
+    "aapb" -> new AapbProfile, // TEST HUB — see docs/ingestion/README_TEST_HUBS.md
     "artstor" -> new IthakaProfile,
     "ithaka" -> new IthakaProfile,
     "bhl" -> new BhlProfile,

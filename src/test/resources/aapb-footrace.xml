@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pbcoreDescriptionDocument xmlns="http://www.pbcore.org/PBCore/PBCoreNamespace.html" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.pbcore.org/PBCore/PBCoreNamespace.html http://www.pbcore.org/PBCore/PBCoreSchema.xsd">
+   <pbcoreAssetType>Program</pbcoreAssetType>
+   <pbcoreAssetDate dateType="Broadcast">2002-00-00</pbcoreAssetDate>
+   <pbcoreIdentifier source="http://americanarchiveinventory.org">cpb-aacip/508-sf2m61cj57</pbcoreIdentifier>
+   <pbcoreIdentifier source="VMM Inventory #">2013-00236</pbcoreIdentifier>
+   <pbcoreIdentifier source="Sony Ci">483c4c6536624dcd9c0d90143784323c</pbcoreIdentifier>
+   <pbcoreTitle titleType="Title">The Great American Footrace</pbcoreTitle>
+   <pbcoreDescription descriptionType="Program">Facing scorching temperatures, 19-year-old Andy Payne, a small-town Cherokee boy, takes home the gold after winning a grueling 3,422-mile foot race designed to bring attention to the newly constructed Route 66 Highway. The race recounted in this Emmy-nominated film became one of the wildest promotion schemes in history, allowing Andy to win enough money to marry his girl and keep the family farm.</pbcoreDescription>
+   <pbcoreCreator>
+      <creator>Bigbee, Dan</creator>
+      <creatorRole>Producer</creatorRole>
+   </pbcoreCreator>
+   <pbcoreCreator>
+      <creator>Shangreaux, Lilly</creator>
+      <creatorRole>Producer</creatorRole>
+   </pbcoreCreator>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="VMM Inventory #">2013-00236</instantiationIdentifier>
+      <instantiationPhysical>Digital Betacam</instantiationPhysical>
+      <instantiationLocation>VMM Archives Vault - VHL 2 Shelf D</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationGenerations>Master</instantiationGenerations>
+      <instantiationDuration>0:56:46</instantiationDuration>
+      <instantiationAnnotation annotationType="organization">Vision Maker Media</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="mediainfo">cpb-aacip-508-sf2m61cj57.mp4</instantiationIdentifier>
+      <instantiationIdentifier source="Sony Ci">483c4c6536624dcd9c0d90143784323c</instantiationIdentifier>
+      <instantiationIdentifier source="MD5 checksum">f04e8aa97a176860a2dbd437877abd84</instantiationIdentifier>
+      <instantiationDate dateType="encoded">2016-12-06</instantiationDate>
+      <instantiationDigital>video/mp4</instantiationDigital>
+      <instantiationStandard>Base Media / Version 2</instantiationStandard>
+      <instantiationLocation>N/A</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationGenerations>Proxy</instantiationGenerations>
+      <instantiationFileSize unitsOfMeasure="MiB">796</instantiationFileSize>
+      <instantiationDataRate unitsOfMeasure="950">1</instantiationDataRate>
+      <instantiationTracks>1 video, 1 audio</instantiationTracks>
+      <instantiationChannelConfiguration>2 channel</instantiationChannelConfiguration>
+      <instantiationEssenceTrack>
+         <essenceTrackType>video</essenceTrackType>
+         <essenceTrackIdentifier source="mediainfo">1</essenceTrackIdentifier>
+         <essenceTrackStandard>NTSC</essenceTrackStandard>
+         <essenceTrackEncoding ref="http://developers.videolan.org/x264.html" source="mediainfo">AVC</essenceTrackEncoding>
+         <essenceTrackDataRate unitsOfMeasure="821">1</essenceTrackDataRate>
+         <essenceTrackFrameRate>29.970</essenceTrackFrameRate>
+         <essenceTrackBitDepth>8</essenceTrackBitDepth>
+         <essenceTrackFrameSize>1920 x 1080</essenceTrackFrameSize>
+         <essenceTrackAspectRatio>16:10</essenceTrackAspectRatio>
+         <essenceTrackDuration>00:57:04</essenceTrackDuration>
+         <essenceTrackLanguage>eng</essenceTrackLanguage>
+         <essenceTrackAnnotation annotationType="colorspace">YUV</essenceTrackAnnotation>
+         <essenceTrackAnnotation annotationType="subsampling">4:2:0</essenceTrackAnnotation>
+      </instantiationEssenceTrack>
+      <instantiationEssenceTrack>
+         <essenceTrackType>audio</essenceTrackType>
+         <essenceTrackIdentifier source="mediainfo">2</essenceTrackIdentifier>
+         <essenceTrackEncoding source="mediainfo">AAC LC</essenceTrackEncoding>
+         <essenceTrackDataRate unitsOfMeasure="kb/s">125</essenceTrackDataRate>
+         <essenceTrackSamplingRate>48.0 kHz</essenceTrackSamplingRate>
+         <essenceTrackDuration>00:57:04</essenceTrackDuration>
+         <essenceTrackLanguage>eng</essenceTrackLanguage>
+      </instantiationEssenceTrack>
+      <instantiationAnnotation annotationType="Preservation LTO">AB0001</instantiationAnnotation>
+      <instantiationAnnotation annotationType="Preservation Disk">ABDISK0002</instantiationAnnotation>
+      <instantiationAnnotation annotationType="organization">American Archive of Public Broadcasting</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreAnnotation annotationType="Transcript URL">https://s3.amazonaws.com/americanarchive.org/transcripts/cpb-aacip-508-sf2m61cj57/cpb-aacip-508-sf2m61cj57-transcript.json</pbcoreAnnotation>
+   <pbcoreAnnotation annotationType="Project Code">VM0001</pbcoreAnnotation>
+   <pbcoreAnnotation annotationType="Level of User Access">Online Reading Room</pbcoreAnnotation>
+   <pbcoreAnnotation annotationType="special_collections">vision-maker-media</pbcoreAnnotation>
+   <pbcoreAnnotation annotationType="Transcript Status">Uncorrected</pbcoreAnnotation>
+   <pbcoreAnnotation annotationType="last_modified">2018-08-13 14:44:33</pbcoreAnnotation>
+   <pbcoreAnnotation annotationType="organization">Vision Maker Media</pbcoreAnnotation>
+</pbcoreDescriptionDocument>

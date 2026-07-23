@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pbcoreDescriptionDocument xmlns="http://www.pbcore.org/PBCore/PBCoreNamespace.html" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.pbcore.org/PBCore/PBCoreNamespace.html http://www.pbcore.org/PBCore/PBCoreSchema.xsd">
+   <pbcoreAssetType>Episode</pbcoreAssetType>
+   <pbcoreAssetDate dateType="Broadcast">1959-10-11</pbcoreAssetDate>
+   <pbcoreIdentifier source="http://americanarchiveinventory.org">cpb-aacip/15-51vdnr5h</pbcoreIdentifier>
+   <pbcoreIdentifier source="MARS Asset Record ID">A_4I007ULJ5LZLYYK</pbcoreIdentifier>
+   <pbcoreIdentifier source="MARS Source Creation Order">1302716</pbcoreIdentifier>
+   <pbcoreIdentifier source="Sony Ci">1de30e08352645b6a4ed69f0ea737378</pbcoreIdentifier>
+   <pbcoreIdentifier source="NET_CATALOG">FMP_3183145</pbcoreIdentifier>
+   <pbcoreIdentifier source="NOLA Code">PSOM</pbcoreIdentifier>
+   <pbcoreTitle titleType="Series">Prospects of Mankind with Eleanor Roosevelt</pbcoreTitle>
+   <pbcoreTitle titleType="Episode Number">101</pbcoreTitle>
+   <pbcoreTitle titleType="Episode">New Possibilities for Coexistence</pbcoreTitle>
+   <pbcoreDescription descriptionType="Episode">This episode Mrs. Roosevelt's guests are V. K. Krishna Menon: India's Defense Minister and head of the Indian Delegation to the United Nations General Assembly; Robert R. Bowie: Director of the Center for International Affairs at Harvard University and former Assistant Secretary of State for Policy Planning; Harrison Salisbury: New York Time international expert. The group examines in depth the implications of coexistence between the Communist and the non-Communist worlds. What are the possibilities for lifting the Iron Curtain, increased trade? How irreconcilable are long term Soviet objectives with free world objectives? (Description adapted from documents in the NET Microfiche)</pbcoreDescription>
+   <pbcoreDescription descriptionType="Description">"Prospects of Mankind is a talk show hosted by Eleanor Roosevelt featuring roundtable discussion of foreign and domestic affairs with leading political, academic, and journalistic experts. It was filmed on location at Brandies University. "</pbcoreDescription>
+   <pbcoreDescription descriptionType="Description">This is a monthly series of nine one-hour television episodes featuring Mrs. Eleanor Roosevelt. The former first lady serves as the host and moderator. On each episode she will be joined by three guests:1) A key foreign figure such as a visiting prime minister, a United Nations representative or a man or woman of prominence representing his country unofficially. 2) An important American in public life or a person of equal consequence from the academic world.3) A distinguished representative from the press or other mass media who will focus the discussion on the relevant issues and controversies at stake. On each episode Mrs. Roosevelt and her guests will discuss a current international problem of major importance in which the United States is involved. The program is made up as two 29-minute episodes with a station break between the two portions."Prospects of Mankind" is a television series designed to provide a wide public with those facts and opinions important to an understating of the underlying fabric of current international problems. It derives its inspiration from the ideals and endeavors of Mrs. Eleanor Roosevelt. On each episode Mrs. Roosevelt joins three distinguished guests who through their position of authority or expression of opinion have a significant influence on the denervation or interpretation of current issues.Saville Davis and Erwin D. Canham, editors of The Christian Science Monitor, at times assist in moderating the discussions.These program is produced for National Educational Television by WGBH-TV in cooperation with Brandeis University. In addition to the audience of educational stations throughout the country they have been seen in the key areas of New York and Washington, DC, through the facilities of the Metropolitan Broadcasting Corporation. (Description adapted from documents in the NET Microfiche)</pbcoreDescription>
+   <pbcoreGenre source="AAPB Format Genre" annotation="genre">Talk Show</pbcoreGenre>
+   <pbcoreGenre source="AAPB Topical Genre" annotation="topic">Social Issues</pbcoreGenre>
+   <pbcoreGenre source="AAPB Topical Genre" annotation="topic">Global Affairs</pbcoreGenre>
+   <pbcoreGenre source="AAPB Topical Genre" annotation="topic">Politics and Government</pbcoreGenre>
+   <pbcoreCreator>
+      <creator ref="http://id.loc.gov/authorities/names/n50052713">WGBH Educational Foundation</creator>
+      <creatorRole>Producing Organization</creatorRole>
+   </pbcoreCreator>
+   <pbcoreContributor>
+      <contributor>Roosevelt, Eleanor</contributor>
+      <contributorRole>Host</contributorRole>
+   </pbcoreContributor>
+   <pbcoreContributor>
+      <contributor>Salisbury, Harrison</contributor>
+      <contributorRole>Guest</contributorRole>
+   </pbcoreContributor>
+   <pbcoreContributor>
+      <contributor>Bowie, Robert R.</contributor>
+      <contributorRole>Guest</contributorRole>
+   </pbcoreContributor>
+   <pbcoreContributor>
+      <contributor affiliation=" ">Menon, V. K. Krishna</contributor>
+      <contributorRole>Guest</contributorRole>
+   </pbcoreContributor>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="WNET Archive">wnet_aacip_2641</instantiationIdentifier>
+      <instantiationPhysical>16mm film</instantiationPhysical>
+      <instantiationLocation>WNET Archive</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationDuration>00:30:00?</instantiationDuration>
+      <instantiationAnnotation annotationType="organization">Thirteen - New York Public Media (WNET)</instantiationAnnotation>
+      <instantiationAnnotation>Part 1</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="WNET Archive">wnet_aacip_2643</instantiationIdentifier>
+      <instantiationPhysical>16mm film</instantiationPhysical>
+      <instantiationLocation>WNET Archive</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationDuration>00:30:00?</instantiationDuration>
+      <instantiationAnnotation annotationType="organization">Thirteen - New York Public Media (WNET)</instantiationAnnotation>
+      <instantiationAnnotation>Part 1</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="WNET Archive">wnet_aacip_2642</instantiationIdentifier>
+      <instantiationPhysical>16mm film</instantiationPhysical>
+      <instantiationLocation>WNET Archive</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationDuration>00:30:00?</instantiationDuration>
+      <instantiationAnnotation annotationType="organization">Thirteen - New York Public Media (WNET)</instantiationAnnotation>
+      <instantiationAnnotation>Part 2</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="WNET Archive">wnet_aacip_2644</instantiationIdentifier>
+      <instantiationPhysical>16mm film</instantiationPhysical>
+      <instantiationLocation>WNET Archive</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationDuration>00:30:00?</instantiationDuration>
+      <instantiationAnnotation annotationType="organization">Thirteen - New York Public Media (WNET)</instantiationAnnotation>
+      <instantiationAnnotation>Part 2</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="WGBH Barcode">308276</instantiationIdentifier>
+      <instantiationPhysical>Digital Betacam</instantiationPhysical>
+      <instantiationLocation>HOLDINGS_LOCATION = Vault. Vault-ML006627-048-2-1-</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationGenerations>Master</instantiationGenerations>
+      <instantiationTracks>Audio: tracks</instantiationTracks>
+      <instantiationAnnotation annotationType="Alternate Generation">Preservation Master</instantiationAnnotation>
+      <instantiationAnnotation annotationType="organization">WGBH</instantiationAnnotation>
+      <instantiationExtension>
+         <extensionWrap>
+            <extensionElement>AACIP Record Nomination Status</extensionElement>
+            <extensionValue>Nominated/1st Priority</extensionValue>
+            <extensionAuthorityUsed>AACIP</extensionAuthorityUsed>
+         </extensionWrap>
+      </instantiationExtension>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="WGBH Item ID">00971A</instantiationIdentifier>
+      <instantiationIdentifier source="WGBH Barcode">117534</instantiationIdentifier>
+      <instantiationIdentifier source="reel number">2</instantiationIdentifier>
+      <instantiationPhysical>16mm film</instantiationPhysical>
+      <instantiationLocation>HOLDINGS_LOCATION = Vault. Vault-ML009391-002-1-03-</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationGenerations>Kinescope</instantiationGenerations>
+      <instantiationGenerations>Negative</instantiationGenerations>
+      <instantiationTracks>Audio: tracks</instantiationTracks>
+      <instantiationAnnotation annotationType="Alternate Generation">Black and white kinescope negative</instantiationAnnotation>
+      <instantiationAnnotation annotationType="organization">WGBH</instantiationAnnotation>
+      <instantiationAnnotation>BandW NEG PRINT and OPT TRK REEL 2</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="WGBH Item ID">00972A</instantiationIdentifier>
+      <instantiationIdentifier source="WGBH Barcode">117535</instantiationIdentifier>
+      <instantiationIdentifier source="reel number">1</instantiationIdentifier>
+      <instantiationPhysical>16mm film</instantiationPhysical>
+      <instantiationLocation>HOLDINGS_LOCATION = Vault. Vault-ML009408-002-3-06-</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationGenerations>Kinescope</instantiationGenerations>
+      <instantiationGenerations>Negative</instantiationGenerations>
+      <instantiationTracks>Audio: tracks</instantiationTracks>
+      <instantiationAnnotation annotationType="Alternate Generation">Black and white kinescope negative</instantiationAnnotation>
+      <instantiationAnnotation annotationType="organization">WGBH</instantiationAnnotation>
+      <instantiationAnnotation>BandW NEG PRINT and OPT TRK REEL 1</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="WGBH Barcode">35549</instantiationIdentifier>
+      <instantiationIdentifier source="WGBH File Number">P03597</instantiationIdentifier>
+      <instantiationPhysical>VHS</instantiationPhysical>
+      <instantiationLocation>HOLDINGS_LOCATION = 145. 145-----</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationGenerations>Copy: Access</instantiationGenerations>
+      <instantiationTracks>Audio: tracks</instantiationTracks>
+      <instantiationAlternativeModes>Visible Time Code</instantiationAlternativeModes>
+      <instantiationEssenceTrack>
+         <essenceTrackType>General</essenceTrackType>
+         <essenceTrackStandard>NTSC</essenceTrackStandard>
+      </instantiationEssenceTrack>
+      <instantiationAnnotation annotationType="Alternate Generation">Viewing copy</instantiationAnnotation>
+      <instantiationAnnotation annotationType="organization">WGBH</instantiationAnnotation>
+      <instantiationAnnotation>1999 MAPC Preservation Screening Dub Copy 1</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="WGBH Barcode">35551</instantiationIdentifier>
+      <instantiationIdentifier source="WGBH File Number">P03597</instantiationIdentifier>
+      <instantiationPhysical>VHS</instantiationPhysical>
+      <instantiationLocation>HOLDINGS_LOCATION = 145. 145-----</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationGenerations>Copy: Access</instantiationGenerations>
+      <instantiationTracks>Audio: tracks</instantiationTracks>
+      <instantiationAlternativeModes>Visible Time Code</instantiationAlternativeModes>
+      <instantiationEssenceTrack>
+         <essenceTrackType>General</essenceTrackType>
+         <essenceTrackStandard>NTSC</essenceTrackStandard>
+      </instantiationEssenceTrack>
+      <instantiationAnnotation annotationType="Alternate Generation">Viewing copy</instantiationAnnotation>
+      <instantiationAnnotation annotationType="organization">WGBH</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="WGBH Barcode">19228</instantiationIdentifier>
+      <instantiationIdentifier source="WGBH File Number">AP-00765A</instantiationIdentifier>
+      <instantiationPhysical>Betacam</instantiationPhysical>
+      <instantiationLocation>HOLDINGS_LOCATION = Vault. Vault-ML009180-100-3-3-</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationGenerations>Master</instantiationGenerations>
+      <instantiationTracks>Audio: tracks</instantiationTracks>
+      <instantiationEssenceTrack>
+         <essenceTrackType>General</essenceTrackType>
+         <essenceTrackStandard>NTSC</essenceTrackStandard>
+         <essenceTrackAspectRatio>4:3</essenceTrackAspectRatio>
+      </instantiationEssenceTrack>
+      <instantiationAnnotation annotationType="Alternate Generation">Preservation Master</instantiationAnnotation>
+      <instantiationAnnotation annotationType="organization">WGBH</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="WGBH Barcode">19049</instantiationIdentifier>
+      <instantiationIdentifier source="WGBH File Number">AD3-00964</instantiationIdentifier>
+      <instantiationPhysical>D3</instantiationPhysical>
+      <instantiationLocation>HOLDINGS_LOCATION = Vault. Vault-ML009585-011-4-5-</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationGenerations>Master</instantiationGenerations>
+      <instantiationTracks>Audio: tracks</instantiationTracks>
+      <instantiationEssenceTrack>
+         <essenceTrackType>General</essenceTrackType>
+         <essenceTrackStandard>NTSC</essenceTrackStandard>
+      </instantiationEssenceTrack>
+      <instantiationAnnotation annotationType="Alternate Generation">Preservation Master</instantiationAnnotation>
+      <instantiationAnnotation annotationType="organization">WGBH</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="WGBH Barcode">35550</instantiationIdentifier>
+      <instantiationIdentifier source="WGBH File Number">P03597</instantiationIdentifier>
+      <instantiationPhysical>VHS</instantiationPhysical>
+      <instantiationLocation>HOLDINGS_LOCATION = 145. 145-----</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationGenerations>Copy: Access</instantiationGenerations>
+      <instantiationTracks>Audio: tracks</instantiationTracks>
+      <instantiationAlternativeModes>Visible Time Code</instantiationAlternativeModes>
+      <instantiationEssenceTrack>
+         <essenceTrackType>General</essenceTrackType>
+         <essenceTrackStandard>NTSC</essenceTrackStandard>
+      </instantiationEssenceTrack>
+      <instantiationAnnotation annotationType="Alternate Generation">Viewing copy</instantiationAnnotation>
+      <instantiationAnnotation annotationType="organization">WGBH</instantiationAnnotation>
+      <instantiationAnnotation>1999 MAPC Preservation Screening Dub Copy 2</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="mediainfo">cpb-aacip-15-51vdnr5h.h264.mov</instantiationIdentifier>
+      <instantiationDate dateType="encoded">2014-01-27</instantiationDate>
+      <instantiationDigital>video/mp4</instantiationDigital>
+      <instantiationStandard>QuickTime</instantiationStandard>
+      <instantiationLocation>N/A</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationGenerations>Proxy</instantiationGenerations>
+      <instantiationFileSize unitsOfMeasure="MiB">358</instantiationFileSize>
+      <instantiationDataRate unitsOfMeasure="Kbps">854</instantiationDataRate>
+      <instantiationTracks>1 video, 1 audio</instantiationTracks>
+      <instantiationChannelConfiguration>2 channel</instantiationChannelConfiguration>
+      <instantiationEssenceTrack>
+         <essenceTrackType>video</essenceTrackType>
+         <essenceTrackIdentifier source="mediainfo">1</essenceTrackIdentifier>
+         <essenceTrackEncoding ref="http://developers.videolan.org/x264.html" source="mediainfo">AVC</essenceTrackEncoding>
+         <essenceTrackDataRate unitsOfMeasure="Kbps">719</essenceTrackDataRate>
+         <essenceTrackFrameRate>29.970</essenceTrackFrameRate>
+         <essenceTrackBitDepth>8</essenceTrackBitDepth>
+         <essenceTrackFrameSize>480 x 360</essenceTrackFrameSize>
+         <essenceTrackAspectRatio>4:3</essenceTrackAspectRatio>
+         <essenceTrackDuration>00:58:37</essenceTrackDuration>
+         <essenceTrackLanguage>eng</essenceTrackLanguage>
+         <essenceTrackAnnotation annotationType="colorspace">YUV</essenceTrackAnnotation>
+         <essenceTrackAnnotation annotationType="subsampling">4:2:0</essenceTrackAnnotation>
+      </instantiationEssenceTrack>
+      <instantiationEssenceTrack>
+         <essenceTrackType>audio</essenceTrackType>
+         <essenceTrackIdentifier source="mediainfo">2</essenceTrackIdentifier>
+         <essenceTrackEncoding source="mediainfo">AAC LC</essenceTrackEncoding>
+         <essenceTrackDataRate unitsOfMeasure="Kbps">128</essenceTrackDataRate>
+         <essenceTrackSamplingRate>48.0 KHz</essenceTrackSamplingRate>
+         <essenceTrackDuration>00:58:37</essenceTrackDuration>
+         <essenceTrackLanguage>eng</essenceTrackLanguage>
+      </instantiationEssenceTrack>
+      <instantiationEssenceTrack>
+         <essenceTrackType>other</essenceTrackType>
+         <essenceTrackIdentifier source="mediainfo">3</essenceTrackIdentifier>
+         <essenceTrackEncoding source="mediainfo">QuickTime TC</essenceTrackEncoding>
+         <essenceTrackDuration>00:58:37</essenceTrackDuration>
+         <essenceTrackLanguage>eng</essenceTrackLanguage>
+      </instantiationEssenceTrack>
+      <instantiationAnnotation annotationType="encoded by">Apple QuickTime</instantiationAnnotation>
+      <instantiationAnnotation annotationType="organization">American Archive of Public Broadcasting</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="mediainfo">cpb-aacip-15-51vdnr5h.mpeg2.mxf</instantiationIdentifier>
+      <instantiationDate dateType="encoded">2014-01-27</instantiationDate>
+      <instantiationDigital>application/mxf</instantiationDigital>
+      <instantiationStandard>OP-1a</instantiationStandard>
+      <instantiationLocation>N/A</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationGenerations>Mezzanine</instantiationGenerations>
+      <instantiationFileSize unitsOfMeasure="GiB">26</instantiationFileSize>
+      <instantiationDataRate unitsOfMeasure="Mbps">63</instantiationDataRate>
+      <instantiationTracks>1 video, 1 audio</instantiationTracks>
+      <instantiationChannelConfiguration>4 channel</instantiationChannelConfiguration>
+      <instantiationEssenceTrack>
+         <essenceTrackType>video</essenceTrackType>
+         <essenceTrackIdentifier source="mediainfo">2</essenceTrackIdentifier>
+         <essenceTrackStandard>NTSC</essenceTrackStandard>
+         <essenceTrackEncoding source="mediainfo">MPEG-2 Video</essenceTrackEncoding>
+         <essenceTrackDataRate unitsOfMeasure="Mbps">50</essenceTrackDataRate>
+         <essenceTrackFrameRate>29.970</essenceTrackFrameRate>
+         <essenceTrackBitDepth>8</essenceTrackBitDepth>
+         <essenceTrackFrameSize>720 x 486</essenceTrackFrameSize>
+         <essenceTrackAspectRatio>4:3</essenceTrackAspectRatio>
+         <essenceTrackDuration>00:58:37</essenceTrackDuration>
+         <essenceTrackAnnotation annotationType="colorspace">YUV</essenceTrackAnnotation>
+         <essenceTrackAnnotation annotationType="subsampling">4:2:2</essenceTrackAnnotation>
+      </instantiationEssenceTrack>
+      <instantiationEssenceTrack>
+         <essenceTrackType>audio</essenceTrackType>
+         <essenceTrackIdentifier source="mediainfo">3</essenceTrackIdentifier>
+         <essenceTrackEncoding source="mediainfo">PCM</essenceTrackEncoding>
+         <essenceTrackDataRate unitsOfMeasure="Mbps">12</essenceTrackDataRate>
+         <essenceTrackSamplingRate>48.0 KHz</essenceTrackSamplingRate>
+         <essenceTrackBitDepth>16</essenceTrackBitDepth>
+         <essenceTrackDuration>00:58:37</essenceTrackDuration>
+      </instantiationEssenceTrack>
+      <instantiationEssenceTrack>
+         <essenceTrackType>other</essenceTrackType>
+         <essenceTrackIdentifier source="mediainfo">1</essenceTrackIdentifier>
+         <essenceTrackEncoding source="mediainfo">MXF TC</essenceTrackEncoding>
+      </instantiationEssenceTrack>
+      <instantiationEssenceTrack>
+         <essenceTrackType>other</essenceTrackType>
+         <essenceTrackIdentifier source="mediainfo">1</essenceTrackIdentifier>
+         <essenceTrackEncoding source="mediainfo">SMPTE TC</essenceTrackEncoding>
+      </instantiationEssenceTrack>
+      <instantiationAnnotation annotationType="encoded by">OC OCTk 2.1</instantiationAnnotation>
+      <instantiationAnnotation annotationType="organization">American Archive of Public Broadcasting</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="mediainfo">cpb-aacip-15-51vdnr5h.j2k.mxf</instantiationIdentifier>
+      <instantiationDate dateType="encoded">2014-01-27</instantiationDate>
+      <instantiationDigital>application/mxf</instantiationDigital>
+      <instantiationStandard>OP-1a</instantiationStandard>
+      <instantiationLocation>N/A</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationGenerations>Preservation</instantiationGenerations>
+      <instantiationFileSize unitsOfMeasure="GiB">22</instantiationFileSize>
+      <instantiationDataRate unitsOfMeasure="Mbps">53</instantiationDataRate>
+      <instantiationTracks>1 video, 1 audio</instantiationTracks>
+      <instantiationChannelConfiguration>4 channel</instantiationChannelConfiguration>
+      <instantiationEssenceTrack>
+         <essenceTrackType>video</essenceTrackType>
+         <essenceTrackIdentifier source="mediainfo">1</essenceTrackIdentifier>
+         <essenceTrackStandard>NTSC</essenceTrackStandard>
+         <essenceTrackEncoding ref="http://www.morgan-multimedia.com/JPEG 2000/" source="mediainfo">JPEG 2000</essenceTrackEncoding>
+         <essenceTrackDataRate unitsOfMeasure="Mbps">50</essenceTrackDataRate>
+         <essenceTrackFrameRate>59.940</essenceTrackFrameRate>
+         <essenceTrackBitDepth>8</essenceTrackBitDepth>
+         <essenceTrackFrameSize>720 x 486</essenceTrackFrameSize>
+         <essenceTrackAspectRatio>4:3</essenceTrackAspectRatio>
+         <essenceTrackDuration>00:58:36</essenceTrackDuration>
+         <essenceTrackAnnotation annotationType="colorspace">YUV</essenceTrackAnnotation>
+         <essenceTrackAnnotation annotationType="subsampling">4:2:2</essenceTrackAnnotation>
+      </instantiationEssenceTrack>
+      <instantiationEssenceTrack>
+         <essenceTrackType>audio</essenceTrackType>
+         <essenceTrackIdentifier source="mediainfo">2</essenceTrackIdentifier>
+         <essenceTrackEncoding source="mediainfo">PCM</essenceTrackEncoding>
+         <essenceTrackDataRate unitsOfMeasure="Kbps">3072</essenceTrackDataRate>
+         <essenceTrackSamplingRate>48.0 KHz</essenceTrackSamplingRate>
+         <essenceTrackBitDepth>16</essenceTrackBitDepth>
+         <essenceTrackDuration>00:58:36</essenceTrackDuration>
+      </instantiationEssenceTrack>
+      <instantiationEssenceTrack>
+         <essenceTrackType>other</essenceTrackType>
+         <essenceTrackIdentifier source="mediainfo">0</essenceTrackIdentifier>
+         <essenceTrackEncoding source="mediainfo">SMPTE TC</essenceTrackEncoding>
+      </instantiationEssenceTrack>
+      <instantiationEssenceTrack>
+         <essenceTrackType>other</essenceTrackType>
+         <essenceTrackIdentifier source="mediainfo">1</essenceTrackIdentifier>
+         <essenceTrackEncoding source="mediainfo">SMPTE TC</essenceTrackEncoding>
+         <essenceTrackDuration>00:58:36</essenceTrackDuration>
+      </instantiationEssenceTrack>
+      <instantiationAnnotation annotationType="encoded by">Front Porch Digital J2K MXF Wrapper Based on MXFLib 1.0.1(13)-Beta</instantiationAnnotation>
+      <instantiationAnnotation annotationType="organization">American Archive of Public Broadcasting</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="MAVIS Item ID">2411878-1</instantiationIdentifier>
+      <instantiationPhysical>16mm film</instantiationPhysical>
+      <instantiationLocation>N/A</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationGenerations>Copy: Access</instantiationGenerations>
+      <instantiationColors>BandW</instantiationColors>
+      <instantiationLanguage>eng</instantiationLanguage>
+      <instantiationAnnotation annotationType="organization">Library of Congress</instantiationAnnotation>
+      <instantiationAnnotation>Safety Film; Composite Positive</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="MAVIS Item ID">2411919-1</instantiationIdentifier>
+      <instantiationPhysical>16mm film</instantiationPhysical>
+      <instantiationLocation>N/A</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationGenerations>Copy: Access</instantiationGenerations>
+      <instantiationColors>BandW</instantiationColors>
+      <instantiationLanguage>eng</instantiationLanguage>
+      <instantiationAnnotation annotationType="organization">Library of Congress</instantiationAnnotation>
+      <instantiationAnnotation>Safety Film; Composite Positive</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreInstantiation>
+      <instantiationIdentifier source="Indiana University">[request film based on title]</instantiationIdentifier>
+      <instantiationPhysical>16mm film</instantiationPhysical>
+      <instantiationLocation>Indiana University Libraries Moving Image Archive</instantiationLocation>
+      <instantiationMediaType>Moving Image</instantiationMediaType>
+      <instantiationAnnotation annotationType="organization">Indiana University Libraries Moving Image Archive</instantiationAnnotation>
+      <instantiationAnnotation>Indiana University's Audio-Visual Center offered copies of National Educational Television programming for rent. This print is one of these AV versions and may have some differences from the broadcast version.</instantiationAnnotation>
+   </pbcoreInstantiation>
+   <pbcoreAnnotation annotationType="Transcript URL">https://s3.amazonaws.com/americanarchive.org/transcripts/cpb-aacip-15-51vdnr5h/cpb-aacip-15-51vdnr5h-transcript.json</pbcoreAnnotation>
+   <pbcoreAnnotation annotationType="Level of User Access">Online Reading Room</pbcoreAnnotation>
+   <pbcoreAnnotation annotationType="Transcript Status">Uncorrected</pbcoreAnnotation>
+   <pbcoreAnnotation annotationType="MAVIS Number">2411878</pbcoreAnnotation>
+   <pbcoreAnnotation annotationType="MAVIS Number">2411919</pbcoreAnnotation>
+   <pbcoreAnnotation annotationType="special_collections">net-catalog</pbcoreAnnotation>
+   <pbcoreAnnotation annotationType="last_modified">2018-06-15 15:44:15</pbcoreAnnotation>
+   <pbcoreAnnotation annotationType="organization">WGBH</pbcoreAnnotation>
+</pbcoreDescriptionDocument>

@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='UTF-8'?> 
+<pbcoreDescriptionDocument xmlns='http://www.pbcore.org/PBCore/PBCoreNamespace.html' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:schemaLocation='http://www.pbcore.org/PBCore/PBCoreNamespace.html http://www.pbcore.org/xsd/pbcore-2.1.xsd'>
+  <pbcoreAssetType>Episode</pbcoreAssetType>
+  <pbcoreIdentifier source='http://americanarchiveinventory.org'>cpb-aacip-37-95j9krh1</pbcoreIdentifier>
+  <pbcoreIdentifier source='Local Identifier'>IPTVUS-0004863</pbcoreIdentifier>
+  <pbcoreIdentifier source='Local Identifier'>MTM</pbcoreIdentifier>
+  <pbcoreTitle titleType='Series'>Market to Market 3503H</pbcoreTitle>
+  <pbcoreSubject>Agriculture</pbcoreSubject>
+  <pbcoreDescription>
+     LIFE AND LEGACY OF DR. NORMAN BORLAUG green revolution, worked with Mexican
+    farmers, born in Cresco, IA)/ Environmental Protection Agency (EPA) 
+  </pbcoreDescription>
+  <pbcoreCreator>
+    <creator>Iowa Public Television</creator>
+    <creatorRole>Producing Organization</creatorRole>
+  </pbcoreCreator>
+  <pbcoreContributor>
+    <contributor>Mark Pearson</contributor>
+    <contributorRole>Host</contributorRole>
+  </pbcoreContributor>
+  <pbcoreRightsSummary>
+    <rightsSummary><![CDATA[Inquiries may be submitted to archives@iowapbs.org.]]></rightsSummary>
+  </pbcoreRightsSummary>
+  <pbcoreInstantiation>
+    <instantiationIdentifier source='Filename'>cpb-aacip-2a90de5286f</instantiationIdentifier>
+    <instantiationIdentifier source='unknown'>55G-COL3/2</instantiationIdentifier>
+    <instantiationDate>2009-09-18</instantiationDate>
+    <instantiationDimensions>[]</instantiationDimensions>
+    <instantiationPhysical>HDCAM</instantiationPhysical>
+    <instantiationLocation>IPTV Tape Library, 6450 Corporate Drive, Johnston, IA 50131</instantiationLocation>
+    <instantiationMediaType>Moving Image</instantiationMediaType>
+    <instantiationGenerations>Master</instantiationGenerations>
+    <instantiationDuration>00:27:46</instantiationDuration>
+    <instantiationAnnotation><![CDATA[20090918, 20]]></instantiationAnnotation>
+    <instantiationAnnotation annotationType='organization'>Iowa Public Television</instantiationAnnotation>
+  </pbcoreInstantiation>
+  <pbcoreAnnotation annotationType='last_modified' ref='' source='' annotation='' version=''>2013-06-02 16:07:01</pbcoreAnnotation>
+  <pbcoreAnnotation annotationType='organization' ref='' source='' annotation='' version=''>Iowa Public Television</pbcoreAnnotation>
+</pbcoreDescriptionDocument>

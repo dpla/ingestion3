@@ -5,12 +5,30 @@ import dpla.ingestion3.harvesters.api._
 import dpla.ingestion3.harvesters.file._
 import dpla.ingestion3.harvesters.oai.LocalOaiHarvester
 import dpla.ingestion3.mappers.providers._
+import dpla.ingestion3.mappers.providers.experimental.AapbMapping
 
 class IthakaProfile extends XmlProfile {
   type Mapping = IthakaMapping
 
   override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new IthakaMapping
+}
+
+/** American Archive of Public Broadcasting (AAPB) — TEST HUB (not approved for
+  * production).
+  *
+  * PBCore 2.x records. Harvest method is not yet finalized: AAPB's OAI-PMH
+  * endpoint is currently non-functional, so the intended path is the Solr
+  * `/api.json` API (embedded PBCore, filtered to `access_types:online`) or file
+  * delivery of PBCore. `getHarvester` is a placeholder for the localoai path and
+  * only takes effect for `api`/`file` harvest types.
+  * See docs/ingestion/README_TEST_HUBS.md and docs/ingestion/aapb-mapping-draft.md.
+  */
+class AapbProfile extends XmlProfile {
+  type Mapping = AapbMapping
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
+  override def getMapping = new AapbMapping
 }
 
 /** Biodiversity Heritage Library

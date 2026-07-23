@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='UTF-8'?> 
+<pbcoreDescriptionDocument xmlns='http://www.pbcore.org/PBCore/PBCoreNamespace.html' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:schemaLocation='http://www.pbcore.org/PBCore/PBCoreNamespace.html http://www.pbcore.org/xsd/pbcore-2.0.xsd'>
+  <pbcoreAssetDate dateType='Date'>1977-10-01</pbcoreAssetDate>
+  <pbcoreIdentifier source='Digital Object ARK'>ark:/84475/do0238w961t</pbcoreIdentifier>
+  <pbcoreIdentifier source='Sony Ci'>249daf2f92d74a468e098c6b6d1fe6cf</pbcoreIdentifier>
+  <pbcoreIdentifier source='http://americanarchiveinventory.org'>cpb-aacip/513-000000145w</pbcoreIdentifier>
+  <pbcoreTitle titleType='Raw Footage'>UH-Baylor Football</pbcoreTitle>
+  <pbcoreSubject>University of Houston; Football; Baylor University; Astrodome</pbcoreSubject>
+  <pbcoreSubject>Houston, Texas</pbcoreSubject>
+  <pbcoreDescription>
+     Silent footage of a University of Houston vs. Baylor football game in the
+    Astrodome. 
+  </pbcoreDescription>
+  <pbcoreCreator>
+    <creator>KUHT-TV (Television station)</creator>
+    <creatorRole>Producing Organization</creatorRole>
+  </pbcoreCreator>
+  <pbcoreRightsSummary>
+    <rightsSummary>In Copyright</rightsSummary>
+  </pbcoreRightsSummary>
+  <pbcoreInstantiation>
+    <instantiationIdentifier source='Digital Object ARK'>ark:/84475/do0238w961t</instantiationIdentifier>
+    <instantiationIdentifier source='ArchivesSpace URI'>/repositories/2/archival_objects/42509</instantiationIdentifier>
+    <instantiationDigital>video/mp4</instantiationDigital>
+    <instantiationLocation>ark:/84475/do0238w961t; ID 1997-006, AV Shelving</instantiationLocation>
+    <instantiationMediaType>Moving Image</instantiationMediaType>
+    <instantiationDuration>0:16:38</instantiationDuration>
+    <instantiationAnnotation annotationType='organization'>University of Houston</instantiationAnnotation>
+  </pbcoreInstantiation>
+  <pbcoreAnnotation>
+     This project was supported by a Recordings at Risk grant from the Council
+    on Library and Information Resources (CLIR). The grant program is made
+    possible by funding from The Andrew W. Mellon Foundation (2019). 
+  </pbcoreAnnotation>
+  <pbcoreAnnotation annotationType='Level of User Access'>Online Reading Room</pbcoreAnnotation>
+  <pbcoreAnnotation annotationType='Outside URL'>https://id.lib.uh.edu/ark:/84475/do0238w961t</pbcoreAnnotation>
+  <pbcoreAnnotation annotationType='last_modified'>2019-08-27 12:12:18</pbcoreAnnotation>
+  <pbcoreAnnotation annotationType='organization'>University of Houston</pbcoreAnnotation>
+</pbcoreDescriptionDocument>
