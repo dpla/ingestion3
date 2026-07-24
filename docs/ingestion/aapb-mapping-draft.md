@@ -9,14 +9,12 @@ See [README_TEST_HUBS.md](README_TEST_HUBS.md).
   standard derived from Dublin Core. One `<pbcoreDescriptionDocument>` per asset.
 - **Mapper:** [`AapbMapping.scala`](../../src/main/scala/dpla/ingestion3/mappers/providers/experimental/AapbMapping.scala)
 - **Tests:** [`AapbMappingTest.scala`](../../src/test/scala/dpla/ingestion3/mappers/providers/experimental/AapbMappingTest.scala)
-- **Basis:** 4 sample records — two **live** AAPB PBCore records pulled from
-  `americanarchive.org` (`cpb-aacip_513-000000145w`, a digitized/online "Raw
-  Footage" asset with rights + ARK; and `cpb-aacip_37-95j9krh1`, a rights-bearing
-  but *not*-online "Series" record) and two records from
-  [pbcore.org/sample-records](https://pbcore.org/sample-records)
-  (`The Great American Footrace`; `Prospects of Mankind with Eleanor Roosevelt`).
-  All four were run end-to-end (map → enrich → JSON-L) and produce valid DPLA
-  records (see §4 on the one that fails required-field validation).
+- **Basis:** developed against 28 sample records (4 detailed live/pbcore.org records
+  plus 24 pulled two-each from 12 special collections), then **validated at full scale
+  by a complete test harvest + pipeline of the entire feed — 348,689 records, run on
+  EC2 in July 2026, not synced to S3.** That full run is what surfaced the rights
+  finding below: only **86,439 (24.8%) map successfully; 262,250 (75.2%) are rejected
+  for missing rights** (see §3/§4 — the top issue to resolve).
 - **Harvest method:** AAPB's Solr API via
   [`AapbHarvester`](../../src/main/scala/dpla/ingestion3/harvesters/api/AapbHarvester.scala)
   (`harvest.type = "api"`). AAPB's OAI-PMH endpoint (`americanarchive.org/oai.xml`)
@@ -139,19 +137,33 @@ Dropped because there is no DPLA equivalent, or the value is administrative/tech
 
 ## 3. DPLA fields not currently mapped (opportunities)
 
-### Required fields — status
+### Required fields — ⚠️ MISSING RIGHTS IS THE TOP BLOCKER
 
-The hard-required DPLA fields (a record is rejected without them) are:
-`dplaUri`, `dataProvider`, `isShownAt`, `title`, `rights`, and a persistent
-`originalId`.
+The hard-required DPLA fields (a record is rejected without them) are `dplaUri`,
+`dataProvider`, `isShownAt`, `title`, `rights` (or `edmRights`), and a persistent
+`originalId`. Five of the six construct successfully for essentially every record
+(`title`, `isShownAt`, `dataProvider`, `dplaUri`, `originalId`).
 
-- On **live AAPB records** all six are satisfied: `title` from `pbcoreTitle`,
-  `rights` from `pbcoreRightsSummary\rightsSummary`, `isShownAt`/`dataProvider`
-  constructed as above. ✅
-- ⚠️ **`rights` is the fragile one.** The two older *pbcore.org* sample records carry
-  **no `pbcoreRightsSummary`**, so they map with an empty `rights` and would be
-  **rejected at validation**. Live records sampled from AAPB do carry a
-  `rightsSummary`. Coverage should be confirmed across the real feed (see §4).
+**`rights` is the single blocking issue and the #1 thing to resolve before this hub
+can be seriously considered.** A full test harvest + pipeline over the *entire* feed
+(348,689 records; run July 2026 on EC2, not synced to S3) produced:
+
+- **86,439 records mapped successfully (24.8%)**
+- **262,250 rejected (75.2%) — every one solely on "Missing required field, rights or edmRights."**
+
+Measured characterization of the 262,250 failures:
+
+| Count | Share | Pattern |
+|---:|---:|---|
+| 256,593 | 97.8% | **No rights information at all** — no `pbcoreRightsSummary`, no `instantiationRights`, no rights annotation. |
+| 3,217 | 1.2% | Rights present **only in `instantiationRights`** (instantiation-level) — *not currently read by the mapper*; a fixable gap (see §4). |
+| 2,391 | 0.9% | WGBH structured `rightsSummary` blob with an empty `Rights Note` (2,341 still carry a `Rights Holder`, just no statement text). |
+| 49 | 0.02% | `pbcoreRightsSummary` present but `rightsSummary` empty. |
+
+The gap is **corpus-wide**, not confined to a collection or an access tier (rights is
+present on only 27.8% of `online` and 21.3% of `on-location` records), so it **cannot
+be solved by narrowing the harvest scope.** It is a data/policy problem — see §4 for
+the options.
 
 ### Recommended but currently empty / unmapped ⚠️
 
@@ -195,14 +207,36 @@ no clear equivalent in the AAPB PBCore.
 
 ### Additional assessment (opportunities & risks)
 
-- **Harvest method (implemented).** OAI-PMH is down (HTTP 500), so `AapbHarvester`
-  pages the Solr API with **`cursorMark`** — verified live: it advances cleanly
-  (no offset cap; `start` deep-paging is risky above Solr's `maxWindowSize`), and
-  `fl=id,xml` returns the full PBCore inline (~6.2 KB/record). At `rows=500` the
-  superset (~348,689) is ~700 requests / ~2 GB — a single pass in roughly 5–20 min
-  with `HttpUtils` retry/backoff. **Not yet run through the full EC2 pipeline** (per
-  project rule, real harvests run on EC2, not locally). A negotiated bulk PBCore file
-  delivery remains a fine alternative if AAPB prefers.
+- **⚠️ TOP PRIORITY — missing/unstructured rights is the one blocker.** Only
+  **86,439 of 348,689 (24.8%)** records carry rights and pass validation; **262,250
+  (75.2%) are rejected solely for missing `rights`/`edmRights`** (full-corpus breakdown
+  in §3). And of the 86,439 that *do* have rights, **99.8% are free-text `dc:rights`
+  only — just 142 records in the entire feed have a standardized `edmRights` URI**
+  (all `rightsstatements.org` "In Copyright"). DPLA relies on standardized `edmRights`
+  for display and rights-based filtering, so this feed effectively supplies none.
+  **No mapper change can fix this — the rights are absent from the source data.**
+  Resolution options, in order of preference:
+  1. **AAPB populates rights across the feed** — ideally a `rightsLink`
+     (`rightsstatements.org`/CC URI → `edmRights`) plus a `rightsSummary` statement.
+  2. **DPLA applies a default/blanket AAPB rights statement** as a fallback, if AAPB
+     has a site-wide access/rights policy we can point at (would rescue most of the
+     256,593 records that have no rights element at all).
+  3. **Ingest only the ~86,439 that already have rights** — but note ~40% of those are
+     on-location (no online media/thumbnail) and nearly all lack a standardized
+     `edmRights` URI.
+  **This decision gates any production consideration of the hub.**
+- **Low-hanging mapper fix: read `instantiationRights` (+3,217 records).** 3,217 of the
+  failing records carry rights only at the instantiation level
+  (`pbcoreInstantiation\instantiationRights`), which the mapper does not currently read.
+  Adding it as a fallback source for `rights`/`edmRights` would rescue all 3,217 —
+  small, clean, and correct, independent of the policy decision above.
+- **Harvest method (validated at full scale).** OAI-PMH is down (HTTP 500), so
+  `AapbHarvester` pages the Solr API with **`cursorMark`** and pulls the PBCore inline
+  via `fl=id,xml`. A **full test harvest of the entire superset (348,689 records)
+  completed on EC2 in ~4 min** — exact count match, zero records dropped — and the full
+  `map → enrich → jsonl` pipeline then ran successfully (output retained on EC2,
+  **not synced to S3**). The Solr API caps pages at 100 records regardless of `rows`.
+  A negotiated bulk PBCore file delivery remains a fine alternative if AAPB prefers.
 - **Scope: `access_types` options.** `access_types` is a multi-valued Solr facet;
   every record also carries a literal `all` token (so `q=*` = the whole 2,693,053-doc
   index). The buckets (verified via faceting): `online` **186,716** (streamable +
@@ -219,10 +253,10 @@ no clear equivalent in the AAPB PBCore.
 - **Possible duplication with Digital Commonwealth.** AAPB content already reaches DPLA
   indirectly as a data provider to the Digital Commonwealth hub. Adding AAPB as a
   standalone feed risks duplicate items — reconcile before production.
-- **`rights` quality is uneven.** `rightsSummary` ranges from a real statement
-  ("In Copyright") to a contact note ("Inquiries may be submitted to …"). The older
-  pbcore.org samples have no rights at all. *Recommendation:* confirm rights coverage
-  across the live feed and push for `rightsLink` URIs (`edmRights`).
+- **`rights` free-text quality is also uneven** (secondary to the coverage problem
+  above). Where `rightsSummary` exists it ranges from a real statement ("In Copyright")
+  to a bare contact note ("Inquiries may be submitted to …"), so even the 86,439
+  "successful" records vary in how usefully rights are expressed.
 - **The WGBH structured rights blob is not PBCore, and `Rights Type` is not usable as
   a rights status.** Some records pack a structured record into the free-text
   `rightsSummary`: `Rights Note:…,Rights Type:…,Rights Credit:…,Rights Holder:…`.
@@ -261,7 +295,11 @@ no clear equivalent in the AAPB PBCore.
 
 ### Open questions for the partner (AAPB)
 
-1. Rights: can `rightsLink` (standardized rights URIs) be populated across the feed?
+1. **Rights (the blocker):** 75% of the feed (262,250 records) has no rights and is
+   rejected; of the 25% that pass, only 142 records have a standardized `edmRights`
+   URI. Can AAPB populate rights across the feed (ideally `rightsLink`
+   `rightsstatements.org`/CC URIs), or is there a blanket AAPB rights/access statement
+   DPLA could apply as a default?
 2. Harvest: is pulling from the public Solr API (`api.json`, cursorMark) acceptable and
    sustainable long-term, or would AAPB prefer to provide a bulk PBCore file / revive OAI?
 3. Scope: confirm DPLA should ingest only Online Reading Room items.
