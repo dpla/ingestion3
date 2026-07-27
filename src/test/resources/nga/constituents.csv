@@ -1,0 +1,4 @@
+constituentid,uuid,ulanid,preferreddisplayname,forwarddisplayname,lastname,displaydate,artistofngaobject,beginyear,endyear,visualbrowsertimespan,nationality,visualbrowsernationality,constituenttype,wikidataid
+11,125c640d,500115983,"Lorenzetti, Ambrogio",Ambrogio Lorenzetti,Lorenzetti,,1,,,,Italian,Italian,individual,Q367birthday
+427,aaa,,"Mellon, Andrew W.",Andrew W. Mellon,Mellon,,0,,,,American,American,individual,
+9,57edbe2d,,Anonymous,Anonymous,,Anonymous,0,,,,,Other,anonymous,

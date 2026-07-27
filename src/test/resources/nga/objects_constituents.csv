@@ -1,0 +1,4 @@
+objectid,constituentid,displayorder,roletype,role,prefix,suffix,displaydate,beginyear,endyear,country,zipcode
+0,11,1,artist,painter,,,,,,,
+0,427,2,donor,donor,,,,,,,
+999,9,1,artist,artist,,,,,,,
