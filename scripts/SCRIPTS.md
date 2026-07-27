@@ -11,7 +11,7 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 | **scripts/** (root) | Core pipeline, batch, S3, monitoring | `ingest.sh`, `harvest.sh`, `remap.sh`, `mapping.sh`, `enrich.sh`, `jsonl.sh`, `auto-ingest.sh`, `batch-ingest.sh`, `s3-sync.sh`, `common.sh`, `ingest-watchdog.sh` |
 | **scripts/communication/** | Schedule, email, Slack | `schedule.sh`, `send-ingest-email.sh`, `notify-harvest-failure.sh`, `send-harvest-failure-email.py` |
 | **scripts/delete/** | Record removal | `delete-by-id.sh`, `delete-from-jsonl.sh`, `delete-from-jsonl.py` |
-| **scripts/harvest/** | Harvest helpers, NARA, Community Webs, SI, VA | `nara-ingest.sh`, `community-webs-export.sh`, `community-webs-ingest.sh`, `community-webs-validate-jsonl.py`, `fix-si.sh`, `harvest-va.sh` |
+| **scripts/harvest/** | Harvest helpers, NARA, Community Webs, SI, VA, NGA | `nara-ingest.sh`, `community-webs-export.sh`, `community-webs-ingest.sh`, `community-webs-validate-jsonl.py`, `fix-si.sh`, `harvest-va.sh`, `harvest-nga.sh` |
 | **scripts/status/** | Status and sync checks | `ingest-status.sh`, `check-jsonl-sync.sh`, `monitor-pipeline.sh`, `monitor-remap.sh`, `hub-info.sh`, `s3-latest.sh`, `staged-report.sh`, `oai-harvest-watch.sh`, `watch-oai-harvest.py`, `watch-oai-harvest-pages.py` |
 
 ## Quick Reference
@@ -34,6 +34,7 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 | `s3-sync.sh` | Sync hub data to S3 | `./scripts/s3-sync.sh <hub> [subdir]` |
 | `harvest/fix-si.sh` | Preprocess Smithsonian data | `./scripts/harvest/fix-si.sh <folder>` |
 | `harvest/harvest-va.sh` | Download Digital Virginias repos | `./scripts/harvest/harvest-va.sh [output-dir]` |
+| `harvest/harvest-nga.sh` | Clone National Gallery of Art open-data CSVs for the NGA file harvest | `./scripts/harvest/harvest-nga.sh [--output=DIR] [--fresh]` |
 | `status/check-jsonl-sync.sh` | Check JSONL sync status with S3 | `./scripts/status/check-jsonl-sync.sh` |
 | `delete/delete-by-id.sh` | Delete records from Elasticsearch | `./scripts/delete/delete-by-id.sh <id>...` |
 | `delete/delete-from-jsonl.sh` | Delete records from S3 JSONL files | `./scripts/delete/delete-from-jsonl.sh --hub <hub> <id>...` |

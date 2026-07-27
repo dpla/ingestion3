@@ -222,6 +222,7 @@ test_syntax() {
         "harvest/community-webs-export.sh"
         "harvest/community-webs-ingest.sh"
         "harvest/fix-si.sh"
+        "harvest/harvest-nga.sh"
         "harvest/harvest-va.sh"
         "harvest/nara-ingest.sh"
         "status/check-jsonl-sync.sh"
@@ -273,6 +274,7 @@ test_common_sourcing() {
         "harvest/community-webs-export.sh"
         "harvest/community-webs-ingest.sh"
         "harvest/fix-si.sh"
+        "harvest/harvest-nga.sh"
         "harvest/harvest-va.sh"
         "harvest/nara-ingest.sh"
         "status/check-jsonl-sync.sh"
@@ -318,6 +320,7 @@ test_help_outputs() {
         "delete/delete-by-id.sh"
         "delete/delete-from-jsonl.sh"
         "ingest.sh"
+        "harvest/harvest-nga.sh"
         "harvest/nara-ingest.sh"
         "communication/schedule.sh"
     )
