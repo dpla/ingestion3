@@ -5,6 +5,7 @@ import dpla.ingestion3.harvesters.api._
 import dpla.ingestion3.harvesters.file._
 import dpla.ingestion3.harvesters.oai.LocalOaiHarvester
 import dpla.ingestion3.mappers.providers._
+import dpla.ingestion3.mappers.providers.experimental._
 
 class IthakaProfile extends XmlProfile {
   type Mapping = IthakaMapping
@@ -95,6 +96,15 @@ class HarvardProfile extends XmlProfile {
 
   override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new HarvardMapping
+}
+
+/** HBCU Library Alliance (TEST HUB)
+  */
+class HbculaProfile extends XmlProfile {
+  type Mapping = HbculaMapping
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
+  override def getMapping = new HbculaMapping
 }
 
 /** HathiTrust Currently needs rebuilding around their export formats.

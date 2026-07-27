@@ -35,6 +35,7 @@ object CHProviderRegistry {
     "gpo" -> new GpoProfile,
     "harvard" -> new HarvardProfile,
     "hathi" -> new HathiProfile,
+    "hbcula" -> new HbculaProfile,
     "heartland" -> new HeartlandProfile,
     "ia" -> new IaProfile,
     "il" -> new IlProfile,
