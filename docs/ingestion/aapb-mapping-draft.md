@@ -274,6 +274,18 @@ no clear equivalent in the AAPB PBCore.
 - **`identifier` is noisy.** Every `pbcoreIdentifier` is captured, including internal
   system ids (Sony Ci GUIDs, MARS/NOLA codes, barcodes). *Recommendation:* consider
   keeping only meaningful ids (AACIP id, ARK) and dropping opaque system GUIDs.
+- **Multi-value institution names (data issue).** ~500 records carry more than one
+  `pbcoreAnnotation[@annotationType="organization"]` value (e.g. "Peabody Collection"
+  *and* "WGBH"). These annotations are **structurally identical and unqualified** —
+  across all 208,913 organization annotations in the feed, *none* carry a `ref`,
+  `source`, `annotation`, or `version` attribute — so there is **no signal in the data**
+  to distinguish an "authoritative" institution from the others. DPLA's `dataProvider`
+  is single-valued (`ExactlyOne`), so the pipeline keeps the **first in document order**
+  and logs a non-fatal "More than one value mapped, one expected" warning for the rest;
+  the mapping still succeeds. This is a source-data ambiguity, not a mapping choice we
+  can resolve — picking a "primary" would require either name-based heuristics (which we
+  deliberately avoid) or a disambiguating signal AAPB does not currently provide. **Open
+  question for AAPB** (see below).
 - **`type` vs. `format`.** `type` comes from `instantiationMediaType` (DCMI, e.g.
   "moving image"), `format` from `pbcoreAssetType` ("Program"/"Episode"/"Raw Footage").
   Confirm this split reads well on dp.la; `pbcoreAssetType` is arguably more genre than
@@ -304,3 +316,6 @@ no clear equivalent in the AAPB PBCore.
    sustainable long-term, or would AAPB prefer to provide a bulk PBCore file / revive OAI?
 3. Scope: confirm DPLA should ingest only Online Reading Room items.
 4. Duplication: how to reconcile with AAPB content already in DPLA via Digital Commonwealth.
+5. Multi-value institutions: when a record lists several `organization` annotations
+   (~500 records), is one intended as the authoritative `dataProvider`, and if so can it
+   be signaled in the data? Today they are indistinguishable and the first wins.
