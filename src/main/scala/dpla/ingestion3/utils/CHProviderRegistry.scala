@@ -48,6 +48,7 @@ object CHProviderRegistry {
     "mt" -> new MtProfile,
     "mwdl" -> new MwdlProfile,
     "nara" -> new NaraProfile,
+    "nga" -> new NgaProfile,
     "digitalnc" -> new NcProfile,
     "njde" -> new NJDEProfile,
     "northwest-heritage" -> new NorthwestHeritageProfile,

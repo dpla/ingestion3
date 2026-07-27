@@ -5,6 +5,7 @@ import dpla.ingestion3.harvesters.api._
 import dpla.ingestion3.harvesters.file._
 import dpla.ingestion3.harvesters.oai.LocalOaiHarvester
 import dpla.ingestion3.mappers.providers._
+import dpla.ingestion3.mappers.providers.experimental._
 
 class IthakaProfile extends XmlProfile {
   type Mapping = IthakaMapping
@@ -214,6 +215,19 @@ class MtProfile extends XmlProfile {
 
   override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new MtMapping
+}
+
+/** National Gallery of Art (TEST HUB)
+  *
+  * File harvest of the NGA Open Data CSVs. `getMapping` currently returns the
+  * placeholder `NgaMapping` stub — sufficient to dispatch a harvest; the real
+  * mapper is a separate step.
+  */
+class NgaProfile extends JsonProfile {
+  type Mapping = NgaMapping
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[NgaFileHarvester]
+  override def getMapping = new NgaMapping
 }
 
 /** Mountain West Digital Library
