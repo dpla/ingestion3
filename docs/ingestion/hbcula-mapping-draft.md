@@ -144,52 +144,58 @@ production consideration.
 
 ---
 
-## 5. Test-ingest results (full pipeline, EC2, 2026-04-10)
+## 5. Test-ingest results (full pipeline, EC2, 2026-07-28)
 
 A complete harvest → mapping → enrichment → JSON-L run on the ingest EC2 instance
-(test hub — **not** synced to S3). Mapping runtime ~11s.
+(test hub — **not** synced to S3), from a **fresh OAI harvest**. Total pipeline ~3m27s.
+
+> **Re-run vs the 2026-04-10 baseline.** The fresh harvest picked up **+18 new records**
+> (5,201 → 5,219 attempted), but **135 fewer mapped** (3,952 → 3,817): "missing
+> `dataProvider`" errors rose from 1,245 to **1,398 (+153)**. The `dc:source` gap
+> (§3/§4) is **widening** — newly added records also omit it — which is worth raising
+> with HBCULA.
 
 ### Totals
 
 | | count | of harvested |
 |---|---|---|
-| Harvested (OAI records) | 5,201 | — |
-| **Mapped → JSON-L** | **3,952** | **76.0%** |
-| Failed (rejected) | 1,249 | 24.0% |
+| Harvested (OAI records) | 5,219 | — |
+| **Mapped → JSON-L** | **3,817** | **73.1%** |
+| Failed (rejected) | 1,402 | 26.9% |
 
 ### Errors (reject the record)
 
 | reason | records |
 |---|---|
-| Missing required field: dataProvider | 1,245 |
+| Missing required field: dataProvider | 1,398 |
 | Missing required field: rights or edmRights | 243 |
 
-The dominant failure is **missing `dataProvider`** — sets whose OAI export omits
-`dc:source` (e.g. `rwwl`; see §3/§4). That is the top data issue to raise with HBCULA.
-(1,488 error messages fall across 1,249 rejected records — some fail both checks.)
+The dominant — and growing — failure is **missing `dataProvider`** (sets whose OAI
+export omits `dc:source`, e.g. `rwwl`; see §3/§4). That is the top data issue to raise
+with HBCULA. (1,641 error messages across 1,402 rejected records — some fail both checks.)
 
 ### Warnings (informational; do not reject)
 
 | reason | records |
 |---|---|
-| Missing recommended: publisher | 5,201 |
-| Missing recommended: place | 2,431 |
+| Missing recommended: publisher | 5,219 |
+| Missing recommended: place | 2,439 |
 | Missing recommended: creator | 1,824 |
 | Missing recommended: type | 202 |
 | Missing recommended: date | 13 |
-| Missing recommended: format / subject / language / description | ≤4 each |
+| Missing recommended: subject / format / language / description | ≤5 each |
 
-### Field coverage (of the 3,952 mapped records)
+### Field coverage (of the 3,817 mapped records)
 
 | field | coverage |
 |---|---|
 | `dataProvider`, `provider`, `isShownAt`, `preview`(object), `title`, `rights` (free text) | 100% |
-| `description`, `language` | ~100% (3,951) |
+| `description`, `language` | ~100% (3,816) |
 | `format`, `subject`, `date` | 99.9% |
-| `place` | 63.7% |
-| `creator` | 59.8% |
-| `type` | 23.0% |
-| `collection` | 19.4% |
+| `place` | 64.7% |
+| `creator` | 59.5% |
+| `type` | 21.5% |
+| `collection` | 16.4% |
 | `edmRights`, `mediaMaster` | 0% (not mapped — plain-text `dc:rights`, no rights URI; no media-master field) |
 
 HBCULA satisfies the rights requirement via free-text `dc:rights` (100%), not a
