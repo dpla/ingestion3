@@ -319,3 +319,70 @@ no clear equivalent in the AAPB PBCore.
 5. Multi-value institutions: when a record lists several `organization` annotations
    (~500 records), is one intended as the authoritative `dataProvider`, and if so can it
    be signaled in the data? Today they are indistinguishable and the first wins.
+
+---
+
+## 5. Test-ingest results (full feed, EC2, 2026-07-23)
+
+A complete harvest → mapping → enrichment → JSON-L run of the full feed on the ingest
+EC2 instance (test hub — **not** synced to S3). Mapping runtime ~2m42s.
+
+### Totals
+
+| | count | of harvested |
+|---|---|---|
+| Harvested (PBCore assets) | 348,689 | — |
+| **Mapped → JSON-L** | **86,439** | **24.8%** |
+| Failed (rejected) | 262,250 | 75.2% |
+
+### Errors (reject the record)
+
+| reason | records |
+|---|---|
+| Missing required field: rights or edmRights | 262,250 |
+
+The headline finding (§4): three-quarters of the feed carries no rights statement and
+is rejected. Resolving rights coverage with AAPB gates any production consideration.
+
+### Warnings (informational; do not reject)
+
+Counts are over **all attempted records** (including those later rejected), so they
+exceed the mapped total.
+
+| reason | records |
+|---|---|
+| Missing recommended: place | 335,954 |
+| Missing recommended: publisher | 331,301 |
+| Missing recommended: language | 293,049 |
+| Missing recommended: subject | 193,668 |
+| Missing recommended: format | 140,954 |
+| Missing recommended: date | 110,042 |
+| Missing recommended: creator | 89,221 |
+| Missing recommended: type | 1,537 |
+| More than one value mapped, one expected: dataProvider | 500 |
+| Normalized /page/ → /vocab/, edmRights | 81 |
+| Missing recommended: description | 1 |
+
+### Field coverage (of the 86,439 mapped records)
+
+| field | coverage |
+|---|---|
+| `dataProvider`, `provider`, `isShownAt`, `title`, `description`, `identifier`, `rights` (free text) | 100% |
+| `type` | 99.7% |
+| `extent` | 83.7% |
+| `date` | 83.5% |
+| `creator` | 77.2% |
+| `collection` | 75.2% |
+| `format` | 73.8% |
+| `subject` | 69.1% |
+| `preview` (object) | 60.1% |
+| `contributor` | 47.3% |
+| `language` | 34.7% |
+| `publisher` | 10.3% |
+| `place` (spatial) | 6.1% |
+| `temporal` | 4.8% |
+| `edmRights` | 0.2% |
+
+AAPB satisfies the rights requirement via free-text `rights` (100%), essentially never
+via a rights URI (`edmRights` 0.2%). `preview` is present for only ~60% of mapped
+records — the Online Reading Room subset with a real thumbnail.
