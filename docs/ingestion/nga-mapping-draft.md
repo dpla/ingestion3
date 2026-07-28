@@ -154,3 +154,61 @@ contribution.
   (`object_associations.csv`, not yet used). Confirm the desired treatment.
 - **Everything here is DRAFT.** The hub is `status = test`; output is not synced to S3
   and cannot reach the index. Field decisions should be reviewed with NGA.
+
+---
+
+## 5. Test-ingest results (full pipeline, EC2, 2026-07-28)
+
+A complete harvest → mapping → enrichment → JSON-L run of the entire dataset on the
+ingest EC2 instance (test hub — **not** synced to S3). Mapping runtime ~28s.
+
+### Totals
+
+| | count | of harvested |
+|---|---|---|
+| Harvested (objects.csv rows) | 145,566 | — |
+| **Mapped → JSON-L** | **63,409** | **43.6%** |
+| Failed (rejected) | 82,157 | 56.4% |
+
+Every failure is the intended rights gate — see errors below.
+
+### Errors (reject the record)
+
+| reason | records |
+|---|---|
+| Missing required field: rights or edmRights | 82,157 |
+
+i.e. every object with **no open-access image** is dropped (no rights signal), exactly
+as designed (§4). No other error type occurs.
+
+### Warnings (informational; do not reject)
+
+| reason | records |
+|---|---|
+| Missing recommended: publisher | 145,566 |
+| Missing recommended: language | 145,566 |
+| Missing recommended: place | 134,022 |
+| Normalized https→http, edmRights | 63,409 |
+| Missing recommended: description | 30,522 |
+| Missing recommended: subject | 5,030 |
+| Missing recommended: date | 47 |
+
+`publisher` and `language` have no source in the data (expected). The `edmRights`
+"normalization" is the enricher rewriting the CC0 URI to its `http` form.
+
+### Field coverage (of the 63,409 mapped records)
+
+| field | coverage |
+|---|---|
+| `dataProvider`, `provider`, `isShownAt`, `edmRights`, `preview`(object), `mediaMaster` | 100% |
+| `title`, `creator`, `format`, `identifier`, `type` | 100% |
+| `date` | ~100% (63,385) |
+| `subject` | 98.2% |
+| `description` (mostly image Visual Description) | 97.3% |
+| `extent` | 83.0% |
+| `collection` | 23.1% |
+| `place` | 15.5% |
+| `contributor`, `language`, `publisher`, `temporal`, `rights` (free text) | 0% (not mapped / no source) |
+
+Every mapped record carries the full media set (preview + full-res mediaMaster) and
+CC0 edmRights — consistent with the open-access-only scope.
