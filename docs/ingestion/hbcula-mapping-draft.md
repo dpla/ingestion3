@@ -141,3 +141,56 @@ the current state without making new mapping decisions.
 Everything here is DRAFT. The hub is `status = test`; output is not synced to S3 and
 cannot reach the index. Field decisions should be reviewed with HBCULA before any
 production consideration.
+
+---
+
+## 5. Test-ingest results (full pipeline, EC2, 2026-04-10)
+
+A complete harvest → mapping → enrichment → JSON-L run on the ingest EC2 instance
+(test hub — **not** synced to S3). Mapping runtime ~11s.
+
+### Totals
+
+| | count | of harvested |
+|---|---|---|
+| Harvested (OAI records) | 5,201 | — |
+| **Mapped → JSON-L** | **3,952** | **76.0%** |
+| Failed (rejected) | 1,249 | 24.0% |
+
+### Errors (reject the record)
+
+| reason | records |
+|---|---|
+| Missing required field: dataProvider | 1,245 |
+| Missing required field: rights or edmRights | 243 |
+
+The dominant failure is **missing `dataProvider`** — sets whose OAI export omits
+`dc:source` (e.g. `rwwl`; see §3/§4). That is the top data issue to raise with HBCULA.
+(1,488 error messages fall across 1,249 rejected records — some fail both checks.)
+
+### Warnings (informational; do not reject)
+
+| reason | records |
+|---|---|
+| Missing recommended: publisher | 5,201 |
+| Missing recommended: place | 2,431 |
+| Missing recommended: creator | 1,824 |
+| Missing recommended: type | 202 |
+| Missing recommended: date | 13 |
+| Missing recommended: format / subject / language / description | ≤4 each |
+
+### Field coverage (of the 3,952 mapped records)
+
+| field | coverage |
+|---|---|
+| `dataProvider`, `provider`, `isShownAt`, `preview`(object), `title`, `rights` (free text) | 100% |
+| `description`, `language` | ~100% (3,951) |
+| `format`, `subject`, `date` | 99.9% |
+| `place` | 63.7% |
+| `creator` | 59.8% |
+| `type` | 23.0% |
+| `collection` | 19.4% |
+| `edmRights`, `mediaMaster` | 0% (not mapped — plain-text `dc:rights`, no rights URI; no media-master field) |
+
+HBCULA satisfies the rights requirement via free-text `dc:rights` (100%), not a
+rights URI.
