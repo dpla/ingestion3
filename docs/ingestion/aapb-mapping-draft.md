@@ -230,13 +230,29 @@ no clear equivalent in the AAPB PBCore.
   (`pbcoreInstantiation\instantiationRights`), which the mapper does not currently read.
   Adding it as a fallback source for `rights`/`edmRights` would rescue all 3,217 —
   small, clean, and correct, independent of the policy decision above.
-- **Harvest method (validated at full scale).** OAI-PMH is down (HTTP 500), so
-  `AapbHarvester` pages the Solr API with **`cursorMark`** and pulls the PBCore inline
-  via `fl=id,xml`. A **full test harvest of the entire superset (348,689 records)
-  completed on EC2 in ~4 min** — exact count match, zero records dropped — and the full
-  `map → enrich → jsonl` pipeline then ran successfully (output retained on EC2,
-  **not synced to S3**). The Solr API caps pages at 100 records regardless of `rows`.
-  A negotiated bulk PBCore file delivery remains a fine alternative if AAPB prefers.
+- **Harvest method (validated at full scale, but confirm the channel with AAPB).**
+  OAI-PMH is down (HTTP 500), so `AapbHarvester` pages the Solr API with **`cursorMark`**
+  and pulls the PBCore inline via `fl=id,xml`. A **full test harvest of the entire
+  superset (348,689 records) completed on EC2 in ~4 min** — exact count match, zero
+  records dropped — and the full `map → enrich → jsonl` pipeline then ran successfully
+  (output retained on EC2, **not synced to S3**).
+- **⚠️ The Solr API is documented but "experimental" — coordinate with AAPB before
+  production.** The [AAPB2 README](https://github.com/WGBH-MLA/AAPB2) documents the API
+  (public, no key, CORS-enabled, and it explicitly states *"All AAPB metadata records …
+  can be harvested"*), so this is **not** an unsanctioned/internal endpoint. However:
+  (a) AAPB calls the API *"experimental … we also do not guarantee continued
+  availability"*; (b) the `/api.json` endpoint specifically is framed as *"limited
+  access to the underlying Solr index"* for *"summary statistics,"* not unambiguously as
+  the bulk-harvest tool; (c) the docs describe only `start`-based paging with `rows ≤ 100`
+  — our **`cursorMark` approach is undocumented** (it works and is far better for deep
+  paging, but is an undocumented Solr feature that could change); and (d) the endpoint is
+  **rate-limited** (rapid enumeration returns HTTP 429; the harvester relies on
+  `HttpUtils` retry/backoff). AAPB's officially sanctioned **bulk** path is instead an
+  **AMS PBCore export** (they email a zip of PBCore XML; see
+  `americanarchive.org/help/obtain-metadata`). *Recommendation:* since DPLA and AAPB are
+  partners and AAPB invites contact (aapb_notifications@wgbh.org), confirm the intended
+  harvest channel — throttled API use vs. a negotiated bulk PBCore delivery — and get on
+  their API-change notification list, before any production run.
 - **Scope: `access_types` options.** `access_types` is a multi-valued Solr facet;
   every record also carries a literal `all` token (so `q=*` = the whole 2,693,053-doc
   index). The buckets (verified via faceting): `online` **186,716** (streamable +
@@ -312,13 +328,25 @@ no clear equivalent in the AAPB PBCore.
    URI. Can AAPB populate rights across the feed (ideally `rightsLink`
    `rightsstatements.org`/CC URIs), or is there a blanket AAPB rights/access statement
    DPLA could apply as a default?
-2. Harvest: is pulling from the public Solr API (`api.json`, cursorMark) acceptable and
-   sustainable long-term, or would AAPB prefer to provide a bulk PBCore file / revive OAI?
+2. Harvest channel: AAPB's Solr API is documented but flagged *"experimental … not
+   guaranteed,"* the `/api.json` endpoint is framed for "summary statistics / limited
+   access," our `cursorMark` paging is undocumented, and it is rate-limited. Is throttled
+   API harvesting acceptable long-term, or would AAPB prefer a negotiated **bulk PBCore
+   export** (their sanctioned bulk path) / a revived OAI feed? Can DPLA be added to the
+   API-change notification list?
 3. Scope: confirm DPLA should ingest only Online Reading Room items.
 4. Duplication: how to reconcile with AAPB content already in DPLA via Digital Commonwealth.
 5. Multi-value institutions: when a record lists several `organization` annotations
    (~500 records), is one intended as the authoritative `dataProvider`, and if so can it
    be signaled in the data? Today they are indistinguishable and the first wins.
+6. Related sites / scope completeness: AAPB's initial outreach also named the **GBH
+   Open Vault** site and the **Boston Local TV News** website. Open Vault content is
+   largely *within* the AAPB feed (29,762 records tagged `special_collections:open-vault`,
+   captured by this harvest), but the **Boston TV News Digital Library**
+   (`bostonlocaltv.org` — a BPL / Cambridge CTV / Northeast Historic Film / WGBH
+   collaboration) is a **separate corpus essentially absent from AAPB's index** (only 4
+   records tagged `ov-boston-local-tv`). If DPLA is meant to include it, it needs its own
+   harvest — it is *not* part of the AAPB feed we harvested.
 
 ---
 
