@@ -1,6 +1,6 @@
 package dpla.ingestion3.harvesters.file
 
-import com.opencsv.CSVReaderHeaderAware
+import com.opencsv.CSVReader
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.{LocalHarvester, ParsedResult}
 import dpla.ingestion3.model.AVRO_MIME_JSON
@@ -13,7 +13,6 @@ import org.json4s.jackson.JsonMethods._
 
 import java.io.{File, FileReader}
 import scala.collection.mutable
-import scala.jdk.CollectionConverters._
 import scala.util.Using
 
 /** TEST HUB — NOT APPROVED FOR PRODUCTION
@@ -101,18 +100,22 @@ class NgaFileHarvester(
 
 object NgaFileHarvester {
 
-  /** Streams a CSV row by row, applying `f` to each column→value map. Uses
-    * opencsv's header-aware reader so quoted fields with embedded commas and
-    * newlines (common in NGA's medium / dimensions / bibliography columns) parse
-    * correctly. `readMap()` returns null at EOF; a malformed row throws, which
-    * propagates and fails the harvest loudly rather than silently truncating it.
+  /** Streams a CSV row by row, applying `f` to each column→value map. opencsv
+    * handles quoted fields with embedded commas and newlines (common in NGA's
+    * medium / dimensions / bibliography columns). Each row is zipped against the
+    * header rather than using the strict header-aware `readMap()`: NGA's export
+    * contains occasional ragged rows (a field short/long of the header count),
+    * and zipping tolerates them (missing trailing columns are simply absent)
+    * instead of aborting the entire harvest on one bad row.
     */
   def foreachRow(file: File)(f: Map[String, String] => Unit): Unit =
-    Using.resource(new CSVReaderHeaderAware(new FileReader(file))) { reader =>
-      Iterator
-        .continually(reader.readMap())
-        .takeWhile(_ != null)
-        .foreach(row => f(row.asScala.toMap))
+    Using.resource(new CSVReader(new FileReader(file))) { reader =>
+      Option(reader.readNext()).foreach { header =>
+        Iterator
+          .continually(reader.readNext())
+          .takeWhile(_ != null)
+          .foreach(cols => f(header.zip(cols).toMap))
+      }
     }
 
   /** Reads a CSV with a header row into a list of column→value maps. */

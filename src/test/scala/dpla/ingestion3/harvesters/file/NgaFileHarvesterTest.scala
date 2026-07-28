@@ -57,6 +57,16 @@ class NgaFileHarvesterTest
     obj0("title") shouldBe "Saint James Major"
   }
 
+  it should "tolerate ragged rows (short/long) without aborting" in {
+    // NGA's real export has occasional rows with a field count != the header.
+    val r = rows("ragged.csv")
+    r should have size 3
+    r.head("role") shouldBe "artist"
+    r(1).get("role") shouldBe None // short row: trailing columns simply absent
+    r(1)("constituentid") shouldBe "11"
+    r(2)("role") shouldBe "donor" // long row: extra value beyond the header dropped
+  }
+
   "buildDocument" should "carry the object's own columns at the top level" in {
     val doc = docFor("0")
     (doc \ "title").extract[String] shouldBe "Saint James Major"
