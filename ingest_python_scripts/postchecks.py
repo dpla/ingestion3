@@ -316,6 +316,7 @@ def render(hub_results, today, check_dt, month_str, stale_days, check_api):
     for label, s3_path in [
         ("Hub stats",    f"s3://{S3_ANALYTICS}/hub-stats/hub_stats.json"),
         ("Hub stats bw", f"s3://{S3_ANALYTICS}/hub-stats/hub_stats_bws.json"),
+        ("Item mapping", f"s3://{S3_ANALYTICS}/hub-stats/item_data_providers.json"),
         ("Sitemaps",     f"s3://{S3_SITEMAPS}/sitemap/_MANIFEST"),
     ]:
         ls = s3_ls(s3_path)

@@ -240,6 +240,31 @@ test_syntax() {
 }
 
 # =============================================================================
+# Test: Python script syntax
+# =============================================================================
+
+test_python_syntax() {
+    echo ""
+    echo "=========================================="
+    echo "  Testing Python Script Syntax"
+    echo "=========================================="
+
+    local scripts=(
+        "generate_hub_stats.py"
+        "export_item_attribution.py"
+    )
+
+    for script in "${scripts[@]}"; do
+        local script_path="$SCRIPTS_DIR/$script"
+        if [[ -f "$script_path" ]]; then
+            run_test "Python syntax: $script" "python3 -m py_compile '$script_path'"
+        else
+            log_skip "Python syntax: $script (file not found)"
+        fi
+    done
+}
+
+# =============================================================================
 # Test: Scripts source common.sh
 # =============================================================================
 
@@ -1038,6 +1063,7 @@ main() {
     # Run tests
     test_common_sh
     test_syntax
+    test_python_syntax
     test_referenced_script_paths
     
     if [[ "$QUICK_MODE" != "true" ]]; then

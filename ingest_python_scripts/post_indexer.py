@@ -477,25 +477,34 @@ def run_hub_stats():
     except RuntimeError as e:
         warn(f"git fetch/reset failed (proceeding anyway):\n{e}")
 
-    info("Running generate_hub_stats.py on ingest EC2 (up to 3 min)...")
+    # GA4 paging plus per-id ES resolution runs several minutes; a
+    # first-run history backfill takes longer still. Full output goes to a
+    # log file on the EC2; only the tail is echoed because SSM keeps just
+    # the first 24k chars of output, which would hide errors printed last.
+    info("Running generate_hub_stats.py on ingest EC2 (up to 45 min)...")
     try:
         out = ssm_run(
             INGEST_INSTANCE_ID,
             (
                 "sudo -u ec2-user bash -lc '"
                 "cd /home/ec2-user/ingestion3 && "
-                "python3 scripts/generate_hub_stats.py"
-                "' 2>&1"
+                "python3 scripts/generate_hub_stats.py > /tmp/hub-stats.log 2>&1; "
+                "rc=$?; tail -c 20000 /tmp/hub-stats.log; exit $rc"
+                "'"
             ),
-            timeout_seconds=180,
-            poll_seconds=10,
+            timeout_seconds=2700,
+            poll_seconds=15,
         )
         print(out[-2000:] if len(out) > 2000 else out)
         ok("Hub stats complete.")
         slack_notify(":bar_chart: *hub stats generated* :white_check_mark:")
     except RuntimeError as e:
         bad(f"Hub stats failed:\n{e}")
-        slack_notify(":warning: *hub stats FAILED* — check ingest EC2")
+        slack_notify(
+            ":warning: *hub stats step failed* — hub_stats/bws may still have "
+            "uploaded; item_data_providers did not. See /tmp/hub-stats.log on "
+            "the ingest EC2."
+        )
 
 
 # ---------- Step 5: sitemaps ----------
@@ -560,10 +569,12 @@ def verify_outputs():
     if not check_s3_file_today("s3://sitemaps.dp.la/sitemap/_MANIFEST", "Sitemap _MANIFEST"):
         all_good = False
 
-    # Hub stats — check both files are from today
+    # Hub stats — check all three files are from today
     if not check_s3_file_today("s3://dashboard-analytics/hub-stats/hub_stats.json", "hub_stats.json"):
         all_good = False
     if not check_s3_file_today("s3://dashboard-analytics/hub-stats/hub_stats_bws.json", "hub_stats_bws.json"):
+        all_good = False
+    if not check_s3_file_today("s3://dashboard-analytics/hub-stats/item_data_providers.json", "item_data_providers.json"):
         all_good = False
 
     if all_good:
