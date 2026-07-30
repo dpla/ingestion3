@@ -71,6 +71,17 @@ assert_log_contains() {
     fi
 }
 
+# Assert that the log line for one invocation carries no --profile.
+assert_log_line_no_profile() {
+    local needle="$1"
+    if grep -F "$needle" "$AWS_CALLS_LOG" | grep -q -- "--profile"; then
+        echo "s3 sync must not receive --profile (breaks EC2 instance roles, PR #669): $needle"
+        echo "Recorded calls:"
+        sed 's/^/  /' "$AWS_CALLS_LOG"
+        exit 1
+    fi
+}
+
 echo "Running alias smoke tests with stubbed AWS..."
 
 # 1) s3-sync legacy alias behavior
@@ -98,6 +109,7 @@ I3_HOME="$REPO_ROOT" \
 AWS_PROFILE=dpla \
 "$REPO_ROOT/scripts/s3-sync.sh" tn
 assert_log_contains "AWS_PROFILE=dpla s3 sync $DATA_DIR/tn/ s3://dpla-master-dataset/tennessee/"
+assert_log_line_no_profile "AWS_PROFILE=dpla s3 sync $DATA_DIR/tn/ s3://dpla-master-dataset/tennessee/"
 
 # 3) strict mode disables aliasing
 PATH="$FAKE_BIN:$PATH" \
@@ -108,6 +120,7 @@ AWS_PROFILE="" \
 I3_STRICT_HUB_NAMES=1 \
 "$REPO_ROOT/scripts/s3-sync.sh" hathi
 assert_log_contains "s3 sync $DATA_DIR/hathi/ s3://dpla-master-dataset/hathi/"
+assert_log_line_no_profile "s3 sync $DATA_DIR/hathi/ s3://dpla-master-dataset/hathi/"
 
 # 4) check-jsonl-sync uses alias for tn
 run_with_stubbed_aws "$REPO_ROOT/scripts/status/check-jsonl-sync.sh" --data-dir "$DATA_DIR" --profile dpla || true
