@@ -259,7 +259,8 @@ test_python_syntax() {
         if [[ -f "$script_path" ]]; then
             run_test "Python syntax: $script" "python3 -m py_compile '$script_path'"
         else
-            log_skip "Python syntax: $script (file not found)"
+            TESTS_RUN=$((TESTS_RUN + 1))
+            log_fail "Python syntax: $script (file not found)"
         fi
     done
 }
