@@ -31,7 +31,7 @@ AWS_CALLS_LOG="$TMPDIR/aws-calls.log"
 # Stub aws so tests are deterministic and side-effect free
 cat > "$FAKE_BIN/aws" <<'EOF'
 #!/usr/bin/env bash
-echo "AWS_PROFILE=${AWS_PROFILE:-<unset>} $*" >> "${AWS_CALLS_LOG:?}"
+echo "AWS_PROFILE=${AWS_PROFILE-<unset>} $*" >> "${AWS_CALLS_LOG:?}"
 if [ "${1:-}" = "s3" ] && [ "${2:-}" = "ls" ]; then
   exit 0
 fi
