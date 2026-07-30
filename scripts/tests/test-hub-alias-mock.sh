@@ -28,10 +28,10 @@ mkdir -p "$FAKE_BIN"
 AWS_CALLS_LOG="$TMPDIR/aws-calls.log"
 : > "$AWS_CALLS_LOG"
 
-# Stub aws so tests are deterministic and side-effect free.
+# Stub aws so tests are deterministic and side-effect free
 cat > "$FAKE_BIN/aws" <<'EOF'
 #!/usr/bin/env bash
-echo "$*" >> "${AWS_CALLS_LOG:?}"
+echo "AWS_PROFILE=${AWS_PROFILE:-<unset>} $*" >> "${AWS_CALLS_LOG:?}"
 if [ "${1:-}" = "s3" ] && [ "${2:-}" = "ls" ]; then
   exit 0
 fi
@@ -50,11 +50,14 @@ mkdir -p \
 
 PYTHON_BIN="$REPO_ROOT/venv/bin/python"
 
+# AWS_PROFILE is cleared so results do not depend on the caller's shell;
+# common.sh unsets an empty profile (the EC2 instance-role path).
 run_with_stubbed_aws() {
     PATH="$FAKE_BIN:$PATH" \
     AWS_CALLS_LOG="$AWS_CALLS_LOG" \
     DPLA_DATA="$DATA_DIR" \
     I3_HOME="$REPO_ROOT" \
+    AWS_PROFILE="" \
     "$@"
 }
 
@@ -76,23 +79,44 @@ run_with_stubbed_aws "$REPO_ROOT/scripts/s3-sync.sh" tn
 assert_log_contains "s3 sync $DATA_DIR/hathi/ s3://dpla-master-dataset/hathitrust/"
 assert_log_contains "s3 sync $DATA_DIR/tn/ s3://dpla-master-dataset/tennessee/"
 
-# 2) strict mode disables aliasing
+# 2) profile handling: sync must not pass --profile
+# and must not invent AWS_PROFILE since EC2 uses an instance role,
+# and a named profile there makes every aws call fail.
+# A caller-set profile must propagate.
+if grep -F " s3 sync " "$AWS_CALLS_LOG" | grep -q -- "--profile"; then
+    echo "s3 sync must not receive --profile (breaks EC2 instance roles, PR #669)"
+    echo "Recorded calls:"
+    sed 's/^/  /' "$AWS_CALLS_LOG"
+    exit 1
+fi
+assert_log_contains "AWS_PROFILE=<unset> s3 sync $DATA_DIR/hathi/ s3://dpla-master-dataset/hathitrust/"
+
 PATH="$FAKE_BIN:$PATH" \
 AWS_CALLS_LOG="$AWS_CALLS_LOG" \
 DPLA_DATA="$DATA_DIR" \
 I3_HOME="$REPO_ROOT" \
+AWS_PROFILE=dpla \
+"$REPO_ROOT/scripts/s3-sync.sh" tn
+assert_log_contains "AWS_PROFILE=dpla s3 sync $DATA_DIR/tn/ s3://dpla-master-dataset/tennessee/"
+
+# 3) strict mode disables aliasing
+PATH="$FAKE_BIN:$PATH" \
+AWS_CALLS_LOG="$AWS_CALLS_LOG" \
+DPLA_DATA="$DATA_DIR" \
+I3_HOME="$REPO_ROOT" \
+AWS_PROFILE="" \
 I3_STRICT_HUB_NAMES=1 \
 "$REPO_ROOT/scripts/s3-sync.sh" hathi
 assert_log_contains "s3 sync $DATA_DIR/hathi/ s3://dpla-master-dataset/hathi/"
 
-# 3) check-jsonl-sync uses alias for tn
+# 4) check-jsonl-sync uses alias for tn
 run_with_stubbed_aws "$REPO_ROOT/scripts/status/check-jsonl-sync.sh" --data-dir "$DATA_DIR" --profile dpla || true
 assert_log_contains "s3 ls s3://dpla-master-dataset/tennessee/jsonl/20260201_000000-tn-MAP3_1.IndexRecord.jsonl/ --profile dpla"
 
-# 4) check-jsonl-sync keeps canonical tennessee unchanged
+# 5) check-jsonl-sync keeps canonical tennessee unchanged
 assert_log_contains "s3 ls s3://dpla-master-dataset/tennessee/jsonl/20260201_000000-tennessee-MAP3_1.IndexRecord.jsonl/ --profile dpla"
 
-# 5) orchestrator dry-run succeeds against canonical-key i3.conf with both
+# 6) orchestrator dry-run succeeds against canonical-key i3.conf with both
 # legacy and canonical hub arguments (no AWS writes in dry-run path)
 if [ -x "$PYTHON_BIN" ]; then
   I3_CANONICAL_CONF="$TMPDIR/i3-canonical.conf"
