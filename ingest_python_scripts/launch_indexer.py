@@ -331,9 +331,29 @@ def check_jar_freshness():
         warn("Could not parse JAR listing — check manually.")
 
 
+# ---------- hub list helpers ----------
+
+def get_all_hubs():
+    """Return all hub names found in s3://dpla-master-dataset/."""
+    out = aws(["s3", "ls", f"s3://{S3_DATASET}/", "--region", REGION])
+    return [line.strip().rstrip("/").split()[-1] for line in out.splitlines() if line.strip().endswith("/")]
+
+
+def build_providers_arg(exclude_hubs):
+    """Build comma-separated include list (hub/ format) excluding the given hubs."""
+    excluded = {h.strip().lower() for h in exclude_hubs.split(",")}
+    all_hubs = get_all_hubs()
+    included = [h for h in all_hubs if h.lower() not in excluded]
+    if not included:
+        sys.exit("No hubs remaining after exclusions — aborting.")
+    warn(f"Excluding {len(excluded)} hub(s): {', '.join(sorted(excluded))}")
+    info(f"Indexing {len(included)} hub(s).")
+    return ",".join(f"{h}/" for h in included)
+
+
 # ---------- launch cluster ----------
 
-def launch_cluster():
+def launch_cluster(providers_arg="all"):
     step(5, "Launch sparkindexer EMR cluster")
     confirm("All pre-flight checks passed. Launch the cluster now?")
 
@@ -364,7 +384,7 @@ def launch_cluster():
                 "--executor-cores", "2",
                 "--class", "dpla.ingestion3.indexer.IndexerMain",
                 SPARKINDEXER_JAR,
-                ES_HOST_NAME, ES_PORT, "dpla-all", "all", "now",
+                ES_HOST_NAME, ES_PORT, "dpla-all", providers_arg, "now",
                 "3", "1", "dpla-master-dataset", "tech@dp.la",
             ],
             "Type": "CUSTOM_JAR",
@@ -646,6 +666,7 @@ def main():
     parser.add_argument("--skip-preflight", action="store_true", help="Skip pre-flight checks")
     parser.add_argument("--alias-swap-only", action="store_true", help="Skip launch, just do alias swap")
     parser.add_argument("--verify-only", action="store_true", help="Just check API count, show delta, and Slack notify")
+    parser.add_argument("--exclude-hubs", help="Comma-separated hub names to exclude from indexing (e.g. ia,mississippi)")
     args = parser.parse_args()
 
     print("\nDPLA SPARKINDEXER")
@@ -684,7 +705,8 @@ def main():
         else:
             print("\n  Pre-flight checks skipped.")
 
-        cluster_id = launch_cluster()
+        providers_arg = build_providers_arg(args.exclude_hubs) if args.exclude_hubs else "all"
+        cluster_id = launch_cluster(providers_arg)
         success = monitor_cluster(cluster_id)
         if not success:
             sys.exit(1)
