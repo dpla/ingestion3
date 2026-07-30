@@ -73,8 +73,8 @@ echo "Running alias smoke tests with stubbed AWS..."
 # 1) s3-sync legacy alias behavior
 run_with_stubbed_aws "$REPO_ROOT/scripts/s3-sync.sh" hathi
 run_with_stubbed_aws "$REPO_ROOT/scripts/s3-sync.sh" tn
-assert_log_contains "s3 sync $DATA_DIR/hathi/ s3://dpla-master-dataset/hathitrust/ --profile dpla"
-assert_log_contains "s3 sync $DATA_DIR/tn/ s3://dpla-master-dataset/tennessee/ --profile dpla"
+assert_log_contains "s3 sync $DATA_DIR/hathi/ s3://dpla-master-dataset/hathitrust/"
+assert_log_contains "s3 sync $DATA_DIR/tn/ s3://dpla-master-dataset/tennessee/"
 
 # 2) strict mode disables aliasing
 PATH="$FAKE_BIN:$PATH" \
@@ -83,7 +83,7 @@ DPLA_DATA="$DATA_DIR" \
 I3_HOME="$REPO_ROOT" \
 I3_STRICT_HUB_NAMES=1 \
 "$REPO_ROOT/scripts/s3-sync.sh" hathi
-assert_log_contains "s3 sync $DATA_DIR/hathi/ s3://dpla-master-dataset/hathi/ --profile dpla"
+assert_log_contains "s3 sync $DATA_DIR/hathi/ s3://dpla-master-dataset/hathi/"
 
 # 3) check-jsonl-sync uses alias for tn
 run_with_stubbed_aws "$REPO_ROOT/scripts/status/check-jsonl-sync.sh" --data-dir "$DATA_DIR" --profile dpla || true

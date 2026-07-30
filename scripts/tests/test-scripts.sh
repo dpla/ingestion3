@@ -234,7 +234,8 @@ test_syntax() {
         if [[ -f "$script_path" ]]; then
             run_test "Syntax: $script" "bash -n '$script_path'"
         else
-            log_skip "Syntax: $script (file not found)"
+            TESTS_RUN=$((TESTS_RUN + 1))
+            log_fail "Syntax: $script (file not found)"
         fi
     done
 }
