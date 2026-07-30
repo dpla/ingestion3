@@ -18,9 +18,11 @@ Uses two passes per stats file: first a hub-level totals aggregation,
 then one per-hub query for contributor counts. A single nested aggregation
 across all hubs exceeds ES's search.max_buckets limit.
 
-Both hub stats files upload before the GA4 work starts. If
-item_data_providers.json cannot be updated, the script exits non-zero so
-post_indexer.py alerts, but the hub stats uploads stand.
+The hub stats files upload before the GA4 work starts. A BWS build
+failure skips only the BWS upload; a GA4 failure leaves
+item_data_providers.json untouched. Both exit non-zero so post_indexer.py
+alerts, and any uploads that already happened stand. A failure in the
+unfiltered build aborts everything.
 
 Usage:
     ./venv/bin/python scripts/generate_hub_stats.py
@@ -610,16 +612,27 @@ def main() -> None:
             flush=True,
         )
 
-    # Build both stats files, then upload both: a failure mid-build
-    # publishes nothing, and a GA4 failure later cannot block the stats
-    # uploads, which have already happened.
+    # Build the stats files before uploading anything: a failure in the
+    # unfiltered build publishes nothing, and a GA4 failure later cannot
+    # block the stats uploads, which have already happened.
     print("Generating hub stats from ES...", flush=True)
     hub_stats = build_stats(bws=False, generated_at=generated_at)
     hub_count = len(hub_stats["hubs"])
     print(f"  {hub_count} hubs", flush=True)
 
-    bws_stats = build_stats(bws=True, generated_at=generated_at)
-    print(f"  {len(bws_stats['hubs'])} hubs with BWS items", flush=True)
+    # A BWS-only failure must not block hub_stats.json. Skip the BWS
+    # upload so we never publish an empty file, then exit non-zero below.
+    try:
+        bws_stats = build_stats(bws=True, generated_at=generated_at)
+        print(f"  {len(bws_stats['hubs'])} hubs with BWS items", flush=True)
+    except Exception as e:
+        print(traceback.format_exc(), flush=True)
+        print(
+            f"  ERROR: BWS stats failed ({e.__class__.__name__}: {e}); "
+            "existing hub_stats_bws.json untouched.",
+            flush=True,
+        )
+        bws_stats = None
 
     # A partially loaded index passes per-query guards but would wipe most
     # hubs for 24h. Compare against the live file.
@@ -631,7 +644,8 @@ def main() -> None:
         )
 
     upload(hub_stats, HUB_KEY)
-    upload(bws_stats, BWS_KEY)
+    if bws_stats is not None:
+        upload(bws_stats, BWS_KEY)
 
     print("Generating item_data_providers.json...", flush=True)
     try:
@@ -645,22 +659,30 @@ def main() -> None:
         )
         idp = None
 
-    # Exit non-zero on IDP failure so post_indexer's SSM status check alerts;
-    # the hub stats uploads above have already happened either way.
-    if idp is None:
+    if idp is not None:
+        upload(idp, IDP_KEY, compact=True)
+
+    if bws_stats is not None and idp is not None:
         print(
-            f"Done with errors. {hub_count} hubs uploaded; "
-            f"item_data_providers.json not updated. generated_at={generated_at}",
+            f"Done. {hub_count} hubs, {len(idp['items']):,} item mappings, "
+            f"generated_at={generated_at}",
             flush=True,
         )
-        sys.exit(1)
+        return
 
-    upload(idp, IDP_KEY, compact=True)
+    # Exit non-zero on any partial failure so post_indexer's SSM status
+    # check alerts. The uploads above stand either way.
+    skipped = []
+    if bws_stats is None:
+        skipped.append("hub_stats_bws.json")
+    if idp is None:
+        skipped.append("item_data_providers.json")
     print(
-        f"Done. {hub_count} hubs, {len(idp['items']):,} item mappings, "
-        f"generated_at={generated_at}",
+        f"Done with errors. {hub_count} hubs uploaded; not updated: "
+        f"{', '.join(skipped)}. generated_at={generated_at}",
         flush=True,
     )
+    sys.exit(1)
 
 
 if __name__ == "__main__":
