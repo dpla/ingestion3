@@ -48,7 +48,7 @@ import time
 import traceback
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import boto3
@@ -75,6 +75,9 @@ EVENT_CATEGORY_PREFIXES = [
     "Click Through : ",
 ]
 
+# Known non-item categories; the drift check skips them.
+IGNORED_CATEGORY_PREFIXES = ("View API Item : ", "Browse")
+
 # DPLA item IDs are 32 hex chars. Filters out GA4's "(other)" bucket rows
 # and malformed labels.
 ITEM_ID_RE = re.compile(r"[0-9a-f]{32}")
@@ -95,7 +98,8 @@ def _es_search(url: str, payload: bytes, timeout: int, query: dict) -> dict:
 
 
 def es_query(query: dict, timeout: int = 30) -> dict:
-    """Search ES, retrying transient failures (network, 5xx, shard errors)."""
+    """Search ES, retrying transient failures (network, 5xx, shard errors,
+    garbled response body)."""
     url = f"http://{ES_HOST}:{ES_PORT}/dpla_alias/_search"
     payload = json.dumps(query).encode()
     for attempt in range(3):
@@ -105,7 +109,7 @@ def es_query(query: dict, timeout: int = 30) -> dict:
             if e.code < 500:
                 raise
             err: Exception = e
-        except (OSError, RuntimeError) as e:
+        except (OSError, RuntimeError, ValueError) as e:
             err = e
         wait = 2 * (2**attempt)
         print(
@@ -208,6 +212,31 @@ def upload(data: dict, key: str, compact: bool = False) -> None:
     print(f"  Uploaded s3://{BUCKET}/{key}", flush=True)
 
 
+def existing_hub_count() -> Optional[int]:
+    """Hub count in the live hub_stats.json, or None if absent or unreadable.
+
+    Never raises: a floor guard that cannot read the floor skips the check
+    rather than abort a run that already built good data.
+    """
+    try:
+        obj = aws_client("s3").get_object(Bucket=BUCKET, Key=HUB_KEY)
+        data = json.loads(obj["Body"].read())
+    except botocore.exceptions.ClientError as e:
+        code = e.response["Error"]["Code"]
+        if code != "NoSuchKey":
+            print(
+                f"  WARNING: could not read existing {HUB_KEY} ({code}); "
+                "hub-count floor check skipped.",
+                flush=True,
+            )
+        return None
+    except ValueError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    return len(data.get("hubs") or {})
+
+
 # ---------------------------------------------------------------------------
 # item_data_providers.json
 # ---------------------------------------------------------------------------
@@ -234,6 +263,25 @@ def recent_months_range() -> tuple[str, str]:
     )
 
 
+def month_windows(start_date: str, end_date: str) -> list:
+    """Split [start_date, end_date] into calendar-month windows.
+
+    One report per month keeps cardinality low: less "(other)" collapse
+    and thresholding.
+    """
+    start = datetime.strptime(start_date, "%Y-%m-%d").date()
+    end = datetime.strptime(end_date, "%Y-%m-%d").date()
+    windows = []
+    cursor = start
+    while cursor <= end:
+        month_end = cursor.replace(
+            day=calendar.monthrange(cursor.year, cursor.month)[1]
+        )
+        windows.append((cursor.isoformat(), min(month_end, end).isoformat()))
+        cursor = month_end + timedelta(days=1)
+    return windows
+
+
 def fetch_ga4_credentials() -> dict:
     """Fetch GA4 service account JSON from AWS Secrets Manager."""
     secret = aws_client("secretsmanager").get_secret_value(SecretId=GA4_SECRET_NAME)
@@ -241,7 +289,9 @@ def fetch_ga4_credentials() -> dict:
     return json.loads(raw)
 
 
-def ga4_item_ids(credentials: dict, start_date: str, end_date: str) -> set:
+def ga4_item_ids(
+    credentials: dict, start_date: str, end_date: str, check_drift: bool = True
+) -> set:
     """Return the set of item IDs from all four event tables in
     [start_date, end_date].
 
@@ -312,6 +362,7 @@ def ga4_item_ids(credentials: dict, start_date: str, end_date: str) -> set:
     item_ids: set = set()
     dropped = 0
     thresholded = False
+    data_loss = False
     offset = 0
     page_size = 10000
 
@@ -337,12 +388,10 @@ def ga4_item_ids(credentials: dict, start_date: str, end_date: str) -> set:
             limit=page_size,
         )
         response = run_report_with_retry(request)
+        # Partial harvest beats none: the merge only adds, and the Rails
+        # side falls back to the DPLA API for any id not collected.
         if response.metadata.data_loss_from_other_row:
-            raise RuntimeError(
-                "GA4 collapsed some event_label values into the '(other)' "
-                "row (data_loss_from_other_row); this window is missing "
-                "item ids that a re-query cannot recover."
-            )
+            data_loss = True
         if response.metadata.subject_to_thresholding:
             thresholded = True
         if not response.rows:
@@ -364,12 +413,22 @@ def ga4_item_ids(credentials: dict, start_date: str, end_date: str) -> set:
             f"  {dropped:,} label rows dropped (no 32-hex id in label)",
             flush=True,
         )
+    if data_loss:
+        print(
+            f"  WARNING: GA4 collapsed some event_label values into "
+            f"'(other)' for {start_date} → {end_date}; ids in that bucket "
+            f"were not collected.",
+            flush=True,
+        )
     if thresholded:
         print(
             "  WARNING: GA4 withheld low-user rows from this report "
             "(subject_to_thresholding); some item ids are missing.",
             flush=True,
         )
+
+    if not check_drift:
+        return item_ids
 
     # Drift check: EVENT_CATEGORY_PREFIXES is hand-copied from the Rails
     # app. Surface any "{event} : {hub}" category we are not harvesting.
@@ -390,6 +449,7 @@ def ga4_item_ids(credentials: dict, start_date: str, end_date: str) -> set:
             for c in categories
             if " : " in c
             and not any(c.startswith(p) for p in EVENT_CATEGORY_PREFIXES)
+            and not c.startswith(IGNORED_CATEGORY_PREFIXES)
         )
         if unknown:
             print(
@@ -484,14 +544,27 @@ def build_item_data_providers(generated_at: str) -> Optional[dict]:
         start_date = GA4_HISTORY_START
 
     print(f"  Querying GA4 {start_date} → {end_date}...", flush=True)
+    windows = month_windows(start_date, end_date)
+    if not windows:
+        print(
+            f"  ERROR: no months to query ({start_date} is after {end_date}); "
+            "check GA4_HISTORY_START. Leaving item_data_providers.json untouched.",
+            flush=True,
+        )
+        return None
+
     credentials = fetch_ga4_credentials()
-    seen_ids = ga4_item_ids(credentials, start_date, end_date)
+    seen_ids: set = set()
+    for i, (win_start, win_end) in enumerate(windows):
+        seen_ids |= ga4_item_ids(
+            credentials, win_start, win_end, check_drift=(i == len(windows) - 1)
+        )
     print(f"  {len(seen_ids):,} item IDs from GA4", flush=True)
 
     if not seen_ids:
         print(
-            "  ERROR: GA4 returned no item IDs — query or tagging is broken; "
-            "leaving item_data_providers.json untouched.",
+            "  ERROR: GA4 returned no item IDs; query or tagging is broken. "
+            "Leaving item_data_providers.json untouched.",
             flush=True,
         )
         return None
@@ -504,13 +577,20 @@ def build_item_data_providers(generated_at: str) -> Optional[dict]:
     resolved = resolve_ids_from_es(list(seen_ids))
     if not resolved:
         print(
-            "  ERROR: none of the GA4 ids resolved in ES — index or field "
-            "mismatch; leaving item_data_providers.json untouched.",
+            "  ERROR: none of the GA4 ids resolved in ES (index or field "
+            "mismatch); leaving item_data_providers.json untouched.",
             flush=True,
         )
         return None
     current_items.update(resolved)
     print(f"  {len(resolved):,} IDs resolved", flush=True)
+
+    if len(current_items) > 150_000:
+        print(
+            f"  WARNING: mapping at {len(current_items):,} ids; shard the S3 "
+            "file before ~200k (see ItemDataProviders in the Rails app).",
+            flush=True,
+        )
 
     return {"generated_at": generated_at, "items": current_items}
 
@@ -540,6 +620,15 @@ def main() -> None:
 
     bws_stats = build_stats(bws=True, generated_at=generated_at)
     print(f"  {len(bws_stats['hubs'])} hubs with BWS items", flush=True)
+
+    # A partially loaded index passes per-query guards but would wipe most
+    # hubs for 24h. Compare against the live file.
+    previous = existing_hub_count()
+    if previous and hub_count < previous * 0.9:
+        raise RuntimeError(
+            f"Hub count dropped from {previous} to {hub_count}; the index "
+            "may be mid-rebuild. Refusing to overwrite the live stats files."
+        )
 
     upload(hub_stats, HUB_KEY)
     upload(bws_stats, BWS_KEY)
