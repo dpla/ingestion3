@@ -56,7 +56,7 @@ The full PBCore → Dublin Core crosswalk this mapping follows is published at
 | `dataProvider` | `pbcoreAnnotation[@annotationType="organization"]` (top-level) | The contributing/holding organization (e.g. "University of Houston", "GBH", "Vision Maker Media"). Falls back to `"American Archive of Public Broadcasting"` if none. |
 | `isShownAt` | *(constructed)* | `https://americanarchive.org/catalog/{id}` where `{id}` is the AACIP id normalized to the **underscore** form (`cpb-aacip_513-000000145w`). The id arrives with `/`, `-`, or `_` after `cpb-aacip`; all are normalized to `_`. |
 | `preview` (thumbnail) | *(constructed, gated)* | `https://s3.amazonaws.com/americanarchive.org/thumbnail/{id}.jpg` where `{id}` is the **all-hyphen** form (`cpb-aacip-513-000000145w`). **Only emitted when the record is flagged `Level of User Access = "Online Reading Room"`** — non-online assets resolve to a `*_NOT_AVAIL.png` placeholder, so no preview is emitted for them. Serialized to the API as the field literally named `object`. |
-| `edmRights` | `pbcoreRightsSummary\rightsLink` | Standardized rights URI (rightsstatements.org / CC), http only. Absent in the current samples; present on some AAPB records. |
+| `edmRights` | `pbcoreRightsSummary\rightsLink` | Standardized rights URI (http only); `/page/` forms normalized to `/vocab/`. **Vanishingly rare in the full feed: only 142 of 348,689 records (0.04%) carry one** — all `rightsstatements.org` "In Copyright" (81 `/page/InC/`, 61 `/vocab/InC/`). See §3/§4. |
 | `rights` | `pbcoreRightsSummary\rightsSummary` | Free-text rights statement. AAPB uses two shapes: a plain sentence (used verbatim, e.g. "In Copyright"), or a WGBH-internal **structured blob** `Rights Note:…,Rights Type:…,Rights Credit:…,Rights Holder:…` (a WGBH convention packed into the free-text element — *not* PBCore; see §4). For the blob, the `Rights Note` field is used as the statement (the raw `Key:Value` string is not surfaced). Empty when a record has no `rightsSummary` (see §3). |
 | `rightsHolder` | `pbcoreRightsSummary\rightsSummary` → `Rights Holder` | The `Rights Holder` field parsed out of a structured WGBH rights blob (e.g. "WGBH Educational Foundation"). Empty for plain-text rights. **NB:** captured in the MAP model but, like `genre`, the JSON-L index serializer does not project `rightsHolder` (see §3). |
 | `originalRecord` | *(whole record)* | Full PBCore XML, `Utils.formatXml`. |
@@ -170,7 +170,7 @@ the options.
 | DPLA field | Status | Opportunity |
 |---|---|---|
 | `preview` (thumbnail) | Emitted for ORR records only | Correct per AAPB's access model. For non-ORR records there is no online asset, so no thumbnail is appropriate. No change recommended beyond confirming the ORR gate. |
-| `edmRights` | Usually empty | Present only when a record has `rightsSummary\rightsLink`. Encourage AAPB to populate a `rightsstatements.org`/CC URI in `rightsLink` so items get a standardized rights statement. |
+| `edmRights` | **Almost always empty — mapped for only 142 of 348,689 records (0.04%)** | Present only when a record has `rightsSummary\rightsLink` (all 142 are `rightsstatements.org` "In Copyright"). Encourage AAPB to populate `rightsstatements.org`/CC URIs across the feed. |
 
 > **Media-field note.** DPLA's live media roles are `isShownAt` (landing page),
 > `preview` (the thumbnail, serialized to the API as `object`), and `mediaMaster`
