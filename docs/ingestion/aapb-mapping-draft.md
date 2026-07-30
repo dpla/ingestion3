@@ -17,14 +17,18 @@ See [README_TEST_HUBS.md](README_TEST_HUBS.md).
   for missing rights** (see §3/§4 — the top issue to resolve).
 - **Harvest method:** AAPB's Solr API via
   [`AapbHarvester`](../../src/main/scala/dpla/ingestion3/harvesters/api/AapbHarvester.scala)
-  (`harvest.type = "api"`). AAPB's OAI-PMH endpoint (`americanarchive.org/oai.xml`)
-  returns HTTP 500, so the harvester pages `https://americanarchive.org/api.json`
-  with Solr **`cursorMark`** (cap-free deep enumeration; `sort=id asc`) and pulls the
-  full PBCore per record inline via `fl=id,xml` — one pass, no per-record `.pbcore`
-  fetch. **Scope** is set by `aapb.harvest.setlist` (comma-separated `access_types`,
-  OR'd into an `fq`); default = the digitized ∪ online ∪ on-location superset
-  (~348,689 records). See §4 for the scope options and rationale. (Per-record PBCore
-  is also at `…/catalog/{id}.pbcore` and `…/api/{id}.xml`.)
+  (`harvest.type = "api"`). AAPB *does* expose an OAI-PMH feed, but it is unsuitable
+  for this hub: `ListRecords` works only in **MODS** (not PBCore) and only for
+  **Online Reading Room** items (~187k), while `Identify`, `ListMetadataFormats`, and
+  the `oai_dc`/`pbcore` prefixes all return HTTP 500 (verified July 2026). To get
+  **PBCore across the full media-bearing superset**, the harvester instead pages
+  `https://americanarchive.org/api.json` with Solr **`cursorMark`** (cap-free deep
+  enumeration; `sort=id asc`) and pulls the full PBCore per record inline via
+  `fl=id,xml` — one pass, no per-record `.pbcore` fetch. **Scope** is set by
+  `aapb.harvest.setlist` (comma-separated `access_types`, OR'd into an `fq`); default =
+  the digitized ∪ online ∪ on-location superset (~348,689 records). See §4 for the
+  scope options, the OAI trade-off, and rationale. (Per-record PBCore is also at
+  `…/catalog/{id}.pbcore` and `…/api/{id}.xml`.)
 - **DPLA model & serialization:** field types in
   [`DplaMapData.scala`](../../src/main/scala/dpla/ingestion3/model/DplaMapData.scala);
   base field defaults and required/optional validation flags in the
@@ -231,11 +235,19 @@ no clear equivalent in the AAPB PBCore.
   Adding it as a fallback source for `rights`/`edmRights` would rescue all 3,217 —
   small, clean, and correct, independent of the policy decision above.
 - **Harvest method (validated at full scale, but confirm the channel with AAPB).**
-  OAI-PMH is down (HTTP 500), so `AapbHarvester` pages the Solr API with **`cursorMark`**
-  and pulls the PBCore inline via `fl=id,xml`. A **full test harvest of the entire
-  superset (348,689 records) completed on EC2 in ~4 min** — exact count match, zero
-  records dropped — and the full `map → enrich → jsonl` pipeline then ran successfully
-  (output retained on EC2, **not synced to S3**).
+  `AapbHarvester` pages the Solr API with **`cursorMark`** and pulls the PBCore inline
+  via `fl=id,xml`. A **full test harvest of the entire superset (348,689 records)
+  completed on EC2 in ~4 min** — exact count match, zero records dropped — and the full
+  `map → enrich → jsonl` pipeline then ran successfully (output retained on EC2,
+  **not synced to S3**).
+- **Why not OAI-PMH?** AAPB *has* an OAI feed and `ListRecords` works
+  (resumptionToken paging, 100/page), **but it serves MODS only and Online-Reading-Room
+  items only** (`Identify`, `ListMetadataFormats`, and the `oai_dc`/`pbcore` prefixes
+  return HTTP 500 — verified July 2026). Using it would mean a *different* mapper (MODS,
+  not the PBCore mapper here) and a *smaller scope* (~187k ORR items, losing the
+  on-location/digitized records). The Solr API was chosen to get **PBCore across the
+  full media superset** — not because OAI is entirely down. (An earlier draft
+  overstated this as "OAI is down"; corrected.)
 - **⚠️ The Solr API is documented but "experimental" — coordinate with AAPB before
   production.** The [AAPB2 README](https://github.com/WGBH-MLA/AAPB2) documents the API
   (public, no key, CORS-enabled, and it explicitly states *"All AAPB metadata records …
@@ -330,10 +342,13 @@ no clear equivalent in the AAPB PBCore.
    DPLA could apply as a default?
 2. Harvest channel: AAPB's Solr API is documented but flagged *"experimental … not
    guaranteed,"* the `/api.json` endpoint is framed for "summary statistics / limited
-   access," our `cursorMark` paging is undocumented, and it is rate-limited. Is throttled
-   API harvesting acceptable long-term, or would AAPB prefer a negotiated **bulk PBCore
-   export** (their sanctioned bulk path) / a revived OAI feed? Can DPLA be added to the
-   API-change notification list?
+   access," our `cursorMark` paging is undocumented, and it is rate-limited. The OAI-PMH
+   feed is a partial alternative — `ListRecords` works but **MODS-only and ORR-only**
+   (other verbs/formats 500), so it would need a MODS mapper and would miss the
+   on-location/digitized records. Is throttled API harvesting acceptable long-term, would
+   AAPB prefer a negotiated **bulk PBCore export** (their sanctioned bulk path), or could
+   they fix OAI to serve PBCore for the full set? Can DPLA be added to the API-change
+   notification list?
 3. Scope: confirm DPLA should ingest only Online Reading Room items.
 4. Duplication: how to reconcile with AAPB content already in DPLA via Digital Commonwealth.
 5. Multi-value institutions: when a record lists several `organization` annotations

@@ -18,7 +18,8 @@ class IthakaProfile extends XmlProfile {
   * production).
   *
   * PBCore 2.x records harvested from AAPB's Solr API via cursorMark paging (AAPB's
-  * OAI-PMH endpoint is non-functional). Set `aapb.harvest.type = "api"` in i3.conf.
+  * OAI-PMH feed serves MODS-only / ORR-only, so it can't supply PBCore for the full
+  * corpus). Set `aapb.harvest.type = "api"` in i3.conf.
   * See docs/ingestion/README_TEST_HUBS.md and docs/ingestion/aapb-mapping-draft.md.
   */
 class AapbProfile extends XmlProfile {

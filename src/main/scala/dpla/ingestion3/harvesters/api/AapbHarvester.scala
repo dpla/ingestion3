@@ -17,10 +17,11 @@ import scala.util.{Failure, Success, Try}
 /** TEST HUB — see docs/ingestion/README_TEST_HUBS.md and
   * docs/ingestion/aapb-mapping-draft.md.
   *
-  * Harvester for the American Archive of Public Broadcasting (AAPB). AAPB's
-  * OAI-PMH endpoint is non-functional, so this harvests from AAPB's Solr API
-  * (`https://americanarchive.org/api.json`), pulling the full PBCore document for
-  * each record inline via `fl=id,xml`.
+  * Harvester for the American Archive of Public Broadcasting (AAPB). AAPB's OAI-PMH
+  * feed serves MODS-only and Online-Reading-Room items only (Identify/ListMetadataFormats
+  * and non-MODS prefixes return HTTP 500), so to get PBCore across the full media-bearing
+  * corpus this harvests from AAPB's Solr API (`https://americanarchive.org/api.json`),
+  * pulling the full PBCore document for each record inline via `fl=id,xml`.
   *
   * Enumeration uses Solr **`cursorMark`** paging (not `start`/offset): the first
   * request sends `cursorMark=*`, each response returns a `nextCursorMark`, and the
