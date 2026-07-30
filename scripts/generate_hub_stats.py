@@ -234,6 +234,14 @@ def existing_hub_count() -> Optional[int]:
         return None
     except ValueError:
         return None
+    except Exception as e:
+        # Skip the floor check
+        print(
+            f"  WARNING: could not read existing {HUB_KEY} "
+            f"({e.__class__.__name__}); hub-count floor check skipped.",
+            flush=True,
+        )
+        return None
     if not isinstance(data, dict):
         return None
     return len(data.get("hubs") or {})
