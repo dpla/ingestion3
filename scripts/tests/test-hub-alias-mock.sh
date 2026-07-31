@@ -50,14 +50,16 @@ mkdir -p \
 
 PYTHON_BIN="$REPO_ROOT/venv/bin/python"
 
-# AWS_PROFILE is cleared so results do not depend on the caller's shell;
-# common.sh unsets an empty profile (the EC2 instance-role path).
+# AWS_PROFILE and I3_STRICT_HUB_NAMES are cleared so results do not depend
+# on the caller's shell; common.sh unsets an empty profile (the EC2
+# instance-role path). The strict-mode test sets I3_STRICT_HUB_NAMES=1 itself.
 run_with_stubbed_aws() {
     PATH="$FAKE_BIN:$PATH" \
     AWS_CALLS_LOG="$AWS_CALLS_LOG" \
     DPLA_DATA="$DATA_DIR" \
     I3_HOME="$REPO_ROOT" \
     AWS_PROFILE="" \
+    I3_STRICT_HUB_NAMES="" \
     "$@"
 }
 
@@ -107,6 +109,7 @@ AWS_CALLS_LOG="$AWS_CALLS_LOG" \
 DPLA_DATA="$DATA_DIR" \
 I3_HOME="$REPO_ROOT" \
 AWS_PROFILE=dpla \
+I3_STRICT_HUB_NAMES="" \
 "$REPO_ROOT/scripts/s3-sync.sh" tn
 assert_log_contains "AWS_PROFILE=dpla s3 sync $DATA_DIR/tn/ s3://dpla-master-dataset/tennessee/"
 assert_log_line_no_profile "AWS_PROFILE=dpla s3 sync $DATA_DIR/tn/ s3://dpla-master-dataset/tennessee/"
@@ -150,10 +153,12 @@ hathitrust.s3_destination = "s3://dpla-master-dataset/hathitrust/"
 EOF
 
   PATH="$FAKE_BIN:$PATH" AWS_CALLS_LOG="$AWS_CALLS_LOG" \
+    I3_STRICT_HUB_NAMES="" \
     "$PYTHON_BIN" -m scheduler.orchestrator.main --dry-run \
     --config "$I3_CANONICAL_CONF" --hub=tn,hathi >/dev/null
 
   PATH="$FAKE_BIN:$PATH" AWS_CALLS_LOG="$AWS_CALLS_LOG" \
+    I3_STRICT_HUB_NAMES="" \
     "$PYTHON_BIN" -m scheduler.orchestrator.main --dry-run \
     --config "$I3_CANONICAL_CONF" --hub=tennessee,hathitrust >/dev/null
 fi
