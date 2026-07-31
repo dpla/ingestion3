@@ -25,9 +25,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPTS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$SCRIPTS_ROOT/common.sh"
 
-# Setup Java environment (4g for email)
-setup_java "4g" || die "Failed to setup Java environment"
-
 # Parse options
 SKIP_CONFIRM=false
 EMAIL_OVERRIDE=""
@@ -158,6 +155,8 @@ echo ""
 
 # Send email using the Scala Emailer
 echo "Sending email..."
+
+setup_java "4g" || die "Failed to setup Java environment"
 
 cd "$I3_HOME"
 

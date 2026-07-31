@@ -234,7 +234,34 @@ test_syntax() {
         if [[ -f "$script_path" ]]; then
             run_test "Syntax: $script" "bash -n '$script_path'"
         else
-            log_skip "Syntax: $script (file not found)"
+            TESTS_RUN=$((TESTS_RUN + 1))
+            log_fail "Syntax: $script (file not found)"
+        fi
+    done
+}
+
+# =============================================================================
+# Test: Python script syntax
+# =============================================================================
+
+test_python_syntax() {
+    echo ""
+    echo "=========================================="
+    echo "  Testing Python Script Syntax"
+    echo "=========================================="
+
+    local scripts=(
+        "generate_hub_stats.py"
+        "export_item_attribution.py"
+    )
+
+    for script in "${scripts[@]}"; do
+        local script_path="$SCRIPTS_DIR/$script"
+        if [[ -f "$script_path" ]]; then
+            run_test "Python syntax: $script" "python3 -m py_compile '$script_path'"
+        else
+            TESTS_RUN=$((TESTS_RUN + 1))
+            log_fail "Python syntax: $script (file not found)"
         fi
     done
 }
@@ -1038,6 +1065,7 @@ main() {
     # Run tests
     test_common_sh
     test_syntax
+    test_python_syntax
     test_referenced_script_paths
     
     if [[ "$QUICK_MODE" != "true" ]]; then
