@@ -64,6 +64,8 @@ _es_stripped = ES_HOST.replace("https://", "").replace("http://", "").rstrip("/"
 _es_parts    = _es_stripped.rsplit(":", 1)
 ES_HOST_NAME = _es_parts[0]
 ES_PORT      = _es_parts[1] if len(_es_parts) > 1 else "9200"
+CONF_REPO         = _env.get("INGESTION3_CONF_REPO", os.path.expanduser("~/Documents/Repos/ingestion3-conf"))
+I3_CONF_PATH      = os.path.join(CONF_REPO, "i3.conf")
 S3_DATASET        = "dpla-master-dataset"
 S3_BATCH_BASE     = "dpla-provider-export"
 SPARKINDEXER_JAR  = "s3://dpla-sparkindexer/sparkindexer-assembly.jar"
@@ -331,9 +333,60 @@ def check_jar_freshness():
         warn("Could not parse JAR listing — check manually.")
 
 
+# ---------- hub list helpers ----------
+
+def get_all_hubs():
+    """Return all hub names found in s3://dpla-master-dataset/."""
+    out = aws(["s3", "ls", f"s3://{S3_DATASET}/", "--region", REGION])
+    return [line.strip().rstrip("/").split()[-1] for line in out.splitlines() if line.strip().endswith("/")]
+
+
+def get_excluded_hubs_from_conf():
+    """Read i3.conf and return the set of S3 hub prefix names where included_in_index = false.
+
+    Some hubs have a different short name in i3.conf vs their S3 prefix
+    (e.g. hathi → hathitrust, tn → tennessee). CONF_TO_S3 maps conf names
+    to their actual S3 prefix so exclusions work correctly either way.
+    """
+    import re
+    CONF_TO_S3 = {
+        "hathi":      "hathitrust",
+        "tn":         "tennessee",
+    }
+    excluded = set()
+    if not os.path.exists(I3_CONF_PATH):
+        warn(f"i3.conf not found at {I3_CONF_PATH} — no hubs excluded from conf.")
+        return excluded
+    with open(I3_CONF_PATH) as f:
+        for line in f:
+            m = re.match(r'^([\w-]+)\.included_in_index\s*=\s*false', line.strip())
+            if m:
+                name = m.group(1).lower()
+                excluded.add(CONF_TO_S3.get(name, name))
+    return excluded
+
+
+def build_providers_arg(extra_exclude=None):
+    """Build comma-separated include list (hub/ format).
+
+    Automatically excludes hubs with included_in_index = false in i3.conf.
+    Optionally also excludes hubs in extra_exclude (comma-separated string).
+    """
+    excluded = get_excluded_hubs_from_conf()
+    if extra_exclude:
+        excluded |= {h.strip().lower() for h in extra_exclude.split(",")}
+    all_hubs = get_all_hubs()
+    included = [h for h in all_hubs if h.lower() not in excluded]
+    if not included:
+        sys.exit("No hubs remaining after exclusions — aborting.")
+    warn(f"Excluding {len(excluded)} hub(s): {', '.join(sorted(excluded))}")
+    info(f"Indexing {len(included)} hub(s).")
+    return ",".join(f"{h}/" for h in included)
+
+
 # ---------- launch cluster ----------
 
-def launch_cluster():
+def launch_cluster(providers_arg="all"):
     step(5, "Launch sparkindexer EMR cluster")
     confirm("All pre-flight checks passed. Launch the cluster now?")
 
@@ -364,7 +417,7 @@ def launch_cluster():
                 "--executor-cores", "2",
                 "--class", "dpla.ingestion3.indexer.IndexerMain",
                 SPARKINDEXER_JAR,
-                ES_HOST_NAME, ES_PORT, "dpla-all", "all", "now",
+                ES_HOST_NAME, ES_PORT, "dpla-all", providers_arg, "now",
                 "3", "1", "dpla-master-dataset", "tech@dp.la",
             ],
             "Type": "CUSTOM_JAR",
@@ -646,11 +699,18 @@ def main():
     parser.add_argument("--skip-preflight", action="store_true", help="Skip pre-flight checks")
     parser.add_argument("--alias-swap-only", action="store_true", help="Skip launch, just do alias swap")
     parser.add_argument("--verify-only", action="store_true", help="Just check API count, show delta, and Slack notify")
+    parser.add_argument("--exclude-hubs", help="Additional hubs to exclude (comma-separated) on top of those marked included_in_index=false in i3.conf")
+    parser.add_argument("--dry-run", action="store_true", help="Print the providers arg that would be sent to the indexer, then exit")
     args = parser.parse_args()
 
     print("\nDPLA SPARKINDEXER")
     print(f"Region: {REGION}")
     print(f"Time:   {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+    if args.dry_run:
+        providers_arg = build_providers_arg(args.exclude_hubs)
+        print(f"\n  providers_arg = {providers_arg}")
+        return
 
     if args.verify_only:
         verify_api()
@@ -684,7 +744,8 @@ def main():
         else:
             print("\n  Pre-flight checks skipped.")
 
-        cluster_id = launch_cluster()
+        providers_arg = build_providers_arg(args.exclude_hubs)
+        cluster_id = launch_cluster(providers_arg)
         success = monitor_cluster(cluster_id)
         if not success:
             sys.exit(1)
