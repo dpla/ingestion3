@@ -342,8 +342,17 @@ def get_all_hubs():
 
 
 def get_excluded_hubs_from_conf():
-    """Read i3.conf and return the set of hub names where included_in_index = false."""
+    """Read i3.conf and return the set of S3 hub prefix names where included_in_index = false.
+
+    Some hubs have a different short name in i3.conf vs their S3 prefix
+    (e.g. hathi → hathitrust, tn → tennessee). CONF_TO_S3 maps conf names
+    to their actual S3 prefix so exclusions work correctly either way.
+    """
     import re
+    CONF_TO_S3 = {
+        "hathi":      "hathitrust",
+        "tn":         "tennessee",
+    }
     excluded = set()
     if not os.path.exists(I3_CONF_PATH):
         warn(f"i3.conf not found at {I3_CONF_PATH} — no hubs excluded from conf.")
@@ -352,7 +361,8 @@ def get_excluded_hubs_from_conf():
         for line in f:
             m = re.match(r'^([\w-]+)\.included_in_index\s*=\s*false', line.strip())
             if m:
-                excluded.add(m.group(1).lower())
+                name = m.group(1).lower()
+                excluded.add(CONF_TO_S3.get(name, name))
     return excluded
 
 
