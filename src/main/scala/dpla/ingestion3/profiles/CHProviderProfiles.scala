@@ -5,6 +5,7 @@ import dpla.ingestion3.harvesters.api._
 import dpla.ingestion3.harvesters.file._
 import dpla.ingestion3.harvesters.oai.LocalOaiHarvester
 import dpla.ingestion3.mappers.providers._
+import dpla.ingestion3.mappers.providers.experimental._
 
 class IthakaProfile extends XmlProfile {
   type Mapping = IthakaMapping
@@ -397,4 +398,20 @@ class WiProfile extends XmlProfile {
 
   override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new WiMapping
+}
+
+/** Arizona Memory Project (Recollect) — TEST HUB, not approved for production.
+  * See docs/ingestion/README_TEST_HUBS.md and amp-mapping-draft.md.
+  *
+  * Interim harvester: the generic DPLA JSONL file harvester. The AMP-specific
+  * harvest mechanism (Recollect API key / hub export / sitemap scrape) is still
+  * being decided; whichever is chosen emits the per-item JSON shape ArizonaMapping
+  * reads, so only this line changes when the real harvester lands.
+  */
+class ArizonaProfile extends JsonProfile {
+  type Mapping = ArizonaMapping
+
+  override def getHarvester: Class[_ <: Harvester] =
+    classOf[DplaJsonlFileHarvester]
+  override def getMapping = new ArizonaMapping
 }

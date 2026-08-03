@@ -22,6 +22,7 @@ object CHProviderRegistry {
   }
 
   private val registry = Map(
+    "arizona" -> new ArizonaProfile, // TEST HUB (experimental) — see README_TEST_HUBS.md
     "artstor" -> new IthakaProfile,
     "ithaka" -> new IthakaProfile,
     "bhl" -> new BhlProfile,
