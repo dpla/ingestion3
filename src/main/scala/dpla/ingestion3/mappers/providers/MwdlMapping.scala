@@ -6,155 +6,167 @@ import dpla.ingestion3.enrichments.normalizations.filters.{
   FormatTypeValuesBlockList
 }
 import dpla.ingestion3.enrichments.TaggingUtils._
-import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
+import dpla.ingestion3.mappers.utils.{Document, JsonExtractor, JsonMapping}
 import dpla.ingestion3.model.DplaMapData._
-import dpla.ingestion3.model.{nameOnlyAgent, _}
+import dpla.ingestion3.model._
 import dpla.ingestion3.utils.Utils
 import org.json4s.JValue
 import org.json4s.JsonDSL._
 
-import scala.xml._
-
-class MwdlMapping extends XmlMapping with XmlExtractor {
+class MwdlMapping extends JsonMapping with JsonExtractor {
 
   override val enforceDuplicateIds: Boolean = false
-
-  private val baseIsShownAt =
-    "https://utah-primoprod.hosted.exlibrisgroup.com/primo-explore/fulldisplay?docid="
-  private val suffixIsShownAt = "&context=L&vid=MWDL"
 
   val formatBlockList: Set[String] =
     DigitalSurrogateBlockList.termList ++
       FormatTypeValuesBlockList.termList
 
-  // ID minting functions
+  // ID minting
   override def useProviderName: Boolean = true
 
   override def getProviderName: Option[String] = Some("mwdl")
 
-  override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] =
-    extractString(data \\ "PrimoNMBib" \ "record" \ "control" \ "recordid")
+  override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
+    extractString(unwrap(data) \ "pnx" \ "control" \ "recordid")
 
   // SourceResource mapping
-  override def collection(data: Document[NodeSeq]): Seq[DcmiTypeCollection] =
-    extractStrings(data \\ "facets" \ "lfc01")
+  override def collection(data: Document[JValue]): Seq[DcmiTypeCollection] =
+    extractStrings(unwrap(data) \ "pnx" \ "facets" \ "lfc01")
       .map(nameOnlyCollection)
 
-  override def contributor(data: Document[NodeSeq]): Seq[EdmAgent] =
-    extractStrings(data \\ "display" \ "contributor")
+  override def contributor(data: Document[JValue]): Seq[EdmAgent] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "contributor")
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
-  override def creator(data: Document[NodeSeq]): Seq[EdmAgent] =
-    extractStrings(data \\ "display" \ "creator")
+  override def creator(data: Document[JValue]): Seq[EdmAgent] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "creator")
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
-  override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] =
-    // search/creationdate AND PrimoNMBib/record/display/creationdate
-    extractStrings(data \\ "display" \ "creationdate")
+  override def date(data: Document[JValue]): Seq[EdmTimeSpan] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "creationdate")
       .flatMap(_.splitAtDelimiter(";"))
       .map(stringOnlyTimeSpan)
 
-  override def description(data: Document[NodeSeq]): Seq[String] =
-    // search/description (contains dc:description, dcterms:abstract, and dcterms:tableOfContents)
-    extractStrings(data \\ "search" \ "description")
+  override def description(data: Document[JValue]): Seq[String] =
+    extractStrings(unwrap(data) \ "pnx" \ "search" \ "description")
       .map(_.limitCharacters(1000))
 
-  override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \\ "display" \ "lds05")
+  override def extent(data: Document[JValue]): ZeroToMany[String] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds05")
 
-  override def format(data: Document[NodeSeq]): ZeroToMany[String] =
-    extractStrings(data \\ "display" \ "format")
+  override def format(data: Document[JValue]): ZeroToMany[String] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "format")
       .map(_.applyBlockFilter(formatBlockList))
       .filter(_.nonEmpty)
 
-  override def identifier(data: Document[NodeSeq]): Seq[String] =
-    extractStrings(data \\ "control" \ "recordid")
+  override def identifier(data: Document[JValue]): Seq[String] =
+    extractStrings(unwrap(data) \ "pnx" \ "control" \ "recordid")
 
-  override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
-    extractStrings(data \\ "facets" \ "language")
+  override def language(data: Document[JValue]): Seq[SkosConcept] =
+    extractStrings(unwrap(data) \ "pnx" \ "facets" \ "language")
       .map(nameOnlyConcept)
 
-  override def place(data: Document[NodeSeq]): Seq[DplaPlace] =
-    extractStrings(data \\ "display" \ "lds08")
+  override def place(data: Document[JValue]): Seq[DplaPlace] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds08")
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyPlace)
 
-  override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
-    extractStrings(data \\ "display" \ "relation")
+  override def relation(data: Document[JValue]): ZeroToMany[LiteralOrUri] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "relation")
       .flatMap(_.splitAtDelimiter(";"))
       .map(eitherStringOrUri)
 
-  override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
-    (data \\ "display" \ "rights")
-      .flatMap(extractStrings)
+  override def rights(data: Document[JValue]): AtLeastOne[String] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "rights")
+      .flatMap(_.splitAtDelimiter(";"))
 
-  override def subject(data: Document[NodeSeq]): Seq[SkosConcept] =
-    // display/subject
-    extractStrings(data \\ "display" \ "subject")
+  override def subject(data: Document[JValue]): Seq[SkosConcept] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "subject")
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyConcept)
 
-  override def temporal(data: Document[NodeSeq]): ZeroToMany[EdmTimeSpan] =
-    extractStrings(data \\ "display" \ "lds09")
+  override def temporal(data: Document[JValue]): ZeroToMany[EdmTimeSpan] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds09")
       .map(stringOnlyTimeSpan)
 
-  override def title(data: Document[NodeSeq]): Seq[String] =
-    extractStrings(data \\ "display" \ "title")
+  override def title(data: Document[JValue]): Seq[String] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "title")
 
-  override def `type`(data: Document[NodeSeq]): Seq[String] =
-    // facets/rsrctype
-    extractStrings(data \\ "facets" \ "rsrctype")
+  override def `type`(data: Document[JValue]): Seq[String] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "type")
+      .map {
+        case "text_resource"         => "text"
+        case "score"                 => "notated music"
+        case "newspaper"             => "periodical"
+        case "database"              => "dataset"
+        case "dissertation"          => "text"
+        case "conference_proceeding" => "text"
+        case "reference_entry"       => "text"
+        case other                   => other
+      }
 
   // OreAggregation
-  override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
+  override def dplaUri(data: Document[JValue]): ZeroToOne[URI] =
     mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    (data \\ "display" \ "lds03")
-      .flatMap(extractStrings)
+  override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds03")
       .map(nameOnlyAgent)
 
-  override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
-    (data \\ "display" \ "lds13")
-      .flatMap(extractStrings)
+  override def edmRights(data: Document[JValue]): ZeroToMany[URI] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds13")
+      .filter(v =>
+        v.startsWith("http://rightsstatements.org") ||
+        v.startsWith("https://rightsstatements.org") ||
+        v.startsWith("http://creativecommons.org") ||
+        v.startsWith("https://creativecommons.org")
+      )
       .map(URI)
 
-  override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    // baseIsShownAt + control\recordid
-    (data \\ "control" \ "recordid")
-      .flatMap(extractStrings)
-      .map(baseIsShownAt + _.trim + suffixIsShownAt)
-      .map(stringOnlyWebResource)
+  override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
+    val fromDelivery =
+      extractStrings(unwrap(data) \ "delivery" \ "availabilityLinksUrl")
+        .filter(_.nonEmpty)
+    if (fromDelivery.nonEmpty)
+      fromDelivery.map(stringOnlyWebResource)
+    else
+      // Fallback: construct URL from record ID using the Primo VE catalog
+      extractStrings(unwrap(data) \ "pnx" \ "control" \ "recordid")
+        .map(id =>
+          s"https://utah-primo.hosted.exlibrisgroup.com/permalink/01UTAH_INST/MWDL/$id"
+        )
+        .map(stringOnlyWebResource)
+  }
 
-  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] =
-    // links > lln02
-    (data \\ "links" \ "lln02")
-      .flatMap(extractStrings)
+  override def iiifManifest(data: Document[JValue]): ZeroToMany[URI] =
+    extractStrings(unwrap(data) \ "pnx" \ "links" \ "lln02")
       .map(URI)
 
-  override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
-    Utils.formatXml(data)
+  override def originalRecord(data: Document[JValue]): ExactlyOne[String] =
+    Utils.formatJson(data)
 
-  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    (data \\ "LINKS" \ "thumbnail")
-      .flatMap(extractStrings)
+  override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
+    (unwrap(data) \ "delivery" \ "link")
+      .filter(node =>
+        extractString(node \ "displayLabel")
+          .getOrElse("")
+          .equalsIgnoreCase("thumbnail")
+      )
+      .flatMap(node => extractStrings(node \ "linkURL"))
       .map(stringOnlyWebResource)
 
-  override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
+  override def provider(data: Document[JValue]): ExactlyOne[EdmAgent] = agent
 
-  override def sidecar(data: Document[NodeSeq]): JValue =
-    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(
-      data
-    ))
+  override def sidecar(data: Document[JValue]): JValue =
+    ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
 
-  override def tags(data: Document[NodeSeq]): ZeroToMany[URI] =
+  override def tags(data: Document[JValue]): ZeroToMany[URI] =
     dataProvider(data)
       .flatMap(p => p.name)
       .flatMap(_.applyNwdhTags)
 
-  // Helper method
   def agent: EdmAgent = EdmAgent(
     name = Some("Mountain West Digital Library"),
     uri = Some(URI("http://dp.la/api/contributor/mwdl"))
