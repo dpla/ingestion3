@@ -113,7 +113,13 @@ def main():
                 ycount = MAX_SOURCE_SIZE  # we'll get as many as possible
             units.append({"source": source, "year": year, "count": ycount})
             source_total += ycount
-        print(f"  → {source_total:,} expected across years", flush=True)
+        if source_total == 0:
+            # No creationdate facet values — fall back to capped direct harvest
+            capped = min(total, MAX_SOURCE_SIZE)
+            print(f"  → year scanning yielded 0; falling back to capped direct harvest ({capped:,})", flush=True)
+            units.append({"source": source, "year": None, "count": capped})
+        else:
+            print(f"  → {source_total:,} expected across years", flush=True)
 
     total_expected = sum(u["count"] for u in units)
     result = {
