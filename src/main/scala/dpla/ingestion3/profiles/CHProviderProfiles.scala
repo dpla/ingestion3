@@ -218,7 +218,7 @@ class MtProfile extends XmlProfile {
 
 /** Mountain West Digital Library
   */
-class MwdlProfile extends XmlProfile {
+class MwdlProfile extends JsonProfile {
   type Mapping = MwdlMapping
 
   override def getHarvester: Class[_ <: Harvester] = classOf[MwdlHarvester]
