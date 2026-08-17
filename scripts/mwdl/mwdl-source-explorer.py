@@ -11,6 +11,7 @@ Output: mwdl-sources.json — used by mwdl-harvest.py.
 """
 
 import json
+import os
 import time
 import urllib.request
 import urllib.parse
@@ -48,6 +49,23 @@ OUTPUT_FILE = Path("/home/ec2-user/mwdl-harvest/mwdl-sources.json")
 OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 
+def slack_notify(msg: str) -> None:
+    token   = os.environ.get("SLACK_BOT_TOKEN") or os.environ.get("SLACK_TOKEN", "")
+    channel = os.environ.get("SLACK_CHANNEL", "C02HEU2L3")
+    if not token:
+        return
+    payload = json.dumps({"channel": channel, "text": msg}).encode()
+    req = urllib.request.Request(
+        "https://slack.com/api/chat.postMessage",
+        data=payload,
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
+    )
+    try:
+        urllib.request.urlopen(req, timeout=10)
+    except Exception:
+        pass
+
+
 def fetch_total(source: str, year: Optional[int] = None) -> int:
     mfacets = f"facet_data_source,include,{source}"
     if year is not None:
@@ -80,6 +98,7 @@ def main():
     units   = []   # list of {"source": ..., "year": ...|None, "count": ...}
     too_large = []
 
+    slack_notify(":arrow_forward: *mwdl source explorer started* — scanning 10 data sources")
     print("MWDL source explorer", flush=True)
     print(f"MAX_SOURCE_SIZE = {MAX_SOURCE_SIZE}", flush=True)
     print("=" * 60, flush=True)
@@ -135,6 +154,11 @@ def main():
     print("\n" + "=" * 60, flush=True)
     print(f"Done. {len(units)} harvestable units, {total_expected:,} expected records.", flush=True)
     print(f"Output: {OUTPUT_FILE}", flush=True)
+    slack_notify(
+        f":white_check_mark: *mwdl source explorer complete* — "
+        f"{len(units)} harvestable units, {total_expected:,} expected records. "
+        f"Ready to run mwdl-harvest.py."
+    )
 
 
 if __name__ == "__main__":

@@ -10,11 +10,29 @@ Output: /home/ec2-user/mwdl-harvest/mwdl-harvest.jsonl
 """
 
 import json
+import os
 import time
 import urllib.request
 import urllib.parse
 from pathlib import Path
 from typing import Optional
+
+
+def slack_notify(msg: str) -> None:
+    token   = os.environ.get("SLACK_BOT_TOKEN") or os.environ.get("SLACK_TOKEN", "")
+    channel = os.environ.get("SLACK_CHANNEL", "C02HEU2L3")
+    if not token:
+        return
+    payload = json.dumps({"channel": channel, "text": msg}).encode()
+    req = urllib.request.Request(
+        "https://slack.com/api/chat.postMessage",
+        data=payload,
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
+    )
+    try:
+        urllib.request.urlopen(req, timeout=10)
+    except Exception:
+        pass
 
 API_KEY = "l8xxe1772f53c1b54de8b25553fda6e224f5"
 BASE    = "https://api-na.hosted.exlibrisgroup.com/primo/v1/search"
@@ -128,6 +146,10 @@ def main():
                     pass
         print(f"  Loaded {len(seen_ids):,} seen IDs", flush=True)
 
+    slack_notify(
+        f":arrow_forward: *mwdl harvest started* — "
+        f"{len(remaining)} units remaining, {total_expected:,} expected records"
+    )
     print("MWDL Primo VE harvest", flush=True)
     print(f"  Total units:      {len(units)}", flush=True)
     print(f"  Already done:     {len(completed)}", flush=True)
@@ -186,9 +208,11 @@ def main():
 
     except KeyboardInterrupt:
         print(f"\nInterrupted. Progress saved. {docs_written:,} docs written.", flush=True)
+        slack_notify(f":warning: *mwdl harvest interrupted* — {docs_written:,} docs written so far")
     except Exception as e:
         print(f"\nError: {e}", flush=True)
         print(f"Progress saved. {docs_written:,} docs written.", flush=True)
+        slack_notify(f":x: *mwdl harvest ERROR* — {e}\n{docs_written:,} docs written so far")
     finally:
         out.close()
         save_progress(progress)
@@ -198,6 +222,10 @@ def main():
     print(f"  Unique docs written: {docs_written:,}", flush=True)
     print(f"  Expected:            {total_expected:,}", flush=True)
     print(f"  Output:              {OUTPUT_FILE}", flush=True)
+    slack_notify(
+        f":white_check_mark: *mwdl harvest complete* — "
+        f"{docs_written:,} unique records written. Ready to run mwdl-jsonl-to-avro.py."
+    )
 
 
 if __name__ == "__main__":

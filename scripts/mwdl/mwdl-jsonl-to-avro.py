@@ -7,8 +7,27 @@ Output: /home/ec2-user/data/mwdl/harvest/<TIMESTAMP>/mwdl_harvest.avro
 """
 
 import json
+import os
 import time
+import urllib.request
 from pathlib import Path
+
+
+def slack_notify(msg: str) -> None:
+    token   = os.environ.get("SLACK_BOT_TOKEN") or os.environ.get("SLACK_TOKEN", "")
+    channel = os.environ.get("SLACK_CHANNEL", "C02HEU2L3")
+    if not token:
+        return
+    payload = json.dumps({"channel": channel, "text": msg}).encode()
+    req = urllib.request.Request(
+        "https://slack.com/api/chat.postMessage",
+        data=payload,
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
+    )
+    try:
+        urllib.request.urlopen(req, timeout=10)
+    except Exception:
+        pass
 
 import fastavro
 
@@ -84,3 +103,8 @@ with open(manifest_path, "w") as f:
 
 print(f"Manifest: {stats['written']:,} records", flush=True)
 print(f"TIMESTAMP={TIMESTAMP}", flush=True)
+slack_notify(
+    f":white_check_mark: *mwdl avro conversion complete* — "
+    f"{stats['written']:,} records written ({stats['skipped']} skipped). "
+    f"Ready to run `ingest.sh mwdl --skip-harvest`."
+)
