@@ -15,6 +15,7 @@ import time
 import urllib.request
 import urllib.parse
 from pathlib import Path
+from typing import Optional
 
 API_KEY = "l8xxe1772f53c1b54de8b25553fda6e224f5"
 BASE    = "https://api-na.hosted.exlibrisgroup.com/primo/v1/search"
@@ -47,7 +48,7 @@ OUTPUT_FILE = Path("/home/ec2-user/mwdl-harvest/mwdl-sources.json")
 OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 
-def fetch_total(source: str, year: int | None = None) -> int:
+def fetch_total(source: str, year: Optional[int] = None) -> int:
     mfacets = f"facet_data_source,include,{source}"
     if year is not None:
         mfacets += f"|facet_creationdate,include,{year}"

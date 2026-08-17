@@ -14,6 +14,7 @@ import time
 import urllib.request
 import urllib.parse
 from pathlib import Path
+from typing import Optional
 
 API_KEY = "l8xxe1772f53c1b54de8b25553fda6e224f5"
 BASE    = "https://api-na.hosted.exlibrisgroup.com/primo/v1/search"
@@ -37,7 +38,7 @@ def unit_key(unit: dict) -> str:
     return f"{unit['source']}|{unit.get('year') or 'all'}"
 
 
-def fetch_page(source: str, year: int | None, offset: int) -> tuple[list, int]:
+def fetch_page(source: str, year: Optional[int], offset: int) -> "tuple[list, int]":
     mfacets = f"facet_data_source,include,{source}"
     if year is not None:
         mfacets += f"|facet_creationdate,include,{year}"
@@ -72,7 +73,7 @@ def fetch_page(source: str, year: int | None, offset: int) -> tuple[list, int]:
     raise RuntimeError(f"Failed after {MAX_RETRIES} retries (source={source}, year={year}, offset={offset})")
 
 
-def get_record_id(doc: dict) -> str | None:
+def get_record_id(doc: dict) -> Optional[str]:
     control  = doc.get("pnx", {}).get("control", {})
     if isinstance(control, list):
         control = control[0] if control else {}
