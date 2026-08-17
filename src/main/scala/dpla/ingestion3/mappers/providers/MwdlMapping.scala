@@ -27,7 +27,7 @@ class MwdlMapping extends JsonMapping with JsonExtractor {
   override def getProviderName: Option[String] = Some("mwdl")
 
   override def originalId(implicit data: Document[JValue]): ZeroToOne[String] =
-    extractString(unwrap(data) \ "pnx" \ "control" \ "recordid")
+    extractStrings(unwrap(data) \ "pnx" \ "control" \ "recordid").headOption
 
   // SourceResource mapping
   override def collection(data: Document[JValue]): Seq[DcmiTypeCollection] =
