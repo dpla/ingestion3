@@ -50,7 +50,7 @@ class MwdlMapping extends JsonMapping with JsonExtractor {
       .map(stringOnlyTimeSpan)
 
   override def description(data: Document[JValue]): Seq[String] =
-    extractStrings(unwrap(data) \ "pnx" \ "search" \ "description")
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "description")
       .map(_.limitCharacters(1000))
 
   override def extent(data: Document[JValue]): ZeroToMany[String] =

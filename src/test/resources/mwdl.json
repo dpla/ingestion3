@@ -1,0 +1,49 @@
+{
+  "@id": "https://utah-primo.hosted.exlibrisgroup.com/primo-explore/fulldisplay?docid=digcoll_slc_27works_598&context=L&vid=MWDL",
+  "context": "L",
+  "adaptor": "Local Search Engine",
+  "pnx": {
+    "control": {
+      "recordid": ["digcoll_slc_27works_598"],
+      "sourcerecordid": ["works_598"],
+      "sourceid": ["digcoll_slc_27"]
+    },
+    "display": {
+      "title": ["Folio: To Do Something With the Sky"],
+      "creator": ["Salt Lake Community College"],
+      "contributor": ["Salt Lake Community College (Creator)"],
+      "creationdate": ["2012"],
+      "description": ["Fall 2012 issue of Folio."],
+      "format": ["application/pdf", "photograph"],
+      "subject": ["Art; Literature; Poetry; writing"],
+      "rights": ["https://creativecommons.org/licenses/by-nc/4.0/"],
+      "language": ["eng"],
+      "type": ["text_resource"],
+      "relation": ["Publisher"],
+      "lds03": ["Salt Lake Community College Libraries"],
+      "lds05": [],
+      "lds08": ["Place"],
+      "lds09": [],
+      "lds13": ["http://rightsstatements.org/vocab/CNE/1.0/"]
+    },
+    "facets": {
+      "lfc01": ["Salt Lake Community College Scholarly and Creative Works"],
+      "language": ["eng"],
+      "rsrctype": ["text"]
+    },
+    "links": {}
+  },
+  "delivery": {
+    "availabilityLinksUrl": ["https://utah-primo.hosted.exlibrisgroup.com/permalink/01UTAH_INST/MWDL/digcoll_slc_27works_598"],
+    "link": [
+      {
+        "displayLabel": "thumbnail",
+        "linkURL": "https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/"
+      },
+      {
+        "displayLabel": "thumbnail",
+        "linkURL": "https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/"
+      }
+    ]
+  }
+}
