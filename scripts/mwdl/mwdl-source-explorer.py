@@ -26,8 +26,8 @@ SCOPE   = "MWDL"
 
 MAX_SOURCE_SIZE = 9900   # max records we can paginate in one query
 REST_S          = 12     # seconds between requests
-MAX_RETRIES     = 4
-TIMEOUT         = 120
+MAX_RETRIES     = 3
+TIMEOUT         = 30
 
 YEAR_RANGE = range(1800, 2031)
 
@@ -118,22 +118,29 @@ def main():
             continue
 
         # Too large — sub-partition by year
-        print(f"  → too large, scanning years...", flush=True)
+        # Bail early if 30 consecutive years return 0 (source has no creationdate facet)
+        EARLY_EXIT_ZEROS = 30
+        print(f"  → too large, scanning years (bail after {EARLY_EXIT_ZEROS} consecutive zeros)...", flush=True)
         too_large.append(source)
-        source_total = 0
+        source_total  = 0
+        consecutive_0 = 0
         for year in YEAR_RANGE:
             time.sleep(REST_S)
             ycount = fetch_total(source, year)
             if ycount == 0:
+                consecutive_0 += 1
+                if consecutive_0 >= EARLY_EXIT_ZEROS:
+                    print(f"    {EARLY_EXIT_ZEROS} consecutive zeros — stopping year scan early", flush=True)
+                    break
                 continue
+            consecutive_0 = 0
             print(f"    {year}: {ycount:,}", flush=True)
             if ycount > MAX_SOURCE_SIZE:
                 print(f"    !! {year} still too large ({ycount:,}) — capping at {MAX_SOURCE_SIZE}", flush=True)
-                ycount = MAX_SOURCE_SIZE  # we'll get as many as possible
+                ycount = MAX_SOURCE_SIZE
             units.append({"source": source, "year": year, "count": ycount})
             source_total += ycount
         if source_total == 0:
-            # No creationdate facet values — fall back to capped direct harvest
             capped = min(total, MAX_SOURCE_SIZE)
             print(f"  → year scanning yielded 0; falling back to capped direct harvest ({capped:,})", flush=True)
             units.append({"source": source, "year": None, "count": capped})
