@@ -56,17 +56,16 @@ def unit_key(unit: dict) -> str:
     return f"{unit['source']}|{unit.get('rtype') or 'all'}|{unit.get('creator') or 'all'}"
 
 
-def build_mfacets(unit: dict) -> str:
+def build_mfacets(unit: dict) -> "list[str]":
     parts = [f"facet_data_source,include,{unit['source']}"]
     if unit.get("rtype"):
         parts.append(f"facet_rtype,include,{unit['rtype']}")
     if unit.get("creator"):
         parts.append(f"facet_creator,include,{unit['creator']}")
-    return "|".join(parts)
+    return parts
 
 
 def fetch_page(unit: dict, offset: int) -> "tuple[list, int]":
-    mfacets = build_mfacets(unit)
     params = urllib.parse.urlencode({
         "vid":         VID,
         "tab":         TAB,
@@ -75,8 +74,8 @@ def fetch_page(unit: dict, offset: int) -> "tuple[list, int]":
         "limit":       str(LIMIT),
         "offset":      str(offset),
         "q":           "any,contains,a",
-        "multiFacets": mfacets,
-    })
+        "multiFacets": build_mfacets(unit),
+    }, doseq=True)
     url = f"{BASE}?{params}"
     req = urllib.request.Request(url)
 
@@ -95,7 +94,7 @@ def fetch_page(unit: dict, offset: int) -> "tuple[list, int]":
             print(f"    Error: {e}", flush=True)
             time.sleep(REST_BETWEEN_QUERIES)
 
-    raise RuntimeError(f"Failed after {MAX_RETRIES} retries (source={source}, year={year}, offset={offset})")
+    raise RuntimeError(f"Failed after {MAX_RETRIES} retries (unit={unit_key(unit)}, offset={offset})")
 
 
 def get_record_id(doc: dict) -> Optional[str]:

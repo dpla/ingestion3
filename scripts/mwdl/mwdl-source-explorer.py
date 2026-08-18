@@ -72,8 +72,8 @@ def slack_notify(msg: str) -> None:
         pass
 
 
-def _api_get(mfacets: str) -> dict:
-    """Single Primo VE API call; returns parsed JSON or {}."""
+def _api_get(facets: List[str]) -> dict:
+    """Single Primo VE API call with multiple facet filters; returns parsed JSON or {}."""
     params = urllib.parse.urlencode({
         "vid":         VID,
         "tab":         TAB,
@@ -82,8 +82,8 @@ def _api_get(mfacets: str) -> dict:
         "limit":       "1",
         "offset":      "0",
         "q":           "any,contains,a",
-        "multiFacets": mfacets,
-    })
+        "multiFacets": facets,
+    }, doseq=True)
     req = urllib.request.Request(f"{BASE}?{params}")
     for attempt in range(MAX_RETRIES):
         if attempt > 0:
@@ -97,9 +97,9 @@ def _api_get(mfacets: str) -> dict:
     return {}
 
 
-def fetch_info(mfacets: str) -> "Tuple[int, Dict[str, List[Tuple[str, int]]]]":
+def fetch_info(facets: List[str]) -> "Tuple[int, Dict[str, List[Tuple[str, int]]]]":
     """Return (total, {facet_name: [(value, count), ...]}) for a multiFacets query."""
-    data   = _api_get(mfacets)
+    data   = _api_get(facets)
     total  = data.get("info", {}).get("total", 0)
     facets = {}
     for facet in data.get("facets", []):
@@ -125,7 +125,7 @@ def explore_source(source: str, total: int) -> "List[dict]":
     # ── Level 2: partition by rtype ────────────────────────────────────────
     print(f"{indent}→ too large — probing rtype facet...", flush=True)
     time.sleep(REST_S)
-    _, facets = fetch_info(f"facet_data_source,include,{source}")
+    _, facets = fetch_info([f"facet_data_source,include,{source}"])
     rtype_values = facets.get("rtype", [])
 
     if not rtype_values:
@@ -147,8 +147,10 @@ def explore_source(source: str, total: int) -> "List[dict]":
         # ── Level 3: rtype slice too large — partition by creator ──────────
         print(f"{indent}  rtype={rtype_val}: {rtype_count:,} → probing creator facet...", flush=True)
         time.sleep(REST_S)
-        mf2 = f"facet_data_source,include,{source}|facet_rtype,include,{rtype_val}"
-        _, facets2 = fetch_info(mf2)
+        _, facets2 = fetch_info([
+            f"facet_data_source,include,{source}",
+            f"facet_rtype,include,{rtype_val}",
+        ])
         creator_values = facets2.get("creator", [])
 
         if not creator_values:
@@ -194,7 +196,7 @@ def main():
 
     for source in DATA_SOURCES:
         time.sleep(REST_S)
-        total, facets = fetch_info(f"facet_data_source,include,{source}")
+        total, facets = fetch_info([f"facet_data_source,include,{source}"])
         print(f"\n{source}: {total:,} records", flush=True)
 
         if total == 0:
