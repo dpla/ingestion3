@@ -27,7 +27,7 @@ import urllib.parse
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-API_KEY = "l8xxe1772f53c1b54de8b25553fda6e224f5"
+API_KEY = os.environ.get("MWDL_API_KEY", "")
 BASE    = "https://api-na.hosted.exlibrisgroup.com/primo/v1/search"
 VID     = "01UTAH_INST:MWDL"
 TAB     = "LibraryCatalog"
