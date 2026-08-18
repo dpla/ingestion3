@@ -42,8 +42,8 @@ SCOPE   = "MWDL"
 LIMIT   = 100
 
 REST_BETWEEN_QUERIES = 12
-MAX_RETRIES          = 4
-TIMEOUT              = 120
+MAX_RETRIES          = 3
+TIMEOUT              = 30
 MAX_OFFSET           = 9900   # Primo VE hard limit
 
 PROJECT_DIR   = Path("/home/ec2-user/mwdl-harvest")
@@ -53,13 +53,20 @@ PROGRESS_FILE = PROJECT_DIR / "mwdl-harvest-progress.json"
 
 
 def unit_key(unit: dict) -> str:
-    return f"{unit['source']}|{unit.get('year') or 'all'}"
+    return f"{unit['source']}|{unit.get('rtype') or 'all'}|{unit.get('creator') or 'all'}"
 
 
-def fetch_page(source: str, year: Optional[int], offset: int) -> "tuple[list, int]":
-    mfacets = f"facet_data_source,include,{source}"
-    if year is not None:
-        mfacets += f"|facet_creationdate,include,{year}"
+def build_mfacets(unit: dict) -> str:
+    parts = [f"facet_data_source,include,{unit['source']}"]
+    if unit.get("rtype"):
+        parts.append(f"facet_rtype,include,{unit['rtype']}")
+    if unit.get("creator"):
+        parts.append(f"facet_creator,include,{unit['creator']}")
+    return "|".join(parts)
+
+
+def fetch_page(unit: dict, offset: int) -> "tuple[list, int]":
+    mfacets = build_mfacets(unit)
     params = urllib.parse.urlencode({
         "vid":         VID,
         "tab":         TAB,
@@ -129,7 +136,7 @@ def main():
     remaining    = [u for u in units if unit_key(u) not in completed]
 
     # Load seen IDs into memory for deduplication
-    seen_ids: set[str] = set()
+    seen_ids = set()  # type: ignore
     if completed and OUTPUT_FILE.exists():
         print("Loading seen IDs for deduplication...", flush=True)
         with open(OUTPUT_FILE) as f:
@@ -163,11 +170,13 @@ def main():
 
     try:
         for i, unit in enumerate(remaining):
-            source    = unit["source"]
-            year      = unit.get("year")
-            expected  = unit["count"]
-            key       = unit_key(unit)
-            label     = f"{source} / {year or 'all years'}"
+            expected = unit["count"]
+            key      = unit_key(unit)
+            label    = (
+                f"{unit['source']}"
+                + (f" / rtype={unit['rtype']}" if unit.get("rtype") else "")
+                + (f" / creator={str(unit['creator'])[:40]}" if unit.get("creator") else "")
+            )
 
             unit_written  = 0
             unit_dupes    = 0
@@ -177,7 +186,7 @@ def main():
 
             while offset <= MAX_OFFSET:
                 time.sleep(REST_BETWEEN_QUERIES)
-                docs, total = fetch_page(source, year, offset)
+                docs, total = fetch_page(unit, offset)
 
                 if not docs:
                     break
