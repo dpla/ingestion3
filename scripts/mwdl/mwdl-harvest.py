@@ -17,6 +17,21 @@ import urllib.parse
 from pathlib import Path
 from typing import Optional
 
+# Load .env from repo root if env vars not already set
+def _load_env() -> None:
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    if not env_path.exists():
+        return
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, val = line.partition("=")
+            os.environ.setdefault(key.strip(), val.strip())
+
+_load_env()
+
 
 def slack_notify(msg: str) -> None:
     token   = os.environ.get("SLACK_BOT_TOKEN") or os.environ.get("SLACK_TOKEN", "")

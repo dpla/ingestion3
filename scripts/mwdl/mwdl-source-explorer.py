@@ -27,6 +27,21 @@ import urllib.parse
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+# Load .env from repo root if MWDL_API_KEY not already in environment
+def _load_env() -> None:
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    if not env_path.exists():
+        return
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, val = line.partition("=")
+            os.environ.setdefault(key.strip(), val.strip())
+
+_load_env()
+
 API_KEY = os.environ.get("MWDL_API_KEY", "")
 BASE    = "https://api-na.hosted.exlibrisgroup.com/primo/v1/search"
 VID     = "01UTAH_INST:MWDL"
