@@ -52,6 +52,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -289,9 +290,21 @@ def main() -> int:
         "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "items": dict(sorted(items.items())),
     }
-    with open(output, "w") as f:
-        json.dump(doc, f, indent=2, sort_keys=False)
-        f.write("\n")
+    # Write to a temp file and rename
+    tmp = None
+    try:
+        fd, tmp = tempfile.mkstemp(
+            dir=os.path.dirname(output) or ".", suffix=".tmp"
+        )
+        with os.fdopen(fd, "w") as f:
+            json.dump(doc, f, indent=2, sort_keys=False)
+            f.write("\n")
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, output)
+        tmp = None
+    finally:
+        if tmp is not None and os.path.exists(tmp):
+            os.unlink(tmp)
 
     n_ex = sum(1 for v in items.values() if v["exhibitions"])
     n_pss = sum(1 for v in items.values() if v["primarySourceSets"])
