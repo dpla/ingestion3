@@ -68,7 +68,10 @@ PROGRESS_FILE = PROJECT_DIR / "mwdl-harvest-progress.json"
 
 
 def unit_key(unit: dict) -> str:
-    return f"{unit['source']}|{unit.get('rtype') or 'all'}|{unit.get('creator') or 'all'}"
+    return (
+        f"{unit['source']}|{unit.get('rtype') or 'all'}"
+        f"|{unit.get('creator') or 'all'}|{unit.get('year') or 'all'}"
+    )
 
 
 def build_mfacets(unit: dict) -> "list[str]":
@@ -77,6 +80,8 @@ def build_mfacets(unit: dict) -> "list[str]":
         parts.append(f"facet_rtype,include,{unit['rtype']}")
     if unit.get("creator"):
         parts.append(f"facet_creator,include,{unit['creator']}")
+    if unit.get("year"):
+        parts.append(f"facet_creationdate,include,{unit['year']}")
     return parts
 
 
@@ -190,6 +195,7 @@ def main():
                 f"{unit['source']}"
                 + (f" / rtype={unit['rtype']}" if unit.get("rtype") else "")
                 + (f" / creator={str(unit['creator'])[:40]}" if unit.get("creator") else "")
+                + (f" / year={unit['year']}" if unit.get("year") else "")
             )
 
             unit_written  = 0

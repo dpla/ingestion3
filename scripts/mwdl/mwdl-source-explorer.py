@@ -2,19 +2,15 @@
 """
 MWDL source explorer — discovers harvestable query units for mwdl-harvest.py.
 
-Partitioning strategy (3 levels):
-  1. source             — if total <= MAX_SOURCE_SIZE, harvest directly
-  2. source + rtype     — if rtype slice <= MAX_SOURCE_SIZE, harvest
-  3. source + rtype + creator — for slices still too large
+Partitioning strategy (4 levels):
+  1. source                          — harvest directly if <= MAX_SOURCE_SIZE
+  2. source + rtype                  — if rtype slice fits
+  3. source + rtype + creator        — if creator slice fits
+  4. source + rtype + creator + year — for slices still too large
 
-For rtype slices that are too large, the explorer probes the creator
-facet for that specific source+rtype. Each known creator becomes its
-own unit. Records NOT captured by any known creator are added as a
-"remainder" unit (source+rtype, no creator filter) relying on the
-harvest script's deduplication to avoid double-counting.
-
-Any source+rtype+creator unit still > MAX_SOURCE_SIZE is capped and
-flagged — those need a 4th level or a bulk export from the provider.
+For large remainders (records not covered by any named creator), year
+partitioning is applied to the full source+rtype slice; harvest-side
+deduplication prevents double-counting with creator units.
 
 Output: mwdl-sources.json — used by mwdl-harvest.py.
 """
@@ -128,14 +124,59 @@ def fetch_info(facets: List[str]) -> "Tuple[int, Dict[str, List[Tuple[str, int]]
     return total, facets
 
 
+def partition_by_year(
+    base_facets: List[str],
+    source: str,
+    rtype: Optional[str],
+    creator: Optional[str],
+    count: int,
+    indent: str,
+) -> "List[dict]":
+    """Level 4: partition a too-large slice by creationdate year.
+
+    Note: when used for large remainders (creator=None), base_facets covers the
+    full rtype slice — the resulting year units overlap with named-creator units,
+    but harvest-side deduplication handles that correctly.
+    """
+    time.sleep(REST_S)
+    _, fdata = fetch_info(base_facets)
+    year_values = fdata.get("creationdate", [])
+
+    if not year_values:
+        capped = min(count, MAX_SOURCE_SIZE)
+        print(f"{indent}no year facet — capped ({capped:,} of {count:,})", flush=True)
+        return [{"source": source, "rtype": rtype, "creator": creator, "year": None, "count": capped}]
+
+    units = []
+    year_seen = 0
+    for year_val, year_count in year_values:
+        year_seen += year_count
+        if year_count <= MAX_SOURCE_SIZE:
+            print(f"{indent}year={year_val}: {year_count:,} ✓", flush=True)
+            units.append({"source": source, "rtype": rtype, "creator": creator, "year": year_val, "count": year_count})
+        else:
+            print(f"{indent}year={year_val}: {year_count:,} !! STILL TOO LARGE — capped", flush=True)
+            units.append({"source": source, "rtype": rtype, "creator": creator, "year": year_val, "count": MAX_SOURCE_SIZE})
+
+    # Records with no creation date
+    no_year = count - year_seen
+    if no_year > 0:
+        capped_no_year = min(no_year, MAX_SOURCE_SIZE)
+        flag = " (capped)" if no_year > MAX_SOURCE_SIZE else ""
+        print(f"{indent}no-year remainder: ~{no_year:,}{flag}", flush=True)
+        units.append({"source": source, "rtype": rtype, "creator": creator, "year": None, "count": capped_no_year})
+
+    return units
+
+
 def explore_source(source: str, total: int) -> "List[dict]":
-    """Return harvestable units for a source using up to 3 partition levels."""
+    """Return harvestable units for a source using up to 4 partition levels."""
     indent = "  "
 
     # ── Level 1: fits directly ─────────────────────────────────────────────
     if total <= MAX_SOURCE_SIZE:
         print(f"{indent}→ direct harvest ({total:,})", flush=True)
-        return [{"source": source, "rtype": None, "creator": None, "count": total}]
+        return [{"source": source, "rtype": None, "creator": None, "year": None, "count": total}]
 
     # ── Level 2: partition by rtype ────────────────────────────────────────
     print(f"{indent}→ too large — probing rtype facet...", flush=True)
@@ -144,9 +185,11 @@ def explore_source(source: str, total: int) -> "List[dict]":
     rtype_values = facets.get("rtype", [])
 
     if not rtype_values:
-        capped = min(total, MAX_SOURCE_SIZE)
-        print(f"{indent}  no rtype facet — capped direct harvest ({capped:,} of {total:,})", flush=True)
-        return [{"source": source, "rtype": None, "creator": None, "count": capped}]
+        print(f"{indent}  no rtype facet — probing year...", flush=True)
+        return partition_by_year(
+            [f"facet_data_source,include,{source}"],
+            source, None, None, total, indent + "  "
+        )
 
     units = []
     rtype_total_seen = 0
@@ -156,7 +199,7 @@ def explore_source(source: str, total: int) -> "List[dict]":
 
         if rtype_count <= MAX_SOURCE_SIZE:
             print(f"{indent}  rtype={rtype_val}: {rtype_count:,} ✓", flush=True)
-            units.append({"source": source, "rtype": rtype_val, "creator": None, "count": rtype_count})
+            units.append({"source": source, "rtype": rtype_val, "creator": None, "year": None, "count": rtype_count})
             continue
 
         # ── Level 3: rtype slice too large — partition by creator ──────────
@@ -169,9 +212,11 @@ def explore_source(source: str, total: int) -> "List[dict]":
         creator_values = facets2.get("creator", [])
 
         if not creator_values:
-            capped = min(rtype_count, MAX_SOURCE_SIZE)
-            print(f"{indent}    no creator facet — capped ({capped:,} of {rtype_count:,})", flush=True)
-            units.append({"source": source, "rtype": rtype_val, "creator": None, "count": capped})
+            print(f"{indent}    no creator facet — probing year...", flush=True)
+            units.extend(partition_by_year(
+                [f"facet_data_source,include,{source}", f"facet_rtype,include,{rtype_val}"],
+                source, rtype_val, None, rtype_count, indent + "    "
+            ))
             continue
 
         creator_seen_total = 0
@@ -179,22 +224,37 @@ def explore_source(source: str, total: int) -> "List[dict]":
             creator_seen_total += creator_count
             if creator_count <= MAX_SOURCE_SIZE:
                 print(f"{indent}    creator={creator_val[:50]!r}: {creator_count:,} ✓", flush=True)
-                units.append({"source": source, "rtype": rtype_val, "creator": creator_val, "count": creator_count})
+                units.append({"source": source, "rtype": rtype_val, "creator": creator_val, "year": None, "count": creator_count})
             else:
-                print(f"{indent}    creator={creator_val[:50]!r}: {creator_count:,} !! STILL TOO LARGE — capped at {MAX_SOURCE_SIZE}", flush=True)
-                units.append({"source": source, "rtype": rtype_val, "creator": creator_val, "count": MAX_SOURCE_SIZE})
+                # ── Level 4: creator slice too large — partition by year ───
+                print(f"{indent}    creator={creator_val[:50]!r}: {creator_count:,} → probing year...", flush=True)
+                units.extend(partition_by_year(
+                    [
+                        f"facet_data_source,include,{source}",
+                        f"facet_rtype,include,{rtype_val}",
+                        f"facet_creator,include,{creator_val}",
+                    ],
+                    source, rtype_val, creator_val, creator_count, indent + "      "
+                ))
 
         # Remainder: records not covered by any known creator
         remainder = rtype_count - creator_seen_total
-        if remainder > 0:
+        if remainder > MAX_SOURCE_SIZE:
+            # Partition remainder by year across the full rtype slice (dedup handles overlap)
+            print(f"{indent}    remainder ~{remainder:,} → too large, probing year across full rtype slice...", flush=True)
+            units.extend(partition_by_year(
+                [f"facet_data_source,include,{source}", f"facet_rtype,include,{rtype_val}"],
+                source, rtype_val, None, rtype_count, indent + "      "
+            ))
+        elif remainder > 0:
             print(f"{indent}    remainder (unpartitioned creators): ~{remainder:,}", flush=True)
-            units.append({"source": source, "rtype": rtype_val, "creator": None, "count": remainder})
+            units.append({"source": source, "rtype": rtype_val, "creator": None, "year": None, "count": remainder})
 
-    # Rtype remainder: records not covered by any rtype value (rare but possible)
+    # Rtype remainder
     rtype_remainder = total - rtype_total_seen
     if rtype_remainder > 0:
         print(f"{indent}  rtype remainder: ~{rtype_remainder:,}", flush=True)
-        units.append({"source": source, "rtype": None, "creator": None, "count": rtype_remainder})
+        units.append({"source": source, "rtype": None, "creator": None, "year": None, "count": rtype_remainder})
 
     return units
 
@@ -204,8 +264,8 @@ def main():
     capped     = []
     warnings   = []
 
-    slack_notify(":arrow_forward: *mwdl source explorer started* — scanning 10 data sources (3-level partitioning)")
-    print("MWDL source explorer — 3-level partitioning (source → rtype → creator)", flush=True)
+    slack_notify(":arrow_forward: *mwdl source explorer started* — scanning 10 data sources (4-level partitioning)")
+    print("MWDL source explorer — 4-level partitioning (source → rtype → creator → year)", flush=True)
     print(f"MAX_SOURCE_SIZE = {MAX_SOURCE_SIZE}", flush=True)
     print("=" * 60, flush=True)
 
