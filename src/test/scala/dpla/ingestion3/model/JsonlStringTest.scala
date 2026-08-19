@@ -9,13 +9,13 @@ import org.scalatest.flatspec.AnyFlatSpec
 class JsonlStringTest extends AnyFlatSpec {
 
   "jsonlRecord" should "print a valid JSON string" in {
-    val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord)
+    val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord, CuratedMembership.empty)
     val jvalue = parse(s)
     assert(jvalue.isInstanceOf[JValue])
   }
 
   it should "render a field that's a String" in {
-    val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord)
+    val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord, CuratedMembership.empty)
     val jvalue = parse(s)
     assert(
       compact(render(jvalue \ "_source" \ "id")) ==
@@ -24,7 +24,7 @@ class JsonlStringTest extends AnyFlatSpec {
   }
 
   it should "render a field that's a sequence" in {
-    val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord)
+    val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord, CuratedMembership.empty)
     val jvalue = parse(s)
     val title = jvalue \ "_source" \ "sourceResource" \ "title"
     assert(title.isInstanceOf[JArray])
@@ -32,7 +32,7 @@ class JsonlStringTest extends AnyFlatSpec {
   }
 
   it should "render a subject.exactMatch" in {
-      val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord)
+      val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord, CuratedMembership.empty)
       val jvalue = parse(s)
       val subjectExactMatch = jvalue \ "_source" \ "sourceResource" \ "subject" \ "exactMatch"
       assert(subjectExactMatch.isInstanceOf[JArray])
@@ -40,7 +40,7 @@ class JsonlStringTest extends AnyFlatSpec {
     }
 
   it should "render a field that requires a map() on a sequence" in {
-    val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord)
+    val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord, CuratedMembership.empty)
     val jvalue = parse(s)
     val collection = jvalue \ "_source" \ "sourceResource" \ "collection"
     assert(collection.isInstanceOf[JArray])
@@ -50,7 +50,7 @@ class JsonlStringTest extends AnyFlatSpec {
   }
 
   it should "render a iiifManfiest " in {
-    val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord)
+    val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord, CuratedMembership.empty)
     val jvalue = parse(s)
     val iiifManifest = jvalue \ "_source" \ "iiifManifest"
     assert(iiifManifest.isInstanceOf[JString])
@@ -61,11 +61,51 @@ class JsonlStringTest extends AnyFlatSpec {
 
   it should "not have empty arrays for fields that have no data" in {
     // Those fields that are optional are 0-n, so they will be arrays.
-    val s: String = jsonlRecord(EnrichedRecordFixture.minimalEnrichedRecord)
+    val s: String = jsonlRecord(EnrichedRecordFixture.minimalEnrichedRecord, CuratedMembership.empty)
     val jvalue = parse(s)
     val outputString = compact(render(jvalue \ "_source" \ "sourceResource" \ "collection"))
     assert(
        outputString == ""
+    )
+  }
+
+  it should "render exhibitions and primarySourceSets for member items" in {
+    val membership = CuratedMembership(
+      generated = "2026-08-18T00:00:00Z",
+      exhibitions =
+        Map("4b1bd605bd1d75ee23baadb0e1f24457" -> Seq("race-to-the-moon")),
+      primarySourceSets =
+        Map("4b1bd605bd1d75ee23baadb0e1f24457" -> Seq("aviation", "cold-war"))
+    )
+    val s: String = jsonlRecord(EnrichedRecordFixture.enrichedRecord, membership)
+    val jvalue = parse(s)
+    assert(
+      compact(render(jvalue \ "_source" \ "exhibitions")) ==
+        "[\"race-to-the-moon\"]"
+    )
+    assert(
+      compact(render(jvalue \ "_source" \ "primarySourceSets")) ==
+        "[\"aviation\",\"cold-war\"]"
+    )
+  }
+
+  it should "omit exhibitions and primarySourceSets for non-member items" in {
+    val s: String =
+      jsonlRecord(EnrichedRecordFixture.enrichedRecord, CuratedMembership.empty)
+    val jvalue = parse(s)
+    assert(compact(render(jvalue \ "_source" \ "exhibitions")) == "")
+    assert(compact(render(jvalue \ "_source" \ "primarySourceSets")) == "")
+  }
+
+  it should "stamp membership from the bundled snapshot" in {
+    val (id, slugs) = CuratedMembership.fromResource.exhibitions.head
+    val record = EnrichedRecordFixture.enrichedRecord.copy(
+      sidecar = s"""{"prehashId": "prehash", "dplaId": "$id"}"""
+    )
+    val jvalue = parse(jsonlRecord(record, CuratedMembership.fromResource))
+    assert(
+      (jvalue \ "_source" \ "exhibitions") ==
+        JArray(slugs.map(JString(_)).toList)
     )
   }
 

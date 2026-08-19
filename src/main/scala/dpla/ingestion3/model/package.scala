@@ -112,15 +112,19 @@ package object model {
     }
   }
 
-  def jsonlRecord(record: OreAggregation): String = {
+  def jsonlRecord(
+      record: OreAggregation,
+      curated: CuratedMembership
+  ): String = {
 
     // We require the that DPLA ID and prehash ID (the providers 'permanent' identifier) be passed forward via the
     // metadata sidecar. Currently, there is no place to store these values in either the DPLA MAPv3.1 or MAPv4.0 models
-    val dplaId = fromJsonString(record.sidecar) \ "dplaId" match {
+    val sidecar = fromJsonString(record.sidecar)
+    val dplaId = sidecar \ "dplaId" match {
       case JString(js) => js
       case _ => throw new RuntimeException("DPLA ID is not in metadata sidecar")
     }
-    val _id = fromJsonString(record.sidecar) \ "prehashId" match {
+    val _id = sidecar \ "prehashId" match {
       case JString(js) => js
       case _ =>
         throw new RuntimeException("Prehash ID is not in metadata sidecar")
@@ -237,7 +241,11 @@ package object model {
             ("title" -> record.sourceResource.title) ~
             ("type" -> record.sourceResource.`type`)) ~
           ("@type" -> "ore:Aggregation") ~
-          ("tags" -> record.tags.map { _.toString }))
+          ("tags" -> record.tags.map { _.toString }) ~
+          // Empty seqs are dropped at render; only member items get these
+          ("exhibitions" -> curated.exhibitions.getOrElse(dplaId, Seq.empty)) ~
+          ("primarySourceSets" -> curated.primarySourceSets
+            .getOrElse(dplaId, Seq.empty)))
 
     compact(render(dplaMapJsonLd))
   }
