@@ -71,6 +71,7 @@ def unit_key(unit: dict) -> str:
     return (
         f"{unit['source']}|{unit.get('rtype') or 'all'}"
         f"|{unit.get('creator') or 'all'}|{unit.get('year') or 'all'}"
+        f"|{unit.get('alpha') or 'all'}"
     )
 
 
@@ -86,6 +87,7 @@ def build_mfacets(unit: dict) -> "list[str]":
 
 
 def fetch_page(unit: dict, offset: int) -> "tuple[list, int]":
+    q = f"title,begins_with,{unit['alpha']}" if unit.get("alpha") else "any,contains,a"
     params = urllib.parse.urlencode({
         "vid":         VID,
         "tab":         TAB,
@@ -93,7 +95,7 @@ def fetch_page(unit: dict, offset: int) -> "tuple[list, int]":
         "apikey":      API_KEY,
         "limit":       str(LIMIT),
         "offset":      str(offset),
-        "q":           "any,contains,a",
+        "q":           q,
         "multiFacets": build_mfacets(unit),
     }, doseq=True)
     url = f"{BASE}?{params}"
@@ -196,6 +198,7 @@ def main():
                 + (f" / rtype={unit['rtype']}" if unit.get("rtype") else "")
                 + (f" / creator={str(unit['creator'])[:40]}" if unit.get("creator") else "")
                 + (f" / year={unit['year']}" if unit.get("year") else "")
+                + (f" / alpha={unit['alpha']}" if unit.get("alpha") else "")
             )
 
             unit_written  = 0

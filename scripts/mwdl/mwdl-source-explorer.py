@@ -83,7 +83,10 @@ def slack_notify(msg: str) -> None:
         pass
 
 
-def _api_get(facets: List[str]) -> dict:
+ALPHA_LETTERS = list("abcdefghijklmnopqrstuvwxyz")
+
+
+def _api_get(facets: List[str], q: str = "any,contains,a") -> dict:
     """Single Primo VE API call with multiple facet filters; returns parsed JSON or {}."""
     params = urllib.parse.urlencode({
         "vid":         VID,
@@ -92,7 +95,7 @@ def _api_get(facets: List[str]) -> dict:
         "apikey":      API_KEY,
         "limit":       "1",
         "offset":      "0",
-        "q":           "any,contains,a",
+        "q":           q,
         "multiFacets": facets,
     }, doseq=True)
     req = urllib.request.Request(f"{BASE}?{params}")
@@ -124,6 +127,46 @@ def fetch_info(facets: List[str]) -> "Tuple[int, Dict[str, List[Tuple[str, int]]
     return total, facets
 
 
+def partition_by_alpha(
+    base_facets: List[str],
+    source: str,
+    rtype: Optional[str],
+    creator: Optional[str],
+    year: Optional[str],
+    count: int,
+    indent: str,
+) -> "List[dict]":
+    """Level 5: partition by first letter of title using q=title,begins_with,{letter}.
+
+    Alpha units overlap with other units (creator/year), but harvest-side dedup handles it.
+    """
+    units = []
+    alpha_seen = 0
+
+    for letter in ALPHA_LETTERS:
+        time.sleep(REST_S)
+        data = _api_get(base_facets, q=f"title,begins_with,{letter}")
+        letter_count = data.get("info", {}).get("total", 0)
+        if letter_count == 0:
+            continue
+        alpha_seen += letter_count
+        if letter_count <= MAX_SOURCE_SIZE:
+            print(f"{indent}alpha={letter}: {letter_count:,} ✓", flush=True)
+            units.append({"source": source, "rtype": rtype, "creator": creator, "year": year, "alpha": letter, "count": letter_count})
+        else:
+            print(f"{indent}alpha={letter}: {letter_count:,} !! STILL TOO LARGE — capped", flush=True)
+            units.append({"source": source, "rtype": rtype, "creator": creator, "year": year, "alpha": letter, "count": MAX_SOURCE_SIZE})
+
+    no_alpha = max(0, count - alpha_seen)
+    if no_alpha > 0:
+        capped = min(no_alpha, MAX_SOURCE_SIZE)
+        flag = " (capped)" if no_alpha > MAX_SOURCE_SIZE else ""
+        print(f"{indent}no-title remainder: ~{no_alpha:,}{flag}", flush=True)
+        units.append({"source": source, "rtype": rtype, "creator": creator, "year": year, "alpha": None, "count": capped})
+
+    return units
+
+
 def partition_by_year(
     base_facets: List[str],
     source: str,
@@ -143,9 +186,8 @@ def partition_by_year(
     year_values = fdata.get("creationdate", [])
 
     if not year_values:
-        capped = min(count, MAX_SOURCE_SIZE)
-        print(f"{indent}no year facet — capped ({capped:,} of {count:,})", flush=True)
-        return [{"source": source, "rtype": rtype, "creator": creator, "year": None, "count": capped}]
+        print(f"{indent}no year facet — probing alpha...", flush=True)
+        return partition_by_alpha(base_facets, source, rtype, creator, None, count, indent)
 
     units = []
     year_seen = 0
@@ -153,18 +195,22 @@ def partition_by_year(
         year_seen += year_count
         if year_count <= MAX_SOURCE_SIZE:
             print(f"{indent}year={year_val}: {year_count:,} ✓", flush=True)
-            units.append({"source": source, "rtype": rtype, "creator": creator, "year": year_val, "count": year_count})
+            units.append({"source": source, "rtype": rtype, "creator": creator, "year": year_val, "alpha": None, "count": year_count})
         else:
-            print(f"{indent}year={year_val}: {year_count:,} !! STILL TOO LARGE — capped", flush=True)
-            units.append({"source": source, "rtype": rtype, "creator": creator, "year": year_val, "count": MAX_SOURCE_SIZE})
+            print(f"{indent}year={year_val}: {year_count:,} !! STILL TOO LARGE — probing alpha...", flush=True)
+            units.extend(partition_by_alpha(
+                base_facets + [f"facet_creationdate,include,{year_val}"],
+                source, rtype, creator, year_val, year_count, indent + "  "
+            ))
 
     # Records with no creation date
-    no_year = count - year_seen
-    if no_year > 0:
-        capped_no_year = min(no_year, MAX_SOURCE_SIZE)
-        flag = " (capped)" if no_year > MAX_SOURCE_SIZE else ""
-        print(f"{indent}no-year remainder: ~{no_year:,}{flag}", flush=True)
-        units.append({"source": source, "rtype": rtype, "creator": creator, "year": None, "count": capped_no_year})
+    no_year = max(0, count - year_seen)
+    if no_year > MAX_SOURCE_SIZE:
+        print(f"{indent}no-year remainder ~{no_year:,} → probing alpha...", flush=True)
+        units.extend(partition_by_alpha(base_facets, source, rtype, creator, None, no_year, indent))
+    elif no_year > 0:
+        print(f"{indent}no-year remainder: ~{no_year:,}", flush=True)
+        units.append({"source": source, "rtype": rtype, "creator": creator, "year": None, "alpha": None, "count": no_year})
 
     return units
 
@@ -176,7 +222,7 @@ def explore_source(source: str, total: int) -> "List[dict]":
     # ── Level 1: fits directly ─────────────────────────────────────────────
     if total <= MAX_SOURCE_SIZE:
         print(f"{indent}→ direct harvest ({total:,})", flush=True)
-        return [{"source": source, "rtype": None, "creator": None, "year": None, "count": total}]
+        return [{"source": source, "rtype": None, "creator": None, "year": None, "alpha": None, "count": total}]
 
     # ── Level 2: partition by rtype ────────────────────────────────────────
     print(f"{indent}→ too large — probing rtype facet...", flush=True)
@@ -199,7 +245,7 @@ def explore_source(source: str, total: int) -> "List[dict]":
 
         if rtype_count <= MAX_SOURCE_SIZE:
             print(f"{indent}  rtype={rtype_val}: {rtype_count:,} ✓", flush=True)
-            units.append({"source": source, "rtype": rtype_val, "creator": None, "year": None, "count": rtype_count})
+            units.append({"source": source, "rtype": rtype_val, "creator": None, "year": None, "alpha": None, "count": rtype_count})
             continue
 
         # ── Level 3: rtype slice too large — partition by creator ──────────
@@ -224,7 +270,7 @@ def explore_source(source: str, total: int) -> "List[dict]":
             creator_seen_total += creator_count
             if creator_count <= MAX_SOURCE_SIZE:
                 print(f"{indent}    creator={creator_val[:50]!r}: {creator_count:,} ✓", flush=True)
-                units.append({"source": source, "rtype": rtype_val, "creator": creator_val, "year": None, "count": creator_count})
+                units.append({"source": source, "rtype": rtype_val, "creator": creator_val, "year": None, "alpha": None, "count": creator_count})
             else:
                 # ── Level 4: creator slice too large — partition by year ───
                 print(f"{indent}    creator={creator_val[:50]!r}: {creator_count:,} → probing year...", flush=True)
@@ -248,13 +294,13 @@ def explore_source(source: str, total: int) -> "List[dict]":
             ))
         elif remainder > 0:
             print(f"{indent}    remainder (unpartitioned creators): ~{remainder:,}", flush=True)
-            units.append({"source": source, "rtype": rtype_val, "creator": None, "year": None, "count": remainder})
+            units.append({"source": source, "rtype": rtype_val, "creator": None, "year": None, "alpha": None, "count": remainder})
 
     # Rtype remainder
     rtype_remainder = total - rtype_total_seen
     if rtype_remainder > 0:
         print(f"{indent}  rtype remainder: ~{rtype_remainder:,}", flush=True)
-        units.append({"source": source, "rtype": None, "creator": None, "year": None, "count": rtype_remainder})
+        units.append({"source": source, "rtype": None, "creator": None, "year": None, "alpha": None, "count": rtype_remainder})
 
     return units
 
