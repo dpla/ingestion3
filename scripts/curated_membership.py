@@ -127,7 +127,8 @@ def exhibition_item_ids(data, slug):
         for block in page.get("page_blocks") or []:
             for att in block.get("attachments") or []:
                 for et in (att.get("item") or {}).get("element_texts") or []:
-                    if (et.get("element") or {}).get("name") != "Has Version":
+                    name = str((et.get("element") or {}).get("name") or "")
+                    if name.strip().lower() != "has version":
                         continue
                     text = (et.get("text") or "").strip().lower()
                     match = HEX32_TOKEN.search(text)

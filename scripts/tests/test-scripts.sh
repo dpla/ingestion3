@@ -914,6 +914,16 @@ SQL
 # Test: send-ingest-email.sh --yes flag
 # =============================================================================
 
+test_curated_membership_parser() {
+    echo ""
+    echo "=========================================="
+    echo "  Testing curated_membership.py parser"
+    echo "=========================================="
+
+    run_test "curated_membership parser" \
+        "python3 '$TEST_DIR/test-curated-membership.py'"
+}
+
 test_send_email_yes_flag() {
     echo ""
     echo "=========================================="
@@ -1081,6 +1091,7 @@ main() {
         test_scripts_use_run_entry
         test_nara_scripts_deleted
         test_community_webs_export
+        test_curated_membership_parser
         test_send_email_yes_flag
         test_tailscale_exit_node
     fi
