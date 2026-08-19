@@ -23,10 +23,11 @@ BASE    = "https://api-na.hosted.exlibrisgroup.com/primo/v1/search"
 probes = [
     ("DIGCOLL_UUU_11", "images", None),
     ("DIGCOLL_UUU_11", "other",  None),
-    ("DIGCOLL_BYU_12", "other",  None),
     ("DIGCOLL_UUU_11", "images", "N A"),
     ("DIGCOLL_BYU_12", "other",  "Anderson George Edward 1860 1928"),
 ]
+
+CHECK_FACETS = ["topic", "lds02"]
 
 for src, rtype, creator in probes:
     facets = [
@@ -52,10 +53,18 @@ for src, rtype, creator in probes:
     returned_facets = {f["name"]: f.get("values", []) for f in data.get("facets", [])}
 
     label = f"{src}/{rtype}" + (f"/creator={creator[:30]}" if creator else "")
-    print(f"\n{label}: total={total:,}")
-    print(f"  Facets returned: {list(returned_facets.keys())}")
-    if "facet_creationdate" in returned_facets:
-        years = returned_facets["facet_creationdate"]
-        print(f"  Years ({len(years)}): {[(v['value'], v['count']) for v in years[:10]]}")
-    else:
-        print("  !! No facet_creationdate returned")
+    print(f"\n{'='*60}")
+    print(f"{label}: total={total:,}")
+    print(f"  All facets: {list(returned_facets.keys())}")
+
+    for fname in CHECK_FACETS:
+        if fname in returned_facets:
+            vals = returned_facets[fname]
+            val_sum = sum(v.get("count", 0) for v in vals)
+            print(f"\n  {fname} ({len(vals)} values, sum={val_sum:,}):")
+            for v in vals[:30]:
+                print(f"    {v.get('value')}: {int(v.get('count', 0)):,}")
+            if len(vals) > 30:
+                print(f"    ... and {len(vals)-30} more")
+        else:
+            print(f"\n  !! No {fname} facet returned")
