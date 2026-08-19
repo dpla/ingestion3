@@ -4,18 +4,22 @@ import java.net.URL
 
 import dpla.ingestion3.confs.i3Conf
 import org.apache.http.client.utils.URIBuilder
-import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
 
-/** Class for harvesting records from the MWDL Primo endpoint
+/** Harvester for MWDL Primo VE REST API.
+  *
+  * The actual harvest runs via Python prefix scripts (mwdl-prefix-explorer.py
+  * + mwdl-harvest.py) which work around Primo VE's ~9,900 offset limit using
+  * trie-based title-prefix decomposition. This Scala harvester is wired in for
+  * completeness but ingest.sh runs with --skip-harvest.
   */
 class MwdlHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends PrimoHarvester(spark, shortName, conf) {
+) extends PrimoVEHarvester(spark, shortName, conf) {
 
-  /** Constructs the URL for MWDL Primo API requests
+  /** Constructs the URL for MWDL Primo VE REST API requests.
     *
     * @param params
     *   URL parameters
@@ -24,43 +28,27 @@ class MwdlHarvester(
     */
   override def buildUrl(params: Map[String, String]): URL =
     new URIBuilder()
-      .setScheme("http")
-      .setHost("utah-primoprod.hosted.exlibrisgroup.com")
-      .setPath("/PrimoWebServices/xservice/search/brief")
-      .setParameter("indx", params.getOrElse("indx", "1")) // record offset
+      .setScheme("https")
+      .setHost("api-na.hosted.exlibrisgroup.com")
+      .setPath("/primo/v1/search")
+      .setParameter("offset", params.getOrElse("offset", "1"))
+      .setParameter("limit", params.getOrElse("limit", "100"))
+      .setParameter("vid", "01UTAH_INST:MWDL")
+      .setParameter("tab", "LibraryCatalog")
+      .setParameter("scope", "MWDL")
       .setParameter(
-        "bulkSize",
-        params.getOrElse("rows", "10")
-      ) // records per page
-      .setParameter("institution", "MWDL")
-      .setParameter("loc", "local,scope:(mw)")
-      .setParameter(
-        "query",
+        "q",
         params.getOrElse(
           "query",
           throw new RuntimeException("No query parameter provided")
         )
       )
-      .setParameter("query_exc", "facet_rtype,exact,collections")
-      .addParameter(
-        "query_exc",
-        "facet_local1,exact,University of Utah Theses and Dissertations"
-      )
-      .addParameter(
-        "query_exc",
-        "facet_local1,exact,Utah Valley University Student Theses Collection"
-      )
-      .addParameter(
-        "query_exc",
-        "facet_local1,exact,Harvard Peabody Site Reports"
-      )
-      .addParameter(
-        "query_exc",
-        "facet_local1,exact,Westminster College Institutional Repository"
-      )
-      .addParameter(
-        "query_exc",
-        "facet_local4,exact,Salt Lake Community College Digital Archives"
+      .setParameter(
+        "apikey",
+        params.getOrElse(
+          "api_key",
+          throw new RuntimeException("No API key provided")
+        )
       )
       .build()
       .toURL
