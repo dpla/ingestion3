@@ -2,7 +2,7 @@ package dpla.ingestion3.entries.utils
 
 import dpla.ingestion3.confs.CmdArgs
 import dpla.ingestion3.dataStorage.{InputHelper, OutputHelper}
-import dpla.ingestion3.model.{OreAggregation, jsonlRecord}
+import dpla.ingestion3.model.{CuratedMembership, OreAggregation, jsonlRecord}
 import org.apache.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
@@ -81,7 +81,8 @@ object NaraFilecoin {
       .as[OreAggregation]
       .map(row => {
         val id = row.dplaUri.toString.split("/").last
-        val json = jsonlRecord(row)
+        // Stamp membership so this export matches the index
+        val json = jsonlRecord(row, CuratedMembership.fromResource)
         NaraWithId(id, json)
       })
 

@@ -39,6 +39,7 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 | `delete/delete-from-jsonl.sh` | Delete records from S3 JSONL files | `./scripts/delete/delete-from-jsonl.sh --hub <hub> <id>...` |
 | `communication/send-ingest-email.sh` | Send ingest summary email | `./scripts/communication/send-ingest-email.sh [--yes] <hub>` |
 | `generate_hub_stats.py` | Rebuild dashboard hub stats + GA4 item mapping in S3 | `./venv/bin/python scripts/generate_hub_stats.py` |
+| `curated_membership.py` | Refresh the exhibition/source-set membership snapshot used by the JSONL export | `python3 scripts/curated_membership.py` |
 | *scheduling_emails* (Python) | Monthly pre-scheduling email to hub contacts | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails [--month=N] --dry-run \| --draft \| --send` |
 | `status/ingest-status.sh` | Check ingest status (orchestrator or manual runs) | `./scripts/status/ingest-status.sh` |
 | `communication/notify-harvest-failure.sh` | Send Slack and email (tech@dp.la) on harvest failure | `./scripts/communication/notify-harvest-failure.sh <hub> "<error>"` |
@@ -312,6 +313,23 @@ Rebuilds the three dashboard-analytics inputs in `s3://dashboard-analytics/hub-s
 Run on the ingest EC2 on day 5 of the month or later (GA4 settles the prior month for ~72 hours; the script warns on earlier runs). `post_indexer.py` step 4 runs it via SSM with system `python3`, so its dependencies (`boto3`, `google-analytics-data`) must be installed for that interpreter on the EC2. The two hub stats files upload first; if `item_data_providers.json` cannot be updated the script exits non-zero so post_indexer alerts.
 
 **Environment**: `ES_HOST`, `ES_PORT`, `AWS_PROFILE` (omit on EC2), `GA4_PROPERTY_ID` (required for the item mapping), `GA4_SECRET_NAME` (default `dpla/ga4-service-account`), `GA4_HISTORY_START` (default `2025-07-18`, the `event_label` custom dimension's registration date — GA4 returns nothing before it).
+
+### curated_membership.py - Exhibition and Primary Source Set Membership
+
+Regenerates `src/main/resources/curated/curated-membership.json`, the snapshot the JSONL export uses to stamp `exhibitions` and `primarySourceSets` fields onto index records. It crawls the two curated-content sources:
+
+- Exhibitions: `dpla/dpla-frontend` `exhibitions-data/` — item IDs come from `element_texts` entries named "Has Version"
+- Primary source sets: `dpla/pss-json` `data/` — item IDs come from each source's citation (`dp.la/item/{id}`), falling back to the 32-hex segment of the media `contentUrl`
+
+```bash
+python3 scripts/curated_membership.py [output-path]
+```
+
+Uses only the Python standard library; needs network access to `raw.githubusercontent.com` and `api.github.com`. Re-run when exhibitions or source sets change, then commit the updated snapshot and rebuild the JAR (`sbt assembly`) so the next index build picks it up. Items whose IDs are absent from the index are harmless: the join happens per record at export time, so unmatched IDs are simply never emitted.
+
+**Propagating a refresh:** stamping happens at JSONL export, so after re-running the script and rebuilding the JAR, a JSONL re-export from each hub's latest enrichment output is enough: `./scripts/jsonl.sh <hub>`, then the regular S3 sync and index rebuild. No harvest or full re-ingest is needed. Hubs that are not re-exported keep the old stamp until their next export. The JSONL step logs the snapshot's `generated` timestamp and writes it to the `_MANIFEST`, so a stale JAR is visible after the fact.
+
+**Failure behavior:** fetches retry transient errors (5xx, 429, dropped connections) with backoff; if any slug still fails, the script reports every failure, writes nothing, and exits non-zero, so a partial snapshot cannot be committed by accident. Five consecutive failures abort the run early. It prints a warning for each recovered or unusable item ID (curator typos upstream), for each source that falls back to the media-filename hash, and for slugs outside the usual `[a-z0-9-]` shape — review the warnings after each run. Set `GITHUB_TOKEN` if the unauthenticated GitHub API rate limit is a problem.
 
 ## Testing
 
