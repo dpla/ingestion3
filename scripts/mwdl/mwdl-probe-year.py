@@ -60,7 +60,7 @@ for src, rtype, creator in probes:
     for fname in CHECK_FACETS:
         if fname in returned_facets:
             vals = returned_facets[fname]
-            val_sum = sum(v.get("count", 0) for v in vals)
+            val_sum = sum(int(v.get("count", 0)) for v in vals)
             print(f"\n  {fname} ({len(vals)} values, sum={val_sum:,}):")
             for v in vals[:30]:
                 print(f"    {v.get('value')}: {int(v.get('count', 0)):,}")
