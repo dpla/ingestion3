@@ -75,6 +75,10 @@ object NaraFilecoin {
     implicit val naraWithIdEncoder: ExpressionEncoder[NaraWithId] =
       ExpressionEncoder[NaraWithId]
 
+    // Load on the driver: a bad snapshot fails fast, and the snapshot in
+    // the manifest is the one the tasks apply
+    val curated = CuratedMembership.fromResource
+
     val nara = spark.read
       .format("avro")
       .load(inputDirectory)
@@ -82,7 +86,7 @@ object NaraFilecoin {
       .map(row => {
         val id = row.dplaUri.toString.split("/").last
         // Stamp membership so this export matches the index
-        val json = jsonlRecord(row, CuratedMembership.fromResource)
+        val json = jsonlRecord(row, curated)
         NaraWithId(id, json)
       })
 
@@ -115,7 +119,8 @@ object NaraFilecoin {
       "Activity" -> "JSON-L",
       "Provider" -> "nara",
       "Record count" -> indexCount.toString,
-      "Input" -> inputDirectory
+      "Input" -> inputDirectory,
+      "Curated membership snapshot" -> curated.generated
     )
 
     outputHelper.writeManifest(manifestOpts) match {
