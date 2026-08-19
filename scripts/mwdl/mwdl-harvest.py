@@ -34,6 +34,7 @@ _load_env()
 
 
 def slack_notify(msg: str) -> None:
+    return  # disabled
     token   = os.environ.get("SLACK_BOT_TOKEN") or os.environ.get("SLACK_TOKEN", "")
     channel = os.environ.get("SLACK_CHANNEL", "C02HEU2L3")
     if not token:

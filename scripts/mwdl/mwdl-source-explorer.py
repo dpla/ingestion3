@@ -67,6 +67,7 @@ OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 
 def slack_notify(msg: str) -> None:
+    return  # disabled
     token   = os.environ.get("SLACK_BOT_TOKEN") or os.environ.get("SLACK_TOKEN", "")
     channel = os.environ.get("SLACK_CHANNEL", "C02HEU2L3")
     if not token:
@@ -135,27 +136,38 @@ def partition_by_alpha(
     year: Optional[str],
     count: int,
     indent: str,
+    prefix: str = "",
 ) -> "List[dict]":
-    """Level 5: partition by first letter of title using q=title,begins_with,{letter}.
+    """Level 5: partition by title prefix using q=title,begins_with,{prefix+letter}.
 
-    Alpha units overlap with other units (creator/year), but harvest-side dedup handles it.
+    Recurses to 2-character prefixes if a single letter is still too large.
+    Alpha units overlap with other units but harvest-side dedup handles it.
     """
     units = []
     alpha_seen = 0
 
     for letter in ALPHA_LETTERS:
+        token = prefix + letter
         time.sleep(REST_S)
-        data = _api_get(base_facets, q=f"title,begins_with,{letter}")
+        data = _api_get(base_facets, q=f"title,begins_with,{token}")
         letter_count = data.get("info", {}).get("total", 0)
         if letter_count == 0:
             continue
         alpha_seen += letter_count
         if letter_count <= MAX_SOURCE_SIZE:
-            print(f"{indent}alpha={letter}: {letter_count:,} ✓", flush=True)
-            units.append({"source": source, "rtype": rtype, "creator": creator, "year": year, "alpha": letter, "count": letter_count})
+            print(f"{indent}alpha={token}: {letter_count:,} ✓", flush=True)
+            units.append({"source": source, "rtype": rtype, "creator": creator, "year": year, "alpha": token, "count": letter_count})
+        elif len(prefix) < 1:
+            # Subdivide one more level (2-char prefix)
+            print(f"{indent}alpha={token}: {letter_count:,} → subdividing...", flush=True)
+            units.extend(partition_by_alpha(
+                base_facets, source, rtype, creator, year,
+                letter_count, indent + "  ", prefix=token
+            ))
         else:
-            print(f"{indent}alpha={letter}: {letter_count:,} !! STILL TOO LARGE — capped", flush=True)
-            units.append({"source": source, "rtype": rtype, "creator": creator, "year": year, "alpha": letter, "count": MAX_SOURCE_SIZE})
+            # Already at 2-char prefix — cap
+            print(f"{indent}alpha={token}: {letter_count:,} !! STILL TOO LARGE — capped", flush=True)
+            units.append({"source": source, "rtype": rtype, "creator": creator, "year": year, "alpha": token, "count": MAX_SOURCE_SIZE})
 
     no_alpha = max(0, count - alpha_seen)
     if no_alpha > 0:
