@@ -106,7 +106,9 @@ abstract class PrimoVEHarvester(
             continueHarvest = false
         }
     }
-    // Read harvested data into Spark DataFrame and return.
+    // Flush and close the Avro writer before Spark reads the file.
+    // Without this the final partial block is never persisted (issue #760).
+    close()
     spark.read.format("avro").load(tmpOutStr)
   }
 
