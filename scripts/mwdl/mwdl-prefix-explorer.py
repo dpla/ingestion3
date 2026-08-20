@@ -66,7 +66,7 @@ def query_prefix(prefix: str) -> Optional[int]:
         "apikey": API_KEY,
         "limit":  "1",
         "offset": "0",
-        "q":      f"title,begins_with,{prefix}*",
+        "q":      f"title,begins_with,{prefix}",
     })
     req = urllib.request.Request(f"{BASE}?{params}")
     for attempt in range(MAX_RETRIES):
