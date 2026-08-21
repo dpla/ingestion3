@@ -18,12 +18,25 @@ It answers four questions:
 4. Can this be done in one go, or should it be phased?
 
 **TL;DR** — Yes, this is very doable and most of the machinery already exists. Build **one
-parameterized workflow** that acts as a **dispatcher only**: it authenticates to AWS,
-starts the ingest box if it is stopped, hands the job to an **on-box serial queue guarded by
-a single crash-safe lock** (the ingestion analogue of Wikimedia's flock worker-slots, but
-with N=1 and an index guard), confirms the job is queued/running, and exits. The long-running
-work runs detached on EC2 and reports to Slack via the existing `ingest.sh` notifications.
-Deliver it in **4–5 phases**, not one shot.
+parameterized workflow** that acts as a **dispatcher only**: it authenticates to AWS, starts
+the ingest box if it is stopped, and hands the job to an **automated on-box queue** — managed
+by the box itself, exactly like Wikimedia's worker-slot system, but collapsed to **one slot**
+(a crash-safe lock) plus an **index guard**. GHA confirms the job is queued/running and exits;
+the long-running work runs detached on EC2 and reports to Slack via the existing `ingest.sh`
+notifications. Operators (and eventually open users) trigger jobs but never touch the queue.
+Deliver it in **~5 phases**, not one shot.
+
+### Intended end state: an open, multi-user trigger layer
+
+The GHA trigger is the **operator layer moved one level removed from the EC2**. The eventual
+goal is to front it (via a Slack/Lambda or Lambda→web-portal flow — **out of scope to build
+here**) so that **users without any access to DPLA's EC2 or backend** can request ingests.
+That reframes the queue and controls from "convenience" to **load-bearing safety**: multiple
+independent, semi-trusted callers may fire triggers concurrently, and the system must
+guarantee that **no job is silently lost, no caller can starve or overload the box, and no
+caller can step on DPLA's own work** (ingests or index rebuilds). Everything below is designed
+so the trigger layer is *replaceable and untrusted* — all durability, validation, quota, and
+admission logic lives on **our** side of GHA, never solely in the front end. See §4.6.
 
 ---
 
@@ -140,23 +153,24 @@ box.** That is the ingestion equivalent of Wikimedia's flock worker-slots.
 
 ```mermaid
 flowchart TD
-    OP[Operator runs workflow_dispatch<br/>input: hub slug or hub list] --> GHA
+    OP[Operators today; eventually open users<br/>via Slack/Lambda or web portal - out of scope] --> TR[workflow_dispatch<br/>hub slug or hub list + caller id]
+    TR --> GHA
 
     subgraph GHA[GitHub Actions runner - dispatcher only, minutes]
-      A1[Assume AWS role via OIDC] --> A2[ec2 start-instances if stopped<br/>wait instance-running + SSM Online]
-      A2 --> A3[SSM: git fetch+reset, JAR freshness/assembly<br/>reuse hub_preflight checks]
-      A3 --> A4[SSM: enqueue-ingest.sh HUB<br/>detached nohup, returns at once]
-      A4 --> A5[Post 'queued/launched' to Slack, then EXIT]
+      A1[Assume AWS role via OIDC] --> A2[Validate hub + dedup + quota check]
+      A2 --> A3[ec2 start-instances if stopped<br/>wait instance-running + SSM Online]
+      A3 --> A4[SSM: refresh code/JAR; enqueue job;<br/>ensure drain loop running; reuse hub_preflight]
+      A4 --> A5[Post 'queued/launched' + job_id to Slack, then EXIT]
     end
 
     A4 -.detached, hours-days.-> BOX
 
-    subgraph BOX[EC2 ingest box - the worker]
-      Q[(queue dir<br/>FIFO job files)] --> DR{acquire global lock<br/>flock, crash-safe}
-      DR -->|index running?| IG[wait on index guard]
-      IG --> RUN[ingest.sh HUB<br/>harvest to map to enrich to jsonl to s3<br/>+ gates + Slack milestones]
-      RUN --> REL[release lock, dequeue next]
-      REL --> Q
+    subgraph BOX[EC2 ingest box - the single worker]
+      Q[(on-box FIFO queue<br/>EBS-persistent, survives stop/start)] --> DR{drain loop holds one<br/>flock lock, crash-safe}
+      DR -->|next job| GATE[wait if index running or paused]
+      GATE --> RUN[ingest.sh HUB<br/>harvest to map to enrich to jsonl to s3<br/>+ gates + Slack milestones]
+      RUN --> MARK[mark done/failed, dequeue next]
+      MARK --> Q
     end
 
     RUN --> SLACK[#tech-alerts<br/>per-stage + complete/failed]
@@ -186,33 +200,48 @@ running). Wrap that logic non-interactively:
 
 ### 4.3 Concurrency — the ingestion "worker system" (answers Q2)
 
-Because ingestion is **strictly serial** and **must not run during an index**, the Wikimedia
-N-slot budget collapses to a **single global mutex + a FIFO queue + an index guard**, all
-on the box, all crash-safe via `flock`:
+Ingestion is **strictly serial** and **must not run during an index**, so Wikimedia's N-slot
+flock budget collapses to a **single execution slot + a FIFO queue + an index guard** — an
+**automated, on-box** system the box runs itself (operators never manage it), exactly the
+Wikimedia-worker analogy:
 
-- **Global lock (N=1).** A single lock file, held for the whole duration of one hub's
-  `ingest.sh`. Use `flock` so the lock **auto-releases if the process dies** (OOM, kill,
-  reboot) — the same property that makes Wikimedia's slots robust. No stale-lock cleanup code.
-- **FIFO queue.** A queue directory of job descriptors (`<seq>-<hub>.job`). Enqueue is what
-  the GHA triggers. A single **drain loop** (started on first enqueue if not already running,
-  itself guarded by the global lock so only one drain loop exists) pops the next job, runs
-  `ingest.sh <hub>`, then loops until the queue is empty. This gives ordering and visibility
-  that raw flock alone doesn't, and cleanly supports "ingest all hubs / run this month" by
-  enqueuing many jobs that drain one-by-one.
+- **On-box execution slot (N=1), crash-safe.** A single **drain loop** runs on the box and
+  holds one `flock` lock for its lifetime, so only one drain loop and one `ingest.sh` ever run
+  at once. `flock` **auto-releases if the process dies** (OOM, kill, reboot) — the property
+  that makes Wikimedia's slots robust — so a crash frees the slot with no stale-lock cleanup.
+- **FIFO queue on persistent EBS (not `/tmp`).** A queue directory under
+  `/home/ec2-user/data/queue/` holds one descriptor per job (`<seq>-<hub>` + requester +
+  options). Because it lives on the **EBS volume, it survives stop/start and reboot** — only
+  `/tmp` is wiped. The drain loop pops the next job, runs `ingest.sh <hub>`, and loops until
+  the queue is empty; this gives ordering + visibility that raw flock alone doesn't, and
+  cleanly supports "ingest all hubs / run this month" by enqueuing many jobs that drain
+  one-by-one.
+- **Crash recovery.** On drain-loop startup, sweep any job left in an `in-progress` state whose
+  process is gone and return it to `queued`, so an OOM/reboot mid-run resumes instead of losing
+  the job. (EBS persistence + this sweep give the "no lost jobs" guarantee without an off-box
+  store — see the note below.)
 - **Index guard.** Before starting each job, the drain loop checks an "index in progress"
-  signal and waits if set. Cheapest reliable signal: a marker written by
+  signal and waits if set. Cheapest reliable signal: a marker file written by
   `launch_indexer.py`/`post_indexer.py` at start and cleared at completion (they already own
-  the index lifecycle). A secondary check can query the EMR cluster state. Belt-and-suspenders:
-  the launch workflow can refuse to enqueue if the marker is present and no `--force` is given.
-- **What the GHA does NOT do:** hold the lock or wait in the queue. It only enqueues. This
-  keeps every guarantee on the box, where the detached work lives — exactly the lesson from
-  Wikimedia (GH `concurrency:` can't serialize detached work).
+  the index lifecycle). An EMR cluster-state check is a robust backstop.
+- **What the GHA runner does:** start the box if stopped (so it's up before hand-off — SSM
+  needs it running anyway) → SSM-**enqueue** the job into the on-box queue and ensure the drain
+  loop is running (idempotent) → post to Slack → exit. It **never** holds the lock or waits in
+  the queue. Every serialization guarantee lives where the detached work lives — the lesson
+  from Wikimedia (a GH `concurrency:` group cannot serialize work that outlives the run).
 
-> Minimal viable variant (Phase 2a): skip the explicit queue/drain-loop and have each
-> detached launch simply `flock -w <timeout>` on the global lock before running `ingest.sh`
-> (blocking waiters serialize themselves, like Wikimedia's `acquire()` poll loop). Add the
-> FIFO queue dir (Phase 2b) when ordering/visibility for monthly batches is wanted. Both are
-> the same lock; the queue is an ordering layer on top.
+> **Why on-box, not an external queue?** Because the box is always running at enqueue time
+> (GHA just started it), the queue on EBS survives crashes/restarts, and remote status comes
+> from a status workflow that reads the on-box queue (as `wikimedia-upload-status.yml` reads
+> `tmux ls`). An off-box store (SQS/DynamoDB) would only add value if we needed to *accept a
+> request while the box cannot be started at all* — a rare failure we can revisit later; it is
+> not worth the extra service/IAM/code now.
+
+> Interim for the operator-only bootstrap (Phase 1): a conservative `flock` fail-fast ("an
+> ingest is already running — aborting") is safe while access is limited to operators who can
+> retry. It is **explicitly not the open-access shape** — a rejected trigger is a lost job for
+> someone who can't diagnose the box, so the full queue (Phase 2) must land before the trigger
+> is opened beyond operators.
 
 ### 4.4 AWS auth for the runner
 
@@ -222,8 +251,8 @@ Recommend **GitHub OIDC → assume-role**, not static keys:
   `repo:dpla/ingestion3:ref:refs/heads/*` (or an environment), with a policy limited to:
   `ec2:DescribeInstances`, `ec2:StartInstances`, `ec2:StopInstances` (on the ingest
   instance ARN), `ssm:SendCommand`, `ssm:GetCommandInvocation`,
-  `ssm:DescribeInstanceInformation`, and `s3:GetObject`/`ListBucket` if the runner ever needs
-  to read manifests directly.
+  `ssm:DescribeInstanceInformation` (the runner enqueues by SSM-ing the job onto the box), and
+  `s3:GetObject`/`ListBucket` if the runner ever needs to read manifests directly.
 - Workflow gets `permissions: id-token: write, contents: read` and uses
   `aws-actions/configure-aws-credentials` with `role-to-assume`. (The repo already uses
   `id-token: write` in `docs.yml`, so the pattern is familiar.)
@@ -240,6 +269,57 @@ Reuse everything: `ingest.sh` already posts start / per-stage / failure / comple
 "instance starting", "queued behind N job(s)", "launched", and (on dispatch failure) an
 error. A later **status workflow** (cron, mirroring `wikimedia-upload-status.yml`) can SSM in,
 read the queue + `.status` files, and post a rollup.
+
+For the open end state, each job also carries a **`job_id`**; the trigger layer surfaces its
+status by asking the **status workflow** (which SSMs in and reads the on-box queue + `.status`
+files), giving a requester who can't see Slack or the box a feedback channel.
+
+### 4.6 Designing for the open, multi-user trigger layer
+
+Because the trigger is meant to eventually accept requests from callers with **no EC2/backend
+access** (§ Intended end state), the enqueue boundary must enforce admission and fairness
+**itself** — never assume the front end is trusted or even present. These controls belong on
+our side of GHA (in the enqueue step and the on-box drain loop), so they hold no matter what
+fronts the trigger:
+
+- **Strict input validation.** Resolve the hub slug against the authoritative hub list from
+  `i3.conf`; reject anything unknown. Slugs already flow through base64/SSM (no shell
+  injection), but the open boundary must additionally reject non-standard/unsupported hubs
+  with a clear message rather than attempting them.
+- **Idempotency / dedup.** If a hub is already `queued` or `running`, coalesce the new request
+  onto the existing job (attach the new requester) instead of enqueuing a duplicate — the
+  analogue of Wikimedia's session-conflict detection. Prevents double-runs and accidental
+  spam-runs of the same hub.
+- **Per-caller quotas and rate limits.** Cap concurrent queued jobs per requester and runs per
+  day (counted from the requester tag on queue entries + a small on-box tally) so one caller's
+  big batch can't monopolize the single box or burn GitHub Actions minutes. Plain FIFO alone
+  lets one batch starve others; enforce a per-caller in-flight cap (and consider fair-share
+  ordering) on top of FIFO.
+- **Privilege split.** Sensitive actions are **operator-only** and must not be exposable to
+  open callers: `force` (bypasses the index guard), `kill`, `resume-from`, arbitrary/special
+  hubs, and queue **pause**. Open callers get only "request a standard-hub ingest." Implement
+  as separate operator-gated workflows/inputs (GitHub environments + required reviewers, or a
+  distinct restricted workflow), not a single `force` checkbox anyone can tick.
+- **Protecting DPLA's own work.** Two controls beyond the index guard: (1) a global
+  **pause/maintenance flag** the drain loop honors — jobs keep queuing durably but don't
+  execute while DPLA runs sensitive operations; (2) an operator **priority lane** so DPLA/
+  time-sensitive jobs jump ahead of open-user jobs (echoes Wikimedia's additive uploader
+  priority slots).
+- **Authorization hook.** Carry an authenticated requester identity on every job and check it
+  against an allow policy (e.g. a partner may trigger only their own hub). The policy check is
+  the trigger layer's job to *populate*, but the enqueue step must *enforce* whatever identity
+  it is given and default to deny for anything unrecognized.
+- **Backpressure = queue, never reject or block.** Under load the answer is always "durably
+  queued at position N," surfaced via the `job_id`. Never fail-fast a real user's request
+  (that loses their job) and never hold a runner waiting (that burns minutes and hits the 6 h
+  cap). This is why the durable on-box queue (§4.3) is a prerequisite for opening access, not
+  a later nicety.
+- **Cost/DoS bounds.** Idle-stop keeps the box from being held up by sporadic triggers; the
+  per-caller quotas bound both compute and Actions-minute spend; audit records make abuse
+  visible and attributable.
+
+None of this requires building the Lambda/portal now — it requires building the queue and the
+enqueue-time controls now, so the front end can be added later without re-plumbing safety.
 
 ---
 
@@ -267,23 +347,28 @@ workflow with a `partner` input.
 
 ## 6. One go, or phased? (answers Q4)
 
-**Phase it.** The end-to-end system spans IAM/OIDC, a non-interactive launcher refactor, an
-on-box lock/queue/guard, instance lifecycle, and per-hub-type routing — each with its own
-failure modes. Ship the smallest thing that proves the whole chain, then harden. Each phase
-is independently useful and independently reviewable.
+**Phase it.** The end-to-end system spans IAM/OIDC, a non-interactive launcher refactor, a
+durable on-box queue + single execution slot + index guard, instance lifecycle, multi-user
+controls, and per-hub-type routing — each with its own failure modes. Ship the smallest thing
+that proves the whole chain, then harden. Each phase is independently useful and reviewable.
+
+The phases are also an **access-widening ladder**: Phases 0–2 are usable by operators only;
+**the trigger must not be opened beyond operators until Phase 3 (controls) is in place**,
+because that is what makes concurrent, semi-trusted callers safe.
 
 | Phase | Deliverable | Why / acceptance | Rough size |
 |---|---|---|---|
 | **0. Prereqs** | OIDC IAM role + least-privilege policy; GH secrets (Slack); **non-interactive flags** on `hub_preflight.py`/`launch_ingest.py` (env/CLI instead of `input()`); confirm `i3.conf` is current on the box. | Runner can assume role and SSM to the box unattended. | S |
-| **1. Single-hub launch (no queue)** | One `workflow_dispatch` workflow, `hub` input, **standard hubs only**: assume role → start box → preflight/refresh → SSM-launch `ingest.sh` detached → Slack "launched" → exit. Rely on a **simple fail-fast lock check** ("is an ingest already running? if so, abort with a message"). | Proves the full chain end-to-end on a real small hub (e.g. `sd`). Green run → hub appears as a new S3 JSONL snapshot with the safety gate passed. | M |
-| **2. Worker system: lock + queue + index guard** | Replace fail-fast with **enqueue**: on-box global `flock`, FIFO queue dir, single drain loop, and the index-in-progress guard. GHA enqueues; box serializes. | Two back-to-back dispatches run sequentially (second waits), and a dispatch during a (simulated) index waits. This is the core of Q2. | M–L |
-| **3. Lifecycle + batch + status** | Idle-stop check (cron or status workflow) to `stop-instances` when idle; multi-hub/"month" input that enqueues many; a cron **status workflow** posting queue + running state to Slack. | Cost control + "run this month" + at-a-glance status. | M |
-| **4. Special hubs + kill/retry** | Route `nara.file.delta`, Smithsonian, Community-Webs, generic `file` (delivery-path confirmation), IP-blocked (clear fail); add `kill` and `retry` workflows (mirror Wikimedia). | Full hub coverage + operational controls. | L (incremental) |
+| **1. Single-hub launch (operator-only, no queue)** | One `workflow_dispatch` workflow, `hub` input, **standard hubs only**: assume role → start box → preflight/refresh → SSM-launch `ingest.sh` detached → Slack "launched" → exit. Conservative **fail-fast lock** ("an ingest is already running — aborting"). Explicitly operator-only. | Proves the full chain end-to-end on a real small hub (e.g. `sd`). Green run → new S3 JSONL snapshot with the safety gate passed. | M |
+| **2. Automated on-box queue + execution slot + index guard** | **EBS-persistent FIFO queue** the runner enqueues via SSM; on-box **single drain loop** holding one crash-safe `flock`, running jobs one at a time; startup sweep re-queues orphaned in-progress jobs; **index-in-progress guard**. GHA enqueues, never blocks. | No job lost across box stop/start or crash. Two back-to-back dispatches serialize; a dispatch during a (simulated) index waits. Core of Q2. | M–L |
+| **3. Multi-user controls (gates opening access)** | At the enqueue boundary + drain loop: strict hub validation, **dedup/coalescing**, **per-caller quotas/rate limits**, **privilege split** (force/kill/resume/special-hubs/pause = operator-only), global **pause flag**, operator **priority lane**, requester identity + **authz hook**, per-`job_id` status, audit records. | A flood of concurrent requests can't starve/overload the box or step on DPLA work; every request is durably queued and attributable. **Prerequisite for exposing the trigger to non-operators.** | L |
+| **4. Lifecycle + batch + status** | Idle-stop check to `stop-instances` when queue empty and no pipeline process for N min; multi-hub/"month" input that enqueues many; cron **status workflow** posting queue + running state to Slack. | Cost control + "run this month" + at-a-glance status + remote feedback. | M |
+| **5. Special hubs + kill/retry** | Route `nara.file.delta`, Smithsonian, Community-Webs, generic `file` (delivery-path confirmation), IP-blocked (clear fail); add operator-only `kill` and `retry` workflows (mirror Wikimedia). | Full hub coverage + operational controls. | L (incremental) |
 
-Phases 0–1 alone deliver "kick off a standard hub from a button in GitHub." Phase 2 is the
-piece the user specifically flagged as needing to be designed in from the start — and it is,
-even though it lands as its own phase (Phase 1 uses a deliberately conservative fail-fast lock
-so it is never unsafe before the full queue exists).
+Phases 0–1 alone deliver "an operator kicks off a standard hub from a button in GitHub."
+Phases 2–3 are the pieces the open/multi-user end state makes non-negotiable — durability so no
+one's job is lost, and controls so no one steps on anyone else or on DPLA's work — and both
+must precede widening access beyond operators.
 
 ---
 
@@ -296,10 +381,12 @@ so it is never unsafe before the full queue exists).
 | Detached SSM launch of `ingest.sh` | `ingest_python_scripts/launch_ingest.py` | non-interactive; called from GHA |
 | Silent-death detection | `scripts/ingest-watchdog.sh` (cron) | none (keep) |
 | Per-hub status files | `common.sh` + `scheduler/orchestrator/state.py` | read from status workflow |
-| Serial execution / lock / queue / index guard | **nothing** (operator discipline) | **build (Phase 2)** |
-| Instance stop-when-idle | manual today | **build (Phase 3)** |
+| Serial execution slot + index guard | **nothing** (operator discipline) | **build (Phase 2)** |
+| Automated on-box queue (EBS-persistent, no lost jobs) | **nothing** | **build (Phase 2)** |
+| Multi-user controls (dedup, quotas, privilege split, pause, priority, authz, audit) | **nothing** | **build (Phase 3)** |
+| Instance stop-when-idle | manual today | **build (Phase 4)** |
 | Runner→AWS auth | `docs.yml` uses `id-token` | **OIDC role + policy (Phase 0)** |
-| GHA workflow(s) | only `scala.yml`, `docs.yml` (no ingest) | **build (Phases 1,3,4)** |
+| GHA workflow(s) | only `scala.yml`, `docs.yml` (no ingest) | **build (Phases 1,4,5)** |
 
 ---
 
@@ -307,7 +394,17 @@ so it is never unsafe before the full queue exists).
 
 - **Auto-stop races.** Stopping the box must never kill a running or just-enqueued ingest.
   Mitigation: idle-stop only on "queue empty AND no pipeline process for N minutes"; never
-  stop from the launch workflow. Consider leaving auto-stop off until Phase 3 is trusted.
+  stop from the launch workflow. Consider leaving auto-stop off until Phase 4 is trusted.
+- **Durability & orphaned jobs.** The queue must survive box stop/start and crashes → put it on
+  the **EBS volume, not `/tmp`** (which is wiped on reboot), and on drain-loop startup **sweep
+  in-progress jobs whose process is gone back to `queued`** so an OOM/reboot mid-run resumes
+  instead of losing the job. Decide the retry policy for a job that repeatedly fails vs. re-queues.
+- **Fairness & abuse (open access).** Concurrent semi-trusted callers can starve each other or
+  the box. Needs per-caller quotas/rate limits, dedup/coalescing, and (optionally) fair-share
+  ordering — not plain FIFO alone. Must be enforced at the enqueue boundary, not the front end.
+- **Privilege escalation via inputs.** `force` bypasses the index guard; `kill`/`resume`/
+  special-hubs are powerful. These must be operator-gated (GitHub environments/required
+  reviewers or a separate restricted workflow), never a checkbox on an open trigger.
 - **Index guard signal.** Decide the authoritative signal for "index in progress" — a marker
   file owned by `launch_indexer.py`/`post_indexer.py` is simplest; an EMR cluster-state check
   is a robust backstop. Needs a small change in the indexer scripts to set/clear the marker.
@@ -322,22 +419,28 @@ so it is never unsafe before the full queue exists).
   the workflow should detect and message rather than silently fail.
 - **Runner time budget.** Keep the workflow to dispatch-only; never poll a multi-hour ingest to
   completion on the runner.
-- **Ordering under raw flock.** If strict FIFO matters for monthly batches, the queue dir
-  (Phase 2b) provides it; raw flock waiters are not strictly ordered.
+- **Queue location.** Recommended: **on-box FIFO on EBS**, managed by the drain loop (Wikimedia
+  worker-slot analogue). An off-box store (SQS FIFO / DynamoDB) is **only** warranted if we
+  later need to accept requests when the box cannot be started at all, or want cross-region
+  durability — revisit then, not now; it adds a service, IAM, and code for little gain here.
 
 ---
 
 ## 9. Appendix — concrete sketches (illustrative, not final)
 
-**Workflow inputs (Phase 1):**
+**Workflow inputs.** Phase-1 (operator-only) `workflow_dispatch` has `hub` (required),
+`resume_from`, and `force` (bypass index guard). For the open end state, **`resume_from`,
+`force`, and special/arbitrary hubs move to a separate operator-gated workflow** (GitHub
+environment + required reviewers); the open-facing workflow exposes only `hub` (a standard
+hub) and carries the caller identity injected by the trigger layer.
 
 ```yaml
+# open-facing launch (Phase 3+): minimal, no privileged inputs
 on:
   workflow_dispatch:
     inputs:
-      hub:    { description: "Hub slug (e.g. sd, bpl)", required: true }
-      resume_from: { description: "mapping|enrichment|jsonl (optional)", required: false }
-      force:  { description: "Bypass index guard", type: boolean, default: false }
+      hub:       { description: "Hub slug (standard hubs only)", required: true }
+      requester: { description: "Authenticated caller id (set by trigger layer)", required: false }
 permissions: { id-token: write, contents: read }
 ```
 
@@ -345,20 +448,28 @@ permissions: { id-token: write, contents: read }
 StopInstances}` on the ingest instance ARN; `ssm:{SendCommand,GetCommandInvocation,
 DescribeInstanceInformation}`; optional `s3:{GetObject,ListBucket}` on `dpla-master-dataset`.
 
-**On-box lock (Phase 2, crash-safe):**
+**Enqueue + automated on-box slot (Phase 2, crash-safe):**
 
 ```bash
-# enqueue-ingest.sh <hub>: append job, ensure a single drain loop is running
-echo "$hub" >> "$QUEUE_DIR/$(date +%s%N)-$hub.job"
-exec 9>"$LOCK"                 # global mutex; flock auto-releases if holder dies
-if flock -n 9; then           # we are the drain loop
+# On the GHA runner (OIDC role): validate hub → dedup/quota check →
+#   ec2 start if stopped + wait Online → SSM enqueue-ingest.sh HUB REQUESTER → Slack → exit
+
+# enqueue-ingest.sh HUB REQUESTER (runs on the box via SSM; queue lives on EBS):
+Q=/home/ec2-user/data/queue                      # EBS-persistent: survives stop/start & reboot
+printf '%s\t%s\n' "$HUB" "$REQUESTER" > "$Q/$(date +%s%N)-$HUB.job"
+exec 9>"$Q/.drain.lock"                           # single global mutex; auto-releases if holder dies
+if flock -n 9; then                               # we became THE drain loop
   nohup drain-queue.sh >/home/ec2-user/data/queue-drain.log 2>&1 </dev/null &
 fi
-# drain-queue.sh: while queue non-empty: wait-if-index-running; ingest.sh <next>; dequeue
+# drain-queue.sh (holds fd 9 for its lifetime):
+#   startup: requeue any orphaned in-progress job whose process is gone
+#   loop: pop next job (oldest); wait while index-in-progress or paused;
+#         ingest.sh <hub>; mark done/failed; repeat until queue empty; then release lock
 ```
 
 This is the ingestion analogue of `ingest_wikimedia/worker_slots.py` — same `flock`
-crash-safety, collapsed to a single serial slot plus an index guard.
+crash-safety, collapsed to a single serial slot plus a FIFO queue and an index guard — with the
+**queue on the EBS volume** (not `/tmp`) so no request is lost across box stop/start or reboot.
 
 ---
 
