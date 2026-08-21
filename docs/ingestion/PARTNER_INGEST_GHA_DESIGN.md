@@ -390,7 +390,42 @@ must precede widening access beyond operators.
 
 ---
 
-## 8. Risks & open questions
+## 8. Where the work lives — GHA vs repo code vs infra/config
+
+**It cannot be done in GHA YAML alone — and shouldn't be.** By design (the lesson borrowed
+from Wikimedia) the workflow is a thin **dispatcher**: it authenticates, starts the box,
+hands off one SSM call, posts to Slack, and exits. The durable, serialized, stateful logic —
+the queue, the single-slot lock, the index guard, the drain loop — **must** live where the
+work runs (the box), because a GHA runner is ephemeral and time-limited: state created in a
+run evaporates when it ends, and it cannot serialize work that outlives the run. So the bulk
+of the new code is in-repo scripts that the box executes, not in `.github/workflows/`.
+
+| Component | Where it lives | New / change | Notes |
+|---|---|---|---|
+| Dispatcher workflow(s) | `.github/workflows/*.yml` (ingestion3) | **new** | Thin: OIDC → start box → one SSM enqueue → Slack → exit. Operator-gated variant uses GitHub environments. |
+| Queue + slot + drain loop + index guard | `scripts/` (ingestion3, **runs on the box**) | **new** | `enqueue-ingest.sh`, `drain-queue.sh`, `flock` lock, EBS queue dir, orphan sweep, index-guard check. The core of the effort. |
+| Non-interactive launcher | `ingest_python_scripts/{hub_preflight,launch_ingest}.py` | **change** | Replace `input()` prompts with flags/env so GHA can drive them unattended. |
+| Multi-user controls | on-box enqueue/drain (`scripts/`) **+** GitHub environments/required-reviewers | **new** | Dedup, quotas, pause, priority, authz hook, audit live on-box; the operator/open **privilege split** is partly GitHub repo config. |
+| Index-in-progress marker | `ingest_python_scripts/{launch_indexer,post_indexer}.py` | **change** | Write a marker on index start, clear on finish — the guard signal. Small change in a different part of the codebase. |
+| Pipeline itself | `scripts/ingest.sh` (+ `common.sh`) | **little/none** | Already does stages + gates + Slack + `.status` + email; the drain loop consumes its exit code / status files. |
+| Runner→AWS auth | IAM **OIDC provider + role + policy** (AWS) | **new, not in app repo** | Terraform or console; workflow adds `id-token: write` + `role-to-assume`. |
+| GitHub config | repo **secrets** (Slack) + **environments/reviewers** | **new, repo settings** | Not code. |
+| Box provisioning | EC2 (EBS queue dir; drain-loop launch; repo auto-pull) | **small infra** | Box already has the repo, `mise`, Java; queue dir + a systemd unit or `nohup` launch is the delta. |
+| Hub config | `ingestion3-conf` (**separate repo**) | **dependency** | Hub list/endpoints; some `file`-hub endpoints still point at old local paths and need cleanup. |
+| Wikimedia repo | `dpla/ingest-wikimedia` | **none** | Reference architecture only. |
+
+**Bottom line — five buckets of change, of which GHA YAML is the smallest (~10–20%):**
+(1) new GHA workflow YAML; (2) **new on-box scripts under `scripts/` — the bulk of the work**;
+(3) a non-interactive refactor of the `ingest_python_scripts/` launchers; (4) a small marker
+change in the indexer scripts; and (5) non-code infra/config (IAM OIDC role, GitHub
+secrets/environments, minor box setup) plus the separate `ingestion3-conf` dependency.
+Buckets 1–4 all land in the ingestion3 repo and are reviewable as normal PRs (the box just
+pulls the repo and runs them); only the IAM, GitHub settings, and box provisioning happen
+outside a code PR.
+
+---
+
+## 9. Risks & open questions
 
 - **Auto-stop races.** Stopping the box must never kill a running or just-enqueued ingest.
   Mitigation: idle-stop only on "queue empty AND no pipeline process for N minutes"; never
@@ -426,7 +461,7 @@ must precede widening access beyond operators.
 
 ---
 
-## 9. Appendix — concrete sketches (illustrative, not final)
+## 10. Appendix — concrete sketches (illustrative, not final)
 
 **Workflow inputs.** Phase-1 (operator-only) `workflow_dispatch` has `hub` (required),
 `resume_from`, and `force` (bypass index guard). For the open end state, **`resume_from`,
