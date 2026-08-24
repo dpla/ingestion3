@@ -1061,6 +1061,192 @@ test_tailscale_exit_node() {
 }
 
 # =============================================================================
+# Test: ingest.sh setsid self-re-exec
+#
+# ingest.sh re-execs under setsid when it is not already the session leader,
+# escaping the SSM document-worker's 60-minute process-group kill. These tests
+# verify the four critical properties of that block:
+#
+#   1. No re-exec when already session leader (process IS the session leader)
+#   2. Re-exec occurs when NOT the session leader (new session created)
+#   3. All positional arguments are forwarded intact after re-exec
+#   4. Exit status of the re-exec'd child is propagated correctly
+#
+# We exercise the setsid block in isolation using a small wrapper script that
+# embeds the same logic (with awk '{print $1}' field extraction) so that tests
+# run fast on both macOS and Linux without starting the real pipeline.
+# =============================================================================
+
+test_setsid_behavior() {
+    echo ""
+    echo "=========================================="
+    echo "  Testing ingest.sh setsid Self-Re-Exec"
+    echo "=========================================="
+
+    # Skip if setsid not available (macOS without util-linux, old systems).
+    if ! command -v setsid >/dev/null 2>&1; then
+        log_skip "setsid: command not found — skipping setsid tests"
+        return
+    fi
+
+    local ingest_sh="$SCRIPTS_DIR/ingest.sh"
+
+    # --- Test 1: SID comparison uses awk field extraction (static inspection) ---
+    # Ensures the awk normalization is present; without it ps -o sid= returns a
+    # space-padded value that never equals $$, causing an infinite re-exec loop.
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if grep -q "ps -o sid= -p \$\$ | awk" "$ingest_sh" 2>/dev/null; then
+        log_pass "setsid: SID comparison normalizes ps output with awk"
+    else
+        log_fail "setsid: SID comparison missing awk normalization — may infinite-loop"
+    fi
+
+    # --- Test 2: Already-session-leader path — no re-exec ---
+    # Run a tiny script under setsid so it IS the session leader; the re-exec
+    # block must be a no-op and the marker file must appear exactly once.
+    TESTS_RUN=$((TESTS_RUN + 1))
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    local marker="$tmpdir/ran"
+    local probe="$tmpdir/probe.sh"
+
+    cat > "$probe" <<'PROBE'
+#!/usr/bin/env bash
+set -eo pipefail
+MARKER="$1"
+# Only write marker if it doesn't already exist (detect re-exec loops)
+if [[ -f "$MARKER" ]]; then
+    echo "RE-EXEC DETECTED" >&2
+    exit 42
+fi
+touch "$MARKER"
+# Setsid block (same logic as ingest.sh)
+if [ "$(ps -o sid= -p $$ | awk '{print $1}')" != "$$" ]; then
+    exec setsid bash "$0" "$@"
+fi
+exit 0
+PROBE
+    chmod +x "$probe"
+
+    if setsid bash "$probe" "$marker" >/dev/null 2>&1; then
+        if [[ -f "$marker" ]]; then
+            log_pass "setsid: already-session-leader — no re-exec, marker written once"
+        else
+            log_fail "setsid: already-session-leader — marker not written"
+        fi
+    else
+        log_fail "setsid: already-session-leader probe exited non-zero"
+    fi
+    rm -rf "$tmpdir"
+
+    # --- Test 3: Not-session-leader path — re-exec creates new session ---
+    # Run WITHOUT setsid so the script is NOT the session leader; the block
+    # must re-exec under setsid, making the child the session leader (SID==PID).
+    TESTS_RUN=$((TESTS_RUN + 1))
+    tmpdir=$(mktemp -d)
+    local sid_file="$tmpdir/sid"
+    local pid_file="$tmpdir/pid"
+    probe="$tmpdir/probe2.sh"
+
+    cat > "$probe" <<'PROBE'
+#!/usr/bin/env bash
+set -eo pipefail
+SID_FILE="$1"
+PID_FILE="$2"
+# Re-exec block
+if [ "$(ps -o sid= -p $$ | awk '{print $1}')" != "$$" ]; then
+    exec setsid bash "$0" "$@"
+fi
+# After re-exec: record SID and PID so caller can verify SID==PID
+ps -o sid= -p $$ | awk '{print $1}' > "$SID_FILE"
+echo $$ > "$PID_FILE"
+exit 0
+PROBE
+    chmod +x "$probe"
+
+    # Launch as a plain bash (not setsid) subprocess — it will NOT be session leader
+    if bash "$probe" "$sid_file" "$pid_file" >/dev/null 2>&1; then
+        if [[ -f "$sid_file" && -f "$pid_file" ]]; then
+            local recorded_sid recorded_pid
+            recorded_sid=$(cat "$sid_file")
+            recorded_pid=$(cat "$pid_file")
+            if [[ "$recorded_sid" == "$recorded_pid" ]]; then
+                log_pass "setsid: re-exec path — new session created (SID==PID after exec)"
+            else
+                log_fail "setsid: re-exec path — SID ($recorded_sid) != PID ($recorded_pid)"
+            fi
+        else
+            log_fail "setsid: re-exec path — sid/pid files not written"
+        fi
+    else
+        log_fail "setsid: re-exec path probe exited non-zero"
+    fi
+    rm -rf "$tmpdir"
+
+    # --- Test 4: Positional arguments are forwarded intact ---
+    TESTS_RUN=$((TESTS_RUN + 1))
+    tmpdir=$(mktemp -d)
+    local args_file="$tmpdir/args"
+    probe="$tmpdir/probe3.sh"
+
+    cat > "$probe" <<'PROBE'
+#!/usr/bin/env bash
+set -eo pipefail
+ARGS_FILE="${@: -1}"  # last arg is the output file
+if [ "$(ps -o sid= -p $$ | awk '{print $1}')" != "$$" ]; then
+    exec setsid bash "$0" "$@"
+fi
+# Write all args except the last to the file
+printf '%s\n' "${@:1:$(($#-1))}" > "$ARGS_FILE"
+exit 0
+PROBE
+    chmod +x "$probe"
+
+    if bash "$probe" "alpha" "beta with spaces" "gamma" "$args_file" >/dev/null 2>&1; then
+        local saved_args
+        saved_args=$(cat "$args_file" 2>/dev/null || echo "")
+        if [[ "$saved_args" == $'alpha\nbeta with spaces\ngamma' ]]; then
+            log_pass "setsid: arguments preserved after re-exec (including spaces)"
+        else
+            log_fail "setsid: arguments mangled — got: $(echo "$saved_args" | head -3)"
+        fi
+    else
+        log_fail "setsid: argument-preservation probe exited non-zero"
+    fi
+    rm -rf "$tmpdir"
+
+    # --- Test 5: Exit status propagated correctly ---
+    TESTS_RUN=$((TESTS_RUN + 1))
+    tmpdir=$(mktemp -d)
+    probe="$tmpdir/probe4.sh"
+
+    cat > "$probe" <<'PROBE'
+#!/usr/bin/env bash
+set -eo pipefail
+WANT_EXIT="$1"
+if [ "$(ps -o sid= -p $$ | awk '{print $1}')" != "$$" ]; then
+    exec setsid bash "$0" "$@"
+fi
+exit "$WANT_EXIT"
+PROBE
+    chmod +x "$probe"
+
+    local all_ok=1
+    for want_exit in 0 1 7; do
+        local got_exit=0
+        bash "$probe" "$want_exit" >/dev/null 2>&1 || got_exit=$?
+        if [[ "$got_exit" != "$want_exit" ]]; then
+            log_fail "setsid: exit status $want_exit not propagated (got $got_exit)"
+            all_ok=0
+        fi
+    done
+    if [[ "$all_ok" == 1 ]]; then
+        log_pass "setsid: exit status propagated correctly (0, 1, 7)"
+    fi
+    rm -rf "$tmpdir"
+}
+
+# =============================================================================
 # Main
 # =============================================================================
 
@@ -1094,6 +1280,7 @@ main() {
         test_curated_membership_parser
         test_send_email_yes_flag
         test_tailscale_exit_node
+        test_setsid_behavior
     fi
 
     # Run deterministic alias tests (safe in both quick/full mode).
