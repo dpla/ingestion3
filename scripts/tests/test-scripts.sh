@@ -1073,7 +1073,7 @@ test_tailscale_exit_node() {
 #   4. Exit status of the re-exec'd child is propagated correctly
 #
 # We exercise the setsid block in isolation using a small wrapper script that
-# embeds the same logic (with tr -d ' ' whitespace stripping) so that tests
+# embeds the same logic (with awk '{print $1}' field extraction) so that tests
 # run fast on both macOS and Linux without starting the real pipeline.
 # =============================================================================
 
@@ -1091,9 +1091,9 @@ test_setsid_behavior() {
 
     local ingest_sh="$SCRIPTS_DIR/ingest.sh"
 
-    # --- Test 1: SID comparison uses tr -d ' ' (static inspection) ---
-    # Ensures the whitespace-normalisation fix is present; without it the
-    # comparison is always true and ingest.sh would infinite-loop on re-exec.
+    # --- Test 1: SID comparison uses awk field extraction (static inspection) ---
+    # Ensures the awk normalization is present; without it ps -o sid= returns a
+    # space-padded value that never equals $$, causing an infinite re-exec loop.
     TESTS_RUN=$((TESTS_RUN + 1))
     if grep -q "ps -o sid= -p \$\$ | awk" "$ingest_sh" 2>/dev/null; then
         log_pass "setsid: SID comparison normalizes ps output with awk"

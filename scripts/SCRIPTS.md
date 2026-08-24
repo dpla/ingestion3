@@ -18,7 +18,7 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| `ingest.sh` | Full pipeline (harvest → map → enrich → jsonl → S3 sync) | `./scripts/ingest.sh <hub>` |
+| `ingest.sh` | Full pipeline (harvest → map → enrich → jsonl → S3 sync); self-re-execs under `setsid` to escape SSM's 60-min process-group kill | `./scripts/ingest.sh <hub>` |
 | `ingest-watchdog.sh` | Cron watchdog: detects ingests killed by SIGKILL and alerts Slack | `*/5 * * * * /home/ec2-user/ingestion3/scripts/ingest-watchdog.sh` (via crontab) |
 | `harvest.sh` | Harvest records from OAI/API/file source | `./scripts/harvest.sh <hub>` |
 | `remap.sh` | Re-run mapping → enrichment → jsonl | `./scripts/remap.sh <hub>` |
@@ -165,12 +165,12 @@ fi
 ```
 
 **How it works:**
-- `ps -o sid= -p $$` returns the session ID (SID) of the current process, with leading whitespace that `tr -d ' '` strips before the comparison.
+- `ps -o sid= -p $$` returns the session ID (SID) of the current process, space-padded to a fixed-width column; `awk '{print $1}'` extracts the numeric field before the comparison.
 - If `SID != PID`, this process is not the session leader — re-exec under `setsid`, which creates a new session where `PID == SID`.
 - The `exec` replaces the shell in place, so arguments, file descriptors, and exit status are all preserved.
 - The check is a no-op when `ingest.sh` is run directly from a terminal (already session leader), so normal developer usage is unaffected.
 
-**Normalization is required:** `ps -o sid=` zero-pads the output to a fixed-width column, e.g. `  1234`. Comparing that directly with the bare integer `$$` (`1234`) always evaluates as unequal, causing an infinite re-exec loop. `| awk '{print $1}'` extracts the numeric field and removes surrounding whitespace.
+**Normalization is required:** `ps -o sid=` space-pads the output to a fixed-width column, e.g. `  1234`. Comparing that directly with the bare integer `$$` (`1234`) always evaluates as unequal, causing an infinite re-exec loop. `| awk '{print $1}'` extracts the numeric field and removes surrounding whitespace.
 
 #### IP-restricted hubs (TAILSCALE_EXIT_NODE)
 
