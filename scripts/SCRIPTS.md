@@ -152,6 +152,26 @@ Runs the complete ingestion pipeline for a hub:
 ./scripts/ingest.sh maryland --harvest-only   # Only harvest
 ```
 
+#### SSM Run Command and the 60-minute kill
+
+When `ingest.sh` is launched via AWS SSM Run Command (`AWS-RunShellScript`), the SSM document worker tracks the process group and sends **SIGKILL to the entire group after 60 minutes**, even if the foreground shell already reported `Success`. This terminates a long-running harvest (e.g. Minnesota's 1M-record API harvest) at exactly the 60-minute mark.
+
+`ingest.sh` escapes this by calling `setsid` early — before sourcing `common.sh` — to create a new OS session with a fresh process group ID that the SSM worker is not tracking:
+
+```bash
+if [ "$(ps -o sid= -p $$ | awk '{print $1}')" != "$$" ]; then
+    exec setsid bash "$0" "$@"
+fi
+```
+
+**How it works:**
+- `ps -o sid= -p $$` returns the session ID (SID) of the current process, with leading whitespace that `tr -d ' '` strips before the comparison.
+- If `SID != PID`, this process is not the session leader — re-exec under `setsid`, which creates a new session where `PID == SID`.
+- The `exec` replaces the shell in place, so arguments, file descriptors, and exit status are all preserved.
+- The check is a no-op when `ingest.sh` is run directly from a terminal (already session leader), so normal developer usage is unaffected.
+
+**Normalization is required:** `ps -o sid=` zero-pads the output to a fixed-width column, e.g. `  1234`. Comparing that directly with the bare integer `$$` (`1234`) always evaluates as unequal, causing an infinite re-exec loop. `| awk '{print $1}'` extracts the numeric field and removes surrounding whitespace.
+
 #### IP-restricted hubs (TAILSCALE_EXIT_NODE)
 
 Some partners whitelist specific source IPs on their OAI endpoints. For those hubs, `ingest.sh` automatically routes harvest traffic through a Tailscale exit node that holds the whitelisted IP. The exit node is set before the harvest step and cleared (and tailscaled stopped) immediately after, so downstream steps (mapping, enrichment, S3 sync) use normal routing. On failure, the same cleanup runs best-effort via an EXIT trap — it attempts to clear the exit node and stop `tailscaled` even when the harvest fails.
