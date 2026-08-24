@@ -7,6 +7,13 @@
 
 set -eo pipefail  # Exit on any error; propagate failures through pipes
 
+# Ensure we run as a session leader so that SSM Run Command's process-group
+# cleanup (which fires after ~60 min) cannot kill a long-running harvest.
+# If we are not already the session leader, re-exec under setsid.
+if [ "$(ps -o sid= -p $$)" != "$$" ]; then
+    exec setsid bash "$0" "$@"
+fi
+
 # Source common configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
