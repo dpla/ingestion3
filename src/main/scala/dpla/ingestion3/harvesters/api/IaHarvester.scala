@@ -101,6 +101,7 @@ class IaHarvester(
       }
     })
 
+    close() // flush Avro writer before read-back (issue #760)
     spark.read.format("avro").load(tmpOutStr)
   }
 

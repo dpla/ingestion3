@@ -96,7 +96,8 @@ class LocHarvester(
     // @see ApiHarvester
     saveOutAll(locFetched)
 
-    // Read harvested data into Spark DataFrame and return.
+    // Flush and close the Avro writer before Spark reads the file (issue #760).
+    close()
     spark.read.format("avro").load(tmpOutStr)
   }
 
