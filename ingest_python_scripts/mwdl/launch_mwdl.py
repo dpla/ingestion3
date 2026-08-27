@@ -47,7 +47,7 @@ def _load_dotenv():
     creds = cfg.get("AWS_SHARED_CREDENTIALS_FILE")
     if creds:
         os.environ.setdefault("AWS_SHARED_CREDENTIALS_FILE", creds)
-    for key in ("SLACK_BOT_TOKEN", "SLACK_TOKEN", "SLACK_CHANNEL"):
+    for key in ("SLACK_WEBHOOK", "SLACK_TECH_WEBHOOK"):
         if key in cfg:
             os.environ.setdefault(key, cfg[key])
     return cfg
@@ -59,18 +59,14 @@ INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
 # ---------- Slack ----------
 
 def slack_notify(msg: str) -> None:
-    """Post a message to Slack. Silently skips if SLACK_BOT_TOKEN is not set."""
+    """Post a message to Slack via webhook. Silently skips if SLACK_WEBHOOK is not set."""
     import urllib.request as _req
-    token   = os.environ.get("SLACK_BOT_TOKEN") or os.environ.get("SLACK_TOKEN", "")
-    channel = os.environ.get("SLACK_CHANNEL", "C02HEU2L3")
-    if not token:
+    webhook = os.environ.get("SLACK_WEBHOOK", "")
+    if not webhook or webhook == "your_webhook_url_here":
         return
-    payload = json.dumps({"channel": channel, "text": msg}).encode()
-    request = _req.Request(
-        "https://slack.com/api/chat.postMessage",
-        data=payload,
-        headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
-    )
+    payload = json.dumps({"text": msg}).encode()
+    request = _req.Request(webhook, data=payload,
+                           headers={"Content-Type": "application/json"})
     try:
         _req.urlopen(request, timeout=10)
     except Exception:
