@@ -73,7 +73,17 @@ class LocalOaiHarvester(
       val documentXml = scala.xml.XML.loadString(document)
       val header = documentXml \ "header"
       val metadata = documentXml \ "metadata"
-      val about = <about>{requestElement}{resumptionToken}{responseDate}</about>
+      // Preserve any provider-supplied <about> content alongside the OAI request
+      // bookkeeping, rather than discarding it. Some providers put meaningful data
+      // here — e.g. JSTOR/Ithaka supplies the contributing institution as
+      // <about><oai_dc:dc><oai_dc:publisher>. Only element children are carried
+      // over (whitespace text nodes dropped).
+      val providerAbout =
+        (documentXml \ "about").flatMap(_.child).collect { case e: scala.xml.Elem =>
+          e
+        }
+      val about =
+        <about>{requestElement}{resumptionToken}{responseDate}{providerAbout}</about>
       val record = <record>{header}{metadata}{about}</record>
       oaiRecord.copy(document = record.toString)
     } catch {
