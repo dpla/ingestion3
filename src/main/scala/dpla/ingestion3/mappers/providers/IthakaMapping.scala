@@ -20,9 +20,11 @@ class IthakaMapping
 
   override def useProviderName: Boolean = true
 
-  override def getProviderName: Option[String] = Some(
-    "artstor"
-  ) // TODO: does this actually help?
+  // DO NOT CHANGE. This is the id salt: DPLA item id = md5(getProviderName + "--" +
+  // originalId). It must stay "artstor" (the original OCLC-era provider name) so the
+  // JSTOR rebrand preserves the ids these items already have — regardless of whether
+  // the ingest is invoked as jstor/artstor/ithaka. Changing it renumbers the entire hub.
+  override def getProviderName: Option[String] = Some("artstor")
 
   // DPLA item id = md5(getProviderName + "--" + originalId). To keep the ids these
   // items had when they were harvested from the old Artstor (OCLC) feed, look the
@@ -85,7 +87,7 @@ class IthakaMapping
     val contributors = scala.collection.mutable.ArrayBuffer.empty[String]
     // Routing target set by a role term; the role word is retained so a dangling
     // role (no following name) still falls through to contributor rather than drop.
-    var pending: Option[(String, String)] = None
+    var pending: Option[(scala.collection.mutable.ArrayBuffer[String], String)] = None
     def flushDangling(): Unit =
       pending.foreach { case (_, word) => contributors += word }
 
@@ -95,23 +97,17 @@ class IthakaMapping
       .foreach { element =>
         val lc = element.toLowerCase
         if (creatorRoleTerms.contains(lc)) {
-          flushDangling(); pending = Some(("creator", element))
+          flushDangling(); pending = Some((creators, element))
         } else if (lc == "publisher") {
-          flushDangling(); pending = Some(("publisher", element))
+          flushDangling(); pending = Some((publishers, element))
         } else {
-          val names = element
+          val target = pending.map(_._1).getOrElse(contributors)
+          element
             .splitAtDelimiter("\\|")
             .flatMap(_.splitAtDelimiter(";"))
             .map(_.trim)
             .filter(_.nonEmpty)
-          val target = pending.map(_._1).getOrElse("contributor")
-          names.foreach { n =>
-            target match {
-              case "creator"   => creators += n
-              case "publisher" => publishers += n
-              case _           => contributors += n
-            }
-          }
+            .foreach(target += _)
           pending = None
         }
       }
@@ -119,9 +115,13 @@ class IthakaMapping
     (creators.toSeq, publishers.toSeq, contributors.toSeq)
   }
 
+  // Drop empty and placeholder "unknown" agent names.
+  private def keepName(x: String): Boolean =
+    x.nonEmpty && !x.equalsIgnoreCase("unknown")
+
   override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     partitionContributors(data)._3
-      .filter(x => x.nonEmpty && !x.equalsIgnoreCase("unknown"))
+      .filter(keepName)
       .map(nameOnlyAgent)
 
   // Work publisher: dc:publisher (metadata) plus any publisher-role names carried
@@ -129,7 +129,7 @@ class IthakaMapping
   override def publisher(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
     (extractStrings(data \ "metadata" \ "dc" \ "publisher") ++
       partitionContributors(data)._2)
-      .filter(x => x.nonEmpty && !x.equalsIgnoreCase("unknown"))
+      .filter(keepName)
       .map(nameOnlyAgent)
 
   // JSTOR omits dc:title for genuinely untitled items but displays "[No title]" in
@@ -149,7 +149,7 @@ class IthakaMapping
       .flatMap(_.splitAtDelimiter(";")) ++
       partitionContributors(data)._1)
       .map(_.trim)
-      .filter(x => x.nonEmpty && !x.equalsIgnoreCase("unknown"))
+      .filter(keepName)
       .map(nameOnlyAgent)
 
   override def subject(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
@@ -182,12 +182,17 @@ class IthakaMapping
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
     typeyFormaty(data)
 
-  // todo make sure these values look ok
+  // The block/allow filters blank out (return "") the terms they exclude, so
+  // drop those empties rather than emit stray "" values in format/extent.
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
-    typeyFormaty(data).map(_.applyBlockFilter(ExtentIdentificationList.termList))
+    typeyFormaty(data)
+      .map(_.applyBlockFilter(ExtentIdentificationList.termList))
+      .filter(_.nonEmpty)
 
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
-    typeyFormaty(data).map(_.applyAllowFilter(ExtentIdentificationList.termList))
+    typeyFormaty(data)
+      .map(_.applyAllowFilter(ExtentIdentificationList.termList))
+      .filter(_.nonEmpty)
 
   override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
     // JSTOR's persistent record id is the OAI header identifier (the community
