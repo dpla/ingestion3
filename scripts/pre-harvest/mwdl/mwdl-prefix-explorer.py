@@ -44,7 +44,7 @@ SCOPE     = "MWDL"
 
 THRESHOLD  = 5000
 CHARS      = list("abcdefghijklmnopqrstuvwxyz0123456789")
-REST_S     = 12
+REST_S     = 5
 MAX_RETRIES = 3
 TIMEOUT    = 90
 
@@ -141,7 +141,7 @@ def main():
     print("=" * 60, flush=True)
 
     total_resolved = 0
-    top_chars = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+    top_chars = list("abcdefghijklmnopqrstuvwxyz0123456789")
     for i, c in enumerate(top_chars):
         print(f"\n[{i+1}/{len(top_chars)}] Exploring {c}*...", flush=True)
         resolved = explore(c)
