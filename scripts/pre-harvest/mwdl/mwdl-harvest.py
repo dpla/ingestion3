@@ -56,13 +56,13 @@ def fetch_page(prefix: str, offset: int) -> "tuple[list, int]":
         "apikey": API_KEY,
         "limit":  str(LIMIT),
         "offset": str(offset),
-        "q":      f"title,begins_with,{prefix}*",
+        "q":      f"title,begins_with,{prefix}",
     })
     req = urllib.request.Request(f"{BASE}?{params}")
     for attempt in range(MAX_RETRIES):
         if attempt > 0:
             wait = REST_S * (attempt + 1)
-            print(f"    Retry {attempt} for '{prefix}*' offset={offset}, waiting {wait}s...", flush=True)
+            print(f"    Retry {attempt} for '{prefix}' offset={offset}, waiting {wait}s...", flush=True)
             time.sleep(wait)
         try:
             with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
@@ -73,7 +73,7 @@ def fetch_page(prefix: str, offset: int) -> "tuple[list, int]":
         except Exception as e:
             print(f"    Error: {e}", flush=True)
             time.sleep(REST_S)
-    raise RuntimeError(f"Failed to fetch '{prefix}*' offset={offset} after {MAX_RETRIES} retries")
+    raise RuntimeError(f"Failed to fetch '{prefix}' offset={offset} after {MAX_RETRIES} retries")
 
 
 def load_progress() -> dict:
@@ -121,7 +121,7 @@ def main():
             prefix_docs  = 0
             offset       = 0
 
-            print(f"\n[{len(completed)+i+1}/{len(prefixes)}] '{prefix}*' ({expected} expected)", flush=True)
+            print(f"\n[{len(completed)+i+1}/{len(prefixes)}] '{prefix}' ({expected} expected)", flush=True)
 
             while True:
                 time.sleep(REST_S)
@@ -145,7 +145,7 @@ def main():
             progress["completed_prefixes"]  = list(completed)
             progress["total_docs_written"]  = docs_written
             save_progress(progress)
-            print(f"  ✓ '{prefix}*': {prefix_docs} docs (total so far: {docs_written:,})", flush=True)
+            print(f"  ✓ '{prefix}': {prefix_docs} docs (total so far: {docs_written:,})", flush=True)
 
     except KeyboardInterrupt:
         print(f"\nInterrupted. {docs_written:,} docs written.", flush=True)

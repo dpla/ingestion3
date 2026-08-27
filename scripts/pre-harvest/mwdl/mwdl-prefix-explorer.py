@@ -66,13 +66,13 @@ def query_prefix(prefix: str) -> Optional[int]:
         "apikey": API_KEY,
         "limit":  "1",
         "offset": "0",
-        "q":      f"title,begins_with,{prefix}*",
+        "q":      f"title,begins_with,{prefix}",
     })
     req = urllib.request.Request(f"{BASE}?{params}")
     for attempt in range(MAX_RETRIES):
         if attempt > 0:
             wait = REST_S * (attempt + 1)
-            print(f"    Retry {attempt} for '{prefix}*', waiting {wait}s...", flush=True)
+            print(f"    Retry {attempt} for '{prefix}', waiting {wait}s...", flush=True)
             time.sleep(wait)
         query_count += 1
         try:
@@ -91,17 +91,17 @@ def explore(prefix: str) -> int:
 
     count = query_prefix(prefix)
     if count is None:
-        print(f"  '{prefix}*': TIMEOUT — splitting blind", flush=True)
+        print(f"  '{prefix}': TIMEOUT — splitting blind", flush=True)
         count = THRESHOLD  # force split
     elif count == 0:
         return 0
     elif count < THRESHOLD:
         queryable[prefix] = count
-        print(f"  '{prefix}*': {count:,} ✓", flush=True)
+        print(f"  '{prefix}': {count:,} ✓", flush=True)
         return count
 
     needs_split.append((prefix, count))
-    print(f"  '{prefix}*': {count:,} → splitting by char", flush=True)
+    print(f"  '{prefix}': {count:,} → splitting by char", flush=True)
 
     char_resolved = 0
     for c in CHARS:
@@ -111,7 +111,7 @@ def explore(prefix: str) -> int:
     if gap >= THRESHOLD:
         # Prefix is a complete word — split on next word
         print(
-            f"  '{prefix}*': {gap:,} unresolved after char extension "
+            f"  '{prefix}': {gap:,} unresolved after char extension "
             f"→ splitting by next word",
             flush=True,
         )
@@ -121,13 +121,13 @@ def explore(prefix: str) -> int:
 
         remaining = gap - word_resolved
         if remaining > 0 and remaining < THRESHOLD:
-            print(f"  '{prefix}*': {remaining:,} in gap (no next-word match) — noted", flush=True)
+            print(f"  '{prefix}': {remaining:,} in gap (no next-word match) — noted", flush=True)
         elif remaining >= THRESHOLD:
-            print(f"  ⚠ '{prefix}*': {remaining:,} still unresolvable after next-word split", flush=True)
+            print(f"  ⚠ '{prefix}': {remaining:,} still unresolvable after next-word split", flush=True)
 
         return char_resolved + word_resolved
     elif 0 < gap < THRESHOLD:
-        print(f"  '{prefix}*': {gap:,} in gap (small, noted)", flush=True)
+        print(f"  '{prefix}': {gap:,} in gap (small, noted)", flush=True)
 
     return char_resolved
 
@@ -160,7 +160,7 @@ def main():
     top_buckets = sorted(queryable.items(), key=lambda x: -x[1])[:20]
     print("\nLargest queryable buckets:", flush=True)
     for prefix, count in top_buckets:
-        print(f"  '{prefix}*': {count:,}", flush=True)
+        print(f"  '{prefix}': {count:,}", flush=True)
 
     output = {
         "queryable":                dict(sorted(queryable.items())),
