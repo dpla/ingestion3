@@ -47,10 +47,34 @@ def _load_dotenv():
     creds = cfg.get("AWS_SHARED_CREDENTIALS_FILE")
     if creds:
         os.environ.setdefault("AWS_SHARED_CREDENTIALS_FILE", creds)
+    for key in ("SLACK_BOT_TOKEN", "SLACK_TOKEN", "SLACK_CHANNEL"):
+        if key in cfg:
+            os.environ.setdefault(key, cfg[key])
     return cfg
 
 _env = _load_dotenv()
 INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
+
+
+# ---------- Slack ----------
+
+def slack_notify(msg: str) -> None:
+    """Post a message to Slack. Silently skips if SLACK_BOT_TOKEN is not set."""
+    import urllib.request as _req
+    token   = os.environ.get("SLACK_BOT_TOKEN") or os.environ.get("SLACK_TOKEN", "")
+    channel = os.environ.get("SLACK_CHANNEL", "C02HEU2L3")
+    if not token:
+        return
+    payload = json.dumps({"channel": channel, "text": msg}).encode()
+    request = _req.Request(
+        "https://slack.com/api/chat.postMessage",
+        data=payload,
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
+    )
+    try:
+        _req.urlopen(request, timeout=10)
+    except Exception:
+        pass
 
 MWDL_SCRIPTS = "/home/ec2-user/ingestion3/scripts/pre-harvest/mwdl"
 INGEST_SCRIPT = "/home/ec2-user/ingestion3/scripts/ingest.sh"
@@ -165,6 +189,7 @@ def step(n, title):
 
 def run_prefix_explorer():
     step(1, "Build prefix query buckets (mwdl-prefix-explorer.py)")
+    slack_notify(":arrow_forward: *MWDL pre-harvest started* — building title-prefix query buckets")
     log_path = f"{HARVEST_DIR}/mwdl-prefix-explorer.log"
     print(f"  Log: {log_path}")
     ssm_run(f"mkdir -p {HARVEST_DIR}", timeout_seconds=30)
@@ -177,6 +202,7 @@ def run_prefix_explorer():
 
 def run_prefix_harvest():
     step(2, "Harvest records by prefix (mwdl-harvest.py)")
+    slack_notify(":arrow_forward: *MWDL harvest started* — paginating prefix buckets")
     log_path = f"{HARVEST_DIR}/mwdl-harvest.log"
     print(f"  Log: {log_path}")
 
@@ -200,6 +226,7 @@ def run_prefix_harvest():
 
 def run_jsonl_to_avro():
     step(3, "Convert JSONL → Avro (mwdl-jsonl-to-avro.py)")
+    slack_notify(":arrow_forward: *MWDL JSONL → Avro conversion started*")
     log_path = f"{HARVEST_DIR}/mwdl-avro.log"
     print(f"  Log: {log_path}")
 
