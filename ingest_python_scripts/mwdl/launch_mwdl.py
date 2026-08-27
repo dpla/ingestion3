@@ -3,10 +3,10 @@
 DPLA MWDL Ingest Launcher
 
 Orchestrates the full MWDL Primo VE ingest:
-  1. mwdl-prefix-explorer.py  — builds title-prefix query buckets (mwdl-prefixes.json)
-  2. mwdl-prefix-harvest.py   — harvests all records using those buckets (mwdl-harvest.jsonl)
-  3. mwdl-jsonl-to-avro.py    — converts JSONL → Avro ready for the pipeline
-  4. ingest.sh mwdl --skip-harvest — runs mapping → enrichment → jsonl → S3
+  1. pre-harvest/mwdl-prefix-explorer.py  — builds title-prefix query buckets (mwdl-prefixes.json)
+  2. pre-harvest/mwdl-harvest.py          — harvests all records using those buckets (mwdl-harvest.jsonl)
+  3. pre-harvest/mwdl-jsonl-to-avro.py    — converts JSONL → Avro ready for the pipeline
+  4. ingest.sh mwdl --skip-harvest        — runs mapping → enrichment → jsonl → S3
 
 Each long-running step runs as a background nohup job on EC2; this script
 tails the log every 60 s and blocks until the step succeeds or fails.
@@ -18,7 +18,7 @@ Usage:
     python3 mwdl/launch_mwdl.py --skip-to-pipeline  # skip all pre-steps, just run ingest.sh
 
 Prerequisites:
-    - MWDL_API_KEY set in .env (or exported) on EC2
+    - mwdl.harvest.apiKey set in i3.conf on EC2 (read automatically by the scripts)
     - AWS CLI authenticated locally (profile: dpla)
     - IAM: ssm:SendCommand, ssm:GetCommandInvocation on the ingest instance
 """
@@ -52,7 +52,7 @@ def _load_dotenv():
 _env = _load_dotenv()
 INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
 
-MWDL_SCRIPTS = "/home/ec2-user/ingestion3/scripts/mwdl"
+MWDL_SCRIPTS = "/home/ec2-user/ingestion3/scripts/pre-harvest/mwdl"
 INGEST_SCRIPT = "/home/ec2-user/ingestion3/scripts/ingest.sh"
 HARVEST_DIR   = "/home/ec2-user/mwdl-harvest"
 
@@ -176,8 +176,8 @@ def run_prefix_explorer():
 
 
 def run_prefix_harvest():
-    step(2, "Harvest records by prefix (mwdl-prefix-harvest.py)")
-    log_path = f"{HARVEST_DIR}/mwdl-prefix-harvest.log"
+    step(2, "Harvest records by prefix (mwdl-harvest.py)")
+    log_path = f"{HARVEST_DIR}/mwdl-harvest.log"
     print(f"  Log: {log_path}")
 
     # Verify prefixes file exists
@@ -191,7 +191,7 @@ def run_prefix_harvest():
         sys.exit(f"  ERROR: {HARVEST_DIR}/mwdl-prefixes.json not found. Run without --skip-to-harvest first.")
     print(f"  Found {count} queryable prefix buckets.")
 
-    cmd = f"python3 {MWDL_SCRIPTS}/mwdl-prefix-harvest.py"
+    cmd = f"python3 {MWDL_SCRIPTS}/mwdl-harvest.py"
     pid, exit_file = ssm_bg(cmd, log_path)
     print(f"  PID: {pid} — tailing every {POLL_SECONDS}s")
     wait_for_pid(pid, log_path, exit_file, timeout_seconds=18000)  # 5h max

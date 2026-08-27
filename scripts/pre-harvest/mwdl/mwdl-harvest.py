@@ -56,7 +56,7 @@ def fetch_page(prefix: str, offset: int) -> "tuple[list, int]":
         "apikey": API_KEY,
         "limit":  str(LIMIT),
         "offset": str(offset),
-        "q":      f"title,begins_with,{prefix}",
+        "q":      f"title,begins_with,{prefix}*",
     })
     req = urllib.request.Request(f"{BASE}?{params}")
     for attempt in range(MAX_RETRIES):
