@@ -16,22 +16,22 @@ import urllib.request
 import urllib.parse
 from pathlib import Path
 
-# Load .env from repo root
-def _load_env() -> None:
-    env_path = Path(__file__).parent.parent.parent / ".env"
-    if not env_path.exists():
-        return
-    with open(env_path) as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, val = line.partition("=")
-            os.environ.setdefault(key.strip(), val.strip())
+import re
 
-_load_env()
+def _read_api_key() -> str:
+    """Read mwdl.harvest.apiKey from i3.conf."""
+    candidates = [
+        Path.home() / "ingestion3-conf" / "i3.conf",
+        Path(__file__).parent.parent.parent / "ingestion3-conf" / "i3.conf",
+    ]
+    for path in candidates:
+        if path.exists():
+            m = re.search(r'^mwdl\.harvest\.apiKey\s*=\s*"([^"]+)"', path.read_text(), re.MULTILINE)
+            if m:
+                return m.group(1)
+    raise RuntimeError("mwdl.harvest.apiKey not found in i3.conf")
 
-API_KEY = os.environ.get("MWDL_API_KEY", "")
+API_KEY = _read_api_key()
 BASE    = "https://api-na.hosted.exlibrisgroup.com/primo/v1/search"
 VID     = "01UTAH_INST:MWDL"
 TAB     = "LibraryCatalog"
