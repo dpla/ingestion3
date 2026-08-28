@@ -31,7 +31,8 @@ class MwdlMapping extends JsonMapping with JsonExtractor {
 
   // SourceResource mapping
   override def collection(data: Document[JValue]): Seq[DcmiTypeCollection] =
-    extractStrings(unwrap(data) \ "pnx" \ "facets" \ "lfc01")
+    // Real Primo VE records use addtitle for collection/series name; lfc01 is absent
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "addtitle")
       .map(nameOnlyCollection)
 
   override def contributor(data: Document[JValue]): Seq[EdmAgent] =
@@ -46,8 +47,7 @@ class MwdlMapping extends JsonMapping with JsonExtractor {
 
   override def date(data: Document[JValue]): Seq[EdmTimeSpan] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "creationdate")
-      .flatMap(_.splitAtDelimiter(";"))
-      .map(stringOnlyTimeSpan)
+      .map(collapseYearRange)
 
   override def description(data: Document[JValue]): Seq[String] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "description")
@@ -62,10 +62,11 @@ class MwdlMapping extends JsonMapping with JsonExtractor {
       .filter(_.nonEmpty)
 
   override def identifier(data: Document[JValue]): Seq[String] =
-    extractStrings(unwrap(data) \ "pnx" \ "control" \ "recordid")
+    parsedIdentifiers(data)
 
   override def language(data: Document[JValue]): Seq[SkosConcept] =
-    extractStrings(unwrap(data) \ "pnx" \ "facets" \ "language")
+    // facets.language is absent in real records; use display.language
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "language")
       .map(nameOnlyConcept)
 
   override def place(data: Document[JValue]): Seq[DplaPlace] =
@@ -78,9 +79,8 @@ class MwdlMapping extends JsonMapping with JsonExtractor {
       .flatMap(_.splitAtDelimiter(";"))
       .map(eitherStringOrUri)
 
-  override def rights(data: Document[JValue]): AtLeastOne[String] =
-    extractStrings(unwrap(data) \ "pnx" \ "display" \ "rights")
-      .flatMap(_.splitAtDelimiter(";"))
+  override def rights(data: Document[JValue]): ZeroToMany[String] =
+    rightsValues(data).filterNot(isRightsUri)
 
   override def subject(data: Document[JValue]): Seq[SkosConcept] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "subject")
@@ -111,18 +111,26 @@ class MwdlMapping extends JsonMapping with JsonExtractor {
   override def dplaUri(data: Document[JValue]): ZeroToOne[URI] =
     mintDplaItemUri(data)
 
-  override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] =
-    extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds03")
-      .map(nameOnlyAgent)
+  override def dataProvider(data: Document[JValue]): ZeroToMany[EdmAgent] = {
+    val fromLds03 = extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds03")
+    if (fromLds03.nonEmpty)
+      fromLds03.map(nameOnlyAgent)
+    else
+      // Primo VE stores the institution name in electronicServices.packageName
+      // as "Display resource from <Institution Name>" — strip the prefix.
+      extractStrings(
+        unwrap(data) \ "delivery" \ "electronicServices" \ "packageName"
+      ).map(_.replaceFirst("(?i)^display resource from ", "").trim)
+        .filter(_.nonEmpty)
+        .distinct
+        .map(nameOnlyAgent)
+  }
 
   override def edmRights(data: Document[JValue]): ZeroToMany[URI] =
-    extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds13")
-      .filter(v =>
-        v.startsWith("http://rightsstatements.org") ||
-        v.startsWith("https://rightsstatements.org") ||
-        v.startsWith("http://creativecommons.org") ||
-        v.startsWith("https://creativecommons.org")
-      )
+    (rightsValues(data) ++
+      extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds13"))
+      .filter(isRightsUri)
+      .distinct
       .map(URI)
 
   override def isShownAt(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
@@ -131,13 +139,16 @@ class MwdlMapping extends JsonMapping with JsonExtractor {
         .filter(_.nonEmpty)
     if (fromDelivery.nonEmpty)
       fromDelivery.map(stringOnlyWebResource)
-    else
-      // Fallback: construct URL from record ID using the Primo VE catalog
-      extractStrings(unwrap(data) \ "pnx" \ "control" \ "recordid")
-        .map(id =>
-          s"https://utah-primo.hosted.exlibrisgroup.com/permalink/01UTAH_INST/MWDL/$id"
-        )
-        .map(stringOnlyWebResource)
+    else {
+      // Fallback 1: lds10 contains the original item URL in real Primo VE records
+      val fromLds10 = extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds10")
+        .filter(_.startsWith("http"))
+      if (fromLds10.nonEmpty)
+        fromLds10.map(stringOnlyWebResource)
+      else
+        // Fallback 2: parsed identifiers that look like URLs
+        parsedIdentifiers(data).filter(_.startsWith("http")).map(stringOnlyWebResource)
+    }
   }
 
   override def iiifManifest(data: Document[JValue]): ZeroToMany[URI] =
@@ -166,6 +177,43 @@ class MwdlMapping extends JsonMapping with JsonExtractor {
     dataProvider(data)
       .flatMap(p => p.name)
       .flatMap(_.applyNwdhTags)
+
+  /** Collapses a semicolon-delimited list of individual years (as Primo
+    * sometimes expands date ranges) into a single "begin-end" string.
+    * If the parts are not all 4-digit years, returns the original string
+    * unchanged.
+    */
+  private def collapseYearRange(raw: String): EdmTimeSpan = {
+    val parts = raw.split(";").map(_.trim).filter(_.nonEmpty)
+    val years = parts.collect { case p if p.matches("[0-9]{4}") => p.toInt }
+    val sortedDistinct = years.distinct.sorted
+    val isContinuousRange =
+      years.length > 1 &&
+        years.length == parts.length &&
+        sortedDistinct.last - sortedDistinct.head + 1 == sortedDistinct.length
+    if (isContinuousRange)
+      stringOnlyTimeSpan(s"${sortedDistinct.head}-${sortedDistinct.last}")
+    else
+      stringOnlyTimeSpan(raw)
+  }
+
+  private val primoIdentifierRegex = "\\$\\$C[^$]+\\$\\$V".r
+
+  private def parsedIdentifiers(data: Document[JValue]): Seq[String] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "identifier")
+      .flatMap(_.splitAtDelimiter(";"))
+      .map(primoIdentifierRegex.replaceAllIn(_, "").trim)
+      .filter(_.nonEmpty)
+
+  private def isRightsUri(v: String): Boolean =
+    v.startsWith("http://rightsstatements.org") ||
+      v.startsWith("https://rightsstatements.org") ||
+      v.startsWith("http://creativecommons.org") ||
+      v.startsWith("https://creativecommons.org")
+
+  private def rightsValues(data: Document[JValue]): Seq[String] =
+    extractStrings(unwrap(data) \ "pnx" \ "display" \ "rights")
+      .flatMap(_.splitAtDelimiter(";"))
 
   def agent: EdmAgent = EdmAgent(
     name = Some("Mountain West Digital Library"),

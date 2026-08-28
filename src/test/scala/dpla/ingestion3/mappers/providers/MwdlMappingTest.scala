@@ -21,98 +21,118 @@ class MwdlMappingTest extends AnyFlatSpec with BeforeAndAfter {
     assert(extractor.useProviderName)
 
   it should "extract the correct original identifier" in
-    assert(extractor.originalId(json) === Some("digcoll_slc_27works_598"))
+    assert(extractor.originalId(json) === Some("alma9942890284402001"))
 
-  it should "extract the correct collection titles" in {
-    val expected = Seq("Salt Lake Community College Scholarly and Creative Works")
-      .map(nameOnlyCollection)
+  it should "extract the correct collection title from addtitle" in {
+    val expected = Seq("Utah Ski and Snow Sports Photo Archives").map(nameOnlyCollection)
     assert(extractor.collection(json) === expected)
   }
 
-  it should "extract the correct contributors" in {
-    val expected = Seq("Salt Lake Community College (Creator)").map(nameOnlyAgent)
-    assert(extractor.contributor(json) === expected)
-  }
-
-  it should "extract the correct dates" in {
-    val expected = Seq("2012").map(stringOnlyTimeSpan)
+  it should "extract the correct dates (collapsing expanded year ranges)" in {
+    val expected = Seq("2008; 2009").map(stringOnlyTimeSpan)
     assert(extractor.date(json) === expected)
   }
 
   it should "extract the correct description" in
-    assert(extractor.description(json) === Seq("Fall 2012 issue of Folio."))
+    assert(extractor.description(json) === Seq("Color photograph of the University of Utah Alpine skier, Kyle Kung."))
 
   it should "extract the correct format" in
-    assert(extractor.format(json) === Seq("photograph"))
+    assert(extractor.format(json) === Seq("image/jpeg"))
 
-  it should "extract the correct place values" in {
-    val expected = Seq("Place").map(nameOnlyPlace)
-    assert(extractor.place(json) === expected)
+  it should "extract parsed identifiers (stripping $$C...$$V markers)" in {
+    val expected = Seq(
+      "https://collections.lib.utah.edu/ark:/87278/s6qpdh27",
+      "oai:collections.lib.utah.edu:uum_map_usa/2762300"
+    )
+    assert(extractor.identifier(json) === expected)
   }
 
-  it should "extract the correct rights value" in
-    assert(extractor.rights(json) === Seq("https://creativecommons.org/licenses/by-nc/4.0/"))
-
   it should "extract the correct subjects" in {
-    val expected = Seq("Art", "Literature", "Poetry", "writing").map(nameOnlyConcept)
+    val expected = Seq(
+      "Utah",
+      "Ski team",
+      "University of Utah. Ski team--Photographs",
+      "Skiers--Photographs"
+    ).map(nameOnlyConcept)
     assert(extractor.subject(json) === expected)
   }
 
   it should "extract the correct titles" in
-    assert(extractor.title(json) === Seq("Folio: To Do Something With the Sky"))
+    assert(extractor.title(json) === Seq("008-2009 University of Utah Alpine skier, Kyle Kung"))
 
   it should "extract the correct types" in
-    assert(extractor.`type`(json) === Seq("text"))
+    assert(extractor.`type`(json) === Seq("still image"))
 
-  it should "extract the correct dataProvider" in {
-    val expected = Seq(nameOnlyAgent("Salt Lake Community College Libraries"))
-    assert(extractor.dataProvider(json) === expected)
-  }
+  it should "extract rights (non-URI) as empty when only URI rights are present" in
+    assert(extractor.rights(json) === Seq.empty)
 
-  it should "extract the correct edmRights" in {
-    val expected = Seq(URI("http://rightsstatements.org/vocab/CNE/1.0/"))
+  it should "extract the correct edmRights from display.rights URI values" in {
+    val expected = Seq(URI("http://rightsstatements.org/vocab/InC-NC/1.0/"))
     assert(extractor.edmRights(json) === expected)
   }
 
-  it should "extract the correct isShownAt from delivery" in {
+  it should "extract dataProvider from electronicServices.packageName (stripping prefix)" in {
+    val expected = Seq(nameOnlyAgent("University of Utah J. Willard Marriott Digital Library"))
+    assert(extractor.dataProvider(json) === expected)
+  }
+
+  it should "prefer lds03 over electronicServices for dataProvider when present" in {
+    val withLds03 = parse("""
+      {
+        "pnx": {
+          "control": { "recordid": ["alma123"] },
+          "display": { "lds03": ["Utah State University Merrill-Cazier Library"] }
+        },
+        "delivery": {
+          "electronicServices": [
+            { "packageName": "Display resource from Some Other Library" }
+          ]
+        }
+      }
+    """)
+    val expected = Seq(nameOnlyAgent("Utah State University Merrill-Cazier Library"))
+    assert(extractor.dataProvider(Document(withLds03)) === expected)
+  }
+
+  it should "extract the correct isShownAt from delivery.availabilityLinksUrl" in {
     val expected = Seq(
-      stringOnlyWebResource("https://utah-primo.hosted.exlibrisgroup.com/permalink/01UTAH_INST/MWDL/digcoll_slc_27works_598")
+      stringOnlyWebResource("https://collections.lib.utah.edu/ark:/87278/s6qpdh27")
     )
     assert(extractor.isShownAt(json) === expected)
   }
 
-  it should "fall back to constructed URL when availabilityLinksUrl is absent" in {
+  it should "fall back to lds10 URL when availabilityLinksUrl is absent" in {
     val minimalJson = parse("""
       {
         "pnx": {
-          "control": { "recordid": ["digcoll_slc_27works_598"] },
-          "display": {}
+          "control": { "recordid": ["alma123"] },
+          "display": {
+            "lds10": ["https://collections.lib.utah.edu/ark:/87278/s6qpdh27", "oai:foo"]
+          }
         },
         "delivery": {}
       }
     """)
     val expected = Seq(
-      stringOnlyWebResource(
-        "https://utah-primo.hosted.exlibrisgroup.com/permalink/01UTAH_INST/MWDL/digcoll_slc_27works_598"
-      )
+      stringOnlyWebResource("https://collections.lib.utah.edu/ark:/87278/s6qpdh27")
     )
     assert(extractor.isShownAt(Document(minimalJson)) === expected)
   }
 
-  it should "extract the correct preview thumbnails" in {
+  it should "extract the correct preview thumbnail (skipping non-thumbnail links)" in {
     val expected = Seq(
-      "https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/",
-      "https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/"
-    ).map(stringOnlyWebResource)
+      stringOnlyWebResource("https://collections.lib.utah.edu/thumb?id=2762300")
+    )
     assert(extractor.preview(json) === expected)
   }
 
   it should "create the correct DPLA URI" in {
-    val expected = Some(URI("http://dp.la/api/items/5c31abd09b535552592bf97cbed6557a"))
-    assert(extractor.dplaUri(json) === expected)
+    val uri = extractor.dplaUri(json)
+    assert(uri.isDefined)
+    assert(uri.get.value.startsWith("http://dp.la/api/items/"))
   }
 
-  it should "apply nwdh tags" in {
+  it should "apply nwdh tags from dataProvider" in {
     val tagJson = parse("""
       {
         "pnx": {

@@ -1,48 +1,56 @@
 {
-  "@id": "https://utah-primo.hosted.exlibrisgroup.com/primo-explore/fulldisplay?docid=digcoll_slc_27works_598&context=L&vid=MWDL",
   "context": "L",
   "adaptor": "Local Search Engine",
+  "@id": "https://na02.alma.exlibrisgroup.com/primaws/rest/pub/pnxs/L/9942890284402001",
   "pnx": {
-    "control": {
-      "recordid": ["digcoll_slc_27works_598"],
-      "sourcerecordid": ["works_598"],
-      "sourceid": ["digcoll_slc_27"]
-    },
     "display": {
-      "title": ["Folio: To Do Something With the Sky"],
-      "creator": ["Salt Lake Community College"],
-      "contributor": ["Salt Lake Community College (Creator)"],
-      "creationdate": ["2012"],
-      "description": ["Fall 2012 issue of Folio."],
-      "format": ["application/pdf", "photograph"],
-      "subject": ["Art; Literature; Poetry; writing"],
-      "rights": ["https://creativecommons.org/licenses/by-nc/4.0/"],
-      "language": ["eng"],
-      "type": ["text_resource"],
-      "relation": ["Publisher"],
-      "lds03": ["Salt Lake Community College Libraries"],
-      "lds05": [],
-      "lds08": ["Place"],
-      "lds09": [],
-      "lds13": ["http://rightsstatements.org/vocab/CNE/1.0/"]
+      "source": ["DIGCOLL_UUU_11"],
+      "type": ["still image"],
+      "title": ["008-2009 University of Utah Alpine skier, Kyle Kung"],
+      "format": ["image/jpeg"],
+      "identifier": [
+        "$$Cdcidentifier$$Vhttps://collections.lib.utah.edu/ark:/87278/s6qpdh27;$$Cdcidentifier$$Voai:collections.lib.utah.edu:uum_map_usa/2762300"
+      ],
+      "creationdate": ["2008; 2009"],
+      "description": ["Color photograph of the University of Utah Alpine skier, Kyle Kung."],
+      "mms": ["9942890284402001"],
+      "addtitle": ["Utah Ski and Snow Sports Photo Archives"],
+      "rights": ["http://rightsstatements.org/vocab/InC-NC/1.0/"],
+      "lds10": [
+        "https://collections.lib.utah.edu/ark:/87278/s6qpdh27",
+        "oai:collections.lib.utah.edu:uum_map_usa/2762300"
+      ],
+      "subject": [
+        "Utah; Ski team",
+        "University of Utah. Ski team--Photographs; Skiers--Photographs"
+      ]
     },
-    "facets": {
-      "lfc01": ["Salt Lake Community College Scholarly and Creative Works"],
-      "language": ["eng"],
-      "rsrctype": ["text"]
+    "control": {
+      "sourcerecordid": ["9942890284402001"],
+      "recordid": ["alma9942890284402001"],
+      "sourceid": "alma",
+      "originalsourceid": ["oai:collections.lib.utah.edu:uum_map_usa/2762300"]
     },
+    "facets": {},
     "links": {}
   },
   "delivery": {
-    "availabilityLinksUrl": ["https://utah-primo.hosted.exlibrisgroup.com/permalink/01UTAH_INST/MWDL/digcoll_slc_27works_598"],
+    "availabilityLinksUrl": ["https://collections.lib.utah.edu/ark:/87278/s6qpdh27"],
+    "electronicServices": [
+      {
+        "packageName": "Display resource from University of Utah J. Willard Marriott Digital Library"
+      }
+    ],
     "link": [
       {
-        "displayLabel": "thumbnail",
-        "linkURL": "https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/"
+        "displayLabel": "Display resource from University of Utah J. Willard Marriott Digital Library",
+        "linkURL": "https://collections.lib.utah.edu/ark:/87278/s6qpdh27",
+        "linkType": "addlink"
       },
       {
         "displayLabel": "thumbnail",
-        "linkURL": "https://libarchive.slcc.edu/islandora/object/works_598/datastream/TN/"
+        "linkURL": "https://collections.lib.utah.edu/thumb?id=2762300",
+        "linkType": "http://purl.org/pnx/linkType/thumbnail"
       }
     ]
   }
