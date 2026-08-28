@@ -29,7 +29,8 @@ class MwdlMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
 
   it should "extract the correct dates (collapsing expanded year ranges)" in {
-    val expected = Seq("2008; 2009").map(stringOnlyTimeSpan)
+    // "2008; 2009" are consecutive years → collapsed to "2008-2009"
+    val expected = Seq("2008-2009").map(stringOnlyTimeSpan)
     assert(extractor.date(json) === expected)
   }
 

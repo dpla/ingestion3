@@ -1,10 +1,6 @@
 package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{
-  DigitalSurrogateBlockList,
-  FormatTypeValuesBlockList
-}
 import dpla.ingestion3.enrichments.TaggingUtils._
 import dpla.ingestion3.mappers.utils.{Document, JsonExtractor, JsonMapping}
 import dpla.ingestion3.model.DplaMapData._
@@ -16,10 +12,6 @@ import org.json4s.JsonDSL._
 class MwdlMapping extends JsonMapping with JsonExtractor {
 
   override val enforceDuplicateIds: Boolean = false
-
-  val formatBlockList: Set[String] =
-    DigitalSurrogateBlockList.termList ++
-      FormatTypeValuesBlockList.termList
 
   // ID minting
   override def useProviderName: Boolean = true
@@ -58,8 +50,6 @@ class MwdlMapping extends JsonMapping with JsonExtractor {
 
   override def format(data: Document[JValue]): ZeroToMany[String] =
     extractStrings(unwrap(data) \ "pnx" \ "display" \ "format")
-      .map(_.applyBlockFilter(formatBlockList))
-      .filter(_.nonEmpty)
 
   override def identifier(data: Document[JValue]): Seq[String] =
     parsedIdentifiers(data)
