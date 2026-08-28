@@ -72,11 +72,12 @@ def slack_notify(msg: str) -> None:
     except Exception:
         pass
 
-MWDL_SCRIPTS = "/home/ec2-user/ingestion3/scripts/pre-harvest/mwdl"
+MWDL_SCRIPTS  = "/home/ec2-user/ingestion3/scripts/pre-harvest/mwdl"
 INGEST_SCRIPT = "/home/ec2-user/ingestion3/scripts/ingest.sh"
 HARVEST_DIR   = "/home/ec2-user/mwdl-harvest"
 
 POLL_SECONDS  = 60   # log tail interval for long-running steps
+NUM_WORKERS   = 4    # parallel harvest workers
 
 
 # ---------- AWS / SSM helpers ----------
@@ -197,27 +198,78 @@ def run_prefix_explorer():
 
 
 def run_prefix_harvest():
-    step(2, "Harvest records by prefix (mwdl-harvest.py)")
-    slack_notify(":arrow_forward: *MWDL harvest started* — paginating prefix buckets")
-    log_path = f"{HARVEST_DIR}/mwdl-harvest.log"
-    print(f"  Log: {log_path}")
+    step(2, f"Harvest records by prefix ({NUM_WORKERS} parallel workers)")
+    slack_notify(f":arrow_forward: *MWDL harvest started* — {NUM_WORKERS} parallel workers paginating prefix buckets")
 
-    # Verify prefixes file exists
+    # Verify prefixes file exists and get queryable count
     count = ssm_run(
         f"[ -f {HARVEST_DIR}/mwdl-prefixes.json ] && "
-        f"python3 -c \"import json; d=json.load(open('{HARVEST_DIR}/mwdl-prefixes.json')); print(len(d))\" "
+        f"python3 -c \"import json; d=json.load(open('{HARVEST_DIR}/mwdl-prefixes.json')); print(len(d['queryable']))\" "
         f"|| echo missing",
         timeout_seconds=30,
     ).strip()
     if count == "missing":
         sys.exit(f"  ERROR: {HARVEST_DIR}/mwdl-prefixes.json not found. Run without --skip-to-harvest first.")
-    print(f"  Found {count} queryable prefix buckets.")
+    print(f"  Found {count} queryable prefix buckets → splitting across {NUM_WORKERS} workers.")
 
-    cmd = f"python3 {MWDL_SCRIPTS}/mwdl-harvest.py"
-    pid, exit_file = ssm_bg(cmd, log_path)
-    print(f"  PID: {pid} — tailing every {POLL_SECONDS}s")
-    wait_for_pid(pid, log_path, exit_file, timeout_seconds=18000)  # 5h max
-    print("  Prefix harvest complete.")
+    # Clear any stale per-worker progress files so each worker starts fresh
+    ssm_run(
+        f"rm -f {HARVEST_DIR}/mwdl-harvest-progress-*.json {HARVEST_DIR}/mwdl-harvest-*.jsonl",
+        timeout_seconds=30,
+    )
+
+    # Launch all workers
+    workers = []
+    for wid in range(NUM_WORKERS):
+        log_path = f"{HARVEST_DIR}/mwdl-harvest-{wid}.log"
+        cmd = f"python3 {MWDL_SCRIPTS}/mwdl-harvest.py --worker-id {wid} --num-workers {NUM_WORKERS}"
+        pid, exit_file = ssm_bg(cmd, log_path)
+        workers.append({"wid": wid, "pid": pid, "log": log_path, "exit_file": exit_file, "done": False})
+        print(f"  Worker {wid}: PID {pid}  log: {log_path}")
+
+    print(f"\n  Polling every {POLL_SECONDS}s until all workers finish...")
+    start = time.time()
+    timeout_seconds = 43200  # 12h max
+
+    while True:
+        time.sleep(POLL_SECONDS)
+        all_done = True
+        for w in workers:
+            if w["done"]:
+                continue
+            alive = ssm_run(
+                f"ps -p {w['pid']} -o pid= 2>/dev/null || echo dead",
+                timeout_seconds=30,
+            ).strip()
+            tail = ssm_run(
+                f"[ -f {w['log']} ] && tail -3 {w['log']} || echo '(no log yet)'",
+                timeout_seconds=30,
+            ).rstrip()
+            print(f"\n  Worker {w['wid']} ({'running' if alive not in ('dead','') else 'done'}):")
+            print(f"  {tail}")
+            if alive in ("dead", ""):
+                w["done"] = True
+            else:
+                all_done = False
+        if all_done:
+            break
+        if time.time() - start > timeout_seconds:
+            raise RuntimeError("Harvest workers timed out after 12h")
+
+    # Check all exit codes
+    for w in workers:
+        exit_raw = ssm_run(f"cat {w['exit_file']} 2>/dev/null || echo missing", timeout_seconds=30).strip()
+        if exit_raw not in ("0", "0\n"):
+            raise RuntimeError(f"Worker {w['wid']} failed (exit={exit_raw}). See {w['log']}")
+
+    # Concatenate worker outputs into one JSONL
+    print("\n  Combining worker JSONL files...")
+    combined = f"{HARVEST_DIR}/mwdl-harvest.jsonl"
+    worker_files = " ".join(f"{HARVEST_DIR}/mwdl-harvest-{wid}.jsonl" for wid in range(NUM_WORKERS))
+    ssm_run(f"cat {worker_files} > {combined}", timeout_seconds=120)
+    lines = ssm_run(f"wc -l < {combined}", timeout_seconds=30).strip()
+    print(f"  Combined: {lines} records → {combined}")
+    print("  Parallel harvest complete.")
 
 
 def run_jsonl_to_avro():
