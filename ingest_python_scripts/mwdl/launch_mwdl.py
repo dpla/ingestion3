@@ -77,7 +77,7 @@ INGEST_SCRIPT = "/home/ec2-user/ingestion3/scripts/ingest.sh"
 HARVEST_DIR   = "/home/ec2-user/mwdl-harvest"
 
 POLL_SECONDS  = 60   # log tail interval for long-running steps
-NUM_WORKERS   = 4    # parallel harvest workers
+NUM_WORKERS   = 2    # parallel harvest workers
 
 
 # ---------- AWS / SSM helpers ----------
@@ -202,15 +202,16 @@ def run_prefix_harvest():
     slack_notify(f":arrow_forward: *MWDL harvest started* — {NUM_WORKERS} parallel workers paginating prefix buckets")
 
     # Verify prefixes file exists and get queryable count
-    count = ssm_run(
+    check = ssm_run(
         f"[ -f {HARVEST_DIR}/mwdl-prefixes.json ] && "
-        f"python3 -c \"import json; d=json.load(open('{HARVEST_DIR}/mwdl-prefixes.json')); print(len(d['queryable']))\" "
+        f"python3 -c \"import json; d=json.load(open('{HARVEST_DIR}/mwdl-prefixes.json')); q=d['queryable']; print(len(q), sum(q.values()))\" "
         f"|| echo missing",
         timeout_seconds=30,
     ).strip()
-    if count == "missing":
+    if check == "missing":
         sys.exit(f"  ERROR: {HARVEST_DIR}/mwdl-prefixes.json not found. Run without --skip-to-harvest first.")
-    print(f"  Found {count} queryable prefix buckets → splitting across {NUM_WORKERS} workers.")
+    bucket_count, total_records = check.split()
+    print(f"  Found {bucket_count} queryable buckets ({int(total_records):,} records) → splitting across {NUM_WORKERS} workers.")
 
     # Clear any stale per-worker progress files so each worker starts fresh
     ssm_run(

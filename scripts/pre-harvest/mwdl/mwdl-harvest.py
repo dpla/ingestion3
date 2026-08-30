@@ -1,26 +1,28 @@
 #!/usr/bin/env python3
 """
-Harvest all MWDL Primo VE records using title-prefix partitioning.
+Harvest all MWDL Primo VE records using data_source + title-prefix partitioning.
 
-Reads the queryable prefix set from mwdl-prefixes.json (produced by
-mwdl-prefix-explorer.py), paginates through each prefix, and writes
-all records to a single JSONL file.
+Reads mwdl-prefixes.json (produced by mwdl-prefix-explorer.py).
+Bucket keys are "{data_source}::{prefix}" — each bucket is fetched with
+  q=title,begins_with,{prefix}
+  multiFacets=facet_data_source,include,{data_source}
 
-Output: /home/ec2-user/mwdl-harvest/mwdl-harvest.jsonl
+Usage:
+    python3 mwdl-harvest.py                          # single worker, all buckets
+    python3 mwdl-harvest.py --worker-id 0 --num-workers 2   # worker 0 of 2
 """
 
+import argparse
 import json
-import os
 import time
 import urllib.error
 import urllib.request
 import urllib.parse
 from pathlib import Path
-
 import re
 
+
 def _read_api_key() -> str:
-    """Read mwdl.harvest.apiKey from i3.conf."""
     candidates = [
         Path.home() / "ingestion3-conf" / "i3.conf",
         Path(__file__).parent.parent.parent / "ingestion3-conf" / "i3.conf",
@@ -32,23 +34,24 @@ def _read_api_key() -> str:
                 return m.group(1)
     raise RuntimeError("mwdl.harvest.apiKey not found in i3.conf")
 
+
 API_KEY = _read_api_key()
 BASE    = "https://api-na.hosted.exlibrisgroup.com/primo/v1/search"
 VID     = "01UTAH_INST:MWDL"
 TAB     = "LibraryCatalog"
 SCOPE   = "MWDL"
 LIMIT   = 100
-MAX_OFFSET      = 4900   # stay safely under 5000 per prefix bucket
-REST_S          = 15     # seconds between normal page fetches
-THROTTLE_S      = 300    # seconds to wait on 401/429 (rate limit signal)
-MAX_RETRIES     = 5
-TIMEOUT         = 120
+MAX_OFFSET  = 4900
+REST_S      = 15
+THROTTLE_S  = 300    # wait on 401/429 or empty response
+MAX_RETRIES = 5
+TIMEOUT     = 120
 
-PROJECT_DIR   = Path("/home/ec2-user/mwdl-harvest")
+PROJECT_DIR = Path("/home/ec2-user/mwdl-harvest")
 
 
-def fetch_page(prefix: str, offset: int) -> "tuple[list, int]":
-    params = urllib.parse.urlencode({
+def fetch_page(prefix: str, data_source: str, offset: int) -> "tuple[list, int]":
+    params = {
         "vid":    VID,
         "tab":    TAB,
         "scope":  SCOPE,
@@ -56,18 +59,19 @@ def fetch_page(prefix: str, offset: int) -> "tuple[list, int]":
         "limit":  str(LIMIT),
         "offset": str(offset),
         "q":      f"title,begins_with,{prefix}",
-    })
-    req = urllib.request.Request(f"{BASE}?{params}")
+        "multiFacets": f"facet_data_source,include,{data_source}",
+    }
+    req = urllib.request.Request(f"{BASE}?{urllib.parse.urlencode(params)}")
     for attempt in range(MAX_RETRIES):
         if attempt > 0:
-            print(f"    Retry {attempt} for '{prefix}' offset={offset}...", flush=True)
+            print(f"    Retry {attempt} for [{data_source}] '{prefix}' offset={offset}...", flush=True)
         try:
             with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
                 raw = resp.read()
             try:
                 data  = json.loads(raw)
             except json.JSONDecodeError:
-                print(f"    Empty/non-JSON response (rate limit signal) — waiting {THROTTLE_S}s...", flush=True)
+                print(f"    Empty/non-JSON response (throttle) — waiting {THROTTLE_S}s...", flush=True)
                 time.sleep(THROTTLE_S)
                 continue
             docs  = data.get("docs", [])
@@ -75,7 +79,7 @@ def fetch_page(prefix: str, offset: int) -> "tuple[list, int]":
             return docs, total
         except urllib.error.HTTPError as e:
             if e.code in (401, 429):
-                print(f"    HTTP {e.code} (rate limit) — waiting {THROTTLE_S}s before retry...", flush=True)
+                print(f"    HTTP {e.code} (rate limit) — waiting {THROTTLE_S}s...", flush=True)
                 time.sleep(THROTTLE_S)
             else:
                 print(f"    HTTP {e.code}: {e}", flush=True)
@@ -83,7 +87,7 @@ def fetch_page(prefix: str, offset: int) -> "tuple[list, int]":
         except Exception as e:
             print(f"    Error: {e}", flush=True)
             time.sleep(REST_S)
-    raise RuntimeError(f"Failed to fetch '{prefix}' offset={offset} after {MAX_RETRIES} retries")
+    raise RuntimeError(f"Failed [{data_source}] '{prefix}' offset={offset} after {MAX_RETRIES} retries")
 
 
 def load_progress(progress_file: Path) -> dict:
@@ -91,7 +95,7 @@ def load_progress(progress_file: Path) -> dict:
         with open(progress_file) as f:
             return json.load(f)
     except FileNotFoundError:
-        return {"completed_prefixes": [], "total_docs_written": 0}
+        return {"completed_buckets": [], "total_docs_written": 0}
 
 
 def save_progress(progress: dict, progress_file: Path) -> None:
@@ -99,31 +103,29 @@ def save_progress(progress: dict, progress_file: Path) -> None:
         json.dump(progress, f)
 
 
-def run_worker(prefixes_file: Path, worker_id: int, num_workers: int):
-    """Harvest the slice of prefixes assigned to this worker."""
+def run_worker(worker_id: int, num_workers: int):
+    prefixes_file = PROJECT_DIR / "mwdl-prefixes.json"
     output_file   = PROJECT_DIR / f"mwdl-harvest-{worker_id}.jsonl"
     progress_file = PROJECT_DIR / f"mwdl-harvest-progress-{worker_id}.json"
 
     with open(prefixes_file) as f:
         prefix_data = json.load(f)
 
-    queryable = prefix_data["queryable"]
-    # Each worker takes every num_workers-th prefix starting at worker_id
-    all_prefixes = sorted(queryable.keys())
-    my_prefixes  = all_prefixes[worker_id::num_workers]
-    total_expected = sum(queryable[p] for p in my_prefixes)
+    queryable = prefix_data["queryable"]  # {"DS::prefix": count, ...}
+    all_keys  = sorted(queryable.keys())
+    my_keys   = all_keys[worker_id::num_workers]
+    total_expected = sum(queryable[k] for k in my_keys)
 
     progress     = load_progress(progress_file)
-    completed    = set(progress["completed_prefixes"])
+    completed    = set(progress["completed_buckets"])
     docs_written = progress["total_docs_written"]
-    remaining    = [p for p in my_prefixes if p not in completed]
+    remaining    = [k for k in my_keys if k not in completed]
 
-    print(f"Worker {worker_id}/{num_workers} — MWDL Primo VE harvest", flush=True)
-    print(f"  My prefixes:       {len(my_prefixes)}", flush=True)
+    print(f"Worker {worker_id}/{num_workers} — MWDL harvest", flush=True)
+    print(f"  My buckets:        {len(my_keys)}", flush=True)
     print(f"  Already done:      {len(completed)}", flush=True)
     print(f"  Remaining:         {len(remaining)}", flush=True)
     print(f"  Expected records:  {total_expected:,}", flush=True)
-    print(f"  Docs written:      {docs_written:,}", flush=True)
     print(f"  Output:            {output_file}", flush=True)
     print("=" * 60, flush=True)
 
@@ -131,36 +133,37 @@ def run_worker(prefixes_file: Path, worker_id: int, num_workers: int):
     out  = open(output_file, mode)
 
     try:
-        for i, prefix in enumerate(remaining):
-            expected    = queryable[prefix]
-            prefix_docs = 0
+        for i, key in enumerate(remaining):
+            data_source, prefix = key.split("::", 1)
+            expected    = queryable[key]
+            bucket_docs = 0
             offset      = 0
 
-            print(f"\n[{len(completed)+i+1}/{len(my_prefixes)}] '{prefix}' ({expected} expected)", flush=True)
+            print(f"\n[{len(completed)+i+1}/{len(my_keys)}] [{data_source}] '{prefix}' ({expected} expected)", flush=True)
 
             while True:
                 time.sleep(REST_S)
-                docs, total = fetch_page(prefix, offset)
+                docs, total = fetch_page(prefix, data_source, offset)
 
                 if not docs:
                     break
 
                 for doc in docs:
                     out.write(json.dumps(doc) + "\n")
-                    prefix_docs += 1
+                    bucket_docs += 1
                     docs_written += 1
 
-                print(f"  offset={offset}: {len(docs)} docs (prefix total: {prefix_docs}/{expected})", flush=True)
+                print(f"  offset={offset}: {len(docs)} docs (bucket total: {bucket_docs}/{expected})", flush=True)
 
                 offset += LIMIT
                 if offset >= total or offset > MAX_OFFSET:
                     break
 
-            completed.add(prefix)
-            progress["completed_prefixes"] = list(completed)
+            completed.add(key)
+            progress["completed_buckets"]  = list(completed)
             progress["total_docs_written"] = docs_written
             save_progress(progress, progress_file)
-            print(f"  ✓ '{prefix}': {prefix_docs} docs (total so far: {docs_written:,})", flush=True)
+            print(f"  ✓ [{data_source}] '{prefix}': {bucket_docs} docs (total so far: {docs_written:,})", flush=True)
 
     except KeyboardInterrupt:
         print(f"\nInterrupted. {docs_written:,} docs written.", flush=True)
@@ -175,17 +178,12 @@ def run_worker(prefixes_file: Path, worker_id: int, num_workers: int):
 
 
 def main():
-    import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--worker-id",    type=int, default=0,
-                        help="Worker index (0-based)")
-    parser.add_argument("--num-workers",  type=int, default=1,
-                        help="Total number of parallel workers")
+    parser.add_argument("--worker-id",   type=int, default=0)
+    parser.add_argument("--num-workers", type=int, default=1)
     args = parser.parse_args()
-
     PROJECT_DIR.mkdir(parents=True, exist_ok=True)
-    prefixes_file = PROJECT_DIR / "mwdl-prefixes.json"
-    run_worker(prefixes_file, args.worker_id, args.num_workers)
+    run_worker(args.worker_id, args.num_workers)
 
 
 if __name__ == "__main__":
