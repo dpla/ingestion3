@@ -41,7 +41,7 @@ VID       = "01UTAH_INST:MWDL"
 TAB       = "LibraryCatalog"
 SCOPE     = "MWDL"
 CHARS     = list("abcdefghijklmnopqrstuvwxyz0123456789")
-REST_S    = 5
+REST_S    = 3
 TIMEOUT   = 90
 
 OUTPUT_DIR  = Path("/home/ec2-user/mwdl-harvest")
@@ -107,45 +107,74 @@ def split_bucket(prefix: str, data_source: str, max_records: int) -> dict:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--max-records", type=int, default=190,
-                        help="Max records per bucket (default: 190, Primo hard-caps at offset=200)")
+                        help="Max records per bucket (default: 190)")
+    parser.add_argument("--worker-id",   type=int, default=0)
+    parser.add_argument("--num-workers", type=int, default=1)
     args = parser.parse_args()
     max_records = args.max_records
+    worker_id   = args.worker_id
+    num_workers = args.num_workers
 
     with open(OUTPUT_FILE) as f:
         data = json.load(f)
 
     queryable = data["queryable"]
-    large = {k: v for k, v in queryable.items() if v > max_records}
-    small = {k: v for k, v in queryable.items() if v <= max_records}
+    all_large = sorted(k for k, v in queryable.items() if v > max_records)
+    small     = {k: v for k, v in queryable.items() if v <= max_records}
+    my_large  = all_large[worker_id::num_workers]
 
-    print(f"Loaded {len(queryable)} buckets.", flush=True)
-    print(f"  ≤{max_records} records (keep as-is): {len(small)}", flush=True)
-    print(f"  >{max_records} records (need splitting): {len(large)}", flush=True)
-    print(f"  Total records in large buckets: {sum(large.values()):,}", flush=True)
+    print(f"Worker {worker_id}/{num_workers} — MWDL bucket resplit", flush=True)
+    print(f"  Total large buckets: {len(all_large)}", flush=True)
+    print(f"  My share:            {len(my_large)}", flush=True)
     print(flush=True)
 
-    new_queryable = dict(small)
-    splits_done = 0
+    # Each worker writes its results to a sidecar file; worker 0 also merges at the end
+    sidecar = OUTPUT_DIR / f"mwdl-resplit-{worker_id}.json"
+    if sidecar.exists():
+        with open(sidecar) as f:
+            my_results = json.load(f)
+        done_keys = set(my_results.keys())
+        print(f"  Resuming — {len(done_keys)} sub-buckets already found", flush=True)
+    else:
+        my_results = {}
+        done_keys  = set()
 
-    for i, (key, count) in enumerate(sorted(large.items())):
+    processed_large_keys = set()
+
+    for i, key in enumerate(my_large):
         data_source, prefix = key.split("::", 1)
-        print(f"[{i+1}/{len(large)}] Splitting [{data_source}] '{prefix}' ({count} records)...", flush=True)
-        sub_buckets = split_bucket(prefix, data_source, max_records)
-        new_queryable.update(sub_buckets)
-        splits_done += 1
-        covered = sum(sub_buckets.values())
-        gap = count - covered
-        if gap > 0:
-            print(f"  Gap: {gap} records not covered by sub-prefixes (likely misc/punctuation)", flush=True)
-        print(f"  → {len(sub_buckets)} sub-buckets covering {covered:,} records", flush=True)
+        count = queryable[key]
+        # Check if we already split this key (all its children are in my_results)
+        if any(k.startswith(f"{data_source}::{prefix}") for k in done_keys):
+            processed_large_keys.add(key)
+            continue
+        print(f"[{i+1}/{len(my_large)}] [{data_source}] '{prefix}' ({count})", flush=True)
+        sub = split_bucket(prefix, data_source, max_records)
+        my_results.update(sub)
+        processed_large_keys.add(key)
+        with open(sidecar, "w") as f:
+            json.dump(my_results, f)
+        print(f"  → {len(sub)} sub-buckets, {sum(sub.values()):,} records", flush=True)
 
-        # Save progress after each bucket in case of interruption
-        _write_output(data, new_queryable)
+    print(f"\nWorker {worker_id} done. {query_count} API calls.", flush=True)
 
-    print(f"\nDone. {query_count} API calls made.", flush=True)
-    print(f"Buckets: {len(queryable)} → {len(new_queryable)}", flush=True)
-    print(f"Total records: {sum(queryable.values()):,} → {sum(new_queryable.values()):,}", flush=True)
-    _write_output(data, new_queryable)
+    # Merge: wait for all sidecar files then rebuild prefixes.json (worker 0 only)
+    if worker_id == 0:
+        print("Merging all worker results...", flush=True)
+        merged = dict(small)
+        # Collect sidecar files from all workers
+        for wid in range(num_workers):
+            sc = OUTPUT_DIR / f"mwdl-resplit-{wid}.json"
+            if sc.exists():
+                with open(sc) as f:
+                    merged.update(json.load(f))
+                sc.unlink()
+        # Remove original large keys replaced by sub-buckets
+        for key in all_large:
+            merged.pop(key, None)
+        print(f"Buckets: {len(queryable)} → {len(merged)}", flush=True)
+        print(f"Records: {sum(queryable.values()):,} → {sum(merged.values()):,}", flush=True)
+        _write_output(data, merged)
 
 
 def _write_output(original: dict, new_queryable: dict):

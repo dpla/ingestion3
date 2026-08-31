@@ -77,7 +77,7 @@ INGEST_SCRIPT = "/home/ec2-user/ingestion3/scripts/ingest.sh"
 HARVEST_DIR   = "/home/ec2-user/mwdl-harvest"
 
 POLL_SECONDS  = 60   # log tail interval for long-running steps
-NUM_WORKERS   = 1    # parallel harvest workers (1 = safer for API rate limits)
+NUM_WORKERS   = 3    # parallel harvest workers (safe after resplit — all buckets ≤190 records)
 
 
 # ---------- AWS / SSM helpers ----------
@@ -195,6 +195,44 @@ def run_prefix_explorer():
     print(f"  PID: {pid} — tailing every {POLL_SECONDS}s (Ctrl+C stops tailing, job keeps running)")
     wait_for_pid(pid, log_path, exit_file, timeout_seconds=43200)  # 12h max
     print("  Prefix explorer complete.")
+    run_resplit()
+
+
+def run_resplit(num_workers=2):
+    step("1b", f"Resplit buckets >190 records ({num_workers} workers — Primo hard offset limit)")
+    slack_notify(":arrow_forward: *MWDL resplit started* — splitting large buckets to ≤190 records")
+    log_paths = []
+    pids = []
+    for wid in range(num_workers):
+        log_path = f"{HARVEST_DIR}/mwdl-resplit-{wid}.log"
+        cmd = (f"python3 {MWDL_SCRIPTS}/mwdl-resplit-buckets.py "
+               f"--worker-id {wid} --num-workers {num_workers}")
+        pid, exit_file = ssm_bg(cmd, log_path)
+        log_paths.append((wid, log_path, exit_file, pid))
+        print(f"  Resplit worker {wid}: PID {pid}  log: {log_path}")
+
+    # Poll until all done
+    workers_done = {wid: False for wid, *_ in log_paths}
+    start = time.time()
+    while not all(workers_done.values()):
+        time.sleep(POLL_SECONDS)
+        for wid, log_path, exit_file, pid in log_paths:
+            if workers_done[wid]:
+                continue
+            alive = ssm_run(f"ps -p {pid} -o pid= 2>/dev/null || echo dead", timeout_seconds=30).strip()
+            tail = ssm_run(f"[ -f {log_path} ] && tail -3 {log_path} || echo '(no log)'", timeout_seconds=30).rstrip()
+            print(f"\n  Resplit {wid} ({'running' if alive not in ('dead','') else 'done'}):")
+            print(f"  {tail}")
+            if alive in ("dead", ""):
+                workers_done[wid] = True
+        if time.time() - start > 21600:  # 6h max
+            raise RuntimeError("Resplit timed out after 6h")
+
+    for wid, log_path, exit_file, pid in log_paths:
+        exit_raw = ssm_run(f"cat {exit_file} 2>/dev/null || echo missing", timeout_seconds=30).strip()
+        if exit_raw not in ("0", "0\n"):
+            raise RuntimeError(f"Resplit worker {wid} failed (exit={exit_raw}). See {log_path}")
+    print("  Resplit complete.")
 
 
 PIDS_FILE = f"{HARVEST_DIR}/mwdl-harvest-pids.json"
@@ -431,14 +469,19 @@ def run_pipeline():
 def main():
     parser = argparse.ArgumentParser(description="Launch MWDL Primo VE ingest.")
     parser.add_argument(
+        "--skip-to-resplit",
+        action="store_true",
+        help="Skip explorer; resplit existing prefixes.json then harvest.",
+    )
+    parser.add_argument(
         "--skip-to-harvest",
         action="store_true",
-        help="Skip prefix explorer; use existing mwdl-prefixes.json.",
+        help="Skip explorer + resplit; use existing mwdl-prefixes.json as-is.",
     )
     parser.add_argument(
         "--skip-to-avro",
         action="store_true",
-        help="Skip explorer + harvest; use existing mwdl-harvest.jsonl.",
+        help="Skip explorer + resplit + harvest; use existing mwdl-harvest.jsonl.",
     )
     parser.add_argument(
         "--skip-to-pipeline",
@@ -468,8 +511,15 @@ def main():
         run_pipeline()
         return
 
+    if args.skip_to_resplit:
+        run_resplit()
+        run_prefix_harvest()
+        run_jsonl_to_avro()
+        run_pipeline()
+        return
+
     # Full run
-    run_prefix_explorer()
+    run_prefix_explorer()   # also calls run_resplit() at the end
     run_prefix_harvest()
     run_jsonl_to_avro()
     run_pipeline()
