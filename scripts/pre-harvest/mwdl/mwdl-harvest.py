@@ -41,7 +41,7 @@ VID     = "01UTAH_INST:MWDL"
 TAB     = "LibraryCatalog"
 SCOPE   = "MWDL"
 LIMIT   = 100
-MAX_OFFSET  = 4900
+MAX_OFFSET  = 100   # Primo VE hard-caps at offset=200; never attempt the 3rd page
 REST_S      = 20
 THROTTLE_S  = 300    # wait on 401/429 or empty response
 MAX_RETRIES = 10     # each retry waits THROTTLE_S → up to ~50 min before skipping a bucket
