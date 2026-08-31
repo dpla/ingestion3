@@ -219,8 +219,12 @@ def run_resplit(num_workers=2):
         for wid, log_path, exit_file, pid in log_paths:
             if workers_done[wid]:
                 continue
-            alive = ssm_run(f"ps -p {pid} -o pid= 2>/dev/null || echo dead", timeout_seconds=30).strip()
-            tail = ssm_run(f"[ -f {log_path} ] && tail -3 {log_path} || echo '(no log)'", timeout_seconds=30).rstrip()
+            try:
+                alive = ssm_run(f"ps -p {pid} -o pid= 2>/dev/null || echo dead", timeout_seconds=60).strip()
+                tail  = ssm_run(f"[ -f {log_path} ] && tail -3 {log_path} || echo '(no log)'", timeout_seconds=60).rstrip()
+            except RuntimeError as e:
+                print(f"  [SSM transient error, will retry next cycle: {e}]")
+                continue
             print(f"\n  Resplit {wid} ({'running' if alive not in ('dead','') else 'done'}):")
             print(f"  {tail}")
             if alive in ("dead", ""):
@@ -229,7 +233,10 @@ def run_resplit(num_workers=2):
             raise RuntimeError("Resplit timed out after 6h")
 
     for wid, log_path, exit_file, pid in log_paths:
-        exit_raw = ssm_run(f"cat {exit_file} 2>/dev/null || echo missing", timeout_seconds=30).strip()
+        try:
+            exit_raw = ssm_run(f"cat {exit_file} 2>/dev/null || echo missing", timeout_seconds=60).strip()
+        except RuntimeError:
+            exit_raw = "missing"
         if exit_raw not in ("0", "0\n"):
             raise RuntimeError(f"Resplit worker {wid} failed (exit={exit_raw}). See {log_path}")
     print("  Resplit complete.")
