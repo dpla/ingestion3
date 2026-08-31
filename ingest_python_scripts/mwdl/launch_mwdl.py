@@ -193,13 +193,15 @@ def run_prefix_explorer():
     cmd = f"python3 {MWDL_SCRIPTS}/mwdl-prefix-explorer.py"
     pid, exit_file = ssm_bg(cmd, log_path)
     print(f"  PID: {pid} — tailing every {POLL_SECONDS}s (Ctrl+C stops tailing, job keeps running)")
-    wait_for_pid(pid, log_path, exit_file, timeout_seconds=14400)  # 4h max
+    wait_for_pid(pid, log_path, exit_file, timeout_seconds=43200)  # 12h max
     print("  Prefix explorer complete.")
+
+
+PIDS_FILE = f"{HARVEST_DIR}/mwdl-harvest-pids.json"
 
 
 def run_prefix_harvest():
     step(2, f"Harvest records by prefix ({NUM_WORKERS} parallel workers)")
-    slack_notify(f":arrow_forward: *MWDL harvest started* — {NUM_WORKERS} parallel workers paginating prefix buckets")
 
     # Verify prefixes file exists and get queryable count
     check = ssm_run(
@@ -213,20 +215,82 @@ def run_prefix_harvest():
     bucket_count, total_records = check.split()
     print(f"  Found {bucket_count} queryable buckets ({int(total_records):,} records) → splitting across {NUM_WORKERS} workers.")
 
-    # Clear any stale per-worker progress files so each worker starts fresh
-    ssm_run(
-        f"rm -f {HARVEST_DIR}/mwdl-harvest-progress-*.json {HARVEST_DIR}/mwdl-harvest-*.jsonl",
+    # Check if workers are already running (reattach after terminal crash)
+    existing_raw = ssm_run(
+        f"cat {PIDS_FILE} 2>/dev/null || echo missing",
         timeout_seconds=30,
-    )
+    ).strip()
 
-    # Launch all workers
-    workers = []
-    for wid in range(NUM_WORKERS):
-        log_path = f"{HARVEST_DIR}/mwdl-harvest-{wid}.log"
-        cmd = f"python3 {MWDL_SCRIPTS}/mwdl-harvest.py --worker-id {wid} --num-workers {NUM_WORKERS}"
-        pid, exit_file = ssm_bg(cmd, log_path)
-        workers.append({"wid": wid, "pid": pid, "log": log_path, "exit_file": exit_file, "done": False})
-        print(f"  Worker {wid}: PID {pid}  log: {log_path}")
+    if existing_raw != "missing":
+        existing = json.loads(existing_raw)
+        still_running = []
+        for w in existing:
+            alive = ssm_run(
+                f"ps -p {w['pid']} -o pid= 2>/dev/null || echo dead",
+                timeout_seconds=30,
+            ).strip()
+            if alive not in ("dead", ""):
+                still_running.append(w)
+        if still_running:
+            print(f"  Reattaching to {len(still_running)} already-running worker(s): "
+                  f"{[w['pid'] for w in still_running]}")
+            slack_notify(f":recycle: *MWDL harvest reattached* — {len(still_running)} workers still running")
+            workers = existing  # poll all; done ones will exit immediately
+            for w in workers:
+                w["done"] = False
+        else:
+            # PIDs file exists but all workers finished — clean up and skip to combine
+            print("  All workers already finished (PIDs file found, all processes dead). Combining outputs.")
+            _combine_and_verify(workers=existing)
+            ssm_run(f"rm -f {PIDS_FILE}", timeout_seconds=30)
+            return
+    else:
+        # Check if worker processes are running without a PIDs file
+        # (e.g., launched before this reattach logic was added)
+        orphan_pids = []
+        for wid in range(NUM_WORKERS):
+            log_path = f"{HARVEST_DIR}/mwdl-harvest-{wid}.log"
+            # Look for any python mwdl-harvest.py process for this worker
+            pgrep = ssm_run(
+                f"pgrep -f 'mwdl-harvest.py.*--worker-id {wid}' || echo none",
+                timeout_seconds=30,
+            ).strip()
+            if pgrep != "none" and pgrep:
+                pid = pgrep.split()[0]
+                exit_file = f"{log_path}.exitcode"
+                orphan_pids.append({"wid": wid, "pid": pid, "log": log_path, "exit_file": exit_file, "done": False})
+
+        if orphan_pids:
+            print(f"  Found {len(orphan_pids)} worker(s) already running without PIDs file — reattaching.")
+            slack_notify(f":recycle: *MWDL harvest reattached* (no PIDs file) — {len(orphan_pids)} workers running")
+            workers = []
+            for wid in range(NUM_WORKERS):
+                log_path = f"{HARVEST_DIR}/mwdl-harvest-{wid}.log"
+                exit_file = f"{log_path}.exitcode"
+                match = next((w for w in orphan_pids if w["wid"] == wid), None)
+                pid = match["pid"] if match else "0"
+                done = match is None  # worker not found → treat as already done
+                workers.append({"wid": wid, "pid": pid, "log": log_path, "exit_file": exit_file, "done": done})
+            # Write PIDs file now for future crashes
+            pids_json = json.dumps(workers)
+            ssm_run(f"echo {json.dumps(pids_json)} > {PIDS_FILE}", timeout_seconds=30)
+        else:
+            # Genuine fresh start — clear any stale progress/output files and launch workers
+            slack_notify(f":arrow_forward: *MWDL harvest started* — {NUM_WORKERS} parallel workers paginating prefix buckets")
+            ssm_run(
+                f"rm -f {HARVEST_DIR}/mwdl-harvest-progress-*.json {HARVEST_DIR}/mwdl-harvest-*.jsonl",
+                timeout_seconds=30,
+            )
+            workers = []
+            for wid in range(NUM_WORKERS):
+                log_path = f"{HARVEST_DIR}/mwdl-harvest-{wid}.log"
+                cmd = f"python3 {MWDL_SCRIPTS}/mwdl-harvest.py --worker-id {wid} --num-workers {NUM_WORKERS}"
+                pid, exit_file = ssm_bg(cmd, log_path)
+                workers.append({"wid": wid, "pid": pid, "log": log_path, "exit_file": exit_file, "done": False})
+                print(f"  Worker {wid}: PID {pid}  log: {log_path}")
+            # Persist PIDs so we can reattach if Mac terminal dies
+            pids_json = json.dumps(workers)
+            ssm_run(f"echo {json.dumps(pids_json)} > {PIDS_FILE}", timeout_seconds=30)
 
     print(f"\n  Polling every {POLL_SECONDS}s until all workers finish...")
     start = time.time()
@@ -263,14 +327,51 @@ def run_prefix_harvest():
         if exit_raw not in ("0", "0\n"):
             raise RuntimeError(f"Worker {w['wid']} failed (exit={exit_raw}). See {w['log']}")
 
-    # Concatenate worker outputs into one JSONL
+    _combine_and_verify(workers)
+    ssm_run(f"rm -f {PIDS_FILE}", timeout_seconds=30)
+    print("  Parallel harvest complete.")
+
+
+def _combine_and_verify(workers):
+    """Combine per-worker JSONL files and verify record count vs. explorer prediction."""
     print("\n  Combining worker JSONL files...")
     combined = f"{HARVEST_DIR}/mwdl-harvest.jsonl"
-    worker_files = " ".join(f"{HARVEST_DIR}/mwdl-harvest-{wid}.jsonl" for wid in range(NUM_WORKERS))
+    worker_files = " ".join(f"{HARVEST_DIR}/mwdl-harvest-{w['wid']}.jsonl" for w in workers)
     ssm_run(f"cat {worker_files} > {combined}", timeout_seconds=120)
-    lines = ssm_run(f"wc -l < {combined}", timeout_seconds=30).strip()
-    print(f"  Combined: {lines} records → {combined}")
-    print("  Parallel harvest complete.")
+    lines_raw = ssm_run(f"wc -l < {combined}", timeout_seconds=30).strip()
+    actual = int(lines_raw)
+    print(f"  Combined: {actual:,} records → {combined}")
+
+    # Compare to explorer's predicted total (5% tolerance)
+    predicted_raw = ssm_run(
+        f"python3 -c \"import json; d=json.load(open('{HARVEST_DIR}/mwdl-prefixes.json')); print(d['total_records'])\"",
+        timeout_seconds=30,
+    ).strip()
+    try:
+        predicted = int(predicted_raw)
+    except ValueError:
+        print(f"  WARNING: could not read predicted count from prefixes.json ({predicted_raw!r}), skipping check.")
+        return
+
+    pct = actual / predicted * 100
+    threshold = predicted * 0.95
+    print(f"  Record count check: {actual:,} harvested / {predicted:,} predicted = {pct:.1f}%")
+    if actual < threshold:
+        slack_notify(
+            f":warning: *MWDL harvest count check FAILED* — "
+            f"{actual:,} records ({pct:.1f}% of predicted {predicted:,}). "
+            f"Manual review required before pipeline."
+        )
+        sys.exit(
+            f"  ABORT: only {actual:,} of {predicted:,} predicted records harvested ({pct:.1f}%). "
+            f"Expected ≥95%. Check worker logs before proceeding."
+        )
+    else:
+        slack_notify(
+            f":white_check_mark: *MWDL harvest complete* — "
+            f"{actual:,} records ({pct:.1f}% of predicted {predicted:,})"
+        )
+        print(f"  Count check passed ({pct:.1f}% ≥ 95%).")
 
 
 def run_jsonl_to_avro():
