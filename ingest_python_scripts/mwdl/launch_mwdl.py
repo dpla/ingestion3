@@ -77,7 +77,7 @@ INGEST_SCRIPT = "/home/ec2-user/ingestion3/scripts/ingest.sh"
 HARVEST_DIR   = "/home/ec2-user/mwdl-harvest"
 
 POLL_SECONDS  = 60   # log tail interval for long-running steps
-NUM_WORKERS   = 2    # parallel harvest workers
+NUM_WORKERS   = 1    # parallel harvest workers (1 = safer for API rate limits)
 
 
 # ---------- AWS / SSM helpers ----------

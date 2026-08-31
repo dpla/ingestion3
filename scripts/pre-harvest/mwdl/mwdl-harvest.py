@@ -42,9 +42,9 @@ TAB     = "LibraryCatalog"
 SCOPE   = "MWDL"
 LIMIT   = 100
 MAX_OFFSET  = 4900
-REST_S      = 15
+REST_S      = 20
 THROTTLE_S  = 300    # wait on 401/429 or empty response
-MAX_RETRIES = 5
+MAX_RETRIES = 10     # each retry waits THROTTLE_S → up to ~50 min before skipping a bucket
 TIMEOUT     = 120
 
 PROJECT_DIR = Path("/home/ec2-user/mwdl-harvest")
@@ -95,7 +95,7 @@ def load_progress(progress_file: Path) -> dict:
         with open(progress_file) as f:
             return json.load(f)
     except FileNotFoundError:
-        return {"completed_buckets": [], "total_docs_written": 0}
+        return {"completed_buckets": [], "failed_buckets": [], "total_docs_written": 0}
 
 
 def save_progress(progress: dict, progress_file: Path) -> None:
@@ -118,20 +118,23 @@ def run_worker(worker_id: int, num_workers: int):
 
     progress     = load_progress(progress_file)
     completed    = set(progress["completed_buckets"])
+    failed       = set(progress.get("failed_buckets", []))
     docs_written = progress["total_docs_written"]
-    remaining    = [k for k in my_keys if k not in completed]
+    remaining    = [k for k in my_keys if k not in completed and k not in failed]
 
     print(f"Worker {worker_id}/{num_workers} — MWDL harvest", flush=True)
     print(f"  My buckets:        {len(my_keys)}", flush=True)
     print(f"  Already done:      {len(completed)}", flush=True)
+    print(f"  Previously failed: {len(failed)}", flush=True)
     print(f"  Remaining:         {len(remaining)}", flush=True)
     print(f"  Expected records:  {total_expected:,}", flush=True)
     print(f"  Output:            {output_file}", flush=True)
     print("=" * 60, flush=True)
 
-    mode = "a" if completed else "w"
+    mode = "a" if (completed or failed) else "w"
     out  = open(output_file, mode)
 
+    interrupted = False
     try:
         for i, key in enumerate(remaining):
             data_source, prefix = key.split("::", 1)
@@ -141,9 +144,20 @@ def run_worker(worker_id: int, num_workers: int):
 
             print(f"\n[{len(completed)+i+1}/{len(my_keys)}] [{data_source}] '{prefix}' ({expected} expected)", flush=True)
 
+            bucket_failed = False
             while True:
                 time.sleep(REST_S)
-                docs, total = fetch_page(prefix, data_source, offset)
+                try:
+                    docs, total = fetch_page(prefix, data_source, offset)
+                except RuntimeError as e:
+                    # Exhausted all retries for this page — skip the bucket, keep going
+                    print(f"  SKIP [{data_source}] '{prefix}': {e}", flush=True)
+                    failed.add(key)
+                    progress["failed_buckets"]    = list(failed)
+                    progress["total_docs_written"] = docs_written
+                    save_progress(progress, progress_file)
+                    bucket_failed = True
+                    break
 
                 if not docs:
                     break
@@ -159,22 +173,29 @@ def run_worker(worker_id: int, num_workers: int):
                 if offset >= total or offset > MAX_OFFSET:
                     break
 
-            completed.add(key)
-            progress["completed_buckets"]  = list(completed)
-            progress["total_docs_written"] = docs_written
-            save_progress(progress, progress_file)
-            print(f"  ✓ [{data_source}] '{prefix}': {bucket_docs} docs (total so far: {docs_written:,})", flush=True)
+            if not bucket_failed:
+                completed.add(key)
+                progress["completed_buckets"]  = list(completed)
+                progress["total_docs_written"] = docs_written
+                save_progress(progress, progress_file)
+                print(f"  ✓ [{data_source}] '{prefix}': {bucket_docs} docs (total so far: {docs_written:,})", flush=True)
 
     except KeyboardInterrupt:
+        interrupted = True
         print(f"\nInterrupted. {docs_written:,} docs written.", flush=True)
-    except Exception as e:
-        print(f"\nError: {e}", flush=True)
     finally:
         out.close()
         save_progress(progress, progress_file)
 
     print("\n" + "=" * 60, flush=True)
     print(f"Done. {docs_written:,} docs written to {output_file}", flush=True)
+    if failed:
+        print(f"  WARNING: {len(failed)} bucket(s) skipped due to persistent errors:", flush=True)
+        for b in sorted(failed):
+            print(f"    {b}", flush=True)
+    if interrupted or failed:
+        import sys
+        sys.exit(1)
 
 
 def main():
