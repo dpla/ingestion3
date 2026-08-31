@@ -77,7 +77,7 @@ INGEST_SCRIPT = "/home/ec2-user/ingestion3/scripts/ingest.sh"
 HARVEST_DIR   = "/home/ec2-user/mwdl-harvest"
 
 POLL_SECONDS  = 60   # log tail interval for long-running steps
-NUM_WORKERS   = 3    # parallel harvest workers (safe after resplit — all buckets ≤190 records)
+NUM_WORKERS   = 4    # parallel harvest workers (safe after resplit — all buckets ≤190 records)
 
 
 # ---------- AWS / SSM helpers ----------
@@ -195,7 +195,7 @@ def run_prefix_explorer():
     print(f"  PID: {pid} — tailing every {POLL_SECONDS}s (Ctrl+C stops tailing, job keeps running)")
     wait_for_pid(pid, log_path, exit_file, timeout_seconds=43200)  # 12h max
     print("  Prefix explorer complete.")
-    run_resplit()
+    run_resplit(num_workers=3)
 
 
 def run_resplit(num_workers=2):
@@ -512,14 +512,14 @@ def main():
         return
 
     if args.skip_to_resplit:
-        run_resplit()
+        run_resplit(num_workers=3)
         run_prefix_harvest()
         run_jsonl_to_avro()
         run_pipeline()
         return
 
     # Full run
-    run_prefix_explorer()   # also calls run_resplit() at the end
+    run_prefix_explorer()   # also calls run_resplit(num_workers=3) at the end
     run_prefix_harvest()
     run_jsonl_to_avro()
     run_pipeline()
