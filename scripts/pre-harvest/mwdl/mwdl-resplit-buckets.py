@@ -75,8 +75,9 @@ def get_count(prefix: str, data_source: str) -> int:
     return 0
 
 
-def split_bucket(prefix: str, data_source: str, max_records: int) -> dict:
+def split_bucket(prefix: str, data_source: str, max_records: int, _allow_space: bool = True) -> dict:
     """Recursively split prefix until all sub-buckets are ≤ max_records.
+    _allow_space=False prevents infinite recursion on space-padded titles.
     Returns {"{data_source}::{sub_prefix}": count, ...}"""
     result = {}
     for c in CHARS:
@@ -90,16 +91,20 @@ def split_bucket(prefix: str, data_source: str, max_records: int) -> dict:
             print(f"  [{data_source}] '{sub}': {count} ✓", flush=True)
         else:
             print(f"  [{data_source}] '{sub}': {count} → splitting further", flush=True)
-            result.update(split_bucket(sub, data_source, max_records))
+            result.update(split_bucket(sub, data_source, max_records, _allow_space=True))
 
-    # Also try "prefix + space + char" for multi-word titles that don't split further
-    space_count = get_count(prefix + " ", data_source)
-    if space_count > 0:
+    # One level of space expansion only — stops infinite recursion on space-padded titles
+    # (e.g. a record titled "1    s" would otherwise recurse: '1 ', '1  ', '1   '... forever)
+    if _allow_space:
         time.sleep(REST_S)
-        if space_count <= max_records:
-            result[f"{data_source}::{prefix} "] = space_count
-        else:
-            result.update(split_bucket(prefix + " ", data_source, max_records))
+        space_prefix = prefix + " "
+        space_count = get_count(space_prefix, data_source)
+        if 0 < space_count <= max_records:
+            result[f"{data_source}::{space_prefix}"] = space_count
+            print(f"  [{data_source}] '{space_prefix}': {space_count} ✓", flush=True)
+        elif space_count > max_records:
+            # Split space-prefix by chars only — no further space expansion
+            result.update(split_bucket(space_prefix, data_source, max_records, _allow_space=False))
 
     return result
 
