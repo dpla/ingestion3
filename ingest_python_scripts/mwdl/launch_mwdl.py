@@ -213,10 +213,6 @@ def run_prefix_harvest():
     bucket_count, total_records = check.split()
     print(f"  Found {bucket_count} queryable buckets ({int(total_records):,} records) → splitting across {NUM_WORKERS} workers.")
 
-    answer = input(f"\n  Launch {NUM_WORKERS} harvest workers? [y/n]: ").strip().lower()
-    if answer != "y":
-        sys.exit("  Aborted.")
-
     # Clear any stale per-worker progress files so each worker starts fresh
     ssm_run(
         f"rm -f {HARVEST_DIR}/mwdl-harvest-progress-*.json {HARVEST_DIR}/mwdl-harvest-*.jsonl",
