@@ -536,7 +536,10 @@ def monitor_cluster(cluster_id):
                     slack_notify(f":x: *sparkindexer FAILED* — `{cluster_id}`\nReason: {out2.strip()}\nLogs: `{EMR_LOG_URI}{cluster_id}/`")
                     return False
 
-            if state in ("TERMINATING", "TERMINATED_WITH_ERRORS"):
+            if state == "TERMINATING":
+                print(f"\n  [{ts}] TERMINATING — cluster wrapping up, waiting for final state...")
+
+            if state == "TERMINATED_WITH_ERRORS":
                 bad(f"Cluster {state}: {detail}")
                 info(f"Check logs: {EMR_LOG_URI}{cluster_id}/")
                 slack_notify(f":x: *sparkindexer {state}* — `{cluster_id}`\n{detail}\nLogs: `{EMR_LOG_URI}{cluster_id}/`")
