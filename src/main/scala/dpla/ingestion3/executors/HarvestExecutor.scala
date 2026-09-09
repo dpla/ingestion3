@@ -7,6 +7,7 @@ import dpla.ingestion3.dataStorage.OutputHelper
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.file.NaraDeltaHarvester
 import dpla.ingestion3.harvesters.oai.{
+  IthakaOaiHarvester,
   LocalOaiHarvester,
   OaiHarvester,
   OaiHarvestException,
@@ -197,6 +198,13 @@ trait HarvestExecutor {
           sys.env.getOrElse("I3_HOME", System.getProperty("user.dir")) + "/logs"
         val oaiLogger = new OaiHarvestLogger(logDir, shortName)
         new LocalOaiHarvester(spark, shortName, conf, oaiLogger)
+      case "ithaka.oai" =>
+        // JSTOR/Ithaka: standard OAI harvest + in-step Medias resolution so the
+        // harvest output already carries the public media URLs (mediaMaster).
+        val logDir =
+          sys.env.getOrElse("I3_HOME", System.getProperty("user.dir")) + "/logs"
+        val oaiLogger = new OaiHarvestLogger(logDir, shortName)
+        new IthakaOaiHarvester(spark, shortName, conf, oaiLogger)
       case "nara.file.delta" =>
         new NaraDeltaHarvester(spark, shortName, conf)
       case "api" | "file" =>
