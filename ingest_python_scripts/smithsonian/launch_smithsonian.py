@@ -164,9 +164,10 @@ def slack_notify(msg):
 
 
 def aws_s3_ls(s3_path):
+    profile = ["--profile", AWS_PROFILE] if AWS_PROFILE else []
     try:
         r = subprocess.run(
-            ["aws", "s3", "ls", s3_path, "--profile", AWS_PROFILE],
+            ["aws", "s3", "ls", s3_path] + profile,
             capture_output=True, text=True, timeout=30,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError):

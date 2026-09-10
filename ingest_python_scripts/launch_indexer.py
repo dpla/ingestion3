@@ -327,7 +327,8 @@ def check_jar_freshness(non_interactive=False):
             if age_days > 30:
                 warn(f"JAR is {age_days} days old — may be stale.")
                 if non_interactive:
-                    warn("Non-interactive: proceeding with existing JAR.")
+                    warn(f"Non-interactive: JAR is {age_days} days old — auto-rebuilding.")
+                    rebuild_jar(non_interactive=True)
                 else:
                     print()
                     print("  Options:")
