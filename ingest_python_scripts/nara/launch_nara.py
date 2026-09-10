@@ -62,7 +62,15 @@ def _load_dotenv():
     return cfg
 
 _env = _load_dotenv()
-INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
+_env_file_exists = os.path.exists(os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env")
+))
+INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
+AWS_PROFILE: str | None = (
+    os.environ.get("AWS_PROFILE")
+    or _env.get("AWS_PROFILE")
+    or ("dpla" if _env_file_exists else None)
+)
 
 NARA_SCRIPT    = "/home/ec2-user/ingestion3/scripts/harvest/nara-ingest.sh"
 
@@ -78,7 +86,7 @@ POLL_SECONDS   = 60   # log tail interval
 # ---------- AWS / SSM helpers ----------
 
 def aws(args, check=True):
-    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    profile = [] if any(a.startswith("--profile") for a in args) else (["--profile", AWS_PROFILE] if AWS_PROFILE else [])
     result = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
     if check and result.returncode != 0:
         raise RuntimeError(f"aws {' '.join(args[:3])} failed:\n{result.stderr.strip()}")

@@ -41,8 +41,17 @@ def _load_dotenv():
     return cfg
 
 _env = _load_dotenv()
-INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
-AWS_PROFILE = os.environ.get("AWS_PROFILE", "dpla")
+_env_file_exists = os.path.exists(os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+))
+# Instance ID: real env var first (CI), .env fallback (local operator).
+INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
+# AWS profile: env var → .env → "dpla" when .env exists → None (CI role creds).
+AWS_PROFILE: str | None = (
+    os.environ.get("AWS_PROFILE")
+    or _env.get("AWS_PROFILE")
+    or ("dpla" if _env_file_exists else None)
+)
 HUB_RE = re.compile(r"^[a-z0-9_-]+$")
 VALID_RESUME_STEPS = ("mapping", "enrichment", "jsonl")
 
@@ -51,20 +60,25 @@ CONF_PATH   = "/home/ec2-user/ingestion3-conf/i3.conf"
 
 
 # ── SSM helpers ───────────────────────────────────────────────────────────────
+def _profile_args() -> list[str]:
+    """Return ['--profile', AWS_PROFILE] if a profile is configured, else []."""
+    return ["--profile", AWS_PROFILE] if AWS_PROFILE else []
+
+
 def ssm_run(shell_cmd: str) -> str:
     """Run a short command on the EC2 box via SSM and return stdout."""
     encoded = base64.b64encode(shell_cmd.encode()).decode("ascii")
     wrapped = f"sudo -u ec2-user bash -lc 'echo {encoded} | base64 -d | bash -l'"
     params  = json.dumps({"commands": [wrapped]})
     r = subprocess.run(
-        ["aws", "ssm", "send-command",
-         "--profile", AWS_PROFILE,
-         "--instance-ids", INSTANCE_ID,
-         "--document-name", "AWS-RunShellScript",
-         "--timeout-seconds", "20",
-         "--parameters", params,
-         "--query", "Command.CommandId",
-         "--output", "text"],
+        ["aws", "ssm", "send-command"]
+        + _profile_args()
+        + ["--instance-ids", INSTANCE_ID,
+           "--document-name", "AWS-RunShellScript",
+           "--timeout-seconds", "20",
+           "--parameters", params,
+           "--query", "Command.CommandId",
+           "--output", "text"],
         capture_output=True, text=True,
     )
     if r.returncode != 0:
@@ -73,21 +87,21 @@ def ssm_run(shell_cmd: str) -> str:
     for _ in range(8):
         time.sleep(3)
         status = subprocess.run(
-            ["aws", "ssm", "get-command-invocation",
-             "--profile", AWS_PROFILE,
-             "--command-id", cmd_id,
-             "--instance-id", INSTANCE_ID,
-             "--query", "Status", "--output", "text"],
+            ["aws", "ssm", "get-command-invocation"]
+            + _profile_args()
+            + ["--command-id", cmd_id,
+               "--instance-id", INSTANCE_ID,
+               "--query", "Status", "--output", "text"],
             capture_output=True, text=True,
         ).stdout.strip()
         if status not in ("Pending", "InProgress", "Delayed"):
             break
     return subprocess.run(
-        ["aws", "ssm", "get-command-invocation",
-         "--profile", AWS_PROFILE,
-         "--command-id", cmd_id,
-         "--instance-id", INSTANCE_ID,
-         "--query", "StandardOutputContent", "--output", "text"],
+        ["aws", "ssm", "get-command-invocation"]
+        + _profile_args()
+        + ["--command-id", cmd_id,
+           "--instance-id", INSTANCE_ID,
+           "--query", "StandardOutputContent", "--output", "text"],
         capture_output=True, text=True,
     ).stdout.strip()
 
@@ -95,7 +109,7 @@ def ssm_run(shell_cmd: str) -> str:
 def aws_s3_ls(s3_path: str) -> str:
     try:
         r = subprocess.run(
-            ["aws", "s3", "ls", s3_path, "--profile", AWS_PROFILE],
+            ["aws", "s3", "ls", s3_path] + _profile_args(),
             capture_output=True, text=True, timeout=30,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError):
@@ -201,8 +215,12 @@ def list_deliveries(bucket: str) -> list[str]:
 
 
 # ── file-hub pre-flight ───────────────────────────────────────────────────────
-def file_hub_preflight(hub: str, bucket: str) -> None:
-    """Show S3 deliveries and current i3.conf endpoint; prompt to confirm."""
+def file_hub_preflight(hub: str, bucket: str, non_interactive: bool = False) -> None:
+    """Show S3 deliveries and current i3.conf endpoint; prompt to confirm.
+
+    In non-interactive mode the confirmation prompt is skipped — the caller is
+    responsible for ensuring i3.conf is already correct before invoking this.
+    """
     print(f"\nChecking s3://{bucket}/ for deliveries …")
     deliveries = list_deliveries(bucket)
     if not deliveries:
@@ -232,6 +250,9 @@ If it needs updating:
     2. git commit + push
     3. git pull on the EC2 box
 """)
+    if non_interactive:
+        print("Non-interactive: skipping i3.conf confirmation prompt — assuming conf is correct.")
+        return
     try:
         ans = input("i3.conf is correct — launch ingest? [y/n]: ").strip().lower()
     except (EOFError, KeyboardInterrupt):
@@ -260,8 +281,16 @@ def main() -> None:
         action="store_true",
         help="Only run the mapping step (skip harvest, enrichment, jsonl, S3 sync).",
     )
+    parser.add_argument(
+        "--non-interactive", action="store_true",
+        help="Non-interactive mode for CI/GitHub Actions: skip all prompts, "
+             "fail fast on missing hub or ambiguous harvest type.",
+    )
     args = parser.parse_args()
 
+    # Hub: required in non-interactive; prompt in interactive.
+    if args.non_interactive and not args.hub:
+        sys.exit("[CI] --hub is required in non-interactive mode.")
     hub = (args.hub or input("Hub: ")).strip().lower()
     if not HUB_RE.match(hub):
         sys.exit(f"Invalid hub name: {hub!r}")
@@ -272,6 +301,11 @@ def main() -> None:
     print(f"  harvest.type = {harvest_type or '(not found)'}")
 
     if not harvest_type:
+        if args.non_interactive:
+            sys.exit(
+                f"[CI] Could not determine harvest.type for '{hub}'. "
+                "Check i3.conf and retry."
+            )
         try:
             ans = input(
                 f"  Could not determine harvest.type for '{hub}'. "
@@ -294,7 +328,7 @@ def main() -> None:
             else:
                 s3_match = re.match(r"s3://([^/]+)", conf_endpoint or "")
                 bucket = s3_match.group(1) if s3_match else f"dpla-hub-{hub}"
-            file_hub_preflight(hub, bucket)
+            file_hub_preflight(hub, bucket, non_interactive=args.non_interactive)
 
     # Launch.
     flags = [args.harvest_only, args.mapping_only, bool(args.resume_from)]
@@ -317,14 +351,14 @@ def main() -> None:
     params = json.dumps({"commands": [inner]})
 
     result = subprocess.run(
-        ["aws", "ssm", "send-command",
-         "--profile", AWS_PROFILE,
-         "--instance-ids", INSTANCE_ID,
-         "--document-name", "AWS-RunShellScript",
-         "--timeout-seconds", "30",
-         "--parameters", params,
-         "--query", "Command.CommandId",
-         "--output", "text"],
+        ["aws", "ssm", "send-command"]
+        + _profile_args()
+        + ["--instance-ids", INSTANCE_ID,
+           "--document-name", "AWS-RunShellScript",
+           "--timeout-seconds", "30",
+           "--parameters", params,
+           "--query", "Command.CommandId",
+           "--output", "text"],
         capture_output=True, text=True,
     )
     if result.returncode != 0:

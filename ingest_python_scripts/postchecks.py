@@ -53,6 +53,14 @@ def _load_dotenv():
     return cfg
 
 _env = _load_dotenv()
+_env_file_exists = os.path.exists(os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+))
+AWS_PROFILE: str | None = (
+    os.environ.get("AWS_PROFILE")
+    or _env.get("AWS_PROFILE")
+    or ("dpla" if _env_file_exists else None)
+)
 _conf_repo = _env.get("INGESTION3_CONF_REPO",
                        os.path.expanduser("~/Documents/Repos/ingestion3-conf"))
 CONF_PATH = os.environ.get("I3_CONF") or os.path.join(_conf_repo, "i3.conf")
@@ -66,7 +74,7 @@ S3_ALIASES = {
 
 # ---------- AWS helpers ----------
 def aws(args, check=True):
-    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    profile = [] if any(a.startswith("--profile") for a in args) else (["--profile", AWS_PROFILE] if AWS_PROFILE else [])
     result = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
     if check and result.returncode != 0:
         raise RuntimeError(f"aws {' '.join(args[:3])} failed:\n{result.stderr.strip()}")
