@@ -20,9 +20,35 @@ import subprocess
 import sys
 import time
 
+
+def _load_dotenv():
+    cfg = {}
+    env_file = os.path.normpath(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+    )
+    if os.path.exists(env_file):
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    cfg[k.strip()] = os.path.expanduser(v.strip().strip('"').strip("'"))
+    creds = cfg.get("AWS_SHARED_CREDENTIALS_FILE")
+    if creds:
+        os.environ.setdefault("AWS_SHARED_CREDENTIALS_FILE", creds)
+    return cfg
+
+_env = _load_dotenv()
+_env_file_exists = os.path.exists(os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+))
 DEST        = "/tmp/virginias-input"
-INSTANCE_ID = "i-0a0def8581efef783"
-AWS_PROFILE = os.environ.get("AWS_PROFILE", "dpla")
+INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "i-0a0def8581efef783")
+AWS_PROFILE: str | None = (
+    os.environ.get("AWS_PROFILE")
+    or _env.get("AWS_PROFILE")
+    or ("dpla" if _env_file_exists else None)
+)
 REGION      = "us-east-1"
 
 REPOS = [
@@ -44,16 +70,18 @@ def ssm_run(shell_cmd: str, poll_seconds: int = 600) -> tuple[str, str]:
     encoded = base64.b64encode(shell_cmd.encode()).decode("ascii")
     wrapped = f"sudo -u ec2-user bash -lc 'echo {encoded} | base64 -d | bash -l'"
     params  = json.dumps({"commands": [wrapped]})
+    profile = ["--profile", AWS_PROFILE] if AWS_PROFILE else []
 
     r = subprocess.run(
-        ["aws", "ssm", "send-command",
-         "--profile", AWS_PROFILE, "--region", REGION,
-         "--instance-ids", INSTANCE_ID,
-         "--document-name", "AWS-RunShellScript",
-         "--timeout-seconds", "30",
-         "--parameters", params,
-         "--query", "Command.CommandId",
-         "--output", "text"],
+        ["aws", "ssm", "send-command"]
+        + profile
+        + ["--region", REGION,
+           "--instance-ids", INSTANCE_ID,
+           "--document-name", "AWS-RunShellScript",
+           "--timeout-seconds", "30",
+           "--parameters", params,
+           "--query", "Command.CommandId",
+           "--output", "text"],
         capture_output=True, text=True,
     )
     if r.returncode != 0:
@@ -68,10 +96,11 @@ def ssm_run(shell_cmd: str, poll_seconds: int = 600) -> tuple[str, str]:
         time.sleep(interval)
         elapsed += interval
         status = subprocess.run(
-            ["aws", "ssm", "get-command-invocation",
-             "--profile", AWS_PROFILE, "--region", REGION,
-             "--command-id", cmd_id, "--instance-id", INSTANCE_ID,
-             "--query", "Status", "--output", "text"],
+            ["aws", "ssm", "get-command-invocation"]
+            + profile
+            + ["--region", REGION,
+               "--command-id", cmd_id, "--instance-id", INSTANCE_ID,
+               "--query", "Status", "--output", "text"],
             capture_output=True, text=True,
         ).stdout.strip()
         print(f"  [{elapsed}s] {status}")
@@ -79,18 +108,20 @@ def ssm_run(shell_cmd: str, poll_seconds: int = 600) -> tuple[str, str]:
             break
 
     out = subprocess.run(
-        ["aws", "ssm", "get-command-invocation",
-         "--profile", AWS_PROFILE, "--region", REGION,
-         "--command-id", cmd_id, "--instance-id", INSTANCE_ID,
-         "--query", "StandardOutputContent", "--output", "text"],
+        ["aws", "ssm", "get-command-invocation"]
+        + profile
+        + ["--region", REGION,
+           "--command-id", cmd_id, "--instance-id", INSTANCE_ID,
+           "--query", "StandardOutputContent", "--output", "text"],
         capture_output=True, text=True,
     ).stdout.strip()
 
     err = subprocess.run(
-        ["aws", "ssm", "get-command-invocation",
-         "--profile", AWS_PROFILE, "--region", REGION,
-         "--command-id", cmd_id, "--instance-id", INSTANCE_ID,
-         "--query", "StandardErrorContent", "--output", "text"],
+        ["aws", "ssm", "get-command-invocation"]
+        + profile
+        + ["--region", REGION,
+           "--command-id", cmd_id, "--instance-id", INSTANCE_ID,
+           "--query", "StandardErrorContent", "--output", "text"],
         capture_output=True, text=True,
     ).stdout.strip()
 

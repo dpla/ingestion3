@@ -52,8 +52,15 @@ def _load_dotenv():
     return cfg
 
 _env = _load_dotenv()
-INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
-AWS_PROFILE = os.environ.get("AWS_PROFILE", "dpla")
+_env_file_exists = os.path.exists(os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env")
+))
+INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
+AWS_PROFILE: str | None = (
+    os.environ.get("AWS_PROFILE")
+    or _env.get("AWS_PROFILE")
+    or ("dpla" if _env_file_exists else None)
+)
 
 S3_DELIVERY_BUCKET = "dpla-hub-si"
 DATA_ROOT          = "/home/ec2-user/data/smithsonian"
@@ -74,7 +81,7 @@ S3_DATE_RE = re.compile(r"PRE\s+(\d{4}-\d{2}-\d{2})/")
 
 # ── AWS / SSM helpers ─────────────────────────────────────────────────────────
 def _aws(args):
-    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    profile = [] if any(a.startswith("--profile") for a in args) else (["--profile", AWS_PROFILE] if AWS_PROFILE else [])
     r = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(f"aws {' '.join(args)} failed:\n{r.stderr.strip()}")
@@ -157,9 +164,10 @@ def slack_notify(msg):
 
 
 def aws_s3_ls(s3_path):
+    profile = ["--profile", AWS_PROFILE] if AWS_PROFILE else []
     try:
         r = subprocess.run(
-            ["aws", "s3", "ls", s3_path, "--profile", AWS_PROFILE],
+            ["aws", "s3", "ls", s3_path] + profile,
             capture_output=True, text=True, timeout=30,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError):

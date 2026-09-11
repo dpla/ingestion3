@@ -80,7 +80,18 @@ def _load_dotenv():
     return cfg
 
 _env = _load_dotenv()
-INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
+_env_file_exists = os.path.exists(os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+))
+# Instance ID: real env var first (CI), .env fallback (local operator).
+INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
+# AWS profile: env var → .env → "dpla" when .env exists (preserves local behaviour)
+#              → None when neither is present (CI: use role/ambient creds, omit --profile).
+AWS_PROFILE: str | None = (
+    os.environ.get("AWS_PROFILE")
+    or _env.get("AWS_PROFILE")
+    or ("dpla" if _env_file_exists else None)
+)
 _conf_repo = _env.get("INGESTION3_CONF_REPO",
                        os.path.expanduser("~/Documents/Repos/ingestion3-conf"))
 CONF_PATH = os.environ.get("I3_CONF") or os.path.join(_conf_repo, "i3.conf")
@@ -107,7 +118,10 @@ def info(msg):
 # ---------- AWS CLI wrappers ----------
 def aws(args, capture=True):
     """Run an aws CLI command. Returns stdout text (stripped) on success."""
-    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    if any(a.startswith("--profile") for a in args):
+        profile = []
+    else:
+        profile = ["--profile", AWS_PROFILE] if AWS_PROFILE else []
     result = subprocess.run(
         ["aws"] + profile + args,
         capture_output=capture,
@@ -295,7 +309,7 @@ def check_repo_sync(repo, header_num="2", auto_reset=False, interactive=True):
     info("Probably safe if your hub isn't affected by those commits. Flag it to your team.")
     return True  # non-blocking
 
-def check_jar_freshness():
+def check_jar_freshness(auto_rebuild=False):
     header("3. Fat JAR freshness")
     cmd = f"""
 cd {REPO_PATH}
@@ -327,13 +341,16 @@ fi
         return True
 
     bad("JAR is stale or missing.")
-    try:
-        answer = input("  Rebuild fat JAR now? (sbt clean assembly — takes ~10 min) [y/N] ").strip().lower()
-    except EOFError:
-        answer = ""
-    if answer not in ("y", "yes"):
-        info("Skipping rebuild. Run `sbt clean assembly` on the box before ingesting.")
-        return False
+    if not auto_rebuild:
+        try:
+            answer = input("  Rebuild fat JAR now? (sbt clean assembly — takes ~10 min) [y/N] ").strip().lower()
+        except EOFError:
+            answer = ""
+        if answer not in ("y", "yes"):
+            info("Skipping rebuild. Run `sbt clean assembly` on the box before ingesting.")
+            return False
+    else:
+        info("Non-interactive: auto-rebuilding fat JAR (sbt clean assembly)...")
 
     return _run_sbt_assembly()
 
@@ -851,9 +868,9 @@ def _check_s3_endpoint(s3_path):
     info(f"Delivery path: {s3_path}")
     info("Type:          file-based (S3) — checking for current-month delivery")
     try:
+        _profile_args = ["--profile", AWS_PROFILE] if AWS_PROFILE else []
         result = subprocess.run(
-            ["aws", "s3", "ls", s3_path,
-             "--profile", os.environ.get("AWS_PROFILE", "dpla")],
+            ["aws", "s3", "ls", s3_path, *_profile_args],
             capture_output=True, text=True, timeout=30,
         )
     except subprocess.TimeoutExpired:
@@ -1026,6 +1043,12 @@ def main():
         help="List hubs scheduled for a given month (1-12). With no value, "
              "uses the current month. Skips all box-state and endpoint checks.",
     )
+    parser.add_argument(
+        "--non-interactive", action="store_true",
+        help="Non-interactive mode for CI/GitHub Actions: skip all prompts, "
+             "auto-pull repos, auto-rebuild JAR if stale, treat missing hub as "
+             "no endpoint check. Implies --auto-pull.",
+    )
     args = parser.parse_args()
 
     # --todo is a standalone listing mode; it short-circuits the rest of main().
@@ -1042,8 +1065,9 @@ def main():
         sys.exit("--auto-pull and --no-pull are mutually exclusive.")
 
     # If no --hub was passed, prompt for one. Empty input = skip endpoint check.
+    # In non-interactive mode, skip the prompt entirely (treat as no hub).
     hub = args.hub
-    if hub is None:
+    if hub is None and not args.non_interactive:
         try:
             entered = input("Hub to check (can be left blank): ").strip().lower()
         except EOFError:
@@ -1118,10 +1142,12 @@ def main():
         if run_box_checks or needs_box_for_endpoint:
             results.append(("instance", check_instance_state(auto_start=auto_start)))
         if run_box_checks:
-            interactive_pull = not args.no_pull
-            results.append(("ingestion3 repo",      check_repo_sync(INGEST_REPO, header_num="2a", auto_reset=args.auto_pull, interactive=interactive_pull)))
-            results.append(("ingestion3-conf repo", check_repo_sync(CONF_REPO,   header_num="2b", auto_reset=args.auto_pull, interactive=interactive_pull)))
-            results.append(("jar",                  check_jar_freshness()))
+            # In non-interactive mode: always auto-pull, never prompt.
+            effective_auto_pull = args.auto_pull or (args.non_interactive and not args.no_pull)
+            interactive_pull = not args.no_pull and not args.non_interactive
+            results.append(("ingestion3 repo",      check_repo_sync(INGEST_REPO, header_num="2a", auto_reset=effective_auto_pull, interactive=interactive_pull)))
+            results.append(("ingestion3-conf repo", check_repo_sync(CONF_REPO,   header_num="2b", auto_reset=effective_auto_pull, interactive=interactive_pull)))
+            results.append(("jar",                  check_jar_freshness(auto_rebuild=args.non_interactive)))
             results.append(("ownership",            check_target_ownership()))
             results.append(("disk",                 check_disk_space()))
         if run_endpoint_check:

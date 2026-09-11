@@ -53,7 +53,15 @@ def _load_dotenv():
     return cfg
 
 _env = _load_dotenv()
-INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
+_env_file_exists = os.path.exists(os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env")
+))
+INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
+AWS_PROFILE: str | None = (
+    os.environ.get("AWS_PROFILE")
+    or _env.get("AWS_PROFILE")
+    or ("dpla" if _env_file_exists else None)
+)
 REGION        = "us-east-1"
 REPO_PATH     = "/home/ec2-user/ingestion3"
 CW_SCRIPT     = f"{REPO_PATH}/scripts/harvest/community-webs-ingest.sh"
@@ -64,7 +72,7 @@ INGEST_LOG    = f"{DATA_ROOT}/community-webs-ingest.log"
 
 # ---------- AWS / SSM helpers ----------
 def aws(args):
-    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    profile = [] if any(a.startswith("--profile") for a in args) else (["--profile", AWS_PROFILE] if AWS_PROFILE else [])
     result = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"aws {' '.join(args[:3])} failed:\n{result.stderr.strip()}")
@@ -144,8 +152,8 @@ def stage_upload(db_path, timestamp):
     print(f"  S3:     {s3_dest}")
     confirm(f"Upload {size_mb:.1f} MB to S3?")
     result = subprocess.run(
-        ["aws", "s3", "cp", db_path, s3_dest, "--no-progress",
-         "--profile", "dpla"],
+        ["aws", "s3", "cp", db_path, s3_dest, "--no-progress"]
+        + (["--profile", AWS_PROFILE] if AWS_PROFILE else []),
         capture_output=True, text=True,
     )
     if result.returncode != 0:

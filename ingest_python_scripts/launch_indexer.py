@@ -52,10 +52,18 @@ def _load_dotenv():
     return cfg
 
 _env = _load_dotenv()
+_env_file_exists = os.path.exists(os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+))
 
 REGION             = "us-east-1"
-ES_INSTANCE_ID     = _env.get("ES_INSTANCE_ID", "")
-INGEST_INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
+ES_INSTANCE_ID     = os.environ.get("ES_INSTANCE_ID")     or _env.get("ES_INSTANCE_ID", "")
+INGEST_INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
+AWS_PROFILE: str | None = (
+    os.environ.get("AWS_PROFILE")
+    or _env.get("AWS_PROFILE")
+    or ("dpla" if _env_file_exists else None)
+)
 ES_HOST            = _env.get("ES_HOST", "")
 AWS_ACCOUNT_ID     = _env.get("AWS_ACCOUNT_ID", "")
 EMR_LOG_URI        = f"s3://aws-logs-{AWS_ACCOUNT_ID}-us-east-1/elasticmapreduce/"
@@ -97,7 +105,7 @@ def slack_notify(msg):
 
 # ---------- AWS helpers ----------
 def aws(args, check=True):
-    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    profile = [] if any(a.startswith("--profile") for a in args) else (["--profile", AWS_PROFILE] if AWS_PROFILE else [])
     result = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
     if check and result.returncode != 0:
         raise RuntimeError(f"aws {' '.join(args[:3])} failed:\n{result.stderr.strip()}")
@@ -183,7 +191,7 @@ def check_no_running_cluster():
     ok("No active sparkindexer cluster.")
 
 
-def check_hub_snapshot_ages():
+def check_hub_snapshot_ages(non_interactive=False):
     step(2, "Check hub snapshot ages (warn if >45 days old)")
     out = aws(["s3", "ls", f"s3://{S3_DATASET}/", "--region", REGION])
     hubs = [line.strip().rstrip("/").split()[-1] for line in out.splitlines() if line.strip().endswith("/")]
@@ -212,12 +220,15 @@ def check_hub_snapshot_ages():
         warn(f"{len(stale)} hub(s) with snapshots older than {STALE_DAYS} days:")
         for hub, age, date in stale:
             info(f"    {hub:<25} {age} days old  (last: {date})")
-        confirm("Proceed anyway?", default_yes=False)
+        if non_interactive:
+            warn("Non-interactive: proceeding despite stale snapshots.")
+        else:
+            confirm("Proceed anyway?", default_yes=False)
     else:
         ok(f"All hub snapshots are within {STALE_DAYS} days.")
 
 
-def check_batch_output():
+def check_batch_output(non_interactive=False):
     step(3, "Check for existing batch output")
     now = datetime.now()
     batch_path = f"s3://{S3_BATCH_BASE}/{now.year}/{now.month:02d}/all.parquet/"
@@ -226,14 +237,17 @@ def check_batch_output():
     if ls.strip():
         warn(f"Batch output already exists at {batch_path}")
         info("Spark will refuse to write if this path exists.")
-        confirm("Delete it and continue?", default_yes=False)
+        if non_interactive:
+            info("Non-interactive: auto-deleting existing batch output.")
+        else:
+            confirm("Delete it and continue?", default_yes=False)
         aws(["s3", "rm", batch_path, "--recursive", "--region", REGION])
         ok("Deleted existing batch output.")
     else:
         ok("No existing batch output — clear to launch.")
 
 
-def rebuild_jar():
+def rebuild_jar(non_interactive=False):
     """Build the sparkindexer JAR on the ingest EC2 and upload it to S3."""
     info(f"Starting JAR rebuild on {INGEST_INSTANCE_ID} — this takes ~5-10 minutes...")
     slack_notify(":hammer: *sparkindexer JAR rebuild started* — running `sbt assembly` on ingest EC2 (~5–10 min).")
@@ -264,6 +278,8 @@ def rebuild_jar():
     # Confirm sbt reported success
     if "[success]" not in out.lower():
         bad("sbt output does not contain [success] — build may have failed.")
+        if non_interactive:
+            sys.exit("[CI] sbt assembly did not report [success] — aborting.")
         confirm("Continue anyway and upload whatever JAR is there?", default_yes=False)
     else:
         ok("sbt assembly succeeded.")
@@ -295,7 +311,7 @@ def rebuild_jar():
         warn("Could not verify JAR on S3 after upload — check manually.")
 
 
-def check_jar_freshness():
+def check_jar_freshness(non_interactive=False):
     step(4, "Check sparkindexer JAR freshness")
     out = aws(["s3", "ls", SPARKINDEXER_JAR, "--region", REGION], check=False)
     if not out.strip():
@@ -310,21 +326,25 @@ def check_jar_freshness():
             info(f"JAR last modified: {parts[0]} ({age_days} days ago)")
             if age_days > 30:
                 warn(f"JAR is {age_days} days old — may be stale.")
-                print()
-                print("  Options:")
-                print("    r) Rebuild JAR on EC2 and upload to S3 (takes ~5-10 min)")
-                print("    p) Proceed with existing JAR")
-                print("    a) Abort")
-                try:
-                    choice = input("  Choice [r/p/a]: ").strip().lower()
-                except EOFError:
-                    choice = "a"
-                if choice == "r":
-                    rebuild_jar()
-                elif choice == "p":
-                    ok("Proceeding with existing JAR.")
+                if non_interactive:
+                    warn(f"Non-interactive: JAR is {age_days} days old — auto-rebuilding.")
+                    rebuild_jar(non_interactive=True)
                 else:
-                    sys.exit("Aborted.")
+                    print()
+                    print("  Options:")
+                    print("    r) Rebuild JAR on EC2 and upload to S3 (takes ~5-10 min)")
+                    print("    p) Proceed with existing JAR")
+                    print("    a) Abort")
+                    try:
+                        choice = input("  Choice [r/p/a]: ").strip().lower()
+                    except EOFError:
+                        choice = "a"
+                    if choice == "r":
+                        rebuild_jar()
+                    elif choice == "p":
+                        ok("Proceeding with existing JAR.")
+                    else:
+                        sys.exit("Aborted.")
             else:
                 ok(f"JAR is {age_days} days old — looks fresh.")
         except ValueError:
@@ -386,9 +406,10 @@ def build_providers_arg(extra_exclude=None):
 
 # ---------- launch cluster ----------
 
-def launch_cluster(providers_arg="all"):
+def launch_cluster(providers_arg="all", non_interactive=False):
     step(5, "Launch sparkindexer EMR cluster")
-    confirm("All pre-flight checks passed. Launch the cluster now?")
+    if not non_interactive:
+        confirm("All pre-flight checks passed. Launch the cluster now?")
 
     cluster_id = aws([
         "emr", "create-cluster",
@@ -555,7 +576,7 @@ def monitor_cluster(cluster_id):
 
 # ---------- alias swap ----------
 
-def do_alias_swap():
+def do_alias_swap(non_interactive=False):
     step(7, "Elasticsearch alias swap")
 
     # Find current indices
@@ -584,14 +605,29 @@ def do_alias_swap():
     else:
         warn("Could not determine current live index.")
 
-    try:
-        new_index = input("\n  Enter the NEW index name to make live: ").strip()
-    except EOFError:
-        sys.exit("No input provided.")
-    if not new_index:
-        sys.exit("No index name entered.")
-
-    old_index = current_live or input("  Enter the OLD index name to remove alias from: ").strip()
+    if non_interactive:
+        # Auto-detect: newest dpla-all-* index not currently aliased.
+        # The cat output is sorted newest-first; skip the header line.
+        indices = [
+            line.split()[0] for line in out.splitlines()
+            if line.strip() and not line.strip().startswith("index")
+            and line.split()[0].startswith("dpla-all-")
+        ]
+        new_index = next((idx for idx in indices if idx != current_live), None)
+        if not new_index:
+            sys.exit("[CI] Could not auto-detect new index — no unaliased dpla-all-* index found.")
+        info(f"Auto-detected new index: {new_index}")
+        if not current_live:
+            sys.exit("[CI] Could not determine current live index — cannot proceed with alias swap.")
+        old_index = current_live
+    else:
+        try:
+            new_index = input("\n  Enter the NEW index name to make live: ").strip()
+        except EOFError:
+            sys.exit("No input provided.")
+        if not new_index:
+            sys.exit("No index name entered.")
+        old_index = current_live or input("  Enter the OLD index name to remove alias from: ").strip()
 
     # Fetch old index doc count from ES before swapping
     old_count = None
@@ -610,7 +646,10 @@ def do_alias_swap():
     print(f"\n  OLD index: {old_index}  ({f'{old_count:,} docs' if old_count else 'count unknown'})")
     print(f"  NEW index: {new_index}")
     print(f"  This will swap dpla_alias from {old_index} → {new_index} and make it LIVE on dp.la.")
-    confirm("Confirm alias swap?", default_yes=False)
+    if non_interactive:
+        info("Non-interactive: proceeding with alias swap automatically.")
+    else:
+        confirm("Confirm alias swap?", default_yes=False)
 
     swap_payload = json.dumps({
         "actions": [
@@ -704,6 +743,12 @@ def main():
     parser.add_argument("--verify-only", action="store_true", help="Just check API count, show delta, and Slack notify")
     parser.add_argument("--exclude-hubs", help="Additional hubs to exclude (comma-separated) on top of those marked included_in_index=false in i3.conf")
     parser.add_argument("--dry-run", action="store_true", help="Print the providers arg that would be sent to the indexer, then exit")
+    parser.add_argument(
+        "--non-interactive", action="store_true",
+        help="Non-interactive mode for CI/GitHub Actions: skip all prompts, "
+             "auto-detect new ES index after cluster completes, auto-proceed on "
+             "stale JAR/snapshots, fail fast on ambiguous state.",
+    )
     args = parser.parse_args()
 
     print("\nDPLA SPARKINDEXER")
@@ -720,7 +765,7 @@ def main():
         return
 
     if args.alias_swap_only:
-        old_index, new_index, old_count = do_alias_swap()
+        old_index, new_index, old_count = do_alias_swap(non_interactive=args.non_interactive)
         verify_api(old_count=old_count)
         print()
         print("=" * 70)
@@ -741,20 +786,19 @@ def main():
         # Full flow
         if not args.skip_preflight:
             check_no_running_cluster()
-            check_hub_snapshot_ages()
-            check_batch_output()
-            check_jar_freshness()
+            check_hub_snapshot_ages(non_interactive=args.non_interactive)
+            check_batch_output(non_interactive=args.non_interactive)
+            check_jar_freshness(non_interactive=args.non_interactive)
         else:
             print("\n  Pre-flight checks skipped.")
 
         providers_arg = build_providers_arg(args.exclude_hubs)
-        cluster_id = launch_cluster(providers_arg)
+        cluster_id = launch_cluster(providers_arg, non_interactive=args.non_interactive)
         success = monitor_cluster(cluster_id)
         if not success:
             sys.exit(1)
 
-    # Alias swap (always pauses for confirmation)
-    old_index, new_index, old_count = do_alias_swap()
+    old_index, new_index, old_count = do_alias_swap(non_interactive=args.non_interactive)
     verify_api(old_count=old_count)
 
     print()
