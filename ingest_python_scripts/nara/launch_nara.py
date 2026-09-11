@@ -173,6 +173,51 @@ def confirm(msg, default_yes=True):
         sys.exit("Aborted.")
 
 
+# ---------- Auto-detect staged month ----------
+
+def detect_staged_month():
+    """Find the single staged YYYYMM delivery under NARA_ORIGINALS on EC2.
+
+    Exits if zero or more than one month is staged (NARA deltas are
+    order-dependent; guessing is unsafe).  If exactly one month is found but
+    its ingest log already recorded exit-code 0, exits with an error so the
+    operator knows to skip or re-run intentionally.
+    """
+    raw = ssm_run(
+        f"ls -1 {NARA_ORIGINALS} 2>/dev/null | grep -E '^[0-9]{{6}}$' | sort || true",
+        timeout_seconds=30,
+    ).strip()
+
+    months = [m for m in raw.splitlines() if re.match(r"^\d{6}$", m.strip())]
+
+    if not months:
+        sys.exit(
+            f"\n  [BAD] No staged NARA deliveries found under {NARA_ORIGINALS}.\n"
+            "  Run copy_nara.py first to stage the delivery, then re-run."
+        )
+    if len(months) > 1:
+        sys.exit(
+            f"\n  [BAD] Multiple months staged: {', '.join(months)}.\n"
+            "  NARA deltas are order-dependent — pass --month explicitly."
+        )
+
+    month = months[0].strip()
+    exitcode_file = f"{LOG_DIR}/nara-ingest-{month}.log.exitcode"
+    exitcode = ssm_run(
+        f"cat {exitcode_file} 2>/dev/null || echo missing",
+        timeout_seconds=30,
+    ).strip()
+
+    if exitcode == "0":
+        sys.exit(
+            f"\n  [BAD] Month {month} was already ingested successfully.\n"
+            f"  Pass --month {month} explicitly if you intend to re-run."
+        )
+
+    ok(f"Auto-detected staged month: {month}")
+    return month
+
+
 # ---------- Step 1: pre-flight check ----------
 
 def preflight_check(month):
@@ -426,12 +471,12 @@ def main():
         return
 
     # ── Normal mode ───────────────────────────────────────────────────────
-    if not args.month:
-        sys.exit("\n  [BAD] --month YYYYMM is required.")
-    if not re.match(r"^\d{6}$", args.month):
-        sys.exit(f"\n  [BAD] --month must be 6 digits (YYYYMM), got: {args.month!r}")
-
-    month    = args.month
+    if args.month:
+        if not re.match(r"^\d{6}$", args.month):
+            sys.exit(f"\n  [BAD] --month must be 6 digits (YYYYMM), got: {args.month!r}")
+        month = args.month
+    else:
+        month = detect_staged_month()
     log_path = f"{LOG_DIR}/nara-ingest-{month}.log"
 
     print(f"Month: {month}")
