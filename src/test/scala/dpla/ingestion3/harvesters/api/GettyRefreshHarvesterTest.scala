@@ -80,6 +80,51 @@ class GettyRefreshHarvesterTest extends AnyFlatSpec {
     assert(WidestNewRecordsWindow === "90 days back")
   }
 
+  // ── newestHarvest ──────────────────────────────────────────────────────────
+
+  "newestHarvest" should "pick the most recent harvest directory" in {
+    val names = Seq(
+      "20210208_122635-getty-OriginalRecord.avro",
+      "20260912_213156-getty-OriginalRecord.avro",
+      "20201116_071620-getty-OriginalRecord.avro"
+    )
+    assert(newestHarvest(names, "getty") === Some("20260912_213156-getty-OriginalRecord.avro"))
+  }
+
+  it should "order by timestamp, not listing order" in {
+    // Directory listings are not sorted; relying on order would pick at random.
+    val names = Seq(
+      "20260912_213156-getty-OriginalRecord.avro",
+      "20260912_235959-getty-OriginalRecord.avro"
+    )
+    assert(newestHarvest(names.reverse, "getty") === Some("20260912_235959-getty-OriginalRecord.avro"))
+    assert(newestHarvest(names, "getty") === Some("20260912_235959-getty-OriginalRecord.avro"))
+  }
+
+  it should "ignore directories that are not harvests of this hub" in {
+    val names = Seq(
+      "20260912_213156-getty-OriginalRecord.avro",
+      "20261001_000000-mwdl-OriginalRecord.avro",      // another hub
+      "20261002_000000-getty-MAP4_0.MAPRecord.avro",   // mapping, not harvest
+      "_SUCCESS",
+      "some-scratch-dir"
+    )
+    assert(newestHarvest(names, "getty") === Some("20260912_213156-getty-OriginalRecord.avro"))
+  }
+
+  it should "not let a similarly-named hub win" in {
+    // "getty" must not match "getty-test"; seeding from the wrong hub would be
+    // silent and catastrophic.
+    val names = Seq("20261231_000000-getty-test-OriginalRecord.avro")
+    assert(newestHarvest(names, "getty") === None)
+  }
+
+  it should "return None when nothing matches" in {
+    assert(newestHarvest(Seq.empty, "getty") === None)
+    assert(newestHarvest(Seq("README.md"), "getty") === None)
+    assert(newestHarvest(null, "getty") === None)
+  }
+
   // ── discovery gap ──────────────────────────────────────────────────────────
 
   private val seed =

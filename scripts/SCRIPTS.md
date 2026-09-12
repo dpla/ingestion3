@@ -575,8 +575,11 @@ reports success** — which is how a 98% shortfall reached production in Februar
 (`q=rid,exact,<id>`, one record per request, no offset involved) and then asks
 Getty's `newrecords` facet for anything added in the last 90 days.
 
-`getty.harvest.seed` points at the previous harvest's `OriginalRecord.avro`, so
-each run's output is the next run's seed and newly discovered ids carry forward.
+The seed needs no configuration: the harvester lists `$DPLA_DATA/getty/harvest/`
+and takes the newest completed run, so each run's output is automatically the
+next run's seed and discovered ids carry forward. `getty.harvest.seed` overrides
+that for backfills — re-seeding from a specific older harvest or a hand-built id
+file — and is not meant to be edited between routine ingests.
 
 **Getty is scheduled bi-monthly, not quarterly, and that is deliberate.**
 Discovery reaches back only 90 days, so a quarterly cadence sits right on the

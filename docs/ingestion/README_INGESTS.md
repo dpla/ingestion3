@@ -149,9 +149,9 @@ allowlisted IP (`54.165.106.96`; Getty rejects our other static IP).
 
 Two things to know:
 
-- `getty.harvest.seed` must point at the **previous** harvest's
-  `OriginalRecord.avro`. Each run's output is the next run's seed, so update it
-  after every ingest or newly discovered records will be dropped next quarter.
+- The seed is found automatically — the harvester takes the newest completed run
+  in `$DPLA_DATA/getty/harvest/`, so each ingest's output seeds the next one with
+  no config change. `getty.harvest.seed` overrides it for backfills only.
 - **Getty runs bi-monthly (Jan/Mar/May/Jul/Sep/Nov), not quarterly.** Discovery
   reaches back only 90 days, so a quarterly cadence has no margin. The harvester
   logs a `GETTY DISCOVERY GAP` warning if the gap since the previous harvest

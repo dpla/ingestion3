@@ -1,9 +1,11 @@
 package dpla.ingestion3.harvesters.api
 
 import dpla.ingestion3.confs.i3Conf
+import dpla.ingestion3.harvesters.SeedsFromPreviousHarvest
 import dpla.ingestion3.model.AVRO_MIME_JSON
 import dpla.ingestion3.utils.Utils
 import org.apache.avro.generic.GenericData
+import org.apache.hadoop.fs.{Path => HPath}
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.json4s.DefaultFormats
@@ -72,11 +74,16 @@ import scala.util.{Failure, Success, Try, Using}
   *
   * THE SEED
   * --------
-  * The id list comes from `getty.harvest.seed`: either a previous harvest's
-  * OriginalRecord Avro directory (its `id` column) or a newline-delimited text
-  * file. Seeding from the previous harvest makes carry-forward automatic --
-  * each run's output is the next run's seed -- so ids discovered in one quarter
-  * are never silently lost in the next.
+  * The ids come from the hub's own previous harvest, found automatically: the
+  * `harvest` activity directory is listed and the newest completed run wins.
+  * `OutputHelper` names those directories `YYYYMMDD_HHMMSS-<hub>-<schema>`, so
+  * the convention is stable and the timestamp sorts lexically. Nothing needs
+  * configuring, and carry-forward is automatic -- each run's output is the next
+  * run's seed, so ids discovered in one run are never lost in the next.
+  *
+  * `getty.harvest.seed` overrides that when the automatic answer is wrong:
+  * re-seeding from a specific older harvest, or from a hand-built id file during
+  * a backfill. It is not meant to be edited between routine ingests.
   *
   * @param spark
   *   Spark session
@@ -89,7 +96,8 @@ class GettyRefreshHarvester(
     spark: SparkSession,
     shortName: String,
     conf: i3Conf
-) extends ApiHarvester(shortName, conf) {
+) extends ApiHarvester(shortName, conf)
+    with SeedsFromPreviousHarvest {
 
   import GettyRefreshHarvester._
 
@@ -113,13 +121,71 @@ class GettyRefreshHarvester(
     )
   )
 
-  private val seedPath: String = conf.harvest.seed.getOrElse(
-    throw new RuntimeException(
-      "getty.harvest.seed is not set. It must point at the previous harvest's " +
-        "OriginalRecord.avro directory (or a newline-delimited id file). Without a " +
-        "seed there is nothing to look up -- see GettyRefreshHarvester's scaladoc."
+  /** Where the ids come from.
+    *
+    * Normally nothing is configured: the previous harvest is found by listing
+    * this hub's `harvest` activity directory and taking the newest complete one.
+    * `OutputHelper` names those directories `YYYYMMDD_HHMMSS-<hub>-<schema>`, so
+    * they sort by name and the convention is stable.
+    *
+    * `getty.harvest.seed` overrides that, for the cases where the automatic
+    * answer is the wrong one -- re-seeding from a specific older harvest, or
+    * from a hand-built id file during a backfill. It is not meant to be edited
+    * between routine ingests.
+    */
+  private lazy val seedPath: String = conf.harvest.seed
+    .map { configured =>
+      logger.info(s"Seed overridden by getty.harvest.seed: $configured")
+      configured
+    }
+    .orElse(previousHarvestIn(dataRoot))
+    .getOrElse(
+      throw new RuntimeException(
+        s"No previous harvest found to seed from. Looked under " +
+          s"${dataRoot.map(harvestDirFor).getOrElse("<no --output supplied>")}. " +
+          s"The first run against a hub with no harvest history needs " +
+          s"getty.harvest.seed pointed at one (an OriginalRecord.avro directory " +
+          s"or a newline-delimited id file)."
+      )
     )
-  )
+
+  /** The hub's harvest activity directory under a data root. */
+  private def harvestDirFor(root: String): String =
+    if (root.endsWith("/")) s"$root$shortName/harvest" else s"$root/$shortName/harvest"
+
+  /** Newest complete harvest under `root`, if there is one.
+    *
+    * Uses the Hadoop FileSystem API so a local path and an `s3a://` bucket are
+    * handled identically -- `--output` can be either.
+    */
+  private def previousHarvestIn(root: Option[String]): Option[String] = root.flatMap { r =>
+    val dir = harvestDirFor(r)
+    Try {
+      val path = new HPath(dir)
+      val fs = path.getFileSystem(spark.sparkContext.hadoopConfiguration)
+      if (!fs.exists(path)) Seq.empty
+      else
+        fs.listStatus(path)
+          .filter(_.isDirectory)
+          .map(_.getPath.getName)
+          .toSeq
+          // Skip incomplete Spark writes: a directory with _temporary and no
+          // _SUCCESS is a crashed run, and seeding from one would silently
+          // shrink the harvest.
+          .filter(name => fs.exists(new HPath(s"$dir/$name/_SUCCESS")))
+    } match {
+      case Success(names) =>
+        val chosen = newestHarvest(names, shortName)
+        chosen match {
+          case Some(name) => logger.info(s"Seeding from previous harvest: $dir/$name")
+          case None       => logger.warn(s"No completed harvest found under $dir")
+        }
+        chosen.map(name => s"$dir/$name")
+      case Failure(e) =>
+        logger.warn(s"Could not list $dir (${Option(e.getMessage).getOrElse(e.toString)})")
+        None
+    }
+  }
 
   /** Seconds each worker waits between its own requests. */
   private val restSeconds: Double =
@@ -415,6 +481,23 @@ object GettyRefreshHarvester {
 
   /** Activity directories are named `YYYYMMDD_HHMMSS-<hub>-<schema>`. */
   private val ActivityTimestamp = """(\d{8})_\d{6}-""".r
+
+  /** Picks the newest harvest activity directory from a listing.
+    *
+    * [[dpla.ingestion3.dataStorage.OutputHelper]] names them
+    * `YYYYMMDD_HHMMSS-<hub>-OriginalRecord.avro`. That timestamp is fixed-width
+    * and zero-padded, so lexical order is chronological order and no parsing is
+    * needed to rank them. Names that do not match are ignored rather than
+    * guessed at -- anything else in the directory is not a harvest.
+    */
+  def newestHarvest(names: Seq[String], shortName: String): Option[String] = {
+    val pattern = ("""^\d{8}_\d{6}-""" + java.util.regex.Pattern.quote(shortName) +
+      """-OriginalRecord\.avro$""").r
+    Option(names).getOrElse(Seq.empty).filter(n => pattern.pattern.matcher(n).matches()) match {
+      case Nil     => None
+      case matches => Some(matches.max)
+    }
+  }
 
   /** The date encoded in a harvest activity path, if it has one. */
   def previousHarvestDate(seedPath: String): Option[LocalDate] =
