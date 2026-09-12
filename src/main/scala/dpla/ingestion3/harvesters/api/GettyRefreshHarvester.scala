@@ -432,10 +432,19 @@ class GettyRefreshHarvester(
       )
   }
 
-  /** Reads the previous harvest's ids, from an Avro directory or a text file. */
+  /** Reads the seed ids, from an Avro harvest directory or a text file.
+    *
+    * Both go through the Hadoop FileSystem API so a local path and an `s3a://`
+    * or `s3://` URI behave identically -- a bootstrap id list belongs somewhere
+    * durable, not on whichever box happens to be running the harvest.
+    */
   private def loadSeedIds(path: String): Seq[String] =
     if (path.endsWith(".txt") || path.endsWith(".ids")) {
-      Using.resource(Source.fromFile(path))(src => parseIdFile(src.getLines()))
+      val hPath = new HPath(path)
+      val fs = hPath.getFileSystem(spark.sparkContext.hadoopConfiguration)
+      Using.resource(Source.fromInputStream(fs.open(hPath)))(src =>
+        parseIdFile(src.getLines())
+      )
     } else {
       spark.read
         .format("avro")
