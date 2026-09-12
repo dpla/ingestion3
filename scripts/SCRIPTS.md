@@ -560,6 +560,32 @@ batch-ingest.sh
      └── ingest.sh (for each hub)
 ```
 
+### Getty
+
+**Getty is harvested by Scala, not by a script here.** See
+`src/main/scala/dpla/ingestion3/harvesters/api/GettyRefreshHarvester.scala` —
+`./scripts/ingest.sh getty` is all you need, and it routes through the Tailscale
+exit node automatically (see the IP-restricted hubs section above).
+
+It is worth knowing *why* it is unusual, because the failure mode is silent.
+Getty's Primo gateway caps any single query at `offset <= 1999` / `limit <= 1000`,
+so the offset-paging `GettyHarvester` returns ~2,000 of ~101,400 records **and
+reports success** — which is how a 98% shortfall reached production in February
+2026. `GettyRefreshHarvester` instead looks up every known record id directly
+(`q=rid,exact,<id>`, one record per request, no offset involved) and then asks
+Getty's `newrecords` facet for anything added in the last 90 days.
+
+`getty.harvest.seed` points at the previous harvest's `OriginalRecord.avro`, so
+each run's output is the next run's seed and newly discovered ids carry forward.
+
+**This is a temporary method with real gaps**, documented in the harvester's
+scaladoc and worth repeating: the `newrecords` window tops out at 90 days (a
+quarterly schedule has no margin), and the GETTY_OCP side — 78,613 of 101,393
+records — carries no usable facets and cannot be enumerated at all, so OCP
+coverage rests entirely on the seed. It keeps the aggregation from drifting; it
+does not guarantee DPLA holds every record Getty publishes. The real fix is Ex
+Libris lifting the offset cap or Getty providing a bulk feed.
+
 ## Updating This Documentation
 
 When adding or modifying scripts:

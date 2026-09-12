@@ -135,6 +135,29 @@ Digital Virginias uses [multiple Github repositories](https://github.com/dplava)
 
 Then execute the harvest after updating the `virginas.harvest.endpoint` value in `i3.conf`
 
+### Getty
+Getty's Ex Libris Primo gateway caps any single query at `offset <= 1999` /
+`limit <= 1000`, so an offset-paging harvest silently returns ~2,000 of ~101,400
+records **and reports success**. That is how a 98% shortfall reached production
+in February 2026 — check the record count against `info.total`, not the exit code.
+
+Getty is therefore harvested by `GettyRefreshHarvester`, which looks up every
+known record id directly and then asks Getty's `newrecords` facet for anything
+added in the last 90 days. Nothing special to run — `./scripts/ingest.sh getty`
+handles it, including routing through the Tailscale exit node that holds the
+allowlisted IP (`54.165.106.96`; Getty rejects our other static IP).
+
+Two things to know:
+
+- `getty.harvest.seed` must point at the **previous** harvest's
+  `OriginalRecord.avro`. Each run's output is the next run's seed, so update it
+  after every ingest or newly discovered records will be dropped next quarter.
+- **This is a temporary method.** The `newrecords` window tops out at 90 days, and
+  the GETTY_OCP side (78,613 of 101,393 records) has no usable facets and cannot
+  be enumerated, so OCP coverage rests entirely on the seed. It prevents drift; it
+  does not guarantee completeness. The real fix is Ex Libris lifting the cap or
+  Getty providing a bulk feed.
+
 ### NARA
 Please see the [NARA specific documentation](README_NARA.md)
 
