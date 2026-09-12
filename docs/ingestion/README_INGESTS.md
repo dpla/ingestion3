@@ -152,6 +152,11 @@ Two things to know:
 - `getty.harvest.seed` must point at the **previous** harvest's
   `OriginalRecord.avro`. Each run's output is the next run's seed, so update it
   after every ingest or newly discovered records will be dropped next quarter.
+- **Getty runs bi-monthly (Jan/Mar/May/Jul/Sep/Nov), not quarterly.** Discovery
+  reaches back only 90 days, so a quarterly cadence has no margin. The harvester
+  logs a `GETTY DISCOVERY GAP` warning if the gap since the previous harvest
+  exceeds 90 days — **if you see it, the harvest is not complete**, and the
+  warning names the date range whose records can no longer be recovered.
 - **This is a temporary method.** The `newrecords` window tops out at 90 days, and
   the GETTY_OCP side (78,613 of 101,393 records) has no usable facets and cannot
   be enumerated, so OCP coverage rests entirely on the seed. It prevents drift; it

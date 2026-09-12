@@ -13,7 +13,9 @@ import org.json4s.jackson.JsonMethods.{compact, parse, render}
 import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import java.net.{URI, URL, URLEncoder}
 import java.nio.charset.StandardCharsets
-import java.time.Duration
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.time.{Duration, LocalDate}
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch, Executors, TimeUnit}
 import scala.collection.mutable
@@ -217,6 +219,12 @@ class GettyRefreshHarvester(
         s"of ${Utils.formatNumber(total.toLong)} seeded"
     )
 
+    discoveryGapWarning(seedPath, LocalDate.now()).foreach { warning =>
+      logger.warn("!" * 78)
+      logger.warn(s"GETTY DISCOVERY GAP: $warning")
+      logger.warn("!" * 78)
+    }
+
     val discovered = harvestNewRecords(ids.toSet, writeLock)
     if (discovered > 0)
       logger.info(s"Discovery: $discovered record(s) new since the last harvest")
@@ -398,6 +406,48 @@ object GettyRefreshHarvester {
 
   /** Getty's `newrecords` windows are cumulative, so only the widest is useful. */
   val WidestNewRecordsWindow = "90 days back"
+
+  /** Days covered by [[WidestNewRecordsWindow]]. Records added before this many
+    * days ago are invisible to the discovery pass -- if they were never seeded,
+    * nothing will ever find them. Hence [[discoveryGapWarning]].
+    */
+  val DiscoveryWindowDays = 90L
+
+  /** Activity directories are named `YYYYMMDD_HHMMSS-<hub>-<schema>`. */
+  private val ActivityTimestamp = """(\d{8})_\d{6}-""".r
+
+  /** The date encoded in a harvest activity path, if it has one. */
+  def previousHarvestDate(seedPath: String): Option[LocalDate] =
+    ActivityTimestamp
+      .findAllMatchIn(Option(seedPath).getOrElse(""))
+      .map(_.group(1))
+      .toSeq
+      .lastOption
+      .flatMap(d => Try(LocalDate.parse(d, DateTimeFormatter.BASIC_ISO_DATE)).toOption)
+
+  /** Warns when more time has passed since the previous harvest than the
+    * discovery window covers.
+    *
+    * Beyond 90 days there is a blind spot: records Getty added after the last
+    * harvest but before the window opens are neither in the seed nor returned by
+    * `newrecords`, and no later run will find them either. The operator needs to
+    * know the run cannot be trusted for completeness -- hence a warning rather
+    * than a silent gap. It is not fatal: a late harvest is still far better than
+    * none, and refusing to run would make the problem worse.
+    */
+  def discoveryGapWarning(seedPath: String, now: LocalDate): Option[String] =
+    previousHarvestDate(seedPath).flatMap { previous =>
+      val days = ChronoUnit.DAYS.between(previous, now)
+      if (days <= DiscoveryWindowDays) None
+      else
+        Some(
+          s"$days days have passed since the previous harvest ($previous), but Getty's " +
+            s"`newrecords` facet only reaches back $DiscoveryWindowDays days. Records added " +
+            s"between $previous and ${now.minusDays(DiscoveryWindowDays)} are in neither the " +
+            s"seed nor the discovery window, and no later run will find them. This harvest " +
+            s"cannot be treated as complete. Shorten the interval between Getty harvests."
+        )
+    }
 
   /** The gateway caps offset at 1999 and limit at 1000. */
   val MaxOffset = 1999

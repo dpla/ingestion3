@@ -3,6 +3,8 @@ package dpla.ingestion3.harvesters.api
 import org.json4s.jackson.JsonMethods.parse
 import org.scalatest.flatspec.AnyFlatSpec
 
+import java.time.LocalDate
+
 /** Unit tests for the pure parts of [[GettyRefreshHarvester]].
   *
   * Everything load-bearing is in the companion object precisely so it can be
@@ -76,6 +78,73 @@ class GettyRefreshHarvesterTest extends AnyFlatSpec {
     // therefore has no margin: anything older than the window and not already
     // seeded is invisible to discovery.
     assert(WidestNewRecordsWindow === "90 days back")
+  }
+
+  // ── discovery gap ──────────────────────────────────────────────────────────
+
+  private val seed =
+    "s3://dpla-master-dataset/getty/harvest/20260912_213156-getty-OriginalRecord.avro"
+
+  "previousHarvestDate" should "read the date out of an activity path" in {
+    assert(previousHarvestDate(seed) === Some(LocalDate.of(2026, 9, 12)))
+  }
+
+  it should "handle a local path" in {
+    assert(
+      previousHarvestDate("/home/ec2-user/data/getty/harvest/20210208_122635-getty-OriginalRecord.avro")
+        === Some(LocalDate.of(2021, 2, 8))
+    )
+  }
+
+  it should "take the harvest timestamp, not an earlier path segment" in {
+    // A data root can itself contain something timestamp-shaped; the activity
+    // directory is the last one, and picking the wrong one dates the harvest
+    // wrongly and silences the gap warning.
+    assert(
+      previousHarvestDate("/backup/20200101_000000-old/getty/harvest/20260912_213156-getty-OriginalRecord.avro")
+        === Some(LocalDate.of(2026, 9, 12))
+    )
+  }
+
+  it should "return None for a path with no timestamp" in {
+    assert(previousHarvestDate("/home/ec2-user/getty/ids.txt") === None)
+    assert(previousHarvestDate("") === None)
+    assert(previousHarvestDate(null) === None)
+  }
+
+  "discoveryGapWarning" should "stay quiet inside the discovery window" in {
+    assert(discoveryGapWarning(seed, LocalDate.of(2026, 9, 13)).isEmpty)
+    assert(discoveryGapWarning(seed, LocalDate.of(2026, 11, 12)).isEmpty)
+  }
+
+  it should "stay quiet exactly at the window edge" in {
+    // 90 days on the nose is still covered; warning here would cry wolf on a
+    // schedule that is working.
+    assert(discoveryGapWarning(seed, LocalDate.of(2026, 9, 12).plusDays(90)).isEmpty)
+  }
+
+  it should "warn as soon as the window is exceeded" in {
+    val w = discoveryGapWarning(seed, LocalDate.of(2026, 9, 12).plusDays(91))
+    assert(w.isDefined)
+    assert(w.get.contains("91 days"))
+  }
+
+  it should "name the period that was lost" in {
+    // The operator needs to know WHICH records cannot be recovered, not just
+    // that a gap exists.
+    val w = discoveryGapWarning(seed, LocalDate.of(2027, 3, 12)).get
+    assert(w.contains("2026-09-12"))
+    assert(w.contains("2026-12-12"), s"should name the start of the blind spot: $w")
+  }
+
+  it should "say nothing when the previous harvest date is unknown" in {
+    // A text-file seed carries no date. Guessing would be worse than silence.
+    assert(discoveryGapWarning("/home/ec2-user/getty/ids.txt", LocalDate.now()).isEmpty)
+  }
+
+  "the discovery window" should "match the widest facet Getty offers" in {
+    assert(DiscoveryWindowDays === 90L)
+    assert(WidestNewRecordsWindow.startsWith(DiscoveryWindowDays.toString))
   }
 
   // ── recordIdOf ─────────────────────────────────────────────────────────────

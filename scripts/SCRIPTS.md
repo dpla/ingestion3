@@ -578,11 +578,18 @@ Getty's `newrecords` facet for anything added in the last 90 days.
 `getty.harvest.seed` points at the previous harvest's `OriginalRecord.avro`, so
 each run's output is the next run's seed and newly discovered ids carry forward.
 
+**Getty is scheduled bi-monthly, not quarterly, and that is deliberate.**
+Discovery reaches back only 90 days, so a quarterly cadence sits right on the
+edge: a run that slips by a few days leaves records in neither the seed nor the
+window, and no later run finds them. Bi-monthly leaves about a month of margin,
+and the harvester logs a loud `GETTY DISCOVERY GAP` warning if the interval since
+the previous harvest exceeds 90 days anyway. **If you see that warning, the run
+cannot be treated as complete** — it names the exact date range that was lost.
+
 **This is a temporary method with real gaps**, documented in the harvester's
-scaladoc and worth repeating: the `newrecords` window tops out at 90 days (a
-quarterly schedule has no margin), and the GETTY_OCP side — 78,613 of 101,393
-records — carries no usable facets and cannot be enumerated at all, so OCP
-coverage rests entirely on the seed. It keeps the aggregation from drifting; it
+scaladoc and worth repeating: the `newrecords` window tops out at 90 days, and
+the GETTY_OCP side — 78,613 of 101,393 records — carries no usable facets and
+cannot be enumerated at all, so OCP coverage rests entirely on the seed. It keeps the aggregation from drifting; it
 does not guarantee DPLA holds every record Getty publishes. The real fix is Ex
 Libris lifting the offset cap or Getty providing a bulk feed.
 
