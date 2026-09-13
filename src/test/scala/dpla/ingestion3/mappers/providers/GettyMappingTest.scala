@@ -75,10 +75,22 @@ class GettyMappingTest extends AnyFlatSpec with BeforeAndAfter {
   }
   it should "extract the correct preview" in {
     val expected = Seq(
-      "https://rosettaapp.getty.edu/delivery/DeliveryManagerServlet?dps_pid=IE1318448&dps_func=thumbnail",
       "https://rosettaapp.getty.edu/delivery/DeliveryManagerServlet?dps_pid=IE1318448&dps_func=thumbnail")
       .map(stringOnlyWebResource)
     assert(extractor.preview(xml) === expected)
+  }
+
+  it should "collapse Getty's duplicate thumbnail entries to one preview" in {
+    // The fixture carries the real shape: two delivery.link entries labelled
+    // "thumbnail" with the same linkURL, differing only in their blank-node id.
+    // This previously yielded two identical previews, which warned on every
+    // record and then silently discarded one. Pinning the dedup so the
+    // duplicate cannot creep back in.
+    val thumbs = (xml.get \ "delivery" \ "link").children.count { link =>
+      (link \ "displayLabel").values.toString.equalsIgnoreCase("thumbnail")
+    }
+    assert(thumbs === 2, "fixture should still contain the duplicate entries")
+    assert(extractor.preview(xml).size === 1)
   }
 
   it should "create the correct DPLA URI" in {

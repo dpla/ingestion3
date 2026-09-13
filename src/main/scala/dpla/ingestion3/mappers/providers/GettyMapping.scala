@@ -116,6 +116,14 @@ class GettyMapping extends JsonMapping with JsonExtractor {
     Utils.formatJson(unwrap(data))
 
   override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] = {
+    // Getty lists every thumbnail twice in delivery.link -- measured across the
+    // 2026-09-12 harvest, all 101,384 records carry exactly two thumbnail
+    // entries and in every one the two linkURLs are identical. The entries
+    // differ only in their blank-node `@id` and a couple of empty attributes,
+    // so there is no "preferred" copy to choose between; it is a duplicate, not
+    // a choice. Without `distinct` this produces a "more than one value mapped"
+    // warning on 100% of Getty records -- 21% of all warnings the hub emits --
+    // while Mapper.validatePreview silently keeps whichever came first.
     (unwrap(data) \ "delivery" \ "link")
       .filter(
         extractString("displayLabel")(_)
@@ -123,6 +131,7 @@ class GettyMapping extends JsonMapping with JsonExtractor {
           .equalsIgnoreCase("thumbnail")
       )
       .flatMap(extractStrings("linkURL")(_))
+      .distinct
       .map(stringOnlyWebResource)
   }
 
