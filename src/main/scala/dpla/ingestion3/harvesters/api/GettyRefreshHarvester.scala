@@ -458,7 +458,7 @@ class GettyRefreshHarvester(
                 s"more than ${MaxOffset + PageLimit} records were added in the last " +
                 s"$WidestNewRecordsWindow. The discovery pass cannot see past the cap."
             )
-          else offset = math.min(offset + PageLimit, MaxOffset)
+          else offset = nextOffset(offset)
         case Failure(e) =>
           // Discovery is additive. Losing it costs us new records, not the
           // refresh we already completed, so warn loudly and return.
@@ -610,6 +610,16 @@ object GettyRefreshHarvester {
   /** The gateway caps offset at 1999 and limit at 1000. */
   val MaxOffset = 1999
   val PageLimit = 1000
+
+  /** Next page offset, clamped to the gateway ceiling.
+    *
+    * Stepping by PageLimit alone goes 0 -> 1000 -> 2000, and 2000 exceeds
+    * MaxOffset, so the loop would end without ever requesting 1999 and silently
+    * skip records 2000-2998. Lives here rather than inline in the paging loop so
+    * the test exercises this function and not a copy of it.
+    */
+  private[api] def nextOffset(offset: Int): Int =
+    math.min(offset + PageLimit, MaxOffset)
 
   val Workers = 6
   val DefaultRestSeconds = 0.5

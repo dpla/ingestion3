@@ -283,10 +283,10 @@ class GettyRefreshHarvesterTest extends AnyFlatSpec {
     // Offsets must go 0 -> 1000 -> 1999. Adding PageLimit blindly gives
     // 0 -> 1000 -> 2000, which exceeds MaxOffset and ends the loop without ever
     // requesting 1999 -- silently skipping records 2000-2998.
-    def next(offset: Int): Int = math.min(offset + PageLimit, MaxOffset)
-    assert(next(0) === 1000)
-    assert(next(1000) === MaxOffset)
-    assert(next(1000) !== 2000, "must not step past the gateway ceiling")
+    assert(nextOffset(0) === 1000)
+    assert(nextOffset(1000) === MaxOffset)
+    assert(nextOffset(1000) !== 2000, "must not step past the gateway ceiling")
+    assert(nextOffset(MaxOffset) === MaxOffset, "clamped, never past the ceiling")
   }
 
   it should "reach exactly the deepest retrievable record" in {
