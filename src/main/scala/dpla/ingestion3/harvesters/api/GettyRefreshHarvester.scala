@@ -103,6 +103,20 @@ class GettyRefreshHarvester(
 
   private val logger = LogManager.getLogger(this.getClass)
 
+  // LocalHarvester.close() flushes and closes the inherited Avro writer, and it
+  // is the only thing that does: HarvestExecutor calls cleanUp() on both success
+  // and failure, and cleanUp() only deletes the temp directory. So every exit
+  // from harvest has to come through here. It cannot simply be called twice --
+  // close() flushes first, and flushing an already-closed writer throws -- hence
+  // the guard.
+  private var writerClosed = false
+  private def closeWriterOnce(): Unit = synchronized {
+    if (!writerClosed) {
+      writerClosed = true
+      close()
+    }
+  }
+
   private val httpClient: HttpClient = HttpClient
     .newBuilder()
     .connectTimeout(Duration.ofMillis(TimeoutMillis.toLong))
@@ -198,7 +212,7 @@ class GettyRefreshHarvester(
   private val restSeconds: Double =
     conf.harvest.sleep.flatMap(s => Try(s.toDouble).toOption).getOrElse(DefaultRestSeconds)
 
-  override def harvest: DataFrame = {
+  override def harvest: DataFrame = try {
     implicit val formats: DefaultFormats.type = DefaultFormats
 
     val ids = loadSeedIds(seedPath)
@@ -285,7 +299,6 @@ class GettyRefreshHarvester(
     futures.foreach(_.get())   // re-raise anything a worker died on
 
     routeLost.foreach { message =>
-      close()
       throw new RuntimeException(
         s"Aborted after $RouteLostAfter consecutive 403s -- the allowlisted route is gone " +
           s"($message). Stopped rather than continuing to call the partner's endpoint. " +
@@ -305,7 +318,6 @@ class GettyRefreshHarvester(
     // from a transient error. Refuse to publish instead; re-running is cheap
     // next to losing records nobody would notice were missing.
     if (failed.get() > 0) {
-      close()
       throw new RuntimeException(
         s"${failed.get()} seeded lookup(s) neither resolved nor reported absent after " +
           s"$MaxRetries attempts each. Publishing would drop them from the next seed " +
@@ -340,8 +352,14 @@ class GettyRefreshHarvester(
       )
 
     // Flush and close the Avro writer before Spark reads the file (issue #760).
-    close()
+    closeWriterOnce()
     spark.read.format("avro").load(tmpOutStr)
+  } finally {
+    // Every other way out of this method -- an empty seed, a refused route
+    // probe, a worker exception re-raised from futures.get(), the discovery
+    // offset ceiling, the resolved-fraction floor -- would otherwise leave the
+    // writer open on a file that cleanUp() is about to delete.
+    closeWriterOnce()
   }
 
   /** One lookup, with retries. Does not retry a 403 -- that is the route, not luck. */
