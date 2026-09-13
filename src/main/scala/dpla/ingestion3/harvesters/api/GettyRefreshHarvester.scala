@@ -132,6 +132,13 @@ class GettyRefreshHarvester(
     * answer is the wrong one -- re-seeding from a specific older harvest, or
     * from a hand-built id file during a backfill. It is not meant to be edited
     * between routine ingests.
+    *
+    * Accepted values, and nothing else:
+    *   - a harvest activity directory (read as Avro, using its `id` column)
+    *   - a newline-delimited id file whose name ends in `.txt` or `.ids`
+    *
+    * The extension is the only signal -- a newline-delimited `.csv` or `.list`
+    * would be handed to the Avro reader and fail obscurely.
     */
   private lazy val seedPath: String = conf.harvest.seed
     .map { configured =>
@@ -224,7 +231,13 @@ class GettyRefreshHarvester(
     val latch = new CountDownLatch(Workers)
     val total = ids.size
 
-    (1 to Workers).foreach { _ =>
+    // Retain the futures. ExecutorService.submit parks a task's exception in the
+    // Future it returns; discarding that means a worker can die mid-record --
+    // saveOutRecords hitting a full disk, an InterruptedException in the pacing
+    // sleep -- and take the id it was holding with it. The other workers drain
+    // the rest of the queue, so the run still "succeeds", just quietly short.
+    // get() below re-raises it.
+    val futures = (1 to Workers).map { _ =>
       pool.submit(new Runnable {
         override def run(): Unit =
           try {
@@ -269,6 +282,7 @@ class GettyRefreshHarvester(
     pool.shutdown()
     latch.await()
     pool.awaitTermination(1, TimeUnit.MINUTES)
+    futures.foreach(_.get())   // re-raise anything a worker died on
 
     routeLost.foreach { message =>
       close()
@@ -284,6 +298,21 @@ class GettyRefreshHarvester(
         s"${Utils.formatNumber(gone.get().toLong)} gone, ${failed.get()} failed, " +
         s"of ${Utils.formatNumber(total.toLong)} seeded"
     )
+
+    // Only `Gone` establishes that an id is absent. A `LookupFailed` id is
+    // indeterminate: it wrote no record, so it would vanish from the next
+    // harvest's seed and never be asked about again -- a permanent, silent loss
+    // from a transient error. Refuse to publish instead; re-running is cheap
+    // next to losing records nobody would notice were missing.
+    if (failed.get() > 0) {
+      close()
+      throw new RuntimeException(
+        s"${failed.get()} seeded lookup(s) neither resolved nor reported absent after " +
+          s"$MaxRetries attempts each. Publishing would drop them from the next seed " +
+          s"permanently. Re-run the harvest; if this persists, the endpoint is failing " +
+          s"for those specific ids and they need investigating."
+      )
+    }
 
     discoveryGapWarning(seedPath, LocalDate.now()).foreach { warning =>
       logger.warn("!" * 78)
@@ -395,7 +424,23 @@ class GettyRefreshHarvester(
               }
             }
           }
-          if (docs.size < PageLimit) exhausted = true else offset += PageLimit
+          // Offsets go 0 -> 1000 -> 1999, not 0 -> 1000 -> 2000. Adding
+          // PageLimit blindly would step past the gateway's ceiling and end the
+          // loop without ever requesting 1999, silently skipping records
+          // 2000-2998. The last page overlaps the previous one; seenHere
+          // already suppresses the duplicate writes.
+          if (docs.size < PageLimit) exhausted = true
+          else if (offset >= MaxOffset)
+            // A full page at the ceiling means there are more new records than
+            // the gateway will ever show us. Discovery is incomplete and we
+            // cannot tell by how much, so say so rather than return a truncated
+            // set that looks whole.
+            throw new RuntimeException(
+              s"Discovery hit Getty's offset ceiling ($MaxOffset) with a full page: " +
+                s"more than ${MaxOffset + PageLimit} records were added in the last " +
+                s"$WidestNewRecordsWindow. The discovery pass cannot see past the cap."
+            )
+          else offset = math.min(offset + PageLimit, MaxOffset)
         case Failure(e) =>
           // Discovery is additive. Losing it costs us new records, not the
           // refresh we already completed, so warn loudly and return.
@@ -433,6 +478,9 @@ class GettyRefreshHarvester(
   }
 
   /** Reads the seed ids, from an Avro harvest directory or a text file.
+    *
+    * Text seeds are recognised by a `.txt` or `.ids` extension only; see the
+    * seed contract on `seedPath`.
     *
     * Both go through the Hadoop FileSystem API so a local path and an `s3a://`
     * or `s3://` URI behave identically -- a bootstrap id list belongs somewhere

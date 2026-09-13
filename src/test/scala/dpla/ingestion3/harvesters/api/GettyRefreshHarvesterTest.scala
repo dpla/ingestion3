@@ -277,6 +277,23 @@ class GettyRefreshHarvesterTest extends AnyFlatSpec {
     assert(parseIdFile(Iterator.empty).isEmpty)
   }
 
+  // ── discovery paging ───────────────────────────────────────────────────────
+
+  "discovery paging" should "reach the ceiling instead of stepping past it" in {
+    // Offsets must go 0 -> 1000 -> 1999. Adding PageLimit blindly gives
+    // 0 -> 1000 -> 2000, which exceeds MaxOffset and ends the loop without ever
+    // requesting 1999 -- silently skipping records 2000-2998.
+    def next(offset: Int): Int = math.min(offset + PageLimit, MaxOffset)
+    assert(next(0) === 1000)
+    assert(next(1000) === MaxOffset)
+    assert(next(1000) !== 2000, "must not step past the gateway ceiling")
+  }
+
+  it should "reach exactly the deepest retrievable record" in {
+    // offset 1999 + limit 1000 reaches record 2,998; one past that is refused.
+    assert(MaxOffset + PageLimit === 2999)
+  }
+
   // ── guard rails ────────────────────────────────────────────────────────────
 
   "the route-loss threshold" should "be small enough to protect the partner" in {
