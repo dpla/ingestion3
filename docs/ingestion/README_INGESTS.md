@@ -147,11 +147,22 @@ added in the last 90 days. Nothing special to run — `./scripts/ingest.sh getty
 handles it, including routing through the Tailscale exit node that holds the
 allowlisted IP (`54.165.106.96`; Getty rejects our other static IP).
 
-Two things to know:
+Three things to know:
 
-- The seed is found automatically — the harvester takes the newest completed run
-  in `$DPLA_DATA/getty/harvest/`, so each ingest's output seeds the next one with
-  no config change. `getty.harvest.seed` overrides it for backfills only.
+- **The seed.** `getty.harvest.seed` wins if set. Otherwise the harvester takes
+  the newest directory under `$DPLA_DATA/getty/harvest/` that contains a
+  `_SUCCESS` marker, so each ingest's output seeds the next one with no config
+  change and discovered ids carry forward on their own.
+
+  **On a box with no completed Getty harvest, there is nothing to find and the
+  harvest aborts** — the first run there must be given `getty.harvest.seed`
+  explicitly. Set it to either a harvest activity directory or a
+  newline-delimited id file ending `.txt` or `.ids` (the extension is the only
+  signal; any other suffix goes to the Avro reader and fails). Remove it once a
+  harvest has completed, so automatic carry-forward takes over again.
+
+  Use the override for exactly two things: bootstrapping a first run, and
+  backfilling from a specific older harvest. Not for routine ingests.
 - **Getty runs bi-monthly (Jan/Mar/May/Jul/Sep/Nov), not quarterly.** Discovery
   reaches back only 90 days, so a quarterly cadence has no margin. The harvester
   logs a `GETTY DISCOVERY GAP` warning if the gap since the previous harvest

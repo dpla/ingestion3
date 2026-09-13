@@ -575,11 +575,20 @@ reports success** — which is how a 98% shortfall reached production in Februar
 (`q=rid,exact,<id>`, one record per request, no offset involved) and then asks
 Getty's `newrecords` facet for anything added in the last 90 days.
 
-The seed needs no configuration: the harvester lists `$DPLA_DATA/getty/harvest/`
-and takes the newest completed run, so each run's output is automatically the
-next run's seed and discovered ids carry forward. `getty.harvest.seed` overrides
-that for backfills — re-seeding from a specific older harvest or a hand-built id
-file — and is not meant to be edited between routine ingests.
+`getty.harvest.seed` wins if set; otherwise the harvester lists
+`$DPLA_DATA/getty/harvest/` and takes the newest directory carrying a `_SUCCESS`
+marker. So in steady state the seed needs no configuration — each run's output is
+automatically the next run's seed and discovered ids carry forward.
+
+**The exception is a first run on a box with no completed Getty harvest**: there
+is nothing to discover, and the harvest aborts telling you so. Give it
+`getty.harvest.seed` pointing at either a harvest activity directory or a
+newline-delimited id file ending `.txt` or `.ids` — the extension is the only
+signal, so a `.csv` would be handed to the Avro reader and fail. Remove the
+override once a harvest has completed.
+
+So the override covers two cases, first-run bootstrapping and backfilling from a
+specific older harvest — never routine ingests.
 
 **Getty is scheduled bi-monthly, not quarterly, and that is deliberate.**
 Discovery reaches back only 90 days, so a quarterly cadence sits right on the
