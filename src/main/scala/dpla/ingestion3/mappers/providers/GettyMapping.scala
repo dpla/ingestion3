@@ -77,6 +77,36 @@ class GettyMapping extends JsonMapping with JsonExtractor {
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyAgent)
 
+  /** Promote a rights URI Getty has already published into edmRights.
+    *
+    * Getty publishes free-text rights statements, not standardized URIs: across
+    * the 2026-09-12 harvest exactly two of 101,384 records carry one
+    * (http://rightsstatements.org/vocab/InC/1.0/, in lds27). Those two were
+    * reaching DPLA as free-text rights -- a URI sitting in a text field, where it
+    * cannot be used as a rights statement.
+    *
+    * A scan of every field in every record confirmed Getty has no separate
+    * rights-URI field, so the only place a published URI can appear is alongside
+    * the free text.
+    *
+    * This deliberately does NOT crosswalk Getty's local statements. Getty's
+    * wording (the Open Content Program statement covers 77.5% of the hub) is a
+    * partner statement whose meaning is theirs to declare; assigning a URI to it
+    * would change what the record says. Non-standard values stay in free-text
+    * rights, untouched.
+    *
+    * The match is exact -- the whole value must be a valid edmRights URI, not
+    * merely contain one -- so a URI mentioned inside prose is never harvested out
+    * of context.
+    */
+  override def edmRights(data: Document[JValue]): ZeroToMany[URI] =
+    (extractStrings(unwrap(data) \ "pnx" \ "display" \ "rights") ++
+      extractStrings(unwrap(data) \ "pnx" \ "display" \ "lds27"))
+      .map(_.trim)
+      .map(URI)
+      .filter(_.isValidEdmRightsUri)
+      .distinct
+
   override def rights(data: Document[JValue]): AtLeastOne[String] =
     // display/lds27 AND display/rights
     extractStrings(
