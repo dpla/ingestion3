@@ -971,6 +971,35 @@ test_send_email_yes_flag() {
 # Test: Tailscale exit node configuration (static inspection of ingest.sh)
 # =============================================================================
 
+test_format_recipients() {
+    echo ""
+    echo "=========================================="
+    echo "  Testing format_recipients"
+    echo "=========================================="
+
+    source "$SCRIPTS_DIR/common.sh" >/dev/null 2>&1
+
+    local raw="Sela Constan-Wahl<a@getty.edu>,Alyssa Loera<b@getty.edu>,Teresa Soleau<c@getty.edu>"
+    local want="Sela Constan-Wahl<a@getty.edu>, Alyssa Loera<b@getty.edu>, Teresa Soleau<c@getty.edu>"
+
+    assert_equals "$want" "$(format_recipients "$raw")" \
+        "format_recipients: adds a space after each comma"
+
+    # Must not double-space a list that is already formatted, or the fix would
+    # degrade every well-formed entry in i3.conf.
+    assert_equals "$want" "$(format_recipients "$want")" \
+        "format_recipients: idempotent on already-spaced input"
+
+    assert_equals "a@x.org, b@y.org" "$(format_recipients "a@x.org ,  b@y.org")" \
+        "format_recipients: collapses irregular spacing"
+
+    assert_equals "solo@x.org" "$(format_recipients "solo@x.org")" \
+        "format_recipients: leaves a single address untouched"
+
+    assert_equals "" "$(format_recipients "")" \
+        "format_recipients: empty input stays empty"
+}
+
 test_tailscale_exit_node() {
     echo ""
     echo "=========================================="
@@ -1279,6 +1308,7 @@ main() {
         test_community_webs_export
         test_curated_membership_parser
         test_send_email_yes_flag
+        test_format_recipients
         test_tailscale_exit_node
         test_setsid_behavior
     fi

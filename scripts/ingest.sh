@@ -469,8 +469,9 @@ if [ -n "$HUB_EMAIL" ]; then
     SBT_OPTS="-Xmx4g"
     if run_entry dpla.ingestion3.utils.Emailer \
            "$MAP_TS_DIR" "$PROVIDER" "$I3_CONF"; then
-        EMAIL_NOTE="\nPartner email sent to $HUB_EMAIL"
-        log_info "Partner email sent to $HUB_EMAIL"
+        HUB_EMAIL_DISPLAY=$(format_recipients "$HUB_EMAIL")
+        EMAIL_NOTE="\nPartner email sent to $HUB_EMAIL_DISPLAY"
+        log_info "Partner email sent to $HUB_EMAIL_DISPLAY"
     else
         log_warn "Partner email failed (non-fatal)"
     fi

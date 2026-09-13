@@ -55,6 +55,7 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None)
         apiKey = getProp(providerConf, "harvest.apiKey"),
         rows = getProp(providerConf, "harvest.rows"),
         query = getProp(providerConf, "harvest.query"),
+        seed = getProp(providerConf, "harvest.seed"),
         // Properties for FileDelta harvests
         update = getProp(providerConf, "harvest.delta.update"),
         previous = getProp(providerConf, "harvest.delta.previous"),
@@ -174,6 +175,10 @@ case class Harvest(
     rows: Option[String] = None,
     query: Option[String] = None,
     apiKey: Option[String] = None,
+    // Id-seeded API harvests (Getty): path to the previous harvest's
+    // OriginalRecord Avro directory, or a newline-delimited id file. Each run's
+    // output is the next run's seed, so discovered ids carry forward.
+    seed: Option[String] = None,
     // File delta
     // Process NARA ingest using a incremental update of records
     update: Option[String] = None, // Path to delta update records
