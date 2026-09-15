@@ -33,7 +33,7 @@ abstract class PrimoVEHarvester(
   override protected val queryParams: Map[String, String] = Map(
     "query" -> conf.harvest.query,
     "rows" -> conf.harvest.rows,
-    "offset" -> Some("1"),
+    "offset" -> Some("0"),
     "api_key" -> conf.harvest.apiKey
   ).collect { case (key, Some(value)) => key -> value } // remove None values
 
@@ -49,7 +49,7 @@ abstract class PrimoVEHarvester(
     // Mutable vars for controlling harvest loop
     var continueHarvest = true
     var offset =
-      "1" // record offset, deliberate misspelling to match Primo naming for this parameter
+      "0" // record offset, 0-based to match Primo VE API
     var totalRecords = "" // total number of records to fetch
 
     while (continueHarvest) getSinglePage(offset) match {
@@ -88,12 +88,12 @@ abstract class PrimoVEHarvester(
 
             // Fetched 8,300 of 991,692 from http://mwdl.com/PrimoWebServices/xservice/search/brief?indx=8201?...
             logger.info(
-              s"Fetched ${Utils.formatNumber(nextIndx.toLong - 1)} " +
+              s"Fetched ${Utils.formatNumber(nextIndx.toLong)} " +
                 s"of ${Utils.formatNumber(totalRecords.toLong)} " +
                 s"from ${src.url.getOrElse("No url")}"
             )
 
-            if (offset.toInt >= totalRecords.toInt) {
+            if (nextIndx.toInt >= totalRecords.toInt) {
               continueHarvest = false
             } else offset = nextIndx
           case _ =>
