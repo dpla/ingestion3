@@ -164,22 +164,28 @@ def detect_staged_db():
         )
 
     # Lines are: "2026-08-19 02:30:00  12345678 20260819_023000-community-webs.db"
-    # Sort lexicographically (YYYYMMDD_HHMMSS prefix = chronological) — newest last.
-    db_entries.sort()
-    newest   = db_entries[-1].split()
-    filename = newest[-1]  # "20260819_023000-community-webs.db"
-
-    ts_match = _re.match(r"^(\d{8}_\d{6})-community-webs\.db$", filename)
-    if not ts_match:
-        sys.exit(f"\n  [BAD] Could not parse timestamp from S3 filename: {filename!r}")
-    timestamp = ts_match.group(1)
+    # Parse and validate the filename timestamp for each entry, then sort by it
+    # so re-uploaded older files don't shadow a newer db.
+    valid = []
+    for line in db_entries:
+        fname = line.split()[-1]
+        m = _re.match(r"^(\d{8}_\d{6})-community-webs\.db$", fname)
+        if m:
+            valid.append((m.group(1), fname))
+    if not valid:
+        sys.exit(
+            f"\n  [BAD] No validly-named *-community-webs.db files found in {S3_STAGING}/.\n"
+            "  Expected format: YYYYMMDD_HHMMSS-community-webs.db"
+        )
+    valid.sort(key=lambda x: x[0])
+    timestamp, filename = valid[-1]
 
     # Check if this specific db was already successfully ingested by looking for
     # its EC2 path and a success marker in INGEST_LOG. The log is overwritten on
     # each run, so a match means this db was the most recent run and it completed.
     ec2_db_path = f"/tmp/community-webs-{timestamp}.db"
     log_check = ssm_run(
-        f"grep -l {ec2_db_path} {INGEST_LOG} 2>/dev/null "
+        f"grep -q {ec2_db_path} {INGEST_LOG} 2>/dev/null "
         f"&& grep -q 'Community Webs.*complete' {INGEST_LOG} 2>/dev/null "
         f"&& echo DONE || echo NOT_DONE",
         timeout_seconds=30,
