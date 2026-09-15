@@ -171,7 +171,11 @@ def detect_staged_db():
         fname = line.split()[-1]
         m = _re.match(r"^(\d{8}_\d{6})-community-webs\.db$", fname)
         if m:
-            valid.append((m.group(1), fname))
+            try:
+                datetime.strptime(m.group(1), "%Y%m%d_%H%M%S")
+                valid.append((m.group(1), fname))
+            except ValueError:
+                pass  # skip filenames with structurally valid but impossible dates
     if not valid:
         sys.exit(
             f"\n  [BAD] No validly-named *-community-webs.db files found in {S3_STAGING}/.\n"
