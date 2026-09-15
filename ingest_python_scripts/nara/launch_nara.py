@@ -188,7 +188,15 @@ def detect_staged_month():
         timeout_seconds=30,
     ).strip()
 
-    months = [m for m in raw.splitlines() if re.match(r"^\d{6}$", m.strip())]
+    months = []
+    for m in raw.splitlines():
+        m = m.strip()
+        if re.match(r"^\d{6}$", m):
+            try:
+                datetime.strptime(m, "%Y%m")
+                months.append(m)
+            except ValueError:
+                pass  # skip dirs like 202613 that match the pattern but aren't valid months
 
     if not months:
         sys.exit(
