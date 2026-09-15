@@ -176,12 +176,12 @@ def confirm(msg, default_yes=True):
 # ---------- Auto-detect staged month ----------
 
 def detect_staged_month():
-    """Find the single staged YYYYMM delivery under NARA_ORIGINALS on EC2.
+    """Find the single unprocessed YYYYMM delivery under NARA_ORIGINALS on EC2.
 
-    Exits if zero or more than one month is staged (NARA deltas are
-    order-dependent; guessing is unsafe).  If exactly one month is found but
-    its ingest log already recorded exit-code 0, exits with an error so the
-    operator knows to skip or re-run intentionally.
+    Filters out months whose exitcode sidecar = 0 (already ingested), then:
+      - 0 unprocessed → exit (all done or nothing staged)
+      - 1 unprocessed → use it
+      - >1 unprocessed → exit (NARA deltas are order-dependent; pass --month)
     """
     raw = ssm_run(
         f"ls -1 {NARA_ORIGINALS} 2>/dev/null | grep -E '^[0-9]{{6}}$' | sort || true",
@@ -196,32 +196,39 @@ def detect_staged_month():
                 datetime.strptime(m, "%Y%m")
                 months.append(m)
             except ValueError:
-                pass  # skip dirs like 202613 that match the pattern but aren't valid months
+                pass  # skip dirs like 202613 that aren't valid months
 
     if not months:
         sys.exit(
             f"\n  [BAD] No staged NARA deliveries found under {NARA_ORIGINALS}.\n"
             "  Run copy_nara.py first to stage the delivery, then re-run."
         )
-    if len(months) > 1:
+
+    # Filter out months that have already been successfully ingested
+    unprocessed = []
+    for month in months:
+        exitcode_file = f"{LOG_DIR}/nara-ingest-{month}.log.exitcode"
+        exitcode = ssm_run(
+            f"cat {exitcode_file} 2>/dev/null || echo missing",
+            timeout_seconds=30,
+        ).strip()
+        if exitcode == "0":
+            info(f"Skipping {month} — already ingested (exit code 0).")
+        else:
+            unprocessed.append(month)
+
+    if not unprocessed:
         sys.exit(
-            f"\n  [BAD] Multiple months staged: {', '.join(months)}.\n"
+            f"\n  [BAD] All staged months ({', '.join(months)}) have already been ingested.\n"
+            "  Pass --month explicitly if you intend to re-run one."
+        )
+    if len(unprocessed) > 1:
+        sys.exit(
+            f"\n  [BAD] Multiple unprocessed months staged: {', '.join(unprocessed)}.\n"
             "  NARA deltas are order-dependent — pass --month explicitly."
         )
 
-    month = months[0].strip()
-    exitcode_file = f"{LOG_DIR}/nara-ingest-{month}.log.exitcode"
-    exitcode = ssm_run(
-        f"cat {exitcode_file} 2>/dev/null || echo missing",
-        timeout_seconds=30,
-    ).strip()
-
-    if exitcode == "0":
-        sys.exit(
-            f"\n  [BAD] Month {month} was already ingested successfully.\n"
-            f"  Pass --month {month} explicitly if you intend to re-run."
-        )
-
+    month = unprocessed[0]
     ok(f"Auto-detected staged month: {month}")
     return month
 
