@@ -148,7 +148,7 @@ def detect_staged_db():
 
     Errors out if:
       - no .db files found in the staging prefix
-      - the enrichment output on EC2 is newer than the db (already ingested)
+      - the ingest log shows this specific db was already processed successfully
     Returns the timestamp string (YYYYMMDD_HHMMSS) of the newest unprocessed db.
     """
     import re as _re
@@ -164,43 +164,35 @@ def detect_staged_db():
         )
 
     # Lines are: "2026-08-19 02:30:00  12345678 20260819_023000-community-webs.db"
-    # Sort by S3 date (first two fields) — newest last; take last entry.
+    # Sort lexicographically (YYYYMMDD_HHMMSS prefix = chronological) — newest last.
     db_entries.sort()
-    newest = db_entries[-1].split()
-    s3_date_str = f"{newest[0]} {newest[1]}"   # "YYYY-MM-DD HH:MM:SS"
-    filename    = newest[-1]                    # "20260819_023000-community-webs.db"
+    newest   = db_entries[-1].split()
+    filename = newest[-1]  # "20260819_023000-community-webs.db"
 
     ts_match = _re.match(r"^(\d{8}_\d{6})-community-webs\.db$", filename)
     if not ts_match:
         sys.exit(f"\n  [BAD] Could not parse timestamp from S3 filename: {filename!r}")
     timestamp = ts_match.group(1)
 
-    # Check if enrichment output is newer than the db → already ingested
-    enrichment_dir = f"{DATA_ROOT}/community-webs/enrichment"
-    mtime_raw = ssm_run(
-        f"stat -c '%Y' {enrichment_dir} 2>/dev/null || echo 0",
+    # Check if this specific db was already successfully ingested by looking for
+    # its EC2 path and a success marker in INGEST_LOG. The log is overwritten on
+    # each run, so a match means this db was the most recent run and it completed.
+    ec2_db_path = f"/tmp/community-webs-{timestamp}.db"
+    log_check = ssm_run(
+        f"grep -l {ec2_db_path} {INGEST_LOG} 2>/dev/null "
+        f"&& grep -q 'Community Webs.*complete' {INGEST_LOG} 2>/dev/null "
+        f"&& echo DONE || echo NOT_DONE",
         timeout_seconds=30,
     ).strip()
-    try:
-        enrichment_mtime = int(mtime_raw)
-    except ValueError:
-        enrichment_mtime = 0
 
-    from datetime import timezone
-    try:
-        db_dt = datetime.strptime(s3_date_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
-        db_epoch = int(db_dt.timestamp())
-    except ValueError:
-        db_epoch = 0
-
-    if enrichment_mtime > 0 and enrichment_mtime > db_epoch:
+    if log_check == "DONE":
         sys.exit(
             f"\n  [BAD] DB {timestamp} appears already ingested.\n"
-            f"  Enrichment output is newer than the staged .db.\n"
+            f"  The ingest log shows a successful run for this db.\n"
             f"  Pass --timestamp {timestamp} explicitly to re-run anyway."
         )
 
-    ok(f"Auto-detected staged db: {timestamp}")
+    print(f"  Auto-detected staged db: {timestamp}")
     return timestamp
 
 
