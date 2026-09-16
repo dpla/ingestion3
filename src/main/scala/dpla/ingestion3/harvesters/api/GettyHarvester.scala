@@ -27,7 +27,7 @@ class GettyHarvester(
       .setScheme("https")
       .setHost("api-na.hosted.exlibrisgroup.com")
       .setPath("/primo/v1/search")
-      .setParameter("offset", params.getOrElse("offset", "1")) // record offset
+      .setParameter("offset", params.getOrElse("offset", "0")) // record offset
       .setParameter("vid", "DPLA")
       .setParameter("tab", "dpla")
       .setParameter("scope", "DPLA")
