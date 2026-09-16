@@ -173,6 +173,94 @@ def confirm(msg, default_yes=True):
         sys.exit("Aborted.")
 
 
+# ---------- Auto-detect staged month ----------
+
+def detect_staged_month():
+    """Find the single unprocessed YYYYMM delivery under NARA_ORIGINALS on EC2.
+
+    Filters out months whose exitcode sidecar = 0 (already ingested), then:
+      - 0 unprocessed → exit (all done or nothing staged)
+      - 1 unprocessed → use it
+      - >1 unprocessed → exit (NARA deltas are order-dependent; pass --month)
+    """
+    raw = ssm_run(
+        f"ls -1 {NARA_ORIGINALS} 2>/dev/null | grep -E '^[0-9]{{6}}$' | sort || true",
+        timeout_seconds=30,
+    ).strip()
+
+    months = []
+    for m in raw.splitlines():
+        m = m.strip()
+        if re.match(r"^\d{6}$", m):
+            try:
+                datetime.strptime(m, "%Y%m")
+                months.append(m)
+            except ValueError:
+                pass  # skip dirs like 202613 that aren't valid months
+
+    if not months:
+        sys.exit(
+            f"\n  [BAD] No staged NARA deliveries found under {NARA_ORIGINALS}.\n"
+            "  Run copy_nara.py first to stage the delivery, then re-run."
+        )
+
+    # Filter out months that have already been successfully ingested
+    unprocessed = []
+    for month in months:
+        log_file      = f"{LOG_DIR}/nara-ingest-{month}.log"
+        exitcode_file = f"{log_file}.exitcode"
+        exitcode = ssm_run(
+            f"cat {exitcode_file} 2>/dev/null || echo missing",
+            timeout_seconds=30,
+        ).strip()
+        info(f"Checking {month}: exitcode={exitcode}")
+        if exitcode == "0":
+            info(f"  → Skipping {month} — already ingested (exitcode=0).")
+        elif exitcode == "missing":
+            # No sidecar — check the log for [SUCCESS] lines as a fallback
+            # (covers months ingested before the .exitcode sidecar feature)
+            success_count = ssm_run(
+                f"grep -c '\\[SUCCESS\\]' {log_file} 2>/dev/null || echo 0",
+                timeout_seconds=30,
+            ).strip()
+            try:
+                has_success = int(success_count) > 0
+            except ValueError:
+                has_success = False
+            if has_success:
+                warn(f"  → Skipping {month} — no exitcode sidecar, but log shows {success_count} [SUCCESS] line(s).")
+            else:
+                # No sidecar and no [SUCCESS] lines — could be actively running
+                # or genuinely not yet started. Check for a live process before queuing.
+                pid_out = ssm_run(
+                    f"pgrep -f 'nara-ingest.sh.*{month}' 2>/dev/null || echo ''",
+                    timeout_seconds=30,
+                ).strip()
+                if pid_out:
+                    warn(f"  → {month} ingest is active (PID {pid_out}) — not queuing.")
+                else:
+                    info(f"  → {month} not yet ingested — queued.")
+                    unprocessed.append(month)
+        else:
+            info(f"  → {month} not yet ingested (exitcode={exitcode}) — queued.")
+            unprocessed.append(month)
+
+    if not unprocessed:
+        sys.exit(
+            f"\n  [BAD] All staged months ({', '.join(months)}) have already been ingested.\n"
+            "  Pass --month explicitly if you intend to re-run one."
+        )
+    if len(unprocessed) > 1:
+        sys.exit(
+            f"\n  [BAD] Multiple unprocessed months staged: {', '.join(unprocessed)}.\n"
+            "  NARA deltas are order-dependent — pass --month explicitly."
+        )
+
+    month = unprocessed[0]
+    ok(f"Auto-detected staged month: {month}")
+    return month
+
+
 # ---------- Step 1: pre-flight check ----------
 
 def preflight_check(month):
@@ -426,12 +514,12 @@ def main():
         return
 
     # ── Normal mode ───────────────────────────────────────────────────────
-    if not args.month:
-        sys.exit("\n  [BAD] --month YYYYMM is required.")
-    if not re.match(r"^\d{6}$", args.month):
-        sys.exit(f"\n  [BAD] --month must be 6 digits (YYYYMM), got: {args.month!r}")
-
-    month    = args.month
+    if args.month:
+        if not re.match(r"^\d{6}$", args.month):
+            sys.exit(f"\n  [BAD] --month must be 6 digits (YYYYMM), got: {args.month!r}")
+        month = args.month
+    else:
+        month = detect_staged_month()
     log_path = f"{LOG_DIR}/nara-ingest-{month}.log"
 
     print(f"Month: {month}")
