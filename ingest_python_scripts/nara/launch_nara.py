@@ -207,14 +207,33 @@ def detect_staged_month():
     # Filter out months that have already been successfully ingested
     unprocessed = []
     for month in months:
-        exitcode_file = f"{LOG_DIR}/nara-ingest-{month}.log.exitcode"
+        log_file      = f"{LOG_DIR}/nara-ingest-{month}.log"
+        exitcode_file = f"{log_file}.exitcode"
         exitcode = ssm_run(
             f"cat {exitcode_file} 2>/dev/null || echo missing",
             timeout_seconds=30,
         ).strip()
+        info(f"Checking {month}: exitcode={exitcode}")
         if exitcode == "0":
-            info(f"Skipping {month} — already ingested (exit code 0).")
+            info(f"  → Skipping {month} — already ingested (exitcode=0).")
+        elif exitcode == "missing":
+            # No sidecar — check the log for [SUCCESS] lines as a fallback
+            # (covers months ingested before the .exitcode sidecar feature)
+            success_count = ssm_run(
+                f"grep -c '\\[SUCCESS\\]' {log_file} 2>/dev/null || echo 0",
+                timeout_seconds=30,
+            ).strip()
+            try:
+                has_success = int(success_count) > 0
+            except ValueError:
+                has_success = False
+            if has_success:
+                warn(f"  → Skipping {month} — no exitcode sidecar, but log shows {success_count} [SUCCESS] line(s).")
+            else:
+                info(f"  → {month} not yet ingested — queued.")
+                unprocessed.append(month)
         else:
+            info(f"  → {month} not yet ingested (exitcode={exitcode}) — queued.")
             unprocessed.append(month)
 
     if not unprocessed:
