@@ -230,8 +230,17 @@ def detect_staged_month():
             if has_success:
                 warn(f"  → Skipping {month} — no exitcode sidecar, but log shows {success_count} [SUCCESS] line(s).")
             else:
-                info(f"  → {month} not yet ingested — queued.")
-                unprocessed.append(month)
+                # No sidecar and no [SUCCESS] lines — could be actively running
+                # or genuinely not yet started. Check for a live process before queuing.
+                pid_out = ssm_run(
+                    f"pgrep -f 'nara-ingest.sh.*{month}' 2>/dev/null || echo ''",
+                    timeout_seconds=30,
+                ).strip()
+                if pid_out:
+                    warn(f"  → {month} ingest is active (PID {pid_out}) — not queuing.")
+                else:
+                    info(f"  → {month} not yet ingested — queued.")
+                    unprocessed.append(month)
         else:
             info(f"  → {month} not yet ingested (exitcode={exitcode}) — queued.")
             unprocessed.append(month)
