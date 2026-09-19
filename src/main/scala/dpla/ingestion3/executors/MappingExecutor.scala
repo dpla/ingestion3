@@ -96,11 +96,16 @@ trait MappingExecutor extends Serializable with IngestMessageTemplates {
     val extractorClass = getExtractorClass(shortName) // lookup from registry
 
     val mappingResults = harvestedRecords
-      .select("document")
-      .as[String]
-      .map(document => dplaMap.map(document, extractorClass))(
-        ExpressionEncoder[OreAggregation]
-      )
+      .select("document", "ingestDate")
+      .as[(String, Long)]
+      .map { case (document, harvestTs) =>
+        val record = dplaMap.map(document, extractorClass)
+        val harvestDateStr = java.time.Instant
+          .ofEpochSecond(harvestTs)
+          .atOffset(java.time.ZoneOffset.UTC)
+          .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+        record.copy(harvestDate = Some(harvestDateStr))
+      }(ExpressionEncoder[OreAggregation])
 
     // Save mapped results locally as parquet
     mappingResults.write.parquet(tempLocation1)

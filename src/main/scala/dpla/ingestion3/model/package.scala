@@ -147,6 +147,7 @@ package object model {
             ("exactMatch" -> record.dataProvider.exactMatch.map(_.toString))) ~
           ("iiifManifest" -> record.iiifManifest
             .map(i => i.toString)) ~ // IIIF Manifest URI
+          ("harvestDate" -> record.harvestDate) ~
           ("ingestDate" -> ingestDate) ~
           ("ingestType" -> "item") ~
           ("intermediateProvider" -> record.intermediateProvider
