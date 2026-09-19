@@ -149,7 +149,6 @@ package object model {
             .map(i => i.toString)) ~ // IIIF Manifest URI
           ("harvestDate" -> record.harvestDate) ~
           ("ingestDate" -> ingestDate) ~
-          ("indexDate" -> ingestDate) ~
           ("ingestType" -> "item") ~
           ("intermediateProvider" -> record.intermediateProvider
             .map(p => p.name)) ~
