@@ -220,26 +220,30 @@ LOCK_PATH = "/tmp/monthly-batch.lock"
 def fire_batch(hubs, batch_log):
     """Write the batch script to EC2 and run it as a nohup background job.
 
-    Uses a timestamp-unique script path so concurrent dispatches don't overwrite
-    each other's script file, and a flock on LOCK_PATH so only one batch runs at
-    a time. A second dispatch while the first is running will fail fast with a
-    clear error rather than silently double-ingesting.
+    Uses mktemp under /home/ec2-user (mode 0700, owned by ec2-user) so the
+    script file is never world-readable and each dispatch gets a unique path.
+    A flock probe fast-fails if another batch is already running; the nohup
+    wrapper also uses flock -n so a second dispatch that slips through the
+    probe's TOCTOU window fails immediately rather than waiting.  The script
+    cleans itself up after execution.
+    The script logs via _log() → $BATCH_LOG directly; nohup goes to /dev/null
+    to avoid mixing ingest.sh stdout into the structured batch log.
     """
     script = build_batch_script(hubs, batch_log)
     encoded = base64.b64encode(script.encode()).decode()
-    script_path = f"/tmp/monthly-batch-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.sh"
 
-    # 1. Write script to a unique temp path.
-    # 2. Check that the lock is free (fast-fail if another batch is running).
-    # 3. Launch nohup wrapper that holds the lock for the script's full duration.
-    #    The script logs via _log() → $BATCH_LOG; nohup goes to /dev/null to
-    #    avoid double-writing that file.
+    # 1. mktemp: unique path, restricted permissions, owned by ec2-user.
+    # 2. Probe: fast-fail if lock is held (synchronous error visible via SSM).
+    # 3. Launch: nohup wrapper holds the lock for the script's full duration
+    #    with flock -n (fail-fast if probe's TOCTOU window allowed a race).
+    #    rm -f inside the wrapper cleans up the script after it finishes.
     cmd = (
-        f"echo {encoded} | base64 -d > {script_path} && "
-        f"chmod +x {script_path} && "
+        f"SCRIPT=$(mktemp /home/ec2-user/monthly-batch-XXXXXX.sh) && "
+        f"chmod 0700 \"$SCRIPT\" && "
+        f"echo {encoded} | base64 -d > \"$SCRIPT\" && "
         f"flock -n {LOCK_PATH} true || "
-        f"  {{ echo 'ERROR: a monthly batch is already running; try again later'; exit 1; }} && "
-        f"nohup bash -c 'flock {LOCK_PATH} bash {script_path}' > /dev/null 2>&1 </dev/null & "
+        f"  {{ echo 'ERROR: a monthly batch is already running; try again later'; rm -f \"$SCRIPT\"; exit 1; }} && "
+        f"nohup bash -c \"flock -n {LOCK_PATH} bash \\\"$SCRIPT\\\"; rm -f \\\"$SCRIPT\\\"\" > /dev/null 2>&1 </dev/null & "
         f"echo \"Batch PID=$!\""
     )
     out = ssm_run(cmd, timeout_seconds=30)
