@@ -82,8 +82,9 @@ jobs:
               [[ -n "$OVERRIDE" ]] && CMD+=(--month "$OVERRIDE")
               ;;
 
-            smithsonian)
+            smithsonian|si)
               # --auto skips all interactive checkpoints; --date defaults to latest S3 delivery.
+              # "si" is Smithsonian's conf-side name in i3.conf; both aliases route here.
               CMD=(python3 ingest_python_scripts/smithsonian/launch_smithsonian.py --auto)
               [[ -n "$OVERRIDE" ]] && CMD+=(--date "$OVERRIDE")
               ;;
