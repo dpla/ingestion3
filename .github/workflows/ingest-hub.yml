@@ -1,0 +1,117 @@
+name: Launch Hub Ingest
+
+# Trigger: Actions → "Launch Hub Ingest" → Run workflow.
+# OIDC credentials are scoped to main only (role trust policy) — the branch
+# check below gives a clear error if you accidentally run from a feature branch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      hub:
+        description: 'Hub short name (e.g. bpl, ohio, nara, smithsonian, community-webs)'
+        required: true
+        type: string
+      resume_from:
+        description: '(Standard hubs) Resume from stage: harvest|mapping|enrichment|jsonl|delivery — leave blank for a full run'
+        required: false
+        type: string
+        default: ''
+      override:
+        description: 'NARA: YYYYMM month · Smithsonian: YYYY-MM-DD delivery date · Community Webs: YYYYMMDD_HHMMSS timestamp · leave blank to auto-detect'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  id-token: write   # required for OIDC
+  contents: read
+
+jobs:
+  ingest:
+    name: 'Ingest: ${{ inputs.hub }}'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360   # some ingests (NARA, SI) run for several hours
+
+    steps:
+      - name: Enforce main branch
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::This workflow must run from main — the OIDC role trust policy restricts credentials to main only."
+            exit 1
+          fi
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502  # v4.0.2
+        with:
+          role-to-assume: arn:aws:iam::283408157088:role/github-actions-ingestion3
+          aws-region: us-east-1
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: '3.11'
+
+      # Starts the EC2 if stopped, waits for SSM Online, resets both repos to
+      # origin/main, and rebuilds the fat JAR if it's stale.
+      - name: Box preflight — start EC2, sync repos, rebuild JAR if stale
+        env:
+          INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
+          CI: '1'
+        run: |
+          python3 ingest_python_scripts/hub_preflight.py \
+            --non-interactive \
+            --skip-endpoint
+
+      - name: Launch ${{ inputs.hub }} ingest
+        env:
+          INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
+          CI: '1'
+        run: |
+          set -euo pipefail
+          HUB="${{ inputs.hub }}"
+          RESUME_FROM="${{ inputs.resume_from }}"
+          OVERRIDE="${{ inputs.override }}"
+
+          case "$HUB" in
+            nara)
+              # launch_nara.py auto-detects the staged month when --month is omitted.
+              # In GHA stdin is EOF, so confirm() prompts use their defaults (default_yes=True).
+              # The zero-delete gate aborts (default_yes=False) — re-run with --skip-delete-check if needed.
+              CMD=(python3 ingest_python_scripts/nara/launch_nara.py)
+              [[ -n "$OVERRIDE" ]] && CMD+=(--month "$OVERRIDE")
+              ;;
+
+            smithsonian)
+              # --auto skips all interactive checkpoints; --date defaults to latest S3 delivery.
+              CMD=(python3 ingest_python_scripts/smithsonian/launch_smithsonian.py --auto)
+              [[ -n "$OVERRIDE" ]] && CMD+=(--date "$OVERRIDE")
+              ;;
+
+            community-webs)
+              # --skip-upload assumes the .db is already in s3://dpla-hub-community-webs/.
+              # The job fires in the background on EC2; this step exits once it's launched.
+              CMD=(python3 ingest_python_scripts/community-webs/launch_cw.py --skip-upload)
+              [[ -n "$OVERRIDE" ]] && CMD+=(--timestamp "$OVERRIDE")
+              ;;
+
+            *)
+              # Standard hubs (localoai / api / file) — launch_ingest.py reads
+              # harvest.type from i3.conf on EC2 via SSM; no local conf needed.
+              CMD=(python3 ingest_python_scripts/launch_ingest.py "$HUB" --non-interactive)
+              [[ -n "$RESUME_FROM" ]] && CMD+=(--resume-from "$RESUME_FROM")
+              ;;
+          esac
+
+          echo "▶ ${CMD[*]}"
+          "${CMD[@]}"
+
+      - name: Notify Slack on failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\": \":x: *Hub ingest job FAILED* — \`${{ inputs.hub }}\` (triggered by ${{ github.actor }}) — <$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|View run>\"}"
