@@ -77,19 +77,25 @@ jobs:
         env:
           INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
           CI: '1'
+          MONTH_INPUT: ${{ inputs.month }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
           ARGS=()
-          [[ -n "${{ inputs.month }}" ]]           && ARGS+=(--month "${{ inputs.month }}")
-          [[ "${{ inputs.dry_run }}" == "true" ]]  && ARGS+=(--dry-run)
+          [[ -n "$MONTH_INPUT" ]]         && ARGS+=(--month "$MONTH_INPUT")
+          [[ "$DRY_RUN" == "true" ]]      && ARGS+=(--dry-run)
           python3 ingest_python_scripts/run_monthly_batch.py "${ARGS[@]}"
 
       - name: Notify Slack on failure
         if: failure()
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          ACTOR: ${{ github.actor }}
         run: |
           [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
+          PAYLOAD=$(jq -n --arg actor "$ACTOR" \
+            --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            '{text: ":x: *Monthly batch launch FAILED* — triggered by \($actor) — <\($url)|View run>"}')
           curl -s -X POST "$SLACK_WEBHOOK_URL" \
             -H 'Content-Type: application/json' \
-            -d "{\"text\": \":x: *Monthly batch launch FAILED* — triggered by ${{ github.actor }} — <$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|View run>\"}"
+            -d "$PAYLOAD"

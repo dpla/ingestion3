@@ -67,11 +67,11 @@ jobs:
         env:
           INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
           CI: '1'
+          HUB: ${{ inputs.hub }}
+          RESUME_FROM: ${{ inputs.resume_from }}
+          OVERRIDE: ${{ inputs.override }}
         run: |
           set -euo pipefail
-          HUB="${{ inputs.hub }}"
-          RESUME_FROM="${{ inputs.resume_from }}"
-          OVERRIDE="${{ inputs.override }}"
 
           case "$HUB" in
             nara)
@@ -111,8 +111,13 @@ jobs:
         if: failure()
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          HUB: ${{ inputs.hub }}
+          ACTOR: ${{ github.actor }}
         run: |
           [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
+          PAYLOAD=$(jq -n --arg hub "$HUB" --arg actor "$ACTOR" \
+            --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            '{text: ":x: *Hub ingest job FAILED* — `\($hub)` (triggered by \($actor)) — <\($url)|View run>"}')
           curl -s -X POST "$SLACK_WEBHOOK_URL" \
             -H 'Content-Type: application/json' \
-            -d "{\"text\": \":x: *Hub ingest job FAILED* — \`${{ inputs.hub }}\` (triggered by ${{ github.actor }}) — <$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|View run>\"}"
+            -d "$PAYLOAD"

@@ -214,21 +214,37 @@ fi
 """
 
 
+LOCK_PATH = "/tmp/monthly-batch.lock"
+
+
 def fire_batch(hubs, batch_log):
-    """Write the batch script to EC2 and run it as a nohup background job."""
+    """Write the batch script to EC2 and run it as a nohup background job.
+
+    Uses a timestamp-unique script path so concurrent dispatches don't overwrite
+    each other's script file, and a flock on LOCK_PATH so only one batch runs at
+    a time. A second dispatch while the first is running will fail fast with a
+    clear error rather than silently double-ingesting.
+    """
     script = build_batch_script(hubs, batch_log)
     encoded = base64.b64encode(script.encode()).decode()
+    script_path = f"/tmp/monthly-batch-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.sh"
 
-    # Write script to a temp file, make it executable, fire it in background.
-    # The script logs to $BATCH_LOG itself via _log(); nohup goes to /dev/null
-    # to avoid double-writing that file from two sources.
+    # 1. Write script to a unique temp path.
+    # 2. Check that the lock is free (fast-fail if another batch is running).
+    # 3. Launch nohup wrapper that holds the lock for the script's full duration.
+    #    The script logs via _log() → $BATCH_LOG; nohup goes to /dev/null to
+    #    avoid double-writing that file.
     cmd = (
-        f"echo {encoded} | base64 -d > /tmp/monthly-batch.sh && "
-        f"chmod +x /tmp/monthly-batch.sh && "
-        f"nohup bash /tmp/monthly-batch.sh > /dev/null 2>&1 </dev/null & "
+        f"echo {encoded} | base64 -d > {script_path} && "
+        f"chmod +x {script_path} && "
+        f"flock -n {LOCK_PATH} true || "
+        f"  {{ echo 'ERROR: a monthly batch is already running; try again later'; exit 1; }} && "
+        f"nohup bash -c 'flock {LOCK_PATH} bash {script_path}' > /dev/null 2>&1 </dev/null & "
         f"echo \"Batch PID=$!\""
     )
     out = ssm_run(cmd, timeout_seconds=30)
+    if "ERROR:" in out:
+        sys.exit(f"[bad] {out.strip()}")
     pid_match = re.search(r"PID=(\d+)", out)
     pid = pid_match.group(1) if pid_match else "unknown"
     ok(f"Batch script launched on EC2 (PID {pid})")
@@ -247,7 +263,7 @@ def main():
                         help="Print hub list without launching")
     args = parser.parse_args()
 
-    month = args.month or datetime.now().month
+    month = args.month if args.month is not None else datetime.now().month
     if not (1 <= month <= 12):
         sys.exit(f"Invalid month: {month}")
 

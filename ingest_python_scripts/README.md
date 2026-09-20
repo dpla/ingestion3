@@ -46,7 +46,7 @@ Two workflows are available under **Actions → Launch Hub Ingest / Monthly Hub 
 | Workflow | Purpose | File |
 |----------|---------|------|
 | **Launch Hub Ingest** | Manual single-hub trigger | `.github/workflows/ingest-hub.yml` |
-| **Monthly Hub Batch** | Reads i3.conf, fires all scheduled standard hubs | `.github/workflows/ingest-monthly.yml` |
+| **Monthly Hub Batch** | Reads i3.conf, fires all scheduled standard hubs sequentially; special-case hubs (NARA, Smithsonian, Community Webs) are excluded and must be run separately | `.github/workflows/ingest-monthly.yml` |
 
 **Launch Hub Ingest** inputs:
 - `hub` (required) — short name, e.g. `bpl`, `ohio`, `nara`, `smithsonian`
