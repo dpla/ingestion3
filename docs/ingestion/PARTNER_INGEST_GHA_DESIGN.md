@@ -1,6 +1,11 @@
 # Partner Ingest via GitHub Actions — Design & Scoping
 
-Status: **Draft for review** · Owner: tech@dp.la · Last updated: 2026-08-21
+Status: **Phases 0–1 shipped and merged; Phase 2+ (concurrency & controls) outstanding** ·
+Owner: tech@dp.la · Last updated: 2026-09-21
+
+> **Read [§0 Implementation status](#0-implementation-status-live-vs-remaining) first** for the
+> current live-vs-remaining picture. The rest of this document is the original design/scoping;
+> it remains the target for the outstanding phases.
 
 This document scopes the work to drive a **full partner ("hub") ingest pipeline**
 (harvest → mapping → enrichment → JSONL → S3 sync) from **GitHub Actions (GHA)**, in
@@ -37,6 +42,65 @@ guarantee that **no job is silently lost, no caller can starve or overload the b
 caller can step on DPLA's own work** (ingests or index rebuilds). Everything below is designed
 so the trigger layer is *replaceable and untrusted* — all durability, validation, quota, and
 admission logic lives on **our** side of GHA, never solely in the front end. See §4.6.
+
+---
+
+## 0. Implementation status: live vs remaining
+
+> Added 2026-09-21 after the first tranche of work merged to `main` (ZMS/@zspieges,
+> issues #769/#770/#771 + follow-ups #783–#785). This section reflects the shipped reality;
+> §§1–10 below are the original design and remain the target for the outstanding phases.
+
+**Headline:** the **operator-facing dispatcher is live and meets the Phase-1 goal** ("an
+operator kicks off a hub from a button in GitHub"), and it already routes the special hubs that
+the design had deferred to Phase 5. **The concurrency system (Phase 2) and multi-user controls
+(Phase 3) are not built** — so the trigger is safe for **DPLA operators only** and must not be
+opened beyond them yet.
+
+### What is live (merged to `main`)
+
+| Area | Shipped | Where |
+|---|---|---|
+| **OIDC auth** (Phase 0) | Role `github-actions-ingestion3`, trust **scoped to `main` only**; both workflows use `id-token: write` + `role-to-assume` and an explicit "Enforce main branch" step. Provisioned out-of-band (Zoe lacks IAM perms). | `.github/workflows/ingest-hub.yml`, `ingest-monthly.yml` |
+| **Non-interactive launchers** (Phase 0, #770/#774) | `hub_preflight.py --non-interactive` (implies `--auto-pull`, skips prompts); `launch_ingest.py --non-interactive`; special launchers take `--auto` / `--skip-upload` / `--month` / `--date` / `--timestamp`. | `ingest_python_scripts/{hub_preflight,launch_ingest}.py` |
+| **Latest-delivery auto-detect** (#769/#779) | Community Webs and NARA launchers auto-detect the newest staged delivery when the override is blank (extends the Smithsonian-only helper). | `.../community-webs/launch_cw.py`, `.../nara/launch_nara.py` |
+| **Single-hub dispatcher** (Phase 1, #771/#782 + #783–#785) | `workflow_dispatch` with `hub`, `resume_from`, `override`; OIDC → preflight (start box, sync repos, rebuild stale JAR) → Slack "started" → **route by hub** (nara→`launch_nara.py`, smithsonian/si→`launch_smithsonian.py --auto`, community-webs→`launch_cw.py --skip-upload`, standard→`launch_ingest.py --non-interactive`) → detached launch → failure Slack. | `.github/workflows/ingest-hub.yml` |
+| **Monthly batch** (a Phase-4 piece, shipped early) | `workflow_dispatch` (`month`, `dry_run`) that fires all active **standard** hubs for the month as one sequential `nohup` batch on EC2; cron scaffolded but commented out. | `.github/workflows/ingest-monthly.yml`, `ingest_python_scripts/run_monthly_batch.py` |
+| **Slack test** helper | Quick end-to-end Slack check. | `.github/workflows/test-slack.yml` |
+
+**Net:** Phase 0 and Phase 1 are done, plus early slices of Phase 4 (batch) and Phase 5
+(special-hub routing) that the phasing had scheduled later.
+
+### What remains (and why it matters)
+
+| Gap | Status | Consequence |
+|---|---|---|
+| **Serial execution slot across *all* trigger paths** (Phase 2) | **Not built** | Two `ingest-hub.yml` runs can overlap → 2× enrichment (`-Xmx18g` each) exceeds the 32 GB box → OOM. A single-hub run can also collide with a running monthly batch. |
+| **Durable on-box FIFO queue on EBS + orphan sweep** (Phase 2) | **Not built** | No ordering/visibility; nothing survives a box stop/start or crash mid-run; requests aren't durably held. |
+| **Index guard** (Phase 2) | **Not built** | Nothing stops an ingest from launching during an EMR `sparkindexer` rebuild. |
+| **Multi-user controls** — dedup/coalescing, per-caller quotas, privilege split, pause flag, priority lane, authz hook, audit (Phase 3) | **Not built** | The trigger **cannot be opened beyond operators** (concurrent semi-trusted callers could starve/overload the box or step on DPLA work). |
+| **Idle-stop + status workflow** (Phase 4) | **Not built** | Box is not auto-stopped by these workflows; no at-a-glance queue/running status or remote feedback channel. |
+| **`kill` / `retry` workflows; IP-blocked/Tailscale handling** (Phase 5) | **Not built** | No remote abort/retry; blocked hubs aren't yet detected-and-messaged. |
+
+### Concurrency, specifically (the Q2 answer, as-built)
+
+The **only** concurrency guard that shipped is in `run_monthly_batch.py`: a **fail-fast
+`flock -n /tmp/monthly-batch.lock`** that prevents two *monthly batches* from overlapping
+(it prints `ERROR: a monthly batch is already running` and exits). It is **not** the Phase-2
+system:
+
+- It is **batch-vs-batch only.** The single-hub `launch_ingest.py` takes **no lock at all**
+  (verified), so single-hub↔single-hub and single-hub↔batch collisions are unguarded.
+- It is **fail-fast, not a queue.** A rejected trigger is a dropped request — fine for
+  operators who can retry, but explicitly *not* the open-access shape (§4.3).
+- It lives in **`/tmp`** (wiped on reboot) and there is **no index guard**.
+
+So the designed guarantee — *one ingest at a time across every path, never during an index,
+no job lost* — is **not yet in place**. Building it is the top outstanding item (§4.3, Phase 2),
+and it is a hard prerequisite before any Slack/Lambda/web trigger layer (§4.6) is added. The
+absence of the fail-fast lock on the single-hub path is deliberate — per the Phase-1 decision to
+keep the operator-only launcher unguarded and manage the box by hand — not an oversight; it is
+superseded by, not a substitute for, the Phase-2 slot.
 
 ---
 
@@ -79,6 +143,9 @@ Established from `scripts/ingest.sh`, `scripts/common.sh`, `ingest_python_script
   a second ingest from being launched while one is already running, or during an index —
   the only guard is **operator discipline**. This is the gap that a GHA trigger (which can be
   invoked without knowing what's on the box) makes dangerous, and it is the crux of Q2.
+  *(Update 2026-09-21: the GHA work merged since — see §0 — added a **fail-fast lock on the
+  monthly-batch path only**; the single-hub path is still unguarded and the Phase-2 slot/queue
+  remain unbuilt, so this gap is still open.)*
 - **Special hubs don't use plain `ingest.sh`.** NARA (delta merge → `nara-ingest.sh`),
   Smithsonian (`fix-si.sh` preprocess + checkpoints), Community Webs (SQLite→JSONL export),
   generic `file` hubs (confirm the S3 delivery path first), IP-blocked hubs
@@ -242,6 +309,14 @@ Wikimedia-worker analogy:
 > retry. It is **explicitly not the open-access shape** — a rejected trigger is a lost job for
 > someone who can't diagnose the box, so the full queue (Phase 2) must land before the trigger
 > is opened beyond operators.
+>
+> **As built (2026-09-21):** none of this section has shipped. The live dispatcher
+> (`ingest-hub.yml`) launches `ingest.sh`/the special launcher **directly** via SSM `nohup` —
+> there is no queue, no drain loop, no single global slot, and no index guard. The single-hub
+> path takes **no lock at all**; the only guard anywhere is a **fail-fast `flock -n
+> /tmp/monthly-batch.lock`** in `run_monthly_batch.py` that serializes **monthly-batch vs
+> monthly-batch only**. This section (the on-box slot + EBS FIFO queue + index guard) is the
+> **top outstanding build (Phase 2)** and the prerequisite for opening access beyond operators.
 
 ### 4.4 AWS auth for the runner
 
@@ -356,14 +431,21 @@ The phases are also an **access-widening ladder**: Phases 0–2 are usable by op
 **the trigger must not be opened beyond operators until Phase 3 (controls) is in place**,
 because that is what makes concurrent, semi-trusted callers safe.
 
-| Phase | Deliverable | Why / acceptance | Rough size |
-|---|---|---|---|
-| **0. Prereqs** | OIDC IAM role + least-privilege policy; GH secrets (Slack); **non-interactive flags** on `hub_preflight.py`/`launch_ingest.py` (env/CLI instead of `input()`); confirm `i3.conf` is current on the box. | Runner can assume role and SSM to the box unattended. | S |
-| **1. Single-hub launch (operator-only, no queue)** | One `workflow_dispatch` workflow, `hub` input, **standard hubs only**: assume role → start box → preflight/refresh → SSM-launch `ingest.sh` detached → Slack "launched" → exit. Conservative **fail-fast lock** ("an ingest is already running — aborting"). Explicitly operator-only. | Proves the full chain end-to-end on a real small hub (e.g. `sd`). Green run → new S3 JSONL snapshot with the safety gate passed. | M |
-| **2. Automated on-box queue + execution slot + index guard** | **EBS-persistent FIFO queue** the runner enqueues via SSM; on-box **single drain loop** holding one crash-safe `flock`, running jobs one at a time; startup sweep re-queues orphaned in-progress jobs; **index-in-progress guard**. GHA enqueues, never blocks. | No job lost across box stop/start or crash. Two back-to-back dispatches serialize; a dispatch during a (simulated) index waits. Core of Q2. | M–L |
-| **3. Multi-user controls (gates opening access)** | At the enqueue boundary + drain loop: strict hub validation, **dedup/coalescing**, **per-caller quotas/rate limits**, **privilege split** (force/kill/resume/special-hubs/pause = operator-only), global **pause flag**, operator **priority lane**, requester identity + **authz hook**, per-`job_id` status, audit records. | A flood of concurrent requests can't starve/overload the box or step on DPLA work; every request is durably queued and attributable. **Prerequisite for exposing the trigger to non-operators.** | L |
-| **4. Lifecycle + batch + status** | Idle-stop check to `stop-instances` when queue empty and no pipeline process for N min; multi-hub/"month" input that enqueues many; cron **status workflow** posting queue + running state to Slack. | Cost control + "run this month" + at-a-glance status + remote feedback. | M |
-| **5. Special hubs + kill/retry** | Route `nara.file.delta`, Smithsonian, Community-Webs, generic `file` (delivery-path confirmation), IP-blocked (clear fail); add operator-only `kill` and `retry` workflows (mirror Wikimedia). | Full hub coverage + operational controls. | L (incremental) |
+Status legend: ✅ done · ◐ partially done · ⬜ not started. (See §0 for detail.)
+
+| Phase | Status | Deliverable | Why / acceptance | Rough size |
+|---|---|---|---|---|
+| **0. Prereqs** | ✅ | OIDC IAM role + least-privilege policy; GH secrets (Slack); **non-interactive flags** on `hub_preflight.py`/`launch_ingest.py` (env/CLI instead of `input()`); confirm `i3.conf` is current on the box. | Runner can assume role and SSM to the box unattended. | S |
+| **1. Single-hub launch (operator-only, no queue)** | ✅ | One `workflow_dispatch` workflow, `hub` input: assume role → start box → preflight/refresh → SSM-launch detached → Slack → exit. **Shipped as `ingest-hub.yml`.** *Deviations from the original row:* no fail-fast lock (dropped by decision — operator-only, manage box by hand) and it already routes special hubs (NARA/SI/CW), which the plan had deferred to Phase 5. | Proves the full chain end-to-end. Green run → new S3 JSONL snapshot with the safety gate passed. | M |
+| **2. Automated on-box queue + execution slot + index guard** | ⬜ | **EBS-persistent FIFO queue** the runner enqueues via SSM; on-box **single drain loop** holding one crash-safe `flock`, running jobs one at a time; startup sweep re-queues orphaned in-progress jobs; **index-in-progress guard**. GHA enqueues, never blocks. | No job lost across box stop/start or crash. Two back-to-back dispatches serialize; a dispatch during a (simulated) index waits. Core of Q2. **Top outstanding item.** | M–L |
+| **3. Multi-user controls (gates opening access)** | ⬜ | At the enqueue boundary + drain loop: strict hub validation, **dedup/coalescing**, **per-caller quotas/rate limits**, **privilege split** (force/kill/resume/special-hubs/pause = operator-only), global **pause flag**, operator **priority lane**, requester identity + **authz hook**, per-`job_id` status, audit records. | A flood of concurrent requests can't starve/overload the box or step on DPLA work; every request is durably queued and attributable. **Prerequisite for exposing the trigger to non-operators.** | L |
+| **4. Lifecycle + batch + status** | ◐ | Idle-stop check to `stop-instances` when queue empty and no pipeline process for N min; multi-hub/"month" input that enqueues many; cron **status workflow** posting queue + running state to Slack. | Cost control + "run this month" + at-a-glance status + remote feedback. | M |
+| **5. Special hubs + kill/retry** | ◐ | Route `nara.file.delta`, Smithsonian, Community-Webs, generic `file` (delivery-path confirmation), IP-blocked (clear fail); add operator-only `kill` and `retry` workflows (mirror Wikimedia). | Full hub coverage + operational controls. | L (incremental) |
+
+**Phase 4 (◐):** the **"run this month" batch shipped** (`ingest-monthly.yml` + `run_monthly_batch.py`),
+but it launches a `nohup` batch directly rather than enqueuing to a Phase-2 queue; **idle-stop and
+the status workflow are not built.** **Phase 5 (◐):** special-hub **routing shipped** in
+`ingest-hub.yml` (NARA/SI/CW); **kill/retry workflows and IP-blocked/Tailscale detection are not.**
 
 Phases 0–1 alone deliver "an operator kicks off a standard hub from a button in GitHub."
 Phases 2–3 are the pieces the open/multi-user end state makes non-negotiable — durability so no
@@ -374,19 +456,21 @@ must precede widening access beyond operators.
 
 ## 7. Reuse map — what exists vs what's new
 
-| Capability | Already exists | New work |
-|---|---|---|
-| Full pipeline + gates + Slack + email | `scripts/ingest.sh` (+ `common.sh`) | none |
-| Start box if stopped, preflight, JAR freshness | `ingest_python_scripts/hub_preflight.py` | wrap **non-interactively** |
-| Detached SSM launch of `ingest.sh` | `ingest_python_scripts/launch_ingest.py` | non-interactive; called from GHA |
-| Silent-death detection | `scripts/ingest-watchdog.sh` (cron) | none (keep) |
-| Per-hub status files | `common.sh` + `scheduler/orchestrator/state.py` | read from status workflow |
-| Serial execution slot + index guard | **nothing** (operator discipline) | **build (Phase 2)** |
-| Automated on-box queue (EBS-persistent, no lost jobs) | **nothing** | **build (Phase 2)** |
-| Multi-user controls (dedup, quotas, privilege split, pause, priority, authz, audit) | **nothing** | **build (Phase 3)** |
-| Instance stop-when-idle | manual today | **build (Phase 4)** |
-| Runner→AWS auth | `docs.yml` uses `id-token` | **OIDC role + policy (Phase 0)** |
-| GHA workflow(s) | only `scala.yml`, `docs.yml` (no ingest) | **build (Phases 1,4,5)** |
+(Status: ✅ done · ◐ partial · ⬜ not started — as of 2026-09-21.)
+
+| Capability | Already exists | New work | Status |
+|---|---|---|---|
+| Full pipeline + gates + Slack + email | `scripts/ingest.sh` (+ `common.sh`) | none | ✅ |
+| Start box if stopped, preflight, JAR freshness | `ingest_python_scripts/hub_preflight.py` | wrap **non-interactively** | ✅ `--non-interactive` (#774) |
+| Detached SSM launch of `ingest.sh` | `ingest_python_scripts/launch_ingest.py` | non-interactive; called from GHA | ✅ (#774, driven by `ingest-hub.yml`) |
+| Silent-death detection | `scripts/ingest-watchdog.sh` (cron) | none (keep) | ✅ |
+| Per-hub status files | `common.sh` + `scheduler/orchestrator/state.py` | read from status workflow | ◐ files exist; no status workflow |
+| Serial execution slot + index guard | **nothing** (operator discipline) | **build (Phase 2)** | ⬜ (only batch-vs-batch fail-fast lock) |
+| Automated on-box queue (EBS-persistent, no lost jobs) | **nothing** | **build (Phase 2)** | ⬜ |
+| Multi-user controls (dedup, quotas, privilege split, pause, priority, authz, audit) | **nothing** | **build (Phase 3)** | ⬜ |
+| Instance stop-when-idle | manual today | **build (Phase 4)** | ⬜ |
+| Runner→AWS auth | `docs.yml` uses `id-token` | **OIDC role + policy (Phase 0)** | ✅ `github-actions-ingestion3` (main-only) |
+| GHA workflow(s) | only `scala.yml`, `docs.yml` (no ingest) | **build (Phases 1,4,5)** | ✅ `ingest-hub.yml`, `ingest-monthly.yml` (#782); kill/retry/status ⬜ |
 
 ---
 
