@@ -243,6 +243,7 @@ source /home/ec2-user/ingestion3/scripts/common.sh
 HUBS=({hub_list})
 BATCH_LOG="{batch_log}"
 SCRIPTS_DIR="/home/ec2-user/ingestion3/scripts"
+PREFLIGHT="python3 /home/ec2-user/ingestion3/ingest_python_scripts/hub_preflight.py"
 FAILED=()
 
 _log() {{ echo "$(date -u '+%Y-%m-%dT%H:%M:%SZ')  $*" >> "$BATCH_LOG"; }}
@@ -251,6 +252,13 @@ _log "▶ Monthly batch started{triggered_by} — ${{#HUBS[@]}} hubs: {hub_list}
 slack_notify ":calendar: *Monthly batch started*{triggered_by} — ${{#HUBS[@]}} hubs: {hub_list}"
 
 for HUB in "${{HUBS[@]}}"; do
+    _log "▶ Endpoint preflight for $HUB"
+    if ! $PREFLIGHT --hub "$HUB" --endpoint-only --non-interactive >> "$BATCH_LOG" 2>&1; then
+        _log "✗ $HUB endpoint check FAILED — skipping"
+        slack_notify ":x: *$HUB endpoint check FAILED* — skipping in monthly batch. Check the endpoint in i3.conf."
+        FAILED+=("$HUB")
+        continue
+    fi
     _log "▶ Starting $HUB"
     bash "$SCRIPTS_DIR/ingest.sh" "$HUB"
     RC=$?
@@ -305,7 +313,7 @@ def fire_batch(hubs, batch_log):
         f"nohup bash -c \"flock -n {LOCK_PATH} bash \\\"$SCRIPT\\\"; rm -f \\\"$SCRIPT\\\"\" > /dev/null 2>&1 </dev/null & "
         f"echo \"Batch PID=$!\""
     )
-    out = ssm_run(cmd, timeout_seconds=30)
+    out = ssm_run(cmd, timeout_seconds=60)
     if "ERROR:" in out:
         sys.exit(f"[bad] {out.strip()}")
     pid_match = re.search(r"PID=(\d+)", out)
