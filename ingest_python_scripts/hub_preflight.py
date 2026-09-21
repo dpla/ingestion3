@@ -1115,7 +1115,13 @@ def main():
     # Harvest types that should be tested as OAI-PMH (with ?verb=Identify
     # and validated by looking for <OAI-PMH>/<Identify> in the response).
     OAI_TYPES = ("oai", "localoai")
-    if hub:
+
+    # When the conf is local, look up endpoint now so we can display it early.
+    # When the conf isn't local (GHA runner), defer the SSM-based lookup until
+    # after check_instance_state() — EC2 must be up before SSM works.
+    _defer_conf_lookup = hub and not os.path.exists(CONF_PATH) and bool(INSTANCE_ID)
+
+    if hub and not _defer_conf_lookup:
         looked_up_endpoint, harvest_type = lookup_hub_in_conf(hub)
         if looked_up_endpoint:
             endpoint = looked_up_endpoint
@@ -1127,6 +1133,8 @@ def main():
             print(f"{label}: {endpoint}  (from conf, type={harvest_type or 'unknown'})")
         else:
             print(f"Endpoint: (not found in {CONF_PATH} for hub '{hub}')")
+    elif _defer_conf_lookup:
+        print(f"Endpoint: (will resolve from EC2 conf after instance start)")
     else:
         print("Endpoint: (none — endpoint check will be skipped)")
     print()
@@ -1140,7 +1148,8 @@ def main():
     # check_endpoint(None, ...) silently pass.
     # Exception: api-type hubs (e.g. mwdl, ia) may have their endpoint
     # hardcoded in the harvester class — skip the check rather than failing.
-    if hub and run_endpoint_check and endpoint is None:
+    # (Deferred lookups skip this check here — they validate after EC2 starts.)
+    if hub and run_endpoint_check and endpoint is None and not _defer_conf_lookup:
         if harvest_type == "api":
             info(f"Hub '{hub}' has no endpoint in i3.conf — endpoint is hardcoded in the harvester. Skipping endpoint check.")
             run_endpoint_check = False
@@ -1160,8 +1169,35 @@ def main():
     try:
         # Always run the instance check if we need the box for ANY check
         # (file endpoint or any of the box-state checks).
-        if run_box_checks or needs_box_for_endpoint:
+        if run_box_checks or needs_box_for_endpoint or _defer_conf_lookup:
             results.append(("instance", check_instance_state(auto_start=auto_start)))
+
+        # Deferred conf lookup: EC2 is now up, SSM should succeed.
+        # Probe SSM directly first so any failure raises RuntimeError and
+        # propagates through the outer handler — lookup_hub_in_conf swallows
+        # all SSM exceptions and returns (None, None), which would be
+        # indistinguishable from a genuine "hub not in conf" result.
+        if _defer_conf_lookup:
+            try:
+                ssm_run("true", timeout_seconds=30)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"SSM not responsive after instance start — cannot read i3.conf: {exc}"
+                ) from exc
+            looked_up_endpoint, harvest_type = lookup_hub_in_conf(hub)
+            if looked_up_endpoint:
+                endpoint = looked_up_endpoint
+                if not is_api and harvest_type and harvest_type not in OAI_TYPES and harvest_type != "file":
+                    is_api = True
+                label = "Delivery path" if harvest_type == "file" else "Endpoint"
+                print(f"{label}: {endpoint}  (from EC2 conf, type={harvest_type or 'unknown'})")
+            elif run_endpoint_check:
+                if harvest_type == "api":
+                    info(f"Hub '{hub}' has no endpoint in i3.conf — endpoint is hardcoded in the harvester. Skipping endpoint check.")
+                    run_endpoint_check = False
+                else:
+                    bad(f"Hub '{hub}' has no endpoint in EC2 conf — cannot run endpoint check.")
+                    sys.exit(1)
         if run_box_checks:
             # In non-interactive mode: always auto-pull, never prompt.
             effective_auto_pull = args.auto_pull or (args.non_interactive and not args.no_pull)
