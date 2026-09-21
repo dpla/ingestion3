@@ -260,6 +260,17 @@ def check_repo_sync(repo, header_num="2", auto_reset=False, interactive=True):
             break
     if current_branch and current_branch != repo["branch"]:
         bad(f"{repo['label']}: on branch '{current_branch}', expected '{repo['branch']}'.")
+        if auto_reset:
+            branch = repo["branch"]
+            info(f"Auto-switching to {branch}…")
+            switch_cmd = (
+                f"cd {repo['path']} && "
+                f"git checkout -f {branch} && "
+                f"git reset --hard origin/{branch}"
+            )
+            print(ssm_run(switch_cmd).rstrip())
+            ok(f"{repo['label']}: switched to {branch} and reset.")
+            return True
         info(f"Switch back before ingesting:  git checkout {repo['branch']}  (on the box)")
         return False
 
@@ -655,11 +666,19 @@ def lookup_hub_in_conf(hub, conf_path=CONF_PATH):
         illinois.harvest.type = "oai"
         illinois.harvest.endpoint = "https://..."
     """
-    if not os.path.exists(conf_path):
+    if os.path.exists(conf_path):
+        with open(conf_path, "r", encoding="utf-8") as f:
+            text = f.read()
+    elif INSTANCE_ID:
+        # Local conf not present (e.g. GHA runner) — read from EC2 via SSM.
+        try:
+            text = ssm_run(f"cat {conf_path} 2>/dev/null || echo ''", timeout_seconds=30)
+        except Exception:
+            return None, None
+        if not text.strip():
+            return None, None
+    else:
         return None, None
-
-    with open(conf_path, "r", encoding="utf-8") as f:
-        text = f.read()
 
     # Strip comments (# ... or // ...) to simplify matching.
     text = re.sub(r"(?m)^\s*(#|//).*$", "", text)
