@@ -52,6 +52,20 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Notify Slack — workflow triggered
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          HUB: ${{ inputs.hub }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
+          PAYLOAD=$(jq -n --arg hub "$HUB" --arg actor "$ACTOR" \
+            --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            '{text: ":rocket: *\($hub) ingest queued* — triggered by \($actor) via GHA — <\($url)|View run>"}')
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$PAYLOAD"
+
       # Starts the EC2 if stopped, waits for SSM Online, resets both repos to
       # origin/main, and rebuilds the fat JAR if it's stale.
       - name: Box preflight — start EC2, sync repos, rebuild JAR if stale
@@ -64,33 +78,18 @@ jobs:
             --non-interactive \
             --hub "$HUB"
 
-      # Fire-and-forget SSM call to common.sh's slack_notify so the team sees
-      # "ingest started" before the job blocks waiting for completion.
-      - name: Notify Slack — ingest started
+      - name: Notify Slack — preflight passed
         env:
-          INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           HUB: ${{ inputs.hub }}
           ACTOR: ${{ github.actor }}
         run: |
-          python3 - <<'PYEOF'
-          import base64, json, os, subprocess
-          hub   = os.environ["HUB"]
-          actor = os.environ["ACTOR"]
-          iid   = os.environ["INGEST_INSTANCE_ID"]
-          msg   = f":arrow_forward: *{hub} ingest started* via GHA (triggered by {actor})"
-          cmd   = f'export I3_HOME=/home/ec2-user/ingestion3 && source /home/ec2-user/ingestion3/scripts/common.sh && slack_notify "{msg}"'
-          enc   = base64.b64encode(cmd.encode()).decode()
-          inner = f"echo {enc} | base64 -d | sudo -u ec2-user bash -l"
-          subprocess.run(
-              ["aws", "ssm", "send-command",
-               "--instance-ids", iid,
-               "--document-name", "AWS-RunShellScript",
-               "--parameters", json.dumps({"commands": [inner]}),
-               "--region", "us-east-1",
-               "--output", "none"],
-              check=False,  # non-fatal — job continues even if Slack isn't configured
-          )
-          PYEOF
+          [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
+          PAYLOAD=$(jq -n --arg hub "$HUB" --arg actor "$ACTOR" \
+            '{text: ":white_check_mark: *\($hub) preflight passed* — EC2 up, repos synced, launching ingest"}')
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$PAYLOAD"
 
       - name: Launch ${{ inputs.hub }} ingest
         env:
@@ -99,6 +98,7 @@ jobs:
           HUB: ${{ inputs.hub }}
           RESUME_FROM: ${{ inputs.resume_from }}
           OVERRIDE: ${{ inputs.override }}
+          GHA_ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
 
