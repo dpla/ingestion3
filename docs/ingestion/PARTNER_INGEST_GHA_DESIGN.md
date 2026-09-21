@@ -33,6 +33,14 @@ Deliver it in **~5 phases**, not one shot.
 
 ### Intended end state: an open, multi-user trigger layer
 
+**Two motivating goals** drive the box-load work (queue + controls + observability):
+**(1)** let **third-party, non-tech partners safely trigger their own hub ingests** with no
+access to — and no risk to — the box; and **(2)** let DPLA **fire a whole month's (or any)
+batch once and walk away**, replacing today's hand-driven "start a hub, wait, come back online,
+start the next" cycle with a safe queue that drains serially and unattended — a real, recurring
+operator-time saving that lands *before* any partner-facing front end exists. Both are enabled
+by the same on-box controller; see §4.3 and [issue #786](https://github.com/dpla/ingestion3/issues/786).
+
 The GHA trigger is the **operator layer moved one level removed from the EC2**. The eventual
 goal is to front it (via a Slack/Lambda or Lambda→web-portal flow — **out of scope to build
 here**) so that **users without any access to DPLA's EC2 or backend** can request ingests.
@@ -101,6 +109,10 @@ and it is a hard prerequisite before any Slack/Lambda/web trigger layer (§4.6) 
 absence of the fail-fast lock on the single-hub path is deliberate — per the Phase-1 decision to
 keep the operator-only launcher unguarded and manage the box by hand — not an oversight; it is
 superseded by, not a substitute for, the Phase-2 slot.
+
+This subsystem is now scoped as a box-load management umbrella in
+**[issue #786](https://github.com/dpla/ingestion3/issues/786)**; the settled design decisions
+are folded into §4.3 below.
 
 ---
 
@@ -318,6 +330,31 @@ Wikimedia-worker analogy:
 > monthly-batch only**. This section (the on-box slot + EBS FIFO queue + index guard) is the
 > **top outstanding build (Phase 2)** and the prerequisite for opening access beyond operators.
 
+> **Scoped for build (2026-09-21, [#786](https://github.com/dpla/ingestion3/issues/786)).**
+> Reframed from "GHA concurrency" to a **box-load management subsystem** — universally applied
+> to every ingest path, not just GHA-triggered ones. Settled design decisions:
+>
+> - **Single front door + drain loop as the sole executor.** *Every* path (GHA single-hub, GHA
+>   monthly, the orchestrator, `batch-ingest.sh`/`auto-ingest.sh`, and a direct
+>   `ingest.sh`/`nara-ingest.sh` run) goes through one `enqueue-ingest` command into the durable
+>   EBS queue; a single on-box drain loop is the only thing that runs a pipeline. This makes the
+>   guard **universal** (not just GHA runs) and gives one place that owns serialization, queue,
+>   status, and messaging. `ingest.sh`/`nara-ingest.sh` gain a drain-loop-token guard + an
+>   operator break-glass.
+> - **Operator controls that never tear down the queue:** `cancel <job_id>` (dequeue a pending
+>   job), `kill [current]` (abort the running pipeline; the drain loop survives and continues),
+>   `pause`/`resume`, and a break-glass direct run. Uses **two locks** — a drain-loop
+>   **singleton** lock and a per-run **slot** lock — so even break-glass stays mutually exclusive.
+> - **Guardrail posture = warn, allow, notify.** Only **two hard stops** — unknown hub (reject)
+>   and index-in-progress (hold/wait). Off-schedule, rate/period cap, and duplicate all **proceed
+>   with a `#tech-alerts` warning** rather than blocking. (Box-load management, per §Intended
+>   end state goal 2, not just concurrency.)
+> - **Observability + messaging as first-class:** an on-box status/queue CLI (structured JSON +
+>   human) is the source of truth, readable **on-demand from off the box** via a GHA status
+>   workflow now (and Slack/web later); all lifecycle events (queued / started / succeeded /
+>   failed / cancelled / killed / warnings) post to `#tech-alerts` **with attribution** (which
+>   caller/trigger).
+
 ### 4.4 AWS auth for the runner
 
 Recommend **GitHub OIDC → assume-role**, not static keys:
@@ -437,7 +474,7 @@ Status legend: ✅ done · ◐ partially done · ⬜ not started. (See §0 for d
 |---|---|---|---|---|
 | **0. Prereqs** | ✅ | OIDC IAM role + least-privilege policy; GH secrets (Slack); **non-interactive flags** on `hub_preflight.py`/`launch_ingest.py` (env/CLI instead of `input()`); confirm `i3.conf` is current on the box. | Runner can assume role and SSM to the box unattended. | S |
 | **1. Single-hub launch (operator-only, no queue)** | ✅ | One `workflow_dispatch` workflow, `hub` input: assume role → start box → preflight/refresh → SSM-launch detached → Slack → exit. **Shipped as `ingest-hub.yml`.** *Deviations from the original row:* no fail-fast lock (dropped by decision — operator-only, manage box by hand) and it already routes special hubs (NARA/SI/CW), which the plan had deferred to Phase 5. | Proves the full chain end-to-end. Green run → new S3 JSONL snapshot with the safety gate passed. | M |
-| **2. Automated on-box queue + execution slot + index guard** | ⬜ | **EBS-persistent FIFO queue** the runner enqueues via SSM; on-box **single drain loop** holding one crash-safe `flock`, running jobs one at a time; startup sweep re-queues orphaned in-progress jobs; **index-in-progress guard**. GHA enqueues, never blocks. | No job lost across box stop/start or crash. Two back-to-back dispatches serialize; a dispatch during a (simulated) index waits. Core of Q2. **Top outstanding item.** | M–L |
+| **2. Automated on-box queue + execution slot + index guard** | ⬜ scoped in [#786](https://github.com/dpla/ingestion3/issues/786) | **EBS-persistent FIFO queue** the runner enqueues via SSM; on-box **single drain loop** holding one crash-safe `flock`, running jobs one at a time; startup sweep re-queues orphaned in-progress jobs; **index-in-progress guard**. GHA enqueues, never blocks. Reframed and scoped as a universal box-load subsystem (front door for *all* paths + cancel/kill/pause + observability/messaging) in #786. | No job lost across box stop/start or crash. Two back-to-back dispatches serialize; a dispatch during a (simulated) index waits. Core of Q2. **Top outstanding item.** | M–L |
 | **3. Multi-user controls (gates opening access)** | ⬜ | At the enqueue boundary + drain loop: strict hub validation, **dedup/coalescing**, **per-caller quotas/rate limits**, **privilege split** (force/kill/resume/special-hubs/pause = operator-only), global **pause flag**, operator **priority lane**, requester identity + **authz hook**, per-`job_id` status, audit records. | A flood of concurrent requests can't starve/overload the box or step on DPLA work; every request is durably queued and attributable. **Prerequisite for exposing the trigger to non-operators.** | L |
 | **4. Lifecycle + batch + status** | ◐ | Idle-stop check to `stop-instances` when queue empty and no pipeline process for N min; multi-hub/"month" input that enqueues many; cron **status workflow** posting queue + running state to Slack. | Cost control + "run this month" + at-a-glance status + remote feedback. | M |
 | **5. Special hubs + kill/retry** | ◐ | Route `nara.file.delta`, Smithsonian, Community-Webs, generic `file` (delivery-path confirmation), IP-blocked (clear fail); add operator-only `kill` and `retry` workflows (mirror Wikimedia). | Full hub coverage + operational controls. | L (incremental) |
