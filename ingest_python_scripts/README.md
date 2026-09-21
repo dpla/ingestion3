@@ -1,6 +1,65 @@
 # DPLA Ingest Pipeline — Runbook
 
-Python scripts for running the DPLA monthly ingest and indexing pipeline from a local machine via AWS SSM. All scripts communicate with the ingest EC2 instance — you never need to SSH in directly.
+All scripts communicate with the ingest EC2 instance via AWS SSM — you never need to SSH in directly.
+
+---
+
+## How to Run an Ingest
+
+Three paths are available depending on how much control you need:
+
+| Method | When to use |
+|--------|-------------|
+| **1. Manual via SSM** | Debugging, one-off runs, or when you need to run a command directly on the box |
+| **2. Manual via Python scripts** | Normal monthly operations — run from your Mac, full visibility, interactive prompts |
+| **3. GitHub Actions** | Hands-off launches — trigger from the GitHub UI; EC2 does the work |
+
+### 1. Manual via SSM
+
+Send commands directly to the EC2 instance:
+
+```bash
+# Ad-hoc ingest (replace <hub> with the hub short name)
+aws ssm send-command \
+  --instance-ids i-XXXXX \
+  --document-name AWS-RunShellScript \
+  --parameters 'commands=["sudo -u ec2-user bash -l -c \"nohup bash /home/ec2-user/ingestion3/scripts/ingest.sh <hub> > /home/ec2-user/data/<hub>-ingest.log 2>&1 </dev/null &\""]' \
+  --region us-east-1
+```
+
+Use SSM for one-off commands, quick checks, or when the Python scripts aren't available.
+
+### 2. Manual via Python scripts
+
+Run from your Mac — see the sections below for each step of the monthly workflow.
+
+```bash
+python3 hub_preflight.py      # pre-flight
+python3 launch_ingest.py bpl  # launch a hub
+python3 check_ingest.py bpl   # monitor it
+```
+
+### 3. GitHub Actions
+
+Two workflows are available under **Actions → Launch Hub Ingest / Monthly Hub Batch**:
+
+| Workflow | Purpose | File |
+|----------|---------|------|
+| **Launch Hub Ingest** | Manual single-hub trigger | `.github/workflows/ingest-hub.yml` |
+| **Monthly Hub Batch** | Reads i3.conf, fires all scheduled standard hubs sequentially; special-case hubs (NARA, Smithsonian, Community Webs) are excluded and must be run separately | `.github/workflows/ingest-monthly.yml` |
+
+**Launch Hub Ingest** inputs:
+- `hub` (required) — short name, e.g. `bpl`, `ohio`, `nara`, `smithsonian`
+- `resume_from` (optional) — resume standard hubs from `harvest|mapping|enrichment|jsonl|delivery`
+- `override` (optional) — NARA: `YYYYMM`; Smithsonian: `YYYY-MM-DD`; Community Webs: `YYYYMMDD_HHMMSS`
+
+**Monthly Hub Batch** inputs:
+- `month` (optional, 1-12) — defaults to current month
+- `dry_run` — print hub list without launching
+
+Both workflows require the `INGEST_INSTANCE_ID` secret and OIDC auth scoped to `main`.
+The batch fires all hubs as a sequential background job on EC2 — the GHA step completes
+immediately; Slack notifies as each hub finishes.
 
 ---
 
