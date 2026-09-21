@@ -58,10 +58,39 @@ jobs:
         env:
           INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
           CI: '1'
+          HUB: ${{ inputs.hub }}
         run: |
           python3 ingest_python_scripts/hub_preflight.py \
             --non-interactive \
-            --skip-endpoint
+            --hub "$HUB"
+
+      # Fire-and-forget SSM call to common.sh's slack_notify so the team sees
+      # "ingest started" before the job blocks waiting for completion.
+      - name: Notify Slack — ingest started
+        env:
+          INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
+          HUB: ${{ inputs.hub }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          python3 - <<'PYEOF'
+          import base64, json, os, subprocess
+          hub   = os.environ["HUB"]
+          actor = os.environ["ACTOR"]
+          iid   = os.environ["INGEST_INSTANCE_ID"]
+          msg   = f":arrow_forward: *{hub} ingest started* via GHA (triggered by {actor})"
+          cmd   = f'export I3_HOME=/home/ec2-user/ingestion3 && source /home/ec2-user/ingestion3/scripts/common.sh && slack_notify "{msg}"'
+          enc   = base64.b64encode(cmd.encode()).decode()
+          inner = f"echo {enc} | base64 -d | sudo -u ec2-user bash -l"
+          subprocess.run(
+              ["aws", "ssm", "send-command",
+               "--instance-ids", iid,
+               "--document-name", "AWS-RunShellScript",
+               "--parameters", json.dumps({"commands": [inner]}),
+               "--region", "us-east-1",
+               "--output", "none"],
+              check=False,  # non-fatal — job continues even if Slack isn't configured
+          )
+          PYEOF
 
       - name: Launch ${{ inputs.hub }} ingest
         env:
