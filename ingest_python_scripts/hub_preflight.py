@@ -290,17 +290,16 @@ def check_repo_sync(repo, header_num="2", auto_reset=False, interactive=True):
     if behind > 0:
         info(f"{repo['label']}: behind origin/{branch} by {behind} commits.")
 
-        do_pull = True
-        if interactive and not auto_reset:
+        do_pull = auto_reset  # True for GHA/--auto-pull; False for --no-pull
+        if not do_pull and interactive:
             try:
                 answer = input(
                     f"  Pull {behind} commit(s) from origin/{branch} into "
                     f"{repo['path']} on the box? [Y/n] "
                 ).strip().lower()
-                if answer in ("n", "no"):
-                    do_pull = False
+                do_pull = answer not in ("n", "no")
             except EOFError:
-                pass
+                do_pull = True  # stdin closed — default to pulling
 
         if do_pull:
             info(f"Pulling: git reset --hard origin/{branch} on the box...")
@@ -677,9 +676,14 @@ def lookup_hub_in_conf(hub, conf_path=CONF_PATH):
         # exceeds SSM's ~48 KB StandardOutputContent limit, so a full cat gets
         # truncated and hubs near the end of the file are silently dropped.
         ec2_conf = f"{CONF_REPO['path']}/i3.conf"
+        # Validate hub name before interpolating into the shell command.
+        if not re.fullmatch(r"[a-z0-9_-]+", hub):
+            return None, None
+        safe_pattern = shlex.quote(f"^[[:space:]]*{hub}[.]")
+        safe_conf    = shlex.quote(ec2_conf)
         try:
             text = ssm_run(
-                f"grep -E '^[[:space:]]*{hub}[.]' {ec2_conf} 2>/dev/null || echo ''",
+                f"grep -E {safe_pattern} {safe_conf} 2>/dev/null || echo ''",
                 timeout_seconds=30,
             )
         except Exception:

@@ -342,7 +342,9 @@ def main() -> None:
         extra = f" --resume-from {args.resume_from}"
     else:
         extra = ""
-    invocation = f"bash {SCRIPTS_DIR}/ingest.sh {hub}{extra}"
+    gha_actor = os.environ.get("GHA_ACTOR", "")
+    env_prefix = f"GHA_ACTOR={gha_actor} " if gha_actor else ""
+    invocation = f"{env_prefix}bash {SCRIPTS_DIR}/ingest.sh {hub}{extra}"
     inner = (
         'sudo -u ec2-user bash -lc "'
         f"nohup {invocation} > /home/ec2-user/data/{hub}-ingest.log 2>&1 </dev/null &"

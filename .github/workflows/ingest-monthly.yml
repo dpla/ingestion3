@@ -60,6 +60,19 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Notify Slack — workflow triggered
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
+          PAYLOAD=$(jq -n --arg actor "$ACTOR" \
+            --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            '{text: ":rocket: *Monthly batch queued* — triggered by \($actor) via GHA — <\($url)|View run>"}')
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$PAYLOAD"
+
       # Starts the EC2 if stopped, waits for SSM Online, resets both repos,
       # and rebuilds the fat JAR if stale.
       - name: Box preflight — start EC2, sync repos, rebuild JAR if stale
@@ -71,14 +84,27 @@ jobs:
             --non-interactive \
             --skip-endpoint
 
-      # Reads i3.conf from EC2, prints the hub list, then fires a sequential
-      # bash batch script on EC2 as a nohup background job and returns.
+      - name: Notify Slack — preflight passed
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
+          PAYLOAD=$(jq -n --arg actor "$ACTOR" \
+            '{text: ":white_check_mark: *Monthly batch preflight passed* — EC2 up, repos synced, launching batch"}')
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$PAYLOAD"
+
+      # Reads i3.conf from EC2, skips hubs already ingested this month,
+      # then fires a sequential bash batch script on EC2 as a nohup background job and returns.
       - name: Launch monthly batch
         env:
           INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
           CI: '1'
           MONTH_INPUT: ${{ inputs.month }}
           DRY_RUN: ${{ inputs.dry_run }}
+          GHA_ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
           ARGS=()
