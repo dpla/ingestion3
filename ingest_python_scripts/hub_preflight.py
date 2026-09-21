@@ -290,16 +290,17 @@ def check_repo_sync(repo, header_num="2", auto_reset=False, interactive=True):
     if behind > 0:
         info(f"{repo['label']}: behind origin/{branch} by {behind} commits.")
 
-        do_pull = auto_reset
-        if not do_pull and interactive:
+        do_pull = True
+        if interactive and not auto_reset:
             try:
                 answer = input(
                     f"  Pull {behind} commit(s) from origin/{branch} into "
-                    f"{repo['path']} on the box? [y/N] "
+                    f"{repo['path']} on the box? [Y/n] "
                 ).strip().lower()
-                do_pull = answer in ("y", "yes")
+                if answer in ("n", "no"):
+                    do_pull = False
             except EOFError:
-                do_pull = False
+                pass
 
         if do_pull:
             info(f"Pulling: git reset --hard origin/{branch} on the box...")
@@ -672,9 +673,15 @@ def lookup_hub_in_conf(hub, conf_path=CONF_PATH):
     elif INSTANCE_ID:
         # Local conf not present (e.g. GHA runner) — read from EC2 via SSM.
         # Use the EC2-side path, not conf_path (which is the local/runner path).
+        # grep only the hub's lines rather than cat-ing the whole file: i3.conf
+        # exceeds SSM's ~48 KB StandardOutputContent limit, so a full cat gets
+        # truncated and hubs near the end of the file are silently dropped.
         ec2_conf = f"{CONF_REPO['path']}/i3.conf"
         try:
-            text = ssm_run(f"cat {ec2_conf} 2>/dev/null || echo ''", timeout_seconds=30)
+            text = ssm_run(
+                f"grep -E '^[[:space:]]*{hub}[.]' {ec2_conf} 2>/dev/null || echo ''",
+                timeout_seconds=30,
+            )
         except Exception:
             return None, None
         if not text.strip():
