@@ -671,8 +671,10 @@ def lookup_hub_in_conf(hub, conf_path=CONF_PATH):
             text = f.read()
     elif INSTANCE_ID:
         # Local conf not present (e.g. GHA runner) — read from EC2 via SSM.
+        # Use the EC2-side path, not conf_path (which is the local/runner path).
+        ec2_conf = f"{CONF_REPO['path']}/i3.conf"
         try:
-            text = ssm_run(f"cat {conf_path} 2>/dev/null || echo ''", timeout_seconds=30)
+            text = ssm_run(f"cat {ec2_conf} 2>/dev/null || echo ''", timeout_seconds=30)
         except Exception:
             return None, None
         if not text.strip():
