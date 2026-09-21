@@ -1172,8 +1172,18 @@ def main():
         if run_box_checks or needs_box_for_endpoint or _defer_conf_lookup:
             results.append(("instance", check_instance_state(auto_start=auto_start)))
 
-        # Deferred conf lookup: EC2 is now up, SSM will succeed.
+        # Deferred conf lookup: EC2 is now up, SSM should succeed.
+        # Probe SSM directly first so any failure raises RuntimeError and
+        # propagates through the outer handler — lookup_hub_in_conf swallows
+        # all SSM exceptions and returns (None, None), which would be
+        # indistinguishable from a genuine "hub not in conf" result.
         if _defer_conf_lookup:
+            try:
+                ssm_run("true", timeout_seconds=30)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"SSM not responsive after instance start — cannot read i3.conf: {exc}"
+                ) from exc
             looked_up_endpoint, harvest_type = lookup_hub_in_conf(hub)
             if looked_up_endpoint:
                 endpoint = looked_up_endpoint
