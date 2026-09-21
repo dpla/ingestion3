@@ -134,6 +134,10 @@ def already_ran_this_month(hub, month, year):
     Checks s3://dpla-master-dataset/{hub}/jsonl/ for any entry whose name
     starts with YYYY-MM — meaning the hub was already ingested this month
     and should be skipped in the monthly batch.
+
+    Raises RuntimeError on AWS errors (non-zero exit) so that a credentials
+    or bucket problem aborts hub selection rather than silently treating every
+    hub as un-run.
     """
     prefix = f"{year}-{month:02d}"
     r = subprocess.run(
@@ -142,8 +146,21 @@ def already_ran_this_month(hub, month, year):
         capture_output=True, text=True,
     )
     if r.returncode != 0:
-        return False
-    return any(prefix in line for line in r.stdout.splitlines())
+        raise RuntimeError(
+            f"aws s3 ls failed for hub '{hub}' (exit {r.returncode}): {r.stderr.strip()}"
+        )
+    # Extract just the object name from each ls line to avoid matching the
+    # timestamp column (e.g. "2026-09-16 12:34:56") against the YYYY-MM prefix.
+    # PRE lines: "                           PRE 2026-09-16T123456/"
+    # File lines: "2026-09-16 12:34:56      12345 filename"
+    for line in r.stdout.splitlines():
+        parts = line.split()
+        if not parts:
+            continue
+        name = parts[-1].rstrip("/")   # last field is always the object name
+        if name.startswith(prefix):
+            return True
+    return False
 
 
 def get_monthly_hubs(month):
@@ -191,8 +208,15 @@ def get_monthly_hubs(month):
         scheduled.append(name)
 
     # Skip hubs already ingested this month (e.g. run manually or via single-hub GHA).
+    # Propagate S3 errors — a failed lookup should abort, not silently treat the hub as un-run.
     year = datetime.now().year
-    already_done = [h for h in scheduled if already_ran_this_month(h, month, year)]
+    already_done = []
+    for h in scheduled:
+        try:
+            if already_ran_this_month(h, month, year):
+                already_done.append(h)
+        except RuntimeError as e:
+            sys.exit(f"[bad] S3 check failed for hub '{h}': {e}")
     if already_done:
         warn(f"Skipping {len(already_done)} hub(s) already ingested this month: {', '.join(already_done)}")
 
