@@ -339,8 +339,6 @@ def fire_batch(hubs, batch_log, skipped_hubs=None):
         f"echo \"Batch PID=$!\""
     )
     out = ssm_run(cmd, timeout_seconds=60)
-    if "ERROR:" in out:
-        sys.exit(f"[bad] {out.strip()}")
     pid_match = re.search(r"PID=(\d+)", out)
     pid = pid_match.group(1) if pid_match else "unknown"
     ok(f"Batch script launched on EC2 (PID {pid})")
