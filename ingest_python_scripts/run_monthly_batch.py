@@ -257,7 +257,7 @@ HUBS=({hub_list})
 TOTAL=${{#HUBS[@]}}
 BATCH_LOG="{batch_log}"
 SCRIPTS_DIR="/home/ec2-user/ingestion3/scripts"
-PREFLIGHT="python3 /home/ec2-user/ingestion3/ingest_python_scripts/hub_preflight.py"
+PREFLIGHT="/home/ec2-user/ingestion3/venv/bin/python /home/ec2-user/ingestion3/ingest_python_scripts/hub_preflight.py"
 FAILED=()
 IDX=0
 
@@ -308,27 +308,33 @@ def fire_batch(hubs, batch_log, skipped_hubs=None):
 
     Uses mktemp under /home/ec2-user (mode 0700, owned by ec2-user) so the
     script file is never world-readable and each dispatch gets a unique path.
-    A flock probe fast-fails if another batch is already running; the nohup
-    wrapper also uses flock -n so a second dispatch that slips through the
-    probe's TOCTOU window fails immediately rather than waiting.  The script
-    cleans itself up after execution.
-    The script logs via _log() → $BATCH_LOG directly; nohup goes to /dev/null
-    to avoid mixing ingest.sh stdout into the structured batch log.
+    A synchronous flock probe (separate SSM call) fast-fails if another batch
+    is already running; the nohup wrapper also uses flock -n to guard the small
+    TOCTOU window between probe and launch.  The script cleans itself up after
+    execution.  The script logs via _log() → $BATCH_LOG directly; nohup goes
+    to /dev/null to avoid mixing ingest.sh stdout into the structured batch log.
     """
     script = build_batch_script(hubs, batch_log, gha_actor=GHA_ACTOR, skipped_hubs=skipped_hubs)
     encoded = base64.b64encode(script.encode()).decode()
 
-    # 1. mktemp: unique path, restricted permissions, owned by ec2-user.
-    # 2. Probe: fast-fail if lock is held (synchronous error visible via SSM).
-    # 3. Launch: nohup wrapper holds the lock for the script's full duration
-    #    with flock -n (fail-fast if probe's TOCTOU window allowed a race).
+    # 1. Probe: synchronous flock check — fail fast before writing the script.
+    #    Runs as its own SSM call so the exit code is captured cleanly, avoiding
+    #    the bash `&` backgrounding bug that caused the probe and launch to share
+    #    a subshell and garble the output.
+    probe = ssm_run(
+        f"flock -n {LOCK_PATH} true && echo OK || echo LOCKED",
+        timeout_seconds=30,
+    )
+    if "LOCKED" in probe:
+        sys.exit("[bad] A monthly batch is already running on EC2; try again later.")
+
+    # 2. Write script + launch: mktemp (0700, ec2-user), write, nohup with flock
+    #    so a race between probe and launch still fails fast rather than waiting.
     #    rm -f inside the wrapper cleans up the script after it finishes.
     cmd = (
         f"SCRIPT=$(mktemp /home/ec2-user/monthly-batch-XXXXXX.sh) && "
         f"chmod 0700 \"$SCRIPT\" && "
         f"echo {encoded} | base64 -d > \"$SCRIPT\" && "
-        f"flock -n {LOCK_PATH} true || "
-        f"  {{ echo 'ERROR: a monthly batch is already running; try again later'; rm -f \"$SCRIPT\"; exit 1; }} && "
         f"nohup bash -c \"flock -n {LOCK_PATH} bash \\\"$SCRIPT\\\"; rm -f \\\"$SCRIPT\\\"\" > /dev/null 2>&1 </dev/null & "
         f"echo \"Batch PID=$!\""
     )
