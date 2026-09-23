@@ -144,7 +144,7 @@ def already_ran_this_month(hub, month, year):
         pass  # SSM failure here is non-fatal; fall through to S3 check
 
     # 2. Check for a completed JSONL snapshot in S3 dated this month.
-    prefix = f"{year}-{month:02d}"
+    prefix = f"{year}{month:02d}"
     r = subprocess.run(
         ["aws", "s3", "ls", f"s3://dpla-master-dataset/{hub}/jsonl/",
          "--region", REGION] + _profile_args(),
@@ -154,10 +154,8 @@ def already_ran_this_month(hub, month, year):
         raise RuntimeError(
             f"aws s3 ls failed for hub '{hub}' (exit {r.returncode}): {r.stderr.strip()}"
         )
-    # Extract just the object name from each ls line to avoid matching the
-    # timestamp column (e.g. "2026-09-16 12:34:56") against the YYYY-MM prefix.
-    # PRE lines: "                           PRE 2026-09-16T123456/"
-    # File lines: "2026-09-16 12:34:56      12345 filename"
+    # Extract just the object name from each ls line. Snapshots are named
+    # YYYYMMDD_HHMMSS-hub-... so prefix is YYYYMM (no dashes), e.g. "202609".
     for line in r.stdout.splitlines():
         parts = line.split()
         if not parts:

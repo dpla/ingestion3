@@ -986,16 +986,29 @@ def check_endpoint(endpoint, is_api=False, harvest_type=None):
 
     info(f"URL:     {test_url}")
     info(f"Timeout: {timeout}s ({kind})")
-    info("Running curl from EC2...")
-
-    try:
-        body = ssm_run(
-            f"curl -sS --max-time {timeout} {shlex.quote(test_url)} 2>&1 || echo 'CURL_FAILED'",
-            timeout_seconds=timeout + 30,
-        )
-    except RuntimeError as e:
-        bad(f"curl failed: {e}")
-        return False
+    if INSTANCE_ID:
+        info("Running curl from EC2 via SSM...")
+        try:
+            body = ssm_run(
+                f"curl -sS --max-time {timeout} {shlex.quote(test_url)} 2>&1 || echo 'CURL_FAILED'",
+                timeout_seconds=timeout + 30,
+            )
+        except RuntimeError as e:
+            bad(f"curl failed: {e}")
+            return False
+    else:
+        info("Running curl directly (on EC2)...")
+        try:
+            r = subprocess.run(
+                ["curl", "-sS", "--max-time", str(timeout), test_url],
+                capture_output=True, text=True,
+            )
+            body = r.stdout + r.stderr if r.returncode != 0 else r.stdout
+            if r.returncode != 0:
+                body += "\nCURL_FAILED"
+        except Exception as e:
+            bad(f"curl failed: {e}")
+            return False
 
     if "CURL_FAILED" in body or not body.strip():
         bad(f"curl failed or timed out after {timeout}s — endpoint likely down or unreachable from EC2.")
