@@ -47,7 +47,7 @@ _env_file_exists = os.path.exists(os.path.normpath(
 # Instance ID: real env var first (CI), .env fallback (local operator).
 INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
 # AWS profile: env var → .env → "dpla" when .env exists → None (CI role creds).
-AWS_PROFILE: str | None = (
+AWS_PROFILE = (
     os.environ.get("AWS_PROFILE")
     or _env.get("AWS_PROFILE")
     or ("dpla" if _env_file_exists else None)
