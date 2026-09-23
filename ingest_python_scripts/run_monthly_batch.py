@@ -95,7 +95,7 @@ def ssm_run(shell_cmd, timeout_seconds=60, poll_seconds=3):
         ["aws", "ssm", "send-command"] + _profile_args() + [
             "--instance-ids",  INSTANCE_ID,
             "--document-name", "AWS-RunShellScript",
-            "--timeout-seconds", "30",
+            "--timeout-seconds", str(timeout_seconds),
             "--parameters", params,
             "--region", REGION,
             "--query", "Command.CommandId",
@@ -332,7 +332,7 @@ def fire_batch(hubs, batch_log, skipped_hubs=None):
         f"nohup bash -c \"flock -n {LOCK_PATH} bash \\\"$SCRIPT\\\"; rm -f \\\"$SCRIPT\\\"\" > /dev/null 2>&1 </dev/null & "
         f"echo \"Batch PID=$!\""
     )
-    out = ssm_run(cmd, timeout_seconds=60)
+    out = ssm_run(cmd, timeout_seconds=120)
     pid_match = re.search(r"PID=(\d+)", out)
     pid = pid_match.group(1) if pid_match else "unknown"
     ok(f"Batch script launched on EC2 (PID {pid})")
