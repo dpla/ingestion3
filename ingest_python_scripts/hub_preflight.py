@@ -936,7 +936,9 @@ def _check_s3_endpoint(s3_path):
 
     # Also check the endpoint path itself — if the dated subfolder name contains
     # the current month the delivery is current regardless of file names inside.
-    path_has_current_month = bool(pattern.search(s3_path))
+    # Strip s3://bucket to avoid matching date-like substrings in the bucket name.
+    s3_key_path = re.sub(r"^s3://[^/]+/", "", s3_path)
+    path_has_current_month = bool(pattern.search(s3_key_path))
     matches = [ln for ln in listing if pattern.search(ln)]
 
     if path_has_current_month:
