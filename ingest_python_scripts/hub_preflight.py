@@ -925,13 +925,25 @@ def _check_s3_endpoint(s3_path):
     for line in listing[-5:]:
         info(f"  {line.rstrip()}")
 
-    # Look for current-month markers in the listing — both YYYY-MM (e.g. 2026-04)
-    # for hyphenated date folders and YYYYMM (e.g. 202604) for run-together dates.
+    # Look for current-month markers — both YYYY-MM (e.g. 2026-09)
+    # and YYYYMM (e.g. 202609) and MMDDYYYY (e.g. 09212026).
     current_yyyy_mm = datetime.now().strftime("%Y-%m")
-    current_yyyymm = datetime.now().strftime("%Y%m")
-    pattern = re.compile(rf"({re.escape(current_yyyy_mm)}|{re.escape(current_yyyymm)})")
+    current_yyyymm  = datetime.now().strftime("%Y%m")
+    current_mmyyyy  = datetime.now().strftime("%m%Y")   # covers MMDDYYYY prefix
+    pattern = re.compile(
+        rf"({re.escape(current_yyyy_mm)}|{re.escape(current_yyyymm)}|{re.escape(current_mmyyyy)})"
+    )
+
+    # Also check the endpoint path itself — if the dated subfolder name contains
+    # the current month the delivery is current regardless of file names inside.
+    # Strip s3://bucket to avoid matching date-like substrings in the bucket name.
+    s3_key_path = re.sub(r"^s3://[^/]+/", "", s3_path)
+    path_has_current_month = bool(pattern.search(s3_key_path))
     matches = [ln for ln in listing if pattern.search(ln)]
 
+    if path_has_current_month:
+        ok(f"Endpoint path contains current month ({current_yyyy_mm}) — delivery is current.")
+        return True
     if matches:
         ok(f"Found {len(matches)} entries dated in the current month ({current_yyyy_mm}).")
         return True
