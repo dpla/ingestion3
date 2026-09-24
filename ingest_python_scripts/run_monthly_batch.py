@@ -85,13 +85,13 @@ def _profile_args():
     return ["--profile", AWS_PROFILE] if AWS_PROFILE else []
 
 
-def ssm_run(shell_cmd, timeout_seconds=60, poll_seconds=3):
-    """Run a shell command on the EC2 instance via SSM; return stdout."""
+def _ssm_send(shell_cmd, timeout_seconds=60):
+    """Send an SSM command; return the command ID without waiting for completion."""
     encoded = base64.b64encode(shell_cmd.encode()).decode()
     inner   = f"echo {encoded} | base64 -d | sudo -u ec2-user bash -l"
     params  = json.dumps({"commands": [inner]})
 
-    cmd_id = subprocess.check_output(
+    return subprocess.check_output(
         ["aws", "ssm", "send-command"] + _profile_args() + [
             "--instance-ids",  INSTANCE_ID,
             "--document-name", "AWS-RunShellScript",
@@ -103,6 +103,11 @@ def ssm_run(shell_cmd, timeout_seconds=60, poll_seconds=3):
         ],
         text=True,
     ).strip()
+
+
+def ssm_run(shell_cmd, timeout_seconds=60, poll_seconds=3):
+    """Run a shell command on the EC2 instance via SSM; return stdout."""
+    cmd_id = _ssm_send(shell_cmd, timeout_seconds=timeout_seconds)
 
     deadline = time.time() + timeout_seconds
     while time.time() < deadline:
@@ -321,20 +326,27 @@ def fire_batch(hubs, batch_log, skipped_hubs=None):
     if "LOCKED" in probe:
         sys.exit("[bad] A monthly batch is already running on EC2; try again later.")
 
-    # 2. Write script + launch: mktemp (0700, ec2-user), write, nohup with flock
-    #    so a race between probe and launch still fails fast rather than waiting.
-    #    rm -f inside the wrapper cleans up the script after it finishes.
-    cmd = (
+    # 2a. Write the batch script to EC2 and confirm it landed.
+    script_path = ssm_run(
         f"SCRIPT=$(mktemp /home/ec2-user/monthly-batch-XXXXXX.sh) && "
         f"chmod 0700 \"$SCRIPT\" && "
         f"echo {encoded} | base64 -d > \"$SCRIPT\" && "
-        f"nohup bash -c \"flock -n {LOCK_PATH} bash \\\"$SCRIPT\\\"; rm -f \\\"$SCRIPT\\\"\" > /dev/null 2>&1 </dev/null & "
+        f"echo \"$SCRIPT\"",
+        timeout_seconds=60,
+    ).strip()
+    if not script_path:
+        sys.exit("[bad] Failed to write batch script to EC2.")
+    ok(f"Batch script written to EC2: {script_path}")
+
+    # 2b. Launch as nohup background job — fire and forget. The batch runs on EC2;
+    #     we don't wait for SSM to confirm completion (it would timeout on long batches).
+    launch_cmd = (
+        f"nohup bash -c \"flock -n {LOCK_PATH} bash \\\"{script_path}\\\"; "
+        f"rm -f \\\"{script_path}\\\"\" > /dev/null 2>&1 </dev/null & "
         f"echo \"Batch PID=$!\""
     )
-    out = ssm_run(cmd, timeout_seconds=120)
-    pid_match = re.search(r"PID=(\d+)", out)
-    pid = pid_match.group(1) if pid_match else "unknown"
-    ok(f"Batch script launched on EC2 (PID {pid})")
+    cmd_id = _ssm_send(launch_cmd, timeout_seconds=900)
+    ok(f"Batch launched on EC2 (SSM command: {cmd_id})")
     info(f"Log:  {batch_log}")
     info(f"Tail: ssh ec2-user@<box> tail -f {batch_log}")
     info(f"Or:   python3 ingest_python_scripts/check_ingest.py <hub>")
@@ -348,6 +360,8 @@ def main():
     parser.add_argument("--month", type=int, help="Month 1-12 (default: current month)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print hub list without launching")
+    parser.add_argument("--exclude", default="",
+                        help="Comma-separated hub names to skip (e.g. indiana,jstor)")
     args = parser.parse_args()
 
     month = args.month if args.month is not None else datetime.now().month
@@ -357,9 +371,19 @@ def main():
     if not INSTANCE_ID:
         sys.exit("INGEST_INSTANCE_ID is not set — export it or add it to .env")
 
+    excluded = {h.strip().lower() for h in args.exclude.split(",") if h.strip()}
+
     header(f"Monthly batch — month {month}")
 
     hubs, skipped = get_monthly_hubs(month)
+
+    if excluded:
+        before = set(hubs)
+        hubs = [h for h in hubs if h not in excluded]
+        actually_excluded = before - set(hubs)
+        if actually_excluded:
+            warn(f"Manually excluded: {', '.join(sorted(actually_excluded))}")
+            skipped = list(skipped) + sorted(actually_excluded)
 
     if not hubs:
         info("No active standard hubs scheduled for this month.")

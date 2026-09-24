@@ -22,6 +22,11 @@ on:
         required: false
         type: boolean
         default: false
+      exclude:
+        description: 'Comma-separated hub names to exclude from this run (e.g. indiana,jstor)'
+        required: false
+        type: string
+        default: ''
 
   # Uncomment to run automatically on the 1st of each month at 1pm UTC (9am ET).
   # Ensure ingestion3-conf is up to date and any special-hub preprocessing is
@@ -104,12 +109,14 @@ jobs:
           CI: '1'
           MONTH_INPUT: ${{ inputs.month }}
           DRY_RUN: ${{ inputs.dry_run }}
+          EXCLUDE_INPUT: ${{ inputs.exclude }}
           GHA_ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
           ARGS=()
           [[ -n "$MONTH_INPUT" ]]         && ARGS+=(--month "$MONTH_INPUT")
           [[ "$DRY_RUN" == "true" ]]      && ARGS+=(--dry-run)
+          [[ -n "$EXCLUDE_INPUT" ]]       && ARGS+=(--exclude "$EXCLUDE_INPUT")
           python3 ingest_python_scripts/run_monthly_batch.py "${ARGS[@]}"
 
       - name: Kill batch on failure
