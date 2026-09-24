@@ -13,7 +13,13 @@ name: Update File Hub Endpoints
 # OIDC credentials are restricted to main by the role trust policy.
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      month:
+        description: 'Only update hubs scheduled for this month (1-12). Leave blank to update all file hubs.'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   id-token: write   # required for OIDC AWS auth
@@ -57,18 +63,24 @@ jobs:
 
       - name: Detect stale endpoints (dry run)
         id: dry-run
+        env:
+          MONTH_INPUT: ${{ inputs.month }}
         run: |
           set -o pipefail
+          ARGS=(--conf ingestion3-conf/i3.conf)
+          [[ -n "$MONTH_INPUT" ]] && ARGS+=(--month "$MONTH_INPUT")
           python3 ingestion3/ingest_python_scripts/update_file_endpoints.py \
-            --conf ingestion3-conf/i3.conf \
-            | tee /tmp/endpoint-report.txt
+            "${ARGS[@]}" | tee /tmp/endpoint-report.txt
 
       - name: Apply updates to i3.conf
         id: apply
+        env:
+          MONTH_INPUT: ${{ inputs.month }}
         run: |
+          ARGS=(--conf ingestion3-conf/i3.conf --apply)
+          [[ -n "$MONTH_INPUT" ]] && ARGS+=(--month "$MONTH_INPUT")
           python3 ingestion3/ingest_python_scripts/update_file_endpoints.py \
-            --conf ingestion3-conf/i3.conf \
-            --apply
+            "${ARGS[@]}"
 
       - name: Commit and push changes
         id: commit

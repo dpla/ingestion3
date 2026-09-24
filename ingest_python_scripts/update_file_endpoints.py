@@ -152,9 +152,10 @@ def list_s3_root(bucket):
 # ── i3.conf parsing ───────────────────────────────────────────────────────────
 
 def parse_file_hubs(conf_text):
-    """Return {hub: {endpoint, bucket, is_dir}} for all file hubs with S3 endpoints.
+    """Return {hub: {endpoint, bucket, is_dir, months}} for all file hubs with S3 endpoints.
 
     is_dir is True if the current endpoint ends with '/' (directory-type).
+    months is the list of scheduled months from schedule.months (empty if not set).
     """
     # Strip comments
     text = re.sub(r"(?m)^\s*(#|//).*$", "", conf_text)
@@ -179,6 +180,16 @@ def parse_file_hubs(conf_text):
                 hubs[hub]["endpoint"] = endpoint
                 hubs[hub]["bucket"] = bucket_match.group(1)
                 hubs[hub]["is_dir"] = endpoint.endswith("/")
+
+    for m in re.finditer(
+        r"""^\s*([a-z0-9_-]+)\.schedule\.months\s*[=:]\s*\[([0-9,\s]+)\]""",
+        text, re.MULTILINE | re.IGNORECASE,
+    ):
+        hub = m.group(1).lower()
+        if hub in hubs:
+            hubs[hub]["months"] = [
+                int(x.strip()) for x in m.group(2).split(",") if x.strip().isdigit()
+            ]
 
     # Only return hubs that have both type=file and an S3 endpoint
     return {h: v for h, v in hubs.items() if "bucket" in v}
@@ -211,13 +222,20 @@ def main():
                         help="Write changes to i3.conf (default: dry run, print only)")
     parser.add_argument("--conf", default=DEFAULT_CONF,
                         help=f"Path to i3.conf (default: {DEFAULT_CONF})")
+    parser.add_argument("--month", type=int, metavar="N",
+                        help="Only update hubs scheduled for month N (1-12). "
+                             "Omit to update all file hubs regardless of schedule.")
     args = parser.parse_args()
+
+    if args.month is not None and not (1 <= args.month <= 12):
+        sys.exit(f"[bad] --month must be 1-12, got {args.month}")
 
     conf_path = Path(args.conf)
     if not conf_path.exists():
         sys.exit(f"[bad] i3.conf not found at {conf_path}")
 
-    header(f"File endpoint updater — {'APPLYING' if args.apply else 'DRY RUN'}")
+    month_label = f" (month {args.month} only)" if args.month else ""
+    header(f"File endpoint updater — {'APPLYING' if args.apply else 'DRY RUN'}{month_label}")
     info(f"Conf: {conf_path}")
 
     conf_text = conf_path.read_text()
@@ -227,7 +245,23 @@ def main():
         info("No file-type hubs with S3 endpoints found.")
         sys.exit(0)
 
-    info(f"{len(file_hubs)} file hub(s) found: {', '.join(sorted(file_hubs))}\n")
+    # Filter by month if requested
+    if args.month:
+        before = set(file_hubs)
+        file_hubs = {
+            h: v for h, v in file_hubs.items()
+            if args.month in v.get("months", [])
+        }
+        skipped = before - set(file_hubs)
+        if skipped:
+            info(f"Skipping {len(skipped)} hub(s) not scheduled for month {args.month}: "
+                 f"{', '.join(sorted(skipped))}")
+
+    if not file_hubs:
+        info(f"No file hubs scheduled for month {args.month}.")
+        sys.exit(0)
+
+    info(f"{len(file_hubs)} file hub(s) to check: {', '.join(sorted(file_hubs))}\n")
 
     changes = []
     errors = []
