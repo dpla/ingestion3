@@ -925,13 +925,18 @@ def _check_s3_endpoint(s3_path):
     for line in listing[-5:]:
         info(f"  {line.rstrip()}")
 
-    # Look for current-month markers — both YYYY-MM (e.g. 2026-09)
-    # and YYYYMM (e.g. 202609) and MMDDYYYY (e.g. 09212026).
-    current_yyyy_mm = datetime.now().strftime("%Y-%m")
-    current_yyyymm  = datetime.now().strftime("%Y%m")
-    current_mmyyyy  = datetime.now().strftime("%m%Y")   # covers MMDDYYYY prefix
+    # Look for current-month markers in three date formats:
+    #   YYYY-MM   e.g. 2026-09
+    #   YYYYMM    e.g. 202609
+    #   MMDDYYYY  e.g. 09212026 — MM and YYYY are not adjacent (DD sits between),
+    #             so match MM + any two digits + YYYY as a regex, not a substring.
+    now = datetime.now()
+    current_yyyy_mm = now.strftime("%Y-%m")
+    current_yyyymm  = now.strftime("%Y%m")
+    current_mm      = now.strftime("%m")
+    current_yyyy    = now.strftime("%Y")
     pattern = re.compile(
-        rf"({re.escape(current_yyyy_mm)}|{re.escape(current_yyyymm)}|{re.escape(current_mmyyyy)})"
+        rf"({re.escape(current_yyyy_mm)}|{re.escape(current_yyyymm)}|{re.escape(current_mm)}\d{{2}}{re.escape(current_yyyy)})"
     )
 
     # Also check the endpoint path itself — if the dated subfolder name contains

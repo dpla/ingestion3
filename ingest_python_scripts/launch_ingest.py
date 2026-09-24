@@ -367,8 +367,33 @@ def main() -> None:
         sys.exit(f"aws ssm send-command failed:\n{result.stderr.strip()}")
 
     cmdid = result.stdout.strip()
+
+    # Poll briefly to confirm EC2 received and started the command.
+    # The nohup job backgrounds immediately so the invocation reaches Success fast.
+    print(f"  Confirming delivery (SSM command: {cmdid}) …", flush=True)
+    for _ in range(10):
+        time.sleep(3)
+        r = subprocess.run(
+            ["aws", "ssm", "get-command-invocation"]
+            + _profile_args()
+            + ["--command-id", cmdid,
+               "--instance-id", INSTANCE_ID,
+               "--query", "[Status, StandardOutputContent, StandardErrorContent]",
+               "--output", "text"],
+            capture_output=True, text=True,
+        )
+        if r.returncode != 0:
+            continue
+        parts = r.stdout.strip().split("\t", 2)
+        status = parts[0] if parts else ""
+        if status in ("Success", "Failed", "TimedOut", "Cancelled"):
+            if status != "Success":
+                sys.exit(f"SSM launch command ended with status '{status}':\n{parts[2] if len(parts) > 2 else ''}")
+            break
+    else:
+        print("  Warning: could not confirm SSM delivery within 30s — ingest may still have launched.")
+
     print(f"\nLaunched: {hub}{extra}")
-    print(f"  SSM command id: {cmdid}")
     print(f"  Log on EC2:     /home/ec2-user/data/{hub}-ingest.log")
     print()
     print("Watch #tech-alerts for milestone messages.")
