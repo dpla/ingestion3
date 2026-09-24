@@ -101,12 +101,8 @@ jobs:
             git add i3.conf
             REPORT=$(grep -E '→|already up to date|Error' /tmp/endpoint-report.txt \
               | sed 's/^/  /' || true)
-            COMMIT_MSG="chore: auto-update file hub endpoints
-
-Detected by update-file-endpoints workflow — run $GITHUB_RUN_ID
-Triggered by: ${{ github.actor }}
-
-$REPORT"
+            COMMIT_MSG=$(printf 'chore: auto-update file hub endpoints\n\nDetected by update-file-endpoints workflow — run %s\nTriggered by: %s\n\n%s' \
+              "$GITHUB_RUN_ID" "${{ github.actor }}" "$REPORT")
             git commit -m "$COMMIT_MSG"
 
             git push
