@@ -273,12 +273,11 @@ for HUB in "${{HUBS[@]}}"; do
     fi
     slack_notify ":white_check_mark: *$HUB endpoint passed* — launching ingest"
     _log "▶ Starting $HUB"
-    bash "$SCRIPTS_DIR/ingest.sh" "$HUB"
-    RC=$?
-    if [ $RC -eq 0 ]; then
+    if bash "$SCRIPTS_DIR/ingest.sh" "$HUB"; then
         _log "✓ $HUB complete"
     else
-        _log "✗ $HUB FAILED (exit $RC)"
+        _log "✗ $HUB FAILED"
+        slack_notify ":x: *$HUB ingest FAILED* — continuing batch"
         FAILED+=("$HUB")
     fi
 done
