@@ -107,10 +107,13 @@ def _sortable_date(entry):
 def list_s3_root(bucket):
     """List top-level entries in s3://bucket/.
 
-    Returns two lists:
-      dirs:   names with trailing '/'  e.g. ['20260619/', '20260901/']
+    Returns two lists, each sorted newest-first:
+      dirs:   names with trailing '/'  e.g. ['20260901/', '20260619/']
+              sorted by date embedded in name (PRE lines carry no timestamp)
       files:  names without trailing slash  e.g. ['hub-2026-05-24.jsonl']
-    Only entries that contain a recognizable date are returned.
+              sorted by S3 LastModified timestamp so mis-named files sort correctly
+
+    Only entries that contain a recognizable date in their name are returned.
     """
     r = subprocess.run(
         ["aws", "s3", "ls", f"s3://{bucket}/", "--region", REGION] + _profile_args(),
@@ -119,9 +122,12 @@ def list_s3_root(bucket):
     if r.returncode != 0:
         raise RuntimeError(f"aws s3 ls s3://{bucket}/ failed: {r.stderr.strip()}")
 
-    dirs, files = [], []
+    dirs = []
+    files = []  # list of (last_modified_str, name)
+
     for line in r.stdout.splitlines():
         # Directory prefix: "                           PRE 20260619/"
+        # No timestamp available for PRE entries — fall back to name-based sort.
         m = re.search(r"\bPRE\s+(.+?)/\s*$", line)
         if m:
             name = m.group(1) + "/"
@@ -129,23 +135,27 @@ def list_s3_root(bucket):
                 dirs.append(name)
             continue
         # Object: "2026-06-19 14:23:05   4321 hub-2026-05-24.jsonl"
-        m = re.search(r"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s+\d+\s+(\S+)\s*$", line)
+        m = re.search(
+            r"(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+\d+\s+(\S+)\s*$", line
+        )
         if m:
-            name = m.group(1)
+            last_modified = m.group(1)  # "2026-06-19 14:23:05" — lexically sortable
+            name = m.group(2)
             if _DATE_RE.search(name):
-                files.append(name)
+                files.append((last_modified, name))
 
     dirs.sort(key=_sortable_date, reverse=True)
-    files.sort(key=_sortable_date, reverse=True)
-    return dirs, files
+    files.sort(key=lambda t: t[0], reverse=True)   # sort by S3 LastModified
+    return dirs, [name for _, name in files]
 
 
 # ── i3.conf parsing ───────────────────────────────────────────────────────────
 
 def parse_file_hubs(conf_text):
-    """Return {hub: {endpoint, bucket, is_dir}} for all file hubs with S3 endpoints.
+    """Return {hub: {endpoint, bucket, is_dir, months}} for all file hubs with S3 endpoints.
 
     is_dir is True if the current endpoint ends with '/' (directory-type).
+    months is the list of scheduled months from schedule.months (empty if not set).
     """
     # Strip comments
     text = re.sub(r"(?m)^\s*(#|//).*$", "", conf_text)
@@ -170,6 +180,16 @@ def parse_file_hubs(conf_text):
                 hubs[hub]["endpoint"] = endpoint
                 hubs[hub]["bucket"] = bucket_match.group(1)
                 hubs[hub]["is_dir"] = endpoint.endswith("/")
+
+    for m in re.finditer(
+        r"""^\s*([a-z0-9_-]+)\.schedule\.months\s*[=:]\s*\[([0-9,\s]+)\]""",
+        text, re.MULTILINE | re.IGNORECASE,
+    ):
+        hub = m.group(1).lower()
+        if hub in hubs:
+            hubs[hub]["months"] = [
+                int(x.strip()) for x in m.group(2).split(",") if x.strip().isdigit()
+            ]
 
     # Only return hubs that have both type=file and an S3 endpoint
     return {h: v for h, v in hubs.items() if "bucket" in v}
@@ -202,13 +222,20 @@ def main():
                         help="Write changes to i3.conf (default: dry run, print only)")
     parser.add_argument("--conf", default=DEFAULT_CONF,
                         help=f"Path to i3.conf (default: {DEFAULT_CONF})")
+    parser.add_argument("--month", type=int, metavar="N",
+                        help="Only update hubs scheduled for month N (1-12). "
+                             "Omit to update all file hubs regardless of schedule.")
     args = parser.parse_args()
+
+    if args.month is not None and not (1 <= args.month <= 12):
+        sys.exit(f"[bad] --month must be 1-12, got {args.month}")
 
     conf_path = Path(args.conf)
     if not conf_path.exists():
         sys.exit(f"[bad] i3.conf not found at {conf_path}")
 
-    header(f"File endpoint updater — {'APPLYING' if args.apply else 'DRY RUN'}")
+    month_label = f" (month {args.month} only)" if args.month else ""
+    header(f"File endpoint updater — {'APPLYING' if args.apply else 'DRY RUN'}{month_label}")
     info(f"Conf: {conf_path}")
 
     conf_text = conf_path.read_text()
@@ -218,7 +245,23 @@ def main():
         info("No file-type hubs with S3 endpoints found.")
         sys.exit(0)
 
-    info(f"{len(file_hubs)} file hub(s) found: {', '.join(sorted(file_hubs))}\n")
+    # Filter by month if requested
+    if args.month:
+        before = set(file_hubs)
+        file_hubs = {
+            h: v for h, v in file_hubs.items()
+            if args.month in v.get("months", [])
+        }
+        skipped = before - set(file_hubs)
+        if skipped:
+            info(f"Skipping {len(skipped)} hub(s) not scheduled for month {args.month}: "
+                 f"{', '.join(sorted(skipped))}")
+
+    if not file_hubs:
+        info(f"No file hubs scheduled for month {args.month}.")
+        sys.exit(0)
+
+    info(f"{len(file_hubs)} file hub(s) to check: {', '.join(sorted(file_hubs))}\n")
 
     changes = []
     errors = []
@@ -253,8 +296,15 @@ def main():
         latest_entry = candidates[0]                # already sorted newest-first
         latest = f"s3://{bucket}/{latest_entry}"    # preserves trailing / for dirs
 
+        # Extract the path component of current endpoint for date comparison
+        current_path = current.rstrip("/").split("/", 3)[-1]  # e.g. "20260619" or "hub-2026-05-24.jsonl"
+        current_date = _sortable_date(current_path)
+        latest_date  = _sortable_date(latest_entry.rstrip("/"))
+
         if latest == current:
             ok(f"  already up to date")
+        elif latest_date <= current_date:
+            warn(f"  latest S3 delivery ({latest_entry.rstrip('/')}) is not newer than current ({current_path}) — skipping")
         else:
             info(f"  latest:  {latest}")
             changes.append((hub, current, latest))
