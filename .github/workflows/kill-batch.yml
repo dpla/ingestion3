@@ -1,0 +1,74 @@
+name: Kill Monthly Batch
+
+# Emergency stop for a running monthly batch on the ingest EC2.
+# Kills the batch wrapper script and any running ingest.sh processes,
+# then clears the flock so the batch can be re-triggered cleanly.
+#
+# OIDC credentials are restricted to main by the role trust policy.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "kill" to confirm — this stops all running ingests on EC2'
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  kill:
+    name: 'Kill batch'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Enforce main branch
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::This workflow must run from main."
+            exit 1
+          fi
+
+      - name: Check confirmation
+        run: |
+          if [[ "${{ inputs.confirm }}" != "kill" ]]; then
+            echo "::error::Confirmation input must be exactly \"kill\"."
+            exit 1
+          fi
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502  # v4.0.2
+        with:
+          role-to-assume: arn:aws:iam::283408157088:role/github-actions-ingestion3
+          aws-region: us-east-1
+
+      - name: Kill batch and clear lock
+        env:
+          INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids "$INGEST_INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --parameters '{"commands":["pkill -f monthly-batch || true; pkill -f ingest.sh || true; rm -f /tmp/monthly-batch.lock || true; echo DONE"]}' \
+            --region us-east-1 \
+            --query 'Command.CommandId' --output text)
+          echo "SSM command: $CMD_ID"
+          sleep 5
+          aws ssm get-command-invocation \
+            --command-id "$CMD_ID" \
+            --instance-id "$INGEST_INSTANCE_ID" \
+            --region us-east-1 \
+            --query 'StandardOutputContent' --output text
+
+          [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
+          PAYLOAD=$(jq -n --arg actor "$ACTOR" \
+            --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            '{text: ":stop_sign: *Monthly batch killed* by \($actor) — <\($url)|View run>"}')
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$PAYLOAD"

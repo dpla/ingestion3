@@ -112,6 +112,17 @@ jobs:
           [[ "$DRY_RUN" == "true" ]]      && ARGS+=(--dry-run)
           python3 ingest_python_scripts/run_monthly_batch.py "${ARGS[@]}"
 
+      - name: Kill batch on failure
+        if: failure()
+        env:
+          INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
+        run: |
+          aws ssm send-command \
+            --instance-ids "$INGEST_INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --parameters '{"commands":["rm -f /tmp/monthly-batch.lock || true"]}' \
+            --region us-east-1 || true
+
       - name: Notify Slack on failure
         if: failure()
         env:
