@@ -33,8 +33,10 @@ jobs:
           fi
 
       - name: Check confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
         run: |
-          if [[ "${{ inputs.confirm }}" != "kill" ]]; then
+          if [[ "$CONFIRM" != "kill" ]]; then
             echo "::error::Confirmation input must be exactly \"kill\"."
             exit 1
           fi
@@ -58,12 +60,27 @@ jobs:
             --region us-east-1 \
             --query 'Command.CommandId' --output text)
           echo "SSM command: $CMD_ID"
-          sleep 5
+          for i in $(seq 1 20); do
+            sleep 3
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$CMD_ID" \
+              --instance-id "$INGEST_INSTANCE_ID" \
+              --region us-east-1 \
+              --query 'Status' --output text 2>/dev/null || echo "Pending")
+            echo "  status: $STATUS"
+            case "$STATUS" in
+              Success|Failed|TimedOut|Cancelled) break ;;
+            esac
+          done
           aws ssm get-command-invocation \
             --command-id "$CMD_ID" \
             --instance-id "$INGEST_INSTANCE_ID" \
             --region us-east-1 \
             --query 'StandardOutputContent' --output text
+          if [[ "$STATUS" != "Success" ]]; then
+            echo "::error::SSM kill command ended with status: $STATUS"
+            exit 1
+          fi
 
           [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
           PAYLOAD=$(jq -n --arg actor "$ACTOR" \

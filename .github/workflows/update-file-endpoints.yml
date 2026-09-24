@@ -58,6 +58,7 @@ jobs:
       - name: Detect stale endpoints (dry run)
         id: dry-run
         run: |
+          set -o pipefail
           python3 ingestion3/ingest_python_scripts/update_file_endpoints.py \
             --conf ingestion3-conf/i3.conf \
             | tee /tmp/endpoint-report.txt
@@ -80,19 +81,21 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No changes to commit."
           else
-            CHANGED=$(git diff --name-only i3.conf)
             SUMMARY=$(git diff --unified=0 i3.conf \
               | grep "^[-+].*harvest\.endpoint" \
               | sed 's/^-/  old: /; s/^+/  new: /')
             echo "$SUMMARY"
 
             git add i3.conf
-            git commit -m "chore: auto-update file hub endpoints
+            REPORT=$(grep -E '→|already up to date|Error' /tmp/endpoint-report.txt \
+              | sed 's/^/  /' || true)
+            COMMIT_MSG="chore: auto-update file hub endpoints
 
 Detected by update-file-endpoints workflow — run $GITHUB_RUN_ID
 Triggered by: ${{ github.actor }}
 
-$(cat /tmp/endpoint-report.txt | grep -E '→|already up to date|Error' | sed 's/^/  /')"
+$REPORT"
+            git commit -m "$COMMIT_MSG"
 
             git push
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -126,10 +129,14 @@ $(cat /tmp/endpoint-report.txt | grep -E '→|already up to date|Error' | sed 's
           ACTOR: ${{ github.actor }}
         run: |
           [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
+          WARNINGS=$(grep -E '⚠|✗' /tmp/endpoint-report.txt || true)
+          MSG=":white_check_mark: *File hub endpoint check* — no endpoint changes (triggered by $ACTOR)"
+          [[ -n "$WARNINGS" ]] && MSG="$MSG\n\`\`\`$WARNINGS\`\`\`"
           PAYLOAD=$(jq -n \
             --arg actor "$ACTOR" \
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-            '{text: ":white_check_mark: *File hub endpoint check* — all endpoints already up to date (triggered by \($actor)) — <\($url)|View run>"}')
+            --arg msg "$MSG" \
+            '{text: "\($msg) — <\($url)|View run>"}')
           curl -s -X POST "$SLACK_WEBHOOK_URL" \
             -H 'Content-Type: application/json' \
             -d "$PAYLOAD"
