@@ -67,16 +67,20 @@ jobs:
 
       - name: Notify Slack — workflow triggered
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
           ACTOR: ${{ github.actor }}
         run: |
-          [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
+          [[ -z "${SLACK_BOT_TOKEN:-}" ]] && exit 0
           PAYLOAD=$(jq -n --arg actor "$ACTOR" \
+            --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-            '{text: ":rocket: *Monthly batch queued* — triggered by \($actor) via GHA — <\($url)|View run>"}')
-          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            '{channel: $channel, text: ":rocket: *Monthly batch queued* — triggered by \($actor) via GHA — <\($url)|View run>"}')
+          RESP=$(curl -s -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H 'Content-Type: application/json' \
-            -d "$PAYLOAD"
+            -d "$PAYLOAD")
+          echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"
 
       # Starts the EC2 if stopped, waits for SSM Online, resets both repos,
       # and rebuilds the fat JAR if stale.
@@ -91,15 +95,19 @@ jobs:
 
       - name: Notify Slack — preflight passed
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
           ACTOR: ${{ github.actor }}
         run: |
-          [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
+          [[ -z "${SLACK_BOT_TOKEN:-}" ]] && exit 0
           PAYLOAD=$(jq -n --arg actor "$ACTOR" \
-            '{text: ":white_check_mark: *Monthly batch preflight passed* — EC2 up, repos synced, launching batch"}')
-          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
+            '{channel: $channel, text: ":white_check_mark: *Monthly batch preflight passed* — EC2 up, repos synced, launching batch"}')
+          RESP=$(curl -s -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H 'Content-Type: application/json' \
-            -d "$PAYLOAD"
+            -d "$PAYLOAD")
+          echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"
 
       # Reads i3.conf from EC2, skips hubs already ingested this month,
       # then fires a sequential bash batch script on EC2 as a nohup background job and returns.
@@ -133,13 +141,17 @@ jobs:
       - name: Notify Slack on failure
         if: failure()
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
           ACTOR: ${{ github.actor }}
         run: |
-          [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
+          [[ -z "${SLACK_BOT_TOKEN:-}" ]] && exit 0
           PAYLOAD=$(jq -n --arg actor "$ACTOR" \
+            --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-            '{text: ":x: *Monthly batch launch FAILED* — triggered by \($actor) — <\($url)|View run>"}')
-          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            '{channel: $channel, text: ":x: *Monthly batch launch FAILED* — triggered by \($actor) — <\($url)|View run>"}')
+          RESP=$(curl -s -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H 'Content-Type: application/json' \
-            -d "$PAYLOAD"
+            -d "$PAYLOAD")
+          echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"
