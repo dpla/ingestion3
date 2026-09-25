@@ -263,7 +263,7 @@ HUBS=({hub_list})
 TOTAL=${{#HUBS[@]}}
 BATCH_LOG="{batch_log}"
 SCRIPTS_DIR="/home/ec2-user/ingestion3/scripts"
-PREFLIGHT="python3 /home/ec2-user/ingestion3/ingest_python_scripts/hub_preflight.py"
+PREFLIGHT="I3_CONF=/home/ec2-user/ingestion3-conf/i3.conf python3 /home/ec2-user/ingestion3/ingest_python_scripts/hub_preflight.py"
 FAILED=()
 IDX=0
 
