@@ -127,11 +127,11 @@ jobs:
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --arg diff "$DIFF" \
             '{channel: $channel, text: ":pencil: *File hub endpoints updated* by \($actor) — <\($url)|View run>\n```\($diff)```"}')
-          RESP=$(curl -s -X POST "https://slack.com/api/chat.postMessage" \
+          RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
             -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H 'Content-Type: application/json' \
-            -d "$PAYLOAD")
-          echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"
+            -d "$PAYLOAD") || { echo "::warning::Slack transport error (changes-pushed notification)"; RESP=""; }
+          [[ -n "$RESP" ]] && { echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"; }
 
       - name: Notify Slack — no changes
         if: steps.commit.outputs.changed != 'true'
@@ -150,11 +150,11 @@ jobs:
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --arg msg "$MSG" \
             '{channel: $channel, text: "\($msg) — <\($url)|View run>"}')
-          RESP=$(curl -s -X POST "https://slack.com/api/chat.postMessage" \
+          RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
             -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H 'Content-Type: application/json' \
-            -d "$PAYLOAD")
-          echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"
+            -d "$PAYLOAD") || { echo "::warning::Slack transport error (no-changes notification)"; RESP=""; }
+          [[ -n "$RESP" ]] && { echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"; }
 
       - name: Notify Slack on failure
         if: failure()
@@ -169,8 +169,8 @@ jobs:
             --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             '{channel: $channel, text: ":x: *File hub endpoint update FAILED* — triggered by \($actor) — <\($url)|View run>"}')
-          RESP=$(curl -s -X POST "https://slack.com/api/chat.postMessage" \
+          RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
             -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H 'Content-Type: application/json' \
-            -d "$PAYLOAD")
-          echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"
+            -d "$PAYLOAD") || { echo "::warning::Slack transport error (failure notification)"; RESP=""; }
+          [[ -n "$RESP" ]] && { echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"; }

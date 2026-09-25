@@ -64,11 +64,11 @@ jobs:
             --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             '{channel: $channel, text: ":rocket: *\($hub) ingest queued* — triggered by \($actor) via GHA — <\($url)|View run>"}')
-          RESP=$(curl -s -X POST "https://slack.com/api/chat.postMessage" \
+          RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
             -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H 'Content-Type: application/json' \
-            -d "$PAYLOAD")
-          echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"
+            -d "$PAYLOAD") || { echo "::warning::Slack transport error (queued notification)"; RESP=""; }
+          [[ -n "$RESP" ]] && { echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"; }
 
       # Starts the EC2 if stopped, waits for SSM Online, resets both repos to
       # origin/main, and rebuilds the fat JAR if it's stale.
@@ -93,11 +93,11 @@ jobs:
           PAYLOAD=$(jq -n --arg hub "$HUB" --arg actor "$ACTOR" \
             --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
             '{channel: $channel, text: ":white_check_mark: *\($hub) preflight passed* — EC2 up, repos synced, launching ingest"}')
-          RESP=$(curl -s -X POST "https://slack.com/api/chat.postMessage" \
+          RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
             -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H 'Content-Type: application/json' \
-            -d "$PAYLOAD")
-          echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"
+            -d "$PAYLOAD") || { echo "::warning::Slack transport error (preflight-passed notification)"; RESP=""; }
+          [[ -n "$RESP" ]] && { echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"; }
 
       - name: Launch ${{ inputs.hub }} ingest
         env:
@@ -157,8 +157,8 @@ jobs:
             --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             '{channel: $channel, text: ":x: *Hub ingest job FAILED* — `\($hub)` (triggered by \($actor)) — <\($url)|View run>"}')
-          RESP=$(curl -s -X POST "https://slack.com/api/chat.postMessage" \
+          RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
             -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H 'Content-Type: application/json' \
-            -d "$PAYLOAD")
-          echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"
+            -d "$PAYLOAD") || { echo "::warning::Slack transport error (failure notification)"; RESP=""; }
+          [[ -n "$RESP" ]] && { echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"; }
