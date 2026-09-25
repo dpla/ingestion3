@@ -112,54 +112,65 @@ jobs:
       - name: Notify Slack — changes pushed
         if: steps.commit.outputs.changed == 'true'
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
           ACTOR: ${{ github.actor }}
         run: |
-          [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
-          # Build a compact diff summary for Slack
+          [[ -z "${SLACK_BOT_TOKEN:-}" ]] && exit 0
           DIFF=$(cat /tmp/endpoint-report.txt \
             | grep -E '(^  [a-z]|→)' \
             | sed 's/^  //; s/  → /\n    → /' \
             | head -40)
           PAYLOAD=$(jq -n \
             --arg actor "$ACTOR" \
+            --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --arg diff "$DIFF" \
-            '{text: ":pencil: *File hub endpoints updated* by \($actor) — <\($url)|View run>\n```\($diff)```"}')
-          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            '{channel: $channel, text: ":pencil: *File hub endpoints updated* by \($actor) — <\($url)|View run>\n```\($diff)```"}')
+          RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H 'Content-Type: application/json' \
-            -d "$PAYLOAD"
+            -d "$PAYLOAD") || { echo "::warning::Slack transport error (changes-pushed notification)"; RESP=""; }
+          [[ -n "$RESP" ]] && { echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"; }
 
       - name: Notify Slack — no changes
         if: steps.commit.outputs.changed != 'true'
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
           ACTOR: ${{ github.actor }}
         run: |
-          [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
+          [[ -z "${SLACK_BOT_TOKEN:-}" ]] && exit 0
           WARNINGS=$(grep -E '⚠|✗' /tmp/endpoint-report.txt || true)
           MSG=":white_check_mark: *File hub endpoint check* — no endpoint changes (triggered by $ACTOR)"
           [[ -n "$WARNINGS" ]] && MSG="$MSG\n\`\`\`$WARNINGS\`\`\`"
           PAYLOAD=$(jq -n \
             --arg actor "$ACTOR" \
+            --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             --arg msg "$MSG" \
-            '{text: "\($msg) — <\($url)|View run>"}')
-          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            '{channel: $channel, text: "\($msg) — <\($url)|View run>"}')
+          RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H 'Content-Type: application/json' \
-            -d "$PAYLOAD"
+            -d "$PAYLOAD") || { echo "::warning::Slack transport error (no-changes notification)"; RESP=""; }
+          [[ -n "$RESP" ]] && { echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"; }
 
       - name: Notify Slack on failure
         if: failure()
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
           ACTOR: ${{ github.actor }}
         run: |
-          [[ -z "${SLACK_WEBHOOK_URL:-}" ]] && exit 0
+          [[ -z "${SLACK_BOT_TOKEN:-}" ]] && exit 0
           PAYLOAD=$(jq -n \
             --arg actor "$ACTOR" \
+            --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-            '{text: ":x: *File hub endpoint update FAILED* — triggered by \($actor) — <\($url)|View run>"}')
-          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            '{channel: $channel, text: ":x: *File hub endpoint update FAILED* — triggered by \($actor) — <\($url)|View run>"}')
+          RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H 'Content-Type: application/json' \
-            -d "$PAYLOAD"
+            -d "$PAYLOAD") || { echo "::warning::Slack transport error (failure notification)"; RESP=""; }
+          [[ -n "$RESP" ]] && { echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"; }
