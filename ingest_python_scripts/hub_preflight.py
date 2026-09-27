@@ -87,11 +87,12 @@ _env_file_exists = os.path.exists(os.path.normpath(
 INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
 # AWS profile: env var → .env → "dpla" when .env exists (preserves local behaviour)
 #              → None when neither is present (CI: use role/ambient creds, omit --profile).
-AWS_PROFILE = (
-    os.environ.get("AWS_PROFILE")
-    or _env.get("AWS_PROFILE")
-    or ("dpla" if _env_file_exists else None)
-)
+# If AWS_PROFILE is explicitly exported (even as empty string) it takes precedence —
+# this lets the batch script clear the profile for EC2 instance-role auth.
+if "AWS_PROFILE" in os.environ:
+    AWS_PROFILE = os.environ["AWS_PROFILE"] or None
+else:
+    AWS_PROFILE = _env.get("AWS_PROFILE") or ("dpla" if _env_file_exists else None)
 _conf_repo = _env.get("INGESTION3_CONF_REPO",
                        os.path.expanduser("~/Documents/Repos/ingestion3-conf"))
 CONF_PATH = os.environ.get("I3_CONF") or os.path.join(_conf_repo, "i3.conf")
@@ -901,9 +902,12 @@ def _check_s3_endpoint(s3_path):
     info("Type:          file-based (S3) — checking for current-month delivery")
     try:
         _profile_args = ["--profile", AWS_PROFILE] if AWS_PROFILE else []
+        _run_env = os.environ.copy()
+        if not AWS_PROFILE:
+            _run_env.pop("AWS_PROFILE", None)
         result = subprocess.run(
             ["aws", "s3", "ls", s3_path, *_profile_args],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, timeout=30, env=_run_env,
         )
     except subprocess.TimeoutExpired:
         bad("aws s3 ls timed out after 30s.")
