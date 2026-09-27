@@ -902,9 +902,12 @@ def _check_s3_endpoint(s3_path):
     info("Type:          file-based (S3) — checking for current-month delivery")
     try:
         _profile_args = ["--profile", AWS_PROFILE] if AWS_PROFILE else []
+        _run_env = os.environ.copy()
+        if not AWS_PROFILE:
+            _run_env.pop("AWS_PROFILE", None)
         result = subprocess.run(
             ["aws", "s3", "ls", s3_path, *_profile_args],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, timeout=30, env=_run_env,
         )
     except subprocess.TimeoutExpired:
         bad("aws s3 ls timed out after 30s.")
