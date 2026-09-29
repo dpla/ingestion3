@@ -661,7 +661,12 @@ def do_alias_swap(non_interactive=False):
     result = ssm_run(ES_INSTANCE_ID, swap_cmd, timeout_seconds=60)
     print(f"\n  Response: {result.strip()}")
 
-    if '"acknowledged":true' in result:
+    try:
+        swap_ok = json.loads(result).get("acknowledged", False)
+    except (json.JSONDecodeError, AttributeError):
+        swap_ok = False
+
+    if swap_ok:
         ok("Alias swap successful.")
         slack_notify(f":arrows_counterclockwise: *ES alias swap complete*\nOld: `{old_index}`\nNew: `{new_index}` (now live on dp.la)")
     else:
