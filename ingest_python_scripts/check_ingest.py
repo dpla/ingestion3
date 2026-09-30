@@ -81,12 +81,12 @@ STAGE_KEYWORDS = {
     "enrichment": ["EnrichEntry", "enrichment complete", ":white_check_mark: enrichment"],
     "mapping":    ["MappingEntry", "IngestRemap", "mapping complete", ":white_check_mark: mapping"],
     "harvest":    ["OaiMultiPageResponseBuilder", "OaiRequestInfo", "HarvestEntry",
-                   "OaiHarvester", "ApiHarvester", "FileHarvester",
+                   "Harvest initiated", "OaiHarvester", "ApiHarvester", "FileHarvester",
                    "harvest complete", ":white_check_mark: harvest"],
 }
 # Flat regex used by bash grep — covers all stages.
 ALL_STAGE_REGEX = (
-    "OaiMultiPageResponseBuilder|OaiRequestInfo|HarvestEntry|"
+    "OaiMultiPageResponseBuilder|OaiRequestInfo|HarvestEntry|Harvest initiated|"
     "OaiHarvester|ApiHarvester|FileHarvester|"
     "MappingEntry|IngestRemap|EnrichEntry|JsonlEntry|"
     "harvest complete|mapping complete|enrichment complete|jsonl complete"
@@ -213,7 +213,7 @@ echo "===STAGE_FIRST==="
 # Output one HH:MM:SS timestamp per stage (or blank line if stage not started).
 # Timestamps are extracted in bash with grep -oE so Python just gets clean strings.
 if [ -f "$LOG" ]; then
-  grep -m1 -E "OaiMultiPageResponseBuilder|OaiRequestInfo|HarvestEntry|OaiHarvester|ApiHarvester|FileHarvester|LocalOaiHarvester|harvest started" "$LOG" 2>/dev/null | grep -oE '[0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}' | head -1
+  grep -m1 -E "OaiMultiPageResponseBuilder|OaiRequestInfo|Harvest initiated|OaiHarvester|LocalOaiHarvester|ApiHarvester|FileHarvester|harvest started" "$LOG" 2>/dev/null | grep -oE '[0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}' | head -1
   echo "---"
   grep -m1 -E "MappingEntry|IngestRemap|mapping started" "$LOG" 2>/dev/null | grep -oE '[0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}' | head -1
   echo "---"
