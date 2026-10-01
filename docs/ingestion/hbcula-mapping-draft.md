@@ -159,8 +159,8 @@ rejected.
    | `UDCW` | UDC Digital Archives Collection | 256 | 6 |
    | `lane` | Lane College Early History Digital Collection | 54 | 2 |
 
-   The gap is growing: 1,245 records were rejected for this in April 2026 and 1,398 in
-   July. Can the export emit the holding institution in `dc:source` for every set? If
+   The gap has been roughly constant: 1,390 records rejected for this in April 2026,
+   1,398 in July, and 1,365 in the 2026-10-01 feed. Can the export emit the holding institution in `dc:source` for every set? If
    HBCULA instead wants DPLA to use the OAI set name as the institution, that is the
    hub's decision to make — but set names are collection titles for some sets (e.g.
    `lumo`, `GSBG`), so they aren't a clean institution name either.
@@ -208,8 +208,10 @@ are the current expectation (5,288 live, 3,886 mapping).
 | **Mapped → JSON-L** | **3,817** | **73.1%** |
 | Failed (rejected) | 1,402 | 26.9% |
 
-Compared with the 2026-04-10 baseline (5,201 harvested, 3,952 mapped), "missing
-`dataProvider`" rejections rose from 1,245 to 1,398.
+Compared with the 2026-04-10 baseline (5,201 harvested, 3,807 mapped, 1,390 missing
+`dataProvider`), the July feed added 18 records and 8 more `dataProvider` rejections.
+(A second 2026-04-10 run, 3,952 mapped / 1,245 missing `dataProvider`, used the
+short-lived `dcterms:isPartOf` fallback and isn't comparable.)
 
 ### Errors (reject the record)
 
