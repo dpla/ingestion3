@@ -47,8 +47,16 @@ def _load_dotenv():
     return cfg
 
 _env = _load_dotenv()
-INGEST_INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
-AWS_ACCOUNT_ID     = _env.get("AWS_ACCOUNT_ID", "")
+_env_file_exists = os.path.exists(os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+))
+INGEST_INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
+AWS_ACCOUNT_ID     = os.environ.get("AWS_ACCOUNT_ID")     or _env.get("AWS_ACCOUNT_ID", "")
+AWS_PROFILE: str | None = (
+    os.environ.get("AWS_PROFILE")
+    or _env.get("AWS_PROFILE")
+    or ("dpla" if _env_file_exists else None)
+)
 EMR_LOG_URI        = f"s3://aws-logs-{AWS_ACCOUNT_ID}-us-east-1/elasticmapreduce/"
 
 BATCH_JAR_BUCKET   = "s3://dpla-monthly-batch/"
@@ -92,7 +100,7 @@ def slack_notify(msg):
 
 # ---------- AWS helpers ----------
 def aws(args, check=True):
-    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    profile = [] if any(a.startswith("--profile") for a in args) else (["--profile", AWS_PROFILE] if AWS_PROFILE else [])
     result = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
     if check and result.returncode != 0:
         raise RuntimeError(f"aws {' '.join(args[:3])} failed:\n{result.stderr.strip()}")
@@ -189,11 +197,13 @@ def rebuild_jar():
     slack_notify(f":white_check_mark: *batch JAR rebuilt and uploaded* — `{BATCH_JAR_S3}`")
 
 
-def check_jar_freshness():
+def check_jar_freshness(non_interactive=False):
     step(1, "Check batch JAR freshness")
     out = aws(["s3", "ls", BATCH_JAR_S3, "--region", REGION], check=False)
     if not out.strip():
         bad(f"JAR not found at {BATCH_JAR_S3}")
+        if non_interactive:
+            sys.exit("[CI] Batch JAR not found — build and upload it before running post-indexer.")
         confirm("Build and upload it now?", default_yes=False)
         rebuild_jar()
         return
@@ -205,21 +215,25 @@ def check_jar_freshness():
         info(f"JAR last modified: {parts[0]} ({age_days} days ago)")
         if age_days > STALE_JAR_DAYS:
             warn(f"JAR is {age_days} days old — may be stale.")
-            print()
-            print("  Options:")
-            print("    r) Rebuild JAR on EC2 and upload to S3 (~5-10 min)")
-            print("    p) Proceed with existing JAR")
-            print("    a) Abort")
-            try:
-                choice = input("  Choice [r/p/a]: ").strip().lower()
-            except EOFError:
-                choice = "a"
-            if choice == "r":
+            if non_interactive:
+                warn(f"Non-interactive: JAR is {age_days} days old — auto-rebuilding.")
                 rebuild_jar()
-            elif choice == "p":
-                ok("Proceeding with existing JAR.")
             else:
-                sys.exit("Aborted.")
+                print()
+                print("  Options:")
+                print("    r) Rebuild JAR on EC2 and upload to S3 (~5-10 min)")
+                print("    p) Proceed with existing JAR")
+                print("    a) Abort")
+                try:
+                    choice = input("  Choice [r/p/a]: ").strip().lower()
+                except EOFError:
+                    choice = "a"
+                if choice == "r":
+                    rebuild_jar()
+                elif choice == "p":
+                    ok("Proceeding with existing JAR.")
+                else:
+                    sys.exit("Aborted.")
         else:
             ok(f"JAR is {age_days} days old — looks fresh.")
     except (ValueError, IndexError):
@@ -228,11 +242,12 @@ def check_jar_freshness():
 
 # ---------- Step 2: launch cluster ----------
 
-def launch_cluster():
+def launch_cluster(non_interactive=False):
     step(2, "Launch monthlybatch EMR cluster")
     info("Steps: parquet → jsonl → mq → sitemap")
     info("Cluster launched from EC2 via SSM (instance role has required IAM permissions).")
-    confirm("Launch the batch cluster now?")
+    if not non_interactive:
+        confirm("Launch the batch cluster now?")
 
     # Build steps and cluster config as JSON, then pass to aws emr create-cluster
     # via SSM so it runs under the EC2 instance role (avoids iam:PassRole issues for local user)
@@ -477,25 +492,34 @@ def run_hub_stats():
     except RuntimeError as e:
         warn(f"git fetch/reset failed (proceeding anyway):\n{e}")
 
-    info("Running generate_hub_stats.py on ingest EC2 (up to 3 min)...")
+    # GA4 paging plus per-id ES resolution runs several minutes; a
+    # first-run history backfill takes longer still. Full output goes to a
+    # log file on the EC2; only the tail is echoed because SSM keeps just
+    # the first 24k chars of output, which would hide errors printed last.
+    info("Running generate_hub_stats.py on ingest EC2 (up to 45 min)...")
     try:
         out = ssm_run(
             INGEST_INSTANCE_ID,
             (
                 "sudo -u ec2-user bash -lc '"
                 "cd /home/ec2-user/ingestion3 && "
-                "python3 scripts/generate_hub_stats.py"
-                "' 2>&1"
+                "python3 scripts/generate_hub_stats.py > /tmp/hub-stats.log 2>&1; "
+                "rc=$?; tail -c 20000 /tmp/hub-stats.log; exit $rc"
+                "'"
             ),
-            timeout_seconds=180,
-            poll_seconds=10,
+            timeout_seconds=2700,
+            poll_seconds=15,
         )
         print(out[-2000:] if len(out) > 2000 else out)
         ok("Hub stats complete.")
         slack_notify(":bar_chart: *hub stats generated* :white_check_mark:")
     except RuntimeError as e:
         bad(f"Hub stats failed:\n{e}")
-        slack_notify(":warning: *hub stats FAILED* — check ingest EC2")
+        slack_notify(
+            ":warning: *hub stats step failed* — hub_stats/bws may still have "
+            "uploaded; item_data_providers did not. See /tmp/hub-stats.log on "
+            "the ingest EC2."
+        )
 
 
 # ---------- Step 5: sitemaps ----------
@@ -560,10 +584,12 @@ def verify_outputs():
     if not check_s3_file_today("s3://sitemaps.dp.la/sitemap/_MANIFEST", "Sitemap _MANIFEST"):
         all_good = False
 
-    # Hub stats — check both files are from today
+    # Hub stats — check all three files are from today
     if not check_s3_file_today("s3://dashboard-analytics/hub-stats/hub_stats.json", "hub_stats.json"):
         all_good = False
     if not check_s3_file_today("s3://dashboard-analytics/hub-stats/hub_stats_bws.json", "hub_stats_bws.json"):
+        all_good = False
+    if not check_s3_file_today("s3://dashboard-analytics/hub-stats/item_data_providers.json", "item_data_providers.json"):
         all_good = False
 
     if all_good:
@@ -585,6 +611,12 @@ def main():
     parser.add_argument("--cluster-id",     help="Resume monitoring an existing monthlybatch cluster")
     parser.add_argument("--skip-preflight", action="store_true", help="Skip JAR freshness check")
     parser.add_argument("--verify-only",    action="store_true", help="Just run S3 output verification")
+    parser.add_argument(
+        "--non-interactive", action="store_true",
+        help="Non-interactive mode for CI/GitHub Actions: skip all prompts, "
+             "fail fast on missing JAR, auto-proceed on stale JAR, "
+             "fail fast if cluster does not complete successfully.",
+    )
     args = parser.parse_args()
 
     print("\nDPLA POST-INDEXER")
@@ -600,13 +632,15 @@ def main():
         success = monitor_cluster(args.cluster_id)
     else:
         if not args.skip_preflight:
-            check_jar_freshness()
-        cluster_id = launch_cluster()
+            check_jar_freshness(non_interactive=args.non_interactive)
+        cluster_id = launch_cluster(non_interactive=args.non_interactive)
         success    = monitor_cluster(cluster_id)
 
     if not success:
         print()
         bad("Batch cluster did not complete successfully.")
+        if args.non_interactive:
+            sys.exit("[CI] Cluster failed — aborting post-indexer steps.")
         confirm("Run hub stats and sitemaps anyway?", default_yes=False)
 
     run_hub_stats()

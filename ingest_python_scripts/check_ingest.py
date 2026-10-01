@@ -22,9 +22,7 @@ Handles multiple harvest types:
 
 Usage:
     python3 check_ingest.py                  # prompts for hub
-    python3 check_ingest.py p2p              # one-shot
-    python3 check_ingest.py p2p --watch      # refresh every 30s
-    python3 check_ingest.py p2p --watch 60   # custom interval
+    python3 check_ingest.py p2p              # one-shot status check
 """
 
 import argparse
@@ -62,7 +60,15 @@ def _load_dotenv():
     return cfg
 
 _env = _load_dotenv()
-INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
+_env_file_exists = os.path.exists(os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+))
+INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
+AWS_PROFILE: str | None = (
+    os.environ.get("AWS_PROFILE")
+    or _env.get("AWS_PROFILE")
+    or ("dpla" if _env_file_exists else None)
+)
 _conf_repo = _env.get("INGESTION3_CONF_REPO",
                        os.path.expanduser("~/Documents/Repos/ingestion3-conf"))
 CONF_PATH = os.environ.get("I3_CONF") or os.path.join(_conf_repo, "i3.conf")
@@ -88,7 +94,7 @@ ALL_STAGE_REGEX = (
 
 # ---------- AWS / SSM helpers ----------
 def aws(args):
-    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    profile = [] if any(a.startswith("--profile") for a in args) else (["--profile", AWS_PROFILE] if AWS_PROFILE else [])
     result = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"aws {' '.join(args)} failed:\n{result.stderr.strip()}")
@@ -618,10 +624,6 @@ def derive_summary(is_running, sections, harvest_type):
 def main():
     parser = argparse.ArgumentParser(description="Check on a DPLA hub ingest.")
     parser.add_argument("hub", nargs="?", help="Hub name (e.g. p2p). Prompts if omitted.")
-    parser.add_argument(
-        "--watch", nargs="?", const=30, type=int, default=None,
-        help="Re-run every N seconds (default 30 if --watch is given without a value).",
-    )
     args = parser.parse_args()
 
     hub = args.hub
@@ -636,29 +638,12 @@ def main():
     endpoint, harvest_type = lookup_hub_in_conf(hub)
     script = build_status_script(hub)
 
-    def one_pass():
-        try:
-            out = ssm_run(script)
-        except RuntimeError as e:
-            print(f"\n[ERROR] {e}\n")
-            return
-        sections = parse_sections(out)
-        print(render(hub, harvest_type, endpoint, sections))
-
-    if args.watch is None:
-        one_pass()
-        return
-
-    interval = args.watch
     try:
-        while True:
-            os.system("clear" if os.name == "posix" else "cls")
-            print(time.strftime("Last refresh: %Y-%m-%d %H:%M:%S"))
-            one_pass()
-            print(c(DIM, f"(refreshing every {interval}s — Ctrl+C to exit)"))
-            time.sleep(interval)
-    except KeyboardInterrupt:
-        print("\nStopped.")
+        out = ssm_run(script)
+    except RuntimeError as e:
+        sys.exit(f"\n[ERROR] {e}\n")
+    sections = parse_sections(out)
+    print(render(hub, harvest_type, endpoint, sections))
 
 
 if __name__ == "__main__":

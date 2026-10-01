@@ -3,14 +3,16 @@ package dpla.ingestion3.profiles
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.api._
 import dpla.ingestion3.harvesters.file._
-import dpla.ingestion3.harvesters.oai.LocalOaiHarvester
+import dpla.ingestion3.harvesters.oai.{IthakaOaiHarvester, LocalOaiHarvester}
 import dpla.ingestion3.mappers.providers._
 import dpla.ingestion3.mappers.providers.experimental.DartmouthMapping
 
 class IthakaProfile extends XmlProfile {
   type Mapping = IthakaMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
+  // JSTOR/Ithaka uses a two-step OAI harvest (OAI + Medias resolution); the harvest
+  // type "ithaka.oai" selects IthakaOaiHarvester in HarvestExecutor.buildHarvester.
+  override def getHarvester: Class[_ <: Harvester] = classOf[IthakaOaiHarvester]
   override def getMapping = new IthakaMapping
 }
 

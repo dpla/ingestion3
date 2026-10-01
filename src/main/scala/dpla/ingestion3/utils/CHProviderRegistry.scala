@@ -22,6 +22,12 @@ object CHProviderRegistry {
   }
 
   private val registry = Map(
+    // JSTOR (rebranded from Artstor). All three short names resolve to the same
+    // profile: "jstor" is the current slug; "artstor"/"ithaka" are retained aliases
+    // so historical invocations and the retired-in-place artstor config still map.
+    // DPLA item ids are unaffected — IthakaMapping salts ids with a fixed "artstor"
+    // getProviderName regardless of which slug runs the ingest.
+    "jstor" -> new IthakaProfile,
     "artstor" -> new IthakaProfile,
     "ithaka" -> new IthakaProfile,
     "bhl" -> new BhlProfile,

@@ -43,8 +43,8 @@ case class OreAggregation(
     tags: ZeroToMany[URI] = Seq[URI](),
     iiifManifest: ZeroToOne[URI] = None, // URL for IIIF presentation manifest
     mediaMaster: ZeroToMany[EdmWebResource] =
-      Seq() // master media representation of artifact
-
+      Seq(), // master media representation of artifact
+    harvestDate: ZeroToOne[String] = None // ISO-8601 timestamp from harvest step
 )
 
 /** dpla:SourceResource is a subclass of "edm:ProvidedCHO," which comprises the

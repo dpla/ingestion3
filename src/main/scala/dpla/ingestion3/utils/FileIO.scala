@@ -36,6 +36,8 @@ class FlatFileIO {
     */
   def readFileAsString(name: String): String = {
     val stream = getClass.getResourceAsStream(name)
+    if (stream == null)
+      throw new RuntimeException(s"Resource not found on classpath: $name")
     val result = Source.fromInputStream(stream).mkString
     IOUtils.closeQuietly(stream)
     result

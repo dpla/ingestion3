@@ -3,7 +3,7 @@
 Community Webs (Internet Archive) ingest orchestrator.
 
 Internet Archive delivers a SQLite .db file. This script:
-  1. Uploads your local .db file to s3://dpla-scratch/community-webs/
+  1. Uploads your local .db file to s3://dpla-hub-community-webs/
   2. Downloads it to EC2 at a temp path
   3. Runs community-webs-ingest.sh --db=<path> on EC2
      (handles export → harvest, and optionally full pipeline)
@@ -16,13 +16,13 @@ Usage:
     python3 launch_cw.py --db ~/Downloads/community-webs.db --full --update-conf
 
 Skip flags (for resuming a failed run):
-    --skip-upload     .db already in s3://dpla-scratch/community-webs/
+    --skip-upload     .db already in s3://dpla-hub-community-webs/
     --skip-export     ZIP already on EC2 (community-webs-ingest.sh --skip-export)
 
 Prerequisites:
     - AWS CLI installed and authenticated locally
     - IAM: ssm:SendCommand, ssm:GetCommandInvocation,
-           s3:PutObject/GetObject on dpla-scratch
+           s3:PutObject/GetObject/ListBucket on dpla-hub-community-webs
 """
 
 import argparse
@@ -53,18 +53,26 @@ def _load_dotenv():
     return cfg
 
 _env = _load_dotenv()
-INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
+_env_file_exists = os.path.exists(os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env")
+))
+INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
+AWS_PROFILE: str | None = (
+    os.environ.get("AWS_PROFILE")
+    or _env.get("AWS_PROFILE")
+    or ("dpla" if _env_file_exists else None)
+)
 REGION        = "us-east-1"
 REPO_PATH     = "/home/ec2-user/ingestion3"
-CW_SCRIPT     = f"{REPO_PATH}/scripts/community-webs-ingest.sh"
-S3_STAGING    = "s3://dpla-scratch/community-webs"
+CW_SCRIPT     = f"{REPO_PATH}/scripts/harvest/community-webs-ingest.sh"
+S3_STAGING    = "s3://dpla-hub-community-webs"
 DATA_ROOT     = "/home/ec2-user/data"
 INGEST_LOG    = f"{DATA_ROOT}/community-webs-ingest.log"
 
 
 # ---------- AWS / SSM helpers ----------
 def aws(args):
-    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    profile = [] if any(a.startswith("--profile") for a in args) else (["--profile", AWS_PROFILE] if AWS_PROFILE else [])
     result = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"aws {' '.join(args[:3])} failed:\n{result.stderr.strip()}")
@@ -133,6 +141,71 @@ def confirm(msg, default_yes=True):
         sys.exit("Aborted.")
 
 
+# ---------- Auto-detect staged db ----------
+
+def detect_staged_db():
+    """Find the newest *-community-webs.db staged in S3_STAGING.
+
+    Errors out if:
+      - no .db files found in the staging prefix
+      - the ingest log shows this specific db was already processed successfully
+    Returns the timestamp string (YYYYMMDD_HHMMSS) of the newest unprocessed db.
+    """
+    import re as _re
+    ls_out = aws(["s3", "ls", f"{S3_STAGING}/"])
+    db_entries = [
+        line for line in ls_out.splitlines()
+        if line.strip().endswith("-community-webs.db")
+    ]
+    if not db_entries:
+        sys.exit(
+            f"\n  [BAD] No *-community-webs.db files found in {S3_STAGING}/.\n"
+            "  Upload a .db first or pass --timestamp explicitly."
+        )
+
+    # Lines are: "2026-08-19 02:30:00  12345678 20260819_023000-community-webs.db"
+    # Parse and validate the filename timestamp for each entry, then sort by it
+    # so re-uploaded older files don't shadow a newer db.
+    valid = []
+    for line in db_entries:
+        fname = line.split()[-1]
+        m = _re.match(r"^(\d{8}_\d{6})-community-webs\.db$", fname)
+        if m:
+            try:
+                datetime.strptime(m.group(1), "%Y%m%d_%H%M%S")
+                valid.append((m.group(1), fname))
+            except ValueError:
+                pass  # skip filenames with structurally valid but impossible dates
+    if not valid:
+        sys.exit(
+            f"\n  [BAD] No validly-named *-community-webs.db files found in {S3_STAGING}/.\n"
+            "  Expected format: YYYYMMDD_HHMMSS-community-webs.db"
+        )
+    valid.sort(key=lambda x: x[0])
+    timestamp, filename = valid[-1]
+
+    # Check if this specific db was already successfully ingested by looking for
+    # its EC2 path and a success marker in INGEST_LOG. The log is overwritten on
+    # each run, so a match means this db was the most recent run and it completed.
+    ec2_db_path = f"/tmp/community-webs-{timestamp}.db"
+    log_check = ssm_run(
+        f"grep -q {ec2_db_path} {INGEST_LOG} 2>/dev/null "
+        f"&& grep -q 'Community Webs.*complete' {INGEST_LOG} 2>/dev/null "
+        f"&& echo DONE || echo NOT_DONE",
+        timeout_seconds=30,
+    ).strip()
+
+    if log_check == "DONE":
+        sys.exit(
+            f"\n  [BAD] DB {timestamp} appears already ingested.\n"
+            f"  The ingest log shows a successful run for this db.\n"
+            f"  Pass --timestamp {timestamp} explicitly to re-run anyway."
+        )
+
+    print(f"  Auto-detected staged db: {timestamp}")
+    return timestamp
+
+
 # ---------- stages ----------
 
 def stage_upload(db_path, timestamp):
@@ -144,8 +217,8 @@ def stage_upload(db_path, timestamp):
     print(f"  S3:     {s3_dest}")
     confirm(f"Upload {size_mb:.1f} MB to S3?")
     result = subprocess.run(
-        ["aws", "s3", "cp", db_path, s3_dest, "--no-progress",
-         "--profile", "dpla"],
+        ["aws", "s3", "cp", db_path, s3_dest, "--no-progress"]
+        + (["--profile", AWS_PROFILE] if AWS_PROFILE else []),
         capture_output=True, text=True,
     )
     if result.returncode != 0:
@@ -202,7 +275,7 @@ def main():
     parser.add_argument("--update-conf", action="store_true",
                         help="Pass --update-conf to community-webs-ingest.sh")
     parser.add_argument("--skip-upload", action="store_true",
-                        help="Skip S3 upload (.db already at s3://dpla-scratch/community-webs/)")
+                        help="Skip S3 upload (.db already at s3://dpla-hub-community-webs/)")
     parser.add_argument("--skip-export", action="store_true",
                         help="Pass --skip-export to community-webs-ingest.sh (ZIP already on EC2)")
     parser.add_argument("--timestamp",
@@ -226,7 +299,10 @@ def main():
         print(out)
         return
 
-    timestamp = args.timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
+    if args.skip_upload and not args.timestamp:
+        timestamp = detect_staged_db()
+    else:
+        timestamp = args.timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
     s3_db     = f"{S3_STAGING}/{timestamp}-community-webs.db"
 
     if not args.skip_upload and not args.skip_export:

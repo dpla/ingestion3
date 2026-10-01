@@ -7,6 +7,13 @@
 
 set -eo pipefail  # Exit on any error; propagate failures through pipes
 
+# Ensure we run as a session leader so that SSM Run Command's process-group
+# cleanup (which fires after ~60 min) cannot kill a long-running harvest.
+# If we are not already the session leader, re-exec under setsid.
+if [ "$(ps -o sid= -p $$ | awk '{print $1}')" != "$$" ]; then
+    exec setsid bash "$0" "$@"
+fi
+
 # Source common configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
@@ -170,12 +177,15 @@ START_TIME=$(date +%s)
 
 cd "$I3_HOME"
 
+_triggered_by=""
+[[ -n "${GHA_ACTOR:-}" ]] && _triggered_by=" via GHA (triggered by $GHA_ACTOR)"
+
 if [[ -n "$RESUME_FROM" ]]; then
-    slack_notify ":arrow_forward: *$PROVIDER ingest resuming from $RESUME_FROM*"
+    slack_notify ":arrow_forward: *$PROVIDER ingest resuming from $RESUME_FROM*${_triggered_by}"
 elif [[ "$MAPPING_ONLY" = true ]]; then
-    slack_notify ":arrow_forward: *$PROVIDER mapping-only run started*"
+    slack_notify ":arrow_forward: *$PROVIDER mapping-only run started*${_triggered_by}"
 else
-    slack_notify ":arrow_forward: *$PROVIDER ingest started* | harvest → map → enrich → jsonl → s3"
+    slack_notify ":arrow_forward: *$PROVIDER ingest started*${_triggered_by} | harvest → map → enrich → jsonl → s3"
 fi
 
 # Step 1: Harvest

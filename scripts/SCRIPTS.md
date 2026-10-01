@@ -8,7 +8,7 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 
 | Folder | Purpose | Scripts |
 |--------|---------|---------|
-| **scripts/** (root) | Core pipeline, batch, S3, monitoring | `ingest.sh`, `harvest.sh`, `remap.sh`, `mapping.sh`, `enrich.sh`, `jsonl.sh`, `auto-ingest.sh`, `batch-ingest.sh`, `s3-sync.sh`, `common.sh`, `ingest-watchdog.sh` |
+| **scripts/** (root) | Core pipeline, batch, S3, monitoring | `ingest.sh`, `harvest.sh`, `remap.sh`, `mapping.sh`, `enrich.sh`, `jsonl.sh`, `auto-ingest.sh`, `batch-ingest.sh`, `s3-sync.sh`, `common.sh`, `ingest-watchdog.sh`, `generate_hub_stats.py`, `export_item_attribution.py` |
 | **scripts/communication/** | Schedule, email, Slack | `schedule.sh`, `send-ingest-email.sh`, `notify-harvest-failure.sh`, `send-harvest-failure-email.py` |
 | **scripts/delete/** | Record removal | `delete-by-id.sh`, `delete-from-jsonl.sh`, `delete-from-jsonl.py` |
 | **scripts/harvest/** | Harvest helpers, NARA, Community Webs, SI, VA | `nara-ingest.sh`, `community-webs-export.sh`, `community-webs-ingest.sh`, `community-webs-validate-jsonl.py`, `fix-si.sh`, `harvest-va.sh` |
@@ -18,7 +18,7 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| `ingest.sh` | Full pipeline (harvest → map → enrich → jsonl → S3 sync) | `./scripts/ingest.sh <hub>` |
+| `ingest.sh` | Full pipeline (harvest → map → enrich → jsonl → S3 sync); self-re-execs under `setsid` to escape SSM's 60-min process-group kill | `./scripts/ingest.sh <hub>` |
 | `ingest-watchdog.sh` | Cron watchdog: detects ingests killed by SIGKILL and alerts Slack | `*/5 * * * * /home/ec2-user/ingestion3/scripts/ingest-watchdog.sh` (via crontab) |
 | `harvest.sh` | Harvest records from OAI/API/file source | `./scripts/harvest.sh <hub>` |
 | `remap.sh` | Re-run mapping → enrichment → jsonl | `./scripts/remap.sh <hub>` |
@@ -38,6 +38,8 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 | `delete/delete-by-id.sh` | Delete records from Elasticsearch | `./scripts/delete/delete-by-id.sh <id>...` |
 | `delete/delete-from-jsonl.sh` | Delete records from S3 JSONL files | `./scripts/delete/delete-from-jsonl.sh --hub <hub> <id>...` |
 | `communication/send-ingest-email.sh` | Send ingest summary email | `./scripts/communication/send-ingest-email.sh [--yes] <hub>` |
+| `generate_hub_stats.py` | Rebuild dashboard hub stats + GA4 item mapping in S3 | `./venv/bin/python scripts/generate_hub_stats.py` |
+| `curated_membership.py` | Refresh the exhibition/source-set membership snapshot used by the JSONL export | `python3 scripts/curated_membership.py` |
 | *scheduling_emails* (Python) | Monthly pre-scheduling email to hub contacts | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails [--month=N] --dry-run \| --draft \| --send` |
 | `status/ingest-status.sh` | Check ingest status (orchestrator or manual runs) | `./scripts/status/ingest-status.sh` |
 | `communication/notify-harvest-failure.sh` | Send Slack and email (tech@dp.la) on harvest failure | `./scripts/communication/notify-harvest-failure.sh <hub> "<error>"` |
@@ -149,6 +151,26 @@ Runs the complete ingestion pipeline for a hub:
 ./scripts/ingest.sh maryland --skip-harvest   # Use existing harvest data
 ./scripts/ingest.sh maryland --harvest-only   # Only harvest
 ```
+
+#### SSM Run Command and the 60-minute kill
+
+When `ingest.sh` is launched via AWS SSM Run Command (`AWS-RunShellScript`), the SSM document worker tracks the process group and sends **SIGKILL to the entire group after 60 minutes**, even if the foreground shell already reported `Success`. This terminates a long-running harvest (e.g. Minnesota's 1M-record API harvest) at exactly the 60-minute mark.
+
+`ingest.sh` escapes this by calling `setsid` early — before sourcing `common.sh` — to create a new OS session with a fresh process group ID that the SSM worker is not tracking:
+
+```bash
+if [ "$(ps -o sid= -p $$ | awk '{print $1}')" != "$$" ]; then
+    exec setsid bash "$0" "$@"
+fi
+```
+
+**How it works:**
+- `ps -o sid= -p $$` returns the session ID (SID) of the current process, space-padded to a fixed-width column; `awk '{print $1}'` extracts the numeric field before the comparison.
+- If `SID != PID`, this process is not the session leader — re-exec under `setsid`, which creates a new session where `PID == SID`.
+- The `exec` replaces the shell in place, so arguments, file descriptors, and exit status are all preserved.
+- The check is a no-op when `ingest.sh` is run directly from a terminal (already session leader), so normal developer usage is unaffected.
+
+**Normalization is required:** `ps -o sid=` space-pads the output to a fixed-width column, e.g. `  1234`. Comparing that directly with the bare integer `$$` (`1234`) always evaluates as unequal, causing an infinite re-exec loop. `| awk '{print $1}'` extracts the numeric field and removes surrounding whitespace.
 
 #### IP-restricted hubs (TAILSCALE_EXIT_NODE)
 
@@ -296,6 +318,38 @@ DRY_RUN=true ./scripts/delete/delete-from-jsonl.sh --hub cdl -f ids.txt
 ```
 
 > **Note**: For better performance, use `delete-from-jsonl.py` instead.
+
+### generate_hub_stats.py - Dashboard Hub Stats and Item Mapping
+
+Rebuilds the three dashboard-analytics inputs in `s3://dashboard-analytics/hub-stats/` after each monthly index rebuild:
+
+- `hub_stats.json` / `hub_stats_bws.json` — item and contributor counts per hub, from the live ES index
+- `item_data_providers.json` — cumulative GA4 item id → contributor name mapping
+
+```bash
+./venv/bin/python scripts/generate_hub_stats.py
+```
+
+Run on the ingest EC2 on day 5 of the month or later (GA4 settles the prior month for ~72 hours; the script warns on earlier runs). `post_indexer.py` step 4 runs it via SSM with system `python3`, so its dependencies (`boto3`, `google-analytics-data`) must be installed for that interpreter on the EC2. The two hub stats files upload first; if `item_data_providers.json` cannot be updated the script exits non-zero so post_indexer alerts.
+
+**Environment**: `ES_HOST`, `ES_PORT`, `AWS_PROFILE` (omit on EC2), `GA4_PROPERTY_ID` (required for the item mapping), `GA4_SECRET_NAME` (default `dpla/ga4-service-account`), `GA4_HISTORY_START` (default `2025-07-18`, the `event_label` custom dimension's registration date — GA4 returns nothing before it).
+
+### curated_membership.py - Exhibition and Primary Source Set Membership
+
+Regenerates `src/main/resources/curated/curated-membership.json`, the snapshot the JSONL export uses to stamp `exhibitions` and `primarySourceSets` fields onto index records. It crawls the two curated-content sources:
+
+- Exhibitions: `dpla/dpla-frontend` `exhibitions-data/` — item IDs come from `element_texts` entries named "Has Version"
+- Primary source sets: `dpla/pss-json` `data/` — item IDs come from each source's citation (`dp.la/item/{id}`), falling back to the 32-hex segment of the media `contentUrl`
+
+```bash
+python3 scripts/curated_membership.py [output-path]
+```
+
+Uses only the Python standard library; needs network access to `raw.githubusercontent.com` and `api.github.com`. Re-run when exhibitions or source sets change, then commit the updated snapshot and rebuild the JAR (`sbt assembly`) so the next index build picks it up. Items whose IDs are absent from the index are harmless: the join happens per record at export time, so unmatched IDs are simply never emitted.
+
+**Propagating a refresh:** stamping happens at JSONL export, so after re-running the script and rebuilding the JAR, a JSONL re-export from each hub's latest enrichment output is enough: `./scripts/jsonl.sh <hub>`, then the regular S3 sync and index rebuild. No harvest or full re-ingest is needed. Hubs that are not re-exported keep the old stamp until their next export. The JSONL step logs the snapshot's `generated` timestamp and writes it to the `_MANIFEST`, so a stale JAR is visible after the fact.
+
+**Failure behavior:** fetches retry transient errors (5xx, 429, dropped connections) with backoff; if any slug still fails, the script reports every failure, writes nothing, and exits non-zero, so a partial snapshot cannot be committed by accident. Five consecutive failures abort the run early. It prints a warning for each recovered or unusable item ID (curator typos upstream), for each source that falls back to the media-filename hash, and for slugs outside the usual `[a-z0-9-]` shape — review the warnings after each run. Set `GITHUB_TOKEN` if the unauthenticated GitHub API rate limit is a problem.
 
 ## Testing
 

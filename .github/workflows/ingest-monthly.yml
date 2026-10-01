@@ -1,0 +1,157 @@
+name: Monthly Hub Batch
+
+# Fires all active standard hubs for the current month as a sequential
+# batch on the ingest EC2. Special hubs (NARA, Smithsonian, Community Webs)
+# require preprocessing — use the "Launch Hub Ingest" workflow for those.
+#
+# The batch runs on EC2 as a nohup background job; this GHA step finishes
+# once the job is launched. Progress arrives via Slack as each hub completes.
+#
+# OIDC credentials are restricted to main by the role trust policy.
+
+on:
+  workflow_dispatch:
+    inputs:
+      month:
+        description: 'Month to run (1-12) — defaults to current month'
+        required: false
+        type: string
+        default: ''
+      dry_run:
+        description: 'Print hub list without launching'
+        required: false
+        type: boolean
+        default: false
+      exclude:
+        description: 'Comma-separated hub names to exclude from this run (e.g. indiana,jstor)'
+        required: false
+        type: string
+        default: ''
+
+  # Uncomment to run automatically on the 1st of each month at 1pm UTC (9am ET).
+  # Ensure ingestion3-conf is up to date and any special-hub preprocessing is
+  # complete before enabling this.
+  #
+  # schedule:
+  #   - cron: '0 13 1 * *'
+
+permissions:
+  id-token: write   # required for OIDC
+  contents: read
+
+jobs:
+  batch:
+    name: 'Monthly batch'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30   # just the launch; the EC2 does the real work in background
+
+    steps:
+      - name: Enforce main branch
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::This workflow must run from main — the OIDC role trust policy restricts credentials to main only."
+            exit 1
+          fi
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502  # v4.0.2
+        with:
+          role-to-assume: arn:aws:iam::283408157088:role/github-actions-ingestion3
+          aws-region: us-east-1
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: '3.11'
+
+      - name: Notify Slack — workflow triggered
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          [[ -z "${SLACK_BOT_TOKEN:-}" ]] && exit 0
+          PAYLOAD=$(jq -n --arg actor "$ACTOR" \
+            --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
+            --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            '{channel: $channel, text: ":rocket: *Monthly batch queued* — triggered by \($actor) via GHA — <\($url)|View run>"}')
+          RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -d "$PAYLOAD") || { echo "::warning::Slack transport error (queued notification)"; RESP=""; }
+          [[ -n "$RESP" ]] && { echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"; }
+
+      # Starts the EC2 if stopped, waits for SSM Online, resets both repos,
+      # and rebuilds the fat JAR if stale.
+      - name: Box preflight — start EC2, sync repos, rebuild JAR if stale
+        env:
+          INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
+          CI: '1'
+        run: |
+          python3 ingest_python_scripts/hub_preflight.py \
+            --non-interactive \
+            --skip-endpoint
+
+      - name: Notify Slack — preflight passed
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          [[ -z "${SLACK_BOT_TOKEN:-}" ]] && exit 0
+          PAYLOAD=$(jq -n --arg actor "$ACTOR" \
+            --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
+            '{channel: $channel, text: ":white_check_mark: *Monthly batch preflight passed* — EC2 up, repos synced, launching batch"}')
+          RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -d "$PAYLOAD") || { echo "::warning::Slack transport error (preflight-passed notification)"; RESP=""; }
+          [[ -n "$RESP" ]] && { echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"; }
+
+      # Reads i3.conf from EC2, skips hubs already ingested this month,
+      # then fires a sequential bash batch script on EC2 as a nohup background job and returns.
+      - name: Launch monthly batch
+        env:
+          INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
+          CI: '1'
+          MONTH_INPUT: ${{ inputs.month }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          EXCLUDE_INPUT: ${{ inputs.exclude }}
+          GHA_ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          ARGS=()
+          [[ -n "$MONTH_INPUT" ]]         && ARGS+=(--month "$MONTH_INPUT")
+          [[ "$DRY_RUN" == "true" ]]      && ARGS+=(--dry-run)
+          [[ -n "$EXCLUDE_INPUT" ]]       && ARGS+=(--exclude "$EXCLUDE_INPUT")
+          python3 ingest_python_scripts/run_monthly_batch.py "${ARGS[@]}"
+
+      - name: Kill batch on failure
+        if: failure()
+        env:
+          INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
+        run: |
+          aws ssm send-command \
+            --instance-ids "$INGEST_INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --parameters '{"commands":["rm -f /tmp/monthly-batch.lock || true"]}' \
+            --region us-east-1 || true
+
+      - name: Notify Slack on failure
+        if: failure()
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          [[ -z "${SLACK_BOT_TOKEN:-}" ]] && exit 0
+          PAYLOAD=$(jq -n --arg actor "$ACTOR" \
+            --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
+            --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            '{channel: $channel, text: ":x: *Monthly batch launch FAILED* — triggered by \($actor) — <\($url)|View run>"}')
+          RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -d "$PAYLOAD") || { echo "::warning::Slack transport error (failure notification)"; RESP=""; }
+          [[ -n "$RESP" ]] && { echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"; }

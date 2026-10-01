@@ -80,7 +80,19 @@ def _load_dotenv():
     return cfg
 
 _env = _load_dotenv()
-INSTANCE_ID = _env.get("INGEST_INSTANCE_ID", "")
+_env_file_exists = os.path.exists(os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+))
+# Instance ID: real env var first (CI), .env fallback (local operator).
+INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
+# AWS profile: env var → .env → "dpla" when .env exists (preserves local behaviour)
+#              → None when neither is present (CI: use role/ambient creds, omit --profile).
+# If AWS_PROFILE is explicitly exported (even as empty string) it takes precedence —
+# this lets the batch script clear the profile for EC2 instance-role auth.
+if "AWS_PROFILE" in os.environ:
+    AWS_PROFILE = os.environ["AWS_PROFILE"] or None
+else:
+    AWS_PROFILE = _env.get("AWS_PROFILE") or ("dpla" if _env_file_exists else None)
 _conf_repo = _env.get("INGESTION3_CONF_REPO",
                        os.path.expanduser("~/Documents/Repos/ingestion3-conf"))
 CONF_PATH = os.environ.get("I3_CONF") or os.path.join(_conf_repo, "i3.conf")
@@ -107,7 +119,10 @@ def info(msg):
 # ---------- AWS CLI wrappers ----------
 def aws(args, capture=True):
     """Run an aws CLI command. Returns stdout text (stripped) on success."""
-    profile = [] if any(a.startswith("--profile") for a in args) else ["--profile", "dpla"]
+    if any(a.startswith("--profile") for a in args):
+        profile = []
+    else:
+        profile = ["--profile", AWS_PROFILE] if AWS_PROFILE else []
     result = subprocess.run(
         ["aws"] + profile + args,
         capture_output=capture,
@@ -246,6 +261,17 @@ def check_repo_sync(repo, header_num="2", auto_reset=False, interactive=True):
             break
     if current_branch and current_branch != repo["branch"]:
         bad(f"{repo['label']}: on branch '{current_branch}', expected '{repo['branch']}'.")
+        if auto_reset:
+            branch = repo["branch"]
+            info(f"Auto-switching to {branch}…")
+            switch_cmd = (
+                f"cd {repo['path']} && "
+                f"git checkout -f {branch} && "
+                f"git reset --hard origin/{branch}"
+            )
+            print(ssm_run(switch_cmd).rstrip())
+            ok(f"{repo['label']}: switched to {branch} and reset.")
+            return True
         info(f"Switch back before ingesting:  git checkout {repo['branch']}  (on the box)")
         return False
 
@@ -265,16 +291,16 @@ def check_repo_sync(repo, header_num="2", auto_reset=False, interactive=True):
     if behind > 0:
         info(f"{repo['label']}: behind origin/{branch} by {behind} commits.")
 
-        do_pull = auto_reset
+        do_pull = auto_reset  # True for GHA/--auto-pull; False for --no-pull
         if not do_pull and interactive:
             try:
                 answer = input(
                     f"  Pull {behind} commit(s) from origin/{branch} into "
-                    f"{repo['path']} on the box? [y/N] "
+                    f"{repo['path']} on the box? [Y/n] "
                 ).strip().lower()
-                do_pull = answer in ("y", "yes")
+                do_pull = answer not in ("n", "no")
             except EOFError:
-                do_pull = False
+                do_pull = True  # stdin closed — default to pulling
 
         if do_pull:
             info(f"Pulling: git reset --hard origin/{branch} on the box...")
@@ -295,7 +321,7 @@ def check_repo_sync(repo, header_num="2", auto_reset=False, interactive=True):
     info("Probably safe if your hub isn't affected by those commits. Flag it to your team.")
     return True  # non-blocking
 
-def check_jar_freshness():
+def check_jar_freshness(auto_rebuild=False):
     header("3. Fat JAR freshness")
     cmd = f"""
 cd {REPO_PATH}
@@ -327,13 +353,16 @@ fi
         return True
 
     bad("JAR is stale or missing.")
-    try:
-        answer = input("  Rebuild fat JAR now? (sbt clean assembly — takes ~10 min) [y/N] ").strip().lower()
-    except EOFError:
-        answer = ""
-    if answer not in ("y", "yes"):
-        info("Skipping rebuild. Run `sbt clean assembly` on the box before ingesting.")
-        return False
+    if not auto_rebuild:
+        try:
+            answer = input("  Rebuild fat JAR now? (sbt clean assembly — takes ~10 min) [y/N] ").strip().lower()
+        except EOFError:
+            answer = ""
+        if answer not in ("y", "yes"):
+            info("Skipping rebuild. Run `sbt clean assembly` on the box before ingesting.")
+            return False
+    else:
+        info("Non-interactive: auto-rebuilding fat JAR (sbt clean assembly)...")
 
     return _run_sbt_assembly()
 
@@ -638,11 +667,32 @@ def lookup_hub_in_conf(hub, conf_path=CONF_PATH):
         illinois.harvest.type = "oai"
         illinois.harvest.endpoint = "https://..."
     """
-    if not os.path.exists(conf_path):
+    if os.path.exists(conf_path):
+        with open(conf_path, "r", encoding="utf-8") as f:
+            text = f.read()
+    elif INSTANCE_ID:
+        # Local conf not present (e.g. GHA runner) — read from EC2 via SSM.
+        # Use the EC2-side path, not conf_path (which is the local/runner path).
+        # grep only the hub's lines rather than cat-ing the whole file: i3.conf
+        # exceeds SSM's ~48 KB StandardOutputContent limit, so a full cat gets
+        # truncated and hubs near the end of the file are silently dropped.
+        ec2_conf = f"{CONF_REPO['path']}/i3.conf"
+        # Validate hub name before interpolating into the shell command.
+        if not re.fullmatch(r"[a-z0-9_-]+", hub):
+            return None, None
+        safe_pattern = shlex.quote(f"^[[:space:]]*{hub}[.]")
+        safe_conf    = shlex.quote(ec2_conf)
+        try:
+            text = ssm_run(
+                f"grep -E {safe_pattern} {safe_conf} 2>/dev/null || echo ''",
+                timeout_seconds=30,
+            )
+        except Exception:
+            return None, None
+        if not text.strip():
+            return None, None
+    else:
         return None, None
-
-    with open(conf_path, "r", encoding="utf-8") as f:
-        text = f.read()
 
     # Strip comments (# ... or // ...) to simplify matching.
     text = re.sub(r"(?m)^\s*(#|//).*$", "", text)
@@ -851,10 +901,13 @@ def _check_s3_endpoint(s3_path):
     info(f"Delivery path: {s3_path}")
     info("Type:          file-based (S3) — checking for current-month delivery")
     try:
+        _profile_args = ["--profile", AWS_PROFILE] if AWS_PROFILE else []
+        _run_env = os.environ.copy()
+        if not AWS_PROFILE:
+            _run_env.pop("AWS_PROFILE", None)
         result = subprocess.run(
-            ["aws", "s3", "ls", s3_path,
-             "--profile", os.environ.get("AWS_PROFILE", "dpla")],
-            capture_output=True, text=True, timeout=30,
+            ["aws", "s3", "ls", s3_path, *_profile_args],
+            capture_output=True, text=True, timeout=30, env=_run_env,
         )
     except subprocess.TimeoutExpired:
         bad("aws s3 ls timed out after 30s.")
@@ -876,13 +929,30 @@ def _check_s3_endpoint(s3_path):
     for line in listing[-5:]:
         info(f"  {line.rstrip()}")
 
-    # Look for current-month markers in the listing — both YYYY-MM (e.g. 2026-04)
-    # for hyphenated date folders and YYYYMM (e.g. 202604) for run-together dates.
-    current_yyyy_mm = datetime.now().strftime("%Y-%m")
-    current_yyyymm = datetime.now().strftime("%Y%m")
-    pattern = re.compile(rf"({re.escape(current_yyyy_mm)}|{re.escape(current_yyyymm)})")
+    # Look for current-month markers in three date formats:
+    #   YYYY-MM   e.g. 2026-09
+    #   YYYYMM    e.g. 202609
+    #   MMDDYYYY  e.g. 09212026 — MM and YYYY are not adjacent (DD sits between),
+    #             so match MM + any two digits + YYYY as a regex, not a substring.
+    now = datetime.now()
+    current_yyyy_mm = now.strftime("%Y-%m")
+    current_yyyymm  = now.strftime("%Y%m")
+    current_mm      = now.strftime("%m")
+    current_yyyy    = now.strftime("%Y")
+    pattern = re.compile(
+        rf"({re.escape(current_yyyy_mm)}|{re.escape(current_yyyymm)}|{re.escape(current_mm)}\d{{2}}{re.escape(current_yyyy)})"
+    )
+
+    # Also check the endpoint path itself — if the dated subfolder name contains
+    # the current month the delivery is current regardless of file names inside.
+    # Strip s3://bucket to avoid matching date-like substrings in the bucket name.
+    s3_key_path = re.sub(r"^s3://[^/]+/", "", s3_path)
+    path_has_current_month = bool(pattern.search(s3_key_path))
     matches = [ln for ln in listing if pattern.search(ln)]
 
+    if path_has_current_month:
+        ok(f"Endpoint path contains current month ({current_yyyy_mm}) — delivery is current.")
+        return True
     if matches:
         ok(f"Found {len(matches)} entries dated in the current month ({current_yyyy_mm}).")
         return True
@@ -937,16 +1007,29 @@ def check_endpoint(endpoint, is_api=False, harvest_type=None):
 
     info(f"URL:     {test_url}")
     info(f"Timeout: {timeout}s ({kind})")
-    info("Running curl from EC2...")
-
-    try:
-        body = ssm_run(
-            f"curl -sS --max-time {timeout} {shlex.quote(test_url)} 2>&1 || echo 'CURL_FAILED'",
-            timeout_seconds=timeout + 30,
-        )
-    except RuntimeError as e:
-        bad(f"curl failed: {e}")
-        return False
+    if INSTANCE_ID:
+        info("Running curl from EC2 via SSM...")
+        try:
+            body = ssm_run(
+                f"curl -sS --max-time {timeout} {shlex.quote(test_url)} 2>&1 || echo 'CURL_FAILED'",
+                timeout_seconds=timeout + 30,
+            )
+        except RuntimeError as e:
+            bad(f"curl failed: {e}")
+            return False
+    else:
+        info("Running curl directly (on EC2)...")
+        try:
+            r = subprocess.run(
+                ["curl", "-sS", "--max-time", str(timeout), test_url],
+                capture_output=True, text=True,
+            )
+            body = r.stdout + r.stderr if r.returncode != 0 else r.stdout
+            if r.returncode != 0:
+                body += "\nCURL_FAILED"
+        except Exception as e:
+            bad(f"curl failed: {e}")
+            return False
 
     if "CURL_FAILED" in body or not body.strip():
         bad(f"curl failed or timed out after {timeout}s — endpoint likely down or unreachable from EC2.")
@@ -1026,6 +1109,12 @@ def main():
         help="List hubs scheduled for a given month (1-12). With no value, "
              "uses the current month. Skips all box-state and endpoint checks.",
     )
+    parser.add_argument(
+        "--non-interactive", action="store_true",
+        help="Non-interactive mode for CI/GitHub Actions: skip all prompts, "
+             "auto-pull repos, auto-rebuild JAR if stale, treat missing hub as "
+             "no endpoint check. Implies --auto-pull.",
+    )
     args = parser.parse_args()
 
     # --todo is a standalone listing mode; it short-circuits the rest of main().
@@ -1042,8 +1131,9 @@ def main():
         sys.exit("--auto-pull and --no-pull are mutually exclusive.")
 
     # If no --hub was passed, prompt for one. Empty input = skip endpoint check.
+    # In non-interactive mode, skip the prompt entirely (treat as no hub).
     hub = args.hub
-    if hub is None:
+    if hub is None and not args.non_interactive:
         try:
             entered = input("Hub to check (can be left blank): ").strip().lower()
         except EOFError:
@@ -1070,7 +1160,13 @@ def main():
     # Harvest types that should be tested as OAI-PMH (with ?verb=Identify
     # and validated by looking for <OAI-PMH>/<Identify> in the response).
     OAI_TYPES = ("oai", "localoai")
-    if hub:
+
+    # When the conf is local, look up endpoint now so we can display it early.
+    # When the conf isn't local (GHA runner), defer the SSM-based lookup until
+    # after check_instance_state() — EC2 must be up before SSM works.
+    _defer_conf_lookup = hub and not os.path.exists(CONF_PATH) and bool(INSTANCE_ID)
+
+    if hub and not _defer_conf_lookup:
         looked_up_endpoint, harvest_type = lookup_hub_in_conf(hub)
         if looked_up_endpoint:
             endpoint = looked_up_endpoint
@@ -1082,6 +1178,8 @@ def main():
             print(f"{label}: {endpoint}  (from conf, type={harvest_type or 'unknown'})")
         else:
             print(f"Endpoint: (not found in {CONF_PATH} for hub '{hub}')")
+    elif _defer_conf_lookup:
+        print(f"Endpoint: (will resolve from EC2 conf after instance start)")
     else:
         print("Endpoint: (none — endpoint check will be skipped)")
     print()
@@ -1095,7 +1193,8 @@ def main():
     # check_endpoint(None, ...) silently pass.
     # Exception: api-type hubs (e.g. mwdl, ia) may have their endpoint
     # hardcoded in the harvester class — skip the check rather than failing.
-    if hub and run_endpoint_check and endpoint is None:
+    # (Deferred lookups skip this check here — they validate after EC2 starts.)
+    if hub and run_endpoint_check and endpoint is None and not _defer_conf_lookup:
         if harvest_type == "api":
             info(f"Hub '{hub}' has no endpoint in i3.conf — endpoint is hardcoded in the harvester. Skipping endpoint check.")
             run_endpoint_check = False
@@ -1115,13 +1214,42 @@ def main():
     try:
         # Always run the instance check if we need the box for ANY check
         # (file endpoint or any of the box-state checks).
-        if run_box_checks or needs_box_for_endpoint:
+        if run_box_checks or needs_box_for_endpoint or _defer_conf_lookup:
             results.append(("instance", check_instance_state(auto_start=auto_start)))
+
+        # Deferred conf lookup: EC2 is now up, SSM should succeed.
+        # Probe SSM directly first so any failure raises RuntimeError and
+        # propagates through the outer handler — lookup_hub_in_conf swallows
+        # all SSM exceptions and returns (None, None), which would be
+        # indistinguishable from a genuine "hub not in conf" result.
+        if _defer_conf_lookup:
+            try:
+                ssm_run("true", timeout_seconds=30)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"SSM not responsive after instance start — cannot read i3.conf: {exc}"
+                ) from exc
+            looked_up_endpoint, harvest_type = lookup_hub_in_conf(hub)
+            if looked_up_endpoint:
+                endpoint = looked_up_endpoint
+                if not is_api and harvest_type and harvest_type not in OAI_TYPES and harvest_type != "file":
+                    is_api = True
+                label = "Delivery path" if harvest_type == "file" else "Endpoint"
+                print(f"{label}: {endpoint}  (from EC2 conf, type={harvest_type or 'unknown'})")
+            elif run_endpoint_check:
+                if harvest_type == "api":
+                    info(f"Hub '{hub}' has no endpoint in i3.conf — endpoint is hardcoded in the harvester. Skipping endpoint check.")
+                    run_endpoint_check = False
+                else:
+                    bad(f"Hub '{hub}' has no endpoint in EC2 conf — cannot run endpoint check.")
+                    sys.exit(1)
         if run_box_checks:
-            interactive_pull = not args.no_pull
-            results.append(("ingestion3 repo",      check_repo_sync(INGEST_REPO, header_num="2a", auto_reset=args.auto_pull, interactive=interactive_pull)))
-            results.append(("ingestion3-conf repo", check_repo_sync(CONF_REPO,   header_num="2b", auto_reset=args.auto_pull, interactive=interactive_pull)))
-            results.append(("jar",                  check_jar_freshness()))
+            # In non-interactive mode: always auto-pull, never prompt.
+            effective_auto_pull = args.auto_pull or (args.non_interactive and not args.no_pull)
+            interactive_pull = not args.no_pull and not args.non_interactive
+            results.append(("ingestion3 repo",      check_repo_sync(INGEST_REPO, header_num="2a", auto_reset=effective_auto_pull, interactive=interactive_pull)))
+            results.append(("ingestion3-conf repo", check_repo_sync(CONF_REPO,   header_num="2b", auto_reset=effective_auto_pull, interactive=interactive_pull)))
+            results.append(("jar",                  check_jar_freshness(auto_rebuild=args.non_interactive)))
             results.append(("ownership",            check_target_ownership()))
             results.append(("disk",                 check_disk_space()))
         if run_endpoint_check:

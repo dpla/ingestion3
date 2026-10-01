@@ -3,7 +3,7 @@ package dpla.ingestion3.executors
 import dpla.ingestion3.dataStorage.OutputHelper
 
 import java.time.LocalDateTime
-import dpla.ingestion3.model.{OreAggregation, jsonlRecord}
+import dpla.ingestion3.model.{CuratedMembership, OreAggregation, jsonlRecord}
 import org.apache.logging.log4j.LogManager
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{Dataset, SparkSession}
@@ -50,7 +50,17 @@ trait JsonlExecutor extends Serializable {
 
     val enrichedRows = spark.read.format("avro").load(dataIn).as[OreAggregation]
 
-    val indexRecords: Dataset[String] = enrichedRows.map(jsonlRecord)
+    // Load on the driver: a bad snapshot fails fast, and the snapshot
+    // logged below is the one the tasks apply
+    val curated = CuratedMembership.fromResource
+    logger.info(
+      s"Curated membership snapshot generated ${curated.generated}: " +
+        s"${curated.exhibitions.size} exhibition item IDs, " +
+        s"${curated.primarySourceSets.size} source set item IDs"
+    )
+
+    val indexRecords: Dataset[String] =
+      enrichedRows.map(row => jsonlRecord(row, curated))
 
     // This should always write out as #text() because if we use #json() then the
     // data will be written out inside a JSON object (e.g. {'value': <doc>}) which is
@@ -65,7 +75,8 @@ trait JsonlExecutor extends Serializable {
       "Activity" -> "JSON-L",
       "Provider" -> shortName,
       "Record count" -> indexCount.toString,
-      "Input" -> dataIn
+      "Input" -> dataIn,
+      "Curated membership snapshot" -> curated.generated
     )
 
     outputHelper.writeManifest(manifestOpts) match {

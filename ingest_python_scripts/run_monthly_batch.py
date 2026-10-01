@@ -1,0 +1,417 @@
+#!/usr/bin/env python3
+"""
+Read i3.conf for this month's hub schedule and fire all active standard
+hubs as a sequential batch on the ingest EC2.
+
+How it works
+------------
+1. Reads i3.conf FROM THE EC2 BOX via SSM (no local conf needed).
+2. Parses the monthly schedule; skips special-case hubs (nara, smithsonian,
+   community-webs) and on-hold hubs.
+3. Builds a bash script that runs ingest.sh for each hub in sequence
+   (blocking, not background) and fires it on EC2 as a nohup background job.
+4. Returns immediately — EC2 runs the batch; Slack notifies per-hub progress.
+
+Special hubs (nara, smithsonian/si, community-webs) are always skipped —
+they need preprocessing steps before ingest.sh can run and must be launched
+individually via their own scripts or the "Launch Hub Ingest" GHA workflow.
+
+Usage
+-----
+  python3 run_monthly_batch.py               # current month
+  python3 run_monthly_batch.py --month 9     # September
+  python3 run_monthly_batch.py --dry-run     # print hub list, don't launch
+  CI=1 INGEST_INSTANCE_ID=i-xxx python3 run_monthly_batch.py
+"""
+
+import argparse
+import base64
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+# ── env / config ─────────────────────────────────────────────────────────────
+
+HERE = Path(__file__).resolve().parent
+
+def _load_env():
+    cfg = {}
+    env_file = HERE.parent / ".env"
+    if env_file.exists():
+        for line in env_file.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                cfg[k.strip()] = v.strip().strip('"').strip("'")
+    return cfg
+
+_env = _load_env()
+
+INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
+GHA_ACTOR   = os.environ.get("GHA_ACTOR", "")
+REGION      = "us-east-1"
+CONF_PATH   = os.environ.get("I3_CONF") or "/home/ec2-user/ingestion3-conf/i3.conf"
+SCRIPTS_DIR = "/home/ec2-user/ingestion3/scripts"
+LOG_DIR     = "/home/ec2-user/data"
+
+AWS_PROFILE = (
+    os.environ.get("AWS_PROFILE")
+    or _env.get("AWS_PROFILE")
+    or ("dpla" if (HERE.parent / ".env").exists() else None)
+)
+
+SPECIAL_HUBS = {"nara", "smithsonian", "si", "community-webs"}
+
+# ── output helpers ────────────────────────────────────────────────────────────
+
+def info(msg):   print(f"  {msg}", flush=True)
+def ok(msg):     print(f"  ✓ {msg}", flush=True)
+def warn(msg):   print(f"  ⚠ {msg}", flush=True)
+
+def header(msg):
+    bar = "═" * 60
+    print(f"\n{bar}", flush=True)
+    print(f"  {msg}", flush=True)
+    print(f"{bar}", flush=True)
+
+# ── AWS / SSM ─────────────────────────────────────────────────────────────────
+
+def _profile_args():
+    return ["--profile", AWS_PROFILE] if AWS_PROFILE else []
+
+
+def _ssm_send(shell_cmd, timeout_seconds=60):
+    """Send an SSM command; return the command ID without waiting for completion."""
+    encoded = base64.b64encode(shell_cmd.encode()).decode()
+    inner   = f"echo {encoded} | base64 -d | sudo -u ec2-user bash -l"
+    params  = json.dumps({"commands": [inner]})
+
+    return subprocess.check_output(
+        ["aws", "ssm", "send-command"] + _profile_args() + [
+            "--instance-ids",  INSTANCE_ID,
+            "--document-name", "AWS-RunShellScript",
+            "--timeout-seconds", str(timeout_seconds),
+            "--parameters", params,
+            "--region", REGION,
+            "--query", "Command.CommandId",
+            "--output", "text",
+        ],
+        text=True,
+    ).strip()
+
+
+def ssm_run(shell_cmd, timeout_seconds=60, poll_seconds=3):
+    """Run a shell command on the EC2 instance via SSM; return stdout."""
+    cmd_id = _ssm_send(shell_cmd, timeout_seconds=timeout_seconds)
+
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        time.sleep(poll_seconds)
+        r = subprocess.run(
+            ["aws", "ssm", "get-command-invocation",
+             "--command-id", cmd_id,
+             "--instance-id", INSTANCE_ID,
+             "--region", REGION] + _profile_args(),
+            capture_output=True, text=True,
+        )
+        if r.returncode != 0:
+            continue
+        data   = json.loads(r.stdout)
+        status = data.get("Status", "")
+        if status in ("Success", "Failed", "TimedOut", "Cancelled"):
+            return data.get("StandardOutputContent", "")
+    raise RuntimeError(f"SSM command timed out after {timeout_seconds}s")
+
+# ── i3.conf parsing ───────────────────────────────────────────────────────────
+
+def already_ran_this_month(hub, month, year):
+    """Return True if hub has a completed JSONL snapshot in S3 this month,
+    OR if ingest.sh is currently running for it on EC2.
+
+    Raises RuntimeError on AWS errors so a credentials/bucket problem aborts
+    hub selection rather than silently treating every hub as un-run.
+    """
+    # 1. Check for a running ingest process on EC2.
+    try:
+        ps_out = ssm_run(
+            f"pgrep -af 'ingest.sh.*{hub}' || true",
+            timeout_seconds=30,
+        )
+        if ps_out.strip():
+            info(f"  {hub}: ingest.sh currently running on EC2 — skipping.")
+            return True
+    except Exception:
+        pass  # SSM failure here is non-fatal; fall through to S3 check
+
+    # 2. Check for a completed JSONL snapshot in S3 dated this month.
+    prefix = f"{year}{month:02d}"
+    r = subprocess.run(
+        ["aws", "s3", "ls", f"s3://dpla-master-dataset/{hub}/jsonl/",
+         "--region", REGION] + _profile_args(),
+        capture_output=True, text=True,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(
+            f"aws s3 ls failed for hub '{hub}' (exit {r.returncode}): {r.stderr.strip()}"
+        )
+    # Extract just the object name from each ls line. Snapshots are named
+    # YYYYMMDD_HHMMSS-hub-... so prefix is YYYYMM (no dashes), e.g. "202609".
+    for line in r.stdout.splitlines():
+        parts = line.split()
+        if not parts:
+            continue
+        name = parts[-1].rstrip("/")
+        if name.startswith(prefix):
+            return True
+    return False
+
+
+def get_monthly_hubs(month, excluded=None):
+    """Read i3.conf from EC2 via SSM; return active standard hub names for the month.
+
+    Special hubs (nara, smithsonian/si, community-webs) are always excluded —
+    they require preprocessing steps and must be launched separately.
+    Hubs with a JSONL snapshot already dated this month are also skipped.
+    Manually excluded hubs (via --exclude) are removed before S3 checks.
+    """
+    excluded = excluded or set()
+    info(f"Reading i3.conf from EC2 ({CONF_PATH})…")
+    # Grep only schedule lines — catting the full file hits SSM's ~48 KB
+    # StandardOutputContent limit and silently truncates large confs.
+    conf_text = ssm_run(
+        f"grep -E '^[a-z0-9_-]+\\.schedule\\.' {CONF_PATH} 2>/dev/null || echo ''",
+        timeout_seconds=30,
+    )
+    if not conf_text.strip():
+        sys.exit(f"[bad] Could not read schedule entries from i3.conf at {CONF_PATH} on EC2.")
+
+    text = re.sub(r"(?m)^\s*(#|//).*$", "", conf_text)
+
+    hubs: dict[str, dict] = {}
+    for m in re.finditer(
+        r"^\s*([a-z0-9_-]+)\.schedule\.months\s*[=:]\s*\[([0-9,\s]+)\]",
+        text, re.MULTILINE | re.IGNORECASE,
+    ):
+        name   = m.group(1).lower()
+        months = [int(x.strip()) for x in m.group(2).split(",") if x.strip().isdigit()]
+        hubs.setdefault(name, {})["months"] = months
+
+    for m in re.finditer(
+        r"""^\s*([a-z0-9_-]+)\.schedule\.status\s*[=:]\s*["']([^"']+)["']""",
+        text, re.MULTILINE | re.IGNORECASE,
+    ):
+        hubs.setdefault(m.group(1).lower(), {})["status"] = m.group(2)
+
+    scheduled = []
+    for name, data in sorted(hubs.items()):
+        if "months" not in data or month not in data["months"]:
+            continue
+        if (data.get("status") or "active").lower() != "active":
+            continue
+        if name in SPECIAL_HUBS:
+            continue
+        if name in excluded:
+            continue
+        scheduled.append(name)
+
+    # Skip hubs already ingested this month (e.g. run manually or via single-hub GHA).
+    # Propagate S3 errors — a failed lookup should abort, not silently treat the hub as un-run.
+    year = datetime.utcnow().year
+    already_done = []
+    for h in scheduled:
+        try:
+            if already_ran_this_month(h, month, year):
+                already_done.append(h)
+        except RuntimeError as e:
+            sys.exit(f"[bad] S3 check failed for hub '{h}': {e}")
+    if already_done:
+        warn(f"Skipping {len(already_done)} hub(s) already ingested this month: {', '.join(already_done)}")
+
+    return [h for h in scheduled if h not in already_done], already_done
+
+# ── batch launch ──────────────────────────────────────────────────────────────
+
+def build_batch_script(hubs, batch_log, gha_actor="", skipped_hubs=None, excluded_hubs=None):
+    """Return a bash script that runs ingest.sh for each hub sequentially.
+
+    The script writes its own log via >> redirection; the nohup wrapper in
+    fire_batch() redirects to /dev/null to avoid double-writing the same file.
+    """
+    hub_list = " ".join(hubs)
+    actor_export = f'export GHA_ACTOR="{gha_actor}"' if gha_actor else ""
+    triggered_by = f" via GHA (triggered by {gha_actor})" if gha_actor else ""
+    skipped_notify = ""
+    if skipped_hubs:
+        skipped_str = " ".join(skipped_hubs)
+        skipped_notify = f'slack_notify ":fast_forward: *Skipped (already ran this month):* {skipped_str}"'
+    if excluded_hubs:
+        excluded_str = " ".join(sorted(excluded_hubs))
+        skipped_notify += f'\nslack_notify ":no_entry_sign: *Manually excluded:* {excluded_str}"'
+    return f"""\
+#!/bin/bash
+# Monthly batch — generated by run_monthly_batch.py
+# Hubs: {hub_list}
+set -euo pipefail
+source /home/ec2-user/ingestion3/scripts/common.sh
+{actor_export}
+HUBS=({hub_list})
+TOTAL=${{#HUBS[@]}}
+BATCH_LOG="{batch_log}"
+SCRIPTS_DIR="/home/ec2-user/ingestion3/scripts"
+export I3_CONF="/home/ec2-user/ingestion3-conf/i3.conf"
+export AWS_PROFILE=""
+PREFLIGHT="python3 /home/ec2-user/ingestion3/ingest_python_scripts/hub_preflight.py"
+FAILED=()
+IDX=0
+
+_log() {{ echo "$(date -u '+%Y-%m-%dT%H:%M:%SZ')  $*" >> "$BATCH_LOG"; }}
+
+_log "▶ Monthly batch started{triggered_by} — ${{#HUBS[@]}} hubs: {hub_list}"
+slack_notify ":calendar: *Monthly batch started*{triggered_by} — $TOTAL hubs: {hub_list}"
+{skipped_notify}
+
+for HUB in "${{HUBS[@]}}"; do
+    IDX=$((IDX + 1))
+    slack_notify ":arrow_right: *Starting $HUB ($IDX of $TOTAL)*"
+    _log "▶ Endpoint preflight for $HUB ($IDX of $TOTAL)"
+    if ! $PREFLIGHT --hub "$HUB" --endpoint-only --non-interactive >> "$BATCH_LOG" 2>&1; then
+        _log "✗ $HUB endpoint check FAILED — skipping"
+        slack_notify ":x: *$HUB endpoint check FAILED* — skipping in monthly batch. Check the endpoint in i3.conf."
+        FAILED+=("$HUB")
+        continue
+    fi
+    slack_notify ":white_check_mark: *$HUB endpoint passed* — launching ingest"
+    _log "▶ Starting $HUB"
+    if bash "$SCRIPTS_DIR/ingest.sh" "$HUB"; then
+        _log "✓ $HUB complete"
+    else
+        _log "✗ $HUB FAILED"
+        slack_notify ":x: *$HUB ingest FAILED* — continuing batch"
+        FAILED+=("$HUB")
+    fi
+done
+
+if [ ${{#FAILED[@]}} -gt 0 ]; then
+    _log "✗ Batch finished with failures: ${{FAILED[*]}}"
+    slack_notify ":x: *Monthly batch finished with failures* — failed: ${{FAILED[*]}}"
+    exit 1
+else
+    _log "✓ Batch complete — all ${{#HUBS[@]}} hubs ingested"
+    slack_notify ":tada: *Monthly batch complete* — all ${{#HUBS[@]}} hubs ingested"
+fi
+"""
+
+
+LOCK_PATH = "/tmp/monthly-batch.lock"
+
+
+def fire_batch(hubs, batch_log, skipped_hubs=None, excluded_hubs=None):
+    """Write the batch script to EC2 and run it as a nohup background job.
+
+    Uses mktemp under /home/ec2-user (mode 0700, owned by ec2-user) so the
+    script file is never world-readable and each dispatch gets a unique path.
+    A synchronous flock probe (separate SSM call) fast-fails if another batch
+    is already running; the nohup wrapper also uses flock -n to guard the small
+    TOCTOU window between probe and launch.  The script cleans itself up after
+    execution.  The script logs via _log() → $BATCH_LOG directly; nohup goes
+    to /dev/null to avoid mixing ingest.sh stdout into the structured batch log.
+    """
+    script = build_batch_script(hubs, batch_log, gha_actor=GHA_ACTOR, skipped_hubs=skipped_hubs, excluded_hubs=excluded_hubs)
+    encoded = base64.b64encode(script.encode()).decode()
+
+    # 1. Probe: synchronous flock check — fail fast before writing the script.
+    #    Runs as its own SSM call so the exit code is captured cleanly, avoiding
+    #    the bash `&` backgrounding bug that caused the probe and launch to share
+    #    a subshell and garble the output.
+    probe = ssm_run(
+        f"flock -n {LOCK_PATH} true && echo OK || echo LOCKED",
+        timeout_seconds=30,
+    )
+    if "LOCKED" in probe:
+        sys.exit("[bad] A monthly batch is already running on EC2; try again later.")
+
+    # 2a. Write the batch script to EC2 and confirm it landed.
+    script_path = ssm_run(
+        f"SCRIPT=$(mktemp /home/ec2-user/monthly-batch-XXXXXX.sh) && "
+        f"chmod 0700 \"$SCRIPT\" && "
+        f"echo {encoded} | base64 -d > \"$SCRIPT\" && "
+        f"echo \"$SCRIPT\"",
+        timeout_seconds=60,
+    ).strip()
+    if not script_path:
+        sys.exit("[bad] Failed to write batch script to EC2.")
+    ok(f"Batch script written to EC2: {script_path}")
+
+    # 2b. Launch as nohup background job. The launch_cmd itself is short (fires
+    #     the background process and prints its PID), so we poll for the SSM
+    #     invocation to reach a terminal state to confirm delivery and catch any
+    #     remote execution errors — without waiting for the batch itself.
+    launch_cmd = (
+        f"nohup bash -c \"flock -n {LOCK_PATH} bash \\\"{script_path}\\\"; "
+        f"rm -f \\\"{script_path}\\\"\" > /dev/null 2>&1 </dev/null & "
+        f"echo \"Batch PID=$!\""
+    )
+    out = ssm_run(launch_cmd, timeout_seconds=30)
+    pid_match = re.search(r"PID=(\d+)", out)
+    pid = pid_match.group(1) if pid_match else "unknown"
+    ok(f"Batch launched on EC2 (PID {pid})")
+    info(f"Log:  {batch_log}")
+    info(f"Tail: ssh ec2-user@<box> tail -f {batch_log}")
+    info(f"Or:   python3 ingest_python_scripts/check_ingest.py <hub>")
+
+# ── main ──────────────────────────────────────────────────────────────────────
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Fire this month's standard hub ingests as a sequential batch on EC2."
+    )
+    parser.add_argument("--month", type=int, help="Month 1-12 (default: current month)")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Print hub list without launching")
+    parser.add_argument("--exclude", default="",
+                        help="Comma-separated hub names to skip (e.g. indiana,jstor)")
+    args = parser.parse_args()
+
+    month = args.month if args.month is not None else datetime.now().month
+    if not (1 <= month <= 12):
+        sys.exit(f"Invalid month: {month}")
+
+    if not INSTANCE_ID:
+        sys.exit("INGEST_INSTANCE_ID is not set — export it or add it to .env")
+
+    excluded = {h.strip().lower() for h in args.exclude.split(",") if h.strip()}
+
+    header(f"Monthly batch — month {month}")
+
+    hubs, skipped = get_monthly_hubs(month, excluded=excluded)
+
+    if excluded:
+        warn(f"Manually excluded: {', '.join(sorted(excluded))}")
+
+    if not hubs:
+        info("No active standard hubs scheduled for this month.")
+        sys.exit(0)
+
+    info(f"\n  {len(hubs)} hub(s) queued:")
+    for h in hubs:
+        print(f"    • {h}", flush=True)
+    print(flush=True)
+
+    if args.dry_run:
+        info("Dry run — not launching.")
+        sys.exit(0)
+
+    batch_log = f"{LOG_DIR}/monthly-batch-{datetime.utcnow().strftime('%Y%m')}.log"
+    fire_batch(hubs, batch_log, skipped_hubs=skipped, excluded_hubs=excluded or None)
+
+    ok("Batch is running on EC2. GHA step is complete.")
+    info("Slack will notify as each hub finishes.")
+
+
+if __name__ == "__main__":
+    main()

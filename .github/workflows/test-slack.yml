@@ -1,0 +1,109 @@
+name: Test Slack Notification
+
+# Verifies that the ingest EC2 can send Slack messages via common.sh.
+# Run this any time you want to confirm the Slack integration is working
+# (e.g. after rotating SLACK_BOT_TOKEN or changing .env on the box).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # required for OIDC
+  contents: read
+
+jobs:
+  test-slack:
+    name: 'Test EC2 → Slack'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Enforce main branch
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::This workflow must run from main — the OIDC role trust policy restricts credentials to main only."
+            exit 1
+          fi
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502  # v4.0.2
+        with:
+          role-to-assume: arn:aws:iam::283408157088:role/github-actions-ingestion3
+          aws-region: us-east-1
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: '3.11'
+
+      - name: Send test Slack message via EC2
+        env:
+          INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          python3 - <<'PYEOF'
+          import base64, json, os, subprocess, sys, time
+
+          iid   = os.environ["INGEST_INSTANCE_ID"]
+          actor = os.environ["ACTOR"]
+          msg   = f":test_tube: *Slack test* — EC2 → Slack integration is working (triggered by {actor} via GHA)"
+          cmd   = (
+              f'export I3_HOME=/home/ec2-user/ingestion3 && '
+              f'source /home/ec2-user/ingestion3/scripts/common.sh && '
+              f'slack_notify "{msg}" && echo "SLACK_OK"'
+          )
+          enc   = base64.b64encode(cmd.encode()).decode()
+          inner = f"echo {enc} | base64 -d | sudo -u ec2-user bash -l"
+          params = json.dumps({"commands": [inner]})
+
+          result = subprocess.run(
+              ["aws", "ssm", "send-command",
+               "--instance-ids", iid,
+               "--document-name", "AWS-RunShellScript",
+               "--parameters", params,
+               "--region", "us-east-1",
+               "--query", "Command.CommandId",
+               "--output", "text"],
+              capture_output=True, text=True, check=True,
+          )
+          cmd_id = result.stdout.strip()
+          print(f"SSM command ID: {cmd_id}")
+
+          # Poll until the command completes.
+          deadline = time.time() + 60
+          while time.time() < deadline:
+              time.sleep(3)
+              r = subprocess.run(
+                  ["aws", "ssm", "get-command-invocation",
+                   "--command-id", cmd_id,
+                   "--instance-id", iid,
+                   "--region", "us-east-1"],
+                  capture_output=True, text=True,
+              )
+              if r.returncode != 0:
+                  continue
+              data   = json.loads(r.stdout)
+              status = data.get("Status", "")
+              stdout = data.get("StandardOutputContent", "")
+              stderr = data.get("StandardErrorContent", "")
+              if status not in ("Success", "Failed", "TimedOut", "Cancelled"):
+                  continue
+
+              print(f"SSM status: {status}")
+              if stdout:
+                  print(f"stdout:\n{stdout}")
+              if stderr:
+                  print(f"stderr:\n{stderr}")
+
+              if status != "Success" or "SLACK_OK" not in stdout:
+                  print("::error::Slack notification did not confirm success. "
+                        "Check SLACK_BOT_TOKEN and SLACK_CHANNEL in .env on EC2.")
+                  sys.exit(1)
+
+              print("✓ Slack message sent successfully.")
+              sys.exit(0)
+
+          print("::error::SSM command timed out waiting for result.")
+          sys.exit(1)
+          PYEOF
