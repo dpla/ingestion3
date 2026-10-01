@@ -11,8 +11,8 @@ See [README_TEST_HUBS.md](README_TEST_HUBS.md).
   none, so per policy we harvest the whole corpus (**~136,652 MODS records** across
   all collections). Config in `ingestion3-conf` (`feature/dartmouth-oai-config`).
   Harvested over **HTTP/1.1** (`harvest.httpVersion = "1.1"`) — see §5.
-- **Mapper:** [`DartmouthMapping.scala`](../../src/main/scala/dpla/ingestion3/mappers/providers/experimental/DartmouthMapping.scala)
-- **Tests:** [`DartmouthMappingTest.scala`](../../src/test/scala/dpla/ingestion3/mappers/providers/experimental/DartmouthMappingTest.scala)
+- **Mapper:** [`DartmouthMapping.scala`](../../src/main/scala/dpla/ingestion3/mappers/providers/DartmouthMapping.scala)
+- **Tests:** [`DartmouthMappingTest.scala`](../../src/test/scala/dpla/ingestion3/mappers/providers/DartmouthMappingTest.scala)
   (fixtures are real OAI records from the live feed).
 - **Scope:** the feed advertises 59 `ddlp-collections:*` sets. The 5 collections in
   the July sample zip were only the mapper's development sample, **not** a contributed
@@ -59,11 +59,11 @@ below are relative to `<mods>`.
 | DPLA field | MODS source | Logic / notes |
 |---|---|---|
 | `title` | `titleInfo` (not alternate) | `nonSort` + `title` + `subTitle`, whitespace-collapsed. |
-| `alternateTitle` | `titleInfo[@type="alternative"|"translated"|"uniform"]/title` | |
+| `alternateTitle` | `titleInfo[@type="alternative"\|"translated"\|"uniform"]/title` | |
 | `creator` | `name[@usage="primary"]` (any type/role) | All primary names, and only those; records with no primary name have no creator. **+ `exactMatch`** from `@valueURI` (http) **+ `scheme`** from `@authorityURI`. |
 | `contributor` | all non-primary `name`s **except the repository role** | Repository = `roleTerm` `repository` (text) or `rps` (MARC code), case-insensitive. |
 | `publisher` | `originInfo/publisher` | Name only. |
-| `date` | `relatedItem[@type="original"|"otherFormat"]/originInfo/{dateCreated,dateIssued}@w3cdtf`, else top-level `originInfo` date | Prefers the original/analog date over the top-level **digitization** date. → `EdmTimeSpan(displayDate)`. |
+| `date` | `relatedItem[@type="original"\|"otherFormat"]/originInfo/{dateCreated,dateIssued}@w3cdtf`, else top-level `originInfo` date | Prefers the original/analog date over the top-level **digitization** date. → `EdmTimeSpan(displayDate)`. |
 | `temporal` | `subject/temporal` | → `EdmTimeSpan`. |
 | `subject` | `subject/{topic,temporal,titleInfo,name,genre}` | → `SkosConcept` + `exactMatch` (http or FAST-converted) + `scheme`. |
 | `genre` | `genre` | → `SkosConcept` + `exactMatch` from `@valueURI` (http as-is, bare FAST codes converted to `id.worldcat.org/fast`); deduped by label. |

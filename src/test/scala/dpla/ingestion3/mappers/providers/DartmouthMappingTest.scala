@@ -197,13 +197,24 @@ class DartmouthMappingTest extends AnyFlatSpec {
   it should "map the standardized rights URI to edmRights (poster)" in
     assert(extractor.edmRights(poster) === Seq(URI("http://rightsstatements.org/vocab/NoC-US/1.0/")))
 
-  it should "map a Creative Commons standardized rights URI when present" in {
+  it should "map a Creative Commons standardized rights URI, canonicalizing https to http" in {
+    // DPLA's edmRights vocabulary is http-only; an https CC URI must be
+    // normalized to http or it fails edmRights validation and is dropped.
     val d = inline(
       <mods xmlns="http://www.loc.gov/mods/v3" xmlns:xlink="http://www.w3.org/1999/xlink">
         <accessCondition type="use and reproduction" displayLabel="Standardized rights statement" xlink:href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC</accessCondition>
       </mods>
     )
-    assert(extractor.edmRights(d) === Seq(URI("https://creativecommons.org/licenses/by-nc/4.0/")))
+    assert(extractor.edmRights(d) === Seq(URI("http://creativecommons.org/licenses/by-nc/4.0/")))
+  }
+
+  it should "canonicalize an https rightsstatements.org URI to http" in {
+    val d = inline(
+      <mods xmlns="http://www.loc.gov/mods/v3" xmlns:xlink="http://www.w3.org/1999/xlink">
+        <accessCondition type="use and reproduction" xlink:href="https://rightsstatements.org/vocab/InC/1.0/">In Copyright</accessCondition>
+      </mods>
+    )
+    assert(extractor.edmRights(d) === Seq(URI("http://rightsstatements.org/vocab/InC/1.0/")))
   }
 
   it should "keep accessCondition free text as rights" in

@@ -250,6 +250,7 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
       .flatMap(n => extractString(n.head))
       .map(_.trim)
       .filter(_.nonEmpty)
+      .map(normalizeRightsScheme)
       .map(URI)
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
@@ -364,6 +365,17 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
     case fastCode(n)         => Some(URI(s"http://id.worldcat.org/fast/$n"))
     case _                   => None
   }
+
+  // DPLA's edmRights vocabulary (validEdmRightsValues) and the edmRights
+  // enrichment both use the http:// forms of the rights vocabs. A partner that
+  // publishes the https:// form of the same statement would otherwise fail the
+  // exact-match validation and have its edmRights dropped, so canonicalize the
+  // scheme to http (the statement itself is unchanged).
+  private def normalizeRightsScheme(value: String): String =
+    value.replaceFirst(
+      "^https://(creativecommons\\.org|rightsstatements\\.org)/",
+      "http://$1/"
+    )
 
   // Normalize an isShownAt candidate to a resolvable URL.
   private def normalizeIsShownAt(value: String): String = value.trim match {
