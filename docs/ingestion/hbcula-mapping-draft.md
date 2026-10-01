@@ -192,64 +192,58 @@ production consideration. To graduate the hub, follow
 
 ---
 
-## 5. Test-ingest results (full pipeline, EC2, 2026-07-28)
+## 5. Test-ingest history (full pipeline, EC2)
 
-A complete harvest → mapping → enrichment → JSON-L run on the ingest EC2 instance, from a
-fresh OAI harvest. Total pipeline ~3m27s. This run used the **previous** mapper (before
-`identifier`, `relation`, the title/format punctuation helpers and the https thumbnail were added); those changes add
-fields but don't change which records pass or fail. The 2026-10-01 feed figures in §3
-are the current expectation (5,288 live, 3,886 mapping).
+Every run is a fresh OAI harvest → mapping → enrichment → JSON-L on the ingest EC2.
 
-### Totals
+| Run | Mapper | Harvested | Mapped | Rejected | Missing `dataProvider` | Missing rights |
+|---|---|---|---|---|---|---|
+| 2026-04-10 05:54 | first version | 5,201 | 3,807 (73.2%) | 1,394 | 1,390 | 243 |
+| 2026-04-10 06:04 | with `isPartOf` fallback (reverted; not comparable) | 5,201 | 3,952 | 1,249 | 1,245 | 243 |
+| 2026-07-28 | first version | 5,219 | 3,817 (73.1%) | 1,402 | 1,398 | 243 |
+| **2026-10-01** | **current** (`identifier`, `relation`) | **5,288** | **3,886 (73.5%)** | **1,402** | **1,365** | **243** |
 
-| | count | of harvested |
-|---|---|---|
-| Harvested (OAI records) | 5,219 | — |
-| **Mapped → JSON-L** | **3,817** | **73.1%** |
-| Failed (rejected) | 1,402 | 26.9% |
+The 2026-10-01 run took 2m36s and its JSON-L was synced to
+`s3://dpla-master-dataset/hbcula/jsonl/20261001_205734-hbcula-MAP3_1.IndexRecord.jsonl/`
+(excluded from the index by `included_in_index = false`).
 
-Compared with the 2026-04-10 baseline (5,201 harvested, 3,807 mapped, 1,390 missing
-`dataProvider`), the July feed added 18 records and 8 more `dataProvider` rejections.
-(A second 2026-04-10 run, 3,952 mapped / 1,245 missing `dataProvider`, used the
-short-lived `dcterms:isPartOf` fallback and isn't comparable.)
+Over six months the feed grew by 87 records; the rejection rate is flat at ~26.5%, with
+the same two causes (no `dc:source`, no `dc:rights`). The rights gap is unchanged at 243.
 
-### Errors (reject the record)
+### Warnings (2026-10-01; informational, do not reject)
 
 | reason | records |
 |---|---|
-| Missing required field: dataProvider | 1,398 |
-| Missing required field: rights or edmRights | 243 |
-
-(1,641 error messages across 1,402 rejected records — some fail both checks.)
-
-### Warnings (informational; do not reject)
-
-| reason | records |
-|---|---|
-| Missing recommended: publisher | 5,219 |
+| Missing recommended: publisher | 5,288 (no source element) |
 | Missing recommended: place | 2,439 |
 | Missing recommended: creator | 1,824 |
 | Missing recommended: type | 202 |
-| Missing recommended: date | 13 |
+| Missing recommended: date | 14 |
 | Missing recommended: subject / format / language / description | ≤5 each |
 
-### Field coverage (of the 3,817 mapped records)
+### Field coverage of mapped records, July vs October
 
-| field | coverage |
-|---|---|
-| `dataProvider`, `provider`, `isShownAt`, `preview`(object), `title`, `rights` (free text) | 100% |
-| `description`, `language` | ~100% (3,816) |
-| `format`, `subject`, `date` | 99.9% |
-| `place` | 64.7% |
-| `creator` | 59.5% |
-| `type` | 21.5% |
-| `collection` | 16.4% |
-| `edmRights`, `mediaMaster` | 0% (no rights URI or media-master source in the feed) |
+| field | 2026-07-28 (3,817) | 2026-10-01 (3,886) |
+|---|---|---|
+| `dataProvider`, `isShownAt`, `object` (preview), `title`, `rights`, `description`, `language` | 100% | 100% |
+| `date`, `format`, `subject` | 99.9% | 99.9% |
+| `identifier` | — (not mapped) | **100%** |
+| `place` | 64.7% | 65.3% |
+| `creator` | 59.5% | 60.3% |
+| `collection` | 16.4% | **23.3%** |
+| `type` | 21.5% | 22.4% |
+| `relation` | — (not mapped) | 0.1% |
+| `edmRights`, `mediaMaster` | 0% | 0% |
+
+`relation` is only 0.1% because nearly all `dc:relation` values are in the `becu` set,
+which has no `dc:source`, so those records are rejected.
 
 ### Where the data lives
 
 - **EC2:** `/home/ec2-user/data/hbcula/{harvest,mapping,enrichment,jsonl}/` — runs from
-  2026-04-10 (×2) and 2026-07-28, plus a JSON-L-only re-export on 2026-08-19.
-- **S3:** `s3://dpla-master-dataset/hbcula/jsonl/` holds those four JSON-L snapshots,
-  copied by the 2026-08-19 bulk JSON-L re-export of all hubs. They stay out of the index
-  because of `included_in_index = false` (see the status note at the top).
+  2026-04-10 (×2), 2026-07-28 and 2026-10-01, plus a JSON-L-only re-export on 2026-08-19.
+  The 2026-10-01 run was built from `~/ingestion3-hbcula` (main + this branch).
+- **S3:** `s3://dpla-master-dataset/hbcula/jsonl/` holds the JSON-L snapshots (the
+  2026-10-01 one is newest). They stay out of the index because of
+  `included_in_index = false`, but are picked up by the monthly public bulk JSON-L
+  export until dpla/ingestion3#815 is fixed.
