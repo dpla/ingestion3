@@ -10,6 +10,7 @@ See [README_TEST_HUBS.md](README_TEST_HUBS.md).
   (`deletedRecord=no`, granularity to the second). **No setlist** — Dartmouth gave
   none, so per policy we harvest the whole corpus (**~136,652 MODS records** across
   all collections). Config in `ingestion3-conf` (`feature/dartmouth-oai-config`).
+  Harvested over **HTTP/1.1** (`harvest.httpVersion = "1.1"`) — see §5.
 - **Mapper:** [`DartmouthMapping.scala`](../../src/main/scala/dpla/ingestion3/mappers/providers/experimental/DartmouthMapping.scala)
 - **Tests:** [`DartmouthMappingTest.scala`](../../src/test/scala/dpla/ingestion3/mappers/providers/experimental/DartmouthMappingTest.scala)
   (fixtures are real OAI records from the live feed).
@@ -169,3 +170,32 @@ index exposure.
   setlist the default is all.
 - **doi vs ark precedence** — implemented doi-first; no live record currently carries
   both, so the tiebreak is untested against real data.
+
+---
+
+## 5. Harvesting over HTTP/1.1 (endpoint connection issue)
+
+The Dartmouth OAI endpoint (Apache `mod_http2`) cannot sustain a single
+long-running, data-heavy harvest **over HTTP/2**: a full-corpus `ListRecords` run
+fails partway through when the server closes the long-lived connection with an
+HTTP/2 **GOAWAY** (surfaced to the Java client as
+`RST_STREAM: Stream not processed`). Individual requests and short harvests work
+fine; it is a transport/server-config issue, not an OAI-protocol error and not a
+DPLA-side problem. (Full diagnosis and the suggestions sent to Dartmouth are in
+the endpoint-diagnosis handoff note.)
+
+**Fix:** harvest over **HTTP/1.1**, which has no GOAWAY frame and whose connection
+churn (Apache `KeepAliveTimeout` / `MaxKeepAliveRequests`) the Java `HttpClient`
+handles transparently by opening a fresh connection. This is a per-hub option so
+no other hub is affected:
+
+- `dpla.ingestion3.utils.HttpUtils.makeGetRequest` accepts an optional
+  `HttpClient.Version`; the OAI path threads it from config
+  (`OaiConfiguration.httpVersion` → `OaiProtocol` → `OaiMultiPageResponseBuilder`).
+- Set it in i3.conf: `dartmouth.harvest.httpVersion = "1.1"`. Accepted values are
+  `"1.1"` and `"2"`; when unset, the client default (HTTP/2) is used, so every
+  other hub is unchanged.
+
+The hub then harvests through the normal `localoai` path (`harvest.sh` → `remap.sh`,
+or `ingest.sh`): one harvest dataset, one mapping/enrichment/jsonl pass, and one
+summary email — no per-set orchestration required.

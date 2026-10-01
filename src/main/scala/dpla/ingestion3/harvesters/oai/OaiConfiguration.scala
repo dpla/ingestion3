@@ -7,6 +7,8 @@ import dpla.ingestion3.harvesters.HarvesterExceptions.{
 }
 import dpla.ingestion3.utils.HttpUtils
 
+import java.net.http.HttpClient
+
 /** Case class that holds the responsibility of interpreting the parameters map
   * from the DefaultSource.
   */
@@ -46,6 +48,18 @@ case class OaiConfiguration(parameters: Map[String, String]) {
   }
 
   def metadataPrefix: Option[String] = parameters.get("metadataPrefix")
+
+  /** Preferred HTTP protocol version for OAI requests. "1.1" forces HTTP/1.1
+    * (for endpoints that drop long HTTP/2 connections with a GOAWAY); "2"/"2.0"
+    * forces HTTP/2. When unset, the HttpClient default (HTTP/2) is used.
+    */
+  def httpVersion: Option[HttpClient.Version] =
+    parameters.get("httpVersion").map(_.trim) match {
+      case None | Some("")        => None
+      case Some("1.1")            => Some(HttpClient.Version.HTTP_1_1)
+      case Some("2") | Some("2.0") => Some(HttpClient.Version.HTTP_2)
+      case Some(x) => throwUnrecognizedArgException(s"httpVersion => $x")
+    }
 
   def sleep: Int = parameters.getOrElse("sleep", "0").toInt
 

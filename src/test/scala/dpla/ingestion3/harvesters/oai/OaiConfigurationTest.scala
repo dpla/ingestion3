@@ -3,6 +3,8 @@ package dpla.ingestion3.harvesters.oai
 import dpla.ingestion3.harvesters.oai.OaiConfiguration
 import org.scalatest.flatspec.AnyFlatSpec
 
+import java.net.http.HttpClient
+
 class OaiConfigurationTest extends AnyFlatSpec {
 
   private val defaults = Map("verb" -> "ListRecords")
@@ -75,6 +77,28 @@ class OaiConfigurationTest extends AnyFlatSpec {
 
   it should "throw when ListRecords is not set and a set parameter is also not set" in {
     assertThrows[Exception](OaiConfiguration(Map()))
+  }
+
+  it should "default to no explicit HTTP version" in {
+    assert(OaiConfiguration(defaults).httpVersion === None)
+    assert(OaiConfiguration(defaults.updated("httpVersion", "")).httpVersion === None)
+  }
+
+  it should "parse an explicit HTTP version" in {
+    assert(
+      OaiConfiguration(defaults.updated("httpVersion", "1.1")).httpVersion
+        === Some(HttpClient.Version.HTTP_1_1)
+    )
+    assert(
+      OaiConfiguration(defaults.updated("httpVersion", "2")).httpVersion
+        === Some(HttpClient.Version.HTTP_2)
+    )
+  }
+
+  it should "throw on an unrecognized HTTP version" in {
+    assertThrows[Exception](
+      OaiConfiguration(defaults.updated("httpVersion", "3")).httpVersion
+    )
   }
 
 }

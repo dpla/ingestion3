@@ -51,6 +51,7 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None)
         verb = getProp(providerConf, "harvest.verb"),
         metadataPrefix = getProp(providerConf, "harvest.metadataPrefix"),
         harvestAllSets = getProp(providerConf, "harvest.harvestAllSets"),
+        httpVersion = getProp(providerConf, "harvest.httpVersion"),
         // Properties for API harvests
         apiKey = getProp(providerConf, "harvest.apiKey"),
         rows = getProp(providerConf, "harvest.rows"),
@@ -170,6 +171,11 @@ case class Harvest(
     verb: Option[String] = None,
     metadataPrefix: Option[String] = None,
     harvestAllSets: Option[String] = None,
+    // Preferred HTTP version for OAI requests: "1.1" or "2" (default: client
+    // default, HTTP/2). Set "1.1" for endpoints that drop long HTTP/2
+    // connections with a GOAWAY during a sustained harvest (e.g. Apache
+    // mod_http2). See docs/ingestion/dartmouth-mapping-draft.md.
+    httpVersion: Option[String] = None,
     // API
     rows: Option[String] = None,
     query: Option[String] = None,

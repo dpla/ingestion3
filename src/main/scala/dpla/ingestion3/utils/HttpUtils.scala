@@ -35,10 +35,11 @@ object HttpUtils {
     */
   def makeGetRequest(
       url: URL,
-      headers: Option[Map[String, String]] = None
+      headers: Option[Map[String, String]] = None,
+      version: Option[HttpClient.Version] = None
   ): String =
     retry(RETRIES, INITIAL_SLEEP)(
-      execute(constructRequest(url, headers))
+      execute(constructRequest(url, headers, version))
     ) match {
       case Success(response) => response
       case Failure(e) =>
@@ -115,12 +116,17 @@ object HttpUtils {
     */
   private def constructRequest(
       url: URL,
-      headers: Option[Map[String, String]] = None
+      headers: Option[Map[String, String]] = None,
+      version: Option[HttpClient.Version] = None
   ): HttpRequest = {
     val request = HttpRequest
       .newBuilder()
       .uri(url.toURI)
       .timeout(Duration.ofSeconds(REQUEST_TIMEOUT))
+
+    // Per-request protocol override (e.g. force HTTP/1.1 for endpoints that
+    // drop long HTTP/2 connections). When None, the client default is used.
+    version.foreach(request.version)
 
     headers match {
       case Some(h) =>
