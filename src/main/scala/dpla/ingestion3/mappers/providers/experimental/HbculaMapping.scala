@@ -53,7 +53,12 @@ class HbculaMapping extends XmlMapping with XmlExtractor {
 
   override def format(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \\ "format")
-      .map(_.stripSuffix(";"))
+      .map(_.cleanupEndingPunctuation)
+
+  // All dc:identifier values, as given: the local file/call number (e.g.
+  // "auc.001.bgx3.00000000.pho0039.jpg", "becu.0117") and the CONTENTdm URL.
+  override def identifier(data: Document[NodeSeq]): ZeroToMany[String] =
+    extractStrings(data \ "metadata" \\ "identifier")
 
   override def language(data: Document[NodeSeq]): ZeroToMany[SkosConcept] =
     extractStrings(data \ "metadata" \\ "language")
@@ -65,6 +70,10 @@ class HbculaMapping extends XmlMapping with XmlExtractor {
       .flatMap(_.splitAtDelimiter(";"))
       .map(nameOnlyPlace)
 
+  override def relation(data: Document[NodeSeq]): ZeroToMany[LiteralOrUri] =
+    extractStrings(data \ "metadata" \\ "relation")
+      .map(eitherStringOrUri)
+
   override def rights(data: Document[NodeSeq]): AtLeastOne[String] =
     extractStrings(data \ "metadata" \\ "rights")
 
@@ -75,7 +84,7 @@ class HbculaMapping extends XmlMapping with XmlExtractor {
 
   override def title(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \\ "title")
-      .map(_.stripSuffix("."))
+      .map(_.stripEndingPeriod)
 
   override def `type`(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(data \ "metadata" \\ "type")
@@ -97,35 +106,28 @@ class HbculaMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyAgent)
       .slice(0, 1)
 
+  // The CONTENTdm item URL: the first http dc:identifier.
+  private def contentdmUrl(data: Document[NodeSeq]): Option[String] =
+    identifier(data).find(_.startsWith("http"))
+
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    extractStrings(data \ "metadata" \\ "identifier")
-      .filter(_.startsWith("http"))
-      .map(stringOnlyWebResource)
-      .slice(0, 1)
+    contentdmUrl(data).map(stringOnlyWebResource).toSeq
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
 
-  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
-    val url: Option[String] =
-      extractStrings(data \ "metadata" \\ "identifier")
-        .find(_.startsWith("http"))
-
-    // CONTENTdm item URLs are structured as:
-    //   http://hbcudigitallibrary.auctr.edu/cdm/ref/collection/{collection}/id/{id}
-    // Thumbnail URLs are:
-    //   http://hbcudigitallibrary.auctr.edu/utils/getthumbnail/collection/{collection}/id/{id}
-    val parts: Seq[String] = url.getOrElse("").stripSuffix("/").split("/")
-    val collection: Option[String] = parts.reverse.lift(2) // e.g. "ASUD"
-    val item: Option[String] = parts.lastOption            // e.g. "0"
-
-    if (collection.isDefined && item.isDefined) {
-      val thumbUrl: String =
-        "http://hbcudigitallibrary.auctr.edu/utils/getthumbnail/collection/" +
-          collection.get + "/id/" + item.get
-      Seq(stringOnlyWebResource(thumbUrl))
-    } else Seq()
-  }
+  // CONTENTdm item URLs are structured as:
+  //   http://hbcudigitallibrary.auctr.edu/cdm/ref/collection/{collection}/id/{id}
+  // Thumbnails are built as (the server serves them on both schemes):
+  //   https://hbcudigitallibrary.auctr.edu/utils/getthumbnail/collection/{collection}/id/{id}
+  override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
+    (for {
+      url <- contentdmUrl(data)
+      parts = url.stripSuffix("/").split("/")
+      collection <- parts.reverse.lift(2) // e.g. "ASUD"
+    } yield stringOnlyWebResource(
+      s"https://hbcudigitallibrary.auctr.edu/utils/getthumbnail/collection/$collection/id/${parts.last}"
+    )).toSeq
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
