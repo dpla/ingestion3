@@ -7,16 +7,18 @@ See [README_TEST_HUBS.md](README_TEST_HUBS.md).
 - **Metadata format:** MODS, harvested from the **live OAI-PMH feed**.
 - **Harvest:** `localoai` from `https://collections.dartmouth.edu/archive/oai`,
   `metadataPrefix=mods`, `verb=ListRecords`, paging via `resumptionToken`
-  (`deletedRecord=no`, granularity to the second). Config in `ingestion3-conf/i3.conf`.
+  (`deletedRecord=no`, granularity to the second). **No setlist** — Dartmouth gave
+  none, so per policy we harvest the whole corpus (**~136,652 MODS records** across
+  all collections). Config in `ingestion3-conf` (`feature/dartmouth-oai-config`).
 - **Mapper:** [`DartmouthMapping.scala`](../../src/main/scala/dpla/ingestion3/mappers/providers/experimental/DartmouthMapping.scala)
 - **Tests:** [`DartmouthMappingTest.scala`](../../src/test/scala/dpla/ingestion3/mappers/providers/experimental/DartmouthMappingTest.scala)
   (fixtures are real OAI records from the live feed).
-- **Collections (as of 2026-09-30):** the feed advertises 59 `ddlp-collections:*`
-  sets. Of the 5 originally sampled, **3 currently emit MODS** and are in the
-  harvest setlist: `black-creative-music`, `granite-state-maps`,
-  `winter-carnival-posters`. The two TEI-text sets (`occom`,
-  `Press_Translations_Japanese`) are advertised but return `noRecordsMatch` / 0
-  records — see §4. The other 54 sets are out of scope for this mapping.
+- **Scope:** the feed advertises 59 `ddlp-collections:*` sets. The 5 collections in
+  the July sample zip were only the mapper's development sample, **not** a contributed
+  setlist — so the harvest is **all sets**, not those 5. The TEI-text collections
+  (`occom`, `Press_Translations_Japanese`, `*-tei`) return `noRecordsMatch`/no MODS
+  and simply contribute nothing to an all-sets harvest (no error, since no set is
+  named). See §4.
 - **DPLA model & serialization:** field types in
   [`DplaMapData.scala`](../../src/main/scala/dpla/ingestion3/model/DplaMapData.scala);
   base field defaults / validation flags in the
@@ -160,7 +162,10 @@ index exposure.
 - **Text collections** (`occom`, `Press_Translations_Japanese`) emit no MODS yet
   (`noRecordsMatch` / 0 records). Whether DPLA ingests the text collections at all
   remains open.
-- **Harvest scope** — the test harvest covers the 3 live mapped sets; the other 54
-  advertised sets are not in the contributed set / not designed against.
+- **Harvest scope** — resolved: no hub setlist, so harvest all sets (full ~136k-record
+  corpus), not the 5 sample collections. A full-corpus stress-test harvest was run to
+  surface mapping issues across every collection (see the QA/result file). It remains
+  worth asking Dartmouth which collections they consider contributed, but absent a
+  setlist the default is all.
 - **doi vs ark precedence** — implemented doi-first; no live record currently carries
   both, so the tiebreak is untested against real data.
