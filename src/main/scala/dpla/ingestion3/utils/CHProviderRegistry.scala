@@ -34,7 +34,7 @@ object CHProviderRegistry {
     "bpl" -> new MaProfile,
     "community-webs" -> new CommunityWebsProfile,
     "ct" -> new CtProfile,
-    "dartmouth" -> new DartmouthProfile, // TEST HUB — see docs/ingestion/README_TEST_HUBS.md
+    "dartmouth" -> new DartmouthProfile,
 
     "dc" -> new DcProfile,
     "florida" -> new FlProfile,

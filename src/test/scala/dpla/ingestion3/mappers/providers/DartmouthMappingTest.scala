@@ -1,4 +1,4 @@
-package dpla.ingestion3.mappers.providers.experimental
+package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.mappers.utils.Document
 import dpla.ingestion3.messages.{IngestMessage, MessageCollector}
@@ -8,7 +8,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.xml.{NodeSeq, XML}
 
-/** TEST HUB — see docs/ingestion/dartmouth-mapping-draft.md
+/** See docs/ingestion/dartmouth-mapping-draft.md
   *
   * Fixtures are real OAI-wrapped MODS records from the live feed
   * (https://collections.dartmouth.edu/archive/oai, metadataPrefix=mods):

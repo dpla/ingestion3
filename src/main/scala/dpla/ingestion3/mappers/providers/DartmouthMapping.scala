@@ -1,12 +1,4 @@
 /**
- * TEST HUB — NOT APPROVED FOR PRODUCTION
- *
- * This mapper is under evaluation and has not been approved for inclusion
- * in the DPLA production index. Do not remove the `status = test` flag
- * from i3.conf until the hub has been formally approved.
- *
- * See docs/ingestion/README_TEST_HUBS.md for full conventions.
- *
  * Provider: Dartmouth Libraries (Dartmouth College). Metadata format: MODS,
  * harvested from the live OAI-PMH feed at
  * https://collections.dartmouth.edu/archive/oai (metadataPrefix=mods). Records
@@ -16,7 +8,7 @@
  * Mapping decisions reflect Shaun Akhtar's 2026-09-30 email (see
  * docs/ingestion/dartmouth-mapping-draft.md section 4 for the resolution log).
  */
-package dpla.ingestion3.mappers.providers.experimental
+package dpla.ingestion3.mappers.providers
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
