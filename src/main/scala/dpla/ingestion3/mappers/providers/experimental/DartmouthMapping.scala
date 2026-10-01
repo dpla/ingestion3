@@ -7,20 +7,18 @@
  *
  * See docs/ingestion/README_TEST_HUBS.md for full conventions.
  *
- * Provider: Dartmouth Libraries (Dartmouth College). Metadata format: MODS 3.6
- * (with a Dartmouth `drb:` extension namespace). Records are delivered as raw
- * <mods:mods> documents (one record per file). The `getModsRoot` helper below
- * anchors to the record's root MODS element so this mapper works whether records
- * arrive raw (file harvest) or wrapped in an OAI <record><metadata> envelope —
- * without matching any nested <mods:mods> that may appear inside a relatedItem.
+ * Provider: Dartmouth Libraries (Dartmouth College). Metadata format: MODS,
+ * harvested from the live OAI-PMH feed at
+ * https://collections.dartmouth.edu/archive/oai (metadataPrefix=mods). Records
+ * arrive OAI-wrapped (<record><metadata><mods:mods>); `getModsRoot` anchors to
+ * the record's root MODS element so the mapper also works on a raw <mods:mods>.
+ *
+ * Mapping decisions reflect Shaun Akhtar's 2026-09-30 email (see
+ * docs/ingestion/dartmouth-mapping-draft.md section 4 for the resolution log).
  */
 package dpla.ingestion3.mappers.providers.experimental
 
 import dpla.ingestion3.enrichments.normalizations.StringNormalizationUtils._
-import dpla.ingestion3.enrichments.normalizations.filters.{
-  DigitalSurrogateBlockList,
-  FormatTypeValuesBlockList
-}
 import dpla.ingestion3.mappers.utils.{Document, XmlExtractor, XmlMapping}
 import dpla.ingestion3.model.DplaMapData.{ExactlyOne, ZeroToMany, ZeroToOne}
 import dpla.ingestion3.model._
@@ -32,13 +30,15 @@ import scala.xml._
 
 class DartmouthMapping extends XmlMapping with XmlExtractor {
 
-  val formatBlockList: Set[String] =
-    DigitalSurrogateBlockList.termList ++
-      FormatTypeValuesBlockList.termList
+  // Base URL used to resolve relative URLs the feed currently emits (preview).
+  private val DartmouthBaseUrl = "https://collections.dartmouth.edu"
 
   // titleInfo @type values that are NOT the primary title.
   private val alternateTitleTypes: Seq[String] =
     Seq("alternative", "translated", "uniform")
+
+  // Bare FAST authority code, e.g. "(OCoLC)fst01310063" -> id.worldcat.org/fast/1310063
+  private val fastCode = """^\(OCoLC\)fst0*([0-9]+)$""".r
 
   // ID minting functions
   override def useProviderName: Boolean = true
@@ -46,17 +46,16 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
   override def getProviderName: Option[String] = Some("dartmouth")
 
   override def originalId(implicit data: Document[NodeSeq]): ZeroToOne[String] = {
-    // Prefer the Dartmouth record identifier (mods:recordInfo/mods:recordIdentifier[@source="DRB"]),
-    // e.g. "occom-765122". Fall back to any recordIdentifier, then an OAI header identifier
-    // (present only if these are later harvested via OAI).
+    // Prefer the item's own DRB record identifier
+    // (mods:recordInfo/mods:recordIdentifier[@source="DRB"]); fall back to the OAI
+    // header identifier (oai:ddlp-id:<collection>/<item>), then any recordIdentifier.
     val recordIds = getModsRoot(data) \ "recordInfo" \ "recordIdentifier"
-
     byAttribute(recordIds, "source", "DRB").flatMap(extractStrings).headOption
-      .orElse(extractString(recordIds))
       .orElse(extractString(data \ "header" \ "identifier"))
+      .orElse(extractString(recordIds))
   }
 
-  // SourceResource mapping
+  // ── SourceResource ──────────────────────────────────────────────────────────
 
   override def alternateTitle(data: Document[NodeSeq]): ZeroToMany[String] = {
     val titleInfos = getModsRoot(data) \ "titleInfo"
@@ -72,25 +71,31 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyCollection)
 
   override def creator(data: Document[NodeSeq]): Seq[EdmAgent] =
-    // Per Dartmouth (2026): map all names with usage="primary", regardless of type
-    // or role — and only those. Records with no primary name have no creator.
-    // NOTE: contributor is intentionally NOT mapped — the treatment of non-primary
-    // names is an open question for Dartmouth (see
-    // docs/ingestion/dartmouth-mapping-draft.md).
+    // Per Dartmouth (2026-09-30): names with usage="primary", regardless of type or
+    // role. Records with no primary name have no creator.
     (getModsRoot(data) \ "name")
       .filter(n => filterAttribute(n, "usage", "primary"))
       .map(edmAgentHelper)
 
+  override def contributor(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
+    // Per Dartmouth (2026-09-30): all non-primary names EXCEPT those with the
+    // "repository" role (duplicative of provider). Role matched case-insensitively
+    // against both roleTerm[@type="text"] ("repository") and [@type="code"] ("rps").
+    (getModsRoot(data) \ "name")
+      .filterNot(n => filterAttribute(n, "usage", "primary"))
+      .filterNot(isRepositoryName)
+      .map(edmAgentHelper)
+
   override def date(data: Document[NodeSeq]): Seq[EdmTimeSpan] = {
-    // The meaningful item date is often in the analog original, carried in
-    // <mods:relatedItem type="otherFormat"><mods:originInfo><mods:dateCreated>,
-    // while the top-level <mods:originInfo><mods:dateIssued> is the digitization
-    // date. Prefer dateCreated (top-level or otherFormat); fall back to other
-    // top-level date properties. TODO: confirm date precedence with the partner.
+    // Per Dartmouth (2026-09-30): the item's original date lives in
+    // relatedItem[@type="original" | "otherFormat"]/originInfo/{dateCreated,dateIssued}
+    // (@encoding="w3cdtf"); the top-level originInfo date is the digitization date.
+    // Prefer the related-item date; fall back to the top-level date.
     val root = getModsRoot(data)
-    val topOrigin = root \ "originInfo"
-    val otherFormatOrigin =
-      byAttribute(root \ "relatedItem", "type", "otherFormat") \ "originInfo"
+    val relItems = root \ "relatedItem"
+    val relOrigin =
+      (byAttribute(relItems, "type", "original") ++
+        byAttribute(relItems, "type", "otherFormat")) \ "originInfo"
 
     def w3cdtf(nodes: NodeSeq): Seq[String] =
       byAttribute(nodes, "encoding", "w3cdtf")
@@ -98,23 +103,18 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
         .map(_.trim)
         .filter(_.nonEmpty)
 
-    val dateCreated =
-      w3cdtf(topOrigin \ "dateCreated") ++ w3cdtf(otherFormatOrigin \ "dateCreated")
-
-    val fallback = Seq("dateIssued", "dateOther", "copyrightDate")
+    val fromRelated = w3cdtf(relOrigin \ "dateCreated") ++ w3cdtf(relOrigin \ "dateIssued")
+    val topOrigin = root \ "originInfo"
+    val fromTop = Seq("dateCreated", "dateIssued", "dateOther", "copyrightDate")
       .flatMap(prop => w3cdtf(topOrigin \ prop))
 
-    val chosen = if (dateCreated.nonEmpty) dateCreated else fallback
+    val chosen = if (fromRelated.nonEmpty) fromRelated else fromTop
     chosen.distinct.map(stringOnlyTimeSpan)
   }
 
   override def description(data: Document[NodeSeq]): Seq[String] =
-    // <mods:abstract> only (direct child — relatedItem abstracts excluded), and
-    // excluding abstract[@shareable="no"] (e.g. "Part 1 of 4", not descriptive).
-    // NOTE: <mods:note> values are potentially mappable to description as well,
-    // but the Dartmouth samples mix content notes with administrative/technical
-    // ones (TEI conversion, Handwriting, Paper, Ink). Left out for now; revisit
-    // with the partner if some note types should be included.
+    // <mods:abstract> only (direct child), excluding abstract[@shareable="no"]
+    // (e.g. "Part 1 of 4"). <mods:note> values are intentionally not mapped.
     (getModsRoot(data) \ "abstract")
       .filterNot(n => filterAttribute(n, "shareable", "no"))
       .flatMap(extractStrings)
@@ -122,17 +122,23 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
   override def extent(data: Document[NodeSeq]): ZeroToMany[String] =
     extractStrings(getModsRoot(data) \ "physicalDescription" \ "extent")
 
-  override def format(data: Document[NodeSeq]): Seq[String] =
-    // <mods:genre>
-    extractStrings(getModsRoot(data) \ "genre")
-      .map(_.applyBlockFilter(formatBlockList))
-      .filter(_.nonEmpty)
-
-  override def identifier(data: Document[NodeSeq]): Seq[String] =
-    extractStrings(getModsRoot(data) \ "identifier")
+  override def genre(data: Document[NodeSeq]): ZeroToMany[SkosConcept] = {
+    // Per Dartmouth (2026-09-30): map MODS genre to DPLA genre, preserving the
+    // @valueURI as exactMatch (http as-is; bare FAST codes converted to
+    // id.worldcat.org/fast URIs). Deduped by label, keeping a URI-bearing variant.
+    val concepts = (getModsRoot(data) \ "genre")
+      .map(skosConceptHelper)
+      .filter(_.providedLabel.exists(_.trim.nonEmpty))
+    val byLabel = scala.collection.mutable.LinkedHashMap[String, SkosConcept]()
+    concepts.foreach { c =>
+      val key = c.providedLabel.map(_.trim.toLowerCase).getOrElse("")
+      val keep = byLabel.get(key).forall(e => e.exactMatch.isEmpty && c.exactMatch.nonEmpty)
+      if (keep) byLabel(key) = c
+    }
+    byLabel.values.toSeq
+  }
 
   override def language(data: Document[NodeSeq]): Seq[SkosConcept] =
-    // <mods:language><mods:languageTerm type="text">
     byAttribute(getModsRoot(data) \ "language" \ "languageTerm", "type", "text")
       .flatMap(extractStrings)
       .map(nameOnlyConcept)
@@ -148,23 +154,43 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
         .filter(_.nonEmpty)
         .map(nameOnlyPlace)
 
-    // <mods:subject><mods:geographic>. An http(s) valueURI on the subject (or the
-    // geographic node) is captured as exactMatch. FAST "(OCoLC)fst..." style values
-    // are not URIs and are ignored. TODO: capture FAST authority IDs if the partner
-    // provides them (or we convert them) in http form (id.worldcat.org/fast/...).
-    val subjectPlaces = (root \ "subject").flatMap { subject =>
-      val uri = (getAttributeValue(subject, "valueURI").toSeq ++
-        (subject \ "geographic").flatMap(g => getAttributeValue(g, "valueURI")))
-        .filter(isHttpUri)
-        .map(URI)
-      (subject \ "geographic")
+    val subjects = root \ "subject"
+
+    // <mods:subject><mods:geographic>, with a FAST/http valueURI as exactMatch.
+    val geoPlaces = subjects.flatMap { s =>
+      val uri = (getAttributeValue(s, "valueURI").toSeq ++
+        (s \ "geographic").flatMap(g => getAttributeValue(g, "valueURI")))
+        .flatMap(normalizeAuthorityUri)
+      (s \ "geographic")
         .flatMap(extractStrings)
         .map(_.trim)
         .filter(_.nonEmpty)
         .map(name => DplaPlace(name = Some(name), exactMatch = uri))
     }
 
-    originPlaces ++ subjectPlaces
+    // <mods:subject><mods:cartographics><mods:coordinates>. NOTE: Dartmouth emits
+    // MARC-255 coordinate strings (e.g. "(W 73°--W 70°/N 45°...)"), not decimal
+    // lat/long. Mapped as-is; see the mapping doc / QA report re: MAP 3.1.
+    val coordPlaces = (subjects \ "cartographics" \ "coordinates")
+      .flatMap(extractStrings)
+      .map(_.trim)
+      .filter(_.nonEmpty)
+      .map(c => DplaPlace(coordinates = Some(c)))
+
+    // <mods:subject><mods:hierarchicalGeographic>
+    val hierPlaces = (subjects \ "hierarchicalGeographic").map { h =>
+      val city = extractString(h \ "city").map(_.trim).filter(_.nonEmpty)
+      val county = extractString(h \ "county").map(_.trim).filter(_.nonEmpty)
+      val state = extractString(h \ "state").map(_.trim).filter(_.nonEmpty)
+      val country = extractString(h \ "country").map(_.trim).filter(_.nonEmpty)
+      val name = Seq(city, county, state, country).flatten match {
+        case Nil => None
+        case parts => Some(parts.mkString(", "))
+      }
+      DplaPlace(name = name, city = city, county = county, state = state, country = country)
+    }
+
+    originPlaces ++ geoPlaces ++ coordPlaces ++ hierPlaces
   }
 
   override def publisher(data: Document[NodeSeq]): Seq[EdmAgent] =
@@ -172,15 +198,14 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
       .map(nameOnlyAgent)
 
   override def rights(data: Document[NodeSeq]): Seq[String] =
-    // Direct text of each <mods:accessCondition> only. Using direct text (not
-    // descendant text) drops conditions whose content is a nested copyrightMD
-    // block (cmd:copyright); its holder is mapped to rightsHolder instead.
+    // Direct text of each <mods:accessCondition>; a condition whose content is a
+    // nested copyrightMD block (cmd:copyright) contributes no text (holder ->
+    // rightsHolder). Standardized rights URIs are mapped to edmRights.
     (getModsRoot(data) \ "accessCondition")
       .map(directText)
       .filter(_.nonEmpty)
 
   override def rightsHolder(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    // <mods:accessCondition><cmd:copyright><cmd:rights.holder><cmd:name>
     (getModsRoot(data) \ "accessCondition" \ "copyright" \ "rights.holder" \ "name")
       .flatMap(extractStrings)
       .map(_.trim)
@@ -190,7 +215,7 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
   override def subject(data: Document[NodeSeq]): Seq[SkosConcept] = {
     val root = getModsRoot(data)
     Seq("topic", "temporal", "titleInfo", "name", "genre").flatMap(property =>
-      (root \ "subject" \ property).map(skosConceptUriHelper)
+      (root \ "subject" \ property).map(skosConceptHelper)
     )
   }
 
@@ -199,8 +224,6 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
       .map(stringOnlyTimeSpan)
 
   override def title(data: Document[NodeSeq]): Seq[String] = {
-    // Top-level <mods:titleInfo> that is not an alternate form: combine
-    // <mods:nonSort> <mods:title> <mods:subTitle>.
     val titleNodes = (getModsRoot(data) \ "titleInfo")
       .filterNot(n => alternateTitleTypes.exists(t => filterAttribute(n, "type", t)))
 
@@ -215,101 +238,103 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
   }
 
   override def `type`(data: Document[NodeSeq]): Seq[String] =
-    // <mods:typeOfResource> (direct child only)
     extractStrings(getModsRoot(data) \ "typeOfResource")
 
-  // OreAggregation
+  // ── OreAggregation ──────────────────────────────────────────────────────────
+
   override def dplaUri(data: Document[NodeSeq]): ZeroToOne[URI] =
     mintDplaItemUri(data)
 
   override def dataProvider(data: Document[NodeSeq]): ZeroToMany[EdmAgent] =
-    // Per Dartmouth (2026): hardcoded, same as provider. (Previously derived from
-    // the analog original's subLocation; dropped at Dartmouth's request.)
+    // Hardcoded, same as provider. Dartmouth offered to supply a per-record
+    // dataProvider source; proposal is in the QA/result file.
     Seq(nameOnlyAgent("Dartmouth Libraries"))
 
   override def edmRights(data: Document[NodeSeq]): ZeroToMany[URI] =
-    // <mods:accessCondition type="use and reproduction" xlink:href="...">
+    // Standardized rights URI: <mods:accessCondition type="use and reproduction"
+    // xlink:href="..."> (rightsstatements.org or creativecommons.org).
     byAttribute(getModsRoot(data) \ "accessCondition", "type", "use and reproduction")
       .flatMap(node => node.attribute(node.getNamespace("xlink"), "href"))
       .flatMap(n => extractString(n.head))
       .map(_.trim)
+      .filter(_.nonEmpty)
       .map(URI)
 
   override def isShownAt(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
-    // <mods:location><mods:url usage="primary" access="object in context">
-    val urls = getModsRoot(data) \ "location" \ "url"
-    byAttribute(byAttribute(urls, "usage", "primary"), "access", "object in context")
-      .flatMap(extractStrings)
+    // Per Dartmouth (2026-09-30): prefer identifier[@type="doi"], then
+    // identifier[@type="ark"], then location/url[@usage="primary"][@access="object
+    // in context"]. Bare doi:/ark: forms normalized to resolvable URLs.
+    val root = getModsRoot(data)
+    val doi = byAttribute(root \ "identifier", "type", "doi").flatMap(extractStrings)
+    val ark = byAttribute(root \ "identifier", "type", "ark").flatMap(extractStrings)
+    val primary = byAttribute(
+      byAttribute(root \ "location" \ "url", "usage", "primary"),
+      "access", "object in context"
+    ).flatMap(extractStrings)
+
+    (doi ++ ark ++ primary)
+      .map(_.trim)
+      .filter(_.nonEmpty)
+      .map(normalizeIsShownAt)
+      .headOption
       .map(stringOnlyWebResource)
+      .toSeq
   }
 
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
 
   override def preview(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    // TODO: The Dartmouth sample MODS records carry no explicit thumbnail/preview
-    //  URL. Confirm the thumbnail source with the partner (candidates: the ark
-    //  "Electronic image" identifier, or a derivable IIIF/thumbnail endpoint under
-    //  collections.dartmouth.edu). For now, look for an access="preview" url.
+    // <mods:location><mods:url access="preview">. Dartmouth currently emits a
+    // RELATIVE path; resolve it against the base URL. (Delete resolveUrl once
+    // Dartmouth makes these absolute — see the mapping doc.)
     byAttribute(getModsRoot(data) \ "location" \ "url", "access", "preview")
       .flatMap(extractStrings)
+      .map(_.trim)
+      .filter(_.nonEmpty)
+      .map(resolveUrl)
       .map(stringOnlyWebResource)
 
-  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] = {
-    // Archive (image/map) objects have a IIIF Presentation 3.0 manifest at
-    //   https://collections.dartmouth.edu/archive/iiif/{collection}/{item}-mods.json
-    // where {collection} is the host relatedItem's DRB recordIdentifier and {item}
-    // is the record's own DRB recordIdentifier. Text collections (occom, teitexts)
-    // have no such manifest, so we skip typeOfResource = "text".
-    //
-    // TODO: this hardcodes the collections.dartmouth.edu IIIF URL template. Ideally
-    //  Dartmouth would emit the manifest URL explicitly in the MODS (e.g.
-    //  <mods:location><mods:url note="iiifManifest">), as several DPLA hubs do.
-    val root = getModsRoot(data)
-    val isText = extractStrings(root \ "typeOfResource").exists(_.equalsIgnoreCase("text"))
-
-    val collection = byAttribute(
-      byAttribute(root \ "relatedItem", "type", "host") \ "recordInfo" \ "recordIdentifier",
-      "source", "DRB"
-    ).flatMap(extractStrings).headOption
-
-    val item = byAttribute(root \ "recordInfo" \ "recordIdentifier", "source", "DRB")
+  override def iiifManifest(data: Document[NodeSeq]): ZeroToMany[URI] =
+    // <mods:location><mods:url note="IIIF manifest"> — literal attribute value
+    // "IIIF manifest" (with a space), as the feed emits it.
+    byAttribute(getModsRoot(data) \ "location" \ "url", "note", "IIIF manifest")
       .flatMap(extractStrings)
-      .headOption
-
-    (for {
-      c <- collection if !isText
-      i <- item
-    } yield URI(
-      s"https://collections.dartmouth.edu/archive/iiif/$c/$i-mods.json"
-    )).toSeq
-  }
+      .map(_.trim)
+      .filter(_.nonEmpty)
+      .map(resolveUrl)
+      .map(URI)
 
   override def provider(data: Document[NodeSeq]): ExactlyOne[EdmAgent] = agent
 
   override def sidecar(data: Document[NodeSeq]): JValue =
     ("prehashId" -> buildProviderBaseId()(data)) ~ ("dplaId" -> mintDplaId(data))
 
-  // Helper methods
+  // ── Helpers ─────────────────────────────────────────────────────────────────
 
   def agent: EdmAgent = EdmAgent(
     name = Some("Dartmouth Libraries"),
     uri = Some(URI("http://dp.la/api/contributor/dartmouth"))
   )
 
-  // Anchors to the record's root MODS element. For OAI-wrapped records that is
-  // <metadata><mods:mods>; for raw records it is the top-level node itself. Using
-  // an explicit path (rather than a descendant scan) avoids matching any nested
-  // <mods:mods> inside a relatedItem.
+  // Anchors to the record's root MODS element (OAI-wrapped <metadata><mods> or a
+  // raw <mods>), without matching any nested <mods> inside a relatedItem.
   private def getModsRoot(data: Document[NodeSeq]): NodeSeq = {
     val ns: NodeSeq = data
     val wrapped = ns \ "metadata" \ "mods"
     if (wrapped.nonEmpty) wrapped else ns.filter(_.label == "mods")
   }
 
-  // Filters a NodeSeq to the elements whose `attr` equals `value`.
   private def byAttribute(nodes: NodeSeq, attr: String, value: String): NodeSeq =
     nodes.flatMap(n => getByAttribute(n.asInstanceOf[Elem], attr, value))
+
+  // A name is the "repository" (excluded from contributor) if any of its role
+  // terms is "repository" (text) or "rps" (MARC relator code), case-insensitive.
+  private def isRepositoryName(node: Node): Boolean =
+    (node \ "role" \ "roleTerm")
+      .flatMap(extractStrings)
+      .map(_.trim.toLowerCase)
+      .exists(t => t == "repository" || t == "rps")
 
   private def nameConstructor(node: Node): Option[String] = {
     val family = extractString((node \ "namePart").filter(p => filterAttribute(p, "type", "family")))
@@ -328,25 +353,48 @@ class DartmouthMapping extends XmlMapping with XmlExtractor {
   }
 
   private def edmAgentHelper(node: Node): EdmAgent = {
-    // @valueURI -> exactMatch (the entity URI, e.g. an LC name authority);
-    // @authorityURI -> scheme (the authority base). Only http(s) values are kept.
+    // @valueURI -> exactMatch (entity URI); @authorityURI -> scheme. http(s) only.
     val uri = getAttributeValue(node, "valueURI").filter(isHttpUri).map(URI).toSeq
     val scheme = getAttributeValue(node, "authorityURI").filter(isHttpUri).map(URI)
     EdmAgent(name = nameConstructor(node), exactMatch = uri, scheme = scheme)
   }
 
+  private def skosConceptHelper(node: Node): SkosConcept = {
+    val uri = getAttributeValue(node, "valueURI").flatMap(normalizeAuthorityUri).toSeq
+    val scheme = getAttributeValue(node, "authorityURI").filter(isHttpUri).map(URI)
+    SkosConcept(providedLabel = extractString(node), exactMatch = uri, scheme = scheme)
+  }
+
+  // http(s) kept as-is; bare FAST "(OCoLC)fst…" codes converted to a FAST URI;
+  // anything else dropped (not a resolvable URI).
+  private def normalizeAuthorityUri(value: String): Option[URI] = value.trim match {
+    case v if isHttpUri(v)   => Some(URI(v))
+    case fastCode(n)         => Some(URI(s"http://id.worldcat.org/fast/$n"))
+    case _                   => None
+  }
+
+  // Normalize an isShownAt candidate to a resolvable URL.
+  private def normalizeIsShownAt(value: String): String = value.trim match {
+    case s if isHttpUri(s)        => s
+    case s if s.startsWith("doi:") => "https://doi.org/" + s.stripPrefix("doi:")
+    case s if s.startsWith("ark:") => "https://n2t.net/" + s
+    case s                         => s
+  }
+
+  // Resolve a possibly-relative URL against the Dartmouth base URL. Dartmouth
+  // currently emits relative preview paths; they intend to make them absolute.
+  // DELETE this once all URLs in the feed are absolute.
+  private def resolveUrl(value: String): String = {
+    val t = value.trim
+    if (isHttpUri(t)) t
+    else DartmouthBaseUrl + (if (t.startsWith("/")) t else "/" + t)
+  }
+
   private def isHttpUri(value: String): Boolean =
     value.startsWith("http://") || value.startsWith("https://")
 
-  // Concatenates only a node's direct text children (ignoring nested elements
-  // such as copyrightMD blocks), with whitespace collapsed.
+  // Concatenates only a node's direct text children (ignoring nested elements such
+  // as copyrightMD blocks), with whitespace collapsed.
   private def directText(node: Node): String =
     node.child.collect { case t: Text => t.text }.mkString(" ").reduceWhitespace
-
-  private def skosConceptUriHelper(node: Node): SkosConcept = {
-    val uri = getAttributeValue(node, "valueURI").map(URI).toSeq
-    val scheme = getAttributeValue(node, "authorityURI").map(URI)
-    val label = extractString(node)
-    SkosConcept(providedLabel = label, exactMatch = uri, scheme = scheme)
-  }
 }

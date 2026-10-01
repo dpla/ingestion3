@@ -8,173 +8,215 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 import scala.xml.{NodeSeq, XML}
 
-/** TEST HUB — see docs/ingestion/README_TEST_HUBS.md
+/** TEST HUB — see docs/ingestion/dartmouth-mapping-draft.md
   *
-  * Fixtures are raw <mods:mods> records delivered by Dartmouth:
-  *   - dartmouth.xml         : occom-765122 (a manuscript letter; text)
-  *   - dartmouth-images.xml  : BCM images (still image; carries a CC rights URI)
+  * Fixtures are real OAI-wrapped MODS records from the live feed
+  * (https://collections.dartmouth.edu/archive/oai, metadataPrefix=mods):
+  *   - dartmouth-maps.xml   : granite-state-maps NH_1638_001 (ark; relatedItem
+  *                            @type="original"; cartographics/coordinates; FAST)
+  *   - dartmouth-poster.xml : winter-carnival-posters dwcposters-1911-001 (doi;
+  *                            relatedItem @type="otherFormat")
+  *   - dartmouth-bcm.xml    : black-creative-music hampton-images (ark; no primary
+  *                            name -> no creator; multiple contributors)
   */
 class DartmouthMappingTest extends AnyFlatSpec {
 
   implicit val msgCollector: MessageCollector[IngestMessage] =
     new MessageCollector[IngestMessage]
 
-  val shortName = "dartmouth"
+  private def doc(resource: String): Document[NodeSeq] =
+    Document(XML.loadString(new FlatFileIO().readFileAsString(resource)))
 
-  val xml: Document[NodeSeq] =
-    Document(XML.loadString(new FlatFileIO().readFileAsString("/dartmouth.xml")))
-  val xmlImages: Document[NodeSeq] =
-    Document(XML.loadString(new FlatFileIO().readFileAsString("/dartmouth-images.xml")))
+  private def inline(mods: scala.xml.Elem): Document[NodeSeq] = Document(mods)
+
+  val maps: Document[NodeSeq] = doc("/dartmouth-maps.xml")
+  val poster: Document[NodeSeq] = doc("/dartmouth-poster.xml")
+  val bcm: Document[NodeSeq] = doc("/dartmouth-bcm.xml")
 
   val extractor = new DartmouthMapping
+
+  // ── IDs & provider ────────────────────────────────────────────────────────
 
   it should "use the provider shortname in minting IDs" in
     assert(extractor.useProviderName)
 
-  it should "extract the correct original identifier" in
-    assert(extractor.originalId(xml) === Some("occom-765122"))
+  it should "extract the DRB original identifier" in
+    assert(extractor.originalId(maps) === Some("NH_1638_001"))
 
-  it should "extract the correct title" in
-    assert(
-      extractor.title(xml) ===
-        Seq("Daniel Bull, letter, to Eleazar Wheelock, 1765 January 22")
-    )
-
-  it should "map only names with usage=primary as creator" in
-    assert(extractor.creator(xml) === Seq(nameOnlyAgent("Bull, Daniel")))
-
-  it should "not map contributor (dropped; open question for Dartmouth)" in
-    assert(extractor.contributor(xml).isEmpty)
-
-  it should "exclude non-primary names (addressee, repository) from creator" in {
-    val names = extractor.creator(xml).flatMap(_.name)
-    assert(!names.contains("Wheelock, Eleazar"))
-    assert(!names.contains("Digital by Dartmouth Library"))
+  it should "hardcode provider and dataProvider to Dartmouth Libraries" in {
+    assert(extractor.provider(maps).name === Some("Dartmouth Libraries"))
+    assert(extractor.dataProvider(maps) === Seq(nameOnlyAgent("Dartmouth Libraries")))
   }
 
-  it should "map only the abstract to description (not mods:note)" in
+  // ── isShownAt: doi > ark > primary; drop other identifiers ──────────────────
+
+  it should "map isShownAt to the ark when no doi is present" in
     assert(
-      extractor.description(xml) ===
-        Seq("Bull writes that the Indian girl, whom Wheelock had committed to his care, has arrived.")
+      extractor.isShownAt(maps) ===
+        Seq(stringOnlyWebResource("https://n2t.net/ark:/83024/d4g44hw6f"))
     )
 
-  it should "hardcode dataProvider to Dartmouth Libraries" in {
-    assert(extractor.dataProvider(xml) === Seq(nameOnlyAgent("Dartmouth Libraries")))
-    assert(extractor.dataProvider(xmlImages) === Seq(nameOnlyAgent("Dartmouth Libraries")))
-  }
-
-  it should "exclude shareable=no abstracts from description" in {
-    val d = extractor.description(xmlImages)
-    assert(d.contains(
-      "Associated images of cassette containing live concert recording of the " +
-        "Barbary Coast Jazz Ensemble with Slide Hampton, Clint Houston, " +
-        "Mickey Tucker, and Alan Dawson."
-    ))
-    assert(!d.contains("Part 1 of 4"))
-  }
-
-  it should "not leak the copyright holder into rights" in {
-    val r = extractor.rights(xmlImages)
-    assert(!r.contains("Trustees of Dartmouth College"))
-    assert(r.contains("Creative Commons Attribution-NonCommercial License"))
-  }
-
-  it should "map the copyright holder to rightsHolder" in
+  it should "map isShownAt to the doi when present" in
     assert(
-      extractor.rightsHolder(xmlImages) === Seq(nameOnlyAgent("Trustees of Dartmouth College"))
+      extractor.isShownAt(poster) ===
+        Seq(stringOnlyWebResource("https://doi.org/10.1349/ddlp.1284"))
     )
 
-  it should "prefer the analog dateCreated over the digitization dateIssued" in
-    assert(extractor.date(xml) === Seq(stringOnlyTimeSpan("1765-01-22")))
-
-  it should "extract the correct publisher" in
-    assert(
-      extractor.publisher(xml) === Seq(nameOnlyAgent("Trustees of Dartmouth College"))
+  it should "prefer doi over ark when a record has both" in {
+    val d = inline(
+      <mods xmlns="http://www.loc.gov/mods/v3">
+        <identifier type="ark">https://n2t.net/ark:/83024/zzz</identifier>
+        <identifier type="doi">https://doi.org/10.1/abc</identifier>
+      </mods>
     )
+    assert(extractor.isShownAt(d) === Seq(stringOnlyWebResource("https://doi.org/10.1/abc")))
+  }
 
-  it should "extract the correct place" in
-    assert(extractor.place(xml) === Seq(nameOnlyPlace("Hanover, NH")))
+  it should "normalize bare doi:/ark: isShownAt values to resolvable URLs" in {
+    val d = inline(
+      <mods xmlns="http://www.loc.gov/mods/v3">
+        <identifier type="ark">ark:/83024/abc</identifier>
+      </mods>
+    )
+    assert(extractor.isShownAt(d) === Seq(stringOnlyWebResource("https://n2t.net/ark:/83024/abc")))
+  }
 
-  it should "extract the correct language" in
-    assert(extractor.language(xml) === Seq(nameOnlyConcept("English")))
+  it should "drop invalid and non-doi/ark identifiers from the mapping" in {
+    // maps.xml carries identifier[@type="uri" invalid="yes"] and type="ark"
+    assert(extractor.identifier(maps).isEmpty)
+    assert(!extractor.isShownAt(maps).exists(_.uri.toString.contains("libarchive")))
+  }
 
-  it should "extract the correct type" in
-    assert(extractor.`type`(xml) === Seq("text"))
+  // ── preview / iiifManifest ──────────────────────────────────────────────────
 
-  it should "extract the correct collection" in
-    assert(extractor.collection(xml) === Seq(nameOnlyCollection("Occom Circle")))
-
-  it should "extract the correct isShownAt" in
+  it should "resolve a relative preview path against the base URL" in
     assert(
-      extractor.isShownAt(xml) === Seq(
+      extractor.preview(maps) === Seq(
         stringOnlyWebResource(
-          "https://collections.dartmouth.edu/occom/html/diplomatic/765122-diplomatic.html"
+          "https://collections.dartmouth.edu/xcdas-derivative/granite-state-maps/jpeg-160x120/NH_1638_001.jpg"
         )
       )
     )
 
-  it should "extract rights free-text from accessCondition" in
-    assert(extractor.rights(xml).exists(_.startsWith("Copyright 2015 Trustees of Dartmouth College")))
-
-  it should "extract no edmRights URI when none is present" in
-    assert(extractor.edmRights(xml).isEmpty)
-
-  it should "extract the edmRights URI from accessCondition/@xlink:href" in
+  it should "map iiifManifest from location/url[@note='IIIF manifest']" in
     assert(
-      extractor.edmRights(xmlImages) ===
-        Seq(URI("https://creativecommons.org/licenses/by-nc/4.0/"))
+      extractor.iiifManifest(maps) === Seq(
+        URI("https://collections.dartmouth.edu/archive/iiif/granite-state-maps/NH_1638_001-mods.json")
+      )
     )
 
-  it should "capture creator exactMatch (@valueURI) and scheme (@authorityURI)" in {
-    val agentXml: Document[NodeSeq] = Document(
-      <mods>
-        <name usage="primary"
-              valueURI="http://id.loc.gov/authorities/names/n79021164"
-              authorityURI="http://id.loc.gov/authorities/names">
-          <namePart>Whitman, Walt</namePart>
+  // ── Dates: relatedItem original/otherFormat over top-level ──────────────────
+
+  it should "prefer the relatedItem[@type=original] date over the digitization date" in
+    // top-level dateIssued is 2015 (digitization); original is 1638
+    assert(extractor.date(maps) === Seq(stringOnlyTimeSpan("1638")))
+
+  it should "prefer the relatedItem[@type=otherFormat] date (poster: 1911 not 2014)" in
+    assert(extractor.date(poster) === Seq(stringOnlyTimeSpan("1911")))
+
+  it should "prefer otherFormat dateCreated (bcm: 1982-02-13 not 2025)" in
+    assert(extractor.date(bcm) === Seq(stringOnlyTimeSpan("1982-02-13")))
+
+  // ── Names: creator=primary; contributor=non-primary minus repository ────────
+
+  it should "map usage=primary names to creator" in
+    assert(extractor.creator(maps) === Seq(nameOnlyAgent("Gardner, John, 1624-1706")))
+
+  it should "map non-primary names to contributor, excluding the repository role" in {
+    val names = extractor.contributor(maps).flatMap(_.name)
+    assert(names.contains("Putnam, Charles A."))
+    assert(!names.contains("Dartmouth Digital Library Program")) // repository excluded
+  }
+
+  it should "have no creator and multiple contributors when no name is primary (bcm)" in {
+    assert(extractor.creator(bcm).isEmpty)
+    val names = extractor.contributor(bcm).flatMap(_.name)
+    assert(names.contains("Hampton, Slide"))
+    assert(names.contains("Barbary Coast Jazz Ensemble"))
+    assert(!names.contains("Digital by Dartmouth Library")) // repository excluded
+    assert(names.size === 5)
+  }
+
+  it should "exclude a repository identified by the MARC relator code rps" in {
+    val d = inline(
+      <mods xmlns="http://www.loc.gov/mods/v3">
+        <name><namePart>Repo Co</namePart>
+          <role><roleTerm type="code" authority="marcrelator">rps</roleTerm></role>
         </name>
+        <name><namePart>Real Contributor</namePart></name>
       </mods>
     )
-    assert(
-      extractor.creator(agentXml) === Seq(
-        EdmAgent(
-          name = Some("Whitman, Walt"),
-          exactMatch = Seq(URI("http://id.loc.gov/authorities/names/n79021164")),
-          scheme = Some(URI("http://id.loc.gov/authorities/names"))
-        )
-      )
-    )
+    assert(extractor.contributor(d).flatMap(_.name) === Seq("Real Contributor"))
   }
 
-  it should "capture place exactMatch for http valueURIs but ignore FAST (OCoLC) codes" in {
-    val placeXml: Document[NodeSeq] = Document(
-      <mods>
-        <subject valueURI="http://vocab.getty.edu/tgn/7013445">
-          <geographic>Boston</geographic>
-        </subject>
-        <subject authority="fast" valueURI="(OCoLC)fst01204155">
-          <geographic>United States</geographic>
-        </subject>
+  // ── genre -> genre with FAST normalization ──────────────────────────────────
+
+  it should "map genre to genre, converting bare FAST codes to FAST URIs" in {
+    val uris = extractor.genre(maps).flatMap(_.exactMatch).map(_.toString)
+    assert(uris.contains("http://id.worldcat.org/fast/1752699")) // Digital maps
+    assert(uris.contains("http://id.worldcat.org/fast/1423704")) // Maps
+    assert(extractor.genre(maps).flatMap(_.providedLabel).exists(_.equalsIgnoreCase("map")))
+  }
+
+  // ── place: coordinates + geographic FAST exactMatch ─────────────────────────
+
+  it should "map cartographics/coordinates as-is (MARC-255 string)" in {
+    val d = inline(
+      <mods xmlns="http://www.loc.gov/mods/v3">
+        <subject><cartographics><coordinates>(W 73°--W 70°/N 45°15ʹ--N 42°30ʹ).</coordinates></cartographics></subject>
       </mods>
     )
-    assert(
-      extractor.place(placeXml) === Seq(
-        DplaPlace(name = Some("Boston"), exactMatch = Seq(URI("http://vocab.getty.edu/tgn/7013445"))),
-        DplaPlace(name = Some("United States"))
-      )
-    )
+    assert(extractor.place(d).exists(_.coordinates.exists(_.startsWith("(W 73"))))
   }
 
-  it should "construct the IIIF manifest URL from the DRB recordIdentifiers" in
+  it should "map hierarchicalGeographic to a structured place" in {
+    val d = inline(
+      <mods xmlns="http://www.loc.gov/mods/v3">
+        <subject><hierarchicalGeographic>
+          <country>United States</country><state>New Hampshire</state>
+          <county>Grafton</county><city>Hanover</city>
+        </hierarchicalGeographic></subject>
+      </mods>
+    )
+    assert(extractor.place(d).exists(x => x.state.contains("New Hampshire") && x.city.contains("Hanover")))
+  }
+
+  it should "convert a bare FAST subject valueURI to a FAST URI exactMatch on place" in {
+    val geo = extractor.place(maps).filter(_.name.contains("United States"))
+    assert(geo.nonEmpty)
+    assert(geo.exists(_.exactMatch.map(_.toString).contains("http://id.worldcat.org/fast/1310063")))
+  }
+
+  // ── rights / edmRights / rightsHolder ───────────────────────────────────────
+
+  it should "map the standardized rights URI to edmRights (maps: rightsstatements)" in
     assert(
-      extractor.iiifManifest(xmlImages) === Seq(
-        URI("https://collections.dartmouth.edu/archive/iiif/black-creative-music/BCM-19820213-hampton-images-mods.json")
-      )
+      extractor.edmRights(maps) === Seq(URI("http://rightsstatements.org/vocab/NoC-US/1.0/"))
     )
 
-  it should "not construct an IIIF manifest for text records" in
-    assert(extractor.iiifManifest(xml).isEmpty)
+  it should "map the standardized rights URI to edmRights (poster)" in
+    assert(extractor.edmRights(poster) === Seq(URI("http://rightsstatements.org/vocab/NoC-US/1.0/")))
 
-  it should "have no creator when no name has usage=primary (images record)" in
-    assert(extractor.creator(xmlImages).isEmpty)
+  it should "map a Creative Commons standardized rights URI when present" in {
+    val d = inline(
+      <mods xmlns="http://www.loc.gov/mods/v3" xmlns:xlink="http://www.w3.org/1999/xlink">
+        <accessCondition type="use and reproduction" displayLabel="Standardized rights statement" xlink:href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC</accessCondition>
+      </mods>
+    )
+    assert(extractor.edmRights(d) === Seq(URI("https://creativecommons.org/licenses/by-nc/4.0/")))
+  }
+
+  it should "keep accessCondition free text as rights" in
+    assert(extractor.rights(maps).exists(_.toLowerCase.contains("public domain")))
+
+  it should "map a copyrightMD rights holder to rightsHolder" in {
+    val d = inline(
+      <mods xmlns="http://www.loc.gov/mods/v3" xmlns:cmd="http://www.cdlib.org/inside/diglib/copyrightMD">
+        <accessCondition>
+          <cmd:copyright><cmd:rights.holder><cmd:name>Trustees of Dartmouth College</cmd:name></cmd:rights.holder></cmd:copyright>
+        </accessCondition>
+      </mods>
+    )
+    assert(extractor.rightsHolder(d) === Seq(nameOnlyAgent("Trustees of Dartmouth College")))
+  }
 }
