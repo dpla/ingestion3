@@ -373,7 +373,6 @@ def get_excluded_hubs_from_conf():
     (e.g. hathi → hathitrust, tn → tennessee). CONF_TO_S3 maps conf names
     to their actual S3 prefix so exclusions work correctly either way.
     """
-    import re
     CONF_TO_S3 = {
         "hathi":      "hathitrust",
         "tn":         "tennessee",
