@@ -362,54 +362,102 @@ def get_all_hubs():
 
 
 def get_excluded_hubs_from_conf():
-    """Read i3.conf and return the set of S3 hub prefix names where included_in_index = false.
+    """Fetch origin and read i3.conf from origin/master; return (excluded_set, conf_sha).
+
+    Reads from `git show origin/master:i3.conf` — never from the working tree —
+    so the exclusion list always reflects the committed conf, not a possibly stale
+    local checkout. Aborts the script if the repo is missing, the fetch fails, or
+    the conf cannot be read.
 
     Some hubs have a different short name in i3.conf vs their S3 prefix
     (e.g. hathi → hathitrust, tn → tennessee). CONF_TO_S3 maps conf names
     to their actual S3 prefix so exclusions work correctly either way.
     """
-    import re
     CONF_TO_S3 = {
         "hathi":      "hathitrust",
         "tn":         "tennessee",
     }
+
+    if not os.path.isdir(CONF_REPO):
+        sys.exit(f"[ABORT] ingestion3-conf repo not found at {CONF_REPO}. "
+                 "Clone it or set INGESTION3_CONF_REPO in .env.")
+
+    # Fetch origin so origin/master is current.
+    _git_env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+    try:
+        fetch = subprocess.run(
+            ["git", "-C", CONF_REPO, "fetch", "origin"],
+            capture_output=True, text=True, timeout=30, env=_git_env,
+        )
+    except subprocess.TimeoutExpired:
+        sys.exit(f"[ABORT] git fetch origin timed out in {CONF_REPO}.")
+    if fetch.returncode != 0:
+        sys.exit(f"[ABORT] git fetch origin failed in {CONF_REPO}:\n{fetch.stderr.strip()}")
+
+    # Resolve origin/master SHA for tagging and display.
+    try:
+        sha_result = subprocess.run(
+            ["git", "-C", CONF_REPO, "rev-parse", "--short", "origin/master"],
+            capture_output=True, text=True, timeout=10, env=_git_env,
+        )
+    except subprocess.TimeoutExpired:
+        sys.exit(f"[ABORT] git rev-parse origin/master timed out in {CONF_REPO}.")
+    if sha_result.returncode != 0:
+        sys.exit(f"[ABORT] Could not resolve origin/master SHA in {CONF_REPO}:\n{sha_result.stderr.strip()}")
+    conf_sha = sha_result.stdout.strip()
+
+    # Read i3.conf from origin/master — not the working tree.
+    try:
+        show = subprocess.run(
+            ["git", "-C", CONF_REPO, "show", "origin/master:i3.conf"],
+            capture_output=True, text=True, timeout=10, env=_git_env,
+        )
+    except subprocess.TimeoutExpired:
+        sys.exit(f"[ABORT] git show origin/master:i3.conf timed out in {CONF_REPO}.")
+    if show.returncode != 0:
+        sys.exit(f"[ABORT] Could not read origin/master:i3.conf from {CONF_REPO}:\n{show.stderr.strip()}")
+
     excluded = set()
-    if not os.path.exists(I3_CONF_PATH):
-        warn(f"i3.conf not found at {I3_CONF_PATH} — no hubs excluded from conf.")
-        return excluded
-    with open(I3_CONF_PATH) as f:
-        for line in f:
-            m = re.match(r'^([\w-]+)\.included_in_index\s*=\s*false', line.strip())
-            if m:
-                name = m.group(1).lower()
-                excluded.add(CONF_TO_S3.get(name, name))
-    return excluded
+    for line in show.stdout.splitlines():
+        m = re.match(r'^([\w-]+)\.included_in_index\s*=\s*false', line.strip())
+        if m:
+            name = m.group(1).lower()
+            excluded.add(CONF_TO_S3.get(name, name))
+    return excluded, conf_sha
 
 
 def build_providers_arg(extra_exclude=None):
     """Build comma-separated include list (hub/ format).
 
-    Automatically excludes hubs with included_in_index = false in i3.conf.
+    Automatically excludes hubs with included_in_index = false in i3.conf
+    (read from origin/master — never the working tree).
     Optionally also excludes hubs in extra_exclude (comma-separated string).
     """
-    excluded = get_excluded_hubs_from_conf()
+    excluded, conf_sha = get_excluded_hubs_from_conf()
     if extra_exclude:
         excluded |= {h.strip().lower() for h in extra_exclude.split(",")}
     all_hubs = get_all_hubs()
     included = [h for h in all_hubs if h.lower() not in excluded]
     if not included:
         sys.exit("No hubs remaining after exclusions — aborting.")
+    info(f"Conf SHA (origin/master): {conf_sha}")
     warn(f"Excluding {len(excluded)} hub(s): {', '.join(sorted(excluded))}")
     info(f"Indexing {len(included)} hub(s).")
-    return ",".join(f"{h}/" for h in included)
+    return ",".join(f"{h}/" for h in included), conf_sha, excluded
 
 
 # ---------- launch cluster ----------
 
-def launch_cluster(providers_arg="all", non_interactive=False):
+def launch_cluster(providers_arg="all", conf_sha=None, excluded=None, non_interactive=False):
     step(5, "Launch sparkindexer EMR cluster")
     if not non_interactive:
         confirm("All pre-flight checks passed. Launch the cluster now?")
+
+    tags = ["for-use-with-amazon-emr-managed-policies=true"]
+    if conf_sha:
+        tags.append(f"i3conf-sha={conf_sha}")
+    if excluded:
+        tags.append(f"index-excluded={'_'.join(sorted(excluded))}")
 
     cluster_id = aws([
         "emr", "create-cluster",
@@ -428,7 +476,7 @@ def launch_cluster(providers_arg="all", non_interactive=False):
         "--enable-debugging",
         "--release-label", "emr-7.10.0",
         "--log-uri", EMR_LOG_URI,
-        "--tags", "for-use-with-amazon-emr-managed-policies=true",
+        "--tags", *tags,
         "--steps", json.dumps([{
             "Args": [
                 "spark-submit", "--deploy-mode", "cluster",
@@ -761,7 +809,8 @@ def main():
     print(f"Time:   {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     if args.dry_run:
-        providers_arg = build_providers_arg(args.exclude_hubs)
+        providers_arg, conf_sha, excluded = build_providers_arg(args.exclude_hubs)
+        print(f"\n  conf SHA (origin/master): {conf_sha}")
         print(f"\n  providers_arg = {providers_arg}")
         return
 
@@ -797,8 +846,8 @@ def main():
         else:
             print("\n  Pre-flight checks skipped.")
 
-        providers_arg = build_providers_arg(args.exclude_hubs)
-        cluster_id = launch_cluster(providers_arg, non_interactive=args.non_interactive)
+        providers_arg, conf_sha, excluded = build_providers_arg(args.exclude_hubs)
+        cluster_id = launch_cluster(providers_arg, conf_sha=conf_sha, excluded=excluded, non_interactive=args.non_interactive)
         success = monitor_cluster(cluster_id)
         if not success:
             sys.exit(1)

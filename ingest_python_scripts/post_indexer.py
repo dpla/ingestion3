@@ -20,6 +20,7 @@ Usage:
 import base64
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -58,6 +59,10 @@ AWS_PROFILE: str | None = (
     or ("dpla" if _env_file_exists else None)
 )
 EMR_LOG_URI        = f"s3://aws-logs-{AWS_ACCOUNT_ID}-us-east-1/elasticmapreduce/"
+
+CONF_REPO          = _env.get("INGESTION3_CONF_REPO",
+                               os.path.expanduser("~/Documents/Repos/ingestion3-conf"))
+CONF_TO_S3         = {"hathi": "hathitrust", "tn": "tennessee"}
 
 BATCH_JAR_BUCKET   = "s3://dpla-monthly-batch/"
 BATCH_JAR_NAME     = "batch-process-dpla-index-assembly.jar"
@@ -240,12 +245,102 @@ def check_jar_freshness(non_interactive=False):
         warn("Could not parse JAR date — check manually.")
 
 
+# ---------- conf preflight ----------
+
+def get_excluded_hubs_from_conf():
+    """Fetch origin and read i3.conf from origin/master; return (excluded_set, conf_sha).
+    Aborts if the repo is missing, fetch fails, or conf can't be read."""
+    if not os.path.isdir(CONF_REPO):
+        sys.exit(f"[ABORT] ingestion3-conf repo not found at {CONF_REPO}. "
+                 "Clone it or set INGESTION3_CONF_REPO in .env.")
+    _git_env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+    try:
+        fetch = subprocess.run(
+            ["git", "-C", CONF_REPO, "fetch", "origin"],
+            capture_output=True, text=True, timeout=30, env=_git_env,
+        )
+    except subprocess.TimeoutExpired:
+        sys.exit(f"[ABORT] git fetch origin timed out in {CONF_REPO}.")
+    if fetch.returncode != 0:
+        sys.exit(f"[ABORT] git fetch origin failed in {CONF_REPO}:\n{fetch.stderr.strip()}")
+
+    try:
+        sha_result = subprocess.run(
+            ["git", "-C", CONF_REPO, "rev-parse", "--short", "origin/master"],
+            capture_output=True, text=True, timeout=10, env=_git_env,
+        )
+    except subprocess.TimeoutExpired:
+        sys.exit(f"[ABORT] git rev-parse origin/master timed out in {CONF_REPO}.")
+    if sha_result.returncode != 0:
+        sys.exit(f"[ABORT] Could not resolve origin/master SHA in {CONF_REPO}:\n{sha_result.stderr.strip()}")
+    conf_sha = sha_result.stdout.strip()
+
+    try:
+        show = subprocess.run(
+            ["git", "-C", CONF_REPO, "show", "origin/master:i3.conf"],
+            capture_output=True, text=True, timeout=10, env=_git_env,
+        )
+    except subprocess.TimeoutExpired:
+        sys.exit(f"[ABORT] git show origin/master:i3.conf timed out in {CONF_REPO}.")
+    if show.returncode != 0:
+        sys.exit(f"[ABORT] Could not read origin/master:i3.conf from {CONF_REPO}:\n{show.stderr.strip()}")
+
+    excluded = set()
+    for line in show.stdout.splitlines():
+        m = re.match(r'^([\w-]+)\.included_in_index\s*=\s*false', line.strip())
+        if m:
+            name = m.group(1).lower()
+            excluded.add(CONF_TO_S3.get(name, name))
+    return excluded, conf_sha
+
+
 # ---------- Step 2: launch cluster ----------
+
+def cleanup_stale_excluded_exports(excluded: set):
+    """Delete per-hub export dirs for excluded hubs from the current month's export prefix.
+
+    Runs before the EMR batch so a newly excluded hub's old files don't survive in
+    s3://dpla-provider-export/{year}/{month}/ after the batch completes.
+    """
+    now = datetime.now()
+    year = now.year
+    month = f"{now.month:02d}"
+    export_base = f"s3://dpla-provider-export/{year}/{month}"
+
+    deleted_any = False
+    for hub in sorted(excluded):
+        hub_dir = f"{export_base}/{hub}.jsonl/"
+        # Use aws s3 ls to check if the prefix exists before attempting rm
+        ls = aws(["s3", "ls", hub_dir, "--region", REGION], check=False)
+        if ls.strip():
+            info(f"Removing stale excluded export: {hub_dir}")
+            aws(["s3", "rm", hub_dir, "--recursive", "--region", REGION])
+            deleted_any = True
+        else:
+            info(f"No stale export to clean for excluded hub: {hub}")
+
+    if deleted_any:
+        ok("Stale excluded hub exports removed ✓")
+    else:
+        ok("No stale excluded hub exports found ✓")
+
 
 def launch_cluster(non_interactive=False):
     step(2, "Launch monthlybatch EMR cluster")
     info("Steps: parquet → jsonl → mq → sitemap")
     info("Cluster launched from EC2 via SSM (instance role has required IAM permissions).")
+
+    excluded, conf_sha = get_excluded_hubs_from_conf()
+    excluded_arg = ",".join(sorted(excluded))
+    excluded_tag = "_".join(sorted(excluded))
+    info(f"Conf SHA (origin/master): {conf_sha}")
+    info(f"Excluding {len(excluded)} hub(s): {excluded_arg or 'none'}")
+
+    # Remove any stale per-hub export dirs for excluded hubs before the batch runs,
+    # so they don't linger in the public export prefix.
+    if excluded:
+        cleanup_stale_excluded_exports(excluded)
+
     if not non_interactive:
         confirm("Launch the batch cluster now?")
 
@@ -255,14 +350,14 @@ def launch_cluster(non_interactive=False):
         {
             "Args": ["spark-submit", "--deploy-mode", "cluster",
                      "--class", "dpla.batch_process_dpla_index.processes.ParquetDump",
-                     BATCH_JAR_S3, MASTER_DATASET, PARQUET_OUT],
+                     BATCH_JAR_S3, MASTER_DATASET, PARQUET_OUT, excluded_arg],
             "Type": "CUSTOM_JAR", "ActionOnFailure": "CANCEL_AND_WAIT",
             "Jar": "command-runner.jar", "Properties": "", "Name": "parquet",
         },
         {
             "Args": ["spark-submit", "--deploy-mode", "cluster",
                      "--class", "dpla.batch_process_dpla_index.processes.JsonlDump",
-                     BATCH_JAR_S3, MASTER_DATASET, JSONL_OUT],
+                     BATCH_JAR_S3, MASTER_DATASET, JSONL_OUT, excluded_arg],
             "Type": "CUSTOM_JAR", "ActionOnFailure": "CANCEL_AND_WAIT",
             "Jar": "command-runner.jar", "Properties": "", "Name": "jsonl",
         },
@@ -331,6 +426,8 @@ def launch_cluster(non_interactive=False):
             "--release-label", "emr-7.10.0",
             "--log-uri", EMR_LOG_URI,
             "--tags", "for-use-with-amazon-emr-managed-policies=true",
+                      f"i3conf-sha={conf_sha}",
+                      f"batch-excluded={excluded_tag or 'none'}",
             "--steps", f"file://{steps_f}",
             "--name", "monthlybatch",
             "--instance-groups", f"file://{ig_f}",
@@ -562,7 +659,7 @@ def check_s3_file_today(s3_path, label):
         return False
 
 
-def verify_outputs():
+def verify_outputs(excluded: set | None = None):
     step(6, "Verify S3 batch outputs")
     now   = datetime.now()
     today = now.strftime("%Y-%m-%d")
@@ -579,6 +676,23 @@ def verify_outputs():
     else:
         bad(f"Provider export: EMPTY at {export_path}")
         all_good = False
+
+    # Verify no stale excluded hub dirs remain in the export prefix.
+    # Read exclusions from conf if not already passed in (handles --cluster-id resume path).
+    if excluded is None:
+        try:
+            excluded, _ = get_excluded_hubs_from_conf()
+        except SystemExit:
+            warn("Could not read exclusions from conf — skipping stale-hub check.")
+            excluded = set()
+    for hub in sorted(excluded):
+        hub_dir = f"{export_path}{hub}.jsonl/"
+        stale_ls = aws(["s3", "ls", hub_dir, "--region", REGION], check=False)
+        if stale_ls.strip():
+            bad(f"Stale excluded hub export still present: {hub_dir}")
+            all_good = False
+        else:
+            ok(f"Excluded hub absent from export as expected: {hub} ✓")
 
     # Sitemaps — check _MANIFEST is from today
     if not check_s3_file_today("s3://sitemaps.dp.la/sitemap/_MANIFEST", "Sitemap _MANIFEST"):
