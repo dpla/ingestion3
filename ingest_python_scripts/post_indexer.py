@@ -296,6 +296,35 @@ def get_excluded_hubs_from_conf():
 
 # ---------- Step 2: launch cluster ----------
 
+def cleanup_stale_excluded_exports(excluded: set):
+    """Delete per-hub export dirs for excluded hubs from the current month's export prefix.
+
+    Runs before the EMR batch so a newly excluded hub's old files don't survive in
+    s3://dpla-provider-export/{year}/{month}/ after the batch completes.
+    """
+    now = datetime.now()
+    year = now.year
+    month = f"{now.month:02d}"
+    export_base = f"s3://dpla-provider-export/{year}/{month}"
+
+    deleted_any = False
+    for hub in sorted(excluded):
+        hub_dir = f"{export_base}/{hub}.jsonl/"
+        # Use aws s3 ls to check if the prefix exists before attempting rm
+        ls = aws(["s3", "ls", hub_dir, "--region", REGION], check=False)
+        if ls.strip():
+            info(f"Removing stale excluded export: {hub_dir}")
+            aws(["s3", "rm", hub_dir, "--recursive", "--region", REGION])
+            deleted_any = True
+        else:
+            info(f"No stale export to clean for excluded hub: {hub}")
+
+    if deleted_any:
+        ok("Stale excluded hub exports removed ✓")
+    else:
+        ok("No stale excluded hub exports found ✓")
+
+
 def launch_cluster(non_interactive=False):
     step(2, "Launch monthlybatch EMR cluster")
     info("Steps: parquet → jsonl → mq → sitemap")
@@ -305,6 +334,11 @@ def launch_cluster(non_interactive=False):
     excluded_arg = ",".join(sorted(excluded))
     info(f"Conf SHA (origin/master): {conf_sha}")
     info(f"Excluding {len(excluded)} hub(s): {excluded_arg or 'none'}")
+
+    # Remove any stale per-hub export dirs for excluded hubs before the batch runs,
+    # so they don't linger in the public export prefix.
+    if excluded:
+        cleanup_stale_excluded_exports(excluded)
 
     if not non_interactive:
         confirm("Launch the batch cluster now?")
@@ -624,7 +658,7 @@ def check_s3_file_today(s3_path, label):
         return False
 
 
-def verify_outputs():
+def verify_outputs(excluded: set | None = None):
     step(6, "Verify S3 batch outputs")
     now   = datetime.now()
     today = now.strftime("%Y-%m-%d")
@@ -641,6 +675,23 @@ def verify_outputs():
     else:
         bad(f"Provider export: EMPTY at {export_path}")
         all_good = False
+
+    # Verify no stale excluded hub dirs remain in the export prefix.
+    # Read exclusions from conf if not already passed in (handles --cluster-id resume path).
+    if excluded is None:
+        try:
+            excluded, _ = get_excluded_hubs_from_conf()
+        except SystemExit:
+            warn("Could not read exclusions from conf — skipping stale-hub check.")
+            excluded = set()
+    for hub in sorted(excluded):
+        hub_dir = f"{export_path}{hub}.jsonl/"
+        stale_ls = aws(["s3", "ls", hub_dir, "--region", REGION], check=False)
+        if stale_ls.strip():
+            bad(f"Stale excluded hub export still present: {hub_dir}")
+            all_good = False
+        else:
+            ok(f"Excluded hub absent from export as expected: {hub} ✓")
 
     # Sitemaps — check _MANIFEST is from today
     if not check_s3_file_today("s3://sitemaps.dp.la/sitemap/_MANIFEST", "Sitemap _MANIFEST"):
