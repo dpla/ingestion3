@@ -1,7 +1,9 @@
 # Dartmouth Libraries — Draft MODS → DPLA Mapping
 
-**Status:** DRAFT / test hub — not approved for production, not synced to the index.
-See [README_TEST_HUBS.md](README_TEST_HUBS.md).
+**Status:** Active hub — `schedule.status = "active"`, `included_in_index = true`.
+Promoted from the test-hub `experimental/` package; the mapper now lives in
+`mappers/providers`. This PR adds the mapper; the first full ingest is synced to
+S3 for the next index rebuild.
 
 - **Provider (hub):** Dartmouth Libraries (Dartmouth College)
 - **Metadata format:** MODS, harvested from the **live OAI-PMH feed**.
