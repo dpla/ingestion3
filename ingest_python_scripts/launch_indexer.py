@@ -384,25 +384,37 @@ def get_excluded_hubs_from_conf():
                  "Clone it or set INGESTION3_CONF_REPO in .env.")
 
     # Fetch origin so origin/master is current.
-    fetch = subprocess.run(
-        ["git", "-C", CONF_REPO, "fetch", "origin"],
-        capture_output=True, text=True,
-    )
+    _git_env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+    try:
+        fetch = subprocess.run(
+            ["git", "-C", CONF_REPO, "fetch", "origin"],
+            capture_output=True, text=True, timeout=30, env=_git_env,
+        )
+    except subprocess.TimeoutExpired:
+        sys.exit(f"[ABORT] git fetch origin timed out in {CONF_REPO}.")
     if fetch.returncode != 0:
         sys.exit(f"[ABORT] git fetch origin failed in {CONF_REPO}:\n{fetch.stderr.strip()}")
 
     # Resolve origin/master SHA for tagging and display.
-    sha_result = subprocess.run(
-        ["git", "-C", CONF_REPO, "rev-parse", "--short", "origin/master"],
-        capture_output=True, text=True,
-    )
-    conf_sha = sha_result.stdout.strip() if sha_result.returncode == 0 else "unknown"
+    try:
+        sha_result = subprocess.run(
+            ["git", "-C", CONF_REPO, "rev-parse", "--short", "origin/master"],
+            capture_output=True, text=True, timeout=10, env=_git_env,
+        )
+    except subprocess.TimeoutExpired:
+        sys.exit(f"[ABORT] git rev-parse origin/master timed out in {CONF_REPO}.")
+    if sha_result.returncode != 0:
+        sys.exit(f"[ABORT] Could not resolve origin/master SHA in {CONF_REPO}:\n{sha_result.stderr.strip()}")
+    conf_sha = sha_result.stdout.strip()
 
     # Read i3.conf from origin/master — not the working tree.
-    show = subprocess.run(
-        ["git", "-C", CONF_REPO, "show", "origin/master:i3.conf"],
-        capture_output=True, text=True,
-    )
+    try:
+        show = subprocess.run(
+            ["git", "-C", CONF_REPO, "show", "origin/master:i3.conf"],
+            capture_output=True, text=True, timeout=10, env=_git_env,
+        )
+    except subprocess.TimeoutExpired:
+        sys.exit(f"[ABORT] git show origin/master:i3.conf timed out in {CONF_REPO}.")
     if show.returncode != 0:
         sys.exit(f"[ABORT] Could not read origin/master:i3.conf from {CONF_REPO}:\n{show.stderr.strip()}")
 
