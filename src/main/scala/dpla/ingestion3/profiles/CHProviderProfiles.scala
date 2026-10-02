@@ -63,12 +63,19 @@ class FlProfile extends JsonProfile {
   override def getMapping = new FlMapping
 }
 
-/** J. Paul Getty Trust Currently down; Primo errors.
+/** J. Paul Getty Trust.
+  *
+  * Harvested by [[dpla.ingestion3.harvesters.api.GettyRefreshHarvester]], which
+  * looks up known record ids one at a time. The offset-paging
+  * [[dpla.ingestion3.harvesters.api.GettyHarvester]] is retained but NOT wired
+  * up: Primo caps any single query at offset<=1999, so it returns ~2,000 of
+  * ~101,400 records and reports success. Re-point this at GettyHarvester only if
+  * Ex Libris lifts that cap.
   */
 class GettyProfile extends JsonProfile {
   type Mapping = GettyMapping
 
-  override def getHarvester: Class[_ <: Harvester] = classOf[GettyHarvester]
+  override def getHarvester: Class[_ <: Harvester] = classOf[GettyRefreshHarvester]
   override def getMapping = new GettyMapping
 }
 
