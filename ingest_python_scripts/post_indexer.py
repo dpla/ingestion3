@@ -332,7 +332,7 @@ def launch_cluster(non_interactive=False):
 
     excluded, conf_sha = get_excluded_hubs_from_conf()
     excluded_arg = ",".join(sorted(excluded))
-    excluded_tag = "|".join(sorted(excluded))
+    excluded_tag = "_".join(sorted(excluded))
     info(f"Conf SHA (origin/master): {conf_sha}")
     info(f"Excluding {len(excluded)} hub(s): {excluded_arg or 'none'}")
 
