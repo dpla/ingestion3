@@ -17,7 +17,8 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration,
       metadataPrefix,
       None,
       oaiConfiguration.sleep,
-      harvestLogger
+      harvestLogger,
+      oaiConfiguration.httpVersion
     ).getResponse.iterator
 
   override def listAllRecordPagesForSet(
@@ -29,12 +30,21 @@ class OaiProtocol(oaiConfiguration: OaiConfiguration,
       metadataPrefix,
       Some(setSpec),
       oaiConfiguration.sleep,
-      harvestLogger
+      harvestLogger,
+      oaiConfiguration.httpVersion
     ).getResponse.iterator
   }
 
   override def listAllSetPages(): IterableOnce[OaiPage] = {
-    new OaiMultiPageResponseBuilder(endpoint, "ListSets", None, None, oaiConfiguration.sleep, harvestLogger).getResponse.iterator
+    new OaiMultiPageResponseBuilder(
+      endpoint,
+      "ListSets",
+      None,
+      None,
+      oaiConfiguration.sleep,
+      harvestLogger,
+      oaiConfiguration.httpVersion
+    ).getResponse.iterator
   }
 
   override def parsePageIntoRecords(

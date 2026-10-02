@@ -19,6 +19,7 @@ class LocalOaiHarvester(
   private val readerOptions: Map[String, String] = Map(
     "verb" -> conf.harvest.verb,
     "metadataPrefix" -> conf.harvest.metadataPrefix,
+    "httpVersion" -> conf.harvest.httpVersion,
     "harvestAllSets" -> conf.harvest.harvestAllSets,
     "setlist" -> conf.harvest.setlist,
     "blacklist" -> conf.harvest.blacklist,

@@ -5,6 +5,7 @@ import dpla.ingestion3.harvesters.api._
 import dpla.ingestion3.harvesters.file._
 import dpla.ingestion3.harvesters.oai.{IthakaOaiHarvester, LocalOaiHarvester}
 import dpla.ingestion3.mappers.providers._
+import dpla.ingestion3.mappers.providers.DartmouthMapping
 
 class IthakaProfile extends XmlProfile {
   type Mapping = IthakaMapping
@@ -160,6 +161,16 @@ class MaProfile extends XmlProfile {
 
   override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
   override def getMapping = new MaMapping
+}
+
+/** Dartmouth Libraries. MODS harvested from the live OAI-PMH feed (localoai).
+  * See docs/ingestion/dartmouth-mapping-draft.md.
+  */
+class DartmouthProfile extends XmlProfile {
+  type Mapping = DartmouthMapping
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
+  override def getMapping = new DartmouthMapping
 }
 
 /** Digital Maryland

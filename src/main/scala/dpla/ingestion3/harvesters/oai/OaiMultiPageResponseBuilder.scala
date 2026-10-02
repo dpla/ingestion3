@@ -5,6 +5,7 @@ import org.apache.http.client.utils.URIBuilder
 import org.apache.logging.log4j.LogManager
 
 import java.net.URL
+import java.net.http.HttpClient
 import scala.util.{Failure, Success, Try}
 
 class OaiMultiPageResponseBuilder(
@@ -13,7 +14,8 @@ class OaiMultiPageResponseBuilder(
     metadataPrefix: Option[String] = None,
     set: Option[String] = None,
     sleep: Int = 0,
-    harvestLogger: OaiHarvestLogger = OaiHarvestLogger.Noop
+    harvestLogger: OaiHarvestLogger = OaiHarvestLogger.Noop,
+    httpVersion: Option[HttpClient.Version] = None
 ) extends Serializable {
 
   private val logger = LogManager.getLogger(this.getClass)
@@ -152,7 +154,7 @@ class OaiMultiPageResponseBuilder(
     if (sleep > 0)
       Thread.sleep(sleep)
     logger.info("Loading page {}: {}", url.toString, requestInfo)
-    val page = HttpUtils.makeGetRequest(url)
+    val page = HttpUtils.makeGetRequest(url, version = httpVersion)
     parseResponseBody(page, requestInfo)
   }
 

@@ -34,6 +34,8 @@ object CHProviderRegistry {
     "bpl" -> new MaProfile,
     "community-webs" -> new CommunityWebsProfile,
     "ct" -> new CtProfile,
+    "dartmouth" -> new DartmouthProfile,
+
     "dc" -> new DcProfile,
     "florida" -> new FlProfile,
     "georgia" -> new DlgProfile,
