@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# git-prune-local: delete local branches already merged into main/master.
+# Install: copy to a directory on your PATH (e.g. /usr/local/bin/) and chmod +x.
+# Usage: git prune-local [--dry-run]
+
+set -euo pipefail
+
+DRY_RUN=false
+[[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
+
+# Determine the default trunk branch.
+if git rev-parse --verify main &>/dev/null; then
+    trunk="main"
+elif git rev-parse --verify master &>/dev/null; then
+    trunk="master"
+else
+    echo "ERROR: neither 'main' nor 'master' found." >&2
+    exit 1
+fi
+
+# Fetch + prune so remote-tracking refs are current.
+echo "Fetching origin..."
+git fetch --prune origin
+
+# Branches merged into trunk, excluding trunk itself and the current branch.
+merged=$(git branch --merged "$trunk" \
+    | grep -v "^\*" \
+    | grep -Ev "^\s*(main|master)$" \
+    | sed 's/^[[:space:]]*//')
+
+if [[ -z "$merged" ]]; then
+    echo "No merged local branches to prune."
+    exit 0
+fi
+
+echo ""
+echo "Branches to delete:"
+echo "$merged" | sed 's/^/  /'
+
+if $DRY_RUN; then
+    echo ""
+    echo "(dry run — nothing deleted)"
+    exit 0
+fi
+
+echo ""
+echo "$merged" | xargs git branch -d
+echo "Done."
