@@ -457,7 +457,7 @@ def launch_cluster(providers_arg="all", conf_sha=None, excluded=None, non_intera
     if conf_sha:
         tags.append(f"i3conf-sha={conf_sha}")
     if excluded:
-        tags.append(f"index-excluded={','.join(sorted(excluded))}")
+        tags.append(f"index-excluded={'|'.join(sorted(excluded))}")
 
     cluster_id = aws([
         "emr", "create-cluster",

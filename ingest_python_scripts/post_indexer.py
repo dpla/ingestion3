@@ -332,6 +332,7 @@ def launch_cluster(non_interactive=False):
 
     excluded, conf_sha = get_excluded_hubs_from_conf()
     excluded_arg = ",".join(sorted(excluded))
+    excluded_tag = "|".join(sorted(excluded))
     info(f"Conf SHA (origin/master): {conf_sha}")
     info(f"Excluding {len(excluded)} hub(s): {excluded_arg or 'none'}")
 
@@ -426,7 +427,7 @@ def launch_cluster(non_interactive=False):
             "--log-uri", EMR_LOG_URI,
             "--tags", "for-use-with-amazon-emr-managed-policies=true",
                       f"i3conf-sha={conf_sha}",
-                      f"batch-excluded={excluded_arg or 'none'}",
+                      f"batch-excluded={excluded_tag or 'none'}",
             "--steps", f"file://{steps_f}",
             "--name", "monthlybatch",
             "--instance-groups", f"file://{ig_f}",
