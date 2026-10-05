@@ -724,6 +724,38 @@ def do_alias_swap(non_interactive=False):
         slack_notify(f":warning: *ES alias swap may have failed* — check search-prod1\nAttempted: `{old_index}` → `{new_index}`")
         return old_index, new_index, old_count
 
+    # Auto-cleanup: delete all dpla-all-* indices except the two most recent
+    # (current live + one prior for rollback). The alias swap must succeed first.
+    info("Cleaning up old ES indices (keeping current + 1 prior)...")
+    try:
+        cat_out = ssm_run(
+            ES_INSTANCE_ID,
+            f"curl -s '{ES_HOST}/_cat/indices/dpla-all-*?s=creation.date:desc&h=index' 2>/dev/null",
+            timeout_seconds=60,
+        )
+        all_indices = [line.strip() for line in cat_out.splitlines() if line.strip().startswith("dpla-all-")]
+        to_delete = all_indices[2:]  # keep first two (newest), delete the rest
+        if to_delete:
+            delete_targets = ",".join(to_delete)
+            del_result = ssm_run(
+                ES_INSTANCE_ID,
+                f"curl -s -X DELETE '{ES_HOST}/{delete_targets}' 2>/dev/null",
+                timeout_seconds=120,
+            )
+            try:
+                del_ok = json.loads(del_result).get("acknowledged", False)
+            except (json.JSONDecodeError, AttributeError):
+                del_ok = False
+            if del_ok:
+                ok(f"Deleted {len(to_delete)} old index(es): {', '.join(to_delete)}")
+                slack_notify(f":wastebasket: *ES index cleanup*: deleted {len(to_delete)} old index(es)\n`{'`, `'.join(to_delete)}`")
+            else:
+                warn(f"Index cleanup may have failed. Response: {del_result.strip()}")
+        else:
+            ok("No old indices to clean up.")
+    except Exception as e:
+        warn(f"Index cleanup failed: {e} — clean up manually.")
+
     return old_index, new_index, old_count
 
 
