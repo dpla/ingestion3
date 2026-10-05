@@ -644,7 +644,10 @@ def do_alias_swap(non_interactive=False):
     )
     try:
         alias_data = json.loads(alias_out)
-        current_live = list(alias_data.keys())[0] if alias_data else None
+        if not alias_data or "error" in alias_data:
+            current_live = None
+        else:
+            current_live = list(alias_data.keys())[0]
     except (json.JSONDecodeError, IndexError):
         current_live = None
 
@@ -699,12 +702,11 @@ def do_alias_swap(non_interactive=False):
     else:
         confirm("Confirm alias swap?", default_yes=False)
 
-    swap_payload = json.dumps({
-        "actions": [
-            {"remove": {"index": old_index, "alias": "dpla_alias"}},
-            {"add":    {"index": new_index, "alias": "dpla_alias"}},
-        ]
-    })
+    actions = []
+    if old_index:
+        actions.append({"remove": {"index": old_index, "alias": "dpla_alias"}})
+    actions.append({"add": {"index": new_index, "alias": "dpla_alias"}})
+    swap_payload = json.dumps({"actions": actions})
     swap_cmd = f"curl -s -X POST '{ES_HOST}/_aliases' -H 'Content-Type: application/json' -d '{swap_payload}' 2>/dev/null"
     result = ssm_run(ES_INSTANCE_ID, swap_cmd, timeout_seconds=60)
     print(f"\n  Response: {result.strip()}")
