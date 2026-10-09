@@ -1,0 +1,131 @@
+name: Discover Primo ids
+
+# Banks record ids that Primo hubs have added recently.
+#
+# Hubs on the id-lookup harvest path (see docs/ingestion/README_INGESTS.md) can
+# only learn about new ids through Primo's `newrecords` facet, which reaches back
+# a fixed window -- 90 days at most. A record added more than one window before
+# the next harvest is invisible to it, permanently. The harvests run quarterly at
+# best, so discovery has to run on its own, far more often, to keep the window
+# from ever being the binding constraint.
+#
+# This is a trigger only: the work runs on the ingest EC2 via SSM, the same as
+# every other ingest task. Nothing is harvested here -- ids are written to
+# S3 and picked up by the next full harvest.
+
+on:
+  schedule:
+    # Mondays 09:00 UTC. Weekly against a 90-day window leaves ~12x margin, so a
+    # missed run (or three) costs nothing.
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+    inputs:
+      hub:
+        description: "Hub short name, or 'all' for every hub with discovery enabled"
+        required: false
+        default: "all"
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  # Never let a manual run overlap the schedule: both would hit the partner's
+  # endpoint at once, and the box-side flock would just make one wait anyway.
+  group: discover-ids
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    env:
+      AWS_REGION: us-east-1
+      # Never interpolate ${{ }} directly into a shell command: the value would be
+      # substituted before the shell parses the line, so anything quote-breaking in
+      # it executes. Carried as environment variables and quoted at use instead.
+      HUB: ${{ inputs.hub || 'all' }}
+      INSTANCE_ID: ${{ vars.INGEST_INSTANCE_ID }}
+    steps:
+      - name: Validate inputs
+        run: |
+          set -euo pipefail
+          # `hub` is dispatch input and reaches a shell on the ingest box, so it is
+          # checked against a strict character set and nothing else. Fails closed.
+          case "$HUB" in
+            "" | *[!a-z0-9_-]* )
+              echo "Refusing to run: hub must match [a-z0-9_-]+ (got '$HUB')" >&2
+              exit 1 ;;
+          esac
+          if [ -z "$INSTANCE_ID" ]; then
+            echo "Refusing to run: repository variable INGEST_INSTANCE_ID is not set" >&2
+            exit 1
+          fi
+          echo "hub=$HUB instance=$INSTANCE_ID"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Send discovery command to the ingest box
+        id: send
+        run: |
+          set -euo pipefail
+          # $HUB has been validated to [a-z0-9_-]+ above, so it cannot break out
+          # of the quoting here. Built with jq rather than string-concatenated JSON
+          # so the escaping is the tool's problem and not ours.
+          params=$(jq -nc --arg hub "$HUB" \
+            '{commands: ["sudo -u ec2-user bash -lc " + ("cd /home/ec2-user/ingestion3 && ./scripts/discover.sh " + $hub | @sh)]}')
+          cmd=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --comment "id discovery ($HUB)" \
+            --parameters "$params" \
+            --query "Command.CommandId" --output text)
+          echo "command_id=$cmd" >> "$GITHUB_OUTPUT"
+          echo "Sent SSM command $cmd"
+
+      - name: Wait for it to finish
+        id: wait
+        env:
+          CMD_ID: ${{ steps.send.outputs.command_id }}
+        run: |
+          set -euo pipefail
+          cmd="$CMD_ID"
+          # Poll the ORIGINAL command id. Firing fresh SSM commands to check on a
+          # run only queues them behind it.
+          for _ in $(seq 1 120); do
+            status=$(aws ssm get-command-invocation \
+              --command-id "$cmd" \
+              --instance-id "$INSTANCE_ID" \
+              --query Status --output text 2>/dev/null || echo Pending)
+            case "$status" in
+              Success|Failed|Cancelled|TimedOut) break ;;
+            esac
+            sleep 15
+          done
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo "Final status: $status"
+
+      - name: Show output
+        if: always()
+        env:
+          CMD_ID: ${{ steps.send.outputs.command_id }}
+        run: |
+          aws ssm get-command-invocation \
+            --command-id "$CMD_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --query "{Status:Status,Out:StandardOutputContent,Err:StandardErrorContent}" \
+            --output text || true
+
+      - name: Fail the run when discovery did not complete
+        if: steps.wait.outputs.status != 'Success'
+        env:
+          RESULT: ${{ steps.wait.outputs.status }}
+        run: |
+          echo "Discovery exited $RESULT." >&2
+          echo "discover.sh has already posted the details to Slack." >&2
+          exit 1

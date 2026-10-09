@@ -61,7 +61,24 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None)
         previous = getProp(providerConf, "harvest.delta.previous"),
         deletes = getProp(providerConf, "harvest.delta.deletes"),
         sleep = getProp(providerConf, "harvest.sleep"),
-        awsProfile = getProp(providerConf, "harvest.aws.profile")
+        awsProfile = getProp(providerConf, "harvest.aws.profile"),
+        // Properties for Primo `newrecords` id discovery
+        discovery = Discovery(
+          enabled = getProp(providerConf, "harvest.discovery.enabled"),
+          endpoint = getProp(providerConf, "harvest.discovery.endpoint"),
+          apiKey = getProp(providerConf, "harvest.discovery.apiKey"),
+          viewParams = getProp(providerConf, "harvest.discovery.viewParams"),
+          query = getProp(providerConf, "harvest.discovery.query"),
+          newRecordsFacet = getProp(providerConf, "harvest.discovery.newRecordsFacet"),
+          windows = getProp(providerConf, "harvest.discovery.windows"),
+          maxOffset = getProp(providerConf, "harvest.discovery.maxOffset"),
+          pageLimit = getProp(providerConf, "harvest.discovery.pageLimit"),
+          partitionField = getProp(providerConf, "harvest.discovery.partitionField"),
+          partitionAlphabet = getProp(providerConf, "harvest.discovery.partitionAlphabet"),
+          partitionBaseFacets = getProp(providerConf, "harvest.discovery.partitionBaseFacets"),
+          maxPartitionDepth = getProp(providerConf, "harvest.discovery.maxPartitionDepth"),
+          restSeconds = getProp(providerConf, "harvest.discovery.restSeconds")
+        )
       ),
       i3Spark(
         // FIXME these should be removed
@@ -186,7 +203,38 @@ case class Harvest(
     previous: Option[String] = None, // Path to previously harvested records
     deletes: Option[String] = None, // Path to deletes
     sleep: Option[String] = None,
-    awsProfile: Option[String] = None // Named AWS profile for cross-account S3 access
+    awsProfile: Option[String] = None, // Named AWS profile for cross-account S3 access
+    // Primo `newrecords` id discovery, run on its own schedule
+    discovery: Discovery = Discovery()
+)
+
+/** Settings for [[dpla.ingestion3.harvesters.api.PrimoIdDiscovery]].
+  *
+  * Everything a Primo tenant differs on lives here, so wiring a new hub onto the
+  * id-discovery path is a config change and not a code change. Defaults suit
+  * Getty; a tenant with a lower paging cap (Mississippi's is `offset + limit <=
+  * 500`) must set `maxOffset` and `pageLimit` to match, or discovery will page
+  * past the ceiling and fail.
+  */
+case class Discovery(
+    enabled: Option[String] = None,
+    endpoint: Option[String] = None,
+    apiKey: Option[String] = None, // falls back to harvest.apiKey
+    // `vid=DPLA,tab=dpla,scope=DPLA,inst=01GRI,lang=eng`
+    viewParams: Option[String] = None,
+    query: Option[String] = None, // falls back to harvest.query
+    newRecordsFacet: Option[String] = None,
+    windows: Option[String] = None,
+    maxOffset: Option[String] = None,
+    pageLimit: Option[String] = None,
+    // Used only when a window is too large to page and must be sliced
+    partitionField: Option[String] = None,
+    partitionAlphabet: Option[String] = None,
+    // Facet clauses restated while partitioning, because the prefix clause
+    // displaces the base query out of `q`
+    partitionBaseFacets: Option[String] = None,
+    maxPartitionDepth: Option[String] = None,
+    restSeconds: Option[String] = None
 )
 
 case class i3Conf(

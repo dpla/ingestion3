@@ -21,6 +21,7 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 | `ingest.sh` | Full pipeline (harvest → map → enrich → jsonl → S3 sync); self-re-execs under `setsid` to escape SSM's 60-min process-group kill | `./scripts/ingest.sh <hub>` |
 | `ingest-watchdog.sh` | Cron watchdog: detects ingests killed by SIGKILL and alerts Slack | `*/5 * * * * /home/ec2-user/ingestion3/scripts/ingest-watchdog.sh` (via crontab) |
 | `harvest.sh` | Harvest records from OAI/API/file source | `./scripts/harvest.sh <hub>` |
+| `discover.sh` | Bank new record ids from a Primo hub's `newrecords` facet (ids only, no records) | `./scripts/discover.sh [<hub>\|all]` |
 | `remap.sh` | Re-run mapping → enrichment → jsonl | `./scripts/remap.sh <hub>` |
 | `mapping.sh` | Transform harvested records to DPLA MAP | `./scripts/mapping.sh <hub>` |
 | `enrich.sh` | Enrich/normalize DPLA MAP records | `./scripts/enrich.sh <hub>` |

@@ -226,6 +226,19 @@ Node keys rotate every ~180 days; see scripts/SCRIPTS.md for details."
             || die "Failed to set Tailscale exit node — $PROVIDER endpoint requires whitelisted IP"
     fi
 
+    # Bank any ids this hub has added since the last scheduled discovery run,
+    # before the harvest reads its seed. Discovery runs on its own frequent
+    # schedule, but a harvest starting mid-interval would otherwise miss up to a
+    # full interval's worth of new records. A no-op for hubs not on the id path.
+    #
+    # Never fatal: a discovery failure costs at most one interval of new ids,
+    # while refusing to harvest costs the whole run. discover.sh has already
+    # posted to Slack by this point.
+    if [ -x "$SCRIPT_DIR/discover.sh" ]; then
+        "$SCRIPT_DIR/discover.sh" "$PROVIDER" --if-enabled \
+            || log_warn "Id discovery failed for $PROVIDER; harvesting with the ids already on hand"
+    fi
+
     SBT_OPTS="-Xmx15g"
     run_entry dpla.ingestion3.entries.ingest.HarvestEntry \
         --output="$DPLA_DATA" \

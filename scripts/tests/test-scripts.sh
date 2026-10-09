@@ -209,6 +209,7 @@ test_syntax() {
         "batch-ingest.sh"
         "enrich.sh"
         "harvest.sh"
+        "discover.sh"
         "ingest.sh"
         "jsonl.sh"
         "mapping.sh"
@@ -290,6 +291,7 @@ test_common_sourcing() {
         "batch-ingest.sh"
         "enrich.sh"
         "harvest.sh"
+        "discover.sh"
         "ingest.sh"
         "jsonl.sh"
         "mapping.sh"
@@ -503,6 +505,7 @@ test_no_hardcoded_paths() {
         "batch-ingest.sh"
         "enrich.sh"
         "harvest.sh"
+        "discover.sh"
         "ingest.sh"
         "jsonl.sh"
         "mapping.sh"
@@ -609,6 +612,7 @@ test_output_path_convention() {
         "mapping.sh"
         "enrich.sh"
         "harvest.sh"
+        "discover.sh"
         "remap.sh"
         "jsonl.sh"
     )
@@ -711,6 +715,7 @@ test_scripts_use_run_entry() {
         "mapping.sh"
         "enrich.sh"
         "harvest.sh"
+        "discover.sh"
         "jsonl.sh"
     )
     
@@ -758,6 +763,7 @@ test_referenced_script_paths() {
         "common.sh"
         "ingest.sh"
         "harvest.sh"
+        "discover.sh"
         "remap.sh"
         "mapping.sh"
         "enrich.sh"
