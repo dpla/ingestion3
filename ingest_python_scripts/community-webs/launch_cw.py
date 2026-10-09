@@ -261,6 +261,23 @@ def stage_ingest(ec2_db, timestamp, full_pipeline, update_conf, skip_export):
 
     pid = ssm_bg(cmd, INGEST_LOG)
     print(f"  PID: {pid}")
+
+    # A PID only means nohup forked — the job can still die instantly (bad
+    # path, missing tool) while the launch looks successful. Confirm it's
+    # alive; on failure show the log and exit non-zero so CI goes red.
+    time.sleep(5)
+    try:
+        check = ssm_run(
+            f"if ps -p {pid} >/dev/null 2>&1; then echo INGEST_RUNNING; "
+            f"else echo INGEST_NOT_RUNNING; tail -20 {INGEST_LOG} 2>&1; fi",
+            timeout_seconds=30,
+        )
+    except RuntimeError as e:
+        check = ""
+        print(f"  Warning: could not verify the ingest is running ({e}) — check the log on EC2.")
+    if "INGEST_NOT_RUNNING" in check:
+        sys.exit(f"Community Webs ingest (PID {pid}) exited right after launch. Log tail ({INGEST_LOG}):\n{check}")
+
     print(f"\n  Monitor with: python3 check_cw.py --watch")
     print(f"  Or tail log:  python3 launch_cw.py --resume")
 
