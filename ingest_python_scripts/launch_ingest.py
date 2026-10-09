@@ -17,6 +17,7 @@ import base64
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -343,7 +344,9 @@ def main() -> None:
     else:
         extra = ""
     gha_actor = os.environ.get("GHA_ACTOR", "")
-    env_prefix = f"GHA_ACTOR={gha_actor} " if gha_actor else ""
+    # `env` is required: nohup execs its first argument, so a bare VAR=val
+    # prefix is treated as the command name and the launch silently fails.
+    env_prefix = f"env GHA_ACTOR={shlex.quote(gha_actor)} " if gha_actor else ""
     invocation = f"{env_prefix}bash {SCRIPTS_DIR}/ingest.sh {hub}{extra}"
     inner = (
         'sudo -u ec2-user bash -lc "'
@@ -392,6 +395,21 @@ def main() -> None:
             break
     else:
         print("  Warning: could not confirm SSM delivery within 30s — ingest may still have launched.")
+
+    # SSM Success only means nohup was backgrounded, not that ingest.sh is
+    # running — a bad invocation dies instantly and the launch still "passes".
+    # Confirm the process exists; on failure show the log so CI goes red.
+    log_path = f"/home/ec2-user/data/{hub}-ingest.log"
+    time.sleep(5)
+    check = ssm_run(
+        f"if pgrep -u ec2-user -f 'scripts/ingest.sh {hub}( |$)' >/dev/null; "
+        f"then echo INGEST_RUNNING; "
+        f"else echo INGEST_NOT_RUNNING; tail -20 {log_path} 2>&1; fi"
+    )
+    if "INGEST_NOT_RUNNING" in check:
+        sys.exit(f"ingest.sh is not running for {hub} after launch. Log tail ({log_path}):\n{check}")
+    if "INGEST_RUNNING" not in check:
+        print("  Warning: could not verify ingest.sh is running — check the log on EC2.")
 
     print(f"\nLaunched: {hub}{extra}")
     print(f"  Log on EC2:     /home/ec2-user/data/{hub}-ingest.log")

@@ -359,6 +359,24 @@ def fire_batch(hubs, batch_log, skipped_hubs=None, excluded_hubs=None):
     out = ssm_run(launch_cmd, timeout_seconds=30)
     pid_match = re.search(r"PID=(\d+)", out)
     pid = pid_match.group(1) if pid_match else "unknown"
+
+    # A PID only means nohup forked. If another batch holds the lock,
+    # `flock -n` exits immediately and nothing runs — confirm it's alive.
+    if pid != "unknown":
+        time.sleep(5)
+        try:
+            check = ssm_run(
+                f"ps -p {pid} >/dev/null 2>&1 && echo BATCH_RUNNING || echo BATCH_NOT_RUNNING",
+                timeout_seconds=30,
+            )
+        except RuntimeError as e:
+            check = ""
+            warn(f"Could not verify the batch is running ({e}) — check {batch_log} on EC2.")
+        if "BATCH_NOT_RUNNING" in check:
+            sys.exit(
+                f"[bad] Batch (PID {pid}) exited right after launch. Another batch may "
+                f"hold {LOCK_PATH}, or the script failed — check {batch_log} on EC2."
+            )
     ok(f"Batch launched on EC2 (PID {pid})")
     info(f"Log:  {batch_log}")
     info(f"Tail: ssh ec2-user@<box> tail -f {batch_log}")
