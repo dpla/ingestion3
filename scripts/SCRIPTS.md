@@ -560,6 +560,51 @@ batch-ingest.sh
      └── ingest.sh (for each hub)
 ```
 
+### Getty
+
+**Getty is harvested by Scala, not by a script here.** See
+`src/main/scala/dpla/ingestion3/harvesters/api/GettyRefreshHarvester.scala` —
+`./scripts/ingest.sh getty` is all you need, and it routes through the Tailscale
+exit node automatically (see the IP-restricted hubs section above).
+
+It is worth knowing *why* it is unusual, because the failure mode is silent.
+Getty's Primo gateway caps any single query at `offset <= 1999` / `limit <= 1000`,
+so the offset-paging `GettyHarvester` returns ~2,000 of ~101,400 records **and
+reports success** — which is how a 98% shortfall reached production in February
+2026. `GettyRefreshHarvester` instead looks up every known record id directly
+(`q=rid,exact,<id>`, one record per request, no offset involved) and then asks
+Getty's `newrecords` facet for anything added in the last 90 days.
+
+`getty.harvest.seed` wins if set; otherwise the harvester lists
+`$DPLA_DATA/getty/harvest/` and takes the newest directory carrying a `_SUCCESS`
+marker. So in steady state the seed needs no configuration — each run's output is
+automatically the next run's seed and discovered ids carry forward.
+
+**The exception is a first run on a box with no completed Getty harvest**: there
+is nothing to discover, and the harvest aborts telling you so. Give it
+`getty.harvest.seed` pointing at either a harvest activity directory or a
+newline-delimited id file ending `.txt` or `.ids` — the extension is the only
+signal, so a `.csv` would be handed to the Avro reader and fail. Remove the
+override once a harvest has completed.
+
+So the override covers two cases, first-run bootstrapping and backfilling from a
+specific older harvest — never routine ingests.
+
+**Getty is scheduled bi-monthly, not quarterly, and that is deliberate.**
+Discovery reaches back only 90 days, so a quarterly cadence sits right on the
+edge: a run that slips by a few days leaves records in neither the seed nor the
+window, and no later run finds them. Bi-monthly leaves about a month of margin,
+and the harvester logs a loud `GETTY DISCOVERY GAP` warning if the interval since
+the previous harvest exceeds 90 days anyway. **If you see that warning, the run
+cannot be treated as complete** — it names the exact date range that was lost.
+
+**This is a temporary method with real gaps**, documented in the harvester's
+scaladoc and worth repeating: the `newrecords` window tops out at 90 days, and
+the GETTY_OCP side — 78,613 of 101,393 records — carries no usable facets and
+cannot be enumerated at all, so OCP coverage rests entirely on the seed. It keeps the aggregation from drifting; it
+does not guarantee DPLA holds every record Getty publishes. The real fix is Ex
+Libris lifting the offset cap or Getty providing a bulk feed.
+
 ## Updating This Documentation
 
 When adding or modifying scripts:
