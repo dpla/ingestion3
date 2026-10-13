@@ -252,6 +252,7 @@ test_python_syntax() {
 
     local scripts=(
         "generate_hub_stats.py"
+        "generate_tag_sitemap.py"
         "export_item_attribution.py"
         "curated_membership.py"
     )

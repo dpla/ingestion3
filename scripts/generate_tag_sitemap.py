@@ -3,8 +3,8 @@
 Generate sitemaps for tag-based DPLA hub subdomains (aviation, bws) by
 querying Elasticsearch directly using PIT + search_after pagination.
 
-This script runs on the ingest EC2 (inside the VPC with direct ES access),
-invoked via SSM SendCommand from the generate-hub-sitemaps GH Actions workflow.
+Runs on the ingest EC2 (direct ES access). post_indexer.py runs it over SSM
+after the monthly index swap.
 
 Replaces the public DPLA API pagination previously used for these two hubs:
   - No max_result_window (50K) constraint — PIT + search_after has no ceiling
@@ -18,9 +18,9 @@ dpla-frontend/scripts/generate-hub-sitemaps.py:
   s3://sitemaps.dp.la/sitemap/<hub>/all_item_urls.xml                   (index)
 
 Usage:
-    venv/bin/python3 scripts/generate_tag_sitemap.py --hub aviation
-    venv/bin/python3 scripts/generate_tag_sitemap.py --hub bws
-    venv/bin/python3 scripts/generate_tag_sitemap.py --hub aviation --dry-run
+    python3 scripts/generate_tag_sitemap.py --hub aviation
+    python3 scripts/generate_tag_sitemap.py --hub bws
+    python3 scripts/generate_tag_sitemap.py --hub aviation --dry-run
 
 Environment:
     ES_HOST   Elasticsearch hostname (default: search-prod1.internal.dp.la)

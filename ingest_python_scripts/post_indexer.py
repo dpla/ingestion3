@@ -8,8 +8,9 @@ Steps:
   1. Check / rebuild batch JAR  (s3://dpla-monthly-batch/)
   2. Launch monthlybatch EMR cluster  (parquet → jsonl → mq → sitemap)
   3. Monitor cluster with hourly heartbeat
-  4. On completion: terminate cluster, run hub stats, trigger sitemaps
-  5. Verify S3 outputs
+  4. On completion: terminate cluster, run hub stats
+  5. Build aviation/bws sitemaps on EC2, trigger dpla-frontend for the rest
+  6. Verify S3 outputs
 
 Usage:
     python3 post_indexer.py
@@ -621,8 +622,48 @@ def run_hub_stats():
 
 # ---------- Step 5: sitemaps ----------
 
-def trigger_sitemaps():
-    step(5, "Trigger hub sitemaps GitHub workflow")
+# Tag-based hubs need ES access, so they build on the ingest EC2
+# instead of GitHub Actions like the rest of the sitemaps
+TAG_SITEMAP_HUBS = ("aviation", "bws")
+
+
+def run_tag_sitemaps():
+    """Run scripts/generate_tag_sitemap.py on the ingest EC2 for each tag hub."""
+    failed = []
+    for hub in TAG_SITEMAP_HUBS:
+        # SSM keeps 24k chars of output
+        # Log to a file and echo the tail
+        info(f"Running generate_tag_sitemap.py --hub {hub} on ingest EC2 (up to 30 min)...")
+        try:
+            out = ssm_run(
+                INGEST_INSTANCE_ID,
+                (
+                    "sudo -u ec2-user bash -lc '"
+                    "cd /home/ec2-user/ingestion3 && "
+                    f"python3 scripts/generate_tag_sitemap.py --hub {hub} > /tmp/sitemap-{hub}.log 2>&1; "
+                    f"rc=$?; tail -c 20000 /tmp/sitemap-{hub}.log; exit $rc"
+                    "'"
+                ),
+                timeout_seconds=1800,
+                poll_seconds=15,
+            )
+            print(out[-2000:] if len(out) > 2000 else out)
+            ok(f"{hub} sitemap complete.")
+        except RuntimeError as e:
+            bad(f"{hub} sitemap failed:\n{e}")
+            failed.append(hub)
+
+    if failed:
+        slack_notify(
+            f":warning: *tag hub sitemaps failed* — {', '.join(failed)}. "
+            "See /tmp/sitemap-<hub>.log on the ingest EC2."
+        )
+    else:
+        slack_notify(":world_map: *aviation and bws sitemaps generated* :white_check_mark:")
+
+
+def trigger_provider_sitemaps():
+    """Trigger the dpla-frontend workflow for provider-based hub sitemaps."""
     import shutil
     gh = shutil.which("gh") or "/opt/homebrew/bin/gh"
     info(f"Running: {gh} workflow run generate-hub-sitemaps.yml --repo dpla/dpla-frontend --ref main")
@@ -632,12 +673,18 @@ def trigger_sitemaps():
         capture_output=True, text=True,
     )
     if result.returncode == 0:
-        ok("Sitemaps workflow triggered.")
-        slack_notify(":world_map: *hub sitemaps workflow triggered* :white_check_mark:")
+        ok("Provider hub sitemaps workflow triggered.")
+        slack_notify(":world_map: *provider hub sitemaps workflow triggered* :white_check_mark:")
     else:
         bad(f"Failed to trigger sitemaps workflow:\n{result.stderr.strip()}")
         info("Make sure `gh` CLI is installed and authenticated.")
-        slack_notify(":warning: *hub sitemaps workflow trigger FAILED* — run manually")
+        slack_notify(":warning: *provider hub sitemaps workflow trigger FAILED* — run manually")
+
+
+def run_sitemaps():
+    step(5, "Hub sitemaps")
+    run_tag_sitemaps()
+    trigger_provider_sitemaps()
 
 
 # ---------- Step 6: verify outputs ----------
@@ -697,6 +744,14 @@ def verify_outputs(excluded: set | None = None):
     # Sitemaps — check _MANIFEST is from today
     if not check_s3_file_today("s3://sitemaps.dp.la/sitemap/_MANIFEST", "Sitemap _MANIFEST"):
         all_good = False
+
+    # Tag hubs finished in step 5
+    # Provider hubs are still building in GH Actions
+    for hub in TAG_SITEMAP_HUBS:
+        if not check_s3_file_today(
+            f"s3://sitemaps.dp.la/sitemap/{hub}/all_item_urls.xml", f"{hub} sitemap index"
+        ):
+            all_good = False
 
     # Hub stats — check all three files are from today
     if not check_s3_file_today("s3://dashboard-analytics/hub-stats/hub_stats.json", "hub_stats.json"):
@@ -758,7 +813,7 @@ def main():
         confirm("Run hub stats and sitemaps anyway?", default_yes=False)
 
     run_hub_stats()
-    trigger_sitemaps()
+    run_sitemaps()
     verify_outputs()
 
     print()
