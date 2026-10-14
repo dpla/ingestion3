@@ -49,6 +49,7 @@ object CHProviderRegistry {
     "indiana" -> new InProfile,
     "jh3" -> new Jh3Profile,
     "lc" -> new LocProfile,
+    "maine" -> new MaineProfile,
     "maryland" -> new MarylandProfile,
     "mi" -> new MiProfile,
     "minnesota" -> new MdlProfile,

@@ -1,0 +1,22 @@
+<record>
+	<header>
+		<identifier>oai:digitalmaine.com:brewer_images-1010</identifier>
+		<datestamp>2017-01-21T19:00:08Z</datestamp>
+				<setSpec>publication:brewer</setSpec>
+				<setSpec>publication:brewer_images</setSpec>
+				<setSpec>publication:regions</setSpec>
+			</header>
+	<metadata>
+		<oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.bepress.com/OAI/2.0/qualified-dublin-core/ https://resources.bepress.com/assets/xsd/oai_qualified_dc.xsd">
+			
+			<dc:title>Sargent Lumber Mill, Brewer, Maine</dc:title>
+			<dc:creator>J.Craig Thayer Photography</dc:creator>
+			<dc:type>Image</dc:type>
+			<dc:contributor>Brewer Historical Society</dc:contributor>
+			<dc:description.abstract>Sargent Lumber Mill</dc:description.abstract>
+			<dc:rights>http://rightsstatements.org/vocab/NoC-US/1.0/</dc:rights>
+			<dc:identifier>https://digitalmaine.com/brewer_images/11</dc:identifier>
+			<dc:description>https://digitalmaine.com/brewer_images/1010/thumbnail.jpg</dc:description>
+		</oai_dc:dc>
+	</metadata>
+</record>

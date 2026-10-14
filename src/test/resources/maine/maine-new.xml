@@ -1,0 +1,23 @@
+<record>
+	<header>
+		<identifier>oai:digitalmaine.com:trolley_images-1001</identifier>
+		<datestamp>2019-03-15T18:12:11Z</datestamp>
+				<setSpec>publication:kennebunkport</setSpec>
+				<setSpec>publication:regions</setSpec>
+				<setSpec>publication:trolley_museum</setSpec>
+				<setSpec>publication:trolley_images</setSpec>
+			</header>
+	<metadata>
+		<oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.bepress.com/OAI/2.0/qualified-dublin-core/ https://resources.bepress.com/assets/xsd/oai_qualified_dc.xsd">
+			
+			<dc:title>Easton &amp; Washington Traction Co.</dc:title>
+			<dc:type>Image</dc:type>
+			<dc:contributor>New England Electric Railway Historical Society</dc:contributor>
+			<dc:description.abstract>#4882 5 cars. Picture of car #2  with a man standing in the doorway.</dc:description.abstract>
+			<dc:date.created>1906-01-01T08:00:00Z</dc:date.created>
+			<dc:subject>Wason Manufacturing Compay</dc:subject>
+			<dc:identifier>https://digitalmaine.com/trolley_images/2</dc:identifier>
+			<dc:description>https://digitalmaine.com/trolley_images/1001/thumbnail.jpg</dc:description>
+		</oai_dc:dc>
+	</metadata>
+</record>

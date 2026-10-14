@@ -154,6 +154,17 @@ class LocProfile extends JsonProfile {
   override def getMapping = new LcRetconMapping
 }
 
+/** Digital Maine (Maine State Library / Maine State Archives). Qualified DC
+  * harvested from the Digital Commons OAI-PMH feed (localoai). Legacy items keep
+  * their ingestion1-era DPLA ids via MaineMapping's crosswalk.
+  */
+class MaineProfile extends XmlProfile {
+  type Mapping = MaineMapping
+
+  override def getHarvester: Class[_ <: Harvester] = classOf[LocalOaiHarvester]
+  override def getMapping = new MaineMapping
+}
+
 /** Massachusetts - Digital Commonwealth
   */
 class MaProfile extends XmlProfile {

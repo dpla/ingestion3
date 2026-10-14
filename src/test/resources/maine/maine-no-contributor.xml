@@ -1,0 +1,30 @@
+<record>
+	<header>
+		<identifier>oai:digitalmaine.com:maine_library_images-1241</identifier>
+		<datestamp>2015-09-08T13:18:14Z</datestamp>
+				<setSpec>publication:statedocs</setSpec>
+				<setSpec>publication:msl_images</setSpec>
+				<setSpec>publication:msl</setSpec>
+				<setSpec>publication:maine_library_images</setSpec>
+			</header>
+	<metadata>
+		<oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.bepress.com/OAI/2.0/qualified-dublin-core/ https://resources.bepress.com/assets/xsd/oai_qualified_dc.xsd">
+			
+			<dc:title>Winterport Memorial Library</dc:title>
+			<dc:creator>Wood, Ellen</dc:creator>
+			<dc:type>Image</dc:type>
+			<dc:subject>Library</dc:subject>
+			<dc:description.abstract>In 2007, Maine State Library employee, Ellen Wood and her husband, photographed public libraries across Maine. This image is of Winterport Memorial Library, 229 Main Street, Winterport, Maine 04496.</dc:description.abstract>
+			<dc:date.created>2007-01-01T08:00:00Z</dc:date.created>
+			<dc:coverage.spatial.lat>44.6352984</dc:coverage.spatial.lat>
+			<dc:coverage.spatial.long>-68.84673750000002</dc:coverage.spatial.long>
+			<dc:coverage.spatial>Winterport</dc:coverage.spatial>
+			<dc:coverage.spatial>Waldo County</dc:coverage.spatial>
+			<dc:rights>http://rightsstatements.org/vocab/InC-NC/1.0/</dc:rights>
+			<dc:subject>Public Library Buildings; Maine; Winterport</dc:subject>
+			<dc:subject>Maine</dc:subject>
+			<dc:identifier>https://digitalmaine.com/maine_library_images/242</dc:identifier>
+			<dc:description>https://digitalmaine.com/maine_library_images/1241/thumbnail.jpg</dc:description>
+		</oai_dc:dc>
+	</metadata>
+</record>

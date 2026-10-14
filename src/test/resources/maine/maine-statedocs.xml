@@ -1,0 +1,48 @@
+<record>
+	<header>
+		<identifier>oai:digitalmaine.com:alien_docs-5510</identifier>
+		<datestamp>2016-10-04T19:07:24Z</datestamp>
+				<setSpec>publication:statedocs</setSpec>
+				<setSpec>publication:sos</setSpec>
+				<setSpec>publication:arc_adjutant_general</setSpec>
+				<setSpec>publication:archives</setSpec>
+				<setSpec>publication:arc_img</setSpec>
+				<setSpec>publication:alien_reg</setSpec>
+				<setSpec>publication:alien_docs</setSpec>
+			</header>
+	<metadata>
+		<oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.bepress.com/OAI/2.0/qualified-dublin-core/ https://resources.bepress.com/assets/xsd/oai_qualified_dc.xsd">
+			
+			<dc:title>Alien Registration- Poisson, Wilfrid (Biddeford, York County)</dc:title>
+			<dc:creator>Poisson, Wilfrid</dc:creator>
+			<dc:type>Text</dc:type>
+			<dc:contributor>Maine State Archives</dc:contributor>
+			<dc:description.abstract>The registration of adult alien resident in the State of Maine directed by Executive Proclamation, dated June 14, 1940. Registrations include place of birth, period of residence in this State and Country, information as to the family, occupation, education and employment.</dc:description.abstract>
+			<dc:date.created>1940-01-01T08:00:00Z</dc:date.created>
+			<dc:language>English</dc:language>
+			<dc:coverage.spatial>Biddeford</dc:coverage.spatial>
+			<dc:coverage.spatial>York County</dc:coverage.spatial>
+			<dc:rights>http://rightsstatements.org/vocab/NoC-US/1.0/</dc:rights>
+			<dc:subject>Aliens</dc:subject>
+			<dc:subject>Non-Citizens</dc:subject>
+			<dc:subject>Census</dc:subject>
+			<dc:subject>World War II</dc:subject>
+			<dc:subject>WWII</dc:subject>
+			<dc:subject>Immigration</dc:subject>
+			<dc:subject>Naturalization</dc:subject>
+			<dc:subject>State Defense</dc:subject>
+			<dc:subject>Citizenship</dc:subject>
+			<dc:subject>Wartime</dc:subject>
+			<dc:subject>Nationality</dc:subject>
+			<dc:subject>Maine</dc:subject>
+			<dc:subject>Un-American Activities</dc:subject>
+			<dc:subject>Subversive Activities</dc:subject>
+			<dc:subject>Sedition</dc:subject>
+			<dc:subject>Subject of Foreign Countries</dc:subject>
+			<dc:subject>Citizen of Foreign Countries</dc:subject>
+			<dc:subject>Sedition</dc:subject>
+			<dc:identifier>https://digitalmaine.com/alien_docs/4510</dc:identifier>
+			<dc:description>https://digitalmaine.com/alien_docs/5510/thumbnail.jpg</dc:description>
+		</oai_dc:dc>
+	</metadata>
+</record>
