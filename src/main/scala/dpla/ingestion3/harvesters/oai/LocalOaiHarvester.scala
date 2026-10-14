@@ -4,6 +4,7 @@ import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.harvesters.{LocalHarvester, ParsedResult}
 import dpla.ingestion3.model.AVRO_MIME_XML
 import org.apache.avro.generic.GenericData
+import org.apache.logging.log4j.LogManager
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import java.time.format.DateTimeFormatter
@@ -30,6 +31,10 @@ class LocalOaiHarvester(
   ).collect { case (key, Some(value)) => key -> value }
 
   private val oaiConfig = OaiConfiguration(readerOptions)
+  private val logger = LogManager.getLogger(this.getClass)
+
+  // A record listed in more than one harvested set is written once.
+  private val seenIds = new LocalOaiHarvester.SeenIds
   private val oaiMethods = new OaiProtocol(oaiConfig, harvestLogger)
 
   override def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
@@ -73,6 +78,11 @@ class LocalOaiHarvester(
     }
 
     close()
+    if (seenIds.duplicatesSkipped > 0)
+      logger.info(
+        s"Skipped ${seenIds.duplicatesSkipped} duplicate records " +
+          "(same identifier in more than one harvested set)"
+      )
     spark.read.format("avro").load(tmpOutStr)
   }
 
@@ -127,6 +137,9 @@ class LocalOaiHarvester(
 
   private def allowListHarvest(sets: Array[String]): Unit = {
     val unixEpoch = getUnixEpoch
+    // Records can only repeat across sets, so a single-set harvest skips the
+    // bookkeeping.
+    val dedupe = sets.length > 1
     for {
       set <- sets
       page <- oaiMethods.listAllRecordPagesForSet(set)
@@ -134,6 +147,7 @@ class LocalOaiHarvester(
         page,
         removeDeleted = oaiConfig.removeDeleted()
       )
+      if !dedupe || seenIds.firstTime(record.id)
       fixedRecord = addAboutToDocument(record)
     } writeOut(unixEpoch, ParsedResult(fixedRecord.id, fixedRecord.document))
   }
@@ -148,6 +162,7 @@ class LocalOaiHarvester(
         pageEither,
         removeDeleted = oaiConfig.removeDeleted()
       )
+      if seenIds.firstTime(record.id)
       fixedRecord = addAboutToDocument(record)
     } writeOut(unixEpoch, ParsedResult(fixedRecord.id, fixedRecord.document))
   }
@@ -180,6 +195,7 @@ class LocalOaiHarvester(
         pageEither,
         removeDeleted = oaiConfig.removeDeleted()
       )
+      if seenIds.firstTime(record.id)
       fixedRecord = addAboutToDocument(record)
     } writeOut(unixEpoch, ParsedResult(fixedRecord.id, fixedRecord.document))
   }
@@ -189,6 +205,21 @@ class LocalOaiHarvester(
 }
 
 object LocalOaiHarvester {
+
+  /** Identifiers already written during one harvest. */
+  final class SeenIds {
+    private val ids = scala.collection.mutable.HashSet.empty[String]
+    private var skipped = 0L
+
+    /** True the first time an identifier is seen; false (and counted) after. */
+    def firstTime(id: String): Boolean = {
+      val isNew = ids.add(id)
+      if (!isNew) skipped += 1
+      isNew
+    }
+
+    def duplicatesSkipped: Long = skipped
+  }
 
   /** setSpec -> setName from parsed ListSets entries (sets without a name are
     * skipped).

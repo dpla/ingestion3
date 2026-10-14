@@ -2,7 +2,7 @@ package dpla.ingestion3.harvesters.oai
 
 import org.scalatest.flatspec.AnyFlatSpec
 
-class LocalOaiHarvesterSetNamesTest extends AnyFlatSpec {
+class LocalOaiHarvesterTest extends AnyFlatSpec {
 
   private val requestInfo = OaiRequestInfo("ListSets", None, None, None, 0L)
 
@@ -55,5 +55,13 @@ class LocalOaiHarvesterSetNamesTest extends AnyFlatSpec {
         "publication:regions" -> "Digital Repositories for Maine Communities"
       )
     )
+  }
+
+  "LocalOaiHarvester.SeenIds" should "accept an identifier once and count repeats" in {
+    val seen = new LocalOaiHarvester.SeenIds
+    assert(seen.firstTime("oai:digitalmaine.com:books-1012"))
+    assert(seen.firstTime("oai:digitalmaine.com:books-1013"))
+    assert(!seen.firstTime("oai:digitalmaine.com:books-1012"))
+    assert(seen.duplicatesSkipped === 1)
   }
 }
