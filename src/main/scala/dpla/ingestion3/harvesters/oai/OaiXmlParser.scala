@@ -84,7 +84,8 @@ object OaiXmlParser {
     for (set <- xml \ "ListSets" \ "set")
       yield {
         val id = (set \ "setSpec").text
-        OaiSet(id, set.toString, info)
+        val name = Some((set \ "setName").text.trim).filter(_.nonEmpty)
+        OaiSet(id, set.toString, info, name)
       }
 
   def containsError(xml: Node): Unit = {

@@ -45,4 +45,13 @@
 			<dc:description>https://digitalmaine.com/alien_docs/5510/thumbnail.jpg</dc:description>
 		</oai_dc:dc>
 	</metadata>
+	<about>
+		<setName spec="publication:statedocs">State Documents</setName>
+		<setName spec="publication:sos">Secretary of State</setName>
+		<setName spec="publication:arc_adjutant_general">Adjutant General</setName>
+		<setName spec="publication:archives">State Archives</setName>
+		<setName spec="publication:arc_img">Archives Services</setName>
+		<setName spec="publication:alien_reg">Alien Registrations</setName>
+		<setName spec="publication:alien_docs">Registrations</setName>
+	</about>
 </record>

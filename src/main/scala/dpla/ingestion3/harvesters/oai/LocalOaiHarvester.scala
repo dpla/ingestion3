@@ -20,6 +20,7 @@ class LocalOaiHarvester(
     "verb" -> conf.harvest.verb,
     "metadataPrefix" -> conf.harvest.metadataPrefix,
     "httpVersion" -> conf.harvest.httpVersion,
+    "includeSetNames" -> conf.harvest.includeSetNames,
     "harvestAllSets" -> conf.harvest.harvestAllSets,
     "setlist" -> conf.harvest.setlist,
     "blacklist" -> conf.harvest.blacklist,
@@ -33,7 +34,27 @@ class LocalOaiHarvester(
 
   override def mimeType: GenericData.EnumSymbol = AVRO_MIME_XML
 
+  // setSpec -> setName for every set the endpoint lists, fetched once per
+  // harvest. Only used when harvest.includeSetNames is enabled.
+  private lazy val setNames: Map[String, String] = {
+    val names = LocalOaiHarvester.setNamesFromSets(
+      oaiMethods
+        .listAllSetPages()
+        .iterator
+        .flatMap(oaiMethods.parsePageIntoSets)
+    )
+    if (names.isEmpty)
+      throw OaiHarvesterException(
+        "harvest.includeSetNames is enabled but ListSets returned no set names."
+      )
+    names
+  }
+
   override def harvest: DataFrame = {
+
+    // Fetch set names up front so a ListSets failure aborts before any records
+    // are written (and isn't reported as a record parse error).
+    if (oaiConfig.includeSetNames) setNames
 
     (oaiConfig.setlist, oaiConfig.harvestAllSets, oaiConfig.blacklist) match {
 
@@ -83,8 +104,12 @@ class LocalOaiHarvester(
         (documentXml \ "about").flatMap(_.child).collect { case e: scala.xml.Elem =>
           e
         }
+      val setNameElements =
+        if (oaiConfig.includeSetNames)
+          LocalOaiHarvester.setNameElements(header, setNames)
+        else Seq.empty
       val about =
-        <about>{requestElement}{resumptionToken}{responseDate}{providerAbout}</about>
+        <about>{requestElement}{resumptionToken}{responseDate}{setNameElements}{providerAbout}</about>
       val record = <record>{header}{metadata}{about}</record>
       oaiRecord.copy(document = record.toString)
     } catch {
@@ -161,4 +186,24 @@ class LocalOaiHarvester(
 
   private def getUnixEpoch: Long = System.currentTimeMillis() / 1000L
 
+}
+
+object LocalOaiHarvester {
+
+  /** setSpec -> setName from parsed ListSets entries (sets without a name are
+    * skipped).
+    */
+  def setNamesFromSets(sets: Iterator[OaiSet]): Map[String, String] =
+    sets.flatMap(set => set.name.map(set.id -> _)).toMap
+
+  /** One <setName spec="..."> element per header setSpec that has a known name,
+    * in header order.
+    */
+  def setNameElements(
+      header: scala.xml.NodeSeq,
+      names: Map[String, String]
+  ): Seq[scala.xml.Elem] =
+    (header \ "setSpec").map(_.text).flatMap { spec =>
+      names.get(spec).map(name => <setName spec={spec}>{name}</setName>)
+    }
 }

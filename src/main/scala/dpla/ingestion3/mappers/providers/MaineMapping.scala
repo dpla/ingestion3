@@ -85,6 +85,22 @@ class MaineMapping
     values(data, "rights").filterNot(isRightsUri)
 
   // SourceResource
+
+  // The collection is the record's own Digital Commons publication, i.e. the set
+  // publication:<collection> where <collection> is the identifier's prefix
+  // (oai:digitalmaine.com:<collection>-<n>). Its title is the set name, which
+  // the harvester records in <about><setName> (harvest.includeSetNames).
+  override def collection(
+      data: Document[NodeSeq]
+  ): ZeroToMany[DcmiTypeCollection] = {
+    val ownSet = extractString(data \ "header" \ "identifier")
+      .map(_.trim)
+      .collect { case MaineMapping.CollectionFromId(c) => s"publication:$c" }
+    (data \ "about" \ "setName")
+      .filter(node => ownSet.contains(node \@ "spec"))
+      .flatMap(extractStrings)
+      .map(nameOnlyCollection)
+  }
   override def title(data: Document[NodeSeq]): ZeroToMany[String] =
     values(data, "title")
 
@@ -158,6 +174,9 @@ class MaineMapping
 object MaineMapping {
 
   private val ResourcePath = "/maine/legacy_ids.tsv"
+
+  private[providers] val CollectionFromId =
+    "^oai:digitalmaine\\.com:(.+)-\\d+$".r
 
   /** Digital Commons OAI identifier -> REPOX set (msl_statedocs or msl_regions)
     * the record was harvested through in 2017. Built from the 2022 Maine JSONL

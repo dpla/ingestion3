@@ -72,6 +72,15 @@ case class OaiConfiguration(parameters: Map[String, String]) {
     case x             => throwUnrecognizedArgException(s"harvestAllSets => $x")
   }
 
+  def includeSetNames: Boolean = parameters
+    .get("includeSetNames")
+    .map(_.toLowerCase) match {
+    case Some("true")  => true
+    case Some("false") => false
+    case None          => false
+    case x => throwUnrecognizedArgException(s"includeSetNames => $x")
+  }
+
   def setlist: Option[Array[String]] = parameters.get("setlist").map(parseSets)
 
   def blacklist: Option[Array[String]] =

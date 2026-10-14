@@ -15,7 +15,12 @@ case class OaiRequestInfo(
 case class OaiRecord(id: String, document: String, info: OaiRequestInfo)
 
 /** A single set from an OAI harvest. */
-case class OaiSet(id: String, document: String, info: OaiRequestInfo)
+case class OaiSet(
+    id: String,
+    document: String,
+    info: OaiRequestInfo,
+    name: Option[String] = None
+)
 
 /** Represents a single response from an OAI harvest. */
 sealed trait OaiResponse

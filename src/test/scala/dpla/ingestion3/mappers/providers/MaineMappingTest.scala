@@ -196,6 +196,28 @@ class MaineMappingTest extends AnyFlatSpec {
 
   // SourceResource fields
 
+  it should "take the collection from the record's own publication set name" in {
+    assert(
+      extractor.collection(statedocs) === Seq(
+        nameOnlyCollection("Registrations")
+      )
+    )
+    assert(
+      extractor.collection(regions) === Seq(nameOnlyCollection("Brewer Images"))
+    )
+    assert(
+      extractor.collection(added) === Seq(
+        nameOnlyCollection(
+          "New England Electric Railway Historical Society Images"
+        )
+      )
+    )
+  }
+
+  it should "map no collection when the harvest recorded no set names" in {
+    assert(extractor.collection(noContributor) === Seq())
+  }
+
   it should "extract the title" in {
     assert(
       extractor.title(regions) === Seq("Sargent Lumber Mill, Brewer, Maine")

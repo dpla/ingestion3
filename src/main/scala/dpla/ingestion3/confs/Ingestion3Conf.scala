@@ -52,6 +52,7 @@ class Ingestion3Conf(confFilePath: String, providerName: Option[String] = None)
         metadataPrefix = getProp(providerConf, "harvest.metadataPrefix"),
         harvestAllSets = getProp(providerConf, "harvest.harvestAllSets"),
         httpVersion = getProp(providerConf, "harvest.httpVersion"),
+        includeSetNames = getProp(providerConf, "harvest.includeSetNames"),
         // Properties for API harvests
         apiKey = getProp(providerConf, "harvest.apiKey"),
         rows = getProp(providerConf, "harvest.rows"),
@@ -176,6 +177,10 @@ case class Harvest(
     // connections with a GOAWAY during a sustained harvest (e.g. Apache
     // mod_http2). See docs/ingestion/dartmouth-mapping-draft.md.
     httpVersion: Option[String] = None,
+    // "true" to fetch ListSets once and record each harvested record's set
+    // names (<setName spec="...">) in its <about> block, for mappers that take
+    // collection titles from OAI set names.
+    includeSetNames: Option[String] = None,
     // API
     rows: Option[String] = None,
     query: Option[String] = None,

@@ -19,4 +19,9 @@
 			<dc:description>https://digitalmaine.com/brewer_images/1010/thumbnail.jpg</dc:description>
 		</oai_dc:dc>
 	</metadata>
+	<about>
+		<setName spec="publication:brewer">Brewer, Maine</setName>
+		<setName spec="publication:brewer_images">Brewer Images</setName>
+		<setName spec="publication:regions">Digital Repositories for Maine Communities</setName>
+	</about>
 </record>

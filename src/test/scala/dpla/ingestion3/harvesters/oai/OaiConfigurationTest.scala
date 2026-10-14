@@ -31,6 +31,21 @@ class OaiConfigurationTest extends AnyFlatSpec {
     assertThrows[Exception](OaiConfiguration(Map("verb" -> verb)))
   }
 
+  it should "default includeSetNames to false" in {
+    assert(!OaiConfiguration(defaults).includeSetNames)
+  }
+
+  it should "parse includeSetNames" in {
+    assert(OaiConfiguration(defaults.updated("includeSetNames", "true")).includeSetNames)
+    assert(!OaiConfiguration(defaults.updated("includeSetNames", "false")).includeSetNames)
+  }
+
+  it should "throw on an unrecognized includeSetNames value" in {
+    assertThrows[Exception](
+      OaiConfiguration(defaults.updated("includeSetNames", "yes")).includeSetNames
+    )
+  }
+
   it should "throw when no verb is passed" in {
     assertThrows[Exception](OaiConfiguration(Map()))
   }

@@ -20,4 +20,10 @@
 			<dc:description>https://digitalmaine.com/trolley_images/1001/thumbnail.jpg</dc:description>
 		</oai_dc:dc>
 	</metadata>
+	<about>
+		<setName spec="publication:kennebunkport">Kennebunkport, Maine</setName>
+		<setName spec="publication:regions">Digital Repositories for Maine Communities</setName>
+		<setName spec="publication:trolley_museum">New England Electric Railway Historical Society</setName>
+		<setName spec="publication:trolley_images">New England Electric Railway Historical Society Images</setName>
+	</about>
 </record>

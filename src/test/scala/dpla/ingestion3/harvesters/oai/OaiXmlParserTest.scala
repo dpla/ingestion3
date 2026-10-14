@@ -34,6 +34,16 @@ class OaiXmlParserTest extends AnyFlatSpec with Matchers {
     sets(1).id shouldEqual "scarlet"
   }
 
+  it should "read each set's name, unescaping XML entities" in {
+    val xmlString = flatFileIO.readFileAsString("/oai-sets.xml")
+    val xmlNode = OaiXmlParser.parsePageIntoXml(OaiPage(xmlString, requestInfo))
+    val sets = OaiXmlParser.parseXmlIntoSets(xmlNode, requestInfo)
+    sets.head.name shouldEqual Some("English Crime and Execution Broadsides")
+    sets(1).name shouldEqual Some(
+      "Studies in Scarlet: Marriage and Sexuality in the U.S. & U.K., 1815-1914"
+    )
+  }
+
   "OaiXmlParser.getResumptionToken" should "correctly extract the resumption token from XML" in {
     val xmlString = "<root><resumptionToken>token123</resumptionToken></root>"
     val xmlNode = OaiXmlParser.parsePageIntoXml(OaiPage(xmlString, requestInfo))
