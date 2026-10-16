@@ -189,7 +189,7 @@ Immediately after the alias swap completes:
 python3 post_indexer.py
 ```
 
-Checks/rebuilds the batch JAR, launches the monthlybatch EMR cluster, and runs four Spark steps in sequence: `ParquetDump` → `JsonlDump` → `MqReports` → `Sitemap`. On completion it runs hub stats and the aviation/bws sitemaps on EC2, then triggers the dpla-frontend GitHub Actions workflow that builds the provider-based hub sitemaps. Cluster takes **3–5 hours**.
+Checks/rebuilds the batch JAR, launches the monthlybatch EMR cluster, and runs four Spark steps in sequence: `ParquetDump` → `JsonlDump` → `MqReports` → `Sitemap`. On completion it runs hub stats and the aviation/bws sitemaps on EC2, then runs the dpla-frontend GitHub Actions workflow that builds the provider-based hub sitemaps and waits for its result. A final Slack summary names any failed or stale output. Cluster takes **3–5 hours**.
 
 ```bash
 python3 post_indexer.py --cluster-id j-XXXXX   # resume monitoring

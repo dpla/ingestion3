@@ -22,11 +22,13 @@ import base64
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import time
-from datetime import datetime
+import traceback
+from datetime import datetime, timedelta, timezone
 
 # ---------- config ----------
 REGION             = "us-east-1"
@@ -146,6 +148,21 @@ def ssm_run(instance_id, shell_cmd, timeout_seconds=60, poll_seconds=5):
     if status != "Success":
         raise RuntimeError(f"SSM status={status}\nSTDOUT:\n{out}\nSTDERR:\n{err}")
     return out
+
+
+def gh(args, timeout=None):
+    """Run the gh CLI; return stdout, raise RuntimeError on failure."""
+    exe = shutil.which("gh") or "/opt/homebrew/bin/gh"
+    result = subprocess.run([exe] + args, capture_output=True, text=True, timeout=timeout)
+    if result.returncode != 0:
+        raise RuntimeError(f"gh {' '.join(args[:2])} failed:\n{result.stderr.strip()}")
+    return result.stdout
+
+
+def tail(text, limit=1500):
+    """Last `limit` chars of an error, for Slack."""
+    text = str(text).strip()
+    return text if len(text) <= limit else "…" + text[-limit:]
 
 
 # ---------- UI helpers ----------
@@ -518,7 +535,8 @@ def monitor_cluster(cluster_id):
 
             # WAITING = all steps finished (cluster kept alive by --no-auto-terminate)
             if state == "WAITING":
-                failed    = [s["Name"] for s in steps if s["State"] in ("FAILED", "CANCELLED")]
+                # Any state but COMPLETED (incl. INTERRUPTED) is a failure, or we'd wait forever
+                failed    = [s["Name"] for s in steps if s["State"] != "COMPLETED"]
                 completed = [s["Name"] for s in steps if s["State"] == "COMPLETED"]
 
                 if failed:
@@ -589,6 +607,8 @@ def run_hub_stats():
         ok("ingestion3 updated on EC2.")
     except RuntimeError as e:
         warn(f"git fetch/reset failed (proceeding anyway):\n{e}")
+        slack_notify(":warning: *post-indexer: git reset of ingestion3 on the ingest EC2 failed* — "
+                     f"hub stats will run on old code.\n```{tail(e, 800)}```")
 
     # GA4 paging plus per-id ES resolution runs several minutes; a
     # first-run history backfill takes longer still. Full output goes to a
@@ -613,11 +633,8 @@ def run_hub_stats():
         slack_notify(":bar_chart: *hub stats generated* :white_check_mark:")
     except RuntimeError as e:
         bad(f"Hub stats failed:\n{e}")
-        slack_notify(
-            ":warning: *hub stats step failed* — hub_stats/bws may still have "
-            "uploaded; item_data_providers did not. See /tmp/hub-stats.log on "
-            "the ingest EC2."
-        )
+        slack_notify(":warning: *hub stats step failed* — full log in /tmp/hub-stats.log "
+                     f"on the ingest EC2.\n```{tail(e)}```")
 
 
 # ---------- Step 5: sitemaps ----------
@@ -662,29 +679,54 @@ def run_tag_sitemaps():
         slack_notify(":world_map: *aviation and bws sitemaps generated* :white_check_mark:")
 
 
-def trigger_provider_sitemaps():
-    """Trigger the dpla-frontend workflow for provider-based hub sitemaps."""
-    import shutil
-    gh = shutil.which("gh") or "/opt/homebrew/bin/gh"
-    info(f"Running: {gh} workflow run generate-hub-sitemaps.yml --repo dpla/dpla-frontend --ref main")
-    result = subprocess.run(
-        [gh, "workflow", "run", "generate-hub-sitemaps.yml",
-         "--repo", "dpla/dpla-frontend", "--ref", "main"],
-        capture_output=True, text=True,
-    )
-    if result.returncode == 0:
-        ok("Provider hub sitemaps workflow triggered.")
-        slack_notify(":world_map: *provider hub sitemaps workflow triggered* :white_check_mark:")
-    else:
-        bad(f"Failed to trigger sitemaps workflow:\n{result.stderr.strip()}")
-        info("Make sure `gh` CLI is installed and authenticated.")
-        slack_notify(":warning: *provider hub sitemaps workflow trigger FAILED* — run manually")
+def run_provider_sitemaps():
+    """Run the dpla-frontend provider hub sitemap workflow and wait for its result
+    (`gh workflow run` exiting 0 only means GitHub accepted the request).
+    Returns a problem string for the step 6 summary, or None on success."""
+    repo, wf = "dpla/dpla-frontend", "generate-hub-sitemaps.yml"
+    since = (datetime.now(timezone.utc) - timedelta(seconds=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    run = None
+    try:
+        gh(["workflow", "run", wf, "--repo", repo, "--ref", "main"])
+        for _ in range(12):  # the run takes a few seconds to appear
+            time.sleep(10)
+            runs = json.loads(gh(["run", "list", "--workflow", wf, "--repo", repo, "--event",
+                                  "workflow_dispatch", "--limit", "5", "--json", "databaseId,createdAt,url"]))
+            run = next((r for r in reversed(runs) if r["createdAt"] >= since), None)
+            if run:
+                break
+        if not run:
+            raise RuntimeError("workflow was requested but its run never appeared")
+    except (RuntimeError, ValueError) as e:
+        bad(f"Provider hub sitemaps did not start:\n{e}")
+        slack_notify(f":warning: *provider hub sitemaps did not start* — run {wf} manually.\n```{tail(e, 800)}```")
+        return "provider hub sitemaps did not start"
+
+    url = run["url"]
+    slack_notify(f":world_map: *provider hub sitemaps started* — {url}")
+    info(f"Waiting for {url} (up to 3 h)...")
+    try:
+        gh(["run", "watch", str(run["databaseId"]), "--repo", repo, "--exit-status", "--interval", "60"],
+           timeout=3 * 3600 + 600)
+        ok("Provider hub sitemaps complete.")
+        slack_notify(f":world_map: *provider hub sitemaps complete* :white_check_mark: — {url}")
+        return None
+    except (RuntimeError, subprocess.TimeoutExpired):
+        try:
+            m = re.search(r"hub\(s\) failed: (.+)",
+                          gh(["run", "view", str(run["databaseId"]), "--repo", repo, "--log-failed"]))
+        except RuntimeError:
+            m = None
+        hubs = m.group(1).strip() if m else "see run log"
+        bad(f"Provider hub sitemaps failed or timed out: {hubs} — {url}")
+        slack_notify(f":warning: *provider hub sitemaps FAILED*: {hubs} — {url}")
+        return f"provider hub sitemaps failed: {hubs}"
 
 
 def run_sitemaps():
     step(5, "Hub sitemaps")
     run_tag_sitemaps()
-    trigger_provider_sitemaps()
+    return run_provider_sitemaps()
 
 
 # ---------- Step 6: verify outputs ----------
@@ -706,23 +748,28 @@ def check_s3_file_today(s3_path, label):
         return False
 
 
-def verify_outputs(excluded: set | None = None):
+def verify_outputs(excluded: set | None = None, sitemap_problem=None):
+    """Check all outputs; post one Slack summary naming any problems. Returns them."""
     step(6, "Verify S3 batch outputs")
     now   = datetime.now()
     today = now.strftime("%Y-%m-%d")
     year  = now.year
     month = f"{now.month:02d}"
 
-    all_good = True
+    problems = [sitemap_problem] if sitemap_problem else []
 
-    # Provider export — check year/month prefix exists
+    # Provider export — all.parquet present and every file written today
+    # (a partial export or an earlier run this month leaves older files)
     export_path = f"s3://dpla-provider-export/{year}/{month}/"
-    ls = aws(["s3", "ls", export_path, "--region", REGION], check=False)
-    if ls.strip():
-        ok(f"Provider export: found at {export_path} ✓")
-    else:
-        bad(f"Provider export: EMPTY at {export_path}")
-        all_good = False
+    out  = aws(["s3", "ls", export_path, "--recursive", "--region", REGION], check=False)
+    rows = [r for r in (line.split(None, 3) for line in out.splitlines()) if len(r) == 4]
+    stale_dirs = sorted({r[3].split("/")[2] for r in rows if r[0] != today})  # key: YYYY/MM/<dir>/...
+    if not any("/all.parquet/" in r[3] for r in rows):
+        problems.append(f"provider export missing all.parquet at {export_path}")
+    if stale_dirs:
+        problems.append(f"provider export not written today: {', '.join(stale_dirs)}")
+    if rows and not stale_dirs:
+        ok(f"Provider export: all files written today at {export_path} ✓")
 
     # Verify no stale excluded hub dirs remain in the export prefix.
     # Read exclusions from conf if not already passed in (handles --cluster-id resume path).
@@ -737,39 +784,34 @@ def verify_outputs(excluded: set | None = None):
         stale_ls = aws(["s3", "ls", hub_dir, "--region", REGION], check=False)
         if stale_ls.strip():
             bad(f"Stale excluded hub export still present: {hub_dir}")
-            all_good = False
+            problems.append(f"excluded hub still in provider export: {hub}")
         else:
             ok(f"Excluded hub absent from export as expected: {hub} ✓")
 
-    # Sitemaps — check _MANIFEST is from today
-    if not check_s3_file_today("s3://sitemaps.dp.la/sitemap/_MANIFEST", "Sitemap _MANIFEST"):
-        all_good = False
+    # Files that must be from today. _MANIFEST is the EMR dp.la item sitemap;
+    # provider hub sitemaps are covered by the workflow result in step 5.
+    files = {"dp.la item sitemap (_MANIFEST)": "s3://sitemaps.dp.la/sitemap/_MANIFEST"}
+    files.update({f"{h} hub sitemap": f"s3://sitemaps.dp.la/sitemap/{h}/all_item_urls.xml"
+                  for h in TAG_SITEMAP_HUBS})
+    files.update({n: f"s3://dashboard-analytics/hub-stats/{n}"
+                  for n in ("hub_stats.json", "hub_stats_bws.json", "item_data_providers.json")})
+    stale = [label for label, path in files.items() if not check_s3_file_today(path, label)]
+    if stale:
+        problems.append(f"not updated today: {', '.join(stale)}")
 
-    # Tag hubs finished in step 5
-    # Provider hubs are still building in GH Actions
-    for hub in TAG_SITEMAP_HUBS:
-        if not check_s3_file_today(
-            f"s3://sitemaps.dp.la/sitemap/{hub}/all_item_urls.xml", f"{hub} sitemap index"
-        ):
-            all_good = False
-
-    # Hub stats — check all three files are from today
-    if not check_s3_file_today("s3://dashboard-analytics/hub-stats/hub_stats.json", "hub_stats.json"):
-        all_good = False
-    if not check_s3_file_today("s3://dashboard-analytics/hub-stats/hub_stats_bws.json", "hub_stats_bws.json"):
-        all_good = False
-    if not check_s3_file_today("s3://dashboard-analytics/hub-stats/item_data_providers.json", "item_data_providers.json"):
-        all_good = False
-
-    if all_good:
+    if problems:
+        for p in problems:
+            bad(p)
+        slack_notify(f":warning: *post-indexer done, with problems* ({today}):\n"
+                     + "\n".join(f"• {p}" for p in problems))
+    else:
         slack_notify(
             f":tada: *post-indexer complete* — all outputs verified for {today} :white_check_mark:\n"
             f"• Provider export: `{export_path}`\n"
             f"• Sitemaps: fresh\n"
             f"• Hub stats: fresh"
         )
-    else:
-        slack_notify(":warning: *post-indexer done but some S3 outputs are missing or stale* — check manually.")
+    return problems
 
 
 # ---------- main ----------
@@ -813,15 +855,20 @@ def main():
         confirm("Run hub stats and sitemaps anyway?", default_yes=False)
 
     run_hub_stats()
-    run_sitemaps()
-    verify_outputs()
+    problems = verify_outputs(sitemap_problem=run_sitemaps())
 
     print()
     print("=" * 70)
-    print("  Post-indexer complete!")
+    print("  Post-indexer complete!" if not problems else "  Post-indexer finished with problems (see above).")
     print("=" * 70)
     print()
+    if problems and args.non_interactive:
+        sys.exit("[CI] Some post-indexer outputs failed or are stale.")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        slack_notify(f":rotating_light: *post-indexer crashed*\n```{tail(traceback.format_exc())}```")
+        raise
