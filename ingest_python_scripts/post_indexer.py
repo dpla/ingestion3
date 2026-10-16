@@ -9,8 +9,8 @@ Steps:
   2. Launch monthlybatch EMR cluster  (parquet → jsonl → mq → sitemap)
   3. Monitor cluster with hourly heartbeat
   4. On completion: terminate cluster, run hub stats
-  5. Build aviation/bws sitemaps on EC2, trigger dpla-frontend for the rest
-  6. Verify S3 outputs
+  5. Build aviation/bws sitemaps on EC2, run dpla-frontend's workflow for the rest and wait for it
+  6. Verify S3 outputs; post one Slack summary naming any failures
 
 Usage:
     python3 post_indexer.py
