@@ -271,13 +271,6 @@ class TnMapping
       .flatMap(extractStrings)
       .map(stringOnlyWebResource)
 
-  override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    // <location><url access="raw object">
-    (data \\ "mods" \ "location" \ "url")
-      .flatMap(node => getByAttribute(node, "access", "raw object"))
-      .flatMap(extractStrings)
-      .map(stringOnlyWebResource)
-
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
 
