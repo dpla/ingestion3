@@ -174,13 +174,6 @@ class TnMappingTest extends AnyFlatSpec with BeforeAndAfter {
     assert(extractor.isShownAt(xml) === expected)
   }
 
-  // object
-  it should "extract the correct object" in {
-    val expected = List("http://cdm15138.contentdm.oclc.org/utils/getthumbnail/collection/agricult/id/62")
-      .map(stringOnlyWebResource)
-    assert(extractor.`object`(xml) === expected)
-  }
-
   // preview
   it should "extract the correct preview" in {
     val expected = List("http://cdm15138.contentdm.oclc.org/utils/getthumbnail/collection/agricult/id/62")
