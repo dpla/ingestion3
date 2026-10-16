@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
 Generate sitemaps for tag-based DPLA hub subdomains (aviation, bws) by
-querying Elasticsearch directly using PIT + search_after pagination.
+querying Elasticsearch directly using search_after pagination sorted on _id
+(same approach as export_item_attribution.py).
 
-This script runs on the ingest EC2 (inside the VPC with direct ES access),
-invoked via SSM SendCommand from the generate-hub-sitemaps GH Actions workflow.
+Runs on the ingest EC2 (direct ES access). post_indexer.py runs it over SSM
+after the monthly index swap,
+so the index is static while this runs.
 
 Replaces the public DPLA API pagination previously used for these two hubs:
-  - No max_result_window (50K) constraint — PIT + search_after has no ceiling
+  - No max_result_window (50K) constraint — search_after has no ceiling
   - No dataProvider/hex-prefix segmentation workaround
   - No load on api.dp.la or WAF
   - No 500-error risk from ES circuit-breaker pressure
@@ -18,9 +20,9 @@ dpla-frontend/scripts/generate-hub-sitemaps.py:
   s3://sitemaps.dp.la/sitemap/<hub>/all_item_urls.xml                   (index)
 
 Usage:
-    venv/bin/python3 scripts/generate_tag_sitemap.py --hub aviation
-    venv/bin/python3 scripts/generate_tag_sitemap.py --hub bws
-    venv/bin/python3 scripts/generate_tag_sitemap.py --hub aviation --dry-run
+    python3 scripts/generate_tag_sitemap.py --hub aviation
+    python3 scripts/generate_tag_sitemap.py --hub bws
+    python3 scripts/generate_tag_sitemap.py --hub aviation --dry-run
 
 Environment:
     ES_HOST   Elasticsearch hostname (default: search-prod1.internal.dp.la)
@@ -50,7 +52,6 @@ SITEMAP_BUCKET = "sitemaps.dp.la"
 ITEM_BASE      = "https://dp.la/item"
 SHARD_SIZE     = 50_000   # max URLs per sitemap shard (sitemap protocol limit)
 PAGE_SIZE      = 10_000   # hits per ES page (well under max; large for efficiency)
-PIT_KEEP_ALIVE = "5m"     # refreshed on every search call
 
 # hub_id → ES tag value
 TAG_HUBS = {
@@ -116,78 +117,65 @@ def _es(method: str, path: str, body=None, timeout: int = 60, retries: int = 5) 
     ) from last_exc
 
 
-def iter_ids_via_pit(tag_value: str):
+def iter_ids(tag_value: str):
     """
-    Yield every DPLA item ID tagged with `tag_value` using PIT + search_after.
-
-    This approach:
-      - Opens a Point-in-Time snapshot of the index so results are stable
-        across pages even if the index is updated mid-run.
-      - Sorts by `id` (asc) and uses each page's last sort value as the
-        cursor for the next page.
-      - Has no result-window ceiling (unlike from/size pagination).
-      - Closes the PIT in a finally block to avoid leaving open contexts.
+    Yield every DPLA item ID tagged with `tag_value` using search_after
+    pagination sorted on `_id` (asc).
+    This is the same approach as
+    export_item_attribution.py.
+    `_id` is the DPLA item ID.
     """
-    # Open a Point-in-Time on the index alias.
-    pit_resp = _es("POST", f"/{ES_INDEX}/_pit?keep_alive={PIT_KEEP_ALIVE}")
-    pit_id   = pit_resp["id"]
+    query = {
+        "size":    PAGE_SIZE,
+        "query":   {"term": {"tags": tag_value}},
+        "_source": False,
+        "sort":    [{"_id": "asc"}],
+        # ES 7 caps hits.total at 10,000 by default;
+        # ask for the exact count on the first page
+        # (disabled after that to skip recounting).
+        "track_total_hits": True,
+    }
 
-    try:
-        query = {
-            "size":    PAGE_SIZE,
-            "query":   {"term": {"tags": tag_value}},
-            "_source": ["id"],
-            "sort":    [{"id": {"order": "asc"}}],
-            "pit":     {"id": pit_id, "keep_alive": PIT_KEEP_ALIVE},
-        }
+    total_reported = False
+    search_after   = None
 
-        total_reported = False
-        search_after   = None
+    while True:
+        if search_after is not None:
+            query["search_after"] = search_after
 
-        while True:
-            if search_after is not None:
-                query["search_after"] = search_after
-            else:
-                query.pop("search_after", None)
+        resp = _es("POST", f"/{ES_INDEX}/_search", query)
 
-            resp = _es("GET", "/_search", query)
-            hits = resp["hits"]["hits"]
+        if resp.get("timed_out"):
+            raise RuntimeError("Elasticsearch query timed out")
+        shards = resp.get("_shards", {})
+        if shards.get("failed", 0) > 0:
+            raise RuntimeError(f"Elasticsearch shard failures: {shards}")
 
-            # Log total on first page.
-            if not total_reported:
-                total = resp["hits"]["total"]
-                count = total["value"] if isinstance(total, dict) else total
-                rel   = total.get("relation", "eq") if isinstance(total, dict) else "eq"
-                print(
-                    f"  ES total for tag={tag_value!r}: {count:,}"
-                    + (" (lower bound)" if rel == "gte" else ""),
-                    flush=True,
-                )
-                total_reported = True
+        hits = resp["hits"]["hits"]
 
-            # ES may rotate the PIT id; use the latest one.
-            if "pit_id" in resp:
-                query["pit"]["id"] = resp["pit_id"]
+        # Log total on first page
+        if not total_reported:
+            total = resp["hits"]["total"]
+            count = total["value"] if isinstance(total, dict) else total
+            rel   = total.get("relation", "eq") if isinstance(total, dict) else "eq"
+            print(
+                f"  ES total for tag={tag_value!r}: {count:,}"
+                + (" (lower bound)" if rel == "gte" else ""),
+                flush=True,
+            )
+            total_reported = True
+            query["track_total_hits"] = False
 
-            if not hits:
-                break
+        if not hits:
+            break
 
-            for hit in hits:
-                item_id = (hit.get("_source") or {}).get("id")
-                if item_id:
-                    yield item_id
+        for hit in hits:
+            yield hit["_id"]
 
-            if len(hits) < PAGE_SIZE:
-                break  # last page
+        if len(hits) < PAGE_SIZE:
+            break  # last page
 
-            search_after = hits[-1]["sort"]
-
-    finally:
-        # Always release the PIT context.
-        try:
-            _es("DELETE", "/_pit", {"id": query["pit"]["id"]})
-        except Exception as exc:  # noqa: BLE001
-            print(f"  Warning: could not close PIT: {exc}", file=sys.stderr)
+        search_after = hits[-1]["sort"]
 
 
 # ── Sitemap XML builders ───────────────────────────────────────────────────────
@@ -272,7 +260,7 @@ def generate(hub_id: str, dry_run: bool, timestamp: datetime):
 
     print(f"  {hub_id}: querying ES for tag={tag_value!r}…", flush=True)
 
-    for item_id in iter_ids_via_pit(tag_value):
+    for item_id in iter_ids(tag_value):
         shard_buf.append(f"{ITEM_BASE}/{item_id}")
         total += 1
 
