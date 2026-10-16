@@ -835,7 +835,8 @@ def main():
     print(f"Time:   {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     if args.verify_only:
-        verify_outputs()
+        if verify_outputs() and args.non_interactive:
+            sys.exit("[CI] Some post-indexer outputs failed or are stale.")
         return
 
     if args.cluster_id:
