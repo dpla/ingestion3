@@ -218,9 +218,6 @@ class NaraMapping extends XmlMapping with XmlExtractor {
       }.replaceFirst("https/", "https:/") // some urls are missing the colon for some reason.
   } yield stringOnlyWebResource(url)
 
-  override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] =
-    extractPreview(data)
-
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
 

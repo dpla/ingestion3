@@ -132,27 +132,6 @@ class SiMapping extends XmlMapping with XmlExtractor {
         .toSeq
   }
 
-  override def `object`(data: Document[NodeSeq]): ZeroToMany[EdmWebResource] = {
-    val results = (data \ "descriptiveNonRepeating" \ "online_media" \ "media")
-      .flatMap(_.child)
-      .flatMap(_ match {
-        case Text(str) if str.trim.nonEmpty => Some(str)
-        case _                              => None
-      })
-      .map(stringOnlyWebResource)
-
-    results match {
-      case Seq()              => Seq()
-      case x if x.length == 1 => results
-      case x if x.length > 1  =>
-        // if there's more than one, prefer one from ids.si.edu
-        x.find(entry => entry.uri.toString.contains("ids.si.edu")) match {
-          case Some(entry) => Seq(entry)
-          case None        => Seq(results.head)
-        }
-    }
-  }
-
   override def originalRecord(data: Document[NodeSeq]): ExactlyOne[String] =
     Utils.formatXml(data)
 
