@@ -4,7 +4,7 @@ See @docs/ingestion/README_INGESTS.md for the generalized rules of running inges
 
 1. **Environment:** Source `.env` before running any process that needs project env (including building the JAR: run `source .env` then `sbt assembly` from repo root so the correct Java 11+ JDK is used). From repo root: `source .env`. Full checklist: [AGENTS.md](AGENTS.md) § Environment and build.
 2. **Python:** Use the virtualenv at `./venv/` (e.g. `./venv/bin/python` or `source ./venv/bin/activate`) for any new or existing Python scripts.
-3. **AWS credentials:** No named profile in CI or on the ingest EC2; locally, set `AWS_PROFILE` in `.env` if your profile is not named `dpla`. Details: [AGENTS.md](AGENTS.md) § Environment and build.
+3. **AWS credentials:** No named profile in CI or on the ingest EC2; locally, set `AWS_PROFILE=dpla` in `.env` unless your default AWS profile is the DPLA account. Details: [AGENTS.md](AGENTS.md) § Environment and build.
 4. **Shell scripts:** Write POSIX-compliant bash; avoid macOS- or Linux-specific flags (e.g. `sed -i`, `readlink -f` — use helpers from `scripts/common.sh` where applicable).
 5. **Build:** Before running ingests or skills that use the Scala pipeline, run `sbt assembly` from repo root so the fat JAR is current; scripts use the JAR when present.
 

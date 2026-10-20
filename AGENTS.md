@@ -12,7 +12,7 @@ Use this document when you are asked to **run ingests**, **report status**, or *
 - **Build the fat JAR:** From repo root run `source .env` then `sbt assembly`. Java 11+ is required (the codebase uses `java.net.http`). If you run `sbt assembly` without sourcing `.env`, the build may use the wrong JDK and fail (e.g. "package java.net.http does not exist"). Pipeline scripts (harvest.sh, ingest.sh, etc.) automatically run `sbt assembly` when the JAR is missing or when any Scala source is newer than the JAR, so the "harvest [hub]" skill uses current code without a separate build step.
 - **Java:** 11+ required for build and run. Set `JAVA_HOME` in `.env` (see Java requirement section below).
 - **Python:** Use `./venv/bin/python` or `source ./venv/bin/activate`; do not use system Python.
-- **AWS credentials:** No named profile is needed in CI or on the ingest EC2 — GitHub Actions uses an OIDC role, and on EC2 `common.sh` unsets `AWS_PROFILE` so the instance role is used. Locally, the Python launchers in `ingest_python_scripts/` fall back to a profile named `dpla` when `.env` exists; if your profile has a different name, set `AWS_PROFILE` in `.env`.
+- **AWS credentials:** No named profile is needed in CI or on the ingest EC2 — GitHub Actions uses an OIDC role, and on EC2 `common.sh` unsets `AWS_PROFILE` so the instance role is used. Locally, set `AWS_PROFILE=dpla` in `.env` unless your default AWS profile is the DPLA account: only the Python launchers in `ingest_python_scripts/` fall back to `dpla`; shell scripts and raw `aws` commands use your default credentials.
 
 **Why this checklist lives in AGENTS.md:** The full list of "before X do Y" rules is kept in one place so Cursor and Claude agents (and humans) follow the same process. .cursorrules and CLAUDE.md point here for the canonical checklist.
 
@@ -111,7 +111,7 @@ Ensure every failure is reflected in #tech-alerts or in an email to tech@dp.la.
 
 - **Environment:** Source `.env` before running the orchestrator or pipeline scripts so `JAVA_HOME`, `SLACK_BOT_TOKEN`, `DPLA_DATA`, and other vars are set (e.g. `source .env` from repo root).
 - **Python:** Use the virtualenv at `./venv/` when writing or running Python scripts.
-- **AWS credentials:** See [Environment and build](#environment-and-build) — no named profile in CI or on EC2; locally, set `AWS_PROFILE` in `.env` if your profile is not named `dpla`.
+- **AWS credentials:** See [Environment and build](#environment-and-build) — no named profile in CI or on EC2; locally, set `AWS_PROFILE=dpla` in `.env` unless your default AWS profile is the DPLA account.
 - **Shell scripts:** Write POSIX-compliant bash; avoid OS-specific flags (see [scripts/common.sh](scripts/common.sh) for portable helpers).
 - **New or changed scripts:** Document in [scripts/SCRIPTS.md](scripts/SCRIPTS.md) (Quick Reference and, if needed, Script Details). Create or update tests in `scripts/tests/` and run `./scripts/tests/test-scripts.sh` when changing scripts.
 

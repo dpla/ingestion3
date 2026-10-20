@@ -258,11 +258,11 @@ Some hubs restrict access to their harvest endpoint by IP address. No hub curren
 
 - Indiana
 
-**Tailscale exit node (automated):** The partner has whitelisted a specific stable IP address. Rather than exposing the EC2's dynamic public IP, we route harvest traffic through the `main-vpc` Tailscale node (`100.82.233.38`). `ingest.sh` handles this automatically — see [IP-whitelisted endpoints (Tailscale exit node)](#ip-whitelisted-endpoints-tailscale-exit-node) below.
+**Tailscale exit node (automated):** The partner allowlisted the `main-vpc` Tailscale node's address rather than the EC2's egress IP, so we route harvest traffic through that node (`100.82.233.38`). `ingest.sh` handles this automatically — see [IP-whitelisted endpoints (Tailscale exit node)](#ip-whitelisted-endpoints-tailscale-exit-node) below.
 
 ### IP-whitelisted endpoints (Tailscale exit node)
 
-Some partner endpoints are not publicly accessible — they whitelist a specific IP for OAI-PMH access. Rather than whitelisting the EC2's dynamic public IP (which changes on stop/start), we use a [Tailscale](https://tailscale.com) exit node to route harvest traffic through a stable whitelisted IP.
+Some partner endpoints are not publicly accessible — they whitelist a specific IP for OAI-PMH access. These partners allowlisted the `main-vpc` Tailscale node rather than the EC2's egress IP (`52.2.32.179`, the NAT gateway's fixed address), so we use a [Tailscale](https://tailscale.com) exit node to route their harvest traffic through it.
 
 `ingest.sh` handles the full lifecycle automatically for hubs that require it (determined by a `TAILSCALE_EXIT_NODE` case block in `ingest.sh`): it starts `tailscaled`, waits for the daemon to connect, sets the exit node, runs the harvest, then clears the exit node and stops `tailscaled`. Only the **harvest step** is routed through the exit node — mapping, enrichment, JSONL export, and S3 sync use normal routing. No manual Tailscale steps are needed to run these ingests.
 

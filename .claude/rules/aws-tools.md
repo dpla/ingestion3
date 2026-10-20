@@ -10,7 +10,7 @@ Perform S3 and AWS data operations for the ingestion pipeline using the project'
 
 No named profile is needed in GitHub Actions (OIDC role) or on the ingest EC2 (`common.sh` unsets `AWS_PROFILE` so the instance role is used). Scripts in `scripts/` pass `--profile` only when `AWS_PROFILE` is set.
 
-Locally, use whatever profile reaches the DPLA account: export `AWS_PROFILE`, or set it in `.env`. The Python launchers in `ingest_python_scripts/` fall back to a profile named `dpla` when `.env` exists, so set `AWS_PROFILE` in `.env` if yours has a different name.
+Locally, set `AWS_PROFILE=dpla` in `.env` (or export it) unless your default AWS profile is the DPLA account. Only the Python launchers in `ingest_python_scripts/` fall back to `dpla`; shell scripts and raw `aws` commands use your default credentials.
 
 ## Find Latest Data in S3
 

@@ -10,9 +10,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../common.sh"
 
 hub="${1:?Usage: s3-latest.sh <hub>}"
+# i3.conf name -> S3 prefix (e.g. hathi -> hathitrust, tn -> tennessee)
+prefix="$(resolve_s3_prefix "$hub")"
 
 for stage in harvest mapping jsonl; do
-  latest=$(aws s3 ls "s3://dpla-master-dataset/${hub}/${stage}/" ${AWS_PROFILE:+--profile "$AWS_PROFILE"} 2>/dev/null \
+  latest=$(aws s3 ls "s3://dpla-master-dataset/${prefix}/${stage}/" ${AWS_PROFILE:+--profile "$AWS_PROFILE"} 2>/dev/null \
     | awk '{print $NF}' \
     | grep -E '^[0-9]{8}_[0-9]{6}-' \
     | sort \

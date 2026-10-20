@@ -311,7 +311,7 @@ python3 community-webs/check_cw.py --watch
 
 ## Slack Notifications
 
-Scripts send notifications to `#tech-alerts` via the ingest EC2: they call `slack_notify` from `scripts/common.sh` over SSM, which reads the bot token from `/home/ec2-user/ingestion3/.env` on the box. Nothing needs to be configured locally.
+Scripts send notifications to `#tech-alerts` via the ingest EC2: they call `slack_notify` from `scripts/common.sh` over SSM, which reads the bot token from `/home/ec2-user/ingestion3/.env` on the box. Nothing needs to be configured locally. The box's `.env` sets:
 
 ```
 SLACK_BOT_TOKEN=         # Slack bot token (chat.postMessage)
