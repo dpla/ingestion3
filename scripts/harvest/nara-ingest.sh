@@ -305,16 +305,21 @@ sync_base_from_s3() {
 }
 
 # Back up this run's outputs to S3: the merged harvest (the next cycle's base)
-# and, unless $1 is "harvest-only", the newest mapping/enrichment/jsonl dirs.
+# and, unless $1 is "harvest-only", the JSONL dir given as $1 (the one
+# run_post_pipeline safety-checked) plus the newest mapping/enrichment dirs.
 # Syncs only those dirs; syncing the parent dirs would also upload every older
 # cycle still on disk. --delete: a same-day merge retry reuses the YYYYMMDD_000000
 # prefix, and stale Spark part files from the earlier attempt must not survive.
+_sync_stage_dir() {  # $1 = stage, $2 = local dir
+    print_info "Syncing $1..."
+    aws s3 sync --delete "$2/" "$S3_NARA_PATH/$1/$(basename "$2")/"
+}
+
 _sync_newest_stage() {
     local dir
     dir=$(find "$NARA_OUTPUT/$1" -maxdepth 1 -type d -name "*-nara-*" | sort | tail -1)
     [ -n "$dir" ] || return 0
-    print_info "Syncing $1..."
-    aws s3 sync --delete "$dir/" "$S3_NARA_PATH/$1/$(basename "$dir")/"
+    _sync_stage_dir "$1" "$dir"
 }
 
 sync_outputs_to_s3() {
@@ -324,7 +329,7 @@ sync_outputs_to_s3() {
 
     # JSONL first: it's what the indexer reads, so a failure syncing the larger
     # dirs below (set -e) can't keep it out of S3
-    if [ "$full" = true ]; then _sync_newest_stage jsonl; fi
+    if [ "$full" = true ]; then _sync_stage_dir jsonl "$1"; fi
 
     print_info "Syncing harvest..."
     aws s3 sync --delete "$MERGED_HARVEST/" "$S3_NARA_PATH/harvest/$(basename "$MERGED_HARVEST")/"
@@ -745,7 +750,7 @@ print(f'New: {new:,} ({sign}{delta:,} vs prev) | Change: {-drop:+.1f}%')
         print_success "Safety check passed: $delta_line"
     fi
 
-    sync_outputs_to_s3
+    sync_outputs_to_s3 "$jsonl_dir"
 
     slack_notify ":white_check_mark: *nara ingest complete*\nNew snapshot: \`$jsonl_ts\`\n${delta_line}\nS3: \`s3://dpla-master-dataset/${s3_prefix}/jsonl/${jsonl_ts}/\`"
     write_hub_status "nara" complete
