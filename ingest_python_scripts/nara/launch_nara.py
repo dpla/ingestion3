@@ -284,8 +284,9 @@ def preflight_check(month):
 
 # Each run adds ~130 GB of output to the box, so keep only the most recent complete
 # run: in harvest/ and each of mapping/enrichment/jsonl, the newest dir with a
-# _SUCCESS file stays and everything else is deleted. Failed merges go first
-# (NaraMergeUtil deletes its __tmp_* dirs only on success, so they mark a failure).
+# _SUCCESS file stays. Older complete runs are deleted only once they're in S3;
+# incomplete dirs and failed merges (NaraMergeUtil deletes its __tmp_* dirs only on
+# success, so they mark a failure) are deleted outright.
 PRUNE_SCRIPT = r"""
 set -u
 N=/home/ec2-user/data/nara
@@ -294,16 +295,19 @@ del() { [ -e "$1" ] || return 0; rm -rf "$1" && echo "DELETED: $1"; }
 for t in "$N"/harvest/*-nara-OriginalRecord.avro__tmp_*; do
   [ -e "$t" ] && { del "${t%%__tmp_*}"; del "$t"; }
 done
-prune() {  # keeps the newest complete dir in $1 (and $KEEP_BASE), deletes the rest
+prune() {  # $1 = local dir, $2 = S3 subdir; keeps the newest complete dir and $KEEP_BASE
   keep=$(for d in $(ls -1 "$1" 2>/dev/null | sort); do [ -f "$1/$d/_SUCCESS" ] && echo "$d"; done | tail -1)
   [ -n "$keep" ] || { echo "KEEP ALL (no complete run found): $1"; return; }
   echo "KEEP (most recent): $1/$keep"
   for name in $(ls -1 "$1" 2>/dev/null); do
-    [ "$name" = "$keep" ] || [ "$1/$name" = "${KEEP_BASE:-}" ] || del "$1/$name"
+    [ "$name" = "$keep" ] || [ "$1/$name" = "${KEEP_BASE:-}" ] && continue
+    if [ ! -f "$1/$name/_SUCCESS" ] || aws s3 ls "s3://dpla-master-dataset/nara/$2/$name/_SUCCESS" >/dev/null 2>&1; then
+      del "$1/$name"
+    else echo "KEEP (not in S3): $1/$name"; fi
   done
 }
-prune "$N/harvest"
-for s in mapping enrichment jsonl; do prune "$N/nara/$s"; done
+prune "$N/harvest" harvest
+for s in mapping enrichment jsonl; do prune "$N/nara/$s" "$s"; done
 df -h / | tail -1
 """
 
