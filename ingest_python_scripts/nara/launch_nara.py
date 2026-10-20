@@ -285,15 +285,18 @@ def preflight_check(month):
 # Each run adds ~130 GB of output to the box, so keep only the most recent complete
 # run: in harvest/ and each of mapping/enrichment/jsonl, the newest dir with a
 # _SUCCESS file stays. Older complete runs are deleted only once they're in S3;
-# incomplete dirs and failed merges (NaraMergeUtil deletes its __tmp_* dirs only on
-# success, so they mark a failure) are deleted outright.
+# incomplete dirs are deleted outright, as are failed merges (a __tmp_* dir left
+# beside a harvest with no _LOGS/_SUMMARY.txt).
 PRUNE_SCRIPT = r"""
 set -u
 N=/home/ec2-user/data/nara
 if pgrep -f nara-ingest.sh >/dev/null; then echo "SKIP: nara-ingest.sh is running"; exit 0; fi
 del() { [ -e "$1" ] || return 0; rm -rf "$1" && echo "DELETED: $1"; }
 for t in "$N"/harvest/*-nara-OriginalRecord.avro__tmp_*; do
-  [ -e "$t" ] && { del "${t%%__tmp_*}"; del "$t"; }
+  [ -e "$t" ] || continue
+  # _SUMMARY.txt is written once the merge is complete; keep those, drop only the temp dir
+  [ -f "${t%%__tmp_*}/_LOGS/_SUMMARY.txt" ] || del "${t%%__tmp_*}"
+  del "$t"
 done
 prune() {  # $1 = local dir, $2 = S3 subdir; keeps the newest complete dir and $KEEP_BASE
   keep=$(for d in $(ls -1 "$1" 2>/dev/null | sort); do [ -f "$1/$d/_SUCCESS" ] && echo "$d"; done | tail -1)
@@ -315,7 +318,11 @@ df -h / | tail -1
 def prune_old_outputs(keep_base=None):
     step("1b", "Prune old NARA outputs on EC2")
     prefix = f"KEEP_BASE={shlex.quote(keep_base.rstrip('/'))}\n" if keep_base else ""
-    print(ssm_run(prefix + PRUNE_SCRIPT, timeout_seconds=900).strip())
+    out = ssm_run(prefix + PRUNE_SCRIPT, timeout_seconds=900).strip()
+    print(out)
+    if "SKIP: nara-ingest.sh is running" in out:
+        sys.exit("\n  [BAD] A NARA ingest is already running on EC2 — not launching another.\n"
+                 "  Re-attach with: python3 nara/launch_nara.py --resume --month YYYYMM")
 
 
 # ---------- Step 2: launch nara-ingest.sh ----------

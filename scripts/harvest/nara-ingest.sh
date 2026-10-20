@@ -312,7 +312,9 @@ sync_outputs_to_s3() {
     print_step "Syncing outputs to S3..."
 
     print_info "Syncing harvest..."
-    aws s3 sync "$MERGED_HARVEST/" "$S3_NARA_PATH/harvest/$(basename "$MERGED_HARVEST")/"
+    # --delete: a same-day merge retry reuses the YYYYMMDD_000000 prefix, and stale
+    # Spark part files from the earlier attempt must not survive alongside the new ones
+    aws s3 sync --delete "$MERGED_HARVEST/" "$S3_NARA_PATH/harvest/$(basename "$MERGED_HARVEST")/"
     [ "${1:-}" = "harvest-only" ] && { print_success "S3 sync complete (harvest only)"; return; }
 
     local stage dir
@@ -320,7 +322,7 @@ sync_outputs_to_s3() {
         dir=$(find "$NARA_OUTPUT/$stage" -maxdepth 1 -type d -name "*-nara-*" | sort | tail -1)
         [ -n "$dir" ] || continue
         print_info "Syncing $stage..."
-        aws s3 sync "$dir/" "$S3_NARA_PATH/$stage/$(basename "$dir")/"
+        aws s3 sync --delete "$dir/" "$S3_NARA_PATH/$stage/$(basename "$dir")/"
     done
 
     print_success "S3 sync complete"
