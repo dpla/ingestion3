@@ -252,13 +252,11 @@ Not all ingests are fire and forget, some require a bit of massaging before we c
 
 ### Firewalled endpoints
 
-Some hubs restrict access to their OAI-PMH endpoint by IP address or VPN membership. There are two patterns:
+Some hubs restrict access to their harvest endpoint by IP address. No hub currently requires a VPN or a local harvest. There are two patterns:
 
-**Run locally (VPN required):** The partner's firewall only allows connections from inside a specific institution's network. These must be harvested on a machine connected to that VPN — the EC2 instance cannot be placed behind an external institution's VPN.
+**Allowlisted EC2 IP:** The partner allowlists the ingest EC2's own egress IP, `52.2.32.179`. These hubs run like any other hub on EC2; the endpoint is blocked from other machines (e.g. a laptop), so harvest them from EC2 only.
 
-- Illinois
 - Indiana
-- MWDL
 
 **Tailscale exit node (automated):** The partner has whitelisted a specific stable IP address. Rather than exposing the EC2's dynamic public IP, we route harvest traffic through the `main-vpc` Tailscale node (`100.82.233.38`). `ingest.sh` handles this automatically — see [IP-whitelisted endpoints (Tailscale exit node)](#ip-whitelisted-endpoints-tailscale-exit-node) below.
 

@@ -499,7 +499,6 @@ CURRENT_SPECIAL_HUBS = {
     "smithsonian",
     "si",                # smithsonian's conf-side name
     "community-webs",
-    "illinois",
 }
 
 # Known special-case hubs that need extra steps beyond the standard
@@ -511,19 +510,13 @@ SPECIAL_CASE_NOTES = {
     "smithsonian":    "preprocessing required (download from S3 + fix-si.sh)",
     "si":             "preprocessing required (download from S3 + fix-si.sh)",
     "community-webs": "preprocessing required (SQLite -> JSONL/ZIP)",
-    "maryland":       "EC2 IP blocked, run locally",
     "getty":          "EC2 IP blocked, run locally",
-    "hathitrust":     "EC2 IP blocked, run locally",
-    "illinois":       "VPN required, run locally",
-    "indiana":        "VPN required, run locally",
-    "mwdl":           "VPN required, run locally",
     "ct":             "file-export, check S3 for fresh export first",
-    "fl":             "file-export, check S3 for fresh export first",
+    "florida":        "file-export, check S3 for fresh export first",
     "ohio":           "file-export, check S3 for fresh export first",
     "nypl":           "file-export, check S3 for fresh export first",
     "vt":             "file-export, check S3 for fresh export first",
     "txdl":           "file-export, check S3 for fresh export first",
-    "txd":            "file-export, check S3 for fresh export first",
     "virginias":      "multi-repo assembly (clone dplava org repos first)",
 }
 
@@ -644,7 +637,6 @@ def print_special_case_banner(hub):
     print("    - nara           → NARA delta-merge workflow (NaraMergeUtil)")
     print("    - smithsonian/si → multi-step preprocessing (fix-si.sh)")
     print("    - community-webs → SQLite -> JSONL/ZIP via community-webs-ingest.sh")
-    print("    - illinois       → VPN required, harvest runs locally on Mac")
     print()
     return True
 
@@ -1066,7 +1058,7 @@ def check_endpoint(endpoint, is_api=False, harvest_type=None):
             info("Check the hub's OAI endpoint with your browser, update i3.conf, and re-run.")
             return False
         warn(f"Endpoint returned an HTTP {code} error page — EC2 IP may be blocked.")
-        info("The harvester might still work if Rutgers/the provider whitelists by User-Agent")
+        info("The harvester might still work if the provider allowlists by User-Agent")
         info("or if the block only applies to the ?verb=Identify path. Try the ingest and see.")
         return True  # non-blocking — let the operator try
     warn("OAI endpoint responded, but no <OAI-PMH>/<Identify> tags found.")
@@ -1179,7 +1171,7 @@ def main():
         else:
             print(f"Endpoint: (not found in {CONF_PATH} for hub '{hub}')")
     elif _defer_conf_lookup:
-        print(f"Endpoint: (will resolve from EC2 conf after instance start)")
+        print("Endpoint: (will resolve from EC2 conf after instance start)")
     else:
         print("Endpoint: (none — endpoint check will be skipped)")
     print()

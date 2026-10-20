@@ -1,10 +1,10 @@
-See @docs/ingestion/README_INGESTS.md for the generialized rules of running ingests and @docs/ingestion/README_NARA.md and @docs/ingestion/README_SMITHSONIAN.md for NARA and Smithsonian ingest documentations
+See @docs/ingestion/README_INGESTS.md for the generalized rules of running ingests and @docs/ingestion/README_NARA.md and @docs/ingestion/README_SMITHSONIAN.md for NARA and Smithsonian ingest documentations
 
 # Project rules
 
 1. **Environment:** Source `.env` before running any process that needs project env (including building the JAR: run `source .env` then `sbt assembly` from repo root so the correct Java 11+ JDK is used). From repo root: `source .env`. Full checklist: [AGENTS.md](AGENTS.md) § Environment and build.
 2. **Python:** Use the virtualenv at `./venv/` (e.g. `./venv/bin/python` or `source ./venv/bin/activate`) for any new or existing Python scripts.
-3. **AWS CLI:** Use `--profile dpla` for all AWS commands.
+3. **AWS credentials:** No named profile in CI or on the ingest EC2; locally, set `AWS_PROFILE` in `.env` if your profile is not named `dpla`. Details: [AGENTS.md](AGENTS.md) § Environment and build.
 4. **Shell scripts:** Write POSIX-compliant bash; avoid macOS- or Linux-specific flags (e.g. `sed -i`, `readlink -f` — use helpers from `scripts/common.sh` where applicable).
 5. **Build:** Before running ingests or skills that use the Scala pipeline, run `sbt assembly` from repo root so the fat JAR is current; scripts use the JAR when present.
 
@@ -18,8 +18,8 @@ All markdown files in **.claude/rules/** are loaded automatically by Claude Code
   - [.claude/skills/README.md](.claude/skills/README.md) — Available skills
 
 # Environment Commands
-- Source project env: `source .env` (from repo root; sets JAVA_HOME, SLACK_WEBHOOK, DPLA_DATA, I3_CONF, etc.)
+- Source project env: `source .env` (from repo root; sets JAVA_HOME, SLACK_BOT_TOKEN, DPLA_DATA, I3_CONF, etc.)
 - Build: run `source .env` then `sbt assembly` from repo root (required so sbt uses Java 11+)
 - Python Source: `source ./venv/bin/activate`
 - Build Command: `sbt assembly` (pipeline scripts use the assembly JAR when present)
-- AWS Alias: Use `--profile dpla`
+- AWS profile: see rule 3 above

@@ -61,7 +61,7 @@ All scripts use these environment variables (with sensible defaults):
 | `I3_CONF` | Path to i3.conf configuration | `$HOME/dpla/code/ingestion3-conf/i3.conf` |
 | `JAVA_HOME` | Java installation directory | Auto-detected |
 | `SPARK_MASTER` | Spark execution mode (pipeline parallelism) | `local[4]` |
-| `AWS_PROFILE` | AWS credentials profile | `dpla` |
+| `AWS_PROFILE` | AWS credentials profile. `common.sh` exports it only when set; otherwise the AWS CLI uses ambient credentials (the instance role on EC2). | unset |
 | `I3_JAR` | Override path to ingestion3 fat JAR | `$I3_HOME/target/scala-2.13/ingestion3-assembly-0.0.1.jar` |
 
 All scripts use the fat JAR via `run_entry` in common.sh. **The JAR is built automatically** when it is missing or when any Scala source under `src/main/scala` is newer than the JAR, so running `./scripts/harvest.sh indiana` (or ingest.sh, remap.sh, etc.) will run `sbt assembly` first when needed and then use the JAR. You can still build once manually to avoid a build delay on the first run:
@@ -75,7 +75,7 @@ cd "$I3_HOME" && sbt assembly
 
 All scripts source `common.sh` which provides:
 
-- **Env file:** When `$I3_HOME/.env` exists, `common.sh` sources it during init, so `SLACK_WEBHOOK`, `JAVA_HOME`, and other vars are set for pipeline runs and harvest-failure notifications without needing to run `source .env` first.
+- **Env file:** When `$I3_HOME/.env` exists, `common.sh` sources it during init, so `SLACK_BOT_TOKEN`, `JAVA_HOME`, and other vars are set for pipeline runs and Slack notifications without needing to run `source .env` first.
 
 - **Platform detection**: `$PLATFORM` is set to `macos` or `linux`
 - **Portable utilities**: `sed_i`, `get_script_dir`, `get_common_dir`
