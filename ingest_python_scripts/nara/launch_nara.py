@@ -291,7 +291,15 @@ PRUNE_SCRIPT = r"""
 set -u
 N=/home/ec2-user/data/nara
 if pgrep -f nara-ingest.sh >/dev/null; then echo "SKIP: nara-ingest.sh is running"; exit 0; fi
-del() { [ -e "$1" ] || return 0; rm -rf "$1" && echo "DELETED: $1"; }
+# GONE tracks deleted paths so a dry run (DRY=1) treats them as gone too and its
+# preview matches what the real run does
+GONE=" "
+gone() { case "$GONE" in *" $1 "*) return 0;; esac; return 1; }
+del() {
+  [ -e "$1" ] && ! gone "$1" || return 0
+  GONE="$GONE$1 "
+  if [ "${DRY:-0}" = 1 ]; then echo "WOULD DELETE: $1"; else rm -rf "$1" && echo "DELETED: $1"; fi
+}
 for t in "$N"/harvest/*-nara-OriginalRecord.avro__tmp_*; do
   [ -e "$t" ] || continue
   # _SUMMARY.txt is written once the merge is complete; keep those, drop only the temp dir
@@ -299,11 +307,12 @@ for t in "$N"/harvest/*-nara-OriginalRecord.avro__tmp_*; do
   del "$t"
 done
 prune() {  # $1 = local dir, $2 = S3 subdir; keeps the newest complete dir and $KEEP_BASE
-  keep=$(for d in $(ls -1 "$1" 2>/dev/null | sort); do [ -f "$1/$d/_SUCCESS" ] && echo "$d"; done | tail -1)
+  [ -d "$1" ] || return 0
+  keep=$(for d in $(ls -1 "$1" | sort); do ! gone "$1/$d" && [ -f "$1/$d/_SUCCESS" ] && echo "$d"; done | tail -1)
   [ -n "$keep" ] || { echo "KEEP ALL (no complete run found): $1"; return; }
   echo "KEEP (most recent): $1/$keep"
-  for name in $(ls -1 "$1" 2>/dev/null); do
-    [ "$name" = "$keep" ] || [ "$1/$name" = "${KEEP_BASE:-}" ] && continue
+  for name in $(ls -1 "$1"); do
+    [ "$name" = "$keep" ] || [ "$1/$name" = "${KEEP_BASE:-}" ] || gone "$1/$name" && continue
     if [ ! -f "$1/$name/_SUCCESS" ] || aws s3 ls "s3://dpla-master-dataset/nara/$2/$name/_SUCCESS" >/dev/null 2>&1; then
       del "$1/$name"
     else echo "KEEP (not in S3): $1/$name"; fi
@@ -318,11 +327,17 @@ df -h / | tail -1
 def prune_old_outputs(keep_base=None):
     step("1b", "Prune old NARA outputs on EC2")
     prefix = f"KEEP_BASE={shlex.quote(keep_base.rstrip('/'))}\n" if keep_base else ""
-    out = ssm_run(prefix + PRUNE_SCRIPT, timeout_seconds=900).strip()
-    print(out)
-    if "SKIP: nara-ingest.sh is running" in out:
+    # Dry run first so the operator sees exactly what will go before anything is deleted
+    preview = ssm_run(prefix + "DRY=1\n" + PRUNE_SCRIPT, timeout_seconds=120).strip()
+    print(preview)
+    if "SKIP: nara-ingest.sh is running" in preview:
         sys.exit("\n  [BAD] A NARA ingest is already running on EC2 — not launching another.\n"
                  "  Re-attach with: python3 nara/launch_nara.py --resume --month YYYYMM")
+    if "WOULD DELETE" not in preview:
+        ok("Nothing to prune.")
+        return
+    confirm("Delete the dirs listed above?")
+    print(ssm_run(prefix + PRUNE_SCRIPT, timeout_seconds=900).strip())
 
 
 # ---------- Step 2: launch nara-ingest.sh ----------

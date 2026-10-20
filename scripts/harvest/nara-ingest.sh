@@ -307,23 +307,32 @@ sync_base_from_s3() {
 # Back up this run's outputs to S3: the merged harvest (the next cycle's base)
 # and, unless $1 is "harvest-only", the newest mapping/enrichment/jsonl dirs.
 # Syncs only those dirs; syncing the parent dirs would also upload every older
-# cycle still on disk.
+# cycle still on disk. --delete: a same-day merge retry reuses the YYYYMMDD_000000
+# prefix, and stale Spark part files from the earlier attempt must not survive.
+_sync_newest_stage() {
+    local dir
+    dir=$(find "$NARA_OUTPUT/$1" -maxdepth 1 -type d -name "*-nara-*" | sort | tail -1)
+    [ -n "$dir" ] || return 0
+    print_info "Syncing $1..."
+    aws s3 sync --delete "$dir/" "$S3_NARA_PATH/$1/$(basename "$dir")/"
+}
+
 sync_outputs_to_s3() {
     print_step "Syncing outputs to S3..."
+    local full=true
+    [ "${1:-}" = "harvest-only" ] && full=false
+
+    # JSONL first: it's what the indexer reads, so a failure syncing the larger
+    # dirs below (set -e) can't keep it out of S3
+    if [ "$full" = true ]; then _sync_newest_stage jsonl; fi
 
     print_info "Syncing harvest..."
-    # --delete: a same-day merge retry reuses the YYYYMMDD_000000 prefix, and stale
-    # Spark part files from the earlier attempt must not survive alongside the new ones
     aws s3 sync --delete "$MERGED_HARVEST/" "$S3_NARA_PATH/harvest/$(basename "$MERGED_HARVEST")/"
-    [ "${1:-}" = "harvest-only" ] && { print_success "S3 sync complete (harvest only)"; return; }
 
-    local stage dir
-    for stage in mapping enrichment jsonl; do
-        dir=$(find "$NARA_OUTPUT/$stage" -maxdepth 1 -type d -name "*-nara-*" | sort | tail -1)
-        [ -n "$dir" ] || continue
-        print_info "Syncing $stage..."
-        aws s3 sync --delete "$dir/" "$S3_NARA_PATH/$stage/$(basename "$dir")/"
-    done
+    if [ "$full" = true ]; then
+        _sync_newest_stage enrichment
+        _sync_newest_stage mapping
+    fi
 
     print_success "S3 sync complete"
 }
