@@ -37,6 +37,7 @@ import base64
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -281,6 +282,38 @@ def preflight_check(month):
     ok(f"{count} file(s) staged at {ingest_dir}")
 
 
+# Each run adds ~130 GB of output to the box, so keep only the most recent complete
+# run: in harvest/ and each of mapping/enrichment/jsonl, the newest dir with a
+# _SUCCESS file stays and everything else is deleted. Failed merges go first
+# (NaraMergeUtil deletes its __tmp_* dirs only on success, so they mark a failure).
+PRUNE_SCRIPT = r"""
+set -u
+N=/home/ec2-user/data/nara
+if pgrep -f nara-ingest.sh >/dev/null; then echo "SKIP: nara-ingest.sh is running"; exit 0; fi
+del() { [ -e "$1" ] || return 0; rm -rf "$1" && echo "DELETED: $1"; }
+for t in "$N"/harvest/*-nara-OriginalRecord.avro__tmp_*; do
+  [ -e "$t" ] && { del "${t%%__tmp_*}"; del "$t"; }
+done
+prune() {  # keeps the newest complete dir in $1 (and $KEEP_BASE), deletes the rest
+  keep=$(for d in $(ls -1 "$1" 2>/dev/null | sort); do [ -f "$1/$d/_SUCCESS" ] && echo "$d"; done | tail -1)
+  [ -n "$keep" ] || { echo "KEEP ALL (no complete run found): $1"; return; }
+  echo "KEEP (most recent): $1/$keep"
+  for name in $(ls -1 "$1" 2>/dev/null); do
+    [ "$name" = "$keep" ] || [ "$1/$name" = "${KEEP_BASE:-}" ] || del "$1/$name"
+  done
+}
+prune "$N/harvest"
+for s in mapping enrichment jsonl; do prune "$N/nara/$s"; done
+df -h / | tail -1
+"""
+
+
+def prune_old_outputs(keep_base=None):
+    step("1b", "Prune old NARA outputs on EC2")
+    prefix = f"KEEP_BASE={shlex.quote(keep_base.rstrip('/'))}\n" if keep_base else ""
+    print(ssm_run(prefix + PRUNE_SCRIPT, timeout_seconds=900).strip())
+
+
 # ---------- Step 2: launch nara-ingest.sh ----------
 
 def launch_ingest(month, log_path, extra_args=""):
@@ -482,6 +515,8 @@ def main():
                         help="Force fresh S3 download of base harvest on EC2")
     parser.add_argument("--skip-delete-check", action="store_true",
                         help="Bypass the zero-delete gate (use when 0 deletes is expected)")
+    parser.add_argument("--skip-prune",       action="store_true",
+                        help="Don't remove old NARA outputs from EC2 before launching")
     parser.add_argument("--resume",           action="store_true",
                         help="Re-attach to an existing running ingest log")
     parser.add_argument("--log",
@@ -530,6 +565,9 @@ def main():
         preflight_check(month)
     else:
         info("Skipping pre-flight check (--skip-preflight).")
+
+    if not args.skip_prune:
+        prune_old_outputs(keep_base=args.base)
 
     # Step 2: Launch
     extra = []

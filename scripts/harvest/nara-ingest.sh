@@ -304,23 +304,24 @@ sync_base_from_s3() {
     slack_notify ":white_check_mark: *nara S3 base download complete* — \`$latest_s3_key\` ($base_size)"
 }
 
+# Back up this run's outputs to S3: the merged harvest (the next cycle's base)
+# and, unless $1 is "harvest-only", the newest mapping/enrichment/jsonl dirs.
+# Syncs only those dirs; syncing the parent dirs would also upload every older
+# cycle still on disk.
 sync_outputs_to_s3() {
     print_step "Syncing outputs to S3..."
 
-    local merged_dir
-    merged_dir=$(basename "$MERGED_HARVEST")
-
     print_info "Syncing harvest..."
-    aws s3 sync "$MERGED_HARVEST" "$S3_NARA_PATH/harvest/$merged_dir/"
+    aws s3 sync "$MERGED_HARVEST/" "$S3_NARA_PATH/harvest/$(basename "$MERGED_HARVEST")/"
+    [ "${1:-}" = "harvest-only" ] && { print_success "S3 sync complete (harvest only)"; return; }
 
-    print_info "Syncing mapping..."
-    aws s3 sync "$NARA_OUTPUT/mapping/" "$S3_NARA_PATH/mapping/"
-
-    print_info "Syncing enrichment..."
-    aws s3 sync "$NARA_OUTPUT/enrichment/" "$S3_NARA_PATH/enrichment/"
-
-    print_info "Syncing jsonl..."
-    aws s3 sync "$NARA_OUTPUT/jsonl/" "$S3_NARA_PATH/jsonl/"
+    local stage dir
+    for stage in mapping enrichment jsonl; do
+        dir=$(find "$NARA_OUTPUT/$stage" -maxdepth 1 -type d -name "*-nara-*" | sort | tail -1)
+        [ -n "$dir" ] || continue
+        print_info "Syncing $stage..."
+        aws s3 sync "$dir/" "$S3_NARA_PATH/$stage/$(basename "$dir")/"
+    done
 
     print_success "S3 sync complete"
 }
@@ -733,9 +734,7 @@ print(f'New: {new:,} ({sign}{delta:,} vs prev) | Change: {-drop:+.1f}%')
         print_success "Safety check passed: $delta_line"
     fi
 
-    print_step "Syncing JSONL to S3..."
-    aws s3 sync "$jsonl_dir/" "s3://dpla-master-dataset/${s3_prefix}/jsonl/${jsonl_ts}/"
-    print_success "S3 sync complete: s3://dpla-master-dataset/${s3_prefix}/jsonl/${jsonl_ts}/"
+    sync_outputs_to_s3
 
     slack_notify ":white_check_mark: *nara ingest complete*\nNew snapshot: \`$jsonl_ts\`\n${delta_line}\nS3: \`s3://dpla-master-dataset/${s3_prefix}/jsonl/${jsonl_ts}/\`"
     write_hub_status "nara" complete
@@ -1072,6 +1071,7 @@ main() {
     else
         print_info "Skipping pipeline (--skip-pipeline)"
         print_info "Final merged harvest: $MERGED_HARVEST"
+        sync_outputs_to_s3 harvest-only
     fi
 
     END_TIME=$(date +%s)
