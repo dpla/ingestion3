@@ -8,9 +8,12 @@ Perform S3 and AWS data operations for the ingestion pipeline using the project'
 
 ## AWS Credentials
 
-No named profile is needed in GitHub Actions (OIDC role) or on the ingest EC2 (`common.sh` unsets `AWS_PROFILE` so the instance role is used). Scripts in `scripts/` pass `--profile` only when `AWS_PROFILE` is set.
+- **GitHub Actions:** OIDC role; no profile.
+- **Scripts that source `common.sh`:** honor `AWS_PROFILE` when it is set (including from `.env`, which `common.sh` loads); otherwise the default credential chain. On the ingest EC2 that is the instance role, so no profile is needed there.
+- **Raw `aws` commands:** honor an *exported* `AWS_PROFILE` (a plain `source .env` does not export it), otherwise the default chain.
+- **Python launchers in `ingest_python_scripts/`:** fall back to a profile named `dpla` when `.env` exists.
 
-Locally, set `AWS_PROFILE=dpla` in `.env` (or export it) unless your default AWS profile is the DPLA account. Only the Python launchers in `ingest_python_scripts/` fall back to `dpla`; shell scripts and raw `aws` commands use your default credentials.
+Locally, set `AWS_PROFILE=dpla` in `.env` unless your default AWS profile is the DPLA account, and export it (or pass `--profile`) for raw `aws` commands.
 
 ## Find Latest Data in S3
 
