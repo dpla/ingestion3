@@ -47,6 +47,12 @@ NARA_OUTPUT="$NARA_DATA/nara"
 # Datestamp for output directories (YYYYMMDD format required by IngestRemap)
 OUTPUT_DATESTAMP=$(date +%Y%m%d)
 
+# Each run works in its own delta/<month>/<run id>/ (default: today), so rerunning
+# a month starts clean instead of reusing an earlier run's preprocessing, delta
+# harvest, or delete files. Pass --run-id=<earlier run id> to resume that run.
+RUN_ID=$(date +%Y%m%d)
+delta_dir() { echo "$NARA_DATA/delta/$1/$RUN_ID"; }
+
 # ============================================================================
 # Memory Configuration
 #
@@ -115,7 +121,10 @@ Options:
                     preprocess step runs.
                     Example: --s3-source=s3://ngc-storage01/dpla-bimonthly-report/2026/M04/
 
-  --skip-preprocess Skip preprocessing (use existing delta/ directory)
+  --run-id=YYYYMMDD Work directory for this run: delta/<month>/<run id>/
+                    (default: today). Pass an earlier run's id to resume it.
+
+  --skip-preprocess Skip preprocessing (use this run's existing delta dir)
   --skip-pipeline   Stop after merge (don't run mapping/enrichment/jsonl)
   --skip-to-pipeline
                     Skip directly to pipeline using existing merged harvest
@@ -378,7 +387,8 @@ sync_from_nara_s3() {
 preprocess_month() {
     local month="$1"
     local src_dir="$NARA_ORIGINALS/$month"
-    local dest_dir="$NARA_DATA/delta/$month"
+    local dest_dir
+    dest_dir=$(delta_dir "$month")
 
     print_step "Preprocessing month $month..."
 
@@ -529,7 +539,8 @@ update_nara_config() {
 
 run_delta_harvest() {
     local month="$1"
-    local delta_dir="$NARA_DATA/delta/$month"
+    local delta_dir
+    delta_dir=$(delta_dir "$month")
 
     print_step "Running NARA delta harvest for $month..."
 
@@ -567,7 +578,8 @@ run_delta_harvest() {
 run_merge() {
     local month="$1"
     local output_datestamp="$2"
-    local delta_dir="$NARA_DATA/delta/$month"
+    local delta_dir
+    delta_dir=$(delta_dir "$month")
 
     print_step "Running NARA merge for $month..."
 
@@ -658,7 +670,8 @@ check_delete_gate() {
     fi
 
     # 0 valid deletes — check whether delete files were actually present
-    local delta_dir="$NARA_DATA/delta/$month"
+    local delta_dir
+    delta_dir=$(delta_dir "$month")
     local delete_file_count
     delete_file_count=$(find "$delta_dir/deletes" -name "*.xml" -type f 2>/dev/null \
         | wc -l | tr -d ' ')
@@ -888,6 +901,10 @@ main() {
                 OUTPUT_DATESTAMP="${1#*=}"
                 shift
                 ;;
+            --run-id=*)
+                RUN_ID="${1#*=}"
+                shift
+                ;;
             --s3-source=*)
                 S3_SOURCE="${1#*=}"
                 shift
@@ -929,6 +946,11 @@ main() {
                 ;;
         esac
     done
+
+    if [[ ! "$RUN_ID" =~ ^[A-Za-z0-9_-]+$ ]]; then
+        print_error "--run-id must be letters, digits, '_' or '-' (got: $RUN_ID)"
+        exit 1
+    fi
 
     print_header "NARA Delta Ingest Pipeline"
 
@@ -991,6 +1013,7 @@ main() {
     echo "Configuration:"
     echo "  Month(s):        ${MONTH_ARRAY[*]}"
     echo "  Output Datestamp: $OUTPUT_DATESTAMP"
+    echo "  Run ID:           $RUN_ID (delta/<month>/$RUN_ID/)"
     echo "  Data Dir:         $NARA_DATA"
     echo "  Config:           $I3_CONF"
     echo "  Java:             $JAVA_HOME"
@@ -1058,7 +1081,7 @@ main() {
         if [ "$SKIP_PREPROCESS" != true ]; then
             # Check if already preprocessed (tar.gz files exist)
             local existing_tgz
-            existing_tgz=$(find "$NARA_DATA/delta/$month" -maxdepth 1 -name "*.tar.gz" 2>/dev/null | wc -l | tr -d ' ')
+            existing_tgz=$(find "$(delta_dir "$month")" -maxdepth 1 -name "*.tar.gz" 2>/dev/null | wc -l | tr -d ' ')
             if [ "$existing_tgz" -gt 0 ]; then
                 print_info "Month $month already preprocessed ($existing_tgz tar.gz files). Skipping."
             else
@@ -1071,7 +1094,7 @@ main() {
         # 2c. Delta Harvest
         # Check if already harvested
         local existing_harvest
-        existing_harvest=$(find "$NARA_DATA/delta/$month/harvest" -type d -name "*-nara-OriginalRecord.avro" 2>/dev/null | sort | tail -1)
+        existing_harvest=$(find "$(delta_dir "$month")/harvest" -type d -name "*-nara-OriginalRecord.avro" 2>/dev/null | sort | tail -1)
         if [ -n "$existing_harvest" ]; then
             print_info "Delta harvest already exists: $existing_harvest. Skipping harvest."
             DELTA_HARVEST="$existing_harvest"

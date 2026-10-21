@@ -21,6 +21,16 @@ on:
         required: false
         type: string
         default: ''
+      nara_run_id:
+        description: 'NARA: run id (YYYYMMDD) of an earlier run to resume it in delta/<month>/<run id>/ (finished steps are skipped) · leave blank for a new run dated today'
+        required: false
+        type: string
+        default: ''
+      nara_skip_delete_check:
+        description: 'NARA: bypass the zero-delete gate. Use with nara_run_id + override (month) to continue a run that halted at the gate after you verified 0 deletes is expected'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   id-token: write   # required for OIDC
@@ -106,6 +116,8 @@ jobs:
           HUB: ${{ inputs.hub }}
           RESUME_FROM: ${{ inputs.resume_from }}
           OVERRIDE: ${{ inputs.override }}
+          NARA_RUN_ID: ${{ inputs.nara_run_id }}
+          NARA_SKIP_DELETE_CHECK: ${{ inputs.nara_skip_delete_check }}
           GHA_ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
@@ -114,9 +126,13 @@ jobs:
             nara)
               # launch_nara.py auto-detects the staged month when --month is omitted.
               # In GHA stdin is EOF, so confirm() prompts use their defaults (default_yes=True).
-              # The zero-delete gate aborts (default_yes=False) — re-run with --skip-delete-check if needed.
+              # The zero-delete gate aborts (default_yes=False). To continue after verifying,
+              # re-run with the same month (override) + nara_run_id + nara_skip_delete_check:
+              # the run's finished steps (preprocess, harvest, merge) are skipped.
               CMD=(python3 ingest_python_scripts/nara/launch_nara.py)
               [[ -n "$OVERRIDE" ]] && CMD+=(--month "$OVERRIDE")
+              [[ -n "$NARA_RUN_ID" ]] && CMD+=(--run-id "$NARA_RUN_ID")
+              [[ "$NARA_SKIP_DELETE_CHECK" == "true" ]] && CMD+=(--skip-delete-check)
               ;;
 
             smithsonian|si)

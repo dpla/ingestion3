@@ -58,6 +58,11 @@ The script handles:
 - Automatic preprocessing (unzip by export group, create tar.gz, separate deletes)
 - S3 base harvest sync (if no local base exists)
 - Idempotent step detection (skips already-completed preprocess/harvest/merge steps)
+- Per-run work directories: each run preprocesses and harvests into
+  `delta/<month>/<run id>/` (run id defaults to today, `YYYYMMDD`), so rerunning a
+  month starts clean instead of reusing an earlier run's output. To resume an
+  earlier run on a later day, pass `--run-id=<that run's id>`. `launch_nara.py`
+  names its log `~/nara-ingest-<month>-<run id>.log` and takes the same `--run-id`.
 - Per-step memory tuning (configurable via environment variables)
 - Multi-month chaining (merged output from month N becomes base for month N+1)
 
@@ -580,27 +585,20 @@ du -sh /private/var/folders/*/T/blockmgr-* 2>/dev/null
       2026-02-07_17.115_DESC_0001.zip
       ...
 
-  delta/                     # Preprocessed deltas (per month)
+  delta/                     # Preprocessed deltas: delta/<month>/<run id>/
     202512/
-      10.018_nara_delta.tar.gz        # one tar.gz per export group
-      21.018_nara_delta.tar.gz
-      deletes/                        # delete XMLs
-        NAC_DESC_Deletes_001.xml
-      harvest/                        # delta harvest output
-        nara/harvest/
-          20260209_HHMMSS-nara-OriginalRecord.avro
-
+      20260209/                       # one dir per run (--run-id, default: run date)
+        10.018_nara_delta.tar.gz      # one tar.gz per export group (per-ZIP subdirs inside)
+        21.018_nara_delta.tar.gz
+        deletes/                      # every delete XML, uniquely named:
+          2025-11-29_10.018_DESC_0001__1__NAC_DESC_Deletes_0001.xml   # <zip>__<n>__<file>
+          2025-11-29_21.018_DESC_0009__1__NAC_DESC_Deletes_0001.xml
+        harvest/                      # delta harvest output
+          nara/harvest/
+            20260209_HHMMSS-nara-OriginalRecord.avro
     202601/
-      09.113_nara_delta.tar.gz
-      17.115_nara_delta.tar.gz
-      ...
-      deletes/
-        NAC_DESC_Deletes_001.xml
-        NAC_DESC_Deletes_002.xml
+      20260209/
         ...
-      harvest/
-        nara/harvest/
-          20260209_HHMMSS-nara-OriginalRecord.avro
 
   harvest/                   # Merged base harvests (cumulative)
     20250429_000000-nara-OriginalRecord.avro    # from S3
