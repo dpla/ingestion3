@@ -1068,11 +1068,13 @@ main() {
 
         print_header "Processing Month $month ($month_idx/$total_months)"
 
-        # Determine output datestamp for this month's merge
-        # For intermediate months, use YYYYMM format (6 digit)
-        # For the final month, use full YYYYMMDD format (8 digit - required by IngestRemap)
+        # Determine output datestamp for this month's merge.
+        # Merges that feed the pipeline use YYYYMMDD (8 digit - required by
+        # IngestRemap). Every other merge (intermediate months, and any month in a
+        # --skip-pipeline run) is named after its month label, so merges of
+        # different months run on the same day can't share a name.
         local merge_datestamp
-        if [ "$is_last_month" = true ]; then
+        if [ "$is_last_month" = true ] && [ "$SKIP_PIPELINE" != true ]; then
             merge_datestamp="$OUTPUT_DATESTAMP"
         else
             merge_datestamp="$month"
@@ -1114,6 +1116,17 @@ main() {
         # Check if already merged
         local existing_merge="$NARA_HARVEST/${merge_datestamp}_000000-nara-OriginalRecord.avro"
         if [ -d "$existing_merge" ] && [ -f "$existing_merge/_LOGS/_SUMMARY.txt" ]; then
+            # Only reuse a merge built from this month's delta harvest; anything
+            # else means the name is taken by a different merge.
+            local merged_delta
+            merged_delta=$(awk '/^ *Delta *$/ {d=1} d && /path:/ {print $2; exit}' "$existing_merge/_LOGS/_SUMMARY.txt")
+            if [ "$(echo "$merged_delta" | sed 's#//*#/#g; s#/$##')" != "$(echo "$DELTA_HARVEST" | sed 's#//*#/#g; s#/$##')" ]; then
+                print_error "$existing_merge already exists but was merged from a different delta:"
+                print_error "  its delta:  $merged_delta"
+                print_error "  this month: $DELTA_HARVEST"
+                print_error "Not reusing it. Use a different --run-id/--datestamp, or move that merge aside."
+                exit 1
+            fi
             print_info "Merge output already exists: $existing_merge. Skipping merge."
             MERGED_HARVEST="$existing_merge"
         else
