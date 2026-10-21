@@ -433,6 +433,13 @@ preprocess_month() {
         local zip_count=0
         for zip in "$src_dir"/*_${group}_DESC_*.zip; do
             [ -f "$zip" ] || continue
+            # Pull delete lists out first, each under a unique name. NARA names
+            # every one NAC_DESC_Deletes_0001.xml and a delivery can have several
+            # (one per ZIP), so unzipping them into one dir or copying them into
+            # deletes/ under the same name keeps only the last.
+            unzip -Z1 "$zip" | grep 'NAC_DESC_Deletes_[^/]*\.xml$' | while IFS= read -r member; do
+                unzip -p "$zip" "$member" > "$dest_dir/deletes/$(basename "$zip" .zip)__$(basename "$member")"
+            done
             unzip -q -o "$zip" -d "$work_dir/"
             ((zip_count++)) || true
         done
@@ -443,13 +450,8 @@ preprocess_month() {
             continue
         fi
 
-        # Extract any delete files that came out of the ZIPs into deletes/,
-        # then remove both delete and NaidsList files so they are not bundled
-        # into the data tar.gz.
-        find "$work_dir" -name "NAC_DESC_Deletes_*.xml" | while IFS= read -r f; do
-            cp "$f" "$dest_dir/deletes/"
-            ((delete_count++)) || true
-        done
+        # Delete lists were already copied out above; remove them and the
+        # NaidsList rosters so they are not bundled into the data tar.gz.
         find "$work_dir" -name "NAC_DESC_Deletes_*.xml" -delete 2>/dev/null || true
         find "$work_dir" -name "*NaidsList*" -delete 2>/dev/null || true
 
@@ -491,7 +493,10 @@ preprocess_month() {
         print_info "⚠️  No delete files found for $month — verify this is expected for this delivery"
         slack_notify_resilient ":warning: *nara preprocess $month* — 0 delete files found (expected for some deliveries; verify)"
     else
-        print_info "Delete files: $actual_deletes file(s) in $dest_dir/deletes/"
+        # Compare with "ids to delete specified at path" in the merge summary
+        local delete_ids
+        delete_ids=$(cat "$dest_dir/deletes"/*.xml | grep -o '<naId>' | wc -l | tr -d ' ')
+        print_info "Delete files: $actual_deletes file(s), $delete_ids <naId> entries in $dest_dir/deletes/"
     fi
 }
 
