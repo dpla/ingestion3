@@ -209,9 +209,11 @@ def detect_staged_month():
     unprocessed = []
     for month in months:
         log_file      = f"{LOG_DIR}/nara-ingest-{month}.log"
-        exitcode_file = f"{log_file}.exitcode"
+        # Newest exit code across the old name and run-dated names
+        # (nara-ingest-<month>-<run id>.log.exitcode)
         exitcode = ssm_run(
-            f"cat {exitcode_file} 2>/dev/null || echo missing",
+            f"f=$(ls -t {log_file}.exitcode {LOG_DIR}/nara-ingest-{month}-*.log.exitcode 2>/dev/null | head -1); "
+            f"[ -n \"$f\" ] && cat \"$f\" || echo missing",
             timeout_seconds=30,
         ).strip()
         info(f"Checking {month}: exitcode={exitcode}")
@@ -359,9 +361,11 @@ def launch_ingest(month, log_path, extra_args=""):
     return pid
 
 
-def launch_skip_to_pipeline(harvest_path, log_path, skip_delete_check=False):
+def launch_skip_to_pipeline(harvest_path, log_path, skip_delete_check=False, run_id=None):
     step(2, "Launch nara-ingest.sh --skip-to-pipeline on EC2")
     flags = ["--skip-to-pipeline"]
+    if run_id:
+        flags.append(f"--run-id={run_id}")
     if harvest_path:
         flags.append(f"--harvest={harvest_path}")
     if skip_delete_check:
@@ -402,11 +406,19 @@ def extract_harvest_from_log(log_path):
         return None
 
 
+# Set by main() for --month runs: a zero-delete-gate halt is resumed by
+# re-running the same month and run id with --skip-delete-check (finished steps
+# are skipped). Starting the pipeline instead would be wrong for --skip-pipeline
+# runs, whose merge is an intermediate one.
+RESUME = {}
+
+
 def handle_delete_gate_halt(log_path):
     """Called when tail_log detects the script halted at the zero-delete gate.
 
     Shows a summary, prompts the operator to continue or abort, and if they
-    confirm, relaunches with --skip-to-pipeline --skip-delete-check.
+    confirm, re-runs the same month/run id with --skip-delete-check (or, for a
+    --skip-to-pipeline run, relaunches that with --skip-delete-check).
     """
     print()
     warn("=" * 66)
@@ -428,10 +440,16 @@ def handle_delete_gate_halt(log_path):
         warn("  Could not detect merged harvest path from log — you'll need to set --harvest manually.")
 
     print()
-    confirm("Continue to pipeline despite 0 deletes? (confirm you've verified this)", default_yes=False)
+    confirm("Continue past the zero-delete gate? (confirm you've verified 0 deletes is expected)", default_yes=False)
 
     # Relaunch as a new background job
     label    = datetime.now().strftime("%Y%m%d-%H%M%S")
+    if RESUME:
+        new_log = f"{LOG_DIR}/nara-ingest-{RESUME['month']}-{RESUME['run_id']}-resume-{label}.log"
+        pid = launch_ingest(RESUME["month"], new_log,
+                            extra_args=" ".join(RESUME["extra"] + ["--skip-delete-check"]))
+        tail_log(pid, new_log)
+        return
     new_log  = f"{LOG_DIR}/nara-ingest-resume-{label}.log"
     pid      = launch_skip_to_pipeline(harvest_path, new_log, skip_delete_check=True)
     tail_log(pid, new_log)
@@ -547,7 +565,12 @@ def main():
                         help="Re-attach to an existing running ingest log")
     parser.add_argument("--log",
                         help="Log path to tail (use with --resume)")
+    parser.add_argument("--run-id", default=datetime.now().strftime("%Y%m%d"),
+                        help="Run id for delta/<month>/<run id>/ and the log name "
+                             "(default: today). Pass an earlier run's id to resume it.")
     args = parser.parse_args()
+    if not re.match(r"^[A-Za-z0-9_-]+$", args.run_id):
+        sys.exit(f"\n  [BAD] --run-id must be letters, digits, '_' or '-', got: {args.run_id!r}")
 
     print("\nDPLA NARA INGEST LAUNCHER")
     print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -559,17 +582,18 @@ def main():
         if not log_path:
             if not args.month:
                 sys.exit("\n  --resume requires --log <path> or --month YYYYMM")
-            log_path = f"{LOG_DIR}/nara-ingest-{args.month}.log"
+            log_path = f"{LOG_DIR}/nara-ingest-{args.month}-{args.run_id}.log"
         resume_log(log_path)
         return
 
     # ── Skip-to-pipeline mode ─────────────────────────────────────────────
     if args.skip_to_pipeline:
-        label    = args.month or datetime.now().strftime("%Y%m%d-%H%M%S")
+        label    = f"{args.month}-{args.run_id}" if args.month else datetime.now().strftime("%Y%m%d-%H%M%S")
         log_path = f"{LOG_DIR}/nara-ingest-{label}.log"
         pid      = launch_skip_to_pipeline(
             args.harvest, log_path,
             skip_delete_check=args.skip_delete_check,
+            run_id=args.run_id,
         )
         tail_log(pid, log_path)
         return
@@ -581,9 +605,11 @@ def main():
         month = args.month
     else:
         month = detect_staged_month()
-    log_path = f"{LOG_DIR}/nara-ingest-{month}.log"
+    # Run-dated so a rerun of a month doesn't overwrite an earlier run's log
+    log_path = f"{LOG_DIR}/nara-ingest-{month}-{args.run_id}.log"
 
     print(f"Month: {month}")
+    print(f"Run:   {args.run_id} (delta/{month}/{args.run_id}/)")
     print(f"Log:   {log_path}")
 
     # Step 1: Pre-flight
@@ -596,7 +622,7 @@ def main():
         prune_old_outputs(keep_base=args.base)
 
     # Step 2: Launch
-    extra = []
+    extra = [f"--run-id={args.run_id}"]
     if args.skip_pipeline:
         extra.append("--skip-pipeline")
     if args.base:
@@ -606,6 +632,8 @@ def main():
     if args.skip_delete_check:
         extra.append("--skip-delete-check")
 
+    RESUME.update(month=month, run_id=args.run_id,
+                  extra=[e for e in extra if e != "--skip-delete-check"])
     pid = launch_ingest(month, log_path, extra_args=" ".join(extra))
 
     # Step 3: Tail

@@ -239,7 +239,12 @@ Handles NARA's large dataset with delta updates. Located in `scripts/harvest/`:
 ./scripts/harvest/nara-ingest.sh --month=202602 --force-sync       # re-download base from S3
 ./scripts/harvest/nara-ingest.sh --skip-to-pipeline --harvest=/path/to/merged.avro
 ./scripts/harvest/nara-ingest.sh --month=202512,202602             # multi-month
+./scripts/harvest/nara-ingest.sh --month=202602 --run-id=20261021  # resume an earlier run
 ```
+
+Each run works in `delta/<month>/<run id>/` (default run id: today, `YYYYMMDD`),
+so rerunning a month never reuses an earlier run's preprocessing, delta harvest,
+or delete files. Steps are skipped only when they already finished in the same run.
 
 `--force-sync` downloads only the **single latest** merged base harvest from S3
 (~34 GB) rather than the full historical prefix. Only the most recent base is
