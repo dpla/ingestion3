@@ -443,10 +443,15 @@ preprocess_month() {
             # Pull delete lists out first, each under a unique name. NARA names
             # every one NAC_DESC_Deletes_0001.xml and a delivery can have several
             # (one per ZIP), so unzipping them into one dir or copying them into
-            # deletes/ under the same name keeps only the last.
-            unzip -Z1 "$zip" | grep 'NAC_DESC_Deletes_[^/]*\.xml$' | while IFS= read -r member; do
-                unzip -p "$zip" "$member" > "$dest_dir/deletes/$(basename "$zip" .zip)__$(basename "$member")"
-            done
+            # deletes/ under the same name keeps only the last. The per-ZIP index
+            # also keeps same-named members in different subdirs of one ZIP apart.
+            unzip -Z1 "$zip" | grep 'NAC_DESC_Deletes_[^/]*\.xml$' | {
+                delete_member_index=0
+                while IFS= read -r member; do
+                    delete_member_index=$((delete_member_index + 1))
+                    unzip -p "$zip" "$member" > "$dest_dir/deletes/$(basename "$zip" .zip)__${delete_member_index}__$(basename "$member")"
+                done
+            }
             ((zip_count++)) || true
             # Each ZIP gets its own subdir so same-named data files in different
             # ZIPs don't overwrite each other. Plain names (no dots): the harvester
