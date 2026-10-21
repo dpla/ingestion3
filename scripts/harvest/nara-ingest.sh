@@ -387,6 +387,13 @@ preprocess_month() {
         exit 1
     fi
 
+    # Start deletes/ empty: preprocessing rebuilds it from this delivery's files,
+    # so delete lists left by an earlier run must not be applied again alongside
+    # (or instead of) the ones extracted now.
+    if [ -d "$dest_dir/deletes" ] && [ -n "$(ls -A "$dest_dir/deletes")" ]; then
+        print_info "Removing $(ls -A "$dest_dir/deletes" | wc -l | tr -d ' ') delete file(s) left from an earlier run in $dest_dir/deletes/"
+        rm -f "$dest_dir/deletes"/*
+    fi
     mkdir -p "$dest_dir/deletes"
 
     # Step 1: Copy real delete files (NAC_DESC_Deletes_*.xml) to deletes/.
@@ -433,8 +440,24 @@ preprocess_month() {
         local zip_count=0
         for zip in "$src_dir"/*_${group}_DESC_*.zip; do
             [ -f "$zip" ] || continue
-            unzip -q -o "$zip" -d "$work_dir/"
+            # Pull delete lists out first, each under a unique name. NARA names
+            # every one NAC_DESC_Deletes_0001.xml and a delivery can have several
+            # (one per ZIP), so unzipping them into one dir or copying them into
+            # deletes/ under the same name keeps only the last. The per-ZIP index
+            # also keeps same-named members in different subdirs of one ZIP apart.
+            unzip -Z1 "$zip" | grep 'NAC_DESC_Deletes_[^/]*\.xml$' | {
+                delete_member_index=0
+                while IFS= read -r member; do
+                    delete_member_index=$((delete_member_index + 1))
+                    unzip -p "$zip" "$member" > "$dest_dir/deletes/$(basename "$zip" .zip)__${delete_member_index}__$(basename "$member")"
+                done
+            }
             ((zip_count++)) || true
+            # Each ZIP gets its own subdir so same-named data files in different
+            # ZIPs don't overwrite each other. Plain names (no dots): the harvester
+            # skips tar entries containing "._".
+            mkdir -p "$work_dir/zip_$zip_count"
+            unzip -q -o "$zip" -d "$work_dir/zip_$zip_count/"
         done
 
         if [ "$zip_count" -eq 0 ]; then
@@ -443,27 +466,21 @@ preprocess_month() {
             continue
         fi
 
-        # Extract any delete files that came out of the ZIPs into deletes/,
-        # then remove both delete and NaidsList files so they are not bundled
-        # into the data tar.gz.
-        find "$work_dir" -name "NAC_DESC_Deletes_*.xml" | while IFS= read -r f; do
-            cp "$f" "$dest_dir/deletes/"
-            ((delete_count++)) || true
-        done
+        # Delete lists were already copied out above; remove them and the
+        # NaidsList rosters so they are not bundled into the data tar.gz.
         find "$work_dir" -name "NAC_DESC_Deletes_*.xml" -delete 2>/dev/null || true
         find "$work_dir" -name "*NaidsList*" -delete 2>/dev/null || true
 
-        # Count XML data files
-        local xml_count
+        # Count XML data files, and note names that repeat across ZIPs (all kept)
+        local xml_count repeated
         xml_count=$(find "$work_dir" -name "*.xml" -type f | wc -l | tr -d ' ')
         total_xml=$((total_xml + xml_count))
+        repeated=$(find "$work_dir" -name "*.xml" -type f -exec basename {} \; | sort | uniq -d | wc -l | tr -d ' ')
+        [ "$repeated" -eq 0 ] || print_info "  Group $group: $repeated data file name(s) repeat across ZIPs (all kept)"
 
-        # Create tar.gz for this export group
+        # Create tar.gz for this export group (XML files are in per-ZIP subdirs)
         local archive="$dest_dir/${group}_nara_delta.tar.gz"
-        (cd "$work_dir" && tar -czf "$archive" *.xml 2>/dev/null) || {
-            # If *.xml glob fails, try find-based approach
-            (cd "$work_dir" && find . -name "*.xml" -print0 | tar -czf "$archive" --null -T -)
-        }
+        (cd "$work_dir" && find . -name "*.xml" -type f -print0 | tar -czf "$archive" --null -T -)
 
         local archive_size
         archive_size=$(du -h "$archive" | cut -f1)
@@ -491,7 +508,10 @@ preprocess_month() {
         print_info "⚠️  No delete files found for $month — verify this is expected for this delivery"
         slack_notify_resilient ":warning: *nara preprocess $month* — 0 delete files found (expected for some deliveries; verify)"
     else
-        print_info "Delete files: $actual_deletes file(s) in $dest_dir/deletes/"
+        # Compare with "ids to delete specified at path" in the merge summary
+        local delete_ids
+        delete_ids=$(cat "$dest_dir/deletes"/*.xml | grep -o '<naId>' | wc -l | tr -d ' ')
+        print_info "Delete files: $actual_deletes file(s), $delete_ids <naId> entries in $dest_dir/deletes/"
     fi
 }
 
