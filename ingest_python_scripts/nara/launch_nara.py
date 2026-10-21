@@ -406,11 +406,19 @@ def extract_harvest_from_log(log_path):
         return None
 
 
+# Set by main() for --month runs: a zero-delete-gate halt is resumed by
+# re-running the same month and run id with --skip-delete-check (finished steps
+# are skipped). Starting the pipeline instead would be wrong for --skip-pipeline
+# runs, whose merge is an intermediate one.
+RESUME = {}
+
+
 def handle_delete_gate_halt(log_path):
     """Called when tail_log detects the script halted at the zero-delete gate.
 
     Shows a summary, prompts the operator to continue or abort, and if they
-    confirm, relaunches with --skip-to-pipeline --skip-delete-check.
+    confirm, re-runs the same month/run id with --skip-delete-check (or, for a
+    --skip-to-pipeline run, relaunches that with --skip-delete-check).
     """
     print()
     warn("=" * 66)
@@ -432,10 +440,16 @@ def handle_delete_gate_halt(log_path):
         warn("  Could not detect merged harvest path from log — you'll need to set --harvest manually.")
 
     print()
-    confirm("Continue to pipeline despite 0 deletes? (confirm you've verified this)", default_yes=False)
+    confirm("Continue past the zero-delete gate? (confirm you've verified 0 deletes is expected)", default_yes=False)
 
     # Relaunch as a new background job
     label    = datetime.now().strftime("%Y%m%d-%H%M%S")
+    if RESUME:
+        new_log = f"{LOG_DIR}/nara-ingest-{RESUME['month']}-{RESUME['run_id']}-resume-{label}.log"
+        pid = launch_ingest(RESUME["month"], new_log,
+                            extra_args=" ".join(RESUME["extra"] + ["--skip-delete-check"]))
+        tail_log(pid, new_log)
+        return
     new_log  = f"{LOG_DIR}/nara-ingest-resume-{label}.log"
     pid      = launch_skip_to_pipeline(harvest_path, new_log, skip_delete_check=True)
     tail_log(pid, new_log)
@@ -618,6 +632,8 @@ def main():
     if args.skip_delete_check:
         extra.append("--skip-delete-check")
 
+    RESUME.update(month=month, run_id=args.run_id,
+                  extra=[e for e in extra if e != "--skip-delete-check"])
     pid = launch_ingest(month, log_path, extra_args=" ".join(extra))
 
     # Step 3: Tail

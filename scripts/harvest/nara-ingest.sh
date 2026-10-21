@@ -144,7 +144,8 @@ Zero-Delete Gate:
   sends a Slack warning and pauses:
     - Interactive (TTY): prompts to confirm or halt (30s timeout → halt)
     - Non-interactive (EC2/cron): halts immediately with resume instructions
-  To resume after a halt: re-run with --skip-to-pipeline --harvest=<path> --skip-delete-check
+  To resume after a halt: re-run the same command with the same --run-id plus
+  --skip-delete-check (finished steps are skipped). The halt message prints it.
 
 Environment Variables:
   HARVEST_SBT_OPTS       sbt launcher JVM opts for harvest step  (default: -Xmx12g)
@@ -694,7 +695,20 @@ check_delete_gate() {
 
     slack_notify "${severity} *nara merge: 0 valid deletes* (\`$month\`)\n${context_msg}\nSummary: \`$(basename "$merged_harvest")/_LOGS/_SUMMARY.txt\`"
 
-    local resume_cmd="./nara-ingest.sh --skip-to-pipeline --harvest=$merged_harvest --skip-delete-check"
+    # Resume = the same run again past the gate. For --month runs that means
+    # re-running the same months with the same run id (preprocess, harvest, and
+    # merge are skipped), which also continues to any remaining months and keeps
+    # --skip-pipeline runs from starting the pipeline on an intermediate merge.
+    local resume_cmd
+    if [ -n "${MONTHS:-}" ]; then
+        resume_cmd="./nara-ingest.sh --month=$MONTHS --run-id=$RUN_ID"
+        if [ -n "${EXPLICIT_BASE:-}" ]; then resume_cmd="$resume_cmd --base=$EXPLICIT_BASE"; fi
+        if [ "${DATESTAMP_SET:-false}" = true ]; then resume_cmd="$resume_cmd --datestamp=$OUTPUT_DATESTAMP"; fi
+        if [ "${SKIP_PIPELINE:-false}" = true ]; then resume_cmd="$resume_cmd --skip-pipeline"; fi
+        resume_cmd="$resume_cmd --skip-delete-check"
+    else
+        resume_cmd="./nara-ingest.sh --skip-to-pipeline --harvest=$merged_harvest --skip-delete-check"
+    fi
 
     if [ -t 0 ]; then
         # Interactive — give operator a chance to confirm or halt
