@@ -111,8 +111,9 @@ Options:
   --base=<path>     Use specific base harvest Avro dir (skips S3 sync)
   --force-sync      Force fresh download of base harvest from S3
   --datestamp=YYYYMMDD
-                    Override output datestamp (default: today).
-                    Used for the final merged harvest directory name.
+                    Override output datestamp (default: the run id when it
+                    is 8 digits, else today). Used for the final merged
+                    harvest directory name.
 
   --s3-source=<s3://...>
                     S3 prefix to sync from NARA's bucket before preprocessing.
@@ -899,6 +900,7 @@ main() {
                 ;;
             --datestamp=*)
                 OUTPUT_DATESTAMP="${1#*=}"
+                DATESTAMP_SET=true
                 shift
                 ;;
             --run-id=*)
@@ -950,6 +952,12 @@ main() {
     if [[ ! "$RUN_ID" =~ ^[A-Za-z0-9_-]+$ ]]; then
         print_error "--run-id must be letters, digits, '_' or '-' (got: $RUN_ID)"
         exit 1
+    fi
+    # Name the final merge after the run, not the day it happens to run, so
+    # resuming a run on a later day finds its merge instead of redoing it.
+    # IngestRemap needs an 8-digit date prefix, so only an 8-digit run id is used.
+    if [ "${DATESTAMP_SET:-false}" != true ] && [[ "$RUN_ID" =~ ^[0-9]{8}$ ]]; then
+        OUTPUT_DATESTAMP="$RUN_ID"
     fi
 
     print_header "NARA Delta Ingest Pipeline"
