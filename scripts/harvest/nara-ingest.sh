@@ -440,8 +440,12 @@ preprocess_month() {
             unzip -Z1 "$zip" | grep 'NAC_DESC_Deletes_[^/]*\.xml$' | while IFS= read -r member; do
                 unzip -p "$zip" "$member" > "$dest_dir/deletes/$(basename "$zip" .zip)__$(basename "$member")"
             done
-            unzip -q -o "$zip" -d "$work_dir/"
             ((zip_count++)) || true
+            # Each ZIP gets its own subdir so same-named data files in different
+            # ZIPs don't overwrite each other. Plain names (no dots): the harvester
+            # skips tar entries containing "._".
+            mkdir -p "$work_dir/zip_$zip_count"
+            unzip -q -o "$zip" -d "$work_dir/zip_$zip_count/"
         done
 
         if [ "$zip_count" -eq 0 ]; then
@@ -455,17 +459,16 @@ preprocess_month() {
         find "$work_dir" -name "NAC_DESC_Deletes_*.xml" -delete 2>/dev/null || true
         find "$work_dir" -name "*NaidsList*" -delete 2>/dev/null || true
 
-        # Count XML data files
-        local xml_count
+        # Count XML data files, and note names that repeat across ZIPs (all kept)
+        local xml_count repeated
         xml_count=$(find "$work_dir" -name "*.xml" -type f | wc -l | tr -d ' ')
         total_xml=$((total_xml + xml_count))
+        repeated=$(find "$work_dir" -name "*.xml" -type f -exec basename {} \; | sort | uniq -d | wc -l | tr -d ' ')
+        [ "$repeated" -eq 0 ] || print_info "  Group $group: $repeated data file name(s) repeat across ZIPs (all kept)"
 
-        # Create tar.gz for this export group
+        # Create tar.gz for this export group (XML files are in per-ZIP subdirs)
         local archive="$dest_dir/${group}_nara_delta.tar.gz"
-        (cd "$work_dir" && tar -czf "$archive" *.xml 2>/dev/null) || {
-            # If *.xml glob fails, try find-based approach
-            (cd "$work_dir" && find . -name "*.xml" -print0 | tar -czf "$archive" --null -T -)
-        }
+        (cd "$work_dir" && find . -name "*.xml" -type f -print0 | tar -czf "$archive" --null -T -)
 
         local archive_size
         archive_size=$(du -h "$archive" | cut -f1)
