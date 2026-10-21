@@ -660,10 +660,11 @@ check_delete_gate() {
         return 0
     fi
 
-    # Parse valid delete count from the "Delete: N in file, M valid, K invalid" line
+    # Parse valid delete count from NaraMergeUtil's
+    # " valid deletes (IDs in merged dataset): N" line (N may contain commas)
     local valid_deletes
-    valid_deletes=$(grep -iE "^[[:space:]]*Delete:" "$summary_file" \
-        | grep -oE '[0-9]+ valid' | grep -oE '^[0-9]+' || true)
+    valid_deletes=$(grep -E "^[[:space:]]*valid deletes \(IDs in merged dataset\):" "$summary_file" \
+        | grep -oE '[0-9,]+[[:space:]]*$' | tr -d ', ' || true)
     valid_deletes="${valid_deletes:-0}"
 
     if [ "$valid_deletes" -gt 0 ]; then
