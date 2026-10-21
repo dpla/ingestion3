@@ -518,7 +518,7 @@ preprocess_month() {
     actual_deletes=$(find "$dest_dir/deletes" -name "*.xml" -type f | wc -l | tr -d ' ')
     if [ "$actual_deletes" -eq 0 ]; then
         print_info "⚠️  No delete files found for $month — verify this is expected for this delivery"
-        slack_notify_resilient ":warning: *nara preprocess $month* — 0 delete files found (expected for some deliveries; verify)"
+        slack_notify ":warning: *nara preprocess $month* — 0 delete files found (expected for some deliveries; verify)" || true
     else
         # Compare with "ids to delete specified at path" in the merge summary
         local delete_ids
