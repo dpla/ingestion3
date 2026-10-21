@@ -387,6 +387,13 @@ preprocess_month() {
         exit 1
     fi
 
+    # Start deletes/ empty: preprocessing rebuilds it from this delivery's files,
+    # so delete lists left by an earlier run must not be applied again alongside
+    # (or instead of) the ones extracted now.
+    if [ -d "$dest_dir/deletes" ] && [ -n "$(ls -A "$dest_dir/deletes")" ]; then
+        print_info "Removing $(ls -A "$dest_dir/deletes" | wc -l | tr -d ' ') delete file(s) left from an earlier run in $dest_dir/deletes/"
+        rm -f "$dest_dir/deletes"/*
+    fi
     mkdir -p "$dest_dir/deletes"
 
     # Step 1: Copy real delete files (NAC_DESC_Deletes_*.xml) to deletes/.
