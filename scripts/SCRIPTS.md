@@ -240,11 +240,20 @@ Handles NARA's large dataset with delta updates. Located in `scripts/harvest/`:
 ./scripts/harvest/nara-ingest.sh --skip-to-pipeline --harvest=/path/to/merged.avro
 ./scripts/harvest/nara-ingest.sh --month=202512,202602             # multi-month
 ./scripts/harvest/nara-ingest.sh --month=202602 --run-id=20261021  # resume an earlier run
+./scripts/harvest/nara-ingest.sh --month=202512,202602 --run-id=20261021 --skip-delete-check-month=202512  # resume past the zero-delete gate for 202512 only
 ```
 
 Each run works in `delta/<month>/<run id>/` (default run id: today, `YYYYMMDD`),
 so rerunning a month never reuses an earlier run's preprocessing, delta harvest,
-or delete files. Steps are skipped only when they already finished in the same run.
+or delete files. Steps are skipped only when they already finished in the same run:
+preprocessing once it wrote `.preprocess_complete`, the delta harvest once it has a
+`_MANIFEST`, and the merge once its `_SUMMARY.txt` names the same base and delta.
+A run id that isn't a `YYYYMMDD` date also needs `--datestamp=YYYYMMDD`.
+
+After a zero-delete gate halt, the halt message prints the resume command. For
+`--month` runs it adds `--skip-delete-check-month=<halted month>`, so later months
+in the rerun are still checked (`--skip-delete-check` turns the gate off for all).
+Tests: `./scripts/tests/test-nara-gate.sh`.
 
 `--force-sync` downloads only the **single latest** merged base harvest from S3
 (~34 GB) rather than the full historical prefix. Only the most recent base is

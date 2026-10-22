@@ -413,6 +413,21 @@ def extract_harvest_from_log(log_path):
 RESUME = {}
 
 
+def parse_gate_resume_cmd(text):
+    """RESUME entry from the gate's logged resume command for a --month run
+    ("./nara-ingest.sh --month=M --run-id=R ... --skip-delete-check-month=M"),
+    or {} if the text has none (e.g. a --skip-to-pipeline run's halt)."""
+    m = re.findall(r"\./nara-ingest\.sh((?: --[A-Za-z-]+(?:=[^\s\x1b`]*)?)+)", text)
+    args = m[-1].split() if m else []
+    month = next((a.split("=", 1)[1] for a in args if a.startswith("--month=")), None)
+    if not month:
+        return {}
+    run_id = next((a.split("=", 1)[1] for a in args if a.startswith("--run-id=")), "")
+    return {"month": month, "run_id": run_id,
+            "extra": [a for a in args if not a.startswith(("--month=", "--skip-delete-check"))],
+            "skip": [a for a in args if a.startswith("--skip-delete-check")]}
+
+
 def handle_delete_gate_halt(log_path):
     """Called when tail_log detects the script halted at the zero-delete gate.
 
@@ -444,10 +459,17 @@ def handle_delete_gate_halt(log_path):
 
     # Relaunch as a new background job
     label    = datetime.now().strftime("%Y%m%d-%H%M%S")
+    if not RESUME:
+        # Re-attached (--resume) to a run this process didn't launch: continue
+        # its month run from the resume command nara-ingest.sh logged at the gate
+        RESUME.update(parse_gate_resume_cmd(
+            ssm_run(f"grep -F './nara-ingest.sh --' {log_path} | tail -1 || true",
+                    timeout_seconds=30)))
     if RESUME:
         new_log = f"{LOG_DIR}/nara-ingest-{RESUME['month']}-{RESUME['run_id']}-resume-{label}.log"
         pid = launch_ingest(RESUME["month"], new_log,
-                            extra_args=" ".join(RESUME["extra"] + ["--skip-delete-check"]))
+                            extra_args=" ".join(RESUME["extra"]
+                                                + (RESUME.get("skip") or ["--skip-delete-check"])))
         tail_log(pid, new_log)
         return
     new_log  = f"{LOG_DIR}/nara-ingest-resume-{label}.log"

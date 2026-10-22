@@ -655,10 +655,11 @@ du -sh /private/var/folders/*/T/blockmgr-* 2>/dev/null
 ```hocon
 nara.provider = "National Archives and Records Administration"
 nara.harvest.type = "nara.file.delta"
-nara.harvest.endpoint = "/Users/you/dpla/data/nara/delta/YYYYMM/"
-nara.harvest.delta.update = "/Users/you/dpla/data/nara/delta/YYYYMM/"
+nara.harvest.endpoint = "/Users/you/dpla/data/nara/delta/YYYYMM/<run id>/"
+nara.harvest.delta.update = "/Users/you/dpla/data/nara/delta/YYYYMM/<run id>/"
 nara.s3_destination = "s3://dpla-master-dataset/nara/"
 ```
 
-Both `endpoint` and `delta.update` must point to the delta directory for the month
-being processed. Update these before each harvest step.
+Both `endpoint` and `delta.update` must point to the delta directory of the month
+and run being processed. `nara-ingest.sh` sets them before each delta harvest; when
+harvesting by hand, set them yourself.
