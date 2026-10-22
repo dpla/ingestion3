@@ -52,6 +52,12 @@ OUTPUT_DATESTAMP=$(date +%Y%m%d)
 # harvest, or delete files. Pass --run-id=<earlier run id> to resume that run.
 RUN_ID=$(date +%Y%m%d)
 delta_dir() { echo "$NARA_DATA/delta/$1/$RUN_ID"; }
+# Newest delta harvest under $1 that finished: HarvestExecutor writes _MANIFEST
+# only after the Avro write and schema check succeed
+latest_complete_harvest() {
+    find "$1" -type d -name "*-nara-OriginalRecord.avro" 2>/dev/null | sort \
+        | while read -r d; do [ -f "$d/_MANIFEST" ] && echo "$d"; done | tail -1 || true
+}
 
 # ============================================================================
 # Memory Configuration
@@ -134,6 +140,9 @@ Options:
   --skip-delete-check
                     Bypass the zero-delete gate (see below). Use this when
                     you've confirmed that 0 deletes is expected for this delivery.
+  --skip-delete-check-month=<YYYYMM[,YYYYMM...]>
+                    Bypass the gate for these months only; other months in the
+                    run are still checked.
 
   --dry-run         Show what would be done without executing
   --help            Show this help message
@@ -145,7 +154,8 @@ Zero-Delete Gate:
     - Interactive (TTY): prompts to confirm or halt (30s timeout → halt)
     - Non-interactive (EC2/cron): halts immediately with resume instructions
   To resume after a halt: re-run the same command with the same --run-id plus
-  --skip-delete-check (finished steps are skipped). The halt message prints it.
+  --skip-delete-check-month=<halted month> (finished steps are skipped; later
+  months are still gated). The halt message prints it.
 
 Environment Variables:
   HARVEST_SBT_OPTS       sbt launcher JVM opts for harvest step  (default: -Xmx12g)
@@ -399,6 +409,10 @@ preprocess_month() {
         exit 1
     fi
 
+    # Archives and the completion marker from a run that stopped partway are
+    # rebuilt below
+    rm -f "$dest_dir"/*.tar.gz "$dest_dir/.preprocess_complete"
+
     # Start deletes/ empty: preprocessing rebuilds it from this delivery's files,
     # so delete lists left by an earlier run must not be applied again alongside
     # (or instead of) the ones extracted now.
@@ -518,13 +532,15 @@ preprocess_month() {
     actual_deletes=$(find "$dest_dir/deletes" -name "*.xml" -type f | wc -l | tr -d ' ')
     if [ "$actual_deletes" -eq 0 ]; then
         print_info "⚠️  No delete files found for $month — verify this is expected for this delivery"
-        slack_notify_resilient ":warning: *nara preprocess $month* — 0 delete files found (expected for some deliveries; verify)"
+        slack_notify ":warning: *nara preprocess $month* — 0 delete files found (expected for some deliveries; verify)" || true
     else
         # Compare with "ids to delete specified at path" in the merge summary
         local delete_ids
         delete_ids=$(cat "$dest_dir/deletes"/*.xml | grep -o '<naId>' | wc -l | tr -d ' ')
         print_info "Delete files: $actual_deletes file(s), $delete_ids <naId> entries in $dest_dir/deletes/"
     fi
+
+    touch "$dest_dir/.preprocess_complete"
 }
 
 # ============================================================================
@@ -560,7 +576,7 @@ run_delta_harvest() {
         --sparkMaster=$HARVEST_SPARK_MASTER"
 
     # Find the harvested output (nested under nara/harvest/)
-    DELTA_HARVEST=$(find "$delta_dir/harvest" -type d -name "*-nara-OriginalRecord.avro" 2>/dev/null | sort | tail -1)
+    DELTA_HARVEST=$(latest_complete_harvest "$delta_dir/harvest")
 
     if [ -z "$DELTA_HARVEST" ]; then
         print_error "Delta harvest failed - no output found in $delta_dir/harvest/"
@@ -639,10 +655,11 @@ run_merge() {
 # Behavior:
 #   - Interactive (TTY attached): prompts operator to confirm or halt.
 #     30-second timeout defaults to halt for safety.
-#   - Non-interactive (EC2/cron/no-TTY): halts with Slack notice and
-#     instructions to resume via --skip-to-pipeline --skip-delete-check.
+#   - Non-interactive (EC2/cron/no-TTY): halts with Slack notice and the
+#     resume command (--month runs: --skip-delete-check-month=<that month>).
 #   - --skip-delete-check flag: bypasses gate entirely (use when you've
 #     confirmed that 0 deletes is expected for this specific delivery).
+#   - --skip-delete-check-month=M[,M...]: bypasses it for those months only.
 # ============================================================================
 
 check_delete_gate() {
@@ -653,6 +670,12 @@ check_delete_gate() {
         print_info "Zero-delete gate bypassed (--skip-delete-check)"
         return 0
     fi
+    case ",${SKIP_DELETE_CHECK_MONTHS:-}," in
+        *",$month,"*)
+            print_info "Zero-delete gate bypassed for $month (--skip-delete-check-month)"
+            return 0
+            ;;
+    esac
 
     local summary_file="$merged_harvest/_LOGS/_SUMMARY.txt"
     if [ ! -f "$summary_file" ]; then
@@ -660,10 +683,11 @@ check_delete_gate() {
         return 0
     fi
 
-    # Parse valid delete count from the "Delete: N in file, M valid, K invalid" line
+    # Parse valid delete count from NaraMergeUtil's
+    # " valid deletes (IDs in merged dataset): N" line (N may contain commas)
     local valid_deletes
-    valid_deletes=$(grep -iE "^[[:space:]]*Delete:" "$summary_file" \
-        | grep -oE '[0-9]+ valid' | grep -oE '^[0-9]+' || true)
+    valid_deletes=$(grep -E "^[[:space:]]*valid deletes \(IDs in merged dataset\):" "$summary_file" \
+        | grep -oE '[0-9,]+[[:space:]]*$' | tr -d ', ' || true)
     valid_deletes="${valid_deletes:-0}"
 
     if [ "$valid_deletes" -gt 0 ]; then
@@ -705,7 +729,9 @@ check_delete_gate() {
         if [ -n "${EXPLICIT_BASE:-}" ]; then resume_cmd="$resume_cmd --base=$EXPLICIT_BASE"; fi
         if [ "${DATESTAMP_SET:-false}" = true ]; then resume_cmd="$resume_cmd --datestamp=$OUTPUT_DATESTAMP"; fi
         if [ "${SKIP_PIPELINE:-false}" = true ]; then resume_cmd="$resume_cmd --skip-pipeline"; fi
-        resume_cmd="$resume_cmd --skip-delete-check"
+        # Approve only this month (plus any approved earlier in the run), so
+        # later months in the rerun still go through the gate
+        resume_cmd="$resume_cmd --skip-delete-check-month=${SKIP_DELETE_CHECK_MONTHS:+$SKIP_DELETE_CHECK_MONTHS,}$month"
     else
         resume_cmd="./nara-ingest.sh --skip-to-pipeline --harvest=$merged_harvest --skip-delete-check"
     fi
@@ -896,6 +922,7 @@ main() {
     EXPLICIT_HARVEST=""
     S3_SOURCE=""
     SKIP_DELETE_CHECK=false
+    SKIP_DELETE_CHECK_MONTHS=""
     DRY_RUN=false
 
     while [[ $# -gt 0 ]]; do
@@ -945,6 +972,10 @@ main() {
                 SKIP_DELETE_CHECK=true
                 shift
                 ;;
+            --skip-delete-check-month=*)
+                SKIP_DELETE_CHECK_MONTHS="${1#*=}"
+                shift
+                ;;
             --dry-run)
                 DRY_RUN=true
                 shift
@@ -967,11 +998,21 @@ main() {
         print_error "--run-id must be letters, digits, '_' or '-' (got: $RUN_ID)"
         exit 1
     fi
+    if [ -n "$SKIP_DELETE_CHECK_MONTHS" ] && [[ ! "$SKIP_DELETE_CHECK_MONTHS" =~ ^[0-9]{6}(,[0-9]{6})*$ ]]; then
+        print_error "--skip-delete-check-month must be YYYYMM[,YYYYMM...] (got: $SKIP_DELETE_CHECK_MONTHS)"
+        exit 1
+    fi
     # Name the final merge after the run, not the day it happens to run, so
     # resuming a run on a later day finds its merge instead of redoing it.
-    # IngestRemap needs an 8-digit date prefix, so only an 8-digit run id is used.
-    if [ "${DATESTAMP_SET:-false}" != true ] && [[ "$RUN_ID" =~ ^[0-9]{8}$ ]]; then
-        OUTPUT_DATESTAMP="$RUN_ID"
+    # IngestRemap needs an 8-digit date prefix, so only an 8-digit run id is used;
+    # any other run id needs an explicit --datestamp (the same one on resume).
+    if [ "${DATESTAMP_SET:-false}" != true ]; then
+        if [[ "$RUN_ID" =~ ^[0-9]{8}$ ]]; then
+            OUTPUT_DATESTAMP="$RUN_ID"
+        else
+            print_error "--run-id=$RUN_ID is not a YYYYMMDD date: also pass --datestamp=YYYYMMDD (and the same value when resuming)"
+            exit 1
+        fi
     fi
 
     print_header "NARA Delta Ingest Pipeline"
@@ -1103,10 +1144,11 @@ main() {
 
         # 2b. Preprocess
         if [ "$SKIP_PREPROCESS" != true ]; then
-            # Check if already preprocessed (tar.gz files exist)
-            local existing_tgz
-            existing_tgz=$(find "$(delta_dir "$month")" -maxdepth 1 -name "*.tar.gz" 2>/dev/null | wc -l | tr -d ' ')
-            if [ "$existing_tgz" -gt 0 ]; then
+            # Skip only if preprocessing finished (marker written at its end);
+            # tar.gz files alone may be from a run that stopped partway
+            if [ -f "$(delta_dir "$month")/.preprocess_complete" ]; then
+                local existing_tgz
+                existing_tgz=$(find "$(delta_dir "$month")" -maxdepth 1 -name "*.tar.gz" | wc -l | tr -d ' ')
                 print_info "Month $month already preprocessed ($existing_tgz tar.gz files). Skipping."
             else
                 preprocess_month "$month"
@@ -1118,7 +1160,7 @@ main() {
         # 2c. Delta Harvest
         # Check if already harvested
         local existing_harvest
-        existing_harvest=$(find "$(delta_dir "$month")/harvest" -type d -name "*-nara-OriginalRecord.avro" 2>/dev/null | sort | tail -1)
+        existing_harvest=$(latest_complete_harvest "$(delta_dir "$month")/harvest")
         if [ -n "$existing_harvest" ]; then
             print_info "Delta harvest already exists: $existing_harvest. Skipping harvest."
             DELTA_HARVEST="$existing_harvest"
@@ -1130,14 +1172,23 @@ main() {
         # Check if already merged
         local existing_merge="$NARA_HARVEST/${merge_datestamp}_000000-nara-OriginalRecord.avro"
         if [ -d "$existing_merge" ] && [ -f "$existing_merge/_LOGS/_SUMMARY.txt" ]; then
-            # Only reuse a merge built from this month's delta harvest; anything
-            # else means the name is taken by a different merge.
-            local merged_delta
+            # Only reuse a merge built from this month's base and delta harvest;
+            # anything else means the name is taken by a different merge.
+            local merged_base merged_delta
+            merged_base=$(awk '/^ *Base *$/ {d=1} d && /path:/ {print $2; exit}' "$existing_merge/_LOGS/_SUMMARY.txt")
             merged_delta=$(awk '/^ *Delta *$/ {d=1} d && /path:/ {print $2; exit}' "$existing_merge/_LOGS/_SUMMARY.txt")
-            if [ "$(echo "$merged_delta" | sed 's#//*#/#g; s#/$##')" != "$(echo "$DELTA_HARVEST" | sed 's#//*#/#g; s#/$##')" ]; then
-                print_error "$existing_merge already exists but was merged from a different delta:"
+            norm() { echo "$1" | sed 's#//*#/#g; s#/$##'; }
+            # Without --base, the first month's base is the newest local harvest,
+            # which on a resume is this merge itself, so only the delta identifies it
+            local check_base=true
+            if [ -z "$EXPLICIT_BASE" ] && [ "$month_idx" -eq 1 ]; then check_base=false; fi
+            if { [ "$check_base" = true ] && [ "$(norm "$merged_base")" != "$(norm "$BASE_HARVEST")" ]; } \
+                || [ "$(norm "$merged_delta")" != "$(norm "$DELTA_HARVEST")" ]; then
+                print_error "$existing_merge already exists but was merged from different inputs:"
+                print_error "  its base:   $merged_base"
+                print_error "  this base:  $BASE_HARVEST"
                 print_error "  its delta:  $merged_delta"
-                print_error "  this month: $DELTA_HARVEST"
+                print_error "  this delta: $DELTA_HARVEST"
                 print_error "Not reusing it. Use a different --run-id/--datestamp, or move that merge aside."
                 exit 1
             fi

@@ -1288,6 +1288,9 @@ main() {
     if [[ -f "$TEST_DIR/test-hub-alias-mock.sh" ]]; then
         run_test "Hub alias mock tests" "'$TEST_DIR/test-hub-alias-mock.sh'"
     fi
+    if [[ -f "$TEST_DIR/test-nara-gate.sh" ]]; then
+        run_test "NARA resume and zero-delete gate tests" "'$TEST_DIR/test-nara-gate.sh'"
+    fi
     
     # Summary
     echo ""
