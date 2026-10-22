@@ -105,9 +105,7 @@ Bringing up the Vagrant EC2 instance is not always required. You can run a lot o
 ## Exceptions and unusual ingests
 Not all ingests are fire and forget, some require a bit of massaging before we can successfully harvest their data.
 ### Firewalled endpoints
-Some hubs have their feed endpoints behind a firewall so the harvests needs to be run while behind out VPN. I've been meaning to try and get the EC2 instance behind the VPN but that work is not a high priority right now because we have a workaround (run locally behind VPN). Hubs which need to be harvested will on the VPN
-- Illinois
-- Indiana
+No hub currently needs a VPN or a local harvest. A few hubs restrict their endpoint by IP address and are handled on the ingest EC2: Indiana allowlists the EC2's own egress IP (`52.2.32.179`), and getty and njde are routed through a Tailscale exit node by `ingest.sh`. See [Firewalled endpoints](../../README.md#firewalled-endpoints) in the main README.
 
 ### Community Webs
 Internet Archive Community Webs sends a SQLite database. Use the automated scripts to export, validate, and harvest:

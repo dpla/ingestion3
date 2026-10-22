@@ -70,7 +70,7 @@ immediately; Slack notifies as each hub finishes.
 - `[nara]` profile in `~/.aws/credentials` (obtain credentials from Dominic)
 - `sbt` installed locally for batch JAR builds (`brew install sbt`)
 - `~/.dpla-secrets.env` locally with `DPLA_API_KEY`
-- `~/.dpla-secrets.env` on the ingest EC2 with `SLACK_BOT_TOKEN` and `SLACK_CHANNEL`
+- `/home/ec2-user/ingestion3/.env` on the ingest EC2 with `SLACK_BOT_TOKEN` (and optionally `SLACK_CHANNEL`)
 
 ---
 
@@ -311,13 +311,14 @@ python3 community-webs/check_cw.py --watch
 
 ## Slack Notifications
 
-Scripts send notifications to `#tech-alerts` via the ingest EC2. Configure webhooks in `.env`:
+Scripts send notifications to `#tech-alerts` via the ingest EC2: they call `slack_notify` from `scripts/common.sh` over SSM, which reads the bot token from `/home/ec2-user/ingestion3/.env` on the box. Nothing needs to be configured locally. The box's `.env` sets:
 
 ```
-SLACK_WEBHOOK=           # #tech-alerts
-SLACK_TECH_WEBHOOK=      # #tech (hub-complete with @here)
-SLACK_ALERT_USER_ID=     # your Slack member ID for @mention on failures
+SLACK_BOT_TOKEN=         # Slack bot token (chat.postMessage)
+SLACK_CHANNEL=           # optional; defaults to C02HEU2L3 (#tech-alerts)
 ```
+
+The GitHub Actions workflows post their own queued/failed messages using repository secrets of the same names.
 
 ---
 
@@ -337,7 +338,7 @@ Use `--resume-from <stage>` in `launch_ingest.py` to restart from mapping, enric
 Your IAM user needs EMR read permissions. Resume with `--cluster-id j-XXXXX` once permissions are sorted.
 
 **Slack notifications not sending**
-Verify `~/.dpla-secrets.env` exists on the ingest EC2 with `SLACK_BOT_TOKEN` and `SLACK_CHANNEL` set.
+Verify `/home/ec2-user/ingestion3/.env` on the ingest EC2 sets `SLACK_BOT_TOKEN`. For GitHub Actions messages, check the `SLACK_BOT_TOKEN` and `SLACK_CHANNEL` repository secrets.
 
 **`sbt assembly` fails**
 Make sure `sbt` is installed (`brew install sbt` on Mac) and `batch-process-dpla-index` is cloned at the path saved in your `.env`.

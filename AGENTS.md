@@ -8,11 +8,11 @@ Use this document when you are asked to **run ingests**, **report status**, or *
 
 **Before any of these:** building the JAR, running `./scripts/*`, running the orchestrator, running Python tools, or running AWS scripts that need project env — you must load the project environment. This is the **canonical checklist** for Cursor and Claude agents; .cursorrules and CLAUDE.md point here for the full list.
 
-- **Load env:** From repo root run `source .env` so `JAVA_HOME`, `SLACK_WEBHOOK`, `DPLA_DATA`, `I3_CONF`, etc. are set. Scripts that source `common.sh` (e.g. `harvest.sh`, `ingest.sh`) automatically load `$I3_HOME/.env` when present, so `SLACK_WEBHOOK` is available for harvest-failure notifications even if you did not run `source .env` in the shell first.
+- **Load env:** From repo root run `source .env` so `JAVA_HOME`, `SLACK_BOT_TOKEN`, `DPLA_DATA`, `I3_CONF`, etc. are set. Scripts that source `common.sh` (e.g. `harvest.sh`, `ingest.sh`) automatically load `$I3_HOME/.env` when present, so the Slack credentials are available even if you did not run `source .env` in the shell first. See [.env.example](.env.example) for the full list.
 - **Build the fat JAR:** From repo root run `source .env` then `sbt assembly`. Java 11+ is required (the codebase uses `java.net.http`). If you run `sbt assembly` without sourcing `.env`, the build may use the wrong JDK and fail (e.g. "package java.net.http does not exist"). Pipeline scripts (harvest.sh, ingest.sh, etc.) automatically run `sbt assembly` when the JAR is missing or when any Scala source is newer than the JAR, so the "harvest [hub]" skill uses current code without a separate build step.
 - **Java:** 11+ required for build and run. Set `JAVA_HOME` in `.env` (see Java requirement section below).
 - **Python:** Use `./venv/bin/python` or `source ./venv/bin/activate`; do not use system Python.
-- **AWS:** Use `--profile dpla` for all `aws` commands.
+- **AWS credentials:** GitHub Actions uses an OIDC role. Scripts that source `common.sh` honor `AWS_PROFILE` when it is set (including from `.env`, which `common.sh` loads) and otherwise use the default credential chain, which on the ingest EC2 is the instance role, so no profile is needed there. Raw `aws` commands honor an *exported* `AWS_PROFILE` (a plain `source .env` does not export it) or otherwise use the default chain. Only the Python launchers in `ingest_python_scripts/` fall back to a profile named `dpla`. Locally, set `AWS_PROFILE=dpla` in `.env` unless your default AWS profile is the DPLA account, and export it (or pass `--profile`) for raw `aws` commands.
 
 **Why this checklist lives in AGENTS.md:** The full list of "before X do Y" rules is kept in one place so Cursor and Claude agents (and humans) follow the same process. .cursorrules and CLAUDE.md point here for the canonical checklist.
 
@@ -33,7 +33,15 @@ Use this document when you are asked to **run ingests**, **report status**, or *
 
 ## Notifications and errors (Slack or email tech@dp.la)
 
-**Policy:** All errors and important status updates must be reported to **Slack** or **email tech@dp.la** (or both). Prefer Slack when a webhook is configured; otherwise ensure tech@dp.la is notified.
+**Policy:** All errors and important status updates must be reported to **Slack** or **email tech@dp.la** (or both). Prefer Slack when it is configured; otherwise ensure tech@dp.la is notified.
+
+**Slack credentials — which variable each path uses:**
+
+| Path | Variables | Where they are set |
+|------|-----------|--------------------|
+| `ingest.sh` and other shell scripts (`common.sh` `slack_notify`, `ingest-watchdog.sh`) | `SLACK_BOT_TOKEN`, optional `SLACK_CHANNEL` (default `C02HEU2L3` = #tech-alerts) | `$I3_HOME/.env` (on the ingest EC2: `/home/ec2-user/ingestion3/.env`) |
+| GitHub Actions workflows (`ingest-hub.yml`, `ingest-monthly.yml`, …) | `SLACK_BOT_TOKEN`, `SLACK_CHANNEL` | Repository secrets |
+| Python orchestrator and staged report (`scheduler/orchestrator/`) | `SLACK_WEBHOOK`, optional `SLACK_TECH_WEBHOOK`, `SLACK_ALERT_USER_ID` | `.env` |
 
 **Treat as errors (must notify):**
 - Feed or endpoint unreachable (e.g. OAI/API timeout, connection failure).
@@ -72,9 +80,9 @@ For any **pipeline stage failure**, ensure a notification is posted to **Slack #
   - **Slack:** Run start, per-stage progress (harvest/mapping/enrichment/jsonl/sync complete per hub), anomaly alerts, run completion (per-hub status), failure escalation (failed hubs + path to report). Requires `SLACK_WEBHOOK` in the environment (or in `.env`). The webhook should target **#tech-alerts** so all automated notifications land there.
   - If Slack is not configured, the orchestrator still writes escalation files under `data/escalations/`. In that case, email tech@dp.la with the failure summary or attach the failure report.
 
-- **Scripts:** [scripts/communication/send-ingest-email.sh](scripts/communication/send-ingest-email.sh) sends the mapping summary to the hub’s contacts (from i3.conf). [scheduler/orchestrator/backlog_emails.py](scheduler/orchestrator/backlog_emails.py) CC’s tech@dp.la on backlog hub emails. Scripts do not send errors to Slack or tech@dp.la; when you run ingests manually via scripts and something fails, post the error to #tech-alerts or email tech@dp.la (and, if applicable, point to the failure report or logs).
+- **Scripts:** [scripts/communication/send-ingest-email.sh](scripts/communication/send-ingest-email.sh) sends the mapping summary to the hub’s contacts (from i3.conf). [scheduler/orchestrator/backlog_emails.py](scheduler/orchestrator/backlog_emails.py) CC’s tech@dp.la on backlog hub emails. `ingest.sh` posts per-step progress, failures, and completion to #tech-alerts via `SLACK_BOT_TOKEN` when it is set. Other scripts do not; when one of those fails, post the error to #tech-alerts or email tech@dp.la (and, if applicable, point to the failure report or logs).
 
-**If you run an ingest and it fails:** (1) Classify the failure (harvest, mapping, sync, anomaly). (2) Post to #tech-alerts (if `SLACK_WEBHOOK` is set) or send an email to tech@dp.la with a short summary and, if available, the path to the failure report (e.g. `data/escalations/failures-<run_id>.md`) or the relevant log snippet.
+**If you run an ingest and it fails:** (1) Classify the failure (harvest, mapping, sync, anomaly). (2) Post to #tech-alerts or send an email to tech@dp.la with a short summary and, if available, the path to the failure report (e.g. `data/escalations/failures-<run_id>.md`) or the relevant log snippet.
 
 ---
 
@@ -101,9 +109,9 @@ Ensure every failure is reflected in #tech-alerts or in an email to tech@dp.la.
 
 ## Project conventions
 
-- **Environment:** Source `.env` before running the orchestrator or pipeline scripts so `JAVA_HOME`, `SLACK_WEBHOOK`, `DPLA_DATA`, and other vars are set (e.g. `source .env` from repo root).
+- **Environment:** Source `.env` before running the orchestrator or pipeline scripts so `JAVA_HOME`, `SLACK_BOT_TOKEN`, `DPLA_DATA`, and other vars are set (e.g. `source .env` from repo root).
 - **Python:** Use the virtualenv at `./venv/` when writing or running Python scripts.
-- **AWS CLI:** Use `--profile dpla` for all AWS commands.
+- **AWS credentials:** See [Environment and build](#environment-and-build) — no named profile in CI or on EC2; locally, set `AWS_PROFILE=dpla` in `.env` unless your default AWS profile is the DPLA account.
 - **Shell scripts:** Write POSIX-compliant bash; avoid OS-specific flags (see [scripts/common.sh](scripts/common.sh) for portable helpers).
 - **New or changed scripts:** Document in [scripts/SCRIPTS.md](scripts/SCRIPTS.md) (Quick Reference and, if needed, Script Details). Create or update tests in `scripts/tests/` and run `./scripts/tests/test-scripts.sh` when changing scripts.
 
