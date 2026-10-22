@@ -1178,7 +1178,11 @@ main() {
             merged_base=$(awk '/^ *Base *$/ {d=1} d && /path:/ {print $2; exit}' "$existing_merge/_LOGS/_SUMMARY.txt")
             merged_delta=$(awk '/^ *Delta *$/ {d=1} d && /path:/ {print $2; exit}' "$existing_merge/_LOGS/_SUMMARY.txt")
             norm() { echo "$1" | sed 's#//*#/#g; s#/$##'; }
-            if [ "$(norm "$merged_base")" != "$(norm "$BASE_HARVEST")" ] \
+            # Without --base, the first month's base is the newest local harvest,
+            # which on a resume is this merge itself, so only the delta identifies it
+            local check_base=true
+            if [ -z "$EXPLICIT_BASE" ] && [ "$month_idx" -eq 1 ]; then check_base=false; fi
+            if { [ "$check_base" = true ] && [ "$(norm "$merged_base")" != "$(norm "$BASE_HARVEST")" ]; } \
                 || [ "$(norm "$merged_delta")" != "$(norm "$DELTA_HARVEST")" ]; then
                 print_error "$existing_merge already exists but was merged from different inputs:"
                 print_error "  its base:   $merged_base"

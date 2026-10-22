@@ -134,6 +134,12 @@ expect_out "Delta harvest already exists" "complete delta harvest reused"
 expect_out "Merge output already exists" "merge with the same base and delta reused"
 [ "$(calls_count HARVEST)$(calls_count MERGE)" = "00" ] && pass "no harvest or merge rerun" || fail "harvest/merge rerun on resume"
 
+# Without --base the base is the newest local harvest, which is now this merge
+: > "$CALLS"
+VALID=5,351 run_nara --month=202510 --run-id=$RUN --skip-pipeline
+expect_rc 0 "rerun without --base completes"
+expect_out "Merge output already exists" "merge reused without --base (its own output isn't taken as a new base)"
+
 OTHER_BASE="$DATA/nara/harvest/20240101_000000-nara-OriginalRecord.avro"
 mkdir -p "$OTHER_BASE"
 VALID=5,351 run_nara --month=202510 --run-id=$RUN --skip-pipeline --base="$OTHER_BASE"

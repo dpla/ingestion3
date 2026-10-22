@@ -247,7 +247,8 @@ Each run works in `delta/<month>/<run id>/` (default run id: today, `YYYYMMDD`),
 so rerunning a month never reuses an earlier run's preprocessing, delta harvest,
 or delete files. Steps are skipped only when they already finished in the same run:
 preprocessing once it wrote `.preprocess_complete`, the delta harvest once it has a
-`_MANIFEST`, and the merge once its `_SUMMARY.txt` names the same base and delta.
+`_MANIFEST`, and the merge once its `_SUMMARY.txt` names the same delta and (with
+`--base`, or for later months of a multi-month run) the same base.
 A run id that isn't a `YYYYMMDD` date also needs `--datestamp=YYYYMMDD`.
 
 After a zero-delete gate halt, the halt message prints the resume command. For
