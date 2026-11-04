@@ -11,13 +11,16 @@
 #   apt install sqlite3 jq    # Ubuntu
 #
 # Usage:
-#   ./scripts/community-webs-export.sh [--db=/path/to/file.db] [--update-conf]
+#   ./scripts/community-webs-export.sh [--db=/path/to/file.db]
 #
 #   --db=/path/to/file.db  Explicit DB path (default: latest *.db in originalRecords/)
-#   --update-conf          Update i3.conf community-webs.harvest.endpoint
 #   --skip-validate        Skip JSONL schema validation (not recommended)
 #
 # Output: $DPLA_DATA/community-webs/originalRecords/<YYYYMMDD>/community-webs-<timestamp>.zip
+#
+# The newest ZIP is also copied to the top of originalRecords/, replacing the
+# previous one. The harvester reads only that level, so community-webs.harvest.endpoint
+# stays fixed at originalRecords/ and a re-export can't double the records.
 #
 # See scripts/SCRIPTS.md for full documentation.
 #
@@ -34,7 +37,6 @@ COMMON_DIR="${COMMON_DIR:-$(get_common_dir)}"
 
 # Defaults
 DB_PATH=""
-UPDATE_CONF=false
 SKIP_VALIDATE=false
 
 usage() {
@@ -44,7 +46,6 @@ usage() {
     echo ""
     echo "Options:"
     echo "  --db=PATH        Explicit DB file path"
-    echo "  --update-conf    Update i3.conf community-webs.harvest.endpoint"
     echo "  --skip-validate  Skip JSONL schema validation (not recommended)"
     echo "  --help, -h       Show this help"
     echo ""
@@ -53,7 +54,7 @@ usage() {
     echo ""
     echo "Example:"
     echo "  $0"
-    echo "  $0 --db=$CW_ORIGINALS/20260204_dpla_export.db --update-conf"
+    echo "  $0 --db=$CW_ORIGINALS/20260204_dpla_export.db"
     exit 1
 }
 
@@ -62,9 +63,6 @@ for arg in "$@"; do
     case "$arg" in
         --db=*)
             DB_PATH="${arg#*=}"
-            ;;
-        --update-conf)
-            UPDATE_CONF=true
             ;;
         --skip-validate)
             SKIP_VALIDATE=true
@@ -168,19 +166,16 @@ main() {
 
     log_success "Export complete: $ZIP_PATH"
 
-    if [[ "$UPDATE_CONF" == "true" ]] && [[ -n "${I3_CONF:-}" ]] && [[ -f "$I3_CONF" ]]; then
-        print_step "Updating i3.conf..."
-        if grep -q 'community-webs\.harvest\.endpoint' "$I3_CONF" 2>/dev/null; then
-            sed_i "s|community-webs\.harvest\.endpoint.*|community-webs.harvest.endpoint = \"$OUT_DIR/\"|" "$I3_CONF"
-            log_info "Updated community-webs.harvest.endpoint -> $OUT_DIR/"
-        else
-            log_info "Add to i3.conf: community-webs.harvest.endpoint = \"$OUT_DIR/\""
-        fi
-    fi
+    # Publish for harvest: the temp name doesn't end in .zip, so the harvester
+    # never sees a partial copy.
+    cp "$ZIP_PATH" "$CW_ORIGINALS/.$ZIP_NAME.tmp"
+    find "$CW_ORIGINALS" -maxdepth 1 -type f -name "*.zip" -exec rm -f {} +
+    mv "$CW_ORIGINALS/.$ZIP_NAME.tmp" "$CW_ORIGINALS/$ZIP_NAME"
+    log_info "Ready for harvest: $CW_ORIGINALS/$ZIP_NAME"
 
     echo ""
     echo "Next: ./scripts/harvest.sh community-webs"
-    echo "Or:   ./scripts/community-webs-ingest.sh --full"
+    echo "Or:   ./scripts/harvest/community-webs-ingest.sh --skip-export"
 }
 
 main "$@"

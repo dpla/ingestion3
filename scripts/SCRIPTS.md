@@ -289,7 +289,6 @@ Export Community Webs SQLite database to JSONL and ZIP for harvest. Internet Arc
 ```bash
 ./scripts/harvest/community-webs-export.sh                        # Auto-detect latest *.db
 ./scripts/harvest/community-webs-export.sh --db=/path/to/file.db  # Explicit DB path
-./scripts/harvest/community-webs-export.sh --update-conf          # Also update i3.conf endpoint
 ./scripts/harvest/community-webs-export.sh --skip-validate        # Skip JSONL schema validation (not recommended)
 ```
 
@@ -299,14 +298,18 @@ The script validates the JSONL against the expected harvest schema (required `id
 
 ### community-webs-ingest.sh - Community Webs Ingest
 
-Orchestrates export + harvest + (optional) full pipeline. Located in `scripts/harvest/`:
+Runs export + harvest + mapping + enrichment + jsonl + safety check, then stops for review. Nothing reaches S3 or the hub contacts until `--send`. Slack reports every stage, including export and harvest. Located in `scripts/harvest/`; normally launched with `ingest_python_scripts/community-webs/launch_cw.py`.
 
 ```bash
-./scripts/harvest/community-webs-ingest.sh              # Export + harvest only
-./scripts/harvest/community-webs-ingest.sh --full       # Export + harvest + mapping + enrichment + jsonl
-./scripts/harvest/community-webs-ingest.sh --skip-export  # Harvest only (endpoint must already point to ZIP)
-./scripts/harvest/community-webs-ingest.sh --db=/path/to/db --update-conf
+./scripts/harvest/community-webs-ingest.sh --db=/path/to/db   # Full run, stops for review
+./scripts/harvest/community-webs-ingest.sh --skip-export      # Same, reusing the current ZIP
+./scripts/harvest/community-webs-ingest.sh --send             # After review: S3 sync + partner email
+./scripts/harvest/community-webs-ingest.sh --send --force     # Send despite a blocked safety check
 ```
+
+`community-webs.harvest.endpoint` stays fixed at `$DPLA_DATA/community-webs/originalRecords/`, and the script stops if it points anywhere else. The export copies the newest ZIP to the top of that folder, replacing the previous one, and keeps a dated copy.
+
+`ingest.sh --skip-email` skips the partner email for any hub.
 
 ### delete-by-id.sh - Elasticsearch Delete
 

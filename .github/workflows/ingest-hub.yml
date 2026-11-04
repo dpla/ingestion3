@@ -143,9 +143,10 @@ jobs:
               ;;
 
             community-webs)
-              # --skip-upload assumes the .db is already in s3://dpla-hub-community-webs/.
+              # Uses the newest .db in s3://dpla-hub-community-webs/ (see copy_cw.py).
               # The job fires in the background on EC2; this step exits once it's launched.
-              CMD=(python3 ingest_python_scripts/community-webs/launch_cw.py --skip-upload)
+              # Sending stays manual: launch_cw.py --send
+              CMD=(python3 ingest_python_scripts/community-webs/launch_cw.py)
               [[ -n "$OVERRIDE" ]] && CMD+=(--timestamp "$OVERRIDE")
               ;;
 

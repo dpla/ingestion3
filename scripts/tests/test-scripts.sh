@@ -909,6 +909,17 @@ SQL
         TESTS_RUN=$((TESTS_RUN + 1))
         log_fail "Community Webs ZIP missing community-webs.jsonl"
     fi
+
+    # A re-export must replace the ZIP the harvester reads, not add a second one
+    DPLA_DATA="$tmpdir" "$export_script" --db="$test_db" --skip-validate >/dev/null 2>&1 || true
+    local top_zips
+    top_zips=$(find "$out_dir" -maxdepth 1 -type f -name "*.zip" | wc -l | tr -d ' ')
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if [[ "$top_zips" -eq 1 ]]; then
+        log_pass "Community Webs re-export leaves one ZIP for harvest"
+    else
+        log_fail "Community Webs re-export left $top_zips ZIPs in $out_dir"
+    fi
 }
 
 # =============================================================================
