@@ -280,26 +280,22 @@ python3 smithsonian/check_status_smithsonian.py --watch
 Internet Archive delivers a SQLite `.db` file directly (not via S3). File recieved to tech@dp.la and downloaded to local machine.
 
 ```bash
-python3 community-webs/launch_cw.py --db ~/Downloads/community-webs.db --full
+python3 community-webs/launch_cw.py ~/Downloads/community-webs.sqlite3
 ```
 
-This:
-1. Uploads the `.db` to `s3://dpla-scratch/community-webs/`
+This shows the record counts, asks once, then:
+1. Uploads the `.db` to `s3://dpla-hub-community-webs/`
 2. Downloads it to EC2 at a temp path
-3. Runs `community-webs-ingest.sh --db=<path> --full` on EC2: export → harvest → mapping → enrichment → jsonl → S3
+3. Runs `community-webs-ingest.sh` on EC2: export → harvest → mapping → enrichment → jsonl → safety check, then stops for review
 
-Without `--full`, only export and harvest run. Re-run with `--full` and `--skip-export` to continue:
-
-```bash
-python3 community-webs/launch_cw.py --full --skip-export
-```
-
-**Skip flags for resuming after a failure:**
+Slack reports each stage and posts the counts when it's ready. Nothing reaches S3 or the hub contacts until:
 
 ```bash
---skip-upload    # .db already in s3://dpla-scratch/community-webs/
---skip-export    # ZIP already on EC2, skip straight to harvest
+python3 community-webs/launch_cw.py --send
+python3 community-webs/launch_cw.py --send --force   # the safety check blocked it and you've reviewed the drop
 ```
+
+To retry after a failure, run the same command again. `--skip-upload` uses the newest `.db` already in S3.
 
 Monitor with:
 

@@ -40,6 +40,7 @@ usage() {
     echo "  --harvest-only          Only run harvest step"
     echo "  --mapping-only          Only run mapping step (implies --skip-harvest)"
     echo "  --skip-s3-sync          Skip S3 sync step (pipeline stops at JSONL)"
+    echo "  --skip-email            Skip the partner summary email"
     echo "  --resume-from <step>    Resume from a specific step, reusing existing outputs"
     echo "                          for all preceding steps. Valid steps: mapping,"
     echo "                          enrichment, jsonl. Implies --skip-harvest."
@@ -75,6 +76,7 @@ SKIP_HARVEST=false
 HARVEST_ONLY=false
 MAPPING_ONLY=false
 SKIP_S3_SYNC=false
+SKIP_EMAIL=false
 RESUME_FROM=""
 
 # Minimum free disk space (GB) required before starting each step.
@@ -99,6 +101,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --skip-s3-sync)
             SKIP_S3_SYNC=true
+            shift
+            ;;
+        --skip-email)
+            SKIP_EMAIL=true
             shift
             ;;
         --resume-from)
@@ -468,7 +474,7 @@ fi
 # Send partner summary email only if safety check passed
 HUB_EMAIL=$(get_hub_email "$PROVIDER")
 EMAIL_NOTE=""
-if [ -n "$HUB_EMAIL" ]; then
+if [ -n "$HUB_EMAIL" ] && [ "$SKIP_EMAIL" = false ]; then
     SBT_OPTS="-Xmx4g"
     if run_entry dpla.ingestion3.utils.Emailer \
            "$MAP_TS_DIR" "$PROVIDER" "$I3_CONF"; then

@@ -5,19 +5,25 @@ Community Webs (Internet Archive) ingest orchestrator.
 Internet Archive delivers a SQLite .db file. This script:
   1. Uploads your local .db file to s3://dpla-hub-community-webs/
   2. Downloads it to EC2 at a temp path
-  3. Runs community-webs-ingest.sh --db=<path> on EC2
-     (handles export → harvest, and optionally full pipeline)
+  3. Runs community-webs-ingest.sh on EC2: export -> harvest -> mapping ->
+     enrichment -> jsonl -> safety check, then stops for review
 
-After this script completes, run check_cw.py to monitor progress.
+Nothing reaches S3 or the hub contacts until you run --send. Slack reports each
+stage and posts the counts when the run is ready for review.
 
 Usage:
-    python3 launch_cw.py --db ~/Downloads/community-webs.db
-    python3 launch_cw.py --db ~/Downloads/community-webs.db --full
-    python3 launch_cw.py --db ~/Downloads/community-webs.db --full --update-conf
+    python3 launch_cw.py ~/Downloads/community-webs.sqlite3
+    python3 launch_cw.py --send             # after review: S3 sync + partner email
+    python3 launch_cw.py --send --force     # send despite a blocked safety check
 
-Skip flags (for resuming a failed run):
-    --skip-upload     .db already in s3://dpla-hub-community-webs/
-    --skip-export     ZIP already on EC2 (community-webs-ingest.sh --skip-export)
+Rerunning the same command starts again from the export; it can't double records.
+
+Other flags:
+    --skip-upload     .db already in s3://dpla-hub-community-webs/ (newest is used)
+    --timestamp       With --skip-upload: use this staged .db
+    --resume          Show the running process and the log tail
+
+After launching, run check_cw.py to monitor progress.
 
 Prerequisites:
     - AWS CLI installed and authenticated locally
@@ -29,6 +35,8 @@ import argparse
 import base64
 import json
 import os
+import shlex
+import sqlite3
 import subprocess
 import sys
 import time
@@ -68,6 +76,8 @@ CW_SCRIPT     = f"{REPO_PATH}/scripts/harvest/community-webs-ingest.sh"
 S3_STAGING    = "s3://dpla-hub-community-webs"
 DATA_ROOT     = "/home/ec2-user/data"
 INGEST_LOG    = f"{DATA_ROOT}/community-webs-ingest.log"
+READY_FILE    = f"{DATA_ROOT}/community-webs/.ready-for-review"
+S3_JSONL      = "s3://dpla-master-dataset/community-webs/jsonl"
 
 
 # ---------- AWS / SSM helpers ----------
@@ -117,7 +127,11 @@ def ssm_run(shell_cmd, timeout_seconds=120, poll_seconds=5):
 
 def ssm_bg(shell_cmd, log_path):
     """Fire a long-running command as a nohup background job. Returns PID."""
-    launch = f"nohup bash -c {json.dumps(shell_cmd)} > {log_path} 2>&1 & echo $!"
+    # setsid: the job must outlive this SSM command. The exit code file tells a
+    # fast finish apart from a crash.
+    wrapped = f"{shell_cmd}; echo $? > {log_path}.exitcode"
+    launch = (f"rm -f {log_path}.exitcode; setsid nohup bash -c {shlex.quote(wrapped)} "
+              f"> {log_path} 2>&1 < /dev/null & echo $!")
     out = ssm_run(launch, timeout_seconds=60)
     return out.strip().split()[-1]
 
@@ -208,14 +222,35 @@ def detect_staged_db():
 
 # ---------- stages ----------
 
+def count_records(db_path):
+    """Count ait rows locally so a bad file fails before anything is uploaded."""
+    try:
+        with sqlite3.connect(f"file:{db_path}?mode=ro", uri=True) as conn:
+            return conn.execute("SELECT count(*) FROM ait").fetchone()[0]
+    except sqlite3.Error as e:
+        sys.exit(f"{db_path} is not a readable Community Webs export ({e}).")
+
+
+def previous_count():
+    """Record count of the newest snapshot in S3, or None if it can't be read."""
+    try:
+        snapshots = sorted(
+            line.split()[-1] for line in aws(["s3", "ls", f"{S3_JSONL}/"]).splitlines()
+            if line.strip().endswith(".jsonl/")
+        )
+        if not snapshots:
+            return None
+        manifest = aws(["s3", "cp", f"{S3_JSONL}/{snapshots[-1]}_MANIFEST", "-"])
+    except RuntimeError:
+        return None
+    for line in manifest.splitlines():
+        if line.startswith("Record count:"):
+            return int(line.split()[-1].replace(",", ""))
+    return None
+
+
 def stage_upload(db_path, timestamp):
-    step(1, "Upload .db to S3")
-    s3_key  = f"{timestamp}-community-webs.db"
-    s3_dest = f"{S3_STAGING}/{s3_key}"
-    size_mb = os.path.getsize(db_path) / 1024 / 1024
-    print(f"  Local:  {db_path}  ({size_mb:.1f} MB)")
-    print(f"  S3:     {s3_dest}")
-    confirm(f"Upload {size_mb:.1f} MB to S3?")
+    s3_dest = f"{S3_STAGING}/{timestamp}-community-webs.db"
     result = subprocess.run(
         ["aws", "s3", "cp", db_path, s3_dest, "--no-progress"]
         + (["--profile", AWS_PROFILE] if AWS_PROFILE else []),
@@ -228,47 +263,25 @@ def stage_upload(db_path, timestamp):
 
 
 def stage_download(s3_db, timestamp):
-    step(2, "Download .db to EC2")
     ec2_db = f"/tmp/community-webs-{timestamp}.db"
-    print(f"  S3:  {s3_db}")
-    print(f"  EC2: {ec2_db}")
     ssm_run(f"aws s3 cp {s3_db} {ec2_db} --region {REGION}", timeout_seconds=600)
     print(f"  ✓ Downloaded → {ec2_db}")
     return ec2_db
 
 
-def stage_ingest(ec2_db, timestamp, full_pipeline, update_conf, skip_export):
-    step(3, "Run community-webs-ingest.sh on EC2")
-
-    script_args = [f"--db={ec2_db}"]
-    if skip_export:
-        script_args.append("--skip-export")
-    if update_conf:
-        script_args.append("--update-conf")
-    if full_pipeline:
-        script_args.append("--full")
-
-    cmd = f"bash {CW_SCRIPT} {' '.join(script_args)}"
-    print(f"  Command: {cmd}")
-    print(f"  Log:     {INGEST_LOG}")
-    print()
-    if full_pipeline:
-        print("  This will run: export → harvest → mapping → enrichment → jsonl → S3")
-    else:
-        print("  This will run: export → harvest only")
-        print("  Re-run with --full to continue to mapping/enrichment/jsonl.")
-    confirm("Launch Community Webs ingest now?")
-
+def stage_ingest(ec2_db):
+    cmd = f"bash {CW_SCRIPT} --db={ec2_db}"
     pid = ssm_bg(cmd, INGEST_LOG)
-    print(f"  PID: {pid}")
+    print(f"  ✓ Started on EC2 (PID {pid})")
 
-    # A PID only means nohup forked — the job can still die instantly (bad
-    # path, missing tool) while the launch looks successful. Confirm it's
-    # alive; on failure show the log and exit non-zero so CI goes red.
+    # A PID only means the fork worked — the job can still die instantly (bad
+    # path, missing tool) while the launch looks successful. On failure show the
+    # log and exit non-zero so CI goes red.
     time.sleep(5)
     try:
         check = ssm_run(
             f"if ps -p {pid} >/dev/null 2>&1; then echo INGEST_RUNNING; "
+            f"elif [ \"$(cat {INGEST_LOG}.exitcode 2>/dev/null)\" = 0 ]; then echo INGEST_DONE; "
             f"else echo INGEST_NOT_RUNNING; tail -20 {INGEST_LOG} 2>&1; fi",
             timeout_seconds=30,
         )
@@ -278,23 +291,39 @@ def stage_ingest(ec2_db, timestamp, full_pipeline, update_conf, skip_export):
     if "INGEST_NOT_RUNNING" in check:
         sys.exit(f"Community Webs ingest (PID {pid}) exited right after launch. Log tail ({INGEST_LOG}):\n{check}")
 
-    print(f"\n  Monitor with: python3 check_cw.py --watch")
-    print(f"  Or tail log:  python3 launch_cw.py --resume")
+    print("\n  Slack will post each stage, then the counts when it's ready for review.")
+    print("  Nothing goes to S3 or the hub contacts until you run: launch_cw.py --send")
+    print("  Monitor with: python3 check_cw.py --watch")
+
+
+def stage_send(force):
+    """After review: sync the snapshot to S3 and email the hub contacts."""
+    state = ssm_run(
+        f"cat {READY_FILE} 2>/dev/null | head -1; "
+        f"grep '^community-webs.email' {REPO_PATH}-conf/i3.conf | sed 's/.*= *//'",
+        timeout_seconds=30,
+    )
+    print("\nCOMMUNITY WEBS SEND")
+    print(f"  From EC2:\n{state}")
+    if force:
+        print("  --force: sends the newest snapshot even if the safety check blocked it.")
+    confirm("Sync to S3 and email the contacts above?", default_yes=False)
+    flags = "--send --force" if force else "--send"
+    print(ssm_run(f"bash {CW_SCRIPT} {flags} 2>&1 | tail -15; exit ${{PIPESTATUS[0]}}",
+                  timeout_seconds=1800))
 
 
 # ---------- main ----------
 def main():
     parser = argparse.ArgumentParser(description="Community Webs ingest orchestrator")
-    parser.add_argument("--db",
-                        help="Path to local community-webs .db file from Internet Archive")
-    parser.add_argument("--full", action="store_true",
-                        help="Run full pipeline (export + harvest + mapping + enrichment + jsonl + S3)")
-    parser.add_argument("--update-conf", action="store_true",
-                        help="Pass --update-conf to community-webs-ingest.sh")
+    parser.add_argument("db", nargs="?",
+                        help="Path to local community-webs .db/.sqlite3 file from Internet Archive")
+    parser.add_argument("--send", action="store_true",
+                        help="After review: sync the snapshot to S3 and email the hub contacts")
+    parser.add_argument("--force", action="store_true",
+                        help="With --send: send the newest snapshot even if the safety check blocked it")
     parser.add_argument("--skip-upload", action="store_true",
                         help="Skip S3 upload (.db already at s3://dpla-hub-community-webs/)")
-    parser.add_argument("--skip-export", action="store_true",
-                        help="Pass --skip-export to community-webs-ingest.sh (ZIP already on EC2)")
     parser.add_argument("--timestamp",
                         help="Override timestamp (YYYYMMDD_HHMMSS). Auto-generated if omitted.")
     parser.add_argument("--resume", action="store_true",
@@ -316,42 +345,38 @@ def main():
         print(out)
         return
 
+    if args.force and not args.send:
+        parser.error("--force only applies with --send")
+    if args.send:
+        stage_send(args.force)
+        return
+
     if args.skip_upload and not args.timestamp:
         timestamp = detect_staged_db()
     else:
         timestamp = args.timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
-    s3_db     = f"{S3_STAGING}/{timestamp}-community-webs.db"
+    s3_db = f"{S3_STAGING}/{timestamp}-community-webs.db"
 
-    if not args.skip_upload and not args.skip_export:
+    print(f"\nCOMMUNITY WEBS INGEST — {timestamp}")
+    if args.skip_upload:
+        print(f"  File:     {s3_db} (already staged)")
+    else:
         if not args.db:
-            sys.exit("--db is required unless --skip-upload or --skip-export is set.")
+            parser.error("give the path to the .db file, or use --send, --resume or --skip-upload")
         db_path = os.path.expanduser(args.db)
         if not os.path.isfile(db_path):
             sys.exit(f".db file not found: {db_path}")
+        size_mb = os.path.getsize(db_path) / 1024 / 1024
+        prev = previous_count()
+        print(f"  File:     {db_path} ({size_mb:.1f} MB)")
+        print(f"  Records:  {count_records(db_path):,} (previous in S3: {f'{prev:,}' if prev is not None else 'unknown'})")
+    print("  Will run: export → harvest → map → enrich → jsonl → safety check, then stop for review")
+    confirm("Start?")
 
-    print(f"\nCOMMUNITY WEBS INGEST — {timestamp}")
-    print(f"Instance: {INSTANCE_ID}")
-    if not args.skip_upload and not args.skip_export:
-        print(f"Local .db: {os.path.expanduser(args.db)}")
-    print(f"S3 stage: {s3_db}")
-    print(f"Log:      {INGEST_LOG}")
-
-    ec2_db = None
-
-    if not args.skip_upload and not args.skip_export:
-        stage_upload(os.path.expanduser(args.db), timestamp)
-        ec2_db = stage_download(s3_db, timestamp)
-    elif args.skip_upload and not args.skip_export:
-        ec2_db = stage_download(s3_db, timestamp)
-    # if skip_export, ec2_db doesn't matter (community-webs-ingest.sh ignores --db)
-
-    stage_ingest(
-        ec2_db or "",
-        timestamp,
-        full_pipeline=args.full,
-        update_conf=args.update_conf,
-        skip_export=args.skip_export,
-    )
+    if not args.skip_upload:
+        stage_upload(db_path, timestamp)
+    ec2_db = stage_download(s3_db, timestamp)
+    stage_ingest(ec2_db)
 
 
 if __name__ == "__main__":
