@@ -113,16 +113,18 @@ Some hubs have their feed endpoints behind a firewall so the harvests needs to b
 Internet Archive Community Webs sends a SQLite database. From the repo root:
 
 ```shell
-./venv/bin/python ingest_python_scripts/community-webs/launch_cw.py ~/Downloads/community-webs.sqlite3
+./venv/bin/python ingest_python_scripts/community-webs/copy_cw.py ~/Downloads/community-webs.sqlite3
 ```
 
-This uploads the file and runs export, harvest, mapping, enrichment, JSON-L and the safety check on EC2, then stops. Slack reports each stage and posts the counts. After reviewing them:
+This checks the file and copies it to S3. Then run the ingest on the newest copied file:
 
 ```shell
-./venv/bin/python ingest_python_scripts/community-webs/launch_cw.py --send
+./venv/bin/python ingest_python_scripts/community-webs/launch_cw.py
 ```
 
-`--send` syncs the JSON-L to S3 and emails the hub contacts. If the >5% safety check blocked the run and the drop is fine, use `--send --force`. No `i3.conf` edit is needed per delivery: `community-webs.harvest.endpoint` stays at `.../community-webs/originalRecords/`.
+This runs export, harvest, mapping, enrichment, JSON-L and the safety check on EC2, with Slack reporting each stage. When it finishes, it shows the counts and contacts and asks whether to sync the JSON-L to S3 and email the hub. If the >5% safety check blocked the run, it says so and asks the same question.
+
+If you answer no or close the terminal, send later with `launch_cw.py --send`, or `--send --force` for a blocked run. No `i3.conf` edit is needed per delivery: `community-webs.harvest.endpoint` stays at `.../community-webs/originalRecords/`.
 
 See [scripts/SCRIPTS.md](../../scripts/SCRIPTS.md) for `community-webs-export.sh` and `community-webs-ingest.sh` options.
 ### Digital Virginias

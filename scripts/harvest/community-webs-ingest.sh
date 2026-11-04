@@ -151,7 +151,7 @@ run_ingest() {
     jsonl_count=$(read_manifest_count "$jsonl_dir/_MANIFEST")
     printf '%s\n%s\n' "$jsonl_dir" "$map_dir" > "$READY_FILE"
 
-    slack_notify ":pause_button: *$HUB ready for review* — nothing sent yet\nExported: $exported | Harvested: $harvest_count | JSON-L: $jsonl_count\nSnapshot: \`$(basename "$jsonl_dir")\`\nTo sync and email: \`launch_cw.py --send\`" || true
+    slack_notify ":pause_button: *$HUB ready for review* — nothing sent yet\nExported: $exported | Harvested: $harvest_count | JSON-L: $jsonl_count\nSnapshot: \`$(basename "$jsonl_dir")\`\nAnswer the prompt in your terminal, or run \`launch_cw.py --send\`" || true
     log_success "Community Webs ingest complete — ready for review"
     echo ""
     echo "Snapshot: $jsonl_dir ($jsonl_count records)"
