@@ -110,18 +110,21 @@ Some hubs have their feed endpoints behind a firewall so the harvests needs to b
 - Indiana
 
 ### Community Webs
-Internet Archive Community Webs sends a SQLite database. Use the automated scripts to export, validate, and harvest:
+Internet Archive Community Webs sends a SQLite database. From the repo root:
 
-**Automated (recommended):**
-1. Place the `*.db` file in `$DPLA_DATA/community-webs/originalRecords/`
-2. Run: `./scripts/harvest/community-webs-ingest.sh --full --update-conf`
-   - This exports the DB to JSONL, validates schema, zips, updates i3.conf, harvests, and runs the full pipeline (mapping + enrichment + jsonl)
+```shell
+./venv/bin/python ingest_python_scripts/community-webs/copy_cw.py ~/Downloads/community-webs.sqlite3
+```
 
-**Manual (if needed):**
-- Install `jq` and `sqlite3`: `brew install jq sqlite3` / `apt install jq sqlite3`
-1. Export: `./scripts/harvest/community-webs-export.sh --db=/path/to/file.db --update-conf`
-2. Harvest: `./scripts/harvest.sh community-webs`
-3. Pipeline: `./scripts/ingest.sh community-webs --skip-harvest`
+This checks the file and copies it to S3. Then run the ingest on the newest copied file:
+
+```shell
+./venv/bin/python ingest_python_scripts/community-webs/launch_cw.py
+```
+
+This runs export, harvest, mapping, enrichment, JSON-L and the safety check on EC2, with Slack reporting each stage. When it finishes, it shows the counts and contacts and asks whether to sync the JSON-L to S3 and email the hub. If the >5% safety check blocked the run, it says so and asks the same question.
+
+If you answer no or close the terminal, send later with `launch_cw.py --send`, or `--send --force` for a blocked run. No `i3.conf` edit is needed per delivery: `community-webs.harvest.endpoint` stays at `.../community-webs/originalRecords/`.
 
 See [scripts/SCRIPTS.md](../../scripts/SCRIPTS.md) for `community-webs-export.sh` and `community-webs-ingest.sh` options.
 ### Digital Virginias

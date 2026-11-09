@@ -867,11 +867,12 @@ INSERT INTO ait VALUES (
 );
 SQL
 
-    # Export to temp output (override DPLA_DATA for test)
+    # Export to temp output. I3_HOME points at the temp dir too: common.sh sources
+    # $I3_HOME/.env, and the repo's .env would replace DPLA_DATA with the real data dir.
     local out_dir="$tmpdir/community-webs/originalRecords"
     mkdir -p "$out_dir"
 
-    if ! DPLA_DATA="$tmpdir" "$export_script" --db="$test_db" --skip-validate 2>/dev/null; then
+    if ! I3_HOME="$tmpdir" DPLA_DATA="$tmpdir" "$export_script" --db="$test_db" --skip-validate 2>/dev/null; then
         local exit_code=$?
         TESTS_RUN=$((TESTS_RUN + 1))
         log_fail "Community Webs export: command failed (exit $exit_code): DPLA_DATA=$tmpdir $export_script --db=$test_db --skip-validate"
@@ -908,6 +909,25 @@ SQL
     else
         TESTS_RUN=$((TESTS_RUN + 1))
         log_fail "Community Webs ZIP missing community-webs.jsonl"
+    fi
+
+    # A re-export must replace the ZIP the harvester reads, not add a second one.
+    # ZIP names carry a per-second timestamp, so wait one second to get a new name.
+    local first_zip
+    first_zip=$(find "$out_dir" -maxdepth 1 -type f -name "*.zip" -exec basename {} \; | head -1)
+    sleep 1
+    TESTS_RUN=$((TESTS_RUN + 1))
+    if ! I3_HOME="$tmpdir" DPLA_DATA="$tmpdir" "$export_script" --db="$test_db" --skip-validate >/dev/null 2>&1; then
+        log_fail "Community Webs re-export: command failed"
+        return
+    fi
+    local top_zips top_zip
+    top_zips=$(find "$out_dir" -maxdepth 1 -type f -name "*.zip" | wc -l | tr -d ' ')
+    top_zip=$(find "$out_dir" -maxdepth 1 -type f -name "*.zip" -exec basename {} \; | head -1)
+    if [[ "$top_zips" -eq 1 && -n "$first_zip" && "$top_zip" != "$first_zip" ]]; then
+        log_pass "Community Webs re-export replaces the ZIP for harvest"
+    else
+        log_fail "Community Webs re-export: expected 1 new ZIP, found $top_zips (first: $first_zip, now: $top_zip)"
     fi
 }
 
@@ -1058,6 +1078,17 @@ test_tailscale_exit_node() {
         log_pass "Tailscale: all tailscale set calls use sudo ($ts_set_with_sudo/$ts_set_total)"
     else
         log_fail "Tailscale: $((ts_set_total - ts_set_with_sudo)) of $ts_set_total tailscale set calls missing sudo"
+    fi
+
+    # Partner email: the Emailer call must sit after the --skip-email guard
+    TESTS_RUN=$((TESTS_RUN + 1))
+    local guard_line emailer_line
+    guard_line=$(grep -n 'if .*"\$SKIP_EMAIL" = false' <<< "$content" | head -1 | cut -d: -f1)
+    emailer_line=$(grep -n 'run_entry dpla.ingestion3.utils.Emailer' <<< "$content" | head -1 | cut -d: -f1)
+    if [[ -n "$guard_line" && -n "$emailer_line" && "$guard_line" -lt "$emailer_line" ]]; then
+        log_pass "ingest.sh: Emailer runs only after the --skip-email guard"
+    else
+        log_fail "ingest.sh: Emailer call not behind the --skip-email guard (guard=$guard_line, emailer=$emailer_line)"
     fi
 }
 

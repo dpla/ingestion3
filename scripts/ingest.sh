@@ -40,6 +40,9 @@ usage() {
     echo "  --harvest-only          Only run harvest step"
     echo "  --mapping-only          Only run mapping step (implies --skip-harvest)"
     echo "  --skip-s3-sync          Skip S3 sync step (pipeline stops at JSONL)"
+    echo "  --skip-email            Skip the partner summary email"
+    echo "  --outputs-file <path>   Write this run's JSON-L and mapping dirs to <path>"
+    echo "                          (one per line) once JSON-L is done, for wrapper scripts"
     echo "  --resume-from <step>    Resume from a specific step, reusing existing outputs"
     echo "                          for all preceding steps. Valid steps: mapping,"
     echo "                          enrichment, jsonl. Implies --skip-harvest."
@@ -75,6 +78,8 @@ SKIP_HARVEST=false
 HARVEST_ONLY=false
 MAPPING_ONLY=false
 SKIP_S3_SYNC=false
+SKIP_EMAIL=false
+OUTPUTS_FILE=""
 RESUME_FROM=""
 
 # Minimum free disk space (GB) required before starting each step.
@@ -100,6 +105,18 @@ while [[ $# -gt 0 ]]; do
         --skip-s3-sync)
             SKIP_S3_SYNC=true
             shift
+            ;;
+        --skip-email)
+            SKIP_EMAIL=true
+            shift
+            ;;
+        --outputs-file)
+            OUTPUTS_FILE="${2:-}"
+            if [[ -z "$OUTPUTS_FILE" ]]; then
+                log_error "--outputs-file requires a path"
+                usage
+            fi
+            shift 2
             ;;
         --resume-from)
             RESUME_FROM="${2:-}"
@@ -380,6 +397,10 @@ stop_heartbeat
 JSONL_TS_DIR=$(find_latest_data "$PROVIDER" jsonl)
 JSONL_TS=$(basename "$JSONL_TS_DIR")
 log_info "JSONL export complete: $JSONL_TS"
+# Written before the safety check so a wrapper can pair this run's outputs even when it blocks
+if [[ -n "$OUTPUTS_FILE" ]]; then
+    printf '%s\n%s\n' "$JSONL_TS_DIR" "$MAP_TS_DIR" > "$OUTPUTS_FILE"
+fi
 slack_notify_resilient ":white_check_mark: *$PROVIDER JSONL export complete* — starting S3 sync"
 
 # Read record count from JSONL manifest
@@ -468,7 +489,7 @@ fi
 # Send partner summary email only if safety check passed
 HUB_EMAIL=$(get_hub_email "$PROVIDER")
 EMAIL_NOTE=""
-if [ -n "$HUB_EMAIL" ]; then
+if [ -n "$HUB_EMAIL" ] && [ "$SKIP_EMAIL" = false ]; then
     SBT_OPTS="-Xmx4g"
     if run_entry dpla.ingestion3.utils.Emailer \
            "$MAP_TS_DIR" "$PROVIDER" "$I3_CONF"; then

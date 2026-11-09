@@ -280,26 +280,28 @@ python3 smithsonian/check_status_smithsonian.py --watch
 Internet Archive delivers a SQLite `.db` file directly (not via S3). File recieved to tech@dp.la and downloaded to local machine.
 
 ```bash
-python3 community-webs/launch_cw.py --db ~/Downloads/community-webs.db --full
+python3 community-webs/copy_cw.py ~/Downloads/community-webs.sqlite3
+python3 community-webs/launch_cw.py
 ```
 
-This:
-1. Uploads the `.db` to `s3://dpla-scratch/community-webs/`
+`copy_cw.py` checks the file, shows its record count next to the previous one, and copies it to `s3://dpla-hub-community-webs/`.
+
+`launch_cw.py` then:
+1. Finds the newest copied `.db` and asks once
 2. Downloads it to EC2 at a temp path
-3. Runs `community-webs-ingest.sh --db=<path> --full` on EC2: export → harvest → mapping → enrichment → jsonl → S3
+3. Runs `community-webs-ingest.sh` on EC2: export → harvest → mapping → enrichment → jsonl → safety check
+4. Waits, shows the counts and contacts, and asks before syncing to S3 and emailing the hub
 
-Without `--full`, only export and harvest run. Re-run with `--full` and `--skip-export` to continue:
+Slack reports each stage. If the safety check blocked the run, step 4 says so and asks the same question. Without a terminal (GitHub Actions) it stops after starting the run.
 
-```bash
-python3 community-webs/launch_cw.py --full --skip-export
-```
-
-**Skip flags for resuming after a failure:**
+If you answer no or close the terminal, send later:
 
 ```bash
---skip-upload    # .db already in s3://dpla-scratch/community-webs/
---skip-export    # ZIP already on EC2, skip straight to harvest
+python3 community-webs/launch_cw.py --send
+python3 community-webs/launch_cw.py --send --force   # the safety check blocked it and you've reviewed the drop
 ```
+
+To retry after a failure, run `launch_cw.py` again. `--timestamp` picks a specific copied `.db`; a file that already finished is refused without it.
 
 Monitor with:
 
