@@ -298,7 +298,7 @@ The script validates the JSONL against the expected harvest schema (required `id
 
 ### community-webs-ingest.sh - Community Webs Ingest
 
-Runs export + harvest + mapping + enrichment + jsonl + safety check, then stops for review. Nothing reaches S3 or the hub contacts until `--send`. Slack reports every stage, including export and harvest. Located in `scripts/harvest/`; normally launched with `ingest_python_scripts/community-webs/launch_cw.py`.
+Runs export + harvest + mapping + enrichment + jsonl + safety check, then stops for review. Nothing is published to `dpla-master-dataset` or emailed to the hub contacts until `--send`, which syncs only the reviewed snapshot. Slack reports every stage, including export and harvest. Located in `scripts/harvest/`; normally launched with `ingest_python_scripts/community-webs/launch_cw.py`.
 
 ```bash
 ./scripts/harvest/community-webs-ingest.sh --db=/path/to/db   # Full run, stops for review
@@ -309,7 +309,7 @@ Runs export + harvest + mapping + enrichment + jsonl + safety check, then stops 
 
 `community-webs.harvest.endpoint` stays fixed at `$DPLA_DATA/community-webs/originalRecords/`, and the script stops if it points anywhere else. The export copies the newest ZIP to the top of that folder, replacing the previous one, and keeps a dated copy.
 
-`ingest.sh --skip-email` skips the partner email for any hub.
+`ingest.sh --skip-email` skips the partner email for any hub. `ingest.sh --outputs-file <path>` records the run's JSON-L and mapping dirs, which `community-webs-ingest.sh` uses to pair them.
 
 ### delete-by-id.sh - Elasticsearch Delete
 

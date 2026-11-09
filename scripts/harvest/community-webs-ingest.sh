@@ -17,7 +17,7 @@
 #   --db=PATH       Explicit DB path (passed to community-webs-export.sh)
 #   --skip-export   Reuse the current ZIP in originalRecords/
 #   --send          Sync the reviewed snapshot to S3 and email the hub contacts
-#   --force         With --send: send the newest snapshot even though the run
+#   --force         With --send: send the last run's snapshot even though it
 #                   did not finish cleanly (e.g. the >5% safety check blocked it)
 #   --help, -h      Show help
 #
@@ -33,6 +33,8 @@ source "$SCRIPTS_ROOT/common.sh"
 HUB="community-webs"
 CW_ORIGINALS="${DPLA_DATA}/${HUB}/originalRecords"
 READY_FILE="${DPLA_DATA}/${HUB}/.ready-for-review"
+# JSON-L and mapping dirs of the latest run, as recorded by ingest.sh (also on a blocked run)
+RUN_FILE="${DPLA_DATA}/${HUB}/.last-run"
 
 # Defaults
 SKIP_EXPORT=false
@@ -51,7 +53,7 @@ usage() {
     echo "  --db=PATH       Explicit DB path for export"
     echo "  --skip-export   Reuse the current ZIP in originalRecords/"
     echo "  --send          Sync the reviewed snapshot to S3 and email the hub contacts"
-    echo "  --force         With --send: send the newest snapshot even if the run did not finish cleanly"
+    echo "  --force         With --send: send the last run's snapshot even if it did not finish cleanly"
     echo "  --help, -h      Show this help"
     exit 1
 }
@@ -103,7 +105,7 @@ check_endpoint() {
 
 run_ingest() {
     setup_java "4g" || die "Failed to setup Java"
-    rm -f "$READY_FILE"
+    rm -f "$READY_FILE" "$RUN_FILE"
     mkdir -p "$CW_ORIGINALS"
     check_endpoint
 
@@ -141,15 +143,17 @@ run_ingest() {
     STAGE="pipeline"
     ALERT_ON_EXIT=false
     print_step "Running pipeline (mapping + enrichment + jsonl + safety check)..."
-    "$SCRIPTS_ROOT/ingest.sh" "$HUB" --skip-harvest --skip-s3-sync --skip-email || die "Pipeline failed"
+    "$SCRIPTS_ROOT/ingest.sh" "$HUB" --skip-harvest --skip-s3-sync --skip-email \
+        --outputs-file "$RUN_FILE" || die "Pipeline failed"
     ALERT_ON_EXIT=true
 
     STAGE="review handoff"
     local jsonl_dir map_dir jsonl_count
-    jsonl_dir=$(find_latest_data "$HUB" jsonl) || die "No jsonl output found"
-    map_dir=$(find_latest_data "$HUB" mapping) || die "No mapping output found"
+    [[ -s "$RUN_FILE" ]] || die "ingest.sh did not record its output dirs in $RUN_FILE"
+    jsonl_dir=$(sed -n 1p "$RUN_FILE")
+    map_dir=$(sed -n 2p "$RUN_FILE")
     jsonl_count=$(read_manifest_count "$jsonl_dir/_MANIFEST")
-    printf '%s\n%s\n' "$jsonl_dir" "$map_dir" > "$READY_FILE"
+    cp "$RUN_FILE" "$READY_FILE"
 
     slack_notify ":pause_button: *$HUB ready for review* — nothing sent yet\nExported: $exported | Harvested: $harvest_count | JSON-L: $jsonl_count\nSnapshot: \`$(basename "$jsonl_dir")\`\nAnswer the prompt in your terminal, or run \`launch_cw.py --send\`" || true
     log_success "Community Webs ingest complete — ready for review"
@@ -165,13 +169,17 @@ run_send() {
         jsonl_dir=$(sed -n 1p "$READY_FILE")
         map_dir=$(sed -n 2p "$READY_FILE")
     elif [[ "$FORCE" == "true" ]]; then
-        jsonl_dir=$(find_latest_data "$HUB" jsonl) || die "No jsonl output found"
-        map_dir=$(find_latest_data "$HUB" mapping) || die "No mapping output found"
-        log_warn "No clean run waiting for review; --force is sending the newest snapshot"
+        # The last run's own record, so the email describes the snapshot being synced
+        [[ -s "$RUN_FILE" ]] || die "No record of the last run's outputs ($RUN_FILE); can't pair JSON-L with mapping. Rerun the ingest."
+        jsonl_dir=$(sed -n 1p "$RUN_FILE")
+        map_dir=$(sed -n 2p "$RUN_FILE")
+        log_warn "No clean run waiting for review; --force is sending the last run's snapshot"
     else
         die "No run is waiting for review. If the safety check blocked it and you have reviewed the drop, use --send --force."
     fi
+    [[ -n "$jsonl_dir" && -n "$map_dir" ]] || die "Run record is missing the JSON-L or mapping dir"
     [[ -f "$jsonl_dir/_SUCCESS" ]] || die "Snapshot is incomplete (no _SUCCESS): $jsonl_dir"
+    [[ -f "$map_dir/_SUMMARY" ]] || die "Mapping summary not found: $map_dir/_SUMMARY"
 
     local jsonl_ts jsonl_count
     jsonl_ts=$(basename "$jsonl_dir")
@@ -180,7 +188,8 @@ run_send() {
 
     STAGE="S3 sync"
     print_step "Syncing $jsonl_ts to S3..."
-    "$SCRIPTS_ROOT/s3-sync.sh" "$HUB" jsonl
+    # Only this snapshot: other local snapshots (older blocked runs) must not go up with it
+    "$SCRIPTS_ROOT/s3-sync.sh" "$HUB" "jsonl/$jsonl_ts"
     slack_notify ":white_check_mark: *$HUB synced to S3* ($jsonl_count records)\nSnapshot: \`$jsonl_ts\`" || true
 
     # The sync is safe to repeat, so a failed email can be retried with --send

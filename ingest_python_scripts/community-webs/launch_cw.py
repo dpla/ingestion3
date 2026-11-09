@@ -8,8 +8,9 @@ Community Webs (Internet Archive) ingest, using the newest file from copy_cw.py.
      enrichment -> jsonl -> safety check
   4. Waits, shows the counts, and asks before syncing to S3 and emailing the hub
 
-Nothing reaches S3 or the hub contacts unless you say yes. Slack reports each
-stage. Without a terminal (GitHub Actions) it starts the run and exits at step 3.
+The .db is already staged in s3://dpla-hub-community-webs/ (copy_cw.py). Nothing
+is published to s3://dpla-master-dataset/ or emailed to the hub contacts unless
+you say yes. Slack reports each stage. Without a terminal (GitHub Actions) it starts the run and exits at step 3.
 
 Usage:
     python3 copy_cw.py ~/Downloads/community-webs.sqlite3
@@ -74,6 +75,7 @@ S3_STAGING    = "s3://dpla-hub-community-webs"
 DATA_ROOT     = "/home/ec2-user/data"
 INGEST_LOG    = f"{DATA_ROOT}/community-webs-ingest.log"
 READY_FILE    = f"{DATA_ROOT}/community-webs/.ready-for-review"
+RUN_FILE      = f"{DATA_ROOT}/community-webs/.last-run"
 S3_JSONL      = "s3://dpla-master-dataset/community-webs/jsonl"
 
 
@@ -243,6 +245,12 @@ def stage_download(s3_db, timestamp):
 
 
 def stage_ingest(ec2_db):
+    # One run at a time: they share the log, exit code file and run record.
+    # The [c] keeps pgrep from matching this check itself.
+    busy = ssm_run("pgrep -f '[c]ommunity-webs-ingest.sh' || true", timeout_seconds=30).strip()
+    if busy:
+        sys.exit(f"A Community Webs ingest is already running on EC2 (PID {busy}). "
+                 "Wait for it, or check it with: launch_cw.py --resume")
     cmd = f"bash {CW_SCRIPT} --db={ec2_db}"
     pid = ssm_bg(cmd, INGEST_LOG)
     print(f"  ✓ Started on EC2 (PID {pid})")
@@ -311,7 +319,7 @@ def review_and_send(pid):
 def stage_send(force):
     """After review: sync the snapshot to S3 and email the hub contacts."""
     state = ssm_run(
-        f"S=$(head -1 {READY_FILE} 2>/dev/null || ls -d {DATA_ROOT}/community-webs/jsonl/*/ | sort | tail -1); "
+        f"S=$(head -1 {READY_FILE} 2>/dev/null || head -1 {RUN_FILE} 2>/dev/null); "
         f"echo \"Snapshot: $S\"; grep 'Record count' \"$S/_MANIFEST\"; "
         f"echo Contacts:; grep '^community-webs.email' {REPO_PATH}-conf/i3.conf | sed 's/.*= *//'",
         timeout_seconds=30,
@@ -321,7 +329,7 @@ def stage_send(force):
     print(f"{state}")
     print(f"Previous in S3: {f'{prev:,}' if prev is not None else 'unknown'}")
     if force:
-        print("  This sends the newest snapshot even though the safety check blocked it.")
+        print("  This sends the last run's snapshot even though the safety check blocked it.")
     if not ask("Sync to S3 and email the contacts above?", default_yes=False):
         later = "--send --force" if force else "--send"
         print(f"  Nothing sent. To send later: launch_cw.py {later}")
@@ -382,7 +390,7 @@ def main():
         review_and_send(pid)
     else:
         print("\n  Started. Slack posts the counts when it's ready for review.")
-        print("  Nothing goes to S3 or the hub contacts until you run: launch_cw.py --send")
+        print("  Nothing is published to dpla-master-dataset or emailed until you run: launch_cw.py --send")
 
 
 if __name__ == "__main__":

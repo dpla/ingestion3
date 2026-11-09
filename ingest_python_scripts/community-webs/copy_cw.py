@@ -14,6 +14,7 @@ Then run launch_cw.py, which uses the newest copied file.
 
 import argparse
 import os
+from pathlib import Path
 import sqlite3
 import subprocess
 import sys
@@ -25,7 +26,8 @@ from launch_cw import AWS_PROFILE, S3_STAGING, previous_count
 def count_records(db_path):
     """Count ait rows so a bad file fails before anything is uploaded."""
     try:
-        with sqlite3.connect(f"file:{db_path}?mode=ro", uri=True) as conn:
+        uri = Path(db_path).resolve().as_uri() + "?mode=ro"  # as_uri percent-encodes the path
+        with sqlite3.connect(uri, uri=True) as conn:
             return conn.execute("SELECT count(*) FROM ait").fetchone()[0]
     except sqlite3.Error as e:
         sys.exit(f"{db_path} is not a readable Community Webs export ({e}).")
@@ -42,6 +44,8 @@ def main():
 
     size_mb = os.path.getsize(db_path) / 1024 / 1024
     records = count_records(db_path)
+    if records == 0:
+        sys.exit(f"{db_path} has no records in the ait table; nothing copied.")
     prev = previous_count()
     print(f"  File:     {db_path} ({size_mb:.1f} MB)")
     print(f"  Records:  {records:,} (previous in S3: {f'{prev:,}' if prev is not None else 'unknown'})")

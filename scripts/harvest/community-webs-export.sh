@@ -167,10 +167,11 @@ main() {
     log_success "Export complete: $ZIP_PATH"
 
     # Publish for harvest: the temp name doesn't end in .zip, so the harvester
-    # never sees a partial copy.
-    cp "$ZIP_PATH" "$CW_ORIGINALS/.$ZIP_NAME.tmp"
-    find "$CW_ORIGINALS" -maxdepth 1 -type f -name "*.zip" -exec rm -f {} +
-    mv "$CW_ORIGINALS/.$ZIP_NAME.tmp" "$CW_ORIGINALS/$ZIP_NAME"
+    # never sees a partial copy. Old ZIPs go only after the new one is in place,
+    # so a failed copy or move leaves the previous ZIP harvestable.
+    cp "$ZIP_PATH" "$CW_ORIGINALS/.$ZIP_NAME.tmp" || die "Could not stage $ZIP_NAME for harvest"
+    mv "$CW_ORIGINALS/.$ZIP_NAME.tmp" "$CW_ORIGINALS/$ZIP_NAME" || die "Could not publish $ZIP_NAME for harvest"
+    find "$CW_ORIGINALS" -maxdepth 1 -type f -name "*.zip" ! -name "$ZIP_NAME" -exec rm -f {} +
     log_info "Ready for harvest: $CW_ORIGINALS/$ZIP_NAME"
 
     echo ""
