@@ -148,6 +148,27 @@ To resume a failed run partway through:
 python3 launch_ingest.py <hub> --resume-from mapping     # or enrichment / jsonl
 ```
 
+To run without the partner summary email at the end (for example, to review the counts before the hub hears about them):
+
+```bash
+python3 launch_ingest.py <hub> --skip-email
+```
+
+This passes `--skip-email` to `ingest.sh` on EC2, so the EC2 checkout of ingestion3 must include it. It combines with `--resume-from` and the other options.
+
+To send the email later, run `send-ingest-email.sh` on EC2 as `ec2-user` from the ingestion3 checkout, since it reads the hub's mapping output there (`/home/ec2-user/data/<hub>/mapping/`, newest run unless you pass a mapping dir). The hub is the first argument. Without `--yes` it shows the recipients and summary and asks `Send email? (y/n)`, which needs an interactive shell (e.g. an SSM session):
+
+```bash
+sudo -u ec2-user bash -lc "cd /home/ec2-user/ingestion3 && source .env && bash scripts/communication/send-ingest-email.sh <hub>"
+```
+
+Through `aws ssm send-command` there is no terminal to answer the prompt, so add `--yes`, which sends immediately to the hub's i3.conf contacts:
+
+```bash
+aws ssm send-command --profile dpla --instance-ids <ingest-instance-id> --document-name AWS-RunShellScript \
+  --parameters 'commands=["sudo -u ec2-user bash -lc \"cd /home/ec2-user/ingestion3 && source .env && bash scripts/communication/send-ingest-email.sh --yes <hub>\""]'
+```
+
 ---
 
 ### Step 3 — Monitor
