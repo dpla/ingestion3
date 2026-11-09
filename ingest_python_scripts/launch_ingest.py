@@ -11,6 +11,7 @@ Usage:
     python3 run/launch_ingest.py ohio                 # detects file hub, checks S3
     python3 run/launch_ingest.py ohio --bucket dpla-hub-ohio
     python3 run/launch_ingest.py bpl --resume-from mapping
+    python3 run/launch_ingest.py bpl --skip-email     # no partner summary email
 """
 import argparse
 import base64
@@ -283,6 +284,12 @@ def main() -> None:
         help="Only run the mapping step (skip harvest, enrichment, jsonl, S3 sync).",
     )
     parser.add_argument(
+        "--skip-email",
+        action="store_true",
+        help="Don't send the partner summary email at the end (passes --skip-email to "
+             "ingest.sh; the EC2 checkout must include it).",
+    )
+    parser.add_argument(
         "--non-interactive", action="store_true",
         help="Non-interactive mode for CI/GitHub Actions: skip all prompts, "
              "fail fast on missing hub or ambiguous harvest type.",
@@ -343,6 +350,8 @@ def main() -> None:
         extra = f" --resume-from {args.resume_from}"
     else:
         extra = ""
+    if args.skip_email:
+        extra += " --skip-email"
     gha_actor = os.environ.get("GHA_ACTOR", "")
     # `env` is required: nohup execs its first argument, so a bare VAR=val
     # prefix is treated as the command name and the launch silently fails.

@@ -148,6 +148,14 @@ To resume a failed run partway through:
 python3 launch_ingest.py <hub> --resume-from mapping     # or enrichment / jsonl
 ```
 
+To run without the partner summary email at the end (for example, to review the counts before the hub hears about them):
+
+```bash
+python3 launch_ingest.py <hub> --skip-email
+```
+
+This passes `--skip-email` to `ingest.sh` on EC2, so the EC2 checkout of ingestion3 must include it. It combines with `--resume-from` and the other options. To send the email later: `scripts/communication/send-ingest-email.sh <hub>`.
+
 ---
 
 ### Step 3 — Monitor
