@@ -245,7 +245,7 @@ init_paths() {
     I3_HOME="${I3_HOME:-$(get_i3_home)}"
     export I3_HOME
 
-    # Load .env when present so SLACK_WEBHOOK, JAVA_HOME, etc. are set for
+    # Load .env when present so SLACK_BOT_TOKEN, JAVA_HOME, etc. are set for
     # pipeline scripts and harvest-failure notifications.
     if [ -f "${I3_HOME}/.env" ] && [ -r "${I3_HOME}/.env" ]; then
         set -a

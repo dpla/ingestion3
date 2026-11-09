@@ -19,7 +19,7 @@ Include: hub name, stage that failed, one-line error or path to logs/escalation 
 
 ## Where to Notify
 
-- **Slack #tech-alerts:** Preferred when `SLACK_WEBHOOK` is set. Post: hub, stage, error or link to report.
+- **Slack #tech-alerts:** Preferred. `ingest.sh` and other shell scripts post via `SLACK_BOT_TOKEN` (optional `SLACK_CHANNEL`); the Python orchestrator posts via `SLACK_WEBHOOK`. Post: hub, stage, error or link to report.
 - **Email tech@dp.la:** When Slack is unavailable or as backup. Same content.
 
 The orchestrator posts failure alerts automatically; when running scripts manually, you must post or email.

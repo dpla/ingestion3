@@ -8,7 +8,7 @@ Run an ingest for a specific hub using the right runbook and scripts, then verif
 
 ## Checklist
 
-0. **Build the JAR:** Run `source .env` from repo root (so `JAVA_HOME`, `SLACK_WEBHOOK`, `DPLA_DATA`, etc. are set), then `sbt assembly`. Scripts (`./scripts/harvest.sh`, `ingest.sh`, `remap.sh`) and `run_entry` in common.sh rely on `.env` being sourced and use the JAR when present or fall back to `sbt runMain` when missing — they do not auto-build the JAR.
+0. **Build the JAR:** Run `source .env` from repo root (so `JAVA_HOME`, `SLACK_BOT_TOKEN`, `DPLA_DATA`, etc. are set), then `sbt assembly`. Scripts (`./scripts/harvest.sh`, `ingest.sh`, `remap.sh`) and `run_entry` in common.sh rely on `.env` being sourced and use the JAR when present or fall back to `sbt runMain` when missing — they do not auto-build the JAR.
 1. **Identify the hub** (e.g. from the user message).
 2. **Get harvest type** from i3.conf (`$I3_CONF`, default `~/dpla/code/ingestion3-conf/i3.conf`): `<hub>.harvest.type`. Values: `localoai`, `api`, `file`, `nara.file.delta`.
 3. **Pick the runbook:** See [runbooks/README.md](../../runbooks/README.md) for harvest-type to runbook mapping.
@@ -36,7 +36,7 @@ Run an ingest for a specific hub using the right runbook and scripts, then verif
 
 - **NARA / Smithsonian:** Do not run the standard ingest pipeline without their dedicated runbooks (NARA: delta merge; Smithsonian: preprocessing e.g. fix-si.sh).
 - **Output path:** All Scala `--output` must be `$DPLA_DATA` (the data root), never `$DPLA_DATA/<hub>`. Scripts handle this. OutputHelper builds paths as `rootPath / shortName / activity / timestamp-schema`.
-- **Python/scripts:** Use `./venv/bin/python` for Python; run `./scripts/` scripts from repo root. AWS: `--profile dpla`.
+- **Python/scripts:** Use `./venv/bin/python` for Python; run `./scripts/` scripts from repo root. AWS: see aws-tools rule (no named profile on EC2/CI).
 
 ## Verification
 
