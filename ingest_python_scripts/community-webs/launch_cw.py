@@ -244,8 +244,10 @@ def stage_download(s3_db, timestamp):
     return ec2_db
 
 
-def stage_ingest(ec2_db):
-    # One run at a time: they share the log, exit code file and run record.
+def ensure_not_running():
+    """Refuse early if an ingest or send is running, before the download can
+    overwrite a .db it's exporting or the launch truncates its log. The script's
+    own lock still makes the final call."""
     # Matches only bash running the script (an ingest or a --send), not editors,
     # tail or grep that merely mention its name.
     busy = ssm_run(
@@ -253,8 +255,11 @@ def stage_ingest(ec2_db):
         timeout_seconds=30,
     ).strip()
     if busy:
-        sys.exit(f"A Community Webs ingest is already running on EC2 (PID {busy}). "
+        sys.exit(f"A Community Webs ingest or send is already running on EC2 (PID {busy}). "
                  "Wait for it, or check it with: launch_cw.py --resume")
+
+
+def stage_ingest(ec2_db):
     cmd = f"bash {CW_SCRIPT} --db={ec2_db}"
     pid = ssm_bg(cmd, INGEST_LOG)
     print(f"  ✓ Started on EC2 (PID {pid})")
@@ -395,6 +400,7 @@ def main():
     print(f"\nCOMMUNITY WEBS INGEST — {timestamp}")
     print(f"  File:     {s3_db}")
     print("  Will run: export → harvest → map → enrich → jsonl → safety check, then ask before sending")
+    ensure_not_running()
     if interactive and not ask("Start?"):
         sys.exit("Aborted.")
 

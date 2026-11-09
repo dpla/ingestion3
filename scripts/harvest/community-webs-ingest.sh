@@ -89,24 +89,25 @@ if [[ "$FORCE" == "true" && "$SEND" != "true" ]]; then
 fi
 
 # One ingest or send at a time: they share the exported ZIP, the latest outputs
-# and the run record. mkdir is atomic, so two starts can't both take the lock;
-# a lock left by a dead process is cleared. Same location as jsonl.sh's lock.
-LOCK_DIR="$I3_HOME/logs/${HUB}-ingest.lock"
+# and the run record. The lock is a symlink whose target is the owner's PID:
+# creating it is atomic and fails if it exists, so it's taken and owned in one
+# step. A lock left by a dead process is never removed automatically, since
+# that removal could race with another start; the message says how to clear it.
+LOCK="$I3_HOME/logs/${HUB}-ingest.lock"
 LOCK_HELD=false
 mkdir -p "$I3_HOME/logs"
-if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-    holder=$(cat "$LOCK_DIR/pid" 2>/dev/null || true)
+[[ -d "$LOCK" && ! -L "$LOCK" ]] && die "$LOCK is a directory, not a lock; remove it and retry"
+if ! ln -s "$$" "$LOCK" 2>/dev/null; then
+    holder=$(readlink "$LOCK" 2>/dev/null || true)
     if [[ -n "$holder" ]] && kill -0 "$holder" 2>/dev/null; then
         die "Another $HUB ingest or send is already running (PID $holder)."
     fi
-    rm -rf "$LOCK_DIR"
-    mkdir "$LOCK_DIR" 2>/dev/null || die "Could not take the $HUB lock at $LOCK_DIR"
+    die "A $HUB lock is left from PID ${holder:-unknown}, which is no longer running. If no $HUB ingest or send is running, clear it and retry: rm $LOCK"
 fi
-echo $$ > "$LOCK_DIR/pid"
 LOCK_HELD=true
 
 trap 'err=$?
-      if [[ "$LOCK_HELD" == "true" ]]; then rm -rf "$LOCK_DIR"; fi
+      if [[ "$LOCK_HELD" == "true" && "$(readlink "$LOCK" 2>/dev/null)" == "$$" ]]; then rm -f "$LOCK"; fi
       if [[ $err -ne 0 && "$ALERT_ON_EXIT" == "true" ]]; then
           slack_notify ":x: *$HUB ingest FAILED* during $STAGE (exit $err)" || true
       fi' EXIT
