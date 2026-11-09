@@ -88,10 +88,30 @@ if [[ "$FORCE" == "true" && "$SEND" != "true" ]]; then
     usage
 fi
 
+# One ingest or send at a time: they share the exported ZIP, the latest outputs
+# and the run record. mkdir is atomic, so two starts can't both take the lock;
+# a lock left by a dead process is cleared. Same location as jsonl.sh's lock.
+LOCK_DIR="$I3_HOME/logs/${HUB}-ingest.lock"
+LOCK_HELD=false
+mkdir -p "$I3_HOME/logs"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    holder=$(cat "$LOCK_DIR/pid" 2>/dev/null || true)
+    if [[ -n "$holder" ]] && kill -0 "$holder" 2>/dev/null; then
+        die "Another $HUB ingest or send is already running (PID $holder)."
+    fi
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR" 2>/dev/null || die "Could not take the $HUB lock at $LOCK_DIR"
+fi
+echo $$ > "$LOCK_DIR/pid"
+LOCK_HELD=true
+
 trap 'err=$?
+      if [[ "$LOCK_HELD" == "true" ]]; then rm -rf "$LOCK_DIR"; fi
       if [[ $err -ne 0 && "$ALERT_ON_EXIT" == "true" ]]; then
           slack_notify ":x: *$HUB ingest FAILED* during $STAGE (exit $err)" || true
       fi' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # The harvester lists ZIPs directly under the endpoint, so anything else in i3.conf
 # silently harvests the wrong delivery or 0 records.

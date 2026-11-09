@@ -246,8 +246,12 @@ def stage_download(s3_db, timestamp):
 
 def stage_ingest(ec2_db):
     # One run at a time: they share the log, exit code file and run record.
-    # The [c] keeps pgrep from matching this check itself.
-    busy = ssm_run("pgrep -f '[c]ommunity-webs-ingest.sh' || true", timeout_seconds=30).strip()
+    # Matches only bash running the script (an ingest or a --send), not editors,
+    # tail or grep that merely mention its name.
+    busy = ssm_run(
+        "pgrep -f '^(/usr/bin/|/bin/)?bash [^ ]*community-webs-ingest\\.sh( |$)' || true",
+        timeout_seconds=30,
+    ).strip()
     if busy:
         sys.exit(f"A Community Webs ingest is already running on EC2 (PID {busy}). "
                  "Wait for it, or check it with: launch_cw.py --resume")
@@ -318,12 +322,23 @@ def review_and_send(pid):
 
 def stage_send(force):
     """After review: sync the snapshot to S3 and email the hub contacts."""
+    # Same source the EC2 script will send from: the reviewed run, or with
+    # --force the last run's record. Check it before showing anything.
+    source = f"head -1 {READY_FILE} 2>/dev/null"
+    if force:
+        source += f" || head -1 {RUN_FILE} 2>/dev/null"
     state = ssm_run(
-        f"S=$(head -1 {READY_FILE} 2>/dev/null || head -1 {RUN_FILE} 2>/dev/null); "
+        f"S=$({source}); "
+        f"if [ -z \"$S\" ]; then echo NO_RUN; exit 0; fi; "
         f"echo \"Snapshot: $S\"; grep 'Record count' \"$S/_MANIFEST\"; "
         f"echo Contacts:; grep '^community-webs.email' {REPO_PATH}-conf/i3.conf | sed 's/.*= *//'",
         timeout_seconds=30,
     )
+    if state.strip() == "NO_RUN":
+        if force:
+            sys.exit("No record of the last run's outputs on EC2; rerun the ingest.")
+        sys.exit("No run is waiting for review. If the safety check blocked it and "
+                 "you've reviewed the drop, use: launch_cw.py --send --force")
     prev = previous_count()
     print("\nCOMMUNITY WEBS SEND")
     print(f"{state}")
