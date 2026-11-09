@@ -5,13 +5,13 @@ Works for all hub types (localoai, api, file). For file-export hubs the
 script fetches the harvest type from i3.conf, lists available S3 deliveries,
 and prompts you to confirm the endpoint before launching.
 
-Usage:
-    python3 run/launch_ingest.py                      # prompts for hub
-    python3 run/launch_ingest.py bpl                  # runs ingest.sh bpl
-    python3 run/launch_ingest.py ohio                 # detects file hub, checks S3
-    python3 run/launch_ingest.py ohio --bucket dpla-hub-ohio
-    python3 run/launch_ingest.py bpl --resume-from mapping
-    python3 run/launch_ingest.py bpl --skip-email     # no partner summary email
+Usage (from the repo root):
+    python3 ingest_python_scripts/launch_ingest.py                   # prompts for hub
+    python3 ingest_python_scripts/launch_ingest.py bpl               # runs ingest.sh bpl
+    python3 ingest_python_scripts/launch_ingest.py ohio              # detects file hub, checks S3
+    python3 ingest_python_scripts/launch_ingest.py ohio --bucket dpla-hub-ohio
+    python3 ingest_python_scripts/launch_ingest.py bpl --resume-from mapping
+    python3 ingest_python_scripts/launch_ingest.py bpl --skip-email  # no partner summary email
 """
 import argparse
 import base64
