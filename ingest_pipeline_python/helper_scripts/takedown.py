@@ -197,7 +197,8 @@ def source_status(is_shown_at):
         if it == 200:
             return "live", "ContentDM item still published (200)"
         return "unverified", f"ContentDM API returned {it}"
-    if "ark.cdlib.org" in is_shown_at or "calisphere.org" in is_shown_at:
+    host = (urllib.parse.urlparse(is_shown_at).hostname or "").lower()
+    if host in ("ark.cdlib.org", "calisphere.org") or host.endswith(".calisphere.org"):
         return "unverified", "Calisphere blocks scripted checks; check in a browser"
     code = http_status(is_shown_at)
     if code in (404, 410):
