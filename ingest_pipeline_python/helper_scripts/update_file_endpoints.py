@@ -33,7 +33,7 @@ HERE = Path(__file__).resolve().parent
 
 def _load_env():
     cfg = {}
-    env_file = HERE.parent / ".env"
+    env_file = HERE.parent.parent / ".env"
     if env_file.exists():
         for line in env_file.read_text().splitlines():
             line = line.strip()
@@ -47,7 +47,7 @@ _env = _load_env()
 AWS_PROFILE = (
     os.environ.get("AWS_PROFILE")
     or _env.get("AWS_PROFILE")
-    or ("dpla" if (HERE.parent / ".env").exists() else None)
+    or ("dpla" if (HERE.parent.parent / ".env").exists() else None)
 )
 REGION = "us-east-1"
 

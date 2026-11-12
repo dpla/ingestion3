@@ -6,12 +6,12 @@ script fetches the harvest type from i3.conf, lists available S3 deliveries,
 and prompts you to confirm the endpoint before launching.
 
 Usage (from the repo root):
-    python3 ingest_python_scripts/launch_ingest.py                   # prompts for hub
-    python3 ingest_python_scripts/launch_ingest.py bpl               # runs ingest.sh bpl
-    python3 ingest_python_scripts/launch_ingest.py ohio              # detects file hub, checks S3
-    python3 ingest_python_scripts/launch_ingest.py ohio --bucket dpla-hub-ohio
-    python3 ingest_python_scripts/launch_ingest.py bpl --resume-from mapping
-    python3 ingest_python_scripts/launch_ingest.py bpl --skip-email  # no partner summary email
+    python3 ingest_pipeline_python/3_launch_ingest.py                   # prompts for hub
+    python3 ingest_pipeline_python/3_launch_ingest.py bpl               # runs ingest.sh bpl
+    python3 ingest_pipeline_python/3_launch_ingest.py ohio              # detects file hub, checks S3
+    python3 ingest_pipeline_python/3_launch_ingest.py ohio --bucket dpla-hub-ohio
+    python3 ingest_pipeline_python/3_launch_ingest.py bpl --resume-from mapping
+    python3 ingest_pipeline_python/3_launch_ingest.py bpl --skip-email  # no partner summary email
 """
 import argparse
 import base64
@@ -23,7 +23,7 @@ import subprocess
 import sys
 import time
 
-from hub_preflight import lookup_hub_in_conf
+from helper_scripts.hub_conf import lookup_hub_in_conf
 
 def _load_dotenv():
     cfg = {}
@@ -123,7 +123,7 @@ def aws_s3_ls(s3_path: str) -> str:
 def get_harvest_type(hub: str) -> str:
     """Return harvest.type for hub, reading from EC2 conf via SSM.
 
-    Falls back to the local i3.conf (via hub_preflight.lookup_hub_in_conf) if
+    Falls back to the local i3.conf (via helper_scripts/hub_conf.py) if
     the SSM grep returns empty — e.g. because the box's conf repo is stale or
     the SSM call fails quietly.
     """

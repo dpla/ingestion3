@@ -13,12 +13,12 @@ Prerequisites:
   - AWS CLI authenticated locally with SSM access
 
 Usage:
-    python3 nara/launch_nara.py --month 202605
-    python3 nara/launch_nara.py --month 202605 --skip-pipeline     # merge only, no pipeline
-    python3 nara/launch_nara.py --skip-to-pipeline                 # resume from latest merged harvest
-    python3 nara/launch_nara.py --skip-to-pipeline --harvest /path/to/harvest.avro
-    python3 nara/launch_nara.py --resume --month 202605            # re-attach to existing log
-    python3 nara/launch_nara.py --resume --log /home/ec2-user/nara-ingest-202605.log
+    python3 special_cases/nara/launch_nara.py --month 202605
+    python3 special_cases/nara/launch_nara.py --month 202605 --skip-pipeline     # merge only, no pipeline
+    python3 special_cases/nara/launch_nara.py --skip-to-pipeline                 # resume from latest merged harvest
+    python3 special_cases/nara/launch_nara.py --skip-to-pipeline --harvest /path/to/harvest.avro
+    python3 special_cases/nara/launch_nara.py --resume --month 202605            # re-attach to existing log
+    python3 special_cases/nara/launch_nara.py --resume --log /home/ec2-user/nara-ingest-202605.log
 
 Zero-delete gate:
     After the merge, nara-ingest.sh checks whether any records were actually
@@ -29,7 +29,7 @@ Zero-delete gate:
         N = Abort so I can investigate before re-running
 
     To bypass the gate upfront (if you already know this delivery has no deletes):
-        python3 nara/launch_nara.py --month 202605 --skip-delete-check
+        python3 special_cases/nara/launch_nara.py --month 202605 --skip-delete-check
 """
 
 import argparse
@@ -48,7 +48,7 @@ REGION         = "us-east-1"
 def _load_dotenv():
     cfg = {}
     env_file = os.path.normpath(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../..", ".env")
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../..", ".env")
     )
     if os.path.exists(env_file):
         with open(env_file) as f:
@@ -64,7 +64,7 @@ def _load_dotenv():
 
 _env = _load_dotenv()
 _env_file_exists = os.path.exists(os.path.normpath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env")
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".env")
 ))
 INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
 AWS_PROFILE: str | None = (
@@ -334,7 +334,7 @@ def prune_old_outputs(keep_base=None):
     print(preview)
     if "SKIP: nara-ingest.sh is running" in preview:
         sys.exit("\n  [BAD] A NARA ingest is already running on EC2 — not launching another.\n"
-                 "  Re-attach with: python3 nara/launch_nara.py --resume --month YYYYMM")
+                 "  Re-attach with: python3 special_cases/nara/launch_nara.py --resume --month YYYYMM")
     if "WOULD DELETE" not in preview:
         ok("Nothing to prune.")
         return
@@ -483,7 +483,7 @@ def tail_log(pid, log_path):
     step(3, "Monitoring (Ctrl+C to stop tailing — job keeps running on EC2)")  # Step 2 = launch
     info(f"Log: {log_path}")
     info(f"PID: {pid}")
-    info(f"Resume:  python3 nara/launch_nara.py --resume --log {log_path}")
+    info(f"Resume:  python3 special_cases/nara/launch_nara.py --resume --log {log_path}")
     info(f"Status:  python3 check_nara.py\n")
 
     last_lines = 0
@@ -540,7 +540,7 @@ def tail_log(pid, log_path):
 
     except KeyboardInterrupt:
         print(f"\n\n  Monitoring stopped. NARA ingest is still running on EC2.")
-        print(f"  Resume:  python3 nara/launch_nara.py --resume --log {log_path}")
+        print(f"  Resume:  python3 special_cases/nara/launch_nara.py --resume --log {log_path}")
         print(f"  Status:  python3 check_nara.py")
 
 

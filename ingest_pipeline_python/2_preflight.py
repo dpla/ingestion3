@@ -6,11 +6,11 @@ Runs the usual before-every-ingest checks against the EC2 box and prints
 a clean summary. Exits 0 if everything is GOOD, 1 otherwise.
 
 Usage:
-    python3 hub_preflight.py                            # full checks — prompts for hub
-    python3 hub_preflight.py --hub njde                 # full checks for a specific hub
-    python3 hub_preflight.py --hub njde --endpoint-only # skip box-state checks; just verify the endpoint
-    python3 hub_preflight.py --hub njde --skip-endpoint # opposite: skip the endpoint check
-    python3 hub_preflight.py --no-start                 # don't auto-start the EC2 if it's stopped
+    python3 2_preflight.py                            # full checks — prompts for hub
+    python3 2_preflight.py --hub njde                 # full checks for a specific hub
+    python3 2_preflight.py --hub njde --endpoint-only # skip box-state checks; just verify the endpoint
+    python3 2_preflight.py --hub njde --skip-endpoint # opposite: skip the endpoint check
+    python3 2_preflight.py --no-start                 # don't auto-start the EC2 if it's stopped
 
 The endpoint is ALWAYS read from i3.conf for the given hub — there is no
 manual endpoint override. If you need to test a different URL, edit i3.conf
@@ -503,16 +503,16 @@ CURRENT_SPECIAL_HUBS = {
 }
 
 # Known special-case hubs that need extra steps beyond the standard
-# launch_ingest.py flow. Annotations get printed alongside the --todo list
+# 3_launch_ingest.py flow. Annotations get printed alongside the --todo list
 # so the operator knows at a glance which hubs are quick wins vs. multi-hour
 # projects.
 SPECIAL_CASE_NOTES = {
-    "nara":           "delta merge required (use NaraMergeUtil, not ingest.sh)",
-    "smithsonian":    "preprocessing required (download from S3 + fix-si.sh)",
-    "si":             "preprocessing required (download from S3 + fix-si.sh)",
-    "community-webs": "preprocessing required (SQLite -> JSONL/ZIP)",
+    "nara":           "delta merge: use special_cases/nara/ (copy_nara.py, launch_nara.py), not ingest.sh",
+    "smithsonian":    "preprocessing required: use special_cases/smithsonian/launch_smithsonian.py",
+    "si":             "preprocessing required: use special_cases/smithsonian/launch_smithsonian.py",
+    "community-webs": "SQLite delivery: use special_cases/community-webs/ (copy_cw.py, launch_cw.py)",
     "maryland":       "EC2 IP blocked, run locally",
-    "getty":          "EC2 IP blocked, run locally",
+    "getty":          "EC2 IP blocked; ingest.sh routes it through the Tailscale exit node",
     "hathitrust":     "EC2 IP blocked, run locally",
     "illinois":       "VPN required, run locally",
     "indiana":        "VPN required, run locally",
@@ -638,7 +638,7 @@ def print_special_case_banner(hub):
     print("  Standard prechecks may show endpoint or repo-state results that")
     print("  look wrong (e.g., dev-path endpoints, missing local data). That's")
     print("  expected — this hub uses a custom workflow, not the standard")
-    print("  launch_ingest.py flow.")
+    print("  3_launch_ingest.py flow.")
     print()
     print("  Refer to the hub-specific runbook before launching:")
     print("    - nara           → NARA delta-merge workflow (NaraMergeUtil)")
@@ -1267,7 +1267,7 @@ def main():
     if all_passed:
         if hub and hub in CURRENT_SPECIAL_HUBS:
             print(f"\nAll standard checks passed — but {hub} is a special-case hub.")
-            print("Don't run launch_ingest.py for this one; follow the hub-specific runbook.\n")
+            print("Don't run 3_launch_ingest.py for this one; follow the hub-specific runbook.\n")
         else:
             print("\nAll checks passed. Safe to kick off the ingest.\n")
         sys.exit(0)

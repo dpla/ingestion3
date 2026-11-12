@@ -6,7 +6,7 @@ Runs pre-flight checks, launches the sparkindexer EMR cluster, monitors it,
 then walks you through the Elasticsearch alias swap when it's done.
 
 Usage:
-    python3 launch_indexer.py
+    python3 4_launch_indexer.py
 
 Pre-flight checks:
   1. No existing sparkindexer EMR cluster running

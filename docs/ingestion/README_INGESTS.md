@@ -113,13 +113,13 @@ Some hubs have their feed endpoints behind a firewall so the harvests needs to b
 Internet Archive Community Webs sends a SQLite database. From the repo root:
 
 ```shell
-./venv/bin/python ingest_python_scripts/community-webs/copy_cw.py ~/Downloads/community-webs.sqlite3
+./venv/bin/python ingest_pipeline_python/special_cases/community-webs/copy_cw.py ~/Downloads/community-webs.sqlite3
 ```
 
 This checks the file and copies it to S3. Then run the ingest on the newest copied file:
 
 ```shell
-./venv/bin/python ingest_python_scripts/community-webs/launch_cw.py
+./venv/bin/python ingest_pipeline_python/special_cases/community-webs/launch_cw.py
 ```
 
 This runs export, harvest, mapping, enrichment, JSON-L and the safety check on EC2, with Slack reporting each stage. When it finishes, it shows the counts and contacts and asks whether to sync the JSON-L to S3 and email the hub. If the >5% safety check blocked the run, it says so and asks the same question.

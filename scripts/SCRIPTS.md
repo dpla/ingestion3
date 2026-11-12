@@ -298,7 +298,7 @@ The script validates the JSONL against the expected harvest schema (required `id
 
 ### community-webs-ingest.sh - Community Webs Ingest
 
-Runs export + harvest + mapping + enrichment + jsonl + safety check, then stops for review. Nothing is published to `dpla-master-dataset` or emailed to the hub contacts until `--send`, which syncs only the reviewed snapshot. Slack reports every stage, including export and harvest. Located in `scripts/harvest/`; normally launched with `ingest_python_scripts/community-webs/launch_cw.py`.
+Runs export + harvest + mapping + enrichment + jsonl + safety check, then stops for review. Nothing is published to `dpla-master-dataset` or emailed to the hub contacts until `--send`, which syncs only the reviewed snapshot. Slack reports every stage, including export and harvest. Located in `scripts/harvest/`; normally launched with `ingest_pipeline_python/special_cases/community-webs/launch_cw.py`.
 
 ```bash
 ./scripts/harvest/community-webs-ingest.sh --db=/path/to/db   # Full run, stops for review

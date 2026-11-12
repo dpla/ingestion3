@@ -2,7 +2,7 @@
 """
 DPLA Post-Indexer: monthly batch jobs.
 
-Run immediately after launch_indexer.py completes the alias swap.
+Run immediately after 4_launch_indexer.py completes the alias swap.
 
 Steps:
   1. Check / rebuild batch JAR  (s3://dpla-monthly-batch/)
@@ -13,9 +13,9 @@ Steps:
   6. Verify S3 outputs; post one Slack summary naming any failures
 
 Usage:
-    python3 post_indexer.py
-    python3 post_indexer.py --cluster-id j-XXXXX   # resume monitoring
-    python3 post_indexer.py --skip-preflight        # skip JAR check
+    python3 5_post_indexer.py
+    python3 5_post_indexer.py --cluster-id j-XXXXX   # resume monitoring
+    python3 5_post_indexer.py --skip-preflight        # skip JAR check
 """
 
 import base64

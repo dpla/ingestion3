@@ -41,7 +41,7 @@ HERE = Path(__file__).resolve().parent
 
 def _load_env():
     cfg = {}
-    env_file = HERE.parent / ".env"
+    env_file = HERE.parent.parent / ".env"
     if env_file.exists():
         for line in env_file.read_text().splitlines():
             line = line.strip()
@@ -62,7 +62,7 @@ LOG_DIR     = "/home/ec2-user/data"
 AWS_PROFILE = (
     os.environ.get("AWS_PROFILE")
     or _env.get("AWS_PROFILE")
-    or ("dpla" if (HERE.parent / ".env").exists() else None)
+    or ("dpla" if (HERE.parent.parent / ".env").exists() else None)
 )
 
 SPECIAL_HUBS = {"nara", "smithsonian", "si", "community-webs"}
@@ -265,7 +265,7 @@ BATCH_LOG="{batch_log}"
 SCRIPTS_DIR="/home/ec2-user/ingestion3/scripts"
 export I3_CONF="/home/ec2-user/ingestion3-conf/i3.conf"
 export AWS_PROFILE=""
-PREFLIGHT="python3 /home/ec2-user/ingestion3/ingest_python_scripts/hub_preflight.py"
+PREFLIGHT="python3 /home/ec2-user/ingestion3/ingest_pipeline_python/2_preflight.py"
 FAILED=()
 IDX=0
 
@@ -380,7 +380,7 @@ def fire_batch(hubs, batch_log, skipped_hubs=None, excluded_hubs=None):
     ok(f"Batch launched on EC2 (PID {pid})")
     info(f"Log:  {batch_log}")
     info(f"Tail: ssh ec2-user@<box> tail -f {batch_log}")
-    info(f"Or:   python3 ingest_python_scripts/check_ingest.py <hub>")
+    info(f"Or:   python3 ingest_pipeline_python/helper_scripts/check_ingest.py <hub>")
 
 # ── main ──────────────────────────────────────────────────────────────────────
 

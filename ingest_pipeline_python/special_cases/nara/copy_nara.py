@@ -14,7 +14,7 @@ A direct cross-account sync isn't possible with a single credential set, so we:
      (ready for nara-ingest.sh — no second download needed)
 
 After this script completes, run:
-    python3 nara/launch_nara.py --month <YYYYMM>
+    python3 special_cases/nara/launch_nara.py --month <YYYYMM>
 
 Usage:
     python3 copy_nara.py --month 202604
@@ -39,7 +39,7 @@ import time
 def _load_dotenv():
     cfg = {}
     env_file = os.path.normpath(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../..", ".env")
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../..", ".env")
     )
     if os.path.exists(env_file):
         with open(env_file) as f:
@@ -55,7 +55,7 @@ def _load_dotenv():
 
 _env = _load_dotenv()
 _env_file_exists = os.path.exists(os.path.normpath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env")
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".env")
 ))
 INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
 AWS_PROFILE: str | None = (

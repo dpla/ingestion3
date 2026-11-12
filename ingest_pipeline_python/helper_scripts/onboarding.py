@@ -36,7 +36,7 @@ NARA_PROFILE = "nara"
 SECRETS_FILE = os.path.expanduser("~/.dpla-secrets.env")
 
 SCRIPT_DIR  = os.path.dirname(os.path.abspath(__file__))
-CONFIG_FILE = os.path.normpath(os.path.join(SCRIPT_DIR, "..", ".env"))
+CONFIG_FILE = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "..", ".env"))
 
 # Defaults shown in prompts
 DEFAULT_INGESTION3      = os.path.expanduser("~/Documents/Repos/ingestion3")

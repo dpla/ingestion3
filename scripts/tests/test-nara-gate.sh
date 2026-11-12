@@ -198,7 +198,7 @@ expect_out "is not a YYYYMMDD date" "error explains --datestamp is needed"
 # ---------------------------------------------------------------------------
 echo "--- 7. launch_nara.py parses the gate's resume command"
 PY="$REPO_ROOT/venv/bin/python"; [ -x "$PY" ] || PY=python3
-if "$PY" - "$REPO_ROOT/ingest_python_scripts/nara" << 'PY'
+if "$PY" - "$REPO_ROOT/ingest_pipeline_python/special_cases/nara" << 'PY'
 import sys
 sys.path.insert(0, sys.argv[1])
 from launch_nara import parse_gate_resume_cmd as p

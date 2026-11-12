@@ -7,18 +7,18 @@ with harvest types, special-case notes, and on-hold status. Use this at
 the start of each ingest month to plan the run order.
 
 For per-hub pre-flight checks (EC2 state, repo sync, JAR, endpoint),
-use hub_preflight.py.
+use 2_preflight.py.
 
 Usage:
-    python3 pre_ingest_check.py              # current month
-    python3 pre_ingest_check.py --month 5    # specific month
+    python3 1_prechecks.py              # current month
+    python3 1_prechecks.py --month 5    # specific month
 """
 
 import argparse
 import sys
 from datetime import datetime
 
-from hub_preflight import CONF_PATH, MONTH_NAMES, SPECIAL_CASE_NOTES, list_scheduled_hubs
+from helper_scripts.hub_conf import CONF_PATH, MONTH_NAMES, SPECIAL_CASE_NOTES, list_scheduled_hubs
 
 
 def main() -> None:

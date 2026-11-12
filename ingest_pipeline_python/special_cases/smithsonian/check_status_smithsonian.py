@@ -43,7 +43,7 @@ PIPELINE_STAGE_REGEX = "MappingEntry|IngestRemap|EnrichEntry|JsonlEntry|mapping 
 def _load_dotenv():
     cfg = {}
     env_file = os.path.normpath(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../..", ".env")
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../..", ".env")
     )
     if os.path.exists(env_file):
         with open(env_file) as f:

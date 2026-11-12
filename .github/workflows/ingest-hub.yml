@@ -88,7 +88,7 @@ jobs:
           CI: '1'
           HUB: ${{ inputs.hub }}
         run: |
-          python3 ingest_python_scripts/hub_preflight.py \
+          python3 ingest_pipeline_python/2_preflight.py \
             --non-interactive \
             --hub "$HUB"
 
@@ -129,7 +129,7 @@ jobs:
               # The zero-delete gate aborts (default_yes=False). To continue after verifying,
               # re-run with the same month (override) + nara_run_id + nara_skip_delete_check:
               # the run's finished steps (preprocess, harvest, merge) are skipped.
-              CMD=(python3 ingest_python_scripts/nara/launch_nara.py)
+              CMD=(python3 ingest_pipeline_python/special_cases/nara/launch_nara.py)
               [[ -n "$OVERRIDE" ]] && CMD+=(--month "$OVERRIDE")
               [[ -n "$NARA_RUN_ID" ]] && CMD+=(--run-id "$NARA_RUN_ID")
               [[ "$NARA_SKIP_DELETE_CHECK" == "true" ]] && CMD+=(--skip-delete-check)
@@ -138,7 +138,7 @@ jobs:
             smithsonian|si)
               # --auto skips all interactive checkpoints; --date defaults to latest S3 delivery.
               # "si" is Smithsonian's conf-side name in i3.conf; both aliases route here.
-              CMD=(python3 ingest_python_scripts/smithsonian/launch_smithsonian.py --auto)
+              CMD=(python3 ingest_pipeline_python/special_cases/smithsonian/launch_smithsonian.py --auto)
               [[ -n "$OVERRIDE" ]] && CMD+=(--date "$OVERRIDE")
               ;;
 
@@ -146,14 +146,14 @@ jobs:
               # Uses the newest .db in s3://dpla-hub-community-webs/ (see copy_cw.py).
               # The job fires in the background on EC2; this step exits once it's launched.
               # Sending stays manual: launch_cw.py --send
-              CMD=(python3 ingest_python_scripts/community-webs/launch_cw.py)
+              CMD=(python3 ingest_pipeline_python/special_cases/community-webs/launch_cw.py)
               [[ -n "$OVERRIDE" ]] && CMD+=(--timestamp "$OVERRIDE")
               ;;
 
             *)
               # Standard hubs (localoai / api / file) — launch_ingest.py reads
               # harvest.type from i3.conf on EC2 via SSM; no local conf needed.
-              CMD=(python3 ingest_python_scripts/launch_ingest.py "$HUB" --non-interactive)
+              CMD=(python3 ingest_pipeline_python/3_launch_ingest.py "$HUB" --non-interactive)
               [[ -n "$RESUME_FROM" ]] && CMD+=(--resume-from "$RESUME_FROM")
               ;;
           esac

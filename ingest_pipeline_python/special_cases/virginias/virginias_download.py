@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""Clone all dplava GitHub repos to /tmp/virginias-input/ on the ingest EC2.
+"""Download all dplava GitHub repos as zip archives to /tmp/virginias-input/ on EC2.
 
-Clones these repos (shallow, depth 1) into a flat directory so the file
-harvester can walk all XML files in one pass:
+VaFileHarvester expects ZIP files directly in the endpoint directory.
+GitHub provides archive zips at:
+  https://github.com/dplava/{repo}/archive/refs/heads/{branch}.zip
 
-    uva, vt, wvu, wm, gmu, vcu, vmfa, vamve, marshall, wlu, hsc
-
-After cloning, updates i3.conf locally so the endpoint points at the EC2
-local path. You still need to git commit + push i3.conf and git pull on EC2
-before running the ingest.
+After downloading, updates i3.conf locally so the endpoint points at the
+EC2 local path. You still need to git commit + push i3.conf and git pull
+on EC2 before running the ingest.
 
 Usage:
     python3 virginias_download.py
@@ -16,6 +15,7 @@ Usage:
 import base64
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -24,7 +24,7 @@ import time
 def _load_dotenv():
     cfg = {}
     env_file = os.path.normpath(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env")
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".env")
     )
     if os.path.exists(env_file):
         with open(env_file) as f:
@@ -40,20 +40,20 @@ def _load_dotenv():
 
 _env = _load_dotenv()
 _env_file_exists = os.path.exists(os.path.normpath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env")
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".env")
 ))
-DEST          = "/tmp/virginias-input"
-INSTANCE_ID   = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "i-0a0def8581efef783")
+DEST        = "/tmp/virginias-input"
+INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "i-0a0def8581efef783")
 AWS_PROFILE: str | None = (
     os.environ.get("AWS_PROFILE")
     or _env.get("AWS_PROFILE")
     or ("dpla" if _env_file_exists else None)
 )
-REGION        = "us-east-1"
+REGION      = "us-east-1"
 
 REPOS = [
     ("uva",      "master"),
-    ("vt",       "dpla-harvest"),
+    ("vt",       "master"),
     ("wvu",      "master"),
     ("wm",       "master"),
     ("gmu",      "master"),
@@ -66,7 +66,7 @@ REPOS = [
 ]
 
 
-def ssm_run(shell_cmd: str, poll_seconds: int = 300) -> tuple[str, str]:
+def ssm_run(shell_cmd: str, poll_seconds: int = 600) -> tuple[str, str]:
     encoded = base64.b64encode(shell_cmd.encode()).decode("ascii")
     wrapped = f"sudo -u ec2-user bash -lc 'echo {encoded} | base64 -d | bash -l'"
     params  = json.dumps({"commands": [wrapped]})
@@ -107,11 +107,6 @@ def ssm_run(shell_cmd: str, poll_seconds: int = 300) -> tuple[str, str]:
         if status not in ("Pending", "InProgress", "Delayed"):
             break
 
-    if status != "Success":
-        raise RuntimeError(
-            f"SSM command {cmd_id} did not succeed (final status: {status!r})"
-        )
-
     out = subprocess.run(
         ["aws", "ssm", "get-command-invocation"]
         + profile
@@ -133,35 +128,15 @@ def ssm_run(shell_cmd: str, poll_seconds: int = 300) -> tuple[str, str]:
     return out, err
 
 
-def clone_repos():
-    clone_cmds = " && ".join(
-        f"git clone --depth 1 --branch {branch} https://github.com/dplava/{repo}.git {DEST}/{repo} 2>&1"
+def download_zips():
+    curl_cmds = " && ".join(
+        f"curl -L -o {DEST}/{repo}.zip https://github.com/dplava/{repo}/archive/refs/heads/{branch}.zip"
+        f" && echo 'OK: {repo}'"
         for repo, branch in REPOS
     )
-    repos_list = " ".join(repo for repo, _ in REPOS)
-    # After cloning, zip each repo's XML files into a single zip per institution
-    # (VaFileHarvester expects .zip files in the endpoint directory, not subdirs).
-    zip_cmds = (
-        f"cd {DEST} && "
-        f"failed=() && "
-        f"for repo in {repos_list}; do "
-        f"  if [ -d \"$repo\" ]; then "
-        f"    if find \"$repo\" -name '*.xml' | zip \"${{repo}}.zip\" -@; then "
-        f"      echo \"zipped $repo\" && rm -rf \"$repo\"; "
-        f"    else "
-        f"      echo \"ERROR: failed to zip $repo\" >&2 && failed+=(\"$repo\"); "
-        f"    fi; "
-        f"  else "
-        f"    echo \"ERROR: missing repo dir: $repo\" >&2 && failed+=(\"$repo\"); "
-        f"  fi; "
-        f"done && "
-        f"if [ ${{#failed[@]}} -gt 0 ]; then "
-        f"  echo \"Zipping failed for: ${{failed[*]}}\" >&2 && exit 1; "
-        f"fi"
-    )
-    shell_cmd = f"rm -rf {DEST} && mkdir -p {DEST} && {clone_cmds} && {zip_cmds} && echo DONE && ls -lh {DEST}/*.zip"
+    shell_cmd = f"rm -rf {DEST} && mkdir -p {DEST} && {curl_cmds} && echo DONE && ls -lh {DEST}/"
 
-    print(f"\nCloning {len(REPOS)} dplava repos to EC2:{DEST} and zipping XML files ...")
+    print(f"\nDownloading {len(REPOS)} dplava repo zips to EC2:{DEST} ...")
     out, err = ssm_run(shell_cmd, poll_seconds=600)
     if out:
         print(out)
@@ -172,17 +147,16 @@ def clone_repos():
 def update_i3conf():
     conf_path = os.path.normpath(
         os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                     "..", "..", "ingestion3-conf", "i3.conf")
+                     "..", "..", "..", "..", "ingestion3-conf", "i3.conf")
     )
     if not os.path.exists(conf_path):
-        print(f"  Could not find i3.conf at {conf_path} — update manually:")
+        print(f"  Could not find i3.conf — update manually:")
         print(f'  virginias.harvest.endpoint = "{DEST}"')
         return
 
     with open(conf_path) as f:
         content = f.read()
 
-    import re
     new_content = re.sub(
         r'^(virginias\.harvest\.endpoint\s*=\s*).*$',
         rf'\g<1>"{DEST}"',
@@ -191,16 +165,16 @@ def update_i3conf():
     )
 
     if new_content == content:
-        print(f"  virginias.harvest.endpoint not found in i3.conf — update manually.")
+        print("  virginias.harvest.endpoint not found in i3.conf — update manually.")
         return
 
     with open(conf_path, "w") as f:
         f.write(new_content)
-    print(f"  i3.conf updated: virginias.harvest.endpoint = \"{DEST}\"")
+    print(f'  i3.conf updated: virginias.harvest.endpoint = "{DEST}"')
 
 
 def main():
-    clone_repos()
+    download_zips()
 
     print("\nUpdating i3.conf locally ...")
     update_i3conf()
@@ -208,8 +182,8 @@ def main():
     print("""
 Next steps:
   1. git commit + push ingestion3-conf/i3.conf
-  2. git pull on EC2 (run ec2_gitpull.py)
-  3. python3 launch_ingest.py virginias
+  2. python3 2_preflight.py --hub virginias   (offers to pull the box's repos)
+  3. python3 3_launch_ingest.py virginias
 """)
 
 

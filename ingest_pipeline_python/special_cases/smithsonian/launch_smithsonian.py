@@ -37,7 +37,7 @@ import time
 def _load_dotenv():
     cfg = {}
     env_file = os.path.normpath(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../..", ".env")
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../..", ".env")
     )
     if os.path.exists(env_file):
         with open(env_file) as f:
@@ -53,7 +53,7 @@ def _load_dotenv():
 
 _env = _load_dotenv()
 _env_file_exists = os.path.exists(os.path.normpath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env")
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".env")
 ))
 INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
 AWS_PROFILE: str | None = (

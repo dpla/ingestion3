@@ -11,10 +11,10 @@ Sections:
   4. SUMMARY         — counts of fresh / stale / missing
 
 Usage:
-    python3 postchecks.py
-    python3 postchecks.py --month 202605      # check specific month
-    python3 postchecks.py --no-api            # skip API count check
-    python3 postchecks.py --stale-days 60     # widen staleness window
+    python3 6_postchecks.py
+    python3 6_postchecks.py --month 202605      # check specific month
+    python3 6_postchecks.py --no-api            # skip API count check
+    python3 6_postchecks.py --stale-days 60     # widen staleness window
 """
 
 import argparse
@@ -27,7 +27,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
-from hub_preflight import list_scheduled_hubs
+from helper_scripts.hub_conf import list_scheduled_hubs
 
 # ---------- config ----------
 REGION        = "us-east-1"
@@ -190,7 +190,7 @@ def classify_age(date_str, now, stale_days):
 def get_hubs_from_conf(month_number, conf_path=CONF_PATH):
     """
     Return sorted list of active hub names scheduled for month_number (1–12).
-    Delegates to hub_preflight.list_scheduled_hubs() — single source of truth.
+    Delegates to list_scheduled_hubs() in 2_preflight.py (via helper_scripts/hub_conf.py) — single source of truth.
     """
     hubs = list_scheduled_hubs(month_number, conf_path)
     if hubs is None:
