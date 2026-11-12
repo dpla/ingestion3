@@ -143,6 +143,7 @@ def prompt_config(existing):
     return config
 
 
+PROMPTED_KEYS = ("INGESTION3_REPO", "INGESTION3_CONF_REPO", "BATCH_REPO_DIR", "DPLA_USER_EMAIL")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
@@ -164,7 +165,8 @@ def check_user_email(config):
     if not EMAIL_RE.match(config.get("DPLA_USER_EMAIL", "")):
         warn("DPLA_USER_EMAIL not set (used for test sends of the pre-ingest email)")
         config["DPLA_USER_EMAIL"] = ask_email()
-        save_config(config)
+        # Only this key: rewriting the others would drop their quoting
+        save_config({"DPLA_USER_EMAIL": config["DPLA_USER_EMAIL"]})
     ok(f"DPLA_USER_EMAIL  {c(DIM, config['DPLA_USER_EMAIL'])}")
     return True
 
@@ -258,7 +260,9 @@ def check_repos(config):
         ok(f"{label:<20} {c(DIM, path)}{git_note}")
 
     if changed:
-        save_config(config)
+        # Only the repo keys: rewriting the others would drop their quoting
+        save_config({k: config[k] for k in ("INGESTION3_REPO", "INGESTION3_CONF_REPO", "BATCH_REPO_DIR")
+                     if k in config})
         ok(f"Paths saved to {c(DIM, CONFIG_FILE)}")
 
     conf_repo = config.get("INGESTION3_CONF_REPO", "")
@@ -311,7 +315,7 @@ def main():
 
     if needs_setup:
         config = prompt_config(existing)
-        save_config(config)
+        save_config({k: config[k] for k in PROMPTED_KEYS})
         print()
         ok(f"Config saved to {c(DIM, CONFIG_FILE)}")
     else:

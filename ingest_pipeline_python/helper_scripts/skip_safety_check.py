@@ -119,9 +119,15 @@ def ssm_run(shell_cmd, timeout_seconds=120, poll_seconds=5):
         if time.time() > deadline:
             raise SSMOutcomeUnknown(f"SSM command {cmd_id} hasn't reported a final state "
                                     f"(last: {status}); check it with aws ssm get-command-invocation")
-    out = aws(["ssm", "get-command-invocation", "--command-id", cmd_id,
-               "--instance-id", INSTANCE_ID, "--region", REGION,
-               "--query", "StandardOutputContent", "--output", "text"])
+    try:
+        out = aws(["ssm", "get-command-invocation", "--command-id", cmd_id,
+                   "--instance-id", INSTANCE_ID, "--region", REGION,
+                   "--query", "StandardOutputContent", "--output", "text"])
+    except RuntimeError as e:
+        if status == "Success":
+            # It ran; we just can't see what it did
+            raise SSMOutcomeUnknown(f"SSM command {cmd_id} succeeded but its output couldn't be read: {e}")
+        raise
     if status != "Success":
         err = aws(["ssm", "get-command-invocation", "--command-id", cmd_id,
                    "--instance-id", INSTANCE_ID, "--region", REGION,
@@ -263,10 +269,18 @@ def main():
                  "a harvester pagination bug. Fix and re-ingest; don't publish it.")
     if uniq not in ("PASS", "SKIP"):
         sys.exit(f"\nCouldn't run the ID uniqueness check on {snap} (got {uniq!r}). Not publishing.")
+    # SKIP is fine for a small snapshot, but 0 sampled means it read nothing at all
+    sampled = re.search(r"in ([\d,]+) sampled", info.get("UNIQ_DETAIL", ""))
+    if uniq == "SKIP" and (not sampled or int(sampled.group(1).replace(",", "")) == 0):
+        sys.exit(f"\nThe ID uniqueness check read no records from {snap} "
+                 f"({info.get('UNIQ_DETAIL', '')}), so it can't vouch for it. Not publishing.")
     print(f"  ID uniqueness:     {uniq} ({info.get('UNIQ_DETAIL', '')})")
     if info.get("IN_S3") == "yes":
         sys.exit(f"\n{snap} is already in S3; nothing to publish. "
                  "To email the hub, use scripts/communication/send-ingest-email.sh.")
+    if s3_snap and prev <= 0:
+        sys.exit(f"\nCouldn't read a record count for the previous S3 snapshot ({s3_snap}), so the "
+                 "drop can't be judged. Check its _MANIFEST before publishing.")
     if s3_snap and snap <= s3_snap:
         sys.exit(f"\n{snap} is older than the newest S3 snapshot ({s3_snap}); the indexer "
                  "wouldn't use it, so it isn't synced.")

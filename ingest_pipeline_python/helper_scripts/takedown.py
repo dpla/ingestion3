@@ -132,13 +132,20 @@ def es(shell_cmd, timeout_seconds=300):
 
 
 def es_query(index, action, ids):
-    """POST a terms-on-id query to <index>/<action> and return the parsed response."""
+    """POST a terms-on-id query to <index>/<action> and return the parsed response.
+    Raises RuntimeError on an Elasticsearch error or an unreadable response."""
     query = base64.b64encode(json.dumps({"query": {"terms": {"id": ids}}}).encode()).decode()
     # A file per request, so overlapping runs can't read each other's query
     out = es(f"Q=$(mktemp /tmp/dpla-takedown-q.XXXXXX) && echo {query} | base64 -d > \"$Q\" && "
              f"curl -s -XPOST \"http://$IP:9200/{index}/{action}\" "
              f"-H 'Content-Type: application/json' -d @\"$Q\"; rm -f \"$Q\"")
-    return json.loads(out)
+    try:
+        res = json.loads(out)
+    except ValueError:
+        raise RuntimeError(f"unreadable Elasticsearch response: {out[:300]}")
+    if not isinstance(res, dict) or "error" in res:
+        raise RuntimeError(f"Elasticsearch error: {json.dumps(res)[:300]}")
+    return res
 
 
 def live_index():
@@ -150,16 +157,22 @@ def live_index():
 
 
 def api_get(url):
-    """GET a DPLA API URL; returns (http_status, parsed_json_or_None)."""
+    """GET a DPLA API URL; returns (http_status, parsed_json_or_None).
+    Network errors are retried; (None, None) means the API couldn't be reached."""
     sep = "&" if "?" in url else "?"
-    try:
-        with urllib.request.urlopen(f"{url}{sep}api_key={API_KEY}", timeout=30) as r:
-            return r.status, json.load(r)
-    except urllib.error.HTTPError as e:
+    for attempt in range(3):
         try:
-            return e.code, json.load(e)
-        except ValueError:
-            return e.code, None
+            with urllib.request.urlopen(f"{url}{sep}api_key={API_KEY}", timeout=30) as r:
+                return r.status, json.load(r)
+        except urllib.error.HTTPError as e:
+            try:
+                return e.code, json.load(e)
+            except ValueError:
+                return e.code, None
+        except (urllib.error.URLError, OSError, ValueError):
+            if attempt < 2:
+                time.sleep(5)
+    return None, None
 
 
 def api_count(params=None):
@@ -206,7 +219,10 @@ def source_status(is_shown_at):
         if it == 200:
             return "live", "ContentDM item still published (200)"
         return "unverified", f"ContentDM API returned {it}"
-    host = (urllib.parse.urlparse(is_shown_at).hostname or "").lower()
+    try:
+        host = (urllib.parse.urlparse(is_shown_at).hostname or "").lower()
+    except ValueError:
+        return "unverified", "isShownAt isn't a valid URL"
     if host in ("ark.cdlib.org", "calisphere.org") or host.endswith(".calisphere.org"):
         return "unverified", "Calisphere blocks scripted checks; check in a browser"
     code = http_status(is_shown_at)
@@ -216,8 +232,9 @@ def source_status(is_shown_at):
 
 
 def gone_from_api(dpla_id):
+    """True only when the API confirms the ID is gone; unreachable counts as not confirmed."""
     status, body = api_get(f"{API}/{dpla_id}")
-    return status == 404 or (body is not None and body.get("count") == 0)
+    return status == 404 or (status == 200 and body is not None and body.get("count") == 0)
 
 
 # ---------- main ----------
@@ -251,6 +268,8 @@ def main():
     items, missing = [], []
     for i in ids:
         status, body = api_get(f"{API}/{i}")
+        if status is None:
+            sys.exit(f"Couldn't reach the DPLA API to look up {i}. Nothing was changed.")
         docs = (body or {}).get("docs") or []
         if status != 200 or not docs:
             missing.append(i)
@@ -313,7 +332,10 @@ def main():
     # Find the live index and check every ID is in it before touching anything
     index = live_index()
     batches = [[it["id"] for it in take[k:k + BATCH]] for k in range(0, n, BATCH)]
-    found = sum(es_query(index, "_count", b)["count"] for b in batches)
+    try:
+        found = sum(es_query(index, "_count", b)["count"] for b in batches)
+    except (RuntimeError, KeyError) as e:
+        sys.exit(f"Couldn't count the IDs in {index} ({e}). Nothing was changed.")
     print(f"\n  Live index {index}: {found} of {n} found")
     if found != n:
         sys.exit("  Counts don't match; stopping before any deletion. Investigate the missing IDs.")
@@ -352,13 +374,17 @@ def main():
     print(f"\nRemoving from {index} …")
     deleted = 0
     for b in batches:
-        # An alias swap mid-run would leave these deletes on an index that's no longer live
-        if live_index() != index:
-            sys.exit(f"dpla_alias no longer points to {index}; stopped after deleting {deleted}. "
-                     "Rerun the takedown against the new index.")
-        if es_query(index, "_count", b)["count"] != len(b):
-            sys.exit(f"Batch count changed since the check; stopped after deleting {deleted}.")
-        res = es_query(index, "_delete_by_query?conflicts=abort&refresh=true", b)
+        try:
+            # An alias swap mid-run would leave these deletes on an index that's no longer live
+            if live_index() != index:
+                sys.exit(f"dpla_alias no longer points to {index}; stopped after deleting {deleted}. "
+                         "Rerun the takedown against the new index.")
+            if es_query(index, "_count", b)["count"] != len(b):
+                sys.exit(f"Batch count changed since the check; stopped after deleting {deleted}.")
+            res = es_query(index, "_delete_by_query?conflicts=abort&refresh=true", b)
+        except (RuntimeError, KeyError, ValueError) as e:
+            sys.exit(f"Elasticsearch failed mid-takedown ({e}). Stopped after deleting {deleted} of {n} "
+                     f"from {index}; S3 already has all {n} removed. Check which IDs remain before rerunning.")
         if res.get("deleted") != len(b) or res.get("failures") or res.get("version_conflicts"):
             sys.exit(f"Batch didn't delete cleanly (deleted {res.get('deleted')} of {len(b)}; "
                      f"failures {res.get('failures')}; conflicts {res.get('version_conflicts')}). "
@@ -374,8 +400,12 @@ def main():
         print(f"  {len(still)} still showing; waiting 2 minutes for the API cache …")
         time.sleep(120)
         still = [i for i in still if not gone_from_api(i)]
-    total_after = api_count()
-    hub_after = api_count({"provider.name": f'"{hub_name}"'})
+    try:
+        total_after = api_count()
+        hub_after = api_count({"provider.name": f'"{hub_name}"'})
+    except RuntimeError as e:
+        print(f"  ✗ Couldn't read the API counts ({e}).")
+        total_after, hub_after = total_before, hub_before  # forces the unverified verdict below
     t_delta, h_delta = total_before - total_after, hub_before - hub_after
     print(f"  Total: {total_before:,} → {total_after:,}  (−{t_delta})  {'✓' if t_delta == n else '✗'}")
     print(f"  {hub_name}: {hub_before:,} → {hub_after:,}  (−{h_delta})  {'✓' if h_delta == n else '✗'}")
