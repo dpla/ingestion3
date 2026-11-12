@@ -108,17 +108,35 @@ def save_config(config):
         if stripped and not stripped.startswith("#") and "=" in stripped:
             k = stripped.split("=", 1)[0].strip()
             if k in keys_to_write:
-                new_lines.append(f"{k}={config[k]}\n")
+                new_lines.append(f"{k}={_env_value(k, config[k])}\n")
                 updated.add(k)
                 continue
         new_lines.append(line)
 
     # Append any keys that weren't already in the file
     for k in sorted(keys_to_write - updated):
-        new_lines.append(f"{k}={config[k]}\n")
+        new_lines.append(f"{k}={_env_value(k, config[k])}\n")
 
     with open(CONFIG_FILE, "w") as f:
         f.writelines(new_lines)
+
+
+def _env_value(key, value):
+    """Shell-safe .env value. The email is double-quoted with \\ " $ ` escaped, so
+    `source .env` keeps it literal; paths are left as before."""
+    if key != "DPLA_USER_EMAIL":
+        return value
+    for ch in ("\\", '"', "$", "`"):
+        value = value.replace(ch, "\\" + ch)
+    return f'"{value}"'
+
+
+def warn_if_env_overrides(saved):
+    """2_send_email.py prefers an exported DPLA_USER_EMAIL over .env; say so if they differ."""
+    exported = os.environ.get("DPLA_USER_EMAIL")
+    if exported and exported != saved:
+        warn(f"Your shell exports DPLA_USER_EMAIL={exported}, which overrides the saved {saved}. "
+             "Test sends go to the exported one until you unset it or open a new shell.")
 
 
 def prompt_config(existing):
@@ -168,6 +186,7 @@ def check_user_email(config):
         # Only this key: rewriting the others would drop their quoting
         save_config({"DPLA_USER_EMAIL": config["DPLA_USER_EMAIL"]})
     ok(f"DPLA_USER_EMAIL  {c(DIM, config['DPLA_USER_EMAIL'])}")
+    warn_if_env_overrides(config["DPLA_USER_EMAIL"])
     return True
 
 

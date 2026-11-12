@@ -158,21 +158,27 @@ def live_index():
 
 def api_get(url):
     """GET a DPLA API URL; returns (http_status, parsed_json_or_None).
-    Network errors are retried; (None, None) means the API couldn't be reached."""
+    Network errors and transient HTTP errors (429, 5xx) are retried; after that
+    the last status is returned, or (None, None) if the API couldn't be reached."""
     sep = "&" if "?" in url else "?"
+    result = (None, None)
     for attempt in range(3):
         try:
             with urllib.request.urlopen(f"{url}{sep}api_key={API_KEY}", timeout=30) as r:
                 return r.status, json.load(r)
         except urllib.error.HTTPError as e:
             try:
-                return e.code, json.load(e)
+                body = json.load(e)
             except ValueError:
-                return e.code, None
+                body = None
+            if e.code != 429 and e.code < 500:
+                return e.code, body
+            result = (e.code, body)
         except (urllib.error.URLError, OSError, ValueError):
-            if attempt < 2:
-                time.sleep(5)
-    return None, None
+            result = (None, None)
+        if attempt < 2:
+            time.sleep(5)
+    return result
 
 
 def api_count(params=None):
@@ -268,12 +274,14 @@ def main():
     items, missing = [], []
     for i in ids:
         status, body = api_get(f"{API}/{i}")
-        if status is None:
-            sys.exit(f"Couldn't reach the DPLA API to look up {i}. Nothing was changed.")
-        docs = (body or {}).get("docs") or []
-        if status != 200 or not docs:
+        docs = (body or {}).get("docs") or [] if status == 200 else []
+        # Only a 404, or a 200 with no record, means the ID really isn't there
+        if status == 404 or (status == 200 and not docs):
             missing.append(i)
             continue
+        if status != 200:
+            sys.exit(f"Couldn't look up {i} in the DPLA API ({'no response' if status is None else f'HTTP {status}'}). "
+                     "Nothing was changed; try again.")
         d = docs[0]
         prov = d.get("provider") or {}
         items.append({
