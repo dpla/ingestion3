@@ -21,8 +21,8 @@ Handles multiple harvest types:
   - file / nara    — file-based harvests (progress not meaningful)
 
 Usage:
-    python3 check_ingest.py                  # prompts for hub
-    python3 check_ingest.py p2p              # one-shot status check
+    python3 helper_scripts/check_ingest.py                  # prompts for hub
+    python3 helper_scripts/check_ingest.py p2p              # one-shot status check
 """
 
 import argparse

@@ -10,10 +10,10 @@ Shows the current state of a running or recently completed Community Webs ingest
   - Tail of the ingest log
 
 Usage:
-    python3 check_cw.py
-    python3 check_cw.py --tail 50
-    python3 check_cw.py --watch        # refresh every 30s
-    python3 check_cw.py --watch 60     # custom interval
+    python3 special_cases/community-webs/check_cw.py
+    python3 special_cases/community-webs/check_cw.py --tail 50
+    python3 special_cases/community-webs/check_cw.py --watch        # refresh every 30s
+    python3 special_cases/community-webs/check_cw.py --watch 60     # custom interval
 """
 
 import argparse

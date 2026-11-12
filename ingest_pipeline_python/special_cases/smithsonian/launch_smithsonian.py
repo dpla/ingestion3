@@ -16,12 +16,12 @@ Stages already complete are skipped automatically. Use --start-at to resume
 from a specific stage after a failure.
 
 Usage:
-    python3 launch_smithsonian.py                        # human checkpoints (default)
-    python3 launch_smithsonian.py --auto                 # no checkpoints, full run
-    python3 launch_smithsonian.py --date 2026-04-03
-    python3 launch_smithsonian.py --start-at harvest
-    python3 launch_smithsonian.py --start-at mapping
-    python3 launch_smithsonian.py --start-at pipeline
+    python3 special_cases/smithsonian/launch_smithsonian.py                        # human checkpoints (default)
+    python3 special_cases/smithsonian/launch_smithsonian.py --auto                 # no checkpoints, full run
+    python3 special_cases/smithsonian/launch_smithsonian.py --date 2026-04-03
+    python3 special_cases/smithsonian/launch_smithsonian.py --start-at harvest
+    python3 special_cases/smithsonian/launch_smithsonian.py --start-at mapping
+    python3 special_cases/smithsonian/launch_smithsonian.py --start-at pipeline
 """
 
 import argparse

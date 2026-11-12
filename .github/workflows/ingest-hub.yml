@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       resume_from:
-        description: '(Standard hubs) Resume from stage: harvest|mapping|enrichment|jsonl|delivery — leave blank for a full run'
+        description: '(Standard hubs) Resume from stage: mapping|enrichment|jsonl — leave blank for a full run'
         required: false
         type: string
         default: ''
@@ -151,7 +151,7 @@ jobs:
               ;;
 
             *)
-              # Standard hubs (localoai / api / file) — launch_ingest.py reads
+              # Standard hubs (localoai / api / file) — 3_launch_ingest.py reads
               # harvest.type from i3.conf on EC2 via SSM; no local conf needed.
               CMD=(python3 ingest_pipeline_python/3_launch_ingest.py "$HUB" --non-interactive)
               [[ -n "$RESUME_FROM" ]] && CMD+=(--resume-from "$RESUME_FROM")

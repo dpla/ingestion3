@@ -6,6 +6,16 @@ allowed-tools: Bash
 
 # DPLA Takedown
 
+## Script
+
+`ingest_pipeline_python/helper_scripts/takedown.py` runs this whole procedure for explicit IDs (one hub per run) and stops on any mismatch. Prefer it; use the phases below for criteria-based lists (Phase 0 B/C), Calisphere source checks, or a step that has to be redone by hand.
+
+```bash
+cd ingest_pipeline_python
+../venv/bin/python helper_scripts/takedown.py -f ids.txt --dry-run   # lookup, source check, live-index count; deletes nothing
+../venv/bin/python helper_scripts/takedown.py -f ids.txt             # asks before deleting
+```
+
 ## Purpose
 
 Safely remove one or more DPLA items from the live dp.la search index and from the

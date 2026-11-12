@@ -13,8 +13,8 @@ is published to s3://dpla-master-dataset/ or emailed to the hub contacts unless
 you say yes. Slack reports each stage. Without a terminal (GitHub Actions) it starts the run and exits at step 3.
 
 Usage:
-    python3 copy_cw.py ~/Downloads/community-webs.sqlite3
-    python3 launch_cw.py
+    python3 special_cases/community-webs/copy_cw.py ~/Downloads/community-webs.sqlite3
+    python3 special_cases/community-webs/launch_cw.py
 
 Rerunning starts again from the export; it can't double records.
 

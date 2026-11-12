@@ -7,7 +7,7 @@ its record count next to the previous one, and copies it to
 s3://dpla-hub-community-webs/<timestamp>-community-webs.db.
 
 Usage:
-    python3 copy_cw.py ~/Downloads/community-webs.sqlite3
+    python3 special_cases/community-webs/copy_cw.py ~/Downloads/community-webs.sqlite3
 
 Then run launch_cw.py, which uses the newest copied file.
 """
@@ -61,7 +61,7 @@ def main():
         sys.exit(f"S3 upload failed: {result.stderr.strip()}")
 
     print(f"  ✓ Copied → {s3_dest}")
-    print("\n  Next: python3 launch_cw.py")
+    print("\n  Next: python3 special_cases/community-webs/launch_cw.py")
 
 
 if __name__ == "__main__":

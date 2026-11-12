@@ -10,15 +10,15 @@ All user-supplied content (subject, intro, image) is passed as flags —
 no interactive prompts. Designed to be called by a Claude skill.
 
 Usage:
-    python3 pre-emails/get_info.py --month 5 --year 2026
-    python3 pre-emails/get_info.py --month 5 --year 2026 --dry-run
-    python3 pre-emails/get_info.py --month 5 --year 2026 \\
+    python3 pre_ingest_monthly_email/1_get_info.py --month 5 --year 2026
+    python3 pre_ingest_monthly_email/1_get_info.py --month 5 --year 2026 --dry-run
+    python3 pre_ingest_monthly_email/1_get_info.py --month 5 --year 2026 \\
         --subject "DPLA Ingests for May 2026" \\
         --intro "DPLA partners, it is harvest time!..." \\
         --image-url "https://example.com/image.jpg" \\
         --image-caption "Harvest Time, courtesy Illinois Digital Heritage Hub"
 
-Output file (default): pre-emails/txt_emails/pre-ingest-<YYYY>-<MM>_<timestamp>.txt
+Output file (default): pre_ingest_monthly_email/txt_emails/pre-ingest-<YYYY>-<MM>_<timestamp>.txt
 """
 
 import argparse
@@ -128,7 +128,7 @@ def format_week_range(monday: date, friday: date) -> str:
 # ── Image fetch ───────────────────────────────────────────────────────────────
 
 def fetch_image(url: str) -> str:
-    """Download image to pre-emails/images/ and return the local path."""
+    """Download image to pre_ingest_monthly_email/images/ and return the local path."""
     import urllib.parse
     import urllib.error
 

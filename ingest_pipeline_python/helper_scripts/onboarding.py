@@ -16,8 +16,8 @@ On first run, prompts for your local repo paths and saves them to dpla_config.en
   8. Summary
 
 Usage:
-    python3 onboarding.py           # first run — prompts for config
-    python3 onboarding.py --update  # re-prompt to change saved paths
+    python3 helper_scripts/onboarding.py           # first run — prompts for config
+    python3 helper_scripts/onboarding.py --update  # re-prompt to change saved paths
 """
 
 import argparse
@@ -316,7 +316,7 @@ def main():
         for k in failed:
             print(f"    {c(RED, '✗')} {k.replace('_', ' ')}")
         print()
-        print(c(DIM, "  Fix the items above and re-run python3 onboarding.py"))
+        print(c(DIM, "  Fix the items above and re-run python3 helper_scripts/onboarding.py"))
 
     print(c(DIM, "=" * 70))
     print()

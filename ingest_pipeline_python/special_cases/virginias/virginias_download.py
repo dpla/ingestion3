@@ -10,7 +10,7 @@ EC2 local path. You still need to git commit + push i3.conf and git pull
 on EC2 before running the ingest.
 
 Usage:
-    python3 virginias_download.py
+    python3 special_cases/virginias/virginias_download.py
 """
 import base64
 import json

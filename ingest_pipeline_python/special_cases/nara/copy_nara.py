@@ -17,7 +17,7 @@ After this script completes, run:
     python3 special_cases/nara/launch_nara.py --month <YYYYMM>
 
 Usage:
-    python3 copy_nara.py --month 202604
+    python3 special_cases/nara/copy_nara.py --month 202604
 
 Prerequisites:
     - AWS CLI installed and authenticated locally
@@ -304,7 +304,7 @@ def main():
     print(f"  NARA copy complete — {month}!")
     print(f"  S3:  {dst}")
     print(f"  EC2: {ec2_ingest_dir}")
-    print(f"  Run: python3 launch_nara.py --month {month}")
+    print(f"  Run: python3 special_cases/nara/launch_nara.py --month {month}")
     print("=" * 70)
     print()
 

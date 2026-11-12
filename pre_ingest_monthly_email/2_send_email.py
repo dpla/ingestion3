@@ -2,7 +2,7 @@
 """
 send_email.py — Send the DPLA pre-ingest email via AWS SES.
 
-Reads a prepared txt file from pre-emails/txt_emails/ and sends it as a
+Reads a prepared txt file from pre_ingest_monthly_email/txt_emails/ and sends it as a
 styled HTML email matching the DPLA ingest email template.
 
 TEST MODE (current): sends only to TEST_EMAIL.
@@ -10,10 +10,10 @@ PRODUCTION (when ready): To: ingest@dp.la, BCC: all hub contact emails from i3.c
 To switch, set TEST_MODE = False below.
 
 Usage:
-    python3 pre-emails/send_email.py                        # send latest txt file
-    python3 pre-emails/send_email.py --file pre-ingest-2026-05_20260513T143022.txt
-    python3 pre-emails/send_email.py --dry-run              # print HTML to stdout
-    python3 pre-emails/send_email.py --aws-profile dpla     # override AWS profile
+    python3 pre_ingest_monthly_email/2_send_email.py                        # send latest txt file
+    python3 pre_ingest_monthly_email/2_send_email.py --file pre-ingest-2026-05_20260513T143022.txt
+    python3 pre_ingest_monthly_email/2_send_email.py --dry-run              # print HTML to stdout
+    python3 pre_ingest_monthly_email/2_send_email.py --aws-profile dpla     # override AWS profile
 """
 
 import argparse

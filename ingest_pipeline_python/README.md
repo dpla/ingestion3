@@ -52,7 +52,7 @@ Two workflows are available under **Actions → Launch Hub Ingest / Monthly Hub 
 
 **Launch Hub Ingest** inputs:
 - `hub` (required) — short name, e.g. `bpl`, `ohio`, `nara`, `smithsonian`
-- `resume_from` (optional) — resume standard hubs from `harvest|mapping|enrichment|jsonl|delivery`
+- `resume_from` (optional) — resume standard hubs from `mapping`, `enrichment` or `jsonl`
 - `override` (optional) — NARA: `YYYYMM`; Smithsonian: `YYYY-MM-DD`; Community Webs: `YYYYMMDD_HHMMSS`
 
 **Monthly Hub Batch** inputs:
@@ -91,6 +91,7 @@ Re-run at any time. Use `--update` to change saved paths.
 ## Monthly Workflow
 
 ```
+0. pre-ingest email      start of the month: ../pre_ingest_monthly_email/1_get_info.py, then 2_send_email.py
 1. 1_prechecks.py        list every hub scheduled for the month
 2. 2_preflight.py        check one hub before ingesting it
 3. 3_launch_ingest.py    launch that hub once preflight passes
@@ -352,8 +353,38 @@ Downloads the repos to EC2 and updates `virginias.harvest.endpoint` in your loca
 | `helper_scripts/check_ingest.py` | Monitor a running ingest |
 | `helper_scripts/hub_conf.py` | Not run directly: lets the numbered scripts import the shared i3.conf helpers from `2_preflight.py` |
 | `helper_scripts/onboarding.py` | First-time setup |
+| `helper_scripts/skip_safety_check.py` | Publish an ingest the >5% safety check blocked, after you've reviewed the drop |
+| `helper_scripts/takedown.py` | Take items down from dp.la and the S3 master dataset |
 | `helper_scripts/run_monthly_batch.py` | Launch all of a month's standard hubs in sequence (used by the Monthly Hub Batch workflow) |
 | `helper_scripts/update_file_endpoints.py` | Point file hubs' i3.conf endpoints at their newest S3 delivery (used by the Update Hub File Endpoints workflow) |
+
+---
+
+## When the Safety Check Blocks an Ingest
+
+If `ingest.sh` reports a >5% record drop, the new snapshot stays on EC2 and the hub isn't emailed. Compare the counts to see where the records went. If the drop is expected:
+
+```bash
+python3 helper_scripts/skip_safety_check.py <hub>
+```
+
+It shows the blocked snapshot next to the previous S3 snapshot (plus the harvest and mapping counts and hub contacts), asks, syncs only that snapshot to S3, checks it's now the newest there, asks before emailing the hub, and posts to Slack. `--snapshot <dir>` picks a snapshot other than the newest. It refuses runs blocked by the ID uniqueness check, unfinished snapshots, and snapshots older than what's in S3. Community Webs uses `launch_cw.py --send --force` instead; NARA isn't handled.
+
+---
+
+## Takedowns
+
+```bash
+../venv/bin/python helper_scripts/takedown.py -f ids.txt --dry-run   # check everything, delete nothing
+../venv/bin/python helper_scripts/takedown.py -f ids.txt
+```
+
+Takes DPLA IDs (arguments or `-f`, one per line; one hub per run). It looks each up in the API, checks the item is gone at the source (ContentDM through its API, other sites by HTTP status), shows a manifest and asks, removes the IDs from the hub's newest S3 JSON-L, counts them in the live index (must match exactly), deletes them in batches of 100, and confirms through the API that the total and hub counts dropped by exactly that many.
+
+- Items still published in ContentDM are always left out. Items it can't confirm (non-ContentDM sites, Calisphere) are left out unless you check them yourself and pass `--include-unverified`.
+- If the hub's S3 folder isn't the API's hub name, pass `--s3-hub <folder>`.
+- Use the venv Python: the S3 step needs `boto3`.
+- There's no exclusion list. Ask the hub to remove the items at the source, or they come back at its next ingest.
 
 ---
 

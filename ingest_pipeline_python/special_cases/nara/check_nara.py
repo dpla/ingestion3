@@ -10,11 +10,11 @@ Shows the current state of a running or recently completed NARA ingest:
   - Tail of the most recent log file
 
 Usage:
-    python3 check_nara.py
-    python3 check_nara.py --month 202604
-    python3 check_nara.py --tail 50
-    python3 check_nara.py --watch        # refresh every 30s
-    python3 check_nara.py --watch 60     # custom interval
+    python3 special_cases/nara/check_nara.py
+    python3 special_cases/nara/check_nara.py --month 202604
+    python3 special_cases/nara/check_nara.py --tail 50
+    python3 special_cases/nara/check_nara.py --watch        # refresh every 30s
+    python3 special_cases/nara/check_nara.py --watch 60     # custom interval
 """
 
 import argparse
@@ -484,7 +484,7 @@ def render(sections):
         lines.append("  1. Review the merge summary above for valid/invalid delete counts.")
         lines.append("  2. Check the delivery: were NAC_DESC_Deletes_*.xml files present?")
         lines.append("  3. If 0 deletes is expected for this delivery, resume with:")
-        lines.append(c(DIM, "       python3 nara/launch_nara.py --skip-to-pipeline --skip-delete-check"))
+        lines.append(c(DIM, "       python3 special_cases/nara/launch_nara.py --skip-to-pipeline --skip-delete-check"))
         lines.append("  4. Otherwise, investigate before re-running.")
 
     lines.append("")

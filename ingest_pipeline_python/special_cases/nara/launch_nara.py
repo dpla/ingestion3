@@ -279,7 +279,7 @@ def preflight_check(month):
             f"\n  [BAD] No files found at {ingest_dir} on EC2.\n"
             f"  Run copy_nara.py first — it downloads the NARA delivery and stages\n"
             f"  the ZIPs at that path, ready for nara-ingest.sh.\n"
-            f"  Run: python3 copy_nara.py   (then re-run this script)"
+            f"  Run: python3 special_cases/nara/copy_nara.py   (then re-run this script)"
         )
     ok(f"{count} file(s) staged at {ingest_dir}")
 
@@ -484,7 +484,7 @@ def tail_log(pid, log_path):
     info(f"Log: {log_path}")
     info(f"PID: {pid}")
     info(f"Resume:  python3 special_cases/nara/launch_nara.py --resume --log {log_path}")
-    info(f"Status:  python3 check_nara.py\n")
+    info(f"Status:  python3 special_cases/nara/check_nara.py\n")
 
     last_lines = 0
     try:
@@ -541,7 +541,7 @@ def tail_log(pid, log_path):
     except KeyboardInterrupt:
         print(f"\n\n  Monitoring stopped. NARA ingest is still running on EC2.")
         print(f"  Resume:  python3 special_cases/nara/launch_nara.py --resume --log {log_path}")
-        print(f"  Status:  python3 check_nara.py")
+        print(f"  Status:  python3 special_cases/nara/check_nara.py")
 
 
 def resume_log(log_path):

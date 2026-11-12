@@ -14,16 +14,16 @@ description: >
 
 This skill walks through the full pipeline: gathering hub data from `i3.conf`,
 generating a structured `.txt` draft, previewing the rendered HTML, and sending
-via AWS SES. Everything lives in `pre-emails/` inside the Claude Scripts folder.
+via AWS SES. Everything lives in `pre_ingest_monthly_email/` in the ingestion3 repo.
 
 ---
 
 ## File layout
 
 ```
-pre-emails/
-├── get_info.py          — generates the .txt draft from i3.conf
-├── send_email.py        — renders HTML + sends via SES (or dry-runs)
+pre_ingest_monthly_email/
+├── 1_get_info.py        — generates the .txt draft from i3.conf
+├── 2_send_email.py      — renders HTML + sends via SES (or dry-runs)
 ├── txt_emails/          — generated .txt files land here
 ├── images/              — downloaded cover images land here
 └── standard_images/
@@ -52,16 +52,15 @@ If all you know is "send the May email", that's enough to proceed with defaults.
 
 ### 2. Generate the .txt draft
 
-Run `get_info.py` from the `pre-emails/` directory:
+Run `1_get_info.py` from the ingestion3 repo root:
 
 ```bash
-cd "/path/to/pre-emails"
-python3 get_info.py --month <M> --year <YYYY>
+./venv/bin/python pre_ingest_monthly_email/1_get_info.py --month <M> --year <YYYY>
 ```
 
 With optional flags:
 ```bash
-python3 get_info.py \
+./venv/bin/python pre_ingest_monthly_email/1_get_info.py \
   --month 5 --year 2026 \
   --image-url "https://example.com/cover.jpg" \
   --image-caption "Harvest Time, Illinois Digital Heritage Hub" \
@@ -81,39 +80,42 @@ Tell the user the output filename and the ingest week it calculated, so they can
 Show the user what the email will look like before sending:
 
 ```bash
-python3 send_email.py --dry-run
+./venv/bin/python pre_ingest_monthly_email/2_send_email.py --dry-run
 ```
 
 This prints the raw HTML to stdout. You don't need to show all of it —
 just confirm the key parts look right: subject line, hub list, ingest week date,
-cover image (if any). If the user spots anything wrong, re-run `get_info.py`
+cover image (if any). If the user spots anything wrong, re-run `1_get_info.py`
 with corrected flags rather than editing the `.txt` file by hand.
 
 ### 4. Send the email
 
 Once the user confirms everything looks good:
 
+**Test send first**, to the user's own address only (no BCC):
+
 ```bash
-python3 send_email.py
+./venv/bin/python pre_ingest_monthly_email/2_send_email.py --to <their-email>
 ```
 
-**TEST_MODE** (default `True` in `send_email.py`):
-- Sends only to `spieges124@gmail.com`
-- Safe to run at any time
-- Tell the user to check their inbox and confirm it looks right
+Tell the user to check their inbox and confirm it looks right.
 
-**Production send** (`TEST_MODE = False`):
+**Production send** — `TEST_MODE = False` in `2_send_email.py` (its current setting), so a plain run is the real send:
+
+```bash
+./venv/bin/python pre_ingest_monthly_email/2_send_email.py
+```
+
 - Sends `To: ingest@dp.la`, `BCC:` all hub contact emails from `i3.conf`
-- Only flip this when Zoe explicitly says "send for real" or "production send"
-- The toggle is on line 29 of `send_email.py`: `TEST_MODE = True/False`
+- Only run it when Zoe explicitly says "send for real" or "production send"
 
-Always confirm with the user before flipping to production.
+Always confirm with the user before the production send.
 
 ---
 
 ## Useful flags reference
 
-### get_info.py
+### 1_get_info.py
 
 | Flag | Default | Notes |
 |------|---------|-------|
@@ -126,7 +128,7 @@ Always confirm with the user before flipping to production.
 | `--dry-run` | off | prints to stdout, no file written |
 | `--i3-conf` | from `.env` or `~/Documents/Repos/ingestion3-conf/i3.conf` | |
 
-### send_email.py
+### 2_send_email.py
 
 | Flag | Default | Notes |
 |------|---------|-------|
@@ -134,6 +136,7 @@ Always confirm with the user before flipping to production.
 | `--file` | latest `.txt` in `txt_emails/` | specify a filename to use a different one |
 | `--aws-profile` | `dpla` | AWS credentials profile |
 | `--i3-conf` | from `.env` | used for BCC list in production mode |
+| `--to` | _(none)_ | send only to this address, no BCC (test send) |
 
 ---
 
@@ -149,13 +152,13 @@ This is an IAM permission — ask Dominic to add it if it's missing.
 the email still sends but without the logo image.
 
 **Wrong ingest week:**
-`get_info.py` calculates the last full Monday–Friday of the month. If the
+`1_get_info.py` calculates the last full Monday–Friday of the month. If the
 auto-detected week looks wrong, pass a corrected `--intro` with the right date
 or let the user know they may need to adjust.
 
 **`i3.conf` not found:**
-Set `INGESTION3_CONF_REPO` in the `.env` file at the root of the Claude Scripts
-folder, or pass `--i3-conf /path/to/i3.conf` directly.
+Set `INGESTION3_CONF_REPO` in the `.env` file at the root of the ingestion3
+repo, or pass `--i3-conf /path/to/i3.conf` directly.
 
 **No hubs listed:**
 The hub may be on hold (`schedule.status = "on-hold"` in `i3.conf`) or not

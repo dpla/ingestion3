@@ -39,7 +39,7 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 | `delete/delete-from-jsonl.sh` | Delete records from S3 JSONL files | `./scripts/delete/delete-from-jsonl.sh --hub <hub> <id>...` |
 | `communication/send-ingest-email.sh` | Send ingest summary email | `./scripts/communication/send-ingest-email.sh [--yes] <hub>` |
 | `generate_hub_stats.py` | Rebuild dashboard hub stats + GA4 item mapping in S3 | `./venv/bin/python scripts/generate_hub_stats.py` |
-| `generate_tag_sitemap.py` | Build aviation/bws item sitemaps from ES into s3://sitemaps.dp.la (run by `post_indexer.py`) | `python3 scripts/generate_tag_sitemap.py --hub aviation\|bws [--dry-run]` |
+| `generate_tag_sitemap.py` | Build aviation/bws item sitemaps from ES into s3://sitemaps.dp.la (run by `ingest_pipeline_python/5_post_indexer.py`) | `python3 scripts/generate_tag_sitemap.py --hub aviation\|bws [--dry-run]` |
 | `curated_membership.py` | Refresh the exhibition/source-set membership snapshot used by the JSONL export | `python3 scripts/curated_membership.py` |
 | *scheduling_emails* (Python) | Monthly pre-scheduling email to hub contacts | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails [--month=N] --dry-run \| --draft \| --send` |
 | `status/ingest-status.sh` | Check ingest status (orchestrator or manual runs) | `./scripts/status/ingest-status.sh` |
@@ -349,7 +349,7 @@ Rebuilds the three dashboard-analytics inputs in `s3://dashboard-analytics/hub-s
 ./venv/bin/python scripts/generate_hub_stats.py
 ```
 
-Run on the ingest EC2 on day 5 of the month or later (GA4 settles the prior month for ~72 hours; the script warns on earlier runs). `post_indexer.py` step 4 runs it via SSM with system `python3`, so its dependencies (`boto3`, `google-analytics-data`) must be installed for that interpreter on the EC2. The two hub stats files upload first; if `item_data_providers.json` cannot be updated the script exits non-zero so post_indexer alerts.
+Run on the ingest EC2 on day 5 of the month or later (GA4 settles the prior month for ~72 hours; the script warns on earlier runs). `ingest_pipeline_python/5_post_indexer.py` step 4 runs it via SSM with system `python3`, so its dependencies (`boto3`, `google-analytics-data`) must be installed for that interpreter on the EC2. The two hub stats files upload first; if `item_data_providers.json` cannot be updated the script exits non-zero so post_indexer alerts.
 
 **Environment**: `ES_HOST`, `ES_PORT`, `AWS_PROFILE` (omit on EC2), `GA4_PROPERTY_ID` (required for the item mapping), `GA4_SECRET_NAME` (default `dpla/ga4-service-account`), `GA4_HISTORY_START` (default `2025-07-18`, the `event_label` custom dimension's registration date — GA4 returns nothing before it).
 

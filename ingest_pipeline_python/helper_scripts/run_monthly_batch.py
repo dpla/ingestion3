@@ -18,10 +18,10 @@ individually via their own scripts or the "Launch Hub Ingest" GHA workflow.
 
 Usage
 -----
-  python3 run_monthly_batch.py               # current month
-  python3 run_monthly_batch.py --month 9     # September
-  python3 run_monthly_batch.py --dry-run     # print hub list, don't launch
-  CI=1 INGEST_INSTANCE_ID=i-xxx python3 run_monthly_batch.py
+  python3 helper_scripts/run_monthly_batch.py               # current month
+  python3 helper_scripts/run_monthly_batch.py --month 9     # September
+  python3 helper_scripts/run_monthly_batch.py --dry-run     # print hub list, don't launch
+  CI=1 INGEST_INSTANCE_ID=i-xxx python3 helper_scripts/run_monthly_batch.py
 """
 
 import argparse

@@ -15,9 +15,9 @@ checkout of ingestion3-conf and writes changes back to that file.
 
 Usage
 -----
-  python3 update_file_endpoints.py                          # dry run
-  python3 update_file_endpoints.py --apply                  # write changes
-  python3 update_file_endpoints.py --conf /path/to/i3.conf  # custom path
+  python3 helper_scripts/update_file_endpoints.py                          # dry run
+  python3 helper_scripts/update_file_endpoints.py --apply                  # write changes
+  python3 helper_scripts/update_file_endpoints.py --conf /path/to/i3.conf  # custom path
 """
 
 import argparse

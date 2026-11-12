@@ -9,9 +9,9 @@ Reports the things that matter while you're waiting:
     how far through it we are.
 
 Usage:
-    python3 check_status_smithsonian.py            # one-shot
-    python3 check_status_smithsonian.py --watch    # refresh every 30s
-    python3 check_status_smithsonian.py --watch 60 # custom interval
+    python3 special_cases/smithsonian/check_status_smithsonian.py            # one-shot
+    python3 special_cases/smithsonian/check_status_smithsonian.py --watch    # refresh every 30s
+    python3 special_cases/smithsonian/check_status_smithsonian.py --watch 60 # custom interval
 """
 
 import argparse
