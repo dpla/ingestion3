@@ -5,14 +5,15 @@ send_email.py — Send the DPLA pre-ingest email via AWS SES.
 Reads a prepared txt file from pre_ingest_monthly_email/txt_emails/ and sends it as a
 styled HTML email matching the DPLA ingest email template.
 
-TEST MODE (current): sends only to TEST_EMAIL.
-PRODUCTION (when ready): To: ingest@dp.la, BCC: all hub contact emails from i3.conf.
-To switch, set TEST_MODE = False below.
+Production send: To: ingest@dp.la, BCC: all hub contact emails from i3.conf.
+Test send (--test): only to your own address, DPLA_USER_EMAIL in the repo's .env
+(helper_scripts/onboarding.py in ingest_pipeline_python/ sets it).
 
 Usage:
     python3 pre_ingest_monthly_email/2_send_email.py                        # send latest txt file
     python3 pre_ingest_monthly_email/2_send_email.py --file pre-ingest-2026-05_20260513T143022.txt
     python3 pre_ingest_monthly_email/2_send_email.py --dry-run              # print HTML to stdout
+    python3 pre_ingest_monthly_email/2_send_email.py --test                 # send only to you (DPLA_USER_EMAIL)
     python3 pre_ingest_monthly_email/2_send_email.py --aws-profile dpla     # override AWS profile
 """
 
@@ -26,8 +27,8 @@ from email.mime.text import MIMEText
 from pathlib import Path
 
 # ── Mode toggle ───────────────────────────────────────────────────────────────
+# True makes every send a test send to DPLA_USER_EMAIL (same as --test).
 TEST_MODE  = False
-TEST_EMAIL = "spieges124@gmail.com"
 
 SENDER   = "ingest@dp.la"
 PROD_TO  = "ingest@dp.la"
@@ -68,6 +69,8 @@ DEFAULT_CONF_REPO = _env.get(
 )
 DEFAULT_CONF_PATH = os.path.join(DEFAULT_CONF_REPO, "i3.conf")
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
+# Your own address, for test sends. Set by ingest_pipeline_python/helper_scripts/onboarding.py.
+TEST_EMAIL = os.environ.get("DPLA_USER_EMAIL") or _env.get("DPLA_USER_EMAIL", "")
 
 
 # ── txt file helpers ──────────────────────────────────────────────────────────
@@ -470,7 +473,7 @@ def build_message(subject: str, plain_body: str, to_addrs: list[str],
 
 def send(subject: str, body: str, aws_profile: str, conf_path: str,
          cover_img_path: str = "", cover_caption: str = "",
-         override_to: str = "", month: int = 0) -> bool:
+         override_to: str = "", month: int = 0, test_send: bool = False) -> bool:
     try:
         import boto3
     except ImportError:
@@ -482,11 +485,15 @@ def send(subject: str, body: str, aws_profile: str, conf_path: str,
         to_addrs  = [override_to]
         bcc_addrs = []
         print(f"  DIRECT SEND — To: {override_to} (no BCC)")
-    elif TEST_MODE:
+    elif test_send:
+        if not TEST_EMAIL:
+            print("Error: DPLA_USER_EMAIL isn't set in the repo's .env. Run "
+                  "ingest_pipeline_python/helper_scripts/onboarding.py --update, or use --to.",
+                  file=sys.stderr)
+            return False
         to_addrs  = [TEST_EMAIL]
         bcc_addrs = []
-        print(f"  TEST MODE — sending only to {TEST_EMAIL}")
-        print(f"  (flip TEST_MODE = False in send_email.py to send for real)")
+        print(f"  TEST SEND — only to {TEST_EMAIL} (no BCC)")
     else:
         to_addrs  = [PROD_TO]
         bcc_addrs = get_hub_emails(conf_path, month)
@@ -530,7 +537,9 @@ def main():
     parser.add_argument("--aws-profile", default="dpla",
                         help="AWS profile for SES (default: dpla)")
     parser.add_argument("--to",          default="",
-                        help="Send directly to this address only (no BCC, overrides TEST_MODE)")
+                        help="Send directly to this address only (no BCC)")
+    parser.add_argument("--test",        action="store_true",
+                        help="Test send to your own address (DPLA_USER_EMAIL in .env), no BCC")
     parser.add_argument("--dry-run",     action="store_true",
                         help="Write rendered HTML to stdout instead of sending")
     args = parser.parse_args()
@@ -563,7 +572,8 @@ def main():
         return
 
     month = parse_month(txt_path)
-    ok = send(subject, body, args.aws_profile, conf_path, cover_img_path, caption, args.to, month)
+    ok = send(subject, body, args.aws_profile, conf_path, cover_img_path, caption, args.to, month,
+              test_send=args.test or TEST_MODE)
     sys.exit(0 if ok else 1)
 
 

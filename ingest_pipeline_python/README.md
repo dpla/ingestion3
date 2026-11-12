@@ -82,7 +82,7 @@ immediately; Slack notifies as each hub finishes.
 python3 helper_scripts/onboarding.py
 ```
 
-Prompts for your local repo paths (`ingestion3`, `ingestion3-conf`, `batch-process-dpla-index`) and saves them to `.env` in the ingestion3 root (gitignored). Also verifies your AWS credentials, NARA profile, `i3.conf`, and DPLA API key.
+Prompts for your local repo paths (`ingestion3`, `ingestion3-conf`, `batch-process-dpla-index`) and your email, and saves them to `.env` in the ingestion3 root (gitignored). Your email (`DPLA_USER_EMAIL`) is where `pre_ingest_monthly_email/2_send_email.py --test` sends test copies. Also verifies your AWS credentials, NARA profile, `i3.conf`, and DPLA API key.
 
 Re-run at any time. Use `--update` to change saved paths.
 

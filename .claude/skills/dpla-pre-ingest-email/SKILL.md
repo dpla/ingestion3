@@ -92,10 +92,10 @@ with corrected flags rather than editing the `.txt` file by hand.
 
 Once the user confirms everything looks good:
 
-**Test send first**, to the user's own address only (no BCC):
+**Test send first**, to the user's own address only (no BCC). `--test` uses `DPLA_USER_EMAIL` from the repo's `.env`, which `ingest_pipeline_python/helper_scripts/onboarding.py` sets; if it's missing, run that (or use `--to <address>`):
 
 ```bash
-./venv/bin/python pre_ingest_monthly_email/2_send_email.py --to <their-email>
+./venv/bin/python pre_ingest_monthly_email/2_send_email.py --test
 ```
 
 Tell the user to check their inbox and confirm it looks right.
@@ -136,7 +136,8 @@ Always confirm with the user before the production send.
 | `--file` | latest `.txt` in `txt_emails/` | specify a filename to use a different one |
 | `--aws-profile` | `dpla` | AWS credentials profile |
 | `--i3-conf` | from `.env` | used for BCC list in production mode |
-| `--to` | _(none)_ | send only to this address, no BCC (test send) |
+| `--test` | off | send only to `DPLA_USER_EMAIL` from `.env`, no BCC |
+| `--to` | _(none)_ | send only to this address, no BCC |
 
 ---
 

@@ -6,7 +6,7 @@ Verifies that everything is in place to start working on the DPLA ingest pipelin
 On first run, prompts for your local repo paths and saves them to dpla_config.env
 (next to this script) so you never have to edit the other scripts directly.
 
-  1. Create / update dpla_config.env
+  1. Create / update the repo's .env (repo paths, your email)
   2. Python version
   3. Required CLI tools (aws, curl)
   4. AWS credentials — default profile + NARA profile
@@ -139,7 +139,34 @@ def prompt_config(existing):
     config["INGESTION3_REPO"]      = ask("Path to ingestion3 repo:",                "INGESTION3_REPO",      DEFAULT_INGESTION3)
     config["INGESTION3_CONF_REPO"] = ask("Path to ingestion3-conf repo:",           "INGESTION3_CONF_REPO", DEFAULT_INGESTION3_CONF)
     config["BATCH_REPO_DIR"]       = ask("Path to batch-process-dpla-index repo:",  "BATCH_REPO_DIR",       DEFAULT_BATCH_REPO)
+    config["DPLA_USER_EMAIL"]      = ask_email(existing.get("DPLA_USER_EMAIL", ""))
     return config
+
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def ask_email(current=""):
+    """Prompt for the operator's own email (test sends of the pre-ingest email go here)."""
+    while True:
+        try:
+            val = input("  Your email (test sends of the pre-ingest email go here):\n"
+                        f"  [{current}]: ").strip() or current
+        except (EOFError, KeyboardInterrupt):
+            sys.exit("\nAborted.")
+        if EMAIL_RE.match(val):
+            return val
+        print("  That doesn't look like an email address.")
+
+
+def check_user_email(config):
+    section("Your Email")
+    if not EMAIL_RE.match(config.get("DPLA_USER_EMAIL", "")):
+        warn("DPLA_USER_EMAIL not set (used for test sends of the pre-ingest email)")
+        config["DPLA_USER_EMAIL"] = ask_email()
+        save_config(config)
+    ok(f"DPLA_USER_EMAIL  {c(DIM, config['DPLA_USER_EMAIL'])}")
+    return True
 
 
 # ---------- checks ----------
@@ -270,7 +297,7 @@ def check_api_key():
 def main():
     parser = argparse.ArgumentParser(description="DPLA ingest onboarding check")
     parser.add_argument("--update", action="store_true",
-                        help="Re-prompt for repo paths even if dpla_config.env already exists")
+                        help="Re-prompt for repo paths and your email even if .env already exists")
     args = parser.parse_args()
 
     print()
@@ -301,6 +328,7 @@ def main():
     results["aws_nara"]    = check_aws_nara()
     results["repos"]       = check_repos(config)
     results["api_key"]     = check_api_key()
+    results["user_email"]  = check_user_email(config)
 
     # ── Summary ───────────────────────────────────────────────────────────────
     print()
