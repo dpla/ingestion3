@@ -77,6 +77,7 @@ API_KEY = (os.environ.get("DPLA_API_KEY") or _env.get("DPLA_API_KEY")
 REGION = "us-east-1"
 ES_INSTANCE = "i-00bbdfe0a6ff6cf78"  # search-prod1
 API = "https://api.dp.la/v2/items"
+BUCKET = "dpla-master-dataset"
 ID_RE = re.compile(r"^[0-9a-f]{32}$")
 INDEX_RE = re.compile(r"^dpla-all-\d{8}-\d{6}$")
 BATCH = 100
@@ -133,11 +134,19 @@ def es(shell_cmd, timeout_seconds=300):
 def es_query(index, action, ids):
     """POST a terms-on-id query to <index>/<action> and return the parsed response."""
     query = base64.b64encode(json.dumps({"query": {"terms": {"id": ids}}}).encode()).decode()
-    out = es(f"echo {query} | base64 -d > /tmp/dpla-takedown-q.json && "
+    # A file per request, so overlapping runs can't read each other's query
+    out = es(f"Q=$(mktemp /tmp/dpla-takedown-q.XXXXXX) && echo {query} | base64 -d > \"$Q\" && "
              f"curl -s -XPOST \"http://$IP:9200/{index}/{action}\" "
-             f"-H 'Content-Type: application/json' -d @/tmp/dpla-takedown-q.json; "
-             f"rm -f /tmp/dpla-takedown-q.json")
+             f"-H 'Content-Type: application/json' -d @\"$Q\"; rm -f \"$Q\"")
     return json.loads(out)
+
+
+def live_index():
+    """The single dpla-all-* index dpla_alias points to (exits if it's anything else)."""
+    indices = list(json.loads(es("curl -s http://$IP:9200/_alias/dpla_alias")))
+    if len(indices) != 1 or not INDEX_RE.match(indices[0]):
+        sys.exit(f"dpla_alias points to {indices}; expected exactly one dpla-all-YYYYMMDD-HHMMSS index.")
+    return indices[0]
 
 
 def api_get(url):
@@ -269,9 +278,9 @@ def main():
 
     s3_hub = args.s3_hub or hub
     try:
-        aws(["s3", "ls", f"s3://dpla-master-dataset/{s3_hub}/jsonl/"])
+        aws(["s3", "ls", f"s3://{BUCKET}/{s3_hub}/jsonl/"])
     except RuntimeError:
-        sys.exit(f"No s3://dpla-master-dataset/{s3_hub}/jsonl/. If the S3 folder has another "
+        sys.exit(f"No s3://{BUCKET}/{s3_hub}/jsonl/. If the S3 folder has another "
                  f"name, pass --s3-hub (see: aws s3 ls s3://dpla-master-dataset/ --profile dpla).")
 
     # 2. Source checks
@@ -302,11 +311,7 @@ def main():
     print("  They come back at the hub's next ingest unless the hub removes them at the source.")
 
     # Find the live index and check every ID is in it before touching anything
-    alias = json.loads(es("curl -s http://$IP:9200/_alias/dpla_alias"))
-    indices = list(alias)
-    if len(indices) != 1 or not INDEX_RE.match(indices[0]):
-        sys.exit(f"dpla_alias points to {indices}; expected exactly one dpla-all-YYYYMMDD-HHMMSS index.")
-    index = indices[0]
+    index = live_index()
     batches = [[it["id"] for it in take[k:k + BATCH]] for k in range(0, n, BATCH)]
     found = sum(es_query(index, "_count", b)["count"] for b in batches)
     print(f"\n  Live index {index}: {found} of {n} found")
@@ -324,16 +329,22 @@ def main():
         idfile = f.name
     print("\nRemoving from S3 …")
     cmd = [sys.executable, os.path.join(REPO_ROOT, "scripts", "delete", "delete-from-jsonl.py"),
-           "--hub", s3_hub, "-y", "-f", idfile]
+           "--hub", s3_hub, "--bucket", BUCKET, "-y", "-f", idfile]
     if AWS_PROFILE:
         cmd += ["--profile", AWS_PROFILE]
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    # A DRY_RUN inherited from the shell would make the S3 step a silent preview
+    child_env = {k: v for k, v in os.environ.items() if k not in ("DRY_RUN", "S3_BUCKET")}
+    r = subprocess.run(cmd, capture_output=True, text=True, env=child_env)
     os.unlink(idfile)
     print("    " + r.stdout.strip().replace("\n", "\n    "))
     if r.returncode != 0:
         sys.exit(f"S3 delete failed; the live index was not touched.\n{r.stderr.strip()}")
     m = re.search(r"Total records removed:\s*(\d+)", r.stdout)
-    removed = int(m.group(1)) if m else -1
+    if not m or "[DRY RUN]" in r.stdout:
+        sys.exit("Couldn't confirm the S3 removal (no 'Total records removed' in its output). "
+                 "The live index was not touched.")
+    removed = int(m.group(1))
+    # Fewer can be legitimate (an ID missing from the newest export but still live)
     if removed != n and not ask(f"S3 removed {removed}, expected {n}. Continue to the live index anyway?"):
         sys.exit("Stopped after S3. The live index was not touched.")
 
@@ -341,6 +352,10 @@ def main():
     print(f"\nRemoving from {index} …")
     deleted = 0
     for b in batches:
+        # An alias swap mid-run would leave these deletes on an index that's no longer live
+        if live_index() != index:
+            sys.exit(f"dpla_alias no longer points to {index}; stopped after deleting {deleted}. "
+                     "Rerun the takedown against the new index.")
         if es_query(index, "_count", b)["count"] != len(b):
             sys.exit(f"Batch count changed since the check; stopped after deleting {deleted}.")
         res = es_query(index, "_delete_by_query?conflicts=abort&refresh=true", b)
@@ -369,8 +384,14 @@ def main():
     if t_delta > n:
         print("  ✗ MORE items left dp.la than were taken down. Investigate now.")
 
+    reminder = "Reminder: ask the hub to remove them at the source, or they come back at its next ingest."
+    if still or t_delta != n or h_delta != n:
+        print(f"\nTAKEDOWN INCOMPLETE OR UNVERIFIED: {deleted} deleted from {index}, but the checks "
+              "above don't all pass. Investigate before telling anyone it's done.")
+        print(reminder)
+        sys.exit(1)
     print(f"\nTAKEDOWN DONE: {n} item(s) removed from S3 ({s3_hub}) and {index}.")
-    print("Reminder: ask the hub to remove them at the source, or they come back at its next ingest.")
+    print(reminder)
 
 
 if __name__ == "__main__":

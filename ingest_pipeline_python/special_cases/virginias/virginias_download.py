@@ -144,15 +144,23 @@ def download_zips():
         print(f"stderr: {err}")
 
 
+def resolve_conf_path():
+    """Same precedence as 2_preflight.py: I3_CONF, then INGESTION3_CONF_REPO, then the sibling repo."""
+    if os.environ.get("I3_CONF"):
+        return os.path.expanduser(os.environ["I3_CONF"])
+    conf_repo = os.environ.get("INGESTION3_CONF_REPO") or _env.get("INGESTION3_CONF_REPO")
+    if conf_repo:
+        return os.path.join(os.path.expanduser(conf_repo), "i3.conf")
+    return os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                         "..", "..", "..", "..", "ingestion3-conf", "i3.conf"))
+
+
 def update_i3conf():
-    conf_path = os.path.normpath(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                     "..", "..", "..", "..", "ingestion3-conf", "i3.conf")
-    )
+    conf_path = resolve_conf_path()
     if not os.path.exists(conf_path):
-        print(f"  Could not find i3.conf — update manually:")
+        print(f"  Could not find i3.conf at {conf_path} — update manually:")
         print(f'  virginias.harvest.endpoint = "{DEST}"')
-        return
+        return None
 
     with open(conf_path) as f:
         content = f.read()
@@ -165,23 +173,24 @@ def update_i3conf():
     )
 
     if new_content == content:
-        print("  virginias.harvest.endpoint not found in i3.conf — update manually.")
-        return
+        print(f"  virginias.harvest.endpoint not found in {conf_path} — update manually.")
+        return None
 
     with open(conf_path, "w") as f:
         f.write(new_content)
-    print(f'  i3.conf updated: virginias.harvest.endpoint = "{DEST}"')
+    print(f'  {conf_path} updated: virginias.harvest.endpoint = "{DEST}"')
+    return conf_path
 
 
 def main():
     download_zips()
 
     print("\nUpdating i3.conf locally ...")
-    update_i3conf()
+    conf_path = update_i3conf() or resolve_conf_path()
 
-    print("""
+    print(f"""
 Next steps:
-  1. git commit + push ingestion3-conf/i3.conf
+  1. git commit + push {conf_path}
   2. python3 2_preflight.py --hub virginias   (offers to pull the box's repos)
   3. python3 3_launch_ingest.py virginias
 """)

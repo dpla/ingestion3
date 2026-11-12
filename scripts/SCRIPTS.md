@@ -43,6 +43,8 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 | `curated_membership.py` | Refresh the exhibition/source-set membership snapshot used by the JSONL export | `python3 scripts/curated_membership.py` |
 | *scheduling_emails* (Python) | Monthly pre-scheduling email to hub contacts | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails [--month=N] --dry-run \| --draft \| --send` |
 | `status/ingest-status.sh` | Check ingest status (orchestrator or manual runs) | `./scripts/status/ingest-status.sh` |
+| *skip_safety_check.py* (Python) | Publish an ingest the >5% safety check blocked, after review: shows counts, asks, syncs only that snapshot, asks before the partner email. Refuses unfinished, empty, non-unique, already-synced or older-than-S3 snapshots, and Community Webs/NARA. See `ingest_pipeline_python/README.md` | `python3 ingest_pipeline_python/helper_scripts/skip_safety_check.py <hub> [--snapshot <dir>]` |
+| *takedown.py* (Python) | Take items down from S3 and the live index with the dpla-takedown checks (source check, exact live-index count, asks before deleting, API verification). See `ingest_pipeline_python/README.md` | `./venv/bin/python ingest_pipeline_python/helper_scripts/takedown.py <id>... \| -f ids.txt [--dry-run]` |
 | `communication/notify-harvest-failure.sh` | Send Slack and email (tech@dp.la) on harvest failure | `./scripts/communication/notify-harvest-failure.sh <hub> "<error>"` |
 | `status/hub-info.sh` | Show hub config from i3.conf | `./scripts/status/hub-info.sh <hub>` |
 | `status/s3-latest.sh` | Show latest S3 data for a hub (harvest/mapping/jsonl) | `./scripts/status/s3-latest.sh <hub>` |

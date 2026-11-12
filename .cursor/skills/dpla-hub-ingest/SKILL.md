@@ -886,9 +886,9 @@ for hub, info in sorted(hubs.items()):
         continue
     if info["type"] == "file":
         if hub == "community-webs":
-            print(f"  CW   {hub:25s} [own pipeline — use special_cases/community-webs/, not this batch]")
-        else:
-            print(f"  WARN {hub:25s} [file harvest — verify files staged on EC2 first]")
+            print(f"  SKIP {hub:25s} [own pipeline — use special_cases/community-webs/, not this batch]")
+            continue
+        print(f"  WARN {hub:25s} [file harvest — verify files staged on EC2 first]")
         runnable.append(hub)
         continue
     print(f"  OK   {hub:25s} [{info['type']}]")

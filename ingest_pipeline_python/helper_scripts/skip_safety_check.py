@@ -77,6 +77,10 @@ NOT_HANDLED = {
 
 
 # ---------- AWS / SSM ----------
+class SSMOutcomeUnknown(RuntimeError):
+    """The command may still be running; its result couldn't be confirmed."""
+
+
 def aws(args):
     profile = ["--profile", AWS_PROFILE] if AWS_PROFILE else []
     r = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
@@ -86,17 +90,22 @@ def aws(args):
 
 
 def ssm_run(shell_cmd, timeout_seconds=120, poll_seconds=5):
-    """Run shell_cmd on the ingest EC2 as ec2-user (login shell); return stdout."""
+    """Run shell_cmd on the ingest EC2 as ec2-user (login shell); return stdout.
+
+    The command is killed on EC2 after timeout_seconds (executionTimeout). If its
+    final state still can't be read after that, SSMOutcomeUnknown is raised:
+    the command may or may not have finished, so callers mustn't treat it as a failure.
+    """
     encoded = base64.b64encode(shell_cmd.encode()).decode("ascii")
     wrapped = f"sudo -u ec2-user bash -lc 'echo {encoded} | base64 -d | bash -l'"
     cmd_id = aws([
         "ssm", "send-command", "--instance-ids", INSTANCE_ID,
         "--document-name", "AWS-RunShellScript",
-        "--timeout-seconds", str(timeout_seconds),
-        "--parameters", json.dumps({"commands": [wrapped]}),
+        "--parameters", json.dumps({"commands": [wrapped],
+                                    "executionTimeout": [str(timeout_seconds)]}),
         "--region", REGION, "--query", "Command.CommandId", "--output", "text",
     ])
-    deadline = time.time() + timeout_seconds + 60
+    deadline = time.time() + timeout_seconds + 180
     while True:
         time.sleep(poll_seconds)
         try:
@@ -108,7 +117,8 @@ def ssm_run(shell_cmd, timeout_seconds=120, poll_seconds=5):
         if status not in ("Pending", "InProgress", "Delayed"):
             break
         if time.time() > deadline:
-            raise RuntimeError(f"SSM command {cmd_id} still running after {timeout_seconds}s")
+            raise SSMOutcomeUnknown(f"SSM command {cmd_id} hasn't reported a final state "
+                                    f"(last: {status}); check it with aws ssm get-command-invocation")
     out = aws(["ssm", "get-command-invocation", "--command-id", cmd_id,
                "--instance-id", INSTANCE_ID, "--region", REGION,
                "--query", "StandardOutputContent", "--output", "text"])
@@ -130,6 +140,11 @@ def ask(msg):
 # ---------- gather ----------
 GATHER = r'''
 cd {repo} && source scripts/common.sh >/dev/null 2>&1
+ERR=$(mktemp)
+trap 'rm -f "$ERR"' EXIT
+# aws s3 ls exits 1 with no stderr for an empty listing; stderr output means a real failure
+s3_failed() {{ [ "$1" -ne 0 ] && [ -s "$ERR" ]; }}
+s3_error() {{ echo "S3_ERROR=$1: $(tr '\n' ' ' < "$ERR" | head -c 300)"; }}
 HUB={hub}
 SNAP={snap}
 JDIR={data}/$HUB/jsonl
@@ -150,23 +165,36 @@ echo "HARVEST_COUNT=$(read_manifest_count {data}/$HUB/harvest/$HARV/_MANIFEST)"
 grep -E '^(Attempted|Successful|Failed)' {data}/$HUB/mapping/$MAP/_SUMMARY 2>/dev/null | sed 's/\.\.*/: /; s/^/MAPSUM=/'
 PREFIX=$(resolve_s3_prefix "$HUB")
 echo "S3_PREFIX=$PREFIX"
-S3_SNAP=$(aws s3 ls "s3://dpla-master-dataset/$PREFIX/jsonl/" 2>/dev/null | awk '{{print $NF}}' | sed 's|/||g' | grep -E '^[0-9]{{8}}_[0-9]{{6}}-' | sort | tail -1)
+LS=$(aws s3 ls "s3://dpla-master-dataset/$PREFIX/jsonl/" 2>"$ERR"); RC=$?
+if s3_failed $RC; then s3_error "listing s3://dpla-master-dataset/$PREFIX/jsonl/"; exit 0; fi
+S3_SNAP=$(echo "$LS" | awk '{{print $NF}}' | sed 's|/||g' | grep -E '^[0-9]{{8}}_[0-9]{{6}}-' | sort | tail -1)
 echo "S3_SNAP=$S3_SNAP"
-[ -n "$S3_SNAP" ] && echo "S3_COUNT=$(aws s3 cp "s3://dpla-master-dataset/$PREFIX/jsonl/$S3_SNAP/_MANIFEST" - 2>/dev/null | read_manifest_count)"
-echo "IN_S3=$(aws s3 ls "s3://dpla-master-dataset/$PREFIX/jsonl/$SNAP/_SUCCESS" >/dev/null 2>&1 && echo yes || echo no)"
+if [ -n "$S3_SNAP" ]; then
+  M=$(aws s3 cp "s3://dpla-master-dataset/$PREFIX/jsonl/$S3_SNAP/_MANIFEST" - 2>"$ERR") || {{ s3_error "reading $S3_SNAP/_MANIFEST"; exit 0; }}
+  echo "S3_COUNT=$(echo "$M" | read_manifest_count)"
+fi
+aws s3 ls "s3://dpla-master-dataset/$PREFIX/jsonl/$SNAP/_SUCCESS" >/dev/null 2>"$ERR"; RC=$?
+if s3_failed $RC; then s3_error "checking $SNAP in S3"; exit 0; fi
+echo "IN_S3=$([ $RC -eq 0 ] && echo yes || echo no)"
+if [ "{uniq}" = yes ] && [ -f "$JDIR/$SNAP/_SUCCESS" ]; then
+  U=$(check_id_uniqueness "$JDIR/$SNAP")
+  echo "UNIQ_RESULT=$(echo "$U" | head -1)"
+  echo "UNIQ_DETAIL=$(echo "$U" | tail -1)"
+fi
 echo "EMAIL=$(get_hub_email "$HUB")"
 LOG={data}/$HUB-ingest.log
 if grep -q "$SNAP" "$LOG" 2>/dev/null; then
-  grep -q "Uniqueness check FAILED" "$LOG" && echo "BLOCKED_BY=uniqueness"
   grep -q "Safety check FAILED" "$LOG" && echo "BLOCKED_BY=safety"
 fi
 exit 0
 '''
 
 
-def gather(hub, snapshot):
+def gather(hub, snapshot, check_uniqueness=False):
     out = ssm_run(GATHER.format(repo=REPO, data=DATA, hub=shlex.quote(hub),
-                                snap=shlex.quote(snapshot or "")), timeout_seconds=120)
+                                snap=shlex.quote(snapshot or ""),
+                                uniq="yes" if check_uniqueness else "no"),
+                  timeout_seconds=300)
     info = {"MAPSUM": [], "BLOCKED_BY": []}
     for line in out.splitlines():
         if "=" not in line:
@@ -176,6 +204,8 @@ def gather(hub, snapshot):
             info[k].append(v.strip())
         else:
             info[k] = v.strip()
+    if info.get("S3_ERROR"):
+        sys.exit(f"\nCouldn't read S3 ({info['S3_ERROR']}). Nothing was changed.")
     return info
 
 
@@ -202,7 +232,7 @@ def main():
         sys.exit("INGEST_INSTANCE_ID isn't set (env or the repo's .env).")
 
     print(f"\nChecking {hub} on EC2 …")
-    info = gather(hub, args.snapshot)
+    info = gather(hub, args.snapshot, check_uniqueness=True)
     snap = info.get("SNAP", "")
     if not snap:
         sys.exit(f"No JSON-L snapshots found on EC2 under {DATA}/{hub}/jsonl/.")
@@ -222,14 +252,18 @@ def main():
         print(f"                     {line}")
     print(f"  Hub contacts:      {info.get('EMAIL') or '(none in i3.conf)'}")
 
-    # Refuse anything that isn't a complete, blocked, newer snapshot
-    if "uniqueness" in info["BLOCKED_BY"]:
-        sys.exit("\nThis run was blocked by the ID uniqueness check, not the record-count check "
-                 "(likely a harvester pagination bug). Fix and re-ingest; don't publish it.")
+    # Refuse anything that isn't a complete, unique, newer snapshot
     if info.get("SUCCESS") != "yes":
         sys.exit(f"\n{snap} has no _SUCCESS marker; the JSON-L export didn't finish.")
     if new == 0:
         sys.exit(f"\n{snap} has 0 records.")
+    uniq = info.get("UNIQ_RESULT", "")
+    if uniq == "FAIL":
+        sys.exit(f"\n{snap} fails the ID uniqueness check ({info.get('UNIQ_DETAIL', '')}): likely "
+                 "a harvester pagination bug. Fix and re-ingest; don't publish it.")
+    if uniq not in ("PASS", "SKIP"):
+        sys.exit(f"\nCouldn't run the ID uniqueness check on {snap} (got {uniq!r}). Not publishing.")
+    print(f"  ID uniqueness:     {uniq} ({info.get('UNIQ_DETAIL', '')})")
     if info.get("IN_S3") == "yes":
         sys.exit(f"\n{snap} is already in S3; nothing to publish. "
                  "To email the hub, use scripts/communication/send-ingest-email.sh.")
@@ -252,6 +286,10 @@ def main():
             f"jsonl/{shlex.quote(snap)} 2>&1 | tail -3; exit ${{PIPESTATUS[0]}}",
             timeout_seconds=3600, poll_seconds=15,
         )
+    except SSMOutcomeUnknown as e:
+        sys.exit(f"\nCouldn't confirm whether the S3 sync finished; nothing emailed. Check "
+                 f"s3://dpla-master-dataset/{info.get('S3_PREFIX', hub)}/jsonl/{snap}/ for _SUCCESS "
+                 f"before rerunning.\n{e}")
     except RuntimeError as e:
         sys.exit(f"\nS3 sync failed; nothing emailed.\n{e}")
     print("    " + out.replace("\n", "\n    "))
@@ -274,6 +312,9 @@ def main():
                 )
                 print("    " + out.replace("\n", "\n    "))
                 emailed = True
+            except SSMOutcomeUnknown as e:
+                print(f"  Couldn't confirm whether the email went out (the S3 sync stands). "
+                      f"Check with the hub before resending.\n{e}")
             except RuntimeError as e:
                 print(f"  Email failed (the S3 sync stands). Retry with send-ingest-email.sh.\n{e}")
     else:

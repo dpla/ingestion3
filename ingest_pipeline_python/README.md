@@ -100,7 +100,7 @@ Re-run at any time. Use `--update` to change saved paths.
 6. 5_post_indexer.py     batch exports, hub stats and sitemaps, right after the swap
 ```
 
-Afterwards, `6_postchecks.py` verifies the month's outputs. Special-case hubs (NARA, Smithsonian, Community Webs, Virginias) use their scripts in `special_cases/` in place of steps 2–3; preflight tells you when a hub is one of them.
+Afterwards, `6_postchecks.py` verifies the month's outputs. NARA, Smithsonian and Community Webs use their scripts in `special_cases/` in place of steps 2–3; preflight tells you when a hub is one of them. Virginias needs `special_cases/virginias/virginias_download.py` run first, then the usual steps 2–3.
 
 ---
 
