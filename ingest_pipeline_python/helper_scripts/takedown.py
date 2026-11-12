@@ -270,7 +270,10 @@ def main():
 
     # 1. Look up each ID
     print(f"\nLooking up {len(ids)} ID(s) in the DPLA API …")
-    total_before = api_count()
+    try:
+        total_before = api_count()
+    except RuntimeError as e:
+        sys.exit(f"Couldn't read the DPLA API total ({e}). Nothing was changed; try again.")
     items, missing = [], []
     for i in ids:
         status, body = api_get(f"{API}/{i}")
@@ -319,7 +322,10 @@ def main():
     skipped = [it for it in items if it not in take]
 
     # 3. Manifest
-    hub_before = api_count({"provider.name": f'"{hub_name}"'})
+    try:
+        hub_before = api_count({"provider.name": f'"{hub_name}"'})
+    except RuntimeError as e:
+        sys.exit(f"Couldn't read the {hub_name} count from the API ({e}). Nothing was changed; try again.")
     print(f"\nTAKEDOWN MANIFEST — {hub_name} ({hub}; S3 folder {s3_hub})")
     print(f"  {'ID':32}  {'Source':10}  Title / institution")
     for it in take:
@@ -338,7 +344,10 @@ def main():
     print("  They come back at the hub's next ingest unless the hub removes them at the source.")
 
     # Find the live index and check every ID is in it before touching anything
-    index = live_index()
+    try:
+        index = live_index()
+    except (RuntimeError, ValueError) as e:
+        sys.exit(f"Couldn't read dpla_alias from Elasticsearch ({e}). Nothing was changed.")
     batches = [[it["id"] for it in take[k:k + BATCH]] for k in range(0, n, BATCH)]
     try:
         found = sum(es_query(index, "_count", b)["count"] for b in batches)
