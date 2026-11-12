@@ -5,8 +5,12 @@ description: Run Community Webs ingest. Use when the user says harvest community
 
 # DPLA Community Webs Ingest
 
-Community Webs ingest is handled by the **`dpla-hub-ingest`** skill with `community-webs` as the hub name.
+Community Webs has its own scripts, run from `ingest_pipeline_python/` (no `i3.conf` edit per delivery):
 
-The pre-processing step (SQLite DB → JSONL → ZIP → i3.conf update) runs entirely on EC2 via SSM — no local steps needed. See the **Community Webs Pre-processing** section in the `dpla-hub-ingest` skill for the full procedure.
+```bash
+python3 special_cases/community-webs/copy_cw.py <path-to-.db-or-.sqlite3>   # copy the delivery to S3
+python3 special_cases/community-webs/launch_cw.py                           # full run on EC2, then asks before S3 sync + partner email
+python3 special_cases/community-webs/launch_cw.py --send [--force]          # sync + email later; --force if the safety check blocked it
+```
 
-**Trigger phrase to use:** "ingest community-webs" or "harvest community-webs"
+See the Community Webs section of `ingest_pipeline_python/README.md`.

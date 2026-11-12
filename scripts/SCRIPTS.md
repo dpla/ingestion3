@@ -39,10 +39,12 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 | `delete/delete-from-jsonl.sh` | Delete records from S3 JSONL files | `./scripts/delete/delete-from-jsonl.sh --hub <hub> <id>...` |
 | `communication/send-ingest-email.sh` | Send ingest summary email | `./scripts/communication/send-ingest-email.sh [--yes] <hub>` |
 | `generate_hub_stats.py` | Rebuild dashboard hub stats + GA4 item mapping in S3 | `./venv/bin/python scripts/generate_hub_stats.py` |
-| `generate_tag_sitemap.py` | Build aviation/bws item sitemaps from ES into s3://sitemaps.dp.la (run by `post_indexer.py`) | `python3 scripts/generate_tag_sitemap.py --hub aviation\|bws [--dry-run]` |
+| `generate_tag_sitemap.py` | Build aviation/bws item sitemaps from ES into s3://sitemaps.dp.la (run by `ingest_pipeline_python/5_post_indexer.py`) | `python3 scripts/generate_tag_sitemap.py --hub aviation\|bws [--dry-run]` |
 | `curated_membership.py` | Refresh the exhibition/source-set membership snapshot used by the JSONL export | `python3 scripts/curated_membership.py` |
 | *scheduling_emails* (Python) | Monthly pre-scheduling email to hub contacts | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails [--month=N] --dry-run \| --draft \| --send` |
 | `status/ingest-status.sh` | Check ingest status (orchestrator or manual runs) | `./scripts/status/ingest-status.sh` |
+| *skip_safety_check.py* (Python) | Publish an ingest the >5% safety check blocked, after review: shows counts, asks, syncs only that snapshot, asks before the partner email. Refuses unfinished, empty, non-unique, already-synced or older-than-S3 snapshots, and Community Webs/NARA. See `ingest_pipeline_python/README.md` | `python3 ingest_pipeline_python/helper_scripts/skip_safety_check.py <hub> [--snapshot <dir>]` |
+| *takedown.py* (Python) | Take items down from S3 and the live index with the dpla-takedown checks (source check, exact live-index count, asks before deleting, API verification). See `ingest_pipeline_python/README.md` | `./venv/bin/python ingest_pipeline_python/helper_scripts/takedown.py <id>... \| -f ids.txt [--dry-run]` |
 | `communication/notify-harvest-failure.sh` | Send Slack and email (tech@dp.la) on harvest failure | `./scripts/communication/notify-harvest-failure.sh <hub> "<error>"` |
 | `status/hub-info.sh` | Show hub config from i3.conf | `./scripts/status/hub-info.sh <hub>` |
 | `status/s3-latest.sh` | Show latest S3 data for a hub (harvest/mapping/jsonl) | `./scripts/status/s3-latest.sh <hub>` |
@@ -298,7 +300,7 @@ The script validates the JSONL against the expected harvest schema (required `id
 
 ### community-webs-ingest.sh - Community Webs Ingest
 
-Runs export + harvest + mapping + enrichment + jsonl + safety check, then stops for review. Nothing is published to `dpla-master-dataset` or emailed to the hub contacts until `--send`, which syncs only the reviewed snapshot. Slack reports every stage, including export and harvest. Located in `scripts/harvest/`; normally launched with `ingest_python_scripts/community-webs/launch_cw.py`.
+Runs export + harvest + mapping + enrichment + jsonl + safety check, then stops for review. Nothing is published to `dpla-master-dataset` or emailed to the hub contacts until `--send`, which syncs only the reviewed snapshot. Slack reports every stage, including export and harvest. Located in `scripts/harvest/`; normally launched with `ingest_pipeline_python/special_cases/community-webs/launch_cw.py`.
 
 ```bash
 ./scripts/harvest/community-webs-ingest.sh --db=/path/to/db   # Full run, stops for review
@@ -349,7 +351,7 @@ Rebuilds the three dashboard-analytics inputs in `s3://dashboard-analytics/hub-s
 ./venv/bin/python scripts/generate_hub_stats.py
 ```
 
-Run on the ingest EC2 on day 5 of the month or later (GA4 settles the prior month for ~72 hours; the script warns on earlier runs). `post_indexer.py` step 4 runs it via SSM with system `python3`, so its dependencies (`boto3`, `google-analytics-data`) must be installed for that interpreter on the EC2. The two hub stats files upload first; if `item_data_providers.json` cannot be updated the script exits non-zero so post_indexer alerts.
+Run on the ingest EC2 on day 5 of the month or later (GA4 settles the prior month for ~72 hours; the script warns on earlier runs). `ingest_pipeline_python/5_post_indexer.py` step 4 runs it via SSM with system `python3`, so its dependencies (`boto3`, `google-analytics-data`) must be installed for that interpreter on the EC2. The two hub stats files upload first; if `item_data_providers.json` cannot be updated the script exits non-zero so post_indexer alerts.
 
 **Environment**: `ES_HOST`, `ES_PORT`, `AWS_PROFILE` (omit on EC2), `GA4_PROPERTY_ID` (required for the item mapping), `GA4_SECRET_NAME` (default `dpla/ga4-service-account`), `GA4_HISTORY_START` (default `2025-07-18`, the `event_label` custom dimension's registration date — GA4 returns nothing before it).
 

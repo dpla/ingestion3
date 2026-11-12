@@ -1,0 +1,666 @@
+#!/usr/bin/env python3
+"""
+DPLA NARA Ingest Launcher
+
+Orchestrates the NARA monthly delta ingest:
+  1. Runs nara-ingest.sh on EC2 as a background nohup job
+  2. Tails the log in real time (Ctrl+C stops tailing — job keeps running)
+
+Prerequisites:
+  - copy_nara.py must have already run for this month:
+      • ZIPs copied to s3://dpla-hub-nara/raw_ingest_files/<YYYYMM>/
+      • ZIPs staged at ~/data/nara/originalRecords/<YYYYMM>/ on EC2
+  - AWS CLI authenticated locally with SSM access
+
+Usage:
+    python3 special_cases/nara/launch_nara.py --month 202605
+    python3 special_cases/nara/launch_nara.py --month 202605 --skip-pipeline     # merge only, no pipeline
+    python3 special_cases/nara/launch_nara.py --skip-to-pipeline                 # resume from latest merged harvest
+    python3 special_cases/nara/launch_nara.py --skip-to-pipeline --harvest /path/to/harvest.avro
+    python3 special_cases/nara/launch_nara.py --resume --month 202605            # re-attach to existing log
+    python3 special_cases/nara/launch_nara.py --resume --log /home/ec2-user/nara-ingest-202605.log
+
+Zero-delete gate:
+    After the merge, nara-ingest.sh checks whether any records were actually
+    deleted. If 0 valid deletes are found, it halts (non-interactively) and sends
+    a Slack notification. This script detects that halt and prompts you here:
+
+        Y = I've verified 0 deletes is expected — continue to pipeline
+        N = Abort so I can investigate before re-running
+
+    To bypass the gate upfront (if you already know this delivery has no deletes):
+        python3 special_cases/nara/launch_nara.py --month 202605 --skip-delete-check
+"""
+
+import argparse
+import base64
+import json
+import os
+import re
+import shlex
+import subprocess
+import sys
+import time
+from datetime import datetime
+
+# ---------- config ----------
+REGION         = "us-east-1"
+def _load_dotenv():
+    cfg = {}
+    env_file = os.path.normpath(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../..", ".env")
+    )
+    if os.path.exists(env_file):
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    cfg[k.strip()] = os.path.expanduser(v.strip().strip('"').strip("'"))
+    creds = cfg.get("AWS_SHARED_CREDENTIALS_FILE")
+    if creds:
+        os.environ.setdefault("AWS_SHARED_CREDENTIALS_FILE", creds)
+    return cfg
+
+_env = _load_dotenv()
+_env_file_exists = os.path.exists(os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".env")
+))
+INSTANCE_ID = os.environ.get("INGEST_INSTANCE_ID") or _env.get("INGEST_INSTANCE_ID", "")
+AWS_PROFILE: str | None = (
+    os.environ.get("AWS_PROFILE")
+    or _env.get("AWS_PROFILE")
+    or ("dpla" if _env_file_exists else None)
+)
+
+NARA_SCRIPT    = "/home/ec2-user/ingestion3/scripts/harvest/nara-ingest.sh"
+
+# EC2 paths — nara-ingest.sh uses ~/data/ (not ~/dpla/data/)
+DATA_ROOT      = "/home/ec2-user/data"
+NARA_DATA      = f"{DATA_ROOT}/nara"
+NARA_ORIGINALS = f"{NARA_DATA}/originalRecords"
+
+LOG_DIR        = "/home/ec2-user"
+POLL_SECONDS   = 60   # log tail interval
+
+
+# ---------- AWS / SSM helpers ----------
+
+def aws(args, check=True):
+    profile = [] if any(a.startswith("--profile") for a in args) else (["--profile", AWS_PROFILE] if AWS_PROFILE else [])
+    result = subprocess.run(["aws"] + profile + args, capture_output=True, text=True)
+    if check and result.returncode != 0:
+        raise RuntimeError(f"aws {' '.join(args[:3])} failed:\n{result.stderr.strip()}")
+    return result.stdout.strip()
+
+
+def ssm_run(shell_cmd, timeout_seconds=120, poll_seconds=5):
+    """Run a shell command on EC2 via SSM as ec2-user. Returns stdout."""
+    encoded = base64.b64encode(shell_cmd.encode()).decode("ascii")
+    wrapped = f"sudo -u ec2-user bash -lc 'echo {encoded} | base64 -d | bash -l'"
+    params  = json.dumps({"commands": [wrapped]})
+    cmd_id  = aws([
+        "ssm", "send-command",
+        "--instance-ids", INSTANCE_ID,
+        "--document-name", "AWS-RunShellScript",
+        "--timeout-seconds", str(timeout_seconds),
+        "--parameters", params,
+        "--region", REGION,
+        "--query", "Command.CommandId",
+        "--output", "text",
+    ])
+    deadline = time.time() + timeout_seconds
+    while True:
+        time.sleep(poll_seconds)
+        status = aws(["ssm", "get-command-invocation",
+                      "--command-id", cmd_id, "--instance-id", INSTANCE_ID,
+                      "--region", REGION,
+                      "--query", "Status", "--output", "text"])
+        if status not in ("Pending", "InProgress", "Delayed"):
+            break
+        if time.time() > deadline:
+            raise RuntimeError(f"SSM timed out after {timeout_seconds}s")
+    out = aws(["ssm", "get-command-invocation", "--command-id", cmd_id,
+               "--instance-id", INSTANCE_ID, "--region", REGION,
+               "--query", "StandardOutputContent", "--output", "text"])
+    err = aws(["ssm", "get-command-invocation", "--command-id", cmd_id,
+               "--instance-id", INSTANCE_ID, "--region", REGION,
+               "--query", "StandardErrorContent", "--output", "text"])
+    if status != "Success":
+        raise RuntimeError(f"SSM status={status}\nSTDOUT:\n{out}\nSTDERR:\n{err}")
+    return out
+
+
+def ssm_bg(shell_cmd, log_path):
+    """Launch a long-running command as a background nohup job. Returns PID.
+
+    On completion the process writes its exit code to <log_path>.exitcode so
+    tail_log can detect failures even when monitoring resumes after the process
+    has already died.
+    """
+    exit_file = f"{log_path}.exitcode"
+    wrapper = (
+        f"bash -c {json.dumps(shell_cmd)} > {log_path} 2>&1; "
+        f"echo $? > {exit_file}"
+    )
+    launch = f"nohup bash -c {json.dumps(wrapper)} </dev/null >/dev/null 2>&1 & echo $!"
+    out    = ssm_run(launch, timeout_seconds=60)
+    return out.strip().split()[-1]
+
+
+# ---------- UI helpers ----------
+
+def step(n, title):
+    print()
+    print("=" * 70)
+    print(f"  STEP {n}: {title}")
+    print("=" * 70)
+
+
+def ok(msg):   print(f"  [GOOD]    {msg}")
+def warn(msg): print(f"  [CAUTION] {msg}")
+def bad(msg):  print(f"  [BAD]     {msg}")
+def info(msg): print(f"  {msg}")
+
+
+def confirm(msg, default_yes=True):
+    suffix = " [Y/n] " if default_yes else " [y/N] "
+    try:
+        answer = input(f"\n  {msg}{suffix}").strip().lower()
+    except EOFError:
+        answer = ""
+    ok_resp = answer not in ("n", "no") if default_yes else answer in ("y", "yes")
+    if not ok_resp:
+        sys.exit("Aborted.")
+
+
+# ---------- Auto-detect staged month ----------
+
+def detect_staged_month():
+    """Find the single unprocessed YYYYMM delivery under NARA_ORIGINALS on EC2.
+
+    Filters out months whose exitcode sidecar = 0 (already ingested), then:
+      - 0 unprocessed → exit (all done or nothing staged)
+      - 1 unprocessed → use it
+      - >1 unprocessed → exit (NARA deltas are order-dependent; pass --month)
+    """
+    raw = ssm_run(
+        f"ls -1 {NARA_ORIGINALS} 2>/dev/null | grep -E '^[0-9]{{6}}$' | sort || true",
+        timeout_seconds=30,
+    ).strip()
+
+    months = []
+    for m in raw.splitlines():
+        m = m.strip()
+        if re.match(r"^\d{6}$", m):
+            try:
+                datetime.strptime(m, "%Y%m")
+                months.append(m)
+            except ValueError:
+                pass  # skip dirs like 202613 that aren't valid months
+
+    if not months:
+        sys.exit(
+            f"\n  [BAD] No staged NARA deliveries found under {NARA_ORIGINALS}.\n"
+            "  Run copy_nara.py first to stage the delivery, then re-run."
+        )
+
+    # Filter out months that have already been successfully ingested
+    unprocessed = []
+    for month in months:
+        log_file      = f"{LOG_DIR}/nara-ingest-{month}.log"
+        # Newest exit code across the old name and run-dated names
+        # (nara-ingest-<month>-<run id>.log.exitcode)
+        exitcode = ssm_run(
+            f"f=$(ls -t {log_file}.exitcode {LOG_DIR}/nara-ingest-{month}-*.log.exitcode 2>/dev/null | head -1); "
+            f"[ -n \"$f\" ] && cat \"$f\" || echo missing",
+            timeout_seconds=30,
+        ).strip()
+        info(f"Checking {month}: exitcode={exitcode}")
+        if exitcode == "0":
+            info(f"  → Skipping {month} — already ingested (exitcode=0).")
+        elif exitcode == "missing":
+            # No sidecar — check the log for [SUCCESS] lines as a fallback
+            # (covers months ingested before the .exitcode sidecar feature)
+            success_count = ssm_run(
+                f"grep -c '\\[SUCCESS\\]' {log_file} 2>/dev/null || echo 0",
+                timeout_seconds=30,
+            ).strip()
+            try:
+                has_success = int(success_count) > 0
+            except ValueError:
+                has_success = False
+            if has_success:
+                warn(f"  → Skipping {month} — no exitcode sidecar, but log shows {success_count} [SUCCESS] line(s).")
+            else:
+                # No sidecar and no [SUCCESS] lines — could be actively running
+                # or genuinely not yet started. Check for a live process before queuing.
+                pid_out = ssm_run(
+                    f"pgrep -f 'nara-ingest.sh.*{month}' 2>/dev/null || echo ''",
+                    timeout_seconds=30,
+                ).strip()
+                if pid_out:
+                    warn(f"  → {month} ingest is active (PID {pid_out}) — not queuing.")
+                else:
+                    info(f"  → {month} not yet ingested — queued.")
+                    unprocessed.append(month)
+        else:
+            info(f"  → {month} not yet ingested (exitcode={exitcode}) — queued.")
+            unprocessed.append(month)
+
+    if not unprocessed:
+        sys.exit(
+            f"\n  [BAD] All staged months ({', '.join(months)}) have already been ingested.\n"
+            "  Pass --month explicitly if you intend to re-run one."
+        )
+    if len(unprocessed) > 1:
+        sys.exit(
+            f"\n  [BAD] Multiple unprocessed months staged: {', '.join(unprocessed)}.\n"
+            "  NARA deltas are order-dependent — pass --month explicitly."
+        )
+
+    month = unprocessed[0]
+    ok(f"Auto-detected staged month: {month}")
+    return month
+
+
+# ---------- Step 1: pre-flight check ----------
+
+def preflight_check(month):
+    """Verify that copy_nara.py has already staged the files on EC2."""
+    step(1, f"Pre-flight: verify files staged on EC2 ({month})")
+    ingest_dir = f"{NARA_ORIGINALS}/{month}"
+    count = ssm_run(
+        f"ls {ingest_dir} 2>/dev/null | wc -l || echo 0",
+        timeout_seconds=30,
+    ).strip()
+    if count == "0":
+        sys.exit(
+            f"\n  [BAD] No files found at {ingest_dir} on EC2.\n"
+            f"  Run copy_nara.py first — it downloads the NARA delivery and stages\n"
+            f"  the ZIPs at that path, ready for nara-ingest.sh.\n"
+            f"  Run: python3 special_cases/nara/copy_nara.py   (then re-run this script)"
+        )
+    ok(f"{count} file(s) staged at {ingest_dir}")
+
+
+# Each run adds ~130 GB of output to the box, so keep only the most recent complete
+# run: in harvest/ and each of mapping/enrichment/jsonl, the newest dir with a
+# _SUCCESS file stays. Older complete runs are deleted only once they're in S3;
+# incomplete dirs are deleted outright, as are failed merges (a __tmp_* dir left
+# beside a harvest with no _LOGS/_SUMMARY.txt).
+PRUNE_SCRIPT = r"""
+set -u
+N=/home/ec2-user/data/nara
+if pgrep -f nara-ingest.sh >/dev/null; then echo "SKIP: nara-ingest.sh is running"; exit 0; fi
+# GONE tracks deleted paths so a dry run (DRY=1) treats them as gone too and its
+# preview matches what the real run does
+GONE=" "
+gone() { case "$GONE" in *" $1 "*) return 0;; esac; return 1; }
+del() {
+  [ -e "$1" ] && ! gone "$1" || return 0
+  GONE="$GONE$1 "
+  if [ "${DRY:-0}" = 1 ]; then echo "WOULD DELETE: $1"; else rm -rf "$1" && echo "DELETED: $1"; fi
+}
+for t in "$N"/harvest/*-nara-OriginalRecord.avro__tmp_*; do
+  [ -e "$t" ] || continue
+  # _SUMMARY.txt is written once the merge is complete; keep those, drop only the temp dir
+  [ -f "${t%%__tmp_*}/_LOGS/_SUMMARY.txt" ] || del "${t%%__tmp_*}"
+  del "$t"
+done
+prune() {  # $1 = local dir, $2 = S3 subdir; keeps the newest complete dir and $KEEP_BASE
+  [ -d "$1" ] || return 0
+  keep=$(for d in $(ls -1 "$1" | sort); do ! gone "$1/$d" && [ -f "$1/$d/_SUCCESS" ] && echo "$d"; done | tail -1)
+  [ -n "$keep" ] || { echo "KEEP ALL (no complete run found): $1"; return; }
+  echo "KEEP (most recent): $1/$keep"
+  for name in $(ls -1 "$1"); do
+    [ "$name" = "$keep" ] || [ "$1/$name" = "${KEEP_BASE:-}" ] || gone "$1/$name" && continue
+    if [ ! -f "$1/$name/_SUCCESS" ] || aws s3 ls "s3://dpla-master-dataset/nara/$2/$name/_SUCCESS" >/dev/null 2>&1; then
+      del "$1/$name"
+    else echo "KEEP (not in S3): $1/$name"; fi
+  done
+}
+prune "$N/harvest" harvest
+for s in mapping enrichment jsonl; do prune "$N/nara/$s" "$s"; done
+df -h / | tail -1
+"""
+
+
+def prune_old_outputs(keep_base=None):
+    step("1b", "Prune old NARA outputs on EC2")
+    prefix = f"KEEP_BASE={shlex.quote(keep_base.rstrip('/'))}\n" if keep_base else ""
+    # Dry run first so the operator sees exactly what will go before anything is deleted
+    preview = ssm_run(prefix + "DRY=1\n" + PRUNE_SCRIPT, timeout_seconds=120).strip()
+    print(preview)
+    if "SKIP: nara-ingest.sh is running" in preview:
+        sys.exit("\n  [BAD] A NARA ingest is already running on EC2 — not launching another.\n"
+                 "  Re-attach with: python3 special_cases/nara/launch_nara.py --resume --month YYYYMM")
+    if "WOULD DELETE" not in preview:
+        ok("Nothing to prune.")
+        return
+    confirm("Delete the dirs listed above?")
+    print(ssm_run(prefix + PRUNE_SCRIPT, timeout_seconds=900).strip())
+
+
+# ---------- Step 2: launch nara-ingest.sh ----------
+
+def launch_ingest(month, log_path, extra_args=""):
+    step(2, "Launch nara-ingest.sh on EC2")  # Step 1 = preflight check
+    cmd = f"bash {NARA_SCRIPT} --month={month} {extra_args}".strip()
+    info(f"Command: {cmd}")
+    info(f"Log:     {log_path}")
+    print()
+    print("  This will take ~12-14 hours total:")
+    print("    • Preprocess + delta harvest:  ~30 min")
+    print("    • Merge (~18.8M records):      ~1-2 hours")
+    print("    • Pipeline (map/enrich/jsonl): ~10 hours")
+    confirm("Launch NARA ingest now?")
+
+    pid = ssm_bg(cmd, log_path)
+    ok(f"Launched. PID: {pid}")
+    return pid
+
+
+def launch_skip_to_pipeline(harvest_path, log_path, skip_delete_check=False, run_id=None):
+    step(2, "Launch nara-ingest.sh --skip-to-pipeline on EC2")
+    flags = ["--skip-to-pipeline"]
+    if run_id:
+        flags.append(f"--run-id={run_id}")
+    if harvest_path:
+        flags.append(f"--harvest={harvest_path}")
+    if skip_delete_check:
+        flags.append("--skip-delete-check")
+    cmd = f"bash {NARA_SCRIPT} {' '.join(flags)}"
+    info(f"Command: {cmd}")
+    info(f"Log:     {log_path}")
+    print()
+    print("  Pipeline only (~10 hours): mapping → enrichment → JSONL → S3")
+    confirm("Launch NARA pipeline now?")
+
+    pid = ssm_bg(cmd, log_path)
+    ok(f"Launched. PID: {pid}")
+    return pid
+
+
+# ---------- Zero-delete gate ----------
+
+def extract_harvest_from_log(log_path):
+    """Pull the merged harvest path from the log's gate-halt message."""
+    try:
+        out = ssm_run(
+            f"grep -oE -- '--harvest=[^ ]+' {log_path} | tail -1 || true",
+            timeout_seconds=30,
+        ).strip()
+        if out.startswith("--harvest="):
+            return out[len("--harvest="):]
+    except Exception:
+        pass
+    # Fallback: scan for any OriginalRecord.avro path in the log
+    try:
+        out = ssm_run(
+            f"grep -oE '/[^ ]+OriginalRecord\\.avro' {log_path} | tail -1 || true",
+            timeout_seconds=30,
+        ).strip()
+        return out or None
+    except Exception:
+        return None
+
+
+# Set by main() for --month runs: a zero-delete-gate halt is resumed by
+# re-running the same month and run id with --skip-delete-check (finished steps
+# are skipped). Starting the pipeline instead would be wrong for --skip-pipeline
+# runs, whose merge is an intermediate one.
+RESUME = {}
+
+
+def parse_gate_resume_cmd(text):
+    """RESUME entry from the gate's logged resume command for a --month run
+    ("./nara-ingest.sh --month=M --run-id=R ... --skip-delete-check-month=M"),
+    or {} if the text has none (e.g. a --skip-to-pipeline run's halt)."""
+    m = re.findall(r"\./nara-ingest\.sh((?: --[A-Za-z-]+(?:=[^\s\x1b`]*)?)+)", text)
+    args = m[-1].split() if m else []
+    month = next((a.split("=", 1)[1] for a in args if a.startswith("--month=")), None)
+    if not month:
+        return {}
+    run_id = next((a.split("=", 1)[1] for a in args if a.startswith("--run-id=")), "")
+    return {"month": month, "run_id": run_id,
+            "extra": [a for a in args if not a.startswith(("--month=", "--skip-delete-check"))],
+            "skip": [a for a in args if a.startswith("--skip-delete-check")]}
+
+
+def handle_delete_gate_halt(log_path):
+    """Called when tail_log detects the script halted at the zero-delete gate.
+
+    Shows a summary, prompts the operator to continue or abort, and if they
+    confirm, re-runs the same month/run id with --skip-delete-check (or, for a
+    --skip-to-pipeline run, relaunches that with --skip-delete-check).
+    """
+    print()
+    warn("=" * 66)
+    warn("  ZERO-DELETE GATE — nara-ingest.sh halted after merge")
+    warn("=" * 66)
+    print()
+    warn("The merge completed but 0 records were actually deleted.")
+    warn("A Slack notification was sent. Review before continuing:")
+    print()
+    info("  • Was a delete file (NAC_DESC_Deletes_*.xml) present in the delivery?")
+    info("  • Check: cat <merged-harvest>/_LOGS/_SUMMARY.txt")
+    info("  • If no deletes are expected for this delivery, continue.")
+    print()
+
+    harvest_path = extract_harvest_from_log(log_path)
+    if harvest_path:
+        info(f"  Merged harvest: {harvest_path}")
+    else:
+        warn("  Could not detect merged harvest path from log — you'll need to set --harvest manually.")
+
+    print()
+    confirm("Continue past the zero-delete gate? (confirm you've verified 0 deletes is expected)", default_yes=False)
+
+    # Relaunch as a new background job
+    label    = datetime.now().strftime("%Y%m%d-%H%M%S")
+    if not RESUME:
+        # Re-attached (--resume) to a run this process didn't launch: continue
+        # its month run from the resume command nara-ingest.sh logged at the gate
+        RESUME.update(parse_gate_resume_cmd(
+            ssm_run(f"grep -F './nara-ingest.sh --' {log_path} | tail -1 || true",
+                    timeout_seconds=30)))
+    if RESUME:
+        new_log = f"{LOG_DIR}/nara-ingest-{RESUME['month']}-{RESUME['run_id']}-resume-{label}.log"
+        pid = launch_ingest(RESUME["month"], new_log,
+                            extra_args=" ".join(RESUME["extra"]
+                                                + (RESUME.get("skip") or ["--skip-delete-check"])))
+        tail_log(pid, new_log)
+        return
+    new_log  = f"{LOG_DIR}/nara-ingest-resume-{label}.log"
+    pid      = launch_skip_to_pipeline(harvest_path, new_log, skip_delete_check=True)
+    tail_log(pid, new_log)
+
+
+# ---------- Step 3: tail log ----------
+
+def tail_log(pid, log_path):
+    step(3, "Monitoring (Ctrl+C to stop tailing — job keeps running on EC2)")  # Step 2 = launch
+    info(f"Log: {log_path}")
+    info(f"PID: {pid}")
+    info(f"Resume:  python3 special_cases/nara/launch_nara.py --resume --log {log_path}")
+    info(f"Status:  python3 special_cases/nara/check_nara.py\n")
+
+    last_lines = 0
+    try:
+        while True:
+            alive = ssm_run(
+                f"ps -p {pid} -o pid= 2>/dev/null || echo dead",
+                timeout_seconds=30,
+            ).strip()
+
+            total_lines = int(ssm_run(
+                f"[ -f {log_path} ] && wc -l < {log_path} || echo 0",
+                timeout_seconds=30,
+            ).strip() or "0")
+
+            if total_lines > last_lines:
+                new = total_lines - last_lines
+                tail = ssm_run(f"tail -{new} {log_path}", timeout_seconds=30).rstrip()
+                if tail:
+                    print(tail)
+                last_lines = total_lines
+
+            if alive in ("dead", ""):
+                print()
+                log_tail = ssm_run(f"tail -40 {log_path}", timeout_seconds=30).strip()
+                print(log_tail)
+
+                # Read sidecar exit code written by ssm_bg wrapper
+                exit_file  = f"{log_path}.exitcode"
+                exit_raw   = ssm_run(
+                    f"cat {exit_file} 2>/dev/null || echo missing",
+                    timeout_seconds=30,
+                ).strip()
+                if exit_raw == "missing":
+                    bad("Exit code sidecar not found — process may have been killed or sidecar write failed.")
+                    raise RuntimeError("NARA ingest exit code unknown; check the log manually.")
+                try:
+                    exit_code = int(exit_raw)
+                except ValueError:
+                    exit_code = 1
+
+                if exit_code != 0:
+                    # Check if this was a zero-delete gate halt before raising
+                    if "zero-delete gate" in log_tail.lower():
+                        handle_delete_gate_halt(log_path)
+                        return
+                    bad(f"NARA ingest FAILED (exit {exit_code}). See log: {log_path}")
+                    raise RuntimeError(f"nara-ingest.sh exited {exit_code}")
+
+                ok(f"Process exited cleanly (exit 0).")
+                return
+
+            time.sleep(POLL_SECONDS)
+
+    except KeyboardInterrupt:
+        print(f"\n\n  Monitoring stopped. NARA ingest is still running on EC2.")
+        print(f"  Resume:  python3 special_cases/nara/launch_nara.py --resume --log {log_path}")
+        print(f"  Status:  python3 special_cases/nara/check_nara.py")
+
+
+def resume_log(log_path):
+    """Re-attach to an existing log/process."""
+    step(1, f"Resuming: {log_path}")
+    pid_out = ssm_run(
+        "pgrep -f 'nara-ingest.sh' || echo ''",
+        timeout_seconds=30,
+    ).strip()
+
+    if not pid_out:
+        info("No running nara-ingest.sh process found — showing final log output.")
+        print(ssm_run(f"tail -50 {log_path}", timeout_seconds=30).strip())
+    else:
+        pid = pid_out.strip().split()[-1]
+        ok(f"Found running process: PID {pid}")
+        tail_log(pid, log_path)
+
+
+# ---------- main ----------
+
+def main():
+    parser = argparse.ArgumentParser(description="DPLA NARA ingest launcher")
+    parser.add_argument("--month",
+                        help="Month to process (YYYYMM)")
+    parser.add_argument("--skip-preflight",   action="store_true",
+                        help="Skip EC2 file check (use if you know files are staged)")
+    parser.add_argument("--skip-pipeline",    action="store_true",
+                        help="Run harvest+merge only, skip mapping/enrichment/jsonl")
+    parser.add_argument("--skip-to-pipeline", action="store_true",
+                        help="Skip to pipeline using existing merged harvest")
+    parser.add_argument("--harvest",
+                        help="Explicit merged harvest path (use with --skip-to-pipeline)")
+    parser.add_argument("--base",
+                        help="Explicit base harvest avro path")
+    parser.add_argument("--force-sync",       action="store_true",
+                        help="Force fresh S3 download of base harvest on EC2")
+    parser.add_argument("--skip-delete-check", action="store_true",
+                        help="Bypass the zero-delete gate (use when 0 deletes is expected)")
+    parser.add_argument("--skip-prune",       action="store_true",
+                        help="Don't remove old NARA outputs from EC2 before launching")
+    parser.add_argument("--resume",           action="store_true",
+                        help="Re-attach to an existing running ingest log")
+    parser.add_argument("--log",
+                        help="Log path to tail (use with --resume)")
+    parser.add_argument("--run-id", default=datetime.now().strftime("%Y%m%d"),
+                        help="Run id for delta/<month>/<run id>/ and the log name "
+                             "(default: today). Pass an earlier run's id to resume it.")
+    args = parser.parse_args()
+    if not re.match(r"^[A-Za-z0-9_-]+$", args.run_id):
+        sys.exit(f"\n  [BAD] --run-id must be letters, digits, '_' or '-', got: {args.run_id!r}")
+
+    print("\nDPLA NARA INGEST LAUNCHER")
+    print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"EC2:  {INSTANCE_ID}")
+
+    # ── Resume mode ──────────────────────────────────────────────────────────
+    if args.resume:
+        log_path = args.log
+        if not log_path:
+            if not args.month:
+                sys.exit("\n  --resume requires --log <path> or --month YYYYMM")
+            log_path = f"{LOG_DIR}/nara-ingest-{args.month}-{args.run_id}.log"
+        resume_log(log_path)
+        return
+
+    # ── Skip-to-pipeline mode ─────────────────────────────────────────────
+    if args.skip_to_pipeline:
+        label    = f"{args.month}-{args.run_id}" if args.month else datetime.now().strftime("%Y%m%d-%H%M%S")
+        log_path = f"{LOG_DIR}/nara-ingest-{label}.log"
+        pid      = launch_skip_to_pipeline(
+            args.harvest, log_path,
+            skip_delete_check=args.skip_delete_check,
+            run_id=args.run_id,
+        )
+        tail_log(pid, log_path)
+        return
+
+    # ── Normal mode ───────────────────────────────────────────────────────
+    if args.month:
+        if not re.match(r"^\d{6}$", args.month):
+            sys.exit(f"\n  [BAD] --month must be 6 digits (YYYYMM), got: {args.month!r}")
+        month = args.month
+    else:
+        month = detect_staged_month()
+    # Run-dated so a rerun of a month doesn't overwrite an earlier run's log
+    log_path = f"{LOG_DIR}/nara-ingest-{month}-{args.run_id}.log"
+
+    print(f"Month: {month}")
+    print(f"Run:   {args.run_id} (delta/{month}/{args.run_id}/)")
+    print(f"Log:   {log_path}")
+
+    # Step 1: Pre-flight
+    if not args.skip_preflight:
+        preflight_check(month)
+    else:
+        info("Skipping pre-flight check (--skip-preflight).")
+
+    if not args.skip_prune:
+        prune_old_outputs(keep_base=args.base)
+
+    # Step 2: Launch
+    extra = [f"--run-id={args.run_id}"]
+    if args.skip_pipeline:
+        extra.append("--skip-pipeline")
+    if args.base:
+        extra.append(f"--base={args.base}")
+    if args.force_sync:
+        extra.append("--force-sync")
+    if args.skip_delete_check:
+        extra.append("--skip-delete-check")
+
+    RESUME.update(month=month, run_id=args.run_id,
+                  extra=[e for e in extra if e != "--skip-delete-check"])
+    pid = launch_ingest(month, log_path, extra_args=" ".join(extra))
+
+    # Step 3: Tail
+    tail_log(pid, log_path)
+
+
+if __name__ == "__main__":
+    main()
