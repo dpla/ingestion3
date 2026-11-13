@@ -3,21 +3,23 @@
 DPLA Ingest Onboarding
 
 Verifies that everything is in place to start working on the DPLA ingest pipeline.
-On first run, prompts for your local repo paths and saves them to dpla_config.env
-(next to this script) so you never have to edit the other scripts directly.
+On first run, prompts for your local repo paths and saves them to the repo's .env
+so you never have to edit the other scripts directly.
 
   1. Create / update the repo's .env (repo paths, your email)
   2. Python version
   3. Required CLI tools (aws, curl)
   4. AWS credentials — default profile + NARA profile
-  5. EC2 instance reachability via SSM
-  6. Local repo paths (ingestion3, ingestion3-conf / i3.conf)
-  7. DPLA API key (~/.dpla-secrets.env)
-  8. Summary
+  5. Local repo paths (ingestion3, ingestion3-conf / i3.conf)
+  6. DPLA API key (~/.dpla-secrets.env)
+  7. Your email
+  8. Instance and Elasticsearch settings in .env (INGEST_INSTANCE_ID,
+     ES_INSTANCE_ID, ES_HOST, AWS_ACCOUNT_ID)
+  9. Summary
 
 Usage:
     python3 helper_scripts/onboarding.py           # first run — prompts for config
-    python3 helper_scripts/onboarding.py --update  # re-prompt to change saved paths
+    python3 helper_scripts/onboarding.py --update  # re-prompt to change saved values
 """
 
 import argparse
@@ -42,6 +44,22 @@ CONFIG_FILE = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "..", ".env"))
 DEFAULT_INGESTION3      = os.path.expanduser("~/Documents/Repos/ingestion3")
 DEFAULT_INGESTION3_CONF = os.path.expanduser("~/Documents/Repos/ingestion3-conf")
 DEFAULT_BATCH_REPO      = os.path.expanduser("~/Documents/Repos/batch-process-dpla-index")
+
+# Instance and Elasticsearch settings the launchers read from .env. Same for
+# everyone; AWS_ACCOUNT_ID defaults to the account your credentials belong to.
+# (key, prompt label, default, validation pattern)
+INFRA_SETTINGS = (
+    ("INGEST_INSTANCE_ID", "Ingest EC2 instance ID",              "i-0a0def8581efef783",
+     r"^i-[0-9a-f]{8,17}$"),
+    ("ES_INSTANCE_ID",     "Elasticsearch (search-prod1) instance ID", "i-00bbdfe0a6ff6cf78",
+     r"^i-[0-9a-f]{8,17}$"),
+    ("ES_HOST",            "Elasticsearch URL",                   "http://search-prod1.internal.dp.la:9200",
+     r"^https?://[^\s/]+(:\d+)?/?$"),
+    ("AWS_ACCOUNT_ID",     "AWS account ID (12 digits)",          "",
+     r"^\d{12}$"),
+)
+# Keys some launchers read from the shell before .env (ES_HOST is .env-only)
+SHELL_FIRST_KEYS = ("INGEST_INSTANCE_ID", "ES_INSTANCE_ID", "AWS_ACCOUNT_ID")
 
 
 # ---------- color ----------
@@ -190,6 +208,48 @@ def check_user_email(config):
     return True
 
 
+def ask_setting(label, current, pattern):
+    """Prompt until the value matches pattern; Enter keeps `current` if it's valid."""
+    while True:
+        try:
+            val = input(f"  {label}\n  [{current}]: ").strip() or current
+        except (EOFError, KeyboardInterrupt):
+            sys.exit("\nAborted.")
+        if re.match(pattern, val):
+            return val
+        print(f"  That doesn't look right for {label}.")
+
+
+def check_infra_settings(config, account_id=None, reprompt=False):
+    """Make sure .env has the instance and Elasticsearch settings the launchers
+    read. Prompts for any that are missing or malformed (all of them with
+    --update) and saves only the keys it changed."""
+    section("Instance and Elasticsearch Settings")
+    changed = {}
+    for key, label, default, pattern in INFRA_SETTINGS:
+        current = config.get(key, "")
+        if key == "AWS_ACCOUNT_ID" and not current:
+            default = account_id or ""
+        if reprompt or not re.match(pattern, current):
+            if not reprompt:
+                warn(f"{key} {'is malformed' if current else 'not set'} in .env")
+            value = ask_setting(label, current if re.match(pattern, current) else default, pattern)
+            if value != current:
+                config[key] = value
+                changed[key] = value
+        ok(f"{key:<20} {c(DIM, config[key])}")
+        exported = os.environ.get(key)
+        if key in SHELL_FIRST_KEYS and exported and exported != config[key]:
+            warn(f"Your shell exports {key}={exported}; scripts that check the shell "
+                 "first use it instead of the .env value.")
+
+    if changed:
+        # Only the changed keys: rewriting the others would drop their quoting
+        save_config(changed)
+        ok(f"Saved to {c(DIM, CONFIG_FILE)}")
+    return True
+
+
 # ---------- checks ----------
 
 def check_python():
@@ -223,13 +283,15 @@ def check_aws_default():
         err = result.stderr.strip().splitlines()[0] if result.stderr.strip() else "(no error output)"
         fail(f"aws sts get-caller-identity failed: {err}")
         warn("Run `aws configure` or set AWS_PROFILE / AWS_ACCESS_KEY_ID")
-        return False
+        return False, None
     try:
         identity = json.loads(result.stdout)
-        ok(f"Account:  {identity.get('Account', '?')}")
+        account = identity.get("Account")
+        ok(f"Account:  {account or '?'}")
     except json.JSONDecodeError:
         ok("Credentials valid")
-    return True
+        account = None
+    return True, account
 
 
 def check_aws_nara():
@@ -320,7 +382,8 @@ def check_api_key():
 def main():
     parser = argparse.ArgumentParser(description="DPLA ingest onboarding check")
     parser.add_argument("--update", action="store_true",
-                        help="Re-prompt for repo paths and your email even if .env already exists")
+                        help="Re-prompt for repo paths, your email and the instance/Elasticsearch "
+                             "settings even if .env already has them")
     args = parser.parse_args()
 
     print()
@@ -341,17 +404,18 @@ def main():
         config = existing
         section("Config")
         ok(f"Loaded {c(DIM, CONFIG_FILE)}")
-        print(c(DIM, "  Run with --update to change repo paths"))
+        print(c(DIM, "  Run with --update to change saved values"))
 
     # ── Checks ───────────────────────────────────────────────────────────────
     results = {}
     results["python"]      = check_python()
     results["cli_tools"]   = check_cli_tools()
-    results["aws_default"] = check_aws_default()
+    results["aws_default"], account_id = check_aws_default()
     results["aws_nara"]    = check_aws_nara()
     results["repos"]       = check_repos(config)
     results["api_key"]     = check_api_key()
     results["user_email"]  = check_user_email(config)
+    results["infra"]       = check_infra_settings(config, account_id, reprompt=args.update)
 
     # ── Summary ───────────────────────────────────────────────────────────────
     print()

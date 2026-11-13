@@ -16,6 +16,8 @@ cd ingest_pipeline_python
 ../venv/bin/python helper_scripts/takedown.py -f ids.txt             # asks before deleting
 ```
 
+It stops on anything it can't confirm: an unresolved API lookup (only a 404 or an empty 200 means "already gone"), an unreadable count or alias, a live-index count that doesn't match, an S3 step that doesn't report its removal count, an alias swap or Elasticsearch error mid-delete. It ends with `TAKEDOWN DONE` only when every ID and both count deltas check out; otherwise `TAKEDOWN INCOMPLETE OR UNVERIFIED` and a nonzero exit. It doesn't touch unsynced snapshots on EC2.
+
 ## Purpose
 
 Safely remove one or more DPLA items from the live dp.la search index and from the
