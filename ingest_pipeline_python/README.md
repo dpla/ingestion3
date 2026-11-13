@@ -84,7 +84,20 @@ python3 helper_scripts/onboarding.py
 
 Prompts for your local repo paths (`ingestion3`, `ingestion3-conf`, `batch-process-dpla-index`) and your email, and saves them to `.env` in the ingestion3 root (gitignored). Your email (`DPLA_USER_EMAIL`) is where `pre_ingest_monthly_email/2_send_email.py --test` sends test copies. Also verifies your AWS credentials, NARA profile, `i3.conf`, and DPLA API key.
 
-Re-run at any time. Use `--update` to change saved paths.
+It also makes sure `.env` has the instance and Elasticsearch settings the launchers read, and asks for any that are missing or malformed:
+
+| Key | Suggested value | Used by |
+|---|---|---|
+| `INGEST_INSTANCE_ID` | the ingest EC2's ID | every launcher that talks to the ingest EC2 |
+| `ES_INSTANCE_ID` | search-prod1's ID | `4_launch_indexer.py` |
+| `ES_HOST` | `http://search-prod1.internal.dp.la:9200` | `4_launch_indexer.py` |
+| `AWS_ACCOUNT_ID` | the account your AWS credentials belong to | `4_launch_indexer.py`, `5_post_indexer.py` (EMR log path) |
+
+Press Enter to accept the suggested value. Run it with `AWS_PROFILE=dpla` so the credentials check, and the suggested account ID, use your `dpla` profile.
+
+It only rewrites the keys it's saving, so the rest of `.env` keeps its quoting. If your shell exports a different `DPLA_USER_EMAIL`, `INGEST_INSTANCE_ID`, `ES_INSTANCE_ID` or `AWS_ACCOUNT_ID`, it warns you, since scripts that read the shell first use the exported value.
+
+Re-run at any time. Use `--update` to change any saved value.
 
 ---
 
@@ -101,6 +114,23 @@ Re-run at any time. Use `--update` to change saved paths.
 ```
 
 Afterwards, `6_postchecks.py` verifies the month's outputs. NARA, Smithsonian and Community Webs use their scripts in `special_cases/` in place of steps 2–3; preflight tells you when a hub is one of them. Virginias needs `special_cases/virginias/virginias_download.py` run first, then the usual steps 2–3.
+
+---
+
+### Step 0 — Pre-ingest email (start of the month)
+
+Emails the hubs scheduled for the month. Run from the ingestion3 repo root, after `helper_scripts/onboarding.py` has saved your email (`DPLA_USER_EMAIL`) and with your local `i3.conf` pulled:
+
+```bash
+cd ..   # ingestion3 repo root
+./venv/bin/python pre_ingest_monthly_email/1_get_info.py --month <M> --year <YYYY> \
+  --intro "..." --image-url "<url>" --image-caption "<credit>"   # writes the draft to txt_emails/
+./venv/bin/python pre_ingest_monthly_email/2_send_email.py --dry-run   # preview the HTML, sends nothing
+./venv/bin/python pre_ingest_monthly_email/2_send_email.py --test      # only to you (DPLA_USER_EMAIL)
+./venv/bin/python pre_ingest_monthly_email/2_send_email.py             # real send: ingest@dp.la + hub contacts in BCC; asks first
+```
+
+Month and year default to the current ones; `--intro` and the image are optional. Check the draft's ingest week and hub list before sending, and re-run `1_get_info.py` to change it rather than editing the file. The send script uses the newest draft unless you pass `--file`; old drafts live in `pre_ingest_monthly_email/archive/`.
 
 ---
 
@@ -210,7 +240,7 @@ Immediately after the alias swap completes:
 python3 5_post_indexer.py
 ```
 
-Checks/rebuilds the batch JAR, launches the monthlybatch EMR cluster, and runs four Spark steps in sequence: `ParquetDump` → `JsonlDump` → `MqReports` → `Sitemap`. On completion it runs hub stats and the aviation/bws sitemaps on EC2, then runs the dpla-frontend GitHub Actions workflow that builds the provider-based hub sitemaps and waits for its result. A final Slack summary names any failed or stale output. Cluster takes **3–5 hours**.
+Checks/rebuilds the batch JAR, launches the monthlybatch EMR cluster, and runs four Spark steps in sequence: `ParquetDump` → `JsonlDump` → `MqReports` → `Sitemap`. On completion it runs hub stats and the aviation/bws sitemaps on EC2, then runs the dpla-frontend GitHub Actions workflow that builds the provider-based hub sitemaps and waits for its result. A final Slack summary names any failed or stale output. Cluster takes **1–2 hours**.
 
 ```bash
 python3 5_post_indexer.py --cluster-id j-XXXXX   # resume monitoring
@@ -368,7 +398,16 @@ If `ingest.sh` reports a >5% record drop, the new snapshot stays on EC2 and the 
 python3 helper_scripts/skip_safety_check.py <hub>
 ```
 
-It shows the blocked snapshot next to the previous S3 snapshot (plus the harvest and mapping counts and hub contacts), asks, syncs only that snapshot to S3, checks it's now the newest there, asks before emailing the hub, and posts to Slack. `--snapshot <dir>` picks a snapshot other than the newest. It refuses runs blocked by the ID uniqueness check, unfinished snapshots, and snapshots older than what's in S3. Community Webs uses `launch_cw.py --send --force` instead; NARA isn't handled.
+It shows the blocked snapshot next to the previous S3 snapshot (plus the harvest and mapping counts and hub contacts), asks, syncs only that snapshot to S3, checks it's now the newest there, asks before emailing the hub, and posts to Slack. `--snapshot <dir>` picks a snapshot other than the newest.
+
+It refuses, before asking anything, when:
+- the snapshot has no `_SUCCESS` or 0 records
+- the ID uniqueness check (run on the snapshot itself) fails, can't run, or reads no records
+- the snapshot is already in S3, or older than the newest S3 snapshot
+- S3 can't be read, or the previous snapshot's record count can't be read
+- the hub is Community Webs (use `launch_cw.py --send --force`) or NARA
+
+If a sync or email can't be confirmed either way (an SSM timeout, or output that can't be read), it reports the outcome as unknown and says what to check before rerunning, so nothing is sent twice.
 
 ---
 
@@ -381,7 +420,13 @@ It shows the blocked snapshot next to the previous S3 snapshot (plus the harvest
 
 Takes DPLA IDs (arguments or `-f`, one per line; one hub per run). It looks each up in the API, checks the item is gone at the source (ContentDM through its API, other sites by HTTP status), shows a manifest and asks, removes the IDs from the hub's newest S3 JSON-L, counts them in the live index (must match exactly), deletes them in batches of 100, and confirms through the API that the total and hub counts dropped by exactly that many.
 
-- Items still published in ContentDM are always left out. Items it can't confirm (non-ContentDM sites, Calisphere) are left out unless you check them yourself and pass `--include-unverified`.
+- Items still published in ContentDM are always left out. Items it can't confirm (non-ContentDM sites, Calisphere, malformed links) are left out unless you check them yourself and pass `--include-unverified`.
+- It stops before deleting anything if an API lookup can't be resolved (only a 404, or a 200 with no record, means "already gone"; 429/5xx are retried first), if the API counts or `dpla_alias` can't be read, or if the live index doesn't contain every ID.
+- The live index is only touched after the S3 step reports how many records it removed. During the deletes it re-checks `dpla_alias` and each batch's count, and on an Elasticsearch error it says how many were already deleted.
+- Each stop above exits nonzero with its own message. If it gets through the deletes, the final check prints `TAKEDOWN DONE` only if every ID it took down is gone from the API and the total and hub counts dropped by exactly the right number; otherwise `TAKEDOWN INCOMPLETE OR UNVERIFIED`, with a nonzero exit. Treat any nonzero exit as needing investigation.
+- `TAKEDOWN DONE` covers only the IDs in the manifest's take-down list. Two kinds of requested IDs aren't on it, and neither is removed from S3: IDs the API didn't return (printed before the manifest under "Not in the API … skipped", first 10 only), and IDs left out because their source isn't confirmed removed (listed in the manifest under "Left out"). Before reporting the request done, compare the original request with the take-down list. Left-out IDs are either `unverified` (the script couldn't check the source) or `live` (the source still has them). For an `unverified` ID, check the source by hand; put only the ones you've confirmed gone in a new ID file and rerun with `--include-unverified`, which takes down every unverified ID in its input. `--include-unverified` never takes down a `live` ID: if your own check says a `live` item is gone, resolve that conflict (with the hub if needed) before removing it. For every API-missing ID, check the hub's newest S3 JSONL from the repo root with `./venv/bin/python scripts/delete/delete-from-jsonl.py --dry-run --bucket dpla-master-dataset --hub <s3-hub> --profile dpla -f <ids-file>`. A dry run reads every file and changes nothing; a nonzero `Total matching records` means the ID is still in S3 and would come back at the next index rebuild.
+- If S3 removes a different number than expected, it asks whether to continue to the live index. Saying yes doesn't stop `TAKEDOWN DONE`, because the final check doesn't look at the S3 count. Resolve any S3 count mismatch before reporting the request done.
+- It doesn't touch newer, unsynced snapshots on EC2 (e.g. one the safety check blocked). Don't publish one of those without re-running the takedown.
 - If the hub's S3 folder isn't the API's hub name, pass `--s3-hub <folder>`.
 - Use the venv Python: the S3 step needs `boto3`.
 - There's no exclusion list. Ask the hub to remove the items at the source, or they come back at its next ingest.
