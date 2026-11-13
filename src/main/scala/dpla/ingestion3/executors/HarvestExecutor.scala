@@ -4,6 +4,7 @@ import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 import dpla.ingestion3.confs.i3Conf
 import dpla.ingestion3.dataStorage.OutputHelper
+import dpla.ingestion3.harvesters.SeedsFromPreviousHarvest
 import dpla.ingestion3.harvesters.Harvester
 import dpla.ingestion3.harvesters.file.NaraDeltaHarvester
 import dpla.ingestion3.harvesters.oai.{
@@ -57,6 +58,14 @@ trait HarvestExecutor {
     logger.info(s"Harvest type: $harvestType")
 
     val harvester = buildHarvester(spark, shortName, conf, harvestType)
+
+    // A harvester that seeds from the hub's previous harvest needs the output
+    // root to find it. That is a run parameter, not configuration, so it is
+    // handed over here rather than pinned in i3.conf.
+    harvester match {
+      case s: SeedsFromPreviousHarvest => s.dataRoot = dataOut
+      case _                           => ()
+    }
 
     // This start time is used for documentation and output file naming.
     val startDateTime = LocalDateTime.now

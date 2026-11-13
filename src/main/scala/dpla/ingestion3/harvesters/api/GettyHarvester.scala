@@ -7,7 +7,18 @@ import org.apache.http.client.utils.URIBuilder
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
 
-/** Class for harvesting records from the Getty Primo VE endpoint
+/** Offset-paging harvester for the Getty Primo VE endpoint.
+  *
+  * RETAINED BUT NOT IN USE. Getty's Primo gateway caps any single query at
+  * `offset <= 1999` and `limit <= 1000`, so paging stops at ~2,000 of ~101,400
+  * records -- and reports SUCCESS, which is how a 98% shortfall reached
+  * production in February 2026. [[GettyProfile]] points at
+  * [[GettyRefreshHarvester]] instead.
+  *
+  * This class is kept deliberately: it is the correct implementation the moment
+  * Ex Libris lifts the offset cap, which is the outcome we are pressing Getty
+  * for. Re-point [[GettyProfile]] here if that happens -- and verify against
+  * `info.total` (~101,400) before trusting the result.
   */
 class GettyHarvester(
     spark: SparkSession,
