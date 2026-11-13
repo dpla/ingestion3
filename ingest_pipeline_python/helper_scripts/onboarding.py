@@ -54,7 +54,9 @@ INFRA_SETTINGS = (
     ("ES_INSTANCE_ID",     "Elasticsearch (search-prod1) instance ID", "i-00bbdfe0a6ff6cf78",
      r"^i-[0-9a-f]{8,17}$"),
     ("ES_HOST",            "Elasticsearch URL",                   "http://search-prod1.internal.dp.la:9200",
-     r"^https?://[^\s/]+(:\d+)?/?$"),
+     # host, then an optional port of 1-65535
+     r"^https?://[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?"
+     r"(?::(?:6553[0-5]|655[0-2]\d|65[0-4]\d{2}|6[0-4]\d{3}|[1-5]\d{4}|[1-9]\d{0,3}))?/?$"),
     ("AWS_ACCOUNT_ID",     "AWS account ID (12 digits)",          "",
      r"^\d{12}$"),
 )
