@@ -27,4 +27,19 @@ class TypeEnrichmentTest  extends AnyFlatSpec with BeforeAndAfter {
     val expectedValue = None
     assert(typeEnrichment.enrich(originalValue) === expectedValue)
   }
+  it should "map MODS 'sound recording-musical' to sound" in {
+    assert(typeEnrichment.enrich("sound recording-musical") === Some("sound"))
+  }
+  it should "map MODS 'sound recording-nonmusical' to sound" in {
+    assert(typeEnrichment.enrich("sound recording-nonmusical") === Some("sound"))
+  }
+  it should "map MODS 'three dimensional object' to physical object" in {
+    assert(typeEnrichment.enrich("three dimensional object") === Some("physical object"))
+  }
+  it should "map MODS 'software, multimedia' to interactive resource" in {
+    assert(typeEnrichment.enrich("software, multimedia") === Some("interactive resource"))
+  }
+  it should "normalize surrounding whitespace before lookup" in {
+    assert(typeEnrichment.enrich("\n  sound recording-musical  \n") === Some("sound"))
+  }
 }
