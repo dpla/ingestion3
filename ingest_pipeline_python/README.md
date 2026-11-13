@@ -425,6 +425,7 @@ Takes DPLA IDs (arguments or `-f`, one per line; one hub per run). It looks each
 - The live index is only touched after the S3 step reports how many records it removed. During the deletes it re-checks `dpla_alias` and each batch's count, and on an Elasticsearch error it says how many were already deleted.
 - Each stop above exits nonzero with its own message. If it gets through the deletes, the final check prints `TAKEDOWN DONE` only if every ID it took down is gone from the API and the total and hub counts dropped by exactly the right number; otherwise `TAKEDOWN INCOMPLETE OR UNVERIFIED`, with a nonzero exit. Treat any nonzero exit as needing investigation.
 - `TAKEDOWN DONE` covers only the IDs in the manifest's take-down list. Review the IDs it skipped (already gone, or unverified at the source) before reporting the whole request done.
+- If S3 removes a different number than expected, it asks whether to continue to the live index. Saying yes doesn't stop `TAKEDOWN DONE`, because the final check doesn't look at the S3 count. Resolve any S3 count mismatch before reporting the request done.
 - It doesn't touch newer, unsynced snapshots on EC2 (e.g. one the safety check blocked). Don't publish one of those without re-running the takedown.
 - If the hub's S3 folder isn't the API's hub name, pass `--s3-hub <folder>`.
 - Use the venv Python: the S3 step needs `boto3`.
