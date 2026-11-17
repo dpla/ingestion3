@@ -89,7 +89,7 @@ jobs:
           INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
           CI: '1'
         run: |
-          python3 ingest_python_scripts/hub_preflight.py \
+          python3 ingest_pipeline_python/2_preflight.py \
             --non-interactive \
             --skip-endpoint
 
@@ -125,7 +125,7 @@ jobs:
           [[ -n "$MONTH_INPUT" ]]         && ARGS+=(--month "$MONTH_INPUT")
           [[ "$DRY_RUN" == "true" ]]      && ARGS+=(--dry-run)
           [[ -n "$EXCLUDE_INPUT" ]]       && ARGS+=(--exclude "$EXCLUDE_INPUT")
-          python3 ingest_python_scripts/run_monthly_batch.py "${ARGS[@]}"
+          python3 ingest_pipeline_python/helper_scripts/run_monthly_batch.py "${ARGS[@]}"
 
       - name: Kill batch on failure
         if: failure()

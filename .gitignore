@@ -208,5 +208,5 @@ scheduler/emails/
 /echo
 
 # Email text files and images from the "pre-emails"
-pre-emails/txt_emails/
-pre-emails/images/
+pre_ingest_monthly_email/txt_emails/
+pre_ingest_monthly_email/images/

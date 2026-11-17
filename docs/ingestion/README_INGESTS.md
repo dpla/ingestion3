@@ -108,18 +108,21 @@ Not all ingests are fire and forget, some require a bit of massaging before we c
 No hub currently needs a VPN or a local harvest. A few hubs restrict their endpoint by IP address and are handled on the ingest EC2: Indiana allowlists the EC2's own egress IP (`52.2.32.179`), and getty and njde are routed through a Tailscale exit node by `ingest.sh`. See [Firewalled endpoints](../../README.md#firewalled-endpoints) in the main README.
 
 ### Community Webs
-Internet Archive Community Webs sends a SQLite database. Use the automated scripts to export, validate, and harvest:
+Internet Archive Community Webs sends a SQLite database. From the repo root:
 
-**Automated (recommended):**
-1. Place the `*.db` file in `$DPLA_DATA/community-webs/originalRecords/`
-2. Run: `./scripts/harvest/community-webs-ingest.sh --full --update-conf`
-   - This exports the DB to JSONL, validates schema, zips, updates i3.conf, harvests, and runs the full pipeline (mapping + enrichment + jsonl)
+```shell
+./venv/bin/python ingest_pipeline_python/special_cases/community-webs/copy_cw.py ~/Downloads/community-webs.sqlite3
+```
 
-**Manual (if needed):**
-- Install `jq` and `sqlite3`: `brew install jq sqlite3` / `apt install jq sqlite3`
-1. Export: `./scripts/harvest/community-webs-export.sh --db=/path/to/file.db --update-conf`
-2. Harvest: `./scripts/harvest.sh community-webs`
-3. Pipeline: `./scripts/ingest.sh community-webs --skip-harvest`
+This checks the file and copies it to S3. Then run the ingest on the newest copied file:
+
+```shell
+./venv/bin/python ingest_pipeline_python/special_cases/community-webs/launch_cw.py
+```
+
+This runs export, harvest, mapping, enrichment, JSON-L and the safety check on EC2, with Slack reporting each stage. When it finishes, it shows the counts and contacts and asks whether to sync the JSON-L to S3 and email the hub. If the >5% safety check blocked the run, it says so and asks the same question.
+
+If you answer no or close the terminal, send later with `launch_cw.py --send`, or `--send --force` for a blocked run. No `i3.conf` edit is needed per delivery: `community-webs.harvest.endpoint` stays at `.../community-webs/originalRecords/`.
 
 See [scripts/SCRIPTS.md](../../scripts/SCRIPTS.md) for `community-webs-export.sh` and `community-webs-ingest.sh` options.
 ### Digital Virginias
@@ -132,6 +135,45 @@ Digital Virginias uses [multiple Github repositories](https://github.com/dplava)
 ```
 
 Then execute the harvest after updating the `virginas.harvest.endpoint` value in `i3.conf`
+
+### Getty
+Getty's Ex Libris Primo gateway caps any single query at `offset <= 1999` /
+`limit <= 1000`, so an offset-paging harvest silently returns ~2,000 of ~101,400
+records **and reports success**. That is how a 98% shortfall reached production
+in February 2026 — check the record count against `info.total`, not the exit code.
+
+Getty is therefore harvested by `GettyRefreshHarvester`, which looks up every
+known record id directly and then asks Getty's `newrecords` facet for anything
+added in the last 90 days. Nothing special to run — `./scripts/ingest.sh getty`
+handles it, including routing through the Tailscale exit node that holds the
+allowlisted IP (`54.165.106.96`; Getty rejects our other static IP).
+
+Three things to know:
+
+- **The seed.** `getty.harvest.seed` wins if set. Otherwise the harvester takes
+  the newest directory under `$DPLA_DATA/getty/harvest/` that contains a
+  `_SUCCESS` marker, so each ingest's output seeds the next one with no config
+  change and discovered ids carry forward on their own.
+
+  **On a box with no completed Getty harvest, there is nothing to find and the
+  harvest aborts** — the first run there must be given `getty.harvest.seed`
+  explicitly. Set it to either a harvest activity directory or a
+  newline-delimited id file ending `.txt` or `.ids` (the extension is the only
+  signal; any other suffix goes to the Avro reader and fails). Remove it once a
+  harvest has completed, so automatic carry-forward takes over again.
+
+  Use the override for exactly two things: bootstrapping a first run, and
+  backfilling from a specific older harvest. Not for routine ingests.
+- **Getty runs bi-monthly (Jan/Mar/May/Jul/Sep/Nov), not quarterly.** Discovery
+  reaches back only 90 days, so a quarterly cadence has no margin. The harvester
+  logs a `GETTY DISCOVERY GAP` warning if the gap since the previous harvest
+  exceeds 90 days — **if you see it, the harvest is not complete**, and the
+  warning names the date range whose records can no longer be recovered.
+- **This is a temporary method.** The `newrecords` window tops out at 90 days, and
+  the GETTY_OCP side (78,613 of 101,393 records) has no usable facets and cannot
+  be enumerated, so OCP coverage rests entirely on the seed. It prevents drift; it
+  does not guarantee completeness. The real fix is Ex Libris lifting the cap or
+  Getty providing a bulk feed.
 
 ### NARA
 Please see the [NARA specific documentation](README_NARA.md)

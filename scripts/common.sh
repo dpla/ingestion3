@@ -726,6 +726,20 @@ get_hub_email() {
     grep "^${hub}\.email" "$I3_CONF" 2>/dev/null | sed 's/.*= *"//' | sed 's/".*//' || echo ""
 }
 
+# Format a comma-separated recipient list for human display.
+#
+# i3.conf stores addresses exactly as typed, which is usually
+# "Name<addr>,Name<addr>" -- compact in a config file, but cramped in a Slack
+# notification, where each name after the first runs straight into the previous
+# address. This normalises the separator to ", " (and collapses any existing
+# spacing so it cannot double up).
+#
+# DISPLAY ONLY. Never feed this to a mail command -- senders use the raw
+# get_hub_email value.
+format_recipients() {
+    printf '%s' "${1:-}" | sed -E 's/[[:space:]]*,[[:space:]]*/, /g'
+}
+
 # Get harvest type from i3.conf
 get_harvest_type() {
     local hub="$1"

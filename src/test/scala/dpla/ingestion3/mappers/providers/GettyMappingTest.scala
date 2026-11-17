@@ -73,12 +73,57 @@ class GettyMappingTest extends AnyFlatSpec with BeforeAndAfter {
     val expected = Seq(stringOnlyWebResource("https://rosettaapp.getty.edu/delivery/DeliveryManagerServlet?dps_pid=IE1318448"))
     assert(extractor.isShownAt(xml) === expected)
   }
+  it should "leave edmRights empty when Getty publishes only free text" in {
+    // The fixture carries Getty's normal case: prose rights, no URI. Inventing a
+    // URI for a local statement would change what the record says, so nothing is
+    // crosswalked and edmRights stays empty.
+    assert(extractor.edmRights(xml) === Seq())
+    assert(extractor.rights(xml).nonEmpty, "free-text rights should still be mapped")
+  }
+
+  it should "promote a published rights URI into edmRights" in {
+    val doc = Document(parse(
+      """{"pnx":{"display":{"lds27":["http://rightsstatements.org/vocab/InC/1.0/"]}}}"""
+    ))
+    assert(extractor.edmRights(doc) === Seq(URI("http://rightsstatements.org/vocab/InC/1.0/")))
+  }
+
+  it should "ignore a rights URI mentioned inside prose" in {
+    // Exact match only. Pulling a URI out of a sentence would attribute a rights
+    // statement to a record whose provider did not actually assert it.
+    val doc = Document(parse(
+      """{"pnx":{"display":{"lds27":["See http://rightsstatements.org/vocab/InC/1.0/ for details"]}}}"""
+    ))
+    assert(extractor.edmRights(doc) === Seq())
+  }
+
+  it should "ignore non-rights URLs in the rights text" in {
+    // Getty's most common statement embeds an Open Content Program link; it is
+    // not a rights URI and must not become one.
+    val doc = Document(parse(
+      """{"pnx":{"display":{"rights":["Digital images courtesy of the Getty's <a href=\"http://www.getty.edu/about/opencontent.html\">Open Content Program</a>."]}}}"""
+    ))
+    assert(extractor.edmRights(doc) === Seq())
+  }
+
   it should "extract the correct preview" in {
     val expected = Seq(
-      "https://rosettaapp.getty.edu/delivery/DeliveryManagerServlet?dps_pid=IE1318448&dps_func=thumbnail",
       "https://rosettaapp.getty.edu/delivery/DeliveryManagerServlet?dps_pid=IE1318448&dps_func=thumbnail")
       .map(stringOnlyWebResource)
     assert(extractor.preview(xml) === expected)
+  }
+
+  it should "collapse Getty's duplicate thumbnail entries to one preview" in {
+    // The fixture carries the real shape: two delivery.link entries labelled
+    // "thumbnail" with the same linkURL, differing only in their blank-node id.
+    // This previously yielded two identical previews, which warned on every
+    // record and then silently discarded one. Pinning the dedup so the
+    // duplicate cannot creep back in.
+    val thumbs = (xml.get \ "delivery" \ "link").children.count { link =>
+      (link \ "displayLabel").values.toString.equalsIgnoreCase("thumbnail")
+    }
+    assert(thumbs === 2, "fixture should still contain the duplicate entries")
+    assert(extractor.preview(xml).size === 1)
   }
 
   it should "create the correct DPLA URI" in {

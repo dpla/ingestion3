@@ -199,7 +199,7 @@ Environment variables:
         "--dry-run",
         action="store_true",
         default=os.environ.get("DRY_RUN", "").lower() == "true",
-        help="Preview without modifying S3",
+        help="Scan the files and count matching records without modifying S3",
     )
     def positive_int(value: str) -> int:
         ivalue = int(value)
@@ -287,10 +287,11 @@ Environment variables:
             print(f"  {id_}")
         if len(exclude_ids) > 20:
             print(f"  ... and {len(exclude_ids) - 20} more")
-        sys.exit(0)
+        print()
+        print("[DRY RUN] Scanning the files for these IDs; nothing is uploaded.")
 
-    # Confirm
-    if not args.yes:
+    # Confirm (a dry run reads only, so it doesn't ask)
+    if not args.yes and not args.dry_run:
         response = input(
             f"This will modify {len(jsonl_files)} file(s) in S3. Continue? [y/N] "
         )
@@ -328,7 +329,9 @@ Environment variables:
                 total_removed += result["removed"]
 
                 status = ""
-                if result["removed"] > 0:
+                if result["removed"] > 0 and args.dry_run:
+                    status = f"{result['removed']} matching (not modified)"
+                elif result["removed"] > 0:
                     status = f"removed {result['removed']} (was {result['before']}, now {result['after']})"
                     if result["uploaded"]:
                         status += " ✓"
@@ -350,7 +353,10 @@ Environment variables:
         print(f"Completed with {errors} error(s).")
     else:
         print("Complete!")
-    print(f"Total records removed: {total_removed}")
+    if args.dry_run:
+        print(f"Total matching records (dry run, S3 not modified): {total_removed}")
+    else:
+        print(f"Total records removed: {total_removed}")
     print(f"Files processed: {processed}")
 
     if errors:

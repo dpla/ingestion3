@@ -1,0 +1,95 @@
+DPLA Pre-Ingest Email — October 2026
+Generated: 2026-10-08
+========================================
+
+MONTH:       October 2026
+INGEST WEEK: October 26–30
+             (Monday, October 26 – Friday, October 30, 2026)
+
+HUBS SCHEDULED (13 total):
+  - Community Webs
+  - Digital Commonwealth
+  - Illinois Digital Heritage Hub
+  - Jewish Heritage and History Hub
+  - Michigan Service Hub
+  - NJ/DE Digital Collective
+  - National Archives and Records Administration
+  - Northwest Digital Heritage
+  - Plains to Peaks Collective
+  - Recollection Wisconsin
+  - Smithsonian Institution
+  - Texas Digital Library
+  - The Portal to Texas History
+
+========================================
+EMAIL BODY
+========================================
+
+Subject: DPLA Ingests for October 2026
+
+DPLA partners, it is harvest time!
+
+This is the new format for our pre-ingest notices. If you have thoughts on how
+this information is presented, please feel free to let us know!
+
+You are receiving this email because your hub's data is due to be re-ingested
+this month. We always intend to run all ingests on the last full week of the
+month. For this month, that is the week of October 26–30.
+
+--- GUIDELINES ---
+
+1. Please make sure your data is uploaded or up to date in your feed prior to
+   the ingest week, as we may attempt to process you as early as 9am ET Monday
+   morning of that week.
+
+   Having the full week for ingest gives us a chance to work through any issues
+   that may arise with your harvest prior to the indexing process that we
+   initiate at the end of the week that creates the new DPLA aggregation.
+
+2. Please let us know the number of records to expect in your harvest—and if
+   you are providing a file export to DPLA, please let us know when we can
+   expect delivery of the data to your s3 bucket.
+
+   All communications regarding counts and export files can go to ingest@dp.la,
+   which is a shared inbox for our team.
+
+--- HUBS ---
+
+The following hubs are scheduled for ingest in October 2026:
+
+  - Community Webs
+  - Digital Commonwealth
+  - Illinois Digital Heritage Hub
+  - Jewish Heritage and History Hub
+  - Michigan Service Hub
+  - NJ/DE Digital Collective
+  - National Archives and Records Administration
+  - Northwest Digital Heritage
+  - Plains to Peaks Collective
+  - Recollection Wisconsin
+  - Smithsonian Institution
+  - Texas Digital Library
+  - The Portal to Texas History
+
+--- IMPORTANT NOTES ---
+
+We have documentation for our ingestion system to provide a high level overview
+of how we map, normalize, validate and enrich your metadata, available at
+[our GitHub repo](https://github.com/dpla/ingestion3?tab=readme-ov-file#dpla-ingestion-3).
+After an ingest is complete, you should receive a report in your inbox. This
+documentation also unpacks some of those warnings and error messages you will
+see in your ingest report. You can view your hub's ingest schedule and contacts
+at [our Confluence wiki page](https://digitalpubliclibraryofamerica.atlassian.net/wiki/spaces/CT/pages/84969744/Hub+Re-ingest+Schedule).
+
+Often, we have found that if something is amiss, the partners will be the first
+to notice. If at any time you experience any issues, such as an ingest behind
+schedule, no ingest report emailed to you, or if you need to make updates to
+any of the information found there, please contact us right away so we can
+investigate.
+
+--- CONTACT ---
+
+If you need to talk with someone at DPLA, especially if there is an issue with
+an ingest, please email ingest@dp.la or reach out directly to our Director of
+Community Engagement, Dominic Byrd-McDevitt.
+

@@ -4,7 +4,7 @@ Generate sitemaps for tag-based DPLA hub subdomains (aviation, bws) by
 querying Elasticsearch directly using search_after pagination sorted on _id
 (same approach as export_item_attribution.py).
 
-Runs on the ingest EC2 (direct ES access). post_indexer.py runs it over SSM
+Runs on the ingest EC2 (direct ES access). 5_post_indexer.py runs it over SSM
 after the monthly index swap,
 so the index is static while this runs.
 

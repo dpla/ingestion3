@@ -1,27 +1,25 @@
 #!/usr/bin/env bash
 #
-# community-webs-ingest.sh - Community Webs ingest: export DB to ZIP, harvest, optionally full pipeline
+# community-webs-ingest.sh - Community Webs ingest, paused for review before sending
 #
-# Automates the Community Webs workflow:
-#   1. Export SQLite DB to JSONL and ZIP (or --skip-export to use existing)
-#   2. Update i3.conf endpoint if needed
-#   3. Harvest community-webs
-#   4. (Optional) Run full pipeline: mapping + enrichment + jsonl
+#   1. Export the SQLite DB to JSONL and ZIP (or --skip-export to reuse the current ZIP)
+#   2. Harvest, then mapping + enrichment + jsonl + safety check
+#   3. Stop and post the counts to Slack
+#   4. After review, --send syncs the jsonl to S3 and emails the hub contacts
 #
 # Usage:
-#   ./scripts/community-webs-ingest.sh [options]
+#   ./scripts/harvest/community-webs-ingest.sh --db=/path/to/file.db
+#   ./scripts/harvest/community-webs-ingest.sh --skip-export
+#   ./scripts/harvest/community-webs-ingest.sh --send
+#   ./scripts/harvest/community-webs-ingest.sh --send --force
 #
 # Options:
 #   --db=PATH       Explicit DB path (passed to community-webs-export.sh)
-#   --skip-export   Use existing ZIP; endpoint must already point to it
-#   --full          Run full pipeline (harvest + map + enrich + jsonl)
-#   --update-conf   Update i3.conf with export output directory
+#   --skip-export   Reuse the current ZIP in originalRecords/
+#   --send          Sync the reviewed snapshot to S3 and email the hub contacts
+#   --force         With --send: send the last run's snapshot even though it
+#                   did not finish cleanly (e.g. the >5% safety check blocked it)
 #   --help, -h      Show help
-#
-# Example:
-#   ./scripts/community-webs-ingest.sh
-#   ./scripts/community-webs-ingest.sh --full --update-conf
-#   ./scripts/community-webs-ingest.sh --skip-export  # Use existing ZIP
 #
 # See scripts/SCRIPTS.md for full documentation.
 #
@@ -32,28 +30,31 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPTS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$SCRIPTS_ROOT/common.sh"
 
+HUB="community-webs"
+CW_ORIGINALS="${DPLA_DATA}/${HUB}/originalRecords"
+READY_FILE="${DPLA_DATA}/${HUB}/.ready-for-review"
+# JSON-L and mapping dirs of the latest run, as recorded by ingest.sh (also on a blocked run)
+RUN_FILE="${DPLA_DATA}/${HUB}/.last-run"
+
 # Defaults
 SKIP_EXPORT=false
-FULL_PIPELINE=false
-UPDATE_CONF=false
+SEND=false
+FORCE=false
 DB_PATH=""
+STAGE="startup"
+ALERT_ON_EXIT=true
 
 usage() {
     echo "Usage: $0 [options]"
     echo ""
-    echo "Community Webs ingest: export DB -> harvest -> (optional) full pipeline"
+    echo "Community Webs ingest: export -> harvest -> map -> enrich -> jsonl, then pause for review"
     echo ""
     echo "Options:"
     echo "  --db=PATH       Explicit DB path for export"
-    echo "  --skip-export   Use existing ZIP; i3.conf endpoint must point to it"
-    echo "  --full          Run full pipeline (harvest + map + enrich + jsonl)"
-    echo "  --update-conf   Update i3.conf with export output directory"
+    echo "  --skip-export   Reuse the current ZIP in originalRecords/"
+    echo "  --send          Sync the reviewed snapshot to S3 and email the hub contacts"
+    echo "  --force         With --send: send the last run's snapshot even if it did not finish cleanly"
     echo "  --help, -h      Show this help"
-    echo ""
-    echo "Example:"
-    echo "  $0                    # Export + harvest only"
-    echo "  $0 --full             # Export + harvest + map + enrich + jsonl"
-    echo "  $0 --skip-export      # Harvest only (existing ZIP)"
     exit 1
 }
 
@@ -66,11 +67,11 @@ for arg in "$@"; do
         --skip-export)
             SKIP_EXPORT=true
             ;;
-        --full)
-            FULL_PIPELINE=true
+        --send)
+            SEND=true
             ;;
-        --update-conf)
-            UPDATE_CONF=true
+        --force)
+            FORCE=true
             ;;
         --help|-h)
             usage
@@ -82,40 +83,147 @@ for arg in "$@"; do
     esac
 done
 
-main() {
+if [[ "$FORCE" == "true" && "$SEND" != "true" ]]; then
+    log_error "--force only applies with --send"
+    usage
+fi
+
+# One ingest or send at a time: they share the exported ZIP, the latest outputs
+# and the run record. The lock is a symlink whose target is the owner's PID:
+# creating it is atomic and fails if it exists, so it's taken and owned in one
+# step. A lock left by a dead process is never removed automatically, since
+# that removal could race with another start; the message says how to clear it.
+LOCK="$I3_HOME/logs/${HUB}-ingest.lock"
+LOCK_HELD=false
+mkdir -p "$I3_HOME/logs"
+[[ -d "$LOCK" && ! -L "$LOCK" ]] && die "$LOCK is a directory, not a lock; remove it and retry"
+if ! ln -s "$$" "$LOCK" 2>/dev/null; then
+    holder=$(readlink "$LOCK" 2>/dev/null || true)
+    if [[ -n "$holder" ]] && kill -0 "$holder" 2>/dev/null; then
+        die "Another $HUB ingest or send is already running (PID $holder)."
+    fi
+    die "A $HUB lock is left from PID ${holder:-unknown}, which is no longer running. If no $HUB ingest or send is running, clear it and retry: rm $LOCK"
+fi
+LOCK_HELD=true
+
+trap 'err=$?
+      if [[ "$LOCK_HELD" == "true" && "$(readlink "$LOCK" 2>/dev/null)" == "$$" ]]; then rm -f "$LOCK"; fi
+      if [[ $err -ne 0 && "$ALERT_ON_EXIT" == "true" ]]; then
+          slack_notify ":x: *$HUB ingest FAILED* during $STAGE (exit $err)" || true
+      fi' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+# The harvester lists ZIPs directly under the endpoint, so anything else in i3.conf
+# silently harvests the wrong delivery or 0 records.
+check_endpoint() {
+    local endpoint
+    endpoint=$(grep "^${HUB}\.harvest\.endpoint" "$I3_CONF" 2>/dev/null | sed 's/.*= *"//' | sed 's/".*//' || true)
+    [[ -d "$endpoint" ]] || die "$HUB.harvest.endpoint is not a directory: '$endpoint'"
+    [[ "$(cd "$endpoint" && pwd -P)" == "$(cd "$CW_ORIGINALS" && pwd -P)" ]] \
+        || die "$HUB.harvest.endpoint must be $CW_ORIGINALS/ (found: $endpoint)"
+}
+
+run_ingest() {
     setup_java "4g" || die "Failed to setup Java"
+    rm -f "$READY_FILE" "$RUN_FILE"
+    mkdir -p "$CW_ORIGINALS"
+    check_endpoint
 
     if [[ "$SKIP_EXPORT" != "true" ]]; then
+        STAGE="export"
+        slack_notify ":arrow_forward: *$HUB export started*" || true
         print_step "Exporting Community Webs DB to JSONL and ZIP..."
         local export_args=()
         [[ -n "$DB_PATH" ]] && export_args+=(--db="$DB_PATH")
-        [[ "$UPDATE_CONF" == "true" ]] && export_args+=(--update-conf)
-        "$SCRIPT_DIR/community-webs-export.sh" "${export_args[@]}" || die "Export failed"
+        "$SCRIPT_DIR/community-webs-export.sh" ${export_args[@]+"${export_args[@]}"} || die "Export failed"
     else
         log_info "Skipping export (using existing ZIP)"
-        if [[ -z "${I3_CONF:-}" ]] || [[ ! -f "$I3_CONF" ]]; then
-            log_error "I3_CONF not set or file not found; harvest endpoint unknown"
-            exit 1
-        fi
     fi
 
+    local zip_path zip_count exported
+    zip_count=$(find "$CW_ORIGINALS" -maxdepth 1 -type f -name "*.zip" | wc -l | tr -d ' ')
+    [[ "$zip_count" -eq 1 ]] || die "Expected 1 ZIP directly in $CW_ORIGINALS, found $zip_count"
+    zip_path=$(find "$CW_ORIGINALS" -maxdepth 1 -type f -name "*.zip")
+    exported=$(unzip -p "$zip_path" | wc -l | tr -d ' ')
+    slack_notify ":white_check_mark: *$HUB export ready* ($exported records in $(basename "$zip_path")) — starting harvest" || true
+
+    STAGE="harvest"
     print_step "Harvesting community-webs..."
-    "$SCRIPTS_ROOT/harvest.sh" community-webs || die "Harvest failed"
+    "$SCRIPTS_ROOT/harvest.sh" "$HUB" || die "Harvest failed"
 
-    if [[ "$FULL_PIPELINE" == "true" ]]; then
-        print_step "Running full pipeline (mapping + enrichment + jsonl)..."
-        "$SCRIPTS_ROOT/ingest.sh" community-webs --skip-harvest || die "Pipeline failed"
-        log_success "Community Webs ingest complete"
-        echo ""
-        echo "Output: $DPLA_DATA/community-webs/"
-        echo "  mapping/    $DPLA_DATA/community-webs/mapping/"
-        echo "  enrichment: $DPLA_DATA/community-webs/enrichment/"
-        echo "  jsonl:      $DPLA_DATA/community-webs/jsonl/"
-    else
-        log_success "Community Webs harvest complete"
-        echo ""
-        echo "Next: ./scripts/ingest.sh community-webs --skip-harvest  (mapping + enrichment + jsonl)"
+    local harvest_dir harvest_count
+    harvest_dir=$(find_latest_data "$HUB" harvest) || die "No harvest output found"
+    harvest_count=$(read_manifest_count "$harvest_dir/_MANIFEST")
+    if [[ "$harvest_count" -eq 0 ]]; then
+        die "Harvest produced 0 records from $zip_path"
     fi
+    slack_notify ":white_check_mark: *$HUB harvest complete* ($harvest_count records)" || true
+
+    # ingest.sh posts its own stage and failure alerts from here on
+    STAGE="pipeline"
+    ALERT_ON_EXIT=false
+    print_step "Running pipeline (mapping + enrichment + jsonl + safety check)..."
+    "$SCRIPTS_ROOT/ingest.sh" "$HUB" --skip-harvest --skip-s3-sync --skip-email \
+        --outputs-file "$RUN_FILE" || die "Pipeline failed"
+    ALERT_ON_EXIT=true
+
+    STAGE="review handoff"
+    local jsonl_dir map_dir jsonl_count
+    [[ -s "$RUN_FILE" ]] || die "ingest.sh did not record its output dirs in $RUN_FILE"
+    jsonl_dir=$(sed -n 1p "$RUN_FILE")
+    map_dir=$(sed -n 2p "$RUN_FILE")
+    jsonl_count=$(read_manifest_count "$jsonl_dir/_MANIFEST")
+    cp "$RUN_FILE" "$READY_FILE"
+
+    slack_notify ":pause_button: *$HUB ready for review* — nothing sent yet\nExported: $exported | Harvested: $harvest_count | JSON-L: $jsonl_count\nSnapshot: \`$(basename "$jsonl_dir")\`\nAnswer the prompt in your terminal, or run \`launch_cw.py --send\`" || true
+    log_success "Community Webs ingest complete — ready for review"
+    echo ""
+    echo "Snapshot: $jsonl_dir ($jsonl_count records)"
+    echo "Nothing has been sent. To sync to S3 and email the hub: launch_cw.py --send"
 }
 
-main "$@"
+run_send() {
+    STAGE="send"
+    local jsonl_dir map_dir
+    if [[ -f "$READY_FILE" ]]; then
+        jsonl_dir=$(sed -n 1p "$READY_FILE")
+        map_dir=$(sed -n 2p "$READY_FILE")
+    elif [[ "$FORCE" == "true" ]]; then
+        # The last run's own record, so the email describes the snapshot being synced
+        [[ -s "$RUN_FILE" ]] || die "No record of the last run's outputs ($RUN_FILE); can't pair JSON-L with mapping. Rerun the ingest."
+        jsonl_dir=$(sed -n 1p "$RUN_FILE")
+        map_dir=$(sed -n 2p "$RUN_FILE")
+        log_warn "No clean run waiting for review; --force is sending the last run's snapshot"
+    else
+        die "No run is waiting for review. If the safety check blocked it and you have reviewed the drop, use --send --force."
+    fi
+    [[ -n "$jsonl_dir" && -n "$map_dir" ]] || die "Run record is missing the JSON-L or mapping dir"
+    [[ -f "$jsonl_dir/_SUCCESS" ]] || die "Snapshot is incomplete (no _SUCCESS): $jsonl_dir"
+    [[ -f "$map_dir/_SUMMARY" ]] || die "Mapping summary not found: $map_dir/_SUMMARY"
+
+    local jsonl_ts jsonl_count
+    jsonl_ts=$(basename "$jsonl_dir")
+    jsonl_count=$(read_manifest_count "$jsonl_dir/_MANIFEST")
+    [[ "$jsonl_count" -gt 0 ]] || die "Snapshot has 0 records: $jsonl_dir"
+
+    STAGE="S3 sync"
+    print_step "Syncing $jsonl_ts to S3..."
+    # Only this snapshot: other local snapshots (older blocked runs) must not go up with it
+    "$SCRIPTS_ROOT/s3-sync.sh" "$HUB" "jsonl/$jsonl_ts"
+    slack_notify ":white_check_mark: *$HUB synced to S3* ($jsonl_count records)\nSnapshot: \`$jsonl_ts\`" || true
+
+    # The sync is safe to repeat, so a failed email can be retried with --send
+    STAGE="partner email (S3 sync already done; rerun --send to retry)"
+    print_step "Emailing hub contacts..."
+    "$SCRIPTS_ROOT/communication/send-ingest-email.sh" --yes "$HUB" "$map_dir"
+    rm -f "$READY_FILE"
+    slack_notify ":email: *$HUB partner email sent*" || true
+    log_success "Community Webs sent: $jsonl_ts ($jsonl_count records)"
+}
+
+if [[ "$SEND" == "true" ]]; then
+    run_send
+else
+    run_ingest
+fi

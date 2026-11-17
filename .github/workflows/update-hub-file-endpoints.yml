@@ -69,7 +69,7 @@ jobs:
           set -o pipefail
           ARGS=(--conf ingestion3-conf/i3.conf)
           [[ -n "$MONTH_INPUT" ]] && ARGS+=(--month "$MONTH_INPUT")
-          python3 ingestion3/ingest_python_scripts/update_file_endpoints.py \
+          python3 ingestion3/ingest_pipeline_python/helper_scripts/update_file_endpoints.py \
             "${ARGS[@]}" | tee /tmp/endpoint-report.txt
 
       - name: Apply updates to i3.conf
@@ -79,7 +79,7 @@ jobs:
         run: |
           ARGS=(--conf ingestion3-conf/i3.conf --apply)
           [[ -n "$MONTH_INPUT" ]] && ARGS+=(--month "$MONTH_INPUT")
-          python3 ingestion3/ingest_python_scripts/update_file_endpoints.py \
+          python3 ingestion3/ingest_pipeline_python/helper_scripts/update_file_endpoints.py \
             "${ARGS[@]}"
 
       - name: Commit and push changes

@@ -39,10 +39,12 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 | `delete/delete-from-jsonl.sh` | Delete records from S3 JSONL files | `./scripts/delete/delete-from-jsonl.sh --hub <hub> <id>...` |
 | `communication/send-ingest-email.sh` | Send ingest summary email | `./scripts/communication/send-ingest-email.sh [--yes] <hub>` |
 | `generate_hub_stats.py` | Rebuild dashboard hub stats + GA4 item mapping in S3 | `./venv/bin/python scripts/generate_hub_stats.py` |
-| `generate_tag_sitemap.py` | Build aviation/bws item sitemaps from ES into s3://sitemaps.dp.la (run by `post_indexer.py`) | `python3 scripts/generate_tag_sitemap.py --hub aviation\|bws [--dry-run]` |
+| `generate_tag_sitemap.py` | Build aviation/bws item sitemaps from ES into s3://sitemaps.dp.la (run by `ingest_pipeline_python/5_post_indexer.py`) | `python3 scripts/generate_tag_sitemap.py --hub aviation\|bws [--dry-run]` |
 | `curated_membership.py` | Refresh the exhibition/source-set membership snapshot used by the JSONL export | `python3 scripts/curated_membership.py` |
 | *scheduling_emails* (Python) | Monthly pre-scheduling email to hub contacts | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails [--month=N] --dry-run \| --draft \| --send` |
 | `status/ingest-status.sh` | Check ingest status (orchestrator or manual runs) | `./scripts/status/ingest-status.sh` |
+| *skip_safety_check.py* (Python) | Publish an ingest the >5% safety check blocked, after review: shows counts, asks, syncs only that snapshot, asks before the partner email. Refuses unfinished, empty, non-unique (or unchecked), already-synced or older-than-S3 snapshots, unreadable S3 state or previous count, and Community Webs/NARA. See `ingest_pipeline_python/README.md` | `python3 ingest_pipeline_python/helper_scripts/skip_safety_check.py <hub> [--snapshot <dir>]` |
+| *takedown.py* (Python) | Take items down from S3 and the live index with the dpla-takedown checks (source check, exact live-index count, asks before deleting, S3 before the live index, API verification; exits nonzero unless the final API checks pass. An S3 removal count that differs from the number expected doesn't change the exit status once you confirm continuing). See `ingest_pipeline_python/README.md` | `./venv/bin/python ingest_pipeline_python/helper_scripts/takedown.py <id>... \| -f ids.txt [--dry-run]` |
 | `communication/notify-harvest-failure.sh` | Send Slack and email (tech@dp.la) on harvest failure | `./scripts/communication/notify-harvest-failure.sh <hub> "<error>"` |
 | `status/hub-info.sh` | Show hub config from i3.conf | `./scripts/status/hub-info.sh <hub>` |
 | `status/s3-latest.sh` | Show latest S3 data for a hub (harvest/mapping/jsonl) | `./scripts/status/s3-latest.sh <hub>` |
@@ -239,7 +241,22 @@ Handles NARA's large dataset with delta updates. Located in `scripts/harvest/`:
 ./scripts/harvest/nara-ingest.sh --month=202602 --force-sync       # re-download base from S3
 ./scripts/harvest/nara-ingest.sh --skip-to-pipeline --harvest=/path/to/merged.avro
 ./scripts/harvest/nara-ingest.sh --month=202512,202602             # multi-month
+./scripts/harvest/nara-ingest.sh --month=202602 --run-id=20261021  # resume an earlier run
+./scripts/harvest/nara-ingest.sh --month=202512,202602 --run-id=20261021 --skip-delete-check-month=202512  # resume past the zero-delete gate for 202512 only
 ```
+
+Each run works in `delta/<month>/<run id>/` (default run id: today, `YYYYMMDD`),
+so rerunning a month never reuses an earlier run's preprocessing, delta harvest,
+or delete files. Steps are skipped only when they already finished in the same run:
+preprocessing once it wrote `.preprocess_complete`, the delta harvest once it has a
+`_MANIFEST`, and the merge once its `_SUMMARY.txt` names the same delta and (with
+`--base`, or for later months of a multi-month run) the same base.
+A run id that isn't a `YYYYMMDD` date also needs `--datestamp=YYYYMMDD`.
+
+After a zero-delete gate halt, the halt message prints the resume command. For
+`--month` runs it adds `--skip-delete-check-month=<halted month>`, so later months
+in the rerun are still checked (`--skip-delete-check` turns the gate off for all).
+Tests: `./scripts/tests/test-nara-gate.sh`.
 
 `--force-sync` downloads only the **single latest** merged base harvest from S3
 (~34 GB) rather than the full historical prefix. Only the most recent base is
@@ -274,7 +291,6 @@ Export Community Webs SQLite database to JSONL and ZIP for harvest. Internet Arc
 ```bash
 ./scripts/harvest/community-webs-export.sh                        # Auto-detect latest *.db
 ./scripts/harvest/community-webs-export.sh --db=/path/to/file.db  # Explicit DB path
-./scripts/harvest/community-webs-export.sh --update-conf          # Also update i3.conf endpoint
 ./scripts/harvest/community-webs-export.sh --skip-validate        # Skip JSONL schema validation (not recommended)
 ```
 
@@ -284,14 +300,18 @@ The script validates the JSONL against the expected harvest schema (required `id
 
 ### community-webs-ingest.sh - Community Webs Ingest
 
-Orchestrates export + harvest + (optional) full pipeline. Located in `scripts/harvest/`:
+Runs export + harvest + mapping + enrichment + jsonl + safety check, then stops for review. Nothing is published to `dpla-master-dataset` or emailed to the hub contacts until `--send`, which syncs only the reviewed snapshot. Slack reports every stage, including export and harvest. Located in `scripts/harvest/`; normally launched with `ingest_pipeline_python/special_cases/community-webs/launch_cw.py`.
 
 ```bash
-./scripts/harvest/community-webs-ingest.sh              # Export + harvest only
-./scripts/harvest/community-webs-ingest.sh --full       # Export + harvest + mapping + enrichment + jsonl
-./scripts/harvest/community-webs-ingest.sh --skip-export  # Harvest only (endpoint must already point to ZIP)
-./scripts/harvest/community-webs-ingest.sh --db=/path/to/db --update-conf
+./scripts/harvest/community-webs-ingest.sh --db=/path/to/db   # Full run, stops for review
+./scripts/harvest/community-webs-ingest.sh --skip-export      # Same, reusing the current ZIP
+./scripts/harvest/community-webs-ingest.sh --send             # After review: S3 sync + partner email
+./scripts/harvest/community-webs-ingest.sh --send --force     # Send despite a blocked safety check
 ```
+
+`community-webs.harvest.endpoint` stays fixed at `$DPLA_DATA/community-webs/originalRecords/`, and the script stops if it points anywhere else. The export copies the newest ZIP to the top of that folder, replacing the previous one, and keeps a dated copy.
+
+`ingest.sh --skip-email` skips the partner email for any hub. `ingest.sh --outputs-file <path>` records the run's JSON-L and mapping dirs, which `community-webs-ingest.sh` uses to pair them.
 
 ### delete-by-id.sh - Elasticsearch Delete
 
@@ -331,7 +351,7 @@ Rebuilds the three dashboard-analytics inputs in `s3://dashboard-analytics/hub-s
 ./venv/bin/python scripts/generate_hub_stats.py
 ```
 
-Run on the ingest EC2 on day 5 of the month or later (GA4 settles the prior month for ~72 hours; the script warns on earlier runs). `post_indexer.py` step 4 runs it via SSM with system `python3`, so its dependencies (`boto3`, `google-analytics-data`) must be installed for that interpreter on the EC2. The two hub stats files upload first; if `item_data_providers.json` cannot be updated the script exits non-zero so post_indexer alerts.
+Run on the ingest EC2 on day 5 of the month or later (GA4 settles the prior month for ~72 hours; the script warns on earlier runs). `ingest_pipeline_python/5_post_indexer.py` step 4 runs it via SSM with system `python3`, so its dependencies (`boto3`, `google-analytics-data`) must be installed for that interpreter on the EC2. The two hub stats files upload first; if `item_data_providers.json` cannot be updated the script exits non-zero so post_indexer alerts.
 
 **Environment**: `ES_HOST`, `ES_PORT`, `AWS_PROFILE` (omit on EC2), `GA4_PROPERTY_ID` (required for the item mapping), `GA4_SECRET_NAME` (default `dpla/ga4-service-account`), `GA4_HISTORY_START` (default `2025-07-18`, the `event_label` custom dimension's registration date — GA4 returns nothing before it).
 
@@ -560,6 +580,51 @@ batch-ingest.sh
      │
      └── ingest.sh (for each hub)
 ```
+
+### Getty
+
+**Getty is harvested by Scala, not by a script here.** See
+`src/main/scala/dpla/ingestion3/harvesters/api/GettyRefreshHarvester.scala` —
+`./scripts/ingest.sh getty` is all you need, and it routes through the Tailscale
+exit node automatically (see the IP-restricted hubs section above).
+
+It is worth knowing *why* it is unusual, because the failure mode is silent.
+Getty's Primo gateway caps any single query at `offset <= 1999` / `limit <= 1000`,
+so the offset-paging `GettyHarvester` returns ~2,000 of ~101,400 records **and
+reports success** — which is how a 98% shortfall reached production in February
+2026. `GettyRefreshHarvester` instead looks up every known record id directly
+(`q=rid,exact,<id>`, one record per request, no offset involved) and then asks
+Getty's `newrecords` facet for anything added in the last 90 days.
+
+`getty.harvest.seed` wins if set; otherwise the harvester lists
+`$DPLA_DATA/getty/harvest/` and takes the newest directory carrying a `_SUCCESS`
+marker. So in steady state the seed needs no configuration — each run's output is
+automatically the next run's seed and discovered ids carry forward.
+
+**The exception is a first run on a box with no completed Getty harvest**: there
+is nothing to discover, and the harvest aborts telling you so. Give it
+`getty.harvest.seed` pointing at either a harvest activity directory or a
+newline-delimited id file ending `.txt` or `.ids` — the extension is the only
+signal, so a `.csv` would be handed to the Avro reader and fail. Remove the
+override once a harvest has completed.
+
+So the override covers two cases, first-run bootstrapping and backfilling from a
+specific older harvest — never routine ingests.
+
+**Getty is scheduled bi-monthly, not quarterly, and that is deliberate.**
+Discovery reaches back only 90 days, so a quarterly cadence sits right on the
+edge: a run that slips by a few days leaves records in neither the seed nor the
+window, and no later run finds them. Bi-monthly leaves about a month of margin,
+and the harvester logs a loud `GETTY DISCOVERY GAP` warning if the interval since
+the previous harvest exceeds 90 days anyway. **If you see that warning, the run
+cannot be treated as complete** — it names the exact date range that was lost.
+
+**This is a temporary method with real gaps**, documented in the harvester's
+scaladoc and worth repeating: the `newrecords` window tops out at 90 days, and
+the GETTY_OCP side — 78,613 of 101,393 records — carries no usable facets and
+cannot be enumerated at all, so OCP coverage rests entirely on the seed. It keeps the aggregation from drifting; it
+does not guarantee DPLA holds every record Getty publishes. The real fix is Ex
+Libris lifting the offset cap or Getty providing a bulk feed.
 
 ## Updating This Documentation
 

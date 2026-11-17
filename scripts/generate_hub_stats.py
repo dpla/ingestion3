@@ -20,7 +20,7 @@ across all hubs exceeds ES's search.max_buckets limit.
 
 The hub stats files upload before the GA4 work starts. A BWS build
 failure skips only the BWS upload; a GA4 failure leaves
-item_data_providers.json untouched. Both exit non-zero so post_indexer.py
+item_data_providers.json untouched. Both exit non-zero so 5_post_indexer.py
 alerts, and any uploads that already happened stand. A failure in the
 unfiltered build aborts everything.
 
