@@ -23,7 +23,7 @@ nga.harvest.endpoint = "s3://dpla-hub-nga/..."
 
 - **`included_in_index = false`** is the setting that matters. The index rebuild (`launch_indexer.py`) and the monthly batch exports (parquet, JSONL dumps, metadata quality reports, sitemaps) both skip hubs with this flag, so test data never reaches dp.la or the public bulk exports.
 - **No `email` key.** `ingest.sh` only sends the partner summary email when the hub has an `email` entry.
-- **`status = test`** is a label for humans. No script changes its behaviour based on it.
+- **`status = test`** is a label for humans. No script changes its behaviour based on it. (The `dpla-hub-ingest` Claude Code skill still reads it and skips the S3 sync for test hubs; that skill predates this convention and hasn't been updated.)
 
 ---
 
@@ -58,5 +58,5 @@ When a hub is approved:
 1. Move the mapper from `providers/experimental/` to `providers/` and remove the `TEST HUB` header comment
 2. In i3.conf, set `<hub>.included_in_index = true`, add the partner `<hub>.email` contacts, and remove `<hub>.status = test`
 3. Open a PR for the mapper move in ingestion3
-4. Commit the i3.conf change in ingestion3-conf
+4. Commit the i3.conf change in ingestion3-conf and push it (or merge its PR) to `origin/master`. The index rebuild and monthly batch read `included_in_index` from `origin/master`, not your local copy, so an unpushed change leaves the hub out of both
 5. Run a full ingest — the hub's next snapshot is picked up by the following index rebuild and monthly batch, and the partner receives the summary email

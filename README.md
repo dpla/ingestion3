@@ -258,7 +258,7 @@ Some hubs restrict access to their harvest endpoint by IP address. No hub curren
 
 - Indiana
 
-**Tailscale exit node (automated):** The partner allowlisted the `main-vpc` Tailscale node's address rather than the EC2's egress IP, so we route harvest traffic through that node (`100.82.233.38`). `ingest.sh` handles this automatically — see [IP-whitelisted endpoints (Tailscale exit node)](#ip-whitelisted-endpoints-tailscale-exit-node) below.
+**Tailscale exit node (automated):** The partner allowlisted the public egress IP of the `main-vpc` Tailscale node rather than the EC2's egress IP, so we route harvest traffic through that node as an exit node. `100.82.233.38` is the node's Tailscale address, used only to select it as the exit node; partners see (and allowlist) its public egress IP, not that address. `ingest.sh` handles this automatically — see [IP-whitelisted endpoints (Tailscale exit node)](#ip-whitelisted-endpoints-tailscale-exit-node) below.
 
 ### IP-whitelisted endpoints (Tailscale exit node)
 
@@ -276,7 +276,8 @@ Some partner endpoints are not publicly accessible — they whitelist a specific
 |-------|-------|
 | Partner | J. Paul Getty Trust |
 | Endpoint | IP-whitelisted ExLibris Primo REST API |
-| Whitelisted IP | `100.82.233.38` (main-vpc Tailscale node) |
+| Exit node (routing address) | `100.82.233.38` (main-vpc Tailscale node; selects the exit node, not the allowlisted address) |
+| Allowlisted address | The main-vpc node's public egress IP (what the partner sees) |
 | Configured in | `scripts/ingest.sh` (`TAILSCALE_EXIT_NODE` case block) |
 | Handled by | `ingest.sh` automatically |
 
@@ -288,7 +289,8 @@ Run exactly like any other hub — `ingest.sh getty` — no extra steps needed.
 |-------|-------|
 | Partner | Rutgers University / New Jersey State Library |
 | Endpoint | IP-whitelisted OAI-PMH |
-| Whitelisted IP | `100.82.233.38` (main-vpc Tailscale node) |
+| Exit node (routing address) | `100.82.233.38` (main-vpc Tailscale node; selects the exit node, not the allowlisted address) |
+| Allowlisted address | The main-vpc node's public egress IP (what the partner sees) |
 | Configured in | `scripts/ingest.sh` (`TAILSCALE_EXIT_NODE` case block) |
 | Handled by | `ingest.sh` automatically |
 
