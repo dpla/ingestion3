@@ -4,22 +4,26 @@ This document describes the conventions for developing and testing a new DPLA hu
 
 ## Overview
 
-When a proposed hub is under evaluation, all related code and configuration should be kept in the repository but clearly marked as experimental. Test ingests run the full harvest → mapping → enrichment → JSONL pipeline but **never sync to S3**, so test data cannot be accidentally picked up by the sparkindexer or appear on dp.la.
+When a proposed hub is under evaluation, all related code and configuration should be kept in the repository but clearly marked as experimental. Test ingests run the full harvest → mapping → enrichment → JSONL pipeline **and sync to S3 like any other hub**, so test data is preserved in `s3://dpla-master-dataset/<hub>/`. What keeps test data off dp.la is `included_in_index = false`, not skipping the S3 sync.
 
 ---
 
 ## i3.conf Convention
 
-Add a `status` key to the hub's config block in `ingestion3-conf/i3.conf`:
+A test hub's config block in `ingestion3-conf/i3.conf` has:
 
 ```ini
 nga.status = test
+nga.included_in_index = false
 nga.harvest.type = file
 nga.harvest.endpoint = "s3://dpla-hub-nga/..."
+# no nga.email — so no partner summary email is sent
 # ... rest of config
 ```
 
-The `status = test` flag is the authoritative marker. The hub ingest skill reads this flag and automatically adjusts its behaviour (see below). When a hub is approved for production, remove the `status` line (or change it to `status = production`).
+- **`included_in_index = false`** is the setting that matters. The index rebuild (`4_launch_indexer.py`) and the monthly batch exports (`5_post_indexer.py`: parquet, JSONL dumps, metadata quality reports, sitemaps) both skip hubs with this flag, so test data never reaches dp.la or the public bulk exports. Both read the flag from `ingestion3-conf`'s `origin/master`, not your local checkout, and index every hub folder in S3 that isn't excluded there. So **push the flag (or merge its PR) to `origin/master` before the hub's first test ingest syncs to S3**; otherwise the next rebuild publishes the test data.
+- **No `email` key.** `ingest.sh` only sends the partner summary email when the hub has an `email` entry.
+- **`status = test`** is a label for humans. No script changes its behaviour based on it. (The `dpla-hub-ingest` Claude Code skill still reads it and skips the S3 sync for test hubs; that skill predates this convention and hasn't been updated.)
 
 ---
 
@@ -38,32 +42,12 @@ Every file in this package must include a header comment:
  * TEST HUB — NOT APPROVED FOR PRODUCTION
  *
  * This mapper is under evaluation and has not been approved for inclusion
- * in the DPLA production index. Do not remove the `status = test` flag
- * from i3.conf until the hub has been formally approved.
+ * in the DPLA production index. Do not set `included_in_index = true`
+ * in i3.conf until the hub has been formally approved.
  */
 ```
 
 When a hub is approved, move the mapper to the standard `providers/` package and remove the header comment.
-
-### Finding experimental mappers
-
-The hub ingest skill is aware of this convention. When ingesting a test hub, it will look for the mapper in both `providers/experimental/` and `providers/` so no manual path adjustment is needed.
-
-To list all experimental mappers:
-```bash
-ls src/main/scala/dpla/ingestion3/mappers/providers/experimental/
-```
-
----
-
-## How the Hub Ingest Skill Treats Test Hubs
-
-When `<hub>.status = test` is present in i3.conf, the skill automatically:
-
-1. **Announces** at the start that this is a test hub and lists the differences in behaviour
-2. **Skips S3 sync** — passes `--skip-s3-sync` to `ingest.sh`, so JSONL output stays on EC2 only
-3. **Skips the partner summary email** — does not send via AWS SES
-4. **Still generates all summaries and logs** — the mapping summary, record counts, and JSONL output are all produced normally and remain available on EC2 for manual review or to share with a partner contact if desired
 
 ---
 
@@ -71,8 +55,8 @@ When `<hub>.status = test` is present in i3.conf, the skill automatically:
 
 When a hub is approved:
 
-1. Move the mapper from `providers/experimental/` to `providers/` and remove the `TEST HUB` header comment
-2. Remove `<hub>.status = test` from i3.conf (or delete the line entirely)
-3. Open a PR for the mapper move in ingestion3
-4. Commit the i3.conf change in ingestion3-conf
-5. Run a full ingest — the skill will now treat it as a production hub and perform S3 sync and partner email normally
+1. Move the mapper from `providers/experimental/` to `providers/` and remove the `TEST HUB` header comment, and open a PR for it in ingestion3
+2. In i3.conf, add the partner `<hub>.email` contacts and remove `<hub>.status = test`, but **leave `<hub>.included_in_index = false`**. Push it (or merge its PR) to `origin/master`: preflight resets the ingest EC2's copy of i3.conf to `origin/master`, and `ingest.sh` reads the email contacts from there
+3. Run a full ingest once the mapper PR is merged. Confirm it succeeded and synced the new snapshot to S3; the partner receives the summary email
+4. Only then set `<hub>.included_in_index = true` and push it (or merge its PR) to `origin/master`. Doing this before the new snapshot is in S3 would let a rebuild publish the old test snapshot
+5. The next index rebuild and monthly batch pick up the new snapshot. Both read `included_in_index` from `origin/master`, not your local copy, so start them only after step 4 is pushed

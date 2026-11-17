@@ -252,19 +252,17 @@ Not all ingests are fire and forget, some require a bit of massaging before we c
 
 ### Firewalled endpoints
 
-Some hubs restrict access to their OAI-PMH endpoint by IP address or VPN membership. There are two patterns:
+Some hubs restrict access to their harvest endpoint by IP address. No hub currently requires a VPN or a local harvest. There are two patterns:
 
-**Run locally (VPN required):** The partner's firewall only allows connections from inside a specific institution's network. These must be harvested on a machine connected to that VPN — the EC2 instance cannot be placed behind an external institution's VPN.
+**Allowlisted EC2 IP:** The partner allowlists the ingest EC2's own egress IP, `52.2.32.179`. These hubs run like any other hub on EC2; the endpoint is blocked from other machines (e.g. a laptop), so harvest them from EC2 only.
 
-- Illinois
 - Indiana
-- MWDL
 
-**Tailscale exit node (automated):** The partner has whitelisted a specific stable IP address. Rather than exposing the EC2's dynamic public IP, we route harvest traffic through the `main-vpc` Tailscale node (`100.82.233.38`). `ingest.sh` handles this automatically — see [IP-whitelisted endpoints (Tailscale exit node)](#ip-whitelisted-endpoints-tailscale-exit-node) below.
+**Tailscale exit node (automated):** The partner allowlisted the public egress IP of the `main-vpc` Tailscale node rather than the EC2's egress IP, so we route harvest traffic through that node as an exit node. `100.82.233.38` is the node's Tailscale address, used only to select it as the exit node; partners see (and allowlist) its public egress IP, not that address. `ingest.sh` handles this automatically — see [IP-whitelisted endpoints (Tailscale exit node)](#ip-whitelisted-endpoints-tailscale-exit-node) below.
 
 ### IP-whitelisted endpoints (Tailscale exit node)
 
-Some partner endpoints are not publicly accessible — they whitelist a specific IP for OAI-PMH access. Rather than whitelisting the EC2's dynamic public IP (which changes on stop/start), we use a [Tailscale](https://tailscale.com) exit node to route harvest traffic through a stable whitelisted IP.
+Some partner endpoints are not publicly accessible — they whitelist a specific IP for harvest access. These partners allowlisted the `main-vpc` Tailscale node rather than the EC2's egress IP (`52.2.32.179`, the NAT gateway's fixed address), so we use a [Tailscale](https://tailscale.com) exit node to route their harvest traffic through it.
 
 `ingest.sh` handles the full lifecycle automatically for hubs that require it (determined by a `TAILSCALE_EXIT_NODE` case block in `ingest.sh`): it starts `tailscaled`, waits for the daemon to connect, sets the exit node, runs the harvest, then clears the exit node and stops `tailscaled`. Only the **harvest step** is routed through the exit node — mapping, enrichment, JSONL export, and S3 sync use normal routing. No manual Tailscale steps are needed to run these ingests.
 
@@ -278,7 +276,8 @@ Some partner endpoints are not publicly accessible — they whitelist a specific
 |-------|-------|
 | Partner | J. Paul Getty Trust |
 | Endpoint | IP-whitelisted ExLibris Primo REST API |
-| Whitelisted IP | `100.82.233.38` (main-vpc Tailscale node) |
+| Exit node (routing address) | `100.82.233.38` (main-vpc Tailscale node; selects the exit node, not the allowlisted address) |
+| Allowlisted address | The main-vpc node's public egress IP (what the partner sees) |
 | Configured in | `scripts/ingest.sh` (`TAILSCALE_EXIT_NODE` case block) |
 | Handled by | `ingest.sh` automatically |
 
@@ -290,7 +289,8 @@ Run exactly like any other hub — `ingest.sh getty` — no extra steps needed.
 |-------|-------|
 | Partner | Rutgers University / New Jersey State Library |
 | Endpoint | IP-whitelisted OAI-PMH |
-| Whitelisted IP | `100.82.233.38` (main-vpc Tailscale node) |
+| Exit node (routing address) | `100.82.233.38` (main-vpc Tailscale node; selects the exit node, not the allowlisted address) |
+| Allowlisted address | The main-vpc node's public egress IP (what the partner sees) |
 | Configured in | `scripts/ingest.sh` (`TAILSCALE_EXIT_NODE` case block) |
 | Handled by | `ingest.sh` automatically |
 
