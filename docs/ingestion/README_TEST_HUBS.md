@@ -21,7 +21,7 @@ nga.harvest.endpoint = "s3://dpla-hub-nga/..."
 # ... rest of config
 ```
 
-- **`included_in_index = false`** is the setting that matters. The index rebuild (`launch_indexer.py`) and the monthly batch exports (parquet, JSONL dumps, metadata quality reports, sitemaps) both skip hubs with this flag, so test data never reaches dp.la or the public bulk exports.
+- **`included_in_index = false`** is the setting that matters. The index rebuild (`4_launch_indexer.py`) and the monthly batch exports (`5_post_indexer.py`: parquet, JSONL dumps, metadata quality reports, sitemaps) both skip hubs with this flag, so test data never reaches dp.la or the public bulk exports.
 - **No `email` key.** `ingest.sh` only sends the partner summary email when the hub has an `email` entry.
 - **`status = test`** is a label for humans. No script changes its behaviour based on it. (The `dpla-hub-ingest` Claude Code skill still reads it and skips the S3 sync for test hubs; that skill predates this convention and hasn't been updated.)
 
