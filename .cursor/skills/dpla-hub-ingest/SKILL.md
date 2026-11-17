@@ -174,7 +174,7 @@ Key harvest types and their network requirements:
 | `file` | **community-webs**: use its own scripts (see the Community Webs section), not this procedure. **Other file hubs**: `harvest.endpoint` references `/Users/scott/...` paths from a previous operator — require manual staging to EC2 before harvest. |
 | `nara.file.delta` | NARA-specific delta file format. Complex — consult README_NARA.md. |
 
-**Note:** No hub is currently blocked from EC2 (re-tested 2026-10-20): maryland, hathi and il are open; indiana allowlists the EC2's IP `52.2.32.179` (so it works from EC2 only, not from a laptop); getty and njde go through the Tailscale exit node (next section). If a hub's endpoint starts timing out or returning 403 from EC2, **stop and ask the user** how to proceed: either ask the partner to allowlist `52.2.32.179`, or run the harvest locally on your computer. Do not default to local harvest without the user's direction. Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
+**Note:** No hub is currently blocked from EC2 (re-tested 2026-10-20): maryland, hathi and il are open; indiana allowlists the EC2's IP `52.2.32.179` (so it works from EC2 only, not from a laptop); getty and njde go through the Tailscale exit node (next section). If any other hub's endpoint starts timing out or returning 403 from EC2, **stop and ask the user** (getty and njde fail a direct check from the EC2 by design; see Step 3b) how to proceed: either ask the partner to allowlist `52.2.32.179`, or run the harvest locally on your computer. Do not default to local harvest without the user's direction. Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
 
 ## IP-Restricted Hubs (Tailscale Exit Node)
 
@@ -395,7 +395,7 @@ For `api` hubs, use a 60-second timeout:
 curl -s --max-time 60 "<endpoint>?<query>&rows=1" | head -2
 ```
 
-**If endpoint is unreachable from EC2 but reachable locally** → likely a new IP block (for getty or njde, check the Tailscale exit node first). Stop the instance, inform the user, and ask how to proceed: ask the partner to allowlist `52.2.32.179`, or run the harvest locally. Do not proceed without the user's direction.
+**If endpoint is unreachable from EC2** → for **getty** or **njde** this is expected: this check is a direct request from the EC2, while `ingest.sh` sends their harvest through the Tailscale exit node. Don't stop the instance or request an allowlist on this result alone; launch through `ingest.sh` (Step 4), and if the harvest itself fails, check the exit node in the log. For any other hub, it's likely a new IP block: stop the instance, inform the user, and ask how to proceed: ask the partner to allowlist `52.2.32.179`, or run the harvest locally. Do not proceed without the user's direction.
 
 ### Step 4: Launch ingest.sh
 
@@ -826,7 +826,7 @@ Hubs **cannot run in parallel** on this instance — two enrichment steps alone 
 
 ### Step B1: Derive Hub List
 
-When the user says "run [month] ingests" (e.g. "run February ingests", "run March ingests"), use this script to derive the list from `i3.conf`. It skips on-hold hubs, flags file-type hubs, and excludes `nara` (complex delta format, manual only).
+When the user says "run [month] ingests" (e.g. "run February ingests", "run March ingests"), use this script to derive the list from `i3.conf`. It skips on-hold hubs and the Tailscale hubs (getty, njde), flags file-type hubs, and excludes `nara` (complex delta format, manual only).
 
 ```python
 #!/usr/bin/env python3
@@ -834,6 +834,9 @@ import os, re, sys
 from datetime import datetime
 
 CONF = os.environ["I3_CONF"]
+# Harvested through the Tailscale exit node, which only scripts/ingest.sh sets up;
+# the batch templates call HarvestEntry directly, so these must run on their own.
+TAILSCALE_HUBS = {"getty", "njde"}
 MONTH_NAMES = {
     "january":1,"february":2,"march":3,"april":4,"may":5,"june":6,
     "july":7,"august":8,"september":9,"october":10,"november":11,"december":12
@@ -866,6 +869,9 @@ for hub, info in sorted(hubs.items()):
         continue
     if info["type"] == "nara.file.delta":
         print(f"  SKIP {hub:25s} [nara delta — manual only]")
+        continue
+    if hub in TAILSCALE_HUBS:
+        print(f"  SKIP {hub:25s} [Tailscale exit node — launch on its own via ingest.sh (Step 4), not this batch]")
         continue
     if info["type"] == "file":
         if hub == "community-webs":
