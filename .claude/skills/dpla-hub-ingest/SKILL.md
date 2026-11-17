@@ -174,13 +174,13 @@ Key harvest types and their network requirements:
 | `file` | **community-webs**: use its own scripts (see the Community Webs section), not this procedure. **Other file hubs**: `harvest.endpoint` references `/Users/scott/...` paths from a previous operator — require manual staging to EC2 before harvest. |
 | `nara.file.delta` | NARA-specific delta file format. Complex — consult README_NARA.md. |
 
-**Note:** **maryland**, **getty**, and **hathi** have known IP blocks on EC2 — the endpoint will time out or return 403 from `52.2.32.179`. When this happens, **stop and ask the user** how to proceed: either ask the partner to allowlist `52.2.32.179`, or run the harvest locally on the Mac (see **Local Harvest (EC2-Blocked Hubs)** section below). Do not default to local harvest without the user's direction. Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
+**Note:** No hub is currently blocked from EC2 (re-tested 2026-10-20): maryland, hathi and il are open; indiana allowlists the EC2's IP `52.2.32.179` (so it works from EC2 only, not from a laptop); getty and njde go through the Tailscale exit node (next section). If a hub's endpoint starts timing out or returning 403 from EC2, **stop and ask the user** how to proceed: either ask the partner to allowlist `52.2.32.179`, or run the harvest locally (see **Local Harvest (EC2-Blocked Hubs)** below). Do not default to local harvest without the user's direction. Always pre-flight test the endpoint from EC2 (see Step 3) before starting.
 
 ## IP-Restricted Hubs (Tailscale Exit Node)
 
-Some hubs whitelist a specific IP address for OAI-PMH access. Rather than whitelisting the EC2's dynamic public IP, these partners whitelist the **main-vpc Tailscale node** (`100.82.233.38`). The ingest routes harvest traffic through that node via a Tailscale exit node, so the partner sees a stable whitelisted IP.
+Some hubs allowlist a specific IP address for harvest access. These partners allowlisted the public egress IP of the **main-vpc Tailscale node** rather than the EC2's IP (`52.2.32.179`), so the ingest routes harvest traffic through that node as a Tailscale exit node. `100.82.233.38` is the node's Tailscale address, used only to select the exit node; the partner sees (and allowlists) the node's public egress IP, not that address.
 
-**This is handled automatically by `ingest.sh`** — no manual Tailscale steps required. When `TAILSCALE_EXIT_NODE` is set in `i3.conf` for a hub, the script:
+**This is handled automatically by `ingest.sh`** — no manual Tailscale steps required. For hubs listed in the `TAILSCALE_EXIT_NODE` case block in `scripts/ingest.sh` (currently `getty|njde`), the script:
 1. Starts `tailscaled` (kept stopped between ingests — see SSM note below)
 2. Waits for the daemon to connect and detects key expiration early
 3. Sets the exit node for the duration of the harvest
@@ -188,11 +188,12 @@ Some hubs whitelist a specific IP address for OAI-PMH access. Rather than whitel
 
 **Current IP-restricted hubs:**
 
-| Hub | Partner | Whitelisted IP | Tailscale exit node | i3.conf key |
-|-----|---------|---------------|---------------------|-------------|
-| `njde` | Rutgers (NJ Digital Library) | `100.82.233.38` | `main-vpc` | `njde.harvest.tailscaleExitNode = "main-vpc"` |
+| Hub | Partner | Exit node (routing address) | Configured in |
+|-----|---------|-----------------------------|---------------|
+| `getty` | J. Paul Getty Trust | `main-vpc` (`100.82.233.38`) | `scripts/ingest.sh` (`TAILSCALE_EXIT_NODE` case block) |
+| `njde` | Rutgers (NJ Digital Library) | `main-vpc` (`100.82.233.38`) | `scripts/ingest.sh` (`TAILSCALE_EXIT_NODE` case block) |
 
-**Operator independence:** Tailscale auth on the EC2 is stored per-machine in `/var/lib/tailscale/` on EBS. It persists across stop/start cycles and is **not** tied to any individual operator — anyone with SSM access can run the njde ingest without personal Tailscale credentials or the Tailscale CLI installed locally.
+**Operator independence:** Tailscale auth on the EC2 is stored per-machine in `/var/lib/tailscale/` on EBS. It persists across stop/start cycles and is **not** tied to any individual operator — anyone with SSM access can run the getty and njde ingests without personal Tailscale credentials or the Tailscale CLI installed locally.
 
 **⚠️ Node key rotation — ~180-day maintenance task:**
 
@@ -218,7 +219,7 @@ To re-authenticate (run via SSM):
 
 ## Local Harvest (EC2-Blocked Hubs)
 
-**Only use this procedure when the user explicitly requests a local harvest.** Do not invoke it automatically when an EC2 endpoint block is detected — ask the user first (see the EC2-blocked hubs note in Hub Configuration Reference).
+**No hub currently needs this.** Keep it as a fallback for a hub that starts blocking the EC2. **Only use this procedure when the user explicitly requests a local harvest.** Do not invoke it automatically when an EC2 endpoint block is detected — ask the user first (see the note in Hub Configuration Reference).
 
 This covers: running the harvest locally on the Mac, staging the Avro output to S3, pulling it onto the EC2, and resuming the pipeline from mapping. Before starting, verify the endpoint is reachable from your Mac (Step LH1) — it may not be (e.g. HathiTrust uses Cloudflare bot protection that also blocks curl).
 
@@ -1039,7 +1040,7 @@ Hubs **cannot run in parallel** on this instance — two enrichment steps alone 
 
 ### Step B1: Derive Hub List
 
-When the user says "run [month] ingests" (e.g. "run February ingests", "run March ingests"), use this script to derive the list from `i3.conf`. It skips on-hold hubs, flags maryland and file-type hubs, and excludes `nara` (complex delta format, manual only).
+When the user says "run [month] ingests" (e.g. "run February ingests", "run March ingests"), use this script to derive the list from `i3.conf`. It skips on-hold hubs, flags file-type hubs, and excludes `nara` (complex delta format, manual only).
 
 ```python
 #!/usr/bin/env python3
@@ -1047,7 +1048,6 @@ import os, re, sys
 from datetime import datetime
 
 CONF = os.environ["I3_CONF"]
-EC2_BLOCKED_HUBS = {"maryland", "getty", "hathi"}
 MONTH_NAMES = {
     "january":1,"february":2,"march":3,"april":4,"may":5,"june":6,
     "july":7,"august":8,"september":9,"october":10,"november":11,"december":12
@@ -1080,9 +1080,6 @@ for hub, info in sorted(hubs.items()):
         continue
     if info["type"] == "nara.file.delta":
         print(f"  SKIP {hub:25s} [nara delta — manual only]")
-        continue
-    if hub in EC2_BLOCKED_HUBS:
-        print(f"  WARN {hub:25s} [blocked from EC2 — run locally]")
         continue
     if info["type"] == "file":
         if hub == "community-webs":
@@ -1484,7 +1481,7 @@ Smaller hubs (file, localoai with small collections) will be faster than SD. Oth
 1. Check the log: `tail -30 /home/ec2-user/data/<hub>-harvest.log`
 2. For `localoai`: verify OAI endpoint is up and reachable from EC2
 3. For `api`: verify the API endpoint with a longer curl timeout (60s+)
-4. For maryland, getty, and hathi: EC2 harvest is blocked — stop, inform the user, and ask whether to request an IP allowlist or run the harvest locally (see **Local Harvest (EC2-Blocked Hubs)** section)
+4. If the endpoint times out or returns 403 from EC2: for getty or njde, check the Tailscale exit node (the log shows whether it connected); for any other hub, it's likely a new IP block — stop, inform the user, and ask whether to request an allowlist of `52.2.32.179` or run the harvest locally (see **Local Harvest (EC2-Blocked Hubs)** section)
 5. **Do NOT stop the EC2 instance** until investigated
 
 ### Mapping / Enrichment / JSONL Failure
