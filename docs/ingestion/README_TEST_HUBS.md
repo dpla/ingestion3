@@ -21,7 +21,7 @@ nga.harvest.endpoint = "s3://dpla-hub-nga/..."
 # ... rest of config
 ```
 
-- **`included_in_index = false`** is the setting that matters. The index rebuild (`4_launch_indexer.py`) and the monthly batch exports (`5_post_indexer.py`: parquet, JSONL dumps, metadata quality reports, sitemaps) both skip hubs with this flag, so test data never reaches dp.la or the public bulk exports.
+- **`included_in_index = false`** is the setting that matters. The index rebuild (`4_launch_indexer.py`) and the monthly batch exports (`5_post_indexer.py`: parquet, JSONL dumps, metadata quality reports, sitemaps) both skip hubs with this flag, so test data never reaches dp.la or the public bulk exports. Both read the flag from `ingestion3-conf`'s `origin/master`, not your local checkout, and index every hub folder in S3 that isn't excluded there. So **push the flag (or merge its PR) to `origin/master` before the hub's first test ingest syncs to S3**; otherwise the next rebuild publishes the test data.
 - **No `email` key.** `ingest.sh` only sends the partner summary email when the hub has an `email` entry.
 - **`status = test`** is a label for humans. No script changes its behaviour based on it. (The `dpla-hub-ingest` Claude Code skill still reads it and skips the S3 sync for test hubs; that skill predates this convention and hasn't been updated.)
 
@@ -55,8 +55,8 @@ When a hub is approved, move the mapper to the standard `providers/` package and
 
 When a hub is approved:
 
-1. Move the mapper from `providers/experimental/` to `providers/` and remove the `TEST HUB` header comment
-2. In i3.conf, set `<hub>.included_in_index = true`, add the partner `<hub>.email` contacts, and remove `<hub>.status = test`
-3. Open a PR for the mapper move in ingestion3
-4. Commit the i3.conf change in ingestion3-conf and push it (or merge its PR) to `origin/master`. The index rebuild and monthly batch read `included_in_index` from `origin/master`, not your local copy, so an unpushed change leaves the hub out of both
-5. Run a full ingest — the hub's next snapshot is picked up by the following index rebuild and monthly batch, and the partner receives the summary email
+1. Move the mapper from `providers/experimental/` to `providers/` and remove the `TEST HUB` header comment, and open a PR for it in ingestion3
+2. In i3.conf, add the partner `<hub>.email` contacts and remove `<hub>.status = test`, but **leave `<hub>.included_in_index = false`**. Push it (or merge its PR) to `origin/master`: preflight resets the ingest EC2's copy of i3.conf to `origin/master`, and `ingest.sh` reads the email contacts from there
+3. Run a full ingest once the mapper PR is merged. Confirm it succeeded and synced the new snapshot to S3; the partner receives the summary email
+4. Only then set `<hub>.included_in_index = true` and push it (or merge its PR) to `origin/master`. Doing this before the new snapshot is in S3 would let a rebuild publish the old test snapshot
+5. The next index rebuild and monthly batch pick up the new snapshot. Both read `included_in_index` from `origin/master`, not your local copy, so start them only after step 4 is pushed
