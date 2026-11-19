@@ -67,7 +67,7 @@ def list_jsonl_files(s3_client, bucket: str, prefix: str) -> list[str]:
     for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
         for obj in page.get("Contents", []):
             key = obj["Key"]
-            if key.endswith(".gz") or key.endswith(".jsonl"):
+            if key.endswith((".gz", ".jsonl", ".json")):
                 files.append(key)
 
     return files
@@ -94,6 +94,7 @@ def filter_jsonl_file(
         # Filter
         before_count = 0
         after_count = 0
+        matched = []
 
         open_read = gzip.open if is_gzipped else open
         open_write = gzip.open if is_gzipped else open
@@ -103,16 +104,18 @@ def filter_jsonl_file(
             open_write(filtered_path, "wt", encoding="utf-8") as outfile,
         ):
             for line in infile:
-                before_count += 1
                 line = line.rstrip("\n")
                 if not line:
                     continue
+                before_count += 1
                 try:
                     record = json.loads(line)
                     record_id = record.get("_source", {}).get("id", "")
                     if record_id not in exclude_ids:
                         outfile.write(line + "\n")
                         after_count += 1
+                    else:
+                        matched.append(record_id)
                 except json.JSONDecodeError:
                     # Keep malformed lines
                     outfile.write(line + "\n")
@@ -133,6 +136,7 @@ def filter_jsonl_file(
             "after": after_count,
             "removed": removed,
             "uploaded": uploaded,
+            "matched": matched,
         }
 
 
@@ -306,6 +310,7 @@ Environment variables:
     total_removed = 0
     processed = 0
     errors = 0
+    per_id = {id_: 0 for id_ in exclude_ids}
 
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
         futures = {
@@ -327,6 +332,8 @@ Environment variables:
             try:
                 result = future.result()
                 total_removed += result["removed"]
+                for id_ in result["matched"]:
+                    per_id[id_] += 1
 
                 status = ""
                 if result["removed"] > 0 and args.dry_run:
@@ -355,6 +362,12 @@ Environment variables:
         print("Complete!")
     if args.dry_run:
         print(f"Total matching records (dry run, S3 not modified): {total_removed}")
+        print("Matches per ID:")
+        for id_ in sorted(per_id):
+            print(f"  {id_}: {per_id[id_]}")
+        if errors:
+            print("[DRY RUN] Some files couldn't be read, so these counts are incomplete: "
+                  "a 0 above doesn't show the ID is gone.")
     else:
         print(f"Total records removed: {total_removed}")
     print(f"Files processed: {processed}")

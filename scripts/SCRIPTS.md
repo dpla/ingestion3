@@ -340,6 +340,8 @@ DRY_RUN=true ./scripts/delete/delete-from-jsonl.sh --hub cdl -f ids.txt
 
 > **Note**: For better performance, use `delete-from-jsonl.py` instead.
 
+`delete-from-jsonl.py --dry-run` (or `DRY_RUN=true`) reads every file without modifying S3 and prints `Total matching records` and `Matches per ID`, so it doubles as a read-only check of whether IDs are still in a hub's newest JSONL. Trust a 0 only if the run exits 0 with no file errors. Pass `--bucket dpla-master-dataset` explicitly so an exported `S3_BUCKET` can't redirect it. It reads `.gz`, `.jsonl` and `.json` files; blank lines aren't counted as records.
+
 ### generate_hub_stats.py - Dashboard Hub Stats and Item Mapping
 
 Rebuilds the three dashboard-analytics inputs in `s3://dashboard-analytics/hub-stats/` after each monthly index rebuild:
