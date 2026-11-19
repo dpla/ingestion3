@@ -151,6 +151,18 @@ class IaProfile extends JsonProfile {
   override def getMapping = new IaMapping
 }
 
+/** Kentucky
+  * Dead hub. Profile based on migration from ingestion1; kept so the legacy
+  * harvest can be re-mapped (#829).
+  */
+class KyProfile extends JsonProfile {
+  type Mapping = KentuckyRetconMapping
+
+  override def getHarvester: Class[_ <: Harvester] =
+    classOf[DplaJsonlFileHarvester]
+  override def getMapping = new KentuckyRetconMapping
+}
+
 /** Library of Congress
   */
 class LocProfile extends JsonProfile {
@@ -159,6 +171,18 @@ class LocProfile extends JsonProfile {
   override def getHarvester: Class[_ <: Harvester] =
     classOf[DplaJsonlFileHarvester]
   override def getMapping = new LcRetconMapping
+}
+
+/** Digital Maine
+  * Hub has gone out of comms. Profile based on migration from ingestion1;
+  * kept so the legacy harvest can be re-mapped (#829).
+  */
+class MeProfile extends JsonProfile {
+  type Mapping = MaineRetconMapping
+
+  override def getHarvester: Class[_ <: Harvester] =
+    classOf[DplaJsonlFileHarvester]
+  override def getMapping = new MaineRetconMapping
 }
 
 /** Massachusetts - Digital Commonwealth

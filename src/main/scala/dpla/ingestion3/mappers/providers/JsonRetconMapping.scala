@@ -53,7 +53,9 @@ abstract class JsonRetconMapping extends JsonMapping with JsonExtractor {
       .map(URI)
       .map(uriOnlyWebResource)
 
-  override def `object`(data: Document[JValue]): ZeroToMany[EdmWebResource] =
+  // ingestion1's `object` was the thumbnail. In ingestion3 the thumbnail is
+  // `preview` (the JSONL writer emits it as the index's "object" field).
+  override def preview(data: Document[JValue]): ZeroToMany[EdmWebResource] =
     extractStrings(data.get \ "_source" \ "object")
       .map(URI)
       .map(uriOnlyWebResource)
