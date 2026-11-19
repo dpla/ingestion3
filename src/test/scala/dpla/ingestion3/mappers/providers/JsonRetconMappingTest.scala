@@ -262,32 +262,34 @@ class JsonRetconMappingTest extends AnyFlatSpec {
       )
     )
 
-  it should "extract the correct object" in
+  // ingestion1's `object` (the thumbnail) maps to `preview`, which the JSONL
+  // writer emits as the index's "object" field (#829).
+  it should "extract the correct preview" in
     runTests(
       Seq(
         TestCase(
           Seq(uriOnlyWebResource(URI("http://media.artstor.net/imgstor/size1/sslps/c7729997/2842515.jpg"))),
-          artstor.mapping.`object`,
+          artstor.mapping.preview,
           artstor.document
         ),
         TestCase(
           Seq(uriOnlyWebResource(URI("http://nyx.uky.edu/dips/xt7cnp1wfn5x/data/0358/0358_tb.jpg"))),
-          kentucky.mapping.`object`,
+          kentucky.mapping.preview,
           kentucky.document
         ),
         TestCase(
           Seq(uriOnlyWebResource(URI("http://cdn.loc.gov/service/gmd/gmd376/g3764/g3764n/pm003122.gif"))),
-          lc.mapping.`object`,
+          lc.mapping.preview,
           lc.document
         ),
         TestCase(
           Seq(),
-          maine.mapping.`object`,
+          maine.mapping.preview,
           maine.document
         ),
         TestCase(
           Seq(uriOnlyWebResource(uri = URI("http://cdm16786.contentdm.oclc.org/utils/getthumbnail/collection/sayre/id/9054"))),
-          washington.mapping.`object`,
+          washington.mapping.preview,
           washington.document
         )
       )
