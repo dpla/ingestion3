@@ -95,6 +95,7 @@ def filter_jsonl_file(
         before_count = 0
         after_count = 0
         matched = []
+        parse_errors = 0
 
         open_read = gzip.open if is_gzipped else open
         open_write = gzip.open if is_gzipped else open
@@ -117,9 +118,11 @@ def filter_jsonl_file(
                     else:
                         matched.append(record_id)
                 except json.JSONDecodeError:
-                    # Keep malformed lines
+                    # Keep malformed lines, but count them: their ID wasn't
+                    # checked, so the scan for this file is incomplete.
                     outfile.write(line + "\n")
                     after_count += 1
+                    parse_errors += 1
 
         removed = before_count - after_count
 
@@ -137,6 +140,7 @@ def filter_jsonl_file(
             "removed": removed,
             "uploaded": uploaded,
             "matched": matched,
+            "parse_errors": parse_errors,
         }
 
 
@@ -310,6 +314,7 @@ Environment variables:
     total_removed = 0
     processed = 0
     errors = 0
+    parse_errors = 0
     per_id = {id_: 0 for id_ in exclude_ids}
 
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
@@ -334,6 +339,7 @@ Environment variables:
                 total_removed += result["removed"]
                 for id_ in result["matched"]:
                     per_id[id_] += 1
+                parse_errors += result["parse_errors"]
 
                 status = ""
                 if result["removed"] > 0 and args.dry_run:
@@ -344,6 +350,8 @@ Environment variables:
                         status += " ✓"
                 else:
                     status = "no matches"
+                if result["parse_errors"]:
+                    status += f" ({result['parse_errors']} unparseable line(s) kept, not checked)"
 
                 print(f"[{processed}/{len(jsonl_files)}] {result['file']}: {status}")
 
@@ -365,14 +373,17 @@ Environment variables:
         print("Matches per ID:")
         for id_ in sorted(per_id):
             print(f"  {id_}: {per_id[id_]}")
-        if errors:
-            print("[DRY RUN] Some files couldn't be read, so these counts are incomplete: "
+        if errors or parse_errors:
+            print("[DRY RUN] Some files or lines couldn't be read, so these counts are incomplete: "
                   "a 0 above doesn't show the ID is gone.")
     else:
         print(f"Total records removed: {total_removed}")
+    if parse_errors:
+        print(f"Unparseable lines: {parse_errors} (kept as-is; their IDs weren't checked, "
+              "so a requested ID could still be in S3)")
     print(f"Files processed: {processed}")
 
-    if errors:
+    if errors or parse_errors:
         sys.exit(1)
 
 

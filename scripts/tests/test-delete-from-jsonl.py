@@ -95,6 +95,19 @@ class DeleteFromJsonlTest(unittest.TestCase):
         self.assertTrue(r["uploaded"])
         self.assertEqual(self.s3.uploads[0][1].decode().strip(), rec("b"))
 
+    def test_malformed_lines_kept_and_counted(self):
+        key = self.write("part-0.jsonl", [rec("a"), "{not json", rec("b")])
+        r = mod.filter_jsonl_file(self.s3, "b", key, {"a"})
+        self.assertEqual(r["parse_errors"], 1)
+        self.assertEqual(r["removed"], 1)
+        kept = self.s3.uploads[0][1].decode().splitlines()
+        self.assertEqual(kept, ["{not json", rec("b")])
+
+    def test_clean_file_has_no_parse_errors(self):
+        key = self.write("part-0.jsonl", [rec("a"), "", rec("b")])
+        r = mod.filter_jsonl_file(self.s3, "b", key, {"zzz"})
+        self.assertEqual(r["parse_errors"], 0)
+
     def test_lists_json_files_too(self):
         for n in ("a.gz", "b.jsonl", "c.json", "_SUCCESS", "_MANIFEST"):
             self.write(n, [rec("x")])
