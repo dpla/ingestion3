@@ -77,7 +77,7 @@ cd "$I3_HOME" && sbt assembly
 
 All scripts source `common.sh` which provides:
 
-- **Env file:** When `$I3_HOME/.env` exists, `common.sh` sources it during init, so `SLACK_BOT_TOKEN`, `JAVA_HOME`, and other vars are set for pipeline runs and Slack notifications without needing to run `source .env` first.
+- **Env file:** When `$I3_HOME/.env` exists, `common.sh` sources it during init, so `SLACK_BOT_TOKEN`, `JAVA_HOME`, and other vars are set for pipeline runs and Slack notifications without needing to run `source .env` first. `.env` overrides variables already in your environment, except `DPLA_DATA`, `I3_CONF` and `SPARK_MASTER`: if you set one of those (non-empty) before running a script, your value wins, e.g. `DPLA_DATA=/tmp/data ./scripts/s3-sync.sh hub`.
 
 - **Platform detection**: `$PLATFORM` is set to `macos` or `linux`
 - **Portable utilities**: `sed_i`, `get_script_dir`, `get_common_dir`
