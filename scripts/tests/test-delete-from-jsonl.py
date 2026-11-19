@@ -5,8 +5,10 @@ Uses a fake S3 client, so it needs no AWS access and no boto3.
 Run: python3 scripts/tests/test-delete-from-jsonl.py
 """
 
+import contextlib
 import gzip
 import importlib.util
+import io
 import json
 import os
 import shutil
@@ -14,6 +16,7 @@ import sys
 import tempfile
 import types
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCRIPT = os.path.join(HERE, "..", "delete", "delete-from-jsonl.py")
@@ -45,6 +48,27 @@ class FakeS3:
         class P:
             def paginate(self, Bucket, Prefix):
                 yield {"Contents": [{"Key": k} for k in sorted(os.listdir(root))]}
+
+        return P()
+
+
+class FakeS3Export(FakeS3):
+    """Serves the files in root as one hub's newest JSONL export, for main()."""
+
+    PREFIX = "hub/jsonl/20260101_000000-hub-MAP3_1.IndexRecord.jsonl/"
+
+    def list_objects_v2(self, Bucket, Prefix, Delimiter):
+        return {"CommonPrefixes": [{"Prefix": self.PREFIX}]}
+
+    def download_file(self, bucket, key, dest):
+        shutil.copy(os.path.join(self.root, key.split("/")[-1]), dest)
+
+    def get_paginator(self, name):
+        root, prefix = self.root, self.PREFIX
+
+        class P:
+            def paginate(self, Bucket, Prefix):
+                yield {"Contents": [{"Key": prefix + k} for k in sorted(os.listdir(root))]}
 
         return P()
 
@@ -107,6 +131,45 @@ class DeleteFromJsonlTest(unittest.TestCase):
         key = self.write("part-0.jsonl", [rec("a"), "", rec("b")])
         r = mod.filter_jsonl_file(self.s3, "b", key, {"zzz"})
         self.assertEqual(r["parse_errors"], 0)
+
+    def test_whitespace_only_lines_are_skipped(self):
+        key = self.write("part-0.jsonl", [rec("a"), "   ", "\t", rec("b")])
+        r = mod.filter_jsonl_file(self.s3, "b", key, {"zzz"})
+        self.assertEqual(r["before"], 2)
+        self.assertEqual(r["parse_errors"], 0)
+
+    def run_main(self, argv):
+        """Run main() against FakeS3Export; return (exit code, stdout, fake s3)."""
+        s3 = FakeS3Export(self.root)
+        session = types.SimpleNamespace(client=lambda name: s3)
+        out = io.StringIO()
+        code = 0
+        with mock.patch.object(mod.boto3, "Session", lambda profile_name=None: session, create=True), \
+                mock.patch.object(sys, "argv", ["delete-from-jsonl.py"] + argv), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            try:
+                mod.main()
+            except SystemExit as e:
+                code = e.code
+        return code, out.getvalue(), s3
+
+    def test_main_dry_run_malformed_line_marks_zero_incomplete_and_exits_1(self):
+        self.write("part-0.jsonl", [rec("a"), "{not json", rec("b")])
+        code, out, s3 = self.run_main(["--hub", "hub", "--dry-run", "a", "gone"])
+        self.assertEqual(code, 1)
+        self.assertIn("  a: 1", out)
+        self.assertIn("  gone: 0", out)
+        self.assertIn("counts are incomplete", out)
+        self.assertIn("Unparseable lines: 1", out)
+        self.assertEqual(s3.uploads, [])
+
+    def test_main_dry_run_clean_scan_with_no_match_exits_0(self):
+        self.write("part-0.jsonl", [rec("a"), "", rec("b")])
+        code, out, s3 = self.run_main(["--hub", "hub", "--dry-run", "gone"])
+        self.assertIn(code, (0, None))
+        self.assertIn("  gone: 0", out)
+        self.assertNotIn("incomplete", out)
+        self.assertEqual(s3.uploads, [])
 
     def test_lists_json_files_too(self):
         for n in ("a.gz", "b.jsonl", "c.json", "_SUCCESS", "_MANIFEST"):

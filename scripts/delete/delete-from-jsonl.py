@@ -106,7 +106,7 @@ def filter_jsonl_file(
         ):
             for line in infile:
                 line = line.rstrip("\n")
-                if not line:
+                if not line.strip():
                     continue
                 before_count += 1
                 try:
