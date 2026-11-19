@@ -247,11 +247,25 @@ init_paths() {
 
     # Load .env when present so SLACK_BOT_TOKEN, JAVA_HOME, etc. are set for
     # pipeline scripts and harvest-failure notifications.
+    #
+    # DPLA_DATA, I3_CONF and SPARK_MASTER set by the caller (non-empty) win
+    # over .env, so `DPLA_DATA=/x ./scripts/s3-sync.sh hub` and per-hub
+    # SPARK_MASTER from the orchestrator are honored. Everything else in .env
+    # (JAVA_HOME, tokens, ...) still applies as before.
+    local _caller_env="" _name
+    for _name in DPLA_DATA I3_CONF SPARK_MASTER; do
+        if [ -n "${!_name:-}" ]; then
+            _caller_env="${_caller_env}$(printf '%s=%q; ' "$_name" "${!_name}")"
+        fi
+    done
     if [ -f "${I3_HOME}/.env" ] && [ -r "${I3_HOME}/.env" ]; then
         set -a
         # shellcheck source=/dev/null
         source "${I3_HOME}/.env"
         set +a
+    fi
+    if [ -n "$_caller_env" ]; then
+        eval "$_caller_env"
     fi
 
     # DPLA_DATA: Where harvested/processed data is stored

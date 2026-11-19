@@ -194,6 +194,41 @@ test_common_sh() {
 }
 
 # =============================================================================
+# Test: caller-set DPLA_DATA / I3_CONF / SPARK_MASTER win over .env
+# =============================================================================
+
+test_env_precedence() {
+    echo ""
+    echo "=========================================="
+    echo "  Testing .env precedence in common.sh"
+    echo "=========================================="
+
+    local common_sh="$SCRIPTS_DIR/common.sh"
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    cat > "$tmpdir/.env" <<'EOF'
+DPLA_DATA=/from-dotenv/data
+I3_CONF=/from-dotenv/i3.conf
+SPARK_MASTER=local[2]
+SLACK_CHANNEL=from-dotenv
+EOF
+
+    run_test "Caller DPLA_DATA/I3_CONF/SPARK_MASTER beat .env" \
+        "env -i HOME=\"\$HOME\" PATH=\"\$PATH\" I3_HOME='$tmpdir' DPLA_DATA='/from caller/data' I3_CONF=/from-caller/i3.conf SPARK_MASTER='local[6]' \
+         bash -c 'source \"$common_sh\" && [ \"\$DPLA_DATA\" = \"/from caller/data\" ] && [ \"\$I3_CONF\" = /from-caller/i3.conf ] && [ \"\$SPARK_MASTER\" = \"local[6]\" ]'"
+
+    run_test ".env applies when the caller sets nothing" \
+        "env -i HOME=\"\$HOME\" PATH=\"\$PATH\" I3_HOME='$tmpdir' \
+         bash -c 'source \"$common_sh\" && [ \"\$DPLA_DATA\" = /from-dotenv/data ] && [ \"\$I3_CONF\" = /from-dotenv/i3.conf ] && [ \"\$SPARK_MASTER\" = \"local[2]\" ]'"
+
+    run_test ".env still wins for other variables" \
+        "env -i HOME=\"\$HOME\" PATH=\"\$PATH\" I3_HOME='$tmpdir' SLACK_CHANNEL=from-caller \
+         bash -c 'source \"$common_sh\" && [ \"\$SLACK_CHANNEL\" = from-dotenv ]'"
+
+    rm -rf "$tmpdir"
+}
+
+# =============================================================================
 # Test: All scripts have valid bash syntax
 # =============================================================================
 
@@ -1322,6 +1357,7 @@ main() {
     
     # Run tests
     test_common_sh
+    test_env_precedence
     test_syntax
     test_python_syntax
     test_referenced_script_paths
