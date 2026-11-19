@@ -1,0 +1,21 @@
+# systemd unit for the box-wide ingest queue's drain loop (issue #786).
+# Installed by scripts/queue/install-queue-service.sh on the ingest EC2.
+[Unit]
+Description=DPLA ingest queue drain loop (runs queued ingests one at a time)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+# Login shell so mise-managed Java and sbt are on PATH, as for SSM runs.
+ExecStart=/bin/bash -lc '/home/ec2-user/ingestion3/scripts/queue/drain-queue.sh'
+Restart=always
+RestartSec=30
+# Stop/restart only the drain loop, not a pipeline it started: the pipeline
+# keeps running, and the restarted loop waits for it before starting the next
+# job. (KillMode=control-group would kill a running ingest on every deploy.)
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

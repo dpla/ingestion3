@@ -227,6 +227,11 @@ test_syntax() {
         "status/check-jsonl-sync.sh"
         "status/ingest-status.sh"
         "status/monitor-pipeline.sh"
+        "queue/queue-lib.sh"
+        "queue/enqueue-ingest.sh"
+        "queue/drain-queue.sh"
+        "queue/index-guard.sh"
+        "queue/install-queue-service.sh"
     )
     
     for script in "${scripts[@]}"; do
@@ -349,6 +354,9 @@ test_help_outputs() {
         "ingest.sh"
         "harvest/nara-ingest.sh"
         "communication/schedule.sh"
+        "queue/enqueue-ingest.sh"
+        "queue/drain-queue.sh"
+        "queue/index-guard.sh"
     )
     
     for script in "${scripts_with_help[@]}"; do
@@ -1311,6 +1319,79 @@ PROBE
 # Main
 # =============================================================================
 
+# =============================================================================
+# Test: Ingest queue (issue #786) — enqueue, FIFO order, rejects, index guard
+# =============================================================================
+
+test_ingest_queue() {
+    echo ""
+    echo "=========================================="
+    echo "  Testing ingest queue"
+    echo "=========================================="
+
+    local tmp
+    tmp=$(mktemp -d)
+    cat > "$tmp/i3.conf" <<'CONF'
+testhub.harvest.type = "localoai"
+otherhub.harvest.type = "api"
+nara.harvest.type = "nara.file.delta"
+community-webs.harvest.type = "file"
+smithsonian.harvest.type = "file"
+CONF
+    # I3_HOME points at the temp dir so the repo's .env (which sets DPLA_DATA,
+    # I3_CONF and Slack tokens) isn't loaded into the test.
+    local env=(env I3_HOME="$tmp" DPLA_DATA="$tmp/data" I3_CONF="$tmp/i3.conf"
+               QUEUE_DIR="$tmp/queue" SLACK_BOT_TOKEN= SLACK_TOKEN= GHA_ACTOR=tester)
+    local enq="$SCRIPTS_DIR/queue/enqueue-ingest.sh"
+    local guard="$SCRIPTS_DIR/queue/index-guard.sh"
+
+    run_test "queue: enqueue a standard hub" "${env[*]} '$enq' testhub --source test"
+    run_test "queue: enqueue nara with pipeline args" "${env[*]} '$enq' nara --source test -- --month=202605"
+    run_test "queue: enqueue a second standard hub" "${env[*]} '$enq' otherhub --source test"
+
+    local queued first kinds
+    queued=$(ls "$tmp/queue/queued/"*.job 2>/dev/null | wc -l | tr -d ' ')
+    assert_equals "3" "$queued" "queue: three jobs queued"
+
+    first=$(ls "$tmp/queue/queued/" | grep '\.job$' | sort | head -1)
+    assert_equals "testhub" "$(echo "$first" | sed 's/^[0-9]*-//; s/\.job$//')" \
+        "queue: oldest job first (FIFO)"
+
+    kinds=$(for f in $(ls "$tmp/queue/queued/"*.job | sort); do grep '^KIND=' "$f" | cut -d= -f2; done | tr '\n' ' ')
+    assert_equals "standard nara standard " "$kinds" "queue: kinds detected from harvest.type"
+
+    assert_equals "--month=202605" "$(cat "$tmp/queue/queued/"*-nara.args)" \
+        "queue: pipeline args stored one per line"
+
+    run_test "queue: unknown hub rejected" "! ${env[*]} '$enq' nosuchhub"
+    run_test "queue: smithsonian rejected" "! ${env[*]} '$enq' smithsonian"
+    run_test "queue: invalid hub name rejected" "! ${env[*]} '$enq' 'Bad/Hub'"
+    queued=$(ls "$tmp/queue/queued/"*.job 2>/dev/null | wc -l | tr -d ' ')
+    assert_equals "3" "$queued" "queue: rejected jobs aren't queued"
+
+    # q_set/q_get round-trip values with spaces and quotes
+    local val
+    val=$( export QUEUE_DIR="$tmp/queue"; COMMON_NO_INIT=1 source "$SCRIPTS_DIR/common.sh" >/dev/null 2>&1
+           source "$SCRIPTS_DIR/queue/queue-lib.sh"
+           f="$tmp/rt.job"; : > "$f"
+           q_set "$f" NOTE "it's a \"test\" with spaces"; q_get "$f" NOTE )
+    assert_equals "it's a \"test\" with spaces" "$val" "queue: q_set/q_get round-trip"
+
+    run_test "queue: index guard not set initially" "! ${env[*]} '$guard' status"
+    run_test "queue: index guard set" "${env[*]} '$guard' set 2 'test rebuild'"
+    run_test "queue: index guard reports set" "${env[*]} '$guard' status"
+    run_test "queue: index guard rejects bad hours" "! ${env[*]} '$guard' set abc"
+    run_test "queue: index guard clear" "${env[*]} '$guard' clear"
+    run_test "queue: index guard cleared" "! ${env[*]} '$guard' status"
+
+    # An expired guard is removed rather than holding the queue forever
+    printf 'EXPIRES=1\nNOTE=old\n' > "$tmp/queue/INDEX_GUARD"
+    run_test "queue: expired index guard doesn't hold" "! ${env[*]} '$guard' status"
+    run_test "queue: expired index guard is removed" "[ ! -f '$tmp/queue/INDEX_GUARD' ]"
+
+    rm -rf "$tmp"
+}
+
 main() {
     echo "=========================================="
     echo "  DPLA Ingestion Scripts Test Suite"
@@ -1343,6 +1424,7 @@ main() {
         test_format_recipients
         test_tailscale_exit_node
         test_setsid_behavior
+        test_ingest_queue
     fi
 
     # Run deterministic alias tests (safe in both quick/full mode).

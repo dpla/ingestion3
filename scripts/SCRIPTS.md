@@ -12,6 +12,7 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 | **scripts/communication/** | Schedule, email, Slack | `schedule.sh`, `send-ingest-email.sh`, `notify-harvest-failure.sh`, `send-harvest-failure-email.py` |
 | **scripts/delete/** | Record removal | `delete-by-id.sh`, `delete-from-jsonl.sh`, `delete-from-jsonl.py` |
 | **scripts/harvest/** | Harvest helpers, NARA, Community Webs, SI, VA | `nara-ingest.sh`, `community-webs-export.sh`, `community-webs-ingest.sh`, `community-webs-validate-jsonl.py`, `fix-si.sh`, `harvest-va.sh` |
+| **scripts/queue/** | Box-wide ingest queue (issue #786) | `enqueue-ingest.sh`, `drain-queue.sh`, `index-guard.sh`, `queue-lib.sh`, `install-queue-service.sh`, `dpla-ingest-queue.service` |
 | **scripts/status/** | Status and sync checks | `ingest-status.sh`, `check-jsonl-sync.sh`, `monitor-pipeline.sh`, `monitor-remap.sh`, `hub-info.sh`, `s3-latest.sh`, `staged-report.sh`, `oai-harvest-watch.sh`, `watch-oai-harvest.py`, `watch-oai-harvest-pages.py` |
 
 ## Quick Reference
@@ -44,6 +45,10 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 | *scheduling_emails* (Python) | Monthly pre-scheduling email to hub contacts | `./venv/bin/python -m scheduler.orchestrator.scheduling_emails [--month=N] --dry-run \| --draft \| --send` |
 | `status/ingest-status.sh` | Check ingest status (orchestrator or manual runs) | `./scripts/status/ingest-status.sh` |
 | *skip_safety_check.py* (Python) | Publish an ingest the >5% safety check blocked, after review: shows counts, asks, syncs only that snapshot, asks before the partner email. Refuses unfinished, empty, non-unique (or unchecked), already-synced or older-than-S3 snapshots, unreadable S3 state or previous count, and Community Webs/NARA. See `ingest_pipeline_python/README.md` | `python3 ingest_pipeline_python/helper_scripts/skip_safety_check.py <hub> [--snapshot <dir>]` |
+| `queue/enqueue-ingest.sh` | Add a hub ingest to the box-wide queue; prints job id and position | `./scripts/queue/enqueue-ingest.sh <hub> [--requester <name>] [--source <src>] [-- <pipeline args>]` |
+| `queue/drain-queue.sh` | The queue's only executor: runs queued jobs one at a time, holds during index work (run by systemd) | `systemctl status dpla-ingest-queue` |
+| `queue/index-guard.sh` | Hold the queue during an index rebuild (set by the indexer scripts) | `./scripts/queue/index-guard.sh set <hours> [note] \| clear \| status` |
+| `queue/install-queue-service.sh` | Install/restart the queue's systemd unit on the ingest EC2 (root) | `sudo ./scripts/queue/install-queue-service.sh` |
 | *takedown.py* (Python) | Take items down from S3 and the live index with the dpla-takedown checks (source check, exact live-index count, asks before deleting, S3 before the live index, API verification; exits nonzero unless the final API checks pass. An S3 removal count that differs from the number expected doesn't change the exit status once you confirm continuing). See `ingest_pipeline_python/README.md` | `./venv/bin/python ingest_pipeline_python/helper_scripts/takedown.py <id>... \| -f ids.txt [--dry-run]` |
 | `communication/notify-harvest-failure.sh` | Send Slack and email (tech@dp.la) on harvest failure | `./scripts/communication/notify-harvest-failure.sh <hub> "<error>"` |
 | `status/hub-info.sh` | Show hub config from i3.conf | `./scripts/status/hub-info.sh <hub>` |
@@ -339,6 +344,39 @@ DRY_RUN=true ./scripts/delete/delete-from-jsonl.sh --hub cdl -f ids.txt
 ```
 
 > **Note**: For better performance, use `delete-from-jsonl.py` instead.
+
+### Ingest queue (scripts/queue/) - One Pipeline at a Time
+
+Box-wide queue from issue #786, slice (a): a durable queue on EBS and a single drain loop that runs queued ingests **one at a time, oldest first, and never during an index rebuild**. The existing launchers and workflows don't use it yet; moving them over is a later slice, so today a job only goes through the queue if something calls `enqueue-ingest.sh`.
+
+**Queue layout** (`$DPLA_DATA/queue/`, override with `QUEUE_DIR`): a job's state is the folder it's in (`queued/`, `running/`, `done/`, `failed/`); each job is a `<job_id>.job` file of `KEY=value` lines plus a `<job_id>.args` file with one pipeline argument per line. Job ids start with a nanosecond timestamp, so they sort in the order they were queued.
+
+**Enqueue:**
+```bash
+./scripts/queue/enqueue-ingest.sh bpl --requester zoe --source manual
+./scripts/queue/enqueue-ingest.sh bpl -- --resume-from mapping      # args after -- go to ingest.sh
+./scripts/queue/enqueue-ingest.sh nara -- --month=202605            # runs nara-ingest.sh
+./scripts/queue/enqueue-ingest.sh community-webs -- --skip-export   # runs community-webs-ingest.sh
+```
+Rejected: a hub with no `harvest.type` in i3.conf, and Smithsonian (use `launch_smithsonian.py`; its steps aren't one script yet). Each job posts "queued" to Slack with who queued it.
+
+**Drain loop** (`drain-queue.sh`, under systemd as `dpla-ingest-queue`):
+- One loop at a time (`drain.lock`), and one pipeline at a time: it holds `run.lock` for the whole run.
+- Starts each pipeline with `setsid --wait`, so `ingest.sh` doesn't re-exec itself and return early, and the loop gets the real exit code. Standard hubs log to `$DPLA_DATA/<hub>-ingest.log` (where `check_ingest.py` looks); NARA and Community Webs log to `queue/logs/<job_id>.log`.
+- Posts started / finished / failed to Slack; `ingest.sh`'s own per-step messages are unchanged.
+- Holds (and says so in Slack, once) while `INDEX_GUARD` is set, or while a `sparkindexer` or `monthlybatch` EMR cluster is active. If the box can't list EMR clusters, it warns once and relies on `INDEX_GUARD`.
+- On startup: a job left in `running/` whose process is gone (crash, OOM, reboot) is re-queued at the front, once; interrupted a second time, it's marked failed. If the process is still alive (the loop was restarted but the pipeline wasn't), the loop waits for it and records the result as unknown.
+- The unit uses `KillMode=process`: restarting or stopping the service doesn't kill a running ingest.
+
+**Index guard** (`index-guard.sh set <hours> [note] | clear | status`): `4_launch_indexer.py` sets it for 16h before launching the cluster and shortens it to 4h after the alias swap; `5_post_indexer.py` sets 6h and clears it at the end. These calls never stop the indexer: if the ingest box is stopped or doesn't have the queue yet, they warn. An expired guard is removed automatically (with a Slack warning).
+
+**Install on the ingest EC2** (once, as root; re-run after changing the unit):
+```bash
+sudo /home/ec2-user/ingestion3/scripts/queue/install-queue-service.sh
+sudo /home/ec2-user/ingestion3/scripts/queue/install-queue-service.sh --status
+```
+
+Linux only (`flock`, `setsid --wait`, `/proc`). `enqueue-ingest.sh` and `index-guard.sh` also run on macOS, for tests.
 
 ### generate_hub_stats.py - Dashboard Hub Stats and Item Mapping
 
