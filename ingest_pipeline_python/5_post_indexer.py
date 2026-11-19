@@ -22,6 +22,7 @@ import base64
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -85,6 +86,32 @@ SITEMAP_ROOT       = "https://dp.la/sitemap/"
 POLL_SECONDS       = 300   # 5 min
 HEARTBEAT_INTERVAL = 3600  # 1 hour
 STALE_JAR_DAYS     = 30
+
+
+# ---------- ingest queue index guard (issue #786) ----------
+
+QUEUE_GUARD_SCRIPT = "/home/ec2-user/ingestion3/scripts/queue/index-guard.sh"
+
+
+def set_ingest_queue_guard(action, hours=None, note=""):
+    """Set or clear the ingest queue's index guard on the ingest EC2, so the
+    queue starts no ingests while index work runs. Never fatal: if the box is
+    stopped or doesn't have the queue yet, warn and carry on (the queue also
+    checks for active EMR clusters itself)."""
+    if not INGEST_INSTANCE_ID:
+        warn("INGEST_INSTANCE_ID not set; ingest queue index guard not updated.")
+        return
+    args = [QUEUE_GUARD_SCRIPT, action]
+    if action == "set":
+        args += [str(hours), note]
+    inner = " ".join(shlex.quote(a) for a in args)
+    cmd = f"sudo -u ec2-user bash -lc {shlex.quote(inner)}"
+    try:
+        out = ssm_run(INGEST_INSTANCE_ID, cmd, timeout_seconds=60)
+        info(f"Ingest queue guard: {out.strip() or action}")
+    except Exception as e:  # noqa: BLE001 - never block index work on this
+        warn(f"Couldn't update the ingest queue's index guard ({action}): {e}. "
+             "If the ingest box is running, queued ingests may start during this run.")
 
 
 # ---------- Slack (via EC2 common.sh — same as ingest.sh) ----------
@@ -841,10 +868,12 @@ def main():
 
     if args.cluster_id:
         print(f"\nResuming monitoring for cluster: {args.cluster_id}")
+        set_ingest_queue_guard("set", 6, f"monthlybatch {args.cluster_id} (monitoring resumed)")
         success = monitor_cluster(args.cluster_id)
     else:
         if not args.skip_preflight:
             check_jar_freshness(non_interactive=args.non_interactive)
+        set_ingest_queue_guard("set", 6, "monthlybatch post-index batch")
         cluster_id = launch_cluster(non_interactive=args.non_interactive)
         success    = monitor_cluster(cluster_id)
 
@@ -857,6 +886,7 @@ def main():
 
     run_hub_stats()
     problems = verify_outputs(sitemap_problem=run_sitemaps())
+    set_ingest_queue_guard("clear")
 
     print()
     print("=" * 70)

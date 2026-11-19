@@ -28,6 +28,7 @@ import base64
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -81,6 +82,32 @@ SPARKINDEXER_DIR  = "/home/ec2-user/sparkindexer"
 SPARKINDEXER_LOCAL_JAR = f"{SPARKINDEXER_DIR}/target/scala-2.12/sparkindexer-assembly.jar"
 STALE_DAYS        = 45
 POLL_SECONDS      = 300   # check cluster every 5 minutes
+
+
+# ---------- ingest queue index guard (issue #786) ----------
+
+QUEUE_GUARD_SCRIPT = "/home/ec2-user/ingestion3/scripts/queue/index-guard.sh"
+
+
+def set_ingest_queue_guard(action, hours=None, note=""):
+    """Set or clear the ingest queue's index guard on the ingest EC2, so the
+    queue starts no ingests while index work runs. Never fatal: if the box is
+    stopped or doesn't have the queue yet, warn and carry on (the queue also
+    checks for active EMR clusters itself)."""
+    if not INGEST_INSTANCE_ID:
+        warn("INGEST_INSTANCE_ID not set; ingest queue index guard not updated.")
+        return
+    args = [QUEUE_GUARD_SCRIPT, action]
+    if action == "set":
+        args += [str(hours), note]
+    inner = " ".join(shlex.quote(a) for a in args)
+    cmd = f"sudo -u ec2-user bash -lc {shlex.quote(inner)}"
+    try:
+        out = ssm_run(INGEST_INSTANCE_ID, cmd, timeout_seconds=60)
+        info(f"Ingest queue guard: {out.strip() or action}")
+    except Exception as e:  # noqa: BLE001 - never block index work on this
+        warn(f"Couldn't update the ingest queue's index guard ({action}): {e}. "
+             "If the ingest box is running, queued ingests may start during this run.")
 
 
 # ---------- Slack ----------
@@ -867,6 +894,7 @@ def main():
     if args.cluster_id:
         # Resume monitoring existing cluster
         print(f"\nResuming monitoring for cluster: {args.cluster_id}")
+        set_ingest_queue_guard("set", 12, f"sparkindexer {args.cluster_id} (monitoring resumed)")
         success = monitor_cluster(args.cluster_id)
         if not success:
             sys.exit(1)
@@ -881,6 +909,7 @@ def main():
             print("\n  Pre-flight checks skipped.")
 
         providers_arg, conf_sha, excluded = build_providers_arg(args.exclude_hubs)
+        set_ingest_queue_guard("set", 16, "sparkindexer index rebuild")
         cluster_id = launch_cluster(providers_arg, conf_sha=conf_sha, excluded=excluded, non_interactive=args.non_interactive)
         success = monitor_cluster(cluster_id)
         if not success:
@@ -888,6 +917,8 @@ def main():
 
     old_index, new_index, old_count = do_alias_swap(non_interactive=args.non_interactive)
     verify_api(old_count=old_count)
+    # Keep holding ingests for the post-indexer batch, which should start next.
+    set_ingest_queue_guard("set", 4, "alias swapped; waiting for 5_post_indexer.py")
 
     print()
     print("=" * 70)
