@@ -39,7 +39,9 @@ usage() {
     echo "  --skip-harvest          Skip harvest step (use existing harvest data)"
     echo "  --harvest-only          Only run harvest step"
     echo "  --mapping-only          Only run mapping step (implies --skip-harvest)"
-    echo "  --skip-s3-sync          Skip S3 sync step (pipeline stops at JSONL)"
+    echo "  --skip-s3-sync          Skip all S3 syncs (each step's output and the JSONL)"
+    echo "  --prune                 Before starting, delete this hub's old runs from the box"
+    echo "                          (scripts/prune-hub-data.sh: keeps the newest 2 per step)"
     echo "  --skip-email            Skip the partner summary email"
     echo "  --outputs-file <path>   Write this run's JSON-L and mapping dirs to <path>"
     echo "                          (one per line) once JSON-L is done, for wrapper scripts"
@@ -79,6 +81,7 @@ HARVEST_ONLY=false
 MAPPING_ONLY=false
 SKIP_S3_SYNC=false
 SKIP_EMAIL=false
+PRUNE=false
 OUTPUTS_FILE=""
 RESUME_FROM=""
 
@@ -108,6 +111,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --skip-email)
             SKIP_EMAIL=true
+            shift
+            ;;
+        --prune)
+            PRUNE=true
             shift
             ;;
         --outputs-file)
@@ -194,6 +201,32 @@ echo ""
 START_TIME=$(date +%s)
 
 cd "$I3_HOME"
+
+# Upload one finished step's output to S3, so prune-hub-data.sh can delete it
+# from the box later. Non-fatal: the JSONL sync in step 5 is what publishes,
+# and a step that didn't sync is synced by the next prune instead.
+sync_step_to_s3() {
+    local stage="$1" dir="$2"
+    [ "$SKIP_S3_SYNC" = true ] && return 0
+    log_info "Syncing $stage $(basename "$dir") to S3"
+    if sync_run_to_s3 "$PROVIDER" "$stage" "$dir"; then
+        log_info "Synced $stage to $(s3_stage_uri "$PROVIDER" "$stage")/$(basename "$dir")/"
+    else
+        log_warn "Couldn't sync $stage $(basename "$dir") to S3 (continuing)"
+        slack_notify_resilient ":warning: *$PROVIDER*: couldn't sync $stage \`$(basename "$dir")\` to S3 — continuing. It stays on the box until a prune syncs it."
+    fi
+}
+
+# Optional prune of this hub's old runs (3_launch_ingest.py adds --prune after
+# showing the dry run and asking). Non-fatal: the disk checks below still stop
+# the run if there isn't room.
+if [ "$PRUNE" = true ]; then
+    print_step "Pruning old $PROVIDER runs from the box..."
+    if ! "$SCRIPT_DIR/prune-hub-data.sh" "$PROVIDER"; then
+        log_warn "Prune didn't finish cleanly — some old runs were kept (see above). Continuing."
+        slack_notify_resilient ":warning: *$PROVIDER*: prune of old runs didn't finish cleanly — some were kept. See the ingest log. Continuing."
+    fi
+fi
 
 _triggered_by=""
 [[ -n "${GHA_ACTOR:-}" ]] && _triggered_by=" via GHA (triggered by $GHA_ACTOR)"
@@ -307,6 +340,7 @@ Node keys rotate every ~180 days; see scripts/SCRIPTS.md for details."
         TRAP_HANDLED=true
         exit 1
     fi
+    sync_step_to_s3 harvest "$HARVEST_TS_DIR"
 
     slack_notify_resilient ":white_check_mark: *$PROVIDER harvest complete* (${HARVEST_RECORD_COUNT} records${_delivery_note}) — starting mapping"
 else
@@ -360,6 +394,7 @@ else
         TRAP_HANDLED=true
         exit 1
     fi
+    sync_step_to_s3 mapping "$MAP_TS_DIR"
 
     if [ "$MAPPING_ONLY" = true ]; then
         write_hub_status "$PROVIDER" complete
@@ -416,6 +451,7 @@ else
         TRAP_HANDLED=true
         exit 1
     fi
+    sync_step_to_s3 enrichment "$ENRICH_TS_DIR"
 
     slack_notify_resilient ":white_check_mark: *$PROVIDER enrichment complete* (${ENRICH_RECORD_COUNT} records) — starting JSONL export"
 fi

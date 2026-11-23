@@ -170,6 +170,14 @@ python3 3_launch_ingest.py <hub>
 
 Runs `ingest.sh <hub>` on EC2 in the background via SSM. Without a hub it prompts for one. For `file`-type hubs (Ohio, Georgia, Florida, etc.) it lists available S3 deliveries and asks you to confirm the endpoint before launching.
 
+Before launching, it shows a dry run of `scripts/prune-hub-data.sh` for the hub. This lists which old runs of the hub on the box would be deleted. It then asks `Delete the runs above at the start of the ingest …? [y/N]`. On yes, `ingest.sh` gets `--prune` and does it first:
+- **Keeps** the newest 2 complete runs in each of `harvest/`, `mapping/`, `enrichment/` and `jsonl/`.
+- **Deletes** incomplete runs.
+- **Deletes older runs once they're in S3.** Old harvest, mapping and enrichment runs that aren't in S3 yet are synced first.
+- **Never uploads or deletes JSONL that isn't in S3.**
+
+Only interactive launches offer this; `--non-interactive` (GitHub Actions) never prunes. To skip the check, pass `--no-prune`. Either way, `ingest.sh` now syncs each step's output (harvest, mapping, enrichment) to `s3://dpla-master-dataset/<hub>/` as it finishes, so later prunes can delete it from the box.
+
 To resume a failed run partway through:
 
 ```bash

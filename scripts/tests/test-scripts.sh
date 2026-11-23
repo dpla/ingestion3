@@ -316,6 +316,7 @@ test_syntax() {
         "ingest.sh"
         "jsonl.sh"
         "mapping.sh"
+        "prune-hub-data.sh"
         "remap.sh"
         "s3-sync.sh"
         "communication/notify-harvest-failure.sh"
@@ -1460,6 +1461,9 @@ main() {
     fi
     if [[ -f "$TEST_DIR/test-resolve-file-delivery.py" ]]; then
         run_test "resolve_file_delivery.py tests" "python3 '$TEST_DIR/test-resolve-file-delivery.py'"
+    fi
+    if [[ -f "$TEST_DIR/test-prune-hub-data.sh" ]]; then
+        run_test "prune-hub-data.sh and run-dir S3 helper tests" "'$TEST_DIR/test-prune-hub-data.sh'"
     fi
     if [[ -f "$TEST_DIR/test-nara-gate.sh" ]]; then
         run_test "NARA resume and zero-delete gate tests" "'$TEST_DIR/test-nara-gate.sh'"
