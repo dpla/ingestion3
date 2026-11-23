@@ -517,8 +517,8 @@ SPECIAL_CASE_NOTES = {
 
 # Shown for any hub with harvest.type = "file" that has no entry above, so the
 # list follows i3.conf instead of a hardcoded set of file hubs.
-FILE_HUB_NOTE = ("file delivery: Update File Hub Endpoints workflow points i3.conf "
-                 "at the newest S3 delivery")
+FILE_HUB_NOTE = ("file delivery: harvest picks the newest S3 delivery; fails if "
+                 "an older one was already harvested")
 
 
 def hub_note(hub, harvest_type=None):
@@ -897,10 +897,12 @@ fi
 
 def _check_s3_endpoint(s3_path):
     """For file-type harvests with an s3:// endpoint (e.g. dpla-hub-* buckets):
-    list the bucket/prefix, verify there's at least one object, AND flag if
-    the latest entry is from the current YYYY-MM. Driven entirely by the conf
-    endpoint — no hardcoded mapping."""
-    info(f"Delivery path: {s3_path}")
+    list the bucket, verify there's at least one object, AND flag if there's
+    no entry from the current YYYY-MM. The harvest reads the newest dated
+    delivery in the bucket (resolve_file_delivery in scripts/common.sh), so
+    only the endpoint's bucket matters; a dated path after it is ignored."""
+    s3_path = "s3://" + s3_path[len("s3://"):].split("/")[0] + "/"
+    info(f"Delivery bucket: {s3_path}")
     info("Type:          file-based (S3) — checking for current-month delivery")
     try:
         _profile_args = ["--profile", AWS_PROFILE] if AWS_PROFILE else []
@@ -921,9 +923,9 @@ def _check_s3_endpoint(s3_path):
 
     listing = [ln for ln in result.stdout.splitlines() if ln.strip()]
     if not listing:
-        bad(f"S3 path is empty: {s3_path}")
-        info("Fix: ensure the hub has uploaded a fresh export to this prefix,")
-        info("or update the endpoint in i3.conf to the correct dated subfolder.")
+        bad(f"S3 bucket is empty: {s3_path}")
+        info("There's nothing to harvest, so the ingest would fail. Ask the hub")
+        info("to upload an export, or check the bucket named in i3.conf.")
         return False
 
     info(f"Total entries: {len(listing)}")
@@ -945,22 +947,15 @@ def _check_s3_endpoint(s3_path):
         rf"({re.escape(current_yyyy_mm)}|{re.escape(current_yyyymm)}|{re.escape(current_mm)}\d{{2}}{re.escape(current_yyyy)})"
     )
 
-    # Also check the endpoint path itself — if the dated subfolder name contains
-    # the current month the delivery is current regardless of file names inside.
-    # Strip s3://bucket to avoid matching date-like substrings in the bucket name.
-    s3_key_path = re.sub(r"^s3://[^/]+/", "", s3_path)
-    path_has_current_month = bool(pattern.search(s3_key_path))
     matches = [ln for ln in listing if pattern.search(ln)]
 
-    if path_has_current_month:
-        ok(f"Endpoint path contains current month ({current_yyyy_mm}) — delivery is current.")
-        return True
     if matches:
         ok(f"Found {len(matches)} entries dated in the current month ({current_yyyy_mm}).")
         return True
     warn(f"No entries from current month ({current_yyyy_mm}) — latest delivery may be stale.")
-    info("If the partner hasn't uploaded yet, this is fine. If they have but you don't see it,")
-    info("check the endpoint URL or AWS profile.")
+    info("The harvest still takes the newest delivery if it hasn't been harvested yet,")
+    info("and fails if it has. If the partner has uploaded but you don't see it, check")
+    info("the bucket in i3.conf or your AWS profile.")
     return False
 
 

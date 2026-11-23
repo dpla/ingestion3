@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
 """
-Auto-update i3.conf harvest.endpoint for file-type hubs.
+Show which S3 delivery each file hub's next harvest would read.
 
-For each hub where harvest.type = "file" and the current endpoint is an S3
-path, lists the bucket root to find the most recent dated delivery and updates
-the endpoint in i3.conf if it has changed.
+File hubs (harvest.type = "file" with an s3:// endpoint) don't need their
+i3.conf endpoint kept current: at harvest time, ingest.sh and harvest.sh pick
+the newest dated delivery in the bucket the endpoint names
+(helper_scripts/resolve_file_delivery.py). This report lists, per hub, that
+newest delivery. It changes nothing.
 
-Endpoint types handled:
-  - Dated directories: s3://bucket/20260619/     → finds latest PRE entry
-  - Dated files:       s3://bucket/hub-2026-05-24.jsonl  → finds latest file
+Deliveries can be dated folders (s3://bucket/20260619/) or dated files
+(s3://bucket/hub-2026-05-24.jsonl); folders and files are compared by the date
+in their name.
 
-Designed to run on the GHA runner (not EC2) — reads i3.conf from a local
-checkout of ingestion3-conf and writes changes back to that file.
+The bucket-listing and date helpers here are shared with
+resolve_file_delivery.py.
 
 Usage
 -----
-  python3 helper_scripts/update_file_endpoints.py                          # dry run
-  python3 helper_scripts/update_file_endpoints.py --apply                  # write changes
-  python3 helper_scripts/update_file_endpoints.py --conf /path/to/i3.conf  # custom path
+  python3 helper_scripts/file_deliveries.py                          # all file hubs
+  python3 helper_scripts/file_deliveries.py --month 11               # hubs scheduled in November
+  python3 helper_scripts/file_deliveries.py --conf /path/to/i3.conf  # custom path
 """
 
 import argparse
@@ -152,9 +154,8 @@ def list_s3_root(bucket):
 # ── i3.conf parsing ───────────────────────────────────────────────────────────
 
 def parse_file_hubs(conf_text):
-    """Return {hub: {endpoint, bucket, is_dir, months}} for all file hubs with S3 endpoints.
+    """Return {hub: {endpoint, bucket, months}} for all file hubs with S3 endpoints.
 
-    is_dir is True if the current endpoint ends with '/' (directory-type).
     months is the list of scheduled months from schedule.months (empty if not set).
     """
     # Strip comments
@@ -179,7 +180,6 @@ def parse_file_hubs(conf_text):
             if bucket_match:
                 hubs[hub]["endpoint"] = endpoint
                 hubs[hub]["bucket"] = bucket_match.group(1)
-                hubs[hub]["is_dir"] = endpoint.endswith("/")
 
     for m in re.finditer(
         r"""^\s*([a-z0-9_-]+)\.schedule\.months\s*[=:]\s*\[([0-9,\s]+)\]""",
@@ -212,19 +212,31 @@ def update_endpoint_in_conf(conf_text, hub, new_endpoint):
     return new_text
 
 
+def newest_delivery(bucket):
+    """Return (entry, YYYYMMDD) for the newest dated delivery in the bucket,
+    folder or file, or (None, None) if there is none.
+
+    Folders and files are compared by the date in their name. Raises
+    RuntimeError if the bucket can't be listed.
+    """
+    dirs, files = list_s3_root(bucket)
+    candidates = dirs + files
+    if not candidates:
+        return None, None
+    best = max(candidates, key=lambda e: _sortable_date(e.rstrip("/")))
+    return best, _sortable_date(best.rstrip("/"))
+
+
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Auto-update i3.conf endpoints for file-type hubs to latest S3 delivery."
+        description="Show the newest S3 delivery each file hub's next harvest would read."
     )
-    parser.add_argument("--apply", action="store_true",
-                        help="Write changes to i3.conf (default: dry run, print only)")
     parser.add_argument("--conf", default=DEFAULT_CONF,
                         help=f"Path to i3.conf (default: {DEFAULT_CONF})")
     parser.add_argument("--month", type=int, metavar="N",
-                        help="Only update hubs scheduled for month N (1-12). "
-                             "Omit to update all file hubs regardless of schedule.")
+                        help="Only hubs scheduled for month N (1-12). Omit for all file hubs.")
     args = parser.parse_args()
 
     if args.month is not None and not (1 <= args.month <= 12):
@@ -235,108 +247,36 @@ def main():
         sys.exit(f"[bad] i3.conf not found at {conf_path}")
 
     month_label = f" (month {args.month} only)" if args.month else ""
-    header(f"File endpoint updater — {'APPLYING' if args.apply else 'DRY RUN'}{month_label}")
+    header(f"Newest file hub deliveries{month_label}")
     info(f"Conf: {conf_path}")
 
-    conf_text = conf_path.read_text()
-    file_hubs = parse_file_hubs(conf_text)
-
-    if not file_hubs:
-        info("No file-type hubs with S3 endpoints found.")
-        sys.exit(0)
-
-    # Filter by month if requested
+    file_hubs = parse_file_hubs(conf_path.read_text())
     if args.month:
-        before = set(file_hubs)
-        file_hubs = {
-            h: v for h, v in file_hubs.items()
-            if args.month in v.get("months", [])
-        }
-        skipped = before - set(file_hubs)
-        if skipped:
-            info(f"Skipping {len(skipped)} hub(s) not scheduled for month {args.month}: "
-                 f"{', '.join(sorted(skipped))}")
-
+        file_hubs = {h: v for h, v in file_hubs.items() if args.month in v.get("months", [])}
     if not file_hubs:
-        info(f"No file hubs scheduled for month {args.month}.")
+        info("No file hubs with S3 endpoints" + (f" scheduled for month {args.month}." if args.month else "."))
         sys.exit(0)
 
-    info(f"{len(file_hubs)} file hub(s) to check: {', '.join(sorted(file_hubs))}\n")
-
-    changes = []
     errors = []
-
+    print()
     for hub in sorted(file_hubs):
-        data = file_hubs[hub]
-        current = data["endpoint"]
-        bucket = data["bucket"]
-        is_dir = data["is_dir"]
-
-        info(f"{hub}")
-        info(f"  bucket:  s3://{bucket}/")
-        info(f"  current: {current}")
-        info(f"  type:    {'directory' if is_dir else 'file'}")
-
+        bucket = file_hubs[hub]["bucket"]
         try:
-            dirs, files = list_s3_root(bucket)
+            entry, date = newest_delivery(bucket)
         except RuntimeError as e:
-            bad(f"  {e}")
+            bad(f"{hub:<12} {e}")
             errors.append(hub)
-            print()
             continue
-
-        candidates = dirs if is_dir else files
-
-        if not candidates:
-            entry_type = "dated directories" if is_dir else "dated files"
-            warn(f"  No {entry_type} found in s3://{bucket}/ — skipping")
-            print()
-            continue
-
-        latest_entry = candidates[0]                # already sorted newest-first
-        latest = f"s3://{bucket}/{latest_entry}"    # preserves trailing / for dirs
-
-        # Extract the path component of current endpoint for date comparison
-        current_path = current.rstrip("/").split("/", 3)[-1]  # e.g. "20260619" or "hub-2026-05-24.jsonl"
-        current_date = _sortable_date(current_path)
-        latest_date  = _sortable_date(latest_entry.rstrip("/"))
-
-        if latest == current:
-            ok(f"  already up to date")
-        elif latest_date <= current_date:
-            warn(f"  latest S3 delivery ({latest_entry.rstrip('/')}) is not newer than current ({current_path}) — skipping")
+        if entry:
+            ok(f"{hub:<12} s3://{bucket}/{entry}  ({date})")
         else:
-            info(f"  latest:  {latest}")
-            changes.append((hub, current, latest))
-            if args.apply:
-                conf_text = update_endpoint_in_conf(conf_text, hub, latest)
-                ok(f"  updated")
-            else:
-                info(f"  → would update to: {latest}")
-        print()
+            warn(f"{hub:<12} no dated delivery in s3://{bucket}/ (the harvest would fail)")
 
-    # Write file if applying
-    if args.apply and changes:
-        conf_path.write_text(conf_text)
-        print(f"  Wrote {len(changes)} change(s) to {conf_path}")
-
-    # Summary
-    header("Summary")
-    if changes:
-        for hub, old, new in changes:
-            status = "updated" if args.apply else "would update"
-            print(f"  {hub}: {status}")
-            print(f"    {old}")
-            print(f"    → {new}")
-    else:
-        info("No endpoint changes needed.")
-
+    print()
+    info("Whether an older delivery was already harvested is checked at harvest time.")
     if errors:
         bad(f"Errors on: {', '.join(errors)}")
         sys.exit(1)
-
-    if not args.apply and changes:
-        info("\nRe-run with --apply to write changes.")
 
 
 if __name__ == "__main__":

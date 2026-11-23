@@ -175,6 +175,30 @@ fi
 
 **Normalization is required:** `ps -o sid=` space-pads the output to a fixed-width column, e.g. `  1234`. Comparing that directly with the bare integer `$$` (`1234`) always evaluates as unequal, causing an infinite re-exec loop. `| awk '{print $1}'` extracts the numeric field and removes surrounding whitespace.
 
+#### File hubs: which delivery is harvested
+
+For a hub with `harvest.type = "file"` and an `s3://` endpoint, `ingest.sh` and `harvest.sh` don't harvest the i3.conf endpoint as written. They harvest the **newest dated delivery** in the bucket it names, so i3.conf only needs the bucket (e.g. `florida.harvest.endpoint = "s3://dpla-hub-fl/"`). An endpoint that still names a dated folder or file works too: only its bucket is used. Hubs with a local-path endpoint (ct, community-webs, virginias, ...) are unaffected.
+
+Deliveries can be dated folders (`2026-11-02/`, `20261102/`, `11022026/`) or dated files (`SSDN-2026-11-03.jsonl`). Folders and files are compared by the date in their name. Entries with no date in their name are ignored.
+
+| Newest delivery | What happens |
+|---|---|
+| From the current month | Harvested. Rerunning in the same month is fine. |
+| From an earlier month, not harvested yet | Harvested, with a Slack warning that it's from an earlier month. |
+| From an earlier month, already harvested | The harvest **fails** before starting: there's no new delivery. |
+| None (empty bucket, no dated entries), the bucket can't be listed, or no endpoint in i3.conf | The harvest **fails** before starting: there's nothing to harvest. |
+| From an earlier month, and past harvests in `dpla-master-dataset` can't be listed (e.g. access denied) | The harvest **fails** before starting, rather than risk re-harvesting it. |
+
+"Already harvested" is read from the newest harvest in `s3://dpla-master-dataset/<hub>/harvest/`: its `_MANIFEST` records the delivery it read as `Endpoint:`. Harvests from before that was recorded have no `Endpoint:` line; for those, a harvest made on or after the delivery's date counts as having read it.
+
+To harvest a specific delivery anyway (e.g. to re-run one that was already harvested), set `FILE_DELIVERY`:
+
+```bash
+FILE_DELIVERY=s3://dpla-hub-ohio/2026-09-16/ ./scripts/ingest.sh ohio
+```
+
+This skips the search and the already-harvested check. The harvest reads a temporary copy of i3.conf pointing at the chosen delivery; i3.conf itself is never changed. The logic is in `ingest_pipeline_python/helper_scripts/resolve_file_delivery.py`, called through `resolve_file_delivery` in `common.sh`. To see what each file hub's next harvest would pick without running anything, use `python3 ingest_pipeline_python/helper_scripts/file_deliveries.py [--month N]`.
+
 #### IP-restricted hubs (TAILSCALE_EXIT_NODE)
 
 Some partners whitelist specific source IPs on their OAI endpoints. For those hubs, `ingest.sh` automatically routes harvest traffic through a Tailscale exit node that holds the whitelisted IP. The exit node is set before the harvest step and cleared (and tailscaled stopped) immediately after, so downstream steps (mapping, enrichment, S3 sync) use normal routing. On failure, the same cleanup runs best-effort via an EXIT trap — it attempts to clear the exit node and stop `tailscaled` even when the harvest fails.

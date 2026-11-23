@@ -760,6 +760,52 @@ get_harvest_type() {
     grep "^${hub}\.harvest\.type" "$I3_CONF" 2>/dev/null | sed 's/.*= *"//' | sed 's/".*//' || echo "oai"
 }
 
+# Pick the delivery a file hub's harvest reads (newest dated delivery in the
+# bucket its i3.conf endpoint names). See
+# ingest_pipeline_python/helper_scripts/resolve_file_delivery.py for the rules.
+#
+# Usage: resolve_file_delivery <hub>
+# Sets:
+#   HARVEST_CONF            conf to pass to HarvestEntry (a temp copy pointing
+#                           at the delivery, or $I3_CONF when not applicable)
+#   FILE_DELIVERY_RESULT    ok | skip | harvested | none ('' for non-file hubs)
+#   FILE_DELIVERY_URI       delivery picked
+#   FILE_DELIVERY_CURRENT   yes | no: delivery is from the current month
+#   FILE_DELIVERY_LAST      harvest that already read it (when harvested)
+#   FILE_DELIVERY_REASON    why there's nothing to harvest (when none)
+# Returns 0 to harvest, 3 if the delivery was already harvested, 2 if there's
+# nothing to harvest, 1 on other errors.
+resolve_file_delivery() {
+    local hub="$1" py out tmp rc=0
+    HARVEST_CONF="$I3_CONF"
+    FILE_DELIVERY_RESULT="" FILE_DELIVERY_URI="" FILE_DELIVERY_CURRENT=""
+    FILE_DELIVERY_LAST="" FILE_DELIVERY_REASON=""
+
+    [[ "$(get_harvest_type "$hub")" == "file" ]] || return 0
+
+    py="$I3_HOME/venv/bin/python"
+    [[ -x "$py" ]] || py="python3"
+    tmp=$(mktemp "${TMPDIR:-/tmp}/i3-${hub}-conf.XXXXXX") || return 1
+
+    out=$("$py" "$I3_HOME/ingest_pipeline_python/helper_scripts/resolve_file_delivery.py" \
+        --hub "$hub" --conf "$I3_CONF" --out-conf "$tmp" \
+        --master-prefix "$(resolve_s3_prefix "$hub")") || rc=$?
+
+    FILE_DELIVERY_RESULT=$(printf '%s\n' "$out" | sed -n 's/^RESULT=//p')
+    FILE_DELIVERY_URI=$(printf '%s\n' "$out" | sed -n 's/^DELIVERY=//p')
+    FILE_DELIVERY_CURRENT=$(printf '%s\n' "$out" | sed -n 's/^CURRENT_MONTH=//p')
+    FILE_DELIVERY_LAST=$(printf '%s\n' "$out" | sed -n 's/^LAST_HARVEST=//p')
+    FILE_DELIVERY_REASON=$(printf '%s\n' "$out" | sed -n 's/^REASON=//p')
+
+    if [[ $rc -eq 0 && "$FILE_DELIVERY_RESULT" == "ok" ]]; then
+        HARVEST_CONF="$tmp"
+    else
+        rm -f "$tmp"
+    fi
+    [[ $rc -eq 0 && -z "$FILE_DELIVERY_RESULT" ]] && rc=1
+    return $rc
+}
+
 # =============================================================================
 # Initialization
 # =============================================================================

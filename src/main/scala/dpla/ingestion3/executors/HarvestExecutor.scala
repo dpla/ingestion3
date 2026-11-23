@@ -133,11 +133,19 @@ trait HarvestExecutor {
           )
         )
 
+        // File harvests record which delivery they read, so the next ingest
+        // can tell whether the newest delivery in the hub's bucket has already
+        // been harvested (scripts/common.sh resolve_file_delivery).
+        val sourceOpts: Map[String, String] =
+          if (harvestType == "file")
+            conf.harvest.endpoint.map(e => "Endpoint" -> e).toMap
+          else Map.empty
+
         val manifestOpts: Map[String, String] = Map(
           "Activity" -> "Harvest",
           "Provider" -> shortName,
           "Record count" -> recordCount.toString
-        )
+        ) ++ sourceOpts
 
         outputHelper.writeManifest(manifestOpts) match {
           case Success(s) => logger.info(s"Manifest written to $s.")

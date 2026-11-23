@@ -229,6 +229,62 @@ EOF
 }
 
 # =============================================================================
+# Test: resolve_file_delivery (common.sh) reads the resolver's output
+# =============================================================================
+# A stub venv/bin/python stands in for resolve_file_delivery.py and prints
+# whatever STUB_OUT / STUB_RC say, so this checks only the shell wrapper:
+# exit codes, the variables it sets, and HARVEST_CONF / temp-file handling.
+
+test_resolve_file_delivery_shell() {
+    echo ""
+    echo "=========================================="
+    echo "  Testing resolve_file_delivery (common.sh)"
+    echo "=========================================="
+
+    local common_sh="$SCRIPTS_DIR/common.sh"
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/venv/bin"
+    cat > "$tmpdir/venv/bin/python" <<'EOF'
+#!/usr/bin/env bash
+# Write the out-conf like the real resolver does on RESULT=ok.
+while [ $# -gt 0 ]; do [ "$1" = "--out-conf" ] && out="$2"; shift; done
+printf '%b' "$STUB_OUT"
+case "$STUB_OUT" in *RESULT=ok*) echo resolved > "$out" ;; esac
+exit "${STUB_RC:-0}"
+EOF
+    chmod +x "$tmpdir/venv/bin/python"
+    cat > "$tmpdir/i3.conf" <<'EOF'
+ohio.harvest.type = "file"
+ohio.harvest.endpoint = "s3://dpla-hub-ohio/"
+gpo.harvest.type = "localoai"
+EOF
+    local base="env -i HOME=\"\$HOME\" PATH=\"\$PATH\" I3_HOME='$tmpdir' I3_CONF='$tmpdir/i3.conf' TMPDIR='$tmpdir'"
+
+    run_test "resolve_file_delivery: ok sets HARVEST_CONF to the resolved copy" \
+        "$base STUB_OUT='RESULT=ok\nDELIVERY=s3://dpla-hub-ohio/2026-11-02/\nCURRENT_MONTH=no\n' \
+         bash -c 'source \"$common_sh\" && resolve_file_delivery ohio && [ \"\$HARVEST_CONF\" != \"\$I3_CONF\" ] && [ \"\$(cat \"\$HARVEST_CONF\")\" = resolved ] && [ \"\$FILE_DELIVERY_URI\" = s3://dpla-hub-ohio/2026-11-02/ ] && [ \"\$FILE_DELIVERY_CURRENT\" = no ] && rm -f \"\$HARVEST_CONF\"'"
+
+    run_test "resolve_file_delivery: already harvested returns 3, no temp conf left" \
+        "$base STUB_OUT='RESULT=harvested\nDELIVERY=s3://dpla-hub-ohio/2026-09-16/\nLAST_HARVEST=20260920_101010-ohio-OriginalRecord.avro\n' STUB_RC=3 \
+         bash -c 'source \"$common_sh\"; rc=0; resolve_file_delivery ohio || rc=\$?; [ \$rc -eq 3 ] && [ \"\$HARVEST_CONF\" = \"\$I3_CONF\" ] && [ -n \"\$FILE_DELIVERY_LAST\" ] && ! ls \"$tmpdir\"/i3-ohio-conf.* >/dev/null 2>&1'"
+
+    run_test "resolve_file_delivery: nothing to harvest returns 2 with the reason" \
+        "$base STUB_OUT='RESULT=none\nREASON=no dated delivery in s3://dpla-hub-ohio/\n' STUB_RC=2 \
+         bash -c 'source \"$common_sh\"; rc=0; resolve_file_delivery ohio || rc=\$?; [ \$rc -eq 2 ] && [ \"\$FILE_DELIVERY_REASON\" = \"no dated delivery in s3://dpla-hub-ohio/\" ]'"
+
+    run_test "resolve_file_delivery: non-file hub is left alone" \
+        "$base STUB_OUT='should not run' STUB_RC=9 \
+         bash -c 'source \"$common_sh\" && resolve_file_delivery gpo && [ \"\$HARVEST_CONF\" = \"\$I3_CONF\" ] && [ -z \"\$FILE_DELIVERY_RESULT\" ]'"
+
+    run_test "resolve_file_delivery: no RESULT line is an error" \
+        "$base STUB_OUT='' STUB_RC=0 \
+         bash -c 'source \"$common_sh\"; rc=0; resolve_file_delivery ohio || rc=\$?; [ \$rc -eq 1 ]'"
+
+    rm -rf "$tmpdir"
+}
+
+# =============================================================================
 # Test: All scripts have valid bash syntax
 # =============================================================================
 
@@ -1358,6 +1414,7 @@ main() {
     # Run tests
     test_common_sh
     test_env_precedence
+    test_resolve_file_delivery_shell
     test_syntax
     test_python_syntax
     test_referenced_script_paths
@@ -1387,6 +1444,9 @@ main() {
     fi
     if [[ -f "$TEST_DIR/test-delete-from-jsonl.py" ]]; then
         run_test "delete-from-jsonl.py tests (#851)" "python3 '$TEST_DIR/test-delete-from-jsonl.py'"
+    fi
+    if [[ -f "$TEST_DIR/test-resolve-file-delivery.py" ]]; then
+        run_test "resolve_file_delivery.py tests" "python3 '$TEST_DIR/test-resolve-file-delivery.py'"
     fi
     if [[ -f "$TEST_DIR/test-nara-gate.sh" ]]; then
         run_test "NARA resume and zero-delete gate tests" "'$TEST_DIR/test-nara-gate.sh'"
