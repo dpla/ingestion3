@@ -19,7 +19,7 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 | Script | Purpose | Usage |
 |--------|---------|-------|
 | `ingest.sh` | Full pipeline (harvest → map → enrich → jsonl → S3 sync); syncs each step's output to S3 as it finishes; self-re-execs under `setsid` to escape SSM's 60-min process-group kill | `./scripts/ingest.sh <hub> [--prune]` |
-| `prune-hub-data.sh` | Delete a hub's old runs from the box: keeps the newest 2 complete per step, deletes older ones once they're in S3 | `./scripts/prune-hub-data.sh <hub> [--dry-run] [--keep N]` |
+| `prune-hub-data.sh` | Delete a hub's old runs from the box: keeps the newest 2 complete per step, deletes older ones once they're in S3 | `./scripts/prune-hub-data.sh <hub> [--dry-run] [--no-upload] [--keep N]` |
 | `ingest-watchdog.sh` | Cron watchdog: detects ingests killed by SIGKILL and alerts Slack | `*/5 * * * * /home/ec2-user/ingestion3/scripts/ingest-watchdog.sh` (via crontab) |
 | `harvest.sh` | Harvest records from OAI/API/file source | `./scripts/harvest.sh <hub>` |
 | `remap.sh` | Re-run mapping → enrichment → jsonl | `./scripts/remap.sh <hub>` |
@@ -91,7 +91,7 @@ All scripts source `common.sh` which provides:
 - **IngestRemap runner**: `run_ingest_remap <input> <output> <conf> <name>` — convenience wrapper for IngestRemap
 - **Status writer**: `write_hub_status <hub> <status> [--error=msg]` — writes per-hub `.status` file for ingest-status.sh (used by ingest.sh, harvest.sh, remap.sh)
 - **Data finder**: `find_latest_data <provider> <step>` — finds the most recent timestamped directory for a pipeline step
-- **Run-dir S3 helpers**: `sync_run_to_s3 <hub> <step> <run dir>` uploads one complete run with its `_SUCCESS` last, so a run counts as in S3 only once the upload finished. `list_s3_complete_runs <hub> <step>` lists the runs with a `_SUCCESS` in S3, and returns 1 if S3 can't be listed. `s3_stage_uri <hub> <step>` gives `s3://dpla-master-dataset/<prefix>/<step>`
+- **Run-dir S3 helpers**: `sync_run_to_s3 <hub> <step> <run dir>` uploads one complete run with its `_SUCCESS` last, so a run counts as in S3 only once the upload finished. `list_s3_stage_keys <hub> <step>` lists every object under the step as `<run>/<path>`. `list_s3_complete_runs <hub> <step>` lists the runs with a `_SUCCESS` in S3. Both return 1 if S3 can't be listed. `run_files_missing_in_s3 <run dir> <keys>` prints the run's local files that aren't in S3. `s3_stage_uri <hub> <step>` gives `s3://dpla-master-dataset/<prefix>/<step>`
 
 ### Example: Using common.sh in a new script
 
@@ -129,13 +129,14 @@ For each of `$DPLA_DATA/<hub>/{harvest,mapping,enrichment,jsonl}`:
 |-----|--------------|
 | One of the newest N with `_SUCCESS` (N = `--keep`, default 2) | Kept |
 | No `_SUCCESS` (incomplete) | Deleted |
-| Older, `_SUCCESS` in `s3://dpla-master-dataset/<prefix>/<step>/<run>/` | Deleted |
-| Older harvest/mapping/enrichment run, not in S3 | Synced to S3 (`_SUCCESS` last), then deleted. If the sync fails, kept |
+| Older, `_SUCCESS` and every local file of the run in `s3://dpla-master-dataset/<prefix>/<step>/<run>/` | Deleted |
+| Older, `_SUCCESS` in S3 but some files missing there (an interrupted sync) | Kept |
+| Older harvest/mapping/enrichment run, not in S3 | Synced to S3 (`_SUCCESS` last), then deleted. If the sync fails, kept. With `--no-upload` (what `ingest.sh --prune --skip-s3-sync` passes), kept |
 | Older JSONL snapshot, not in S3 | Kept, and never uploaded by the prune. The indexer reads each hub's newest JSONL in S3, and a snapshot that isn't there was held back on purpose (safety check, `--skip-s3-sync`) |
 | Step where S3 can't be listed | Complete runs kept |
 | Step with no complete run | Everything kept |
 
-It does nothing while a pipeline step for the hub is running (a Spark entry with `--name=<hub>`, or `ingest.sh`/`harvest.sh`/`remap.sh`/… for the hub). It exits 1 if a sync or S3 listing failed, so some runs were kept.
+It does nothing while a pipeline step for the hub is running (a Spark entry with `--name=<hub>`, or `ingest.sh`/`harvest.sh`/`remap.sh`/… for the hub). It exits 1 if a sync or S3 listing failed or a run was only partly in S3, so some runs were kept.
 
 **How it's run:**
 - **Launcher:** `3_launch_ingest.py` shows the `--dry-run` output and asks. On yes, it launches `ingest.sh <hub> --prune`, which runs the prune before the harvest. A failed prune is a Slack warning, not a failure, and the disk checks still apply.

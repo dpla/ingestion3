@@ -222,7 +222,11 @@ sync_step_to_s3() {
 # the run if there isn't room.
 if [ "$PRUNE" = true ]; then
     print_step "Pruning old $PROVIDER runs from the box..."
-    if ! "$SCRIPT_DIR/prune-hub-data.sh" "$PROVIDER"; then
+    # --skip-s3-sync means nothing goes to S3, so the prune mustn't upload
+    # either: runs that aren't in S3 are kept.
+    _prune_args=()
+    [ "$SKIP_S3_SYNC" = true ] && _prune_args+=(--no-upload)
+    if ! "$SCRIPT_DIR/prune-hub-data.sh" "$PROVIDER" "${_prune_args[@]}"; then
         log_warn "Prune didn't finish cleanly — some old runs were kept (see above). Continuing."
         slack_notify_resilient ":warning: *$PROVIDER*: prune of old runs didn't finish cleanly — some were kept. See the ingest log. Continuing."
     fi

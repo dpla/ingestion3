@@ -6,10 +6,12 @@
 # For each of $DPLA_DATA/<hub>/{harvest,mapping,enrichment,jsonl}:
 #   - keeps the newest N complete runs (dirs with _SUCCESS; default 2)
 #   - deletes incomplete runs (no _SUCCESS) outright
-#   - deletes older complete runs once they're in S3 (_SUCCESS in
-#     s3://dpla-master-dataset/<prefix>/<stage>/<run>/)
+#   - deletes older complete runs once they're in S3: _SUCCESS in
+#     s3://dpla-master-dataset/<prefix>/<stage>/<run>/ and every local file of
+#     the run there too (a _SUCCESS alone can be left by an interrupted sync)
 #   - harvest/mapping/enrichment runs that aren't in S3 are synced first, then
-#     deleted; if the sync fails the run is kept
+#     deleted; if the sync fails the run is kept. --no-upload keeps them instead
+#     (ingest.sh passes it with --skip-s3-sync)
 #   - jsonl runs that aren't in S3 are kept and never uploaded here: the
 #     indexer reads the newest JSONL snapshot in S3, and a snapshot that isn't
 #     there was held back on purpose (safety check, --skip-s3-sync)
@@ -29,14 +31,15 @@ STAGES="harvest mapping enrichment jsonl"
 RUN_RE='^[0-9]{8}_[0-9]{6}-'
 
 usage() {
-    echo "Usage: $0 <hub> [--dry-run] [--keep N]"
+    echo "Usage: $0 <hub> [--dry-run] [--no-upload] [--keep N]"
     echo ""
     echo "Deletes a hub's old runs from \$DPLA_DATA/<hub>/{harvest,mapping,enrichment,jsonl}."
     echo "Keeps the newest N complete runs per step (default 2). Older runs are deleted once"
     echo "they're in S3; harvest/mapping/enrichment runs not in S3 are synced first."
     echo ""
-    echo "  --dry-run   Show what would be deleted; change nothing"
-    echo "  --keep N    Complete runs to keep per step (default 2, minimum 1)"
+    echo "  --dry-run    Show what would be deleted; change nothing"
+    echo "  --no-upload  Never upload: keep runs that aren't in S3 (ingest.sh --skip-s3-sync)"
+    echo "  --keep N     Complete runs to keep per step (default 2, minimum 1)"
     exit 1
 }
 
@@ -44,10 +47,12 @@ usage() {
 HUB="$1"
 shift
 DRY_RUN=false
+NO_UPLOAD=false
 KEEP=2
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --dry-run) DRY_RUN=true; shift ;;
+        --no-upload) NO_UPLOAD=true; shift ;;
         --keep)
             KEEP="${2:-}"
             [[ "$KEEP" =~ ^[1-9][0-9]*$ ]] || die "--keep needs a whole number of 1 or more"
@@ -98,10 +103,11 @@ for stage in $STAGES; do
     fi
     for r in $keep; do echo "KEEP (newest $KEEP): $stage_dir/$r"; done
 
-    in_s3=""
+    s3_keys=""
     s3_ok=true
-    if ! in_s3=$(list_s3_complete_runs "$HUB" "$stage"); then
+    if ! s3_keys=$(list_s3_stage_keys "$HUB" "$stage"); then
         s3_ok=false
+        failed=1
     fi
 
     for r in $runs; do
@@ -113,11 +119,19 @@ for stage in $STAGES; do
             delete_dir "$d" "incomplete run"
         elif [[ "$s3_ok" != true ]]; then
             echo "KEEP (couldn't list S3): $d"
-            failed=1
-        elif printf '%s\n' "$in_s3" | grep -qxF "$r"; then
-            delete_dir "$d" "in S3"
+        elif printf '%s\n' "$s3_keys" | grep -qxF "$r/_SUCCESS"; then
+            # _SUCCESS in S3 isn't proof on its own: check every file made it
+            missing=$(run_files_missing_in_s3 "$d" "$s3_keys" | wc -l | tr -d ' ')
+            if [[ "$missing" -eq 0 ]]; then
+                delete_dir "$d" "in S3"
+            else
+                echo "KEEP (has _SUCCESS in S3 but $missing file(s) missing there): $d"
+                failed=1
+            fi
         elif [[ "$stage" == "jsonl" ]]; then
             echo "KEEP (not in S3; JSONL is never uploaded by prune): $d"
+        elif [[ "$NO_UPLOAD" == true ]]; then
+            echo "KEEP (not in S3; --no-upload): $d"
         elif [[ "$DRY_RUN" == true ]]; then
             echo "WOULD SYNC + DELETE: $d (not in S3 yet)"
         elif sync_run_to_s3 "$HUB" "$stage" "$d"; then

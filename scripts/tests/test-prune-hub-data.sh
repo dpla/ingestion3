@@ -160,6 +160,37 @@ then pass "missing hub dir is a no-op"
 else fail "missing hub dir"; fi
 
 # ---------------------------------------------------------------------------
+# _SUCCESS in S3 but a part missing (interrupted sync): keep, exit 1
+reset
+touch "$D/harvest/20260101_000000-ohio-OriginalRecord.avro/part-1"
+rc=0; out=$("${ENVV[@]}" bash "$PRUNE" ohio 2>&1) || rc=$?
+if [ "$rc" -eq 1 ] && [ -d "$D/harvest/20260101_000000-ohio-OriginalRecord.avro" ] \
+   && echo "$out" | grep -q "KEEP (has _SUCCESS in S3 but 1 file(s) missing there): .*20260101"
+then pass "_SUCCESS in S3 with a missing part keeps the run and exits 1"
+else fail "partial upload (rc=$rc)"; echo "$out"; fi
+
+# ---------------------------------------------------------------------------
+# --no-upload (ingest.sh --skip-s3-sync): never uploads, keeps runs not in S3
+reset
+rc=0; out=$("${ENVV[@]}" bash "$PRUNE" ohio --no-upload 2>&1) || rc=$?
+if [ "$rc" -eq 0 ] && [ -d "$D/harvest/20260201_000000-ohio-OriginalRecord.avro" ] \
+   && [ ! -e "$S3H/harvest/20260201_000000-ohio-OriginalRecord.avro" ] \
+   && [ ! -e "$D/harvest/20260101_000000-ohio-OriginalRecord.avro" ] \
+   && echo "$out" | grep -q "KEEP (not in S3; --no-upload): .*20260201"
+then pass "--no-upload keeps runs not in S3, still deletes ones that are"
+else fail "--no-upload (rc=$rc)"; echo "$out"; fi
+
+# ---------------------------------------------------------------------------
+# S3 listing error with only incomplete runs to clear: still exits 1
+rm -rf "$TMP/data" "$TMP/s3"
+run 20260301_000000-ohio-OriginalRecord.avro harvest
+run 20260215_000000-ohio-OriginalRecord.avro harvest incomplete
+rc=0; out=$("${ENVV[@]}" AWS_FAIL_LS=1 bash "$PRUNE" ohio 2>&1) || rc=$?
+if [ "$rc" -eq 1 ] && [ ! -e "$D/harvest/20260215_000000-ohio-OriginalRecord.avro" ]
+then pass "S3 listing error exits 1 even with no complete run to judge"
+else fail "listing error exit status (rc=$rc)"; echo "$out"; fi
+
+# ---------------------------------------------------------------------------
 # common.sh helpers on their own
 reset
 if "${ENVV[@]}" bash -c "source '$COMMON' && [ \"\$(list_s3_complete_runs ohio harvest)\" = 20260101_000000-ohio-OriginalRecord.avro ] && [ -z \"\$(list_s3_complete_runs ohio enrichment)\" ]"
