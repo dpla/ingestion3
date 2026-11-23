@@ -273,7 +273,7 @@ def main():
             warn(f"{hub:<12} no dated delivery in s3://{bucket}/ (the harvest would fail)")
 
     print()
-    info("Whether an older delivery was already harvested is checked at harvest time.")
+    info("Whether an older delivery was already published is checked at harvest time.")
     if errors:
         bad(f"Errors on: {', '.join(errors)}")
         sys.exit(1)

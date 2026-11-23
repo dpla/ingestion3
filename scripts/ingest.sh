@@ -214,7 +214,7 @@ if [ "$SKIP_HARVEST" = false ] && [[ -z "$RESUME_FROM" ]]; then
 
     # File hubs: pick the newest delivery in the hub's bucket (i3.conf only
     # names the bucket). Fails if there's nothing to harvest, or if an older
-    # delivery was already harvested.
+    # delivery was already published.
     _fd_rc=0
     resolve_file_delivery "$PROVIDER" || _fd_rc=$?
     case "$_fd_rc" in
@@ -227,9 +227,9 @@ if [ "$SKIP_HARVEST" = false ] && [[ -z "$RESUME_FROM" ]]; then
             exit 1
             ;;
         3)
-            log_error "No new delivery for $PROVIDER: newest is $FILE_DELIVERY_URI, already harvested by $FILE_DELIVERY_LAST"
-            slack_notify ":x: *$PROVIDER ingest FAILED* — no new delivery. Newest in the bucket is \`$FILE_DELIVERY_URI\` (not this month), already harvested by \`$FILE_DELIVERY_LAST\`. To re-harvest it anyway, rerun with FILE_DELIVERY=$FILE_DELIVERY_URI."
-            write_hub_status "$PROVIDER" failed --error="No new delivery (newest already harvested)"
+            log_error "No new delivery for $PROVIDER: newest is $FILE_DELIVERY_URI, already published in JSONL snapshot $FILE_DELIVERY_LAST"
+            slack_notify ":x: *$PROVIDER ingest FAILED* — no new delivery. Newest in the bucket is \`$FILE_DELIVERY_URI\` (not this month), already published in JSONL snapshot \`$FILE_DELIVERY_LAST\`. To re-harvest it anyway, rerun with FILE_DELIVERY=$FILE_DELIVERY_URI."
+            write_hub_status "$PROVIDER" failed --error="No new delivery (newest already published)"
             TRAP_HANDLED=true
             exit 1
             ;;
@@ -246,7 +246,7 @@ if [ "$SKIP_HARVEST" = false ] && [[ -z "$RESUME_FROM" ]]; then
         log_info "Harvesting delivery: $FILE_DELIVERY_URI"
         _delivery_note=" from \`$FILE_DELIVERY_URI\`"
         if [[ "$FILE_DELIVERY_CURRENT" == "no" ]]; then
-            slack_notify ":warning: *$PROVIDER*: newest delivery \`$FILE_DELIVERY_URI\` is from an earlier month but hasn't been harvested yet — harvesting it"
+            slack_notify ":warning: *$PROVIDER*: newest delivery \`$FILE_DELIVERY_URI\` is from an earlier month but hasn't been published yet — harvesting it"
         fi
     fi
 
@@ -437,6 +437,8 @@ stop_heartbeat
 JSONL_TS_DIR=$(find_latest_data "$PROVIDER" jsonl)
 JSONL_TS=$(basename "$JSONL_TS_DIR")
 log_info "JSONL export complete: $JSONL_TS"
+# File hubs: note which delivery this snapshot came from (synced with it).
+write_delivery_marker "$HARVEST_TS_DIR" "$JSONL_TS_DIR"
 # Written before the safety check so a wrapper can pair this run's outputs even when it blocks
 if [[ -n "$OUTPUTS_FILE" ]]; then
     printf '%s\n%s\n' "$JSONL_TS_DIR" "$MAP_TS_DIR" > "$OUTPUTS_FILE"

@@ -277,7 +277,7 @@ If unsure which harvester the hub uses, grep the Scala source: `grep -r "<hub>" 
 grep "<hub>\.harvest" "$I3_CONF"
 python3 ingest_pipeline_python/helper_scripts/file_deliveries.py
 ```
-For an `s3://` endpoint, the endpoint only needs to name the hub's bucket (e.g. `s3://dpla-hub-ohio/`); don't edit it to a dated folder. `ingest.sh` / `harvest.sh` harvest the **newest dated delivery** in that bucket, and fail if the bucket has nothing to harvest or if an older delivery was already harvested. `file_deliveries.py` shows what each file hub's next harvest would pick. To harvest a specific delivery instead, run with `FILE_DELIVERY=s3://<bucket>/<delivery>`. Details: `scripts/SCRIPTS.md`, "File hubs: which delivery is harvested".
+For an `s3://` endpoint, the endpoint only needs to name the hub's bucket (e.g. `s3://dpla-hub-ohio/`); don't edit it to a dated folder. `ingest.sh` / `harvest.sh` harvest the **newest dated delivery** in that bucket, and fail if the bucket has nothing to harvest or if an older delivery was already published (it's in the hub's newest JSONL snapshot, the one the indexer reads). `file_deliveries.py` shows what each file hub's next harvest would pick. To harvest a specific delivery instead, run with `FILE_DELIVERY=s3://<bucket>/<delivery>`. Details: `scripts/SCRIPTS.md`, "File hubs: which delivery is harvested".
 
 **4. Count the files:**
 ```bash

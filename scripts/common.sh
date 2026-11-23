@@ -768,12 +768,12 @@ get_harvest_type() {
 # Sets:
 #   HARVEST_CONF            conf to pass to HarvestEntry (a temp copy pointing
 #                           at the delivery, or $I3_CONF when not applicable)
-#   FILE_DELIVERY_RESULT    ok | skip | harvested | none ('' for non-file hubs)
+#   FILE_DELIVERY_RESULT    ok | skip | published | none ('' for non-file hubs)
 #   FILE_DELIVERY_URI       delivery picked
 #   FILE_DELIVERY_CURRENT   yes | no: delivery is from the current month
-#   FILE_DELIVERY_LAST      harvest that already read it (when harvested)
+#   FILE_DELIVERY_LAST      newest published JSONL snapshot that already has it (when published)
 #   FILE_DELIVERY_REASON    why there's nothing to harvest (when none)
-# Returns 0 to harvest, 3 if the delivery was already harvested, 2 if there's
+# Returns 0 to harvest, 3 if the delivery was already published, 2 if there's
 # nothing to harvest, 1 on other errors.
 resolve_file_delivery() {
     local hub="$1" py out tmp rc=0
@@ -794,7 +794,7 @@ resolve_file_delivery() {
     FILE_DELIVERY_RESULT=$(printf '%s\n' "$out" | sed -n 's/^RESULT=//p')
     FILE_DELIVERY_URI=$(printf '%s\n' "$out" | sed -n 's/^DELIVERY=//p')
     FILE_DELIVERY_CURRENT=$(printf '%s\n' "$out" | sed -n 's/^CURRENT_MONTH=//p')
-    FILE_DELIVERY_LAST=$(printf '%s\n' "$out" | sed -n 's/^LAST_HARVEST=//p')
+    FILE_DELIVERY_LAST=$(printf '%s\n' "$out" | sed -n 's/^LAST_SNAPSHOT=//p')
     FILE_DELIVERY_REASON=$(printf '%s\n' "$out" | sed -n 's/^REASON=//p')
 
     if [[ $rc -eq 0 && "$FILE_DELIVERY_RESULT" == "ok" ]]; then
@@ -804,6 +804,26 @@ resolve_file_delivery() {
     fi
     [[ $rc -eq 0 && -z "$FILE_DELIVERY_RESULT" ]] && rc=1
     return $rc
+}
+
+# Record in a JSONL snapshot which file-hub delivery it was built from, as a
+# _DELIVERY file that syncs to S3 with the snapshot. The indexer reads each
+# hub's newest JSONL snapshot, so resolve_file_delivery checks _DELIVERY there
+# to tell whether the newest delivery has already been published.
+#
+# The delivery comes from the harvest manifest's "Endpoint:" line (written by
+# HarvestExecutor for file harvests), so remaps and --resume-from runs that
+# reuse a harvest record it too. Does nothing when the manifest has no
+# s3:// Endpoint (non-file hubs, local-path endpoints, older harvests).
+#
+# Usage: write_delivery_marker <harvest_ts_dir> <jsonl_ts_dir>
+write_delivery_marker() {
+    local harvest_dir="$1" jsonl_dir="$2" endpoint
+    [[ -f "$harvest_dir/_MANIFEST" && -d "$jsonl_dir" ]] || return 0
+    endpoint=$(sed -n 's/^Endpoint:[[:space:]]*//p' "$harvest_dir/_MANIFEST" | head -1)
+    endpoint="${endpoint%%[[:space:]]*}"
+    [[ "$endpoint" == s3://* ]] || return 0
+    printf '%s\n' "$endpoint" > "$jsonl_dir/_DELIVERY"
 }
 
 # =============================================================================

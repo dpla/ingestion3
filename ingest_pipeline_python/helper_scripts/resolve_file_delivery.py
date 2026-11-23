@@ -12,28 +12,35 @@ bucket is used.
 Rules:
   - The newest delivery is from the current month: harvest it (reruns in the
     same month are fine).
-  - It's from an earlier month: harvest it only if it hasn't been harvested
-    already. The newest harvest in s3://<master>/<prefix>/harvest/ records the
-    delivery it read as "Endpoint:" in its _MANIFEST. Harvests from before that
-    was recorded have no Endpoint line; for those, a harvest made on or after
-    the delivery's date counts as having read it.
+  - It's from an earlier month: harvest it only if it hasn't been published
+    already. "Published" means it's in the hub's newest JSONL snapshot in
+    s3://<master>/<prefix>/jsonl/, the one the indexer reads (sparkindexer's
+    MasterDataset takes the last snapshot in sort order). ingest.sh writes the
+    delivery a snapshot was built from into it as _DELIVERY
+    (write_delivery_marker in scripts/common.sh). Snapshots from before that,
+    or from runs that don't write it (the orchestrator), have no _DELIVERY;
+    for those, a snapshot made on or after the delivery's date counts as
+    having published it.
   - No endpoint, the bucket can't be listed, or it has no dated delivery:
     nothing to harvest, so fail.
 
+Harvests are not checked: ingest.sh only syncs JSONL to S3, so harvests stay
+on the box and may be cleaned up.
+
 FILE_DELIVERY=s3://bucket/path in the environment skips the search and the
-already-harvested check, and harvests that delivery.
+already-published check, and harvests that delivery.
 
 Called by resolve_file_delivery in scripts/common.sh (ingest.sh, harvest.sh).
 
 Output (stdout, KEY=value lines for the shell):
   RESULT=skip        endpoint is not s3:// (local path): use i3.conf as-is
   RESULT=ok          DELIVERY, DELIVERY_DATE, CURRENT_MONTH=yes|no, CONF
-  RESULT=harvested   DELIVERY, DELIVERY_DATE, LAST_HARVEST
+  RESULT=published   DELIVERY, DELIVERY_DATE, LAST_SNAPSHOT
   RESULT=none        REASON
 Human-readable detail goes to stderr.
 
-Exit status: 0 for skip/ok, 3 for harvested, 2 for none, 1 for other errors
-(bad arguments, unreadable i3.conf, or past harvests in S3 can't be checked).
+Exit status: 0 for skip/ok, 3 for published, 2 for none, 1 for other errors
+(bad arguments, unreadable i3.conf, or published snapshots can't be listed).
 """
 
 import argparse
@@ -52,7 +59,7 @@ import file_deliveries as fd  # noqa: E402
 # the box (a named profile there makes every aws call fail).
 fd.AWS_PROFILE = os.environ.get("AWS_PROFILE") or None
 
-EXIT_OK, EXIT_USAGE, EXIT_NONE, EXIT_HARVESTED = 0, 1, 2, 3
+EXIT_OK, EXIT_USAGE, EXIT_NONE, EXIT_PUBLISHED = 0, 1, 2, 3
 
 
 def log(msg):
@@ -84,37 +91,35 @@ def _s3(args):
     )
 
 
-def last_harvest(master_bucket, prefix, max_tries=5):
-    """Return (harvest dir name, manifest text) for the newest harvest in S3
-    that has a _MANIFEST, or (None, None) if there is none.
+def last_published(master_bucket, prefix):
+    """Return (snapshot name, recorded delivery or None) for the hub's newest
+    JSONL snapshot in S3, the one the indexer reads, or (None, None) if the
+    hub has none.
 
     Raises RuntimeError if the listing fails for another reason (e.g. access
-    denied): without it we can't tell whether the delivery was harvested."""
-    r = _s3(["ls", f"s3://{master_bucket}/{prefix}/harvest/"])
+    denied): without it we can't tell whether the delivery was published."""
+    r = _s3(["ls", f"s3://{master_bucket}/{prefix}/jsonl/"])
     if r.returncode != 0:
         if r.stderr.strip():
             raise RuntimeError(
-                f"can't list s3://{master_bucket}/{prefix}/harvest/: {r.stderr.strip()}")
-        # An empty or missing prefix exits non-zero with no error text: no harvest yet.
+                f"can't list s3://{master_bucket}/{prefix}/jsonl/: {r.stderr.strip()}")
+        # An empty or missing prefix exits non-zero with no error text: nothing published yet.
         return None, None
-    names = sorted(
-        (m.group(1) for m in re.finditer(r"PRE\s+(\d{8}_\d{6}-[^/]+)/", r.stdout)),
-        reverse=True,
-    )
-    for name in names[:max_tries]:
-        m = _s3(["cp", f"s3://{master_bucket}/{prefix}/harvest/{name}/_MANIFEST", "-"])
-        if m.returncode == 0:
-            return name, m.stdout
-    return None, None
+    names = sorted(m.group(1) for m in re.finditer(r"PRE\s+(\d{8}_\d{6}-[^/]+)/", r.stdout))
+    if not names:
+        return None, None
+    newest = names[-1]
+    m = _s3(["cp", f"s3://{master_bucket}/{prefix}/jsonl/{newest}/_DELIVERY", "-"])
+    recorded = m.stdout.strip().split()[0] if m.returncode == 0 and m.stdout.strip() else None
+    return newest, recorded
 
 
-def already_harvested(delivery_uri, delivery_date, harvest_name, manifest):
-    """True if the newest harvest read this delivery."""
-    m = re.search(r"(?m)^Endpoint:\s*(\S+)\s*$", manifest or "")
-    if m:
-        return m.group(1).rstrip("/") == delivery_uri.rstrip("/")
-    # No Endpoint recorded (harvest predates it): go by dates.
-    return harvest_name[:8] >= delivery_date
+def already_published(delivery_uri, delivery_date, snapshot_name, recorded):
+    """True if the newest JSONL snapshot was built from this delivery."""
+    if recorded:
+        return recorded.rstrip("/") == delivery_uri.rstrip("/")
+    # No _DELIVERY (older snapshot, or a run that doesn't write it): go by dates.
+    return snapshot_name[:8] >= delivery_date
 
 
 def main(argv=None):
@@ -155,7 +160,7 @@ def main(argv=None):
             return EXIT_USAGE
         delivery = forced
         delivery_date = fd._sortable_date(forced.rstrip("/").split("/")[-1])
-        log(f"FILE_DELIVERY set: harvesting {delivery} (no search, no already-harvested check)")
+        log(f"FILE_DELIVERY set: harvesting {delivery} (no search, no already-published check)")
     else:
         bucket = re.match(r"s3://([^/]+)", endpoint).group(1)
         try:
@@ -175,15 +180,16 @@ def main(argv=None):
 
         if delivery_date[:6] != this_month:
             try:
-                harvest_name, manifest = last_harvest(a.master_bucket, prefix)
+                snapshot, recorded = last_published(a.master_bucket, prefix)
             except RuntimeError as e:
-                log(f"Can't check whether {delivery} was already harvested: {e}")
+                log(f"Can't check whether {delivery} was already published: {e}")
                 return EXIT_USAGE
-            if harvest_name and already_harvested(delivery, delivery_date, harvest_name, manifest):
-                log(f"Already harvested by {harvest_name}; no new delivery since.")
-                emit(RESULT="harvested", DELIVERY=delivery,
-                     DELIVERY_DATE=delivery_date, LAST_HARVEST=harvest_name)
-                return EXIT_HARVESTED
+            if snapshot and already_published(delivery, delivery_date, snapshot, recorded):
+                how = "its _DELIVERY" if recorded else "date (no _DELIVERY recorded)"
+                log(f"Already published in {snapshot} (by {how}); no new delivery since.")
+                emit(RESULT="published", DELIVERY=delivery,
+                     DELIVERY_DATE=delivery_date, LAST_SNAPSHOT=snapshot)
+                return EXIT_PUBLISHED
 
     Path(a.out_conf).write_text(fd.update_endpoint_in_conf(conf_text, hub, delivery))
     emit(RESULT="ok", DELIVERY=delivery, DELIVERY_DATE=delivery_date,

@@ -223,7 +223,7 @@ def file_hub_preflight(hub: str, bucket: str, non_interactive: bool = False) -> 
 The harvest will read the newest delivery:
     {latest}
 No i3.conf edit needed. If that delivery is from an earlier month and was
-already harvested, the harvest fails rather than re-ingesting it.
+already published, the harvest fails rather than re-ingesting it.
 """)
     if non_interactive:
         print("Non-interactive: skipping confirmation prompt.")

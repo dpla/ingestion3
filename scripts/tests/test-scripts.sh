@@ -265,8 +265,8 @@ EOF
         "$base STUB_OUT='RESULT=ok\nDELIVERY=s3://dpla-hub-ohio/2026-11-02/\nCURRENT_MONTH=no\n' \
          bash -c 'source \"$common_sh\" && resolve_file_delivery ohio && [ \"\$HARVEST_CONF\" != \"\$I3_CONF\" ] && [ \"\$(cat \"\$HARVEST_CONF\")\" = resolved ] && [ \"\$FILE_DELIVERY_URI\" = s3://dpla-hub-ohio/2026-11-02/ ] && [ \"\$FILE_DELIVERY_CURRENT\" = no ] && rm -f \"\$HARVEST_CONF\"'"
 
-    run_test "resolve_file_delivery: already harvested returns 3, no temp conf left" \
-        "$base STUB_OUT='RESULT=harvested\nDELIVERY=s3://dpla-hub-ohio/2026-09-16/\nLAST_HARVEST=20260920_101010-ohio-OriginalRecord.avro\n' STUB_RC=3 \
+    run_test "resolve_file_delivery: already published returns 3, no temp conf left" \
+        "$base STUB_OUT='RESULT=published\nDELIVERY=s3://dpla-hub-ohio/2026-09-16/\nLAST_SNAPSHOT=20260920_101010-ohio-MAP3_1.IndexRecord.jsonl\n' STUB_RC=3 \
          bash -c 'source \"$common_sh\"; rc=0; resolve_file_delivery ohio || rc=\$?; [ \$rc -eq 3 ] && [ \"\$HARVEST_CONF\" = \"\$I3_CONF\" ] && [ -n \"\$FILE_DELIVERY_LAST\" ] && ! ls \"$tmpdir\"/i3-ohio-conf.* >/dev/null 2>&1'"
 
     run_test "resolve_file_delivery: nothing to harvest returns 2 with the reason" \
@@ -280,6 +280,19 @@ EOF
     run_test "resolve_file_delivery: no RESULT line is an error" \
         "$base STUB_OUT='' STUB_RC=0 \
          bash -c 'source \"$common_sh\"; rc=0; resolve_file_delivery ohio || rc=\$?; [ \$rc -eq 1 ]'"
+
+    # write_delivery_marker: copies the harvest manifest's Endpoint into the
+    # JSONL snapshot as _DELIVERY (s3:// only).
+    mkdir -p "$tmpdir/h-file" "$tmpdir/h-oai" "$tmpdir/h-local" "$tmpdir/j1" "$tmpdir/j2" "$tmpdir/j3"
+    printf 'Activity: Harvest\nEndpoint: s3://dpla-hub-nypl/nypl-20260820.zip\nRecord count: 5\n' > "$tmpdir/h-file/_MANIFEST"
+    printf 'Activity: Harvest\nRecord count: 5\n' > "$tmpdir/h-oai/_MANIFEST"
+    printf 'Activity: Harvest\nEndpoint: /mnt/data/ct/originalRecords/\n' > "$tmpdir/h-local/_MANIFEST"
+
+    run_test "write_delivery_marker: writes the s3 delivery into the snapshot" \
+        "$base bash -c 'source \"$common_sh\" && write_delivery_marker \"$tmpdir/h-file\" \"$tmpdir/j1\" && [ \"\$(cat \"$tmpdir/j1/_DELIVERY\")\" = s3://dpla-hub-nypl/nypl-20260820.zip ]'"
+
+    run_test "write_delivery_marker: nothing for harvests without an s3 Endpoint" \
+        "$base bash -c 'source \"$common_sh\" && write_delivery_marker \"$tmpdir/h-oai\" \"$tmpdir/j2\" && write_delivery_marker \"$tmpdir/h-local\" \"$tmpdir/j3\" && write_delivery_marker \"$tmpdir/missing\" \"$tmpdir/j3\" && [ ! -e \"$tmpdir/j2/_DELIVERY\" ] && [ ! -e \"$tmpdir/j3/_DELIVERY\" ]'"
 
     rm -rf "$tmpdir"
 }

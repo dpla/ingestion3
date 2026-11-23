@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests for ingest_pipeline_python/helper_scripts/resolve_file_delivery.py.
 
-Stubs the S3 listing and manifest reads, so it needs no AWS access.
+Stubs the S3 listing and _DELIVERY reads, so it needs no AWS access.
 Run: python3 scripts/tests/test-resolve-file-delivery.py
 """
 
@@ -28,6 +28,7 @@ spec.loader.exec_module(rfd)
 fd = rfd.fd
 
 NOW = "202611"
+SNAP = "-ohio-MAP3_1.IndexRecord.jsonl"
 
 
 def conf(endpoint, hub="ohio"):
@@ -37,13 +38,15 @@ def conf(endpoint, hub="ohio"):
 
 
 class FakeS3:
-    """deliveries: (dirs, files) for the hub bucket, or an Exception to raise.
-    harvests: {harvest dir name: manifest text or None (no _MANIFEST)}."""
+    """deliveries: (dirs, files) in the hub bucket, or an Exception to raise.
+    snapshots: {JSONL snapshot name: _DELIVERY text, or None for no _DELIVERY}.
+    ls_error: stderr for a failing jsonl/ listing."""
 
-    def __init__(self, deliveries=((), ()), harvests=None, ls_error=""):
+    def __init__(self, deliveries=((), ()), snapshots=None, ls_error=""):
         self.deliveries = deliveries
-        self.harvests = harvests or {}
+        self.snapshots = snapshots or {}
         self.ls_error = ls_error
+        self.calls = []
 
     def list_s3_root(self, bucket):
         if isinstance(self.deliveries, Exception):
@@ -52,20 +55,23 @@ class FakeS3:
         return list(dirs), list(files)
 
     def s3(self, args):
-        ok = types.SimpleNamespace
+        self.calls.append(args)
+        res = types.SimpleNamespace
         if args[0] == "ls":
+            assert args[1].endswith("/jsonl/"), args
             if self.ls_error:
-                return ok(returncode=1, stdout="", stderr=self.ls_error)
-            if not self.harvests:
-                return ok(returncode=1, stdout="", stderr="")
-            out = "".join(f"                           PRE {n}/\n" for n in self.harvests)
-            return ok(returncode=0, stdout=out, stderr="")
+                return res(returncode=1, stdout="", stderr=self.ls_error)
+            if not self.snapshots:
+                return res(returncode=1, stdout="", stderr="")
+            out = "".join(f"                           PRE {n}/\n" for n in self.snapshots)
+            return res(returncode=0, stdout=out, stderr="")
         if args[0] == "cp":
-            name = args[1].split("/harvest/")[1].split("/")[0]
-            text = self.harvests.get(name)
+            name = args[1].split("/jsonl/")[1].split("/")[0]
+            assert args[1].endswith("/_DELIVERY"), args
+            text = self.snapshots.get(name)
             if text is None:
-                return ok(returncode=1, stdout="", stderr="not found")
-            return ok(returncode=0, stdout=text, stderr="")
+                return res(returncode=1, stdout="", stderr="An error occurred (404)")
+            return res(returncode=0, stdout=text, stderr="")
         raise AssertionError(args)
 
 
@@ -105,11 +111,11 @@ class ResolveFileDeliveryTest(unittest.TestCase):
         self.assertEqual(kv["DELIVERY"], "s3://dpla-hub-ohio/2026-11-02/")
         self.assertEqual(kv["CURRENT_MONTH"], "yes")
         self.assertIn('"s3://dpla-hub-ohio/2026-11-02/"', self.out_endpoint())
+        self.assertEqual(s3.calls, [], "current-month delivery needs no published check")
 
-    def test_current_month_rerun_is_allowed_even_if_harvested(self):
+    def test_current_month_rerun_is_allowed_even_if_published(self):
         s3 = FakeS3((["2026-11-02/"], []), {
-            "20261105_101010-ohio-OriginalRecord.avro":
-                "Endpoint: s3://dpla-hub-ohio/2026-11-02/\nRecord count: 5"})
+            "20261105_101010" + SNAP: "s3://dpla-hub-ohio/2026-11-02/\n"})
         code, kv = self.run_resolver("s3://dpla-hub-ohio/", s3)
         self.assertEqual((code, kv["RESULT"]), (0, "ok"))
 
@@ -118,50 +124,51 @@ class ResolveFileDeliveryTest(unittest.TestCase):
         code, kv = self.run_resolver("s3://dpla-hub-ohio/2026-09-16/", s3)
         self.assertEqual(kv["DELIVERY"], "s3://dpla-hub-ohio/2026-11-02/")
 
-    # ── earlier month ────────────────────────────────────────────────────────
-    def test_old_delivery_already_harvested_per_manifest_fails(self):
+    # ── earlier month: checked against the newest JSONL snapshot ─────────────
+    def test_old_delivery_recorded_in_newest_snapshot_fails(self):
         s3 = FakeS3((["2026-09-16/"], []), {
-            "20260920_101010-ohio-OriginalRecord.avro":
-                "Endpoint: s3://dpla-hub-ohio/2026-09-16/\nRecord count: 5"})
+            "20260920_101010" + SNAP: "s3://dpla-hub-ohio/2026-09-16/\n"})
         code, kv = self.run_resolver("s3://dpla-hub-ohio/", s3)
-        self.assertEqual(code, rfd.EXIT_HARVESTED)
-        self.assertEqual(kv["RESULT"], "harvested")
-        self.assertEqual(kv["LAST_HARVEST"], "20260920_101010-ohio-OriginalRecord.avro")
+        self.assertEqual(code, rfd.EXIT_PUBLISHED)
+        self.assertEqual(kv["RESULT"], "published")
+        self.assertEqual(kv["LAST_SNAPSHOT"], "20260920_101010" + SNAP)
         self.assertFalse(os.path.exists(self.out_conf))
 
-    def test_old_delivery_not_yet_harvested_per_manifest_continues(self):
+    def test_old_delivery_not_in_newest_snapshot_continues(self):
         s3 = FakeS3((["2026-10-23/"], []), {
-            "20260920_101010-ohio-OriginalRecord.avro":
-                "Endpoint: s3://dpla-hub-ohio/2026-09-16/\nRecord count: 5"})
+            "20261024_101010" + SNAP: "s3://dpla-hub-ohio/2026-09-16/\n"})
         code, kv = self.run_resolver("s3://dpla-hub-ohio/", s3)
         self.assertEqual((code, kv["RESULT"], kv["CURRENT_MONTH"]), (0, "ok", "no"))
 
-    def test_no_endpoint_in_manifest_harvest_after_delivery_counts_as_harvested(self):
+    def test_only_the_newest_snapshot_counts(self):
+        # An older snapshot recorded this delivery, but the indexer reads the
+        # newest one, which was built from something else.
         s3 = FakeS3((["2026-09-16/"], []), {
-            "20260920_101010-ohio-OriginalRecord.avro": "Record count: 5"})
-        code, kv = self.run_resolver("s3://dpla-hub-ohio/", s3)
-        self.assertEqual((code, kv["RESULT"]), (rfd.EXIT_HARVESTED, "harvested"))
-
-    def test_no_endpoint_in_manifest_harvest_before_delivery_continues(self):
-        s3 = FakeS3((["2026-10-23/"], []), {
-            "20260920_101010-ohio-OriginalRecord.avro": "Record count: 5"})
+            "20260920_101010" + SNAP: "s3://dpla-hub-ohio/2026-09-16/\n",
+            "20261001_000000" + SNAP: "s3://dpla-hub-ohio/2026-08-01/\n"})
         code, kv = self.run_resolver("s3://dpla-hub-ohio/", s3)
         self.assertEqual((code, kv["RESULT"]), (0, "ok"))
 
-    def test_old_delivery_with_no_harvest_in_s3_continues(self):
+    def test_no_delivery_marker_snapshot_after_delivery_counts_as_published(self):
+        # e.g. nypl: snapshot 20260825 published delivery nypl-20260820.zip
+        s3 = FakeS3(([], ["nypl-20260820.zip"]), {
+            "20260819_022524-nypl-MAP3_1.IndexRecord.jsonl": None,
+            "20260825_161323-nypl-MAP3_1.IndexRecord.jsonl": None})
+        code, kv = self.run_resolver("s3://dpla-hub-nypl/", s3, hub="nypl")
+        self.assertEqual((code, kv["RESULT"]), (rfd.EXIT_PUBLISHED, "published"))
+        self.assertEqual(kv["LAST_SNAPSHOT"], "20260825_161323-nypl-MAP3_1.IndexRecord.jsonl")
+
+    def test_no_delivery_marker_snapshot_before_delivery_continues(self):
+        s3 = FakeS3((["2026-10-23/"], []), {"20260920_101010" + SNAP: None})
+        code, kv = self.run_resolver("s3://dpla-hub-ohio/", s3)
+        self.assertEqual((code, kv["RESULT"]), (0, "ok"))
+
+    def test_old_delivery_with_nothing_published_continues(self):
         s3 = FakeS3((["2026-10-23/"], []))
         code, kv = self.run_resolver("s3://dpla-hub-ohio/", s3)
         self.assertEqual((code, kv["RESULT"]), (0, "ok"))
 
-    def test_newest_harvest_without_manifest_is_skipped(self):
-        s3 = FakeS3((["2026-09-16/"], []), {
-            "20261001_000000-ohio-OriginalRecord.avro": None,
-            "20260920_101010-ohio-OriginalRecord.avro":
-                "Endpoint: s3://dpla-hub-ohio/2026-09-16/"})
-        code, kv = self.run_resolver("s3://dpla-hub-ohio/", s3)
-        self.assertEqual(kv["LAST_HARVEST"], "20260920_101010-ohio-OriginalRecord.avro")
-
-    def test_master_listing_error_fails_instead_of_assuming_not_harvested(self):
+    def test_jsonl_listing_error_fails_instead_of_assuming_not_published(self):
         s3 = FakeS3((["2026-09-16/"], []), ls_error="An error occurred (AccessDenied)")
         code, kv = self.run_resolver("s3://dpla-hub-ohio/", s3)
         self.assertEqual(code, rfd.EXIT_USAGE)
@@ -170,8 +177,7 @@ class ResolveFileDeliveryTest(unittest.TestCase):
 
     def test_force_delivery_skips_the_check(self):
         s3 = FakeS3((["2026-09-16/"], []), {
-            "20260920_101010-ohio-OriginalRecord.avro":
-                "Endpoint: s3://dpla-hub-ohio/2026-09-16/"})
+            "20260920_101010" + SNAP: "s3://dpla-hub-ohio/2026-09-16/\n"})
         code, kv = self.run_resolver("s3://dpla-hub-ohio/", s3,
                                      env={"FILE_DELIVERY": "s3://dpla-hub-ohio/2026-09-16/"})
         self.assertEqual((code, kv["RESULT"]), (0, "ok"))

@@ -184,20 +184,22 @@ Deliveries can be dated folders (`2026-11-02/`, `20261102/`, `11022026/`) or dat
 | Newest delivery | What happens |
 |---|---|
 | From the current month | Harvested. Rerunning in the same month is fine. |
-| From an earlier month, not harvested yet | Harvested, with a Slack warning that it's from an earlier month. |
-| From an earlier month, already harvested | The harvest **fails** before starting: there's no new delivery. |
+| From an earlier month, not published yet | Harvested, with a Slack warning that it's from an earlier month. |
+| From an earlier month, already published | The harvest **fails** before starting: there's no new delivery. |
 | None (empty bucket, no dated entries), the bucket can't be listed, or no endpoint in i3.conf | The harvest **fails** before starting: there's nothing to harvest. |
-| From an earlier month, and past harvests in `dpla-master-dataset` can't be listed (e.g. access denied) | The harvest **fails** before starting, rather than risk re-harvesting it. |
+| From an earlier month, and the hub's JSONL in `dpla-master-dataset` can't be listed (e.g. access denied) | The harvest **fails** before starting, rather than risk re-publishing it. |
 
-"Already harvested" is read from the newest harvest in `s3://dpla-master-dataset/<hub>/harvest/`: its `_MANIFEST` records the delivery it read as `Endpoint:`. Harvests from before that was recorded have no `Endpoint:` line; for those, a harvest made on or after the delivery's date counts as having read it.
+"Already published" means the delivery is in the hub's **newest JSONL snapshot** in `s3://dpla-master-dataset/<hub>/jsonl/`, the one the index rebuild reads (sparkindexer takes each hub's last snapshot in sort order). Harvests aren't checked: `ingest.sh` only syncs JSONL to S3, so harvests stay on the box and may have been cleaned up.
 
-To harvest a specific delivery anyway (e.g. to re-run one that was already harvested), set `FILE_DELIVERY`:
+To know which delivery a snapshot came from, file harvests record it as `Endpoint:` in their `_MANIFEST`, and `ingest.sh` copies that into the JSONL snapshot as a `_DELIVERY` file that syncs to S3 with it (`write_delivery_marker` in `common.sh`). Runs that reuse a harvest (`--skip-harvest`, `--resume-from`) carry it over too. Snapshots without `_DELIVERY` (made before this, or by the orchestrator, which doesn't write it) fall back to dates: a snapshot made on or after the delivery's date counts as having published it. A remap made after a new delivery arrived but before it was harvested would wrongly count it, so for those older snapshots check the hub's JSONL dates against its deliveries if a result looks off.
+
+To harvest a specific delivery anyway (e.g. to re-publish one that's already in the index), set `FILE_DELIVERY`:
 
 ```bash
 FILE_DELIVERY=s3://dpla-hub-ohio/2026-09-16/ ./scripts/ingest.sh ohio
 ```
 
-This skips the search and the already-harvested check. The harvest reads a temporary copy of i3.conf pointing at the chosen delivery; i3.conf itself is never changed. The logic is in `ingest_pipeline_python/helper_scripts/resolve_file_delivery.py`, called through `resolve_file_delivery` in `common.sh`. To see what each file hub's next harvest would pick without running anything, use `python3 ingest_pipeline_python/helper_scripts/file_deliveries.py [--month N]`.
+This skips the search and the already-published check. The harvest reads a temporary copy of i3.conf pointing at the chosen delivery; i3.conf itself is never changed. The logic is in `ingest_pipeline_python/helper_scripts/resolve_file_delivery.py`, called through `resolve_file_delivery` in `common.sh`. To see what each file hub's next harvest would pick without running anything, use `python3 ingest_pipeline_python/helper_scripts/file_deliveries.py [--month N]`.
 
 #### IP-restricted hubs (TAILSCALE_EXIT_NODE)
 

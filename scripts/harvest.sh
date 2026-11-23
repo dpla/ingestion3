@@ -38,13 +38,13 @@ write_hub_status "$PROVIDER" harvesting
 
 # File hubs: harvest the newest delivery in the hub's bucket (see
 # resolve_file_delivery in common.sh). Fails if there's nothing to harvest or
-# an older delivery was already harvested.
+# an older delivery was already published.
 _fd_rc=0
 resolve_file_delivery "$PROVIDER" || _fd_rc=$?
 case "$_fd_rc" in
     0) if [[ "$FILE_DELIVERY_RESULT" == "ok" ]]; then log_info "Harvesting delivery: $FILE_DELIVERY_URI"; fi ;;
     2) die "Nothing to harvest for $PROVIDER: $FILE_DELIVERY_REASON" ;;
-    3) die "No new delivery for $PROVIDER: newest is $FILE_DELIVERY_URI (not this month), already harvested by $FILE_DELIVERY_LAST. Set FILE_DELIVERY=$FILE_DELIVERY_URI to re-harvest it." ;;
+    3) die "No new delivery for $PROVIDER: newest is $FILE_DELIVERY_URI (not this month), already published in JSONL snapshot $FILE_DELIVERY_LAST. Set FILE_DELIVERY=$FILE_DELIVERY_URI to re-harvest it." ;;
     *) die "Couldn't pick a delivery for $PROVIDER (exit $_fd_rc)" ;;
 esac
 

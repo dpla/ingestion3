@@ -518,7 +518,7 @@ SPECIAL_CASE_NOTES = {
 # Shown for any hub with harvest.type = "file" that has no entry above, so the
 # list follows i3.conf instead of a hardcoded set of file hubs.
 FILE_HUB_NOTE = ("file delivery: harvest picks the newest S3 delivery; fails if "
-                 "an older one was already harvested")
+                 "an older one was already published")
 
 
 def hub_note(hub, harvest_type=None):
@@ -953,7 +953,7 @@ def _check_s3_endpoint(s3_path):
         ok(f"Found {len(matches)} entries dated in the current month ({current_yyyy_mm}).")
         return True
     warn(f"No entries from current month ({current_yyyy_mm}) — latest delivery may be stale.")
-    info("The harvest still takes the newest delivery if it hasn't been harvested yet,")
+    info("The harvest still takes the newest delivery if it hasn't been published yet,")
     info("and fails if it has. If the partner has uploaded but you don't see it, check")
     info("the bucket in i3.conf or your AWS profile.")
     return False
