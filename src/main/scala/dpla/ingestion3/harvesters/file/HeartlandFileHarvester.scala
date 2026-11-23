@@ -91,11 +91,14 @@ class HeartlandFileHarvester(
   override def harvest: DataFrame = {
     val harvestTime = System.currentTimeMillis()
     val unixEpoch = harvestTime / 1000L
+    val endpoint = conf.harvest.endpoint.getOrElse("in")
+    // A delivery can be a dated folder (sync) or a single dated file (cp).
     val inFiles = LocalHarvester.resolveToLocalDir(
-      conf.harvest.endpoint.getOrElse("in"),
+      endpoint,
       harvestTime,
       shortName,
-      None
+      None,
+      LocalHarvester.s3SubCmdFor(endpoint)
     )
 
     // Handle raw JSONL files

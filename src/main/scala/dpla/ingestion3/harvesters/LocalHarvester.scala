@@ -102,6 +102,26 @@ case class ParsedResult(id: String, item: String)
 
 object LocalHarvester {
 
+  // Extensions that mark an s3:// endpoint as a single object (a delivery
+  // file) rather than a prefix (a delivery folder).
+  private val s3ObjectExtensions =
+    Seq(".jsonl", ".json", ".zip", ".gz", ".tgz", ".tar", ".xml")
+
+  /** The `aws s3` subcommand for an endpoint: "cp" for a single object such as
+    * s3://dpla-hub-fl/SSDN-2026-05-24.jsonl, "sync" for a prefix such as
+    * s3://dpla-hub-ohio/2026-09-16/. File hubs' deliveries are picked at
+    * harvest time and can be either (resolve_file_delivery in
+    * scripts/common.sh), so harvesters that accept both should use this.
+    */
+  def s3SubCmdFor(endpoint: String): String = {
+    val lower = endpoint.toLowerCase
+    if (
+      lower.startsWith("s3://") && !lower.endsWith("/") &&
+      s3ObjectExtensions.exists(lower.endsWith)
+    ) "cp"
+    else "sync"
+  }
+
   /** Resolves an endpoint to a local directory. If the endpoint is an S3 URI,
     * syncs or copies its contents to a fresh temp directory and returns that.
     * Otherwise returns the endpoint path as-is.

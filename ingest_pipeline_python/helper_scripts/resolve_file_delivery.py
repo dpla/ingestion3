@@ -109,8 +109,15 @@ def last_published(master_bucket, prefix):
     if not names:
         return None, None
     newest = names[-1]
-    m = _s3(["cp", f"s3://{master_bucket}/{prefix}/jsonl/{newest}/_DELIVERY", "-"])
-    recorded = m.stdout.strip().split()[0] if m.returncode == 0 and m.stdout.strip() else None
+    key = f"s3://{master_bucket}/{prefix}/jsonl/{newest}/_DELIVERY"
+    m = _s3(["cp", key, "-"])
+    if m.returncode != 0:
+        # Only a missing _DELIVERY means "not recorded". Anything else (access
+        # denied, credentials, network) leaves us unable to tell, so fail.
+        if not re.search(r"\(404\)|Not Found|does not exist|NoSuchKey", m.stderr or ""):
+            raise RuntimeError(f"can't read {key}: {(m.stderr or '').strip() or 'exit ' + str(m.returncode)}")
+        return newest, None
+    recorded = m.stdout.strip().split()[0] if m.stdout.strip() else None
     return newest, recorded
 
 

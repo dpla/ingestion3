@@ -246,7 +246,7 @@ if [ "$SKIP_HARVEST" = false ] && [[ -z "$RESUME_FROM" ]]; then
         log_info "Harvesting delivery: $FILE_DELIVERY_URI"
         _delivery_note=" from \`$FILE_DELIVERY_URI\`"
         if [[ "$FILE_DELIVERY_CURRENT" == "no" ]]; then
-            slack_notify ":warning: *$PROVIDER*: newest delivery \`$FILE_DELIVERY_URI\` is from an earlier month but hasn't been published yet — harvesting it"
+            slack_notify_resilient ":warning: *$PROVIDER*: newest delivery \`$FILE_DELIVERY_URI\` is from an earlier month but hasn't been published yet — harvesting it"
         fi
     fi
 

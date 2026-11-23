@@ -42,10 +42,11 @@ class FakeS3:
     snapshots: {JSONL snapshot name: _DELIVERY text, or None for no _DELIVERY}.
     ls_error: stderr for a failing jsonl/ listing."""
 
-    def __init__(self, deliveries=((), ()), snapshots=None, ls_error=""):
+    def __init__(self, deliveries=((), ()), snapshots=None, ls_error="", cp_error=""):
         self.deliveries = deliveries
         self.snapshots = snapshots or {}
         self.ls_error = ls_error
+        self.cp_error = cp_error
         self.calls = []
 
     def list_s3_root(self, bucket):
@@ -68,9 +69,13 @@ class FakeS3:
         if args[0] == "cp":
             name = args[1].split("/jsonl/")[1].split("/")[0]
             assert args[1].endswith("/_DELIVERY"), args
+            if self.cp_error:
+                return res(returncode=1, stdout="", stderr=self.cp_error)
             text = self.snapshots.get(name)
             if text is None:
-                return res(returncode=1, stdout="", stderr="An error occurred (404)")
+                return res(returncode=1, stdout="",
+                           stderr="fatal error: An error occurred (404) when calling the "
+                                  "HeadObject operation: Key \"x\" does not exist")
             return res(returncode=0, stdout=text, stderr="")
         raise AssertionError(args)
 
@@ -170,6 +175,15 @@ class ResolveFileDeliveryTest(unittest.TestCase):
 
     def test_jsonl_listing_error_fails_instead_of_assuming_not_published(self):
         s3 = FakeS3((["2026-09-16/"], []), ls_error="An error occurred (AccessDenied)")
+        code, kv = self.run_resolver("s3://dpla-hub-ohio/", s3)
+        self.assertEqual(code, rfd.EXIT_USAGE)
+        self.assertNotIn("RESULT", kv)
+        self.assertFalse(os.path.exists(self.out_conf))
+
+    def test_delivery_marker_read_error_fails_instead_of_falling_back_to_dates(self):
+        s3 = FakeS3((["2026-09-16/"], []), {"20260920_101010" + SNAP: None},
+                    cp_error="fatal error: An error occurred (403) when calling the "
+                             "HeadObject operation: Forbidden")
         code, kv = self.run_resolver("s3://dpla-hub-ohio/", s3)
         self.assertEqual(code, rfd.EXIT_USAGE)
         self.assertNotIn("RESULT", kv)
