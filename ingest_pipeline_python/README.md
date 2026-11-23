@@ -105,7 +105,7 @@ Re-run at any time. Use `--update` to change any saved value.
 
 ```
 0. pre-ingest email      start of the month: ../pre_ingest_monthly_email/1_get_info.py, then 2_send_email.py
-1. 1_prechecks.py        list every hub scheduled for the month
+1. 1_monthly_run_schedule.py  list every hub scheduled for the month
 2. 2_preflight.py        check one hub before ingesting it
 3. 3_launch_ingest.py    launch that hub once preflight passes
 4.                       repeat 2 and 3 for each hub on the list
@@ -137,8 +137,8 @@ Month and year default to the current ones; `--intro` and the image are optional
 ### Step 1 — Monthly hub list
 
 ```bash
-python3 1_prechecks.py              # current month
-python3 1_prechecks.py --month 5    # specific month
+python3 1_monthly_run_schedule.py              # current month
+python3 1_monthly_run_schedule.py --month 5    # specific month
 ```
 
 Lists all hubs scheduled for the month from `i3.conf`, with harvest types, special-case notes, and on-hold status. Run this at the start of each ingest month to plan the run order.
@@ -378,7 +378,7 @@ Downloads the repos to EC2 and updates `virginias.harvest.endpoint` in your loca
 
 | Path | What's there |
 |---|---|
-| `1_prechecks.py` … `6_postchecks.py` | The monthly sequence, in order |
+| `1_monthly_run_schedule.py` … `6_postchecks.py` | The monthly sequence, in order |
 | `special_cases/` | NARA, Smithsonian, Community Webs, Virginias |
 | `helper_scripts/check_ingest.py` | Monitor a running ingest |
 | `helper_scripts/hub_conf.py` | Not run directly: lets the numbered scripts import the shared i3.conf helpers from `2_preflight.py` |

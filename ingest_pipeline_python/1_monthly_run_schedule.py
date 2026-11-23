@@ -10,15 +10,15 @@ For per-hub pre-flight checks (EC2 state, repo sync, JAR, endpoint),
 use 2_preflight.py.
 
 Usage:
-    python3 1_prechecks.py              # current month
-    python3 1_prechecks.py --month 5    # specific month
+    python3 1_monthly_run_schedule.py              # current month
+    python3 1_monthly_run_schedule.py --month 5    # specific month
 """
 
 import argparse
 import sys
 from datetime import datetime
 
-from helper_scripts.hub_conf import CONF_PATH, MONTH_NAMES, SPECIAL_CASE_NOTES, list_scheduled_hubs
+from helper_scripts.hub_conf import CONF_PATH, MONTH_NAMES, hub_note, list_scheduled_hubs
 
 
 def main() -> None:
@@ -54,7 +54,7 @@ def main() -> None:
     if active:
         print(f"  ACTIVE ({len(active)})")
         for h in active:
-            note = SPECIAL_CASE_NOTES.get(h["hub"], "")
+            note = hub_note(h["hub"], h["harvest_type"])
             note_str = f"   ⚠  {note}" if note else ""
             print(f"    {h['hub']:<20} {h['harvest_type']:<10}{note_str}")
         print()

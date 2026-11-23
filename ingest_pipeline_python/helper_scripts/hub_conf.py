@@ -17,5 +17,6 @@ _spec.loader.exec_module(_preflight)
 CONF_PATH = _preflight.CONF_PATH
 MONTH_NAMES = _preflight.MONTH_NAMES
 SPECIAL_CASE_NOTES = _preflight.SPECIAL_CASE_NOTES
+hub_note = _preflight.hub_note
 list_scheduled_hubs = _preflight.list_scheduled_hubs
 lookup_hub_in_conf = _preflight.lookup_hub_in_conf
