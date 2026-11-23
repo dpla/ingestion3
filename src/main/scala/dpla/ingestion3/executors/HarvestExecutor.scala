@@ -133,11 +133,20 @@ trait HarvestExecutor {
           )
         )
 
+        // File harvests record which delivery they read. ingest.sh copies it
+        // into the JSONL snapshot as _DELIVERY (write_delivery_marker in
+        // scripts/common.sh), which the next ingest checks to tell whether the
+        // newest delivery in the hub's bucket has already been published.
+        val sourceOpts: Map[String, String] =
+          if (harvestType == "file")
+            conf.harvest.endpoint.map(e => "Endpoint" -> e).toMap
+          else Map.empty
+
         val manifestOpts: Map[String, String] = Map(
           "Activity" -> "Harvest",
           "Provider" -> shortName,
           "Record count" -> recordCount.toString
-        )
+        ) ++ sourceOpts
 
         outputHelper.writeManifest(manifestOpts) match {
           case Success(s) => logger.info(s"Manifest written to $s.")

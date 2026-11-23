@@ -109,7 +109,10 @@ class OaiFileHarvester(
     val unixEpoch = harvestTime / 1000L
     val endpoint = conf.harvest.endpoint.getOrElse("in")
     val isTempDir = endpoint.startsWith("s3://")
-    val inFiles = LocalHarvester.resolveToLocalDir(endpoint, harvestTime, "oai-file-s3", conf.harvest.awsProfile)
+    // A delivery can be a dated folder (sync) or a single dated file (cp).
+    val inFiles = LocalHarvester.resolveToLocalDir(
+      endpoint, harvestTime, "oai-file-s3", conf.harvest.awsProfile,
+      LocalHarvester.s3SubCmdFor(endpoint))
 
     try {
       // Handle zip archives (each zip may contain multiple XML entries)

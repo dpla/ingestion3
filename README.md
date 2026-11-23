@@ -155,7 +155,7 @@ ex.
 
 Some hubs submit data via a file export process. Some are exported to s3 and others are emailed or linked to. If there is any question about how a hub submits data check the `i3.conf` file or [ingestion3-conf](https://github.com/dpla/ingestion3-conf) project.
 
-These original records are kept in an `./originalRecords` directory for the hub and each export should be placed in a directory named `YYYYMMDD`. When running a harvest for these hubs the target originalRecords directory should be updated in the `./conf/i3.conf` file.
+For hubs that deliver to an S3 bucket, i3.conf only needs to name the bucket (e.g. `s3://dpla-hub-fl/`): the harvest reads the newest dated delivery in it, and fails if there's nothing to harvest or if an older delivery was already published (it's in the hub's newest JSONL snapshot, the one the indexer reads). See "File hubs: which delivery is harvested" in [scripts/SCRIPTS.md](scripts/SCRIPTS.md). Hubs with a local-path endpoint still need it set to the delivery to harvest.
 
 **Hubs which submit file exports**
 ```text

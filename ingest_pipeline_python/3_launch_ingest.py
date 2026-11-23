@@ -3,7 +3,7 @@
 
 Works for all hub types (localoai, api, file). For file-export hubs the
 script fetches the harvest type from i3.conf, lists available S3 deliveries,
-and prompts you to confirm the endpoint before launching.
+and shows which one the harvest will read (the newest) before launching.
 
 Usage (from the repo root):
     python3 ingest_pipeline_python/3_launch_ingest.py                   # prompts for hub
@@ -142,26 +142,6 @@ def get_harvest_type(hub: str) -> str:
     return harvest_type or ""
 
 
-def get_current_endpoint(hub: str) -> str:
-    """Return the current harvest.endpoint for hub from i3.conf.
-
-    Reads from the EC2 box first via SSM; falls back to the local conf if the
-    box's conf is stale or the SSM call returns nothing.
-    """
-    try:
-        out = ssm_run(
-            f"grep '^{hub}\\.harvest\\.endpoint' {CONF_PATH} 2>/dev/null || echo ''"
-        ).strip()
-        if out and "(not found)" not in out:
-            return out
-    except Exception:
-        pass
-    endpoint, _ = lookup_hub_in_conf(hub)
-    if endpoint:
-        return f'{hub}.harvest.endpoint = "{endpoint}"  (from local conf — EC2 may be stale)'
-    return "(not found)"
-
-
 # ── S3 delivery helpers ───────────────────────────────────────────────────────
 def _sortable_date(entry: str) -> str:
     """Return a YYYYMMDD string for sorting delivery entry names newest-first.
@@ -218,10 +198,10 @@ def list_deliveries(bucket: str) -> list[str]:
 
 # ── file-hub pre-flight ───────────────────────────────────────────────────────
 def file_hub_preflight(hub: str, bucket: str, non_interactive: bool = False) -> None:
-    """Show S3 deliveries and current i3.conf endpoint; prompt to confirm.
+    """Show S3 deliveries and the one the harvest will read; prompt to confirm.
 
-    In non-interactive mode the confirmation prompt is skipped — the caller is
-    responsible for ensuring i3.conf is already correct before invoking this.
+    Exits if the bucket has no dated delivery (the harvest would fail).
+    In non-interactive mode the confirmation prompt is skipped.
     """
     print(f"\nChecking s3://{bucket}/ for deliveries …")
     deliveries = list_deliveries(bucket)
@@ -236,27 +216,20 @@ def file_hub_preflight(hub: str, bucket: str, non_interactive: bool = False) -> 
     if len(deliveries) > 5:
         print(f"    … and {len(deliveries) - 5} older")
 
-    print(f"\nCurrent i3.conf delivery path for {hub}:")
-    print(f"  {get_current_endpoint(hub)}")
-
-    # Suggest the most recent dated delivery (always first after list_deliveries sort).
-    latest = deliveries[0]
-    suggested = f"s3://{bucket}/{latest}"
+    # The harvest reads the newest dated delivery in the bucket itself
+    # (resolve_file_delivery in scripts/common.sh); i3.conf only names the bucket.
+    latest = f"s3://{bucket}/{deliveries[0]}"
     print(f"""
-⚠️  Before continuing, make sure i3.conf is pointing at the right delivery path:
-
-    {hub}.harvest.endpoint = "{suggested}"
-
-If it needs updating:
-    1. Edit ingestion3-conf/i3.conf locally
-    2. git commit + push
-    3. git pull on the EC2 box
+The harvest will read the newest delivery:
+    {latest}
+No i3.conf edit needed. If that delivery is from an earlier month and was
+already published, the harvest fails rather than re-ingesting it.
 """)
     if non_interactive:
-        print("Non-interactive: skipping i3.conf confirmation prompt — assuming conf is correct.")
+        print("Non-interactive: skipping confirmation prompt.")
         return
     try:
-        ans = input("i3.conf is correct — launch ingest? [y/n]: ").strip().lower()
+        ans = input("Launch ingest? [y/n]: ").strip().lower()
     except (EOFError, KeyboardInterrupt):
         sys.exit("\nAborted.")
     if ans not in ("y", "yes"):

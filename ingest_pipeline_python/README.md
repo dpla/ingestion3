@@ -386,7 +386,8 @@ Downloads the repos to EC2 and updates `virginias.harvest.endpoint` in your loca
 | `helper_scripts/skip_safety_check.py` | Publish an ingest the >5% safety check blocked, after you've reviewed the drop |
 | `helper_scripts/takedown.py` | Take items down from dp.la and the S3 master dataset |
 | `helper_scripts/run_monthly_batch.py` | Launch all of a month's standard hubs in sequence (used by the Monthly Hub Batch workflow) |
-| `helper_scripts/update_file_endpoints.py` | Point file hubs' i3.conf endpoints at their newest S3 delivery (used by the Update Hub File Endpoints workflow) |
+| `helper_scripts/file_deliveries.py` | Show the newest S3 delivery each file hub's next harvest would read (read-only) |
+| `helper_scripts/resolve_file_delivery.py` | Not run directly: picks a file hub's delivery at harvest time for `ingest.sh` / `harvest.sh` (see `scripts/SCRIPTS.md`, "File hubs: which delivery is harvested") |
 
 ---
 

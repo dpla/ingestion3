@@ -169,6 +169,7 @@ trap 'err=$?
      [ -n "${TAILSCALE_EXIT_NODE:-}" ] && sudo tailscale set --exit-node= 2>/dev/null || true
      [ -n "${TAILSCALE_EXIT_NODE:-}" ] && sudo systemctl stop tailscaled 2>/dev/null || true
      stop_heartbeat 2>/dev/null || true
+     [[ -n "${HARVEST_CONF:-}" && "${HARVEST_CONF}" != "${I3_CONF:-}" ]] && rm -f "$HARVEST_CONF"
      if [[ $err -ne 0 && -n "${INGEST_PROVIDER:-}" && "$TRAP_HANDLED" != "true" ]]; then
          slack_notify ":x: *$INGEST_PROVIDER ingest FAILED* (exit $err)"
          write_hub_status "$INGEST_PROVIDER" failed --error="Exit $err" || true
@@ -211,6 +212,44 @@ if [ "$SKIP_HARVEST" = false ] && [[ -z "$RESUME_FROM" ]]; then
     write_hub_status "$PROVIDER" harvesting
     print_step "Step 1/5: Harvesting $PROVIDER..."
 
+    # File hubs: pick the newest delivery in the hub's bucket (i3.conf only
+    # names the bucket). Fails if there's nothing to harvest, or if an older
+    # delivery was already published.
+    _fd_rc=0
+    resolve_file_delivery "$PROVIDER" || _fd_rc=$?
+    case "$_fd_rc" in
+        0) ;;
+        2)
+            log_error "Nothing to harvest for $PROVIDER: $FILE_DELIVERY_REASON"
+            slack_notify ":x: *$PROVIDER ingest FAILED* — nothing to harvest: $FILE_DELIVERY_REASON"
+            write_hub_status "$PROVIDER" failed --error="Nothing to harvest: $FILE_DELIVERY_REASON"
+            TRAP_HANDLED=true
+            exit 1
+            ;;
+        3)
+            log_error "No new delivery for $PROVIDER: newest is $FILE_DELIVERY_URI, already published in JSONL snapshot $FILE_DELIVERY_LAST"
+            slack_notify ":x: *$PROVIDER ingest FAILED* — no new delivery. Newest in the bucket is \`$FILE_DELIVERY_URI\` (not this month), already published in JSONL snapshot \`$FILE_DELIVERY_LAST\`. To re-harvest it anyway, rerun with FILE_DELIVERY=$FILE_DELIVERY_URI."
+            write_hub_status "$PROVIDER" failed --error="No new delivery (newest already published)"
+            TRAP_HANDLED=true
+            exit 1
+            ;;
+        *)
+            log_error "Couldn't pick a delivery for $PROVIDER (exit $_fd_rc)"
+            slack_notify ":x: *$PROVIDER ingest FAILED* — couldn't pick a delivery to harvest (exit $_fd_rc). Check the ingest log."
+            write_hub_status "$PROVIDER" failed --error="Couldn't pick a delivery (exit $_fd_rc)"
+            TRAP_HANDLED=true
+            exit 1
+            ;;
+    esac
+    _delivery_note=""
+    if [[ "$FILE_DELIVERY_RESULT" == "ok" ]]; then
+        log_info "Harvesting delivery: $FILE_DELIVERY_URI"
+        _delivery_note=" from \`$FILE_DELIVERY_URI\`"
+        if [[ "$FILE_DELIVERY_CURRENT" == "no" ]]; then
+            slack_notify_resilient ":warning: *$PROVIDER*: newest delivery \`$FILE_DELIVERY_URI\` is from an earlier month but hasn't been published yet — harvesting it"
+        fi
+    fi
+
     HARVEST_LOG="$I3_HOME/logs/harvest-${PROVIDER}-$(date +%Y%m%d_%H%M%S).log"
     mkdir -p "$I3_HOME/logs"
     start_heartbeat "$PROVIDER" "harvest" "$HARVEST_LOG"
@@ -246,9 +285,10 @@ Node keys rotate every ~180 days; see scripts/SCRIPTS.md for details."
     SBT_OPTS="-Xmx15g"
     run_entry dpla.ingestion3.entries.ingest.HarvestEntry \
         --output="$DPLA_DATA" \
-        --conf="$I3_CONF" \
+        --conf="$HARVEST_CONF" \
         --name="$PROVIDER" \
         --sparkMaster="$SPARK_MASTER" 2>&1 | tee "$HARVEST_LOG"
+    if [[ "$HARVEST_CONF" != "$I3_CONF" ]]; then rm -f "$HARVEST_CONF"; fi
 
     if [ -n "$TAILSCALE_EXIT_NODE" ]; then
         log_info "Clearing Tailscale exit node and stopping tailscaled after $PROVIDER harvest"
@@ -268,7 +308,7 @@ Node keys rotate every ~180 days; see scripts/SCRIPTS.md for details."
         exit 1
     fi
 
-    slack_notify_resilient ":white_check_mark: *$PROVIDER harvest complete* (${HARVEST_RECORD_COUNT} records) — starting mapping"
+    slack_notify_resilient ":white_check_mark: *$PROVIDER harvest complete* (${HARVEST_RECORD_COUNT} records${_delivery_note}) — starting mapping"
 else
     print_step "Skipping harvest (using existing data)..."
     HARVEST_TS_DIR=$(find_latest_data "$PROVIDER" harvest) \
@@ -397,6 +437,8 @@ stop_heartbeat
 JSONL_TS_DIR=$(find_latest_data "$PROVIDER" jsonl)
 JSONL_TS=$(basename "$JSONL_TS_DIR")
 log_info "JSONL export complete: $JSONL_TS"
+# File hubs: note which delivery this snapshot came from (synced with it).
+write_delivery_marker "$HARVEST_TS_DIR" "$JSONL_TS_DIR"
 # Written before the safety check so a wrapper can pair this run's outputs even when it blocks
 if [[ -n "$OUTPUTS_FILE" ]]; then
     printf '%s\n%s\n' "$JSONL_TS_DIR" "$MAP_TS_DIR" > "$OUTPUTS_FILE"

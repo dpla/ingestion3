@@ -430,20 +430,12 @@ This shows the file extensions present (e.g. `xml.gz`, `zip`, `jsonl`). Confirm 
 
 If unsure which harvester the hub uses, grep the Scala source: `grep -r "<hub>" "$I3_HOME/src/main/scala/dpla/ingestion3/executors/"` or check the mapper for the hub.
 
-**3. Confirm the i3.conf endpoint path:**
+**3. Check which delivery the harvest will read:**
 ```bash
 grep "<hub>\.harvest" "$I3_CONF"
+python3 ingest_pipeline_python/helper_scripts/file_deliveries.py
 ```
-The endpoint must point to the **folder containing the files** (e.g. `s3://dpla-hub-ohio/2026-03-20/`), not a parent bucket root. If it needs updating, use python3 to avoid quoting issues:
-```bash
-python3 -c "
-import os
-content = open(os.environ['I3_CONF']).read()
-content = content.replace('<hub>.harvest.endpoint = \"<old>\"', '<hub>.harvest.endpoint = \"<new>\"')
-open(os.environ['I3_CONF'], 'w').write(content)
-print('Updated:', content[content.find('<hub>.harvest.endpoint'):content.find('<hub>.harvest.endpoint')+60])
-"
-```
+For an `s3://` endpoint, the endpoint only needs to name the hub's bucket (e.g. `s3://dpla-hub-ohio/`); don't edit it to a dated folder. `ingest.sh` / `harvest.sh` harvest the **newest dated delivery** in that bucket, and fail if the bucket has nothing to harvest or if an older delivery was already published (it's in the hub's newest JSONL snapshot, the one the indexer reads). `file_deliveries.py` shows what each file hub's next harvest would pick. To harvest a specific delivery instead, run with `FILE_DELIVERY=s3://<bucket>/<delivery>`. Details: `scripts/SCRIPTS.md`, "File hubs: which delivery is harvested".
 
 **4. Count the files:**
 ```bash
