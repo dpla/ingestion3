@@ -512,14 +512,23 @@ SPECIAL_CASE_NOTES = {
     "community-webs": "SQLite delivery: use special_cases/community-webs/ (copy_cw.py, launch_cw.py)",
     "getty":          "harvest routed via Tailscale exit node by ingest.sh (EC2 IP not allowlisted)",
     "njde":           "harvest routed via Tailscale exit node by ingest.sh (EC2 IP not allowlisted)",
-    "ct":             "file-export, check S3 for fresh export first",
-    "florida":        "file-export, check S3 for fresh export first",
-    "ohio":           "file-export, check S3 for fresh export first",
-    "nypl":           "file-export, check S3 for fresh export first",
-    "vt":             "file-export, check S3 for fresh export first",
-    "txdl":           "file-export, check S3 for fresh export first",
-    "virginias":      "multi-repo assembly (clone dplava org repos first)",
+    "virginias":      "GitHub repos: run special_cases/virginias/virginias_download.py first",
 }
+
+# Shown for any hub with harvest.type = "file" that has no entry above, so the
+# list follows i3.conf instead of a hardcoded set of file hubs.
+FILE_HUB_NOTE = ("file delivery: Update File Hub Endpoints workflow points i3.conf "
+                 "at the newest S3 delivery")
+
+
+def hub_note(hub, harvest_type=None):
+    """Note to print next to a hub in the monthly list ('' if none)."""
+    note = SPECIAL_CASE_NOTES.get(hub)
+    if note:
+        return note
+    if (harvest_type or "").lower() == "file":
+        return FILE_HUB_NOTE
+    return ""
 
 MONTH_NAMES = ("", "January", "February", "March", "April", "May", "June",
                "July", "August", "September", "October", "November", "December")
@@ -604,7 +613,7 @@ def print_todo_list(month):
     if active:
         print(f"  ACTIVE ({len(active)})")
         for h in active:
-            note = SPECIAL_CASE_NOTES.get(h["hub"], "")
+            note = hub_note(h["hub"], h["harvest_type"])
             note_str = f"   ⚠ {note}" if note else ""
             print(f"    {h['hub']:<20} {h['harvest_type']:<10}{note_str}")
         print()
