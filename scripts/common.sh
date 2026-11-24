@@ -866,19 +866,24 @@ list_s3_complete_runs() {
 
 # run_files_missing_in_s3 <local run dir> <S3 keys from list_s3_stage_keys> —
 # prints the run's local files that aren't in S3 (as <run>/<path>). Nothing
-# printed means every file is there. Names are enough: S3 stores each object
-# whole or not at all, so an interrupted sync shows up as missing files, and a
-# _SUCCESS in S3 alone doesn't prove the rest made it (aws s3 sync doesn't
-# upload it last).
+# printed (and status 0) means every file is there. Returns 2 if the run dir
+# couldn't be read or compared, so callers never take that as "nothing missing".
+# Names are enough: S3 stores each object whole or not at all, so an
+# interrupted sync shows up as missing files, and a _SUCCESS in S3 alone
+# doesn't prove the rest made it (aws s3 sync doesn't upload it last).
 run_files_missing_in_s3() {
-    local dir="${1%/}" keys="$2" run
+    local dir="${1%/}" keys="$2" run files rc=0
     run=$(basename "$dir")
-    (cd "$dir" && find . -type f) | sed "s|^\./|${run}/|" \
-        | grep -vxF -f <(printf '%s\n' "$keys") || true
+    files=$(cd "$dir" && find . -type f) || return 2
+    # grep exits 1 when it prints nothing (no missing files), 2 on error
+    printf '%s\n' "$files" | sed "s|^\./|${run}/|" \
+        | grep -vxF -f <(printf '%s\n' "$keys") || rc=$?
+    [[ $rc -le 1 ]] || return 2
 }
 
 # sync_run_to_s3 <hub> <stage> <local run dir> — upload one complete run dir,
-# _SUCCESS last.
+# _SUCCESS last. Any _SUCCESS already in S3 for the run is removed first, so a
+# repeat sync that's cut short leaves the run incomplete there too.
 sync_run_to_s3() {
     local hub="$1" stage="$2" dir="${3%/}" dest
     if [[ ! -f "$dir/_SUCCESS" ]]; then
@@ -886,6 +891,7 @@ sync_run_to_s3() {
         return 1
     fi
     dest="$(s3_stage_uri "$hub" "$stage")/$(basename "$dir")"
+    aws s3 rm "$dest/_SUCCESS" --only-show-errors || return 1
     aws s3 sync "$dir/" "$dest/" --exclude "_SUCCESS" --only-show-errors \
         && aws s3 cp "$dir/_SUCCESS" "$dest/_SUCCESS" --only-show-errors
 }

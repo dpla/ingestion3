@@ -53,6 +53,9 @@ case "$2" in
     ;;
   cp)
     dst=$(loc "$4"); mkdir -p "$(dirname "$dst")"; cp "$3" "$dst" ;;
+  rm)
+    [ "${AWS_FAIL_RM:-0}" = 1 ] && { echo "delete failed" >&2; exit 1; }
+    rm -f "$(loc "$3")" ;;
   *) exit 2 ;;
 esac
 EOF
@@ -208,6 +211,37 @@ if "${ENVV[@]}" AWS_FAIL_LS=0 bash -c "source '$COMMON' && sync_run_to_s3 ohio h
    && [ -f "$S3H/harvest/20260401_000000-ohio-OriginalRecord.avro/part-0" ]
 then pass "sync_run_to_s3: uploads the run with its _SUCCESS"
 else fail "sync_run_to_s3 upload"; fi
+
+# Repeat sync into a run already in S3: its old _SUCCESS comes down first, so a
+# repeat upload that fails leaves the run incomplete in S3
+R=20260101_000000-ohio-OriginalRecord.avro
+touch "$D/harvest/$R/part-1"
+if "${ENVV[@]}" AWS_FAIL_SYNC=1 bash -c "source '$COMMON' && ! sync_run_to_s3 ohio harvest '$D/harvest/$R'" 2>/dev/null \
+   && [ ! -e "$S3H/harvest/$R/_SUCCESS" ] && [ ! -e "$S3H/harvest/$R/part-1" ]
+then pass "sync_run_to_s3: failed repeat sync leaves the run without _SUCCESS in S3"
+else fail "sync_run_to_s3 repeat sync"; fi
+
+touch "$S3H/harvest/$R/_SUCCESS"
+if "${ENVV[@]}" AWS_FAIL_RM=1 bash -c "source '$COMMON' && ! sync_run_to_s3 ohio harvest '$D/harvest/$R'" 2>/dev/null \
+   && [ ! -e "$S3H/harvest/$R/part-1" ]
+then pass "sync_run_to_s3: stops without uploading if the old _SUCCESS can't be removed"
+else fail "sync_run_to_s3 rm failure"; fi
+
+if "${ENVV[@]}" bash -c "source '$COMMON' && [ -z \"\$(list_s3_stage_keys ohio harvest | grep part-1)\" ] && sync_run_to_s3 ohio harvest '$D/harvest/$R'" \
+   && [ -f "$S3H/harvest/$R/_SUCCESS" ] && [ -f "$S3H/harvest/$R/part-1" ]
+then pass "sync_run_to_s3: repeat sync completes the run in S3"
+else fail "sync_run_to_s3 repeat sync completes"; fi
+
+# run_files_missing_in_s3: an unreadable run is an error, never "nothing missing"
+rc=0; "${ENVV[@]}" bash -c "source '$COMMON' && run_files_missing_in_s3 '$D/harvest/no-such-run' 'x/_SUCCESS'" >/dev/null 2>&1 || rc=$?
+if [ "$rc" -eq 2 ]
+then pass "run_files_missing_in_s3: returns 2 when the run can't be read"
+else fail "run_files_missing_in_s3 error status (rc=$rc)"; fi
+
+rc=0; out=$("${ENVV[@]}" bash -c "source '$COMMON' && run_files_missing_in_s3 '$D/harvest/$R' \"\$(list_s3_stage_keys ohio harvest)\"" 2>&1) || rc=$?
+if [ "$rc" -eq 0 ] && [ -z "$out" ]
+then pass "run_files_missing_in_s3: status 0 and no output when every file is in S3"
+else fail "run_files_missing_in_s3 all present (rc=$rc)"; echo "$out"; fi
 
 # ---------------------------------------------------------------------------
 echo ""

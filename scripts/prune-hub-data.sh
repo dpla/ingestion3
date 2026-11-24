@@ -121,11 +121,13 @@ for stage in $STAGES; do
             echo "KEEP (couldn't list S3): $d"
         elif printf '%s\n' "$s3_keys" | grep -qxF "$r/_SUCCESS"; then
             # _SUCCESS in S3 isn't proof on its own: check every file made it
-            missing=$(run_files_missing_in_s3 "$d" "$s3_keys" | wc -l | tr -d ' ')
-            if [[ "$missing" -eq 0 ]]; then
+            if ! missing=$(run_files_missing_in_s3 "$d" "$s3_keys"); then
+                echo "KEEP (couldn't compare its files with S3): $d"
+                failed=1
+            elif [[ -z "$missing" ]]; then
                 delete_dir "$d" "in S3"
             else
-                echo "KEEP (has _SUCCESS in S3 but $missing file(s) missing there): $d"
+                echo "KEEP (has _SUCCESS in S3 but $(printf '%s\n' "$missing" | wc -l | tr -d ' ') file(s) missing there): $d"
                 failed=1
             fi
         elif [[ "$stage" == "jsonl" ]]; then
