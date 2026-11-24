@@ -19,6 +19,39 @@ MAX_FAILURE_SLACK_HUBS = 10
 MAX_ERROR_LINES_CHARS = 2500
 MAX_OAI_CONTEXT_CHARS = 2500
 
+# <!here>, <!channel> and <@USERID> mentions, with any trailing space.
+_SLACK_MENTION_RE = re.compile(r"<(?:!here|!channel|!everyone|@[A-Z0-9]+)>\s?")
+
+
+def _post_webhook(webhook: str, payload: dict, label: str, timeout: int = 10) -> None:
+    """POST a JSON payload to a Slack webhook; failures are logged, never raised."""
+    try:
+        req = urllib.request.Request(
+            webhook,
+            data=json.dumps(payload).encode('utf-8'),
+            headers={'Content-Type': 'application/json'}
+        )
+        urllib.request.urlopen(req, timeout=timeout)
+    except (urllib.error.URLError, ValueError) as e:
+        # Type only: the message can include the webhook URL, which is a secret.
+        print(f"Warning: Could not send Slack {label} ({type(e).__name__})")
+
+
+def post_slack_mirror(payload: dict, webhook: Optional[str]) -> None:
+    """Post a copy of a Slack payload to the mirror workspace's webhook.
+
+    No-op when ``webhook`` is empty. Mentions are stripped from ``text``:
+    user IDs belong to the primary workspace and do not resolve in the mirror,
+    and @here would ping people there. Best-effort, with a short timeout, so
+    the mirror can never affect the primary notification.
+    """
+    if not webhook:
+        return
+    mirrored = dict(payload)
+    if isinstance(mirrored.get("text"), str):
+        mirrored["text"] = _SLACK_MENTION_RE.sub("", mirrored["text"])
+    _post_webhook(webhook, mirrored, "mirror notification", timeout=5)
+
 
 class Notifier:
     """Handles notifications and failure escalation."""
@@ -382,19 +415,9 @@ class Notifier:
         Falls back to SLACK_WEBHOOK if SLACK_TECH_WEBHOOK is not configured.
         """
         webhook = self.config.slack_tech_webhook or self.config.slack_webhook
-        if not webhook:
-            return
-
-        try:
-            data = json.dumps(payload).encode('utf-8')
-            req = urllib.request.Request(
-                webhook,
-                data=data,
-                headers={'Content-Type': 'application/json'}
-            )
-            urllib.request.urlopen(req, timeout=10)
-        except urllib.error.URLError as e:
-            print(f"Warning: Could not send Slack #tech notification: {e}")
+        if webhook:
+            _post_webhook(webhook, payload, "#tech notification")
+        post_slack_mirror(payload, self.config.slack_mirror_webhook)
 
     # =========================================================================
     # Anomaly alerts
@@ -1170,20 +1193,10 @@ class Notifier:
         return "\n".join(lines)
 
     def _send_slack(self, payload: dict):
-        """Send a Slack webhook message."""
-        if not self.config.slack_webhook:
-            return
-
-        try:
-            data = json.dumps(payload).encode('utf-8')
-            req = urllib.request.Request(
-                self.config.slack_webhook,
-                data=data,
-                headers={'Content-Type': 'application/json'}
-            )
-            urllib.request.urlopen(req, timeout=10)
-        except urllib.error.URLError as e:
-            print(f"Warning: Could not send Slack notification: {e}")
+        """Send a Slack webhook message (and a copy to the mirror, if configured)."""
+        if self.config.slack_webhook:
+            _post_webhook(self.config.slack_webhook, payload, "notification")
+        post_slack_mirror(payload, self.config.slack_mirror_webhook)
 
     def _create_github_issue(self, failure_report: dict):
         """Create a GitHub issue for failures."""

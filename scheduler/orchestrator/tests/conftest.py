@@ -24,6 +24,7 @@ def mock_config():
     config.slack_webhook = "https://hooks.slack.com/services/TEST/FAKE/WEBHOOK"
     config.slack_tech_webhook = "https://hooks.slack.com/services/TEST/FAKE/TECH"
     config.slack_alert_user_id = "U0TESTFAKE01"
+    config.slack_mirror_webhook = None
     config.aliases_enabled = True
     config.github_token = None
 

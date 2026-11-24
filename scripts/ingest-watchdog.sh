@@ -37,7 +37,7 @@ HEARTBEAT_INTERVAL_SECS=$((60 * 60))  # 1 hour
 
 [[ -d "$STATUS_DIR" ]] || exit 0
 
-# Load credentials (provides SLACK_BOT_TOKEN, SLACK_CHANNEL)
+# Load credentials (provides SLACK_BOT_TOKEN, SLACK_CHANNEL, SLACK_MIRROR_WEBHOOK)
 [[ -f "$ENV_FILE" ]] && source "$ENV_FILE"
 
 slack_alert() {
@@ -45,16 +45,28 @@ slack_alert() {
     msg=$(printf '%b' "$1")
     local token="${SLACK_BOT_TOKEN:-}"
     local channel="${SLACK_CHANNEL:-C02HEU2L3}"
-    [[ -z "$token" ]] && return 0
     local payload
-    payload=$(python3 -c "
+    if [[ -n "$token" ]] && payload=$(python3 -c "
 import json, sys
 print(json.dumps({'channel': sys.argv[1], 'text': sys.argv[2]}))" \
-        "$channel" "$msg") || return 0
-    curl -s -X POST "https://slack.com/api/chat.postMessage" \
-        -H "Authorization: Bearer $token" \
-        -H "Content-Type: application/json" \
-        -d "$payload" > /dev/null || true
+        "$channel" "$msg"); then
+        curl -s -X POST "https://slack.com/api/chat.postMessage" \
+            -H "Authorization: Bearer $token" \
+            -H "Content-Type: application/json" \
+            -d "$payload" > /dev/null || true
+    fi
+    # Mirror to a second workspace when SLACK_MIRROR_WEBHOOK is set (best-effort).
+    # Same behaviour as slack_mirror in common.sh, which this cron script does
+    # not source; keep the two in step.
+    local hook="${SLACK_MIRROR_WEBHOOK:-}"
+    if [[ -n "$hook" ]] && payload=$(python3 -c "
+import json, sys
+print(json.dumps({'text': sys.argv[1]}))" "$msg"); then
+        curl -s --connect-timeout 5 --max-time 10 -X POST "$hook" \
+            -H "Content-Type: application/json" \
+            -d "$payload" > /dev/null 2>&1 || true
+    fi
+    return 0
 }
 
 is_heartbeat_hub() {

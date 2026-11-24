@@ -303,16 +303,30 @@ init_paths() {
 # Slack Notifications
 # =============================================================================
 #
-# Send a Slack notification to #tech-alerts.
-# Reads SLACK_BOT_TOKEN and SLACK_CHANNEL from the environment (.env file).
-# Silently skips if SLACK_BOT_TOKEN is not configured.
+# Mirror a message to a second Slack workspace.
+# Reads SLACK_MIRROR_WEBHOOK (an Incoming Webhook URL) from the environment;
+# silently skips if it is not set. Best-effort: never fails the caller, so a
+# broken mirror cannot affect the primary notification or the pipeline.
+# The text is posted as-is; no shell-script message contains @mentions.
 #
-# Usage: slack_notify "message text"
+# Usage: slack_mirror "message text"
 #
-slack_notify() {
-    # Interpret \n escape sequences so callers can use "\n" for line breaks.
-    local msg
-    msg=$(printf '%b' "$1")
+slack_mirror() {
+    local hook="${SLACK_MIRROR_WEBHOOK:-}"
+    [[ -z "$hook" ]] && return 0
+    local payload
+    payload=$(python3 -c "import json,sys; print(json.dumps({'text':sys.argv[1]}))" "$1") || return 0
+    curl -s --connect-timeout 5 --max-time 10 \
+        -X POST "$hook" \
+        -H "Content-Type: application/json" \
+        -d "$payload" > /dev/null 2>&1 || true
+    return 0
+}
+
+# Post to the primary workspace (#tech-alerts) via chat.postMessage.
+# Returns 0 when skipped (no token) or on API success, 1 on failure.
+_slack_post_primary() {
+    local msg="$1"
     local token="${SLACK_BOT_TOKEN:-${SLACK_TOKEN:-}}"
     local channel="${SLACK_CHANNEL:-C02HEU2L3}"
     [[ -z "$token" ]] && return 0
@@ -327,6 +341,24 @@ slack_notify() {
         -d "$payload") || return 1
     python3 -c "import json,sys; d=json.loads(sys.argv[1]); sys.exit(0 if d.get('ok') else 1)" \
         "$response" 2>/dev/null
+}
+
+# Send a Slack notification to #tech-alerts.
+# Reads SLACK_BOT_TOKEN and SLACK_CHANNEL from the environment (.env file).
+# Silently skips if SLACK_BOT_TOKEN is not configured.
+# Then mirrors the same text via slack_mirror when SLACK_MIRROR_WEBHOOK is set.
+# The return status is the primary post's; the mirror never changes it.
+#
+# Usage: slack_notify "message text"
+#
+slack_notify() {
+    # Interpret \n escape sequences so callers can use "\n" for line breaks.
+    local msg
+    msg=$(printf '%b' "$1")
+    local rc=0
+    _slack_post_primary "$msg" || rc=$?
+    slack_mirror "$msg"
+    return "$rc"
 }
 
 # Start a background heartbeat that sends progress updates to Slack.

@@ -41,6 +41,7 @@ Use this document when you are asked to **run ingests**, **report status**, or *
 |------|-----------|--------------------|
 | `ingest.sh` and other shell scripts (`common.sh` `slack_notify`, `ingest-watchdog.sh`) | `SLACK_BOT_TOKEN`, optional `SLACK_CHANNEL` (default `C02HEU2L3` = #tech-alerts) | `$I3_HOME/.env` (on the ingest EC2: `/home/ec2-user/ingestion3/.env`) |
 | GitHub Actions workflows (`ingest-hub.yml`, `ingest-monthly.yml`, …) | `SLACK_BOT_TOKEN`, `SLACK_CHANNEL` | Repository secrets |
+| Mirror to a second workspace (optional; applies to every sender in this table) | `SLACK_MIRROR_WEBHOOK` | `$I3_HOME/.env` and a repository secret of the same name |
 | Python orchestrator and staged report (`scheduler/orchestrator/`) | `SLACK_WEBHOOK`, optional `SLACK_TECH_WEBHOOK`, `SLACK_ALERT_USER_ID` | `.env` |
 
 **Treat as errors (must notify):**
