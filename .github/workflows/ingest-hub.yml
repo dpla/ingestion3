@@ -38,13 +38,17 @@ permissions:
 
 env:
   # jq filter that turns a chat.postMessage payload into the mirror webhook
-  # payload. Mentions are stripped: inputs such as the hub name are free text,
-  # and <!here> or a user ID must never ping people in the mirror workspace.
+  # payload. Mentions are stripped as a backstop: <!here> or a user ID must
+  # never ping people in the mirror workspace.
   SLACK_MIRROR_JQ: '{text: (.text | gsub("<(@|!(?!date\\^))[^>]*>\\s?"; ""))}'
-  # jq function that escapes Slack's control characters (& < >). The hub name
-  # is free text typed into the form and is used in messages before preflight
-  # validates it, so it must not be able to inject a mention or a link.
-  SLACK_ESCAPE_JQ: 'def esc: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");'
+  # The form of every real hub name (same as HUB_RE in
+  # ingest_pipeline_python/3_launch_ingest.py). The hub is free text typed into
+  # the form, so it is checked against this before use.
+  HUB_RE: '^[a-z0-9_-]+$'
+  # jq function for putting the hub name into a Slack message: anything that
+  # does not match HUB_RE, and so could carry a mention or a link, becomes a
+  # fixed placeholder.
+  SLACK_HUB_JQ: 'def safe_hub: if test(env.HUB_RE) then . else "(invalid hub name)" end;'
 
 jobs:
   ingest:
@@ -57,6 +61,17 @@ jobs:
         run: |
           if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
             echo "::error::This workflow must run from main — the OIDC role trust policy restricts credentials to main only."
+            exit 1
+          fi
+
+      # Reject a malformed hub before anything uses it. The failure notification
+      # below still runs, and reports it as "(invalid hub name)".
+      - name: Validate hub name
+        env:
+          HUB: ${{ inputs.hub }}
+        run: |
+          if [[ ! "$HUB" =~ $HUB_RE ]]; then  # unquoted, so bash treats it as a regex
+            echo "::error::Invalid hub name: use lowercase letters, digits, '-' and '_' only (for example 'maryland' or 'community-webs')."
             exit 1
           fi
 
@@ -83,7 +98,7 @@ jobs:
           PAYLOAD=$(jq -n --arg hub "$HUB" --arg actor "$ACTOR" \
             --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-            "$SLACK_ESCAPE_JQ"' {channel: $channel, text: ":rocket: *\($hub | esc) ingest queued* — triggered by \($actor) via GHA — <\($url)|View run>"}')
+            "$SLACK_HUB_JQ"' {channel: $channel, text: ":rocket: *\($hub | safe_hub) ingest queued* — triggered by \($actor) via GHA — <\($url)|View run>"}')
           if [[ -n "${SLACK_BOT_TOKEN:-}" ]]; then
             RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
               -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
@@ -120,7 +135,7 @@ jobs:
         run: |
           PAYLOAD=$(jq -n --arg hub "$HUB" --arg actor "$ACTOR" \
             --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
-            "$SLACK_ESCAPE_JQ"' {channel: $channel, text: ":white_check_mark: *\($hub | esc) preflight passed* — EC2 up, repos synced, launching ingest"}')
+            "$SLACK_HUB_JQ"' {channel: $channel, text: ":white_check_mark: *\($hub | safe_hub) preflight passed* — EC2 up, repos synced, launching ingest"}')
           if [[ -n "${SLACK_BOT_TOKEN:-}" ]]; then
             RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
               -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
@@ -199,7 +214,7 @@ jobs:
           PAYLOAD=$(jq -n --arg hub "$HUB" --arg actor "$ACTOR" \
             --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-            "$SLACK_ESCAPE_JQ"' {channel: $channel, text: ":x: *Hub ingest job FAILED* — `\($hub | esc)` (triggered by \($actor)) — <\($url)|View run>"}')
+            "$SLACK_HUB_JQ"' {channel: $channel, text: ":x: *Hub ingest job FAILED* — `\($hub | safe_hub)` (triggered by \($actor)) — <\($url)|View run>"}')
           if [[ -n "${SLACK_BOT_TOKEN:-}" ]]; then
             RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
               -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
