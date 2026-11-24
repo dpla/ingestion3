@@ -307,7 +307,8 @@ init_paths() {
 # Reads SLACK_MIRROR_WEBHOOK (an Incoming Webhook URL) from the environment;
 # silently skips if it is not set. Best-effort: never fails the caller, so a
 # broken mirror cannot affect the primary notification or the pipeline.
-# The text is posted as-is; no shell-script message contains @mentions.
+# @here / @channel / user mentions are stripped from the mirrored copy: user
+# IDs belong to the primary workspace, and the mirror must never ping people.
 #
 # Usage: slack_mirror "message text"
 #
@@ -315,7 +316,10 @@ slack_mirror() {
     local hook="${SLACK_MIRROR_WEBHOOK:-}"
     [[ -z "$hook" ]] && return 0
     local payload
-    payload=$(python3 -c "import json,sys; print(json.dumps({'text':sys.argv[1]}))" "$1") || return 0
+    payload=$(python3 -c "
+import json, re, sys
+text = re.sub(r'<(?:!here|!channel|!everyone|@[A-Z0-9]+)>\s?', '', sys.argv[1])
+print(json.dumps({'text': text}))" "$1") || return 0
     curl -s --connect-timeout 5 --max-time 10 \
         -X POST "$hook" \
         -H "Content-Type: application/json" \

@@ -16,7 +16,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-I3_HOME="$(dirname "$SCRIPT_DIR")"
+# I3_HOME may be overridden (the tests point it at a temp dir); cron leaves it unset.
+I3_HOME="${I3_HOME:-$(dirname "$SCRIPT_DIR")}"
 STATUS_DIR="$I3_HOME/logs/status"
 ENV_FILE="$I3_HOME/.env"
 
@@ -40,6 +41,9 @@ HEARTBEAT_INTERVAL_SECS=$((60 * 60))  # 1 hour
 # Load credentials (provides SLACK_BOT_TOKEN, SLACK_CHANNEL, SLACK_MIRROR_WEBHOOK)
 [[ -f "$ENV_FILE" ]] && source "$ENV_FILE"
 
+# Log a warning. Cron appends this script's stderr to watchdog.log.
+warn() { echo "$(date '+%Y-%m-%d %H:%M:%S') WARN: $*" >&2; }
+
 slack_alert() {
     local msg
     msg=$(printf '%b' "$1")
@@ -50,18 +54,31 @@ slack_alert() {
 import json, sys
 print(json.dumps({'channel': sys.argv[1], 'text': sys.argv[2]}))" \
         "$channel" "$msg"); then
-        curl -s -X POST "https://slack.com/api/chat.postMessage" \
+        # Bounded, and checked: a hung connection must not stall this cron run,
+        # and a rejected alert is logged (stderr goes to watchdog.log) instead
+        # of vanishing. Slack answers HTTP 200 with ok:false on failure.
+        # Same request as _slack_post_primary in common.sh; keep the two in step.
+        local response
+        if response=$(curl -s --connect-timeout 10 --max-time 30 \
+            -X POST "https://slack.com/api/chat.postMessage" \
             -H "Authorization: Bearer $token" \
             -H "Content-Type: application/json" \
-            -d "$payload" > /dev/null || true
+            -d "$payload"); then
+            python3 -c "import json,sys; sys.exit(0 if json.loads(sys.argv[1]).get('ok') else 1)" \
+                "$response" 2>/dev/null \
+                || warn "Slack rejected the watchdog alert: ${response:0:200}"
+        else
+            warn "Slack watchdog alert could not be sent (curl exit $?)"
+        fi
     fi
     # Mirror to a second workspace when SLACK_MIRROR_WEBHOOK is set (best-effort).
     # Same behaviour as slack_mirror in common.sh, which this cron script does
     # not source; keep the two in step.
     local hook="${SLACK_MIRROR_WEBHOOK:-}"
     if [[ -n "$hook" ]] && payload=$(python3 -c "
-import json, sys
-print(json.dumps({'text': sys.argv[1]}))" "$msg"); then
+import json, re, sys
+text = re.sub(r'<(?:!here|!channel|!everyone|@[A-Z0-9]+)>\s?', '', sys.argv[1])
+print(json.dumps({'text': text}))" "$msg"); then
         curl -s --connect-timeout 5 --max-time 10 -X POST "$hook" \
             -H "Content-Type: application/json" \
             -d "$payload" > /dev/null 2>&1 || true

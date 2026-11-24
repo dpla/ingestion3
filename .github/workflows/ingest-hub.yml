@@ -36,6 +36,12 @@ permissions:
   id-token: write   # required for OIDC
   contents: read
 
+env:
+  # jq filter that turns a chat.postMessage payload into the mirror webhook
+  # payload. Mentions are stripped: inputs such as the hub name are free text,
+  # and <!here> or a user ID must never ping people in the mirror workspace.
+  SLACK_MIRROR_JQ: '{text: (.text | gsub("<(!here|!channel|!everyone|@[A-Z0-9]+)> ?"; ""))}'
+
 jobs:
   ingest:
     name: 'Ingest: ${{ inputs.hub }}'
@@ -85,7 +91,7 @@ jobs:
           if [[ -n "${SLACK_MIRROR_WEBHOOK:-}" ]]; then
             curl -sf --connect-timeout 5 --max-time 10 -X POST "$SLACK_MIRROR_WEBHOOK" \
               -H 'Content-Type: application/json' \
-              -d "$(echo "$PAYLOAD" | jq -c '{text}')" > /dev/null || echo "::warning::Slack mirror post failed"
+              -d "$(echo "$PAYLOAD" | jq -c "$SLACK_MIRROR_JQ")" > /dev/null || echo "::warning::Slack mirror post failed"
           fi
 
       # Starts the EC2 if stopped, waits for SSM Online, resets both repos to
@@ -122,7 +128,7 @@ jobs:
           if [[ -n "${SLACK_MIRROR_WEBHOOK:-}" ]]; then
             curl -sf --connect-timeout 5 --max-time 10 -X POST "$SLACK_MIRROR_WEBHOOK" \
               -H 'Content-Type: application/json' \
-              -d "$(echo "$PAYLOAD" | jq -c '{text}')" > /dev/null || echo "::warning::Slack mirror post failed"
+              -d "$(echo "$PAYLOAD" | jq -c "$SLACK_MIRROR_JQ")" > /dev/null || echo "::warning::Slack mirror post failed"
           fi
 
       - name: Launch ${{ inputs.hub }} ingest
@@ -201,5 +207,5 @@ jobs:
           if [[ -n "${SLACK_MIRROR_WEBHOOK:-}" ]]; then
             curl -sf --connect-timeout 5 --max-time 10 -X POST "$SLACK_MIRROR_WEBHOOK" \
               -H 'Content-Type: application/json' \
-              -d "$(echo "$PAYLOAD" | jq -c '{text}')" > /dev/null || echo "::warning::Slack mirror post failed"
+              -d "$(echo "$PAYLOAD" | jq -c "$SLACK_MIRROR_JQ")" > /dev/null || echo "::warning::Slack mirror post failed"
           fi
