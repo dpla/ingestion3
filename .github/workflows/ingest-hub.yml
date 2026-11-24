@@ -41,6 +41,10 @@ env:
   # payload. Mentions are stripped: inputs such as the hub name are free text,
   # and <!here> or a user ID must never ping people in the mirror workspace.
   SLACK_MIRROR_JQ: '{text: (.text | gsub("<(@|!(?!date\\^))[^>]*>\\s?"; ""))}'
+  # jq function that escapes Slack's control characters (& < >). The hub name
+  # is free text typed into the form and is used in messages before preflight
+  # validates it, so it must not be able to inject a mention or a link.
+  SLACK_ESCAPE_JQ: 'def esc: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");'
 
 jobs:
   ingest:
@@ -79,7 +83,7 @@ jobs:
           PAYLOAD=$(jq -n --arg hub "$HUB" --arg actor "$ACTOR" \
             --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-            '{channel: $channel, text: ":rocket: *\($hub) ingest queued* — triggered by \($actor) via GHA — <\($url)|View run>"}')
+            "$SLACK_ESCAPE_JQ"' {channel: $channel, text: ":rocket: *\($hub | esc) ingest queued* — triggered by \($actor) via GHA — <\($url)|View run>"}')
           if [[ -n "${SLACK_BOT_TOKEN:-}" ]]; then
             RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
               -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
@@ -116,7 +120,7 @@ jobs:
         run: |
           PAYLOAD=$(jq -n --arg hub "$HUB" --arg actor "$ACTOR" \
             --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
-            '{channel: $channel, text: ":white_check_mark: *\($hub) preflight passed* — EC2 up, repos synced, launching ingest"}')
+            "$SLACK_ESCAPE_JQ"' {channel: $channel, text: ":white_check_mark: *\($hub | esc) preflight passed* — EC2 up, repos synced, launching ingest"}')
           if [[ -n "${SLACK_BOT_TOKEN:-}" ]]; then
             RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
               -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
@@ -195,7 +199,7 @@ jobs:
           PAYLOAD=$(jq -n --arg hub "$HUB" --arg actor "$ACTOR" \
             --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-            '{channel: $channel, text: ":x: *Hub ingest job FAILED* — `\($hub)` (triggered by \($actor)) — <\($url)|View run>"}')
+            "$SLACK_ESCAPE_JQ"' {channel: $channel, text: ":x: *Hub ingest job FAILED* — `\($hub | esc)` (triggered by \($actor)) — <\($url)|View run>"}')
           if [[ -n "${SLACK_BOT_TOKEN:-}" ]]; then
             RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
               -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
