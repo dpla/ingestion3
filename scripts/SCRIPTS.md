@@ -18,7 +18,8 @@ Scripts are grouped by purpose. Run from repo root (e.g. `./scripts/ingest.sh ma
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| `ingest.sh` | Full pipeline (harvest → map → enrich → jsonl → S3 sync); self-re-execs under `setsid` to escape SSM's 60-min process-group kill | `./scripts/ingest.sh <hub>` |
+| `ingest.sh` | Full pipeline (harvest → map → enrich → jsonl → S3 sync); syncs each step's output to S3 as it finishes; self-re-execs under `setsid` to escape SSM's 60-min process-group kill | `./scripts/ingest.sh <hub> [--prune]` |
+| `prune-hub-data.sh` | Delete a hub's old runs from the box: keeps the newest 2 complete per step, deletes older ones once they're in S3 | `./scripts/prune-hub-data.sh <hub> [--dry-run] [--no-upload] [--keep N]` |
 | `ingest-watchdog.sh` | Cron watchdog: detects ingests killed by SIGKILL and alerts Slack | `*/5 * * * * /home/ec2-user/ingestion3/scripts/ingest-watchdog.sh` (via crontab) |
 | `harvest.sh` | Harvest records from OAI/API/file source | `./scripts/harvest.sh <hub>` |
 | `remap.sh` | Re-run mapping → enrichment → jsonl | `./scripts/remap.sh <hub>` |
@@ -90,6 +91,7 @@ All scripts source `common.sh` which provides:
 - **IngestRemap runner**: `run_ingest_remap <input> <output> <conf> <name>` — convenience wrapper for IngestRemap
 - **Status writer**: `write_hub_status <hub> <status> [--error=msg]` — writes per-hub `.status` file for ingest-status.sh (used by ingest.sh, harvest.sh, remap.sh)
 - **Data finder**: `find_latest_data <provider> <step>` — finds the most recent timestamped directory for a pipeline step
+- **Run-dir S3 helpers**: `sync_run_to_s3 <hub> <step> <run dir>` uploads one complete run with its `_SUCCESS` last, removing any `_SUCCESS` already in S3 for that run first, so a run counts as in S3 only once the upload finished (a repeat upload included). `list_s3_stage_keys <hub> <step>` lists every object under the step as `<run>/<path>`. `list_s3_complete_runs <hub> <step>` lists the runs with a `_SUCCESS` in S3. Both return 1 if S3 can't be listed. `run_files_missing_in_s3 <run dir> <keys>` prints the run's local files that aren't in S3. `s3_stage_uri <hub> <step>` gives `s3://dpla-master-dataset/<prefix>/<step>`
 
 ### Example: Using common.sh in a new script
 
@@ -110,6 +112,38 @@ log_info "Platform is: $PLATFORM"
 ```
 
 ## Script Details
+
+### prune-hub-data.sh - Delete a hub's old runs from the box
+
+Frees disk on the ingest EC2 the same way NARA's prune does (`launch_nara.py` step 1b). It refuses `nara`, which has its own.
+
+```bash
+./scripts/prune-hub-data.sh <hub> --dry-run   # show what would happen; change nothing
+./scripts/prune-hub-data.sh <hub>             # do it
+./scripts/prune-hub-data.sh <hub> --keep 3    # keep 3 complete runs per step instead of 2
+```
+
+For each of `$DPLA_DATA/<hub>/{harvest,mapping,enrichment,jsonl}`:
+
+| Run | What happens |
+|-----|--------------|
+| One of the newest N with `_SUCCESS` (N = `--keep`, default 2) | Kept |
+| No `_SUCCESS` (incomplete) | Deleted |
+| Older, `_SUCCESS` and every local file of the run in `s3://dpla-master-dataset/<prefix>/<step>/<run>/` | Deleted |
+| Older, `_SUCCESS` in S3 but some files missing there (an interrupted sync) | Kept |
+| Older harvest/mapping/enrichment run, not in S3 | Synced to S3 (`_SUCCESS` last), then deleted. If the sync fails, kept. With `--no-upload` (what `ingest.sh --prune --skip-s3-sync` passes), kept |
+| Older JSONL snapshot, not in S3 | Kept, and never uploaded by the prune. The indexer reads each hub's newest JSONL in S3, and a snapshot that isn't there was held back on purpose (safety check, `--skip-s3-sync`) |
+| Step where S3 can't be listed | Complete runs kept |
+| Step with no complete run | Everything kept |
+
+Before it starts, it checks once whether a pipeline step for the hub is running (a Spark entry with `--name=<hub>`, or `ingest.sh`/`harvest.sh`/`remap.sh`/… for the hub), and does nothing if one is. It holds no lock, so a step started after that check isn't stopped and isn't seen; don't start one by hand during a prune. It exits 1 if a sync or S3 listing failed or a run was only partly in S3, so some runs were kept.
+
+**How it's run:**
+- **Launcher:** `3_launch_ingest.py` shows the `--dry-run` output and asks. On yes, it launches `ingest.sh <hub> --prune`, which runs the prune before the harvest. A failed prune is a Slack warning, not a failure, and the disk checks still apply.
+- **CI:** `--non-interactive` launches (GitHub Actions) never prune.
+- **Manually:** on the box, as `ec2-user`, from the ingestion3 checkout.
+
+**Step syncs:** so that old runs can be deleted, `ingest.sh` syncs each step's output to S3 as soon as the step finishes: harvest, mapping, enrichment (`sync_run_to_s3`). The JSONL is synced in step 5 as before, after the safety checks. A failed step sync is a Slack warning and the run continues; the next prune syncs it instead. `--skip-s3-sync` skips the step syncs too.
 
 ### ingest-watchdog.sh - SIGKILL Watchdog
 
@@ -189,7 +223,7 @@ Deliveries can be dated folders (`2026-11-02/`, `20261102/`, `11022026/`) or dat
 | None (empty bucket, no dated entries), the bucket can't be listed, or no endpoint in i3.conf | The harvest **fails** before starting: there's nothing to harvest. |
 | From an earlier month, and the hub's JSONL in `dpla-master-dataset` can't be listed (e.g. access denied) | The harvest **fails** before starting, rather than risk re-publishing it. |
 
-"Already published" means the delivery is in the hub's **newest JSONL snapshot** in `s3://dpla-master-dataset/<hub>/jsonl/`, the one the index rebuild reads (sparkindexer takes each hub's last snapshot in sort order). Harvests aren't checked: `ingest.sh` only syncs JSONL to S3, so harvests stay on the box and may have been cleaned up.
+"Already published" means the delivery is in the hub's **newest JSONL snapshot** in `s3://dpla-master-dataset/<hub>/jsonl/`, the one the index rebuild reads (sparkindexer takes each hub's last snapshot in sort order). Harvests aren't checked: a harvest isn't necessarily published, and harvests made before `ingest.sh` began syncing each step aren't in S3.
 
 To know which delivery a snapshot came from, file harvests record it as `Endpoint:` in their `_MANIFEST`, and `ingest.sh` copies that into the JSONL snapshot as a `_DELIVERY` file that syncs to S3 with it (`write_delivery_marker` in `common.sh`). Runs that reuse a harvest (`--skip-harvest`, `--resume-from`) carry it over too. Snapshots without `_DELIVERY` (made before this, or by the orchestrator, which doesn't write it) fall back to dates: a snapshot made on or after the delivery's date counts as having published it. A remap made after a new delivery arrived but before it was harvested would wrongly count it, so for those older snapshots check the hub's JSONL dates against its deliveries if a result looks off.
 

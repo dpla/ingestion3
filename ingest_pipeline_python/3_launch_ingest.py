@@ -12,6 +12,13 @@ Usage (from the repo root):
     python3 ingest_pipeline_python/3_launch_ingest.py ohio --bucket dpla-hub-ohio
     python3 ingest_pipeline_python/3_launch_ingest.py bpl --resume-from mapping
     python3 ingest_pipeline_python/3_launch_ingest.py bpl --skip-email  # no partner summary email
+    python3 ingest_pipeline_python/3_launch_ingest.py bpl --no-prune    # don't offer to delete old runs
+
+Before launching (interactive runs only), it shows a dry run of
+scripts/prune-hub-data.sh for the hub and asks whether to delete old runs from
+the box. On yes, ingest.sh gets --prune and does it at the start of the run:
+the newest 2 complete runs per step are kept, older ones are deleted once
+they're in S3 (harvest/mapping/enrichment are synced first if they aren't).
 """
 import argparse
 import base64
@@ -67,7 +74,7 @@ def _profile_args() -> list[str]:
     return ["--profile", AWS_PROFILE] if AWS_PROFILE else []
 
 
-def ssm_run(shell_cmd: str) -> str:
+def ssm_run(shell_cmd: str, timeout_seconds: int = 20) -> str:
     """Run a short command on the EC2 box via SSM and return stdout."""
     encoded = base64.b64encode(shell_cmd.encode()).decode("ascii")
     wrapped = f"sudo -u ec2-user bash -lc 'echo {encoded} | base64 -d | bash -l'"
@@ -77,7 +84,7 @@ def ssm_run(shell_cmd: str) -> str:
         + _profile_args()
         + ["--instance-ids", INSTANCE_ID,
            "--document-name", "AWS-RunShellScript",
-           "--timeout-seconds", "20",
+           "--timeout-seconds", str(timeout_seconds),
            "--parameters", params,
            "--query", "Command.CommandId",
            "--output", "text"],
@@ -86,7 +93,7 @@ def ssm_run(shell_cmd: str) -> str:
     if r.returncode != 0:
         return ""
     cmd_id = r.stdout.strip()
-    for _ in range(8):
+    for _ in range(timeout_seconds // 3 + 2):
         time.sleep(3)
         status = subprocess.run(
             ["aws", "ssm", "get-command-invocation"]
@@ -237,6 +244,41 @@ already published, the harvest fails rather than re-ingesting it.
 
 
 # ── main ──────────────────────────────────────────────────────────────────────
+def prune_preview(hub: str) -> bool:
+    """Show what prune-hub-data.sh would delete for this hub and ask.
+
+    Returns True if the operator says yes, so the launch adds --prune and
+    ingest.sh does the sync-and-delete at the start of the run (a backlog sync
+    can take far longer than an SSM call). Interactive launches only.
+    """
+    print(f"\nChecking old {hub} runs on the box (dry run, nothing is deleted) …")
+    out = ssm_run(
+        f"bash {SCRIPTS_DIR}/prune-hub-data.sh {shlex.quote(hub)} --dry-run 2>&1",
+        timeout_seconds=120,
+    )
+    if not out:
+        print("  Warning: couldn't run the prune dry run — launching without a prune.")
+        return False
+    print("\n".join(f"  {line}" for line in out.splitlines()))
+    if "SKIP:" in out:
+        print("  Not pruning while a step for this hub is running.")
+        return False
+    if "WOULD DELETE" not in out and "WOULD SYNC + DELETE" not in out:
+        if "No such file" in out:
+            print("  Warning: prune-hub-data.sh isn't on the box yet (run preflight) — launching without a prune.")
+        else:
+            print("  Nothing to prune.")
+        return False
+    try:
+        ans = input(
+            "\n  Delete the runs above at the start of the ingest "
+            "(syncing to S3 first where marked)? [y/N] "
+        ).strip().lower()
+    except EOFError:
+        ans = ""
+    return ans in ("y", "yes")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Launch a DPLA hub ingest via SSM.")
     parser.add_argument("hub", nargs="?", help="Hub name (e.g. bpl, ohio). Prompts if omitted.")
@@ -261,6 +303,10 @@ def main() -> None:
         action="store_true",
         help="Don't send the partner summary email at the end (passes --skip-email to "
              "ingest.sh; the EC2 checkout must include it).",
+    )
+    parser.add_argument(
+        "--no-prune", action="store_true",
+        help="Don't check for or delete old runs of this hub on the box before launching.",
     )
     parser.add_argument(
         "--non-interactive", action="store_true",
@@ -325,6 +371,10 @@ def main() -> None:
         extra = ""
     if args.skip_email:
         extra += " --skip-email"
+    # Old-run prune: interactive only, since it deletes from the box and needs
+    # a yes. CI launches (--non-interactive) never prune.
+    if not args.non_interactive and not args.no_prune and prune_preview(hub):
+        extra += " --prune"
     gha_actor = os.environ.get("GHA_ACTOR", "")
     # `env` is required: nohup execs its first argument, so a bare VAR=val
     # prefix is treated as the command name and the launch silently fails.

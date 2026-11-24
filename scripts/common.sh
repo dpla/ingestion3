@@ -827,6 +827,76 @@ write_delivery_marker() {
 }
 
 # =============================================================================
+# Run-dir S3 helpers (ingest.sh step syncs, prune-hub-data.sh)
+# =============================================================================
+# A run dir (e.g. harvest/20261101_120000-ohio-OriginalRecord.avro) counts as
+# in S3 once its _SUCCESS is there. sync_run_to_s3 uploads _SUCCESS last, so a
+# sync that's cut short never looks complete.
+
+# s3_stage_uri <hub> <stage> — s3://dpla-master-dataset/<s3 prefix>/<stage>
+s3_stage_uri() {
+    printf 's3://dpla-master-dataset/%s/%s' "$(resolve_s3_prefix "$1")" "$2"
+}
+
+# list_s3_stage_keys <hub> <stage> — every object under the step in S3, as
+# <run>/<path inside the run>, one per line. Returns 1 if S3 couldn't be
+# listed, so callers can tell "nothing there" (0, no output) from "don't know".
+list_s3_stage_keys() {
+    local hub="$1" stage="$2" out err rc=0
+    err=$(mktemp "${TMPDIR:-/tmp}/s3ls.XXXXXX")
+    out=$(aws s3 ls "$(s3_stage_uri "$hub" "$stage")/" --recursive 2>"$err") || rc=$?
+    # aws s3 ls exits 1 with no error text when the prefix doesn't exist yet
+    if [[ $rc -ne 0 && -s "$err" ]]; then
+        cat "$err" >&2
+        rm -f "$err"
+        return 1
+    fi
+    rm -f "$err"
+    printf '%s\n' "$out" | awk -v p="$(resolve_s3_prefix "$hub")/${stage}/" \
+        'index($NF, p) == 1 { k = substr($NF, length(p) + 1); if (k ~ /^[^\/]+\/./) print k }'
+}
+
+# list_s3_complete_runs <hub> <stage> — names of the run dirs that have a
+# _SUCCESS in S3, one per line. Returns 1 if S3 couldn't be listed.
+list_s3_complete_runs() {
+    local keys
+    keys=$(list_s3_stage_keys "$1" "$2") || return 1
+    printf '%s\n' "$keys" | sed -n 's|^\([^/]*\)/_SUCCESS$|\1|p'
+}
+
+# run_files_missing_in_s3 <local run dir> <S3 keys from list_s3_stage_keys> —
+# prints the run's local files that aren't in S3 (as <run>/<path>). Nothing
+# printed (and status 0) means every file is there. Returns 2 if the run dir
+# couldn't be read or compared, so callers never take that as "nothing missing".
+# Names are enough: S3 stores each object whole or not at all, so an
+# interrupted sync shows up as missing files, and a _SUCCESS in S3 alone
+# doesn't prove the rest made it (aws s3 sync doesn't upload it last).
+run_files_missing_in_s3() {
+    local dir="${1%/}" keys="$2" run files rc=0
+    run=$(basename "$dir")
+    files=$(cd "$dir" && find . -type f) || return 2
+    # grep exits 1 when it prints nothing (no missing files), 2 on error
+    printf '%s\n' "$files" | sed "s|^\./|${run}/|" \
+        | grep -vxF -f <(printf '%s\n' "$keys") || rc=$?
+    [[ $rc -le 1 ]] || return 2
+}
+
+# sync_run_to_s3 <hub> <stage> <local run dir> — upload one complete run dir,
+# _SUCCESS last. Any _SUCCESS already in S3 for the run is removed first, so a
+# repeat sync that's cut short leaves the run incomplete there too.
+sync_run_to_s3() {
+    local hub="$1" stage="$2" dir="${3%/}" dest
+    if [[ ! -f "$dir/_SUCCESS" ]]; then
+        log_warn "Not syncing $dir: it has no _SUCCESS (incomplete run)"
+        return 1
+    fi
+    dest="$(s3_stage_uri "$hub" "$stage")/$(basename "$dir")"
+    aws s3 rm "$dest/_SUCCESS" --only-show-errors || return 1
+    aws s3 sync "$dir/" "$dest/" --exclude "_SUCCESS" --only-show-errors \
+        && aws s3 cp "$dir/_SUCCESS" "$dest/_SUCCESS" --only-show-errors
+}
+
+# =============================================================================
 # Initialization
 # =============================================================================
 
