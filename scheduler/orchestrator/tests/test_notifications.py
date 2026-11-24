@@ -507,7 +507,8 @@ class TestSlackMirror:
         import json
         from scheduler.orchestrator.notifications import post_slack_mirror
 
-        payload = {"text": "<@U0TESTFAKE01> <!here> :x: *Ingest failed* for `hub` <https://example.org|link>"}
+        payload = {"text": "<@U0TESTFAKE01> <!here> <!subteam^S0GROUP01> <!subteam^S0GROUP02|@ops> <@U0TESTFAKE02|pat> "
+                           ":x: *Ingest failed* for `hub` <https://example.org|link>"}
         with patch('urllib.request.urlopen') as mock_urlopen:
             post_slack_mirror(payload, "https://hooks.slack.com/mirror")
 

@@ -723,7 +723,7 @@ STUB
 
     run_test "slack_mirror strips mentions but keeps links" \
         "rm -f '$stubdir/log'; env PATH='$stubdir':\"\$PATH\" CURL_LOG='$stubdir/log' I3_HOME='$stubdir' SLACK_MIRROR_WEBHOOK=https://hooks.example/mirror \
-         bash -c 'source \"$common_sh\" && slack_mirror \"<!here> <@U0ABC123> done <https://example.org|link>\"' && grep -q 'done <https://example.org|link>' '$stubdir/log' && ! grep -q -e '!here' -e 'U0ABC123' '$stubdir/log'"
+         bash -c 'source \"$common_sh\" && slack_mirror \"<!here> <@U0ABC123> <!subteam^S0GRP123> <!subteam^S0GRP456|@ops> done <https://example.org|link>\"' && grep -q ': \\\"done <https://example.org|link>\\\"' '$stubdir/log' && ! grep -q -e '!here' -e 'U0ABC123' -e subteam '$stubdir/log'"
 
     rm -rf "$stubdir"
 }

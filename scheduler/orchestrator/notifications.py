@@ -20,8 +20,11 @@ MAX_FAILURE_SLACK_HUBS = 10
 MAX_ERROR_LINES_CHARS = 2500
 MAX_OAI_CONTEXT_CHARS = 2500
 
-# <!here>, <!channel> and <@USERID> mentions, with any trailing space.
-_SLACK_MENTION_RE = re.compile(r"<(?:!here|!channel|!everyone|@[A-Z0-9]+)>\s?")
+# Every Slack mention token: <@...> (users) and <!...> (here, channel, everyone,
+# user groups, anything Slack adds later), with any trailing space. <!date^...>
+# tokens, links and channel links are left alone. Plain-text @here does not
+# notify through a webhook unless link_names/parse is set, which we never do.
+_SLACK_MENTION_RE = re.compile(r"<(?:@|!(?!date\^))[^>]*>\s?")
 
 
 def _post_webhook(webhook: str, payload: dict, label: str, timeout: int = 10) -> bool:

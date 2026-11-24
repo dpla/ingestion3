@@ -22,7 +22,7 @@ env:
   # jq filter that turns a chat.postMessage payload into the mirror webhook
   # payload. Mentions are stripped: inputs such as the hub name are free text,
   # and <!here> or a user ID must never ping people in the mirror workspace.
-  SLACK_MIRROR_JQ: '{text: (.text | gsub("<(!here|!channel|!everyone|@[A-Z0-9]+)> ?"; ""))}'
+  SLACK_MIRROR_JQ: '{text: (.text | gsub("<(@|!(?!date\\^))[^>]*>\\s?"; ""))}'
 
 jobs:
   kill:

@@ -77,7 +77,7 @@ print(json.dumps({'channel': sys.argv[1], 'text': sys.argv[2]}))" \
     local hook="${SLACK_MIRROR_WEBHOOK:-}"
     if [[ -n "$hook" ]] && payload=$(python3 -c "
 import json, re, sys
-text = re.sub(r'<(?:!here|!channel|!everyone|@[A-Z0-9]+)>\s?', '', sys.argv[1])
+text = re.sub(r'<(?:@|!(?!date\^))[^>]*>\s?', '', sys.argv[1])
 print(json.dumps({'text': text}))" "$msg"); then
         curl -s --connect-timeout 5 --max-time 10 -X POST "$hook" \
             -H "Content-Type: application/json" \
