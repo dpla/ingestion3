@@ -554,6 +554,51 @@ class TestSlackMirror:
         assert "https://hooks.slack.com/tech" in seen
 
 
+    def test_mirror_timeout_reading_response_is_swallowed(self, notifier, mock_config):
+        """urlopen raises a bare socket timeout (not URLError) while reading the response."""
+        import socket
+        mock_config.slack_webhook = "https://hooks.slack.com/alerts"
+        mock_config.slack_mirror_webhook = "https://hooks.slack.com/mirror"
+        seen = []
+
+        def fake_urlopen(req, timeout=None):
+            seen.append(req.full_url)
+            if req.full_url.endswith("/mirror"):
+                raise socket.timeout("timed out")
+
+        with patch('urllib.request.urlopen', side_effect=fake_urlopen):
+            notifier._send_slack({"text": "hello"})
+
+        assert seen == ["https://hooks.slack.com/alerts", "https://hooks.slack.com/mirror"]
+
+    def test_staged_report_returns_primary_result_when_mirror_times_out(self, monkeypatch):
+        import socket
+        from scheduler.orchestrator import staged_report
+
+        monkeypatch.setenv("SLACK_MIRROR_WEBHOOK", "https://hooks.slack.com/mirror")
+
+        def fake_urlopen(req, timeout=None):
+            if req.full_url.endswith("/mirror"):
+                raise socket.timeout("timed out")
+
+        with patch('urllib.request.urlopen', side_effect=fake_urlopen):
+            assert staged_report.post_to_slack("report", "https://hooks.slack.com/tech") is True
+
+    @pytest.mark.parametrize("mirror, expected_urls", [
+        ("https://hooks.slack.com/mirror", ["https://hooks.slack.com/mirror"]),
+        (None, []),
+    ])
+    def test_delivery_without_primary_webhook(self, notifier, mock_config, mirror, expected_urls):
+        """Public senders deliver to the mirror alone, and send nothing when nothing is set."""
+        mock_config.slack_webhook = None
+        mock_config.slack_tech_webhook = None
+        mock_config.slack_mirror_webhook = mirror
+
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            notifier.send_harvest_complete("run-1", "test-hub", 100)
+
+        assert [c[0][0].full_url for c in mock_urlopen.call_args_list] == expected_urls
+
     def test_staged_report_posts_primary_then_mirror(self, monkeypatch):
         from scheduler.orchestrator import staged_report
 

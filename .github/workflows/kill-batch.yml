@@ -97,7 +97,7 @@ jobs:
           fi
           # Mirror the same text to a second workspace when configured (best-effort).
           if [[ -n "${SLACK_MIRROR_WEBHOOK:-}" ]]; then
-            curl -s --connect-timeout 5 --max-time 10 -X POST "$SLACK_MIRROR_WEBHOOK" \
+            curl -sf --connect-timeout 5 --max-time 10 -X POST "$SLACK_MIRROR_WEBHOOK" \
               -H 'Content-Type: application/json' \
-              -d "$(echo "$PAYLOAD" | jq -c '{text}')" > /dev/null || echo "::warning::Slack mirror transport error"
+              -d "$(echo "$PAYLOAD" | jq -c '{text}')" > /dev/null || echo "::warning::Slack mirror post failed"
           fi

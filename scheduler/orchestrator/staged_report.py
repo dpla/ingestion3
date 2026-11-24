@@ -16,13 +16,11 @@ import os
 import re
 import subprocess
 import sys
-import urllib.request
-import urllib.error
 from datetime import datetime
 from typing import Optional
 
 from .config import CANONICAL_TO_LEGACY_HUB_KEY, hub_aliases_enabled
-from .notifications import post_slack_mirror
+from .notifications import _post_webhook, post_slack_mirror
 
 
 def _dir_to_date(dir_name: str) -> Optional[str]:
@@ -138,17 +136,10 @@ def _post_to_primary(text: str, webhook: Optional[str] = None) -> bool:
         print("No Slack webhook configured (SLACK_TECH_WEBHOOK / SLACK_WEBHOOK)", file=sys.stderr)
         return False
 
-    try:
-        payload = json.dumps({"text": text}).encode("utf-8")
-        req = urllib.request.Request(
-            webhook, data=payload, headers={"Content-Type": "application/json"}
-        )
-        urllib.request.urlopen(req, timeout=10)
+    ok = _post_webhook(webhook, {"text": text}, "staged report")
+    if ok:
         print("Posted to Slack.")
-        return True
-    except urllib.error.URLError as e:
-        print(f"Slack post failed: {e}", file=sys.stderr)
-        return False
+    return ok
 
 
 def main():

@@ -1,5 +1,6 @@
 """Notifications and escalation for ingest failures."""
 
+import http.client
 import json
 import re
 from datetime import datetime
@@ -23,8 +24,11 @@ MAX_OAI_CONTEXT_CHARS = 2500
 _SLACK_MENTION_RE = re.compile(r"<(?:!here|!channel|!everyone|@[A-Z0-9]+)>\s?")
 
 
-def _post_webhook(webhook: str, payload: dict, label: str, timeout: int = 10) -> None:
-    """POST a JSON payload to a Slack webhook; failures are logged, never raised."""
+def _post_webhook(webhook: str, payload: dict, label: str, timeout: int = 10) -> bool:
+    """POST a JSON payload to a Slack webhook.
+
+    Returns True on success. Failures are logged, never raised.
+    """
     try:
         req = urllib.request.Request(
             webhook,
@@ -32,9 +36,13 @@ def _post_webhook(webhook: str, payload: dict, label: str, timeout: int = 10) ->
             headers={'Content-Type': 'application/json'}
         )
         urllib.request.urlopen(req, timeout=timeout)
-    except (urllib.error.URLError, ValueError) as e:
-        # Type only: the message can include the webhook URL, which is a secret.
+        return True
+    except (OSError, http.client.HTTPException, ValueError) as e:
+        # OSError covers URLError and the bare socket timeouts urlopen raises
+        # while reading the response. Type only: the message can include the
+        # webhook URL, which is a secret.
         print(f"Warning: Could not send Slack {label} ({type(e).__name__})")
+        return False
 
 
 def post_slack_mirror(payload: dict, webhook: Optional[str]) -> None:
@@ -120,7 +128,7 @@ class Notifier:
         print(f"  Hubs: {len(hubs)}")
         print(f"{'='*60}\n")
 
-        if self.config.slack_webhook:
+        if self._slack_enabled():
             self._send_slack({
                 "text": f"{prefix}:rocket: DPLA Ingest Started\nRun: `{run_id}`\nHubs: {', '.join(hubs)}"
             })
@@ -159,7 +167,7 @@ class Notifier:
             )
 
         # Build Slack message
-        if self.config.slack_webhook:
+        if self._slack_enabled():
             slack_text = self._build_completion_slack_message(
                 run_id, complete, failed, total, enriched_hubs,
                 draft_dir, hubs_without_email, prefix, status_emoji
@@ -185,7 +193,7 @@ class Notifier:
 
         print(f"  [{hub}] Harvest complete: {count_str}{dur_str}")
 
-        if self.config.slack_webhook:
+        if self._slack_enabled():
             self._send_slack({
                 "text": (
                     f"{prefix}:seedling: `{hub}` harvest complete\n"
@@ -218,7 +226,7 @@ class Notifier:
 
         print(f"  [{hub}] Mapping complete: {count_str}{dur_str}")
 
-        if self.config.slack_webhook:
+        if self._slack_enabled():
             self._send_slack({
                 "text": (
                     f"{prefix}:world_map: `{hub}` mapping complete\n"
@@ -239,7 +247,7 @@ class Notifier:
 
         print(f"  [{hub}] Enrichment complete{dur_str}")
 
-        if self.config.slack_webhook:
+        if self._slack_enabled():
             self._send_slack({
                 "text": f"{prefix}:sparkles: `{hub}` enrichment complete{dur_str}"
             })
@@ -257,7 +265,7 @@ class Notifier:
 
         print(f"  [{hub}] JSONL export complete{dur_str}")
 
-        if self.config.slack_webhook:
+        if self._slack_enabled():
             self._send_slack({
                 "text": f"{prefix}:package: `{hub}` JSONL export complete{dur_str}"
             })
@@ -275,7 +283,7 @@ class Notifier:
 
         print(f"  [{hub}] Data synced to S3{dur_str}")
 
-        if self.config.slack_webhook:
+        if self._slack_enabled():
             self._send_slack({
                 "text": f"{prefix}:cloud: `{hub}` data synced to S3{dur_str}"
             })
@@ -487,7 +495,7 @@ class Notifier:
             print(f"    [{a.severity}] {a.message}")
         print(f"{'-'*60}\n")
 
-        if self.config.slack_webhook:
+        if self._slack_enabled():
             self._send_slack({"text": message})
 
     def _enrich_hub_summary(self, hubs: dict) -> dict:
@@ -1013,7 +1021,7 @@ class Notifier:
         print(f"{'='*60}\n")
 
         # Send Slack alert
-        if self.config.slack_webhook:
+        if self._slack_enabled():
             mention = ""
             if getattr(self.config, 'slack_alert_user_id', None):
                 mention = f"<@{self.config.slack_alert_user_id}> "
@@ -1191,6 +1199,10 @@ class Notifier:
         ])
 
         return "\n".join(lines)
+
+    def _slack_enabled(self) -> bool:
+        """True when a primary or mirror webhook is configured."""
+        return bool(self.config.slack_webhook or self.config.slack_mirror_webhook)
 
     def _send_slack(self, payload: dict):
         """Send a Slack webhook message (and a copy to the mirror, if configured)."""
