@@ -91,8 +91,10 @@ def ssm_run(shell_cmd: str, timeout_seconds: int = 20) -> str:
         capture_output=True, text=True,
     )
     if r.returncode != 0:
+        print(f"  (SSM send-command failed: {r.stderr.strip()})", file=sys.stderr, flush=True)
         return ""
     cmd_id = r.stdout.strip()
+    status = ""
     for _ in range(timeout_seconds // 3 + 2):
         time.sleep(3)
         status = subprocess.run(
@@ -105,14 +107,54 @@ def ssm_run(shell_cmd: str, timeout_seconds: int = 20) -> str:
         ).stdout.strip()
         if status not in ("Pending", "InProgress", "Delayed"):
             break
-    return subprocess.run(
+    out = subprocess.run(
         ["aws", "ssm", "get-command-invocation"]
         + _profile_args()
         + ["--command-id", cmd_id,
            "--instance-id", INSTANCE_ID,
-           "--query", "StandardOutputContent", "--output", "text"],
+           "--query", "[StandardOutputContent, StandardErrorContent]", "--output", "json"],
         capture_output=True, text=True,
-    ).stdout.strip()
+    )
+    try:
+        stdout, stderr = json.loads(out.stdout)
+    except (ValueError, TypeError):
+        stdout, stderr = "", out.stderr
+    if status != "Success":
+        print(f"  (SSM command {cmd_id} status '{status or 'unknown'}'"
+              f"{': ' + stderr.strip()[-500:] if stderr and stderr.strip() else ''})",
+              file=sys.stderr, flush=True)
+    return (stdout or "").strip()
+
+
+CONFIRM_ATTEMPTS = 6  # each waits up to ~36s for EC2 to answer
+
+
+def confirm_ingest_running(hub: str, log_path: str) -> None:
+    """Keep asking EC2 whether ingest.sh is running until it answers yes or no.
+
+    An empty reply means the check itself didn't finish (SSM slow, box busy),
+    not that the ingest failed, so ask again. Exit if it isn't running, or if
+    EC2 never answers: a launch we can't confirm must not look like a success.
+    """
+    check_cmd = (
+        f"if pgrep -u ec2-user -f 'scripts/ingest.sh {hub}( |$)' >/dev/null; "
+        f"then echo INGEST_RUNNING; "
+        f"else echo INGEST_NOT_RUNNING; tail -20 {log_path} 2>&1; fi"
+    )
+    for attempt in range(1, CONFIRM_ATTEMPTS + 1):
+        print(f"  Checking ingest.sh is running (attempt {attempt}/{CONFIRM_ATTEMPTS}) …", flush=True)
+        check = ssm_run(check_cmd, timeout_seconds=30)
+        if "INGEST_NOT_RUNNING" in check:
+            sys.exit(f"ingest.sh is not running for {hub} after launch. Log tail ({log_path}):\n{check}")
+        if "INGEST_RUNNING" in check:
+            print("  Confirmed: ingest.sh is running.")
+            return
+        print("  No answer from EC2 yet; asking again.", flush=True)
+    sys.exit(
+        f"Couldn't confirm ingest.sh is running for {hub}: EC2 didn't answer {CONFIRM_ATTEMPTS} checks.\n"
+        f"It may still be running. Check {log_path} on EC2 before relaunching, "
+        f"or you may start a second run."
+    )
 
 
 def aws_s3_ls(s3_path: str) -> str:
@@ -433,15 +475,7 @@ def main() -> None:
     # Confirm the process exists; on failure show the log so CI goes red.
     log_path = f"/home/ec2-user/data/{hub}-ingest.log"
     time.sleep(5)
-    check = ssm_run(
-        f"if pgrep -u ec2-user -f 'scripts/ingest.sh {hub}( |$)' >/dev/null; "
-        f"then echo INGEST_RUNNING; "
-        f"else echo INGEST_NOT_RUNNING; tail -20 {log_path} 2>&1; fi"
-    )
-    if "INGEST_NOT_RUNNING" in check:
-        sys.exit(f"ingest.sh is not running for {hub} after launch. Log tail ({log_path}):\n{check}")
-    if "INGEST_RUNNING" not in check:
-        print("  Warning: could not verify ingest.sh is running — check the log on EC2.")
+    confirm_ingest_running(hub, log_path)
 
     print(f"\nLaunched: {hub}{extra}")
     print(f"  Log on EC2:     /home/ec2-user/data/{hub}-ingest.log")
