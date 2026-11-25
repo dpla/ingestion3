@@ -176,7 +176,7 @@ Before launching, it shows a dry run of `scripts/prune-hub-data.sh` for the hub.
 - **Deletes older runs once they're in S3.** Old harvest, mapping and enrichment runs that aren't in S3 yet are synced first.
 - **Never uploads or deletes JSONL that isn't in S3.**
 
-Only interactive launches offer this; `--non-interactive` (GitHub Actions) never prunes. To skip the check, pass `--no-prune`. Either way, `ingest.sh` now syncs each step's output (harvest, mapping, enrichment) to `s3://dpla-master-dataset/<hub>/` as it finishes, so later prunes can delete it from the box. Every run synced or deleted is recorded in `logs/data-history/<hub>.log` on the box (see `scripts/SCRIPTS.md`).
+Only interactive launches offer this; `--non-interactive` (GitHub Actions) never prunes. To skip the check, pass `--no-prune`. Either way, `ingest.sh` now syncs each step's output (harvest, mapping, enrichment) to `s3://dpla-master-dataset/<hub>/` as it finishes, so later prunes can delete it from the box. These per-step syncs and the prune's syncs and deletes are recorded in `logs/data-history/<hub>.log` on the box (see `scripts/SCRIPTS.md`). The JSONL publish in step 5 and other `s3-sync.sh` uploads are not; they're in the ingest log and on Slack.
 
 After launching, it checks on EC2 that `ingest.sh` is running, asking again (up to 6 times, about 30 seconds each) until EC2 answers. It exits with the log tail if `ingest.sh` isn't running, and exits with an error if EC2 never answers, since the ingest may or may not be running then. Check the log before relaunching, so you don't start a second run.
 

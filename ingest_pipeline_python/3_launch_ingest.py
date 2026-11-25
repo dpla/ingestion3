@@ -127,6 +127,7 @@ def ssm_run(shell_cmd: str, timeout_seconds: int = 20) -> str:
 
 
 CONFIRM_ATTEMPTS = 6  # each waits up to ~36s for EC2 to answer
+CONFIRM_SPACING = 30  # min seconds between the starts of unanswered attempts
 
 
 def confirm_ingest_running(hub: str, log_path: str) -> None:
@@ -143,13 +144,17 @@ def confirm_ingest_running(hub: str, log_path: str) -> None:
     )
     for attempt in range(1, CONFIRM_ATTEMPTS + 1):
         print(f"  Checking ingest.sh is running (attempt {attempt}/{CONFIRM_ATTEMPTS}) …", flush=True)
+        started = time.monotonic()
         check = ssm_run(check_cmd, timeout_seconds=30)
         if "INGEST_NOT_RUNNING" in check:
             sys.exit(f"ingest.sh is not running for {hub} after launch. Log tail ({log_path}):\n{check}")
         if "INGEST_RUNNING" in check:
             print("  Confirmed: ingest.sh is running.")
             return
-        print("  No answer from EC2 yet; asking again.", flush=True)
+        if attempt < CONFIRM_ATTEMPTS:
+            print("  No answer from EC2 yet; asking again.", flush=True)
+            # A send-command error returns at once; don't burn every attempt in seconds.
+            time.sleep(max(0.0, CONFIRM_SPACING - (time.monotonic() - started)))
     sys.exit(
         f"Couldn't confirm ingest.sh is running for {hub}: EC2 didn't answer {CONFIRM_ATTEMPTS} checks.\n"
         f"It may still be running. Check {log_path} on EC2 before relaunching, "
