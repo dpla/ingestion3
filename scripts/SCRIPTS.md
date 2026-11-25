@@ -245,6 +245,8 @@ This skips the search and the already-published check. The harvest reads a tempo
 
 Some partners whitelist specific source IPs on their OAI endpoints. For those hubs, `ingest.sh` automatically routes harvest traffic through a Tailscale exit node that holds the whitelisted IP. The exit node is set before the harvest step and cleared (and tailscaled stopped) immediately after, so downstream steps (mapping, enrichment, S3 sync) use normal routing. On failure, the same cleanup runs best-effort via an EXIT trap — it attempts to clear the exit node and stop `tailscaled` even when the harvest fails.
 
+Before setting the exit node, `ingest.sh` waits up to 30s for Tailscale to report `Running`, then up to 30s more for the exit node to appear in the box's peer list. Tailscale reports `Running` before the peer list has loaded, and setting the exit node too early fails with `no node found in netmap with IP …`. If the node never appears, the harvest stops with `Tailscale exit node … didn't appear in this box's peer list within 30s`; check `tailscale status` on the box and that `main-vpc` is online.
+
 The exit node is configured per-provider in a `case` block near the top of `ingest.sh`:
 
 ```bash

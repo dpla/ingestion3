@@ -1214,6 +1214,32 @@ test_tailscale_exit_node() {
         log_fail "Tailscale: $((ts_set_total - ts_set_with_sudo)) of $ts_set_total tailscale set calls missing sudo"
     fi
 
+    # Test 7: waits for the exit node in the peer list before setting it
+    # ("Running" can come before the netmap: "no node found in netmap")
+    TESTS_RUN=$((TESTS_RUN + 1))
+    local peer_line set_line
+    peer_line=$(grep -n "_ts_peer\" != \"yes\"" <<< "$content" | head -1 | cut -d: -f1)
+    set_line=$(grep -n 'sudo tailscale set --exit-node="\$TAILSCALE_EXIT_NODE"' <<< "$content" | head -1 | cut -d: -f1)
+    if [[ -n "$peer_line" && -n "$set_line" && "$peer_line" -lt "$set_line" ]]; then
+        log_pass "Tailscale: waits for the exit node in the peer list before setting it"
+    else
+        log_fail "Tailscale: no peer-list wait before setting the exit node (wait=$peer_line, set=$set_line)"
+    fi
+
+    # Test 8: the peer check finds the exit node in tailscale status JSON
+    TESTS_RUN=$((TESTS_RUN + 1))
+    local peer_py found missing
+    peer_py=$(grep -o "import json,sys; ip=sys.argv\[1\].*else '')" <<< "$content" | head -1)
+    found=$(printf '%s' '{"Peer":{"k1":{"TailscaleIPs":["100.1.1.1"]},"k2":{"TailscaleIPs":["100.82.233.38","fd7a::1"]}}}' \
+        | python3 -c "$peer_py" 100.82.233.38 2>/dev/null || true)
+    missing=$(printf '%s' '{"BackendState":"Running","Peer":null}' \
+        | python3 -c "$peer_py" 100.82.233.38 2>/dev/null || true)
+    if [[ -n "$peer_py" && "$found" == "yes" && -z "$missing" ]]; then
+        log_pass "Tailscale: peer check finds the exit node, and not in an empty peer list"
+    else
+        log_fail "Tailscale: peer check wrong (found='$found', missing='$missing')"
+    fi
+
     # Partner email: the Emailer call must sit after the --skip-email guard
     TESTS_RUN=$((TESTS_RUN + 1))
     local guard_line emailer_line

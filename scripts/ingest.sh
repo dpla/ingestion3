@@ -314,6 +314,19 @@ Node keys rotate every ~180 days; see scripts/SCRIPTS.md for details."
         elif [ "$_ts_state" != "Running" ]; then
             die "Tailscale failed to connect within 30s (state: ${_ts_state:-unknown})"
         fi
+        # "Running" comes before the peer list has loaded; setting the exit node
+        # then fails with "no node found in netmap". Wait for it to appear.
+        _ts_peer=""
+        for _i in $(seq 1 30); do
+            _ts_peer=$(tailscale status --json 2>/dev/null \
+                | python3 -c "import json,sys; ip=sys.argv[1]; d=json.load(sys.stdin); print('yes' if any(ip in (p.get('TailscaleIPs') or []) for p in (d.get('Peer') or {}).values()) else '')" \
+                    "$TAILSCALE_EXIT_NODE" 2>/dev/null || true)
+            [ "$_ts_peer" = "yes" ] && break
+            sleep 1
+        done
+        if [ "$_ts_peer" != "yes" ]; then
+            die "Tailscale exit node $TAILSCALE_EXIT_NODE didn't appear in this box's peer list within 30s. Check it's online: tailscale status"
+        fi
         log_info "Setting Tailscale exit node $TAILSCALE_EXIT_NODE for $PROVIDER harvest"
         sudo tailscale set --exit-node="$TAILSCALE_EXIT_NODE" \
             || die "Failed to set Tailscale exit node — $PROVIDER endpoint requires whitelisted IP"
