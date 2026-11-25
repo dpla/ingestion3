@@ -184,6 +184,7 @@ watchdog automatically.
 |----------|-------------|
 | `SLACK_BOT_TOKEN` | Bot token for Slack `chat.postMessage` API |
 | `SLACK_CHANNEL` | Channel ID to post to (default: `C02HEU2L3` = `#tech-alerts`) |
+| `SLACK_MIRROR_WEBHOOK` | Optional Incoming Webhook URL for a second workspace; every `slack_notify` / watchdog / orchestrator message is also posted there (best-effort) |
 
 ### ingest.sh - Full Pipeline
 

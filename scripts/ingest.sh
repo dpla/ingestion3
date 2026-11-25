@@ -28,7 +28,8 @@ setup_java "8g" || die "Failed to setup Java environment"
 slack_notify_resilient() {
     if ! slack_notify "$@"; then
         sleep 15
-        slack_notify "$@" || log_warn "Slack notify failed on retry (message: ${1:-})"
+        # The first attempt already mirrored; retry the primary post only.
+        SLACK_MIRROR_WEBHOOK="" slack_notify "$@" || log_warn "Slack notify failed on retry (message: ${1:-})"
     fi
 }
 

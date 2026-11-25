@@ -698,6 +698,34 @@ test_common_functions() {
     else
         log_fail "common.sh missing required functions"
     fi
+
+    # slack_mirror / slack_notify: mirror to SLACK_MIRROR_WEBHOOK (stubbed curl).
+    local stubdir
+    stubdir=$(mktemp -d)
+    cat > "$stubdir/curl" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$@" >> "$CURL_LOG"
+echo '{"ok":true}'
+STUB
+    chmod +x "$stubdir/curl"
+
+    run_test "slack_notify mirrors to SLACK_MIRROR_WEBHOOK without a bot token" \
+        "rm -f '$stubdir/log'; env -u SLACK_BOT_TOKEN -u SLACK_TOKEN PATH='$stubdir':\"\$PATH\" CURL_LOG='$stubdir/log' I3_HOME='$stubdir' SLACK_MIRROR_WEBHOOK=https://hooks.example/mirror \
+         bash -c 'source \"$common_sh\" && slack_notify \"line1\\nline2\"' && grep -q '^https://hooks.example/mirror\$' '$stubdir/log' && grep -q 'line1' '$stubdir/log' && ! grep -q 'chat.postMessage' '$stubdir/log'"
+
+    run_test "slack_notify posts to both primary and mirror when both are set" \
+        "rm -f '$stubdir/log'; env PATH='$stubdir':\"\$PATH\" CURL_LOG='$stubdir/log' I3_HOME='$stubdir' SLACK_BOT_TOKEN=xoxb-test SLACK_MIRROR_WEBHOOK=https://hooks.example/mirror \
+         bash -c 'source \"$common_sh\" && slack_notify hello' && grep -q '^https://hooks.example/mirror\$' '$stubdir/log' && grep -q 'chat.postMessage' '$stubdir/log'"
+
+    run_test "slack_notify does not call the mirror when SLACK_MIRROR_WEBHOOK is unset" \
+        "rm -f '$stubdir/log'; env -u SLACK_MIRROR_WEBHOOK PATH='$stubdir':\"\$PATH\" CURL_LOG='$stubdir/log' I3_HOME='$stubdir' SLACK_BOT_TOKEN=xoxb-test \
+         bash -c 'source \"$common_sh\" && slack_notify hello' && grep -q 'chat.postMessage' '$stubdir/log' && ! grep -q 'hooks.example' '$stubdir/log'"
+
+    run_test "slack_mirror strips mentions but keeps links" \
+        "rm -f '$stubdir/log'; env PATH='$stubdir':\"\$PATH\" CURL_LOG='$stubdir/log' I3_HOME='$stubdir' SLACK_MIRROR_WEBHOOK=https://hooks.example/mirror \
+         bash -c 'source \"$common_sh\" && slack_mirror \"<!here> <@U0ABC123> <!subteam^S0GRP123> <!subteam^S0GRP456|@ops> done <https://example.org|link>\"' && grep -q ': \\\"done <https://example.org|link>\\\"' '$stubdir/log' && ! grep -q -e '!here' -e 'U0ABC123' -e subteam '$stubdir/log'"
+
+    rm -rf "$stubdir"
 }
 
 # =============================================================================

@@ -114,6 +114,7 @@ class Config:
     slack_webhook: Optional[str] = None
     slack_tech_webhook: Optional[str] = None  # #tech channel (hub-complete @here)
     slack_alert_user_id: Optional[str] = None  # Slack user ID to @mention on failures
+    slack_mirror_webhook: Optional[str] = None  # second workspace; receives a copy of every message
     github_token: Optional[str] = None
     xmll_jar: Path = field(default_factory=lambda: Path.home() / "xmll-assembly-0.1.jar")
 
@@ -296,5 +297,6 @@ def load_config(
         slack_webhook=os.environ.get("SLACK_WEBHOOK"),
         slack_tech_webhook=os.environ.get("SLACK_TECH_WEBHOOK"),
         slack_alert_user_id=os.environ.get("SLACK_ALERT_USER_ID"),
+        slack_mirror_webhook=os.environ.get("SLACK_MIRROR_WEBHOOK"),
         github_token=os.environ.get("GITHUB_TOKEN"),
     )

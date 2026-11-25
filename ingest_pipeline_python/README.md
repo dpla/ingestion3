@@ -451,6 +451,7 @@ Scripts send notifications to `#tech-alerts` via the ingest EC2: they call `slac
 ```
 SLACK_BOT_TOKEN=         # Slack bot token (chat.postMessage)
 SLACK_CHANNEL=           # optional; defaults to C02HEU2L3 (#tech-alerts)
+SLACK_MIRROR_WEBHOOK=    # optional; Incoming Webhook for a second workspace that gets a copy of each message
 ```
 
 The GitHub Actions workflows post their own queued/failed messages using repository secrets of the same names.

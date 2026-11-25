@@ -18,6 +18,12 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  # jq filter that turns a chat.postMessage payload into the mirror webhook
+  # payload. Mentions are stripped: inputs such as the hub name are free text,
+  # and <!here> or a user ID must never ping people in the mirror workspace.
+  SLACK_MIRROR_JQ: '{text: (.text | gsub("<(@|!(?!date\\^))[^>]*>\\s?"; ""))}'
+
 jobs:
   kill:
     name: 'Kill batch'
@@ -52,6 +58,7 @@ jobs:
           INGEST_INSTANCE_ID: ${{ secrets.INGEST_INSTANCE_ID }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+          SLACK_MIRROR_WEBHOOK: ${{ secrets.SLACK_MIRROR_WEBHOOK }}
           ACTOR: ${{ github.actor }}
         run: |
           CMD_ID=$(aws ssm send-command \
@@ -83,13 +90,20 @@ jobs:
             exit 1
           fi
 
-          [[ -z "${SLACK_BOT_TOKEN:-}" ]] && exit 0
           PAYLOAD=$(jq -n --arg actor "$ACTOR" \
             --arg channel "${SLACK_CHANNEL:-C02HEU2L3}" \
             --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             '{channel: $channel, text: ":stop_sign: *Monthly batch killed* by \($actor) — <\($url)|View run>"}')
-          RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
-            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
-            -H 'Content-Type: application/json' \
-            -d "$PAYLOAD") || { echo "::warning::Slack transport error (kill notification)"; RESP=""; }
-          [[ -n "$RESP" ]] && { echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"; }
+          if [[ -n "${SLACK_BOT_TOKEN:-}" ]]; then
+            RESP=$(curl -s --connect-timeout 5 --max-time 10 -X POST "https://slack.com/api/chat.postMessage" \
+              -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+              -H 'Content-Type: application/json' \
+              -d "$PAYLOAD") || { echo "::warning::Slack transport error (kill notification)"; RESP=""; }
+            if [[ -n "$RESP" ]]; then echo "$RESP" | jq -e '.ok' > /dev/null || echo "::warning::Slack notification failed: $RESP"; fi
+          fi
+          # Mirror the same text to a second workspace when configured (best-effort).
+          if [[ -n "${SLACK_MIRROR_WEBHOOK:-}" ]]; then
+            curl -sf --connect-timeout 5 --max-time 10 -X POST "$SLACK_MIRROR_WEBHOOK" \
+              -H 'Content-Type: application/json' \
+              -d "$(echo "$PAYLOAD" | jq -c "$SLACK_MIRROR_JQ")" > /dev/null || echo "::warning::Slack mirror post failed"
+          fi

@@ -146,9 +146,10 @@ run_watchdog                                     # first run — creates sentine
 # Simulate new ingest: update status file mtime to "now" (newer than sentinel)
 sleep 1
 touch "$STATUS_FILE"
-# Back-date the sentinel so it is older than the freshly touched status file
-touch -t "$(date -d '2 minutes ago' '+%Y%m%d%H%M.%S' 2>/dev/null \
-          || date -v-2M '+%Y%m%d%H%M.%S')" "$SENTINEL"
+# Back-date the sentinel so it is older than the status file even after the
+# status file is itself back-dated past MIN_AGE_SECS below
+touch -t "$(date -d '20 minutes ago' '+%Y%m%d%H%M.%S' 2>/dev/null \
+          || date -v-20M '+%Y%m%d%H%M.%S')" "$SENTINEL"
 # Also back-date the status file well beyond MIN_AGE_SECS
 touch -t "$(date -d '10 minutes ago' '+%Y%m%d%H%M.%S' 2>/dev/null \
           || date -v-10M '+%Y%m%d%H%M.%S')" "$STATUS_FILE"
@@ -187,6 +188,39 @@ fi
 teardown
 
 # ── Summary ───────────────────────────────────────────────────────────────────
+
+# ── Slack alert delivery ──────────────────────────────────────────────────────
+# With a token set and curl stubbed, a rejected or failed alert must be logged
+# to stderr, must not abort the run, and must still write the sentinel.
+
+echo ""
+echo "--- Slack alert delivery ---"
+
+run_watchdog_with_curl() {  # $1 = stub curl body; prints the watchdog's stderr
+    local stub="$TMPDIR_TEST/bin"
+    mkdir -p "$stub"
+    printf '#!/usr/bin/env bash\n%s\n' "$1" > "$stub/curl"
+    chmod +x "$stub/curl"
+    echo "SLACK_BOT_TOKEN=xoxb-test" > "$ENV_FILE"
+    PATH="$stub:$PATH" I3_HOME="$TMPDIR_TEST" bash "$WATCHDOG" 2>&1 >/dev/null
+}
+
+setup
+ALERT_ERR="$(run_watchdog_with_curl "echo '{\"ok\":false,\"error\":\"invalid_auth\"}'")"
+run_test "rejected alert (ok:false) is logged" "grep -q 'Slack rejected the watchdog alert' <<< \"\$ALERT_ERR\""
+run_test "rejected alert still writes the sentinel" "[[ -f '$SENTINEL' ]]"
+teardown
+
+setup
+ALERT_ERR="$(run_watchdog_with_curl "exit 28")"
+run_test "transport failure is logged with curl's exit code" "grep -q 'could not be sent (curl exit 28)' <<< \"\$ALERT_ERR\""
+run_test "transport failure still writes the sentinel" "[[ -f '$SENTINEL' ]]"
+teardown
+
+setup
+ALERT_ERR="$(run_watchdog_with_curl "echo '{\"ok\":true}'")"
+run_test "accepted alert logs nothing" "[[ -z \"\$ALERT_ERR\" ]]"
+teardown
 
 echo ""
 echo "=========================================="

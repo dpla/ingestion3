@@ -16,12 +16,11 @@ import os
 import re
 import subprocess
 import sys
-import urllib.request
-import urllib.error
 from datetime import datetime
 from typing import Optional
 
 from .config import CANONICAL_TO_LEGACY_HUB_KEY, hub_aliases_enabled
+from .notifications import _post_webhook, post_slack_mirror
 
 
 def _dir_to_date(dir_name: str) -> Optional[str]:
@@ -122,23 +121,25 @@ def format_report(staged: list[dict], month: int, year: int) -> str:
 
 
 def post_to_slack(text: str, webhook: Optional[str] = None):
-    """Post text to Slack via webhook."""
+    """Post text to Slack via webhook, then a copy to the mirror, if configured.
+
+    Returns whether the primary post succeeded; the mirror never changes that.
+    """
+    ok = _post_to_primary(text, webhook)
+    post_slack_mirror({"text": text}, os.environ.get("SLACK_MIRROR_WEBHOOK"))
+    return ok
+
+
+def _post_to_primary(text: str, webhook: Optional[str] = None) -> bool:
     webhook = webhook or os.environ.get("SLACK_TECH_WEBHOOK") or os.environ.get("SLACK_WEBHOOK")
     if not webhook:
         print("No Slack webhook configured (SLACK_TECH_WEBHOOK / SLACK_WEBHOOK)", file=sys.stderr)
         return False
 
-    try:
-        payload = json.dumps({"text": text}).encode("utf-8")
-        req = urllib.request.Request(
-            webhook, data=payload, headers={"Content-Type": "application/json"}
-        )
-        urllib.request.urlopen(req, timeout=10)
+    ok = _post_webhook(webhook, {"text": text}, "staged report")
+    if ok:
         print("Posted to Slack.")
-        return True
-    except urllib.error.URLError as e:
-        print(f"Slack post failed: {e}", file=sys.stderr)
-        return False
+    return ok
 
 
 def main():

@@ -492,6 +492,134 @@ class TestHubCompleteSuccess:
                     assert req.full_url == "https://hooks.slack.com/alerts"
 
 
+class TestSlackMirror:
+    """Test the optional second-workspace mirror (SLACK_MIRROR_WEBHOOK)."""
+
+    def test_mirror_noop_without_webhook(self):
+        from scheduler.orchestrator.notifications import post_slack_mirror
+
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            post_slack_mirror({"text": "hello"}, None)
+            post_slack_mirror({"text": "hello"}, "")
+        mock_urlopen.assert_not_called()
+
+    def test_mirror_posts_text_without_mentions(self):
+        import json
+        from scheduler.orchestrator.notifications import post_slack_mirror
+
+        payload = {"text": "<@U0TESTFAKE01> <!here> <!subteam^S0GROUP01> <!subteam^S0GROUP02|@ops> <@U0TESTFAKE02|pat> "
+                           ":x: *Ingest failed* for `hub` <https://example.org|link>"}
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            post_slack_mirror(payload, "https://hooks.slack.com/mirror")
+
+        req = mock_urlopen.call_args[0][0]
+        assert req.full_url == "https://hooks.slack.com/mirror"
+        sent = json.loads(req.data)
+        assert sent["text"] == ":x: *Ingest failed* for `hub` <https://example.org|link>"
+        # The caller's payload is not modified, so the primary keeps its mentions.
+        assert payload["text"].startswith("<@U0TESTFAKE01> <!here>")
+
+    def test_mirror_failure_is_swallowed(self):
+        import urllib.error
+        from scheduler.orchestrator.notifications import post_slack_mirror
+
+        with patch('urllib.request.urlopen', side_effect=urllib.error.URLError("down")):
+            post_slack_mirror({"text": "hello"}, "https://hooks.slack.com/mirror")
+
+    def test_send_slack_posts_to_primary_and_mirror(self, notifier, mock_config):
+        mock_config.slack_webhook = "https://hooks.slack.com/alerts"
+        mock_config.slack_mirror_webhook = "https://hooks.slack.com/mirror"
+
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            notifier._send_slack({"text": "hello"})
+
+        urls = [c[0][0].full_url for c in mock_urlopen.call_args_list]
+        # Primary first, so a slow mirror can never delay it.
+        assert urls == ["https://hooks.slack.com/alerts", "https://hooks.slack.com/mirror"]
+
+    def test_send_slack_tech_mirrors_even_if_primary_fails(self, notifier, mock_config):
+        import urllib.error
+        mock_config.slack_tech_webhook = "https://hooks.slack.com/tech"
+        mock_config.slack_mirror_webhook = "https://hooks.slack.com/mirror"
+        seen = []
+
+        def fake_urlopen(req, timeout=None):
+            seen.append(req.full_url)
+            if req.full_url.endswith("/tech"):
+                raise urllib.error.URLError("down")
+
+        with patch('urllib.request.urlopen', side_effect=fake_urlopen):
+            notifier._send_slack_tech({"text": "<!here> done"})
+
+        assert "https://hooks.slack.com/mirror" in seen
+        assert "https://hooks.slack.com/tech" in seen
+
+
+    def test_mirror_timeout_reading_response_is_swallowed(self, notifier, mock_config):
+        """urlopen raises a bare socket timeout (not URLError) while reading the response."""
+        import socket
+        mock_config.slack_webhook = "https://hooks.slack.com/alerts"
+        mock_config.slack_mirror_webhook = "https://hooks.slack.com/mirror"
+        seen = []
+
+        def fake_urlopen(req, timeout=None):
+            seen.append(req.full_url)
+            if req.full_url.endswith("/mirror"):
+                raise socket.timeout("timed out")
+
+        with patch('urllib.request.urlopen', side_effect=fake_urlopen):
+            notifier._send_slack({"text": "hello"})
+
+        assert seen == ["https://hooks.slack.com/alerts", "https://hooks.slack.com/mirror"]
+
+    def test_staged_report_returns_primary_result_when_mirror_times_out(self, monkeypatch):
+        import socket
+        from scheduler.orchestrator import staged_report
+
+        monkeypatch.setenv("SLACK_MIRROR_WEBHOOK", "https://hooks.slack.com/mirror")
+
+        def fake_urlopen(req, timeout=None):
+            if req.full_url.endswith("/mirror"):
+                raise socket.timeout("timed out")
+
+        with patch('urllib.request.urlopen', side_effect=fake_urlopen):
+            assert staged_report.post_to_slack("report", "https://hooks.slack.com/tech") is True
+
+    @pytest.mark.parametrize("mirror, expected_urls", [
+        ("https://hooks.slack.com/mirror", ["https://hooks.slack.com/mirror"]),
+        (None, []),
+    ])
+    def test_delivery_without_primary_webhook(self, notifier, mock_config, mirror, expected_urls):
+        """Public senders deliver to the mirror alone, and send nothing when nothing is set."""
+        mock_config.slack_webhook = None
+        mock_config.slack_tech_webhook = None
+        mock_config.slack_mirror_webhook = mirror
+
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            notifier.send_harvest_complete("run-1", "test-hub", 100)
+
+        assert [c[0][0].full_url for c in mock_urlopen.call_args_list] == expected_urls
+
+    def test_staged_report_posts_primary_then_mirror(self, monkeypatch):
+        from scheduler.orchestrator import staged_report
+
+        monkeypatch.setenv("SLACK_MIRROR_WEBHOOK", "https://hooks.slack.com/mirror")
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            assert staged_report.post_to_slack("report", "https://hooks.slack.com/tech") is True
+
+        urls = [c[0][0].full_url for c in mock_urlopen.call_args_list]
+        assert urls == ["https://hooks.slack.com/tech", "https://hooks.slack.com/mirror"]
+
+    def test_staged_report_mirror_off_by_default(self, monkeypatch):
+        from scheduler.orchestrator import staged_report
+
+        monkeypatch.delenv("SLACK_MIRROR_WEBHOOK", raising=False)
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            staged_report.post_to_slack("report", "https://hooks.slack.com/tech")
+
+        assert mock_urlopen.call_count == 1
+
+
 @pytest.mark.dry_run_slack
 class TestDryRunSlack:
     """Tests that actually send to Slack. Only run when explicitly requested."""
