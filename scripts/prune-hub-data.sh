@@ -84,7 +84,7 @@ delete_dir() {  # $1 = dir, $2 = why
     if [[ "$DRY_RUN" == true ]]; then
         echo "WOULD DELETE: $1 ($2)"
     else
-        rm -rf "$1" && echo "DELETED: $1 ($2)"
+        rm -rf "$1" && echo "DELETED: $1 ($2)" && record_data_history "$HUB" DELETED "$1 ($2)"
     fi
 }
 
@@ -137,7 +137,7 @@ for stage in $STAGES; do
         elif [[ "$DRY_RUN" == true ]]; then
             echo "WOULD SYNC + DELETE: $d (not in S3 yet)"
         elif sync_run_to_s3 "$HUB" "$stage" "$d"; then
-            rm -rf "$d" && echo "SYNCED + DELETED: $d"
+            rm -rf "$d" && echo "SYNCED + DELETED: $d" && record_data_history "$HUB" DELETED "$d (synced to S3)"
         else
             echo "KEEP (S3 sync failed): $d"
             failed=1

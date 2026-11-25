@@ -91,7 +91,7 @@ All scripts source `common.sh` which provides:
 - **IngestRemap runner**: `run_ingest_remap <input> <output> <conf> <name>` — convenience wrapper for IngestRemap
 - **Status writer**: `write_hub_status <hub> <status> [--error=msg]` — writes per-hub `.status` file for ingest-status.sh (used by ingest.sh, harvest.sh, remap.sh)
 - **Data finder**: `find_latest_data <provider> <step>` — finds the most recent timestamped directory for a pipeline step
-- **Run-dir S3 helpers**: `sync_run_to_s3 <hub> <step> <run dir>` uploads one complete run with its `_SUCCESS` last, removing any `_SUCCESS` already in S3 for that run first, so a run counts as in S3 only once the upload finished (a repeat upload included). `list_s3_stage_keys <hub> <step>` lists every object under the step as `<run>/<path>`. `list_s3_complete_runs <hub> <step>` lists the runs with a `_SUCCESS` in S3. Both return 1 if S3 can't be listed. `run_files_missing_in_s3 <run dir> <keys>` prints the run's local files that aren't in S3. `s3_stage_uri <hub> <step>` gives `s3://dpla-master-dataset/<prefix>/<step>`
+- **Run-dir S3 helpers**: `sync_run_to_s3 <hub> <step> <run dir>` uploads one complete run with its `_SUCCESS` last, removing any `_SUCCESS` already in S3 for that run first, so a run counts as in S3 only once the upload finished (a repeat upload included). It records `SYNCED` or `SYNC FAILED` with `record_data_history <hub> <action> <detail>`, which appends to `$I3_HOME/logs/data-history/<hub>.log`. `list_s3_stage_keys <hub> <step>` lists every object under the step as `<run>/<path>`. `list_s3_complete_runs <hub> <step>` lists the runs with a `_SUCCESS` in S3. Both return 1 if S3 can't be listed. `run_files_missing_in_s3 <run dir> <keys>` prints the run's local files that aren't in S3. `s3_stage_uri <hub> <step>` gives `s3://dpla-master-dataset/<prefix>/<step>`
 
 ### Example: Using common.sh in a new script
 
@@ -137,6 +137,12 @@ For each of `$DPLA_DATA/<hub>/{harvest,mapping,enrichment,jsonl}`:
 | Step with no complete run | Everything kept |
 
 Before it starts, it checks once whether a pipeline step for the hub is running (a Spark entry with `--name=<hub>`, or `ingest.sh`/`harvest.sh`/`remap.sh`/… for the hub), and does nothing if one is. It holds no lock, so a step started after that check isn't stopped and isn't seen; don't start one by hand during a prune. It exits 1 if a sync or S3 listing failed or a run was only partly in S3, so some runs were kept.
+
+**History:** every run it deletes, and every run synced to S3 by it or by `ingest.sh`'s step syncs, is appended to `$I3_HOME/logs/data-history/<hub>.log` on the box (`record_data_history` in `common.sh`). One tab-separated line each: UTC time, hub, `SYNCED` / `SYNC FAILED` / `DELETED`, and the path (with the S3 destination, or why it was deleted). Unlike `<hub>-ingest.log`, which each launch overwrites, it's never cleared. A `--dry-run` writes nothing.
+
+```bash
+tail -n 50 /home/ec2-user/ingestion3/logs/data-history/<hub>.log
+```
 
 **How it's run:**
 - **Launcher:** `3_launch_ingest.py` shows the `--dry-run` output and asks. On yes, it launches `ingest.sh <hub> --prune`, which runs the prune before the harvest. A failed prune is a Slack warning, not a failure, and the disk checks still apply.

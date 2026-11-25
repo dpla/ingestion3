@@ -891,9 +891,25 @@ sync_run_to_s3() {
         return 1
     fi
     dest="$(s3_stage_uri "$hub" "$stage")/$(basename "$dir")"
-    aws s3 rm "$dest/_SUCCESS" --only-show-errors || return 1
-    aws s3 sync "$dir/" "$dest/" --exclude "_SUCCESS" --only-show-errors \
-        && aws s3 cp "$dir/_SUCCESS" "$dest/_SUCCESS" --only-show-errors
+    if aws s3 rm "$dest/_SUCCESS" --only-show-errors \
+        && aws s3 sync "$dir/" "$dest/" --exclude "_SUCCESS" --only-show-errors \
+        && aws s3 cp "$dir/_SUCCESS" "$dest/_SUCCESS" --only-show-errors; then
+        record_data_history "$hub" SYNCED "$dir -> $dest/"
+    else
+        record_data_history "$hub" "SYNC FAILED" "$dir -> $dest/"
+        return 1
+    fi
+}
+
+# record_data_history <hub> <action> <detail> — append one line to
+# $I3_HOME/logs/data-history/<hub>.log: a permanent record of every run synced
+# to S3 or deleted from the box (the ingest log is overwritten each launch).
+# Tab-separated: UTC time, hub, action, detail. Never fails the caller.
+record_data_history() {
+    local hub="$1" action="$2" detail="$3" dir="${I3_HOME}/logs/data-history"
+    { mkdir -p "$dir" \
+        && printf '%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$hub" "$action" "$detail" \
+            >> "$dir/$hub.log"; } 2>/dev/null || true
 }
 
 # =============================================================================

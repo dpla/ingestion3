@@ -97,8 +97,9 @@ if [ -d "$D/harvest/20260101_000000-ohio-OriginalRecord.avro" ] \
    && [ ! -d "$S3H/harvest/20260201_000000-ohio-OriginalRecord.avro" ] \
    && echo "$out" | grep -q "WOULD DELETE: .*harvest/20260101_000000-ohio-OriginalRecord.avro (in S3)" \
    && echo "$out" | grep -q "WOULD DELETE: .*harvest/20260215_000000-ohio-OriginalRecord.avro (incomplete run)" \
-   && echo "$out" | grep -q "WOULD SYNC + DELETE: .*harvest/20260201_000000-ohio-OriginalRecord.avro"
-then pass "dry run lists deletes and syncs, changes nothing"
+   && echo "$out" | grep -q "WOULD SYNC + DELETE: .*harvest/20260201_000000-ohio-OriginalRecord.avro" \
+   && [ ! -e "$TMP/i3home/logs/data-history/ohio.log" ]
+then pass "dry run lists deletes and syncs, changes nothing, records nothing"
 else fail "dry run"; echo "$out"; fi
 
 # ---------------------------------------------------------------------------
@@ -124,13 +125,23 @@ if [ -d "$D/mapping/20260401_000000-ohio-MAP4_0.MAPRecord.avro" ] \
 then pass "a step with no complete run is left alone"
 else fail "no-complete-run step"; echo "$out"; fi
 
+HIST="$TMP/i3home/logs/data-history/ohio.log"
+if grep -F "SYNCED" "$HIST" | grep -qF "harvest/20260201_000000-ohio-OriginalRecord.avro -> s3://dpla-master-dataset/ohio/harvest/20260201_000000-ohio-OriginalRecord.avro/" \
+   && grep -F "DELETED" "$HIST" | grep -qF "harvest/20260201_000000-ohio-OriginalRecord.avro (synced to S3)" \
+   && grep -F "DELETED" "$HIST" | grep -qF "harvest/20260215_000000-ohio-OriginalRecord.avro (incomplete run)" \
+   && grep -F "DELETED" "$HIST" | grep -qF "jsonl/20260101_000000-ohio-MAP3_1.IndexRecord.jsonl (in S3)" \
+   && ! grep -qF "20260401" "$HIST"
+then pass "data history records each sync and delete, nothing for kept runs"
+else fail "data history"; cat "$HIST" 2>/dev/null; fi
+
 # ---------------------------------------------------------------------------
 reset
 rc=0; out=$("${ENVV[@]}" AWS_FAIL_SYNC=1 bash "$PRUNE" ohio 2>&1) || rc=$?
 if [ "$rc" -eq 1 ] && [ -d "$D/harvest/20260201_000000-ohio-OriginalRecord.avro" ] \
    && [ ! -e "$S3H/harvest/20260201_000000-ohio-OriginalRecord.avro/_SUCCESS" ] \
-   && echo "$out" | grep -q "KEEP (S3 sync failed)"
-then pass "failed sync keeps the run and exits 1"
+   && echo "$out" | grep -q "KEEP (S3 sync failed)" \
+   && grep -F "SYNC FAILED" "$TMP/i3home/logs/data-history/ohio.log" | grep -qF "20260201_000000-ohio-OriginalRecord.avro"
+then pass "failed sync keeps the run, records SYNC FAILED, exits 1"
 else fail "failed sync (rc=$rc)"; echo "$out"; fi
 
 # ---------------------------------------------------------------------------
